@@ -462,13 +462,20 @@ void WindowPanel::layoutContent() {
     // layout-space computation below re-enters window space.
     const NUIWindowPoint panelOrigin(bounds.x, bounds.y);
 
+    // AESTRA_LAYOUT_TRACE=window.<title> or =all (V8-X2b criterion 4).
+    auto* trace = layoutRecorderFor("window." + m_title);
+    if (trace) {
+        trace->beginPass(panelOrigin);
+        trace->scope("buttons");
+    }
+
     const NUILocalRect titleBar(0.0f, 0.0f, panelWidth, m_titleBarHeight);
     m_titleBarBounds = localToWindow(titleBar, panelOrigin).raw();
 
     // Layout buttons right-to-left: Close, Maximize, Minimize — nearest-to-
     // the-edge first, exactly what arrangeTrailingRow's item order expects.
     const std::vector<float> buttonWidths{buttonSize, buttonSize, buttonSize};
-    const auto buttonRects = arrangeTrailingRow(titleBar, buttonWidths, buttonSize, buttonPadding, buttonPadding);
+    const auto buttonRects = arrangeTrailingRow(titleBar, buttonWidths, buttonSize, buttonPadding, buttonPadding, trace);
 
     if (m_closeButton) {
         m_closeButton->setBounds(localToWindow(buttonRects[0], panelOrigin).raw());
@@ -497,13 +504,17 @@ void WindowPanel::layoutContent() {
     // Layout content (below title bar)
     if (m_content && !m_minimized) {
         const NUILocalRect panelLocal(0.0f, 0.0f, panelWidth, panelHeight);
-        const NUIVerticalSplit split = splitVertical(panelLocal, m_titleBarHeight);
+        if (trace) {
+            trace->scope("panel");
+        }
+        const NUIVerticalSplit split = splitVertical(panelLocal, m_titleBarHeight, trace);
 
         m_content->setBounds(localToWindow(split.trailing, panelOrigin).raw());
 
         // Trigger content's internal layout
         m_content->onResize(static_cast<int>(split.trailing.width), static_cast<int>(split.trailing.height));
     }
+    finishLayoutPass(trace);
 }
 
 void WindowPanel::onMinimizeClicked() {

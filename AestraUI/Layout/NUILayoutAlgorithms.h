@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include "NUILayoutExplain.h"
 #include "NUILayoutSpace.h"
 #include <algorithm>
 #include <vector>
@@ -62,7 +63,8 @@ inline std::vector<NUILocalRect> arrangeTrailingRow(
     const std::vector<float>& itemWidths,
     float itemHeight,
     float spacing,
-    float edgeMargin) {
+    float edgeMargin,
+    NUILayoutRecorder* recorder = nullptr) {
     std::vector<NUILocalRect> result;
     result.reserve(itemWidths.size());
 
@@ -82,6 +84,22 @@ inline std::vector<NUILocalRect> arrangeTrailingRow(
         first = false;
         cursor -= width;
         result.emplace_back(cursor, y, width, itemHeight);
+        if (recorder) {
+            const std::size_t i = result.size() - 1;
+            NUILayoutStep step;
+            step.rule = "trailing row, item " + std::to_string(i) + " from the right edge: x = right " +
+                        NUILayoutRecorder::num(container.right()) + " - edge margin " + NUILayoutRecorder::num(edgeMargin) +
+                        " - " + std::to_string(i) + " earlier item(s) and gaps of " + NUILayoutRecorder::num(spacing) +
+                        " - own width " + NUILayoutRecorder::num(width) + " = " + NUILayoutRecorder::num(cursor) +
+                        "; centred vertically";
+            step.available = container;
+            step.requestsWidth = step.requestsHeight = true;
+            step.requestedWidth = width;
+            step.requestedHeight = itemHeight;
+            step.resolved = result.back();
+            step.visible = cursor >= container.x;
+            recorder->add(step, "[" + std::to_string(i) + "]");
+        }
     }
     return result;
 }
@@ -97,16 +115,50 @@ inline std::vector<NUILocalRect> arrangeTrailingRow(
  * that by choosing `container.height` accordingly before calling this, not by
  * asking this function to know about that policy.
  */
+/** Records both halves of a split (shared by splitVertical and splitHorizontal). */
+inline void recordSplit(NUILayoutRecorder& recorder, const NUILocalRect& container, const NUILocalRect& leading,
+                        const NUILocalRect& trailing, float asked, float given, bool horizontal) {
+    const char* axis = horizontal ? "width" : "height";
+    const float extent = horizontal ? container.width : container.height;
+
+    NUILayoutStep lead;
+    lead.rule = std::string(horizontal ? "horizontal" : "vertical") + " split, leading part: fixed " + axis + " " +
+                NUILayoutRecorder::num(asked);
+    lead.available = container;
+    lead.requestsWidth = horizontal;
+    lead.requestsHeight = !horizontal;
+    lead.requestedWidth = horizontal ? asked : 0.0f;
+    lead.requestedHeight = horizontal ? 0.0f : asked;
+    lead.resolved = leading;
+    if (given != asked) {
+        lead.clamp = std::string(axis) + " " + NUILayoutRecorder::num(asked) + " clamped to " +
+                     NUILayoutRecorder::num(given) + " (container " + axis + " is " + NUILayoutRecorder::num(extent) + ")";
+    }
+    recorder.add(lead, ".leading");
+
+    NUILayoutStep trail;
+    trail.rule = std::string(horizontal ? "horizontal" : "vertical") + " split, trailing part: fills the rest, " +
+                 NUILayoutRecorder::num(extent) + " - " + NUILayoutRecorder::num(given) + " = " +
+                 NUILayoutRecorder::num(extent - given);
+    trail.available = container;
+    trail.resolved = trailing;
+    recorder.add(trail, ".trailing");
+}
+
 struct NUIVerticalSplit {
     NUILocalRect leading;
     NUILocalRect trailing;
 };
 
-inline NUIVerticalSplit splitVertical(const NUILocalRect& container, float leadingHeight) {
+inline NUIVerticalSplit splitVertical(const NUILocalRect& container, float leadingHeight,
+                                     NUILayoutRecorder* recorder = nullptr) {
     const float clampedLeading = std::max(0.0f, std::min(leadingHeight, container.height));
     NUIVerticalSplit split;
     split.leading = NUILocalRect(container.x, container.y, container.width, clampedLeading);
     split.trailing = NUILocalRect(container.x, container.y + clampedLeading, container.width, container.height - clampedLeading);
+    if (recorder) {
+        recordSplit(*recorder, container, split.leading, split.trailing, leadingHeight, clampedLeading, false);
+    }
     return split;
 }
 
@@ -124,11 +176,15 @@ struct NUIHorizontalSplit {
     NUILocalRect trailing;
 };
 
-inline NUIHorizontalSplit splitHorizontal(const NUILocalRect& container, float leadingWidth) {
+inline NUIHorizontalSplit splitHorizontal(const NUILocalRect& container, float leadingWidth,
+                                         NUILayoutRecorder* recorder = nullptr) {
     const float clampedLeading = std::max(0.0f, std::min(leadingWidth, container.width));
     NUIHorizontalSplit split;
     split.leading = NUILocalRect(container.x, container.y, clampedLeading, container.height);
     split.trailing = NUILocalRect(container.x + clampedLeading, container.y, container.width - clampedLeading, container.height);
+    if (recorder) {
+        recordSplit(*recorder, container, split.leading, split.trailing, leadingWidth, clampedLeading, true);
+    }
     return split;
 }
 
@@ -166,7 +222,8 @@ inline std::vector<NUIScrollItem> arrangeScrollingStack(
     float itemExtent,
     float spacing,
     std::size_t itemCount,
-    float scrollOffset) {
+    float scrollOffset,
+    NUILayoutRecorder* recorder = nullptr) {
     std::vector<NUIScrollItem> result;
     result.reserve(itemCount);
 
@@ -182,6 +239,23 @@ inline std::vector<NUIScrollItem> arrangeScrollingStack(
                                : NUILocalRect(viewport.x, along, viewport.width, itemExtent);
         item.visible = (along + itemExtent) >= start && along <= end;
         result.push_back(item);
+        if (recorder) {
+            NUILayoutStep step;
+            step.rule = std::string("scrolling stack (") + (horizontal ? "horizontal" : "vertical") + "), item " +
+                        std::to_string(i) + " of " + std::to_string(itemCount) + ": " + (horizontal ? "x" : "y") +
+                        " = " + NUILayoutRecorder::num(start) + " + " + std::to_string(i) + " x (" +
+                        NUILayoutRecorder::num(itemExtent) + " + " + NUILayoutRecorder::num(spacing) + ") - scroll " +
+                        NUILayoutRecorder::num(scrollOffset) + " = " + NUILayoutRecorder::num(along);
+            step.available = viewport;
+            step.requestsWidth = horizontal;
+            step.requestsHeight = !horizontal;
+            step.requestedWidth = horizontal ? itemExtent : 0.0f;
+            step.requestedHeight = horizontal ? 0.0f : itemExtent;
+            step.resolved = item.rect;
+            step.overflowExpected = true;
+            step.visible = item.visible;
+            recorder->add(step, "[" + std::to_string(i) + "]");
+        }
     }
     return result;
 }
@@ -214,8 +288,9 @@ inline std::vector<NUIScrollItem> arrangeScrollingRow(
     float itemWidth,
     float spacing,
     std::size_t itemCount,
-    float scrollOffset) {
-    return arrangeScrollingStack(viewport, NUIAxis::Horizontal, itemWidth, spacing, itemCount, scrollOffset);
+    float scrollOffset,
+    NUILayoutRecorder* recorder = nullptr) {
+    return arrangeScrollingStack(viewport, NUIAxis::Horizontal, itemWidth, spacing, itemCount, scrollOffset, recorder);
 }
 
 /**

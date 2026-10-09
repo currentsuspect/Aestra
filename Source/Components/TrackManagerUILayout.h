@@ -42,16 +42,29 @@ struct TimelineLayout {
 };
 
 /** @brief Splits a component of `width` x `height` into the timeline's regions. */
-inline TimelineLayout resolveTimelineLayout(float width, float height, float trackControlsWidth) {
+/// `recorder` (V8-X2b criterion 4) names each split so an explanation can walk
+/// from a row back up to the component: rows <- body.leading <- bands.trailing.
+inline TimelineLayout resolveTimelineLayout(float width, float height, float trackControlsWidth,
+                                            AestraUI::Layout::NUILayoutRecorder* recorder = nullptr) {
     using namespace AestraUI::Layout;
     const NUILocalRect component(0.0f, 0.0f, width, height);
+    const auto name = [recorder](const char* scope, const char* from) {
+        if (recorder) {
+            recorder->scope(scope, from);
+        }
+    };
 
-    const auto bands = splitVertical(component, kTimelineTimeBandHeight);
-    const auto body = splitHorizontal(bands.trailing, width - kTimelineScrollbarWidth);
+    name("bands", "");
+    const auto bands = splitVertical(component, kTimelineTimeBandHeight, recorder);
+    name("body", "bands.trailing");
+    const auto body = splitHorizontal(bands.trailing, width - kTimelineScrollbarWidth, recorder);
 
-    const auto bandColumns = splitHorizontal(bands.leading, width - kTimelineScrollbarWidth);
-    const auto plane = splitHorizontal(bandColumns.leading, trackControlsWidth);
-    const auto minimapRow = splitVertical(plane.trailing, kTimelineMinimapHeight);
+    name("bandColumns", "bands.leading");
+    const auto bandColumns = splitHorizontal(bands.leading, width - kTimelineScrollbarWidth, recorder);
+    name("plane", "bandColumns.leading");
+    const auto plane = splitHorizontal(bandColumns.leading, trackControlsWidth, recorder);
+    name("minimapRow", "plane.trailing");
+    const auto minimapRow = splitVertical(plane.trailing, kTimelineMinimapHeight, recorder);
 
     TimelineLayout layout;
     layout.minimap = minimapRow.leading;
@@ -62,9 +75,13 @@ inline TimelineLayout resolveTimelineLayout(float width, float height, float tra
 
 /** @brief Track row i, in Local space, plus whether it falls inside the row viewport. */
 inline std::vector<AestraUI::Layout::NUIScrollItem> arrangeTimelineRows(
-    const TimelineLayout& layout, float rowHeight, float rowSpacing, std::size_t rowCount, float scrollOffset) {
+    const TimelineLayout& layout, float rowHeight, float rowSpacing, std::size_t rowCount, float scrollOffset,
+    AestraUI::Layout::NUILayoutRecorder* recorder = nullptr) {
+    if (recorder) {
+        recorder->scope("rows", "body.leading");
+    }
     return AestraUI::Layout::arrangeScrollingStack(layout.rows, AestraUI::Layout::NUIAxis::Vertical, rowHeight,
-                                                   rowSpacing, rowCount, scrollOffset);
+                                                   rowSpacing, rowCount, scrollOffset, recorder);
 }
 
 /** @brief Local-space top edge of row `index` (which need not exist yet: drops target new rows). */

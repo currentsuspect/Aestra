@@ -248,7 +248,7 @@ void UIMixerPanel::setPlatformBridge(NUIPlatformBridge* bridge)
     if (m_inspector) m_inspector->setPlatformBridge(bridge);
 }
 
-UIMixerPanel::TrailingLayout UIMixerPanel::trailingLayout() const
+UIMixerPanel::TrailingLayout UIMixerPanel::trailingLayout(Layout::NUILayoutRecorder* recorder) const
 {
     // stripY/stripHeight are recomputed here rather than threaded through as
     // parameters: every one of this method's seven call sites already
@@ -269,7 +269,10 @@ UIMixerPanel::TrailingLayout UIMixerPanel::trailingLayout() const
     // arrangeTrailingRow's own convention.
     const Layout::NUILocalRect container(bounds.x, stripY, bounds.width, stripHeight);
     const std::vector<float> widths{MASTER_STRIP_WIDTH, inspectorWidth()};
-    const auto rects = Layout::arrangeTrailingRow(container, widths, stripHeight, STRIP_SPACING, 0.0f);
+    if (recorder) {
+        recorder->scope("trailing");
+    }
+    const auto rects = Layout::arrangeTrailingRow(container, widths, stripHeight, STRIP_SPACING, 0.0f, recorder);
 
     // The row is already computed in this panel's own coordinate space
     // (bounds.x/bounds.y are folded into `container` above), so there is no
@@ -287,7 +290,13 @@ void UIMixerPanel::layoutMeters()
     updateInspectorWidthConstraint();
 
     auto bounds = getBounds();
-    const TrailingLayout trailing = trailingLayout();
+    // AESTRA_LAYOUT_TRACE=mixer (V8-X2b criterion 4). This panel lays out in
+    // window-absolute coordinates already, so its Local origin is the window's.
+    auto* trace = Layout::layoutRecorderFor("mixer");
+    if (trace) {
+        trace->beginPass(Layout::NUIWindowPoint(0.0f, 0.0f));
+    }
+    const TrailingLayout trailing = trailingLayout(trace);
     const float stripY = trailing.masterRect.y;
     const float stripHeight = trailing.masterRect.height;
 
@@ -322,7 +331,12 @@ void UIMixerPanel::layoutMeters()
     m_targetScrollX = safeClampMixerScroll(m_targetScrollX, maxScroll);
 
     const Layout::NUILocalRect viewport(left, stripY, right - left, stripHeight);
-    const auto items = Layout::arrangeScrollingRow(viewport, STRIP_WIDTH, STRIP_SPACING, m_strips.size(), m_scrollX);
+    if (trace) {
+        trace->scope("strips");
+    }
+    const auto items =
+        Layout::arrangeScrollingRow(viewport, STRIP_WIDTH, STRIP_SPACING, m_strips.size(), m_scrollX, trace);
+    Layout::finishLayoutPass(trace);
     for (size_t i = 0; i < m_strips.size(); ++i) {
         m_strips[i]->setVisible(items[i].visible);
         m_strips[i]->setBounds(items[i].rect.raw());
