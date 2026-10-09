@@ -111,6 +111,28 @@ inline NUIVerticalSplit splitVertical(const NUILocalRect& container, float leadi
 }
 
 /**
+ * @brief The horizontal counterpart of splitVertical(): a fixed-width leading
+ * column and a fill-remaining trailing column, side by side.
+ *
+ * Same clamp, same reason: `leadingWidth` lands in `[0, container.width]` so
+ * the trailing column is never negative. Added for the second consumer
+ * (TrackManagerUI, V8-X2b phase 4), whose track rows and scrollbar gutter are
+ * this split of one band — not a TrackManager-only shape.
+ */
+struct NUIHorizontalSplit {
+    NUILocalRect leading;
+    NUILocalRect trailing;
+};
+
+inline NUIHorizontalSplit splitHorizontal(const NUILocalRect& container, float leadingWidth) {
+    const float clampedLeading = std::max(0.0f, std::min(leadingWidth, container.width));
+    NUIHorizontalSplit split;
+    split.leading = NUILocalRect(container.x, container.y, clampedLeading, container.height);
+    split.trailing = NUILocalRect(container.x + clampedLeading, container.y, container.width - clampedLeading, container.height);
+    return split;
+}
+
+/**
  * @brief One item's placement within a scrolling row — its rect, in the row's
  * own local space, and whether it currently falls inside `viewport`.
  */
@@ -119,10 +141,56 @@ struct NUIScrollItem {
     bool visible = false;
 };
 
+/** @brief The axis a stack runs along. */
+enum class NUIAxis {
+    Horizontal, //!< Items left to right; each takes the viewport's full height.
+    Vertical,   //!< Items top to bottom; each takes the viewport's full width.
+};
+
+/**
+ * @brief arrangeScrollingRow() (below) along either axis.
+ *
+ * The mixer's strip row (horizontal) and the timeline's track rows (vertical,
+ * V8-X2b phase 4) are the same layout: fixed-extent items one step apart,
+ * shifted by a scroll offset, each reported visible or not against the
+ * viewport. One function with an axis, rather than a second near-copy for
+ * the second consumer, is what X2b·5 asks for: the engine absorbs a new
+ * consumer without growing a special case for it.
+ *
+ * Same rules as arrangeScrollingRow(): nothing is clipped or hidden here, and
+ * `scrollOffset` is the caller's to bound.
+ */
+inline std::vector<NUIScrollItem> arrangeScrollingStack(
+    const NUILocalRect& viewport,
+    NUIAxis axis,
+    float itemExtent,
+    float spacing,
+    std::size_t itemCount,
+    float scrollOffset) {
+    std::vector<NUIScrollItem> result;
+    result.reserve(itemCount);
+
+    const bool horizontal = axis == NUIAxis::Horizontal;
+    const float start = horizontal ? viewport.x : viewport.y;
+    const float end = horizontal ? viewport.right() : viewport.bottom();
+    const float step = itemExtent + spacing;
+
+    for (std::size_t i = 0; i < itemCount; ++i) {
+        const float along = start - scrollOffset + (static_cast<float>(i) * step);
+        NUIScrollItem item;
+        item.rect = horizontal ? NUILocalRect(along, viewport.y, itemExtent, viewport.height)
+                               : NUILocalRect(viewport.x, along, viewport.width, itemExtent);
+        item.visible = (along + itemExtent) >= start && along <= end;
+        result.push_back(item);
+    }
+    return result;
+}
+
 /**
  * @brief Arranges `itemCount` fixed-width, equally-spaced items left to right,
  * offset by `scrollOffset`, and reports which ones currently fall inside
- * `viewport` — the mixer's horizontally-scrolling channel-strip row.
+ * `viewport` — the mixer's horizontally-scrolling channel-strip row. The
+ * horizontal case of arrangeScrollingStack().
  *
  * This is the layout system's first encounter with overflow: `viewport` is
  * not the same thing as the row's own extent, which is typically far wider
@@ -147,21 +215,50 @@ inline std::vector<NUIScrollItem> arrangeScrollingRow(
     float spacing,
     std::size_t itemCount,
     float scrollOffset) {
-    std::vector<NUIScrollItem> result;
-    result.reserve(itemCount);
+    return arrangeScrollingStack(viewport, NUIAxis::Horizontal, itemWidth, spacing, itemCount, scrollOffset);
+}
 
-    const float left = viewport.x;
-    const float right = viewport.right();
-    const float step = itemWidth + spacing;
-
-    for (std::size_t i = 0; i < itemCount; ++i) {
-        const float x = left - scrollOffset + (static_cast<float>(i) * step);
-        NUIScrollItem item;
-        item.rect = NUILocalRect(x, viewport.y, itemWidth, viewport.height);
-        item.visible = (x + itemWidth) >= left && x <= right;
-        result.push_back(item);
+/**
+ * @brief Total extent of a stack's content along its axis: the bound a
+ * caller clamps `scrollOffset` against (content extent minus viewport extent).
+ * No trailing spacing after the last item; zero items take no space.
+ */
+inline float scrollingStackContentExtent(float itemExtent, float spacing, std::size_t itemCount) {
+    if (itemCount == 0) {
+        return 0.0f;
     }
-    return result;
+    return (static_cast<float>(itemCount) * (itemExtent + spacing)) - spacing;
+}
+
+/**
+ * @brief The inverse of arrangeScrollingStack() for hit testing: which slot
+ * the coordinate `along` (in the viewport's own space, on the stack's axis)
+ * falls in, or -1 when it lies before the first item.
+ *
+ * A slot is an item plus the spacing that follows it, so a point in a gap
+ * belongs to the item before it — the rule the timeline's hit tests already
+ * applied by hand, made one rule. The result is deliberately unbounded above:
+ * an index at or past `itemCount` is a real answer ("below the last row"),
+ * and whether that means "nothing" or "a new row" is the caller's call, not
+ * this function's.
+ */
+inline int scrollingStackSlotAt(
+    const NUILocalRect& viewport,
+    NUIAxis axis,
+    float itemExtent,
+    float spacing,
+    float scrollOffset,
+    float along) {
+    const float step = itemExtent + spacing;
+    if (!(step > 0.0f)) {
+        return -1;
+    }
+    const float start = axis == NUIAxis::Horizontal ? viewport.x : viewport.y;
+    const float offset = along - start + scrollOffset;
+    if (offset < 0.0f) {
+        return -1;
+    }
+    return static_cast<int>(offset / step);
 }
 
 } // namespace Layout

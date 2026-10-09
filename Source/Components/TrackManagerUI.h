@@ -22,6 +22,7 @@
 #include "TimelineSummaryCache.h"
 #include "TimelineInteractionPolicy.h"
 #include "TimelineMarquee.h"
+#include "TrackManagerUILayout.h"
 #include "TrackManagerUIMath.h"
 #include "WaveformCache.h"
 
@@ -641,6 +642,8 @@ private:
 
     void syncViewToggleButtons();
     void layoutTracks();
+    /** V8-X2b: the timeline's regions in Local space, from current bounds and theme (TrackManagerUILayout.h). */
+    TimelineLayout currentTimelineLayout() const;
     void onAddTrackClicked();
     void syncTrackSelectionView();
     void selectClip(ClipInstanceID clipId);
