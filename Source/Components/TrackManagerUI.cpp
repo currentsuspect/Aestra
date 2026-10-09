@@ -505,7 +505,15 @@ void TrackManagerUI::layoutTracks() {
     const auto toWindow = [&](const AestraUI::Layout::NUILocalRect& local) {
         return AestraUI::Layout::localToWindow(local, origin).raw();
     };
-    const TimelineLayout layout = currentTimelineLayout();
+    // AESTRA_LAYOUT_TRACE=timeline records why each region and row lands where it
+    // does (V8-X2b criterion 4); nullptr, and free, otherwise.
+    auto* trace = AestraUI::Layout::layoutRecorderFor("timeline");
+    if (trace) {
+        trace->beginPass(origin);
+    }
+    const auto& layoutDims = AestraUI::NUIThemeManager::getInstance().getLayoutDimensions();
+    const TimelineLayout layout =
+        resolveTimelineLayout(bounds.width, bounds.height, layoutDims.trackControlsWidth, trace);
 
     // In v3.1, panels are floating overlays and do not affect workspace viewport directly.
     // If we wanted docking, we'd subtract their space here based on external state pointers.
@@ -529,7 +537,8 @@ void TrackManagerUI::layoutTracks() {
     // snapping); nesting is expressed in the chrome instead.
     const auto rows = arrangeTimelineRows(layout, static_cast<float>(m_trackHeight),
                                           static_cast<float>(m_trackSpacing), m_trackUIComponents.size(),
-                                          m_scrollOffset);
+                                          m_scrollOffset, trace);
+    AestraUI::Layout::finishLayoutPass(trace);
     for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
         auto trackUI = m_trackUIComponents[i];
         if (!trackUI)

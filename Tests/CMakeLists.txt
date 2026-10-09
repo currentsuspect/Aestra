@@ -2126,6 +2126,15 @@ target_include_directories(TimelineLayoutTest PRIVATE
 add_test(NAME TimelineLayoutTest COMMAND TimelineLayoutTest)
 set_tests_properties(TimelineLayoutTest PROPERTIES LABELS "ui;timeline;layout;regression;contract:application")
 
+# V8-X2b criterion 4: the layout algorithms explain each rect they place
+# (NUILayoutExplain.h), proven on the timeline's real layout. Header-only.
+add_executable(NUILayoutExplainTest AestraUI/NUILayoutExplainTest.cpp)
+target_include_directories(NUILayoutExplainTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Components
+)
+add_test(NAME NUILayoutExplainTest COMMAND NUILayoutExplainTest)
+set_tests_properties(NUILayoutExplainTest PROPERTIES LABELS "ui;layout;regression;contract:application")
+
 # Invisible pointer over clip context menus: a hover cursor claim made from a
 # position a popup froze must not hide the real pointer (header-only rule).
 add_executable(TimelineCursorClaimTest AestraUI/TimelineCursorClaimTest.cpp)
