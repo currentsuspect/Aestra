@@ -217,6 +217,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Models/UnitManager.cpp
     src/Models/PatternManager.cpp
     src/Models/ClipSource.cpp
+    src/Models/RoutingModel.cpp
     src/Models/ClipRenderService.cpp
     src/Models/AudioClip.cpp
 
@@ -354,6 +355,7 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Drivers/AudioDriverRegistry.h   # Registry interface
     include/DSP/AudioProcessor.h
     include/Models/MeterSnapshot.h
+    include/Models/RoutingModel.h
     include/Core/MixerBus.h
     include/DSP/Oscillator.h
     include/Playback/MetronomeEngine.h
