@@ -276,6 +276,8 @@ set(AESTRA_AUDIO_CORE_SOURCES
     
     # Headless / batch processing
     src/Headless/HeadlessMusicGenerator.cpp
+    src/Headless/OfflineProjectRender.cpp
+    src/Headless/RenderSummary.cpp
     
     # Plugin hosting system
     src/Plugin/PluginScanner.cpp
@@ -412,6 +414,8 @@ set(AESTRA_AUDIO_CORE_HEADERS
 
     # Headless / batch processing
     include/Headless/HeadlessMusicGenerator.h
+    include/Headless/OfflineProjectRender.h
+    include/Headless/RenderSummary.h
 
     src/DummyAudioDriver.h
     # Plugin hosting system

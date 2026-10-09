@@ -8,6 +8,7 @@
 #include "TrackManager.h"
 
 #include "../Core/ProjectSerializer.h"
+#include "HeadlessCheck.h"
 
 #include "../AestraCore/include/AestraJSON.h"
 
@@ -555,6 +556,14 @@ struct Cli {
     bool listScenarios{false};
     bool human{false};
 
+    // --check mode (HeadlessCheck.h): render a project like Export and judge it.
+    std::string checkProject;
+    std::string checkOut;
+    std::string checkExpect;
+    std::string checkWriteExpect;
+    bool checkAllowSilence{false};
+    bool checkAllowMissing{false};
+
     // Legacy single-run mode (kept for convenience)
     std::string projectPath;
     uint32_t sr{44100};
@@ -573,6 +582,16 @@ static void printHelp() {
         << "  --list-scenarios           Print scenario names and exit\n"
         << "  --report <path>            Write JSON report to file (array for multi-run)\n"
         << "  --human                    Print a compact summary to stderr\n"
+        << "\n"
+        << "Check a project (renders through the same path as Export):\n"
+        << "  --check <path.aes>         Render, summarise, and judge; exit 0 pass, 1 fail, 2 could not check\n"
+        << "  --out <path.wav>           Keep the float render (default: temp file, deleted)\n"
+        << "  --expect <golden.json>     Compare frames and hash exactly, peak and RMS within 0.01 dB\n"
+        << "  --write-expect <path>      Write a golden from this render\n"
+        << "  --report <path>            Also write the JSON report to a file\n"
+        << "  --sr <hz>                  Render sample rate (default 48000)\n"
+        << "  --allow-silence            A silent render is not a failure\n"
+        << "  --allow-missing            Missing assets/plugins are not a failure\n"
         << "\n"
         << "Legacy single-run (project render):\n"
         << "  --project <path>           Load .aes/.Aestraproj and render\n"
@@ -601,6 +620,13 @@ static Cli parseCli(int argc, char** argv) {
         else if (std::strcmp(a, "--report") == 0) nextStr(cli.reportPath);
         else if (std::strcmp(a, "--list-scenarios") == 0) cli.listScenarios = true;
         else if (std::strcmp(a, "--human") == 0) cli.human = true;
+
+        else if (std::strcmp(a, "--check") == 0) nextStr(cli.checkProject);
+        else if (std::strcmp(a, "--out") == 0) nextStr(cli.checkOut);
+        else if (std::strcmp(a, "--expect") == 0) nextStr(cli.checkExpect);
+        else if (std::strcmp(a, "--write-expect") == 0) nextStr(cli.checkWriteExpect);
+        else if (std::strcmp(a, "--allow-silence") == 0) cli.checkAllowSilence = true;
+        else if (std::strcmp(a, "--allow-missing") == 0) cli.checkAllowMissing = true;
 
         else if (std::strcmp(a, "--project") == 0) nextStr(cli.projectPath);
         else if (std::strcmp(a, "--sr") == 0) nextU32(cli.sr);
@@ -660,6 +686,26 @@ static int runLegacyProjectOnce(const Cli& cli) {
 
 int main(int argc, char** argv) {
     const Cli cli = parseCli(argc, argv);
+
+    // --check runs alone, ahead of scenario mode: parseCli fills in the default
+    // scenario file whenever one exists in the working directory, and a check
+    // must not silently turn into a scenario run.
+    if (!cli.checkProject.empty()) {
+        HeadlessCheckOptions options;
+        options.projectPath = cli.checkProject;
+        options.outPath = cli.checkOut;
+        options.reportPath = cli.reportPath;
+        options.expectPath = cli.checkExpect;
+        options.writeExpectPath = cli.checkWriteExpect;
+        options.allowSilence = cli.checkAllowSilence;
+        options.allowMissing = cli.checkAllowMissing;
+        bool srGiven = false;
+        for (int i = 1; i < argc; ++i)
+            srGiven = srGiven || std::strcmp(argv[i], "--sr") == 0;
+        if (srGiven)
+            options.sampleRate = cli.sr; // the legacy --sr default (44100) must not override the check's 48000
+        return runHeadlessCheck(options);
+    }
 
     // Scenario-file mode.
     if (!cli.scenarioFile.empty()) {

@@ -584,3 +584,40 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PianoRollPlayheadMappingTest.cpp")
 endif()
 
 message(STATUS "Headless tests enabled - AudioEngine API implemented")
+
+# AestraHeadless --check end to end: a real project file, loaded like the app,
+# rendered through AudioExporter like Export, judged; determinism (bit-exact
+# re-render), a level change and a missing asset each caught. Builds the same
+# sources AestraHeadless does, so it tests the code the CLI ships.
+add_executable(HeadlessCheckEndToEndTest
+    HeadlessCheckEndToEndTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/App/HeadlessCheck.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/AudioSettingsStore.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+)
+target_link_libraries(HeadlessCheckEndToEndTest PRIVATE AestraAudio)
+target_include_directories(HeadlessCheckEndToEndTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+)
+if(MSVC)
+    target_compile_options(HeadlessCheckEndToEndTest PRIVATE /utf-8)
+    target_compile_definitions(HeadlessCheckEndToEndTest PRIVATE _CRT_SECURE_NO_WARNINGS NOMINMAX)
+    target_link_libraries(HeadlessCheckEndToEndTest PRIVATE mfplat mfreadwrite mfuuid)
+endif()
+add_test(NAME HeadlessCheckEndToEndTest COMMAND HeadlessCheckEndToEndTest)
+set_tests_properties(HeadlessCheckEndToEndTest PROPERTIES
+    LABELS "headless;export;integration;contract:audio"
+    ENVIRONMENT "AESTRA_HEADLESS=1"
+    TIMEOUT 300
+)

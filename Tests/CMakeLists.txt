@@ -1032,6 +1032,17 @@ target_include_directories(AestraTransientTest PRIVATE
 add_test(NAME AestraTransientTest COMMAND AestraTransientTest)
 set_tests_properties(AestraTransientTest PROPERTIES LABELS "audio;plugin;contract:audio")
 
+# RenderSummary: the numbers AestraHeadless --check judges a render by (levels,
+# DC, clipping, NaN/Inf, silence padding, the bit-exact hash and the golden diff).
+add_executable(RenderSummaryTest AestraAudio/RenderSummaryTest.cpp)
+target_link_libraries(RenderSummaryTest PRIVATE AestraAudio)
+target_include_directories(RenderSummaryTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME RenderSummaryTest COMMAND RenderSummaryTest)
+set_tests_properties(RenderSummaryTest PROPERTIES LABELS "audio;headless;contract:audio")
+
 # #845 regression: recording in a session with existing clips + patterns
 add_executable(RecordingSessionContentTest AestraAudio/RecordingSessionContentTest.cpp)
 target_link_libraries(RecordingSessionContentTest PRIVATE AestraAudio)
@@ -3363,6 +3374,13 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraCore/JSONLocaleIndependenceTest.cpp
     set_tests_properties(JSONLocaleIndependenceTest PROPERTIES LABELS "core;json;locale;regression;contract:core")
     message(STATUS "JSONLocaleIndependenceTest added - JSON decimal separator locale independence")
 endif()
+
+# JSON::asArray() const / asObject() const return real data (they returned an
+# always-empty static from #179 on, silently hiding every const read).
+add_executable(JSONConstAccessTest AestraCore/JSONConstAccessTest.cpp)
+target_include_directories(JSONConstAccessTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraCore/include)
+add_test(NAME JSONConstAccessTest COMMAND JSONConstAccessTest)
+set_tests_properties(JSONConstAccessTest PROPERTIES LABELS "core;json;regression;contract:core")
 
 # An instanceId identifies a scheduler SLOT, not an occurrence. Re-arming a slot used to
 # append another live copy, and nothing ever erased entries (flush() only rewinds), so the
