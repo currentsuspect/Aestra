@@ -2116,6 +2116,16 @@ target_include_directories(TimelineGeometryTest PRIVATE
 add_test(NAME TimelineGeometryTest COMMAND TimelineGeometryTest)
 set_tests_properties(TimelineGeometryTest PROPERTIES LABELS "ui;timeline;geometry;regression;contract:application")
 
+# V8-X2b phase 4: the timeline's regions and track rows come from the layout
+# system (TrackManagerUILayout.h); proven equal to the hand-written arithmetic
+# they replaced. Header-only, so AESTRA_CI=ON cannot skip it.
+add_executable(TimelineLayoutTest AestraUI/TimelineLayoutTest.cpp)
+target_include_directories(TimelineLayoutTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Components
+)
+add_test(NAME TimelineLayoutTest COMMAND TimelineLayoutTest)
+set_tests_properties(TimelineLayoutTest PROPERTIES LABELS "ui;timeline;layout;regression;contract:application")
+
 # Invisible pointer over clip context menus: a hover cursor claim made from a
 # position a popup froze must not hide the real pointer (header-only rule).
 add_executable(TimelineCursorClaimTest AestraUI/TimelineCursorClaimTest.cpp)

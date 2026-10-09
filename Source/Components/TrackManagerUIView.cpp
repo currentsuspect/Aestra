@@ -40,13 +40,11 @@ void TrackManagerUI::updateScrollbar() {
     if (!m_scrollbar)
         return;
 
-    AestraUI::NUIRect bounds = getBounds();
-
     // In v3.1, panels are floating overlays and do not affect the scrollbar's viewport directly.
-    float viewportHeight = bounds.height - kTimelineTimeBandHeight;
-
-    const float laneCount = static_cast<float>(m_trackUIComponents.size());
-    float totalContentHeight = laneCount * (m_trackHeight + m_trackSpacing);
+    const TimelineLayout layout = currentTimelineLayout();
+    const float viewportHeight = layout.rows.height;
+    const float totalContentHeight = timelineRowsContentHeight(
+        static_cast<float>(m_trackHeight), static_cast<float>(m_trackSpacing), m_trackUIComponents.size());
 
     // Set scrollbar range
     m_scrollbar->setRangeLimit(0, totalContentHeight);
