@@ -229,7 +229,7 @@ jobs:
           ContractPianoRollOneEntryPerGestureTest ContractPianoRollUndoStaysInPatternTest
           ContractPianoRollReachesGlobalUndoTest ContractPianoRollPasteTargetsEditingUnitTest
           FileBrowserLibraryTest
-          PanelWindowKnobDragTest
+          PanelWindowKnobDragTest AdaptiveFPSIdleTest
           --parallel 2
 
       - name: Run UI tests
@@ -238,7 +238,7 @@ jobs:
         # broken selector runs zero tests and ctest still exits 0. A step that
         # silently runs nothing is worse than no step, because it reports
         # success (same precedent as the security contract steps).
-        run: ctest --test-dir build-app -C ${{env.BUILD_TYPE}} -R '^(NUIThemeConsistencyTest|NUIContextMenuInteractionTest|ClipContextMenuReachabilityTest|ClipDragReleaseTest|TimelineFollowPreferenceTest|TimelineGridSelectionTest|ModalDialogInteractionTest|PianoRollInteractionTest|PianoRollPanelPersistenceTest|PianoRollStrokeInteractionTest|PianoRollExternalEditCommitTest|EditorCloseDeferredTest|PanelWindowClickSwallowTest|MixerViewModelAutomationPresenceTest|MixerDropdownKeyboardTest|BPMEditorPaintTest|TransportClockFormatTest|PanelResizeLayoutTest|UnitRowStepSelectionTest|PluginRackBindingLifecycleTest|WindowPanelRaiseTest|TakesHistoryPanelTest|PluginBrowserSelectionTest|UIInsertRoutePickerTest|NUITextInputLayoutTest|NUITextInputEditingTest|NUIDropdownInteractionTest|NUIComponentTooltipTest|NUIHiddenChildDispatchTest|NUIWidgetHiddenInputTest|ContractPianoRollOneEntryPerGestureTest|ContractPianoRollUndoStaysInPatternTest|ContractPianoRollReachesGlobalUndoTest|ContractPianoRollPasteTargetsEditingUnitTest|FileBrowserLibraryTest|PanelWindowKnobDragTest)$' --no-tests=error --output-on-failure
+        run: ctest --test-dir build-app -C ${{env.BUILD_TYPE}} -R '^(NUIThemeConsistencyTest|NUIContextMenuInteractionTest|ClipContextMenuReachabilityTest|ClipDragReleaseTest|TimelineFollowPreferenceTest|TimelineGridSelectionTest|ModalDialogInteractionTest|PianoRollInteractionTest|PianoRollPanelPersistenceTest|PianoRollStrokeInteractionTest|PianoRollExternalEditCommitTest|EditorCloseDeferredTest|PanelWindowClickSwallowTest|MixerViewModelAutomationPresenceTest|MixerDropdownKeyboardTest|BPMEditorPaintTest|TransportClockFormatTest|PanelResizeLayoutTest|UnitRowStepSelectionTest|PluginRackBindingLifecycleTest|WindowPanelRaiseTest|TakesHistoryPanelTest|PluginBrowserSelectionTest|UIInsertRoutePickerTest|NUITextInputLayoutTest|NUITextInputEditingTest|NUIDropdownInteractionTest|NUIComponentTooltipTest|NUIHiddenChildDispatchTest|NUIWidgetHiddenInputTest|ContractPianoRollOneEntryPerGestureTest|ContractPianoRollUndoStaysInPatternTest|ContractPianoRollReachesGlobalUndoTest|ContractPianoRollPasteTargetsEditingUnitTest|FileBrowserLibraryTest|PanelWindowKnobDragTest|AdaptiveFPSIdleTest)$' --no-tests=error --output-on-failure
 
       - name: Verify desktop font bundle
         if: steps.scope.outputs.run == 'true'
