@@ -276,6 +276,11 @@ void PianoRollToolbar::setPatternChoices(const std::vector<PatternChoice>& choic
     if (!m_patternDropdown) {
         return;
     }
+    if (choices == m_appliedPatternChoices && selectedValue == m_appliedPatternSelection) {
+        return;
+    }
+    m_appliedPatternChoices = choices;
+    m_appliedPatternSelection = selectedValue;
 
     m_updatingPatternDropdown = true;
     m_patternDropdown->clearItems();
@@ -291,6 +296,11 @@ void PianoRollToolbar::setUnitChoices(const std::vector<PatternChoice>& choices,
     if (!m_unitDropdown) {
         return;
     }
+    if (choices == m_appliedUnitChoices && selectedValue == m_appliedUnitSelection) {
+        return;
+    }
+    m_appliedUnitChoices = choices;
+    m_appliedUnitSelection = selectedValue;
 
     m_updatingUnitDropdown = true;
     m_unitDropdown->clearItems();
@@ -497,7 +507,7 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
         renderer.strokeRoundedRect(pillRect, radius, 1.0f, borderCol.withAlpha(0.35f));
         renderer.drawText(lengthLabel,
                           NUIPoint(pillRect.x + (pillRect.width - lengthSize.width) * 0.5f,
-                                   pillRect.y + (pillRect.height - lengthSize.height) * 0.5f + 1.0f),
+                                   std::round(renderer.calculateOpticalTextY(pillRect, lengthFontSize))),
                           lengthFontSize,
                           themeManager.getColor("textPrimary").withAlpha(0.82f));
         currentX += pillW + buttonSpacing;

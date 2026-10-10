@@ -2213,17 +2213,16 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
             const auto* nestedTrack = m_trackManager ? m_trackManager->getTrack(lane->trackId) : nullptr;
             numberText = "Lane " + std::to_string(nestedTrack ? nestedTrack->laneNumber(m_laneId) : 0);
         } else {
-            uint32_t trackNumber = static_cast<uint32_t>(lane->index + 1);
-            const auto laneName = m_nameLabel->getText();
-            uint32_t parsedNumber = 0;
-            if (parseTrailingTrackNumber(laneName, parsedNumber)) {
-                trackNumber = parsedNumber;
-            }
-            numberText = std::to_string(trackNumber);
+            uint32_t parsedNumber = 0; // a trailing number in the name wins over the lane index
+            numberText = std::to_string(parseTrailingTrackNumber(m_nameLabel->getText(), parsedNumber)
+                                            ? parsedNumber : static_cast<uint32_t>(lane->index + 1));
         }
+        // Centred on the name's row by cap height (SPEC 3 §3.2), not `nameBounds.y + 2` (1.5 px low).
+        const float numberFontSize = themeManager.getFontSize("xs");
         renderer.drawText(numberText,
-                          AestraUI::NUIPoint(controlAreaBounds.x + stripWidth + 8.0f, nameBounds.y + 2.0f),
-                          themeManager.getFontSize("xs"),
+                          AestraUI::NUIPoint(controlAreaBounds.x + stripWidth + 8.0f,
+                                             std::round(renderer.calculateOpticalTextY(nameBounds, numberFontSize))),
+                          numberFontSize,
                           themeManager.getColor("textSecondary").withAlpha(m_selected ? 0.58f : 0.36f));
     }
 }

@@ -71,7 +71,10 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
     gridStyle.barLineAlpha = 0.148f;         // was 0.02
     gridStyle.beatLineAlpha = 0.057f;        // was 0.005
     gridStyle.subdivisionLineAlpha = 0.023f; // was 0.002
-    gridStyle.zebraAlpha = 0.066f;           // was 0.006
+    // No bar zebra (SPEC 3 §5.1, owner): at 0.066 every other bar read as a band of near
+    // black (bed RGB 0-4 against 15-19) in which the beat lines vanished. The timeline gets
+    // by with lines alone, and at matching line alphas so does this.
+    gridStyle.zebraAlpha = 0.0f;
     renderTimelineGrid(renderer, bounds, bounds.x, bounds.right(), scrollX_, pixelsPerBeat_, beatsPerBar_, gridInk,
                        gridStyle, getSnapSubdivisionBeats());
 
@@ -101,9 +104,9 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
 
     renderer.clearClipRect();
 }
-void PianoRollGrid::setPixelsPerBeat(float ppb) { pixelsPerBeat_ = std::max(10.0f, ppb); repaint(); }
-void PianoRollGrid::setKeyHeight(float height) { keyHeight_ = std::max(8.0f, height); repaint(); }
-void PianoRollGrid::setScrollOffsetX(float offset) { scrollX_ = offset; repaint(); }
-void PianoRollGrid::setScrollOffsetY(float offset) { scrollY_ = offset; repaint(); }
+void PianoRollGrid::setPixelsPerBeat(float ppb) { const auto next = std::max(10.0f, ppb); if (pixelsPerBeat_ == next) return; pixelsPerBeat_ = next; repaint(); }
+void PianoRollGrid::setKeyHeight(float height) { const auto next = std::max(8.0f, height); if (keyHeight_ == next) return; keyHeight_ = next; repaint(); }
+void PianoRollGrid::setScrollOffsetX(float offset) { const auto next = offset; if (scrollX_ == next) return; scrollX_ = next; repaint(); }
+void PianoRollGrid::setScrollOffsetY(float offset) { const auto next = offset; if (scrollY_ == next) return; scrollY_ = next; repaint(); }
 
 } // namespace AestraUI

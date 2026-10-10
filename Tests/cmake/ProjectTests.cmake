@@ -162,3 +162,10 @@ target_include_directories(SourceReadinessInvariantTest PRIVATE
 )
 add_test(NAME SourceReadinessInvariantTest COMMAND SourceReadinessInvariantTest)
 set_tests_properties(SourceReadinessInvariantTest PROPERTIES LABELS "audio;waveform;contract:application")
+
+# SPEC 3 §6.7: SIGTERM/SIGINT are recorded for an autosave-and-exit, never left to
+# SDL's close-button path and its unsaved-changes prompt.
+add_executable(TerminationSignalTest App/TerminationSignalTest.cpp)
+target_include_directories(TerminationSignalTest PRIVATE ${CMAKE_SOURCE_DIR}/Source/App)
+add_test(NAME TerminationSignalTest COMMAND TerminationSignalTest)
+set_tests_properties(TerminationSignalTest PROPERTIES LABELS "app;recovery;regression;contract:durability")

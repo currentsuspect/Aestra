@@ -5,6 +5,7 @@
 #include "NUIScrollbar.h" // Include Scrollbar
 #include "../Platform/NUICursorStyle.h"
 #include "../Core/NUIHoverCursorClaim.h"
+#include <array>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -38,7 +39,7 @@ public:
 
     /** @brief Set the vertical scroll offset applied to the lane. */
     void setScrollOffsetY(float offset);
-    void setHoveredKey(int pitch) { hoveredKey_ = pitch; repaint(); }
+    void setHoveredKey(int pitch) { const auto next = pitch; if (hoveredKey_ == next) return; hoveredKey_ = next; repaint(); }
 
     /** @brief Set callback for note preview (pitch, velocity). Called when user clicks a key. */
     void setOnPreviewNote(std::function<void(int pitch, int velocity)> cb);
@@ -52,11 +53,32 @@ public:
     /** @brief Forward isPlaying callback from PianoRollView. */
     void setIsPlayingFromParent(std::function<bool()> cb) { m_isPlayingCallback = std::move(cb); }
 
+    /**
+     * @brief The keys whose notes are under the playhead while this pattern plays (SPEC 3 §5.1).
+     *
+     * Drawn as a soft accent overlay with a lit tip, deliberately quieter than a key the user
+     * presses. A key that stops playing eases out over kPlayReleaseSeconds, so fast passages
+     * glide instead of strobing. An all-false set lets every key ease back to rest.
+     */
+    void setPlayingPitches(const std::array<bool, 128>& playing);
+    /** @brief True while @p pitch has a note under the playhead. */
+    bool isKeyPlaying(int pitch) const { return pitch >= 0 && pitch < 128 && playing_[pitch]; }
+    /** @brief How lit @p pitch is for playback: 1 while playing, easing to 0 after. */
+    float keyPlayLevel(int pitch) const { return pitch >= 0 && pitch < 128 ? playLevel_[pitch] : 0.0f; }
+
+    void onUpdate(double deltaTime) override;
+
+    /** Seconds a key takes to ease back to rest after its note stops playing. */
+    static constexpr float kPlayReleaseSeconds = 0.16f;
+
 private:
     float keyHeight_;
     float scrollY_;
     int hoveredKey_; // -1 if none
     int previewPitch_; // Currently playing preview note (-1 if none)
+    std::array<bool, 128> playing_{};    // a note of this pattern is under the playhead
+    std::array<float, 128> playLevel_{}; // 1 while playing, eases to 0 after
+    bool playAnimating_ = false;         // some key is still easing out
     std::function<void(int pitch, int velocity)> onPreviewNote_;
     std::function<void(int pitch)> onHoveredKeyChanged_;
     std::function<bool()> m_isPlayingCallback;
@@ -133,9 +155,9 @@ public:
     /** @brief Set the horizontal zoom level in pixels per beat. */
     void setPixelsPerBeat(float ppb); // REORDERED
     /** @brief Set the current bar signature in beats per bar. */
-    void setBeatsPerBar(int bpb) { beatsPerBar_ = bpb; repaint(); }
+    void setBeatsPerBar(int bpb) { const auto next = bpb; if (beatsPerBar_ == next) return; beatsPerBar_ = next; repaint(); }
     /** @brief Set the playhead beat for ruler rendering. */
-    void setPlayheadBeat(double beat) { playheadBeat_ = beat; repaint(); }
+    void setPlayheadBeat(double beat) { const auto next = beat; if (playheadBeat_ == next) return; playheadBeat_ = next; repaint(); }
 
     // Callback: delta (wheel), mouseX (local)
     std::function<void(float delta, float mouseX)> onZoomRequested; // ADDED
@@ -203,6 +225,7 @@ public:
     struct PatternChoice {
         int value = 0;
         std::string label;
+        bool operator==(const PatternChoice& o) const { return value == o.value && label == o.label; }
     };
 
     /** @brief Create the internal piano-roll toolbar. */
@@ -302,6 +325,12 @@ private:
     std::function<void()> onCenterOnPlayhead_;
     bool m_updatingPatternDropdown = false;
     bool m_updatingUnitDropdown = false;
+    // Last applied switcher contents: re-applying the same list every frame cleared and
+    // re-added every item and kept the UI redrawing at idle (SPEC 3 §4).
+    std::vector<PatternChoice> m_appliedPatternChoices;
+    int m_appliedPatternSelection = -2;
+    std::vector<PatternChoice> m_appliedUnitChoices;
+    int m_appliedUnitSelection = -2;
     bool m_updatingSnapDropdown = false;
     SnapGrid m_currentSnap = SnapGrid::Beat;
     int m_rootKey = 0;
@@ -340,9 +369,9 @@ public:
     /** @brief Set the vertical scroll offset. */
     void setScrollOffsetY(float offset);
     /** @brief Set the playhead beat rendered on the grid. */
-    void setPlayheadBeat(double beat) { playheadBeat_ = beat; repaint(); }
-    void setTotalDurationBeats(double beats) { totalDurationBeats_ = std::max(0.0, beats); repaint(); }
-    void setHoveredPitch(int pitch) { hoveredPitch_ = pitch; repaint(); }
+    void setPlayheadBeat(double beat) { const auto next = beat; if (playheadBeat_ == next) return; playheadBeat_ = next; repaint(); }
+    void setTotalDurationBeats(double beats) { const auto next = std::max(0.0, beats); if (totalDurationBeats_ == next) return; totalDurationBeats_ = next; repaint(); }
+    void setHoveredPitch(int pitch) { const auto next = pitch; if (hoveredPitch_ == next) return; hoveredPitch_ = next; repaint(); }
     /** @brief The ruler loop zone, drawn as a band across the grid (SPEC 3 §5.2). */
     void setLoopZone(bool active, double startBeat, double endBeat) {
         loopZoneActive_ = active;
@@ -352,15 +381,15 @@ public:
     }
     
     /** @brief Set the bar signature in beats per bar. */
-    void setBeatsPerBar(int bpb) { beatsPerBar_ = bpb; repaint(); }
+    void setBeatsPerBar(int bpb) { const auto next = bpb; if (beatsPerBar_ == next) return; beatsPerBar_ = next; repaint(); }
 
     /** @brief Set the musical root key used for scale highlighting. */
-    void setRootKey(int root) { rootKey_ = root; repaint(); }
+    void setRootKey(int root) { const auto next = root; if (rootKey_ == next) return; rootKey_ = next; repaint(); }
     /** @brief Set the active scale type used for scale highlighting. */
-    void setScaleType(ScaleType type) { scaleType_ = type; repaint(); }
+    void setScaleType(ScaleType type) { const auto next = type; if (scaleType_ == next) return; scaleType_ = next; repaint(); }
     
     /** @brief Set the active snap grid. */
-    void setSnap(SnapGrid snap) { snap_ = snap; repaint(); }
+    void setSnap(SnapGrid snap) { const auto next = snap; if (snap_ == next) return; snap_ = next; repaint(); }
 
     /** @brief Beat span the grid renders subdivisions at for the active snap. */
     double getSnapSubdivisionBeats() const { return MusicTheory::getSnapDuration(snap_); }
@@ -465,7 +494,7 @@ public:
     void updateEdgeScrolling(float mouseX, float mouseY, const NUIRect& bounds, std::function<void()> syncCallback = nullptr);
     
     /** @brief Set the current playhead beat used for rendering. */
-    void setPlayheadBeat(double beat) { playheadBeat_ = beat; repaint(); }
+    void setPlayheadBeat(double beat) { const auto next = beat; if (playheadBeat_ == next) return; playheadBeat_ = next; repaint(); }
 
     /** @brief Set whether transport is playing, so sounding notes can light up. */
     void setPlaying(bool playing) { isPlaying_ = playing; }
@@ -718,7 +747,16 @@ public:
     void setPixelsPerBeat(float ppb);
     void setScrollX(float scrollX);
     /** @brief Set the bar signature so the lane grid matches the ruler/note grid. */
-    void setBeatsPerBar(int bpb) { beatsPerBar_ = std::max(1, bpb); repaint(); }
+    void setBeatsPerBar(int bpb) { const auto next = std::max(1, bpb); if (beatsPerBar_ == next) return; beatsPerBar_ = next; repaint(); }
+    /**
+     * @brief The width of the label sidebar, which must equal the view's key lane.
+     *
+     * The lane's beat 0 sits at the sidebar's right edge, so this is what lines
+     * its stems and grid up with the notes above. It was a hard-coded 76 after the
+     * key lane shrank to 58 (spec 2 §6), which drew every stem 18 px right of its
+     * note and turned a click on a beat-0 stem into a Velocity/Pan flip.
+     */
+    void setSidebarWidth(float width) { sidebarWidth_ = std::max(0.0f, width); repaint(); }
 
 private:
     std::weak_ptr<PianoRollNoteLayer> noteLayer_;
@@ -727,6 +765,7 @@ private:
     float pixelsPerBeat_;
     float scrollX_;
     int beatsPerBar_ = 4;
+    float sidebarWidth_ = 58.0f; // PianoRollView keeps it equal to its key lane
     LaneMode laneMode_ = LaneMode::Velocity; // Toggled by clicking the lane's sidebar
 
     // Interaction
@@ -798,6 +837,15 @@ public:
     void setPatternLengthBeats(double beats);
     void setPlayheadBeat(double beat, bool follow = false);
     double getPlayheadBeat() const { return m_playheadBeat; }
+    /**
+     * @brief Whether this editor's pattern is the one playing (the panel decides, per frame).
+     *
+     * While true, setPlayheadBeat() lights the keys of the notes under the playhead; while
+     * false every key eases back to rest. Set it before setPlayheadBeat() each frame.
+     */
+    void setPlaybackKeysActive(bool active) { m_playbackKeysActive = active; }
+    /** @brief True while @p pitch's key shows a note under the playhead. */
+    bool isKeyPlaying(int pitch) const;
     void setTotalDurationBeats(double beats);
     void setLocalMinimapVisible(bool visible);
     void applyEdgeAutoScroll(float scrollX, float scrollY);
@@ -877,6 +925,7 @@ private:
     float m_targetScrollX;
     float m_targetScrollY;
     double m_playheadBeat = 0.0;
+    bool m_playbackKeysActive = false; // this pattern is playing: keys follow the playhead
     double m_totalDurationBeats = 400.0;
     double m_patternLengthBeats = 8.0;
     // Scrollable domain (bars the user can traverse), mirroring the Track

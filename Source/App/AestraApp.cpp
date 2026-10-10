@@ -6,9 +6,10 @@
 #include "AppLifecycle.h"
 #include "CrashFlagPath.h"
 #include "ServiceLocator.h"
+#include "TerminationSignal.h"
 #include "AestraRootComponent.h"
 #include "Preferences.h"
-
+#include "../AestraUI/Core/NUIPerfProbe.h"
 #include <cstdlib>
 #include "../AestraCore/include/AestraFile.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
@@ -317,6 +318,11 @@ bool AestraApp::initialize(const std::string& projectPath) {
             Log::error("Failed to initialize platform");
             return false;
         }
+    }
+
+    // After platform init, so it replaces SDL's handler (TerminationSignal.h); the close button keeps its prompt.
+    if (Aestra::TerminationSignal::install()) {
+        Log::info("[Close] SIGTERM/SIGINT autosave and exit without a prompt");
     }
 
     // Resolve the crash-flag path ONCE, now that platform utilities exist, and
@@ -1470,7 +1476,15 @@ void AestraApp::run() {
         }).detach();
     }
 
+
     while (m_running && m_windowManager->processEvents()) {
+        // A logout or `kill` never waits on a dialog nobody will answer; shutdown() autosaves (SPEC 3 §6.7).
+        if ((m_exitSignal = Aestra::TerminationSignal::pending()) != 0) {
+            Log::info("[Close] Signal " + std::to_string(m_exitSignal) + ": exiting without the unsaved-changes prompt");
+            m_running = false;
+            break;
+        }
+
         // Worker → UI hop (native dialogs/decode off the UI thread); pumped
         // before UI update so a completed relink lands this frame.
         drainMainThreadTasks();
@@ -1579,6 +1593,7 @@ void AestraApp::run() {
             m_windowManager->swapBuffers();
             m_lastPresentedFrame = std::chrono::steady_clock::now();
         }
+        AestraUI::PerfProbe::frameWorkEnd(presentThisFrame); // AESTRA_FRAME_STATS report (NUIPerfProbe.h)
         if (sleepTime > 0.0) {
              if (auto fps = m_windowManager->getAdaptiveFPS()) {
                  fps->sleep(sleepTime);
@@ -1588,47 +1603,49 @@ void AestraApp::run() {
          }
 
         UnifiedProfiler::getInstance().endFrame();
+        AestraUI::PerfProbe::frameWorkBegin();
     }
 }
 
 bool AestraApp::shouldRenderThisFrame() {
+    using AestraUI::PerfProbe::presentBecause; // records the reason at AESTRA_FRAME_STATS=2
     // Conservative v1 gate: render unless EVERY skip condition holds
     // (dirty == false && realtime_visuals == false && input_recent == false).
 
     // Pending invalidation — any component's setDirty(true) propagates here.
     auto* root = m_windowManager->getRootComponent();
     if (!root || root->isDirty())
-        return true;
+        return presentBecause("dirty");
 
     // Input recency — the adaptive FPS governor already tracks this (fed by
     // mouse/key callbacks); align with its idle timeout.
     auto* fps = m_windowManager->getAdaptiveFPS();
     if (!fps || fps->getIdleTime() < 2.0)
-        return true;
+        return presentBecause("input");
 
     // Realtime visuals — transport (playhead/meters), record-arm input
     // monitoring, file preview, and Audition playback.
     if (m_audioController && m_audioController->getEngine() && m_audioController->getEngine()->isTransportPlaying()) {
-        return true;
+        return presentBecause("transport");
     }
     if (m_content) {
         if (auto tm = m_content->getTrackManager()) {
             if (tm->isPlaying() || tm->isRecordArmed())
-                return true;
+                return presentBecause("playing or armed");
         }
         if (m_content->hasRealtimePlaybackVisuals())
-            return true;
+            return presentBecause("realtime visuals");
     }
 
     // Overlays that animate or need fresh samples (HUD, dialogs, menus).
     if (m_windowManager->requiresContinuousRender())
-        return true;
+        return presentBecause("overlay");
 
     // Deeply idle: heartbeat only (~3.3 fps) so caret blink, tooltips and any
     // unsignaled change still surface within ~300 ms.
     const auto now = std::chrono::steady_clock::now();
     const double sinceLastPresent = std::chrono::duration<double>(now - m_lastPresentedFrame).count();
-    return sinceLastPresent >= 0.3;
+    return sinceLastPresent >= 0.3 && presentBecause("heartbeat");
 }
 
 void AestraApp::startMuseSocketIfConfigured() {
@@ -1732,7 +1749,8 @@ void AestraApp::shutdown() {
     // the autosave is still available for recovery on next launch.
     if (m_content && m_content->getTrackManager() && m_content->getTrackManager()->isModified()) {
         Log::info("[SHUTDOWN] Emergency autosave before shutdown...");
-        m_autoSaveManager.forceAutosave();
+        // A signal exit never asked, so this autosave is the only copy: keep the crash flag (below).
+        m_keepSessionForRecovery = m_autoSaveManager.forceAutosave() && m_exitSignal != 0;
     }
     m_autoSaveManager.shutdown();
 
@@ -1838,7 +1856,11 @@ void AestraApp::shutdown() {
     // Clear crash flag LAST — if anything above crashes, the flag persists.
     // Also clear ServiceLocator last so shutdown paths can still resolve services.
     Aestra::ServiceLocator::clear();
-    clearCrashFlag();
+    if (m_keepSessionForRecovery) { // the next launch then offers the emergency autosave (SPEC 3 §6.7)
+        Log::info("[CrashDetection] Kept crash flag: signal exit left unsaved work for recovery");
+    } else {
+        clearCrashFlag();
+    }
     Log::shutdown();
 }
 

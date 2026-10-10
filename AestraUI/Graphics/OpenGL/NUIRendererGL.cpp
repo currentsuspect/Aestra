@@ -2131,6 +2131,12 @@ NUIRenderer::FontMetrics NUIRendererGL::getFontMetrics(float fontSize) const {
             metrics.ascent = atlas.ascent * scale;
             metrics.descent = atlas.descent * scale;
             metrics.lineHeight = atlas.lineHeight * scale;
+            // Cap height = top bearing of the 'H' in this atlas (0 falls back in calculateOpticalTextY()).
+            if (atlas.cache) {
+                if (const auto it = atlas.cache->find(static_cast<uint32_t>('H')); it != atlas.cache->end()) {
+                    metrics.capHeight = static_cast<float>(it->second.bearingY) * scale;
+                }
+            }
             return metrics;
         }
         return metrics;
