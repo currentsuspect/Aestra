@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include "Plugin/InternalPluginBase.h"
+#include "RealtimeThreadGuard.h"
 #include "Plugin/PluginHost.h"
 
 #include <algorithm>
@@ -34,7 +36,7 @@ namespace Aestra {
 namespace Audio {
 namespace Plugins {
 
-class AestraLFO : public IPluginInstance {
+class AestraLFO : public InternalPluginBase {
 public:
     static constexpr uint32_t kStateMagic = 0x4C464F31; // 'LFO1'
     static constexpr float kCutoffTopHz = 20000.0f;
@@ -78,15 +80,7 @@ public:
     bool initialize(double sampleRate, uint32_t maxBlockSize) override {
         (void)maxBlockSize;
         m_sampleRate = std::max(1.0, sampleRate);
-        // Seed parameter defaults only on the first initialization of a fresh
-        // instance. EffectChain::prepare() re-calls initialize() on the live
-        // instance during sample-rate/device changes and must preserve the
-        // user's current parameter values (and any loaded project state).
-        if (!m_paramsInitialized.exchange(true)) {
-            for (const auto& param : getParameters()) {
-                m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
-            }
-        }
+        seedDefaultsOnce();
         resetRuntimeState();
         snapSmoothedParams();
         return true;
@@ -107,11 +101,11 @@ public:
     float getBPM() const { return m_bpm.load(std::memory_order_relaxed); }
 
     void process(const float* const* inputs, float** outputs, uint32_t numInputChannels, uint32_t numOutputChannels,
-                 uint32_t numFrames, const MidiBuffer* midiInput = nullptr, MidiBuffer* midiOutput = nullptr) override {
+                 uint32_t numFrames, const MidiBuffer* midiInput = nullptr, MidiBuffer* midiOutput = nullptr) AESTRA_RT_NONBLOCKING override {
         (void)midiInput;
         (void)midiOutput;
 
-        if (!m_active.load(std::memory_order_relaxed) || m_params[kBypass].load(std::memory_order_relaxed) > 0.5f) {
+        if (!m_active.load(std::memory_order_relaxed) || isBypassed()) {
             copyOrClear(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
             return;
         }
@@ -119,9 +113,9 @@ public:
         const uint32_t channels = std::min<uint32_t>(2, numOutputChannels);
         const bool stereo = channels >= 2;
         const float sr = static_cast<float>(m_sampleRate);
-        const auto target = targetFromNorm(m_params[kTarget].load(std::memory_order_relaxed));
-        const auto wave = waveFromNorm(m_params[kWave].load(std::memory_order_relaxed));
-        const bool sync = m_params[kSyncMode].load(std::memory_order_relaxed) > 0.5f;
+        const auto target = targetFromNorm(paramValue(kTarget));
+        const auto wave = waveFromNorm(paramValue(kWave));
+        const bool sync = paramValue(kSyncMode) > 0.5f;
         const float bpm = m_bpm.load(std::memory_order_relaxed);
         const float maxCutoff = 0.45f * sr;
 
@@ -292,35 +286,25 @@ public:
         m_lfoLevel.store(u01(m_lfoSlewed), std::memory_order_relaxed);
     }
 
-    uint32_t getParameterCount() const override { return kParamCount; }
+    // Declarative parameter table: this is the whole plugin-side surface now.
+    // Storage, the non-finite and range guards, getParameters() and the state
+    // blob come from InternalPluginBase.
+    inline static constexpr ParamSpec kSpecs[] = {
+        {kTarget, "Target", "TGT", "", 0.0f, 0.0f, 1.0f, true, false, false, kTargetCount - 1},
+        {kWave, "Wave", "WAVE", "", 0.0f, 0.0f, 1.0f, true, false, false, kWaveCount - 1},
+        {kSyncMode, "Sync", "SYNC", "", 1.0f, 0.0f, 1.0f, true, false, false, 1},
+        {kRateHz, "Rate", "RATE", "Hz", 0.566f, 0.0f, 1.0f, true},                                // ~1 Hz,
+        {kNoteDivision, "Division", "DIV", "", 2.0f / 12.0f, 0.0f, 1.0f, true, false, false, 12}, // 1/4,
+        {kDepth, "Depth", "DPT", "%", 0.5f, 0.0f, 1.0f, true},
+        {kPhase, "Phase", "PHS", "deg", 0.0f, 0.0f, 1.0f, true},
+        {kSmooth, "Smooth", "SMTH", "ms", 0.05f, 0.0f, 1.0f, true}, // 10 ms,
+        {kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
+    };
 
-    float getParameter(uint32_t id) const override {
-        if (id >= kParamCount)
-            return 0.0f;
-        return m_params[id].load(std::memory_order_relaxed);
-    }
-
-    void setParameter(uint32_t id, float value) override {
-        if (id >= kParamCount)
-            return;
-        if (!std::isfinite(value))
-            return;
-        m_params[id].store(std::clamp(value, 0.0f, 1.0f), std::memory_order_relaxed);
-    }
-
-    std::vector<PluginParameter> getParameters() const override {
-        return {
-            {kTarget, "Target", "TGT", "", 0.0f, 0.0f, 1.0f, true, false, false, kTargetCount - 1},
-            {kWave, "Wave", "WAVE", "", 0.0f, 0.0f, 1.0f, true, false, false, kWaveCount - 1},
-            {kSyncMode, "Sync", "SYNC", "", 1.0f, 0.0f, 1.0f, true, false, false, 1},
-            {kRateHz, "Rate", "RATE", "Hz", 0.566f, 0.0f, 1.0f, true},                                // ~1 Hz
-            {kNoteDivision, "Division", "DIV", "", 2.0f / 12.0f, 0.0f, 1.0f, true, false, false, 12}, // 1/4
-            {kDepth, "Depth", "DPT", "%", 0.5f, 0.0f, 1.0f, true},
-            {kPhase, "Phase", "PHS", "deg", 0.0f, 0.0f, 1.0f, true},
-            {kSmooth, "Smooth", "SMTH", "ms", 0.05f, 0.0f, 1.0f, true}, // 10 ms
-            {kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
-        };
-    }
+    const ParamSpec* paramSpecs() const override { return kSpecs; }
+    uint32_t paramSpecCount() const override { return kParamCount; }
+    AESTRA_VALIDATE_PARAM_SPECS(kSpecs, kParamCount);
+    uint32_t stateMagic() const override { return kStateMagic; }
 
     std::string getParameterDisplay(uint32_t id) const override {
         if (id >= kParamCount)
@@ -374,56 +358,8 @@ public:
         }
     }
 
-    std::vector<uint8_t> saveState() const override {
-        struct Blob {
-            uint32_t magic = kStateMagic;
-            uint32_t version = 1;
-            float params[kParamCount] = {};
-        } blob;
-        for (uint32_t i = 0; i < kParamCount; ++i) {
-            blob.params[i] = getParameter(i);
-        }
-        const auto* data = reinterpret_cast<const uint8_t*>(&blob);
-        return {data, data + sizeof(blob)};
-    }
-
-    bool loadState(const std::vector<uint8_t>& state) override {
-        if (state.size() < sizeof(uint32_t) * 2)
-            return false;
-        uint32_t magic = 0;
-        std::memcpy(&magic, state.data(), sizeof(magic));
-        if (magic != kStateMagic)
-            return false;
-        struct Blob {
-            uint32_t magic;
-            uint32_t version;
-            float params[kParamCount];
-        };
-        if (state.size() < sizeof(Blob))
-            return false;
-        Blob blob{};
-        std::memcpy(&blob, state.data(), sizeof(blob));
-        if (blob.version < 1 || blob.version > 1)
-            return false;
-        // Validate the entire decoded set before mutating anything. setParameter
-        // silently drops non-finite values, so applying in place would leave a
-        // half-updated state while still reporting success — fail atomically.
-        for (uint32_t i = 0; i < kParamCount; ++i) {
-            if (!std::isfinite(blob.params[i]) || blob.params[i] < 0.0f || blob.params[i] > 1.0f)
-                return false;
-        }
-        for (uint32_t i = 0; i < kParamCount; ++i) {
-            setParameter(i, blob.params[i]);
-        }
-        return true;
-    }
-
     bool hasEditor() const override { return true; }
-    bool openEditor(void*) override { return false; }
-    void closeEditor() override {}
-    bool isEditorOpen() const override { return false; }
     std::pair<int, int> getEditorSize() const override { return {560, 320}; }
-    bool resizeEditor(int, int) override { return false; }
 
     const PluginInfo& getInfo() const override { return m_info; }
     uint32_t getLatencySamples() const override { return 0; }
@@ -434,10 +370,6 @@ public:
         // the low end, so ~120 ms covers the worst case.
         return static_cast<uint32_t>(m_sampleRate * 0.12);
     }
-    WatchdogStats getWatchdogStats() const override { return {}; }
-    void resetWatchdog() override {}
-    bool isBypassedByWatchdog() const override { return false; }
-    bool isCrashed() const override { return false; }
 
     void setInfo(const PluginInfo& info) { m_info = info; }
 
@@ -605,9 +537,7 @@ private:
     PluginInfo m_info;
     double m_sampleRate = 48000.0;
     std::atomic<bool> m_active{false};
-    std::atomic<bool> m_paramsInitialized{false};
     std::atomic<float> m_bpm{120.0f};
-    std::array<std::atomic<float>, kParamCount> m_params{};
 
     float m_phase = 0.0f;
     float m_prevPhase = 0.0f;

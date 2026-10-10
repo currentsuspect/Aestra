@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "Plugin/InternalPluginBase.h"
+#include "RealtimeThreadGuard.h"
 #include "Plugin/PluginHost.h"
 
 #include <algorithm>
@@ -20,11 +22,12 @@ namespace Aestra {
 namespace Audio {
 namespace Plugins {
 
-class AestraDelay : public IPluginInstance {
+class AestraDelay : public InternalPluginBase {
 public:
-    static constexpr uint32_t kStateMagicV3 = 0x444C5903; // 'DLY' v3
-    static constexpr uint32_t kStateMagicV2 = 0x444C5902; // 'DLY' v2
-    static constexpr uint32_t kStateMagicV1 = 0x444C5901; // 'DLY' v1
+    // Canonical magic, carrying the v3 value: the reset renumbers the version field,
+    // not the magic, so keeping 0x444C5903 means a pre-reset blob is still
+    // recognisablely this plugin's and is rejected on version rather than magic.
+    static constexpr uint32_t kStateMagic = 0x444C5903; // 'DLY' v3
     static constexpr uint32_t kMaxDelaySec = 2;
     static constexpr uint32_t kBlockSize = 16;
 
@@ -66,18 +69,7 @@ public:
     bool initialize(double sampleRate, uint32_t maxBlockSize) override {
         (void)maxBlockSize;
         m_sampleRate = std::max(1.0, sampleRate);
-        const auto defaults = getParameters();
-        // Seed parameter defaults only on the first initialization of a fresh
-        // instance. EffectChain::prepare() re-calls initialize() on the live
-        // instance during sample-rate/device changes and must preserve the
-        // user's current parameter values (and any loaded project state).
-        if (!m_paramsInitialized.exchange(true)) {
-            for (const auto& param : defaults) {
-                if (param.id < kParamCount) {
-                    m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
-                }
-            }
-        }
+        seedDefaultsOnce();
 
         const uint32_t maxSamples = std::max<uint32_t>(
             1u, static_cast<uint32_t>(std::ceil(static_cast<double>(kMaxDelaySec) * m_sampleRate)) + 4u);
@@ -113,8 +105,9 @@ public:
 
     float getBPM() const { return m_bpm.load(std::memory_order_relaxed); }
 
-    void process(const float* const* inputs, float** outputs, uint32_t numInputChannels, uint32_t numOutputChannels,
-                 uint32_t numFrames, const MidiBuffer* midiInput = nullptr, MidiBuffer* midiOutput = nullptr) override {
+    void process(const float* const* inputs, float** outputs, uint32_t numInputChannels,
+                 uint32_t numOutputChannels, uint32_t numFrames, const MidiBuffer* midiInput = nullptr,
+                 MidiBuffer* midiOutput = nullptr) AESTRA_RT_NONBLOCKING override {
         (void)midiInput;
         (void)midiOutput;
 
@@ -166,7 +159,7 @@ public:
             const uint32_t blockEnd = std::min(blockStart + kBlockSize, numFrames);
 
             const float freeTimeSec = 0.01f + m_timeSmoothed * 1.99f;
-            const bool sync = m_params[kSyncMode].load(std::memory_order_relaxed) > 0.5f;
+            const bool sync = paramValue(kSyncMode) > 0.5f;
             const float delaySec = sync ? getSyncedDelaySeconds() : freeTimeSec;
             const float delayMs = std::clamp(delaySec * 1000.0f, 10.0f, 2000.0f);
             const float feedback = std::clamp(m_feedbackSmoothed * 0.95f, 0.0f, 0.95f);
@@ -178,8 +171,8 @@ public:
             const float hpfCutoffHz = 20.0f * std::pow(100.0f, std::clamp(m_feedbackHighpassSmoothed, 0.0f, 1.0f));
             const float hpfCoeff = std::exp(-twoPi * hpfCutoffHz * invSampleRate);
             const float outputTrim = std::pow(10.0f, (m_outputTrimSmoothed * 24.0f - 12.0f) / 20.0f);
-            const bool pingPong = m_params[kStereoMode].load(std::memory_order_relaxed) > 0.5f;
-            const bool bypassed = m_params[kBypass].load(std::memory_order_relaxed) > 0.5f;
+            const bool pingPong = paramValue(kStereoMode) > 0.5f;
+            const bool bypassed = isBypassed();
 
             const float maxShiftMs = std::min(delayMs * 0.5f, 500.0f * 1000.0f * invSampleRate);
             const float stereoOffsetMs = stereoShift * maxShiftMs;
@@ -302,38 +295,30 @@ public:
         m_delayTapInitialized = delayTapInitialized;
     }
 
-    uint32_t getParameterCount() const override { return kParamCount; }
+    // Declarative parameter table: the whole plugin-side surface now. The rows are
+    // the table this plugin already shipped in getParameters(), unchanged. The one
+    // computed default folds at compile time -- kDiv1_8 is enum index 4, so this
+    // is 4/12.0f, the same value the old runtime `defaultDivision` produced.
+    inline static constexpr ParamSpec kSpecs[] = {
+        {kTime, "Time", "TIME", "s", 0.25f, 0.0f, 1.0f, true},
+        {kFeedback, "Feedback", "FB", "", 0.3f, 0.0f, 1.0f, true},
+        {kDamping, "Damping", "DMP", "", 0.2f, 0.0f, 1.0f, true},
+        {kStereoShift, "Stereo", "STR", "", 0.5f, 0.0f, 1.0f, true},
+        {kModDepth, "Mod Depth", "MOD", "", 0.0f, 0.0f, 1.0f, true},
+        {kModRate, "Mod Rate", "RATE", "Hz", 0.1f, 0.0f, 1.0f, true},
+        {kMix, "Mix", "MIX", "%", 1.0f, 0.0f, 1.0f, true},
+        {kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
+        {kSyncMode, "Sync", "SYNC", "", 0.0f, 0.0f, 1.0f, true, false, false, 1},
+        {kNoteDivision, "Division", "DIV", "", static_cast<float>(kDiv1_8) / 12.0f, 0.0f, 1.0f, true, false, false, 12},
+        {kStereoMode, "Stereo Mode", "MODE", "", 0.0f, 0.0f, 1.0f, true, false, false, 1},
+        {kFeedbackHighpass, "Low Cut", "LCUT", "Hz", 0.0f, 0.0f, 1.0f, true},
+        {kOutputTrim, "Output", "OUT", "dB", 0.5f, 0.0f, 1.0f, true},
+    };
 
-    float getParameter(uint32_t id) const override {
-        if (id >= kParamCount)
-            return 0.0f;
-        return m_params[id].load(std::memory_order_relaxed);
-    }
-
-    void setParameter(uint32_t id, float value) override {
-        if (id >= kParamCount || !std::isfinite(value))
-            return;
-        m_params[id].store(std::clamp(value, 0.0f, 1.0f), std::memory_order_relaxed);
-    }
-
-    std::vector<PluginParameter> getParameters() const override {
-        constexpr float defaultDivision = static_cast<float>(kDiv1_8) / 12.0f;
-        return {
-            {kTime, "Time", "TIME", "s", 0.25f, 0.0f, 1.0f, true},
-            {kFeedback, "Feedback", "FB", "", 0.3f, 0.0f, 1.0f, true},
-            {kDamping, "Damping", "DMP", "", 0.2f, 0.0f, 1.0f, true},
-            {kStereoShift, "Stereo", "STR", "", 0.5f, 0.0f, 1.0f, true},
-            {kModDepth, "Mod Depth", "MOD", "", 0.0f, 0.0f, 1.0f, true},
-            {kModRate, "Mod Rate", "RATE", "Hz", 0.1f, 0.0f, 1.0f, true},
-            {kMix, "Mix", "MIX", "%", 1.0f, 0.0f, 1.0f, true},
-            {kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
-            {kSyncMode, "Sync", "SYNC", "", 0.0f, 0.0f, 1.0f, true, false, false, 1},
-            {kNoteDivision, "Division", "DIV", "", defaultDivision, 0.0f, 1.0f, true, false, false, 12},
-            {kStereoMode, "Stereo Mode", "MODE", "", 0.0f, 0.0f, 1.0f, true, false, false, 1},
-            {kFeedbackHighpass, "Low Cut", "LCUT", "Hz", 0.0f, 0.0f, 1.0f, true},
-            {kOutputTrim, "Output", "OUT", "dB", 0.5f, 0.0f, 1.0f, true},
-        };
-    }
+    const ParamSpec* paramSpecs() const override { return kSpecs; }
+    uint32_t paramSpecCount() const override { return kParamCount; }
+    AESTRA_VALIDATE_PARAM_SPECS(kSpecs, kParamCount);
+    uint32_t stateMagic() const override { return kStateMagic; }
 
     std::string getParameterDisplay(uint32_t id) const override {
         if (id >= kParamCount)
@@ -466,88 +451,14 @@ public:
         }
     }
 
-    std::vector<uint8_t> saveState() const override {
-        struct Blob {
-            uint32_t magic = kStateMagicV3;
-            uint32_t version = 3;
-            float params[kParamCount];
-        } blob;
-        for (uint32_t i = 0; i < kParamCount; ++i)
-            blob.params[i] = getParameter(i);
-        const auto* data = reinterpret_cast<const uint8_t*>(&blob);
-        return {data, data + sizeof(blob)};
-    }
+// Canonical base format, version 1. This plugin previously wrote version 3 and
+    // carried readers for v1, v2 and v3; those are deleted by decision, not
+    // omission -- see FD-24 and the format-reset note in this PR. A pre-reset
+    // Delay blob is now rejected rather than half-read.
 
-    bool loadState(const std::vector<uint8_t>& state) override {
-        if (state.size() < sizeof(uint32_t) * 2)
-            return false;
-        struct Header {
-            uint32_t magic;
-            uint32_t version;
-        };
-        Header header_local;
-        std::memcpy(&header_local, state.data(), sizeof(header_local));
-        if (header_local.magic == kStateMagicV3) {
-            struct StateBlobV3 {
-                uint32_t magic;
-                uint32_t version;
-                float params[kParamCount];
-            };
-            if (state.size() < sizeof(StateBlobV3))
-                return false;
-            StateBlobV3 blob_local;
-            std::memcpy(&blob_local, state.data(), sizeof(blob_local));
-            if (blob_local.version != 3 || !allFinite(blob_local.params))
-                return false;
-            for (uint32_t i = 0; i < kParamCount; ++i)
-                setParameter(i, blob_local.params[i]);
-            snapSmoothedParamsToTargets();
-            return true;
-        }
-        if (header_local.magic == kStateMagicV2) {
-            struct LegacyStateBlobV2 {
-                uint32_t magic;
-                uint32_t version;
-                float params[11];
-            };
-            if (state.size() < sizeof(LegacyStateBlobV2))
-                return false;
-            LegacyStateBlobV2 blob_local;
-            std::memcpy(&blob_local, state.data(), sizeof(blob_local));
-            if (blob_local.version != 2 || !allFinite(blob_local.params))
-                return false;
-            for (uint32_t i = 0; i < 11; ++i)
-                setParameter(i, blob_local.params[i]);
-            setParameter(kFeedbackHighpass, 0.0f);
-            setParameter(kOutputTrim, 0.5f);
-            snapSmoothedParamsToTargets();
-            return true;
-        }
-        if (header_local.magic == kStateMagicV1) {
-            struct StateBlobV1 {
-                uint32_t magic;
-                uint32_t version;
-                float params[8];
-            };
-            if (state.size() < sizeof(StateBlobV1))
-                return false;
-            StateBlobV1 blob_local;
-            std::memcpy(&blob_local, state.data(), sizeof(blob_local));
-            if (blob_local.version != 1 || !allFinite(blob_local.params))
-                return false;
-            {
-                const auto defaults = getParameters();
-                for (uint32_t i = 0; i < kParamCount; ++i)
-                    setParameter(i, defaults[i].defaultValue);
-            }
-            for (uint32_t i = 0; i < 8; ++i)
-                setParameter(i, blob_local.params[i]);
-            snapSmoothedParamsToTargets();
-            return true;
-        }
-        return false;
-    }
-
+    // Kept as overrides: the base's editor stubs report hasEditor() == false and
+    // size {0,0}, and this plugin has a real editor at 760x480. Dropping these
+    // lines would remove it with no compiler error and no test failure.
     bool hasEditor() const override { return true; }
     bool openEditor(void*) override { return false; }
     void closeEditor() override {}
@@ -681,8 +592,6 @@ private:
     PluginInfo m_info;
     double m_sampleRate = 48000.0;
     std::atomic<bool> m_active{false};
-    std::atomic<bool> m_paramsInitialized{false};
-    std::array<std::atomic<float>, kParamCount> m_params;
     std::atomic<float> m_bpm{120.0f};
 
     std::vector<float> m_bufL;

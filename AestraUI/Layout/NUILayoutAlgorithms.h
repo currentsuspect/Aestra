@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include "NUILayoutExplain.h"
 #include "NUILayoutSpace.h"
 #include <algorithm>
 #include <vector>
@@ -62,7 +63,8 @@ inline std::vector<NUILocalRect> arrangeTrailingRow(
     const std::vector<float>& itemWidths,
     float itemHeight,
     float spacing,
-    float edgeMargin) {
+    float edgeMargin,
+    NUILayoutRecorder* recorder = nullptr) {
     std::vector<NUILocalRect> result;
     result.reserve(itemWidths.size());
 
@@ -82,6 +84,22 @@ inline std::vector<NUILocalRect> arrangeTrailingRow(
         first = false;
         cursor -= width;
         result.emplace_back(cursor, y, width, itemHeight);
+        if (recorder) {
+            const std::size_t i = result.size() - 1;
+            NUILayoutStep step;
+            step.rule = "trailing row, item " + std::to_string(i) + " from the right edge: x = right " +
+                        NUILayoutRecorder::num(container.right()) + " - edge margin " + NUILayoutRecorder::num(edgeMargin) +
+                        " - " + std::to_string(i) + " earlier item(s) and gaps of " + NUILayoutRecorder::num(spacing) +
+                        " - own width " + NUILayoutRecorder::num(width) + " = " + NUILayoutRecorder::num(cursor) +
+                        "; centred vertically";
+            step.available = container;
+            step.requestsWidth = step.requestsHeight = true;
+            step.requestedWidth = width;
+            step.requestedHeight = itemHeight;
+            step.resolved = result.back();
+            step.visible = cursor >= container.x;
+            recorder->add(step, "[" + std::to_string(i) + "]");
+        }
     }
     return result;
 }
@@ -97,16 +115,124 @@ inline std::vector<NUILocalRect> arrangeTrailingRow(
  * that by choosing `container.height` accordingly before calling this, not by
  * asking this function to know about that policy.
  */
+/**
+ * @brief The mirror of arrangeTrailingRow(): items left to right from the
+ * container's LEADING edge, `edgeMargin` in, `spacing` apart, each centred
+ * vertically. `itemWidths[0]` is the item nearest the leading edge.
+ *
+ * Added for phase 6 (V8-X2b), when the transport bar's four hand-walked
+ * `x += width + gap` rows came off the NUIAbsolute bridge. Same overflow rule
+ * as the trailing row: an item past the trailing edge is placed there and
+ * reported (recorder), never clipped or reflowed here.
+ *
+ * Pass a container exactly `itemHeight` tall to place the row at a y the caller
+ * has already snapped to whole pixels; centring is then a no-op (§7.5: fractional
+ * pixels are the caller's deliberate decision, not this function's).
+ */
+inline std::vector<NUILocalRect> arrangeLeadingRow(
+    const NUILocalRect& container,
+    const std::vector<float>& itemWidths,
+    float itemHeight,
+    float spacing,
+    float edgeMargin,
+    NUILayoutRecorder* recorder = nullptr) {
+    std::vector<NUILocalRect> result;
+    result.reserve(itemWidths.size());
+
+    const float y = container.y + ((container.height - itemHeight) * 0.5f);
+    float cursor = container.x + edgeMargin;
+    for (float width : itemWidths) {
+        result.emplace_back(cursor, y, width, itemHeight);
+        if (recorder) {
+            const std::size_t i = result.size() - 1;
+            NUILayoutStep step;
+            step.rule = "leading row, item " + std::to_string(i) + " from the left edge: x = left " +
+                        NUILayoutRecorder::num(container.x) + " + edge margin " + NUILayoutRecorder::num(edgeMargin) +
+                        " + " + std::to_string(i) + " earlier item(s) and gaps of " + NUILayoutRecorder::num(spacing) +
+                        " = " + NUILayoutRecorder::num(cursor) + "; centred vertically";
+            step.available = container;
+            step.requestsWidth = step.requestsHeight = true;
+            step.requestedWidth = width;
+            step.requestedHeight = itemHeight;
+            step.resolved = result.back();
+            step.visible = cursor + width <= container.right();
+            recorder->add(step, "[" + std::to_string(i) + "]");
+        }
+        cursor += width + spacing;
+    }
+    return result;
+}
+
+/** Records both halves of a split (shared by splitVertical and splitHorizontal). */
+inline void recordSplit(NUILayoutRecorder& recorder, const NUILocalRect& container, const NUILocalRect& leading,
+                        const NUILocalRect& trailing, float asked, float given, bool horizontal) {
+    const char* axis = horizontal ? "width" : "height";
+    const float extent = horizontal ? container.width : container.height;
+
+    NUILayoutStep lead;
+    lead.rule = std::string(horizontal ? "horizontal" : "vertical") + " split, leading part: fixed " + axis + " " +
+                NUILayoutRecorder::num(asked);
+    lead.available = container;
+    lead.requestsWidth = horizontal;
+    lead.requestsHeight = !horizontal;
+    lead.requestedWidth = horizontal ? asked : 0.0f;
+    lead.requestedHeight = horizontal ? 0.0f : asked;
+    lead.resolved = leading;
+    if (given != asked) {
+        lead.clamp = std::string(axis) + " " + NUILayoutRecorder::num(asked) + " clamped to " +
+                     NUILayoutRecorder::num(given) + " (container " + axis + " is " + NUILayoutRecorder::num(extent) + ")";
+    }
+    recorder.add(lead, ".leading");
+
+    NUILayoutStep trail;
+    trail.rule = std::string(horizontal ? "horizontal" : "vertical") + " split, trailing part: fills the rest, " +
+                 NUILayoutRecorder::num(extent) + " - " + NUILayoutRecorder::num(given) + " = " +
+                 NUILayoutRecorder::num(extent - given);
+    trail.available = container;
+    trail.resolved = trailing;
+    recorder.add(trail, ".trailing");
+}
+
 struct NUIVerticalSplit {
     NUILocalRect leading;
     NUILocalRect trailing;
 };
 
-inline NUIVerticalSplit splitVertical(const NUILocalRect& container, float leadingHeight) {
+inline NUIVerticalSplit splitVertical(const NUILocalRect& container, float leadingHeight,
+                                     NUILayoutRecorder* recorder = nullptr) {
     const float clampedLeading = std::max(0.0f, std::min(leadingHeight, container.height));
     NUIVerticalSplit split;
     split.leading = NUILocalRect(container.x, container.y, container.width, clampedLeading);
     split.trailing = NUILocalRect(container.x, container.y + clampedLeading, container.width, container.height - clampedLeading);
+    if (recorder) {
+        recordSplit(*recorder, container, split.leading, split.trailing, leadingHeight, clampedLeading, false);
+    }
+    return split;
+}
+
+/**
+ * @brief The horizontal counterpart of splitVertical(): a fixed-width leading
+ * column and a fill-remaining trailing column, side by side.
+ *
+ * Same clamp, same reason: `leadingWidth` lands in `[0, container.width]` so
+ * the trailing column is never negative. Added for the second consumer
+ * (TrackManagerUI, V8-X2b phase 4), whose track rows and scrollbar gutter are
+ * this split of one band — not a TrackManager-only shape.
+ */
+struct NUIHorizontalSplit {
+    NUILocalRect leading;
+    NUILocalRect trailing;
+};
+
+inline NUIHorizontalSplit splitHorizontal(const NUILocalRect& container, float leadingWidth,
+                                         NUILayoutRecorder* recorder = nullptr) {
+    const float clampedLeading = std::max(0.0f, std::min(leadingWidth, container.width));
+    NUIHorizontalSplit split;
+    split.leading = NUILocalRect(container.x, container.y, clampedLeading, container.height);
+    split.trailing = NUILocalRect(container.x + clampedLeading, container.y, container.width - clampedLeading, container.height);
+    if (recorder) {
+        recordSplit(*recorder, container, split.leading, split.trailing, leadingWidth, clampedLeading, true);
+    }
     return split;
 }
 
@@ -119,10 +245,74 @@ struct NUIScrollItem {
     bool visible = false;
 };
 
+/** @brief The axis a stack runs along. */
+enum class NUIAxis {
+    Horizontal, //!< Items left to right; each takes the viewport's full height.
+    Vertical,   //!< Items top to bottom; each takes the viewport's full width.
+};
+
+/**
+ * @brief arrangeScrollingRow() (below) along either axis.
+ *
+ * The mixer's strip row (horizontal) and the timeline's track rows (vertical,
+ * V8-X2b phase 4) are the same layout: fixed-extent items one step apart,
+ * shifted by a scroll offset, each reported visible or not against the
+ * viewport. One function with an axis, rather than a second near-copy for
+ * the second consumer, is what X2b·5 asks for: the engine absorbs a new
+ * consumer without growing a special case for it.
+ *
+ * Same rules as arrangeScrollingRow(): nothing is clipped or hidden here, and
+ * `scrollOffset` is the caller's to bound.
+ */
+inline std::vector<NUIScrollItem> arrangeScrollingStack(
+    const NUILocalRect& viewport,
+    NUIAxis axis,
+    float itemExtent,
+    float spacing,
+    std::size_t itemCount,
+    float scrollOffset,
+    NUILayoutRecorder* recorder = nullptr) {
+    std::vector<NUIScrollItem> result;
+    result.reserve(itemCount);
+
+    const bool horizontal = axis == NUIAxis::Horizontal;
+    const float start = horizontal ? viewport.x : viewport.y;
+    const float end = horizontal ? viewport.right() : viewport.bottom();
+    const float step = itemExtent + spacing;
+
+    for (std::size_t i = 0; i < itemCount; ++i) {
+        const float along = start - scrollOffset + (static_cast<float>(i) * step);
+        NUIScrollItem item;
+        item.rect = horizontal ? NUILocalRect(along, viewport.y, itemExtent, viewport.height)
+                               : NUILocalRect(viewport.x, along, viewport.width, itemExtent);
+        item.visible = (along + itemExtent) >= start && along <= end;
+        result.push_back(item);
+        if (recorder) {
+            NUILayoutStep step;
+            step.rule = std::string("scrolling stack (") + (horizontal ? "horizontal" : "vertical") + "), item " +
+                        std::to_string(i) + " of " + std::to_string(itemCount) + ": " + (horizontal ? "x" : "y") +
+                        " = " + NUILayoutRecorder::num(start) + " + " + std::to_string(i) + " x (" +
+                        NUILayoutRecorder::num(itemExtent) + " + " + NUILayoutRecorder::num(spacing) + ") - scroll " +
+                        NUILayoutRecorder::num(scrollOffset) + " = " + NUILayoutRecorder::num(along);
+            step.available = viewport;
+            step.requestsWidth = horizontal;
+            step.requestsHeight = !horizontal;
+            step.requestedWidth = horizontal ? itemExtent : 0.0f;
+            step.requestedHeight = horizontal ? 0.0f : itemExtent;
+            step.resolved = item.rect;
+            step.overflowExpected = true;
+            step.visible = item.visible;
+            recorder->add(step, "[" + std::to_string(i) + "]");
+        }
+    }
+    return result;
+}
+
 /**
  * @brief Arranges `itemCount` fixed-width, equally-spaced items left to right,
  * offset by `scrollOffset`, and reports which ones currently fall inside
- * `viewport` — the mixer's horizontally-scrolling channel-strip row.
+ * `viewport` — the mixer's horizontally-scrolling channel-strip row. The
+ * horizontal case of arrangeScrollingStack().
  *
  * This is the layout system's first encounter with overflow: `viewport` is
  * not the same thing as the row's own extent, which is typically far wider
@@ -146,22 +336,52 @@ inline std::vector<NUIScrollItem> arrangeScrollingRow(
     float itemWidth,
     float spacing,
     std::size_t itemCount,
-    float scrollOffset) {
-    std::vector<NUIScrollItem> result;
-    result.reserve(itemCount);
+    float scrollOffset,
+    NUILayoutRecorder* recorder = nullptr) {
+    return arrangeScrollingStack(viewport, NUIAxis::Horizontal, itemWidth, spacing, itemCount, scrollOffset, recorder);
+}
 
-    const float left = viewport.x;
-    const float right = viewport.right();
-    const float step = itemWidth + spacing;
-
-    for (std::size_t i = 0; i < itemCount; ++i) {
-        const float x = left - scrollOffset + (static_cast<float>(i) * step);
-        NUIScrollItem item;
-        item.rect = NUILocalRect(x, viewport.y, itemWidth, viewport.height);
-        item.visible = (x + itemWidth) >= left && x <= right;
-        result.push_back(item);
+/**
+ * @brief Total extent of a stack's content along its axis: the bound a
+ * caller clamps `scrollOffset` against (content extent minus viewport extent).
+ * No trailing spacing after the last item; zero items take no space.
+ */
+inline float scrollingStackContentExtent(float itemExtent, float spacing, std::size_t itemCount) {
+    if (itemCount == 0) {
+        return 0.0f;
     }
-    return result;
+    return (static_cast<float>(itemCount) * (itemExtent + spacing)) - spacing;
+}
+
+/**
+ * @brief The inverse of arrangeScrollingStack() for hit testing: which slot
+ * the coordinate `along` (in the viewport's own space, on the stack's axis)
+ * falls in, or -1 when it lies before the first item.
+ *
+ * A slot is an item plus the spacing that follows it, so a point in a gap
+ * belongs to the item before it — the rule the timeline's hit tests already
+ * applied by hand, made one rule. The result is deliberately unbounded above:
+ * an index at or past `itemCount` is a real answer ("below the last row"),
+ * and whether that means "nothing" or "a new row" is the caller's call, not
+ * this function's.
+ */
+inline int scrollingStackSlotAt(
+    const NUILocalRect& viewport,
+    NUIAxis axis,
+    float itemExtent,
+    float spacing,
+    float scrollOffset,
+    float along) {
+    const float step = itemExtent + spacing;
+    if (!(step > 0.0f)) {
+        return -1;
+    }
+    const float start = axis == NUIAxis::Horizontal ? viewport.x : viewport.y;
+    const float offset = along - start + scrollOffset;
+    if (offset < 0.0f) {
+        return -1;
+    }
+    return static_cast<int>(offset / step);
 }
 
 } // namespace Layout

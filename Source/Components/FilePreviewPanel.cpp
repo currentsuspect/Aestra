@@ -422,10 +422,55 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     const float infoTopY = bounds.y + 8.0f;
     const float nameX = bounds.x + padL;
     const float nameRight = loading ? spinnerLeft - 6.0f : bounds.right() - padR;
-    const float nameMaxW = std::max(0.0f, nameRight - nameX);
     const float nameFont = theme.getFontSize("m");
+
+    // What the header told us: length, rate, channels, tempo, key. Right-aligned
+    // in the name lane; the name gives up width first.
+    std::string facts;
+    const auto addFact = [&facts](const std::string& fact) {
+        if (fact.empty()) return;
+        if (!facts.empty()) facts += " \xc2\xb7 ";
+        facts += fact;
+    };
+    if (currentFile_.durationSec > 0.0) {
+        char buf[32];
+        const double d = currentFile_.durationSec;
+        if (d < 10.0) {
+            std::snprintf(buf, sizeof(buf), "%.1f s", d);
+        } else {
+            const int total = static_cast<int>(d + 0.5);
+            std::snprintf(buf, sizeof(buf), "%d:%02d", total / 60, total % 60);
+        }
+        addFact(buf);
+    }
+    if (currentFile_.sampleRate > 0) {
+        char buf[32];
+        std::snprintf(buf, sizeof(buf), "%g kHz", std::round(currentFile_.sampleRate / 100.0) / 10.0);
+        addFact(buf);
+    }
+    if (currentFile_.channels == 1) addFact("Mono");
+    else if (currentFile_.channels == 2) addFact("Stereo");
+    else if (currentFile_.channels > 2) addFact(std::to_string(currentFile_.channels) + " ch");
+    if (currentFile_.detectedBpm > 0) addFact(std::to_string(currentFile_.detectedBpm) + " BPM");
+    addFact(currentFile_.musicalKey);
+
+    float factsW = 0.0f;
+    const float factsFont = theme.getFontSize("xs");
+    if (!facts.empty()) {
+        factsW = renderer.measureText(facts, factsFont).width;
+        // Never let the facts take more than half the lane.
+        if (factsW > (nameRight - nameX) * 0.5f) {
+            facts.clear();
+            factsW = 0.0f;
+        }
+    }
+    const float nameMaxW = std::max(0.0f, nameRight - nameX - (factsW > 0.0f ? factsW + 10.0f : 0.0f));
     std::string displayName = truncateToWidth(renderer, currentFile_.name, nameFont, nameMaxW);
     renderer.drawText(displayName, NUIPoint(nameX, infoTopY), nameFont, theme.getColor("textPrimary").withAlpha(0.92f));
+    if (!facts.empty()) {
+        renderer.drawText(facts, NUIPoint(nameRight - factsW, infoTopY + 2.0f), factsFont,
+                          theme.getColor("textSecondary").withAlpha(0.70f));
+    }
 
     // -- Scrubber / Progress bar --
     float trackY = scrubberBounds_.y + scrubberBounds_.height * 0.5f;

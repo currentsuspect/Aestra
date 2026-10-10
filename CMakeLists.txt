@@ -203,6 +203,7 @@ add_subdirectory(AestraAudio)
 if(EXISTS "${CMAKE_SOURCE_DIR}/Source/App/HeadlessMain.cpp")
   add_executable(AestraHeadless
     Source/App/HeadlessMain.cpp
+    Source/App/HeadlessCheck.cpp
     Source/Core/AudioSettingsStore.cpp
     Source/Core/ProjectSerializer.cpp
   )

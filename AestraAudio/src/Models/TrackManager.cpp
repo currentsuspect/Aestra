@@ -1,6 +1,9 @@
 #include "TrackManager.h"
+#include <unordered_map>
+#include <algorithm>
 
 #include "ClipPrefilterService.h"
+#include "Plugin/SamplerPlugin.h"
 #include "DSP/ClipPrefilter.h"
 
 namespace Aestra {
@@ -92,6 +95,30 @@ void TrackManager::waitForClipPrefilters() {
     }
     m_clipPrefilterService->waitIdle();
     ensureClipPrefilters(); // apply the drained results deterministically
+}
+
+bool TrackManager::prewarmSamplerKeepLength(bool wait) {
+    using Plugins::SamplerPlugin;
+    // Pitches each unit's notes use, across every pattern (a unit's notes can live in any pattern).
+    std::unordered_map<UnitID, std::vector<int>> pitchesByUnit;
+    for (const auto& pattern : m_patternManager.getAllPatterns()) {
+        if (!pattern || !pattern->isMidi()) continue;
+        for (const auto& note : pattern->getMidiNotes()) {
+            auto& pitches = pitchesByUnit[note.unitId];
+            if (std::find(pitches.begin(), pitches.end(), note.pitch) == pitches.end()) {
+                pitches.push_back(note.pitch);
+            }
+        }
+    }
+    bool allReady = true;
+    for (UnitID id : m_unitManager.getAllUnitIDs()) {
+        auto sampler = std::dynamic_pointer_cast<SamplerPlugin>(m_unitManager.getUnitPlugin(id));
+        if (!sampler || sampler->getPitchMode() != SamplerPlugin::PitchMode::KeepLength) continue;
+        const auto it = pitchesByUnit.find(id);
+        if (it == pitchesByUnit.end()) continue;
+        allReady = sampler->prewarmKeepLength(it->second, wait) && allReady;
+    }
+    return allReady;
 }
 
 } // namespace Audio

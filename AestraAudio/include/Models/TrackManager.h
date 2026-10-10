@@ -659,6 +659,15 @@ public:
     const UnitManager& getUnitManager() const { return m_unitManager; }
 
     /**
+     * @brief Queue keep-length renders for every note a keep-length sampler unit can play.
+     *
+     * Non-RT. Collects each such unit's pitches from all patterns. With @p wait, blocks
+     * until they are rendered (export uses this, so an offline render never falls back
+     * to resampling). Returns false if a wait timed out.
+     */
+    bool prewarmSamplerKeepLength(bool wait);
+
+    /**
      * @brief Set output sample rate
      * @param rate Output device sample rate in Hz.
      *

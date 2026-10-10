@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "Plugin/InternalPluginBase.h"
+#include "RealtimeThreadGuard.h"
 #include "Plugin/PluginHost.h"
 
 #include <algorithm>
@@ -18,7 +20,7 @@ namespace Aestra {
 namespace Audio {
 namespace Plugins {
 
-class AestraDrift : public IPluginInstance {
+class AestraDrift : public InternalPluginBase {
 public:
     enum Param : uint32_t {
         kPitch = 0, // -12 to +12 semitones
@@ -39,15 +41,7 @@ public:
     bool initialize(double sampleRate, uint32_t maxBlockSize) override {
         (void)maxBlockSize;
         m_sampleRate = std::max(1.0, sampleRate);
-        // Seed parameter defaults only on the first initialization of a fresh
-        // instance. EffectChain::prepare() re-calls initialize() on the live
-        // instance during sample-rate/device changes and must preserve the
-        // user's current parameter values (and any loaded project state).
-        if (!m_paramsInitialized.exchange(true)) {
-            for (const auto& param : getParameters()) {
-                m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
-            }
-        }
+        seedDefaultsOnce();
         const uint32_t maxGrainSamples =
             std::max(8u, static_cast<uint32_t>(std::ceil(kMaxGrainMilliseconds * 0.001 * m_sampleRate)));
         m_latencySamples = maxGrainSamples / 2u + 4u;
@@ -74,18 +68,67 @@ public:
     void deactivate() override { m_active.store(false, std::memory_order_relaxed); }
     bool isActive() const override { return m_active.load(std::memory_order_relaxed); }
 
-    void process(const float* const* inputs, float** outputs, uint32_t numInputChannels, uint32_t numOutputChannels,
-                 uint32_t numFrames, const MidiBuffer* midiInput = nullptr, MidiBuffer* midiOutput = nullptr) override {
-        (void)midiInput;
-        (void)midiOutput;
-
-        if (!m_active.load(std::memory_order_relaxed) || m_params[kBypass].load(std::memory_order_relaxed) > 0.5f) {
+    // Bypass has to delay by the same amount getLatencySamples() reports.
+    // EffectChain::getTotalLatency() counts this plugin's latency whenever the
+    // slot is not host-bypassed, and it cannot see the plugin's own Bypass
+    // knob — so a straight copy here would place Drift m_latencySamples early
+    // against everything downstream in a delay-compensated chain. Routing
+    // through the grain ring keeps the reported latency constant instead of
+    // changing it with the knob, and keeps advancing so un-bypassing is
+    // seamless.
+    void bypassThroughGrainDelay(const float* const* inputs, float** outputs,
+                                 uint32_t numInputChannels, uint32_t numOutputChannels,
+                                 uint32_t numFrames) {
+        if (m_buffer.empty() || m_bufferR.empty() || m_latencySamples == 0) {
             for (uint32_t ch = 0; ch < numOutputChannels; ++ch) {
                 if (outputs[ch] && ch < numInputChannels && inputs[ch])
                     std::memcpy(outputs[ch], inputs[ch], numFrames * sizeof(float));
                 else if (outputs[ch])
                     std::memset(outputs[ch], 0, numFrames * sizeof(float));
             }
+            return;
+        }
+
+        // Output side and input side are decided separately: a mono-in /
+        // stereo-out layout still has to fill outputs[1], and the wet path
+        // duplicates the left input into the right, so the bypass does too.
+        const bool stereoOut = numOutputChannels >= 2;
+        const bool hasRightInput = numInputChannels >= 2 && inputs[1] != nullptr;
+        const int mask = m_bufferMask;
+        const int latency = static_cast<int>(m_latencySamples);
+        int writePos = m_writePos;
+
+        for (uint32_t i = 0; i < numFrames; ++i) {
+            const float inL = (numInputChannels >= 1 && inputs[0]) ? inputs[0][i] : 0.0f;
+            const float inR = hasRightInput ? inputs[1][i] : inL;
+            m_buffer[writePos] = inL;
+            m_bufferR[writePos] = inR;
+            // Kept non-negative before the mask: bufferSize always exceeds
+            // m_latencySamples, so adding the ring length first is a plain
+            // modular read rather than a mask over a negative int.
+            const int readPos = (writePos + mask + 1 - latency) & mask;
+            if (outputs[0])
+                outputs[0][i] = m_buffer[readPos];
+            if (stereoOut && outputs[1])
+                outputs[1][i] = m_bufferR[readPos];
+            writePos = (writePos + 1) & mask;
+        }
+        m_writePos = writePos;
+
+        for (uint32_t ch = 2; ch < numOutputChannels; ++ch) {
+            if (outputs[ch])
+                std::memset(outputs[ch], 0, numFrames * sizeof(float));
+        }
+    }
+
+    void process(const float* const* inputs, float** outputs, uint32_t numInputChannels,
+                 uint32_t numOutputChannels, uint32_t numFrames, const MidiBuffer* midiInput = nullptr,
+                 MidiBuffer* midiOutput = nullptr) AESTRA_RT_NONBLOCKING override {
+        (void)midiInput;
+        (void)midiOutput;
+
+        if (!m_active.load(std::memory_order_relaxed) || isBypassed()) {
+            bypassThroughGrainDelay(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
             return;
         }
 
@@ -115,15 +158,15 @@ public:
         // denormal floats — a CPU penalty on the audio thread. 1e-6 is far below
         // the audible resolution of these normalized (0..1) params.
         constexpr float kSmoothSnapEps = 1.0e-6f;
-        const float pitchTarget = m_params[kPitch].load(std::memory_order_relaxed);
-        const float grainTarget = m_params[kGrain].load(std::memory_order_relaxed);
-        const float mixTarget = m_params[kMix].load(std::memory_order_relaxed);
-        const float fineTarget = m_params[kFine].load(std::memory_order_relaxed);
-        const float spreadTarget = m_params[kSpread].load(std::memory_order_relaxed);
-        const float motionTarget = m_params[kMotion].load(std::memory_order_relaxed);
-        const float motionRateTarget = m_params[kMotionRate].load(std::memory_order_relaxed);
-        const float outputTarget = m_params[kOutput].load(std::memory_order_relaxed);
-        const float textureTarget = m_params[kTexture].load(std::memory_order_relaxed);
+        const float pitchTarget = paramValue(kPitch);
+        const float grainTarget = paramValue(kGrain);
+        const float mixTarget = paramValue(kMix);
+        const float fineTarget = paramValue(kFine);
+        const float spreadTarget = paramValue(kSpread);
+        const float motionTarget = paramValue(kMotion);
+        const float motionRateTarget = paramValue(kMotionRate);
+        const float outputTarget = paramValue(kOutput);
+        const float textureTarget = paramValue(kTexture);
         float pitchSmoothed = m_pitchSmoothed;
         float grainSmoothed = m_grainSmoothed;
         float mixSmoothed = m_mixSmoothed;
@@ -272,36 +315,26 @@ public:
         m_textureSmoothed = textureSmoothed;
     }
 
-    uint32_t getParameterCount() const override { return kParamCount; }
+    // Declarative parameter table: the whole plugin-side surface now. The rows are
+    // the table this plugin already shipped in getParameters(), unchanged, so
+    // this is a type rename rather than a behavioural change.
+    inline static constexpr ParamSpec kSpecs[] = {
+        {kPitch, "Pitch", "PIT", "st", 0.5f, 0.0f, 1.0f, true},
+        {kGrain, "Grain", "GRN", "ms", 0.0f, 0.0f, 1.0f, true},
+        {kMix, "Mix", "MIX", "%", 1.0f, 0.0f, 1.0f, true},
+        {kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
+        {kFine, "Fine Tune", "FINE", "ct", 0.5f, 0.0f, 1.0f, true},
+        {kSpread, "Stereo Spread", "SPRD", "%", 0.0f, 0.0f, 1.0f, true},
+        {kMotion, "Motion", "MOT", "ct", 0.0f, 0.0f, 1.0f, true},
+        {kMotionRate, "Motion Rate", "RATE", "Hz", 0.35f, 0.0f, 1.0f, true},
+        {kOutput, "Output", "OUT", "dB", 0.5f, 0.0f, 1.0f, true},
+        {kTexture, "Texture", "TEX", "%", 0.0f, 0.0f, 1.0f, true},
+    };
 
-    float getParameter(uint32_t id) const override {
-        if (id >= kParamCount)
-            return 0.0f;
-        return m_params[id].load(std::memory_order_relaxed);
-    }
-
-    void setParameter(uint32_t id, float value) override {
-        if (id >= kParamCount)
-            return;
-        if (!std::isfinite(value))
-            return; // NaN survives clamp and would poison the parameter smoothers
-        m_params[id].store(std::clamp(value, 0.0f, 1.0f), std::memory_order_relaxed);
-    }
-
-    std::vector<PluginParameter> getParameters() const override {
-        return {
-            {kPitch, "Pitch", "PIT", "st", 0.5f, 0.0f, 1.0f, true},
-            {kGrain, "Grain", "GRN", "ms", 0.0f, 0.0f, 1.0f, true},
-            {kMix, "Mix", "MIX", "%", 1.0f, 0.0f, 1.0f, true},
-            {kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
-            {kFine, "Fine Tune", "FINE", "ct", 0.5f, 0.0f, 1.0f, true},
-            {kSpread, "Stereo Spread", "SPRD", "%", 0.0f, 0.0f, 1.0f, true},
-            {kMotion, "Motion", "MOT", "ct", 0.0f, 0.0f, 1.0f, true},
-            {kMotionRate, "Motion Rate", "RATE", "Hz", 0.35f, 0.0f, 1.0f, true},
-            {kOutput, "Output", "OUT", "dB", 0.5f, 0.0f, 1.0f, true},
-            {kTexture, "Texture", "TEX", "%", 0.0f, 0.0f, 1.0f, true},
-        };
-    }
+    const ParamSpec* paramSpecs() const override { return kSpecs; }
+    uint32_t paramSpecCount() const override { return kParamCount; }
+    AESTRA_VALIDATE_PARAM_SPECS(kSpecs, kParamCount);
+    uint32_t stateMagic() const override { return kStateMagic; }
 
     std::string getParameterDisplay(uint32_t id) const override {
         if (id >= kParamCount)
@@ -355,49 +388,14 @@ public:
         }
     }
 
-    std::vector<uint8_t> saveState() const override {
-        std::vector<uint8_t> state(sizeof(uint32_t) * 2u + sizeof(float) * kParamCount);
-        const uint32_t magic = kStateMagic;
-        const uint32_t version = kStateVersion;
-        std::memcpy(state.data(), &magic, sizeof(magic));
-        std::memcpy(state.data() + sizeof(magic), &version, sizeof(version));
-        for (uint32_t i = 0; i < kParamCount; ++i) {
-            const float value = getParameter(i);
-            std::memcpy(state.data() + sizeof(uint32_t) * 2u + sizeof(float) * i, &value, sizeof(value));
-        }
-        return state;
-    }
+// Canonical base format, version 1. This plugin previously wrote version 3 and
+    // carried readers for v1, v2 and v3, including a v1 quirk that forced kGrain
+    // to zero because "V1 stored this value but never applied it to DSP". Those
+    // are deleted by decision, not omission -- see FD-24 and the format-reset
+    // note in this PR. A pre-reset Drift blob is now rejected, not half-read.
 
-    bool loadState(const std::vector<uint8_t>& state) override {
-        if (state.size() < sizeof(uint32_t) * 2)
-            return false;
-        uint32_t magic = 0;
-        uint32_t version = 0;
-        std::memcpy(&magic, state.data(), sizeof(magic));
-        std::memcpy(&version, state.data() + sizeof(magic), sizeof(version));
-        if (magic != kStateMagic)
-            return false;
-        const uint32_t storedParamCount = version == 1u              ? kLegacyParamCount
-                                          : version == 2u            ? kV2ParamCount
-                                          : version == kStateVersion ? kParamCount
-                                                                     : 0u;
-        if (storedParamCount == 0u || state.size() < sizeof(uint32_t) * 2u + sizeof(float) * storedParamCount)
-            return false;
-        if (version != kStateVersion) {
-            const auto defaults = getParameters();
-            for (uint32_t i = storedParamCount; i < kParamCount; ++i)
-                setParameter(i, defaults[i].defaultValue);
-        }
-        for (uint32_t i = 0; i < storedParamCount; ++i) {
-            float value = 0.0f;
-            std::memcpy(&value, state.data() + sizeof(uint32_t) * 2u + sizeof(float) * i, sizeof(value));
-            setParameter(i, value);
-        }
-        if (version == 1u)
-            setParameter(kGrain, 0.0f); // V1 stored this value but never applied it to DSP.
-        return true;
-    }
-
+    // Kept as overrides: the base's editor stubs report hasEditor() == false and
+    // size {0,0}, and this plugin has a real editor at 720x440.
     bool hasEditor() const override { return true; }
     bool openEditor(void*) override { return false; }
     void closeEditor() override {}
@@ -415,11 +413,12 @@ public:
 
     void setInfo(const PluginInfo& info) { m_info = info; }
 
-private:
+    // Public because stateMagic() is the base's contract for it, and the blob
+    // test asserts against it: a magic that cannot be read from outside is a
+    // magic nothing can verify.
     static constexpr uint32_t kStateMagic = 0x44524654;
-    static constexpr uint32_t kStateVersion = 3;
-    static constexpr uint32_t kLegacyParamCount = 4;
-    static constexpr uint32_t kV2ParamCount = 9;
+
+private:
     static constexpr size_t kTapCount = 2;
     static constexpr float kPi = 3.14159265358979323846f;
     static constexpr float kMaxGrainMilliseconds = 40.0f;
@@ -451,22 +450,20 @@ private:
             m_tapPhase[i] = static_cast<float>(i) / static_cast<float>(kTapCount);
         m_motionPhase = 0.0f;
         // Snap smoothers to the current targets so load/activate doesn't glide.
-        m_pitchSmoothed = m_params[kPitch].load(std::memory_order_relaxed);
-        m_grainSmoothed = m_params[kGrain].load(std::memory_order_relaxed);
-        m_mixSmoothed = m_params[kMix].load(std::memory_order_relaxed);
-        m_fineSmoothed = m_params[kFine].load(std::memory_order_relaxed);
-        m_spreadSmoothed = m_params[kSpread].load(std::memory_order_relaxed);
-        m_motionSmoothed = m_params[kMotion].load(std::memory_order_relaxed);
-        m_motionRateSmoothed = m_params[kMotionRate].load(std::memory_order_relaxed);
-        m_outputSmoothed = m_params[kOutput].load(std::memory_order_relaxed);
-        m_textureSmoothed = m_params[kTexture].load(std::memory_order_relaxed);
+        m_pitchSmoothed = paramValue(kPitch);
+        m_grainSmoothed = paramValue(kGrain);
+        m_mixSmoothed = paramValue(kMix);
+        m_fineSmoothed = paramValue(kFine);
+        m_spreadSmoothed = paramValue(kSpread);
+        m_motionSmoothed = paramValue(kMotion);
+        m_motionRateSmoothed = paramValue(kMotionRate);
+        m_outputSmoothed = paramValue(kOutput);
+        m_textureSmoothed = paramValue(kTexture);
     }
 
     PluginInfo m_info;
     double m_sampleRate = 48000.0;
     std::atomic<bool> m_active{false};
-    std::atomic<bool> m_paramsInitialized{false};
-    std::array<std::atomic<float>, kParamCount> m_params{};
 
     std::vector<float> m_buffer;
     std::vector<float> m_bufferR;
