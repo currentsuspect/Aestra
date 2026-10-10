@@ -320,8 +320,7 @@ bool AestraApp::initialize(const std::string& projectPath) {
         }
     }
 
-    // After platform init, so it replaces SDL's handler: a signal autosaves and exits
-    // instead of asking (TerminationSignal.h). The close button keeps its prompt.
+    // After platform init, so it replaces SDL's handler (TerminationSignal.h); the close button keeps its prompt.
     if (Aestra::TerminationSignal::install()) {
         Log::info("[Close] SIGTERM/SIGINT autosave and exit without a prompt");
     }
@@ -1478,11 +1477,9 @@ void AestraApp::run() {
     }
 
     while (m_running && m_windowManager->processEvents()) {
-        // A logout or a `kill` never waits on a dialog nobody will answer: leave the loop now;
-        // shutdown() autosaves and keeps the session recoverable (SPEC 3 §6.7).
-        if (const int signalNumber = Aestra::TerminationSignal::pending()) {
-            Log::info("[Close] Signal " + std::to_string(signalNumber) + ": exiting without the unsaved-changes prompt");
-            m_exitSignal = signalNumber;
+        // A logout or `kill` never waits on a dialog nobody will answer; shutdown() autosaves (SPEC 3 §6.7).
+        if ((m_exitSignal = Aestra::TerminationSignal::pending()) != 0) {
+            Log::info("[Close] Signal " + std::to_string(m_exitSignal) + ": exiting without the unsaved-changes prompt");
             m_running = false;
             break;
         }
@@ -1748,10 +1745,8 @@ void AestraApp::shutdown() {
     // the autosave is still available for recovery on next launch.
     if (m_content && m_content->getTrackManager() && m_content->getTrackManager()->isModified()) {
         Log::info("[SHUTDOWN] Emergency autosave before shutdown...");
-        const bool autosaved = m_autoSaveManager.forceAutosave();
-        // A signal exit never asked the user, so this autosave is the only copy of their
-        // unsaved work: the crash flag stays (below) and the next launch offers it.
-        m_keepSessionForRecovery = m_exitSignal != 0 && autosaved;
+        // A signal exit never asked, so this autosave is the only copy: keep the crash flag (below).
+        m_keepSessionForRecovery = m_autoSaveManager.forceAutosave() && m_exitSignal != 0;
     }
     m_autoSaveManager.shutdown();
 
@@ -1857,10 +1852,7 @@ void AestraApp::shutdown() {
     // Clear crash flag LAST — if anything above crashes, the flag persists.
     // Also clear ServiceLocator last so shutdown paths can still resolve services.
     Aestra::ServiceLocator::clear();
-    if (m_keepSessionForRecovery) {
-        // Signal exit with unsaved work (SPEC 3 §6.7): leaving the flag makes the next launch
-        // treat this session as unfinished, and recovery offers the emergency autosave, whose
-        // marker carries this session's token. A window close asked the user, so it clears.
+    if (m_keepSessionForRecovery) { // the next launch then offers the emergency autosave (SPEC 3 §6.7)
         Log::info("[CrashDetection] Kept crash flag: signal exit left unsaved work for recovery");
     } else {
         clearCrashFlag();
