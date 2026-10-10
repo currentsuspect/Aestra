@@ -1,12 +1,12 @@
 'on':
+  # No paths filter on pull_request, so that this check CAN be made required.
+  # It does not block merges until "RT effect check" is added to develop's
+  # required status checks in branch protection -- a repository setting, not
+  # this file. A required check that a path filter skips never reports, so the
+  # PR would wait on it forever; that is why the filter goes first. Same
+  # reasoning as the TSan lane (ci.yml, tsan-linux). It is syntax-only, so
+  # running it on every PR is cheap.
   pull_request:
-    paths:
-      - 'AestraAudio/**'
-      - 'Source/**'
-      - 'scripts/ci/check-rt-effects.sh'
-      - 'scripts/ci/check-rt-effects.test.sh'
-      - '.github/workflows/rt-effects.yml'
-      - 'CMakeLists.txt'
   push:
     branches: [develop, main]
     paths:
@@ -27,8 +27,10 @@
 # The main CI matrix builds with the platform's default compiler. This check needs
 # Clang 20 or newer specifically, because [[clang::nonblocking]] and its
 # -Wfunction-effects call-graph analysis exist nowhere else. Bolting a second
-# toolchain onto the main matrix to serve one check would slow every build; a
-# path-filtered lane costs nothing on pull requests that do not touch audio.
+# toolchain onto the main matrix to serve one check would slow every build, so
+# it stays a lane of its own. It runs on every pull request, unfiltered, so it
+# can serve as a required status check once branch protection lists it (see the
+# trigger comment at the top).
 #
 # It is also a syntax-only pass — no codegen, no linking — so it is cheap enough
 # to run on every audio PR rather than nightly, which is where a gate has to run

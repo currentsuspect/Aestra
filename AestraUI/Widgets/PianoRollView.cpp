@@ -585,7 +585,7 @@ bool PianoRollView::onMouseEvent(const NUIMouseEvent& event) {
             if (menu->onMouseEvent(event)) return true;
 
             if (event.pressed && event.button == NUIMouseButton::Left) {
-                const auto menuBounds = menu->getGlobalBounds();
+                const auto menuBounds = menu->getBounds();
                 const auto toolbarBounds = m_toolbar->getBounds();
                 if (!menuBounds.contains(event.position) &&
                     !toolbarBounds.contains(event.position)) {

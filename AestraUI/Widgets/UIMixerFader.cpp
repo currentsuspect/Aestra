@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
+#include <iterator>
 #include <exception>
 #include <locale>
 #include <sstream>
@@ -57,6 +58,10 @@ void UIMixerFader::cacheThemeColors()
     m_textSecondary = theme.getColor("textSecondary");
     m_border = theme.getColor("borderStrong");
     m_tick = theme.getColor("textSecondary").withAlpha(0.34f);
+    // Scale labels and the idle readout are small TEXT on a raised surface: the textSecondary tier.
+    // They used to reuse the tick line's 0.34 alpha (1.8:1 in both themes). textMuted is calibrated
+    // to the primary ground and measured 3.8:1 on this strip, so the secondary tier it is.
+    m_textMuted = theme.getColor("textSecondary");
     m_tickUnity = theme.getColor("textPrimary").withAlpha(0.72f);
     m_tooltipBg = theme.getColor("elevatedPanel").withAlpha(0.98f);
 }
@@ -135,39 +140,65 @@ void UIMixerFader::renderScale(NUIRenderer& renderer, float trackX, float trackW
     const float leftEnd = trackX - TICK_GAP;
     const float rightStart = trackX + trackWidth + TICK_GAP;
 
-    // The scale is structural, not a second readout. Unity is useful orientation
-    // at a glance; the complete dB ladder is revealed for the master strip or
+    // The scale is structural, not a second readout: major marks are always
+    // labelled, the complete dB ladder is revealed for the master strip or
     // while the musician is directly manipulating this fader.
-    char labelBuf[8];
+    // Ticks first, all of them; labels second, with collision avoidance. On a
+    // short fader (a floating mixer, a small window) neighbouring labels land
+    // on top of each other and "+6" and "0" merge into one smudge. Unity is
+    // placed first and always wins; any other label that would sit within
+    // kMinLabelGap of an already placed one is skipped.
+    constexpr float kMinLabelGap = 10.0f;
     for (float db : SCALE_TICKS) {
         if (db > m_maxDb || db < m_minDb) continue;
-
         const bool unity = (std::abs(db) < 0.01f);
         const float y = dbToY(db, trackTop, trackHeight);
         const float len = unity ? TICK_LEN + 2.0f : TICK_LEN;
         const float thickness = unity ? 2.0f : 1.0f;
         const NUIColor color =
             unity ? m_tickUnity : (showLabels ? m_tick : m_tick.withAlpha(m_tick.a * 0.58f));
-
         renderer.fillRect(NUIRect{leftEnd - len, y - thickness * 0.5f, len, thickness}, color);
         renderer.fillRect(NUIRect{rightStart, y - thickness * 0.5f, len, thickness}, color);
+    }
 
-        if (!showLabels && !unity) {
-            continue;
+    float placed[16];
+    static_assert(std::size(SCALE_TICKS) <= std::size(placed), "every scale label needs a slot");
+    int placedCount = 0;
+    const auto fits = [&](float y) {
+        for (int i = 0; i < placedCount; ++i) {
+            if (std::abs(placed[i] - y) < kMinLabelGap) return false;
         }
-
+        return true;
+    };
+    const auto drawLabel = [&](float db) {
+        const bool unity = (std::abs(db) < 0.01f);
+        const float y = dbToY(db, trackTop, trackHeight);
+        if (!fits(y) || placedCount >= 16) return;
+        placed[placedCount++] = y;
+        char labelBuf[8];
         const char* label = "0";
         if (!unity) {
             std::snprintf(labelBuf, sizeof(labelBuf), "%+d", static_cast<int>(db));
             label = labelBuf;
         }
-        const float labelSize = renderer.measureText(label, 7.5f).width;
-        // Right-align labels against the tick so they remain a contextual
-        // measurement aid instead of forming a permanent text column.
-        renderer.drawText(label,
-                          {leftEnd - TICK_LEN - 5.0f - labelSize, y - 3.5f},
-                          unity ? 8.0f : 7.5f,
-                          unity ? m_tickUnity : m_tick.withAlpha(showLabels ? m_tick.a : m_tick.a * 0.72f));
+        const float size = unity ? 8.0f : 7.5f;
+        const float labelW = renderer.measureText(label, size).width;
+        // Right-align labels against the tick so they remain a measurement aid
+        // instead of forming a permanent text column.
+        renderer.drawText(label, {leftEnd - TICK_LEN - 5.0f - labelW, y - 3.5f}, size,
+                          unity ? m_tickUnity : m_textMuted.withAlpha(showLabels ? 1.0f : 0.72f));
+    };
+
+    if (0.0f <= m_maxDb && 0.0f >= m_minDb) drawLabel(0.0f);
+    for (float db : SCALE_TICKS) {
+        if (db > m_maxDb || db < m_minDb || std::abs(db) < 0.01f) continue;
+        // At rest the major marks stay labelled, so the scale reads as a scale;
+        // a lone "0" read as a stray glyph. The full ladder appears on the
+        // master, on hover and while dragging.
+        const auto near = [db](float mark) { return std::abs(db - mark) < 0.01f; };
+        const bool major = near(6.0f) || near(-12.0f) || near(-24.0f) || near(-48.0f);
+        if (!showLabels && !major) continue;
+        drawLabel(db);
     }
 }
 
@@ -253,7 +284,7 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
         renderer.drawTextCentered(m_cachedText,
                                   textRect,
                                   fontSize,
-                                  valueActive ? m_text : m_textSecondary.withAlpha(0.72f));
+                                  valueActive ? m_text : m_textMuted);
     }
 
     // 6. Drag Value Tooltip (only while dragging)

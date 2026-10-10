@@ -24,6 +24,9 @@ public:
     void setTitle(const std::string& title);
     std::string getTitle() const { return title_; }
     void setMembershipBadge(const std::string& tier, const std::string& status, bool verified);
+    /** @brief The open project and whether its changes are saved. @p note, when set,
+        replaces Saved/Unsaved (e.g. "Recovered"). */
+    void setProjectStatus(const std::string& name, bool modified, const std::string& note = {});
     
     void setHeight(float height);
     float getHeight() const { return height_; }
@@ -73,6 +76,9 @@ private:
     std::string membershipTier_;
     std::string membershipStatus_;
     bool membershipVerified_;
+    std::string projectName_;
+    std::string projectNote_;
+    bool projectModified_ = false;
     float height_;
     
     // Window controls

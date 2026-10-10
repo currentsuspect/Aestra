@@ -178,7 +178,7 @@ When stuck, check:
 2. **Test with nested components early** - Verify positioning in hierarchy
 3. **Add debug rendering during development** - Draw bounds to visualize
 4. **Document coordinate assumptions in comments** - Help future maintainers
-5. **Use utility helpers** - `NUIAbsolute()`, `NUICentered()`, etc.
+5. **Use the layout algorithms** - `AestraUI/Layout/` (`splitVertical`, `arrangeTrailingRow`, `localToWindow`)
 6. **Remember render order = Z-order** - First rendered = bottom layer
 7. **Review this checklist before committing** - Catch issues early
 

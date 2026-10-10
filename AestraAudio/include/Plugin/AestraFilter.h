@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include "Plugin/InternalPluginBase.h"
+#include "RealtimeThreadGuard.h"
 #include "Plugin/PluginHost.h"
 
 #include <algorithm>
@@ -37,7 +39,7 @@ namespace Aestra {
 namespace Audio {
 namespace Plugins {
 
-class AestraFilter : public IPluginInstance {
+class AestraFilter : public InternalPluginBase {
 public:
     static constexpr uint32_t kStateMagic = 0x464C5431; // 'FLT1'
     static constexpr float kEnvModOctaves = 4.0f;
@@ -62,15 +64,7 @@ public:
     bool initialize(double sampleRate, uint32_t maxBlockSize) override {
         (void)maxBlockSize;
         m_sampleRate = std::max(1.0, sampleRate);
-        // Seed parameter defaults only on the first initialization of a fresh
-        // instance. EffectChain::prepare() re-calls initialize() on the live
-        // instance during sample-rate/device changes and must preserve the
-        // user's current parameter values (and any loaded project state).
-        if (!m_paramsInitialized.exchange(true)) {
-            for (const auto& param : getParameters()) {
-                m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
-            }
-        }
+        seedDefaultsOnce();
         resetRuntimeState();
         snapSmoothedParams();
         return true;
@@ -88,11 +82,11 @@ public:
     bool isActive() const override { return m_active.load(std::memory_order_relaxed); }
 
     void process(const float* const* inputs, float** outputs, uint32_t numInputChannels, uint32_t numOutputChannels,
-                 uint32_t numFrames, const MidiBuffer* midiInput = nullptr, MidiBuffer* midiOutput = nullptr) override {
+                 uint32_t numFrames, const MidiBuffer* midiInput = nullptr, MidiBuffer* midiOutput = nullptr) AESTRA_RT_NONBLOCKING override {
         (void)midiInput;
         (void)midiOutput;
 
-        if (!m_active.load(std::memory_order_relaxed) || m_params[kBypass].load(std::memory_order_relaxed) > 0.5f) {
+        if (!m_active.load(std::memory_order_relaxed) || isBypassed()) {
             copyOrClear(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
             m_wasBypassed = true;
             return;
@@ -179,7 +173,7 @@ public:
             // LP->BP->HP), which can click; per-type gains morph through any
             // interruption because the current audible blend is the state.
             const uint32_t selType =
-                static_cast<uint32_t>(typeFromNorm(m_params[kType].load(std::memory_order_relaxed)));
+                static_cast<uint32_t>(typeFromNorm(paramValue(kType)));
 
             const float wet = m_mixSmoothed;
             const float dry = 1.0f - wet;
@@ -240,35 +234,25 @@ public:
         m_envLevel.store(std::min(1.0f, m_envelope), std::memory_order_relaxed);
     }
 
-    uint32_t getParameterCount() const override { return kParamCount; }
+    // Declarative parameter table: this is the whole plugin-side surface now.
+    // Storage, the non-finite and range guards, getParameters() and the state
+    // blob come from InternalPluginBase.
+    inline static constexpr ParamSpec kSpecs[] = {
+        {kType, "Type", "TYP", "", 0.0f, 0.0f, 1.0f, true, false, false, kTypeCount - 1},
+        {kCutoff, "Cutoff", "CUT", "Hz", 1.0f, 0.0f, 1.0f, true},
+        {kReso, "Resonance", "RES", "", 0.116f, 0.0f, 1.0f, true}, // ~Q 0.707,
+        {kDrive, "Drive", "DRV", "dB", 0.0f, 0.0f, 1.0f, true},
+        {kEnvAmount, "Envelope", "ENV", "%", 0.5f, 0.0f, 1.0f, true},    // center = off,
+        {kEnvAttack, "Attack", "ATK", "ms", 0.567f, 0.0f, 1.0f, true},   // ~5 ms,
+        {kEnvRelease, "Release", "REL", "ms", 0.642f, 0.0f, 1.0f, true}, // ~150 ms,
+        {kMix, "Mix", "MIX", "%", 1.0f, 0.0f, 1.0f, true},
+        {kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
+    };
 
-    float getParameter(uint32_t id) const override {
-        if (id >= kParamCount)
-            return 0.0f;
-        return m_params[id].load(std::memory_order_relaxed);
-    }
-
-    void setParameter(uint32_t id, float value) override {
-        if (id >= kParamCount)
-            return;
-        if (!std::isfinite(value))
-            return; // NaN survives clamp (comparisons are false) and would poison the SVF coefficients
-        m_params[id].store(std::clamp(value, 0.0f, 1.0f), std::memory_order_relaxed);
-    }
-
-    std::vector<PluginParameter> getParameters() const override {
-        return {
-            {kType, "Type", "TYP", "", 0.0f, 0.0f, 1.0f, true, false, false, kTypeCount - 1},
-            {kCutoff, "Cutoff", "CUT", "Hz", 1.0f, 0.0f, 1.0f, true},
-            {kReso, "Resonance", "RES", "", 0.116f, 0.0f, 1.0f, true}, // ~Q 0.707
-            {kDrive, "Drive", "DRV", "dB", 0.0f, 0.0f, 1.0f, true},
-            {kEnvAmount, "Envelope", "ENV", "%", 0.5f, 0.0f, 1.0f, true},    // center = off
-            {kEnvAttack, "Attack", "ATK", "ms", 0.567f, 0.0f, 1.0f, true},   // ~5 ms
-            {kEnvRelease, "Release", "REL", "ms", 0.642f, 0.0f, 1.0f, true}, // ~150 ms
-            {kMix, "Mix", "MIX", "%", 1.0f, 0.0f, 1.0f, true},
-            {kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
-        };
-    }
+    const ParamSpec* paramSpecs() const override { return kSpecs; }
+    uint32_t paramSpecCount() const override { return kParamCount; }
+    AESTRA_VALIDATE_PARAM_SPECS(kSpecs, kParamCount);
+    uint32_t stateMagic() const override { return kStateMagic; }
 
     std::string getParameterDisplay(uint32_t id) const override {
         if (id >= kParamCount)
@@ -318,56 +302,8 @@ public:
         }
     }
 
-    std::vector<uint8_t> saveState() const override {
-        struct Blob {
-            uint32_t magic = kStateMagic;
-            uint32_t version = 1;
-            float params[kParamCount] = {};
-        } blob;
-        for (uint32_t i = 0; i < kParamCount; ++i) {
-            blob.params[i] = getParameter(i);
-        }
-        const auto* data = reinterpret_cast<const uint8_t*>(&blob);
-        return {data, data + sizeof(blob)};
-    }
-
-    bool loadState(const std::vector<uint8_t>& state) override {
-        if (state.size() < sizeof(uint32_t) * 2)
-            return false;
-        uint32_t magic = 0;
-        std::memcpy(&magic, state.data(), sizeof(magic));
-        if (magic != kStateMagic)
-            return false;
-        struct Blob {
-            uint32_t magic;
-            uint32_t version;
-            float params[kParamCount];
-        };
-        if (state.size() < sizeof(Blob))
-            return false;
-        Blob blob{};
-        std::memcpy(&blob, state.data(), sizeof(blob));
-        if (blob.version < 1 || blob.version > 1)
-            return false;
-        // Validate the entire decoded set before mutating anything. setParameter
-        // silently drops non-finite values, so applying in place would leave a
-        // half-updated state while still reporting success — fail atomically.
-        for (uint32_t i = 0; i < kParamCount; ++i) {
-            if (!std::isfinite(blob.params[i]) || blob.params[i] < 0.0f || blob.params[i] > 1.0f)
-                return false;
-        }
-        for (uint32_t i = 0; i < kParamCount; ++i) {
-            setParameter(i, blob.params[i]);
-        }
-        return true;
-    }
-
     bool hasEditor() const override { return true; }
-    bool openEditor(void*) override { return false; }
-    void closeEditor() override {}
-    bool isEditorOpen() const override { return false; }
     std::pair<int, int> getEditorSize() const override { return {700, 420}; }
-    bool resizeEditor(int, int) override { return false; }
 
     const PluginInfo& getInfo() const override { return m_info; }
     uint32_t getLatencySamples() const override { return 0; }
@@ -379,10 +315,6 @@ public:
         // the current rate.
         return static_cast<uint32_t>(m_sampleRate * 1.2);
     }
-    WatchdogStats getWatchdogStats() const override { return {}; }
-    void resetWatchdog() override {}
-    bool isBypassedByWatchdog() const override { return false; }
-    bool isCrashed() const override { return false; }
 
     void setInfo(const PluginInfo& info) { m_info = info; }
 
@@ -492,8 +424,6 @@ private:
     PluginInfo m_info;
     double m_sampleRate = 48000.0;
     std::atomic<bool> m_active{false};
-    std::atomic<bool> m_paramsInitialized{false};
-    std::array<std::atomic<float>, kParamCount> m_params{};
 
     // ZDF SVF integrator state, per channel
     float m_ic1[2] = {0.0f, 0.0f};

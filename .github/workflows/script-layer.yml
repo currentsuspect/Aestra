@@ -1,0 +1,69 @@
+on:
+  pull_request:
+    paths:
+      - 'scripts/**'
+      - '.github/workflows/**'
+      - '.githooks/**'
+      - 'docs/CONTRIBUTING_CORE.md'
+      - 'scripts/ci/check-script-layer.sh'
+      - 'scripts/ci/check-script-layer.test.sh'
+      - '.github/workflows/script-layer.yml'
+  push:
+    branches: [develop, main]
+    paths:
+      - 'scripts/**'
+      - '.github/workflows/**'
+      - '.githooks/**'
+      - 'scripts/ci/check-script-layer.sh'
+      - '.github/workflows/script-layer.yml'
+  workflow_dispatch:
+
+# © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
+#
+# V8-C8, the enforceable half — Python is the canonical script layer.
+#
+# docs/CONTRIBUTING_CORE.md already says Python is canonical and that the .ps1
+# entry points survive only as wrappers for PowerShell users. That sentence is
+# aspirational: nothing checked it, and a workflow calling `powershell -File`
+# would override it forever while the docs kept claiming otherwise.
+#
+# What this lane checks is the half that is mechanical:
+#
+#   1. No CI step and no git hook invokes a .ps1 directly. This is the invariant
+#      that actually makes Python canonical in practice.
+#   2. Every .ps1 with a .py twin invokes that twin, in live code rather than in a
+#      comment. A .ps1 that stops delegating is a second implementation wearing a
+#      wrapper's filename.
+#
+# What it deliberately does NOT check: that every .ps1 has a Python twin. Seven do
+# not, and that is legitimate — generate-api-docs.ps1 wraps Doxygen and
+# run-filter-repo.ps1 wraps git-filter-repo. Wrapping an external tool is not a
+# second implementation of anything.
+#
+# The self-test runs FIRST and gates everything after it. A gate whose own tests
+# are skipped is an assertion, not a check — the same reasoning
+# check-rt-effects.yml already carries.
+
+jobs:
+  # The job name becomes the status check name. Renaming it detaches any branch
+  # protection rule pointing at it, and every PR then goes green on a gate that is
+  # no longer running. Do not rename without updating branch protection in the
+  # same change.
+  script-layer:
+    name: Script layer (Python canonical)
+    runs-on: ubuntu-latest
+    steps:
+      # persist-credentials: false because this lane then RUNS contributor-controlled
+      # code — the self-test below is repo content. actions/checkout persists a token
+      # in .git/config by default, and nothing here needs authenticated Git
+      # operations. Same reason, and same setting, as ci.yml and nightly.yml.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          submodules: false
+          persist-credentials: false
+
+      - name: Self-test the guard before trusting its verdict
+        run: bash scripts/ci/check-script-layer.test.sh
+
+      - name: Check the script layer
+        run: bash scripts/ci/check-script-layer.sh "$GITHUB_WORKSPACE"

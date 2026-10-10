@@ -1,6 +1,8 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "PluginUIController.h"
+
+#include "PluginEditorRegistry.h"
 #include "EditorSurfacePlacement.h"
 #include "AestraPanelWindow.h"
 #include "../Platform/NUIPlatformBridge.h"
@@ -422,74 +424,17 @@ void PluginUIController::openPluginEditor(
     std::shared_ptr<NUIComponent> editorComp;
     const std::string& pluginId = instance->getInfo().id;
 
-    if (false) {
-#ifdef AESTRAUI_ENABLE_PREMIUM_EDITORS
-    } else if (pluginId == "com.Aestrastudios.rumble") {
-        auto ed = std::make_shared<RumblePluginEditor>(instance);
-        wireEditorClose(ed);
-        ed->setPlatformBridge(m_platformBridge);
-        editorComp = ed;
-#endif
-    } else if (pluginId == "com.Aestrastudios.eq") {
-        auto ed = std::make_shared<AestraEQEditor>(instance);
-        wireEditorClose(ed);
-        ed->setPlatformBridge(m_platformBridge);
-        editorComp = ed;
-    } else if (pluginId == "com.Aestrastudios.comp") {
-        auto ed = std::make_shared<AestraCompEditor>(instance);
-        wireEditorClose(ed);
-        ed->setPlatformBridge(m_platformBridge);
-        editorComp = ed;
-    } else if (pluginId == "com.Aestrastudios.verb") {
-        auto ed = std::make_shared<AestraVerbEditor>(instance);
-        wireEditorClose(ed);
-        ed->setPlatformBridge(m_platformBridge);
-        editorComp = ed;
-    } else if (pluginId == "com.Aestrastudios.delay") {
-        auto ed = std::make_shared<AestraDelayEditor>(instance);
-        wireEditorClose(ed);
-        ed->setPlatformBridge(m_platformBridge);
-        editorComp = ed;
-    } else if (pluginId == "com.Aestrastudios.drift") {
-        auto ed = std::make_shared<AestraDriftEditor>(instance);
-        wireEditorClose(ed);
-        ed->setPlatformBridge(m_platformBridge);
-        editorComp = ed;
-    } else if (pluginId == "com.Aestrastudios.limiter") {
-        auto ed = std::make_shared<AestraLimitEditor>(instance);
-        wireEditorClose(ed);
-        ed->setPlatformBridge(m_platformBridge);
-        editorComp = ed;
-    } else if (pluginId == "com.Aestrastudios.sat") {
-        auto ed = std::make_shared<AestraSatEditor>(instance);
-        wireEditorClose(ed);
-        ed->setPlatformBridge(m_platformBridge);
-        editorComp = ed;
-    } else if (pluginId == "com.Aestrastudios.filter") {
-        auto ed = std::make_shared<AestraFilterEditor>(instance);
-        wireEditorClose(ed);
-        ed->setPlatformBridge(m_platformBridge);
-        editorComp = ed;
-    } else if (pluginId == "com.Aestrastudios.ott") {
-        auto ed = std::make_shared<AestraOTTEditor>(instance);
-        wireEditorClose(ed);
-        ed->setPlatformBridge(m_platformBridge);
-        editorComp = ed;
-    } else if (pluginId == "com.Aestrastudios.lfo") {
-        auto ed = std::make_shared<AestraLFOEditor>(instance);
-        wireEditorClose(ed);
-        ed->setPlatformBridge(m_platformBridge);
-        editorComp = ed;
-    } else if (pluginId == "com.Aestrastudios.transient") {
-        auto ed = std::make_shared<AestraTransientEditor>(instance);
-        wireEditorClose(ed);
-        ed->setPlatformBridge(m_platformBridge);
-        editorComp = ed;
-    } else {
-        auto ed = std::make_shared<GenericPluginEditor>(instance);
-        wireEditorClose(ed);
-        ed->setPlatformBridge(m_platformBridge);
-        editorComp = ed;
+    // Which editor a plugin gets is data, not a branch: see PluginEditorRegistry.
+    // A new special editor is a table row, and a typo'd plugin id can no longer
+    // silently degrade to the generic editor because the ids are enumerable and
+    // checked by PluginEditorRegistryTest.
+    editorComp = pluginEditorFactoryFor(pluginId)(instance, m_platformBridge);
+
+    // Close-wiring happens once, here, rather than in every arm. It stayed a
+    // controller member rather than moving into the registry because it touches
+    // m_popupLayer and m_activeEditors, which the registry cannot reach.
+    if (auto editor = std::dynamic_pointer_cast<AestraPanelWindow>(editorComp)) {
+        wireEditorClose(editor);
     }
     
     auto relayoutEditor = [&](const std::shared_ptr<NUIComponent>& editorComp,
@@ -553,7 +498,7 @@ void PluginUIController::openPluginEditor(
         const auto layerBounds = m_popupLayer->getBounds();
         const Layout::NUILocalRect localRegion(0.0f, 0.0f, layerBounds.width, layerBounds.height);
         const Layout::NUISizeLimits limits{0.0, 0.0};
-        const auto popupGlobal = m_popupLayer->getGlobalBounds();
+        const auto popupGlobal = m_popupLayer->getBounds(); // window-absolute: the layer's origin
         bool placementApplied = false;
         if (!popupGlobal.isEmpty() && !layerBounds.isEmpty()) {
             // Measured window frame: resolve there, convert back for setBounds.
@@ -610,7 +555,7 @@ void PluginUIController::openPluginEditor(
                             std::clamp(dropped.x, 0.0f, std::max(0.0f, layer.width - dropped.width));
                         const float clampedY =
                             std::clamp(dropped.y, 0.0f, std::max(0.0f, layer.height - dropped.height));
-                        const auto popupGlobalNow = m_popupLayer->getGlobalBounds();
+                        const auto popupGlobalNow = m_popupLayer->getBounds();
                         if (popupGlobalNow.isEmpty()) {
                             return;
                         }

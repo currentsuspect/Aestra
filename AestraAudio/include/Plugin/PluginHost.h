@@ -345,9 +345,13 @@ public:
         uint32_t sampleOffset; ///< Sample offset within buffer
         uint8_t data[4];       ///< MIDI data (3 bytes + padding)
         uint8_t size;          ///< Number of valid bytes (1-3)
+        /// Identity of the note a note-on/off belongs to (0 = unknown, e.g. live MIDI).
+        /// MIDI carries only the pitch; the scheduler knows which note it means, so a
+        /// note-off can end exactly its own note even when notes of one pitch overlap.
+        uint32_t noteId;
     };
 
-    void addEvent(uint32_t sampleOffset, const uint8_t* data, uint8_t size) {
+    void addEvent(uint32_t sampleOffset, const uint8_t* data, uint8_t size, uint32_t noteId = 0) {
         if (size <= 3 && data != nullptr) {
             uint32_t index = m_eventCount.load(std::memory_order_acquire);
             while (index < kMaxEvents) {
@@ -360,6 +364,7 @@ public:
                 Event& e = m_events[index];
                 e.sampleOffset = sampleOffset;
                 e.size = size;
+                e.noteId = noteId;
                 std::memset(e.data, 0, sizeof(e.data));
                 std::memcpy(e.data, data, size);
                 return;

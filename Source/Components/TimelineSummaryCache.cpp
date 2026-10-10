@@ -42,8 +42,8 @@ TimelineSummaryCache::~TimelineSummaryCache()
     stopWorker_();
 }
 
-void TimelineSummaryCache::requestRebuild(std::vector<TimelineMinimapClipSpan> spans, double domainStartBeat,
-                                         double domainEndBeat, uint32_t bucketCount)
+uint64_t TimelineSummaryCache::requestRebuild(std::vector<TimelineMinimapClipSpan> spans, double domainStartBeat,
+                                              double domainEndBeat, uint32_t bucketCount)
 {
     ensureWorker_();
 
@@ -54,12 +54,16 @@ void TimelineSummaryCache::requestRebuild(std::vector<TimelineMinimapClipSpan> s
     task.bucketCount = (bucketCount > 0) ? bucketCount : kDefaultBucketCount;
     task.spans = std::move(spans);
 
+    uint64_t generation = 0;
     {
         std::lock_guard<std::mutex> lock(mutex_);
+        generation = ++lastRebuildGeneration_;
+        task.rebuildGeneration = generation;
         tasks_.clear(); // rebuild supersedes any pending incremental work
         tasks_.push_back(std::move(task));
     }
     cv_.notify_one();
+    return generation;
 }
 
 void TimelineSummaryCache::requestApplyDeltas(std::vector<TimelineMinimapClipDelta> deltas, double expectedDomainStartBeat,
@@ -100,7 +104,7 @@ TimelineSummarySnapshot TimelineSummaryCache::getSnapshot() const noexcept
 {
     const uint32_t idx = frontIndex_.load(std::memory_order_acquire) & 1u;
     const TimelineSummary& s = buffers_[idx];
-    return TimelineSummarySnapshot{&s, s.version};
+    return TimelineSummarySnapshot{&s, s.version, s.rebuildGeneration};
 }
 
 void TimelineSummaryCache::ensureWorker_()
@@ -154,6 +158,7 @@ void TimelineSummaryCache::workerLoop_()
         if (task.kind == TaskKind::Rebuild) {
             rebuild_(buffers_[back], task.spans, task.domainStartBeat, task.domainEndBeat, task.bucketCount);
             buffers_[back].version = buffers_[front].version + 1;
+            buffers_[back].rebuildGeneration = task.rebuildGeneration;
 
             // Rebuild the clip index from scratch to match the newly published domain.
             clipIndex_.clear();
@@ -179,6 +184,7 @@ void TimelineSummaryCache::workerLoop_()
 
             applyDeltas_(buffers_[back], src, task.deltas);
             buffers_[back].version = buffers_[front].version + 1;
+            buffers_[back].rebuildGeneration = src.rebuildGeneration;
             recomputeMaxima_(buffers_[back]);
             frontIndex_.store(back, std::memory_order_release);
             continue;

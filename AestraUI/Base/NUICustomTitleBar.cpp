@@ -89,6 +89,16 @@ void NUICustomTitleBar::setMembershipBadge(const std::string& tier, const std::s
     setDirty(true);
 }
 
+void NUICustomTitleBar::setProjectStatus(const std::string& name, bool modified, const std::string& note) {
+    if (projectName_ == name && projectModified_ == modified && projectNote_ == note) {
+        return;
+    }
+    projectName_ = name;
+    projectModified_ = modified;
+    projectNote_ = note;
+    setDirty(true);
+}
+
 void NUICustomTitleBar::setHeight(float height) {
     height_ = height;
     setSize(getBounds().width, height);
@@ -140,90 +150,89 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
     drawWindowControls(renderer);
 
     const auto text = themeManager.getColor("textPrimary").withAlpha(0.90f);
-    const auto muted = themeManager.getColor("textSecondary").withAlpha(0.58f);
+    // A tier colour, not an alpha: textSecondary x 0.58 was 3.2:1 on light, below the 4.5 floor.
+    const auto muted = themeManager.getColor("textSecondary");
     const auto accent = themeManager.getColor("accentPrimary");
     const auto verifiedAccent = themeManager.getColor("success");
     const float userFont = props.fontSizeXS; // 12.0
     const std::string status = membershipStatus_;
     const NUISize statusSize = renderer.measureText(status, userFont);
-    constexpr float badgeW = 96.0f;
-    constexpr float badgeH = 22.0f;
-    constexpr float badgeGapToControls = 12.0f;
-    const float badgeY = bounds.y + std::round((height_ - badgeH) * 0.5f);
-    const NUIRect badge(minimizeButtonRect_.x - badgeGapToControls - badgeW,
-                        badgeY,
-                        badgeW,
-                        badgeH);
-    const float statusX = badge.x - statusSize.width - 14.0f;
+    // Right-hand cluster, read right to left: window controls, the account
+    // line ("Signed out · Core", plain text, one click to the membership
+    // page), then the open project and whether it is saved. No pills: these
+    // are statements, and a box around a statement makes it look like a mode.
+    constexpr float kGapToControls = 14.0f;
+    constexpr float kSeparatorW = 14.0f;
+    const NUIRect textRow(bounds.x, bounds.y, 1.0f, height_);
+    const float textY = renderer.calculateTextY(textRow, userFont);
+    const float tierW = renderer.measureText(membershipTier_, userFont).width;
+    const float tierX = minimizeButtonRect_.x - kGapToControls - tierW;
+    const float statusX = tierX - kSeparatorW - statusSize.width;
 
-    // Progressive collapse for narrow windows. The view toggle is centred on the
-    // whole title bar (AestraContent positions it), so on a small window it would
-    // collide with this right-hand status/badge cluster. Rather than let them
-    // overlap the tabs, hide the least-critical chrome first — the "Signed out"
-    // status text, then the Core badge — keeping the view tabs uncrowded. Primary
-    // controls never hide. Compare against the toggle's centred right edge.
+    // Progressive collapse for narrow windows. The view toggle is centred on
+    // the whole title bar, so on a small window it would collide with this
+    // cluster. Hide the least-critical text first: project state, then the
+    // project name, then "Signed out", then the tier. Primary controls never hide.
     const float toggleRightEdge = bounds.x + bounds.width * 0.5f
                                   + props.layout.viewToggleWidth * 0.5f;
     constexpr float kClusterGuard = 16.0f;
-    const bool showBadge = badge.x > toggleRightEdge + kClusterGuard;
-    // Account state and plan are separate concepts: "Signed out" describes the
-    // session, while "Core" is the plan badge. Keep both visible when space
-    // allows rather than implying that Core is a selectable application mode.
+    const bool showBadge = tierX > toggleRightEdge + kClusterGuard;
     const bool showStatus = showBadge && statusX > toggleRightEdge + kClusterGuard;
 
-    // Hit area for the whole status cluster (status pill + tier badge). Clicking
-    // it opens the membership page, so it must behave like a control, not a
-    // drag surface. Covers the badge whenever it is shown — the status text
-    // only widens the cluster when it also renders.
+    // Hit area for the account line: it opens the membership page, so it must
+    // behave like a control, not a drag surface.
+    constexpr float kClusterH = 22.0f;
     m_statusClusterRect = NUIRect{};
     if (showBadge) {
-        const float clusterX = showStatus ? statusX : badge.x;
-        m_statusClusterRect.x = clusterX;
-        m_statusClusterRect.y = badgeY;
-        m_statusClusterRect.width = badge.right() - clusterX;
-        m_statusClusterRect.height = badgeH;
+        const float clusterX = showStatus ? statusX : tierX;
+        m_statusClusterRect = NUIRect(clusterX, bounds.y + std::round((height_ - kClusterH) * 0.5f),
+                                      tierX + tierW - clusterX, kClusterH);
     }
 
+    const NUIColor accountInk = m_statusHovered ? text : muted;
     if (showStatus) {
-        // Status text is also rendered as a pill so it reads as a deliberate
-        // status chip rather than ambiguous plain text. The combined cluster
-        // (status + tier badge) makes the account state unmistakable.
-        const float statusPillPad = 10.0f;
-        const float statusPillW = statusSize.width + statusPillPad;
-        const NUIRect statusPill(statusX, badgeY, statusPillW, badgeH);
-        const float statusPillRadius = props.radiusM;
-        const NUIColor statusPillFill = m_statusHovered
-            ? themeManager.getColor("surfaceRaised").withAlpha(0.42f)
-            : themeManager.getColor("surfaceRaised").withAlpha(0.24f);
-        const NUIColor statusPillStroke = m_statusHovered
-            ? themeManager.getColor("borderSubtle").withAlpha(0.55f)
-            : themeManager.getColor("borderSubtle").withAlpha(0.32f);
-        renderer.fillRoundedRect(statusPill, statusPillRadius, statusPillFill);
-        renderer.strokeRoundedRect(statusPill, statusPillRadius, 1.0f, statusPillStroke);
-        renderer.drawTextCentered(status, statusPill, userFont, muted);
+        renderer.drawText(status, {statusX, textY}, userFont, accountInk);
+        renderer.drawText("·", {tierX - kSeparatorW * 0.62f, textY}, userFont,
+                          themeManager.getColor("textDisabled"));
+    }
+    if (showBadge) {
+        if (membershipVerified_) {
+            renderer.fillCircle({tierX - 8.0f, bounds.y + height_ * 0.5f}, 3.0f, verifiedAccent);
+        }
+        renderer.drawText(membershipTier_, {tierX, textY}, userFont,
+                          membershipVerified_ ? text : accountInk);
     }
 
-    if (showBadge) {
-        const float badgeRadius = props.radiusM; // 8.0
-        const NUIColor badgeFill = membershipVerified_
-            ? accent.withAlpha(0.10f)
-            : themeManager.getColor("surfaceRaised").withAlpha(0.28f);
-        const NUIColor badgeStroke = membershipVerified_
-            ? accent.withAlpha(0.50f)
-            : themeManager.getColor("borderSubtle").withAlpha(0.42f);
-        renderer.fillRoundedRect(badge, badgeRadius, badgeFill);
-        renderer.strokeRoundedRect(badge, badgeRadius, 1.0f, badgeStroke);
-
-        if (membershipVerified_) {
-            // Subtle status dot on the leading edge of the badge to reinforce verified state.
-            const float dotRadius = 3.0f;
-            const NUIPoint dotCenter(badge.x + 10.0f, badge.y + badge.height * 0.5f);
-            renderer.fillCircle(dotCenter, dotRadius, verifiedAccent.withAlpha(0.92f));
-            renderer.fillCircle(dotCenter, dotRadius * 0.45f, NUIColor::white().withAlpha(0.55f));
+    if (!projectName_.empty()) {
+        const float clusterLeft = showBadge ? m_statusClusterRect.x : minimizeButtonRect_.x - kGapToControls;
+        constexpr float kLamp = 6.0f;
+        constexpr float kInnerGap = 8.0f;
+        constexpr float kGapToAccount = 22.0f;
+        const std::string state = projectNote_.empty() ? (projectModified_ ? "Unsaved" : "Saved") : projectNote_;
+        const float nameW = renderer.measureText(projectName_, userFont).width;
+        const float stateW = renderer.measureText(state, userFont).width;
+        const float right = clusterLeft - (showBadge ? kGapToAccount : 0.0f);
+        const float fullX = right - (nameW + kInnerGap + kLamp + 5.0f + stateW);
+        const float nameOnlyX = right - nameW;
+        const bool showState = fullX > toggleRightEdge + kClusterGuard;
+        const bool showName = showState || nameOnlyX > toggleRightEdge + kClusterGuard;
+        if (showName) {
+            const float nameX = showState ? fullX : nameOnlyX;
+            renderer.drawText(projectName_, {nameX, textY}, userFont, text);
+            if (showState) {
+                const NUIColor lamp = (!projectNote_.empty() || projectModified_)
+                                          ? themeManager.getColor("warning")
+                                          : themeManager.getColor("success");
+                const float lampX = nameX + nameW + kInnerGap;
+                renderer.fillCircle({lampX + kLamp * 0.5f, bounds.y + height_ * 0.5f}, kLamp * 0.5f, lamp);
+                renderer.drawText(state, {lampX + kLamp + 5.0f, textY}, userFont, muted);
+            }
+            if (showBadge) {
+                const float divX = std::round(right + kGapToAccount * 0.5f) + 0.5f;
+                renderer.drawLine({divX, bounds.y + 10.0f}, {divX, bounds.bottom() - 10.0f}, 1.0f,
+                                  themeManager.getColor("divider"));
+            }
         }
-
-        renderer.drawTextCentered(membershipTier_, badge, props.fontSizeS - 2.0f,
-                                  text.withAlpha(membershipVerified_ ? 0.92f : 0.72f));
     }
 
     // Render grouped view toggle background so the segmented control reads as

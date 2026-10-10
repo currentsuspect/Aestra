@@ -74,8 +74,7 @@ private:
     float m_holdDelay;           // Initial delay before repeat
     
     // Cached bounds for dynamic centering
-    AestraUI::NUIRect m_cachedUpArrowBounds;
-    AestraUI::NUIRect m_cachedDownArrowBounds;
+    static constexpr float kArrowColumnWidth = 10.0f;
     
     AestraUI::NUIRect getUpArrowBounds() const;
     AestraUI::NUIRect getDownArrowBounds() const;
@@ -154,11 +153,15 @@ public:
     static std::string formatTime(double seconds);
     /** @brief Existing bar/beat representation (1-based bar:beat.centibeats), as in note labels. */
     static std::string formatMusical(double beats, int beatsPerBar);
+    /** @brief Transport position as bar.beat.sixteenth, all 1-based (e.g. "13.4.2"). */
+    static std::string formatBarBeatSixteenth(double beats, int beatsPerBar);
 
 private:
     double m_currentTime;
     bool m_isPlaying;
-    DisplayMode m_displayMode{DisplayMode::Time};
+    // Bars first: while music plays you read where you are in the song, so the
+    // musical position is the large reading and clock time sits beside it.
+    DisplayMode m_displayMode{DisplayMode::Musical};
     double m_positionBeats{0.0};
     int m_beatsPerBar{4};
     bool m_tapArmed{false};
@@ -183,6 +186,11 @@ public:
     void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
+
+    // Two transport modules live here: POSITION (clock) and TEMPO (BPM + meter).
+    static constexpr float kPositionModuleWidth = 164.0f;
+    static constexpr float kTempoModuleWidth = 142.0f;
+    static constexpr float kPreferredWidth = kPositionModuleWidth + kTempoModuleWidth;
 
 private:
     std::shared_ptr<BPMDisplay> m_bpmDisplay;
