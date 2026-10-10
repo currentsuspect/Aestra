@@ -89,6 +89,7 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/NUIMixerWidgets.cpp
     Widgets/NUIPianoRollWidgets.h
     Widgets/PianoRollGhostCompare.h
+    Widgets/PianoRollPressedKeys.h
     Widgets/PianoRollWidgetShared.h
     Widgets/PianoRollKeyLane.cpp
     Widgets/PianoRollMinimap.cpp
