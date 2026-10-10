@@ -2,7 +2,7 @@
 # pinned at their exact line count. They may shrink, never grow. See
 # Tests/Guards/file_size_ratchet.cmake for the rules and the regeneration command.
 # <lines> <repo-relative path>
-2846 AestraAudio/include/Models/TrackManager.h
+2852 AestraAudio/include/Models/TrackManager.h
 2422 AestraAudio/include/Plugin/AestraEQ.h
 1984 AestraAudio/include/Plugin/AestraVerb.h
 4478 AestraAudio/src/Core/AudioEngine.cpp

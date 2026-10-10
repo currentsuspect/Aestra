@@ -1998,12 +1998,8 @@ public:
      *        preview or a render plays the whole pattern even when a zone exists.
      */
     std::optional<ArsenalLoopZone> scheduledArsenalLoopZone() const { return m_scheduledArsenalLoopZone; }
-    /**
-     * @brief The pattern Arsenal playback last scheduled; invalid once it stops (main thread).
-     *
-     * Lets the piano roll ask "is THIS pattern playing?" without reading the scheduler,
-     * whose lock the audio thread takes (the piano roll's playback keys, SPEC 3 §5.1).
-     */
+    /// Pattern Arsenal playback last scheduled, invalid once stopped (main thread): "is THIS pattern
+    /// playing?" without the scheduler's audio-thread lock (piano-roll playback keys, SPEC 3 §5.1).
     PatternID scheduledArsenalPattern() const { return m_scheduledArsenalPattern; }
 
     /**
