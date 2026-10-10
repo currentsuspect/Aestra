@@ -1969,14 +1969,28 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 chain.prepare(pluginManager.getDefaultSampleRate(), pluginManager.getDefaultBlockSize());
                 if (channels[i].has("effectChainStateHex") && channels[i]["effectChainStateHex"].isString()) {
                     const auto effectState = hexToBytes(channels[i]["effectChainStateHex"].asString());
-                    std::vector<std::string> missingIds;
-                    if (!effectState.empty() && !chain.loadState(effectState, pluginManager, &missingIds)) {
+                    Audio::LoadReport loadReport;
+                    if (!effectState.empty() && !chain.loadState(effectState, pluginManager, &loadReport)) {
                         warningLimiter.warning(ProjectLoadWarningCategory::EffectChain,
                                                "[ProjectLoad] Failed to restore mixer effect chain on: " + channelName,
                                                "[ProjectLoad] Additional mixer effect-chain warnings suppressed.");
                     }
-                    for (auto& id : missingIds) {
+                    for (auto& id : loadReport.missingPlugins) {
                         result.missingPlugins.push_back({std::move(id), channelName});
+                    }
+                    // Reported, not merely logged: the slot is live on DEFAULTS and
+                    // the project's settings for it were dropped (#1014).
+                    if (!loadReport.unreadableState.empty()) {
+                        warningLimiter.warning(
+                            ProjectLoadWarningCategory::EffectChain,
+                            "[ProjectLoad] " + std::to_string(loadReport.unreadableState.size()) +
+                                " plugin(s) on " + channelName +
+                                " could not read their saved settings. Those slots are left empty rather than"
+                                " run on defaults, and their settings are preserved on save.",
+                            "[ProjectLoad] Additional unreadable-plugin-state warnings suppressed.");
+                        for (auto& id : loadReport.unreadableState) {
+                            result.unreadablePluginState.push_back({std::move(id), channelName});
+                        }
                     }
                 }
             }
@@ -1992,14 +2006,28 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 masterChain.prepare(pluginManager.getDefaultSampleRate(), pluginManager.getDefaultBlockSize());
                 if (masterJson.has("effectChainStateHex") && masterJson["effectChainStateHex"].isString()) {
                     const auto effectState = hexToBytes(masterJson["effectChainStateHex"].asString());
-                    std::vector<std::string> missingIds;
-                    if (!effectState.empty() && !masterChain.loadState(effectState, pluginManager, &missingIds)) {
+                    Audio::LoadReport loadReport;
+                    if (!effectState.empty() && !masterChain.loadState(effectState, pluginManager, &loadReport)) {
                         warningLimiter.warning(ProjectLoadWarningCategory::EffectChain,
                                                "[ProjectLoad] Failed to restore Master effect chain",
                                                "[ProjectLoad] Additional Master effect-chain warnings suppressed.");
                     }
-                    for (auto& id : missingIds) {
+                    for (auto& id : loadReport.missingPlugins) {
                         result.missingPlugins.push_back({std::move(id), "Master"});
+                    }
+                    // Reported, not merely logged: the slot is live on DEFAULTS and
+                    // the project's settings for it were dropped (#1014).
+                    if (!loadReport.unreadableState.empty()) {
+                        warningLimiter.warning(
+                            ProjectLoadWarningCategory::EffectChain,
+                            "[ProjectLoad] " + std::to_string(loadReport.unreadableState.size()) +
+                                " plugin(s) on Master could not read their saved settings. Those slots are"
+                                " left empty rather than run on defaults, and their settings are preserved"
+                                " on save.",
+                            "[ProjectLoad] Additional unreadable-plugin-state warnings suppressed.");
+                        for (auto& id : loadReport.unreadableState) {
+                            result.unreadablePluginState.push_back({std::move(id), "Master"});
+                        }
                     }
                 }
             }
@@ -2155,15 +2183,30 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             if (lj[i].has("effectChainStateHex") && lj[i]["effectChainStateHex"].isString()) {
                                 const auto effectState = hexToBytes(lj[i]["effectChainStateHex"].asString());
                                 if (!effectState.empty()) {
-                                    std::vector<std::string> missingIds;
-                                    if (!chain.loadState(effectState, pluginManager, &missingIds)) {
+                                    Audio::LoadReport loadReport;
+                                    if (!chain.loadState(effectState, pluginManager, &loadReport)) {
                                         warningLimiter.warning(
                                             ProjectLoadWarningCategory::EffectChain,
                                             "[ProjectLoad] Failed to restore effect chain on lane: " + lane->name,
                                             "[ProjectLoad] Additional effect chain restore warnings suppressed.");
                                     }
-                                    for (auto& id : missingIds) {
+                                    for (auto& id : loadReport.missingPlugins) {
                                         result.missingPlugins.push_back({std::move(id), lane->name});
+                                    }
+                                    // Reported, not merely logged: the slot is live on DEFAULTS and
+                                    // the project's settings for it were dropped (#1014).
+                                    if (!loadReport.unreadableState.empty()) {
+                                        warningLimiter.warning(
+                                            ProjectLoadWarningCategory::EffectChain,
+                                            "[ProjectLoad] " + std::to_string(loadReport.unreadableState.size()) +
+                                                " plugin(s) on " + lane->name +
+                                                " could not read their saved settings. Those slots are left"
+                                                " empty rather than run on defaults, and their settings are"
+                                                " preserved on save.",
+                                            "[ProjectLoad] Additional unreadable-plugin-state warnings suppressed.");
+                                        for (auto& id : loadReport.unreadableState) {
+                                            result.unreadablePluginState.push_back({std::move(id), lane->name});
+                                        }
                                     }
                                 }
                             }

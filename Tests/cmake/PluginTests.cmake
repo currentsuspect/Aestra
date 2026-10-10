@@ -322,3 +322,70 @@ target_include_directories(MasterEffectChainTest PRIVATE
 add_test(NAME MasterEffectChainTest COMMAND MasterEffectChainTest)
 set_tests_properties(MasterEffectChainTest PROPERTIES LABELS "audio;plugins;mixer;regression;persistence;contract:plugins")
 
+# Registry-driven conformance sweep — one contract, every built-in plugin. The
+# sweep reads InternalPluginRegistry, so a plugin gets its generic contract
+# coverage by being registered, with no test code of its own. This is the
+# family-wide sweep that PluginInitContractTest hand-lists (and therefore
+# silently skips EQ, Transient and the sampler for).
+add_executable(PluginConformanceSweepTest AestraAudio/PluginConformanceSweepTest.cpp)
+target_link_libraries(PluginConformanceSweepTest PRIVATE AestraAudio)
+target_include_directories(PluginConformanceSweepTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME PluginConformanceSweepTest COMMAND PluginConformanceSweepTest)
+set_tests_properties(PluginConformanceSweepTest PROPERTIES LABELS "audio;plugins;registry;conformance;contract:plugins" TIMEOUT 300)
+
+# The base class must not change a byte of any plugin's saved state: every
+# built-in shipped {magic, version, params[count]}, and a migrated plugin has
+# to produce the identical blob or every saved project breaks (AGENTS.md §12).
+add_executable(InternalPluginBaseBlobTest AestraAudio/InternalPluginBaseBlobTest.cpp)
+target_link_libraries(InternalPluginBaseBlobTest PRIVATE AestraAudio)
+target_include_directories(InternalPluginBaseBlobTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME InternalPluginBaseBlobTest COMMAND InternalPluginBaseBlobTest)
+set_tests_properties(InternalPluginBaseBlobTest PROPERTIES LABELS "audio;plugins;serialization;contract:durability" TIMEOUT 120)
+
+# A plugin that IS installed but rejects its own saved state must be reported
+# (#1014). This is the mirror of EffectChainMissingPluginTest: that one depends
+# on NO plugin resolving so it can drive the placeholder path, and this one needs
+# a REAL built-in so it can drive the installed-but-rejecting path. The two
+# failure modes look identical from the outside and are not the same event —
+# the first loses nothing, the second loses the user's settings.
+add_executable(EffectChainUnreadablePluginStateTest
+    AestraAudio/EffectChainUnreadablePluginStateTest.cpp
+)
+target_link_libraries(EffectChainUnreadablePluginStateTest PRIVATE AestraAudio)
+target_include_directories(EffectChainUnreadablePluginStateTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME EffectChainUnreadablePluginStateTest COMMAND EffectChainUnreadablePluginStateTest)
+set_tests_properties(EffectChainUnreadablePluginStateTest PROPERTIES
+    LABELS "audio;plugins;persistence;regression;contract:durability"
+    TIMEOUT 120)
+
+# #1015 — the state-load policy is two decisions, not one. An out-of-range
+# value clamps (ambiguous: it may be a legitimate value from a build whose range
+# was wider, and nothing forces a range change to bump kStateVersion); a
+# non-finite value rejects the whole blob (unambiguous corruption). One test file
+# pins both, because the damaging regression is one half drifting into the other
+# -- NaN clamped into range is a plausible number nobody chose.
+add_executable(InternalPluginBaseStatePolicyTest
+    AestraAudio/InternalPluginBaseStatePolicyTest.cpp
+)
+target_link_libraries(InternalPluginBaseStatePolicyTest PRIVATE AestraAudio)
+target_include_directories(InternalPluginBaseStatePolicyTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME InternalPluginBaseStatePolicyTest COMMAND InternalPluginBaseStatePolicyTest)
+set_tests_properties(InternalPluginBaseStatePolicyTest PROPERTIES
+    LABELS "audio;plugins;serialization;contract:durability"
+    TIMEOUT 120)

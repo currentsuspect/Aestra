@@ -31,6 +31,7 @@ public:
 
     // Paths
     std::string getAppDataPath(const std::string& appName) const override;
+    std::string getKnownFolderPath(KnownFolder folder) const override;
 
 private:
     LARGE_INTEGER m_frequency;

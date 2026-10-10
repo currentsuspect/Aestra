@@ -40,6 +40,7 @@ elseif(UNIX AND NOT APPLE)
         list(APPEND AESTRA_PLAT_SOURCES
             src/Linux/PlatformWindowLinux.cpp
             src/Linux/PlatformUtilsLinux.cpp
+            src/Linux/XdgPortalFileChooser.cpp
             src/Linux/PlatformThreadLinux.cpp
         )
         list(APPEND AESTRA_PLAT_HEADERS
@@ -80,6 +81,7 @@ if(WIN32)
         comdlg32
         ole32
         shell32
+        uuid        # CLSID_FileOpenDialog (IFileOpenDialog folder picker)
     )
 elseif(UNIX AND NOT APPLE)
     find_package(X11 QUIET)

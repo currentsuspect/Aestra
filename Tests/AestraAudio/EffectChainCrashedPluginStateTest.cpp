@@ -263,7 +263,7 @@ int main() {
 
         EffectChain reloaded;
         reloaded.prepare(48000.0, 512);
-        std::vector<std::string> missing;
+        LoadReport missing;
         check(reloaded.loadState(crashedBlob, manager(), &missing), "reload: loadState ok");
         check(reloaded.getMissingPluginId(0) == kCrashId, "reload: crashed record arrives as a placeholder");
         check(reloaded.saveState() == crashedBlob, "reload: placeholder re-emits the preserved bytes");

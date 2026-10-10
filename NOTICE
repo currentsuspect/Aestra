@@ -19,6 +19,7 @@ Third-Party Components:
 - ThorVG (MIT License)
 - MiniAudio (MIT License)
 - RtAudio (MIT License)
+- Signalsmith Stretch and Signalsmith Linear (MIT License; AestraAudio/External/signalsmith)
 - VST3 SDK (Proprietary License from Steinberg)
 - Various SIMD optimizations and mathematical libraries
 

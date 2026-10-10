@@ -4,6 +4,7 @@
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include "Plugin/AestraDrift.h"
+#include "PluginEditorKit.h"
 
 #include <algorithm>
 #include <array>
@@ -52,18 +53,7 @@ NUIColor parameterAccent(uint32_t parameterId) {
     }
 }
 
-void drawArc(NUIRenderer& renderer, NUIPoint center, float radius, float startAngle, float endAngle, float thickness,
-             NUIColor color) {
-    if (endAngle <= startAngle + 0.001f)
-        return;
-    std::array<NUIPoint, 49> points{};
-    for (size_t i = 0; i < points.size(); ++i) {
-        const float t = static_cast<float>(i) / static_cast<float>(points.size() - 1);
-        const float angle = startAngle + (endAngle - startAngle) * t;
-        points[i] = {center.x + std::cos(angle) * radius, center.y + std::sin(angle) * radius};
-    }
-    renderer.drawPolyline(points.data(), static_cast<int>(points.size()), thickness, color);
-}
+using EditorKit::drawArc;
 } // namespace
 
 AestraDriftEditor::AestraDriftEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance)

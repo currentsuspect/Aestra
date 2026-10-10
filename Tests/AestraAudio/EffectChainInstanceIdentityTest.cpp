@@ -418,7 +418,7 @@ void testSaveLoadRoundTripPreservesIdentity() {
     const std::vector<uint8_t> blob = source.saveState();
 
     EffectChain restored;
-    std::vector<std::string> missing;
+    LoadReport missing;
     check(restored.loadState(blob, PluginManager::getInstance(), &missing),
           "the v2 chain loads");
     check(restored.getSlotInstanceId(0) == idA,
@@ -434,7 +434,7 @@ void testV1StateStillLoadsAndMints() {
     const std::vector<uint8_t> blob = buildChainBlob(
         1, {{0, "aestra.test.identity.unregistered.a"}, {0, "aestra.test.identity.unregistered.b"}});
     EffectChain restored;
-    std::vector<std::string> missing;
+    LoadReport missing;
     check(restored.loadState(blob, PluginManager::getInstance(), &missing),
           "a v1 chain still loads");
     const uint64_t a = restored.getSlotInstanceId(0);
@@ -449,7 +449,7 @@ void testV2MissingIdMintsFresh() {
     const std::vector<uint8_t> blob =
         buildChainBlob(2, {{0, "aestra.test.identity.unregistered.a"}});
     EffectChain restored;
-    std::vector<std::string> missing;
+    LoadReport missing;
     check(restored.loadState(blob, PluginManager::getInstance(), &missing),
           "a v2 chain with a missing id still loads");
     check(restored.getSlotInstanceId(0) != 0, "the corrupt slot mints a fresh identity");
@@ -461,7 +461,7 @@ void testV2DuplicateIdMintsFresh() {
     const std::vector<uint8_t> blob = buildChainBlob(
         2, {{42, "aestra.test.identity.unregistered.a"}, {42, "aestra.test.identity.unregistered.b"}});
     EffectChain restored;
-    std::vector<std::string> missing;
+    LoadReport missing;
     check(restored.loadState(blob, PluginManager::getInstance(), &missing),
           "a v2 chain with a duplicate id still loads");
     check(restored.getSlotInstanceId(0) != restored.getSlotInstanceId(1),
@@ -476,14 +476,14 @@ void testPlaceholderIdentitySurvivesRoundTrip() {
     const std::vector<uint8_t> blob = buildChainBlob(
         2, {{77, "aestra.test.identity.does.not.exist"}});
     EffectChain first;
-    std::vector<std::string> missing;
+    LoadReport missing;
     check(first.loadState(blob, PluginManager::getInstance(), &missing),
           "the placeholder chain loads");
     check(first.getSlotInstanceId(0) == 77, "the placeholder restored its wire id");
 
     const std::vector<uint8_t> resaved = first.saveState();
     EffectChain second;
-    std::vector<std::string> missing2;
+    LoadReport missing2;
     check(second.loadState(resaved, PluginManager::getInstance(), &missing2),
           "the resaved placeholder chain loads");
     check(second.getSlotInstanceId(0) == 77,
@@ -496,7 +496,7 @@ void testLoadedIdsAreReservedAgainstFutureMints() {
     const std::vector<uint8_t> blob = buildChainBlob(
         2, {{9000, "aestra.test.identity.unregistered.a"}});
     EffectChain restored;
-    std::vector<std::string> missing;
+    LoadReport missing;
     check(restored.loadState(blob, PluginManager::getInstance(), &missing),
           "the v2 chain loads");
 
@@ -518,7 +518,7 @@ void testLoadClearsIdentityOnSerializedEmptySlots() {
     const uint64_t staleId = reused.getSlotInstanceId(2);
     check(staleId != 0, "the slot about to be emptied really had an identity");
 
-    std::vector<std::string> missing;
+    LoadReport missing;
     check(reused.loadState(blob, PluginManager::getInstance(), &missing),
           "the blob loads over the populated chain");
 

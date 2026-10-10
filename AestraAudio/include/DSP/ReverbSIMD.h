@@ -46,6 +46,25 @@ static constexpr size_t kEarlyTapCount = 12;
 extern bool g_forceScalarFallback;
 extern bool g_forceLinearInterpolation;
 
+// CPU capability, resolved once by resolveSimdCapabilities() on the preparing
+// thread and read as plain bools afterwards.
+//
+// This was a function-local `static const bool` inside processFDNSample(),
+// initialized from CPUDetection::get() -- a guarded singleton whose constructor
+// runs __cpuid/__cpidex/xgetbv. The first audio-thread call therefore took a
+// thread-safe-initialization guard and a CPUID: a VM exit on a virtualised
+// host, unbounded, on the callback. Issue #1009 named AestraVerb, but this
+// dispatch wrapper carries its own copy of the same defect and had to move too.
+//
+// Written before any plugin is published to the audio thread, read-only after,
+// so a plain bool is sound.
+extern bool g_useAVX2;
+extern bool g_useSSE41;
+
+/// Resolves CPU feature flags. MUST be called from a non-audio thread before
+/// any SIMD path runs -- AestraVerb::initialize() does it.
+void resolveSimdCapabilities() noexcept;
+
 inline float sanitizeFeedbackValue(float value) noexcept {
     if (value != value || value <= -32.0f || value >= 32.0f ||
         (value > -1.0e-20f && value < 1.0e-20f)) {
@@ -488,9 +507,7 @@ inline void processFDNSample(
 
     if (!g_forceScalarFallback) {
 #ifdef AESTRA_REVERB_HAS_AVX2
-        static const bool useAVX2 =
-            Aestra::Core::CPUDetection::get().hasAVX2() && Aestra::Core::CPUDetection::get().hasFMA();
-        if (useAVX2) {
+        if (g_useAVX2) {
             processFDNSampleAVX2(lineOut, delayedL, delayedR, dampingState, lowDampState,
                                  delayLines, delayPos, delayMasks, feedbackGains,
                                  injectL, injectR, outputL, outputR,
@@ -500,8 +517,7 @@ inline void processFDNSample(
 #endif
 
 #ifdef AESTRA_REVERB_HAS_SSE
-        static const bool useSSE = Aestra::Core::CPUDetection::get().hasSSE41();
-        if (useSSE) {
+        if (g_useSSE41) {
             processFDNSampleSSE(lineOut, delayedL, delayedR, dampingState, lowDampState,
                                 delayLines, delayPos, delayMasks, feedbackGains,
                                 injectL, injectR, outputL, outputR,

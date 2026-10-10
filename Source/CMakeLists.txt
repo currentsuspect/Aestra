@@ -15,6 +15,8 @@ set(Aestra_SOURCES
     App/MuseHostVerbs.cpp
     App/MuseProjectLoadReport.h
     App/MuseProjectLoadReport.cpp
+    App/ProjectLifecycle.h
+    App/ProjectLifecycle.cpp
 	
 	# Core
 	Core/AestraAudioController.h
@@ -90,8 +92,16 @@ set(Aestra_SOURCES
 	# Components
 	Components/TransportInfoContainer.h
 	Components/TransportInfoContainer.cpp
+	Components/BrowserLibrary.h
+	Components/BrowserLibrary.cpp
+	Components/BrowserLibraryIndex.h
+	Components/BrowserLibraryIndex.cpp
 	Components/FileBrowser.h
 	Components/FileBrowser.cpp
+	Components/FileBrowserNavigation.cpp
+	Components/FileBrowserLibrary.cpp
+	Components/FileBrowserScan.cpp
+	Components/FileBrowserInternal.h
 	Components/FilePreviewPanel.h
 	Components/FilePreviewPanel.cpp
 	Components/AudioVisualizer.h

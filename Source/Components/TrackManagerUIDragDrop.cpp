@@ -685,24 +685,10 @@ double TrackManagerUI::snapBeatToGridForward(double beat) const {
 // =============================================================================
 
 int TrackManagerUI::getTrackAtPosition(float y) const {
-    AestraUI::NUIRect bounds = getBounds();
-    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-
-    // Get ruler height and track area start
-    // MUST match the render layout exactly: minimap(24) + ruler(28)
-    float trackAreaY = bounds.y + kTimelineTimeBandHeight;
-
-    // Relative Y position in track area
-    float relativeY = y - trackAreaY + m_scrollOffset;
-
-    if (relativeY < 0) {
-        return -1; // Above track area
-    }
-
-    // Calculate track index based on track height + spacing
-    int trackIndex = static_cast<int>(relativeY / (m_trackHeight + m_trackSpacing));
-
-    return trackIndex;
+    // y arrives window-absolute; the timeline layout answers in our Local space.
+    // -1 above the first row; may be >= the row count below the last one.
+    return timelineRowSlotAt(currentTimelineLayout(), static_cast<float>(m_trackHeight),
+                             static_cast<float>(m_trackSpacing), m_scrollOffset, y - getBounds().y);
 }
 
 double TrackManagerUI::getTimeAtPosition(float x) const {
@@ -746,10 +732,9 @@ void TrackManagerUI::renderDropPreview(AestraUI::NUIRenderer& renderer) {
     float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
     float gridStartX = bounds.x + controlAreaWidth + kTimelineGridInsetX;
 
-    // Calculate track Y position - MUST match layoutTracks() calculation exactly
-    // layoutTracks uses: minimapHeight(24) + rulerHeight(28)
-    float trackAreaStartY = bounds.y + kTimelineTimeBandHeight;
-    float trackY = trackAreaStartY + (m_dropTargetTrack * (m_trackHeight + m_trackSpacing)) - m_scrollOffset;
+    // The target row's top, from the same layout layoutTracks() places rows with.
+    float trackY = bounds.y + timelineRowTopY(currentTimelineLayout(), static_cast<float>(m_trackHeight),
+                                              static_cast<float>(m_trackSpacing), m_dropTargetTrack, m_scrollOffset);
 
     // Calculate X position from time
     double bpm = m_trackManager->getPlaylistModel().getBPM();

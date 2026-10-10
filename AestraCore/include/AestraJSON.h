@@ -100,9 +100,14 @@ public:
         }
         return *arrayValue_;
     }
+    // The const overloads return the real contents by const reference. They
+    // used to return an always-empty static (a regression in #179), so any read
+    // through a const JSON silently saw no elements and callers had to dodge it
+    // by binding non-const. Read-only access to the real data exposes nothing
+    // mutable, which is the concern SEC-RTM-014 is about.
     const std::vector<JSON>& asArray() const {
         static const std::vector<JSON> e;
-        return e;
+        return (type_ == Type::Array && arrayValue_) ? *arrayValue_ : e;
     }
     std::map<std::string, JSON> asObject() {
         if (type_ != Type::Object) {
@@ -112,7 +117,7 @@ public:
     }
     const std::map<std::string, JSON>& asObject() const {
         static const std::map<std::string, JSON> e;
-        return e;
+        return (type_ == Type::Object && objectValue_) ? *objectValue_ : e;
     }
 
     // Array operations

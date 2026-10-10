@@ -2213,16 +2213,11 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
             const auto* nestedTrack = m_trackManager ? m_trackManager->getTrack(lane->trackId) : nullptr;
             numberText = "Lane " + std::to_string(nestedTrack ? nestedTrack->laneNumber(m_laneId) : 0);
         } else {
-            uint32_t trackNumber = static_cast<uint32_t>(lane->index + 1);
-            const auto laneName = m_nameLabel->getText();
-            uint32_t parsedNumber = 0;
-            if (parseTrailingTrackNumber(laneName, parsedNumber)) {
-                trackNumber = parsedNumber;
-            }
-            numberText = std::to_string(trackNumber);
+            uint32_t parsedNumber = 0; // a trailing number in the name wins over the lane index
+            numberText = std::to_string(parseTrailingTrackNumber(m_nameLabel->getText(), parsedNumber)
+                                            ? parsedNumber : static_cast<uint32_t>(lane->index + 1));
         }
-        // Centred on the name's row by cap height (SPEC 3 §3.2). It was `nameBounds.y + 2`,
-        // which happened to land it on the name's baseline, 1.5 px below its centre.
+        // Centred on the name's row by cap height (SPEC 3 §3.2), not `nameBounds.y + 2` (1.5 px low).
         const float numberFontSize = themeManager.getFontSize("xs");
         renderer.drawText(numberText,
                           AestraUI::NUIPoint(controlAreaBounds.x + stripWidth + 8.0f,
@@ -2350,7 +2345,7 @@ void TrackUIComponent::onResize(int width, int height) {
     const float localNameY = localButtonsY + std::max(0.0f, (buttonH - localNameHeight) * 0.5f);
     const float localLabelWidth = std::max(40.0f, localInlineWidth);
 
-    // Name label - use NUIAbsolute for global coordinate system
+    // Name label: our bounds are window-absolute, so offset by bounds.x/y
     if (m_nameLabel) {
         m_nameLabel->setBounds(AestraUI::NUIRect(bounds.x + localLabelLeft, bounds.y + localNameY, localLabelWidth, localNameHeight));
     }
