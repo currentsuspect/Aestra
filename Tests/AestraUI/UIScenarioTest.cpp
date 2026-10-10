@@ -16,6 +16,7 @@
 #include "AestraJSON.h"
 #include "Layout/NUILayoutExplain.h"
 #include "NUIComponent.h"
+#include "NUIContextMenu.h"
 #include "NUIThemeSystem.h"
 #include "PatternManager.h"
 #include "PlaylistModel.h"
@@ -201,7 +202,16 @@ public:
 
     // A point named the way a user thinks of it: on a clip, or at a beat on a lane.
     bool resolvePoint(Run& run, const JSON& at, AestraUI::NUIPoint& out) {
-        if (!onlyKeys(run, at, {"clip", "fraction", "lane", "beat", "value", "target", "x", "y"}, "at")) return false;
+        if (!onlyKeys(run, at, {"clip", "fraction", "lane", "beat", "value", "target", "header", "x", "y"}, "at")) {
+            return false;
+        }
+        if (at.has("lane") && at.has("header") && at["header"].asBool()) {
+            // The lane's header, right of its buttons: where a right-click opens the track menu.
+            if (!pointAt(run, static_cast<int>(at["lane"].asNumber()), 0.0, out)) return false;
+            const float controls = AestraUI::NUIThemeManager::getInstance().getLayoutDimensions().trackControlsWidth;
+            out.x = manager_->getBounds().x + controls * 0.5f;
+            return true;
+        }
         if (at.has("x") && at.has("y")) {
             out = {static_cast<float>(at["x"].asNumber()), static_cast<float>(at["y"].asNumber())};
             return true;
@@ -283,6 +293,53 @@ public:
             }
         }
         paint();
+    }
+
+    /**
+     * Picks a context-menu item by its label with the keyboard, as a keyboard user
+     * does: Home, Down once per selectable item after the first, then Enter. The menu's private
+     * click path is not reachable from here; its key path is the public one.
+     */
+    bool pickMenuItem(Run& run, const std::string& label) {
+        std::shared_ptr<AestraUI::NUIContextMenu> menu;
+        for (const auto& child : root_->getChildren()) {
+            if (auto m = std::dynamic_pointer_cast<AestraUI::NUIContextMenu>(child); m && m->isVisible()) menu = m;
+        }
+        if (!menu) {
+            run.fail("menu: no context menu is open");
+            return false;
+        }
+        int downs = 0;
+        bool found = false;
+        std::string labels;
+        for (const auto& item : menu->getItems()) {
+            if (!item || !item->isVisible() || item->getType() == AestraUI::NUIContextMenuItem::Type::Separator ||
+                !item->isEnabled()) {
+                continue;
+            }
+            ++downs;
+            labels += " \"" + item->getText() + "\"";
+            if (item->getText() == label) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            run.fail("menu: no item \"" + label + "\" in" + labels);
+            return false;
+        }
+        auto key = [&](AestraUI::NUIKeyCode code) {
+            AestraUI::NUIKeyEvent e;
+            e.keyCode = code;
+            e.pressed = true;
+            AestraUI::NUIComponent::dispatchKeyEvent(menu.get(), e);
+        };
+        // Home lands on the first selectable item whatever the menu opened on.
+        key(AestraUI::NUIKeyCode::Home);
+        for (int i = 1; i < downs; ++i) key(AestraUI::NUIKeyCode::Down);
+        key(AestraUI::NUIKeyCode::Enter);
+        paint();
+        return true;
     }
 
     int laneIndexOf(const PlaylistLaneID& id) const {
@@ -485,6 +542,18 @@ Run runTimeline(const JSON& scenario) {
             } else {
                 run.fail("mouse: unknown kind \"" + kind + "\"");
             }
+        } else if (step.has("mode")) {
+            // The toolbar's clips/automation view switch.
+            if (!onlyKeys(run, step, {"mode"}, "step")) continue;
+            const std::string mode = step["mode"].asString();
+            if (mode == "automation" || mode == "clips") {
+                s.ui().setPlaylistMode(mode == "automation" ? PlaylistMode::Automation : PlaylistMode::Clips);
+                s.paint();
+            } else {
+                run.fail("mode: unknown mode \"" + mode + "\" (clips, automation)");
+            }
+        } else if (step.has("menu")) {
+            if (onlyKeys(run, step, {"menu"}, "step")) s.pickMenuItem(run, step["menu"].asString());
         } else if (step.has("undo")) {
             if (!onlyKeys(run, step, {"undo"}, "step")) continue;
             for (int n = 0; n < static_cast<int>(step["undo"].asNumber()); ++n) {
