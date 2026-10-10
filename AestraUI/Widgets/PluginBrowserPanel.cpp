@@ -1372,6 +1372,9 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
 
 void EffectChainRack::setSlot(int index, const EffectSlotInfo& info) {
     if (index >= 0 && index < MAX_SLOTS) {
+        // The mixer inspector re-syncs every slot every frame; an identical slot must not
+        // repaint (SPEC 3 §4). Compared after the bypass override, which is what is drawn.
+        const EffectSlotInfo before = m_slots[index];
         m_slots[index] = info;
 
         // Apply Override Logic
@@ -1385,6 +1388,12 @@ void EffectChainRack::setSlot(int index, const EffectSlotInfo& info) {
                 // Otherwise force UI to keep user choice
                 m_slots[index].bypassed = forcedState;
             }
+        }
+        const EffectSlotInfo& after = m_slots[index];
+        if (after.name == before.name && after.bypassed == before.bypassed && after.isEmpty == before.isEmpty &&
+            after.dryWet == before.dryWet && after.pendingRemoval == before.pendingRemoval &&
+            after.nonFiniteOutputFault == before.nonFiniteOutputFault) {
+            return;
         }
         // Removing a plugin shrinks the drawn row set, which can leave the
         // offset scrolled past the last row that still exists.
