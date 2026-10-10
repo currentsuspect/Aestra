@@ -2138,6 +2138,15 @@ target_include_directories(TimelineLayoutTest PRIVATE
 add_test(NAME TimelineLayoutTest COMMAND TimelineLayoutTest)
 set_tests_properties(TimelineLayoutTest PROPERTIES LABELS "ui;timeline;layout;regression;contract:application")
 
+# V8-X2b phase 5: the file browser's panes and chrome from the layout system
+# (FileBrowserLayout.h); the folder rows are drawn and hit-tested by one rect.
+add_executable(FileBrowserLayoutTest AestraUI/FileBrowserLayoutTest.cpp)
+target_include_directories(FileBrowserLayoutTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Components
+)
+add_test(NAME FileBrowserLayoutTest COMMAND FileBrowserLayoutTest)
+set_tests_properties(FileBrowserLayoutTest PROPERTIES LABELS "ui;browser;layout;regression;contract:application")
+
 # V8-X2b criterion 4: the layout algorithms explain each rect they place
 # (NUILayoutExplain.h), proven on the timeline's real layout. Header-only.
 add_executable(NUILayoutExplainTest AestraUI/NUILayoutExplainTest.cpp)

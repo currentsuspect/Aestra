@@ -332,6 +332,15 @@ inline NUILayoutRecorder* layoutRecorderFor(const std::string& surface) {
     return slot.get();
 }
 
+/** @brief layoutRecorderFor() plus beginPass(): the recorder for a pass starting now, or nullptr. */
+inline NUILayoutRecorder* beginLayoutPass(const std::string& surface, const NUIWindowPoint& originInWindow) {
+    NUILayoutRecorder* recorder = layoutRecorderFor(surface);
+    if (recorder) {
+        recorder->beginPass(originInWindow);
+    }
+    return recorder;
+}
+
 /**
  * @brief Ends a traced pass: prints its summary when something changed, and the
  * full explanation for any step matching AESTRA_LAYOUT_EXPLAIN. No-op on nullptr.

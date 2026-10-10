@@ -45,8 +45,7 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
 
     // One shared, compact navigation row. The browser no longer spends a full
     // second row on item counts and duplicate structural rules.
-    const float navHeaderH = BROWSER_LIST_HEADER_H;
-    const NUIRect navHeader(layout.navPane.x, layout.navPane.y, layout.navPane.width, navHeaderH);
+    const NUIRect& navHeader = layout.navHeader;
     renderer.fillRect(navHeader, themeManager.getColor("backgroundSecondary").darkened(0.03f));
     renderer.drawLine({navHeader.x, navHeader.bottom()}, {navHeader.right(), navHeader.bottom()},
                       1.0f, themeManager.getColor("border").withAlpha(0.42f));
@@ -80,11 +79,11 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     // windows keep the tail rows reachable without moving the header. Start at the
     // full header height so the first nav row lines up with the first file row (the
     // list header is BROWSER_LIST_HEADER_H tall).
-    const float navContentTop = layout.navPane.y + BROWSER_LIST_HEADER_H;
-    navViewportHeight_ = std::max(0.0f, layout.navPane.bottom() - navContentTop);
+    const float navContentTop = layout.navViewport.y;
+    navViewportHeight_ = layout.navViewport.height;
     const float navMaxScroll = std::max(0.0f, navContentHeight_ - navViewportHeight_);
     navScrollOffset_ = std::clamp(navScrollOffset_, 0.0f, navMaxScroll);
-    renderer.setClipRect(NUIRect(layout.navPane.x, navContentTop, layout.navPane.width, navViewportHeight_));
+    renderer.setClipRect(layout.navViewport); // the same rect hit-testing uses
 
     // Start nav content at the same Y as the right column labels
     float y = navContentTop - navScrollOffset_;
@@ -443,10 +442,9 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
     if (event.cursorCaptured) return false;
 
     // Ignore the fixed folder-name header band: rows scrolled up under it are
-    // visually clipped, so they must not be clickable there either. Must match the
-    // render-side navContentTop (full header height).
-    const float navContentTop = layout.navPane.y + BROWSER_LIST_HEADER_H;
-    const bool insideNav = layout.navPane.contains(event.position) && event.position.y >= navContentTop;
+    // visually clipped, so they must not be clickable there either. navViewport is
+    // the rect the renderer clips to, so the two cannot disagree.
+    const bool insideNav = layout.navViewport.contains(event.position);
     int newHovered = -1;
     if (insideNav) {
         for (int i = 0; i < static_cast<int>(navHits_.size()); ++i) {
