@@ -84,12 +84,32 @@ void testHitReachesEveryCurve() {
     check(hit.curve == 0, "and with volume edited, volume wins");
 }
 
+void testSelection() {
+    std::vector<AutomationCurve> curves{makeAutomationCurve(AutomationTarget::Volume),
+                                        makeAutomationCurve(AutomationTarget::Pan)};
+    curves[0].addPoint(0.0, 1.0f, 24000.0);
+    curves[0].addPoint(4.0, 0.5f, 24000.0);
+    curves[1].addPoint(2.0, 0.0f, 24000.0);
+    selectAutomationPoint(curves, 0, 0, false);
+    check(curves[0].getPoints()[0].selected && selectedAutomationPointCount(curves) == 1, "a press selects one point");
+    selectAutomationPoint(curves, 1, 0, true);
+    check(selectedAutomationPointCount(curves) == 2, "Shift adds a point, across curves");
+    selectAutomationPoint(curves, 0, 0, true);
+    check(!curves[0].getPoints()[0].selected && selectedAutomationPointCount(curves) == 1, "Shift again takes it out");
+    selectAutomationPoint(curves, 0, 1, false);
+    check(curves[0].getPoints()[1].selected && selectedAutomationPointCount(curves) == 1,
+          "a plain press replaces the selection on every curve");
+    selectAutomationPoint(curves, 0, 9, false);
+    check(selectedAutomationPointCount(curves) == 1, "an index past the end changes nothing");
+}
+
 } // namespace
 
 int main() {
     testValueRanges();
     testCurvesByTarget();
     testHitReachesEveryCurve();
+    testSelection();
     if (g_failures == 0) {
         std::cout << "AutomationLaneEditingTest: all passed\n";
         return 0;

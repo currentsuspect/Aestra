@@ -28,6 +28,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <set>
 #include <sstream>
@@ -89,7 +90,7 @@ bool parseTarget(Run& run, const JSON& name, AutomationTarget& out) {
 class TimelineSurface {
 public:
     bool build(Run& run, const JSON& setup) {
-        if (!onlyKeys(run, setup, {"size", "lanes", "clips", "automation", "mode"}, "setup")) return false;
+        if (!onlyKeys(run, setup, {"size", "lanes", "clips", "automation", "mode", "snap"}, "setup")) return false;
         trackManager_ = std::make_shared<TrackManager>();
         trackManager_->setCommandSink([](const AudioQueueCommand&) { return true; });
         auto& playlist = trackManager_->getPlaylistModel();
@@ -144,6 +145,21 @@ public:
         }
         resize(w, h);
         manager_->refreshTracks();
+        if (setup.has("snap")) {
+            // The timeline's snap grid, as the toolbar sets it.
+            const std::string snap = setup["snap"].asString();
+            const std::map<std::string, AestraUI::SnapGrid> grids{{"bar", AestraUI::SnapGrid::Bar},
+                                                                  {"beat", AestraUI::SnapGrid::Beat},
+                                                                  {"half", AestraUI::SnapGrid::Half},
+                                                                  {"quarter", AestraUI::SnapGrid::Quarter},
+                                                                  {"none", AestraUI::SnapGrid::None}};
+            const auto it = grids.find(snap);
+            if (it == grids.end()) {
+                run.fail("setup.snap: unknown grid \"" + snap + "\" (bar, beat, half, quarter, none)");
+                return false;
+            }
+            manager_->setSnapSetting(it->second);
+        }
         if (setup.has("mode")) {
             const std::string mode = setup["mode"].asString();
             if (mode == "automation") {
@@ -306,7 +322,8 @@ void checkExpect(Run& run, TimelineSurface& s, const JSON& expect, size_t undoBa
     if (expect.has("automation")) {
         const JSON& a = expect["automation"];
         AutomationTarget target;
-        if (onlyKeys(run, a, {"lane", "target", "points"}, "expect.automation") && parseTarget(run, a["target"], target)) {
+        if (onlyKeys(run, a, {"lane", "target", "points", "selected"}, "expect.automation") &&
+            parseTarget(run, a["target"], target)) {
             const int laneIndex = static_cast<int>(a["lane"].asNumber());
             const auto* lane = s.model().getPlaylistModel().getLane(s.lanes().at(static_cast<size_t>(laneIndex)));
             const int ci = lane ? automationCurveIndexFor(lane->automationCurves, target) : -1;
@@ -324,6 +341,22 @@ void checkExpect(Run& run, TimelineSurface& s, const JSON& expect, size_t undoBa
                     }
                 }
             }
+            if (ci >= 0 && a.has("selected")) {
+                // Indices of the selected points, in order (V8-A4).
+                std::vector<int> selected;
+                const auto& pts = lane->automationCurves[static_cast<size_t>(ci)].getPoints();
+                for (size_t i = 0; i < pts.size(); ++i) {
+                    if (pts[i].selected) selected.push_back(static_cast<int>(i));
+                }
+                std::vector<int> wantSelected;
+                for (const auto& i : a["selected"].asArray()) wantSelected.push_back(static_cast<int>(i.asNumber()));
+                if (selected != wantSelected) {
+                    std::string got;
+                    for (int i : selected) got += " " + std::to_string(i);
+                    run.fail("selected points are [" + got + " ], expected " + a["selected"].toString(0));
+                }
+            }
+            if (!a.has("points")) same = ci >= 0;
             if (!same) {
                 run.fail("lane " + std::to_string(laneIndex) + " " + a["target"].asString() + " curve is" +
                          (ci < 0 ? std::string(" missing") : got.str()) + ", expected " + a["points"].toString(0));

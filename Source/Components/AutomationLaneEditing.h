@@ -90,5 +90,32 @@ AutomationPointHit hitAutomationPoint(const std::vector<AutomationCurve>& curves
     return {};
 }
 
+/**
+ * @brief V8-A4: a press selects a point. Without @p extend it becomes the only
+ * selected point on the lane (every curve); with it (Shift) it toggles.
+ * Selection is UI state: undo comparison and the project file ignore it.
+ */
+inline void selectAutomationPoint(std::vector<AutomationCurve>& curves, int curve, int point, bool extend) {
+    if (curve < 0 || curve >= static_cast<int>(curves.size())) return;
+    auto& points = curves[static_cast<size_t>(curve)].getPoints();
+    if (point < 0 || point >= static_cast<int>(points.size())) return;
+    const bool wasSelected = points[static_cast<size_t>(point)].selected;
+    if (!extend) {
+        for (auto& c : curves) {
+            for (auto& p : c.getPoints()) p.selected = false;
+        }
+    }
+    points[static_cast<size_t>(point)].selected = extend ? !wasSelected : true;
+}
+
+/// Number of selected points on the lane, every curve.
+inline int selectedAutomationPointCount(const std::vector<AutomationCurve>& curves) {
+    int n = 0;
+    for (const auto& c : curves) {
+        for (const auto& p : c.getPoints()) n += p.selected ? 1 : 0;
+    }
+    return n;
+}
+
 } // namespace Audio
 } // namespace Aestra

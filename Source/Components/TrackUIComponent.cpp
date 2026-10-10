@@ -2717,6 +2717,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 }
                 auto& curve = lane->automationCurves[static_cast<size_t>(editedIndex)];
                 const double value = automationValueAtHeight(curve.getAutomationTarget(), heightFraction);
+                // V8-A4: new and dragged points land on the timeline's snap grid.
+                const double snappedBeat = snapBeatToGrid(std::max(0.0, beat));
 
                 // Right Click -> Delete Point
                 if (event.pressed && event.button == AestraUI::NUIMouseButton::Right && hit.found()) {
@@ -2738,6 +2740,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 if (event.pressed && event.button == AestraUI::NUIMouseButton::Left && isInsideBounds) {
                     const int hitIndex = hit.point;
                     if (hitIndex != -1) {
+                        selectAutomationPoint(lane->automationCurves, editedIndex, hitIndex,
+                                              event.modifiers & AestraUI::NUIModifiers::Shift);
                         m_isDraggingPoint = true;
                         m_draggedPointIndex = hitIndex;
                         m_draggedCurveIndex = editedIndex;
@@ -2758,7 +2762,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                         double bpm = m_trackManager ? m_trackManager->getPlaylistModel().getBPM() : 120.0;
                         double sampleRate = m_trackManager ? m_trackManager->getPlaylistModel().getProjectSampleRate() : 48000.0;
                         double samplesPerBeat = (sampleRate * 60.0) / std::max(bpm, 1.0);
-                        curve.addPoint(beat, value, samplesPerBeat); // linear (V8-A6)
+                        curve.addPoint(snappedBeat, value, samplesPerBeat); // linear (V8-A6)
                         setDirty(true);
                         repaint(); // Immediate update
                         if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback(); // Force parent update
@@ -2770,7 +2774,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                         // Start dragging the new point
                         auto& pts = curve.getPoints();
                         for (int i = 0; i < (int)pts.size(); ++i) {
-                            if (std::abs(pts[i].beat - beat) < 0.001) {
+                            if (std::abs(pts[i].beat - snappedBeat) < 0.001) {
+                                selectAutomationPoint(lane->automationCurves, editedIndex, i, false);
                                 m_isDraggingPoint = true;
                                 m_draggedPointIndex = i;
                                 m_draggedCurveIndex = editedIndex;
@@ -2801,7 +2806,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 if (m_isDraggingPoint && m_draggedCurveIndex == editedIndex) {
                     auto& pts = curve.getPoints();
                     if (m_draggedPointIndex >= 0 && m_draggedPointIndex < (int)pts.size()) {
-                        double newBeat = std::max(0.0, beat);
+                        double newBeat = snappedBeat;
                         double newValue = value;
                         
                         pts[m_draggedPointIndex].beat = newBeat;
