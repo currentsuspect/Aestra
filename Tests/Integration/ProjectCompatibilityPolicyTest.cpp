@@ -4,6 +4,7 @@
 // observable outcomes, historical fixtures, and non-destructive rejection.
 
 #include "../../Source/Core/ProjectSerializer.h"
+#include "../../Source/Core/ProjectUpgradeCopy.h"
 #include "../Support/TestTempDirectory.h"
 #include "Models/PatternSource.h"
 #include "Models/TrackManager.h"
@@ -645,6 +646,64 @@ void testFixtureCorpus(const std::filesystem::path& tempDir) {
     }
 }
 
+std::string readBytes(const std::filesystem::path& path) {
+    std::ifstream in(path, std::ios::binary);
+    return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+}
+
+// The first save over an older-schema file keeps that file, byte for byte, as
+// Song.vN.aes beside it, and no later save touches it: .bak rotates and history
+// is pruned, so this is what still opens in the older Aestra.
+void testFirstSaveKeepsThePreUpgradeFile(const std::filesystem::path& tempDir) {
+    namespace fs = std::filesystem;
+    const fs::path project = tempDir / "upgrade-me.aes";
+    fs::copy_file(fs::path(AESTRA_PROJECT_FIXTURE_DIR) / "v3/serializer-v3-independent-mixer.aes", project,
+                  fs::copy_options::overwrite_existing);
+    const std::string original = readBytes(project);
+
+    auto tracks = makeTracks();
+    const auto loaded = ProjectSerializer::load(project.string(), tracks);
+    require(loaded.ok, "pre-upgrade: v3 fixture did not load");
+    require(ProjectSerializer::save(project.string(), tracks, loaded.tempo, loaded.playhead),
+            "pre-upgrade: first save failed");
+
+    const fs::path copy = ProjectUpgradeCopy::pathFor(project.string(), 3);
+    require(copy == tempDir / "upgrade-me.v3.aes", "pre-upgrade: the copy is named Song.v3.aes");
+    require(fs::exists(copy) && readBytes(copy) == original, "pre-upgrade: the v3 file is kept byte for byte");
+    require(readFixtureVersion(project) == ProjectSerializer::PROJECT_VERSION_CURRENT,
+            "pre-upgrade: the project itself is saved at the current schema");
+
+    require(ProjectSerializer::save(project.string(), tracks, loaded.tempo, loaded.playhead),
+            "pre-upgrade: second save failed");
+    require(readBytes(copy) == original, "pre-upgrade: a later save never touches the kept file");
+    require(readFixtureVersion(project.string() + ".bak") == ProjectSerializer::PROJECT_VERSION_CURRENT,
+            "pre-upgrade: (by then .bak already holds the upgraded file, which is why the copy exists)");
+
+    // Upgrading again (say after rolling back to an older build) never replaces the
+    // copy already kept: the first pre-upgrade file is the one guaranteed to survive.
+    fs::copy_file(fs::path(AESTRA_PROJECT_FIXTURE_DIR) / "v3/serializer-v3-independent-mixer.aes", project,
+                  fs::copy_options::overwrite_existing);
+    require(writeText(copy, "kept from the first upgrade"), "pre-upgrade: seed an existing copy");
+    require(ProjectSerializer::save(project.string(), tracks, loaded.tempo, loaded.playhead),
+            "pre-upgrade: re-upgrade save failed");
+    require(readBytes(copy) == "kept from the first upgrade", "pre-upgrade: an existing copy is never replaced");
+
+    // A current-schema file is not an upgrade: no copy.
+    const fs::path current = tempDir / "already-current.aes";
+    require(ProjectSerializer::save(current.string(), tracks, loaded.tempo, loaded.playhead), "current: save");
+    require(ProjectSerializer::save(current.string(), tracks, loaded.tempo, loaded.playhead), "current: resave");
+    for (int v = 1; v <= ProjectSerializer::PROJECT_VERSION_CURRENT; ++v) {
+        require(!fs::exists(ProjectUpgradeCopy::pathFor(current.string(), v)),
+                "current: saving a current-schema file keeps no pre-upgrade copy");
+    }
+
+    // An unreadable file never blocks a save.
+    const fs::path corrupt = tempDir / "corrupt.aes";
+    require(writeText(corrupt, "{not json"), "corrupt: write");
+    require(ProjectSerializer::save(corrupt.string(), tracks, loaded.tempo, loaded.playhead),
+            "corrupt: an unreadable old file does not stop the save");
+}
+
 void testCurrentLoadMetadata(const std::filesystem::path& tempDir) {
     auto source = makeTracks();
     source->getPlaylistModel().createLane("Current");
@@ -674,6 +733,7 @@ int main() {
     testCurrentLoadMetadata(tempDir.path());
     testFixtureCorpus(tempDir.path());
     testLoadNeverModifiesTheOriginal();
+    testFirstSaveKeepsThePreUpgradeFile(tempDir.path());
 
     if (g_failures != 0) {
         std::cerr << "[FAIL] ProjectCompatibilityPolicyTest: " << g_failures << " failure(s)\n";

@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ProjectSerializer.h"
 #include "ProjectMigrations.h"
+#include "ProjectUpgradeCopy.h"
 #include "WorkspaceFocus.h"
 #include "AestraFile.h"
 #include "../AestraCore/include/AestraLog.h"
@@ -1173,6 +1174,8 @@ bool ProjectSerializer::save(const std::string& path,
 
     // Only create backup once we know serialization succeeded
     if (fs::exists(path)) {
+        // An older schema's file is kept once as Song.vN.aes (ProjectUpgradeCopy.h).
+        ProjectUpgradeCopy::keepBeforeSave(path, PROJECT_VERSION_CURRENT);
         fs::path backupPath = path;
         backupPath += ".bak";
         std::error_code ec;
