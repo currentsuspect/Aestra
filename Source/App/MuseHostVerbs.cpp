@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "MuseHostVerbs.h"
 
+#include "AestraApp.h"
 #include "Commands/HostVerbRegistry.h"
 #include "Commands/MuseService.h"
 #include "Core/AestraContent.h"
@@ -98,7 +99,8 @@ void registerOrLog(Audio::MuseService& service, HostVerbSpec spec, Audio::HostVe
 
 } // namespace
 
-void registerMuseHostVerbs(Audio::MuseService& service, ::AestraContent& content) {
+void registerMuseHostVerbs(Audio::MuseService& service, ::AestraContent& content,
+                           ::AestraApp& app) {
     ::AestraContent* c = &content;
 
     // --- view.open / view.close ---------------------------------------------
@@ -169,8 +171,7 @@ void registerMuseHostVerbs(Audio::MuseService& service, ::AestraContent& content
             "hide panels), plus the workspace 'focus' that causes them to differ. "
             "'open' is retained as an alias for 'visible'.";
         registerOrLog(service, std::move(spec), [c](const JSON&) {
-            JSON views = JSON::array();
-            for (const auto& v : kViews) {
+            JSON views = JSON::array();            for (const auto& v : kViews) {
                 const auto state = c->getViewOpenState(v.view);
                 JSON entry = JSON::object();
                 entry.set("view", JSON(std::string(v.name)));
@@ -189,6 +190,13 @@ void registerMuseHostVerbs(Audio::MuseService& service, ::AestraContent& content
             return HostVerbResult::success(result);
         });
     }
+
+    // --- project.save / project.open / project.new ---------------------------
+    //
+    // Registered from the application rather than declared here because they need
+    // AestraApp's private save/load path, and because the same operations back the
+    // File menu — see ProjectLifecycle.cpp for why there is one implementation.
+    app.registerMuseProjectVerbs(service);
 }
 
 } // namespace Aestra

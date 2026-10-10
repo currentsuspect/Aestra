@@ -810,8 +810,7 @@ std::vector<uint8_t> EffectChain::saveState() const {
     return state;
 }
 
-bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& manager,
-                            std::vector<std::string>* outMissingPluginIds) {
+bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& manager, LoadReport* outReport) {
     if (reportRealtimeMisuse("EffectChain::loadState")) {
         return false;
     }
@@ -949,29 +948,43 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
         std::vector<uint8_t> pluginState(state.begin() + offset, state.begin() + offset + stateLen);
         offset += stateLen;
 
-        // Create plugin instance
+        // Create plugin instance.
+        //
+        // Two ways for a slot to end up with nothing live to run: the plugin
+        // cannot be created at all, or it is created and then REJECTS its own
+        // saved state. Both leave the user's settings unapplied, so both take
+        // the placeholder path below rather than a live instance on defaults.
+        //
+        // That distinction is the whole point of #1014. The previous behaviour
+        // kept the instance live after a rejection, which meant the slot ran
+        // with default parameters and the next save wrote those defaults over
+        // the project's settings -- the data loss was not just unreported, it
+        // was guaranteed on the first save. The placeholder path stores the
+        // opaque state exactly as it came off the wire and re-emits it on save,
+        // so the settings survive and the slot resolves when the project is
+        // loaded again.
         auto instance = manager.createInstanceById(pluginId);
+        bool stateRejected = false;
         if (instance) {
             instance->initialize(m_sampleRate, m_maxBlockSize);
             if (!instance->loadState(pluginState)) {
-                Aestra::Log::warning("[EffectChain] Failed to load state for plugin slot " + std::to_string(i) +
-                                     " — using default state");
+                // Installed, but the blob is not something it will accept. The
+                // diagnosis is more specific than "missing" and is reported as
+                // such; the recovery is the same.
+                stateRejected = true;
+                instance.reset();
             }
+        }
+
+        if (instance) {
             instance->activate();
 
             m_slots[i].plugin = std::move(instance);
             m_slots[i].clearMissingPlugin();
-            // v2 restores the persisted identity (reserving it against future
-            // mints); v1 predates identity and mints. A v2 payload with a
-            // missing/duplicate id mints with a diagnostic (Contract I5).
-            m_slots[i].instanceId = resolveSlotIdentity(wireInstanceId, i);
-            m_slots[i].bypassed.store(bypassed);
-            m_slots[i].dryWetMix.store(dryWet);
-            m_slots[i].faultState = std::make_shared<EffectSlotFaultState>();
         } else {
-            // The plugin is unavailable on this machine. Retain the record
-            // instead of dropping it (#647) — dropping it here is what made the
-            // next save erase the slot permanently and silently.
+            // The plugin is unavailable, or its state was unreadable. Retain
+            // the record instead of dropping it (#647) — dropping it here is
+            // what made the next save erase the slot permanently and silently.
             //
             // The opaque state is stored exactly as it came off the wire; it is
             // never interpreted or normalised, so repeated load/save cycles
@@ -981,21 +994,33 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
             m_slots[i].plugin = nullptr;
             m_slots[i].missingPluginId = pluginId;
             m_slots[i].missingPluginState = std::move(pluginState);
-            // A placeholder is an occupant, so it gets an identity like any
-            // other (#647/#667). Automation addressed to a plugin that failed to
-            // load has to survive the round trip exactly as the placeholder does
-            // (Contract I6): v2 restores the persisted id, v1 mints.
-            m_slots[i].instanceId = resolveSlotIdentity(wireInstanceId, i);
-            m_slots[i].bypassed.store(bypassed);
-            m_slots[i].dryWetMix.store(dryWet);
-            m_slots[i].faultState = std::make_shared<EffectSlotFaultState>();
 
-            if (outMissingPluginIds) {
-                outMissingPluginIds->push_back(pluginId);
+            if (stateRejected) {
+                if (outReport) {
+                    outReport->unreadableState.push_back(pluginId);
+                }
+                Aestra::Log::warning("[EffectChain] Plugin " + pluginId + " at slot " + std::to_string(i) +
+                                     " rejected its saved state — the slot is left empty rather than run on"
+                                     " defaults, and its state is preserved on save");
+            } else {
+                if (outReport) {
+                    outReport->missingPlugins.push_back(pluginId);
+                }
+                Aestra::Log::warning("[EffectChain] Plugin unavailable for slot " + std::to_string(i) +
+                                     ": " + pluginId +
+                                     " — slot state retained and will be preserved on save");
             }
-            Aestra::Log::warning("[EffectChain] Plugin unavailable for slot " + std::to_string(i) + ": " + pluginId +
-                                 " — slot state retained and will be preserved on save");
         }
+        // A slot is an occupant either way, so identity and mix are resolved
+        // once, after the branch: v2 restores the persisted identity (reserving
+        // it against future mints); v1 predates identity and mints. A v2 payload
+        // with a missing/duplicate id mints with a diagnostic (Contract I5).
+        // Automation addressed to a plugin that failed to load has to survive
+        // the round trip exactly as the placeholder does (Contract I6).
+        m_slots[i].instanceId = resolveSlotIdentity(wireInstanceId, i);
+        m_slots[i].bypassed.store(bypassed);
+        m_slots[i].dryWetMix.store(dryWet);
+        m_slots[i].faultState = std::make_shared<EffectSlotFaultState>();
     }
 
     publishSnapshot();

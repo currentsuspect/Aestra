@@ -65,18 +65,30 @@ float oversampledPeak(const std::vector<float>& buf, uint32_t osRatio) {
     return peak;
 }
 
-bool testBypassPassesAudioUnchanged() {
+// Bypass must be a pure delay of exactly getLatencySamples(), not a straight
+// copy. EffectChain::getTotalLatency() counts this plugin's latency whenever
+// the slot is not host-bypassed and it cannot see the plugin's own Bypass
+// knob, so an undelayed bypass placed the limiter's lookahead early against
+// everything downstream in a delay-compensated chain. The priming block is
+// silent so the expected output is exactly "input delayed by the reported
+// latency" with nothing stale ahead of it.
+bool testBypassIsLatencyAligned() {
     AestraLimit lim;
     initAndActivate(lim);
     lim.setParameter(AestraLimit::kBypass, 1.0f);
+
+    processStereo(lim, makeSilence(1024), makeSilence(1024)); // prime the ring
+    const uint32_t latency = lim.getLatencySamples();
 
     const auto inL = makeSine(1024, 1000.0f, 0.5f, kSampleRate);
     const auto inR = makeSine(1024, 1000.0f, 0.5f, kSampleRate);
     auto out = processStereo(lim, inL, inR);
 
     for (uint32_t i = 0; i < inL.size(); ++i) {
-        if (std::abs(out.left[i] - inL[i]) > 1e-6f) return false;
-        if (std::abs(out.right[i] - inR[i]) > 1e-6f) return false;
+        const float expectL = (i >= latency) ? inL[i - latency] : 0.0f;
+        const float expectR = (i >= latency) ? inR[i - latency] : 0.0f;
+        if (std::abs(out.left[i] - expectL) > 1e-6f) return false;
+        if (std::abs(out.right[i] - expectR) > 1e-6f) return false;
     }
     return true;
 }
@@ -201,13 +213,35 @@ bool testSanitizeNanInput() {
     return std::isfinite(outL) && std::isfinite(outR);
 }
 
+// The reported latency has to match the delay the signal path actually
+// applies, not the size of the lookahead ring. This used to compare
+// getLatencySamples() against ceil(lookahead * sampleRate) — a constant that
+// agreed with a plugin reporting one sample more than it delayed, so the lie
+// passed. Measuring the delay with an impulse and comparing it to the report
+// cannot drift that way again.
 bool testLatencyMatchesLookahead() {
     AestraLimit lim;
-    lim.initialize(kSampleRate, kBlockSize);
+    initAndActivate(lim);
 
-    const uint32_t expected = static_cast<uint32_t>(
-        std::ceil(static_cast<double>(AestraLimit::kLookaheadMs) * 0.001 * static_cast<double>(kSampleRate)));
-    return lim.getLatencySamples() == expected;
+    constexpr uint32_t kBlock = 1024;
+    const auto silence = makeSilence(kBlock);
+    processStereo(lim, silence, silence); // prime the ring with silence
+
+    std::vector<float> inL(kBlock, 0.0f);
+    inL[0] = 1.0f;
+    auto out = processStereo(lim, inL, inL);
+
+    uint32_t measured = UINT32_MAX;
+    for (uint32_t i = 0; i < kBlock; ++i) {
+        if (std::fabs(out.left[i]) > 1e-6f) {
+            measured = i;
+            break;
+        }
+    }
+    if (measured == UINT32_MAX)
+        return false; // an impulse in produced nothing at all
+
+    return lim.getLatencySamples() == measured;
 }
 
 bool testMeteringUpdatesAfterProcess() {
@@ -259,7 +293,7 @@ bool testZeroInputLatencyRamp() {
 
 int main() {
     std::cout << "AestraLimit Tests\n";
-    if (!testBypassPassesAudioUnchanged()) { std::cout << "FAIL: bypass\n"; return 1; }
+    if (!testBypassIsLatencyAligned()) { std::cout << "FAIL: bypass latency alignment\n"; return 1; }
     if (!testSilenceProducesSilence()) { std::cout << "FAIL: silence\n"; return 1; }
     if (!testTruePeakDoesNotExceedCeiling()) { std::cout << "FAIL: true peak ceiling\n"; return 1; }
     if (!testGainReductionApplied()) { std::cout << "FAIL: gain reduction\n"; return 1; }

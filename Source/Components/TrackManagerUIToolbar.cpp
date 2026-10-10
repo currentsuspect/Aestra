@@ -68,9 +68,11 @@ void TrackManagerUI::createToolIcons() {
         R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h7v2.1H5.1V10H3V3zm11 0h7v7h-2.1V5.1H14V3zM3 14h2.1v4.9H10V21H3v-7zm15.9 0H21v7h-7v-2.1h4.9V14z"/></svg>)";
     m_multiSelectToolIcon = std::make_shared<AestraUI::NUIIcon>(multiSelectSvg);
 
-    // === PAINT/STAMP TOOL ICON (Brush/stamp) ===
+    // === PAINT/DRAW TOOL ICON ===
+    // A pencil: you draw clips in with it. The Material paintbrush it replaces
+    // was the stock glyph every web app ships, and read as "styling", not "draw".
     const char* paintSvg =
-        R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M7 14c-1.66 0-3 1.34-3 3 0 1.31-1.16 2-2 2 .92 1.22 2.49 2 4 2 2.21 0 4-1.79 4-4 0-1.66-1.34-3-3-3zm13.71-9.37l-1.34-1.34a.996.996 0 00-1.41 0L9 12.25 11.75 15l8.96-8.96a.996.996 0 000-1.41z" fill="currentColor"/></svg>)";
+        R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M15.9 3.1A1.9 1.9 0 0 1 18.6 3.1L20.9 5.4A1.9 1.9 0 0 1 20.9 8.1L9.1 19.9 3.4 20.6 4.1 14.9Z M14.5 6.7L17.3 9.5 18.2 8.6 15.4 5.8Z"/></svg>)";
     m_paintToolIcon = std::make_shared<AestraUI::NUIIcon>(paintSvg);
 
     // === MENU ICON (Hamburger) ===
@@ -199,7 +201,7 @@ bool TrackManagerUI::isCustomCursorActive() const {
     // Use getBounds() (not getGlobalBounds()) so this suppression region shares
     // the exact coordinate basis renderToolCursor()/renderMinimapResizeCursor()
     // draw in. m_lastMousePos is window-space and this component's bounds are
-    // already window-absolute, so getGlobalBounds() double-counts the parent
+    // already window-absolute, so getGlobalBounds() (gone since V8-X2b 6b) double-counted the parent
     // offset and shifts the region down, leaving a top strip where the arrow is
     // not suppressed while the tool cursor still draws (both cursors visible).
     if (hoverCurrent && (m_currentTool == PlaylistTool::Split || m_currentTool == PlaylistTool::Paint)) {

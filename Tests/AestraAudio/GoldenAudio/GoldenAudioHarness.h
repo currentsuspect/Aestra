@@ -118,6 +118,45 @@ struct SessionConfig {
 };
 
 /// Add one audio track whose clip contains `interleaved` (stereo) samples,
+/// starting at `startBeat`. Returns the lane's source id.
+inline Aestra::Audio::ClipSourceID addAudioTrackAtBeat(Aestra::Audio::TrackManager& tm, const std::string& label,
+                                                       const std::vector<float>& interleaved, uint32_t frames,
+                                                       const SessionConfig& cfg, double startBeat) {
+    using namespace Aestra::Audio;
+    auto* channel = tm.addChannel(label);
+
+    auto buffer = std::make_shared<AudioBufferData>();
+    buffer->sampleRate = cfg.sampleRate;
+    buffer->numChannels = cfg.channels;
+    buffer->numFrames = frames;
+    buffer->interleavedData = interleaved;
+
+    const std::string path =
+        (std::filesystem::temp_directory_path() / ("golden_audio_" + label + ".wav")).string();
+    ClipSourceID sourceId = tm.getSourceManager().createRecordedSource(path, label, buffer);
+
+    AudioSlicePayload payload;
+    payload.audioSourceId = sourceId;
+    payload.durationSeconds = static_cast<double>(frames) / cfg.sampleRate;
+    payload.slices.push_back({0.0, payload.durationSeconds, 0.0, static_cast<double>(frames)});
+
+    PlaylistLaneID laneId = tm.getPlaylistModel().createLane(label);
+    const double durationBeats =
+        payload.durationSeconds * (static_cast<double>(cfg.bpm) / 60.0);
+    PatternID patternId =
+        tm.getPatternManager().createAudioPattern(label, durationBeats, payload);
+    if (channel) {
+        tm.getPatternManager().setPatternMixerChannel(patternId, channel->getChannelId());
+    }
+    const ClipInstanceID clipId =
+        tm.getPlaylistModel().addClipFromPattern(laneId, patternId, startBeat, durationBeats);
+    if (!tm.getPlaylistModel().setClipEdits(clipId, ClipEdits{})) {
+        throw std::runtime_error("Failed to configure unity-gain golden-audio clip");
+    }
+    return sourceId;
+}
+
+/// Add one audio track whose clip contains `interleaved` (stereo) samples,
 /// starting at beat 0. Returns the lane's source id.
 inline Aestra::Audio::ClipSourceID addAudioTrack(Aestra::Audio::TrackManager& tm, const std::string& label,
                                                  const std::vector<float>& interleaved, uint32_t frames,

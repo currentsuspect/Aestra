@@ -127,7 +127,7 @@ public:
         /** @brief View currently being dragged. */
         Aestra::Audio::ViewType draggingView = Aestra::Audio::ViewType::Playlist;
         /** @brief Mouse origin in overlay coordinates for the active drag. */
-        AestraUI::NUIPoint dragStartMouseOverlay = {0, 0};
+        AestraUI::NUIPoint dragStartMouse = {0, 0}; // window-absolute
         /** @brief Panel origin in overlay coordinates at drag start. Drag
          * gestures reuse the stored size preference, never the displayed
          * size, so dragging a fitted panel cannot bake the fit into the
@@ -314,6 +314,19 @@ public:
 
     /** @brief The panel owned for a floating view, or nullptr for other views. */
     std::shared_ptr<Aestra::Audio::WindowPanel> panelForView(Aestra::Audio::ViewType view);
+
+    // One accessor per floating panel, existing so the descriptor table can name
+    // a panel without friendship or type erasure. The five members are distinct
+    // derived types (MixerPanel, PianoRollPanel, ArsenalPanel, AestraHistoryPanel,
+    // TakesPanel), so they cannot share a member pointer; a pointer-to-member-
+    // function is compile-checked, allocates nothing and carries no std::any or
+    // std::function through the frame loop. Each is the upcast panelForView()
+    // already performed inside its switch arm.
+    std::shared_ptr<Aestra::Audio::WindowPanel> mixerWindowFor() const;
+    std::shared_ptr<Aestra::Audio::WindowPanel> pianoRollWindowFor() const;
+    std::shared_ptr<Aestra::Audio::WindowPanel> sequencerWindowFor() const;
+    std::shared_ptr<Aestra::Audio::WindowPanel> historyWindowFor() const;
+    std::shared_ptr<Aestra::Audio::WindowPanel> takesWindowFor() const;
     /** @brief The app-owned surface store, or nullptr before AestraApp provides it. */
     Aestra::UISurfaceStoreFile* surfaceStore() const;
     /**
@@ -552,7 +565,7 @@ private:
     Aestra::Events::ScopedConnections m_connections;
     Aestra::Audio::UnitID m_sampleEditorUnitId{0};
     bool m_sampleEditorDragging{false};
-    AestraUI::NUIPoint m_sampleEditorDragStartMouseOverlay{0.0f, 0.0f};
+    AestraUI::NUIPoint m_sampleEditorDragStartMouse{0.0f, 0.0f}; // window-absolute
     AestraUI::NUIRect m_sampleEditorDragStartRect{0.0f, 0.0f, 0.0f, 0.0f};
 
     void openSampleEditorForUnit(Aestra::Audio::UnitID unitId, const std::string& samplePath);

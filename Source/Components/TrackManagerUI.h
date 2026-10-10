@@ -22,6 +22,7 @@
 #include "TimelineSummaryCache.h"
 #include "TimelineInteractionPolicy.h"
 #include "TimelineMarquee.h"
+#include "TrackManagerUILayout.h"
 #include "TrackManagerUIMath.h"
 #include "WaveformCache.h"
 
@@ -29,6 +30,7 @@
 #include <memory>
 #include "Events/Connection.h"
 #include <mutex>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -65,6 +67,14 @@ enum class PlaylistTool {
  */
 class TrackManagerUI : public ::AestraUI::NUIComponent, public ::AestraUI::IDropTarget {
 public:
+    /**
+     * @brief Skip drawing while an opaque panel fully covers the timeline (SPEC 3 §4).
+     *
+     * State work in onRender (lazy track refresh, solo propagation) still runs; only the
+     * drawing, which nobody can see, is skipped. Measured: the timeline under an open piano
+     * roll cost 5-7 ms of CPU plus its GPU fill every frame.
+     */
+    void setRenderOccluded(bool occluded) { m_renderOccluded = occluded; }
     TrackManagerUI(std::shared_ptr<TrackManager> trackManager);
     ~TrackManagerUI() override;
     void onThemeChanged(const ::AestraUI::NUIThemeProperties& theme) override {
@@ -376,6 +386,7 @@ private:
     std::shared_ptr<TrackManager> m_trackManager;
     std::vector<std::shared_ptr<TrackUIComponent>> m_trackUIComponents;
     bool m_needsTrackRefresh = true; // Lazy-init: defer refreshTracks() from ctor to first render
+    bool m_renderOccluded = false;   // an opaque panel covers the whole timeline: draw nothing
     ::AestraUI::NUIPlatformBridge* m_window = nullptr;
 
     // UI Layout
@@ -412,11 +423,17 @@ private:
     // Timeline minimap state (beats-domain)
     ::AestraUI::TimelineSummaryCache m_timelineSummaryCache;
     ::AestraUI::TimelineSummarySnapshot m_timelineSummarySnapshot;
+    std::vector<::AestraUI::NUIColor> m_minimapLaneColors; // each lane's clip display colour, by lane index
+    std::unordered_map<PlaylistLaneID, TrackUIComponent*> m_minimapRowByLane; // reused per update
     ::AestraUI::TimelineMinimapMode m_minimapMode{::AestraUI::TimelineMinimapMode::Clips};
     ::AestraUI::TimelineMinimapAggregation m_minimapAggregation{::AestraUI::TimelineMinimapAggregation::MaxPresence};
     double m_minimapDomainStartBeat{0.0};
     double m_minimapDomainEndBeat{0.0};
     bool m_minimapNeedsRebuild{true};
+    // Set when a summary rebuild is requested; the lane colours (new lane order) are held back
+    // until the worker publishes that exact rebuild (m_minimapLaneColorsGeneration).
+    bool m_minimapLaneColorsPending{false};
+    uint64_t m_minimapLaneColorsGeneration{0};
     ::AestraUI::TimelineRange m_minimapSelectionBeatRange{};
 
     // Tool icons (toolbar)
@@ -625,6 +642,8 @@ private:
 
     void syncViewToggleButtons();
     void layoutTracks();
+    /** V8-X2b: the timeline's regions in Local space, from current bounds and theme (TrackManagerUILayout.h). */
+    TimelineLayout currentTimelineLayout() const;
     void onAddTrackClicked();
     void syncTrackSelectionView();
     void selectClip(ClipInstanceID clipId);

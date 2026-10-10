@@ -237,7 +237,7 @@ void AestraCompEditor::drawSectionLabel(NUIRenderer& renderer, const char* label
     renderer.drawText(label, {leftX, y}, 8.5f, dimText());
     const NUIPoint lineStart{leftX + 56.0f, y + 4.0f};
     const NUIPoint lineEnd{rightX, y + 4.0f};
-    renderer.drawLine(lineStart, lineEnd, 1.0f, NUIColor(1, 1, 1, 0.06f));
+    renderer.drawLine(lineStart, lineEnd, 1.0f, editorInk(0.06f));
 }
 
 void AestraCompEditor::drawTransferCurve(NUIRenderer& renderer, NUIColor accent) {
@@ -268,10 +268,10 @@ void AestraCompEditor::drawTransferCurve(NUIRenderer& renderer, NUIColor accent)
     renderer.fillRoundedRect({statsX - 4.0f, b.y, kStatsW + kModesW + kDividerW + kRightMargin + 8.0f, b.height},
                              6.0f, editorNeutral(0.014f, 0.92f));
 
-    renderer.strokeRoundedRect(b, 6.0f, 1.0f, NUIColor(1, 1, 1, 0.05f));
+    renderer.strokeRoundedRect(b, 6.0f, 1.0f, editorInk(0.05f));
     // Subtle top highlight
     renderer.drawLine({b.x + 6.0f, b.y + 1.0f}, {b.x + b.width - 6.0f, b.y + 1.0f},
-                      1.0f, NUIColor(1, 1, 1, 0.06f));
+                      1.0f, editorInk(0.06f));
 
     // Spectrum analyzer — log frequency axis, kFftDisplayMinDb to 0 dB
     {
@@ -323,37 +323,37 @@ void AestraCompEditor::drawTransferCurve(NUIRenderer& renderer, NUIColor accent)
 
     // Vertical divider: curve | stats
     renderer.drawLine({statsX - kDividerW, b.y + 8.0f}, {statsX - kDividerW, b.bottom() - 8.0f},
-                      kDividerW, NUIColor(1, 1, 1, 0.14f));
+                      kDividerW, editorInk(0.14f));
     // Vertical divider: stats | modes
     renderer.drawLine({modesX - kDividerW, b.y + 8.0f}, {modesX - kDividerW, b.bottom() - 8.0f},
-                      kDividerW, NUIColor(1, 1, 1, 0.14f));
+                      kDividerW, editorInk(0.14f));
 
     // GR section
-    renderer.drawText("GR", {statsX + 6.0f, b.y + 12.0f}, 8.0f, NUIColor(1, 1, 1, 0.28f));
+    renderer.drawText("GR", {statsX + 6.0f, b.y + 12.0f}, 8.0f, editorInk(0.28f));
     char grBuf[16]{};
     std::snprintf(grBuf, sizeof(grBuf), "-%.1f dB", grDb);
     renderer.drawText(grBuf, {statsX + 6.0f, b.y + 24.0f}, 14.0f, amber().withAlpha(0.95f));
 
     // Thin separator
     renderer.drawLine({statsX + 8.0f, b.y + 46.0f}, {statsX + kStatsW - 4.0f, b.y + 46.0f},
-                      0.5f, NUIColor(1, 1, 1, 0.05f));
+                      0.5f, editorInk(0.05f));
 
     // RATIO section
-    renderer.drawText("RATIO", {statsX + 6.0f, b.y + 54.0f}, 8.0f, NUIColor(1, 1, 1, 0.28f));
+    renderer.drawText("RATIO", {statsX + 6.0f, b.y + 54.0f}, 8.0f, editorInk(0.28f));
     char ratBuf[16]{};
     if (ratio >= 19.95f) std::snprintf(ratBuf, sizeof(ratBuf), "20:1");
     else std::snprintf(ratBuf, sizeof(ratBuf), "%d:1", static_cast<int>(std::round(ratio)));
-    renderer.drawText(ratBuf, {statsX + 6.0f, b.y + 66.0f}, 14.0f, NUIColor(1, 1, 1, 0.88f));
+    renderer.drawText(ratBuf, {statsX + 6.0f, b.y + 66.0f}, 14.0f, editorInk(0.88f));
 
     // Thin separator
     renderer.drawLine({statsX + 8.0f, b.y + 88.0f}, {statsX + kStatsW - 4.0f, b.y + 88.0f},
-                      0.5f, NUIColor(1, 1, 1, 0.05f));
+                      0.5f, editorInk(0.05f));
 
     // KNEE section
-    renderer.drawText("KNEE", {statsX + 6.0f, b.y + 96.0f}, 8.0f, NUIColor(1, 1, 1, 0.28f));
+    renderer.drawText("KNEE", {statsX + 6.0f, b.y + 96.0f}, 8.0f, editorInk(0.28f));
     char kneeBuf[16]{};
     std::snprintf(kneeBuf, sizeof(kneeBuf), "%.0f dB", kneeDb);
-    renderer.drawText(kneeBuf, {statsX + 6.0f, b.y + 108.0f}, 14.0f, NUIColor(1, 1, 1, 0.88f));
+    renderer.drawText(kneeBuf, {statsX + 6.0f, b.y + 108.0f}, 14.0f, editorInk(0.88f));
 
     // Axis labels
     char axisBottom[16]{};
@@ -363,7 +363,7 @@ void AestraCompEditor::drawTransferCurve(NUIRenderer& renderer, NUIColor accent)
     renderer.drawText("0 dB", {b.x + 6.0f, curveTop + 2.0f}, 7.0f, dimText());
 
     // 1:1 reference line
-    renderer.drawLine({curveLeft, curveBottom}, {curveRight, curveTop}, 1.0f, NUIColor(1, 1, 1, 0.06f));
+    renderer.drawLine({curveLeft, curveBottom}, {curveRight, curveTop}, 1.0f, editorInk(0.06f));
 
     // Threshold vertical guide
     const float thrNormClamped = std::clamp(thrNorm, 0.0f, 1.0f);
@@ -417,11 +417,11 @@ void AestraCompEditor::drawTransferCurve(NUIRenderer& renderer, NUIColor accent)
             renderer.fillRoundedRect(r, 5.0f, accent.withAlpha(0.80f));
             // Top specular
             renderer.drawLine({r.x + 6.0f, r.y + 1.0f}, {r.x + r.width - 6.0f, r.y + 1.0f},
-                              1.0f, NUIColor(1, 1, 1, 0.22f));
+                              1.0f, editorInk(0.22f));
             // Border
             renderer.strokeRoundedRect(r, 5.0f, 1.0f, accent);
             // Label
-            renderer.drawTextCentered(pillLabels[i], r, 9.5f, NUIColor(1, 1, 1, 0.98f));
+            renderer.drawTextCentered(pillLabels[i], r, 9.5f, editorInk(0.98f));
         } else {
             // Body — deep dark inset
             renderer.fillRoundedRect(r, 5.0f, editorNeutral(0.018f, 0.90f));
@@ -429,9 +429,9 @@ void AestraCompEditor::drawTransferCurve(NUIRenderer& renderer, NUIColor accent)
             renderer.drawLine({r.x + 5.0f, r.y + 1.0f}, {r.x + r.width - 5.0f, r.y + 1.0f},
                               0.5f, NUIColor(0, 0, 0, 0.30f));
             // Border — visible but not loud
-            renderer.strokeRoundedRect(r, 5.0f, 1.0f, NUIColor(1, 1, 1, 0.10f));
+            renderer.strokeRoundedRect(r, 5.0f, 1.0f, editorInk(0.10f));
             // Label — readable but clearly inactive
-            renderer.drawTextCentered(pillLabels[i], r, 9.0f, NUIColor(1, 1, 1, 0.42f));
+            renderer.drawTextCentered(pillLabels[i], r, 9.0f, editorInk(0.42f));
         }
     }
 }
@@ -444,7 +444,7 @@ void AestraCompEditor::drawMeters(NUIRenderer& renderer, NUIColor accent) {
     auto drawMeter = [&](float x, const char* label, float norm, NUIColor color) {
         const NUIRect meterBounds(x, b.y, thirdW, b.height);
         renderer.fillRoundedRect(meterBounds, 5.0f, editorNeutral(0.008f, 1.0f));
-        renderer.strokeRoundedRect(meterBounds, 5.0f, 1.0f, NUIColor(1, 1, 1, 0.055f));
+        renderer.strokeRoundedRect(meterBounds, 5.0f, 1.0f, editorInk(0.055f));
 
         char valBuf[16]{};
         const float db = norm > 1.0e-8f ? 20.0f * std::log10(norm) : -60.0f;
@@ -463,8 +463,8 @@ void AestraCompEditor::drawMeters(NUIRenderer& renderer, NUIColor accent) {
 
         // Text overlaid on the meter
         const float textY = b.y + (b.height - 8.0f) * 0.5f;
-        renderer.drawText(label, {x + 8.0f, textY}, 8.0f, NUIColor(1, 1, 1, 0.50f));
-        renderer.drawText(valBuf, {valX, textY}, 8.0f, NUIColor(1, 1, 1, 0.90f));
+        renderer.drawText(label, {x + 8.0f, textY}, 8.0f, editorInk(0.50f));
+        renderer.drawText(valBuf, {valX, textY}, 8.0f, editorInk(0.90f));
     };
 
     drawMeter(b.x, "IN", m_inputDisplay, purple());
@@ -479,7 +479,7 @@ void AestraCompEditor::drawControl(NUIRenderer& renderer, const KnobControl& con
     const NUIColor knobAccent = prim ? accent : accent.withAlpha(0.72f);
 
     // Knob cell background + border
-    const NUIColor cellBg(0.035f, 0.035f, 0.040f, 0.96f);
+    const NUIColor cellBg = editorNeutral(NUIColor(0.035f, 0.035f, 0.040f, 0.96f)); // follows the theme
     const NUIColor cellBorder = prim ? NUIColor(0.18f, 0.13f, 0.28f, 1.0f) : editorNeutral(NUIColor(0.118f, 0.118f, 0.133f, 1.0f));
     renderer.fillRoundedRect(control.bounds, 8.0f, cellBg);
     renderer.strokeRoundedRect(control.bounds, 8.0f, 1.0f, cellBorder);
@@ -487,7 +487,7 @@ void AestraCompEditor::drawControl(NUIRenderer& renderer, const KnobControl& con
     if (prim) {
         renderer.drawLine({control.bounds.x + 8.0f, control.bounds.y + 1.0f},
                           {control.bounds.x + control.bounds.width - 8.0f, control.bounds.y + 1.0f},
-                          0.5f, NUIColor(1, 1, 1, 0.06f));
+                          0.5f, editorInk(0.06f));
     }
 
     const NUIRect knobRect = control.slider ? control.slider->getBounds() : NUIRect();
@@ -498,7 +498,7 @@ void AestraCompEditor::drawControl(NUIRenderer& renderer, const KnobControl& con
     // Glow + body
     renderer.fillCircle({cx, cy}, r + 6.0f, knobAccent.withAlpha(0.06f));
     renderer.fillCircle({cx, cy}, r, insetBg());
-    renderer.strokeCircle({cx, cy}, r + 2.5f, 1.5f, NUIColor(1, 1, 1, 0.07f));
+    renderer.strokeCircle({cx, cy}, r + 2.5f, 1.5f, editorInk(0.07f));
 
     // Arc
     const float start = kPi * 0.75f;
@@ -549,10 +549,10 @@ void AestraCompEditor::drawUtilityButtons(NUIRenderer& renderer, NUIColor accent
 
         if (btn.disabled) {
             const float dim = 0.50f;
-            const NUIColor bg = NUIColor(0.022f * dim, 0.022f * dim, 0.028f * dim, 0.60f);
+            const NUIColor bg = editorNeutral(NUIColor(0.022f * dim, 0.022f * dim, 0.028f * dim, 0.60f));
             renderer.fillRoundedRect(btn.bounds, 5.0f, bg);
-            renderer.strokeRoundedRect(btn.bounds, 5.0f, 1.0f, NUIColor(1, 1, 1, 0.06f));
-            renderer.drawTextCentered(btn.label, btn.bounds, 9.0f, NUIColor(1, 1, 1, 0.25f));
+            renderer.strokeRoundedRect(btn.bounds, 5.0f, 1.0f, editorInk(0.06f));
+            renderer.drawTextCentered(btn.label, btn.bounds, 9.0f, editorInk(0.25f));
         } else if (btn.on) {
             renderer.fillRoundedRect({btn.bounds.x - 1.5f, btn.bounds.y - 1.5f,
                                       btn.bounds.width + 3.0f, btn.bounds.height + 3.0f},
@@ -560,9 +560,9 @@ void AestraCompEditor::drawUtilityButtons(NUIRenderer& renderer, NUIColor accent
             renderer.fillRoundedRect(btn.bounds, 5.0f, activeAccent.withAlpha(0.55f));
             renderer.drawLine({btn.bounds.x + 5.0f, btn.bounds.y + 1.0f},
                               {btn.bounds.x + btn.bounds.width - 5.0f, btn.bounds.y + 1.0f},
-                              1.0f, NUIColor(1, 1, 1, 0.15f));
+                              1.0f, editorInk(0.15f));
             renderer.strokeRoundedRect(btn.bounds, 5.0f, 1.0f, activeAccent.withAlpha(0.80f));
-            renderer.drawTextCentered(btn.label, btn.bounds, 9.0f, NUIColor(1, 1, 1, 0.95f));
+            renderer.drawTextCentered(btn.label, btn.bounds, 9.0f, editorInk(0.95f));
         } else {
             const NUIColor bg = btn.hov ? editorNeutral(0.041f, 0.90f)
                                         : editorNeutral(0.022f, 0.90f);
@@ -570,9 +570,9 @@ void AestraCompEditor::drawUtilityButtons(NUIRenderer& renderer, NUIColor accent
             renderer.drawLine({btn.bounds.x + 5.0f, btn.bounds.y + 1.0f},
                               {btn.bounds.x + btn.bounds.width - 5.0f, btn.bounds.y + 1.0f},
                               0.5f, NUIColor(0, 0, 0, 0.25f));
-            const NUIColor border = btn.hov ? NUIColor(1, 1, 1, 0.16f) : NUIColor(1, 1, 1, 0.08f);
+            const NUIColor border = btn.hov ? editorInk(0.16f) : editorInk(0.08f);
             renderer.strokeRoundedRect(btn.bounds, 5.0f, 1.0f, border);
-            const NUIColor text = btn.hov ? NUIColor(1, 1, 1, 0.72f) : NUIColor(1, 1, 1, 0.40f);
+            const NUIColor text = btn.hov ? editorInk(0.72f) : editorInk(0.40f);
             renderer.drawTextCentered(btn.label, btn.bounds, 9.0f, text);
         }
     }

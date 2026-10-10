@@ -218,20 +218,13 @@ bool TrackManagerUI::handleTrackSeamSelect(const AestraUI::NUIMouseEvent& event,
         return false;
     }
 
-    const float trackAreaTop = kTimelineTimeBandHeight;
-    if (localPos.y < trackAreaTop) {
+    const TimelineLayout layout = currentTimelineLayout();
+    if (localPos.y < layout.rows.y) {
         return false; // ruler / minimap band
     }
 
-    const float stride = static_cast<float>(m_trackHeight + m_trackSpacing);
-    if (stride <= 0.0f) {
-        return false;
-    }
-    const float relativeY = localPos.y - trackAreaTop + m_scrollOffset;
-    if (relativeY < 0.0f) {
-        return false;
-    }
-    const int idx = static_cast<int>(relativeY / stride);
+    const int idx = timelineRowSlotAt(layout, static_cast<float>(m_trackHeight), static_cast<float>(m_trackSpacing),
+                                      m_scrollOffset, localPos.y);
     if (idx < 0 || idx >= static_cast<int>(m_trackUIComponents.size())) {
         return false;
     }
@@ -640,11 +633,11 @@ bool TrackManagerUI::handleTimelineWheel(const AestraUI::NUIMouseEvent& event, c
             m_targetScrollOffset += scrollDelta;
 
             // Clamp scroll offset
-            float viewportHeight = bounds.height - kTimelineTimeBandHeight;
-
-            const float laneCount = static_cast<float>(m_trackUIComponents.size());
-            float totalContentHeight = laneCount * (m_trackHeight + m_trackSpacing);
-            float maxScroll = std::max(0.0f, totalContentHeight - viewportHeight);
+            const TimelineLayout layout = currentTimelineLayout();
+            const float viewportHeight = layout.rows.height;
+            const float maxScroll = timelineMaxVerticalScroll(layout, static_cast<float>(m_trackHeight),
+                                                              static_cast<float>(m_trackSpacing),
+                                                              m_trackUIComponents.size());
             m_targetScrollOffset = std::max(0.0f, std::min(m_targetScrollOffset, maxScroll));
 
             if (m_scrollbar) {
@@ -1023,8 +1016,8 @@ bool TrackManagerUI::handleSplitToolClick(const AestraUI::NUIMouseEvent& event, 
 
         if (gridBounds.contains(event.position)) {
             // Find which track was clicked
-            float relativeY = localPos.y - trackAreaTop + m_scrollOffset;
-            int trackIndex = static_cast<int>(relativeY / (m_trackHeight + m_trackSpacing));
+            int trackIndex = timelineRowSlotAt(currentTimelineLayout(), static_cast<float>(m_trackHeight),
+                                               static_cast<float>(m_trackSpacing), m_scrollOffset, localPos.y);
 
             if (trackIndex >= 0 && trackIndex < static_cast<int>(m_trackUIComponents.size())) {
                 // Calculate beat position from click X

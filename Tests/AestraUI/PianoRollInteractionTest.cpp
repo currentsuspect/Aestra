@@ -5,6 +5,7 @@
 #include "Widgets/NUIPianoRollWidgets.h"
 #include "Widgets/PianoRollWidgetShared.h"
 #include "../Support/NullRenderer.h"
+#include <algorithm>
 #include <cmath>
 #include <string>
 #include <cassert>
@@ -818,8 +819,231 @@ static void test_bar_snap_double_click_does_not_duplicate() {
     PASS("a bar-snap double-click does not duplicate the note it just placed");
 }
 
+// Review, #981: Alt+drag copy commits live every frame. Without the layer's own undo stack each
+// of those commits became its own CommandHistory entry, so one copy gesture needed several
+// Ctrl+Z. Every commit after the gesture's first must be flagged as a continuation.
+// The live commit also sorts notes_, which moved the clone out from under copyDragIndices_:
+// later frames then dragged a different note (here B), so the gesture destroyed a note.
+static void test_alt_drag_copy_is_one_gesture_and_moves_only_the_clone() {
+    constexpr float kPpb = 80.0f;
+    constexpr float kKey = 24.0f;
+    PianoRollNoteLayer layer;
+    layer.setBounds(NUIRect(0.0f, 0.0f, 1600.0f, 128.0f * kKey));
+    layer.setPixelsPerBeat(kPpb);
+    layer.setKeyHeight(kKey);
+    layer.setSnap(SnapGrid::Beat);
+    layer.setTool(GlobalTool::Pointer);
+    layer.setVisible(true);
+    // A at beat 0 (pitch 60) and B at beat 4 (pitch 64): after A's clone is committed once,
+    // sorting places it before B, so the clone's original index now holds B.
+    layer.setNotes({{60, 0.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f},
+                    {64, 4.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f}});
+
+    int commits = 0;
+    int newEntries = 0; // commits the owner records as a new history entry
+    layer.setOnNotesChanged([&](const std::vector<MidiNote>&) {
+        ++commits;
+        if (!layer.isContinuingEdit()) ++newEntries;
+    });
+
+    const float y = (127.0f - 60.0f) * kKey + kKey * 0.5f;
+    NUIMouseEvent press;
+    press.type = NUIMouseEventType::Down;
+    press.position = NUIPoint(0.5f * kPpb, y);
+    press.button = NUIMouseButton::Left;
+    press.pressed = true;
+    press.modifiers = NUIModifiers::Alt;
+    layer.onMouseEvent(press);
+
+    NUIMouseEvent move;
+    move.type = NUIMouseEventType::Move;
+    move.modifiers = NUIModifiers::Alt;
+    for (float beat : {1.5f, 2.5f, 3.5f}) { // clone ends at beat 3 (A's start 0 + 3 beats)
+        move.position = NUIPoint(beat * kPpb, y);
+        layer.onMouseEvent(move);
+    }
+    NUIMouseEvent release = move;
+    release.type = NUIMouseEventType::Up;
+    release.button = NUIMouseButton::Left;
+    release.released = true;
+    layer.onMouseEvent(release);
+
+    ASSERT(commits >= 2, "the copy drag commits live (precondition), got " + std::to_string(commits) + " commits");
+    ASSERT(newEntries == 1, "one Alt+drag copy is one history entry, got " + std::to_string(newEntries));
+
+    std::vector<std::pair<int, double>> live;
+    for (const auto& n : layer.getNotes())
+        if (!n.isDeleted) live.emplace_back(n.pitch, n.startBeat);
+    std::sort(live.begin(), live.end());
+    std::string got;
+    for (const auto& [p, b] : live) got += " (" + std::to_string(p) + "@" + std::to_string(b) + ")";
+    const std::vector<std::pair<int, double>> expected = {{60, 0.0}, {60, 3.0}, {64, 4.0}};
+    ASSERT(live == expected, "original A stays, its clone lands at beat 3, B is untouched; got" + got);
+    PASS("Alt+drag copy is one gesture and moves only the clone");
+}
+
+// Review, #981 round 2: mid copy-drag the clones sit unsorted at the end of the notes, so the
+// renderer's "first note past the view ends the scan" skipped a visible clone whenever an
+// off-screen note came before it. The clone must be drawn while it is being dragged.
+class NoteBodyRecorder : public Aestra::Testing::NullRenderer {
+public:
+    std::vector<NUIRect> strokes;
+    void strokeRoundedRect(const NUIRect& r, float, float, const NUIColor&) override { strokes.push_back(r); }
+};
+
+static void test_alt_drag_clone_is_drawn_while_dragging() {
+    constexpr float kPpb = 80.0f;
+    constexpr float kKey = 24.0f;
+    PianoRollNoteLayer layer;
+    layer.setBounds(NUIRect(0.0f, 0.0f, 1600.0f, 128.0f * kKey)); // 20 beats visible
+    layer.setPixelsPerBeat(kPpb);
+    layer.setKeyHeight(kKey);
+    layer.setSnap(SnapGrid::Beat);
+    layer.setTool(GlobalTool::Pointer);
+    layer.setVisible(true);
+    layer.setNotes({{60, 0.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f},
+                    {64, 30.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f}}); // B is off-screen
+
+    const float y = (127.0f - 60.0f) * kKey + kKey * 0.5f;
+    NUIMouseEvent press;
+    press.type = NUIMouseEventType::Down;
+    press.position = NUIPoint(0.5f * kPpb, y);
+    press.button = NUIMouseButton::Left;
+    press.pressed = true;
+    press.modifiers = NUIModifiers::Alt;
+    layer.onMouseEvent(press);
+    NUIMouseEvent move;
+    move.type = NUIMouseEventType::Move;
+    move.modifiers = NUIModifiers::Alt;
+    move.position = NUIPoint(3.5f * kPpb, y); // clone to beat 3
+    layer.onMouseEvent(move);
+
+    NoteBodyRecorder rec;
+    layer.onRender(rec); // still mid-drag: no release yet
+    const bool cloneDrawn = std::any_of(rec.strokes.begin(), rec.strokes.end(), [&](const NUIRect& r) {
+        return std::abs(r.x - (3.0f * kPpb + 1.0f)) < 1.5f;
+    });
+    const bool originalDrawn = std::any_of(rec.strokes.begin(), rec.strokes.end(), [&](const NUIRect& r) {
+        return std::abs(r.x - 1.0f) < 1.5f;
+    });
+    ASSERT(originalDrawn, "precondition: the original note is drawn (" + std::to_string(rec.strokes.size()) +
+                              " note bodies drawn)");
+    ASSERT(cloneDrawn, "the clone being dragged is drawn even though an off-screen note precedes it");
+    PASS("the Alt+drag clone is drawn while dragging");
+}
+
+// Drag-painting sets a note's length from its start to the pointer. It used to add the drag to
+// the remembered length (and remember the sum), so equal ~2-beat drags painted 3, 5, 7 beats.
+static void test_drag_painted_notes_keep_the_dragged_length() {
+    constexpr float kPpb = 80.0f;
+    constexpr float kKey = 24.0f;
+    PianoRollNoteLayer layer;
+    layer.setBounds(NUIRect(0.0f, 0.0f, 1600.0f, 128.0f * kKey));
+    layer.setPixelsPerBeat(kPpb);
+    layer.setKeyHeight(kKey);
+    layer.setSnap(SnapGrid::Beat);
+    layer.setTool(GlobalTool::Pencil);
+    layer.setVisible(true);
+
+    auto paint = [&](int pitch, float fromBeat, float toBeat) {
+        const float y = (127.0f - pitch) * kKey + kKey * 0.5f;
+        NUIMouseEvent press;
+        press.type = NUIMouseEventType::Down;
+        press.position = NUIPoint(fromBeat * kPpb, y);
+        press.button = NUIMouseButton::Left;
+        press.pressed = true;
+        layer.onMouseEvent(press);
+        NUIMouseEvent move;
+        move.type = NUIMouseEventType::Move;
+        for (int i = 1; i <= 8; ++i) {
+            move.position = NUIPoint((fromBeat + (toBeat - fromBeat) * i / 8.0f) * kPpb, y);
+            layer.onMouseEvent(move);
+        }
+        NUIMouseEvent release = move;
+        release.type = NUIMouseEventType::Up;
+        release.button = NUIMouseButton::Left;
+        release.released = true;
+        layer.onMouseEvent(release);
+    };
+    auto lengthAt = [&](int pitch) {
+        for (const auto& n : layer.getNotes())
+            if (!n.isDeleted && n.pitch == pitch) return n.durationBeats;
+        return -1.0;
+    };
+
+    paint(72, 0.1f, 2.0f); // each drag covers ~1.9 beats: snaps to 2
+    paint(69, 0.1f, 2.0f);
+    paint(65, 0.1f, 2.0f);
+    std::string got = std::to_string(lengthAt(72)) + ", " + std::to_string(lengthAt(69)) + ", " +
+                      std::to_string(lengthAt(65));
+    ASSERT(std::abs(lengthAt(72) - 2.0) < 1e-9 && std::abs(lengthAt(69) - 2.0) < 1e-9 &&
+               std::abs(lengthAt(65) - 2.0) < 1e-9,
+           "three equal drags paint three 2-beat notes; got " + got);
+
+    paint(60, 4.1f, 4.1f); // a plain click reuses the last painted length
+    ASSERT(std::abs(lengthAt(60) - 2.0) < 1e-9,
+           "a click places the remembered 2-beat length; got " + std::to_string(lengthAt(60)));
+
+    // Drag out to 4 beats, then back to the start: the note returns to the click length (2),
+    // not the last dragged length (review, #1001).
+    {
+        const int pitch = 55;
+        const float y = (127.0f - pitch) * kKey + kKey * 0.5f;
+        NUIMouseEvent press;
+        press.type = NUIMouseEventType::Down;
+        press.position = NUIPoint(8.1f * kPpb, y);
+        press.button = NUIMouseButton::Left;
+        press.pressed = true;
+        layer.onMouseEvent(press);
+        NUIMouseEvent move;
+        move.type = NUIMouseEventType::Move;
+        move.position = NUIPoint(12.0f * kPpb, y);
+        layer.onMouseEvent(move);
+        move.position = NUIPoint(8.1f * kPpb, y); // back to where it started
+        layer.onMouseEvent(move);
+        NUIMouseEvent release = move;
+        release.type = NUIMouseEventType::Up;
+        release.button = NUIMouseButton::Left;
+        release.released = true;
+        layer.onMouseEvent(release);
+        ASSERT(std::abs(lengthAt(pitch) - 2.0) < 1e-9,
+               "dragging back to the start restores the click length; got " + std::to_string(lengthAt(pitch)));
+    }
+
+    // Alt fine-drag keeps a sub-cell length (review, #1001): 0.3 beats under Beat snap, not a
+    // whole 1-beat cell.
+    {
+        const int pitch = 50;
+        const float y = (127.0f - pitch) * kKey + kKey * 0.5f;
+        NUIMouseEvent press;
+        press.type = NUIMouseEventType::Down;
+        press.position = NUIPoint(12.0f * kPpb, y); // snapped start: beat 12
+        press.button = NUIMouseButton::Left;
+        press.pressed = true;
+        layer.onMouseEvent(press);
+        NUIMouseEvent move;
+        move.type = NUIMouseEventType::Move;
+        move.modifiers = NUIModifiers::Alt;
+        move.position = NUIPoint(12.3f * kPpb, y);
+        layer.onMouseEvent(move);
+        NUIMouseEvent release = move;
+        release.type = NUIMouseEventType::Up;
+        release.button = NUIMouseButton::Left;
+        release.released = true;
+        layer.onMouseEvent(release);
+        ASSERT(std::abs(lengthAt(pitch) - 0.3) < 0.01,
+               "an Alt fine-drag keeps its sub-cell length; got " + std::to_string(lengthAt(pitch)));
+    }
+    PASS("drag-painted notes keep the dragged length");
+}
+
 int main() {
     std::cout << "=== PianoRollInteraction Unit Tests ===\n\n";
+
+    test_alt_drag_clone_is_drawn_while_dragging();
+
+    test_alt_drag_copy_is_one_gesture_and_moves_only_the_clone();
+    test_drag_painted_notes_keep_the_dragged_length();
 
     test_deleted_notes_ignored();
     test_pencil_places_in_the_cell_under_the_pointer();

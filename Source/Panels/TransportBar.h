@@ -107,9 +107,16 @@ public:
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
 
     /** Width at the bar's right edge occupied by overlay siblings (the
-        master meter / waveform visualizers laid out by AestraContent).
-        The KEYS status pill hides instead of rendering underneath them. */
+        output scope / meter laid out by AestraContent). The bar paints the
+        OUTPUT module label and divider over that region and keeps every other
+        module clear of it. */
     void setRightReservedWidth(float width);
+
+    /** Width the module row needs with the given optional modules shown.
+        AestraContent uses it to decide which output visualizers still fit:
+        the scope goes first, then the bar sheds keys, panels, the meter and
+        finally the record aids. Transport, position and tempo never hide. */
+    static float requiredWidth(bool record, bool panels, bool keys);
 
     /** @brief Set the platform bridge for hover cursor styling (hand on buttons). */
     void setPlatformBridge(AestraUI::NUIPlatformBridge* bridge) { m_platformBridge = bridge; }
@@ -200,6 +207,18 @@ private:
     bool m_loopRecordActive{false};
 
     int m_beatsPerBar{4};  // Time signature numerator (4 for 4/4)
+
+    // Computer-keyboard note input, shown by the KEYS module.
+    bool m_keysEnabled{true};
+    int m_keysOctave{3};
+
+    // Module geometry from the last layout, in bar-local coordinates, so
+    // onRender paints labels and dividers exactly where layout put things.
+    struct ModuleMark { const char* label; float x; float width; };
+    std::vector<ModuleMark> m_moduleMarks;
+    std::vector<float> m_dividers;
+    AestraUI::NUIRect m_keysValueRect;
+    bool m_showKeys{true};
     
     void createIcons();
     void createButtons();

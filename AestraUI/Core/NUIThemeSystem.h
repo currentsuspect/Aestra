@@ -436,22 +436,41 @@ inline bool editorLightUi() {
 }
 
 /**
- * Map a plugin editor's dark neutral gray onto the active theme's polarity.
- * Dark themes return the given gray untouched (editors keep their tuned
- * near-blacks bit-for-bit); light themes mirror it onto the light-surface
- * ramp, preserving the raised/recessed ordering (lighter = more raised).
+ * The active dark theme's surface tint, as per-channel gains around 1.0.
+ * A neutral theme returns exactly (1, 1, 1); Ember's warm black returns
+ * gains that lean red. Editors multiply their tuned grays by it, so their
+ * surfaces carry the theme's temperature instead of a fixed cool gray.
+ */
+inline NUIColor editorThemeTint() {
+    const auto& bg = NUIThemeManager::getInstance().getCurrentTheme().backgroundPrimary;
+    const float mean = (bg.r + bg.g + bg.b) / 3.0f;
+    if (mean <= 0.0001f) return NUIColor(1.0f, 1.0f, 1.0f, 1.0f);
+    return NUIColor(bg.r / mean, bg.g / mean, bg.b / mean, 1.0f);
+}
+
+/**
+ * Map a plugin editor's dark neutral gray onto the active theme.
+ * Dark themes keep the gray's lightness and take the theme's tint (a neutral
+ * theme gets the gray back bit-for-bit); light themes mirror it onto the
+ * light-surface ramp, preserving the raised/recessed ordering (lighter = more
+ * raised).
  */
 inline NUIColor editorNeutral(float darkGray, float alpha = 1.0f) {
-    if (!editorLightUi()) return NUIColor(darkGray, darkGray, darkGray, alpha);
+    if (!editorLightUi()) {
+        const NUIColor tint = editorThemeTint();
+        return NUIColor(std::min(darkGray * tint.r, 1.0f), std::min(darkGray * tint.g, 1.0f),
+                        std::min(darkGray * tint.b, 1.0f), alpha);
+    }
     const float g = std::min(0.905f + darkGray * 0.38f, 0.985f);
     return NUIColor(g, g, g, alpha);
 }
 
-/** Tinted variant: dark themes keep the tuned color; light themes map its
-    luma onto the light ramp (the subtle tint reads as gray up there anyway). */
+/** Color variant. The editors' tuned near-blacks were tinted cool for the old
+    blue-black theme; both polarities now keep only their lightness, and dark
+    themes re-tint it with the active theme's surface temperature. */
 inline NUIColor editorNeutral(const NUIColor& dark) {
-    if (!editorLightUi()) return dark;
     const float luma = 0.2126f * dark.r + 0.7152f * dark.g + 0.0722f * dark.b;
+    if (!editorLightUi()) return editorNeutral(luma, dark.a);
     const float g = std::min(0.905f + luma * 0.38f, 0.985f);
     return NUIColor(g, g, g, dark.a);
 }

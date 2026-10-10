@@ -8,6 +8,8 @@
 #include <cstdio>
 #include <algorithm>
 #include "TransportBar.h"
+#include "../Components/TransportModuleStyle.h"
+#include "../AestraUI/Layout/NUILayoutAlgorithms.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "../AestraUI/Platform/NUIPlatformBridge.h"
@@ -22,107 +24,100 @@ namespace Aestra {
 
 namespace {
 
-constexpr float TRANSPORT_BUTTON_SIZE = 32.0f;
-constexpr float TRANSPORT_BUTTON_SPACING = 8.0f;
-constexpr float TRANSPORT_ISLAND_PADDING = 12.0f;
-constexpr float TRANSPORT_ISLAND_HEIGHT = 48.0f;
-// With the group shells gone, spacing carries the grouping: a tight gap holds a
-// cluster together (transport buttons ↔ record-aid extras), a generous gap sets
-// the transport / musical-state / view clusters apart as distinct surfaces.
-constexpr float TRANSPORT_INTRA_GAP = 14.0f;
-constexpr float TRANSPORT_SURFACE_GAP = 32.0f;
-constexpr float TRANSPORT_INFO_WIDTH = 232.0f;
+namespace TM = TransportModule;
 
-// Semantic labels. Universal transport actions (play/stop/record), the
-// metronome and the piano roll read as icons on their own; every DAW-specific
-// concept carries a word so nobody has to memorise a glyph. The vocabulary is
-// deliberately terse. "LOOP RECORD" is never shortened to "LOOP" — that would
-// collide with playback looping.
-constexpr const char* TRANSPORT_LABEL_COUNT_IN = "COUNT IN";
-constexpr const char* TRANSPORT_LABEL_WAIT = "WAIT";
-constexpr const char* TRANSPORT_LABEL_LOOP_REC = "LOOP RECORD";
-// The view switches carry no labels. Faders and a rack of channel strips are
-// vocabulary any producer already owns, so the glyphs stand on their own and
-// the workspace cluster stays visually light next to the labelled record aids.
-// Their tooltips name them ("Mixer (F3)", "Arsenal (F6)", "Piano Roll (F7)");
-// the view is called Arsenal everywhere else in the product, so nothing here
-// invents a second name for it.
+// Primary transport buttons: real controls with a plate, not bare glyphs.
+constexpr float TRANSPORT_BUTTON_W = 34.0f;
+constexpr float TRANSPORT_BUTTON_H = 30.0f;
+constexpr float TRANSPORT_BUTTON_GAP = 6.0f;
+constexpr float TRANSPORT_EDGE_PAD = 10.0f;
+constexpr float TRANSPORT_PRIMARY_ICON = 18.0f;
 
-// Micro label tier for DAW-specific transport concepts: the label carries the
-// meaning and the icon reinforces it, so the word stays below label size.
-constexpr float TRANSPORT_LABEL_FONT_SIZE = 9.5f;
-constexpr float TRANSPORT_LABEL_ICON_SIZE = 13.0f;
-constexpr float TRANSPORT_LABEL_ICON_GAP = 5.0f;
-constexpr float TRANSPORT_LABEL_PAD_X = 7.0f;
+// Record aids are lamp chips: a lamp that shows what's on, then the word. The
+// vocabulary is deliberately terse. "Loop record" is never shortened to
+// "Loop": that would collide with playback looping.
+constexpr const char* TRANSPORT_LABEL_COUNT_IN = "Count-in";
+constexpr const char* TRANSPORT_LABEL_WAIT = "Wait";
+constexpr const char* TRANSPORT_LABEL_LOOP_REC = "Loop record";
+constexpr float CHIP_H = 22.0f;
+constexpr float CHIP_FONT = 11.0f;
+constexpr float CHIP_PAD_X = 8.0f;
+constexpr float CHIP_LAMP = 6.0f;
+constexpr float CHIP_LAMP_GAP = 6.0f;
+constexpr float CHIP_GAP = 4.0f;
+constexpr float CHIP_ICON = 13.0f;
+// The metronome chip carries its pendulum instead of a word: a metronome is
+// universally legible, and the swinging arm is its own state readout.
+constexpr float CHIP_METRONOME_W = CHIP_PAD_X * 2.0f + CHIP_LAMP + CHIP_LAMP_GAP + CHIP_ICON;
 
-// layoutComponents runs without a renderer, so label widths are estimated
-// rather than measured. Estimate high: the label is left-aligned after the
-// icon, so overshooting only adds trailing padding, while undershooting would
-// clip the word — and a clipped label defeats the whole point.
-inline float transportLabelTextWidth(const char* text) {
+// Panel switches (mixer / Arsenal / piano roll): icon keys with tooltips.
+constexpr float PANEL_BTN_W = 28.0f;
+constexpr float PANEL_BTN_H = 24.0f;
+constexpr float PANEL_GAP = 4.0f;
+constexpr float PANEL_ICON = 15.0f;
+
+constexpr float KEYS_MODULE_W = 72.0f;
+constexpr float KEYS_VALUE_SIZE = 13.0f;
+
+// layoutComponents runs without a renderer, so chip label widths are
+// estimated rather than measured. Estimate high: the word is left-aligned
+// after the lamp, so overshooting only adds trailing padding, while
+// undershooting would clip the word, and a clipped label defeats the point.
+inline float chipTextWidth(const char* text) {
     float w = 0.0f;
     for (const char* p = text; *p != '\0'; ++p) {
-        w += (*p == ' ') ? TRANSPORT_LABEL_FONT_SIZE * 0.34f : TRANSPORT_LABEL_FONT_SIZE * 0.66f;
+        w += (*p == ' ') ? CHIP_FONT * 0.30f : CHIP_FONT * 0.60f;
     }
     return w;
 }
 
-// An icon+label control is as wide as its word needs; icon-only controls stay
-// square. This is why the toolbar can no longer assume a uniform button width.
-inline float transportLabeledWidth(const char* text) {
-    return TRANSPORT_LABEL_PAD_X * 2.0f + TRANSPORT_LABEL_ICON_SIZE + TRANSPORT_LABEL_ICON_GAP
-           + transportLabelTextWidth(text);
+inline float chipWidth(const char* label) {
+    return CHIP_PAD_X * 2.0f + CHIP_LAMP + CHIP_LAMP_GAP + chipTextWidth(label);
 }
 
-// Record-aid cluster: COUNT IN · WAIT · LOOP RECORD · metronome (icon only).
-inline float transportExtrasWidth() {
-    return transportLabeledWidth(TRANSPORT_LABEL_COUNT_IN) + TRANSPORT_BUTTON_SPACING
-         + transportLabeledWidth(TRANSPORT_LABEL_WAIT) + TRANSPORT_BUTTON_SPACING
-         + transportLabeledWidth(TRANSPORT_LABEL_LOOP_REC) + TRANSPORT_BUTTON_SPACING
-         + TRANSPORT_BUTTON_SIZE;
+inline float transportModuleWidth() {
+    return TRANSPORT_EDGE_PAD + TRANSPORT_BUTTON_W * 3.0f + TRANSPORT_BUTTON_GAP * 2.0f + TM::kPadX;
 }
 
-// View cluster: mixer · arsenal · piano roll, all icon-only. No Timeline button
-// — the title-bar Timeline tab already owns that workspace, and duplicate
-// navigation is worse than an ambiguous icon.
-inline float transportViewsWidth() {
-    return TRANSPORT_BUTTON_SIZE * 3.0f + TRANSPORT_BUTTON_SPACING * 2.0f;
+inline float recordModuleWidth() {
+    return TM::kPadX * 2.0f + chipWidth(TRANSPORT_LABEL_COUNT_IN) + chipWidth(TRANSPORT_LABEL_WAIT)
+         + chipWidth(TRANSPORT_LABEL_LOOP_REC) + CHIP_METRONOME_W + CHIP_GAP * 3.0f;
 }
 
-// Progressive collapse for narrow windows. The transport island packs four fixed
-// groups (transport / extras / info / views). When the window can't hold them all
-// it used to place them at full width anyway and clip the rightmost group off the
-// edge. Instead, hide the secondary groups — the record-aid extras first
-// (count-in / wait / loop-record / metronome), then the view switches — keeping
-// the transport buttons and tempo/time readout always visible. The transport
-// buttons and info readout never hide.
-// Collapse must preserve MEANING, not merely save width: a control either
-// appears with its label intact or it does not appear at all. Degrading
-// "LOOP RECORD" to a bare glyph to squeeze it in would undo the whole point of
-// labelling it.
+inline float panelsModuleWidth() {
+    return TM::kPadX * 2.0f + PANEL_BTN_W * 3.0f + PANEL_GAP * 2.0f;
+}
+
+// Progressive collapse. The row holds modules in a fixed order; when the
+// window can't hold them all, optional modules hide whole: keys first, then
+// the panel switches, then the record aids. (The output scope and meter are
+// shed before and between these by AestraContent, using requiredWidth.)
+// Collapse must preserve MEANING, not merely save width: a control appears
+// with its word intact or not at all. Transport, position and tempo never hide.
 struct TransportLayoutTier {
-    bool showExtras = true;   // count-in / wait / loop-record / metronome
-    bool showViews = true;    // mixer / sequencer / piano-roll
+    bool showRecord = true;
+    bool showPanels = true;
+    bool showKeys = true;
 };
 
+inline float tierWidth(const TransportLayoutTier& t) {
+    return transportModuleWidth() + TransportInfoContainer::kPreferredWidth
+         + (t.showRecord ? recordModuleWidth() : 0.0f)
+         + (t.showPanels ? panelsModuleWidth() : 0.0f)
+         + (t.showKeys ? KEYS_MODULE_W : 0.0f);
+}
+
 inline TransportLayoutTier transportTierFor(float availWidth) {
-    const float bs = TRANSPORT_BUTTON_SIZE;
-    const float sp = TRANSPORT_BUTTON_SPACING;
-    const float intra = TRANSPORT_INTRA_GAP;
-    const float surf = TRANSPORT_SURFACE_GAP;
-    const float pad = TRANSPORT_ISLAND_PADDING;
-    const float g1 = bs * 3.0f + sp * 2.0f;         // transport (3 icon-only buttons)
-    const float extras = transportExtrasWidth();
-    const float views = transportViewsWidth();
-    const float info = TRANSPORT_INFO_WIDTH;
-    const float margin = 20.0f;                     // mirrors the island width clamp
-    // Mirrors layoutComponents' gap rhythm: extras tuck tight to transport (intra),
-    // clusters set apart by the surface gap.
-    const float full     = (g1 + intra + extras + surf + info + surf + views) + pad * 2.0f;
-    const float noExtras = (g1 + surf + info + surf + views) + pad * 2.0f;
-    if (availWidth >= full + margin)     return {true, true};
-    if (availWidth >= noExtras + margin) return {false, true};
-    return {false, false};
+    const TransportLayoutTier ladder[] = {
+        {true, true, true},
+        {true, true, false},
+        {true, false, false},
+        {false, false, false},
+    };
+    for (const auto& tier : ladder) {
+        if (availWidth >= tierWidth(tier)) return tier;
+    }
+    return ladder[3];
 }
 
 } // namespace
@@ -396,7 +391,7 @@ void TransportBar::createButtons() {
         btn = std::make_shared<AestraUI::NUIButton>();
         btn->setText("");
         btn->setStyle(AestraUI::NUIButton::Style::Icon);
-        btn->setSize(32, 32);
+        btn->setSize(TRANSPORT_BUTTON_W, TRANSPORT_BUTTON_H);
         
         btn->setBackgroundColor(AestraUI::NUIColor::transparent());
         btn->setHoverColor(theme.getColor("primary").withAlpha(0.06f));
@@ -613,6 +608,10 @@ void TransportBar::setViewToggled(Audio::ViewType view, bool active) {
         case Audio::ViewType::PianoRoll: m_pianoRollActive = active; break;
         // Timeline has no toolbar control to light up — the title-bar tab owns it.
         case Audio::ViewType::Playlist: break;
+        // History and Takes have no toolbar control either; Count is a sentinel.
+        case Audio::ViewType::History:
+        case Audio::ViewType::Takes:
+        case Audio::ViewType::Count: break;
     }
     setDirty(true);
 }
@@ -646,9 +645,10 @@ void TransportBar::setMusicalTypingStatus(bool enabled, int octave) {
         return;
     }
     m_musicalTypingLabel->setText(enabled ? "KEYS C" + std::to_string(octave) : "KEYS OFF");
-    auto& theme = AestraUI::NUIThemeManager::getInstance();
-    m_musicalTypingLabel->setTextColor(
-        enabled ? theme.getColor("accentPrimary") : theme.getColor("textSecondary").withAlpha(0.62f));
+    // The KEYS module paints the state itself; the legacy pill stays hidden.
+    m_musicalTypingLabel->setVisible(false);
+    m_keysEnabled = enabled;
+    m_keysOctave = octave;
     setDirty(true);
 }
 
@@ -677,160 +677,100 @@ void TransportBar::updateButtonStates() {
 // =============================================================================
 
 void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
-    AestraUI::NUIRect bounds = getBounds();
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
+    const AestraUI::NUIColor control = theme.getColor("surfaceTertiary");
+    const AestraUI::NUIColor raised = theme.getColor("surfaceRaised");
+    const AestraUI::NUIColor border = theme.getColor("border");
+    const AestraUI::NUIColor borderStrong = theme.getColor("borderStrong");
+    const AestraUI::NUIColor ink = theme.getColor("textPrimary");
+    const AestraUI::NUIColor inkQuiet = theme.getColor("textSecondary");
+    const AestraUI::NUIColor primary = theme.getColor("primary");
+    const AestraUI::NUIColor recordRed = theme.getColor("error");
+    const AestraUI::NUIColor lampOn = theme.getColor("warning");
+    const AestraUI::NUIColor lampOff = theme.getColor("textDisabled");
 
-    // Get layout dimensions from theme
-    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    const auto& layout = themeManager.getLayoutDimensions();
-    
-    // Colors
-    AestraUI::NUIColor glassBg = AestraUI::NUIColor::transparent();
-    AestraUI::NUIColor glassBorder = AestraUI::NUIColor::transparent();
-    AestraUI::NUIColor glassHover = themeManager.getColor("surfaceRaised");
-    AestraUI::NUIColor glassActive = themeManager.getColor("accentPrimary").withAlpha(0.15f);
-
-    AestraUI::NUIColor iconPurple = themeManager.getColor("accentPrimary");
-    AestraUI::NUIColor iconRed = themeManager.getColor("error");
-
-    // Calculate button positions
-    float padding = layout.panelMargin;
-    float buttonSize = layout.transportButtonSize;
-    float spacing = layout.transportButtonSpacing;
-    float centerOffsetY = (bounds.height - buttonSize) / 2.0f;
-    float x = padding;
-
-    // Helper to render universal Glass Box button. Passing a label switches it
-    // to the inline "tiny icon + micro-label" form used by DAW-specific
-    // concepts; icon-only controls pass nullptr.
-    auto renderGlassButton = [&](std::shared_ptr<AestraUI::NUIButton>& btn,
-                                 std::shared_ptr<AestraUI::NUIIcon>& icon,
-                                 bool isActive,
-                                 bool isRecording = false,
-                                 bool isPrimaryTransport = false,
-                                 const char* label = nullptr) {
-        if (!btn || !icon || !btn->isVisible()) return; // collapsed groups draw nothing
-
-        AestraUI::NUIRect buttonRect = btn->getBounds(); // Use bounds set in layoutComponents
-        bool isHovered = btn->isHovered() && btn->isEnabled();
-        
-        // Setup Colors. Idle transport extras render bright white like the
-        // primary buttons and readout text (owner direction: legibility over
-        // idle hierarchy); hover/active/disabled still step apart via plates.
-        AestraUI::NUIColor currentBg = glassBg;
-        AestraUI::NUIColor currentBorder = glassBorder;
-        AestraUI::NUIColor iconColor = themeManager.getColor("textPrimary").withAlpha(0.95f);
-        
-        // LOGIC: Glassy Look (Reverted per user request)
-        // Active = Purple Tint Glass + Purple Icon
-        // Inactive = Grey Tint Glass + Grey Icon
-        
-        if (isRecording) {
-             currentBg = iconRed.withAlpha(0.16f);
-             currentBorder = iconRed.withAlpha(0.24f);
-             iconColor = iconRed;
-             if (isHovered) currentBg = iconRed.withAlpha(0.22f);
-        } else if (isActive) {
-             currentBg = themeManager.getColor("accentPrimary").withAlpha(0.18f);
-             currentBorder = themeManager.getColor("accentPrimary").withAlpha(0.34f);
-             iconColor = themeManager.getColor("textPrimary");
-         } else if (isHovered) {
-             currentBg = glassHover.withAlpha(0.82f);
-             currentBorder = themeManager.getColor("border").withAlpha(0.30f);
-             iconColor = themeManager.getColor("textPrimary").withAlpha(1.0f);
-         }
-
-        if (isPrimaryTransport) {
-            // No idle backing plate: primaries sit flush on the group shell
-            // exactly like the time display (owner direction). State still
-            // brings the tinted plate in on hover/active/record.
-            if (isActive && !isRecording) {
-                currentBg = themeManager.getColor("accentPrimary").withAlpha(0.22f);
-                currentBorder = themeManager.getColor("accentPrimary").withAlpha(0.46f);
-            }
-            if (!isRecording) {
-                iconColor = themeManager.getColor("textPrimary").withAlpha(isActive || isHovered ? 1.0f : 0.94f);
-            }
-        }
-
-        // Draw Button Background
-        if (isHovered || isActive || isRecording) {
-            renderer.fillRoundedRect(buttonRect, themeManager.getRadius("m"), currentBg);
-            if (currentBorder.a > 0.0f) {
-                renderer.strokeRoundedRect(buttonRect, themeManager.getRadius("m"), 1.0f, currentBorder);
-            }
-        }
-        
-        if (!btn->isEnabled()) {
-            iconColor = iconColor.withAlpha(0.3f);
-        }
-
-        if (label && label[0] != '\0') {
-            // Inline form: tiny icon, then the word. The word carries the
-            // meaning and the icon reinforces it, so the icon sits a step
-            // dimmer than the label rather than competing with it.
-            const AestraUI::NUIColor labelColor = iconColor;
-            const AestraUI::NUIColor dimIconColor = iconColor.withAlpha(iconColor.a * 0.70f);
-
-            const float iconY = buttonRect.y + (buttonRect.height - TRANSPORT_LABEL_ICON_SIZE) * 0.5f;
-            AestraUI::NUIRect labelIconRect(buttonRect.x + TRANSPORT_LABEL_PAD_X, iconY,
-                                            TRANSPORT_LABEL_ICON_SIZE, TRANSPORT_LABEL_ICON_SIZE);
-            icon->setBounds(labelIconRect);
-            icon->setColor(dimIconColor);
-            icon->onRender(renderer);
-
-            const float textX = labelIconRect.x + TRANSPORT_LABEL_ICON_SIZE + TRANSPORT_LABEL_ICON_GAP;
-            renderer.drawText(label,
-                              {textX, renderer.calculateTextY(buttonRect, TRANSPORT_LABEL_FONT_SIZE)},
-                              TRANSPORT_LABEL_FONT_SIZE, labelColor);
-            return;
-        }
-
-        // Render Icon
-        const float localIconSize = isPrimaryTransport ? 18.0f : 16.0f;
-        float localPadding = (buttonRect.width - localIconSize) * 0.5f;
-        if (localPadding < 2.0f) localPadding = 2.0f;
-        AestraUI::NUIRect iconRect = NUIAbsolute(buttonRect, localPadding, localPadding, localIconSize, localIconSize);
-        icon->setBounds(iconRect);
-        icon->setColor(iconColor);
+    const auto drawIcon = [&](const std::shared_ptr<AestraUI::NUIIcon>& icon, const AestraUI::NUIRect& area,
+                              float size, const AestraUI::NUIColor& color) {
+        if (!icon) return;
+        icon->setBounds(AestraUI::NUIRect(std::round(area.x + (area.width - size) * 0.5f),
+                                          std::round(area.y + (area.height - size) * 0.5f), size, size));
+        icon->setColor(color);
         icon->onRender(renderer);
     };
 
-    // --- Transport Controls (Left) ---
+    // Play, stop, record: plated keys. Play fills violet while it plays; record
+    // fills red while armed. Nothing else in the row is filled, so state reads
+    // at a glance.
+    const auto primaryKey = [&](const std::shared_ptr<AestraUI::NUIButton>& btn,
+                                const std::shared_ptr<AestraUI::NUIIcon>& icon, bool active, bool isRecord) {
+        if (!btn || !btn->isVisible()) return;
+        const AestraUI::NUIRect rect = btn->getBounds();
+        const bool hovered = btn->isHovered() && btn->isEnabled();
+        AestraUI::NUIColor fill = hovered ? raised : control;
+        AestraUI::NUIColor stroke = hovered ? borderStrong : border;
+        AestraUI::NUIColor glyph = isRecord ? recordRed : (hovered ? ink : inkQuiet);
+        if (active) {
+            fill = isRecord ? recordRed : primary;
+            stroke = AestraUI::NUIColor::transparent();
+            glyph = isRecord ? theme.getColor("backgroundPrimary") : AestraUI::NUIColor::white();
+        }
+        if (!btn->isEnabled()) glyph = glyph.withAlpha(0.3f);
+        renderer.fillRoundedRect(rect, 5.0f, fill);
+        if (stroke.a > 0.0f) renderer.strokeRoundedRect(rect, 5.0f, 1.0f, stroke);
+        drawIcon(icon, rect, TRANSPORT_PRIMARY_ICON, glyph);
+    };
 
-    // Play/Pause
-    if (m_playButton) {
-        bool isPlaying = (m_state == TransportState::Playing);
-        auto currentIcon = isPlaying ? m_pauseIcon : m_playIcon;
-        renderGlassButton(m_playButton, currentIcon, isPlaying, false, true);
-        // No breathing shadow while playing (owner direction: flat active
-        // state) — the accent plate from renderGlassButton is the indicator.
+    const bool isPlaying = (m_state == TransportState::Playing);
+    primaryKey(m_playButton, isPlaying ? m_pauseIcon : m_playIcon, isPlaying, false);
+    primaryKey(m_stopButton, m_stopIcon, false, false);
+    if (m_recordButton) {
+        primaryKey(m_recordButton, m_recordIcon, m_recordButton->isToggled(), true);
     }
 
-    // Stop
-    renderGlassButton(m_stopButton, m_stopIcon, false, false, true);
+    // Record aids: lamp chips. The lamp is the state; the word is the meaning.
+    const auto lampChip = [&](const std::shared_ptr<AestraUI::NUIButton>& btn, bool on, const char* label,
+                              const std::shared_ptr<AestraUI::NUIIcon>& icon) {
+        if (!btn || !btn->isVisible()) return;
+        const AestraUI::NUIRect rect = btn->getBounds();
+        const bool hovered = btn->isHovered() && btn->isEnabled();
+        if (on || hovered) {
+            renderer.fillRoundedRect(rect, 4.0f, on ? control : raised.withAlpha(0.6f));
+        }
+        renderer.strokeRoundedRect(rect, 4.0f, 1.0f, on || hovered ? borderStrong : border);
 
-    // Use isToggled() for immediate visual feedback. 
-    // 3rd arg (isActive): Controls pressed look. 4th arg (isRecording): Controls RED color.
-    // We want RED only when toggled.
-    renderGlassButton(m_recordButton, m_recordIcon, m_recordButton->isToggled(), m_recordButton->isToggled(), true);
+        const AestraUI::NUIPoint lampCenter(rect.x + CHIP_PAD_X + CHIP_LAMP * 0.5f, rect.y + rect.height * 0.5f);
+        if (on) renderer.fillCircle(lampCenter, CHIP_LAMP, lampOn.withAlpha(0.22f));
+        renderer.fillCircle(lampCenter, CHIP_LAMP * 0.5f, on ? lampOn : lampOff);
 
-    // --- Transport Extras (Left of Metronome) ---
-    // Record aids are Aestra-specific concepts, so each carries its word.
-    renderGlassButton(m_countInButton, m_countInIcon, m_countInActive, false, false, TRANSPORT_LABEL_COUNT_IN);
-    renderGlassButton(m_waitButton, m_waitIcon, m_waitActive, false, false, TRANSPORT_LABEL_WAIT);
-    renderGlassButton(m_loopRecordButton, m_loopRecordIcon, m_loopRecordActive, false, false, TRANSPORT_LABEL_LOOP_REC);
+        const float contentX = rect.x + CHIP_PAD_X + CHIP_LAMP + CHIP_LAMP_GAP;
+        const AestraUI::NUIColor text = (on || hovered) ? ink : inkQuiet;
+        if (label) {
+            renderer.drawText(label, {contentX, renderer.calculateTextY(rect, CHIP_FONT)}, CHIP_FONT, text);
+        } else {
+            drawIcon(icon, AestraUI::NUIRect(contentX, rect.y, CHIP_ICON, rect.height), CHIP_ICON, text);
+        }
+    };
+    lampChip(m_countInButton, m_countInActive, TRANSPORT_LABEL_COUNT_IN, nullptr);
+    lampChip(m_waitButton, m_waitActive, TRANSPORT_LABEL_WAIT, nullptr);
+    lampChip(m_loopRecordButton, m_loopRecordActive, TRANSPORT_LABEL_LOOP_REC, nullptr);
+    lampChip(m_metronomeButton, m_metronomeActive, nullptr, m_metronomeIcon);
 
-    // --- Metronome (Left of Center) ---
-    // Icon only: a metronome is universally legible.
-    renderGlassButton(m_metronomeButton, m_metronomeIcon, m_metronomeActive);
-
-    // --- View Toggles (Right) ---
-    // Workspace switches are repeated, space-constrained controls. Their
-    // established glyphs plus tooltips communicate more cleanly than a second
-    // row of six-pixel abbreviations.
-    renderGlassButton(m_mixerButton, m_mixerIcon, m_mixerActive);
-    renderGlassButton(m_sequencerButton, m_sequencerIcon, m_sequencerActive);
-    renderGlassButton(m_pianoRollButton, m_pianoRollIcon, m_pianoRollActive);
+    // Panel switches: an open panel gets a raised key with a violet underline.
+    const auto panelKey = [&](const std::shared_ptr<AestraUI::NUIButton>& btn,
+                              const std::shared_ptr<AestraUI::NUIIcon>& icon, bool open) {
+        if (!btn || !btn->isVisible()) return;
+        const AestraUI::NUIRect rect = btn->getBounds();
+        const bool hovered = btn->isHovered() && btn->isEnabled();
+        if (open || hovered) renderer.fillRoundedRect(rect, 4.0f, open ? raised : control);
+        if (open) {
+            renderer.fillRect(AestraUI::NUIRect(rect.x + 6.0f, rect.bottom() - 2.0f, rect.width - 12.0f, 2.0f),
+                              primary);
+        }
+        drawIcon(icon, rect, PANEL_ICON, (open || hovered) ? ink : inkQuiet);
+    };
+    panelKey(m_mixerButton, m_mixerIcon, m_mixerActive);
+    panelKey(m_sequencerButton, m_sequencerIcon, m_sequencerActive);
+    panelKey(m_pianoRollButton, m_pianoRollIcon, m_pianoRollActive);
 }
 
 // =============================================================================
@@ -838,6 +778,10 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
 // =============================================================================
 
 // ... (Previous code)
+
+float TransportBar::requiredWidth(bool record, bool panels, bool keys) {
+    return tierWidth(TransportLayoutTier{record, panels, keys});
+}
 
 void TransportBar::setRightReservedWidth(float width) {
     if (m_rightReservedWidth == width) {
@@ -848,228 +792,152 @@ void TransportBar::setRightReservedWidth(float width) {
 }
 
 void TransportBar::layoutComponents() {
-    AestraUI::NUIRect bounds = getBounds();
+    using namespace AestraUI::Layout;
+    const AestraUI::NUIRect bounds = getBounds();
+    m_moduleMarks.clear();
+    m_dividers.clear();
 
-    // Get layout dimensions from theme
-    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    const auto& layout = themeManager.getLayoutDimensions();
-
-    // Use configurable dimensions - OVERRIDE for Compact Mode
-    float buttonSize = TRANSPORT_BUTTON_SIZE;
-    const float primaryButtonScale = 1.0f;
-    const float primaryButtonSize = buttonSize * primaryButtonScale;
-    float spacing = TRANSPORT_BUTTON_SPACING;
-
-    // --- Layout Logic: Center-Out Calculation ---
-    // We calculate the required width first to center the island perfectly
-    
-    // Group 1: Transport (Play, Stop, Rec)
-    float group1Width = (buttonSize * 3) + (spacing * 2);
-    
-    // Group 2: Extras (COUNT IN, WAIT, LOOP RECORD, metronome) — labelled controls
-    // size to their word, so this is no longer 4 uniform squares.
-    float group2Width = transportExtrasWidth();
-
-    // Group 3: Info Display (Center)
-    // Compact Info: 180px instead of 220px -> reduce to 160px for tighter packing?
-    // Let's check TransportInfoContainer first, but for now allow 170.
-    // Group 3: Info Display (Center)
-    // Expanded Info: 220px to accommodate children
-    float infoWidth = TRANSPORT_INFO_WIDTH;
-    
-    // Group 4: Views (MIX, RACK, piano roll) - 3 controls
-    float group4Width = transportViewsWidth();
-
-    // Which secondary groups fit? (hide extras first, then views — see helper)
-    // The visualizers overlay the right of this row, so the island only owns the
-    // width left of them.
+    // The output visualizers overlay the right of this row; the modules only
+    // own the width left of them.
     const float availWidth = std::max(0.0f, bounds.width - m_rightReservedWidth);
     const TransportLayoutTier tier = transportTierFor(availWidth);
 
-    // Total Content Width — clusters set apart by a surface gap, extras tucked
-    // tight to the transport buttons (one cluster). Order: transport, (extras),
-    // info, (views).
-    float totalContentWidth = group1Width
-        + (tier.showExtras ? TRANSPORT_INTRA_GAP + group2Width : 0.0f)
-        + TRANSPORT_SURFACE_GAP + infoWidth
-        + (tier.showViews ? TRANSPORT_SURFACE_GAP + group4Width : 0.0f);
-    float islandPadding = TRANSPORT_ISLAND_PADDING;
-    float islandWidth = totalContentWidth + (islandPadding * 2.0f);
-    
-    // Clamp to window width
-    if (islandWidth > bounds.width - 20.0f) {
-        islandWidth = bounds.width - 20.0f;
+    // V8-X2b: the modules are one leading row across the bar, and each module's
+    // controls a row inside it. All of it in this bar's Local space; our bounds
+    // are window-absolute, so localToWindow() against our origin is the one
+    // conversion. AESTRA_LAYOUT_TRACE=transport explains any of it.
+    const NUIWindowPoint origin(bounds.x, bounds.y);
+    const auto toWindow = [&](const NUILocalRect& r) { return localToWindow(r, origin).raw(); };
+    auto* trace = layoutRecorderFor("transport");
+    if (trace) {
+        trace->beginPass(origin);
+        trace->scope("modules");
     }
-
-    const float islandHeight = std::min(TRANSPORT_ISLAND_HEIGHT, bounds.height);
-    const float visualCenterBiasY = 0.0f;
-    float islandX = std::round((bounds.width - islandWidth) * 0.5f);
-    float islandY = std::round((bounds.height - islandHeight) * 0.5f + visualCenterBiasY);
-
-    // Stay centred on the window while there's room, but never slide under the
-    // visualizers — with labelled controls the island is wide enough that a
-    // plain centre would put the rightmost view button beneath the scope.
-    if (m_rightReservedWidth > 0.0f) {
-        const float rightLimit = bounds.width - m_rightReservedWidth;
-        if (islandX + islandWidth > rightLimit) {
-            islandX = std::round(std::max(0.0f, rightLimit - islandWidth));
-        }
+    std::vector<float> moduleWidths{transportModuleWidth(), TransportInfoContainer::kPreferredWidth};
+    if (tier.showRecord) moduleWidths.push_back(recordModuleWidth());
+    if (tier.showPanels) moduleWidths.push_back(panelsModuleWidth());
+    if (tier.showKeys) moduleWidths.push_back(KEYS_MODULE_W);
+    const auto modules =
+        arrangeLeadingRow(NUILocalRect(0.0f, 0.0f, bounds.width, bounds.height), moduleWidths, bounds.height, 0.0f,
+                          0.0f, trace);
+    for (const auto& module : modules) {
+        m_dividers.push_back(module.right());
     }
+    std::size_t next = 2; // modules[0] transport, [1] position | tempo, then the optional ones in order
 
-    // Check min width/fallback
-    if (bounds.width < islandWidth) {
-        islandX = 0;
-        islandWidth = bounds.width;
-    }
-
-    float centerOffsetY = std::round(islandY + (islandHeight - buttonSize) * 0.5f);
-
-    // --- Placement ---
-    float xCursor = islandX + islandPadding;
-
-    // Group 1: Transport
-    const auto placePrimaryButton = [&](const std::shared_ptr<AestraUI::NUIButton>& button, float x) {
-        if (!button) return;
-        const float grow = 0.5f * (primaryButtonSize - buttonSize);
-        button->setBounds(NUIAbsolute(bounds, x - grow, centerOffsetY - grow, primaryButtonSize, primaryButtonSize));
+    // A row of controls inside `module`, at a y already snapped to whole pixels.
+    const auto rowIn = [&](const NUILocalRect& module, const char* scope, float y, float height,
+                           const std::vector<float>& widths, float gap, float pad) {
+        if (trace) trace->scope(scope, std::string("modules[") + std::to_string(&module - modules.data()) + "]");
+        return arrangeLeadingRow(NUILocalRect(module.x, y, module.width, height), widths, height, gap, pad, trace);
     };
 
-    placePrimaryButton(m_playButton, xCursor);
-    xCursor += buttonSize + spacing;
-    
-    placePrimaryButton(m_stopButton, xCursor);
-    xCursor += buttonSize + spacing;
-    
-    placePrimaryButton(m_recordButton, xCursor);
-    // Tight gap to the extras (same Transport cluster); if extras are collapsed,
-    // it's a full surface gap onward to the musical-state cluster.
-    xCursor += buttonSize + (tier.showExtras ? TRANSPORT_INTRA_GAP : TRANSPORT_SURFACE_GAP);
-
-    // Group 2: Extras — hidden on narrow windows (see tier). Toggle visibility so
-    // the buttons neither render nor take clicks when collapsed.
-    // A null label means icon-only, so the control stays square; otherwise it is
-    // as wide as its word. The hitbox is the full labelled width, so the word is
-    // clickable, not just the glyph.
-    const auto placeExtra = [&](const std::shared_ptr<AestraUI::NUIButton>& button, const char* label) {
-        if (!button) return;
-        button->setVisible(tier.showExtras);
-        if (tier.showExtras) {
-            const float w = label ? transportLabeledWidth(label) : buttonSize;
-            button->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, w, buttonSize));
-            xCursor += w + spacing;
+    // ── Transport: play · stop · record, centred on the row ──
+    const float buttonY = std::round((bounds.height - TRANSPORT_BUTTON_H) * 0.5f);
+    const auto transport = rowIn(modules[0], "transport", buttonY, TRANSPORT_BUTTON_H,
+                                 {TRANSPORT_BUTTON_W, TRANSPORT_BUTTON_W, TRANSPORT_BUTTON_W}, TRANSPORT_BUTTON_GAP,
+                                 TRANSPORT_EDGE_PAD);
+    std::size_t i = 0;
+    for (const auto* button : {&m_playButton, &m_stopButton, &m_recordButton}) {
+        if (*button) {
+            (*button)->setBounds(toWindow(transport[i]));
         }
-    };
-    placeExtra(m_countInButton, TRANSPORT_LABEL_COUNT_IN);
-    placeExtra(m_waitButton, TRANSPORT_LABEL_WAIT);
-    placeExtra(m_loopRecordButton, TRANSPORT_LABEL_LOOP_REC);
-    placeExtra(m_metronomeButton, nullptr);
-    if (tier.showExtras) {
-        // Last extra added a trailing button spacing; swap it for the surface gap
-        // that sets the Transport cluster apart from the musical-state cluster.
-        xCursor += -spacing + TRANSPORT_SURFACE_GAP;
+        ++i;
     }
 
-    // Group 3: Info Container (always shown)
+    // ── Position | Tempo ──
     if (m_infoContainer) {
-        m_infoContainer->setBounds(NUIAbsolute(bounds, xCursor, islandY, infoWidth, islandHeight));
+        m_infoContainer->setBounds(toWindow(modules[1]));
     }
-    xCursor += infoWidth;
 
-    // Group 4: Views — hidden first on the narrowest windows.
-    const auto placeView = [&](const std::shared_ptr<AestraUI::NUIButton>& button, const char* label, bool advance) {
-        if (!button) return;
-        button->setVisible(tier.showViews);
-        if (tier.showViews) {
-            const float w = label ? transportLabeledWidth(label) : buttonSize;
-            button->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, w, buttonSize));
-            if (advance) xCursor += w + spacing;
+    // ── Record aids ── (a missing chip takes no slot, as before)
+    const std::pair<std::shared_ptr<AestraUI::NUIButton>, float> chipSpecs[] = {
+        {m_countInButton, chipWidth(TRANSPORT_LABEL_COUNT_IN)},
+        {m_waitButton, chipWidth(TRANSPORT_LABEL_WAIT)},
+        {m_loopRecordButton, chipWidth(TRANSPORT_LABEL_LOOP_REC)},
+        {m_metronomeButton, CHIP_METRONOME_W}};
+    std::vector<std::shared_ptr<AestraUI::NUIButton>> chips;
+    std::vector<float> chipWidths;
+    for (const auto& spec : chipSpecs) {
+        if (!spec.first) continue;
+        spec.first->setVisible(tier.showRecord);
+        chips.push_back(spec.first);
+        chipWidths.push_back(spec.second);
+    }
+    if (tier.showRecord) {
+        const auto& module = modules[next++];
+        const float chipY = TM::kContentTop + std::round((TM::kContentHeight - CHIP_H) * 0.5f);
+        const auto row = rowIn(module, "record", chipY, CHIP_H, chipWidths, CHIP_GAP, TM::kPadX);
+        for (std::size_t c = 0; c < row.size(); ++c) {
+            chips[c]->setBounds(toWindow(row[c]));
         }
-    };
-    if (tier.showViews) xCursor += TRANSPORT_SURFACE_GAP; // surface gap before the view cluster
-    placeView(m_mixerButton, nullptr, true);
-    placeView(m_sequencerButton, nullptr, true);
-    placeView(m_pianoRollButton, nullptr, false);
+        m_moduleMarks.push_back({"RECORD", module.x, module.width});
+    }
+
+    // ── Panels ──
+    std::vector<std::shared_ptr<AestraUI::NUIButton>> panelButtons;
+    for (const auto* button : {&m_mixerButton, &m_sequencerButton, &m_pianoRollButton}) {
+        if (!*button) continue;
+        (*button)->setVisible(tier.showPanels);
+        panelButtons.push_back(*button);
+    }
+    if (tier.showPanels) {
+        const auto& module = modules[next++];
+        const float panelY = TM::kContentTop + std::round((TM::kContentHeight - PANEL_BTN_H) * 0.5f);
+        const auto row = rowIn(module, "panels", panelY, PANEL_BTN_H,
+                               std::vector<float>(panelButtons.size(), PANEL_BTN_W), PANEL_GAP, TM::kPadX);
+        for (std::size_t b = 0; b < row.size(); ++b) {
+            panelButtons[b]->setBounds(toWindow(row[b]));
+        }
+        m_moduleMarks.push_back({"PANELS", module.x, module.width});
+    }
+
+    // ── Keys ──
+    m_showKeys = tier.showKeys;
+    if (tier.showKeys) {
+        const auto& module = modules[next++];
+        m_moduleMarks.push_back({"KEYS", module.x, KEYS_MODULE_W});
+        m_keysValueRect = TM::contentRect(module.x + TM::kPadX, KEYS_MODULE_W - TM::kPadX * 2.0f, 0.0f);
+    }
+    finishLayoutPass(trace);
 
     if (m_musicalTypingLabel) {
-        constexpr float statusWidth = 82.0f;
-        constexpr float statusHeight = 24.0f;
-        const float statusX = islandX + islandWidth + 10.0f;
-        const bool hasRoom = statusX + statusWidth <= bounds.width - 8.0f - m_rightReservedWidth;
-        m_musicalTypingLabel->setVisible(hasRoom);
-        if (hasRoom) {
-            m_musicalTypingLabel->setBounds(NUIAbsolute(
-                bounds, statusX, islandY + (islandHeight - statusHeight) * 0.5f, statusWidth, statusHeight));
-        }
+        m_musicalTypingLabel->setVisible(false);
     }
-
-    // Pass dimensions to Render via Theme or member not possible easily here without state.
-    // We relying on onRender duplicating the math or us storing it?
-    // Let's update onRender to match these hardcoded compaction values.
 }
 
 void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
     AESTRA_ZONE("Transport_Render");
-    AestraUI::NUIRect bounds = getBounds();
-    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
+    const AestraUI::NUIRect bounds = getBounds();
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
 
-    // 1. Clear background (Void/Transparent)
-    // renderer.fillRect(bounds, themeManager.getColor("backgroundPrimary")); // REMOVE: Occludes FileBrowser if Z-Ordered on top
+    renderer.fillRect(bounds, theme.getColor("backgroundSecondary"));
+    renderer.drawLine({bounds.x, bounds.bottom() - 1.0f}, {bounds.right(), bounds.bottom() - 1.0f}, 1.0f,
+                      theme.getColor("border"));
 
-    // 2. Re-Calculate Island Geometry (Match layoutComponents logic)
-    // 2. Re-Calculate Island Geometry (Match layoutComponents logic)
-    // Compact Values (Relaxed per user request: "space would have done the trick")
-    float buttonSize = TRANSPORT_BUTTON_SIZE;
-    float spacing = TRANSPORT_BUTTON_SPACING;
-    float group1Width = (buttonSize * 3) + (spacing * 2);
-    float group2Width = transportExtrasWidth();
-    float infoWidth = TRANSPORT_INFO_WIDTH;
-    float group4Width = transportViewsWidth();
+    // One row of labelled modules, set apart by hairlines.
+    for (const float dx : m_dividers) {
+        TM::drawDivider(renderer, bounds.x + dx, bounds.y, bounds.height);
+    }
+    for (const auto& mark : m_moduleMarks) {
+        TM::drawLabel(renderer, mark.label, bounds.x + mark.x + TM::kPadX, bounds.y);
+    }
 
-    // Must mirror layoutComponents: same available width, same collapse tier.
-    const float availWidth = std::max(0.0f, bounds.width - m_rightReservedWidth);
-    const TransportLayoutTier tier = transportTierFor(availWidth);
+    if (m_showKeys) {
+        const AestraUI::NUIRect r(bounds.x + m_keysValueRect.x, bounds.y + m_keysValueRect.y,
+                                  m_keysValueRect.width, m_keysValueRect.height);
+        const std::string value = m_keysEnabled ? "C" + std::to_string(m_keysOctave) : "Off";
+        renderer.drawText(value, {r.x, renderer.calculateTextY(r, KEYS_VALUE_SIZE)}, KEYS_VALUE_SIZE,
+                          m_keysEnabled ? theme.getColor("secondary") : theme.getColor("textMuted"));
+    }
 
-    float totalContentWidth = group1Width
-        + (tier.showExtras ? TRANSPORT_INTRA_GAP + group2Width : 0.0f)
-        + TRANSPORT_SURFACE_GAP + infoWidth
-        + (tier.showViews ? TRANSPORT_SURFACE_GAP + group4Width : 0.0f);
-    float islandPadding = TRANSPORT_ISLAND_PADDING;
-    float islandWidth = totalContentWidth + (islandPadding * 2.0f);
-    
-    if (islandWidth > bounds.width - 20.0f) islandWidth = bounds.width - 20.0f;
-    
-    const float islandHeight = std::min(TRANSPORT_ISLAND_HEIGHT, bounds.height);
-    const float visualCenterBiasY = -1.0f;
-    float islandX = std::round((bounds.width - islandWidth) * 0.5f);
-    float islandY = std::round((bounds.height - islandHeight) * 0.5f + visualCenterBiasY);
-
-    // Mirrors layoutComponents: keep the island clear of the visualizers.
+    // The output scope and meter are siblings drawn over the reserved region;
+    // the bar names that region like any other module.
     if (m_rightReservedWidth > 0.0f) {
-        const float rightLimit = bounds.width - m_rightReservedWidth;
-        if (islandX + islandWidth > rightLimit) {
-            islandX = std::round(std::max(0.0f, rightLimit - islandWidth));
-        }
+        const float outX = bounds.right() - m_rightReservedWidth;
+        TM::drawDivider(renderer, outX, bounds.y, bounds.height);
+        TM::drawLabel(renderer, "OUTPUT", outX + TM::kPadX, bounds.y);
     }
-
-    if (bounds.width < islandWidth) {
-        islandX = 0;
-        islandWidth = bounds.width;
-    }
-
-    AestraUI::NUIRect islandRect(bounds.x + islandX, bounds.y + islandY, islandWidth, islandHeight);
-
-    renderer.fillRect(bounds, themeManager.getColor("backgroundSecondary"));
-    renderer.drawLine({bounds.x, bounds.y}, {bounds.right(), bounds.y}, 1.0f,
-                      themeManager.getColor("textPrimary").withAlpha(0.025f));
-    renderer.drawLine({bounds.x, bounds.bottom() - 1.0f},
-                      {bounds.right(), bounds.bottom() - 1.0f},
-                      1.0f,
-                      themeManager.getColor("border").withAlpha(0.30f));
-    
-    // No per-group shells or separators: the toolbar reads as one purpose-built
-    // instrument, with the transport / musical-state / workspace surfaces set
-    // apart by spacing (in layoutComponents) rather than boxes and borders.
-    (void)islandRect;
 
     renderChildren(renderer);
     renderButtonIcons(renderer);

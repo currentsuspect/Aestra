@@ -267,29 +267,23 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             m_content->getTrackManagerUI()->setWindowPointerPosition(static_cast<float>(x), static_cast<float>(y));
         }
 
-        if (m_content) {
-            m_activeCursorStyle = m_content->getPanelResizeCursorStyle(
+        // A modal dialog covers the content: surfaces UNDER it do not get to pick the cursor.
+        // Panel edges and the browser splitter used to resolve through the dialog, so the pointer
+        // over Settings > Appearance showed the browser splitter's resize arrow (owner: "a global
+        // issue where the cursor sometimes disappears or forgets to change state").
+        // (The one-time hand-back to Arrow when a modal opens lives in resolveCursorState(), which
+        // runs every frame: a modal opened from the keyboard produces no mouse move.)
+        // Only the position-dependent part is resolved here. The widgets' own cursors are set while
+        // THIS move is dispatched to them, below, so combining them here drew the previous move's
+        // cursor: a single jump onto the play button drew the arrow, and a jump off it left the
+        // hand behind, each until the next move. resolveActiveCursorStyle() combines per frame.
+        const bool modalOpen = isModalDialogOpen();
+        if (m_content && !modalOpen) {
+            m_panelCursorStyle = m_content->getPanelResizeCursorStyle(
                 AestraUI::NUIPoint(static_cast<float>(x), static_cast<float>(y))
             );
         } else {
-            m_activeCursorStyle = AestraUI::NUICursorStyle::Arrow;
-        }
-
-        // Let per-component cursor overrides (e.g. piano roll smart cursor) take precedence
-        if (m_window) {
-            auto bridgeStyle = m_window->getCursorStyle();
-            if (bridgeStyle != AestraUI::NUICursorStyle::Arrow &&
-                bridgeStyle != AestraUI::NUICursorStyle::Hidden) {
-                m_activeCursorStyle = bridgeStyle;
-            }
-        }
-
-        // A drag-and-drop in flight (a file from the browser, a sample onto a
-        // lane) is something being carried: the closed hand, wherever the pointer
-        // travels. The source only set the open hand on hover, and nothing else
-        // owns the cursor between drag start and drop.
-        if (AestraUI::NUIDragDropManager::getInstance().isDragging()) {
-            m_activeCursorStyle = AestraUI::NUICursorStyle::Grabbing;
+            m_panelCursorStyle = AestraUI::NUICursorStyle::Arrow;
         }
         
         // RecoveryDialog is modal - consume mouse move when visible
@@ -399,7 +393,7 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             // Only hide the menu if clicking OUTSIDE of it
             if (m_activeMenu && m_activeMenu->isVisible()) {
                 AestraUI::NUIPoint clickPos(static_cast<float>(m_lastMouseX), static_cast<float>(m_lastMouseY));
-                AestraUI::NUIRect menuBounds = m_activeMenu->getGlobalBounds();
+                AestraUI::NUIRect menuBounds = m_activeMenu->getBounds();
                 if (!menuBounds.contains(clickPos)) {
                     hideActiveMenu();
                 }
@@ -788,6 +782,12 @@ bool AestraWindowManager::isMenuOpen() const {
     return m_activeMenu && m_activeMenu->isVisible();
 }
 
+void AestraWindowManager::setProjectStatus(const std::string& name, bool modified, const std::string& note) {
+    if (m_customWindow && m_customWindow->getTitleBar()) {
+        m_customWindow->getTitleBar()->setProjectStatus(name, modified, note);
+    }
+}
+
 void AestraWindowManager::setWindowTitle(const std::string& title) {
     if (m_customWindow) m_customWindow->setTitle(title);
 }
@@ -906,9 +906,10 @@ void AestraWindowManager::render() {
         m_renderer->clearClipRect();
 
         // An active drag-and-drop shows the closed hand; no tool cursor claims it.
+        // A modal owns the cursor: the timeline's tool-cursor claim does not reach through it.
         bool trackManagerHasCustomCursor = false;
-        if (m_content && m_content->getTrackManagerUI() &&
-            !AestraUI::NUIDragDropManager::getInstance().isDragging()) {
+        if (m_content && m_content->getTrackManagerUI() && !AestraUI::NUIDragDropManager::getInstance().isDragging() &&
+            !isModalDialogOpen()) {
             trackManagerHasCustomCursor = m_content->getTrackManagerUI()->isCustomCursorActive();
         }
 
@@ -925,6 +926,28 @@ void AestraWindowManager::render() {
 // ==============================
 
 void AestraWindowManager::resolveCursorState() {
+    // A modal covers the content, and the content stops receiving moves while it is open, so
+    // whatever it last set (resize, hand) would stick over the dialog. Hand the cursor back to
+    // Arrow once, on open. This runs every frame, so a modal opened from the keyboard with the
+    // pointer still is covered too, and it runs before the native-cursor early return.
+    const bool modalOpen = isModalDialogOpen();
+    if (modalOpen && !m_modalWasOpen) {
+        // The panel's style is recombined every frame (resolveActiveCursorStyle) and the content
+        // gets no moves under a modal, so its last style would come straight back: clear it too.
+        m_panelCursorStyle = AestraUI::NUICursorStyle::Arrow;
+        m_activeCursorStyle = AestraUI::NUICursorStyle::Arrow;
+        if (m_window) {
+            m_window->setCursorStyle(AestraUI::NUICursorStyle::Arrow);
+            // Native-cursor mode: the timeline hides the OS cursor while its tool cursor is active
+            // (setOnCursorVisibilityChanged). Show it again, or the dialog has no pointer at all.
+            // Custom-cursor mode manages native visibility below, in the hideNative sync.
+            if (!m_useCustomCursor) {
+                m_window->setCursorVisible(true);
+            }
+        }
+    }
+    m_modalWasOpen = modalOpen;
+
     if (!m_useCustomCursor || !m_window) {
         return;
     }
@@ -937,9 +960,12 @@ void AestraWindowManager::resolveCursorState() {
         m_window->setCursorStyle(AestraUI::NUICursorStyle::Arrow);
     }
 
+    resolveActiveCursorStyle();
+
     const AestraUI::NUICursorStyle style = m_window->getCursorStyle();
     bool trackManagerHasCustomCursor = false;
-    if (m_content && m_content->getTrackManagerUI() && !AestraUI::NUIDragDropManager::getInstance().isDragging()) {
+    if (m_content && m_content->getTrackManagerUI() && !AestraUI::NUIDragDropManager::getInstance().isDragging() &&
+        !modalOpen) {
         trackManagerHasCustomCursor = m_content->getTrackManagerUI()->isCustomCursorActive();
     }
 
@@ -956,9 +982,38 @@ void AestraWindowManager::resolveCursorState() {
     }
 }
 
+bool AestraWindowManager::isModalDialogOpen() const {
+    return (m_settingsDialog && m_settingsDialog->isVisible()) || (m_exportDialog && m_exportDialog->isVisible()) ||
+           (m_confirmationDialog && m_confirmationDialog->isDialogVisible()) ||
+           (m_recoveryDialog && m_recoveryDialog->isDialogVisible()) ||
+           (m_missingAssetsDialog && m_missingAssetsDialog->isDialogVisible());
+}
+
+void AestraWindowManager::resolveActiveCursorStyle() {
+    m_activeCursorStyle = m_panelCursorStyle;
+
+    // Per-component cursor overrides (e.g. the piano roll's smart cursor) take precedence.
+    const auto bridgeStyle = m_window->getCursorStyle();
+    if (bridgeStyle != AestraUI::NUICursorStyle::Arrow && bridgeStyle != AestraUI::NUICursorStyle::Hidden) {
+        m_activeCursorStyle = bridgeStyle;
+    }
+
+    // A drag-and-drop in flight (a file from the browser, a sample onto a
+    // lane) is something being carried: the closed hand, wherever the pointer
+    // travels. The source only set the open hand on hover, and nothing else
+    // owns the cursor between drag start and drop.
+    if (AestraUI::NUIDragDropManager::getInstance().isDragging()) {
+        m_activeCursorStyle = AestraUI::NUICursorStyle::Grabbing;
+    }
+}
+
 void AestraWindowManager::initializeCustomCursors() {
-    const auto mk = [](AestraUI::NUICursorStyle style) {
-        return std::make_shared<AestraUI::NUIIcon>(AestraUI::nuiCursorSvg(style));
+    // Glyphs are built for the current surface polarity (inverted on dark themes, see
+    // nuiCursorSvgForSurface); renderCustomCursor rebuilds them if the theme flips.
+    m_cursorsBuiltForDark = !AestraUI::editorLightUi();
+    const bool dark = m_cursorsBuiltForDark;
+    const auto mk = [dark](AestraUI::NUICursorStyle style) {
+        return std::make_shared<AestraUI::NUIIcon>(AestraUI::nuiCursorSvgForSurface(style, dark));
     };
 
     // Canonical cursor artwork comes from NUICursorRegistry — the single
@@ -983,6 +1038,11 @@ void AestraWindowManager::renderCustomCursor() {
     // Skip rendering custom cursor when hidden style is active
     if (m_window && m_window->getCursorStyle() == AestraUI::NUICursorStyle::Hidden) {
         return;
+    }
+
+    // The theme can flip polarity at runtime (Settings > Appearance): rebuild the glyphs then.
+    if (m_cursorsBuiltForDark == AestraUI::editorLightUi()) {
+        initializeCustomCursors();
     }
 
     // Each glyph is offset so its hotspot (NUICursorRegistry) sits on the pointer.

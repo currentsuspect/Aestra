@@ -120,6 +120,7 @@ private:
     NUIColor m_textSecondary;
     NUIColor m_border;
     NUIColor m_tick;
+    NUIColor m_textMuted; // small labels: the textSecondary tier, not a tick line's alpha
     NUIColor m_tickUnity;
     NUIColor m_tooltipBg;
 
