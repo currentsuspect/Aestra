@@ -104,9 +104,11 @@ struct AutomationCurve {
     // findSlotByInstanceId. effectSlot is LEGACY — kept only for v1 project
     // migration and older-build compatibility; it never participates in
     // resolution. paramId is the plugin's stable parameter id (AGENTS.md §19).
-    // The engine applies Custom curves to Internal-format plugins only:
-    // their parameter storage is atomic, so per-block setParameter from the
-    // render thread is RT-safe; third-party formats need host param queues.
+    // The engine applies a Custom curve through the plugin's render-thread
+    // contract (IPluginInstance::supportsRealtimeAutomation / applyAutomation,
+    // V8-A5), never by checking the plugin's format. Internal plugins satisfy
+    // it with atomic parameter storage; VST3/CLAP adapters will satisfy it with
+    // a host parameter queue (#467) and until then are skipped and counted.
     uint64_t deviceInstanceId{0};
     uint32_t effectSlot{0};
     uint32_t paramId{0};

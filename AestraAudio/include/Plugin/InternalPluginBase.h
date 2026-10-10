@@ -223,6 +223,14 @@ public:
         onParameterChanged(id, clamped);
     }
 
+    /// Render-thread automation contract (V8-A5): parameter storage here is
+    /// atomic, so a store from the render thread is lock-free. The plugin owns
+    /// smoothing: onParameterChanged() / process() ramp toward the target.
+    bool supportsRealtimeAutomation() const noexcept override { return true; }
+    void applyAutomation(uint32_t id, float normalizedValue) noexcept AESTRA_RT_NONBLOCKING override {
+        setParameter(id, normalizedValue);
+    }
+
     /// Display formatting. The generic form is unit + precision scaled to the
     /// declared range. A plugin overrides this where a parameter needs units a
     /// generic rule cannot know (semitones, mode names).

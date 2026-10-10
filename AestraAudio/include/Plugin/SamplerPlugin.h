@@ -41,6 +41,9 @@ public:
     uint32_t getParameterCount() const override;
     float getParameter(uint32_t id) const override;
     void setParameter(uint32_t id, float value) override;
+    /// Render-thread automation contract (V8-A5): m_params is atomic storage.
+    bool supportsRealtimeAutomation() const noexcept override { return true; }
+    void applyAutomation(uint32_t id, float normalizedValue) noexcept override { setParameter(id, normalizedValue); }
     std::string getParameterDisplay(uint32_t id) const override;
 
     std::vector<uint8_t> saveState() const override;

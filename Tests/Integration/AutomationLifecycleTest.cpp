@@ -126,6 +126,10 @@ public:
         }
     }
     float getParameter(uint32_t id) const override { return id == 0 ? m_gain : 0.0f; }
+    // V8-A5: this mock stands in for an internal plugin, so it declares the
+    // render-thread automation contract the engine now requires.
+    bool supportsRealtimeAutomation() const noexcept override { return true; }
+    void applyAutomation(uint32_t id, float normalizedValue) noexcept override { setParameter(id, normalizedValue); }
     void process(const float* const* inputs, float** outputs, uint32_t numInputChannels,
                  uint32_t numOutputChannels, uint32_t numFrames, const MidiBuffer* m = nullptr,
                  MidiBuffer* o = nullptr) override {
