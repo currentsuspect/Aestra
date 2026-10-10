@@ -2138,6 +2138,11 @@ target_include_directories(TimelineLayoutTest PRIVATE
 add_test(NAME TimelineLayoutTest COMMAND TimelineLayoutTest)
 set_tests_properties(TimelineLayoutTest PROPERTIES LABELS "ui;timeline;layout;regression;contract:application")
 
+# V8-C14 ranked gap 4: a toast that arrives while another shows waits its turn (ToastQueue.h).
+add_executable(ToastQueueTest AestraUI/ToastQueueTest.cpp)
+add_test(NAME ToastQueueTest COMMAND ToastQueueTest)
+set_tests_properties(ToastQueueTest PROPERTIES LABELS "ui;toast;regression;contract:application")
+
 # V8-X2b phase 5: the file browser's panes and chrome from the layout system
 # (FileBrowserLayout.h); the folder rows are drawn and hit-tested by one rect.
 add_executable(FileBrowserLayoutTest AestraUI/FileBrowserLayoutTest.cpp)

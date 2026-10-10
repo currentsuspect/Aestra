@@ -6,6 +6,7 @@
 #include "NUICoreWidgets.h"
 #include <array>
 #include <functional>
+#include <optional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -177,6 +178,19 @@ public:
      */
     std::vector<std::string> getFavorites() const;
 
+    /**
+     * @brief Persist favorites through the app's UI-state store (V8-C14).
+     *
+     * AestraUI must not include the store, so the app supplies two callbacks, as for
+     * editor anchors (step 5b). A stored list wins. With nothing stored yet, the
+     * favorites already read from the legacy favorites.json are written once into
+     * the store (one-way import; the old file is left alone). Without a provider the
+     * panel keeps using favorites.json.
+     */
+    using FavoritesLoader = std::function<std::optional<std::vector<std::string>>()>;
+    using FavoritesSaver = std::function<void(const std::vector<std::string>&)>;
+    void setFavoritesProvider(FavoritesLoader load, FavoritesSaver save);
+
     // ==============================
     // Callbacks
     // ==============================
@@ -239,6 +253,7 @@ private:
     std::vector<PluginListItem> m_allPlugins;
     std::vector<PluginListItem> m_filteredPlugins;
     std::unordered_set<std::string> m_favoritesSet; // O(1) lookup, persisted to disk
+    FavoritesSaver m_favoritesSaver;                // set by setFavoritesProvider(); else favorites.json
 
     // Search & Filter
     std::string m_searchQuery;

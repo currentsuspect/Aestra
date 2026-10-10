@@ -329,6 +329,26 @@ std::optional<UIDialogExportOptions> UISurfaceStoreFile::dialogExportOptions() c
     return m_store.dialogExport;
 }
 
+std::optional<std::vector<std::string>> UISurfaceStoreFile::listPreference(const std::string& key) const {
+    const auto it = m_store.listPreferences.find(key);
+    if (it == m_store.listPreferences.end()) {
+        return std::nullopt;
+    }
+    return it->second;
+}
+
+bool UISurfaceStoreFile::setListPreference(const std::string& key, const std::vector<std::string>& value) {
+    const auto it = m_store.listPreferences.find(key);
+    if (it != m_store.listPreferences.end() && it->second == value) {
+        return true;
+    }
+    m_store.listPreferences[key] = value;
+    if (m_path.empty()) {
+        return true; // In-memory only: no write was attempted, so none failed.
+    }
+    return m_store.save(m_path);
+}
+
 bool UISurfaceStoreFile::setDialogExportOptions(const UIDialogExportOptions& value) {
     if (m_store.dialogExport.has_value()) {
         const UIDialogExportOptions& held = *m_store.dialogExport;
