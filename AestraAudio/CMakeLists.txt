@@ -288,6 +288,9 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Headless/HeadlessMusicGenerator.cpp
     src/Headless/OfflineProjectRender.cpp
     src/Headless/RenderSummary.cpp
+
+    # Analysis service (V8-S8): R128 loudness, true peak, band energy, correlation
+    src/Analysis/AudioAnalysis.cpp
     
     # Plugin hosting system
     src/Plugin/PluginScanner.cpp

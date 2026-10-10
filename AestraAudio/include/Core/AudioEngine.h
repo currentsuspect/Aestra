@@ -1420,11 +1420,7 @@ public:
 
 private:
     std::atomic<bool> m_loudnessResetRequested{false};
-    // Pre-computed filter coefficients (static 48 kHz fallback)
-    static const BiquadCoeff kKWeightPreFilter; // HS
-    static const BiquadCoeff kKWeightRLB;       // HPF
-
-    // Sample-rate-aware coefficient computation via bilinear transform
+    // K-weighting at the device rate, from DSP/KWeighting.h (with its 48 kHz reference fallback)
     static BiquadCoeff computeKWeightPreFilter(double sampleRate);
     static BiquadCoeff computeKWeightRLB(double sampleRate);
 

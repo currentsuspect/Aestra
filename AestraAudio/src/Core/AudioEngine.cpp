@@ -7,6 +7,7 @@
 #include "AuditionEngine.h"
 #include "Core/ClipRenderKernel.h"
 #include "DSP/PanLaw.h"
+#include "DSP/KWeighting.h"
 #include "EffectChain.h" // [NEW]
 #include "GarbageCollector.h"
 #include "IO/AudioExporter.h"
@@ -2038,91 +2039,17 @@ void AudioEngine::captureWaveformHistory(const float* interleavedOutput, uint32_
 }
 
 // --- Constants ---
-// Sample-rate-aware LUFS K-weighting coefficients via bilinear transform
-// ITU-R BS.1770-4 specification
+// BS.1770-4 K-weighting at the device rate. One implementation, shared with offline
+// analysis (DSP/KWeighting.h), so the master meter and a render's analysis agree.
 AudioEngine::BiquadCoeff AudioEngine::computeKWeightPreFilter(double sampleRate) {
-    // ITU-R BS.1770 K-weighting pre-filter analog prototype
-    // Reference design parameters chosen so the 48 kHz digital coefficients match:
-    // b0=1.53512485958697, b1=-2.69169618940638, b2=1.19839281085285,
-    // a1=-1.69065929318241, a2=0.73248077421585
-    const double fs = sampleRate;
-    const double f0 = 1681.974450955533;
-    const double Q = 0.7071752369554196;
-    const double gainDb = 4.0; // 4.0 dB per BS.1770
-
-    // RBJ high-shelf form using bilinear transform of the BS.1770 prototype.
-    // A = 10^(gain/40) per the standard (not linear gain)
-    const double K = std::tan(PI_D * f0 / fs);
-    const double K2 = K * K;
-    const double A = std::pow(10.0, gainDb / 40.0);
-    const double norm = 1.0 + K / Q + K2;
-
-    const double b0 = (A + K / Q + K2) / norm;
-    const double b1 = 2.0 * (K2 - A) / norm;
-    const double b2 = (A - K / Q + K2) / norm;
-    const double a1 = 2.0 * (K2 - 1.0) / norm;
-    const double a2 = (1.0 - K / Q + K2) / norm;
-
-    // Validate that the computed 48 kHz coefficients reproduce the existing reference
-    // values within tolerance; fall back to the reference constants if they do not.
-    if (std::abs(fs - 48000.0) < 1.0e-9) {
-        constexpr double tolerance = 1.0e-9;
-        if (std::abs(b0 - kKWeightPreFilter.b0) > tolerance || std::abs(b1 - kKWeightPreFilter.b1) > tolerance ||
-            std::abs(b2 - kKWeightPreFilter.b2) > tolerance || std::abs(a1 - kKWeightPreFilter.a1) > tolerance ||
-            std::abs(a2 - kKWeightPreFilter.a2) > tolerance) {
-            return kKWeightPreFilter;
-        }
-    }
-
-    return {b0, b1, b2, a1, a2};
+    const KWeighting::Biquad c = KWeighting::preFilter(sampleRate);
+    return {c.b0, c.b1, c.b2, c.a1, c.a2};
 }
 
 AudioEngine::BiquadCoeff AudioEngine::computeKWeightRLB(double sampleRate) {
-    // BS.1770 RLB high-pass filter.
-    //
-    // The standard 48 kHz reference coefficients already used by this engine are:
-    //   b = { 1.0, -2.0, 1.0 }
-    //   a = { -1.99004745483398, 0.99007225036621 }
-    //
-    // To preserve that behavior across sample rates, compute the denominator from the
-    // BS.1770 analog prototype parameters and keep the existing numerator convention.
-    double fs = sampleRate;
-    double f0 = 38.13547087602444;
-    double Q = 0.5;
-
-    // Bilinear transform pre-warping
-    double K = std::tan(PI_D * f0 / fs);
-    double K2 = K * K;
-    double norm = 1.0 + K / Q + K2;
-
-    double a1 = 2.0 * (K2 - 1.0) / norm;
-    double a2 = (1.0 - K / Q + K2) / norm;
-    AudioEngine::BiquadCoeff coeff{1.0, -2.0, 1.0, a1, a2};
-
-    // Validate that the computed 48 kHz coefficients reproduce the existing reference
-    // values within tolerance; fall back to the reference constants if they do not.
-    if (std::abs(fs - 48000.0) < 1.0e-9) {
-        constexpr double tolerance = 1.0e-9;
-        if (std::abs(coeff.b0 - kKWeightRLB.b0) > tolerance || std::abs(coeff.b1 - kKWeightRLB.b1) > tolerance ||
-            std::abs(coeff.b2 - kKWeightRLB.b2) > tolerance || std::abs(coeff.a1 - kKWeightRLB.a1) > tolerance ||
-            std::abs(coeff.a2 - kKWeightRLB.a2) > tolerance) {
-            return kKWeightRLB;
-        }
-    }
-
-    return coeff;
+    const KWeighting::Biquad c = KWeighting::rlbHighPass(sampleRate);
+    return {c.b0, c.b1, c.b2, c.a1, c.a2};
 }
-
-// Fallback to 48 kHz coefficients for compatibility
-const AudioEngine::BiquadCoeff AudioEngine::kKWeightPreFilter = {
-    1.53512485958697, -2.69169618940638, 1.19839281085285, // b0, b1, b2
-    -1.69065929318241, 0.73248077421585                    // a1, a2
-};
-
-const AudioEngine::BiquadCoeff AudioEngine::kKWeightRLB = {
-    1.0, -2.0, 1.0,                     // b0, b1, b2
-    -1.99004745483398, 0.99007225036621 // a1, a2
-};
 
 /**
  * @brief Initialize AudioEngine runtime state.
