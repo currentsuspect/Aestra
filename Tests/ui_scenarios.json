@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "scenarios": [
+    {
+      "name": "timeline_layout_holds_across_window_sizes",
+      "surface": "timeline",
+      "setup": {
+        "size": [1400, 700],
+        "lanes": 8,
+        "clips": [
+          {"lane": 0, "start": 0, "length": 4},
+          {"lane": 3, "start": 8, "length": 2},
+          {"lane": 7, "start": 16, "length": 8}
+        ]
+      },
+      "steps": [
+        {"expect": {"layoutProblems": 0, "lanesInside": true}},
+        {"resize": [2560, 1440]},
+        {"expect": {"layoutProblems": 0, "lanesInside": true}},
+        {"resize": [1920, 1080]},
+        {"expect": {"layoutProblems": 0, "lanesInside": true}},
+        {"resize": [1024, 600]},
+        {"expect": {"layoutProblems": 0, "lanesInside": true}},
+        {"resize": [640, 360]},
+        {"expect": {"layoutProblems": 0, "lanesInside": true}},
+        {"resize": [1400, 700]},
+        {"expect": {"layoutProblems": 0, "lanesInside": true}}
+      ]
+    },
+    {
+      "name": "timeline_clip_drag_is_one_undo_step",
+      "surface": "timeline",
+      "setup": {
+        "lanes": 3,
+        "clips": [{"lane": 0, "start": 0, "length": 4}]
+      },
+      "steps": [
+        {"mouse": "down", "at": {"clip": 0, "fraction": 0.5}},
+        {"mouse": "move", "at": {"lane": 0, "beat": 2.5}},
+        {"mouse": "move", "at": {"lane": 0, "beat": 4.5}},
+        {"mouse": "move", "at": {"lane": 0, "beat": 6}},
+        {"mouse": "up", "at": {"lane": 0, "beat": 6}},
+        {"expect": {"clip": {"index": 0, "start": 4, "lane": 0}, "undoDepth": 1}},
+        {"undo": 1},
+        {"expect": {"clip": {"index": 0, "start": 0, "lane": 0}, "undoDepth": 0}}
+      ]
+    },
+    {
+      "name": "timeline_clip_drag_to_another_lane",
+      "surface": "timeline",
+      "setup": {
+        "lanes": 3,
+        "clips": [{"lane": 0, "start": 4, "length": 4}]
+      },
+      "steps": [
+        {"mouse": "down", "at": {"clip": 0, "fraction": 0.5}},
+        {"mouse": "move", "at": {"lane": 1, "beat": 6}},
+        {"mouse": "move", "at": {"lane": 2, "beat": 6}},
+        {"mouse": "up", "at": {"lane": 2, "beat": 6}},
+        {"expect": {"clip": {"index": 0, "start": 4, "lane": 2}, "undoDepth": 1}},
+        {"undo": 1},
+        {"expect": {"clip": {"index": 0, "start": 4, "lane": 0}, "undoDepth": 0}}
+      ]
+    },
+    {
+      "name": "timeline_click_release_on_a_clip_changes_nothing",
+      "surface": "timeline",
+      "setup": {
+        "lanes": 2,
+        "clips": [{"lane": 0, "start": 2, "length": 4}]
+      },
+      "steps": [
+        {"mouse": "down", "at": {"clip": 0, "fraction": 0.5}},
+        {"mouse": "up", "at": {"clip": 0, "fraction": 0.5}},
+        {"expect": {"clip": {"index": 0, "start": 2, "lane": 0}, "undoDepth": 0}}
+      ]
+    }
+  ]
+}

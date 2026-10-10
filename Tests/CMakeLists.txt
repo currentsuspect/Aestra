@@ -2893,6 +2893,64 @@ if(AESTRA_ENABLE_UI)
         LABELS "ui;interaction;timeline;playback;regression;contract:application")
 endif()
 
+# V8-G1: UI headless scenarios, modelled on Tests/headless_scenarios.json. Each
+# scenario in Tests/ui_scenarios.json drives a real TrackManagerUI with real mouse
+# events and checks clip placement, undo depth and layout problems. Same
+# TrackManagerUI translation-unit set as ClipDragReleaseTest.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(UIScenarioTest AestraUI_Core AestraUI_Platform AestraUI_OpenGL)
+    add_executable(UIScenarioTest
+        AestraUI/UIScenarioTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
+        # compiles in.
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapRenderer.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineSummaryCache.cpp
+    )
+    # TrackManagerUIRender references the FBO render cache. The test never reaches
+    # that path — NullRenderer::getRenderCache() returns nullptr, so the documented
+    # no-cache branch runs — but the symbols are needed at link time. The cache
+    # lives in AestraUI_OpenGL, which also carries the glad and FreeType include
+    # paths its header needs. Note AestraUI_OpenGL deliberately does not link
+    # OpenGL::GL: glad resolves GL entry points dynamically, and this test never
+    # initialises them.
+    target_link_libraries(UIScenarioTest PRIVATE
+        AestraUI_Core AestraUI_Platform AestraUI_OpenGL AestraAudio AestraCore)
+    target_include_directories(UIScenarioTest PRIVATE
+        ${CMAKE_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        # TrackManagerUI.h pulls MixerPanel.h and PianoRollPanel.h transitively
+        # without using either, so these are needed to compile, not to link.
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/Source/Settings
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
+        ${CMAKE_SOURCE_DIR}/AestraUI/Helpers
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    target_compile_definitions(UIScenarioTest PRIVATE
+        AESTRA_UI_SCENARIO_FILE="${CMAKE_SOURCE_DIR}/Tests/ui_scenarios.json")
+    add_test(NAME UIScenarioTest COMMAND UIScenarioTest)
+    set_tests_properties(UIScenarioTest PROPERTIES
+        LABELS "ui;scenario;interaction;timeline;layout;regression;contract:application")
+endif()
+
 # SPEC 3 §3.1: follow-playhead is the user's choice; focus only suspends it.
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(TimelineFollowPreferenceTest AestraUI_Core AestraUI_Platform AestraUI_OpenGL)
@@ -3108,6 +3166,7 @@ if(AESTRA_ENABLE_UI)
         ContractPianoRollPasteTargetsEditingUnitTest
         FileBrowserLibraryTest
         PanelWindowKnobDragTest
+        UIScenarioTest
         TextCentringTest
         AdaptiveFPSIdleTest
     )
