@@ -160,7 +160,7 @@ namespace {
         }
 
         auto& chain = channel.channel->getEffectChain();
-        for (size_t i = 0; i < Aestra::Audio::EffectChain::MAX_SLOTS; ++i) {
+        for (size_t i = 0, slotTotal = chain.slotCount(); i < slotTotal; ++i) {
             auto plugin = chain.getPlugin(i);
             auto comp = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraComp>(plugin);
             if (!comp) {

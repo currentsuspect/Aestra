@@ -36,6 +36,12 @@
 
 namespace AestraUI {
 
+// The rack's row ceiling and the engine's slot ceiling are one number written in
+// two modules; this is the only place that sees both, so it is where they are
+// tied together (V8-S3).
+static_assert(EffectChainRack::MAX_SLOTS == static_cast<int>(Aestra::Audio::EffectChain::kMaxSlots),
+              "EffectChainRack::MAX_SLOTS must equal EffectChain::kMaxSlots");
+
 // ============================================================================
 // PluginUIController Implementation
 // ============================================================================

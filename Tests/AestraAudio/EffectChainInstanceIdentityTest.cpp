@@ -144,7 +144,7 @@ void testUnoccupiedSlotsHaveNoIdentity() {
     chain.insertPlugin(0, makePlugin("a"));
 
     check(chain.getSlotInstanceId(1) == 0, "an empty slot has no identity");
-    check(chain.getSlotInstanceId(EffectChain::MAX_SLOTS) == 0,
+    check(chain.getSlotInstanceId(chain.slotCount()) == 0,
           "an out-of-range slot reports no identity rather than reading past the array");
 }
 
@@ -192,7 +192,7 @@ void testReorderDoesNotRetarget() {
     check(chain.swapPlugins(0, 1), "reorder the chain");
 
     const size_t nowAt = chain.findSlotByInstanceId(reverbId);
-    check(nowAt != EffectChain::MAX_SLOTS, "the addressed instance is still resolvable");
+    check(nowAt != EffectChain::kNoSlot, "the addressed instance is still resolvable");
     const std::string after = chain.getPlugin(nowAt)->getInfo().id;
 
     check(before == after && after == "reverb",
@@ -209,11 +209,11 @@ void testRemoveRetiresTheIdentity() {
 
     chain.removePlugin(0);
     check(chain.getSlotInstanceId(0) == 0, "the emptied slot has no identity");
-    check(chain.findSlotByInstanceId(doomed) == EffectChain::MAX_SLOTS,
+    check(chain.findSlotByInstanceId(doomed) == EffectChain::kNoSlot,
           "a removed instance's identity resolves to nothing");
 
     chain.insertPlugin(0, makePlugin("successor"));
-    check(chain.findSlotByInstanceId(doomed) == EffectChain::MAX_SLOTS,
+    check(chain.findSlotByInstanceId(doomed) == EffectChain::kNoSlot,
           "the successor in the same slot does NOT inherit the removed identity");
     check(chain.getSlotInstanceId(0) != doomed,
           "the successor received a fresh identity of its own");
@@ -231,7 +231,7 @@ void testReplacingInSlotMintsFresh() {
 
     check(newId != 0, "the replacement has an identity");
     check(newId != oldId, "the replacement does not inherit the replaced instance's identity");
-    check(chain.findSlotByInstanceId(oldId) == EffectChain::MAX_SLOTS,
+    check(chain.findSlotByInstanceId(oldId) == EffectChain::kNoSlot,
           "the replaced identity no longer resolves anywhere");
 }
 
@@ -244,8 +244,8 @@ void testClearRetiresEveryIdentity() {
 
     chain.clear();
 
-    check(chain.findSlotByInstanceId(a) == EffectChain::MAX_SLOTS &&
-              chain.findSlotByInstanceId(b) == EffectChain::MAX_SLOTS,
+    check(chain.findSlotByInstanceId(a) == EffectChain::kNoSlot &&
+              chain.findSlotByInstanceId(b) == EffectChain::kNoSlot,
           "clear() retires every identity in the chain");
 }
 
@@ -255,7 +255,7 @@ void testLookupRejectsTheReservedZero() {
     EffectChain chain;
     chain.insertPlugin(3, makePlugin("only"));
 
-    check(chain.findSlotByInstanceId(0) == EffectChain::MAX_SLOTS,
+    check(chain.findSlotByInstanceId(0) == EffectChain::kNoSlot,
           "id 0 never resolves, even though empty slots store 0");
 }
 
@@ -264,7 +264,7 @@ void testUnknownIdentityDoesNotResolve() {
     chain.insertPlugin(0, makePlugin("a"));
     const uint64_t real = chain.getSlotInstanceId(0);
 
-    check(chain.findSlotByInstanceId(real + 99999) == EffectChain::MAX_SLOTS,
+    check(chain.findSlotByInstanceId(real + 99999) == EffectChain::kNoSlot,
           "an identity this chain never issued does not resolve");
 }
 
@@ -278,7 +278,7 @@ void testIdentitiesAreUniqueAcrossChains() {
 
     check(first.getSlotInstanceId(0) != second.getSlotInstanceId(0),
           "two chains never mint the same identity for different instances");
-    check(second.findSlotByInstanceId(first.getSlotInstanceId(0)) == EffectChain::MAX_SLOTS,
+    check(second.findSlotByInstanceId(first.getSlotInstanceId(0)) == EffectChain::kNoSlot,
           "one chain's identity does not resolve inside another");
 }
 
@@ -338,7 +338,7 @@ void testSnapshotCarriesIdentity() {
 
     check(snapshot->slot(1).instanceId == b, "the snapshot copies each slot's identity");
     check(snapshot->findSlotByInstanceId(b) == 1, "the snapshot resolves by identity");
-    check(snapshot->findSlotByInstanceId(0) == EffectChainSnapshot::MAX_SLOTS,
+    check(snapshot->findSlotByInstanceId(0) == EffectChain::kNoSlot,
           "the snapshot also refuses the reserved 0");
 }
 
@@ -371,13 +371,13 @@ std::vector<uint8_t> serializeChainWithOccupantInSlotZero() {
 /// bypass + dryWet + empty plugin state.
 std::vector<uint8_t> buildChainBlob(uint8_t version,
                                     const std::vector<std::pair<uint64_t, std::string>>& occupiedSlots) {
-    std::vector<uint8_t> state{'N', 'E', 'C', version, static_cast<uint8_t>(EffectChain::MAX_SLOTS)};
+    std::vector<uint8_t> state{'N', 'E', 'C', version, static_cast<uint8_t>(EffectChain::kInitialSlots)};
     const auto put = [&state](const void* data, size_t n) {
         const auto* bytes = static_cast<const uint8_t*>(data);
         state.insert(state.end(), bytes, bytes + n);
     };
     size_t cursor = 0;
-    for (size_t slot = 0; slot < EffectChain::MAX_SLOTS; ++slot) {
+    for (size_t slot = 0; slot < EffectChain::kInitialSlots; ++slot) {
         if (cursor < occupiedSlots.size() && occupiedSlots[cursor].first == 0 && false) {
             // unreachable; kept for clarity of the loop shape
         }
@@ -524,7 +524,7 @@ void testLoadClearsIdentityOnSerializedEmptySlots() {
 
     check(reused.getSlotInstanceId(2) == 0,
           "a slot the blob says is empty must not keep its old identity");
-    check(reused.findSlotByInstanceId(staleId) == EffectChain::MAX_SLOTS,
+    check(reused.findSlotByInstanceId(staleId) == EffectChain::kNoSlot,
           "the retired identity must not resolve to the now-empty slot");
     check(reused.getSlotInstanceId(0) != staleId,
           "nor may it drift onto the slot the blob did fill");

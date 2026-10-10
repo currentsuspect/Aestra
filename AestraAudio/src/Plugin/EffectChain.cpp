@@ -144,15 +144,36 @@ void restoreDryChannels(float** buffer, const float* dryBuffer, uint32_t numChan
 }
 } // namespace
 
-EffectChain::EffectChain() = default;
+EffectChain::EffectChain() {
+    growTo(kInitialSlots);
+}
 EffectChain::~EffectChain() = default;
+
+bool EffectChain::growTo(size_t count) {
+    if (count > kMaxSlots) {
+        return false;
+    }
+    size_t n = m_slotCount.load(std::memory_order_relaxed);
+    while (n < count) {
+        // A slot allocated by an earlier, larger chain is reused (it was emptied
+        // when the chain shrank); otherwise allocate it. Either way the address
+        // is stable from here on. Publish the larger count only after the slot
+        // exists, so no reader can see an index without a slot behind it.
+        if (!m_slots[n]) {
+            m_slots[n] = std::make_unique<EffectSlot>();
+        }
+        ++n;
+        m_slotCount.store(n, std::memory_order_release);
+    }
+    return true;
+}
 
 // ==============================
 // Snapshot Publication (Pass 2)
 // ==============================
 
 void EffectChain::publishSnapshot() {
-    auto snapshot = std::make_shared<EffectChainSnapshot>(m_slots);
+    auto snapshot = std::make_shared<EffectChainSnapshot>(*this);
     snapshot->isChainBypassed = m_chainBypassed.load(std::memory_order_acquire);
     m_currentSnapshot = snapshot;
 }
@@ -165,7 +186,9 @@ bool EffectChain::insertPlugin(size_t slotIndex, PluginInstancePtr plugin, uint6
     if (reportRealtimeMisuse("EffectChain::insertPlugin")) {
         return false;
     }
-    if (slotIndex >= MAX_SLOTS) {
+    // Growth is the only way past the initial slots: an index just beyond the end
+    // extends the chain to hold it (V8-S3), up to kMaxSlots.
+    if (slotIndex >= kMaxSlots || !growTo(slotIndex + 1)) {
         return false;
     }
 
@@ -189,10 +212,10 @@ bool EffectChain::insertPlugin(size_t slotIndex, PluginInstancePtr plugin, uint6
     // Whether the CALLER handed us a plugin — checked before the move, which
     // leaves `plugin` null either way.
     const bool receivedPlugin = plugin != nullptr;
-    m_slots[slotIndex].plugin = std::move(plugin);
+    at(slotIndex).plugin = std::move(plugin);
     // The slot now genuinely holds what the caller put here, so any retained
     // missing-plugin record for it is superseded (#647).
-    m_slots[slotIndex].clearMissingPlugin();
+    at(slotIndex).clearMissingPlugin();
     // A different plugin instance occupies this slot, so it is a different
     // identity — mint a fresh one rather than inheriting whatever was here
     // (#667). Inheriting would silently hand the previous plugin's automation to
@@ -214,15 +237,15 @@ bool EffectChain::insertPlugin(size_t slotIndex, PluginInstancePtr plugin, uint6
     // name that is unusable or taken.
     if (receivedPlugin && preservedInstanceId != 0
         && preservedInstanceId != std::numeric_limits<uint64_t>::max()
-        && findSlotByInstanceId(preservedInstanceId) == MAX_SLOTS) {
+        && findSlotByInstanceId(preservedInstanceId) == kNoSlot) {
         reserveMintedPluginInstanceId(preservedInstanceId);
-        m_slots[slotIndex].instanceId = preservedInstanceId;
+        at(slotIndex).instanceId = preservedInstanceId;
     } else {
-        m_slots[slotIndex].instanceId = receivedPlugin ? mintPluginInstanceId() : 0;
+        at(slotIndex).instanceId = receivedPlugin ? mintPluginInstanceId() : 0;
     }
-    m_slots[slotIndex].bypassed.store(false);
-    m_slots[slotIndex].dryWetMix.store(1.0f);
-    m_slots[slotIndex].faultState = std::make_shared<EffectSlotFaultState>();
+    at(slotIndex).bypassed.store(false);
+    at(slotIndex).dryWetMix.store(1.0f);
+    at(slotIndex).faultState = std::make_shared<EffectSlotFaultState>();
 
     publishSnapshot();
     if (m_onLatencyChanged) {
@@ -235,19 +258,19 @@ PluginInstancePtr EffectChain::removePlugin(size_t slotIndex) {
     if (reportRealtimeMisuse("EffectChain::removePlugin")) {
         return nullptr;
     }
-    if (slotIndex >= MAX_SLOTS) {
+    if (slotIndex >= slotCount()) {
         return nullptr;
     }
 
-    auto plugin = std::move(m_slots[slotIndex].plugin);
-    m_slots[slotIndex].plugin = nullptr;
+    auto plugin = std::move(at(slotIndex).plugin);
+    at(slotIndex).plugin = nullptr;
     // Removing a slot removes it, placeholder included (#647).
-    m_slots[slotIndex].clearMissingPlugin();
+    at(slotIndex).clearMissingPlugin();
     // The instance is gone, so its identity goes with it (#667). Anything still
     // addressing this id now resolves to nothing, which is the honest outcome —
     // far better than resolving to whatever occupies the index next.
-    m_slots[slotIndex].instanceId = 0;
-    m_slots[slotIndex].faultState = std::make_shared<EffectSlotFaultState>();
+    at(slotIndex).instanceId = 0;
+    at(slotIndex).faultState = std::make_shared<EffectSlotFaultState>();
 
     publishSnapshot();
     if (m_onLatencyChanged) {
@@ -260,7 +283,7 @@ bool EffectChain::movePlugin(size_t fromSlot, size_t toSlot) {
     if (reportRealtimeMisuse("EffectChain::movePlugin")) {
         return false;
     }
-    if (fromSlot >= MAX_SLOTS || toSlot >= MAX_SLOTS) {
+    if (fromSlot >= slotCount() || toSlot >= kMaxSlots || !growTo(toSlot + 1)) {
         return false;
     }
 
@@ -270,30 +293,30 @@ bool EffectChain::movePlugin(size_t fromSlot, size_t toSlot) {
 
     // Can only move to a slot nothing else claims. A placeholder claims its slot
     // (#647) — moving onto it would silently destroy a retained record.
-    if (m_slots[toSlot].isOccupied()) {
+    if (at(toSlot).isOccupied()) {
         return false;
     }
 
-    m_slots[toSlot].plugin = std::move(m_slots[fromSlot].plugin);
+    at(toSlot).plugin = std::move(at(fromSlot).plugin);
     // The identity travels with the instance (#667). This is the whole point of
     // the id: a move changes which index holds the plugin and nothing else, so
     // automation addressed to it keeps resolving to the same plugin.
-    m_slots[toSlot].instanceId = m_slots[fromSlot].instanceId;
-    m_slots[toSlot].missingPluginId = std::move(m_slots[fromSlot].missingPluginId);
-    m_slots[toSlot].missingPluginState = std::move(m_slots[fromSlot].missingPluginState);
-    m_slots[toSlot].bypassed.store(m_slots[fromSlot].bypassed.load());
-    m_slots[toSlot].dryWetMix.store(m_slots[fromSlot].dryWetMix.load());
-    m_slots[toSlot].faultState = std::move(m_slots[fromSlot].faultState);
-    if (!m_slots[toSlot].faultState) {
-        m_slots[toSlot].faultState = std::make_shared<EffectSlotFaultState>();
+    at(toSlot).instanceId = at(fromSlot).instanceId;
+    at(toSlot).missingPluginId = std::move(at(fromSlot).missingPluginId);
+    at(toSlot).missingPluginState = std::move(at(fromSlot).missingPluginState);
+    at(toSlot).bypassed.store(at(fromSlot).bypassed.load());
+    at(toSlot).dryWetMix.store(at(fromSlot).dryWetMix.load());
+    at(toSlot).faultState = std::move(at(fromSlot).faultState);
+    if (!at(toSlot).faultState) {
+        at(toSlot).faultState = std::make_shared<EffectSlotFaultState>();
     }
 
-    m_slots[fromSlot].plugin = nullptr;
-    m_slots[fromSlot].clearMissingPlugin();
-    m_slots[fromSlot].instanceId = 0;  // vacated — no instance lives here now (#667)
-    m_slots[fromSlot].bypassed.store(false);
-    m_slots[fromSlot].dryWetMix.store(1.0f);
-    m_slots[fromSlot].faultState = std::make_shared<EffectSlotFaultState>();
+    at(fromSlot).plugin = nullptr;
+    at(fromSlot).clearMissingPlugin();
+    at(fromSlot).instanceId = 0;  // vacated — no instance lives here now (#667)
+    at(fromSlot).bypassed.store(false);
+    at(fromSlot).dryWetMix.store(1.0f);
+    at(fromSlot).faultState = std::make_shared<EffectSlotFaultState>();
 
     publishSnapshot();
     return true;
@@ -303,7 +326,7 @@ bool EffectChain::swapPlugins(size_t slot1, size_t slot2) {
     if (reportRealtimeMisuse("EffectChain::swapPlugins")) {
         return false;
     }
-    if (slot1 >= MAX_SLOTS || slot2 >= MAX_SLOTS) {
+    if (slot1 >= slotCount() || slot2 >= slotCount()) {
         return false;
     }
 
@@ -311,82 +334,86 @@ bool EffectChain::swapPlugins(size_t slot1, size_t slot2) {
         return true;
     }
 
-    std::swap(m_slots[slot1].plugin, m_slots[slot2].plugin);
+    std::swap(at(slot1).plugin, at(slot2).plugin);
     // Identities swap with their instances (#667) — see movePlugin.
-    std::swap(m_slots[slot1].instanceId, m_slots[slot2].instanceId);
-    std::swap(m_slots[slot1].missingPluginId, m_slots[slot2].missingPluginId);
-    std::swap(m_slots[slot1].missingPluginState, m_slots[slot2].missingPluginState);
-    std::swap(m_slots[slot1].faultState, m_slots[slot2].faultState);
+    std::swap(at(slot1).instanceId, at(slot2).instanceId);
+    std::swap(at(slot1).missingPluginId, at(slot2).missingPluginId);
+    std::swap(at(slot1).missingPluginState, at(slot2).missingPluginState);
+    std::swap(at(slot1).faultState, at(slot2).faultState);
 
-    bool bypass1 = m_slots[slot1].bypassed.load();
-    float mix1 = m_slots[slot1].dryWetMix.load();
+    bool bypass1 = at(slot1).bypassed.load();
+    float mix1 = at(slot1).dryWetMix.load();
 
-    m_slots[slot1].bypassed.store(m_slots[slot2].bypassed.load());
-    m_slots[slot1].dryWetMix.store(m_slots[slot2].dryWetMix.load());
+    at(slot1).bypassed.store(at(slot2).bypassed.load());
+    at(slot1).dryWetMix.store(at(slot2).dryWetMix.load());
 
-    m_slots[slot2].bypassed.store(bypass1);
-    m_slots[slot2].dryWetMix.store(mix1);
+    at(slot2).bypassed.store(bypass1);
+    at(slot2).dryWetMix.store(mix1);
 
     publishSnapshot();
     return true;
 }
 
 PluginInstancePtr EffectChain::getPlugin(size_t slotIndex) const {
-    if (slotIndex >= MAX_SLOTS) {
+    if (slotIndex >= slotCount()) {
         return nullptr;
     }
-    return m_slots[slotIndex].plugin;
+    return at(slotIndex).plugin;
 }
 
 const EffectSlot* EffectChain::getSlot(size_t slotIndex) const {
-    if (slotIndex >= MAX_SLOTS) {
+    if (slotIndex >= slotCount()) {
         return nullptr;
     }
-    return &m_slots[slotIndex];
+    return &at(slotIndex);
 }
 
 bool EffectChain::isSlotEmpty(size_t slotIndex) const {
-    if (slotIndex >= MAX_SLOTS) {
+    if (slotIndex >= slotCount()) {
         return true;
     }
     // "Free to use", not the RT predicate: a retained missing-plugin record
     // claims its slot (#647).
-    return !m_slots[slotIndex].isOccupied();
+    return !at(slotIndex).isOccupied();
 }
 
 uint64_t EffectChain::getSlotInstanceId(size_t slotIndex) const {
-    if (slotIndex >= MAX_SLOTS) {
+    if (slotIndex >= slotCount()) {
         return 0;
     }
-    return m_slots[slotIndex].instanceId;
+    return at(slotIndex).instanceId;
 }
 
 size_t EffectChain::findSlotByInstanceId(uint64_t instanceId) const {
     // Id 0 means "no instance". Unoccupied slots carry 0, so matching on it would
     // resolve every un-addressed curve to the first empty slot (#667).
     if (instanceId == 0) {
-        return MAX_SLOTS;
+        return kNoSlot;
     }
-    for (size_t i = 0; i < MAX_SLOTS; ++i) {
-        if (m_slots[i].instanceId == instanceId) {
+    const size_t count = slotCount();
+    for (size_t i = 0; i < count; ++i) {
+        if (at(i).instanceId == instanceId) {
             return i;
         }
     }
-    return MAX_SLOTS;
+    return kNoSlot;
 }
 
 size_t EffectChain::getFirstEmptySlot() const {
-    for (size_t i = 0; i < MAX_SLOTS; ++i) {
-        if (!m_slots[i].isOccupied()) {
+    const size_t count = slotCount();
+    for (size_t i = 0; i < count; ++i) {
+        if (!at(i).isOccupied()) {
             return i;
         }
     }
-    return MAX_SLOTS;
+    // Every current slot is taken: the next index is where insertPlugin grows to.
+    return count < kMaxSlots ? count : kNoSlot;
 }
 
 size_t EffectChain::getMissingPluginCount() const {
     size_t count = 0;
-    for (const auto& slot : m_slots) {
+    for (size_t i_ = 0, n_ = slotCount(); i_ < n_; ++i_) {
+        const auto& slot = at(i_);
         if (slot.hasMissingPlugin()) {
             ++count;
         }
@@ -395,15 +422,16 @@ size_t EffectChain::getMissingPluginCount() const {
 }
 
 std::string EffectChain::getMissingPluginId(size_t slotIndex) const {
-    if (slotIndex >= MAX_SLOTS) {
+    if (slotIndex >= slotCount()) {
         return {};
     }
-    return m_slots[slotIndex].missingPluginId;
+    return at(slotIndex).missingPluginId;
 }
 
 size_t EffectChain::getActiveSlotCount() const {
     size_t count = 0;
-    for (const auto& slot : m_slots) {
+    for (size_t i_ = 0, n_ = slotCount(); i_ < n_; ++i_) {
+        const auto& slot = at(i_);
         if (!slot.isEmpty()) {
             ++count;
         }
@@ -415,7 +443,8 @@ void EffectChain::clear() {
     if (reportRealtimeMisuse("EffectChain::clear")) {
         return;
     }
-    for (auto& slot : m_slots) {
+    for (size_t i_ = 0, n_ = slotCount(); i_ < n_; ++i_) {
+        auto& slot = at(i_);
         slot.plugin = nullptr;
         slot.clearMissingPlugin();
         slot.instanceId = 0;  // every instance is gone, so every identity is (#667)
@@ -431,11 +460,11 @@ void EffectChain::clear() {
 // ==============================
 
 void EffectChain::setSlotBypassed(size_t slotIndex, bool bypassed) {
-    if (slotIndex < MAX_SLOTS) {
+    if (slotIndex < slotCount()) {
         if (!bypassed) {
-            clearFaultState(m_slots[slotIndex].faultState);
+            clearFaultState(at(slotIndex).faultState);
         }
-        m_slots[slotIndex].bypassed.store(bypassed, std::memory_order_release);
+        at(slotIndex).bypassed.store(bypassed, std::memory_order_release);
         if (!reportRealtimeMisuse("EffectChain::setSlotBypassed")) {
             publishSnapshot();
             if (m_onLatencyChanged) {
@@ -446,18 +475,18 @@ void EffectChain::setSlotBypassed(size_t slotIndex, bool bypassed) {
 }
 
 bool EffectChain::isSlotBypassed(size_t slotIndex) const {
-    if (slotIndex >= MAX_SLOTS) {
+    if (slotIndex >= slotCount()) {
         return true;
     }
-    return m_slots[slotIndex].bypassed.load(std::memory_order_acquire) ||
-           isFaultBypassed(m_slots[slotIndex].faultState);
+    return at(slotIndex).bypassed.load(std::memory_order_acquire) ||
+           isFaultBypassed(at(slotIndex).faultState);
 }
 
 bool EffectChain::isSlotBypassedByNonFiniteOutput(size_t slotIndex) const {
-    if (slotIndex >= MAX_SLOTS) {
+    if (slotIndex >= slotCount()) {
         return false;
     }
-    return isFaultBypassed(m_slots[slotIndex].faultState);
+    return isFaultBypassed(at(slotIndex).faultState);
 }
 
 void EffectChain::setChainBypassed(bool bypassed) {
@@ -468,10 +497,10 @@ void EffectChain::setChainBypassed(bool bypassed) {
 }
 
 uint64_t EffectChain::getSlotNonFiniteOutputCount(size_t slotIndex) const {
-    if (slotIndex >= MAX_SLOTS || !m_slots[slotIndex].faultState) {
+    if (slotIndex >= slotCount() || !at(slotIndex).faultState) {
         return 0;
     }
-    return m_slots[slotIndex].faultState->nonFiniteOutputCount.load(std::memory_order_acquire);
+    return at(slotIndex).faultState->nonFiniteOutputCount.load(std::memory_order_acquire);
 }
 
 // ==============================
@@ -479,8 +508,8 @@ uint64_t EffectChain::getSlotNonFiniteOutputCount(size_t slotIndex) const {
 // ==============================
 
 void EffectChain::setSlotDryWetMix(size_t slotIndex, float mix) {
-    if (slotIndex < MAX_SLOTS) {
-        m_slots[slotIndex].dryWetMix.store(std::clamp(mix, 0.0f, 1.0f), std::memory_order_release);
+    if (slotIndex < slotCount()) {
+        at(slotIndex).dryWetMix.store(std::clamp(mix, 0.0f, 1.0f), std::memory_order_release);
         if (!reportRealtimeMisuse("EffectChain::setSlotDryWetMix")) {
             publishSnapshot();
         }
@@ -488,10 +517,10 @@ void EffectChain::setSlotDryWetMix(size_t slotIndex, float mix) {
 }
 
 float EffectChain::getSlotDryWetMix(size_t slotIndex) const {
-    if (slotIndex >= MAX_SLOTS) {
+    if (slotIndex >= slotCount()) {
         return 1.0f;
     }
-    return m_slots[slotIndex].dryWetMix.load(std::memory_order_acquire);
+    return at(slotIndex).dryWetMix.load(std::memory_order_acquire);
 }
 
 // ==============================
@@ -510,7 +539,8 @@ void EffectChain::prepare(double sampleRate, uint32_t maxBlockSize) {
         m_dryBuffer.resize(required);
     }
 
-    for (auto& slot : m_slots) {
+    for (size_t i_ = 0, n_ = slotCount(); i_ < n_; ++i_) {
+        auto& slot = at(i_);
         if (!slot.plugin) {
             continue;
         }
@@ -532,7 +562,8 @@ void EffectChain::process(float** buffer, uint32_t numChannels, uint32_t numFram
     }
 
     // Process each slot in sequence
-    for (const auto& slot : m_slots) {
+    for (size_t i_ = 0, n_ = slotCount(); i_ < n_; ++i_) {
+        const auto& slot = at(i_);
         // Skip empty or bypassed slots
         if (slot.isEmpty() || slot.bypassed.load(std::memory_order_acquire) || isFaultBypassed(slot.faultState)) {
             continue;
@@ -646,7 +677,7 @@ void EffectChainSnapshot::process(float** buffer, uint32_t numChannels, uint32_t
     }
 
     // Process each slot in sequence
-    for (size_t slotIdx = 0; slotIdx < MAX_SLOTS; ++slotIdx) {
+    for (size_t slotIdx = 0; slotIdx < m_slots.size(); ++slotIdx) {
         const auto& slot = m_slots[slotIdx];
 
         // Skip empty or bypassed slots
@@ -747,14 +778,25 @@ std::vector<uint8_t> EffectChain::saveState() const {
     state.push_back('N');
     state.push_back('E');
     state.push_back('C');                  // Aestra Effect Chain magic
-    state.push_back(kStateFormatVersion);  // Format version (see loadState dispatch)
-
-    // Write slot count
-    state.push_back(static_cast<uint8_t>(MAX_SLOTS));
+    // How many slots to write. At least the initial ten, so a project that never
+    // grew its chain is saved exactly as before (v2, count 10). Past that, only
+    // up to the last occupied slot: trailing empty slots are an artefact of the
+    // chain having once grown, not something worth keeping in the file. A chain
+    // that does reach past ten is written as v3 so an older build refuses it
+    // cleanly instead of reading a count it was never taught.
+    size_t writeCount = kInitialSlots;
+    for (size_t i = slotCount(); i > kInitialSlots; --i) {
+        if (at(i - 1).isOccupied()) {
+            writeCount = i;
+            break;
+        }
+    }
+    state.push_back(writeCount > kInitialSlots ? kStateFormatVersionLong : kStateFormatVersion);
+    state.push_back(static_cast<uint8_t>(writeCount));
 
     // Write each slot
-    for (size_t i = 0; i < MAX_SLOTS; ++i) {
-        const auto& slot = m_slots[i];
+    for (size_t i = 0; i < writeCount; ++i) {
+        const auto& slot = at(i);
 
         // A slot holding a placeholder for a plugin that would not load is NOT
         // empty (#647). Re-emit the retained record verbatim so a load/save on a
@@ -826,20 +868,41 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
     }
 
     const uint8_t version = state[3];
-    if (version == 0 || version > kStateFormatVersion) {
+    if (version == 0 || version > kStateFormatVersionLong) {
         // Unknown/future format: refuse rather than misparse. When a v2 layout is
         // added, dispatch here (e.g. `if (version >= 2) return loadStateV2(...)`)
         // while keeping the v1 path below so older chains still load.
         Aestra::Log::warning("[EffectChain] Unsupported effect-chain state version " + std::to_string(version) +
-                             " (this build supports up to " + std::to_string(kStateFormatVersion) +
+                             " (this build supports up to " + std::to_string(kStateFormatVersionLong) +
                              "); skipping restore.");
         return false;
     }
 
-    uint8_t slotCount = state[4];
-    if (slotCount != MAX_SLOTS) {
+    // v1/v2 always carry exactly the initial ten slots. v3 (V8-S3) carries the
+    // grown count, anywhere from the initial ten up to the ceiling.
+    const uint8_t savedSlots = state[4];
+    const bool countValid = version < kStateFormatVersionLong
+                                ? savedSlots == kInitialSlots
+                                : (savedSlots >= kInitialSlots && savedSlots <= kMaxSlots);
+    if (!countValid) {
         return false;
     }
+
+    // Size the chain to the payload: grow to hold it, and empty (then drop from
+    // the count) anything past it, so a load always yields exactly what was saved.
+    // Slot objects stay allocated, so any address a reader already holds stays
+    // valid; growTo reuses them.
+    growTo(savedSlots);
+    for (size_t extra = savedSlots; extra < slotCount(); ++extra) {
+        auto& dead = at(extra);
+        dead.plugin = nullptr;
+        dead.clearMissingPlugin();
+        dead.instanceId = 0;
+        dead.bypassed.store(false);
+        dead.dryWetMix.store(1.0f);
+        dead.faultState = std::make_shared<EffectSlotFaultState>();
+    }
+    m_slotCount.store(savedSlots, std::memory_order_release);
 
     size_t offset = 5;
 
@@ -878,7 +941,7 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
         return fresh;
     };
 
-    for (size_t i = 0; i < MAX_SLOTS && offset < state.size(); ++i) {
+    for (size_t i = 0; i < savedSlots && offset < state.size(); ++i) {
         uint8_t hasPlugin = state[offset++];
 
         uint64_t wireInstanceId = 0;
@@ -891,13 +954,13 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
         }
 
         if (!hasPlugin) {
-            m_slots[i].plugin = nullptr;
-            m_slots[i].clearMissingPlugin();
+            at(i).plugin = nullptr;
+            at(i).clearMissingPlugin();
             // Loading into a chain that was already populated must not leave the
             // previous occupant's identity behind on a now-empty slot, or a
             // lookup for that id would resolve to a slot holding nothing (#667).
-            m_slots[i].instanceId = 0;
-            m_slots[i].faultState = std::make_shared<EffectSlotFaultState>();
+            at(i).instanceId = 0;
+            at(i).faultState = std::make_shared<EffectSlotFaultState>();
             continue;
         }
 
@@ -979,8 +1042,8 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
         if (instance) {
             instance->activate();
 
-            m_slots[i].plugin = std::move(instance);
-            m_slots[i].clearMissingPlugin();
+            at(i).plugin = std::move(instance);
+            at(i).clearMissingPlugin();
         } else {
             // The plugin is unavailable, or its state was unreadable. Retain
             // the record instead of dropping it (#647) — dropping it here is
@@ -991,9 +1054,9 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
             // cannot progressively mutate it. bypass and dry/wet are stored
             // post-sanitisation, which is what a live plugin round-trips to as
             // well, so both paths converge after one cycle and stay fixed.
-            m_slots[i].plugin = nullptr;
-            m_slots[i].missingPluginId = pluginId;
-            m_slots[i].missingPluginState = std::move(pluginState);
+            at(i).plugin = nullptr;
+            at(i).missingPluginId = pluginId;
+            at(i).missingPluginState = std::move(pluginState);
 
             if (stateRejected) {
                 if (outReport) {
@@ -1017,10 +1080,10 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
         // with a missing/duplicate id mints with a diagnostic (Contract I5).
         // Automation addressed to a plugin that failed to load has to survive
         // the round trip exactly as the placeholder does (Contract I6).
-        m_slots[i].instanceId = resolveSlotIdentity(wireInstanceId, i);
-        m_slots[i].bypassed.store(bypassed);
-        m_slots[i].dryWetMix.store(dryWet);
-        m_slots[i].faultState = std::make_shared<EffectSlotFaultState>();
+        at(i).instanceId = resolveSlotIdentity(wireInstanceId, i);
+        at(i).bypassed.store(bypassed);
+        at(i).dryWetMix.store(dryWet);
+        at(i).faultState = std::make_shared<EffectSlotFaultState>();
     }
 
     publishSnapshot();
@@ -1034,7 +1097,8 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
 uint32_t EffectChain::getTotalLatency() const {
     uint32_t total = 0;
 
-    for (const auto& slot : m_slots) {
+    for (size_t i_ = 0, n_ = slotCount(); i_ < n_; ++i_) {
+        const auto& slot = at(i_);
         if (!slot.isEmpty() && !slot.bypassed.load() && slot.plugin) {
             total += slot.plugin->getLatencySamples();
         }
@@ -1051,7 +1115,8 @@ void EffectChain::reset() {
     bool wasBypassed = m_chainBypassed.exchange(true);
 
     // 2. Reboot each plugin to clear internal buffers (delay lines, etc.)
-    for (auto& slot : m_slots) {
+    for (size_t i_ = 0, n_ = slotCount(); i_ < n_; ++i_) {
+        auto& slot = at(i_);
         if (slot.plugin) {
             // Check if active before resetting?
             if (slot.plugin->isActive()) {
@@ -1075,7 +1140,7 @@ std::shared_ptr<const EffectChainSnapshot> EffectChain::createSnapshot() const {
     if (reportRealtimeMisuse("EffectChain::createSnapshot")) {
         return nullptr;
     }
-    auto snapshot = std::make_shared<EffectChainSnapshot>(m_slots);
+    auto snapshot = std::make_shared<EffectChainSnapshot>(*this);
     return snapshot;
 }
 

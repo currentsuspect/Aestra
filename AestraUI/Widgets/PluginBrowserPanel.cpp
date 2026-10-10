@@ -1470,8 +1470,9 @@ int EffectChainRack::lastPopulatedSlot() const {
 
 int EffectChainRack::visibleSlotCount() const {
     // A reorder drag needs every numbered target available as a drop site.
+    // The initial ten, or further if the chain has grown past them: not all 64.
     if (m_isDraggingReorder) {
-        return MAX_SLOTS;
+        return std::min(MAX_SLOTS, std::max(INITIAL_SLOTS, lastPopulatedSlot() + 2));
     }
     // Populated slots, plus exactly one "+ Add insert" row.
     return std::min(MAX_SLOTS, lastPopulatedSlot() + 2);

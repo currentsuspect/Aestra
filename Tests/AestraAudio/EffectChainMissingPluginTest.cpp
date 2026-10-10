@@ -55,8 +55,8 @@ template <typename T> void appendRaw(std::vector<uint8_t>& out, const T& value) 
 
 std::vector<uint8_t> buildBlob(const std::vector<SlotRecord>& slots) {
     std::vector<uint8_t> out{'N', 'E', 'C', EffectChain::kStateFormatVersion,
-                             static_cast<uint8_t>(EffectChain::MAX_SLOTS)};
-    for (size_t i = 0; i < EffectChain::MAX_SLOTS; ++i) {
+                             static_cast<uint8_t>(EffectChain::kInitialSlots)};
+    for (size_t i = 0; i < EffectChain::kInitialSlots; ++i) {
         const SlotRecord empty;
         const SlotRecord& s = i < slots.size() ? slots[i] : empty;
         if (!s.present) {
@@ -77,15 +77,15 @@ std::vector<uint8_t> buildBlob(const std::vector<SlotRecord>& slots) {
 
 // Parse a blob back so assertions can talk about slots rather than byte offsets.
 bool parseBlob(const std::vector<uint8_t>& blob, std::vector<SlotRecord>& out) {
-    out.assign(EffectChain::MAX_SLOTS, SlotRecord{});
+    out.assign(EffectChain::kInitialSlots, SlotRecord{});
     if (blob.size() < 5 || blob[0] != 'N' || blob[1] != 'E' || blob[2] != 'C') {
         return false;
     }
-    if (blob[4] != static_cast<uint8_t>(EffectChain::MAX_SLOTS)) {
+    if (blob[4] != static_cast<uint8_t>(EffectChain::kInitialSlots)) {
         return false;
     }
     size_t off = 5;
-    for (size_t i = 0; i < EffectChain::MAX_SLOTS; ++i) {
+    for (size_t i = 0; i < EffectChain::kInitialSlots; ++i) {
         if (off >= blob.size()) return false;
         const uint8_t has = blob[off++];
         if (!has) continue;
@@ -141,7 +141,7 @@ int main() {
     // ---------------------------------------------------------------------
     // The core invariant: a chain of unavailable plugins survives load/save.
     // ---------------------------------------------------------------------
-    std::vector<SlotRecord> original(EffectChain::MAX_SLOTS);
+    std::vector<SlotRecord> original(EffectChain::kInitialSlots);
     original[0] = {true, 1234, kMissingA, true, 0.375f, bytes({0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01})};
     original[3] = {true, 5678, kMissingB, false, 1.0f, bytes({0x11, 0x22})};
     original[7] = {true, 9012, kMissingA, false, 0.0f, {}}; // empty opaque state is legal
@@ -205,7 +205,7 @@ int main() {
         check(chain.loadState(blob0, manager()), "fidelity: loadState ok");
         std::vector<SlotRecord> out;
         check(parseBlob(chain.saveState(), out), "fidelity: resaved blob parses");
-        if (out.size() == EffectChain::MAX_SLOTS) {
+        if (out.size() == EffectChain::kInitialSlots) {
             check(out[0].present && out[0].id == kMissingA, "slot 0 id preserved");
             check(out[0].bypassed, "slot 0 bypass=true preserved");
             check(out[0].dryWet == 0.375f, "slot 0 dry/wet preserved exactly");
@@ -227,7 +227,7 @@ int main() {
         check(chain.loadState(blob0, manager()), "position: loadState ok");
         std::vector<SlotRecord> out;
         check(parseBlob(chain.saveState(), out), "position: resaved blob parses");
-        if (out.size() == EffectChain::MAX_SLOTS) {
+        if (out.size() == EffectChain::kInitialSlots) {
             check(out[0].present && out[3].present && out[7].present,
                   "placeholders stay at slots 0, 3 and 7");
             for (size_t i : {1u, 2u, 4u, 5u, 6u, 8u, 9u}) {
@@ -242,7 +242,7 @@ int main() {
     {
         EffectChain chain;
         chain.prepare(48000.0, 512);
-        std::vector<SlotRecord> recs(EffectChain::MAX_SLOTS);
+        std::vector<SlotRecord> recs(EffectChain::kInitialSlots);
         recs[0] = {true, 0, kMissingA, false, 1.0f, bytes({0x01})};
         check(chain.loadState(buildBlob(recs), manager()), "occupancy: loadState ok");
 
@@ -261,7 +261,7 @@ int main() {
     {
         EffectChain chain;
         chain.prepare(48000.0, 512);
-        std::vector<SlotRecord> recs(EffectChain::MAX_SLOTS);
+        std::vector<SlotRecord> recs(EffectChain::kInitialSlots);
         recs[0] = {true, 0, kMissingA, false, 1.0f, bytes({0xAA})};
         recs[1] = {true, 0, kMissingB, false, 1.0f, bytes({0xBB})};
         check(chain.loadState(buildBlob(recs), manager()), "mixed: loadState ok");
@@ -275,7 +275,7 @@ int main() {
 
         std::vector<SlotRecord> out;
         check(parseBlob(chain.saveState(), out), "mixed: resaved blob parses");
-        if (out.size() == EffectChain::MAX_SLOTS) {
+        if (out.size() == EffectChain::kInitialSlots) {
             check(out[0].present && out[0].id == kMissingA, "surviving placeholder still written");
             check(out[0].state == bytes({0xAA}), "surviving placeholder keeps its bytes");
             check(!out[1].present, "removed slot is written as empty");

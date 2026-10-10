@@ -3044,7 +3044,7 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
                 if (track.effectChainSnapshot && curve.deviceInstanceId != 0) {
                     const size_t slotIndex =
                         track.effectChainSnapshot->findSlotByInstanceId(curve.deviceInstanceId);
-                    if (slotIndex < EffectChainSnapshot::MAX_SLOTS) {
+                    if (slotIndex != EffectChain::kNoSlot) {
                         const auto& slot = track.effectChainSnapshot->slot(slotIndex);
                         if (!slot.plugin) {
                             // empty slot: nothing to drive

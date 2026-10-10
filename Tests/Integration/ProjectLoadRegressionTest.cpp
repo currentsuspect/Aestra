@@ -903,7 +903,7 @@ void testV1AutomationCurveMigratesToInstanceId() {
 
     // A v1 chain-state blob: one occupied slot (unknown plugin id -> placeholder
     // with a minted identity on load), no instance ids on the wire.
-    std::vector<uint8_t> blob{'N', 'E', 'C', 1, static_cast<uint8_t>(EffectChain::MAX_SLOTS)};
+    std::vector<uint8_t> blob{'N', 'E', 'C', 1, static_cast<uint8_t>(EffectChain::kInitialSlots)};
     const auto put = [&blob](const void* data, size_t n) {
         const auto* bytes = static_cast<const uint8_t*>(data);
         blob.insert(blob.end(), bytes, bytes + n);
@@ -919,7 +919,7 @@ void testV1AutomationCurveMigratesToInstanceId() {
     put(&dryWet, sizeof(dryWet));
     const uint32_t stateLen = 0;
     put(&stateLen, sizeof(stateLen));
-    for (size_t s = 1; s < EffectChain::MAX_SLOTS; ++s) {
+    for (size_t s = 1; s < EffectChain::kInitialSlots; ++s) {
         blob.push_back(0);
     }
     std::string chainHex;

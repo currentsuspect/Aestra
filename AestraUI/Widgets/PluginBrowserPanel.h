@@ -317,7 +317,13 @@ class NUIPlatformBridge;
 
 class EffectChainRack : public NUIComponent {
 public:
-    static constexpr int MAX_SLOTS = 10;
+    /// Ceiling on rows the rack can hold. Mirrors Audio::EffectChain::kMaxSlots
+    /// (asserted in PluginUIController.cpp, which sees both). The rack shows only
+    /// the populated rows plus one "+ Add insert" row, so a larger ceiling costs
+    /// nothing until a chain actually grows (V8-S3).
+    static constexpr int MAX_SLOTS = 64;
+    /// Rows shown as drop targets during a reorder drag when the chain is short.
+    static constexpr int INITIAL_SLOTS = 10;
 
     struct EffectSlotInfo {
         std::string name;       ///< Plugin name or "Empty"

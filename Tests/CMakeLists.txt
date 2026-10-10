@@ -995,6 +995,17 @@ target_include_directories(AestraEffectChainSnapshotTest PRIVATE
 add_test(NAME AestraEffectChainSnapshotTest COMMAND AestraEffectChainSnapshotTest)
 set_tests_properties(AestraEffectChainSnapshotTest PROPERTIES LABELS "audio;plugin;contract:plugins")
 
+# Dynamic insert slots (V8-S3): the chain grows past ten without breaking RT-safety,
+# slot-index addressing, automation identity or the project format.
+add_executable(AestraEffectChainDynamicSlotsTest AestraAudio/EffectChainDynamicSlotsTest.cpp)
+target_link_libraries(AestraEffectChainDynamicSlotsTest PRIVATE AestraAudio)
+target_include_directories(AestraEffectChainDynamicSlotsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraEffectChainDynamicSlotsTest COMMAND AestraEffectChainDynamicSlotsTest)
+set_tests_properties(AestraEffectChainDynamicSlotsTest PROPERTIES LABELS "audio;plugin;contract:plugins")
+
 add_executable(AestraEffectChainStateVersionTest AestraAudio/EffectChainStateVersionTest.cpp)
 target_link_libraries(AestraEffectChainStateVersionTest PRIVATE AestraAudio)
 target_include_directories(AestraEffectChainStateVersionTest PRIVATE
@@ -2473,6 +2484,29 @@ if(AESTRA_ENABLE_UI)
              COMMAND MixerViewModelAutomationPresenceTest)
     set_tests_properties(MixerViewModelAutomationPresenceTest PROPERTIES
         LABELS "audio;automation;mixer;contract:audio")
+
+    # V8-S3: the insert list follows the chain's real slot count (ten until it grows).
+    aestra_require_ui_targets(MixerViewModelDynamicInsertsTest AestraUI_Core AestraUI_Platform)
+    add_executable(MixerViewModelDynamicInsertsTest
+        AestraAudio/MixerViewModelDynamicInsertsTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/MixerViewModel.cpp
+    )
+    target_link_libraries(MixerViewModelDynamicInsertsTest PRIVATE
+        AestraUI_Core AestraUI_Platform AestraAudio
+    )
+    target_include_directories(MixerViewModelDynamicInsertsTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME MixerViewModelDynamicInsertsTest COMMAND MixerViewModelDynamicInsertsTest)
+    set_tests_properties(MixerViewModelDynamicInsertsTest PROPERTIES
+        LABELS "audio;mixer;contract:audio")
 endif()
 
 # Panel resize/layout regression (triage 2026-08-14): audio clip editor
@@ -3157,6 +3191,7 @@ if(AESTRA_ENABLE_UI)
         EditorCloseDeferredTest
         PanelWindowClickSwallowTest
         MixerViewModelAutomationPresenceTest
+        MixerViewModelDynamicInsertsTest
         MixerDropdownKeyboardTest
         BPMEditorPaintTest
         TransportClockFormatTest

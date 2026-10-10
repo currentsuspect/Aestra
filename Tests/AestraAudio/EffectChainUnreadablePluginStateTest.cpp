@@ -75,8 +75,8 @@ template <typename T> void appendRaw(std::vector<uint8_t>& out, const T& value) 
 // wire format rather than restating the implementation.
 std::vector<uint8_t> buildBlob(const std::vector<SlotRecord>& slots) {
     std::vector<uint8_t> out{'N', 'E', 'C', EffectChain::kStateFormatVersion,
-                             static_cast<uint8_t>(EffectChain::MAX_SLOTS)};
-    for (size_t i = 0; i < EffectChain::MAX_SLOTS; ++i) {
+                             static_cast<uint8_t>(EffectChain::kInitialSlots)};
+    for (size_t i = 0; i < EffectChain::kInitialSlots; ++i) {
         const SlotRecord empty;
         const SlotRecord& s = i < slots.size() ? slots[i] : empty;
         if (!s.present) {
@@ -97,15 +97,15 @@ std::vector<uint8_t> buildBlob(const std::vector<SlotRecord>& slots) {
 
 // Parse a blob back so assertions talk about slots rather than byte offsets.
 bool parseBlob(const std::vector<uint8_t>& blob, std::vector<SlotRecord>& out) {
-    out.assign(EffectChain::MAX_SLOTS, SlotRecord{});
+    out.assign(EffectChain::kInitialSlots, SlotRecord{});
     if (blob.size() < 5 || blob[0] != 'N' || blob[1] != 'E' || blob[2] != 'C') {
         return false;
     }
-    if (blob[4] != static_cast<uint8_t>(EffectChain::MAX_SLOTS)) {
+    if (blob[4] != static_cast<uint8_t>(EffectChain::kInitialSlots)) {
         return false;
     }
     size_t off = 5;
-    for (size_t i = 0; i < EffectChain::MAX_SLOTS; ++i) {
+    for (size_t i = 0; i < EffectChain::kInitialSlots; ++i) {
         if (off >= blob.size()) return false;
         const uint8_t has = blob[off++];
         if (!has) continue;
@@ -172,7 +172,7 @@ int main() {
         // reliably invalid.
         const std::vector<uint8_t> garbage{0x00, 0x01};
 
-        std::vector<SlotRecord> recs(EffectChain::MAX_SLOTS);
+        std::vector<SlotRecord> recs(EffectChain::kInitialSlots);
         recs[0] = {true, 11, kEqId, false, 1.0f, garbage};
 
         EffectChain chain;
@@ -229,7 +229,7 @@ int main() {
         eq->activate();
         const std::vector<uint8_t> goodState = eq->saveState();
 
-        std::vector<SlotRecord> recs(EffectChain::MAX_SLOTS);
+        std::vector<SlotRecord> recs(EffectChain::kInitialSlots);
         recs[0] = {true, 22, kEqId, false, 1.0f, goodState};
 
         EffectChain chain;
