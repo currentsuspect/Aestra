@@ -12,6 +12,7 @@
 // the scenario, because a check that silently does not run reports success.
 
 #include "../Support/NullRenderer.h"
+#include "AutomationLaneEditing.h"
 #include "AestraJSON.h"
 #include "Layout/NUILayoutExplain.h"
 #include "NUIComponent.h"
@@ -71,11 +72,24 @@ bool onlyKeys(Run& run, const JSON& object, const std::set<std::string>& allowed
     return ok;
 }
 
+bool parseTarget(Run& run, const JSON& name, AutomationTarget& out) {
+    const std::string n = name.asString();
+    if (n == "volume") {
+        out = AutomationTarget::Volume;
+    } else if (n == "pan") {
+        out = AutomationTarget::Pan;
+    } else {
+        run.fail("unknown automation target \"" + n + "\" (volume, pan)");
+        return false;
+    }
+    return true;
+}
+
 /** @brief The timeline surface: a real TrackManagerUI in a root, as the app window holds it. */
 class TimelineSurface {
 public:
     bool build(Run& run, const JSON& setup) {
-        if (!onlyKeys(run, setup, {"size", "lanes", "clips"}, "setup")) return false;
+        if (!onlyKeys(run, setup, {"size", "lanes", "clips", "automation", "mode"}, "setup")) return false;
         trackManager_ = std::make_shared<TrackManager>();
         trackManager_->setCommandSink([](const AudioQueueCommand&) { return true; });
         auto& playlist = trackManager_->getPlaylistModel();
@@ -105,6 +119,21 @@ public:
             }
         }
 
+        if (setup.has("automation")) {
+            // Curves as a project would hold them: one per target on a lane.
+            for (const auto& a : setup["automation"].asArray()) {
+                if (!onlyKeys(run, a, {"lane", "target", "points"}, "setup.automation")) return false;
+                AutomationTarget target;
+                if (!parseTarget(run, a["target"], target)) return false;
+                auto* lane = playlist.getLane(lanes_.at(static_cast<size_t>(a["lane"].asNumber())));
+                AutomationCurve curve = makeAutomationCurve(target);
+                for (const auto& p : a["points"].asArray()) {
+                    curve.addPoint(p.asArray()[0].asNumber(), static_cast<float>(p.asArray()[1].asNumber()), 24000.0);
+                }
+                lane->automationCurves.push_back(std::move(curve));
+            }
+        }
+
         manager_ = std::make_shared<TrackManagerUI>(trackManager_);
         root_ = std::make_shared<AestraUI::NUIComponent>();
         root_->addChild(manager_);
@@ -115,6 +144,15 @@ public:
         }
         resize(w, h);
         manager_->refreshTracks();
+        if (setup.has("mode")) {
+            const std::string mode = setup["mode"].asString();
+            if (mode == "automation") {
+                manager_->setPlaylistMode(PlaylistMode::Automation);
+            } else if (mode != "clips") {
+                run.fail("setup.mode: unknown mode \"" + mode + "\" (clips, automation)");
+                return false;
+            }
+        }
         paint();
         return true;
     }
@@ -147,7 +185,7 @@ public:
 
     // A point named the way a user thinks of it: on a clip, or at a beat on a lane.
     bool resolvePoint(Run& run, const JSON& at, AestraUI::NUIPoint& out) {
-        if (!onlyKeys(run, at, {"clip", "fraction", "lane", "beat", "x", "y"}, "at")) return false;
+        if (!onlyKeys(run, at, {"clip", "fraction", "lane", "beat", "value", "target", "x", "y"}, "at")) return false;
         if (at.has("x") && at.has("y")) {
             out = {static_cast<float>(at["x"].asNumber()), static_cast<float>(at["y"].asNumber())};
             return true;
@@ -168,7 +206,16 @@ public:
             return pointAt(run, lane, clip->startBeat + clip->durationBeats * fraction, out);
         }
         if (at.has("lane") && at.has("beat")) {
-            return pointAt(run, static_cast<int>(at["lane"].asNumber()), at["beat"].asNumber(), out);
+            if (!pointAt(run, static_cast<int>(at["lane"].asNumber()), at["beat"].asNumber(), out)) return false;
+            if (at.has("value")) {
+                // An automation value, drawn on its target's range in the lane row.
+                AutomationTarget target = AutomationTarget::Volume;
+                if (at.has("target") && !parseTarget(run, at["target"], target)) return false;
+                const auto b = laneComponentFor(static_cast<int>(at["lane"].asNumber()))->getBounds();
+                out.y = b.y + (1.0f - static_cast<float>(automationHeightOfValue(target, at["value"].asNumber()))) *
+                                  b.height;
+            }
+            return true;
         }
         run.fail("at: needs {clip}, {lane, beat} or {x, y}");
         return false;
@@ -232,6 +279,7 @@ public:
     TrackManager& model() { return *trackManager_; }
     TrackManagerUI& ui() { return *manager_; }
     const std::vector<ClipInstanceID>& clips() const { return clips_; }
+    const std::vector<PlaylistLaneID>& lanes() const { return lanes_; }
 
 private:
     static void collectLanes(const AestraUI::NUIComponent& node, std::vector<std::shared_ptr<TrackUIComponent>>& out) {
@@ -252,7 +300,47 @@ private:
 size_t undoDepth(TrackManager& m) { return m.getCommandHistory().getUndoStack().size(); }
 
 void checkExpect(Run& run, TimelineSurface& s, const JSON& expect, size_t undoBaseline) {
-    if (!onlyKeys(run, expect, {"clip", "undoDepth", "layoutProblems", "lanesInside"}, "expect")) return;
+    if (!onlyKeys(run, expect, {"clip", "undoDepth", "layoutProblems", "lanesInside", "automation", "editedTarget"},
+                  "expect"))
+        return;
+    if (expect.has("automation")) {
+        const JSON& a = expect["automation"];
+        AutomationTarget target;
+        if (onlyKeys(run, a, {"lane", "target", "points"}, "expect.automation") && parseTarget(run, a["target"], target)) {
+            const int laneIndex = static_cast<int>(a["lane"].asNumber());
+            const auto* lane = s.model().getPlaylistModel().getLane(s.lanes().at(static_cast<size_t>(laneIndex)));
+            const int ci = lane ? automationCurveIndexFor(lane->automationCurves, target) : -1;
+            const auto& want = a["points"].asArray();
+            std::ostringstream got;
+            bool same = ci >= 0;
+            if (ci >= 0) {
+                const auto& pts = lane->automationCurves[static_cast<size_t>(ci)].getPoints();
+                same = pts.size() == want.size();
+                for (size_t i = 0; i < pts.size(); ++i) {
+                    got << " [" << pts[i].beat << ", " << pts[i].value << "]";
+                    if (same && (std::fabs(pts[i].beat - want[i].asArray()[0].asNumber()) > 1e-3 ||
+                                 std::fabs(pts[i].value - want[i].asArray()[1].asNumber()) > 1e-3)) {
+                        same = false;
+                    }
+                }
+            }
+            if (!same) {
+                run.fail("lane " + std::to_string(laneIndex) + " " + a["target"].asString() + " curve is" +
+                         (ci < 0 ? std::string(" missing") : got.str()) + ", expected " + a["points"].toString(0));
+            }
+        }
+    }
+    if (expect.has("editedTarget")) {
+        const JSON& e = expect["editedTarget"];
+        AutomationTarget target;
+        if (onlyKeys(run, e, {"lane", "target"}, "expect.editedTarget") && parseTarget(run, e["target"], target)) {
+            const auto lane = s.laneComponentFor(static_cast<int>(e["lane"].asNumber()));
+            if (!lane || lane->getEditedAutomationTarget() != target) {
+                run.fail("lane " + std::to_string(static_cast<int>(e["lane"].asNumber())) + " does not edit " +
+                         e["target"].asString());
+            }
+        }
+    }
     if (expect.has("clip")) {
         const JSON& c = expect["clip"];
         if (!onlyKeys(run, c, {"index", "start", "lane"}, "expect.clip")) return;

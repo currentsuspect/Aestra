@@ -16,7 +16,7 @@
 2617 Source/App/AestraApp.cpp
 3954 Source/Components/FileBrowser.cpp
 1510 Source/Components/TrackManagerUIRender.cpp
-3610 Source/Components/TrackUIComponent.cpp
+3627 Source/Components/TrackUIComponent.cpp
 4936 Source/Core/AestraContent.cpp
 2829 Source/Core/ProjectSerializer.cpp
 1824 Source/Panels/ArsenalPanel.cpp

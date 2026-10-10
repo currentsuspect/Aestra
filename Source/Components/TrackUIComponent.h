@@ -143,6 +143,17 @@ public:
         }
     }
     PlaylistMode getPlaylistMode() const { return m_playlistMode; }
+
+    // V8-A2: the curve automation edits on this lane. A press on another curve's
+    // point makes that curve the edited one; the target picker (V8-A3) sets it.
+    void setEditedAutomationTarget(AutomationTarget target) {
+        m_automationTargetChosen = true;
+        if (m_editedAutomationTarget != target) {
+            m_editedAutomationTarget = target;
+            setDirty(true);
+        }
+    }
+    AutomationTarget getEditedAutomationTarget() const { return m_editedAutomationTarget; }
     
     // Timeline zoom settings
     // Timeline zoom settings
@@ -355,6 +366,8 @@ private:
     };
     WaveformFade m_waveformFade{};
 
+    AutomationTarget m_editedAutomationTarget = AutomationTarget::Volume;
+    bool m_automationTargetChosen = false; // until then, a lane edits the curve it already has
     bool m_isDraggingPoint = false;
     int m_draggedPointIndex = -1;
     int m_draggedCurveIndex = -1;
