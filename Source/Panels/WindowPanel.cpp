@@ -276,7 +276,7 @@ bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         // raise the panel when the press actually lands inside its bounds;
         // otherwise any click on the transport bar would pop every panel to
         // the front.
-        if (getGlobalBounds().contains(event.position)) {
+        if (getBounds().contains(event.position)) { // both window-absolute
             bringToFront();
         }
     }

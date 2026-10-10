@@ -1235,14 +1235,13 @@ void AestraContent::setupArsenalPanels() {
         if (!m_overlayLayer)
             return;
         m_sampleEditorDragging = true;
-        m_sampleEditorDragStartMouseOverlay = m_overlayLayer->globalToLocal(pos);
+        m_sampleEditorDragStartMouse = pos;
         m_sampleEditorDragStartRect = m_sampleEditorRect;
     });
     m_sampleEditorPanel->setOnDragMove([this](const AestraUI::NUIPoint& pos) {
         if (!m_overlayLayer || !m_sampleEditorDragging || !m_sampleEditorPanel)
             return;
-        const AestraUI::NUIPoint currentMouseOverlay = m_overlayLayer->globalToLocal(pos);
-        const AestraUI::NUIPoint delta = currentMouseOverlay - m_sampleEditorDragStartMouseOverlay;
+        const AestraUI::NUIPoint delta = pos - m_sampleEditorDragStartMouse;
         AestraUI::NUIRect proposed = m_sampleEditorDragStartRect;
         proposed.x += delta.x;
         proposed.y += delta.y;
@@ -1395,14 +1394,13 @@ void AestraContent::setupArsenalPanels() {
         if (!m_overlayLayer)
             return;
         m_sampleEditorDragging = true;
-        m_sampleEditorDragStartMouseOverlay = m_overlayLayer->globalToLocal(pos);
+        m_sampleEditorDragStartMouse = pos;
         m_sampleEditorDragStartRect = m_sampleEditorRect;
     });
     m_audioClipEditorPanel->setOnDragMove([this](const AestraUI::NUIPoint& pos) {
         if (!m_overlayLayer || !m_sampleEditorDragging || !m_audioClipEditorPanel)
             return;
-        const AestraUI::NUIPoint currentMouseOverlay = m_overlayLayer->globalToLocal(pos);
-        const AestraUI::NUIPoint delta = currentMouseOverlay - m_sampleEditorDragStartMouseOverlay;
+        const AestraUI::NUIPoint delta = pos - m_sampleEditorDragStartMouse;
         AestraUI::NUIRect proposed = m_sampleEditorDragStartRect;
         proposed.x += delta.x;
         proposed.y += delta.y;
@@ -1922,7 +1920,7 @@ void AestraContent::onRender(AestraUI::NUIRenderer& renderer) {
         if (!component || !component->isVisible()) {
             return;
         }
-        const auto edge = component->getGlobalBounds();
+        const auto edge = component->getBounds();
         const float x = std::round(edge.right()) + 0.5f;
         const float y0 = edge.y + 12.0f;
         const float y1 = edge.bottom() - 12.0f;
@@ -3093,7 +3091,7 @@ AestraContent::hitTestBrowserResizeTarget(const AestraUI::NUIPoint& mouseScreen)
         if (!component || !component->isVisible()) {
             return false;
         }
-        const auto global = component->getGlobalBounds();
+        const auto global = component->getBounds();
         if (mouseScreen.y < global.y || mouseScreen.y > global.bottom()) {
             return false;
         }
@@ -3179,7 +3177,7 @@ void AestraContent::beginPanelDrag(Audio::ViewType view, const AestraUI::NUIPoin
 
     m_viewState.isDragging = true;
     m_viewState.draggingView = view;
-    m_viewState.dragStartMouseOverlay = m_overlayLayer->globalToLocal(mouseScreen);
+    m_viewState.dragStartMouse = mouseScreen;
     const auto startBounds = panel->getBounds();
     m_viewState.dragStartPos = AestraUI::NUIPoint(startBounds.x, startBounds.y);
 
@@ -3196,8 +3194,7 @@ void AestraContent::updatePanelDrag(Audio::ViewType view, const AestraUI::NUIPoi
     UISurfaceGeometry prior = panelPreference(view);
     const Layout::NUIWindowRect region = toWindowRect(computePlacementRegion());
 
-    AestraUI::NUIPoint currentMouseOverlay = m_overlayLayer->globalToLocal(mouseScreen);
-    AestraUI::NUIPoint delta = currentMouseOverlay - m_viewState.dragStartMouseOverlay;
+    AestraUI::NUIPoint delta = mouseScreen - m_viewState.dragStartMouse;
 
     Layout::NUIWindowRect gesture(0.0f, 0.0f, 0.0f, 0.0f);
     const bool restoringMaximized = prior.maximized;
@@ -3207,8 +3204,7 @@ void AestraContent::updatePanelDrag(Audio::ViewType view, const AestraUI::NUIPoi
         // the gesture clears `maximized`.
         const auto maximizedBounds = toWindowRect(panel->getBounds());
         gesture = Layout::restoredRectUnderPointer(maximizedBounds, prior.width, prior.height,
-                                                   Layout::NUIWindowPoint(currentMouseOverlay.x,
-                                                                           currentMouseOverlay.y),
+                                                   Layout::NUIWindowPoint(mouseScreen.x, mouseScreen.y),
                                                    region);
     } else {
         // A move never resizes: the gesture carries the stored size, so a
@@ -3224,7 +3220,7 @@ void AestraContent::updatePanelDrag(Audio::ViewType view, const AestraUI::NUIPoi
         // dragStartPos: rebase it (and the mouse origin) onto the restored
         // position, or the panel jumps on the second pointer update.
         m_viewState.dragStartPos = AestraUI::NUIPoint(applied.x, applied.y);
-        m_viewState.dragStartMouseOverlay = currentMouseOverlay;
+        m_viewState.dragStartMouse = mouseScreen;
     }
 
     setDirty(true);

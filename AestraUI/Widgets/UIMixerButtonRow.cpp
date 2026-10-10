@@ -169,10 +169,9 @@ bool UIMixerButtonRow::onMouseEvent(const NUIMouseEvent& event)
                 else if (m_hovered == 2) text = "Input Monitor";
                 
                 const auto& rect = m_buttonBounds[m_hovered];
-                NUIPoint center(rect.x + rect.width * 0.5f, rect.y + rect.height + 8.0f);
-                NUIPoint globalPos = localToGlobal(center);
-                
-                NUIComponent::showRemoteTooltip(text, globalPos, this);
+                // m_buttonBounds are window-absolute (from getBounds()); so is the tooltip anchor.
+                const NUIPoint anchor(rect.x + rect.width * 0.5f, rect.y + rect.height + 8.0f);
+                NUIComponent::showRemoteTooltip(text, anchor, this);
             } else {
                 NUIComponent::hideRemoteTooltip(this);
             }
