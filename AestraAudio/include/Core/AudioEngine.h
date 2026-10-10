@@ -234,6 +234,12 @@ public:
      */
     void setOfflineRenderActive(bool active) { m_offlineRenderActive.store(active, std::memory_order_relaxed); }
     bool isOfflineRenderActive() const { return m_offlineRenderActive.load(std::memory_order_relaxed); }
+
+    /// V8-A5: how many times a Custom automation curve was skipped because its
+    /// target plugin does not declare supportsRealtimeAutomation(). A non-zero
+    /// count is the honest boundary of third-party automation, visible to
+    /// diagnostics and tests instead of a silent no-op. Counts curve-blocks.
+    uint64_t automationUnsupportedSkips() const { return m_automationUnsupportedSkips.load(std::memory_order_relaxed); }
     /** @brief Replace the active audio graph and compile it for rendering. */
     void setGraph(const AudioGraph& graph) {
         auto preparedGraph = graph;
@@ -951,6 +957,7 @@ private:
     std::atomic<uint32_t> m_outputChannels{2};
     std::atomic<bool> m_transportPlaying{false};
     std::atomic<bool> m_offlineRenderActive{false};
+    std::atomic<uint64_t> m_automationUnsupportedSkips{0};
     // RT-side tracking of last known transport state (avoids race with UI atomic updates)
     bool m_rtLastTransportPlaying{false};
     // Transport edge flags (set in applyPendingCommands, consumed in processBlock)

@@ -3027,35 +3027,31 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
             } else if (curve.getAutomationTarget() == AutomationTarget::Pan) {
                 panTarget = clampD(curve.getValueAtBeat(currentBeat), -1.0, 1.0);
             } else if (curve.getAutomationTarget() == AutomationTarget::Custom) {
-                // Plugin-parameter automation. Internal-format plugins only:
-                // their parameter storage is atomic, so a per-block
-                // setParameter from this thread is lock-free and RT-safe.
-                // Third-party formats are skipped until host param queues
-                // exist (#467). Applied before the effect chain processes
-                // this block, so the value is in effect for these frames.
+                // Plugin-parameter automation through the render-thread
+                // contract (V8-A5, PluginHost.h): the engine asks the plugin,
+                // never its format. Internal plugins store atomically; a
+                // hosted-format adapter will enqueue for the format's own
+                // queue (#467). A plugin that does not declare support is
+                // skipped and counted, never guessed at. Applied before the
+                // chain processes this block.
                 //
-                // Smoothing policy: the *plugin* owns parameter smoothing.
-                // setParameter only stores a target; each internal plugin's
-                // process() ramps toward it — the same contract used for UI
-                // knob moves. We deliberately hand the raw target over once
-                // per block instead of ramping engine-side, so automation
-                // and manual edits share one smoother and never cascade into
-                // double-smoothing. Every internal effect honors this (Drift
-                // was the last to gain per-sample Mix/Pitch smoothing).
+                // The plugin owns smoothing: the raw target is handed over once
+                // per block, the same contract as UI knob moves, so automation
+                // and manual edits never double-smooth.
                 // Automation Identity Contract: resolve by instance id, never
-                // by slot position. A curve whose instance is gone (dangling)
-                // is skipped — it is never re-pointed at whatever now occupies
-                // a slot.
+                // by slot position; a dangling instance is skipped, never
+                // re-pointed at whatever now occupies a slot.
                 if (track.effectChainSnapshot && curve.deviceInstanceId != 0) {
                     const size_t slotIndex =
                         track.effectChainSnapshot->findSlotByInstanceId(curve.deviceInstanceId);
                     if (slotIndex < EffectChainSnapshot::MAX_SLOTS) {
                         const auto& slot = track.effectChainSnapshot->slot(slotIndex);
-                        if (slot.plugin && slot.plugin->getInfo().format == PluginFormat::Internal) {
-                            const float value = curve.getValueAtBeat(currentBeat);
-                            if (std::isfinite(value)) {
-                                slot.plugin->setParameter(curve.paramId, value);
-                            }
+                        if (!slot.plugin) {
+                            // empty slot: nothing to drive
+                        } else if (!slot.plugin->supportsRealtimeAutomation()) {
+                            m_automationUnsupportedSkips.fetch_add(1, std::memory_order_relaxed);
+                        } else if (const float value = curve.getValueAtBeat(currentBeat); std::isfinite(value)) {
+                            slot.plugin->applyAutomation(curve.paramId, value);
                         }
                     }
                 }
