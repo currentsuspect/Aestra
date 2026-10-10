@@ -47,7 +47,7 @@ struct ProjectLoadReport {
 
 class ProjectSerializer {
 public:
-    static constexpr int PROJECT_VERSION_CURRENT = 3;
+    static constexpr int PROJECT_VERSION_CURRENT = 4; // v4: automation tension is audible (V8-A6)
     static constexpr int PROJECT_VERSION_MIN_SUPPORTED = 1;
 
     struct PanelState {

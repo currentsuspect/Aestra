@@ -156,6 +156,7 @@ void testLoadNeverModifiesTheOriginal() {
         "v2/serializer-v2-legacy-audio-split.aes",
         "v2/legacy_audio_assets/shared.wav",
         "v3/serializer-v3-independent-mixer.aes",
+        "v4/serializer-v4-automation-tension.aes",
     };
 
     for (const char* relative : fixtures) {
@@ -476,6 +477,26 @@ void assertV2LegacyAudioSplitSemantics(TrackManager& tracks, const ProjectSerial
     }
 }
 
+// v4 (V8-A6): automation tension is audible and is NOT migrated away. The fixture's one
+// Volume curve has segments of tension 0.6 (early) and -0.4 (late) between three points.
+void assertV4TensionSemantics(TrackManager& tracks, const std::string& generation) {
+    auto& playlist = tracks.getPlaylistModel();
+    require(playlist.getLaneCount() == 1, generation + ": v4 lane count");
+    if (playlist.getLaneCount() != 1) return;
+    const auto* lane = playlist.getLane(playlist.getLaneId(0));
+    require(lane && lane->automationCurves.size() == 1, generation + ": v4 automation curve count");
+    if (!lane || lane->automationCurves.size() != 1) return;
+    const auto& curve = lane->automationCurves[0];
+    require(curve.points.size() == 3, generation + ": v4 point count");
+    if (curve.points.size() != 3) return;
+    require(curve.points[0].curve == 0.6f && curve.points[1].curve == -0.4f && curve.points[2].curve == 0.0f,
+            generation + ": v4 tensions load exactly, unmigrated");
+    require(curve.getValueAtBeat(2.0) > 0.2f + 0.5f * (0.9f - 0.2f),
+            generation + ": the 0.6 segment is above linear at its midpoint (tension is audible)");
+    require(curve.getValueAtBeat(6.0) > 0.9f + 0.5f * (0.3f - 0.9f),
+            generation + ": the -0.4 segment falls late, so it is above linear at its midpoint too");
+}
+
 void assertV3Semantics(TrackManager& tracks, const ProjectSerializer::LoadResult& result,
                        const std::string& generation) {
     require(tracks.getChannelCount() == 2, generation + ": v3 independent channel count");
@@ -502,7 +523,7 @@ void testFixtureCorpus(const std::filesystem::path& tempDir) {
     // `semantics` selects the per-fixture assertions: two fixtures can share a
     // schema version while pinning different things about it, so the version
     // number alone cannot dispatch.
-    enum class Semantics { Structural, V2Identity, V2PositionalMixer, V2LegacyAudioSplit, V3IndependentMixer };
+    enum class Semantics { Structural, V2Identity, V2PositionalMixer, V2LegacyAudioSplit, V3IndependentMixer, V4Tension };
     struct Fixture {
         int version;
         const char* relativePath;
@@ -516,11 +537,14 @@ void testFixtureCorpus(const std::filesystem::path& tempDir) {
     };
     const std::vector<Fixture> fixtures = {
         {1, "v1_minimal.aes", Semantics::Structural, MigrationOutcome::None},
-        {1, "v1_rich.aes", Semantics::Structural, MigrationOutcome::None},
-        {2, "v2/serializer-v2-identity.aes", Semantics::V2Identity, MigrationOutcome::None},
+        // v1_rich and v2-identity store non-zero automation tension, which v3->v4 resets to
+        // linear (V8-A6): a transformation, so they load dirty, marked upgraded.
+        {1, "v1_rich.aes", Semantics::Structural, MigrationOutcome::Transformed},
+        {2, "v2/serializer-v2-identity.aes", Semantics::V2Identity, MigrationOutcome::Transformed},
         {2, "v2/serializer-v2-positional-mixer.aes", Semantics::V2PositionalMixer, MigrationOutcome::None},
         {2, "v2/serializer-v2-legacy-audio-split.aes", Semantics::V2LegacyAudioSplit, MigrationOutcome::Transformed},
         {3, "v3/serializer-v3-independent-mixer.aes", Semantics::V3IndependentMixer, MigrationOutcome::None},
+        {4, "v4/serializer-v4-automation-tension.aes", Semantics::V4Tension, MigrationOutcome::None},
     };
 
     for (int version = ProjectSerializer::PROJECT_VERSION_MIN_SUPPORTED;
@@ -571,6 +595,7 @@ void testFixtureCorpus(const std::filesystem::path& tempDir) {
             case Semantics::V2PositionalMixer: assertV2PositionalMixerSemantics(*firstTracks, label); break;
             case Semantics::V2LegacyAudioSplit: assertV2LegacyAudioSplitSemantics(*firstTracks, first, label); break;
             case Semantics::V3IndependentMixer: assertV3Semantics(*firstTracks, first, label); break;
+            case Semantics::V4Tension: assertV4TensionSemantics(*firstTracks, label); break;
             case Semantics::Structural: break;
         }
 
@@ -614,6 +639,7 @@ void testFixtureCorpus(const std::filesystem::path& tempDir) {
             case Semantics::V2PositionalMixer: assertV2PositionalMixerSemantics(*secondTracks, secondLabel); break;
             case Semantics::V2LegacyAudioSplit: assertV2LegacyAudioSplitSemantics(*secondTracks, second, secondLabel); break;
             case Semantics::V3IndependentMixer: assertV3Semantics(*secondTracks, second, secondLabel); break;
+            case Semantics::V4Tension: assertV4TensionSemantics(*secondTracks, secondLabel); break;
             case Semantics::Structural: break;
         }
     }

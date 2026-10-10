@@ -272,7 +272,7 @@ AutomationCurve volumeCurve(std::initializer_list<std::pair<double, float>> pts,
     AutomationCurve curve("Volume", AutomationTarget::Volume);
     curve.setDefaultValue(1.0f);
     for (const auto& [beat, value] : pts) {
-        curve.addPoint(beat, value, addTimeSamplesPerBeat, 0.5f);
+        curve.addPoint(beat, value, addTimeSamplesPerBeat, 0.0f);
     }
     return curve;
 }
@@ -332,9 +332,9 @@ int main() {
     {
         AutomationCurve pan("Pan", AutomationTarget::Pan);
         pan.setDefaultValue(0.0f);
-        pan.addPoint(0.0, -1.0f, kSpbAt120, 0.5f);
-        pan.addPoint(2.0, -1.0f, kSpbAt120, 0.5f);
-        pan.addPoint(2.5, 1.0f, kSpbAt120, 0.5f);
+        pan.addPoint(0.0, -1.0f, kSpbAt120, 0.0f);
+        pan.addPoint(2.0, -1.0f, kSpbAt120, 0.0f);
+        pan.addPoint(2.5, 1.0f, kSpbAt120, 0.0f);
         const auto r = renderWithAutomation({pan}, 120.0, 5.0);
         require(!r.hasInvalid, "pan: output contains NaN/Inf");
         const double leftEarly = rmsWindow(r.left, 0.5, 1.5, 120.0);
@@ -356,9 +356,9 @@ int main() {
         AutomationCurve param("Gain", AutomationTarget::Custom);
         param.setDefaultValue(1.0f);
         param.paramId = 0;
-        param.addPoint(0.0, 1.0f, kSpbAt120, 0.5f);
-        param.addPoint(2.0, 1.0f, kSpbAt120, 0.5f);
-        param.addPoint(4.0, 0.0f, kSpbAt120, 0.5f);
+        param.addPoint(0.0, 1.0f, kSpbAt120, 0.0f);
+        param.addPoint(2.0, 1.0f, kSpbAt120, 0.0f);
+        param.addPoint(4.0, 0.0f, kSpbAt120, 0.0f);
         const auto r = renderWithAutomation(
             {param}, 120.0, 6.0, std::make_shared<GainParamPlugin>(PluginFormat::Internal),
             [](AutomationCurve& curve, MixerChannel& channel) {
@@ -381,8 +381,8 @@ int main() {
         AutomationCurve param("Gain", AutomationTarget::Custom);
         param.setDefaultValue(1.0f);
         param.paramId = 0;
-        param.addPoint(0.0, 1.0f, kSpbAt120, 0.5f);
-        param.addPoint(4.0, 0.0f, kSpbAt120, 0.5f);
+        param.addPoint(0.0, 1.0f, kSpbAt120, 0.0f);
+        param.addPoint(4.0, 0.0f, kSpbAt120, 0.0f);
         const auto r = renderWithAutomation(
             {param}, 120.0, 6.0, std::make_shared<GainParamPlugin>(PluginFormat::VST3),
             [](AutomationCurve& curve, MixerChannel& channel) {

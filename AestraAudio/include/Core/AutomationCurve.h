@@ -2,6 +2,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -50,6 +51,29 @@ inline constexpr float neutralDefaultFor(AutomationTarget target) noexcept {
     return target == AutomationTarget::Volume ? 1.0f : 0.0f;
 }
 
+/**
+ * @brief Shape of one automation segment (V8-A6, project format v4).
+ *
+ * @p t is the position within the segment (0..1); @p tension is the segment's
+ * starting point's `curve`, clamped to [-1, 1]. 0 is exactly linear. Positive tension
+ * moves toward the end value early (a fast rise), negative late. A symmetric
+ * exponential: exact at both ends and monotonic for every tension, so a segment never
+ * overshoots its two values.
+ *
+ * Before v4 evaluation ignored tension while the UI stored 0.5 on every point, so
+ * honouring the stored values would have bent every curve ever drawn. Loading a
+ * pre-v4 project therefore runs ProjectMigrations' v3->v4 step, which sets every
+ * tension to 0 (the same audio) and marks the project upgraded.
+ */
+inline double automationTensionShape(double t, float tension) {
+    constexpr double kStrength = 6.0; // the bend at |tension| == 1
+    const double k = std::clamp(static_cast<double>(tension), -1.0, 1.0) * kStrength;
+    if (std::abs(k) < 1e-6) {
+        return t;
+    }
+    return (1.0 - std::exp(-k * t)) / (1.0 - std::exp(-k));
+}
+
 struct AutomationPoint {
     // beat is the authoritative position domain: it is what the serializer
     // persists, what the UI edits, and what evaluation/sorting use. sample is
@@ -59,7 +83,7 @@ struct AutomationPoint {
     uint64_t sample{0};
     float value{0.0f};
     double beat{0.0};
-    float curve{0.0f};    // Curve tension (serialized; rendering does not use it yet)
+    float curve{0.0f};    // Tension of the segment that starts here: 0 linear, (0,1] early, [-1,0) late (V8-A6)
     bool selected{false}; // Selection state for UI
 };
 
@@ -155,13 +179,13 @@ struct AutomationCurve {
             return prev->value;
         }
 
-        // Linear interpolation in beat domain
+        // Interpolation in the beat domain, shaped by the segment's tension
         const double beatRange = next->beat - prev->beat;
         if (beatRange <= 0.0) {
             return prev->value;
         }
 
-        const double t = (beat - prev->beat) / beatRange;
+        const double t = automationTensionShape((beat - prev->beat) / beatRange, prev->curve);
         return prev->value + static_cast<float>(t) * (next->value - prev->value);
     }
 
@@ -183,9 +207,9 @@ struct AutomationCurve {
      * @param beat Beat position
      * @param samplesPerBeat Samples per beat for the current project tempo/rate
      * @param value Value at this point (normalized 0-1 for volume/pan)
-     * @param tension Curve tension for serialization (rendering does not use it yet)
+     * @param tension Tension of the segment starting at this point (0 = linear; see automationTensionShape)
      */
-    void addPoint(double beat, float value, double samplesPerBeat, float tension = 0.5f) {
+    void addPoint(double beat, float value, double samplesPerBeat, float tension = 0.0f) {
         AutomationPoint pt;
         pt.sample = static_cast<uint64_t>(beat * samplesPerBeat);
         pt.value = value;

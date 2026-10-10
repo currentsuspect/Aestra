@@ -2751,7 +2751,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                         double bpm = m_trackManager ? m_trackManager->getPlaylistModel().getBPM() : 120.0;
                         double sampleRate = m_trackManager ? m_trackManager->getPlaylistModel().getProjectSampleRate() : 48000.0;
                         double samplesPerBeat = (sampleRate * 60.0) / std::max(bpm, 1.0);
-                        curve.addPoint(beat, value, samplesPerBeat, 0.5f);
+                        curve.addPoint(beat, value, samplesPerBeat); // linear (V8-A6)
                         setDirty(true);
                         repaint(); // Immediate update
                         if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback(); // Force parent update

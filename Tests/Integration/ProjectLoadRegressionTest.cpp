@@ -627,7 +627,7 @@ void testV1FixtureMigratesToCurrentVersion() {
     assert(std::abs(patterns[0]->getMidiNotes()[0].velocity - 0.75f) < 1e-6f);
 
     std::string saved = ProjectSerializer::serialize(trackManager, result.tempo, result.playhead, 0).contents;
-    assert(saved.find("\"version\": 3") != std::string::npos || saved.find("\"version\":3") != std::string::npos);
+    assert(saved.find("\"version\": 4") != std::string::npos || saved.find("\"version\":4") != std::string::npos);
 
     const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectLoadRegression"};
     const auto& testDir = testDirScope.path();
@@ -1338,10 +1338,10 @@ void testLegacyDemoAutomationCloseNearMissPreserved() {
                         "default": 0.800000011920929,
                         "mixerChannelId": 1,
                         "points": [
-                            {"b": 0, "c": 0.5, "v": 0.5},
-                            {"b": 4, "c": 0.5, "v": 1},
-                            {"b": 8, "c": 0.5, "v": 0.2005},
-                            {"b": 12, "c": 0.5, "v": 0.800000011920929}
+                            {"b": 0, "c": 0.0, "v": 0.5},
+                            {"b": 4, "c": 0.0, "v": 1},
+                            {"b": 8, "c": 0.0, "v": 0.2005},
+                            {"b": 12, "c": 0.0, "v": 0.800000011920929}
                         ]
                     }
                 ]
@@ -1357,6 +1357,7 @@ void testLegacyDemoAutomationCloseNearMissPreserved() {
     auto trackManager = std::make_shared<TrackManager>();
     auto result = ProjectSerializer::load(testProject.string(), trackManager);
     assert(result.ok);
+    // Tension is linear (c=0) so the v3->v4 tension reset stays a no-op here.
     assert(result.migrationOutcome != Aestra::MigrationOutcome::Transformed &&
            "a close near-miss must not trigger the migration");
 

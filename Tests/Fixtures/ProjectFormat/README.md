@@ -13,6 +13,7 @@ the exact bytes.
 | v2 | `v2/serializer-v2-positional-mixer.aes` | Generated the same way, from `b4af8de2`. Covers the v2→v3 **topology** change: three lanes, two sharing a name, each paired positionally with a channel carrying distinct state. | Yes |
 | v2 | `v2/serializer-v2-legacy-audio-split.aes` and `v2/legacy_audio_assets/shared.wav` | Generated the same way, from `b4af8de2`. Covers the loader-side **legacy audio split**: one audio pattern placed on two lanes. | Yes |
 | v3 | `v3/serializer-v3-independent-mixer.aes` | Generated with the v3 serializer at the `ba80b605` starting tree. Covers independent playlist lanes/mixer channels and a missing-plugin placeholder with opaque state. | Yes |
+| v4 | `v4/serializer-v4-automation-tension.aes` | Generated with the v4 serializer by a temporary generator in the current tree (2026-10-10, V8-A6): one lane with one Volume curve whose segments carry tension 0.6 and -0.4. Pins that v4 tension loads exactly and is audible, not migrated. | Yes |
 
 The v2 fixture was produced from a temporary `git archive` of `b4af8de2`, with
 a temporary generator linked to that revision's `ProjectSerializer.cpp`. The

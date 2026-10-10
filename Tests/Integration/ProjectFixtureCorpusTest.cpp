@@ -195,10 +195,12 @@ void assertRichFixture(Aestra::Audio::TrackManager& tm, const ProjectSerializer:
         if (curve.points.size() == 2) {
             requireExactD(curve.points[0].beat, 0.5, tag("automation point 1 beat"));
             requireExactF(curve.points[0].value, 0.1f, tag("automation point 1 value"));
-            requireExactF(curve.points[0].curve, 0.25f, tag("automation point 1 tension"));
+            // The file stores tensions 0.25 and 0.5, which pre-v4 evaluation ignored. The v3->v4
+            // migration (V8-A6) resets them to linear, the audio this file always produced.
+            requireExactF(curve.points[0].curve, 0.0f, tag("automation point 1 tension migrated to linear"));
             requireExactD(curve.points[1].beat, 1024.125, tag("automation point 2 beat"));
             requireExactF(curve.points[1].value, 0.9f, tag("automation point 2 value"));
-            requireExactF(curve.points[1].curve, 0.5f, tag("automation point 2 tension"));
+            requireExactF(curve.points[1].curve, 0.0f, tag("automation point 2 tension migrated to linear"));
         }
     }
 }
@@ -226,8 +228,8 @@ int main() {
     // ---------------- Migration proof: a re-save must be stamped current (v2).
     auto resave = ProjectSerializer::serialize(tm1, load1.tempo, load1.playhead, 2);
     require(resave.ok, "re-serialize failed");
-    require(resave.contents.find("\"version\": 3") != std::string::npos ||
-                resave.contents.find("\"version\":3") != std::string::npos,
+    require(resave.contents.find("\"version\": 4") != std::string::npos ||
+                resave.contents.find("\"version\":4") != std::string::npos,
             "re-save not stamped with current version (migration did not run)");
 
     // ---------------- The re-save must load with every value intact.
