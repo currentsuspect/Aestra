@@ -67,6 +67,8 @@ private:
     void updateBounds();
     
     std::shared_ptr<NUISVGDocument> svgDoc_;
+    
+    std::string loadedSvgContent_; // last content given to loadSVG()
     NUIColor color_ = NUIColor::white();
     bool hasCustomColor_ = false;
     std::string themeColorName_;

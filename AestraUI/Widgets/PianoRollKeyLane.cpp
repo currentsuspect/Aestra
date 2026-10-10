@@ -141,11 +141,14 @@ bool PianoRollKeyLane::onMouseEvent(const NUIMouseEvent& event) {
 }
 
 void PianoRollKeyLane::setKeyHeight(float height) {
-    keyHeight_ = std::max(8.0f, height);
+    const float next = std::max(8.0f, height);
+    if (keyHeight_ == next) return; // called every frame from the view's sync
+    keyHeight_ = next;
     repaint();
 }
 
 void PianoRollKeyLane::setScrollOffsetY(float offset) {
+    if (scrollY_ == offset) return; // called every frame from the view's sync
     scrollY_ = offset;
     repaint();
 }
