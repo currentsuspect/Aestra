@@ -303,7 +303,78 @@ int sourceIdWidth() {
     const ClipSourceID restoredId = std::get<AudioSlicePayload>(restored->payload).audioSourceId;
     const ClipSource* src = reloaded->getSourceManager().getSource(restoredId);
     v.check(restoredId == wide, "region keeps source id " + str(wide.value) + " (got " + str(restoredId.value) + ")");
-    v.check(src != nullptr && src->getFilePath() == wav.string(), "region's source id resolves to the same file");
+    // Compare as paths: the project stores generic separators ('/'), so on
+    // Windows the reloaded string differs from wav.string() but names the same file.
+    v.check(src != nullptr && std::filesystem::path(src->getFilePath()) == wav,
+            "region's source id resolves to the same file");
+
+    // Review, #981: past 2^53-1 a JSON number is no longer an exact id. Clamping it
+    // would load the project under a different identity (and a later save would
+    // persist that), so the load must refuse, before touching the loaded project.
+    const auto projectPath = dir.path() / "project.aes";
+    std::string text;
+    {
+        std::ifstream in(projectPath, std::ios::binary);
+        text.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+    }
+    const std::string wideText = str(wide.value);
+    size_t replaced = 0;
+    for (size_t at = text.find(wideText); at != std::string::npos; at = text.find(wideText, at)) {
+        text.replace(at, wideText.size(), "9007199254740992"); // 2^53: first id JSON can't hold exactly
+        ++replaced;
+    }
+    contractSetup(replaced >= 2, "expected the source id and the region's sourceId in the file, replaced " +
+                                     str(replaced));
+    const auto tooWidePath = dir.path() / "too-wide.aes";
+    {
+        std::ofstream out(tooWidePath, std::ios::binary);
+        out << text;
+    }
+    const auto rejected = ProjectSerializer::load(tooWidePath.string(), reloaded);
+    v.check(!rejected.ok, "a source id past 2^53-1 fails the load instead of being clamped");
+    v.check(rejected.errorMessage.find("source id") != std::string::npos,
+            "the failure names the out-of-range source id (got: \"" + rejected.errorMessage + "\")");
+    v.check(reloaded->getSourceManager().getSource(wide) != nullptr,
+            "the refused load leaves the already-loaded project intact");
+
+    // Review, #981 round 2: the largest exact id (2^53-1) loads, but restoring it
+    // verbatim moved the id counter to 2^53, so the next new source got an id the
+    // loader refuses: the project saved and could never be reopened.
+    std::string edgeText = text;
+    for (size_t at = edgeText.find("9007199254740992"); at != std::string::npos;
+         at = edgeText.find("9007199254740992", at)) {
+        edgeText.replace(at, 16, "9007199254740991");
+    }
+    const auto edgePath = dir.path() / "edge.aes";
+    {
+        std::ofstream out(edgePath, std::ios::binary);
+        out << edgeText;
+    }
+    auto edge = std::make_shared<TrackManager>();
+    wireLikeApp(*edge);
+    const auto edgeLoad = ProjectSerializer::load(edgePath.string(), edge);
+    v.check(edgeLoad.ok, "a source id of exactly 2^53-1 loads (error: \"" + edgeLoad.errorMessage + "\")");
+    const PatternSource* edgeRegion = nullptr;
+    for (const auto& p : edge->getPatternManager().getAllPatterns()) {
+        if (p && p->isAudio() && p->name == "Wide")
+            edgeRegion = p.get();
+    }
+    const ClipSource* edgeSrc =
+        edgeRegion ? edge->getSourceManager().getSource(std::get<AudioSlicePayload>(edgeRegion->payload).audioSourceId)
+                   : nullptr;
+    v.check(edgeSrc != nullptr && std::filesystem::path(edgeSrc->getFilePath()) == wav,
+            "the region still resolves to its file");
+    const auto second = dir.path() / "second.wav";
+    contractSetup(writeMonoWav16(second, std::vector<float>(kRate / 10, 0.25f)), "write second wav failed");
+    const ClipSourceID minted = edge->getSourceManager().getOrCreateSource(second.string());
+    v.check(minted.isValid() && minted.value <= 9007199254740991ull,
+            "a source created afterwards gets an id the loader can read back (got " + str(minted.value) + ")");
+    const auto resavedPath = dir.path() / "edge-resaved.aes";
+    contractSetup(ProjectSerializer::save(resavedPath.string(), edge, 120.0, 0.0), "save after edge load failed");
+    auto reopened = std::make_shared<TrackManager>();
+    wireLikeApp(*reopened);
+    const auto reopenLoad = ProjectSerializer::load(resavedPath.string(), reopened);
+    v.check(reopenLoad.ok, "that project saves and reopens (error: \"" + reopenLoad.errorMessage + "\")");
     return v.finish();
 }
 

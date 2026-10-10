@@ -2,6 +2,7 @@
 #pragma once
 
 #include "PluginHost.h"
+#include "Plugin/KeepLengthCache.h"
 
 #include <array>
 #include <atomic>
@@ -19,6 +20,9 @@ class SamplerPlugin : public IPluginInstance {
 public:
     // Values are persisted in sampler state; append new modes rather than renumbering these.
     enum class LoopMode : int { OneShot = 0, Forward = 1, PingPong = 2 };
+    // Persisted; append rather than renumber. Resample: pitch changes speed (tape-style).
+    // KeepLength: pitch without the speed change (a pre-rendered time-stretched copy per semitone).
+    enum class PitchMode : int { Resample = 0, KeepLength = 1 };
 
     SamplerPlugin();
     ~SamplerPlugin() override = default;
@@ -73,6 +77,11 @@ public:
     void setMonoMode(bool mono) noexcept;
     void setCutSelfMode(bool cutSelf) noexcept;
     void setGlideTimeMs(float glideTimeMs) noexcept;
+    void setPitchMode(PitchMode mode);
+    /// Non-RT. Queue keep-length renders for these MIDI notes; with @p wait, block until they
+    /// are ready (or @p timeout passes). Returns false on timeout. No-op in Resample mode.
+    bool prewarmKeepLength(const std::vector<int>& midiNotes, bool wait,
+                           std::chrono::milliseconds timeout = std::chrono::seconds(30));
     bool normalizeSample(float targetPeak = 0.95f);
     bool reverseSample();
 
@@ -87,6 +96,7 @@ public:
     bool isMonoMode() const noexcept { return m_monoMode.load(std::memory_order_relaxed); }
     bool isCutSelfMode() const noexcept { return m_cutSelfMode.load(std::memory_order_relaxed); }
     float getGlideTimeMs() const noexcept { return m_glideTimeMs.load(std::memory_order_relaxed); }
+    PitchMode getPitchMode() const noexcept { return static_cast<PitchMode>(m_pitchMode.load(std::memory_order_relaxed)); }
     float getAttack() const noexcept { return m_params[kParamAttack].load(std::memory_order_relaxed); }
     float getDecay() const noexcept { return m_params[kParamDecay].load(std::memory_order_relaxed); }
     float getSustain() const noexcept { return m_params[kParamSustain].load(std::memory_order_relaxed); }
@@ -123,6 +133,12 @@ private:
     std::atomic<int> m_rootMidiNote{60}; // C3 default
     std::atomic<bool> m_monoMode{false};
     std::atomic<bool> m_cutSelfMode{false};
+    std::atomic<int> m_pitchMode{static_cast<int>(PitchMode::Resample)};
+    std::shared_ptr<KeepLengthCache> m_keepLength = std::make_shared<KeepLengthCache>();
+    /// Total semitone shift a note plays at (note vs root, plus coarse/fine/pitch), rounded.
+    int keepLengthSemitones(int midiNote) const noexcept;
+    /// Hand the current sample to the keep-length cache (non-RT; every m_data swap calls it).
+    void publishToKeepLength(const std::shared_ptr<SampleData>& data);
     std::atomic<float> m_glideTimeMs{80.0f};
 
     // Voice Architecture
@@ -143,6 +159,10 @@ private:
         double stageTime = 0.0; // Seconds in current stage
         float currentGain = 0.0f;
         float releaseGain = 0.0f; // Gain at start of release
+        uint64_t order = 0;       // Trigger order: an id-less note-off ends the oldest held voice of its pitch
+        uint32_t noteId = 0;      // The scheduler's note identity (0 = none, e.g. live MIDI)
+        // Keep-length voices play their own stretched copy; null plays the shared sample.
+        std::shared_ptr<const KeepLengthCache::Buffer> ownData;
     };
 
     static constexpr int kMaxVoices = 32;
@@ -152,6 +172,13 @@ private:
     // aftertouch (0xA0, note, 0..127) just before the matching note-on, which
     // consumes and re-centres its slot. Audio-thread only — no atomics needed.
     std::array<uint8_t, 128> m_pendingNotePan{};
+
+    // Note ownership. A scheduled note-off carries its note's id and ends exactly the
+    // voice that note started; if that voice is already gone (choked, stolen, taken over
+    // in mono, or its sample ran out) the note-off does nothing. Live MIDI has no id:
+    // it ends the oldest held voice of its pitch (exact, since a key can't be pressed
+    // twice without being released). Audio-thread only.
+    uint64_t m_nextVoiceOrder = 1;
 
     // Helpers
     void handleMidiEvent(const MidiBuffer::Event& event, double baseRate,

@@ -3,7 +3,8 @@
 //
 // Drives the real PianoRollPanel against a real TrackManager (same harness as
 // PianoRollPanelPersistenceTest). Modes (argv[1]):
-//   gesture        guards F3  §3.5 one user gesture = one CommandHistory entry
+//   gesture        guards F3  §3.5 one user gesture = one CommandHistory entry, and undoing
+//                             that entry restores the pattern exactly (redo re-applies it)
 //   cross-pattern  guards F2  §3.5 undo after switching pattern never writes into the other pattern
 //   global-undo    guards F1  §3.5 Ctrl+Z at the Piano Roll reaches the single global history
 //   paste-target   guards F5  §3.1 pasted notes target the unit being edited
@@ -32,10 +33,14 @@ using AestraContract::Verdict;
 
 namespace {
 
-bool key(PianoRollPanel& panel, AestraUI::NUIKeyCode code, bool ctrl = false) {
+bool key(PianoRollPanel& panel, AestraUI::NUIKeyCode code, bool ctrl = false, bool shift = false) {
     AestraUI::NUIKeyEvent e;
     e.keyCode = code;
-    e.modifiers = ctrl ? AestraUI::NUIModifiers::Ctrl : AestraUI::NUIModifiers::None;
+    e.modifiers = AestraUI::NUIModifiers::None;
+    if (ctrl)
+        e.modifiers = e.modifiers | AestraUI::NUIModifiers::Ctrl;
+    if (shift)
+        e.modifiers = e.modifiers | AestraUI::NUIModifiers::Shift;
     e.pressed = true;
     return panel.handleKeyEvent(e);
 }
@@ -75,16 +80,32 @@ PatternID makePattern(TrackManager& tm, const char* name, const std::vector<Midi
     return pid;
 }
 
+// The panel's view mirrors the stored pattern (after an undo/redo reload).
+bool viewMatches(PianoRollPanel& panel, const std::vector<MidiNote>& stored) {
+    std::vector<MidiNote> shown;
+    for (const auto& n : panel.getNotes()) {
+        if (!n.isDeleted)
+            shown.push_back(MidiNote{n.pitch, n.startBeat, n.durationBeats, n.velocity, n.pan, 0});
+    }
+    std::vector<MidiNote> expected = stored;
+    for (auto& n : expected)
+        n.unitId = 0;
+    return sameNotes(shown, expected);
+}
+
 // ---------------------------------------------------------------- F3
 int gesture() {
     Verdict v("F3");
     auto tm = std::make_shared<TrackManager>();
+    // Two-beat notes, so the default one-beat grid can subdivide them below.
     const PatternID pid = makePattern(*tm, "Gesture",
-                                      {MidiNote{60, 0.0, 1.0, 0.8f, 0.0f, 0}, MidiNote{64, 2.0, 1.0, 0.8f, 0.0f, 0},
-                                       MidiNote{67, 4.0, 1.0, 0.8f, 0.0f, 0}});
+                                      {MidiNote{60, 0.0, 2.0, 0.8f, 0.0f, 0}, MidiNote{64, 2.0, 2.0, 0.8f, 0.0f, 0},
+                                       MidiNote{67, 4.0, 2.0, 0.8f, 0.0f, 0}});
     PianoRollPanel panel(tm);
     panel.loadPattern(pid);
     auto& history = tm->getCommandHistory();
+    const auto original = storedNotes(*tm, pid);
+    const double originalLength = tm->getPatternManager().getPattern(pid)->lengthBeats;
     const size_t before = history.getUndoStack().size();
 
     key(panel, AestraUI::NUIKeyCode::A, true); // select all
@@ -96,6 +117,37 @@ int gesture() {
 
     const size_t entries = history.getUndoStack().size() - before;
     v.check(entries == 1, "one nudge of three selected notes = " + str(entries) + " history entries");
+
+    // That one entry is the whole gesture: undo restores the pattern exactly
+    // (notes and length), and redo re-applies it exactly.
+    history.undo();
+    const auto undone = storedNotes(*tm, pid);
+    v.check(sameNotes(undone, original),
+            "one undo restores the nudge: expected" + describe(original) + " | got" + describe(undone));
+    v.check(tm->getPatternManager().getPattern(pid)->lengthBeats == originalLength,
+            "one undo restores the pattern length (" + str(originalLength) + ")");
+    v.check(viewMatches(panel, undone), "the Piano Roll view reflects the undone pattern");
+    history.redo();
+    const auto redone = storedNotes(*tm, pid);
+    v.check(sameNotes(redone, nudged),
+            "redo re-applies the nudge: expected" + describe(nudged) + " | got" + describe(redone));
+    history.undo();
+
+    // A second gesture kind: subdivide the selection (Ctrl+Shift+G) with the
+    // default one-beat grid. One entry; one undo restores the original notes.
+    key(panel, AestraUI::NUIKeyCode::A, true);
+    const size_t beforeSubdivide = history.getUndoStack().size();
+    key(panel, AestraUI::NUIKeyCode::G, true, true);
+    const auto subdivided = storedNotes(*tm, pid);
+    contractSetup(subdivided.size() > original.size(),
+                  "the subdivision did not reach the pattern" + describe(subdivided));
+    const size_t subdivideEntries = history.getUndoStack().size() - beforeSubdivide;
+    v.check(subdivideEntries == 1, "one subdivision = " + str(subdivideEntries) + " history entries");
+    history.undo();
+    const auto afterSubdivideUndo = storedNotes(*tm, pid);
+    v.check(sameNotes(afterSubdivideUndo, original), "one undo restores the subdivision: expected" +
+                                                         describe(original) + " | got" + describe(afterSubdivideUndo));
+    v.check(viewMatches(panel, afterSubdivideUndo), "the Piano Roll view reflects the undone subdivision");
     return v.finish();
 }
 
@@ -114,10 +166,17 @@ int crossPattern() {
     panel.loadPattern(b);                    // switch pattern
     const auto bBefore = storedNotes(*tm, b);
 
-    key(panel, AestraUI::NUIKeyCode::Z, true); // undo while B is loaded
+    const auto aEdited = storedNotes(*tm, a);
+
+    // Ctrl+Z while B is loaded. When the panel does not consume it, the app
+    // shell hands it to the global history — do that here too.
+    if (!key(panel, AestraUI::NUIKeyCode::Z, true))
+        tm->getCommandHistory().undo();
     const auto bAfter = storedNotes(*tm, b);
     v.check(sameNotes(bBefore, bAfter),
             "pattern B unchanged by undo: before" + describe(bBefore) + " | after" + describe(bAfter));
+    const auto aAfter = storedNotes(*tm, a);
+    v.check(!sameNotes(aAfter, aEdited), "the undo reverted the edit in pattern A: A still" + describe(aAfter));
     return v.finish();
 }
 

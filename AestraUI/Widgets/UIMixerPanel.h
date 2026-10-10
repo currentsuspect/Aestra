@@ -29,6 +29,10 @@ namespace Aestra {
 
 namespace AestraUI {
 
+namespace Layout {
+class NUILayoutRecorder; // NUILayoutExplain.h
+}
+
 /**
  * @brief Main mixer panel container with channel meters.
  *
@@ -153,7 +157,8 @@ private:
         NUIRect masterRect;
         NUIRect inspectorRect;
     };
-    TrailingLayout trailingLayout() const;
+    /// `recorder` is passed only by the layout pass (V8-X2b criterion 4); render and hit tests call it bare.
+    TrailingLayout trailingLayout(Layout::NUILayoutRecorder* recorder = nullptr) const;
 
     /// Rail/handle that collapses or restores the inspector.
     NUIRect getInspectorToggleRect() const;

@@ -217,6 +217,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Models/UnitManager.cpp
     src/Models/PatternManager.cpp
     src/Models/ClipSource.cpp
+    src/Models/RoutingModel.cpp
     src/Models/ClipRenderService.cpp
     src/Models/AudioClip.cpp
 
@@ -272,10 +273,20 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/MuseStubs.cpp
     src/Commands/HostVerbRegistry.cpp
     src/Commands/MuseService.cpp
+    # One translation unit per Muse verb family. MuseService.cpp is the
+    # dispatcher; these hold the verbs themselves. See MuseServiceInternal.h.
+    src/Commands/MuseServiceQueries.cpp
+    src/Commands/MuseServiceRouting.cpp
+    src/Commands/MuseServiceLibraryQueries.cpp
+    src/Commands/MuseServiceHistory.cpp
+    src/Commands/MuseServiceRender.cpp
+    src/Commands/MuseFileDigest.cpp
     src/Commands/MuseSocketServer.cpp
     
     # Headless / batch processing
     src/Headless/HeadlessMusicGenerator.cpp
+    src/Headless/OfflineProjectRender.cpp
+    src/Headless/RenderSummary.cpp
     
     # Plugin hosting system
     src/Plugin/PluginScanner.cpp
@@ -285,6 +296,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Plugin/InternalPluginRegistry.cpp
     src/Plugin/BuiltInPlugins.cpp
     src/Plugin/SamplerPlugin.cpp
+    src/Plugin/KeepLengthCache.cpp
     src/Plugin/EffectChain.cpp
     src/CommandManager.cpp
 )
@@ -351,6 +363,7 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Drivers/AudioDriverRegistry.h   # Registry interface
     include/DSP/AudioProcessor.h
     include/Models/MeterSnapshot.h
+    include/Models/RoutingModel.h
     include/Core/MixerBus.h
     include/DSP/Oscillator.h
     include/Playback/MetronomeEngine.h
@@ -411,6 +424,8 @@ set(AESTRA_AUDIO_CORE_HEADERS
 
     # Headless / batch processing
     include/Headless/HeadlessMusicGenerator.h
+    include/Headless/OfflineProjectRender.h
+    include/Headless/RenderSummary.h
 
     src/DummyAudioDriver.h
     # Plugin hosting system
@@ -509,6 +524,14 @@ if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/External/miniaudio)
         ${CMAKE_CURRENT_SOURCE_DIR}/External/miniaudio
     )
 endif()
+
+# Signalsmith Stretch + Linear (MIT, header-only; see External/signalsmith/VERSION.md).
+# Include paths only: their own CMake is not used, so no per-arch flags (-mavx*) enter
+# the build. Private: only KeepLengthCache.cpp includes them.
+target_include_directories(AestraAudioCore PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/External/signalsmith/stretch/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/External/signalsmith/linear/include
+)
 
 # VST3 SDK includes (if available)
 if(AESTRA_HAS_VST3)

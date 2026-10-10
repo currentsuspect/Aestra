@@ -245,6 +245,46 @@ if(TARGET AestraAudioCore)
     )
 endif()
 
+# Sampler Voice Behaviour Test: layering one-shots. Pitching (incl. a 44.1 kHz
+# file on a 48 kHz engine and chords), one note-off per note for same-pitch
+# overlaps in poly/cut-self/mono, and a square envelope leaves no tail.
+# Drives SamplerPlugin directly; core-linked, every CI lane.
+if(TARGET AestraAudioCore)
+    add_executable(SamplerVoiceBehaviourTest
+        SamplerVoiceBehaviourTest.cpp
+    )
+    target_link_libraries(SamplerVoiceBehaviourTest PRIVATE AestraAudioCore)
+    target_include_directories(SamplerVoiceBehaviourTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME SamplerVoiceBehaviourTest COMMAND SamplerVoiceBehaviourTest)
+    set_tests_properties(SamplerVoiceBehaviourTest PROPERTIES
+        LABELS "headless;sampler;audio;dsp;regression;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
+# Sampler Keep-Length Test: keep-length pitch mode (pitch without the resampling
+# speed change). Exact pitch + source decay, Resample unchanged, render fallback,
+# no stale buffers after a sample swap, save/load. Core-linked, every CI lane.
+if(TARGET AestraAudioCore)
+    add_executable(SamplerKeepLengthTest
+        SamplerKeepLengthTest.cpp
+    )
+    target_link_libraries(SamplerKeepLengthTest PRIVATE AestraAudioCore)
+    target_include_directories(SamplerKeepLengthTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME SamplerKeepLengthTest COMMAND SamplerKeepLengthTest)
+    set_tests_properties(SamplerKeepLengthTest PROPERTIES
+        LABELS "headless;sampler;audio;dsp;regression;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+        TIMEOUT 120
+    )
+endif()
+
 # Automation Playback Test — end-to-end regression: lane automation curves
 # must reach the engine (snapshot copy), evaluate in the beat domain across
 # tempo changes, and follow UI point drags. Core-linked, every CI lane.
@@ -544,3 +584,40 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PianoRollPlayheadMappingTest.cpp")
 endif()
 
 message(STATUS "Headless tests enabled - AudioEngine API implemented")
+
+# AestraHeadless --check end to end: a real project file, loaded like the app,
+# rendered through AudioExporter like Export, judged; determinism (bit-exact
+# re-render), a level change and a missing asset each caught. Builds the same
+# sources AestraHeadless does, so it tests the code the CLI ships.
+add_executable(HeadlessCheckEndToEndTest
+    HeadlessCheckEndToEndTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/App/HeadlessCheck.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/AudioSettingsStore.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+)
+target_link_libraries(HeadlessCheckEndToEndTest PRIVATE AestraAudio)
+target_include_directories(HeadlessCheckEndToEndTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+)
+if(MSVC)
+    target_compile_options(HeadlessCheckEndToEndTest PRIVATE /utf-8)
+    target_compile_definitions(HeadlessCheckEndToEndTest PRIVATE _CRT_SECURE_NO_WARNINGS NOMINMAX)
+    target_link_libraries(HeadlessCheckEndToEndTest PRIVATE mfplat mfreadwrite mfuuid)
+endif()
+add_test(NAME HeadlessCheckEndToEndTest COMMAND HeadlessCheckEndToEndTest)
+set_tests_properties(HeadlessCheckEndToEndTest PROPERTIES
+    LABELS "headless;export;integration;contract:audio"
+    ENVIRONMENT "AESTRA_HEADLESS=1"
+    TIMEOUT 300
+)

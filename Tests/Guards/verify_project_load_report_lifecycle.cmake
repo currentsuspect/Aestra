@@ -18,13 +18,41 @@ endif()
 file(READ "${APP_SOURCE}" APP_TEXT)
 
 # New Project must clear the report after replacing the session with a blank.
+#
+# That lifecycle lives in AestraApp::createNewProject(), which was an inline
+# File-menu lambda until the project.* Muse verbs needed the same code and a
+# second copy was the one thing guaranteed to drift. The guard follows the code to
+# wherever it is defined rather than pinning a file, so an extraction does not read
+# as a regression -- but it still requires the ORDERING, which is the invariant.
 string(FIND "${APP_TEXT}" "menu->addItem(\"New Project\"" NEW_PROJECT_AT)
 if(NEW_PROJECT_AT EQUAL -1)
     message(FATAL_ERROR "Could not find the New Project application path")
 endif()
-string(SUBSTRING "${APP_TEXT}" ${NEW_PROJECT_AT} 900 NEW_PROJECT_BODY)
-string(FIND "${NEW_PROJECT_BODY}" "resetToDefaultProject();" NEW_RESET_AT)
-string(FIND "${NEW_PROJECT_BODY}" "clearProjectLoadReport();" NEW_CLEAR_AT)
+
+# The menu item must still reach the shared implementation. Without this the
+# ordering check below would go on passing against a function nothing calls.
+string(SUBSTRING "${APP_TEXT}" ${NEW_PROJECT_AT} 400 NEW_PROJECT_ITEM)
+string(FIND "${NEW_PROJECT_ITEM}" "createNewProject()" NEW_PROJECT_CALL_AT)
+if(NEW_PROJECT_CALL_AT EQUAL -1)
+    message(FATAL_ERROR
+        "File > New Project no longer routes through AestraApp::createNewProject(); the menu and the project.new Muse verb must share one implementation")
+endif()
+
+# Prefer the file that defines the function; fall back to AestraApp.cpp so the
+# guard still means something if the extraction is ever reverted.
+set(LIFECYCLE_SOURCE "${AESTRA_SOURCE_ROOT}/Source/App/ProjectLifecycle.cpp")
+if(NOT EXISTS "${LIFECYCLE_SOURCE}")
+    set(LIFECYCLE_SOURCE "${APP_SOURCE}")
+endif()
+file(READ "${LIFECYCLE_SOURCE}" LIFECYCLE_TEXT)
+
+string(FIND "${LIFECYCLE_TEXT}" "AestraApp::createNewProject()" LIFECYCLE_FN_AT)
+if(LIFECYCLE_FN_AT EQUAL -1)
+    message(FATAL_ERROR "Could not find AestraApp::createNewProject() in ${LIFECYCLE_SOURCE}")
+endif()
+string(SUBSTRING "${LIFECYCLE_TEXT}" ${LIFECYCLE_FN_AT} 1200 LIFECYCLE_BODY)
+string(FIND "${LIFECYCLE_BODY}" "resetToDefaultProject();" NEW_RESET_AT)
+string(FIND "${LIFECYCLE_BODY}" "clearProjectLoadReport();" NEW_CLEAR_AT)
 if(NEW_RESET_AT EQUAL -1 OR NEW_CLEAR_AT EQUAL -1 OR NEW_CLEAR_AT LESS NEW_RESET_AT)
     message(FATAL_ERROR
         "New Project no longer clears get_project_load_report after creating the blank session")

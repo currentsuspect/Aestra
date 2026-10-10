@@ -61,6 +61,25 @@ int main() {
     require(!state.isOverwriteProtected(), "successful Save As did not clear overwrite protection");
     require(!state.requiresSaveAs(), "reviewed Save As target should become canonical");
 
+    // Title-bar identity: the file's stem, and a note only when the document
+    // is in a condition worth stating instead of Saved/Unsaved.
+    ProjectDocumentState named;
+    named.startUntitled("/app-data/autosave.aes");
+    require(named.displayName() == "Untitled", "untitled project must display as Untitled");
+    require(named.statusNote().empty(), "an ordinary untitled project needs no note");
+    named.openCanonical("/music/Personal Jesus.aes");
+    require(named.displayName() == "Personal Jesus", "display name must be the file stem");
+    named.openCanonical("C:\\Songs\\beat.v2.aes");
+    require(named.displayName() == "beat.v2", "only the last extension is dropped, on either slash");
+    named.recoverFrom("/app-data/autosave.aes", "/music/song.aes");
+    require(named.statusNote() == "Recovered", "a recovered project must say so");
+    named.restoreSnapshot("/snapshots/song-1.aes", "/music/song.aes");
+    require(named.statusNote() == "Snapshot", "a snapshot restore must say so");
+    named.protectCanonicalFromOverwrite();
+    require(named.statusNote() == "Integrity warning", "an integrity warning outranks every other note");
+    named.openCanonical("/music/.aes");
+    require(named.displayName() == ".aes", "a dotfile keeps its name rather than becoming empty");
+
     std::cout << "[PASS] ProjectDocumentStateTest\n";
     return 0;
 }

@@ -9,15 +9,20 @@
 
 namespace AestraUI {
 
+// Ember palette (2026-09-29). Eight identity hues at one OKLCH lightness
+// (L 0.73), 45° apart where the wheel allows, each at the largest chroma
+// sRGB can hold. Designed for the clip contract below: every body is
+// scaled down to kClipBodyLuminanceCeiling, and hues chosen this way land
+// as distinct, saturated tones there instead of browns and olives.
 static constexpr uint32_t TRACK_PALETTE[] = {
-    0xFF00C9A7, // 0 — Aestra Teal
-    0xFF7B6FD4, // 1 — Soft Purple
-    0xFFF0A500, // 2 — Amber
-    0xFFFF5757, // 3 — Coral
-    0xFF4FB3FF, // 4 — Sky Blue
-    0xFFA3D977, // 5 — Sage Green
-    0xFFFF7AC6, // 6 — Pink
-    0xFF5C7CFA, // 7 — Indigo
+    0xFF06C49D, // 0 — Teal      oklch(0.73 0.18 172)
+    0xFFB88EFC, // 1 — Purple    oklch(0.73 0.18 300)
+    0xFFFB8304, // 2 — Amber     oklch(0.73 0.18  55)
+    0xFFFF7A66, // 3 — Coral     oklch(0.73 0.18  30)
+    0xFF10B6F3, // 4 — Sky Blue  oklch(0.73 0.18 232)
+    0xFF86BC23, // 5 — Sage      oklch(0.73 0.18 128)
+    0xFFFB70AD, // 6 — Pink      oklch(0.73 0.18 355)
+    0xFF8AA1FC, // 7 — Indigo    oklch(0.73 0.18 272)
 };
 static constexpr int PALETTE_SIZE = 8;
 

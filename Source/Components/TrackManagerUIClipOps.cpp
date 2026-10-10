@@ -160,8 +160,10 @@ bool TrackManagerUI::placeFileOnTimeline(const std::string& filePath, const std:
 
     auto& theme = AestraUI::NUIThemeManager::getInstance();
     const auto bounds = getBounds();
-    const float trackAreaStartY = timelineTrackAreaTopY(bounds.y);
-    const float y = trackAreaStartY + (targetLane * (m_trackHeight + m_trackSpacing)) - m_scrollOffset + 2.0f;
+    const float y = bounds.y +
+                    timelineRowTopY(currentTimelineLayout(), static_cast<float>(m_trackHeight),
+                                    static_cast<float>(m_trackSpacing), targetLane, m_scrollOffset) +
+                    2.0f;
     const float gridStartX = timelineGridStartX(0.0f, theme.getLayoutDimensions().trackControlsWidth);
     const double playheadBeats =
         snapBeatToGrid(m_trackManager->getPlaylistModel().secondsToBeats(std::max(0.0, m_trackManager->getPosition())));
@@ -193,8 +195,10 @@ bool TrackManagerUI::placePatternOnTimeline(PatternID patternId) {
 
     auto& theme = AestraUI::NUIThemeManager::getInstance();
     const auto bounds = getBounds();
-    const float trackAreaStartY = timelineTrackAreaTopY(bounds.y);
-    const float y = trackAreaStartY + (targetLane * (m_trackHeight + m_trackSpacing)) - m_scrollOffset + 2.0f;
+    const float y = bounds.y +
+                    timelineRowTopY(currentTimelineLayout(), static_cast<float>(m_trackHeight),
+                                    static_cast<float>(m_trackSpacing), targetLane, m_scrollOffset) +
+                    2.0f;
     const float gridStartX = timelineGridStartX(0.0f, theme.getLayoutDimensions().trackControlsWidth);
     const double playheadBeats =
         snapBeatToGrid(m_trackManager->getPlaylistModel().secondsToBeats(std::max(0.0, m_trackManager->getPosition())));
