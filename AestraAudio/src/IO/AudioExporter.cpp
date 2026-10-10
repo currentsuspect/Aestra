@@ -85,7 +85,7 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     Result result;
     result.outputPath = config.outputPath;
 
-    if (config.outputPath.empty()) {
+    if (config.outputPath.empty() && !config.blockSink) {
         result.errorMessage = "No output path specified";
         return result;
     }
@@ -146,26 +146,31 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         result.errorMessage = "Nothing to render (zero frames)";
         return result;
     }
-    int bitsPerSample = static_cast<int>(config.bitDepth);
-    uint64_t blockAlign64 = static_cast<uint64_t>(config.numChannels) * static_cast<uint64_t>(bitsPerSample / 8);
-    if (blockAlign64 == 0 || blockAlign64 > std::numeric_limits<uint16_t>::max() ||
-        totalFrames > std::numeric_limits<uint32_t>::max() / blockAlign64 ||
-        36ull + totalFrames * blockAlign64 > std::numeric_limits<uint32_t>::max()) {
-        result.errorMessage = "WAV export is too large for RIFF/WAV; use a shorter range or lower format settings";
-        return result;
-    }
+    // The RIFF/WAV limits, the file and its header only exist for a file render;
+    // a block sink (V8-W4) renders the same blocks and keeps them in memory.
+    std::ofstream file;
+    if (!config.blockSink) {
+        int bitsPerSample = static_cast<int>(config.bitDepth);
+        uint64_t blockAlign64 = static_cast<uint64_t>(config.numChannels) * static_cast<uint64_t>(bitsPerSample / 8);
+        if (blockAlign64 == 0 || blockAlign64 > std::numeric_limits<uint16_t>::max() ||
+            totalFrames > std::numeric_limits<uint32_t>::max() / blockAlign64 ||
+            36ull + totalFrames * blockAlign64 > std::numeric_limits<uint32_t>::max()) {
+            result.errorMessage = "WAV export is too large for RIFF/WAV; use a shorter range or lower format settings";
+            return result;
+        }
 
-    // Open output file
-    std::ofstream file(config.outputPath, std::ios::binary);
-    if (!file) {
-        result.errorMessage = "Cannot open output file: " + config.outputPath;
-        return result;
-    }
+        // Open output file
+        file.open(config.outputPath, std::ios::binary);
+        if (!file) {
+            result.errorMessage = "Cannot open output file: " + config.outputPath;
+            return result;
+        }
 
-    // Write placeholder WAV header
-    if (!writeWavHeader(file, config, totalFrames)) {
-        result.errorMessage = "Failed to write WAV header";
-        return result;
+        // Write placeholder WAV header
+        if (!writeWavHeader(file, config, totalFrames)) {
+            result.errorMessage = "Failed to write WAV header";
+            return result;
+        }
     }
 
     // Setup render state
@@ -319,8 +324,12 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         m_peakLevel.store(std::max(m_peakLevel.load(std::memory_order_relaxed), blockPeak),
                           std::memory_order_relaxed);
 
-        // Write samples
+        // Deliver the block: to the caller's sink (memory render), or quantised
+        // into the file.
         bool writeOk = false;
+        if (config.blockSink) {
+            writeOk = config.blockSink(m_renderBufferF.data(), framesThisBlock, config.numChannels);
+        } else
         switch (config.bitDepth) {
             case BitDepth::PCM_16:
                 writeOk = writeSamples<int16_t>(file, m_renderBufferF.data(), framesThisBlock, config.numChannels);
@@ -334,7 +343,7 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         }
 
         if (!writeOk) {
-            result.errorMessage = "Failed to write audio data";
+            result.errorMessage = config.blockSink ? "Render stopped by the block sink" : "Failed to write audio data";
             break;
         }
 
@@ -357,12 +366,15 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     if (!result.success) {
         if (shouldCancel()) {
             result.errorMessage = "Render cancelled by user";
-        } else {
+        } else if (!config.blockSink || result.errorMessage.empty()) {
+            // A sink that stopped the render has already said so; a file render
+            // keeps its established generic message.
             result.errorMessage = "Render failed during audio processing";
         }
     }
 
     if (result.errorMessage.empty()) {
+      if (!config.blockSink) {
         // Rewrite WAV header with actual frame count
         file.seekp(0, std::ios::beg);
         writeWavHeader(file, config, result.framesRendered);
@@ -381,6 +393,7 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
             Log::warning("[Export] Failed to sync exported WAV directory; keeping completed export");
         }
 #endif
+      }
 
         result.success = true;
         result.durationSeconds = static_cast<double>(result.framesRendered) / config.sampleRate;
@@ -400,7 +413,9 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
                 Log::error(msg + " \u2014 export aborted");
                 result.errorMessage = msg;
                 result.success = false;
-                std::remove(config.outputPath.c_str());
+                if (!config.blockSink) {
+                    std::remove(config.outputPath.c_str());
+                }
             } else {
                 Log::warning(msg);
             }
@@ -411,12 +426,26 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
                       " frames, peak: " + std::to_string(result.peakDb) + " dB, true peak: " +
                       std::to_string(result.maxTruePeakdBTP) + " dBTP");
         }
-    } else {
+    } else if (!config.blockSink) {
         file.close();
         std::remove(config.outputPath.c_str());
     }
 
     updateProgress(1.0f);
+    return result;
+}
+
+AudioExporter::Result AudioExporter::renderToBuffer(Config config, RenderedAudio& out) {
+    out = RenderedAudio{};
+    out.sampleRate = config.sampleRate;
+    out.numChannels = config.numChannels;
+    config.blockSink = [&out](const float* interleaved, uint32_t frames, uint32_t channels) {
+        out.interleaved.insert(out.interleaved.end(), interleaved,
+                               interleaved + static_cast<size_t>(frames) * channels);
+        return true;
+    };
+    Result result = render(config);
+    out.frames = result.framesRendered;
     return result;
 }
 
