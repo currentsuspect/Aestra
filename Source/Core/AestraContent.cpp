@@ -32,6 +32,7 @@ constexpr int kCountInStartupFrameLimit = 60;
 #include "MixerChannel.h"
 #include "MixerPanel.h"
 #include "PatternBrowserPanel.h"
+#include "UISurfaceStoreProviders.h"
 #include "PianoRollPanel.h"
 #include "Plugin/AestraDelay.h"
 #include "Plugin/AestraLFO.h"
@@ -836,6 +837,9 @@ void AestraContent::setupBrowserPanels() {
     // Create Plugin Browser
     m_pluginBrowser = std::make_shared<AestraUI::PluginBrowserPanel>();
     m_pluginBrowser->setVisible(false); // Hidden by default
+    // V8-C14: favorites live in the UI-state store (imported once from favorites.json).
+    m_pluginBrowser->setFavoritesProvider(Aestra::storedListLoader(Aestra::UISurfaceKeys::kPluginBrowserFavorites),
+                                          Aestra::storedListSaver(Aestra::UISurfaceKeys::kPluginBrowserFavorites));
 
     m_pluginBrowser->setPluginList({}); // Initialize empty, refresh called later
     refreshPluginList();
@@ -4055,10 +4059,8 @@ void AestraContent::showToast(const std::string& message, double seconds) {
     if (!m_notificationToast) {
         return;
     }
-    m_notificationToast->setText(message);
-    m_notificationToast->setDuration(seconds);
+    m_notificationToast->show(message, seconds); // queues behind a toast already showing
     m_notificationToast->setBounds(toastRect(getBounds()));
-    m_notificationToast->setVisible(true);
     m_notificationToast->bringToFront();
 }
 

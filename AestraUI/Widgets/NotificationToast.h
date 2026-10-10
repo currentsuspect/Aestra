@@ -2,6 +2,7 @@
 #pragma once
 
 #include "NUIComponent.h"
+#include "ToastQueue.h"
 #include <string>
 
 namespace AestraUI {
@@ -29,10 +30,14 @@ public:
     /** Restarts the visible window; the toast hides itself when it elapses. */
     void setDuration(double duration);
 
+    /** Shows @p text for @p seconds, or queues it behind the message on screen (ToastQueue.h). */
+    void show(const std::string& text, double seconds);
+
 private:
     std::string text_;
     double duration_;
     double elapsed_;
+    ToastQueue queue_;
 };
 
 } // namespace AestraUI
