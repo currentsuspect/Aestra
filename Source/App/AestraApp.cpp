@@ -6,6 +6,7 @@
 #include "AppLifecycle.h"
 #include "CrashFlagPath.h"
 #include "ServiceLocator.h"
+#include "TerminationSignal.h"
 #include "AestraRootComponent.h"
 #include "Preferences.h"
 #include "../AestraUI/Core/NUIPerfProbe.h"
@@ -317,6 +318,11 @@ bool AestraApp::initialize(const std::string& projectPath) {
             Log::error("Failed to initialize platform");
             return false;
         }
+    }
+
+    // After platform init, so it replaces SDL's handler (TerminationSignal.h); the close button keeps its prompt.
+    if (Aestra::TerminationSignal::install()) {
+        Log::info("[Close] SIGTERM/SIGINT autosave and exit without a prompt");
     }
 
     // Resolve the crash-flag path ONCE, now that platform utilities exist, and
@@ -1472,6 +1478,13 @@ void AestraApp::run() {
 
 
     while (m_running && m_windowManager->processEvents()) {
+        // A logout or `kill` never waits on a dialog nobody will answer; shutdown() autosaves (SPEC 3 §6.7).
+        if ((m_exitSignal = Aestra::TerminationSignal::pending()) != 0) {
+            Log::info("[Close] Signal " + std::to_string(m_exitSignal) + ": exiting without the unsaved-changes prompt");
+            m_running = false;
+            break;
+        }
+
         // Worker → UI hop (native dialogs/decode off the UI thread); pumped
         // before UI update so a completed relink lands this frame.
         drainMainThreadTasks();
@@ -1736,7 +1749,8 @@ void AestraApp::shutdown() {
     // the autosave is still available for recovery on next launch.
     if (m_content && m_content->getTrackManager() && m_content->getTrackManager()->isModified()) {
         Log::info("[SHUTDOWN] Emergency autosave before shutdown...");
-        m_autoSaveManager.forceAutosave();
+        // A signal exit never asked, so this autosave is the only copy: keep the crash flag (below).
+        m_keepSessionForRecovery = m_autoSaveManager.forceAutosave() && m_exitSignal != 0;
     }
     m_autoSaveManager.shutdown();
 
@@ -1842,7 +1856,11 @@ void AestraApp::shutdown() {
     // Clear crash flag LAST — if anything above crashes, the flag persists.
     // Also clear ServiceLocator last so shutdown paths can still resolve services.
     Aestra::ServiceLocator::clear();
-    clearCrashFlag();
+    if (m_keepSessionForRecovery) { // the next launch then offers the emergency autosave (SPEC 3 §6.7)
+        Log::info("[CrashDetection] Kept crash flag: signal exit left unsaved work for recovery");
+    } else {
+        clearCrashFlag();
+    }
     Log::shutdown();
 }
 
