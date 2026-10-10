@@ -74,6 +74,64 @@
         {"mouse": "up", "at": {"clip": 0, "fraction": 0.5}},
         {"expect": {"clip": {"index": 0, "start": 2, "lane": 0}, "undoDepth": 0}}
       ]
+    },
+    {
+      "name": "automation_lane_edits_pan_alongside_volume",
+      "surface": "timeline",
+      "setup": {
+        "lanes": 2,
+        "mode": "automation",
+        "automation": [
+          {"lane": 0, "target": "volume", "points": [[0, 1.0], [8, 0.5]]},
+          {"lane": 0, "target": "pan", "points": [[0, 0.0], [8, -0.8]]}
+        ]
+      },
+      "steps": [
+        {"mouse": "down", "at": {"lane": 0, "beat": 8, "value": -0.8, "target": "pan"}},
+        {"mouse": "move", "at": {"lane": 0, "beat": 8, "value": -0.4, "target": "pan"}},
+        {"mouse": "move", "at": {"lane": 0, "beat": 8, "value": 0.0, "target": "pan"}},
+        {"mouse": "move", "at": {"lane": 0, "beat": 8, "value": 0.4, "target": "pan"}},
+        {"mouse": "up", "at": {"lane": 0, "beat": 8, "value": 0.4, "target": "pan"}},
+        {"expect": {"automation": {"lane": 0, "target": "pan", "points": [[0, 0.0], [8, 0.4]]}, "editedTarget": {"lane": 0, "target": "pan"}, "undoDepth": 1}},
+        {"expect": {"automation": {"lane": 0, "target": "volume", "points": [[0, 1.0], [8, 0.5]]}}},
+        {"undo": 1},
+        {"expect": {"automation": {"lane": 0, "target": "pan", "points": [[0, 0.0], [8, -0.8]]}, "undoDepth": 0}}
+      ]
+    },
+    {
+      "name": "automation_new_point_goes_to_the_edited_curve",
+      "surface": "timeline",
+      "setup": {
+        "lanes": 2,
+        "mode": "automation",
+        "automation": [
+          {"lane": 0, "target": "volume", "points": [[0, 1.0], [8, 0.5]]},
+          {"lane": 0, "target": "pan", "points": [[0, 0.0], [8, -0.8]]}
+        ]
+      },
+      "steps": [
+        {"mouse": "down", "at": {"lane": 0, "beat": 0, "value": 0.0, "target": "pan"}},
+        {"mouse": "up", "at": {"lane": 0, "beat": 0, "value": 0.0, "target": "pan"}},
+        {"expect": {"editedTarget": {"lane": 0, "target": "pan"}, "undoDepth": 0}},
+        {"mouse": "down", "at": {"lane": 0, "beat": 4, "value": -0.5, "target": "pan"}},
+        {"mouse": "up", "at": {"lane": 0, "beat": 4, "value": -0.5, "target": "pan"}},
+        {"expect": {"automation": {"lane": 0, "target": "pan", "points": [[0, 0.0], [4, -0.5], [8, -0.8]]}, "undoDepth": 1}},
+        {"expect": {"automation": {"lane": 0, "target": "volume", "points": [[0, 1.0], [8, 0.5]]}}}
+      ]
+    },
+    {
+      "name": "automation_pan_only_lane_edits_its_pan",
+      "surface": "timeline",
+      "setup": {
+        "lanes": 1,
+        "mode": "automation",
+        "automation": [{"lane": 0, "target": "pan", "points": [[0, 0.0]]}]
+      },
+      "steps": [
+        {"mouse": "down", "at": {"lane": 0, "beat": 4, "value": 0.5, "target": "pan"}},
+        {"mouse": "up", "at": {"lane": 0, "beat": 4, "value": 0.5, "target": "pan"}},
+        {"expect": {"automation": {"lane": 0, "target": "pan", "points": [[0, 0.0], [4, 0.5]]}, "editedTarget": {"lane": 0, "target": "pan"}, "undoDepth": 1}}
+      ]
     }
   ]
 }

@@ -2,6 +2,7 @@
 #include "TrackUIComponent.h"
 #include "TrackManagerUI.h"
 #include "TrackManagerUIMath.h"
+#include "AutomationLaneEditing.h"
 #include "../AestraUI/Platform/NUIPlatformBridge.h"
 #include "MixerChannel.h"
 #include "TrackManager.h"
@@ -2610,8 +2611,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             bool moved = false;
             if (m_trackManager && m_dragStartBeat >= 0.0 && m_draggedPointIndex >= 0) {
                 if (auto lane = m_trackManager->getPlaylistModel().getLane(m_laneId)) {
-                    if (!lane->automationCurves.empty()) {
-                        const auto& pts = lane->automationCurves[0].getPoints();
+                    if (m_draggedCurveIndex >= 0 && m_draggedCurveIndex < static_cast<int>(lane->automationCurves.size())) {
+                        const auto& pts = lane->automationCurves[static_cast<size_t>(m_draggedCurveIndex)].getPoints();
                         if (m_draggedPointIndex < static_cast<int>(pts.size())) {
                             const auto& pt = pts[static_cast<size_t>(m_draggedPointIndex)];
                             moved = std::abs(pt.beat - m_dragStartBeat) >= 1e-9 ||
@@ -2650,7 +2651,9 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         if (event.position.x >= gridStartX || m_isDraggingPoint) {
             double beat =
                 timelineGridOffsetToBeat(event.position.x - gridStartX, m_timelineScrollOffset, m_pixelsPerBeat);
-            double value = 1.0 - std::clamp((static_cast<double>(event.position.y) - bounds.y) / bounds.height, 0.0, 1.0);
+            // Height in the lane, 0 bottom … 1 top; each curve reads it on its own range (V8-A2).
+            const double heightFraction =
+                1.0 - std::clamp((static_cast<double>(event.position.y) - bounds.y) / bounds.height, 0.0, 1.0);
             
             auto& playlist = m_trackManager->getPlaylistModel();
             auto lane = playlist.getLane(m_laneId);
@@ -2667,18 +2670,38 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 // right-click on empty space must not mutate the model.
                 const bool isLeftPress =
                     event.pressed && event.button == AestraUI::NUIMouseButton::Left;
-                if (isLeftPress && lane->automationCurves.empty()) {
-                    // First point on an empty lane: create the default Volume
-                    // curve bound to this lane's routing channel. FD-14 §15:
-                    // automation targets must never resolve through lane
-                    // POSITION (getChannel(lane->index)) — they resolve by
-                    // ownership: lane -> owning Track -> track channelId,
-                    // master when the lane is unowned. defaultValue 1.0 keeps
-                    // an empty curve neutral — the old default of 0.0 silenced
-                    // the channel until a point was added. Press-only: pointer
-                    // moves (hover) must not insert a curve into the model.
-                    AutomationCurve curve("Volume", AutomationTarget::Volume);
-                    curve.setDefaultValue(1.0f);
+                // V8-A2: points of every curve are reachable, the edited curve's first.
+                // A press on another curve's point makes that curve the edited one.
+                auto screenOf = [&](int c, const AutomationPoint& p) {
+                    const auto target = lane->automationCurves[static_cast<size_t>(c)].getAutomationTarget();
+                    return std::pair<float, float>{
+                        gridStartX + (static_cast<float>(p.beat) * m_pixelsPerBeat) - m_timelineScrollOffset,
+                        bounds.y + (1.0f - static_cast<float>(automationHeightOfValue(target, p.value))) * bounds.height};
+                };
+                const AutomationPointHit hit =
+                    event.pressed ? hitAutomationPoint(lane->automationCurves,
+                                                       automationCurveIndexFor(lane->automationCurves,
+                                                                               m_editedAutomationTarget),
+                                                       event.position.x, event.position.y, 12.0f, screenOf)
+                                  : AutomationPointHit{};
+                if (hit.found()) {
+                    setEditedAutomationTarget(lane->automationCurves[static_cast<size_t>(hit.curve)].getAutomationTarget());
+                }
+                if (!m_automationTargetChosen && !lane->automationCurves.empty() &&
+                    automationCurveIndexFor(lane->automationCurves, m_editedAutomationTarget) < 0) {
+                    m_editedAutomationTarget = lane->automationCurves.front().getAutomationTarget();
+                }
+
+                if (isLeftPress && !hit.found() &&
+                    automationCurveIndexFor(lane->automationCurves, m_editedAutomationTarget) < 0) {
+                    // First point for the edited target: create its curve, bound to this
+                    // lane's routing channel. FD-14 §15: automation targets must never
+                    // resolve through lane POSITION (getChannel(lane->index)) — they
+                    // resolve by ownership: lane -> owning Track -> track channelId,
+                    // master when the lane is unowned. The default keeps an empty curve
+                    // neutral (unity volume, centre pan). Press-only: pointer moves
+                    // (hover) must not insert a curve into the model.
+                    AutomationCurve curve = makeAutomationCurve(m_editedAutomationTarget);
                     const uint32_t resolvedId = m_trackManager->resolveLaneChannelId(lane->id);
                     const uint32_t defaultChannelId = resolvedId != 0 ? resolvedId : MASTER_MIXER_CHANNEL_ID;
                     if (const auto* ch = m_trackManager->getChannelById(defaultChannelId)) {
@@ -2686,54 +2709,38 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                     }
                     lane->automationCurves.push_back(std::move(curve));
                 }
-                if (lane->automationCurves.empty()) {
+                const int editedIndex = m_isDraggingPoint
+                                            ? m_draggedCurveIndex
+                                            : automationCurveIndexFor(lane->automationCurves, m_editedAutomationTarget);
+                if (editedIndex < 0 || editedIndex >= static_cast<int>(lane->automationCurves.size())) {
                     return true;
                 }
-                auto& curve = lane->automationCurves[0]; // For now, automate first curve (Volume)
+                auto& curve = lane->automationCurves[static_cast<size_t>(editedIndex)];
+                const double value = automationValueAtHeight(curve.getAutomationTarget(), heightFraction);
 
                 // Right Click -> Delete Point
-                if (event.pressed && event.button == AestraUI::NUIMouseButton::Right) {
-                    auto& points = curve.getPoints();
-                    for (int i = 0; i < (int)points.size(); ++i) {
-                        float px = gridStartX + (static_cast<float>(points[i].beat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-                        float py = bounds.y + (1.0f - static_cast<float>(points[i].value)) * bounds.height;
-                        
-                        if (AestraUI::distance({px, py}, event.position) < 12.0f) {
-                            curve.removePoint(i);
-                            setDirty(true);
-                            repaint();
-                            if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
-                            if (m_trackManager) {
-                                m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
-                                m_trackManager->markModified();
-                            }
-                            // Deleting is instantaneous — no drag follows, so the
-                            // gesture ends here and its undo step is pushed now.
-                            pushAutomationEditCommand(std::move(m_automationCurvesBefore),
-                                                      "Delete Automation Point");
-                            return true;
-                        }
+                if (event.pressed && event.button == AestraUI::NUIMouseButton::Right && hit.found()) {
+                    curve.removePoint(hit.point);
+                    setDirty(true);
+                    repaint();
+                    if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
+                    if (m_trackManager) {
+                        m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
+                        m_trackManager->markModified();
                     }
+                    // Deleting is instantaneous — no drag follows, so the
+                    // gesture ends here and its undo step is pushed now.
+                    pushAutomationEditCommand(std::move(m_automationCurvesBefore), "Delete Automation Point");
+                    return true;
                 }
 
                 // Left Click -> Select/Add Point
                 if (event.pressed && event.button == AestraUI::NUIMouseButton::Left && isInsideBounds) {
-                    int hitIndex = -1;
-                    auto& points = curve.getPoints();
-                    for (int i = 0; i < (int)points.size(); ++i) {
-                        float px = gridStartX + (static_cast<float>(points[i].beat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-                        float py = bounds.y + (1.0f - static_cast<float>(points[i].value)) * bounds.height;
-                        
-                        if (AestraUI::distance({px, py}, event.position) < 12.0f) {
-                            hitIndex = i;
-                            break;
-                        }
-                    }
-
+                    const int hitIndex = hit.point;
                     if (hitIndex != -1) {
                         m_isDraggingPoint = true;
                         m_draggedPointIndex = hitIndex;
-                        m_draggedCurveIndex = 0;
+                        m_draggedCurveIndex = editedIndex;
                         m_dragStartBeat = curve.getPoints()[static_cast<size_t>(hitIndex)].beat;
                         m_dragStartValue = curve.getPoints()[static_cast<size_t>(hitIndex)].value;
                         
@@ -2766,7 +2773,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                             if (std::abs(pts[i].beat - beat) < 0.001) {
                                 m_isDraggingPoint = true;
                                 m_draggedPointIndex = i;
-                                m_draggedCurveIndex = 0;
+                                m_draggedCurveIndex = editedIndex;
                                 m_dragStartBeat = pts[static_cast<size_t>(i)].beat;
                                 m_dragStartValue = pts[static_cast<size_t>(i)].value;
                                 
@@ -2791,7 +2798,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 }
 
                 // Dragging Logic
-                if (m_isDraggingPoint && m_draggedCurveIndex == 0) {
+                if (m_isDraggingPoint && m_draggedCurveIndex == editedIndex) {
                     auto& pts = curve.getPoints();
                     if (m_draggedPointIndex >= 0 && m_draggedPointIndex < (int)pts.size()) {
                         double newBeat = std::max(0.0, beat);
@@ -3379,16 +3386,26 @@ void TrackUIComponent::renderAutomationLayer(AestraUI::NUIRenderer& renderer, co
     // Automation Area bounds (exclude controls)
     AestraUI::NUIRect gridArea(gridStartX, bounds.y, bounds.width - (gridStartX - bounds.x), bounds.height);
 
-    for (const auto& curve : lane->automationCurves) {
+    // V8-A2: the edited curve draws at full strength, the others recede, so the
+    // lane shows which curve a click edits while keeping every curve visible.
+    int editedIndex = automationCurveIndexFor(lane->automationCurves, m_editedAutomationTarget);
+    if (editedIndex < 0 && !m_automationTargetChosen && !lane->automationCurves.empty()) editedIndex = 0;
+    for (size_t ci = 0; ci < lane->automationCurves.size(); ++ci) {
+        const auto& curve = lane->automationCurves[ci];
         if (!curve.isVisible()) continue;
+        const bool edited = static_cast<int>(ci) == editedIndex;
+        const AutomationTarget target = curve.getAutomationTarget();
+        auto yOf = [&](double v) {
+            return gridArea.y + (1.0f - static_cast<float>(automationHeightOfValue(target, v))) * gridArea.height;
+        };
 
         const auto& points = curve.getPoints();
         if (points.empty()) {
             // Draw a flat line at default value if no points
-            float y = gridArea.y + (1.0f - static_cast<float>(curve.getDefaultValue())) * gridArea.height;
+            float y = yOf(curve.getDefaultValue());
             renderer.drawLine(AestraUI::NUIPoint(gridArea.x, y),
                               AestraUI::NUIPoint(gridArea.right(), y),
-                              1.5f, theme.getColor("accentCyan").withAlpha(0.4f));
+                              1.5f, theme.getColor("accentCyan").withAlpha(edited ? 0.4f : 0.2f));
             continue;
         }
 
@@ -3396,7 +3413,7 @@ void TrackUIComponent::renderAutomationLayer(AestraUI::NUIRenderer& renderer, co
         double sampleRate = m_trackManager ? m_trackManager->getPlaylistModel().getProjectSampleRate() : 48000.0;
         double samplesPerBeat = (sampleRate * 60.0) / std::max(bpm, 1.0);
 
-        AestraUI::NUIColor curveColor = theme.getColor("accentCyan");
+        AestraUI::NUIColor curveColor = theme.getColor("accentCyan").withAlpha(edited ? 1.0f : 0.35f);
 
         // Draw lines between points
         // Draw lines between points
@@ -3409,9 +3426,9 @@ void TrackUIComponent::renderAutomationLayer(AestraUI::NUIRenderer& renderer, co
             
             // Adaptive subdivision based on screen space length
             float sx1 = gridStartX + (static_cast<float>(p1.beat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-            float sy1 = gridArea.y + (1.0f - static_cast<float>(p1.value)) * gridArea.height;
+            float sy1 = yOf(p1.value);
             float sx2 = gridStartX + (static_cast<float>(p2.beat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-            float sy2 = gridArea.y + (1.0f - static_cast<float>(p2.value)) * gridArea.height;
+            float sy2 = yOf(p2.value);
             
             float dist = std::sqrt(std::pow(sx2 - sx1, 2) + std::pow(sy2 - sy1, 2));
             
@@ -3425,7 +3442,7 @@ void TrackUIComponent::renderAutomationLayer(AestraUI::NUIRenderer& renderer, co
                  double val = curve.getValueAtBeat(beat, samplesPerBeat);
                  
                  float x = gridStartX + (static_cast<float>(beat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-                 float y = gridArea.y + (1.0f - static_cast<float>(val)) * gridArea.height;
+                 float y = yOf(val);
                  
                  polyPoints.emplace_back(x, y);
             }
@@ -3441,14 +3458,14 @@ void TrackUIComponent::renderAutomationLayer(AestraUI::NUIRenderer& renderer, co
         if (!points.empty()) {
             const auto& first = points.front();
             float fx = gridStartX + (static_cast<float>(first.beat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-            float fy = gridArea.y + (1.0f - static_cast<float>(first.value)) * gridArea.height;
+            float fy = yOf(first.value);
             if (fx > gridArea.x) {
                 renderer.drawLine(AestraUI::NUIPoint(gridArea.x, fy), AestraUI::NUIPoint(fx, fy), 1.5f, curveColor.withAlpha(0.5f));
             }
             
             const auto& last = points.back();
             float lx = gridStartX + (static_cast<float>(last.beat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-            float ly = gridArea.y + (1.0f - static_cast<float>(last.value)) * gridArea.height;
+            float ly = yOf(last.value);
             if (lx < gridArea.right()) {
                 renderer.drawLine(AestraUI::NUIPoint(lx, ly), AestraUI::NUIPoint(gridArea.right(), ly), 1.5f, curveColor.withAlpha(0.5f));
             }
@@ -3457,8 +3474,8 @@ void TrackUIComponent::renderAutomationLayer(AestraUI::NUIRenderer& renderer, co
         // Draw point handles
         for (const auto& p : points) {
             float x = gridStartX + (static_cast<float>(p.beat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-            float y = gridArea.y + (1.0f - static_cast<float>(p.value)) * gridArea.height;
-            
+            float y = yOf(p.value);
+
             if (x < gridArea.x || x > gridArea.right()) continue;
             
             AestraUI::NUIColor ptColor = p.selected ? theme.getColor("primary") : curveColor;

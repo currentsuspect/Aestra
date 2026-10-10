@@ -2159,6 +2159,19 @@ target_include_directories(AutomationTensionTest PRIVATE
 add_test(NAME AutomationTensionTest COMMAND AutomationTensionTest)
 set_tests_properties(AutomationTensionTest PROPERTIES LABELS "automation;migration;regression;contract:durability")
 
+# V8-A2: a lane edits any of its curves. Each target reads and draws on its own
+# range (Pan on -1…+1, as the engine applies it), and a press reaches every
+# curve's points, the edited curve's first. Header-only.
+add_executable(AutomationLaneEditingTest AestraAudio/AutomationLaneEditingTest.cpp)
+target_include_directories(AutomationLaneEditingTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Components
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AutomationLaneEditingTest COMMAND AutomationLaneEditingTest)
+set_tests_properties(AutomationLaneEditingTest PROPERTIES LABELS "automation;ui-model;regression;contract:application")
+
 # V8-C14 ranked gap 4: a toast that arrives while another shows waits its turn (ToastQueue.h).
 add_executable(ToastQueueTest AestraUI/ToastQueueTest.cpp)
 add_test(NAME ToastQueueTest COMMAND ToastQueueTest)
