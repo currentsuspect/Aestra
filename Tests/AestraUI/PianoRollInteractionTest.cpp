@@ -6,6 +6,7 @@
 #include "Widgets/PianoRollWidgetShared.h"
 #include "../Support/NullRenderer.h"
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <string>
 #include <cassert>
@@ -702,6 +703,153 @@ static void test_ruler_draws_and_clears_a_loop_zone() {
     PASS("the ruler makes a loop zone; Esc and an empty-grid click clear it");
 }
 
+
+// SPEC 3 §5.1: a key shows pressed while a note is pressed in the grid or the key itself is
+// clicked, follows a note dragged to a new row, and eases back out after release instead of
+// snapping. A real note layer and key lane, wired the way PianoRollView wires them.
+static void test_pressed_notes_press_their_keys() {
+    constexpr float kPpb = 80.0f;
+    constexpr float kKey = 24.0f;
+    PianoRollNoteLayer layer;
+    layer.setBounds(NUIRect(0.0f, 0.0f, 1600.0f, 128.0f * kKey));
+    layer.setPixelsPerBeat(kPpb);
+    layer.setKeyHeight(kKey);
+    layer.setSnap(SnapGrid::Quarter);
+    layer.setTool(GlobalTool::Pencil);
+    layer.setVisible(true);
+    PianoRollKeyLane keys;
+    keys.setBounds(NUIRect(0.0f, 0.0f, 58.0f, 128.0f * kKey));
+    keys.setKeyHeight(kKey);
+    keys.setVisible(true);
+    layer.setOnKeyPressChanged([&keys](int pitch, bool down) {
+        if (down) keys.pressKey(pitch); else keys.releaseKey(pitch);
+    });
+    auto rowY = [&](int pitch) { return (127.0f - static_cast<float>(pitch)) * kKey + kKey * 0.5f; };
+    auto event = [](NUIMouseEventType type, float x, float y) {
+        NUIMouseEvent e;
+        e.type = type;
+        e.position = NUIPoint(x, y);
+        e.button = NUIMouseButton::Left;
+        e.pressed = type == NUIMouseEventType::Down;
+        e.released = type == NUIMouseEventType::Up;
+        return e;
+    };
+
+    ASSERT(!keys.isKeyHeld(60) && keys.keyPressLevel(60) == 0.0f, "at rest before any press");
+    layer.onMouseEvent(event(NUIMouseEventType::Down, 0.1f * kPpb, rowY(60)));
+    ASSERT(keys.isKeyHeld(60) && keys.keyPressLevel(60) == 1.0f, "a pencil press in the grid presses its key at once");
+    layer.onMouseEvent(event(NUIMouseEventType::Up, 0.1f * kPpb, rowY(60)));
+    ASSERT(!keys.isKeyHeld(60), "release lets the key go");
+    ASSERT(keys.keyPressLevel(60) == 1.0f, "but it does not snap off: it eases out");
+    keys.onUpdate(PianoRollKeyLane::kKeyReleaseSeconds * 0.5);
+    ASSERT(std::abs(keys.keyPressLevel(60) - 0.5f) < 0.01f, "half way through the release, half pressed");
+    keys.onUpdate(PianoRollKeyLane::kKeyReleaseSeconds);
+    ASSERT(keys.keyPressLevel(60) == 0.0f, "and back at rest when the release is over");
+
+    // Grab that note and drag it two rows up: the key follows the note.
+    layer.setTool(GlobalTool::Pointer);
+    layer.onMouseEvent(event(NUIMouseEventType::Down, 0.4f * kPpb, rowY(60)));
+    ASSERT(keys.isKeyHeld(60), "grabbing a note presses its key");
+    layer.onMouseEvent(event(NUIMouseEventType::Move, 0.4f * kPpb, rowY(62)));
+    ASSERT(keys.isKeyHeld(62) && !keys.isKeyHeld(60), "dragged to 62, key 62 is down and 60 came back up");
+    layer.onMouseEvent(event(NUIMouseEventType::Up, 0.4f * kPpb, rowY(62)));
+    ASSERT(!keys.isKeyHeld(62), "and release lets it go");
+
+    // The key itself: down on press, up on release.
+    keys.onMouseEvent(event(NUIMouseEventType::Down, 20.0f, rowY(64)));
+    ASSERT(keys.isKeyHeld(64) && keys.keyPressLevel(64) == 1.0f, "a click on a key presses it");
+    keys.onMouseEvent(event(NUIMouseEventType::Up, 20.0f, rowY(64)));
+    ASSERT(!keys.isKeyHeld(64), "and releasing lets it go");
+    PASS("pressed notes and keys show their keys pressed, and ease back out");
+}
+
+// SPEC 3 §5.1: the velocity lane's beat 0 sits under the grid's. Its label sidebar was a
+// hard-coded 76 px after the key lane shrank to 58, so every stem drew 18 px right of its
+// note, a click on a note's own x missed it (the hit window is +-10 px), and a click on a
+// beat-0 stem landed in the "sidebar" and flipped Velocity/Pan instead of editing.
+static void test_velocity_lane_lines_up_with_the_grid() {
+    PianoRollView view;
+    view.setBounds({0.0f, 0.0f, 900.0f, 600.0f});
+    view.onResize(900, 600);
+    view.setBeatsPerBar(4);
+    view.setTotalDurationBeats(16.0);
+    view.setViewWindow(0.0, 16.0);
+
+    std::vector<MidiNote> notes;
+    notes.push_back({60, 0.0, 1.0, 0.2f, 0.0f, 0, false, false, 1.0f}); // beat 0
+    notes.push_back({64, 4.0, 1.0, 0.2f, 0.0f, 0, false, false, 1.0f}); // beat 4
+    view.setNotes(notes);
+
+    const NUIRect grid = view.getGridBounds();
+    const double ppb = static_cast<double>(grid.width) / view.getViewDurationBeats();
+    // Near the top of the lane (the panel is the view's bottom 88 px; its value area
+    // runs from bottom - 8 up by height - 28), so a hit sets a high velocity.
+    const float laneY = 600.0f - 8.0f - (88.0f - 28.0f) * 0.9f;
+    auto press = [&](float x) {
+        NUIMouseEvent down;
+        down.type = NUIMouseEventType::Down;
+        down.button = NUIMouseButton::Left;
+        down.position = {x, laneY};
+        down.pressed = true;
+        view.onMouseEvent(down);
+        NUIMouseEvent up = down;
+        up.type = NUIMouseEventType::Up;
+        up.pressed = false;
+        up.released = true;
+        view.onMouseEvent(up);
+    };
+
+    press(grid.x + static_cast<float>(4.0 * ppb));
+    ASSERT(view.getNotes()[1].velocity > 0.8f,
+           "a click on the lane at a note's own x (beat 4) edits that note's velocity");
+    press(grid.x + 1.0f);
+    ASSERT(view.getNotes()[0].velocity > 0.8f,
+           "a click on the beat-0 stem edits velocity, not the Velocity/Pan sidebar");
+    PASS("the velocity lane lines up with the grid");
+}
+
+// SPEC 3 §5.1: while this pattern plays, the keys of the notes under the playhead light up;
+// they follow the playhead, go dark when another pattern plays, and ease out, not snap off.
+static void test_playback_lights_the_keys_under_the_playhead() {
+    PianoRollView view;
+    view.setBounds({0.0f, 0.0f, 900.0f, 600.0f});
+    view.onResize(900, 600);
+    view.setTotalDurationBeats(8.0);
+    std::vector<MidiNote> notes;
+    notes.push_back({60, 0.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f}); // [0, 1)
+    notes.push_back({64, 2.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f}); // [2, 3)
+    notes.push_back({67, 2.0, 1.0, 0.8f, 0.0f, 0, false, true, 1.0f});  // deleted: never lights
+    view.setNotes(notes);
+
+    view.setPlaybackKeysActive(true);
+    view.setPlayheadBeat(0.5);
+    ASSERT(view.isKeyPlaying(60) && !view.isKeyPlaying(64), "at beat 0.5 only C (60) is under the playhead");
+    view.setPlayheadBeat(1.5);
+    ASSERT(!view.isKeyPlaying(60) && !view.isKeyPlaying(64), "between notes, no key is playing");
+    view.setPlayheadBeat(2.5);
+    ASSERT(view.isKeyPlaying(64) && !view.isKeyPlaying(67), "at 2.5 E (64) plays; a deleted note never lights");
+    ASSERT(!view.isKeyPlaying(60), "and the end is exclusive: 60 ended at 1");
+
+    // The panel clears the flag when another pattern (or nothing) is playing.
+    view.setPlaybackKeysActive(false);
+    view.setPlayheadBeat(2.5);
+    ASSERT(!view.isKeyPlaying(64), "not this pattern playing: no key lights, even with a note under the playhead");
+
+    // Release eases out on the key lane itself.
+    PianoRollKeyLane keys;
+    std::array<bool, 128> on{};
+    on[60] = true;
+    keys.setPlayingPitches(on);
+    ASSERT(keys.isKeyPlaying(60) && keys.keyPlayLevel(60) == 1.0f, "a playing key is fully lit at once");
+    keys.setPlayingPitches(std::array<bool, 128>{});
+    ASSERT(!keys.isKeyPlaying(60) && keys.keyPlayLevel(60) == 1.0f, "when its note ends it does not snap off");
+    keys.onUpdate(PianoRollKeyLane::kPlayReleaseSeconds * 0.5);
+    ASSERT(std::abs(keys.keyPlayLevel(60) - 0.5f) < 0.01f, "half way through the release, half lit");
+    keys.onUpdate(PianoRollKeyLane::kPlayReleaseSeconds);
+    ASSERT(keys.keyPlayLevel(60) == 0.0f, "then at rest");
+    PASS("playback lights the keys under the playhead, only for this pattern, and eases them out");
+}
+
 static void test_scroll_domain_floor_and_growth() {
     PianoRollView view;
     view.setBounds({0.0f, 0.0f, 900.0f, 600.0f});
@@ -1073,6 +1221,9 @@ int main() {
     test_scroll_domain_floor_and_growth();
     test_minimap_drag_released_outside_the_editor_ends();
     test_ruler_draws_and_clears_a_loop_zone();
+    test_pressed_notes_press_their_keys();
+    test_velocity_lane_lines_up_with_the_grid();
+    test_playback_lights_the_keys_under_the_playhead();
 
     std::cout << "\n=== Results: " << testsPassed << " passed, " << testsFailed << " failed ===\n";
     return testsFailed > 0 ? 1 : 0;

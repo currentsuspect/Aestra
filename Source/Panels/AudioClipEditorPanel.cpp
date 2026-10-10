@@ -439,6 +439,7 @@ bool AudioClipEditorPanel::resolveClip(ClipInstance*& clip, PatternSource*& patt
 }
 
 bool AudioClipEditorPanel::openClip(ClipInstanceID clipId) {
+    commitEditGesture(); // V8-W6: an edit in progress on the previous clip ends as its own undo step
     m_clipId = clipId;
     ClipInstance* clip = nullptr;
     PatternSource* pattern = nullptr;
@@ -874,6 +875,7 @@ void AudioClipEditorPanel::onUpdate(double deltaTime) {
     ClipInstance* clip = nullptr;
     PatternSource* pattern = nullptr;
     if (!resolveClip(clip, pattern)) {
+        m_editGestureActive = false; // the clip is gone: nothing left to commit
         setVisible(false);
         return;
     }

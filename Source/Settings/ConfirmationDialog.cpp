@@ -97,17 +97,24 @@ void ConfirmationDialog::calculateLayout() {
 
     // Dialog dimensions
     const float dialogWidth = 400.0f;
-    // The extra height over the old 172 is the shared chrome's title bar.
-    const float dialogHeight = 172.0f + AestraUI::AestraPanelWindow::TITLE_BAR_H;
     const float buttonHeight = theme.layout.dialogActionHeight;
     const float buttonSpacing = theme.spacingS;
     const float margin = theme.spacingL;
+    // Sized to its content (SPEC 3 §3.2): title bar, the one-line message band, the divider
+    // and the buttons. It was a fixed 172 + title bar: 172 was sized when the title was drawn
+    // inside the body, so once the title moved into the shared title bar the message sat at
+    // the top of an empty band.
+    constexpr float kMessageBandH = 24.0f;
+    constexpr float kDividerGap = 16.0f; // divider sits this far above the buttons
+    const float dialogHeight =
+        AestraUI::AestraPanelWindow::TITLE_BAR_H + margin + kMessageBandH + margin + kDividerGap + buttonHeight + margin;
 
     // Center dialog in parent (rounded so 1px strokes/text stay crisp).
     m_dialogRect.x = std::round(parentBounds.x + (parentBounds.width - dialogWidth) / 2.0f);
     m_dialogRect.y = std::round(parentBounds.y + (parentBounds.height - dialogHeight) / 2.0f);
     m_dialogRect.width = dialogWidth;
     m_dialogRect.height = dialogHeight;
+    m_messageCentreY = m_dialogRect.y + AestraUI::AestraPanelWindow::TITLE_BAR_H + margin + kMessageBandH * 0.5f;
 
     // Right-aligned button row, primary rightmost — modern convention:
     // Save flow: [ Cancel ] [ Don't Save ] [ Save ].
@@ -161,17 +168,19 @@ void ConfirmationDialog::onRender(AestraUI::NUIRenderer& renderer) {
     const AestraUI::NUIRect content = AestraUI::drawDialogChrome(renderer, chrome);
 
     const float padX = content.x + theme.spacingL;
-    const float messageY = std::round(content.y + theme.spacingL + 4.0f);
+    // Message and its dot share one centre line: the text optically by cap height, the dot
+    // geometrically (it used a hand-rolled messageY + 5).
+    const float messageY = std::round(renderer.calculateOpticalTextY(m_messageCentreY, theme.fontSizeM));
     const float dotR = 4.0f;
     if (!m_isConfirmMode) {
-        renderer.fillCircle({padX + dotR, messageY + 5.0f}, dotR, theme.warning);
+        renderer.fillCircle({padX + dotR, m_messageCentreY}, dotR, theme.warning);
     }
     renderer.drawText(m_message,
                       AestraUI::NUIPoint(m_isConfirmMode ? padX : padX + dotR * 2.0f + 10.0f, messageY),
                       theme.fontSizeM, theme.textSecondary);
 
     // Divider above the button row.
-    const float dividerY = std::round(m_saveButtonRect.y - 16.0f);
+    const float dividerY = std::round(m_saveButtonRect.y - 16.0f); // kDividerGap in calculateLayout
     renderer.drawLine({m_dialogRect.x + theme.spacingM, dividerY},
                       {m_dialogRect.right() - theme.spacingM, dividerY},
                       theme.layout.dividerWidth, theme.borderSubtle);

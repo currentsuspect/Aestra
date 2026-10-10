@@ -325,6 +325,22 @@ if(TARGET AestraAudioCore)
     )
 endif()
 
+# V8-W6: placing a clip is ONE undo step through the command history, with the lane
+# (and owning Track) it may need; a failed placement leaves no history. Core-linked.
+if(TARGET AestraAudioCore)
+    add_executable(ClipPlacementTest ClipPlacementTest.cpp)
+    target_link_libraries(ClipPlacementTest PRIVATE AestraAudioCore)
+    target_include_directories(ClipPlacementTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ClipPlacementTest COMMAND ClipPlacementTest)
+    set_tests_properties(ClipPlacementTest PROPERTIES
+        LABELS "headless;clips;undo;regression;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 # PDC v2 P1 — scaffolding tests (see Aestra-Internals: aestra-docs/PDC-v2-Design.md §12)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCFlatChainTest.cpp")
     add_executable(PDCFlatChainTest PDCFlatChainTest.cpp)
