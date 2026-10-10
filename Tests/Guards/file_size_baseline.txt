@@ -10,10 +10,10 @@
 3643 AestraUI/Graphics/OpenGL/NUIRendererGL.cpp
 5646 AestraUI/Widgets/AestraEQEditor.cpp
 1621 AestraUI/Widgets/AestraVerbEditor.cpp
-2012 AestraUI/Widgets/PianoRollNoteLayer.cpp
+2014 AestraUI/Widgets/PianoRollNoteLayer.cpp
 2733 AestraUI/Widgets/UIRoutingMap.cpp
 1947 AestraUI/Widgets/UnitRow.cpp
-2613 Source/App/AestraApp.cpp
+2617 Source/App/AestraApp.cpp
 3954 Source/Components/FileBrowser.cpp
 1510 Source/Components/TrackManagerUIRender.cpp
 3611 Source/Components/TrackUIComponent.cpp
