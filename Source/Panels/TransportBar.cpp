@@ -9,6 +9,7 @@
 #include <algorithm>
 #include "TransportBar.h"
 #include "../Components/TransportModuleStyle.h"
+#include "../AestraUI/Layout/NUILayoutAlgorithms.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "../AestraUI/Platform/NUIPlatformBridge.h"
@@ -791,6 +792,7 @@ void TransportBar::setRightReservedWidth(float width) {
 }
 
 void TransportBar::layoutComponents() {
+    using namespace AestraUI::Layout;
     const AestraUI::NUIRect bounds = getBounds();
     m_moduleMarks.clear();
     m_dividers.clear();
@@ -800,75 +802,104 @@ void TransportBar::layoutComponents() {
     const float availWidth = std::max(0.0f, bounds.width - m_rightReservedWidth);
     const TransportLayoutTier tier = transportTierFor(availWidth);
 
+    // V8-X2b: the modules are one leading row across the bar, and each module's
+    // controls a row inside it. All of it in this bar's Local space; our bounds
+    // are window-absolute, so localToWindow() against our origin is the one
+    // conversion. AESTRA_LAYOUT_TRACE=transport explains any of it.
+    const NUIWindowPoint origin(bounds.x, bounds.y);
+    const auto toWindow = [&](const NUILocalRect& r) { return localToWindow(r, origin).raw(); };
+    auto* trace = layoutRecorderFor("transport");
+    if (trace) {
+        trace->beginPass(origin);
+        trace->scope("modules");
+    }
+    std::vector<float> moduleWidths{transportModuleWidth(), TransportInfoContainer::kPreferredWidth};
+    if (tier.showRecord) moduleWidths.push_back(recordModuleWidth());
+    if (tier.showPanels) moduleWidths.push_back(panelsModuleWidth());
+    if (tier.showKeys) moduleWidths.push_back(KEYS_MODULE_W);
+    const auto modules =
+        arrangeLeadingRow(NUILocalRect(0.0f, 0.0f, bounds.width, bounds.height), moduleWidths, bounds.height, 0.0f,
+                          0.0f, trace);
+    for (const auto& module : modules) {
+        m_dividers.push_back(module.right());
+    }
+    std::size_t next = 2; // modules[0] transport, [1] position | tempo, then the optional ones in order
+
+    // A row of controls inside `module`, at a y already snapped to whole pixels.
+    const auto rowIn = [&](const NUILocalRect& module, const char* scope, float y, float height,
+                           const std::vector<float>& widths, float gap, float pad) {
+        if (trace) trace->scope(scope, std::string("modules[") + std::to_string(&module - modules.data()) + "]");
+        return arrangeLeadingRow(NUILocalRect(module.x, y, module.width, height), widths, height, gap, pad, trace);
+    };
+
     // ── Transport: play · stop · record, centred on the row ──
-    float x = TRANSPORT_EDGE_PAD;
     const float buttonY = std::round((bounds.height - TRANSPORT_BUTTON_H) * 0.5f);
+    const auto transport = rowIn(modules[0], "transport", buttonY, TRANSPORT_BUTTON_H,
+                                 {TRANSPORT_BUTTON_W, TRANSPORT_BUTTON_W, TRANSPORT_BUTTON_W}, TRANSPORT_BUTTON_GAP,
+                                 TRANSPORT_EDGE_PAD);
+    std::size_t i = 0;
     for (const auto* button : {&m_playButton, &m_stopButton, &m_recordButton}) {
         if (*button) {
-            (*button)->setBounds(NUIAbsolute(bounds, x, buttonY, TRANSPORT_BUTTON_W, TRANSPORT_BUTTON_H));
+            (*button)->setBounds(toWindow(transport[i]));
         }
-        x += TRANSPORT_BUTTON_W + TRANSPORT_BUTTON_GAP;
+        ++i;
     }
-    x = transportModuleWidth();
-    m_dividers.push_back(x);
 
     // ── Position | Tempo ──
     if (m_infoContainer) {
-        m_infoContainer->setBounds(
-            NUIAbsolute(bounds, x, 0.0f, TransportInfoContainer::kPreferredWidth, bounds.height));
+        m_infoContainer->setBounds(toWindow(modules[1]));
     }
-    x += TransportInfoContainer::kPreferredWidth;
-    m_dividers.push_back(x);
 
-    // ── Record aids ──
-    const float chipY = TM::kContentTop + std::round((TM::kContentHeight - CHIP_H) * 0.5f);
-    const auto placeChip = [&](const std::shared_ptr<AestraUI::NUIButton>& button, float width, float& cx) {
-        if (!button) return;
-        button->setVisible(tier.showRecord);
-        if (!tier.showRecord) return;
-        button->setBounds(NUIAbsolute(bounds, cx, chipY, width, CHIP_H));
-        cx += width + CHIP_GAP;
-    };
-    {
-        float cx = x + TM::kPadX;
-        placeChip(m_countInButton, chipWidth(TRANSPORT_LABEL_COUNT_IN), cx);
-        placeChip(m_waitButton, chipWidth(TRANSPORT_LABEL_WAIT), cx);
-        placeChip(m_loopRecordButton, chipWidth(TRANSPORT_LABEL_LOOP_REC), cx);
-        placeChip(m_metronomeButton, CHIP_METRONOME_W, cx);
+    // ── Record aids ── (a missing chip takes no slot, as before)
+    const std::pair<std::shared_ptr<AestraUI::NUIButton>, float> chipSpecs[] = {
+        {m_countInButton, chipWidth(TRANSPORT_LABEL_COUNT_IN)},
+        {m_waitButton, chipWidth(TRANSPORT_LABEL_WAIT)},
+        {m_loopRecordButton, chipWidth(TRANSPORT_LABEL_LOOP_REC)},
+        {m_metronomeButton, CHIP_METRONOME_W}};
+    std::vector<std::shared_ptr<AestraUI::NUIButton>> chips;
+    std::vector<float> chipWidths;
+    for (const auto& spec : chipSpecs) {
+        if (!spec.first) continue;
+        spec.first->setVisible(tier.showRecord);
+        chips.push_back(spec.first);
+        chipWidths.push_back(spec.second);
     }
     if (tier.showRecord) {
-        m_moduleMarks.push_back({"RECORD", x, recordModuleWidth()});
-        x += recordModuleWidth();
-        m_dividers.push_back(x);
+        const auto& module = modules[next++];
+        const float chipY = TM::kContentTop + std::round((TM::kContentHeight - CHIP_H) * 0.5f);
+        const auto row = rowIn(module, "record", chipY, CHIP_H, chipWidths, CHIP_GAP, TM::kPadX);
+        for (std::size_t c = 0; c < row.size(); ++c) {
+            chips[c]->setBounds(toWindow(row[c]));
+        }
+        m_moduleMarks.push_back({"RECORD", module.x, module.width});
     }
 
     // ── Panels ──
-    const float panelY = TM::kContentTop + std::round((TM::kContentHeight - PANEL_BTN_H) * 0.5f);
-    {
-        float px = x + TM::kPadX;
-        for (const auto* button : {&m_mixerButton, &m_sequencerButton, &m_pianoRollButton}) {
-            if (!*button) continue;
-            (*button)->setVisible(tier.showPanels);
-            if (tier.showPanels) {
-                (*button)->setBounds(NUIAbsolute(bounds, px, panelY, PANEL_BTN_W, PANEL_BTN_H));
-                px += PANEL_BTN_W + PANEL_GAP;
-            }
-        }
+    std::vector<std::shared_ptr<AestraUI::NUIButton>> panelButtons;
+    for (const auto* button : {&m_mixerButton, &m_sequencerButton, &m_pianoRollButton}) {
+        if (!*button) continue;
+        (*button)->setVisible(tier.showPanels);
+        panelButtons.push_back(*button);
     }
     if (tier.showPanels) {
-        m_moduleMarks.push_back({"PANELS", x, panelsModuleWidth()});
-        x += panelsModuleWidth();
-        m_dividers.push_back(x);
+        const auto& module = modules[next++];
+        const float panelY = TM::kContentTop + std::round((TM::kContentHeight - PANEL_BTN_H) * 0.5f);
+        const auto row = rowIn(module, "panels", panelY, PANEL_BTN_H,
+                               std::vector<float>(panelButtons.size(), PANEL_BTN_W), PANEL_GAP, TM::kPadX);
+        for (std::size_t b = 0; b < row.size(); ++b) {
+            panelButtons[b]->setBounds(toWindow(row[b]));
+        }
+        m_moduleMarks.push_back({"PANELS", module.x, module.width});
     }
 
     // ── Keys ──
     m_showKeys = tier.showKeys;
     if (tier.showKeys) {
-        m_moduleMarks.push_back({"KEYS", x, KEYS_MODULE_W});
-        m_keysValueRect = TM::contentRect(x + TM::kPadX, KEYS_MODULE_W - TM::kPadX * 2.0f, 0.0f);
-        x += KEYS_MODULE_W;
-        m_dividers.push_back(x);
+        const auto& module = modules[next++];
+        m_moduleMarks.push_back({"KEYS", module.x, KEYS_MODULE_W});
+        m_keysValueRect = TM::contentRect(module.x + TM::kPadX, KEYS_MODULE_W - TM::kPadX * 2.0f, 0.0f);
     }
+    finishLayoutPass(trace);
 
     if (m_musicalTypingLabel) {
         m_musicalTypingLabel->setVisible(false);

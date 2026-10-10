@@ -15,6 +15,7 @@ namespace {
 constexpr int kCountInStartupFrameLimit = 60;
 } // namespace
 
+#include "../AestraUI/Layout/NUILayoutAlgorithms.h"
 #include "../AestraUI/Widgets/PluginBrowserPanel.h"
 #include "../AestraUI/Widgets/PluginUIController.h"
 #include "../AestraUI/Widgets/UIMixerInspector.h"
@@ -2007,6 +2008,12 @@ void AestraContent::onRender(AestraUI::NUIRenderer& renderer) {
     }
 }
 
+// The toast's place, in one spot for onResize() and showToast(): 40 tall, 32 above the bottom.
+static AestraUI::NUIRect toastRect(const AestraUI::NUIRect& b) {
+    using namespace AestraUI::Layout;
+    return localToWindow(NUILocalRect(0.0f, b.height - 72.0f, b.width, 40.0f), NUIWindowPoint(b.x, b.y)).raw();
+}
+
 void AestraContent::onResize(int width, int height) {
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
@@ -2018,7 +2025,14 @@ void AestraContent::onResize(int width, int height) {
     if (m_overlayLayer)
         m_overlayLayer->setBounds(contentBounds);
 
-    // DYNAMIC LAYOUT: Timeline-first hierarchy
+    // DYNAMIC LAYOUT: Timeline-first hierarchy. V8-X2b: regions are resolved in this
+    // component's Local space and converted once (AESTRA_LAYOUT_TRACE=shell explains them).
+    using namespace AestraUI::Layout;
+    const NUIWindowPoint shellOrigin(contentBounds.x, contentBounds.y);
+    const auto toWindow = [&](const NUILocalRect& r) { return localToWindow(r, shellOrigin).raw(); };
+    auto* trace = layoutRecorderFor("shell");
+    if (trace) trace->beginPass(shellOrigin);
+    const NUILocalRect area(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height));
     const float transportHeight = layout.transportBarHeight;
     float sidebarTopY = transportHeight; // Keep primary content aligned under transport
 
@@ -2034,7 +2048,7 @@ void AestraContent::onResize(int width, int height) {
             // Hide transport bar physically (prevent mouse hits)
             m_transportBar->setBounds(AestraUI::NUIRect(0, -100, 0, 0));
         } else {
-            m_transportBar->setBounds(AestraUI::NUIAbsolute(contentBounds, 0, 0, contentBounds.width, transportHeight));
+            m_transportBar->setBounds(toWindow(NUILocalRect(0.0f, 0.0f, contentBounds.width, transportHeight)));
         }
     }
 
@@ -2061,8 +2075,7 @@ void AestraContent::onResize(int width, int height) {
             labelX = toggleBounds.right() + 12.0f;
         }
         labelX = std::min(labelX, std::max(0.0f, contentBounds.width - kScopeLabelWidth - 10.0f));
-        m_scopeLabel->setBounds(
-            AestraUI::NUIAbsolute(contentBounds, labelX, labelY, kScopeLabelWidth, kScopeLabelHeight));
+        m_scopeLabel->setBounds(toWindow(NUILocalRect(labelX, labelY, kScopeLabelWidth, kScopeLabelHeight)));
     }
 
     const float maxFileBrowserWidth = std::max(kMinFileBrowserWidth, std::min(width * 0.42f, 560.0f));
@@ -2133,12 +2146,20 @@ void AestraContent::onResize(int width, int height) {
         m_fileBrowser->setPreviewPanelVisible(showPreviewDock);
     }
 
-    // Browser toggle removed - browser panes now start directly at sidebarTopY without toggle offset
+    // Columns, left to right: browser, pattern rail, track area. The sidebars start at
+    // sidebarTopY (0 in Audition, which hides the transport); the track area always
+    // starts under the transport.
+    if (trace) trace->scope("sidebar", "");
+    const auto sidebar = splitHorizontal(splitVertical(area, sidebarTopY).trailing, fileBrowserWidth, trace);
+    if (trace) trace->scope("rail", "sidebar.trailing");
+    const auto rail = splitHorizontal(sidebar.trailing, patternBrowserWidth, trace);
+    if (trace) trace->scope("body", "");
+    const auto body = splitHorizontal(splitVertical(area, transportHeight).trailing, fileBrowserWidth, trace);
+    if (trace) trace->scope("track", "body.trailing");
+    const NUILocalRect trackArea = splitHorizontal(body.trailing, patternBrowserWidth, trace).trailing;
 
     if (m_fileBrowser) {
-        const float fbTop = sidebarTopY;
-        const float fbHeight = height - fbTop;
-        m_fileBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, 0, fbTop, fileBrowserWidth, fbHeight));
+        m_fileBrowser->setBounds(toWindow(sidebar.leading));
         m_fileBrowser->setContentViewsEnabled(!isAuditionMode && m_fileBrowser->isVisible());
 
         if (showPreviewDock && m_previewPanel) {
@@ -2152,18 +2173,11 @@ void AestraContent::onResize(int width, int height) {
 
     if (m_patternBrowser) {
         if (legacyPatternTabActive || clipsTabActive) {
-            float clipTop = sidebarTopY;
-            m_patternBrowser->setBounds(
-                AestraUI::NUIAbsolute(contentBounds, 0.0f, clipTop, fileBrowserWidth, height - clipTop));
+            m_patternBrowser->setBounds(toWindow(sidebar.leading)); // takes the browser's column
         } else if (patternNavActive && m_fileBrowser) {
             // FileBrowser owns embedded Patterns geometry and visibility.
         } else {
-            float patternBrowserX = fileBrowserWidth;
-            float pbY = isAuditionMode ? 0.0f : transportHeight;
-            float pbHeight = height - pbY;
-
-            m_patternBrowser->setBounds(
-                AestraUI::NUIAbsolute(contentBounds, patternBrowserX, pbY, patternBrowserWidth, pbHeight));
+            m_patternBrowser->setBounds(toWindow(rail.leading));
         }
     }
 
@@ -2194,61 +2208,35 @@ void AestraContent::onResize(int width, int height) {
         if (totalWidth <= 0.0f) {
             if (m_transportBar) m_transportBar->setRightReservedWidth(0.0f);
         } else {
-            float xStart = width - totalWidth - layout.panelMargin;
             if (m_transportBar) {
                 m_transportBar->setRightReservedWidth(totalWidth + outputChrome);
             }
-            if (showScope) {
-                m_waveformVisualizer->setBounds(
-                    AestraUI::NUIAbsolute(contentBounds, xStart, vuY, waveformWidth, visualizerHeight));
-                xStart += waveformWidth + gap;
-            }
-            if (showMeter) {
-                m_audioVisualizer->setBounds(
-                    AestraUI::NUIAbsolute(contentBounds, xStart, vuY, meterWidth, visualizerHeight));
-            }
+            // Meter flush to the margin, scope one gap further in (nearest the edge first).
+            std::vector<float> widths;
+            if (showMeter) widths.push_back(meterWidth);
+            if (showScope) widths.push_back(waveformWidth);
+            if (trace) trace->scope("output", "");
+            const auto row = arrangeTrailingRow(NUILocalRect(0.0f, vuY, area.width, visualizerHeight), widths,
+                                                visualizerHeight, gap, layout.panelMargin, trace);
+            if (showMeter) m_audioVisualizer->setBounds(toWindow(row.front()));
+            if (showScope) m_waveformVisualizer->setBounds(toWindow(row.back()));
         }
     }
 
     if (m_notificationToast && m_notificationToast->isVisible()) {
-        m_notificationToast->setBounds(
-            AestraUI::NUIAbsolute(contentBounds, 0.0f, height - 72.0f, width, 40.0f));
+        m_notificationToast->setBounds(toastRect(contentBounds));
     }
 
     if (m_trackManagerUI) {
-        float trackAreaX = fileBrowserWidth + patternBrowserWidth;
-        float trackAreaWidth = width - trackAreaX;
-        float trackAreaHeight = height - transportHeight;
-        m_trackManagerUI->setBounds(
-            AestraUI::NUIAbsolute(contentBounds, trackAreaX, transportHeight, trackAreaWidth, trackAreaHeight));
+        m_trackManagerUI->setBounds(toWindow(trackArea));
 
-        // AuditionPanel uses the same content area BUT ignores transport height
+        // AuditionPanel: the track area normally; in Audition, everything right of the browser at
+        // full height (the sidebar's trailing column — the pattern rail is 0 wide when hidden).
         if (m_auditionPanel) {
-            float auditionTop = 0; // Full height
-            float auditionHeight = height;
-
-            // Keep file browser visible (it's on the left)
-            // But Audition panel should probably start AFTER file browser
-
-            // IMPORTANT: If PatternBrowser is hidden (width=0), fileBrowserWidth is the only offset.
-            // patternBrowserWidth is calculated above as 0 if m_patternBrowser is nullptr or hidden?
-            // Wait, lines 634 checks 'if (m_patternBrowser)'. I need to ensure it accounts for visibility.
-
-            // Let's rely on the previous calculations. If I hid PatternBrowser in setViewFocus,
-            // does onResize know?
-            // Lines 634-639 calculate patternBrowserWidth based on m_patternBrowser existence, NOT visibility.
-            // I should modify that block first or override here.
-
-            // Overriding for Audition Mode
-            if (m_viewFocus == ViewFocus::Audition) {
-                m_auditionPanel->setBounds(
-                    AestraUI::NUIAbsolute(contentBounds, fileBrowserWidth, 0, width - fileBrowserWidth, height));
-            } else {
-                m_auditionPanel->setBounds(
-                    AestraUI::NUIAbsolute(contentBounds, trackAreaX, transportHeight, trackAreaWidth, trackAreaHeight));
-            }
+            m_auditionPanel->setBounds(toWindow(m_viewFocus == ViewFocus::Audition ? sidebar.trailing : trackArea));
         }
     }
+    finishLayoutPass(trace);
 
     // Floating panels resolve their stored preference against the current
     // region here. This pass never writes a preference: shrinking the window
@@ -4072,9 +4060,7 @@ void AestraContent::showToast(const std::string& message, double seconds) {
     }
     m_notificationToast->setText(message);
     m_notificationToast->setDuration(seconds);
-    const auto bounds = getBounds();
-    m_notificationToast->setBounds(
-        AestraUI::NUIAbsolute(bounds, 0.0f, bounds.height - 72.0f, bounds.width, 40.0f));
+    m_notificationToast->setBounds(toastRect(getBounds()));
     m_notificationToast->setVisible(true);
     m_notificationToast->bringToFront();
 }

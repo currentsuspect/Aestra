@@ -115,6 +115,54 @@ inline std::vector<NUILocalRect> arrangeTrailingRow(
  * that by choosing `container.height` accordingly before calling this, not by
  * asking this function to know about that policy.
  */
+/**
+ * @brief The mirror of arrangeTrailingRow(): items left to right from the
+ * container's LEADING edge, `edgeMargin` in, `spacing` apart, each centred
+ * vertically. `itemWidths[0]` is the item nearest the leading edge.
+ *
+ * Added for phase 6 (V8-X2b), when the transport bar's four hand-walked
+ * `x += width + gap` rows came off the NUIAbsolute bridge. Same overflow rule
+ * as the trailing row: an item past the trailing edge is placed there and
+ * reported (recorder), never clipped or reflowed here.
+ *
+ * Pass a container exactly `itemHeight` tall to place the row at a y the caller
+ * has already snapped to whole pixels; centring is then a no-op (§7.5: fractional
+ * pixels are the caller's deliberate decision, not this function's).
+ */
+inline std::vector<NUILocalRect> arrangeLeadingRow(
+    const NUILocalRect& container,
+    const std::vector<float>& itemWidths,
+    float itemHeight,
+    float spacing,
+    float edgeMargin,
+    NUILayoutRecorder* recorder = nullptr) {
+    std::vector<NUILocalRect> result;
+    result.reserve(itemWidths.size());
+
+    const float y = container.y + ((container.height - itemHeight) * 0.5f);
+    float cursor = container.x + edgeMargin;
+    for (float width : itemWidths) {
+        result.emplace_back(cursor, y, width, itemHeight);
+        if (recorder) {
+            const std::size_t i = result.size() - 1;
+            NUILayoutStep step;
+            step.rule = "leading row, item " + std::to_string(i) + " from the left edge: x = left " +
+                        NUILayoutRecorder::num(container.x) + " + edge margin " + NUILayoutRecorder::num(edgeMargin) +
+                        " + " + std::to_string(i) + " earlier item(s) and gaps of " + NUILayoutRecorder::num(spacing) +
+                        " = " + NUILayoutRecorder::num(cursor) + "; centred vertically";
+            step.available = container;
+            step.requestsWidth = step.requestsHeight = true;
+            step.requestedWidth = width;
+            step.requestedHeight = itemHeight;
+            step.resolved = result.back();
+            step.visible = cursor + width <= container.right();
+            recorder->add(step, "[" + std::to_string(i) + "]");
+        }
+        cursor += width + spacing;
+    }
+    return result;
+}
+
 /** Records both halves of a split (shared by splitVertical and splitHorizontal). */
 inline void recordSplit(NUILayoutRecorder& recorder, const NUILocalRect& container, const NUILocalRect& leading,
                         const NUILocalRect& trailing, float asked, float given, bool horizontal) {

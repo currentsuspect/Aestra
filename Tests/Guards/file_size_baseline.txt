@@ -17,7 +17,7 @@
 3954 Source/Components/FileBrowser.cpp
 1515 Source/Components/TrackManagerUIRender.cpp
 3611 Source/Components/TrackUIComponent.cpp
-4957 Source/Core/AestraContent.cpp
+4943 Source/Core/AestraContent.cpp
 2826 Source/Core/ProjectSerializer.cpp
 1824 Source/Panels/ArsenalPanel.cpp
 1537 Source/Panels/AuditionPanel.cpp
