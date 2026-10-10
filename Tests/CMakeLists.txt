@@ -3020,6 +3020,20 @@ if(AESTRA_ENABLE_UI)
         LABELS "ui;filebrowser;persistence;regression;contract:application")
 endif()
 
+# SPEC 3 §3.2: the renderer's text-centring contract (drawText takes the line box's top;
+# calculateOpticalTextY centres the cap band on the requested centre).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(TextCentringTest AestraUI_Core)
+    add_executable(TextCentringTest AestraUI/TextCentringTest.cpp)
+    target_link_libraries(TextCentringTest PRIVATE AestraUI_Core)
+    target_include_directories(TextCentringTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Common
+    )
+    add_test(NAME TextCentringTest COMMAND TextCentringTest)
+    set_tests_properties(TextCentringTest PROPERTIES LABELS "ui;text;contract:application")
+endif()
+
 if(AESTRA_ENABLE_UI)
     set(AESTRA_REQUIRED_UI_TESTS
         NUIThemeConsistencyTest
@@ -3737,17 +3751,3 @@ target_include_directories(AsyncFileDialogTest PRIVATE ${CMAKE_SOURCE_DIR}/Aestr
 add_test(NAME AsyncFileDialogTest COMMAND AsyncFileDialogTest)
 set_tests_properties(AsyncFileDialogTest PROPERTIES LABELS "platform;dialog;threading;regression;contract:application" TIMEOUT 30
     SKIP_RETURN_CODE 77)
-
-# SPEC 3 §3.2: the renderer's text-centring contract (drawText takes the line box's top;
-# calculateOpticalTextY centres the cap band on the requested centre).
-if(AESTRA_ENABLE_UI)
-    aestra_require_ui_targets(TextCentringTest AestraUI_Core)
-    add_executable(TextCentringTest AestraUI/TextCentringTest.cpp)
-    target_link_libraries(TextCentringTest PRIVATE AestraUI_Core)
-    target_include_directories(TextCentringTest PRIVATE
-        ${CMAKE_SOURCE_DIR}/AestraUI
-        ${CMAKE_SOURCE_DIR}/AestraUI/Common
-    )
-    add_test(NAME TextCentringTest COMMAND TextCentringTest)
-    set_tests_properties(TextCentringTest PROPERTIES LABELS "ui;text;contract:application")
-endif()
