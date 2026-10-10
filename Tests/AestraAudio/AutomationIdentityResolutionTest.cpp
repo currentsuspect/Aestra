@@ -305,12 +305,12 @@ void testPlaceholderTargetStaysAttached() {
     // retarget (covered by the remove case at render level).
     EffectChain chain;
     {
-        std::vector<uint8_t> blob{'N', 'E', 'C', 2, static_cast<uint8_t>(EffectChain::MAX_SLOTS)};
+        std::vector<uint8_t> blob{'N', 'E', 'C', 2, static_cast<uint8_t>(EffectChain::kInitialSlots)};
         const auto put = [&blob](const void* data, size_t n) {
             const auto* bytes = static_cast<const uint8_t*>(data);
             blob.insert(blob.end(), bytes, bytes + n);
         };
-        for (size_t slot = 0; slot < EffectChain::MAX_SLOTS; ++slot) {
+        for (size_t slot = 0; slot < EffectChain::kInitialSlots; ++slot) {
             const bool occupied = slot == 1;
             blob.push_back(occupied ? 1 : 0);
             if (!occupied) {

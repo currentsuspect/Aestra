@@ -4458,7 +4458,7 @@ void AestraContent::loadEffectToSelectedTrack(const std::string& pluginId) {
     auto& chain = channel->getEffectChain();
     chain.prepare(pm.getDefaultSampleRate(), pm.getDefaultBlockSize());
     size_t slot = chain.getFirstEmptySlot();
-    if (slot < Aestra::Audio::EffectChain::MAX_SLOTS) {
+    if (slot < Aestra::Audio::EffectChain::kMaxSlots) { // kNoSlot (chain full) is not < kMaxSlots
         m_trackManager->getCommandHistory().pushAndExecute(
             std::make_shared<Aestra::Audio::AddPluginCommand>(*channel, slot, std::move(instance)));
         // The playback graph only picks up chain changes on rebuild (which also

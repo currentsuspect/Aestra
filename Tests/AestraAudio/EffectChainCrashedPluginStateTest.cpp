@@ -56,15 +56,15 @@ struct SlotRecord {
 };
 
 bool parseBlob(const std::vector<uint8_t>& blob, std::vector<SlotRecord>& out) {
-    out.assign(EffectChain::MAX_SLOTS, SlotRecord{});
+    out.assign(EffectChain::kInitialSlots, SlotRecord{});
     if (blob.size() < 5 || blob[0] != 'N' || blob[1] != 'E' || blob[2] != 'C') {
         return false;
     }
-    if (blob[4] != static_cast<uint8_t>(EffectChain::MAX_SLOTS)) {
+    if (blob[4] != static_cast<uint8_t>(EffectChain::kInitialSlots)) {
         return false;
     }
     size_t off = 5;
-    for (size_t i = 0; i < EffectChain::MAX_SLOTS; ++i) {
+    for (size_t i = 0; i < EffectChain::kInitialSlots; ++i) {
         if (off >= blob.size()) return false;
         const uint8_t has = blob[off++];
         if (!has) continue;
@@ -196,7 +196,7 @@ int main() {
         const std::vector<uint8_t> before = chain.saveState();
         std::vector<SlotRecord> beforeRecs;
         check(parseBlob(before, beforeRecs), "crash: pre-crash blob parses");
-        if (beforeRecs.size() == EffectChain::MAX_SLOTS) {
+        if (beforeRecs.size() == EffectChain::kInitialSlots) {
             check(beforeRecs[0].present && beforeRecs[0].state == goodState,
                   "crash: pre-crash save carries the live state");
         }
@@ -205,7 +205,7 @@ int main() {
         const std::vector<uint8_t> after = chain.saveState();
         std::vector<SlotRecord> afterRecs;
         check(parseBlob(after, afterRecs), "crash: post-crash blob parses");
-        if (afterRecs.size() == EffectChain::MAX_SLOTS) {
+        if (afterRecs.size() == EffectChain::kInitialSlots) {
             check(afterRecs[0].present, "crash: crashed slot is still written, not dropped");
             check(afterRecs[0].id == kCrashId, "crash: crashed slot keeps its plugin id");
             check(afterRecs[0].state == goodState,
@@ -227,7 +227,7 @@ int main() {
 
         std::vector<SlotRecord> out;
         check(parseBlob(chain.saveState(), out), "cold: blob parses");
-        if (out.size() == EffectChain::MAX_SLOTS) {
+        if (out.size() == EffectChain::kInitialSlots) {
             check(out[2].present && out[2].id == kCrashId, "cold: crashed slot keeps its id");
             check(out[2].state.empty(), "cold: nothing cached means an empty blob, honestly written");
         }
@@ -287,7 +287,7 @@ int main() {
               "replace: reinsert ok");
         std::vector<SlotRecord> out;
         check(parseBlob(chain.saveState(), out), "replace: blob parses");
-        if (out.size() == EffectChain::MAX_SLOTS) {
+        if (out.size() == EffectChain::kInitialSlots) {
             check(out[0].present && out[0].state == freshState,
                   "replace: new occupant saves its own state, not the cached one");
         }

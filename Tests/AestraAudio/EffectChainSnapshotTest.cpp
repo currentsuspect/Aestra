@@ -128,7 +128,7 @@ void emptyChainSnapshotHasNoPlugins() {
     require(snapshot != nullptr, "emptyChainSnapshotHasNoPlugins: snapshot is null");
     require(snapshot->getActiveSlotCount() == 0, "emptyChainSnapshotHasNoPlugins: active slot count != 0");
 
-    for (size_t i = 0; i < EffectChainSnapshot::MAX_SLOTS; ++i) {
+    for (size_t i = 0; i < snapshot->slotCount(); ++i) {
         require(snapshot->slot(i).isEmpty(), "emptyChainSnapshotHasNoPlugins: slot not empty");
     }
 

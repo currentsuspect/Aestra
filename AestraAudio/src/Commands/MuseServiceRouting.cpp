@@ -235,7 +235,7 @@ std::optional<std::string> handleRoutingVerbs(const RequestContext& ctx, const R
             master.set("insertChainAvailable", JSON(true));
             const auto& masterChain = masterChannel->getEffectChain();
             JSON pluginSlots = JSON::array();
-            for (size_t slotIndex = 0; slotIndex < EffectChain::MAX_SLOTS; ++slotIndex) {
+            for (size_t slotIndex = 0; slotIndex < masterChain.slotCount(); ++slotIndex) {
                 JSON position = JSON::object();
                 position.set("mixerChannelId", JSON(0.0));
                 position.set("slotIndex", JSON(static_cast<double>(slotIndex)));
@@ -265,7 +265,7 @@ std::optional<std::string> handleRoutingVerbs(const RequestContext& ctx, const R
             }
 
             JSON insertChain = JSON::object();
-            insertChain.set("slotCount", JSON(static_cast<double>(EffectChain::MAX_SLOTS)));
+            insertChain.set("slotCount", JSON(static_cast<double>(masterChain.slotCount())));
             insertChain.set("identityKind", JSON("positional"));
             insertChain.set("stableSlotIdentityAvailable", JSON(false));
             insertChain.set("slots", pluginSlots);
@@ -283,7 +283,7 @@ std::optional<std::string> handleRoutingVerbs(const RequestContext& ctx, const R
 
             JSON pluginSlots = JSON::array();
             const auto& chain = channel->getEffectChain();
-            for (size_t slotIndex = 0; slotIndex < EffectChain::MAX_SLOTS; ++slotIndex) {
+            for (size_t slotIndex = 0; slotIndex < chain.slotCount(); ++slotIndex) {
                 JSON position = JSON::object();
                 position.set("mixerChannelId", JSON(static_cast<double>(channelId)));
                 position.set("slotIndex", JSON(static_cast<double>(slotIndex)));
@@ -313,7 +313,7 @@ std::optional<std::string> handleRoutingVerbs(const RequestContext& ctx, const R
             }
 
             JSON insertChain = JSON::object();
-            insertChain.set("slotCount", JSON(static_cast<double>(EffectChain::MAX_SLOTS)));
+            insertChain.set("slotCount", JSON(static_cast<double>(chain.slotCount())));
             insertChain.set("identityKind", JSON("positional"));
             insertChain.set("stableSlotIdentityAvailable", JSON(false));
             insertChain.set("slots", pluginSlots);

@@ -254,7 +254,7 @@ std::optional<std::string> handleLibraryVerbs(const RequestContext& ctx, const R
 
         auto& chain = channel->getEffectChain();
         JSON slots = JSON::array();
-        for (size_t slot = 0; slot < EffectChain::MAX_SLOTS; ++slot) {
+        for (size_t slot = 0, slotTotal = chain.slotCount(); slot < slotTotal; ++slot) {
             auto plugin = chain.getPlugin(slot);
             if (!plugin) continue;
             JSON entry = JSON::object();

@@ -875,7 +875,7 @@ bool UIMixerPanel::loadPluginToChannel(Aestra::ChannelViewModel* vmChannel, cons
 
     auto& chain = vmChannel->channel->getEffectChain();
     size_t slot = chain.getFirstEmptySlot();
-    if (slot < Aestra::Audio::EffectChain::MAX_SLOTS) {
+    if (slot < Aestra::Audio::EffectChain::kMaxSlots) { // kNoSlot (chain full) is not < kMaxSlots
         m_trackManager->getCommandHistory().pushAndExecute(
             std::make_shared<Aestra::Audio::AddPluginCommand>(*vmChannel->channel, slot, std::move(instance)));
         // The playback graph only picks up chain changes on rebuild (which also

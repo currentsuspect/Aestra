@@ -199,7 +199,8 @@ struct Rendered {
 // An optional extra effect is inserted at chain slot 1 (after the generator).
 Rendered renderWithAutomation(const std::vector<AutomationCurve>& curves, double renderBpm, double beats,
                               std::shared_ptr<IPluginInstance> slot1Fx = nullptr,
-                              std::function<void(AutomationCurve&, MixerChannel&)> fixup = nullptr) {
+                              std::function<void(AutomationCurve&, MixerChannel&)> fixup = nullptr,
+                              size_t fxSlot = 1) {
     auto trackManager = std::make_shared<TrackManager>();
     trackManager->setOutputSampleRate(static_cast<double>(kSampleRate));
 
@@ -207,7 +208,7 @@ Rendered renderWithAutomation(const std::vector<AutomationCurve>& curves, double
     require(src != nullptr, "addChannel failed");
     require(src->getEffectChain().insertPlugin(0, std::make_shared<SineGeneratorPlugin>()), "generator insert failed");
     if (slot1Fx) {
-        require(src->getEffectChain().insertPlugin(1, std::move(slot1Fx)), "slot-1 effect insert failed");
+        require(src->getEffectChain().insertPlugin(fxSlot, std::move(slot1Fx)), "effect insert failed");
     }
 
     auto& playlist = trackManager->getPlaylistModel();
@@ -434,6 +435,25 @@ int main() {
         require(early > 1.0e-3, "6d: output is silent");
         require(late > 0.8 * early, "6d: an Internal-format plugin that does not declare support was driven by its format name");
         require(r.unsupportedSkips > 0, "6d: the skip was silent");
+    }
+
+    // ---------------- 6e. Insert slots are no longer a fixed ten (V8-S3). The
+    // effect sits at slot 12, past the old array; the audio thread renders it
+    // through the grown snapshot and a curve addressed to its identity drives it.
+    {
+        const auto r = renderWithAutomation(
+            {fadeCurve()}, 120.0, 6.0, std::make_shared<GainParamPlugin>(PluginFormat::Internal, true),
+            [](AutomationCurve& curve, MixerChannel& channel) {
+                curve.deviceInstanceId = channel.getEffectChain().getSlotInstanceId(12);
+            },
+            12);
+        require(!r.hasInvalid, "6e: output contains NaN/Inf");
+        const double early = rmsWindow(r.left, 0.5, 1.5, 120.0);
+        const double late = rmsWindow(r.left, 4.5, 5.5, 120.0);
+        std::cout << "automation at slot 12: early=" << early << " late=" << late << "\n";
+        require(early > 1.0e-3, "6e: a plugin at slot 12 does not pass audio (the chain stopped at ten)");
+        require(late < 0.02 * early, "6e: automation did not drive a plugin past the tenth slot");
+        require(r.unsupportedSkips == 0, "6e: the plugin was counted as unsupported");
     }
 
     // ---------------- 7. UI-created empty curve contract: the first point on

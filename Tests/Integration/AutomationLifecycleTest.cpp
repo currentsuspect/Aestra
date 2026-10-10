@@ -182,7 +182,7 @@ void registerTestPlugins() {
 // Slot order as a vector of plugin ids (empty slots skipped).
 std::vector<std::string> chainOrder(EffectChain& chain) {
     std::vector<std::string> order;
-    for (size_t i = 0; i < EffectChain::MAX_SLOTS; ++i) {
+    for (size_t i = 0; i < EffectChain::kInitialSlots; ++i) {
         const auto* slot = chain.getSlot(i);
         if (slot && slot->plugin) {
             order.push_back(slot->plugin->getInfo().id);
@@ -200,7 +200,7 @@ std::string join(const std::vector<std::string>& v) {
 }
 
 uint64_t instanceIdAt(EffectChain& chain, const std::string& pluginId) {
-    for (size_t i = 0; i < EffectChain::MAX_SLOTS; ++i) {
+    for (size_t i = 0; i < EffectChain::kInitialSlots; ++i) {
         const auto* slot = chain.getSlot(i);
         if (slot && slot->plugin && slot->plugin->getInfo().id == pluginId) {
             return chain.getSlotInstanceId(i);
