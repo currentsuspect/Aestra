@@ -26,6 +26,7 @@ constexpr int kCountInStartupFrameLimit = 60;
 #include "AudioGraphBuilder.h"
 #include "AuditionEngine.h" // Audition Mode backend
 #include "AuditionPanel.h"  // Audition Mode UI
+#include "Commands/ClipPlacement.h"
 #include "Commands/PluginCommands.h"
 #include "MidiInputService.h"
 #include "MixerChannel.h"
@@ -4240,15 +4241,8 @@ void AestraContent::loadSampleIntoSelectedTrack(const std::string& filePath) {
     }
 
     auto& playlist = m_trackManager->getPlaylistModel();
-    if (!targetLaneId.isValid()) {
-        if (playlist.getLaneCount() == 0) {
-            targetLaneId = playlist.createLane("Sample Lane");
-            // FD-14 ownership: a lane created in-session must own a Track too,
-            // or record arm / monitoring have no ownership to bind to.
-            m_trackManager->createTrack(targetLaneId, "Sample Lane");
-        } else {
-            targetLaneId = playlist.getLaneId(0);
-        }
+    if (!targetLaneId.isValid() && playlist.getLaneCount() > 0) {
+        targetLaneId = playlist.getLaneId(0); // with no lanes, placement creates one and its Track
     }
 
     double playheadPositionSeconds = m_transportBar ? m_transportBar->getPosition() : 0.0;
@@ -4263,8 +4257,9 @@ void AestraContent::loadSampleIntoSelectedTrack(const std::string& filePath) {
     clip.durationSeconds = durationSeconds;
     clip.name = patternName;
     clip.edits = Aestra::Audio::ClipEdits::forNewAudioClip();
-    const auto clipId = playlist.addClip(targetLaneId, clip);
-    if (!clipId.isValid()) {
+    // V8-W6: one undo step through the command history, so it is undoable, dirty and autosaved.
+    if (!Aestra::Audio::placeClipAsOneUndoStep(*m_trackManager, targetLaneId, clip, "Sample Lane",
+                                               "Add Sample Clip")) {
         patternManager.removePattern(patternId);
         AESTRA_LOG_ERROR("Failed to add sample clip to arrangement; removed orphan pattern");
         return;
