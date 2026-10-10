@@ -98,6 +98,13 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         return result;
     }
 
+    // Keep-length samplers play pre-rendered copies; an offline render must never fall back
+    // to resampling (the file would not match what the producer set), so wait for them.
+    if (!m_trackManager.prewarmSamplerKeepLength(true)) {
+        result.errorMessage = "Keep-length sampler renders did not finish in time";
+        return result;
+    }
+
     // Compute render duration from actual playlist
     double startBeat = 0.0;
     double durationBeats = computeRenderDurationBeats(config, startBeat);
@@ -191,6 +198,53 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     bool wasPlaying = m_engine.isTransportPlaying();
     uint64_t savedSamplePos = m_engine.getGlobalSamplePos();
 
+    // Preview ducking is a monitoring convenience and must never attenuate an
+    // offline render: an audible browser preview during export was measured to
+    // duck the exported file by the full configured attenuation
+    // (RealtimeExportParityTest, Export_Immune_To_Preview_Ducking).
+    const float wasPreviewDuckDb = m_engine.getPreviewDuckingAttenuationDb();
+    // The transport loop is a playback convenience: an export renders its range
+    // once. Left on, rendering past the loop end (the tail) wrapped back to the
+    // loop start and played the arrangement again (#992).
+    const bool wasLoopEnabled = m_engine.isLoopEnabled();
+    // Offline export should follow the exact live engine path to avoid render-path
+    // mismatches between playback and export.
+    const bool wasMetronomeEnabled = m_engine.isMetronomeEnabled();
+    const bool wasAuditionEnabled = m_engine.isAuditionModeEnabled();
+
+    // Every setting this render parks is restored on scope exit, including when
+    // the render loop unwinds: updateProgress() is a caller callback and may
+    // throw, and OfflineRenderGuard alone restored only offlineRenderActive,
+    // which would have left the engine on the export rate with the loop off.
+    struct EngineStateGuard {
+        AudioExporter& self;
+        uint32_t savedSampleRate;
+        uint64_t savedSamplePos;
+        float savedPreviewDuckDb;
+        bool savedLoopEnabled;
+        bool savedMetronomeEnabled;
+        bool savedAuditionEnabled;
+        bool wasPlaying;
+        ~EngineStateGuard() {
+            self.m_engine.setOfflineRenderActive(false);
+            self.m_engine.setTransportPlaying(false);
+            self.m_engine.setSampleRate(savedSampleRate);
+            self.m_trackManager.setOutputSampleRate(static_cast<double>(savedSampleRate));
+            self.m_engine.setGraph(AudioGraphBuilder::buildFromTrackManager(self.m_trackManager));
+            self.m_engine.setMetronomeEnabled(savedMetronomeEnabled);
+            self.m_engine.setAuditionModeEnabled(savedAuditionEnabled);
+            self.m_engine.setLoopEnabled(savedLoopEnabled);
+            // Restore the configured duck depth only; live playback re-smooths the
+            // duck gain naturally from the current preview state.
+            self.m_engine.setPreviewDuckingAttenuationDb(savedPreviewDuckDb);
+            self.m_engine.setGlobalSamplePos(savedSamplePos);
+            if (wasPlaying) {
+                self.m_engine.setTransportPlaying(true);
+            }
+        }
+    } engineStateGuard{*this, originalSampleRate, savedSamplePos, wasPreviewDuckDb,
+                       wasLoopEnabled, wasMetronomeEnabled, wasAuditionEnabled, wasPlaying};
+
     // Stop transport for safe offline rendering
     if (wasPlaying) {
         m_engine.setTransportPlaying(false);
@@ -199,7 +253,6 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         }
     }
 
-    // Set engine to export sample rate
     m_engine.setSampleRate(config.sampleRate);
     m_trackManager.setOutputSampleRate(sampleRate);
     // Clip start/end samples in AudioGraph are derived from timeline beats at
@@ -208,15 +261,7 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     // the second half of every clip.
     m_engine.setGraph(AudioGraphBuilder::buildFromTrackManager(m_trackManager));
 
-    // Offline export should follow the exact live engine path to avoid render-path
-    // mismatches between playback and export.
-    const bool wasMetronomeEnabled = m_engine.isMetronomeEnabled();
-    const bool wasAuditionEnabled = m_engine.isAuditionModeEnabled();
-    // Preview ducking is a monitoring convenience and must never attenuate an
-    // offline render: an audible browser preview during export was measured to
-    // duck the exported file by the full configured attenuation
-    // (RealtimeExportParityTest, Export_Immune_To_Preview_Ducking).
-    const float wasPreviewDuckDb = m_engine.getPreviewDuckingAttenuationDb();
+    m_engine.setLoopEnabled(false);
     m_engine.setMetronomeEnabled(false);
     m_engine.setAuditionModeEnabled(false);
     m_engine.setPreviewDuckingAttenuationDb(0.0f);
@@ -225,13 +270,9 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     m_engine.setTransportPlaying(true);
 
     // Offline render: track/send gains render snapped to target from frame 0
-    // (parity with a warmed live engine and isolated bounces, #745). Restore
-    // on every exit path.
+    // (parity with a warmed live engine and isolated bounces, #745). Restored
+    // by engineStateGuard on every exit path.
     m_engine.setOfflineRenderActive(true);
-    struct OfflineRenderGuard {
-        AudioEngine& engine;
-        ~OfflineRenderGuard() { engine.setOfflineRenderActive(false); }
-    } offlineRenderGuard{m_engine};
 
     // Zero the render buffer before the first block so stale DSP state from
     // prior playback cannot bleed into the export render.
@@ -245,9 +286,29 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     uint64_t framesRemaining = totalFrames;
     result.framesRendered = 0;
 
+    // The tail exists to render effect decay past the range end. It must not
+    // also render arrangement audio: with the loop off the transport advances
+    // linearly, so a clip starting after the range end would be fed into the
+    // tail and the export would contain audio the range never asked for (#992).
+    // Past the range end the graph is rebuilt without clips, which silences the
+    // sources while the mixer topology and effect chains keep processing.
+    const uint64_t rangeEndSample = startSample + (tailBeats > 0.0 ? static_cast<uint64_t>(
+        (durationBeats - tailBeats) * samplesPerBeat) : totalFrames);
+    bool sourcesSilenced = false;
+
     while (framesRemaining > 0 && !shouldCancel()) {
-        uint32_t framesThisBlock = static_cast<uint32_t>(
-            std::min<uint64_t>(RENDER_BLOCK_FRAMES, framesRemaining));
+        const uint64_t position = m_engine.getGlobalSamplePos();
+        // Clamp the block so it stops exactly at the range end. Without this the
+        // swap happens a whole block late and a clip starting at the boundary
+        // bleeds up to RENDER_BLOCK_FRAMES of audio into the tail.
+        uint64_t blockLimit = std::min<uint64_t>(RENDER_BLOCK_FRAMES, framesRemaining);
+        if (!sourcesSilenced && position < rangeEndSample) {
+            blockLimit = std::min<uint64_t>(blockLimit, rangeEndSample - position);
+        } else if (!sourcesSilenced) {
+            m_engine.setGraph(AudioGraphBuilder::buildFromTrackManager(m_trackManager, /*includeClips=*/false));
+            sourcesSilenced = true;
+        }
+        uint32_t framesThisBlock = static_cast<uint32_t>(blockLimit);
 
         // Master bounce: use full live engine path with master stage
         m_engine.processBlock(m_renderBufferF.data(), nullptr, framesThisBlock, 0.0);
@@ -286,20 +347,7 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         updateProgress(progress);
     }
 
-    // Restore engine state
-    m_engine.setTransportPlaying(false);
-    m_engine.setSampleRate(originalSampleRate);
-    m_trackManager.setOutputSampleRate(static_cast<double>(originalSampleRate));
-    m_engine.setGraph(AudioGraphBuilder::buildFromTrackManager(m_trackManager));
-    m_engine.setMetronomeEnabled(wasMetronomeEnabled);
-    m_engine.setAuditionModeEnabled(wasAuditionEnabled);
-    // Restore the configured duck depth only; live playback re-smooths the
-    // duck gain naturally from the current preview state.
-    m_engine.setPreviewDuckingAttenuationDb(wasPreviewDuckDb);
-    m_engine.setGlobalSamplePos(savedSamplePos);
-    if (wasPlaying) {
-        m_engine.setTransportPlaying(true);
-    }
+    // Engine state is restored by engineStateGuard when this scope exits.
 
     // Check if render completed successfully
     if (framesRemaining == 0 && result.framesRendered > 0) {

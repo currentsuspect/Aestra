@@ -784,9 +784,9 @@ void AudioVisualizer::renderCompactMeter(NUIRenderer& renderer) {
 
     const float energy = std::max({leftPeakSmoothed_.load(), rightPeakSmoothed_.load(),
                                    leftRMSSmoothed_.load(), rightRMSSmoothed_.load()});
-    if (energy < 0.001f) {
-        renderer.drawTextCentered("MASTER", bounds, 9.0f, textColor_.withAlpha(0.30f));
-    }
+    // At silence the empty wells already read as a meter; the transport's
+    // OUTPUT label names it. No placeholder word.
+    (void)energy;
 }
 
 void AudioVisualizer::renderCompactWaveform(NUIRenderer& renderer) {
@@ -894,7 +894,8 @@ void AudioVisualizer::renderCompactWaveform(NUIRenderer& renderer) {
     }
 
     if (!anySignal) {
-        renderer.drawTextCentered("SCOPE", bounds, 9.0f, textColor_.withAlpha(0.30f));
+        // Silence is the flat centre line drawn above, the way a scope shows
+        // it, not a placeholder word.
         return;
     }
 

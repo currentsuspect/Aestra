@@ -4,6 +4,7 @@
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "../AestraUI/Core/NUIDragDrop.h"
+#include "../AestraUI/Layout/NUILayoutAlgorithms.h"
 #include "NUISegmentedControl.h"
 #include "NUIButton.h"
 #include "NUIIcon.h"
@@ -360,7 +361,11 @@ void PatternBrowserPanel::refreshClips() {
         return;
     }
 
+    // A clip references a pattern (patternId); an audio pattern references
+    // its source. ClipInstance::sourceId is a legacy mirror of the pattern id,
+    // never a source id (ownership contract F9).
     std::unordered_set<uint64_t> placedSourceIds;
+    const auto& patternManager = m_trackManager->getPatternManager();
     auto& playlistModel = m_trackManager->getPlaylistModel();
     const auto laneIds = playlistModel.getLaneIDs();
     for (const auto& laneId : laneIds) {
@@ -369,8 +374,12 @@ void PatternBrowserPanel::refreshClips() {
             continue;
         }
         for (const auto& clip : lane->clips) {
-            if (clip.sourceId > 0) {
-                placedSourceIds.insert(static_cast<uint64_t>(clip.sourceId));
+            const PatternSource* pattern = patternManager.getPattern(clip.patternId);
+            if (pattern && pattern->isAudio()) {
+                const auto& payload = std::get<AudioSlicePayload>(pattern->payload);
+                if (payload.audioSourceId.value > 0) {
+                    placedSourceIds.insert(payload.audioSourceId.value);
+                }
             }
         }
     }
@@ -1034,25 +1043,32 @@ void PatternBrowserPanel::renderClipItem(AestraUI::NUIRenderer& renderer, const 
 }
 
 void PatternBrowserPanel::onResize(int width, int height) {
-    auto bounds = getBounds();
-    float padding = 8.0f;
-    float toggleWidth = std::max(104.0f, std::min(156.0f, width - 24.0f));
-    
-    if (m_modeToggle) {
-        float toggleY = height - m_footerHeight + (m_footerHeight - 28) / 2.0f;
-        float toggleX = std::round((width - toggleWidth) * 0.5f);
-        m_modeToggle->setBounds(AestraUI::NUIAbsolute(bounds, toggleX, toggleY, toggleWidth, 28));
+    using namespace AestraUI::Layout;
+    const auto bounds = getBounds();
+    const NUIWindowPoint origin(bounds.x, bounds.y);
+    auto* trace = layoutRecorderFor("patterns");
+    if (trace) {
+        trace->beginPass(origin);
+        trace->scope("header");
     }
-    
-    // Layout buttons (right aligned in header)
-    float btnSize = 24.0f;
-    float x_offset = width - padding - btnSize;
-    
-    if (m_deleteButton) m_deleteButton->setBounds(AestraUI::NUIAbsolute(bounds, x_offset, padding + 4, btnSize, btnSize));
-    x_offset -= (btnSize + 4);
-    if (m_duplicateButton) m_duplicateButton->setBounds(AestraUI::NUIAbsolute(bounds, x_offset, padding + 4, btnSize, btnSize));
-    x_offset -= (btnSize + 4);
-    if (m_createButton) m_createButton->setBounds(AestraUI::NUIAbsolute(bounds, x_offset, padding + 4, btnSize, btnSize));
+    const float padding = 8.0f;
+    const float toggleWidth = std::max(104.0f, std::min(156.0f, width - 24.0f));
+
+    if (m_modeToggle) {
+        const float toggleY = height - m_footerHeight + (m_footerHeight - 28) / 2.0f;
+        const float toggleX = std::round((width - toggleWidth) * 0.5f);
+        m_modeToggle->setBounds(localToWindow(NUILocalRect(toggleX, toggleY, toggleWidth, 28), origin).raw());
+    }
+
+    // Header buttons, right-aligned: delete nearest the edge, then duplicate, then create.
+    const float btnSize = 24.0f;
+    const auto buttons = arrangeTrailingRow(NUILocalRect(0.0f, padding + 4, static_cast<float>(width), btnSize),
+                                            {btnSize, btnSize, btnSize}, btnSize, 4.0f, padding, trace);
+    const std::shared_ptr<AestraUI::NUIButton>* order[] = {&m_deleteButton, &m_duplicateButton, &m_createButton};
+    for (std::size_t i = 0; i < 3; ++i) {
+        if (*order[i]) (*order[i])->setBounds(localToWindow(buttons[i], origin).raw());
+    }
+    finishLayoutPass(trace);
 }
 
 void PatternBrowserPanel::onUpdate(double deltaTime) {

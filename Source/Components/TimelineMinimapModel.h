@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "NUITypes.h"
+
 namespace AestraUI {
 
 struct TimelineSummarySnapshot;
@@ -70,6 +72,16 @@ struct TimelineMinimapModel
     bool showMarkers = true;
     bool showDiagnostics = true;
     bool showPlayhead = true; // New visibility toggle
+
+    // The colour the timeline paints each lane's clips in (its first clip's display colour: the
+    // routed channel's, or the clip's own), indexed like the clip spans' trackIndex. The minimap
+    // used a palette slot and a clip-TYPE tint, colours no clip on screen had (owner: "false colour
+    // advertisement"). The hash lets setModel notice a colour change without comparing arrays.
+    // Borrowed: points into the owner's storage (TrackManagerUI::m_minimapLaneColors), which is
+    // only valid until the owner's next update. The owner refreshes the model before every render.
+    const NUIColor* laneColors = nullptr;
+    size_t laneColorCount = 0;
+    uint64_t laneColorsHash = 0;
 };
 
 } // namespace AestraUI

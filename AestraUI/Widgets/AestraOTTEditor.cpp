@@ -4,19 +4,17 @@
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include "Plugin/AestraOTT.h"
+#include "PluginEditorKit.h"
 
 #include <algorithm>
-#include <array>
 #include <cmath>
+#include <iterator>
 
 namespace AestraUI {
 
 namespace {
 using Aestra::Audio::Plugins::AestraOTT;
 
-constexpr float kPi = 3.14159265358979323846f;
-constexpr float kKnobSweep = kPi * 1.5f;
-constexpr float kKnobStart = kPi * 0.75f; // pointing down-left, sweeping clockwise
 constexpr float kDragRangePx = 160.0f;    // full param range per drag distance
 
 NUIColor accent() {
@@ -29,21 +27,6 @@ NUIColor insetSurface() {
     return editorNeutral(0.038f, 0.96f);
 }
 
-void drawArc(NUIRenderer& renderer, NUIPoint center, float radius, float startAngle, float endAngle, float thickness,
-             NUIColor color) {
-    if (endAngle < startAngle)
-        std::swap(startAngle, endAngle);
-    if (endAngle - startAngle <= 0.001f)
-        return;
-    std::array<NUIPoint, 49> pts{};
-    const float div = static_cast<float>(pts.size() - 1);
-    for (size_t i = 0; i < pts.size(); ++i) {
-        const float t = static_cast<float>(i) / div;
-        const float a = startAngle + (endAngle - startAngle) * t;
-        pts[i] = {center.x + std::cos(a) * radius, center.y + std::sin(a) * radius};
-    }
-    renderer.drawPolyline(pts.data(), static_cast<int>(pts.size()), thickness, color);
-}
 } // namespace
 
 AestraOTTEditor::AestraOTTEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance)
@@ -106,40 +89,10 @@ void AestraOTTEditor::drawContent(NUIRenderer& renderer, const NUIRect& contentR
 
 void AestraOTTEditor::drawKnob(NUIRenderer& renderer, const NUIRect& rect, uint32_t paramId, const char* label,
                                bool large, bool bipolar) {
-    auto& theme = NUIThemeManager::getInstance();
     const float value = m_instance ? m_instance->getParameter(paramId) : 0.0f;
-    const NUIPoint c = rect.center();
-    const float r = rect.width * 0.5f - 4.0f;
-    const float angle = kKnobStart + value * kKnobSweep;
-
-    renderer.fillCircle(c, r + 4.0f, insetSurface());
-    renderer.strokeCircle(c, r + 4.0f, 1.0f, editorInk(0.060f));
-
-    drawArc(renderer, c, r - 3.0f, kKnobStart, kKnobStart + kKnobSweep, large ? 4.0f : 3.0f,
-            editorNeutral(0.199f, 1.0f));
-    if (bipolar) {
-        // Bipolar knobs fill from the top-center detent toward the value.
-        const float centerAngle = kKnobStart + 0.5f * kKnobSweep;
-        drawArc(renderer, c, r - 3.0f, std::min(centerAngle, angle), std::max(centerAngle, angle), 3.0f,
-                accent().withAlpha(0.92f));
-    } else {
-        drawArc(renderer, c, r - 3.0f, kKnobStart, angle, large ? 4.0f : 3.0f, accent().withAlpha(0.92f));
-    }
-
-    const float needleLen = r - (large ? 14.0f : 9.0f);
-    const NUIPoint tip(c.x + std::cos(angle) * needleLen, c.y + std::sin(angle) * needleLen);
-    renderer.drawLine(c, tip, 2.0f, accent().withAlpha(0.85f));
-    renderer.fillCircle(tip, large ? 3.5f : 2.5f, accent());
-
-    const float wellR = r * (large ? 0.34f : 0.28f);
-    renderer.fillCircle(c, wellR, editorNeutral(0.045f, 0.96f));
-    renderer.strokeCircle(c, wellR, 1.2f, accent().withAlpha(0.36f));
-
-    renderer.drawTextCentered(label, NUIRect(rect.x, rect.bottom() + 4.0f, rect.width, 14.0f), 10.5f,
-                              theme.getColor("textPrimary").withAlpha(0.95f));
-    const std::string valStr = m_instance ? m_instance->getParameterDisplay(paramId) : "";
-    renderer.drawTextCentered(valStr, NUIRect(rect.x - 14.0f, rect.bottom() + 19.0f, rect.width + 28.0f, 13.0f),
-                              large ? 10.0f : 9.0f, accent().withAlpha(0.96f));
+    const std::string valueText = m_instance ? m_instance->getParameterDisplay(paramId) : "";
+    EditorKit::drawKnob(renderer, rect, value, label, valueText, accent(), insetSurface(),
+                        EditorKit::KnobLook{large, bipolar});
 }
 
 void AestraOTTEditor::drawBypassPill(NUIRenderer& renderer) {
@@ -178,43 +131,16 @@ bool AestraOTTEditor::onMouseEvent(const NUIMouseEvent& event) {
     }
     m_bypassHovered = m_bypassRect.contains(event.position);
 
-    // Knob vertical drag
-    if (m_draggingParam >= 0) {
-        if (event.released) {
-            endKnobCapture();
-            m_draggingParam = -1;
-            return true;
-        }
-        if (event.button == NUIMouseButton::None) {
-            // Service-owned frame delta (up = increase); accumulates into the
-            // current value, so total travel matches the old absolute mapping.
-            const float step = knobDragStep(event, kDragRangePx);
-            const float cur = m_instance->getParameter(static_cast<uint32_t>(m_draggingParam));
-            m_instance->setParameter(static_cast<uint32_t>(m_draggingParam),
-                                     std::clamp(cur + step, 0.0f, 1.0f));
-            setDirty();
-            return true;
-        }
-    }
-    if (event.pressed && event.button == NUIMouseButton::Left) {
-        const struct {
-            NUIRect rect;
-            uint32_t param;
-        } knobs[] = {
-            {m_depthRect, AestraOTT::kDepth},   {m_timeRect, AestraOTT::kTime},    {m_inRect, AestraOTT::kInGain},
-            {m_outRect, AestraOTT::kOutGain},   {m_lowRect, AestraOTT::kLowGain},  {m_midRect, AestraOTT::kMidGain},
-            {m_highRect, AestraOTT::kHighGain}, {m_xloRect, AestraOTT::kXoverLow}, {m_xhiRect, AestraOTT::kXoverHigh},
-        };
-        for (const auto& k : knobs) {
-            if (k.rect.contains(event.position)) {
-                m_draggingParam = static_cast<int>(k.param);
-                m_dragStartValue = m_instance->getParameter(k.param);
-                beginKnobCapture({k.rect.x + k.rect.width * 0.5f, k.rect.y + k.rect.height * 0.5f},
-                                 event.position);
-                return true;
-            }
-        }
-    }
+    // Knob vertical drag (rotary -> cursor capture): AestraPanelWindow::handleKnobDrag.
+    const KnobTarget knobs[] = {
+        {m_depthRect, AestraOTT::kDepth},   {m_timeRect, AestraOTT::kTime},    {m_inRect, AestraOTT::kInGain},
+        {m_outRect, AestraOTT::kOutGain},   {m_lowRect, AestraOTT::kLowGain},  {m_midRect, AestraOTT::kMidGain},
+        {m_highRect, AestraOTT::kHighGain}, {m_xloRect, AestraOTT::kXoverLow}, {m_xhiRect, AestraOTT::kXoverHigh},
+    };
+    const auto get = [this](uint32_t id) { return m_instance->getParameter(id); };
+    const auto set = [this](uint32_t id, float v) { m_instance->setParameter(id, v); };
+    if (handleKnobDrag(event, knobs, std::size(knobs), kDragRangePx, get, set))
+        return true;
 
     return consumeInsideBounds(event);
 }

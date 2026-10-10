@@ -84,14 +84,26 @@ int main() {
     expect(TimerDisplay::formatMusical(7.999, 4) == "3:1.00", "carry works past the first bar boundary");
     expect(TimerDisplay::formatMusical(3.994, 4) == "1:4.99", "no carry below the rounding boundary");
 
+    // Transport position module: bar.beat.sixteenth, all 1-based.
+    expect(TimerDisplay::formatBarBeatSixteenth(0.0, 4) == "1.1.1", "position downbeat");
+    expect(TimerDisplay::formatBarBeatSixteenth(0.25, 4) == "1.1.2", "position second sixteenth");
+    expect(TimerDisplay::formatBarBeatSixteenth(3.75, 4) == "1.4.4", "position last sixteenth of bar 1");
+    expect(TimerDisplay::formatBarBeatSixteenth(4.0, 4) == "2.1.1", "position bar rollover");
+    expect(TimerDisplay::formatBarBeatSixteenth(3.9999999, 4) == "2.1.1", "float error at a downbeat carries");
+    expect(TimerDisplay::formatBarBeatSixteenth(49.5, 4) == "13.2.3", "position mid-song");
+    expect(TimerDisplay::formatBarBeatSixteenth(7.0, 3) == "3.2.1", "position triple meter");
+    expect(TimerDisplay::formatBarBeatSixteenth(-2.0, 4) == "1.1.1", "negative clamps to the start");
+
+    // Bars first (Ember transport): the musical position is the large reading;
+    // one tap swaps to clock time, a second swaps back.
     TimerDisplay clock;
-    expect(clock.getDisplayMode() == TimerDisplay::DisplayMode::Time, "clock defaults to time mode");
+    expect(clock.getDisplayMode() == TimerDisplay::DisplayMode::Musical, "clock defaults to musical mode");
     clock.setTime(4.33);
     clock.setMusicalPosition(8.66, 4);
     clock.toggleDisplayMode();
-    expect(clock.getDisplayMode() == TimerDisplay::DisplayMode::Musical, "one toggle reaches musical mode");
+    expect(clock.getDisplayMode() == TimerDisplay::DisplayMode::Time, "one toggle reaches time mode");
     clock.toggleDisplayMode();
-    expect(clock.getDisplayMode() == TimerDisplay::DisplayMode::Time, "two toggles return to time mode");
+    expect(clock.getDisplayMode() == TimerDisplay::DisplayMode::Musical, "two toggles return to musical mode");
     expect(clock.getTime() == 4.33, "toggling never moves the position");
 
     BPMDisplay bpm;

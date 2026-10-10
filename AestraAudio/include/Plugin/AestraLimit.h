@@ -15,6 +15,8 @@
 
 #pragma once
 
+#include "Plugin/InternalPluginBase.h"
+#include "RealtimeThreadGuard.h"
 #include "Plugin/PluginHost.h"
 
 #include <algorithm>
@@ -30,7 +32,7 @@ namespace Aestra {
 namespace Audio {
 namespace Plugins {
 
-class AestraLimit : public IPluginInstance {
+class AestraLimit : public InternalPluginBase {
 public:
     static constexpr uint32_t kStateMagic = 0x4C4D5431; // 'LMT1'
 
@@ -53,15 +55,7 @@ public:
     bool initialize(double sampleRate, uint32_t maxBlockSize) override {
         m_sampleRate = std::max(1.0, sampleRate);
         m_maxBlockSize = maxBlockSize;
-        // Seed parameter defaults only on the first initialization of a fresh
-        // instance. EffectChain::prepare() re-calls initialize() on the live
-        // instance during sample-rate/device changes and must preserve the
-        // user's current parameter values (and any loaded project state).
-        if (!m_paramsInitialized.exchange(true)) {
-            for (const auto& param : getParameters()) {
-                m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
-            }
-        }
+        seedDefaultsOnce();
         resetRuntimeState();
         snapSmoothedParams();
         updateLookaheadSize();
@@ -80,16 +74,56 @@ public:
     void deactivate() override { m_active.store(false, std::memory_order_relaxed); }
     bool isActive() const override { return m_active.load(std::memory_order_relaxed); }
 
+    void pushLookaheadBypass(float inL, float inR, bool stereo, float& outL, float& outR) {
+        m_lookaheadBuf[0][m_writeCursor] = inL;
+        if (stereo)
+            m_lookaheadBuf[1][m_writeCursor] = inR;
+        m_writeCursor = (m_writeCursor + 1) % m_lookaheadSize;
+
+        const uint32_t readOffset = (m_writeCursor + m_lookaheadSize - m_lookaheadSamples) % m_lookaheadSize;
+        outL = m_lookaheadBuf[0][readOffset];
+        outR = stereo ? m_lookaheadBuf[1][readOffset] : outL;
+    }
+
+    // Bypass must delay by the same amount the plugin reports, or a host that
+    // compensates the chain against getLatencySamples() places this plugin
+    // m_lookaheadSamples early. Routing through the lookahead ring keeps the
+    // reported latency constant instead of changing it with the knob.
+    void bypassThroughLookahead(const float* const* inputs, float** outputs,
+                                uint32_t numInputChannels, uint32_t numOutputChannels,
+                                uint32_t numFrames) {
+        if (m_lookaheadSize == 0 || m_lookaheadSamples == 0) {
+            copyOrClear(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
+            return;
+        }
+        // Output side and input side are decided separately: a mono-in /
+        // stereo-out layout still has to fill outputs[1], which the previous
+        // straight copy zero-filled.
+        const bool stereoOut = numOutputChannels >= 2;
+        const bool hasRightInput = numInputChannels >= 2 && inputs[1] != nullptr;
+        for (uint32_t i = 0; i < numFrames; ++i) {
+            const float inL = sanitizeSample(readInput(inputs, numInputChannels, 0, i));
+            const float inR = hasRightInput ? sanitizeSample(readInput(inputs, numInputChannels, 1, i)) : inL;
+            float outL = 0.0f, outR = 0.0f;
+            pushLookaheadBypass(inL, inR, stereoOut, outL, outR);
+            if (outputs[0]) outputs[0][i] = outL;
+            if (stereoOut && outputs[1]) outputs[1][i] = outR;
+        }
+        for (uint32_t ch = 2; ch < numOutputChannels; ++ch) {
+            if (outputs[ch])
+                std::memset(outputs[ch], 0, numFrames * sizeof(float));
+        }
+    }
+
     void process(const float* const* inputs, float** outputs,
                  uint32_t numInputChannels, uint32_t numOutputChannels,
                  uint32_t numFrames, const MidiBuffer* midiInput = nullptr,
-                 MidiBuffer* midiOutput = nullptr) override {
+                 MidiBuffer* midiOutput = nullptr) AESTRA_RT_NONBLOCKING override {
         (void)midiInput;
         (void)midiOutput;
 
-        if (!m_active.load(std::memory_order_relaxed) ||
-            m_params[kBypass].load(std::memory_order_relaxed) > 0.5f) {
-            copyOrClear(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
+        if (!m_active.load(std::memory_order_relaxed) || isBypassed()) {
+            bypassThroughLookahead(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
             return;
         }
 
@@ -97,7 +131,7 @@ public:
         const bool stereo = channels >= 2;
 
         // Cache per-block constants (avoids repeated atomic loads and transcendental calls)
-        const bool autoRelease = m_params[kReleaseMode].load(std::memory_order_relaxed) <= 0.5f;
+        const bool autoRelease = paramValue(kReleaseMode) <= 0.5f;
         const float clipLevel = m_clipLevel;
 
         float blockInputPeak = 0.0f;
@@ -195,26 +229,22 @@ public:
         m_gainReduction.store(std::max(0.0f, -m_appliedGainDb), std::memory_order_relaxed);
     }
 
-    uint32_t getParameterCount() const override { return kParamCount; }
+    // Declarative parameter table: this is the whole plugin-side surface now.
+    // Storage, the non-finite and range guards, getParameters() and the state
+    // blob come from InternalPluginBase. The rows are the table this plugin
+    // already shipped in getParameters(), unchanged — same defaults, same
+    // steps, same bypass marking — so this is a type rename, not a rewrite.
+    inline static constexpr ParamSpec kSpecs[] = {
+        {kCeiling, "Ceiling", "CEIL", "dBTP", 0.9958f, 0.0f, 1.0f, true},
+        {kReleaseMode, "Release Mode", "RM", "", 0.0f, 0.0f, 1.0f, true, false, false, 1},
+        {kRelease, "Release", "REL", "ms", 0.1837f, 0.0f, 1.0f, true},
+        {kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
+    };
 
-    float getParameter(uint32_t id) const override {
-        if (id >= kParamCount) return 0.0f;
-        return m_params[id].load(std::memory_order_relaxed);
-    }
-
-    void setParameter(uint32_t id, float value) override {
-        if (id >= kParamCount) return;
-        m_params[id].store(std::clamp(value, 0.0f, 1.0f), std::memory_order_relaxed);
-    }
-
-    std::vector<PluginParameter> getParameters() const override {
-        return {
-            { kCeiling, "Ceiling", "CEIL", "dBTP", 0.9958f, 0.0f, 1.0f, true },
-            { kReleaseMode, "Release Mode", "RM", "", 0.0f, 0.0f, 1.0f, true, false, false, 1 },
-            { kRelease, "Release", "REL", "ms", 0.1837f, 0.0f, 1.0f, true },
-            { kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1 },
-        };
-    }
+    const ParamSpec* paramSpecs() const override { return kSpecs; }
+    uint32_t paramSpecCount() const override { return kParamCount; }
+    AESTRA_VALIDATE_PARAM_SPECS(kSpecs, kParamCount);
+    uint32_t stateMagic() const override { return kStateMagic; }
 
     std::string getParameterDisplay(uint32_t id) const override {
         if (id >= kParamCount) return "";
@@ -228,39 +258,14 @@ public:
         }
     }
 
-    std::vector<uint8_t> saveState() const override {
-        struct Blob {
-            uint32_t magic = kStateMagic;
-            uint32_t version = 1;
-            float params[kParamCount] = {};
-        } blob;
-        for (uint32_t i = 0; i < kParamCount; ++i) {
-            blob.params[i] = getParameter(i);
-        }
-        const auto* data = reinterpret_cast<const uint8_t*>(&blob);
-        return { data, data + sizeof(blob) };
-    }
-
-    bool loadState(const std::vector<uint8_t>& state) override {
-        if (state.size() < sizeof(uint32_t) * 2) return false;
-        uint32_t magic = 0;
-        std::memcpy(&magic, state.data(), sizeof(magic));
-        if (magic != kStateMagic) return false;
-        if (state.size() < sizeof(uint32_t) * 2 + sizeof(float) * kParamCount) return false;
-        struct Blob {
-            uint32_t magic;
-            uint32_t version;
-            float params[kParamCount];
-        };
-        Blob blob{};
-        std::memcpy(&blob, state.data(), sizeof(blob));
-        if (blob.version < 1 || blob.version > 1) return false;
-        for (uint32_t i = 0; i < kParamCount; ++i) {
-            setParameter(i, blob.params[i]);
-        }
-        return true;
-    }
-
+    // The {magic, version, params[kParamCount]} blob this plugin used to write
+    // by hand is byte-for-byte what InternalPluginBase emits for the same
+    // magic and row count, so inheriting it is a no-op for a saved project.
+    // InternalPluginBaseBlobTest pins that identity per plugin.
+    //
+    // Kept as an override because the base's editor stubs report no editor and
+    // a zero size. Limit has a real one at 520x400, and dropping these two
+    // lines would have silently taken its editor away.
     bool hasEditor() const override { return true; }
     bool openEditor(void*) override { return false; }
     void closeEditor() override {}
@@ -269,8 +274,13 @@ public:
     bool resizeEditor(int, int) override { return false; }
 
     const PluginInfo& getInfo() const override { return m_info; }
+    // The lookahead ring reads the slot written one iteration ago, so the
+    // input reaching the VCA is m_lookaheadSamples - 1 old, not
+    // m_lookaheadSamples. Verified by impulse probe: it reported 96 while the
+    // first non-zero output landed on frame 95. Reporting the real figure is
+    // what lets a host delay-compensate the chain correctly.
     uint32_t getLatencySamples() const override {
-        return m_lookaheadSamples;
+        return m_lookaheadSamples > 0u ? m_lookaheadSamples - 1u : 0u;
     }
     uint32_t getTailSamples() const override { return 0; }
     WatchdogStats getWatchdogStats() const override { return {}; }
@@ -323,21 +333,26 @@ private:
         m_longEma  = m_alphaLong  * inputSq + (1.0f - m_alphaLong)  * m_longEma;
     }
 
-    void computeAutoReleaseMs() {
+    // Density thresholds for the auto-release curve. Hoisted to class scope from
+    // function-local `static constexpr`: Clang refuses any static local inside a
+    // function annotated AESTRA_RT_NONBLOCKING, because thread-safe static
+    // initialisation is a guard variable and a guard on an audio-thread path is a
+    // lock. Same values, same generated code.
+    inline static constexpr float K_DENSE_THRESH  = 0.7f;
+    inline static constexpr float K_SPARSE_THRESH = 0.3f;
+    inline static constexpr float K_RELEASE_MAX_MS = 300.0f;
+    inline static constexpr float K_RELEASE_MIN_MS = 60.0f;
+
+    void computeAutoReleaseMs() AESTRA_RT_NONBLOCKING {
         const float density = (m_longEma > 1e-10f) ? (m_shortEma / m_longEma) : 0.0f;
 
-        static constexpr float kDenseThresh  = 0.7f;
-        static constexpr float kSparseThresh = 0.3f;
-        static constexpr float kReleaseMaxMs = 300.0f;
-        static constexpr float kReleaseMinMs = 60.0f;
-
-        if (density >= kDenseThresh) {
-            m_autoReleaseMs = kReleaseMaxMs;
-        } else if (density <= kSparseThresh) {
-            m_autoReleaseMs = kReleaseMinMs;
+        if (density >= K_DENSE_THRESH) {
+            m_autoReleaseMs = K_RELEASE_MAX_MS;
+        } else if (density <= K_SPARSE_THRESH) {
+            m_autoReleaseMs = K_RELEASE_MIN_MS;
         } else {
-            const float t = (density - kSparseThresh) / (kDenseThresh - kSparseThresh);
-            m_autoReleaseMs = kReleaseMinMs + t * (kReleaseMaxMs - kReleaseMinMs);
+            const float t = (density - K_SPARSE_THRESH) / (K_DENSE_THRESH - K_SPARSE_THRESH);
+            m_autoReleaseMs = K_RELEASE_MIN_MS + t * (K_RELEASE_MAX_MS - K_RELEASE_MIN_MS);
         }
     }
 
@@ -435,8 +450,7 @@ private:
     double m_sampleRate = 48000.0;
     uint32_t m_maxBlockSize = 512;
     std::atomic<bool> m_active{false};
-    std::atomic<bool> m_paramsInitialized{false};
-    std::array<std::atomic<float>, kParamCount> m_params{};
+    
 
     // Oversampler states
     UpsampleState m_tpUpsampleL;

@@ -151,14 +151,19 @@ int main() {
     {
         EffectChain chain;
         chain.prepare(48000.0, 512);
-        std::vector<std::string> missing;
-        check(chain.loadState(blob0, manager(), &missing), "loadState reports a well-formed blob as ok");
+        LoadReport report;
+        check(chain.loadState(blob0, manager(), &report), "loadState reports a well-formed blob as ok");
 
-        check(missing.size() == 3, "all three unavailable plugins are reported");
-        if (missing.size() == 3) {
-            check(missing[0] == kMissingA && missing[1] == kMissingB && missing[2] == kMissingA,
+        check(report.missingPlugins.size() == 3, "all three unavailable plugins are reported");
+        if (report.missingPlugins.size() == 3) {
+            check(report.missingPlugins[0] == kMissingA && report.missingPlugins[1] == kMissingB &&
+                      report.missingPlugins[2] == kMissingA,
                   "reported ids arrive in slot order");
         }
+        // The two lists are different facts. A placeholder preserves the record
+        // and loses nothing; an unreadable state means the settings are gone.
+        // Collapsing them into one list is what #1014 was.
+        check(report.unreadableState.empty(), "a placeholder is never reported as unreadable state");
         check(chain.getMissingPluginCount() == 3, "chain counts three placeholders");
         check(chain.getMissingPluginId(0) == kMissingA, "slot 0 retains its id");
         check(chain.getMissingPluginId(3) == kMissingB, "slot 3 retains its id");
@@ -284,9 +289,10 @@ int main() {
         EffectChain chain;
         chain.prepare(48000.0, 512);
         const std::vector<uint8_t> emptyBlob = buildBlob({});
-        std::vector<std::string> missing;
-        check(chain.loadState(emptyBlob, manager(), &missing), "all-empty chain loads");
-        check(missing.empty(), "all-empty chain reports nothing missing");
+        LoadReport report;
+        check(chain.loadState(emptyBlob, manager(), &report), "all-empty chain loads");
+        check(report.missingPlugins.empty(), "all-empty chain reports nothing missing");
+        check(report.unreadableState.empty(), "all-empty chain reports nothing unreadable");
         check(chain.getMissingPluginCount() == 0, "all-empty chain has no placeholders");
         check(chain.saveState() == emptyBlob, "all-empty chain round-trips unchanged");
         check(chain.getFirstEmptySlot() == 0, "all-empty chain offers slot 0");

@@ -1,0 +1,15 @@
+# Budget gate baseline (V8-G5 · FD-39 tier 1). Checked by scripts/ci/check-budgets.py in
+# the "Linux (UI/App compile)" CI lane; the rules and how to move a budget are in that
+# script's header. A metric may drift +/-10%; past +10% the PR fails, past -10% it warns
+# so the row can be lowered and the win kept.
+#
+# Values are measured on the CI lane (ubuntu-latest, Release), not on a developer box.
+# Regenerate after an intentional change with:
+#   python3 scripts/ci/check-budgets.py --bin-dir build-app/bin --update
+#
+# <metric> <baseline> <cap|->
+#   bundle_bytes   stripped Aestra binary + AestraAssets/ beside it; cap = FD-35's 50 MiB ceiling
+#   rss_kb.*       AestraHeadless peak RSS (KiB) for a fixed offline scenario, no audio device
+bundle_bytes 10999908 52428800
+rss_kb.stress 28692 -
+rss_kb.tone 24744 -

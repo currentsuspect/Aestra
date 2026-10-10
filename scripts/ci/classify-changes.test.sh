@@ -66,7 +66,7 @@ expect skip-cxx "#615 as merged"                 "workers/license-signing/packag
 # compile)" sets it — so nothing else compiles these files.
 expect ui-app-only "UI widget source"            "AestraUI/Widgets/UIMixerButtonRow.cpp"
 expect ui-app-only "app source"                  "Source/App/AestraApp.cpp"
-expect ui-app-only "component source"            "Source/Components/FileBrowser.cpp"
+expect ui-app-only "component source"            "Source/Components/FilePreviewPanel.cpp"
 expect ui-app-only "several UI sources"          "AestraUI/Widgets/UIMixerButtonRow.cpp" \
                                                  "Source/Panels/MixerPanel.cpp"
 expect ui-app-only "UI source plus docs"         "docs/index.md" "Source/App/AestraApp.cpp"
@@ -94,6 +94,10 @@ expect broad "cursor service compiled by a test" "AestraUI/Platform/NUICursorSer
 # now, and this pair is what keeps that honest in both directions.
 expect broad "lane component compiled by a test" "Source/Components/TrackManagerUIClipOps.cpp"
 expect broad "lane view compiled by a test"      "Source/Components/TrackUIComponent.cpp"
+# FileBrowser.cpp joined this group when FileBrowserLibraryTest began compiling it
+# (#1033), which is why "component source" above moved to FilePreviewPanel.cpp.
+expect broad "browser compiled by a test"        "Source/Components/FileBrowser.cpp"
+expect broad "browser split compiled by a test"  "Source/Components/FileBrowserNavigation.cpp"
 expect broad "one headless source among UI"      "Source/App/AestraApp.cpp" \
                                                  "Source/Core/ProjectSerializer.cpp"
 

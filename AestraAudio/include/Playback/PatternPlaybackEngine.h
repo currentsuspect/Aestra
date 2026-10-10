@@ -40,7 +40,8 @@ struct ScheduledEvent {
     uint8_t data2;        // 1 byte (velocity)
     /** @brief Event priority inside a frame. */
     uint8_t priority;     // 1 byte (0=note-off, 1=per-note pan, 2=note-on)
-    uint8_t _padding[6];  // 6 bytes -> Total 32.
+    /** @brief Note identity shared by a note's on and off (0 = none). 4 bytes, aligned -> Total 32. */
+    uint32_t noteId;
 };
 static_assert(sizeof(ScheduledEvent) == 32, "ScheduledEvent must be 32 bytes");
 
@@ -340,6 +341,8 @@ private:
         uint8_t noteNumber;
         uint16_t channelIdx;
         uint64_t offFrame;
+        uint32_t noteId;    // the id its voice was started with; every note-off for it carries this
+        uint32_t currentId; // the id the scheduler computes for the note now (changes when edited)
     };
 
     // Gated-note registry (control thread only; refilled/pruned in refillWindow).

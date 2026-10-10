@@ -3,6 +3,9 @@
 
 #include "NUIComponent.h"
 #include "NUITypes.h"
+
+#include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <string>
 
@@ -129,6 +132,29 @@ protected:
     // Shift is held — opt-in fine/precision drag; the default (unmodified)
     // feel is unchanged. Add to the current value each drag frame.
     float knobDragStep(const NUIMouseEvent& event, float rangePx) const;
+
+    // One continuous knob an editor hands to handleKnobDrag(): where it is, and
+    // which parameter it moves.
+    struct KnobTarget {
+        NUIRect rect;
+        uint32_t paramId = 0;
+    };
+
+    // The whole knob interaction in one call, so editors stop repeating it:
+    //   - press on a target: begins a capture drag on that parameter
+    //   - motion while dragging: steps the value by knobDragStep(), clamped to
+    //     0..1, through @p set, and marks the editor dirty
+    //   - release while dragging: ends the capture
+    // Returns true when the event was consumed. Call it where the editor used to
+    // test its own knob rects, after any control that must win a press first.
+    // @p get / @p set read and write a normalised parameter value.
+    bool handleKnobDrag(const NUIMouseEvent& event, const KnobTarget* targets, size_t count, float rangePx,
+                        const std::function<float(uint32_t)>& get, const std::function<void(uint32_t, float)>& set);
+    // The parameter being dragged, or -1. Read-only for subclasses that draw a
+    // drag highlight; handleKnobDrag() owns it.
+    int knobDragParam() const { return m_knobDragParam; }
+
+    int m_knobDragParam = -1;
 
     // Window dragging from title bar
     bool m_isDraggingWindow = false;

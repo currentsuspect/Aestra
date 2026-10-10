@@ -489,58 +489,62 @@ void TrackManagerUI::onAddTrackClicked() {
     addTrack(); // Add track with auto-generated name
 }
 
+TimelineLayout TrackManagerUI::currentTimelineLayout() const {
+    const AestraUI::NUIRect bounds = getBounds();
+    const auto& dims = AestraUI::NUIThemeManager::getInstance().getLayoutDimensions();
+    return resolveTimelineLayout(bounds.width, bounds.height, dims.trackControlsWidth);
+}
+
 void TrackManagerUI::layoutTracks() {
     AestraUI::NUIRect bounds = getBounds();
 
-    // Get layout dimensions from theme
-    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    const auto& layout = themeManager.getLayoutDimensions();
-
-    float scrollbarWidth = kTimelineScrollbarWidth;
-
-    float viewportHeight = std::max(0.0f, bounds.height - kTimelineTimeBandHeight);
+    // V8-X2b: every region and row is resolved in this component's Local space
+    // (TrackManagerUILayout.h). Our bounds are window-absolute, so the single
+    // conversion is localToWindow() against our own origin, here.
+    const AestraUI::Layout::NUIWindowPoint origin(bounds.x, bounds.y);
+    const auto toWindow = [&](const AestraUI::Layout::NUILocalRect& local) {
+        return AestraUI::Layout::localToWindow(local, origin).raw();
+    };
+    // AESTRA_LAYOUT_TRACE=timeline records why each region and row lands where it
+    // does (V8-X2b criterion 4); nullptr, and free, otherwise.
+    auto* trace = AestraUI::Layout::layoutRecorderFor("timeline");
+    if (trace) {
+        trace->beginPass(origin);
+    }
+    const auto& layoutDims = AestraUI::NUIThemeManager::getInstance().getLayoutDimensions();
+    const TimelineLayout layout =
+        resolveTimelineLayout(bounds.width, bounds.height, layoutDims.trackControlsWidth, trace);
 
     // In v3.1, panels are floating overlays and do not affect workspace viewport directly.
     // If we wanted docking, we'd subtract their space here based on external state pointers.
 
-    // Layout timeline minimap (top of the time band, above the ruler).
-    // Cropped to the plane column: starts where the track-controls boundary
-    // ends so the surface never spans the toolbar corner.
+    // Timeline minimap: top of the time band, above the ruler, cropped to the
+    // plane column so the surface never spans the toolbar corner.
     if (m_timelineMinimap) {
-        const float minimapX = layout.trackControlsWidth;
-        float minimapWidth = std::max(0.0f, bounds.width - scrollbarWidth - minimapX);
-        m_timelineMinimap->setBounds(
-            AestraUI::NUIAbsolute(bounds, minimapX, 0.0f, minimapWidth, kTimelineMinimapHeight));
+        m_timelineMinimap->setBounds(toWindow(layout.minimap));
         updateTimelineMinimap(0.0);
     }
 
-    // Layout vertical scrollbar (right side, below the time band)
+    // Vertical scrollbar: right-hand gutter, below the time band.
     if (m_scrollbar) {
-        float scrollbarY = kTimelineTimeBandHeight;
-        float scrollbarX = std::max(0.0f, bounds.width - scrollbarWidth);
-        m_scrollbar->setBounds(AestraUI::NUIAbsolute(bounds, scrollbarX, scrollbarY, scrollbarWidth, viewportHeight));
+        m_scrollbar->setBounds(toWindow(layout.scrollbar));
         updateScrollbar();
     }
 
-    float controlAreaWidth = layout.trackControlsWidth;
-    float gridStartX = bounds.x + std::max(0.0f, controlAreaWidth + kTimelineGridInsetX);
-    float trackAreaTop = bounds.y + std::max(0.0f, kTimelineTimeBandHeight);
-
     // === V3.0 LANE LAYOUT (Two-Rect Model) ===
+    // FD-14 §10: nested rows keep FULL-WIDTH bounds — the timeline grid must
+    // stay globally aligned across lanes (a row-x indent would shift clip
+    // snapping); nesting is expressed in the chrome instead.
+    const auto rows = arrangeTimelineRows(layout, static_cast<float>(m_trackHeight),
+                                          static_cast<float>(m_trackSpacing), m_trackUIComponents.size(),
+                                          m_scrollOffset, trace);
+    AestraUI::Layout::finishLayoutPass(trace);
     for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
         auto trackUI = m_trackUIComponents[i];
         if (!trackUI)
             continue;
 
-        float yPos = trackAreaTop + (i * (m_trackHeight + m_trackSpacing)) - m_scrollOffset;
-
-        // Fix: Use absolute coordinates (bounds.x, yPos).
-        // AestraUI components use absolute screen coordinates.
-        // FD-14 §10: nested rows keep FULL-WIDTH bounds — the timeline grid
-        // must stay globally aligned across lanes (a row-x indent would shift
-        // clip snapping); nesting is expressed in the chrome instead.
-        float trackWidth = timelineTrackRowWidth(bounds.width);
-        trackUI->setBounds(bounds.x, yPos, trackWidth, m_trackHeight);
+        trackUI->setBounds(toWindow(rows[i].rect));
         trackUI->setVisible(m_playlistVisible);
 
         // Zebra Striping: Ensure index is set during layout (critical for refresh persistence)

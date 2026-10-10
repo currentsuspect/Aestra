@@ -80,7 +80,8 @@ void TimelineMinimapBar::setModel(const TimelineMinimapModel& model)
                            o.aggregation == model.aggregation && o.beatsPerBar == model.beatsPerBar &&
                            o.showSelection == model.showSelection && o.showLoop == model.showLoop &&
                            o.showMarkers == model.showMarkers && o.showDiagnostics == model.showDiagnostics &&
-                           o.showPlayhead == model.showPlayhead;
+                           o.showPlayhead == model.showPlayhead && o.laneColorCount == model.laneColorCount &&
+                           o.laneColorsHash == model.laneColorsHash;
 
     model_ = model;
     lastSeenSummaryVersion_ = newSummaryVersion;
@@ -193,6 +194,7 @@ void TimelineMinimapBar::cacheThemeColors_()
     colors_.midiTint = theme.getColor("accentCyan");
     colors_.automationTint = theme.getColor("accentPrimary");
     colors_.baseline = theme.getColor("textSecondary").withAlpha(0.10f);
+    colors_.densityTint = theme.getColor("textSecondary");
 
     // The viewport is navigation chrome, not a loop or selection. Keep it
     // neutral; semantic purple is reserved for actual musical ranges.

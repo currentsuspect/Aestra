@@ -3,8 +3,6 @@
 
 #include "NUIThemeSystem.h"
 #include "NUIRenderer.h"
-#include "../Graphics/NUISVGParser.h"
-#include "TrackControlIcons.h"
 
 #include <algorithm>
 #include <cmath>
@@ -17,21 +15,11 @@ namespace {
     constexpr float BTN_W = 24.0f;
     constexpr float BTN_H = 20.0f;
     constexpr float BTN_GAP = 5.0f;
-    constexpr float BTN_RADIUS = 8.0f;
+    constexpr float BTN_RADIUS = 3.0f;  // keys, matching the track-header M / S / R
 
-    // Mute/solo/monitor glyphs come from TrackControlIcons.h, shared with the
-    // arrangement track headers so both surfaces speak one icon language by
-    // construction rather than by matching copies. FD-14 #6: the strip's third
-    // slot is input monitoring — record arm lives on the Track only.
-
-    // Parsed once, then rasterized+cached per size/tint by NUISVGRenderer, so the
-    // per-frame cost is a single texture draw.
-    const NUISVGDocument* mixerControlIcon(const char* svg) {
-        static std::unordered_map<const char*, std::shared_ptr<NUISVGDocument>> docs;
-        auto& doc = docs[svg];
-        if (!doc) doc = NUISVGParser::parse(svg);
-        return doc.get();
-    }
+    // Mute / solo / input-monitor render as lettered keys, the same language
+    // as the arrangement track headers. FD-14 #6: the strip's third slot is
+    // input monitoring; record arm lives on the Track only.
 }
 
 UIMixerButtonRow::UIMixerButtonRow()
@@ -113,8 +101,13 @@ void UIMixerButtonRow::onResize(int width, int height)
 
 void UIMixerButtonRow::onRender(NUIRenderer& renderer)
 {
-    static constexpr const char* icons[kButtonCount] = {kMuteIconSvg, kSoloIconSvg, kMonitorIconSvg};
+    // Lettered keys, the same language as the track-header M / S / R: a
+    // state reads without hovering, and an active key is a solid fill in its
+    // theme colour. The third key is input monitoring (it stopped being record
+    // arm in v0.7.1), so it says IN rather than borrowing a record glyph.
+    static constexpr const char* letters[kButtonCount] = {"M", "S", "IN"};
     auto& theme = NUIThemeManager::getInstance();
+    const NUIColor inkOnActive = theme.getColor("backgroundPrimary");
 
     for (int i = 0; i < kButtonCount; ++i) {
         const bool hovered = (i == m_hovered);
@@ -122,65 +115,38 @@ void UIMixerButtonRow::onRender(NUIRenderer& renderer)
 
         bool active = false;
         NUIColor activeBg = m_bg;
-        NUIColor textColor = m_text;
-
         if (i == 0) {
             active = m_muted;
             activeBg = m_muteOn;
-            if (active) textColor = m_textOnBright;
         } else if (i == 1) {
             active = m_soloed;
             activeBg = m_soloOn;
-            if (active) textColor = m_textOnBright;
         } else if (i == 2) {
             active = m_monitored;
             activeBg = m_monitorOn;
-            if (active) textColor = m_textOnRed;
         }
 
-        NUIRect rect = m_buttonBounds[i];
-        NUIRect visualRect{
+        const NUIRect rect = m_buttonBounds[i];
+        const NUIRect visualRect{
             std::floor(rect.x) + 0.5f,
             std::floor(rect.y) + 0.5f,
             std::max(1.0f, std::floor(rect.width) - 1.0f),
             std::max(1.0f, std::floor(rect.height) - 1.0f)
         };
-        
-        NUIColor bg = m_bg;
-        NUIColor border = m_border;
 
+        NUIColor textColor = m_text;
         if (active) {
-            bg = activeBg.withAlpha(0.32f);
-            border = activeBg.withAlpha(0.85f);
-            textColor = (i == 2) ? m_textOnRed : m_textOnBright;
-        } else if (hovered) {
-            bg = theme.getColor("buttonBgHover").withAlpha(0.99f);
-            border = m_hoverBorder;
-            textColor = theme.getColor("textPrimary").withAlpha(0.92f);
+            renderer.fillRoundedRect(visualRect, BTN_RADIUS, pressed ? activeBg.withAlpha(0.8f) : activeBg);
+            textColor = inkOnActive;
         } else {
-            textColor = m_text;
+            if (hovered || pressed) {
+                renderer.fillRoundedRect(visualRect, BTN_RADIUS,
+                                         theme.getColor(pressed ? "buttonBgActive" : "buttonBgHover").withAlpha(0.99f));
+                textColor = theme.getColor("textPrimary");
+            }
+            renderer.strokeRoundedRect(visualRect, BTN_RADIUS, 1.0f, hovered ? m_hoverBorder : m_border);
         }
-
-        if (pressed) {
-            bg = active ? activeBg.withAlpha(0.28f) : theme.getColor("buttonBgActive").withAlpha(0.99f);
-        }
-
-        // Flat active state (no glow): the coloured fill + border + white icon
-        // carry the on-state, matching the flat-active language used elsewhere.
-        renderer.fillRoundedRect(visualRect, BTN_RADIUS, bg);
-        // Single outline — the fill contrast carries the state, and the inset
-        // bevel only added another concentric edge.
-        renderer.strokeRoundedRect(visualRect, BTN_RADIUS, 1.0f, border);
-        // Centre the glyph in the raw button bounds (not the half-pixel-inset
-        // visualRect) so the offsets stay symmetric integers — matches the
-        // track-header control icons exactly.
-        if (const auto* doc = mixerControlIcon(icons[i])) {
-            const float iconSize = std::round(std::min(rect.width, rect.height) - 6.0f);
-            const NUIRect iconRect(std::round(rect.x + (rect.width - iconSize) * 0.5f),
-                                   std::round(rect.y + (rect.height - iconSize) * 0.5f),
-                                   iconSize, iconSize);
-            NUISVGRenderer::render(renderer, *doc, iconRect, textColor);
-        }
+        renderer.drawTextCentered(letters[i], rect, 9.5f, textColor);
     }
 }
 
@@ -203,10 +169,9 @@ bool UIMixerButtonRow::onMouseEvent(const NUIMouseEvent& event)
                 else if (m_hovered == 2) text = "Input Monitor";
                 
                 const auto& rect = m_buttonBounds[m_hovered];
-                NUIPoint center(rect.x + rect.width * 0.5f, rect.y + rect.height + 8.0f);
-                NUIPoint globalPos = localToGlobal(center);
-                
-                NUIComponent::showRemoteTooltip(text, globalPos, this);
+                // m_buttonBounds are window-absolute (from getBounds()); so is the tooltip anchor.
+                const NUIPoint anchor(rect.x + rect.width * 0.5f, rect.y + rect.height + 8.0f);
+                NUIComponent::showRemoteTooltip(text, anchor, this);
             } else {
                 NUIComponent::hideRemoteTooltip(this);
             }

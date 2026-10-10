@@ -464,12 +464,33 @@ bool NUIRendererGL::initialize(int width, int height) {
         std::vector<std::string> fontPaths;
         if (const char* fontDir = std::getenv("AESTRA_FONT_DIR")) {
             const std::string base(fontDir);
+            fontPaths.push_back(base + "/Archivo/Archivo-Medium.ttf");
+            fontPaths.push_back(base + "/Archivo/Archivo-Regular.ttf");
+            fontPaths.push_back(base + "/Archivo/Archivo-Bold.ttf");
             fontPaths.push_back(base + "/Geist/Geist-Medium.ttf");
             fontPaths.push_back(base + "/Geist/Geist-Regular.ttf");
             fontPaths.push_back(base + "/Geist/Geist-Bold.ttf");
             fontPaths.push_back(base + "/Manrope/Manrope-Regular.ttf");
         }
         std::vector<std::string> fallbackFontPaths = {
+            "AestraAssets/fonts/Archivo/Archivo-Medium.ttf",
+            "../AestraAssets/fonts/Archivo/Archivo-Medium.ttf",
+            "../../AestraAssets/fonts/Archivo/Archivo-Medium.ttf",
+            "../../../AestraAssets/fonts/Archivo/Archivo-Medium.ttf",
+            "../../../../AestraAssets/fonts/Archivo/Archivo-Medium.ttf",
+
+            "AestraAssets/fonts/Archivo/Archivo-Regular.ttf",
+            "../AestraAssets/fonts/Archivo/Archivo-Regular.ttf",
+            "../../AestraAssets/fonts/Archivo/Archivo-Regular.ttf",
+            "../../../AestraAssets/fonts/Archivo/Archivo-Regular.ttf",
+            "../../../../AestraAssets/fonts/Archivo/Archivo-Regular.ttf",
+
+            "AestraAssets/fonts/Archivo/Archivo-Bold.ttf",
+            "../AestraAssets/fonts/Archivo/Archivo-Bold.ttf",
+            "../../AestraAssets/fonts/Archivo/Archivo-Bold.ttf",
+            "../../../AestraAssets/fonts/Archivo/Archivo-Bold.ttf",
+            "../../../../AestraAssets/fonts/Archivo/Archivo-Bold.ttf",
+
             "AestraAssets/fonts/Geist/Geist-Medium.ttf",
             "../AestraAssets/fonts/Geist/Geist-Medium.ttf",
             "../../AestraAssets/fonts/Geist/Geist-Medium.ttf",

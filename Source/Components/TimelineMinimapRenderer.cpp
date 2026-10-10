@@ -89,8 +89,10 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
                           1.0f, colors.cornerSeparator);
     }
 
-    const TimelineSummarySnapshot snap = model.summary ? TimelineSummarySnapshot{model.summary->summary, model.summary->version}
-                                                       : TimelineSummarySnapshot{};
+    const TimelineSummarySnapshot snap =
+        model.summary
+            ? TimelineSummarySnapshot{model.summary->summary, model.summary->version, model.summary->rebuildGeneration}
+            : TimelineSummarySnapshot{};
     const TimelineSummary* s = snap.summary;
     if (!s || s->bucketCount == 0 || s->buckets.empty()) {
         return;
@@ -181,7 +183,7 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
                 buckets, a, b, model.aggregation,
                 [](const TimelineSummaryBucket& bk) { return std::max(0.0f, bk.energySum); });
             maxValue = std::max(1.0f, s->maxEnergySum);
-            tint = colors.audioTint;
+            tint = colors.densityTint;
         } else {
             const float audio = aggregateValue(
                 buckets, a, b, model.aggregation,
@@ -195,18 +197,13 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
             const float maxMidi = static_cast<float>(std::max<uint32_t>(1u, s->maxMidi));
             maxValue = std::max(maxAudio, maxMidi);
 
-            // Subtle type tint: prefer the dominant signal, blend when similar.
+            // The band says how busy the arrangement is, in neutral ink. It used to be tinted by
+            // clip TYPE (amber audio, cyan MIDI), and every span was typed Audio, so the whole
+            // minimap wore an amber band that named no clip's colour (owner: the beige/orange
+            // "stack" and "false colour advertisement"). Lane colour lives on the lines below.
             const float na = logNorm(audio, maxAudio);
             const float nm = logNorm(midi, maxMidi);
-            if (na <= 0.0f && nm <= 0.0f) {
-                tint = colors.baseline; // "empty" uses neutral baseline, not an accent.
-            } else if (na > nm * 1.2f) {
-                tint = colors.audioTint;
-            } else if (nm > na * 1.2f) {
-                tint = colors.midiTint;
-            } else {
-                tint = blendAdd(colors.audioTint.withAlpha(0.5f), colors.midiTint.withAlpha(0.5f));
-            }
+            tint = (na <= 0.0f && nm <= 0.0f) ? colors.baseline : colors.densityTint;
         }
 
         const float x = map.x + static_cast<float>(px);
@@ -239,8 +236,12 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
                  // use: raw palette hues here read as a second, louder colour
                  // system sitting above a timeline that deliberately tones the
                  // very same lane identity down.
-                 const NUIColor lineTint = restrainLaneIdentityColor(
-                     NUIColor::fromARGB(paletteIndexToARGB(static_cast<int>(i % PALETTE_SIZE))), 0.9f);
+                 // The colour the timeline paints this lane's clips; the palette slot is only a
+                 // fallback when the timeline supplied none (a lane with no clips yet).
+                 const bool known = model.laneColors && i < model.laneColorCount && model.laneColors[i].a > 0.0f;
+                 const NUIColor laneColour = known ? model.laneColors[i]
+                                                   : NUIColor::fromARGB(paletteIndexToARGB(static_cast<int>(i % PALETTE_SIZE)));
+                 const NUIColor lineTint = restrainLaneIdentityColor(laneColour, 0.9f);
 
                  NUIRect lineRect(x, currentY, 1.0f, trackH);
                  renderer.fillRect(lineRect, lineTint);
