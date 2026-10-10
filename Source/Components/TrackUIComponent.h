@@ -154,6 +154,7 @@ public:
         }
     }
     AutomationTarget getEditedAutomationTarget() const { return m_editedAutomationTarget; }
+    bool hasChosenAutomationTarget() const { return m_automationTargetChosen; }
     
     // Timeline zoom settings
     // Timeline zoom settings

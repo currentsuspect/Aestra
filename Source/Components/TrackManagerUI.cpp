@@ -169,7 +169,13 @@ void TrackManagerUI::refreshTracks() {
     // Stable lane IDs own selection. Raw pointers only describe the current
     // widget generation, so discard that view before destroying any rows.
     m_selectedTracks.clear();
+    // V8-A3: a chosen automation target belongs to the lane, not to this row
+    // generation, so it survives the rebuild.
+    std::vector<std::pair<PlaylistLaneID, AutomationTarget>> chosenTargets;
     for (auto& trackUI : m_trackUIComponents) {
+        if (trackUI && trackUI->hasChosenAutomationTarget()) {
+            chosenTargets.emplace_back(trackUI->getLaneId(), trackUI->getEditedAutomationTarget());
+        }
         removeChild(trackUI);
     }
     m_trackUIComponents.clear();
@@ -296,6 +302,9 @@ void TrackManagerUI::refreshTracks() {
         trackUI->setTimelineScrollOffset(m_timelineScrollOffset);
         trackUI->setSnapSetting(m_snapSetting); // Sync snap setting for resize
         trackUI->setSnapEnabled(m_snapEnabled); // Sync master snap toggle for resize
+        for (const auto& [chosenLane, target] : chosenTargets) {
+            if (chosenLane == trackUI->getLaneId()) trackUI->setEditedAutomationTarget(target);
+        }
 
         // Pass platform bridge for cursor capture (volume knob)
         trackUI->setPlatformBridge(m_window);
@@ -823,6 +832,22 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
                 }
             }
         });
+        menu->addSeparator();
+
+        // V8-A3: choose what this lane's automation edits. Choosing shows the
+        // automation view; the curve itself is created by its first point.
+        for (const auto& [label, target] : {std::pair{"Automate Volume", AutomationTarget::Volume},
+                                            std::pair{"Automate Pan", AutomationTarget::Pan}}) {
+            const bool current =
+                m_playlistMode == PlaylistMode::Automation && selectedTrack->getEditedAutomationTarget() == target;
+            menu->addRadioItem(label, "automationTarget", current, [this, laneId, target = target]() {
+                for (const auto& trackUI : m_trackUIComponents) {
+                    if (trackUI && trackUI->getLaneId() == laneId) trackUI->setEditedAutomationTarget(target);
+                }
+                setPlaylistMode(PlaylistMode::Automation);
+                invalidateCache();
+            });
+        }
         menu->addSeparator();
 
         // FD-14 phase-5: take lanes accumulate with no escape hatch. Only the

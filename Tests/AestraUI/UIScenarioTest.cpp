@@ -16,6 +16,7 @@
 #include "AestraJSON.h"
 #include "Layout/NUILayoutExplain.h"
 #include "NUIComponent.h"
+#include "NUIContextMenu.h"
 #include "NUIThemeSystem.h"
 #include "PatternManager.h"
 #include "PlaylistModel.h"
@@ -28,6 +29,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <set>
 #include <sstream>
@@ -89,7 +91,7 @@ bool parseTarget(Run& run, const JSON& name, AutomationTarget& out) {
 class TimelineSurface {
 public:
     bool build(Run& run, const JSON& setup) {
-        if (!onlyKeys(run, setup, {"size", "lanes", "clips", "automation", "mode"}, "setup")) return false;
+        if (!onlyKeys(run, setup, {"size", "lanes", "clips", "automation", "mode", "snap"}, "setup")) return false;
         trackManager_ = std::make_shared<TrackManager>();
         trackManager_->setCommandSink([](const AudioQueueCommand&) { return true; });
         auto& playlist = trackManager_->getPlaylistModel();
@@ -144,6 +146,21 @@ public:
         }
         resize(w, h);
         manager_->refreshTracks();
+        if (setup.has("snap")) {
+            // The timeline's snap grid, as the toolbar sets it.
+            const std::string snap = setup["snap"].asString();
+            const std::map<std::string, AestraUI::SnapGrid> grids{{"bar", AestraUI::SnapGrid::Bar},
+                                                                  {"beat", AestraUI::SnapGrid::Beat},
+                                                                  {"half", AestraUI::SnapGrid::Half},
+                                                                  {"quarter", AestraUI::SnapGrid::Quarter},
+                                                                  {"none", AestraUI::SnapGrid::None}};
+            const auto it = grids.find(snap);
+            if (it == grids.end()) {
+                run.fail("setup.snap: unknown grid \"" + snap + "\" (bar, beat, half, quarter, none)");
+                return false;
+            }
+            manager_->setSnapSetting(it->second);
+        }
         if (setup.has("mode")) {
             const std::string mode = setup["mode"].asString();
             if (mode == "automation") {
@@ -185,7 +202,16 @@ public:
 
     // A point named the way a user thinks of it: on a clip, or at a beat on a lane.
     bool resolvePoint(Run& run, const JSON& at, AestraUI::NUIPoint& out) {
-        if (!onlyKeys(run, at, {"clip", "fraction", "lane", "beat", "value", "target", "x", "y"}, "at")) return false;
+        if (!onlyKeys(run, at, {"clip", "fraction", "lane", "beat", "value", "target", "header", "x", "y"}, "at")) {
+            return false;
+        }
+        if (at.has("lane") && at.has("header") && at["header"].asBool()) {
+            // The lane's header, right of its buttons: where a right-click opens the track menu.
+            if (!pointAt(run, static_cast<int>(at["lane"].asNumber()), 0.0, out)) return false;
+            const float controls = AestraUI::NUIThemeManager::getInstance().getLayoutDimensions().trackControlsWidth;
+            out.x = manager_->getBounds().x + controls * 0.5f;
+            return true;
+        }
         if (at.has("x") && at.has("y")) {
             out = {static_cast<float>(at["x"].asNumber()), static_cast<float>(at["y"].asNumber())};
             return true;
@@ -269,6 +295,53 @@ public:
         paint();
     }
 
+    /**
+     * Picks a context-menu item by its label with the keyboard, as a keyboard user
+     * does: Home, Down once per selectable item after the first, then Enter. The menu's private
+     * click path is not reachable from here; its key path is the public one.
+     */
+    bool pickMenuItem(Run& run, const std::string& label) {
+        std::shared_ptr<AestraUI::NUIContextMenu> menu;
+        for (const auto& child : root_->getChildren()) {
+            if (auto m = std::dynamic_pointer_cast<AestraUI::NUIContextMenu>(child); m && m->isVisible()) menu = m;
+        }
+        if (!menu) {
+            run.fail("menu: no context menu is open");
+            return false;
+        }
+        int downs = 0;
+        bool found = false;
+        std::string labels;
+        for (const auto& item : menu->getItems()) {
+            if (!item || !item->isVisible() || item->getType() == AestraUI::NUIContextMenuItem::Type::Separator ||
+                !item->isEnabled()) {
+                continue;
+            }
+            ++downs;
+            labels += " \"" + item->getText() + "\"";
+            if (item->getText() == label) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            run.fail("menu: no item \"" + label + "\" in" + labels);
+            return false;
+        }
+        auto key = [&](AestraUI::NUIKeyCode code) {
+            AestraUI::NUIKeyEvent e;
+            e.keyCode = code;
+            e.pressed = true;
+            AestraUI::NUIComponent::dispatchKeyEvent(menu.get(), e);
+        };
+        // Home lands on the first selectable item whatever the menu opened on.
+        key(AestraUI::NUIKeyCode::Home);
+        for (int i = 1; i < downs; ++i) key(AestraUI::NUIKeyCode::Down);
+        key(AestraUI::NUIKeyCode::Enter);
+        paint();
+        return true;
+    }
+
     int laneIndexOf(const PlaylistLaneID& id) const {
         for (size_t i = 0; i < lanes_.size(); ++i) {
             if (lanes_[i] == id) return static_cast<int>(i);
@@ -306,7 +379,8 @@ void checkExpect(Run& run, TimelineSurface& s, const JSON& expect, size_t undoBa
     if (expect.has("automation")) {
         const JSON& a = expect["automation"];
         AutomationTarget target;
-        if (onlyKeys(run, a, {"lane", "target", "points"}, "expect.automation") && parseTarget(run, a["target"], target)) {
+        if (onlyKeys(run, a, {"lane", "target", "points", "selected"}, "expect.automation") &&
+            parseTarget(run, a["target"], target)) {
             const int laneIndex = static_cast<int>(a["lane"].asNumber());
             const auto* lane = s.model().getPlaylistModel().getLane(s.lanes().at(static_cast<size_t>(laneIndex)));
             const int ci = lane ? automationCurveIndexFor(lane->automationCurves, target) : -1;
@@ -324,6 +398,22 @@ void checkExpect(Run& run, TimelineSurface& s, const JSON& expect, size_t undoBa
                     }
                 }
             }
+            if (ci >= 0 && a.has("selected")) {
+                // Indices of the selected points, in order (V8-A4).
+                std::vector<int> selected;
+                const auto& pts = lane->automationCurves[static_cast<size_t>(ci)].getPoints();
+                for (size_t i = 0; i < pts.size(); ++i) {
+                    if (pts[i].selected) selected.push_back(static_cast<int>(i));
+                }
+                std::vector<int> wantSelected;
+                for (const auto& i : a["selected"].asArray()) wantSelected.push_back(static_cast<int>(i.asNumber()));
+                if (selected != wantSelected) {
+                    std::string got;
+                    for (int i : selected) got += " " + std::to_string(i);
+                    run.fail("selected points are [" + got + " ], expected " + a["selected"].toString(0));
+                }
+            }
+            if (!a.has("points")) same = ci >= 0;
             if (!same) {
                 run.fail("lane " + std::to_string(laneIndex) + " " + a["target"].asString() + " curve is" +
                          (ci < 0 ? std::string(" missing") : got.str()) + ", expected " + a["points"].toString(0));
@@ -452,6 +542,18 @@ Run runTimeline(const JSON& scenario) {
             } else {
                 run.fail("mouse: unknown kind \"" + kind + "\"");
             }
+        } else if (step.has("mode")) {
+            // The toolbar's clips/automation view switch.
+            if (!onlyKeys(run, step, {"mode"}, "step")) continue;
+            const std::string mode = step["mode"].asString();
+            if (mode == "automation" || mode == "clips") {
+                s.ui().setPlaylistMode(mode == "automation" ? PlaylistMode::Automation : PlaylistMode::Clips);
+                s.paint();
+            } else {
+                run.fail("mode: unknown mode \"" + mode + "\" (clips, automation)");
+            }
+        } else if (step.has("menu")) {
+            if (onlyKeys(run, step, {"menu"}, "step")) s.pickMenuItem(run, step["menu"].asString());
         } else if (step.has("undo")) {
             if (!onlyKeys(run, step, {"undo"}, "step")) continue;
             for (int n = 0; n < static_cast<int>(step["undo"].asNumber()); ++n) {
