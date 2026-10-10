@@ -745,7 +745,9 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
         const float contentX = rect.x + CHIP_PAD_X + CHIP_LAMP + CHIP_LAMP_GAP;
         const AestraUI::NUIColor text = (on || hovered) ? ink : inkQuiet;
         if (label) {
-            renderer.drawText(label, {contentX, renderer.calculateTextY(rect, CHIP_FONT)}, CHIP_FONT, text);
+            // Caps: centred by cap height, level with the lamp (SPEC 3 §3.2).
+            renderer.drawText(label,
+                              {contentX, std::round(renderer.calculateOpticalTextY(rect, CHIP_FONT))}, CHIP_FONT, text);
         } else {
             drawIcon(icon, AestraUI::NUIRect(contentX, rect.y, CHIP_ICON, rect.height), CHIP_ICON, text);
         }
