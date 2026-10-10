@@ -1,6 +1,8 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "Headless/RenderSummary.h"
 
+#include "Analysis/AudioAnalysis.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -124,6 +126,34 @@ std::vector<std::string> compareToExpectation(const RenderSummary& actual, const
     if (expected.hasHash && actual.hash64 != expected.hash64) {
         diffs.emplace_back("hash: " + hashToHex(actual.hash64) + ", expected " + hashToHex(expected.hash64) +
                            " (not bit-identical)");
+    }
+    return diffs;
+}
+
+RenderExpectation expectationFrom(const RenderSummary& summary, const AudioAnalysis& analysis) {
+    RenderExpectation e = expectationFrom(summary);
+    e.hasLoudness = true;
+    e.integratedLufs = analysis.integratedLufs;
+    e.truePeakDbtp = analysis.truePeakDbtp;
+    return e;
+}
+
+std::vector<std::string> compareToExpectation(const RenderSummary& actual, const AudioAnalysis& analysis,
+                                              const RenderExpectation& expected, double toleranceDb) {
+    std::vector<std::string> diffs = compareToExpectation(actual, expected, toleranceDb);
+    if (!expected.hasLoudness) {
+        return diffs;
+    }
+    char buf[160];
+    if (std::fabs(analysis.integratedLufs - expected.integratedLufs) > toleranceDb) {
+        std::snprintf(buf, sizeof(buf), "loudness: %.3f LUFS, expected %.3f (moved %+.3f LU)", analysis.integratedLufs,
+                      expected.integratedLufs, analysis.integratedLufs - expected.integratedLufs);
+        diffs.emplace_back(buf);
+    }
+    if (std::fabs(analysis.truePeakDbtp - expected.truePeakDbtp) > toleranceDb) {
+        std::snprintf(buf, sizeof(buf), "true peak: %.3f dBTP, expected %.3f (moved %+.3f dB)", analysis.truePeakDbtp,
+                      expected.truePeakDbtp, analysis.truePeakDbtp - expected.truePeakDbtp);
+        diffs.emplace_back(buf);
     }
     return diffs;
 }

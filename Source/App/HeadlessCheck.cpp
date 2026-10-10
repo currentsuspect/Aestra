@@ -2,6 +2,7 @@
 #include "HeadlessCheck.h"
 
 #include "../Core/ProjectSerializer.h"
+#include "Analysis/AudioAnalysis.h"
 #include "AudioEngine.h"
 #include "Headless/OfflineProjectRender.h"
 #include "Headless/RenderSummary.h"
@@ -78,6 +79,27 @@ JSON summaryJson(const RenderSummary& s, double truePeakDbtp) {
     return o;
 }
 
+JSON analysisJson(const AudioAnalysis& a) {
+    JSON o = JSON::object();
+    o.set("integratedLufs", JSON(a.integratedLufs));
+    o.set("maxMomentaryLufs", JSON(a.maxMomentaryLufs));
+    o.set("maxShortTermLufs", JSON(a.maxShortTermLufs));
+    o.set("loudnessRangeLu", JSON(a.loudnessRangeLu));
+    o.set("samplePeakDbfs", JSON(a.samplePeakDbfs));
+    o.set("truePeakDbtp", JSON(a.truePeakDbtp));
+    o.set("correlation", JSON(a.correlation));
+    static constexpr const char* kBandNames[AudioAnalysis::kBandCount] = {"low", "lowMid", "mid", "highMid", "high"};
+    JSON bands = JSON::object();
+    for (size_t b = 0; b < AudioAnalysis::kBandCount; ++b) {
+        JSON band = JSON::object();
+        band.set("rmsDbfs", JSON(a.bandRmsDbfs[b]));
+        band.set("share", JSON(a.bandShare[b]));
+        bands.set(kBandNames[b], band);
+    }
+    o.set("bands", bands);
+    return o;
+}
+
 bool readText(const std::string& path, std::string& out) {
     std::ifstream in(path, std::ios::binary);
     if (!in) {
@@ -119,6 +141,12 @@ bool readExpectation(const std::string& path, RenderExpectation& out, std::strin
     out.frames = static_cast<uint64_t>(root["frames"].asNumber());
     out.peakDbfs = root["peakDbfs"].asNumber();
     out.rmsDbfs = root["rmsDbfs"].asNumber();
+    // Loudness pins (V8-S8) are optional: a golden from before them still checks.
+    out.hasLoudness = root.has("integratedLufs") && root.has("truePeakDbtp");
+    if (out.hasLoudness) {
+        out.integratedLufs = root["integratedLufs"].asNumber();
+        out.truePeakDbtp = root["truePeakDbtp"].asNumber();
+    }
     return true;
 }
 
@@ -128,6 +156,10 @@ JSON expectationJson(const RenderExpectation& e) {
     o.set("hash", JSON(hashToHex(e.hash64)));
     o.set("peakDbfs", JSON(e.peakDbfs));
     o.set("rmsDbfs", JSON(e.rmsDbfs));
+    if (e.hasLoudness) {
+        o.set("integratedLufs", JSON(e.integratedLufs));
+        o.set("truePeakDbtp", JSON(e.truePeakDbtp));
+    }
     return o;
 }
 
@@ -236,6 +268,8 @@ int runHeadlessCheck(const HeadlessCheckOptions& options) {
     }
     const RenderSummary summary = summarizeRender(samples, fileChannels, fileRate);
     report.set("summary", summaryJson(summary, render.maxTruePeakdBTP));
+    const AudioAnalysis analysis = analyzeAudio(samples, fileChannels, fileRate);
+    report.set("analysis", analysisJson(analysis));
 
     if (summary.nonFiniteSamples > 0) {
         failures.push_back(std::to_string(summary.nonFiniteSamples) + " NaN/Inf sample(s)");
@@ -246,7 +280,7 @@ int runHeadlessCheck(const HeadlessCheckOptions& options) {
 
     // --- Golden ----------------------------------------------------------------
     if (!options.writeExpectPath.empty()) {
-        if (!writeText(options.writeExpectPath, expectationJson(expectationFrom(summary)).toString(2))) {
+        if (!writeText(options.writeExpectPath, expectationJson(expectationFrom(summary, analysis)).toString(2))) {
             failures.push_back("cannot write golden " + options.writeExpectPath);
             return finish(report, failures, options, kCouldNotCheck);
         }
@@ -259,7 +293,7 @@ int runHeadlessCheck(const HeadlessCheckOptions& options) {
             failures.push_back(error);
             return finish(report, failures, options, kCouldNotCheck);
         }
-        const auto diffs = compareToExpectation(summary, expected);
+        const auto diffs = compareToExpectation(summary, analysis, expected);
         report.set("expect", JSON(options.expectPath));
         report.set("expectDiffs", stringArray(diffs));
         for (const auto& d : diffs) {

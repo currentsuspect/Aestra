@@ -1055,6 +1055,17 @@ target_include_directories(RenderSummaryTest PRIVATE
 add_test(NAME RenderSummaryTest COMMAND RenderSummaryTest)
 set_tests_properties(RenderSummaryTest PROPERTIES LABELS "audio;headless;contract:audio")
 
+# Analysis service (V8-S8): R128 loudness against EBU Tech 3341/3342 cases, true
+# peak, correlation, band energy, and the cache that computes each analysis once.
+add_executable(AudioAnalysisTest AestraAudio/AudioAnalysisTest.cpp)
+target_link_libraries(AudioAnalysisTest PRIVATE AestraAudio)
+target_include_directories(AudioAnalysisTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AudioAnalysisTest COMMAND AudioAnalysisTest)
+set_tests_properties(AudioAnalysisTest PROPERTIES LABELS "audio;analysis;headless;contract:audio")
+
 # #845 regression: recording in a session with existing clips + patterns
 add_executable(RecordingSessionContentTest AestraAudio/RecordingSessionContentTest.cpp)
 target_link_libraries(RecordingSessionContentTest PRIVATE AestraAudio)

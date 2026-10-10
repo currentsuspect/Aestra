@@ -8,6 +8,8 @@
 namespace Aestra {
 namespace Audio {
 
+struct AudioAnalysis;
+
 /**
  * @brief What a rendered file sounds like, as numbers a script can check.
  *
@@ -67,14 +69,25 @@ struct RenderExpectation {
     uint64_t hash64 = 0;
     double peakDbfs = 0.0;
     double rmsDbfs = 0.0;
+    /// Loudness pins from the analysis service (V8-S8), within the same
+    /// tolerance as the levels. A golden written before them has none, and
+    /// is compared exactly as before.
+    bool hasLoudness = false;
+    double integratedLufs = 0.0;
+    double truePeakDbtp = 0.0;
 };
 
 RenderExpectation expectationFrom(const RenderSummary& summary);
+/// The same, plus the loudness pins.
+RenderExpectation expectationFrom(const RenderSummary& summary, const AudioAnalysis& analysis);
 
 /// Human-readable differences; empty means the render matches. Hash is compared
 /// exactly; levels within @p toleranceDb.
 std::vector<std::string> compareToExpectation(const RenderSummary& actual, const RenderExpectation& expected,
                                               double toleranceDb = 0.01);
+/// The same, plus integrated loudness and true peak when the golden pins them.
+std::vector<std::string> compareToExpectation(const RenderSummary& actual, const AudioAnalysis& analysis,
+                                              const RenderExpectation& expected, double toleranceDb = 0.01);
 
 /// 16 lower-case hex digits, the form a golden file stores (a JSON number
 /// cannot hold 64 bits exactly).

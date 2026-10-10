@@ -133,6 +133,14 @@ int main() {
     check(s["peakDbfs"].asNumber() < 0.0 && s["peakDbfs"].asNumber() > -30.0,
           "a half-scale tone renders at a plausible level (-30..0 dBFS)");
     check(s["durationSeconds"].asNumber() >= 1.0, "the render covers the clip");
+    // The analysis service (V8-S8) measures the same render.
+    const auto& a = r["analysis"];
+    check(a.isObject() && a["integratedLufs"].asNumber() > -40.0 && a["integratedLufs"].asNumber() < 0.0,
+          "the report carries the render's integrated loudness");
+    check(a["truePeakDbtp"].asNumber() >= a["samplePeakDbfs"].asNumber(), "and its true peak");
+    check(a["bands"].isObject() && a["bands"].has("mid"), "and its band energy");
+    check(readJson(golden).has("integratedLufs") && readJson(golden).has("truePeakDbtp"),
+          "a new golden pins loudness and true peak");
 
     // 2. Determinism: a second render reproduces the golden, hash included.
     Aestra::HeadlessCheckOptions again;
@@ -140,7 +148,37 @@ int main() {
     again.expectPath = golden.string();
     check(Aestra::runHeadlessCheck(again) == 0, "a second render matches the golden bit for bit");
 
-    // 3. A golden one dB off fails.
+    // 3. A golden from before the loudness pins still checks, on the levels and hash alone.
+    {
+        Aestra::JSON g = readJson(golden);
+        Aestra::JSON old = Aestra::JSON::object();
+        for (const char* key : {"frames", "hash", "peakDbfs", "rmsDbfs"}) old.set(key, g[key]);
+        const fs::path oldGolden = dir.path() / "tone.pre-s8.golden.json";
+        std::ofstream(oldGolden, std::ios::trunc) << old.toString(2);
+        Aestra::HeadlessCheckOptions legacy;
+        legacy.projectPath = project.string();
+        legacy.expectPath = oldGolden.string();
+        check(Aestra::runHeadlessCheck(legacy) == 0, "a golden without loudness pins still passes");
+    }
+
+    // 4. A golden whose loudness is one LU off fails, and says so.
+    {
+        const Aestra::JSON original = readJson(golden);
+        Aestra::JSON g = original;
+        g.set("integratedLufs", Aestra::JSON(g["integratedLufs"].asNumber() + 1.0));
+        std::ofstream(golden, std::ios::trunc) << g.toString(2);
+        Aestra::HeadlessCheckOptions loud = again;
+        loud.reportPath = report.string();
+        check(Aestra::runHeadlessCheck(loud) == 1, "a golden 1 LU off fails the check");
+        bool named = false;
+        for (const auto& d : readJson(report)["expectDiffs"].asArray()) {
+            named = named || d.asString().rfind("loudness:", 0) == 0;
+        }
+        check(named, "and the diff names the loudness");
+        std::ofstream(golden, std::ios::trunc) << original.toString(2);
+    }
+
+    // 5. A golden one dB off fails.
     {
         Aestra::JSON g = readJson(golden);
         g.set("peakDbfs", Aestra::JSON(g["peakDbfs"].asNumber() + 1.0));
@@ -148,7 +186,7 @@ int main() {
     }
     check(Aestra::runHeadlessCheck(again) == 1, "a golden 1 dB off fails the check");
 
-    // 4. A deleted sample is a missing asset, and a failure.
+    // 6. A deleted sample is a missing asset, and a failure.
     fs::remove(wav);
     Aestra::HeadlessCheckOptions missing;
     missing.projectPath = project.string();
