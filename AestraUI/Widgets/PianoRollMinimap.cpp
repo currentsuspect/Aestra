@@ -33,6 +33,9 @@ double PianoRollMinimap::xToBeat(float x) const {
 }
 
 void PianoRollMinimap::setView(double start, double duration, bool preserveEdge) {
+    // Called every frame from the view's sync: repaint only when the window moved (SPEC 3 §4).
+    const double beforeStart = startBeat_;
+    const double beforeDuration = viewDuration_;
     if (isDragging_) return;
     if (preserveEdge) {
         const double previousStart = startBeat_;
@@ -49,10 +52,12 @@ void PianoRollMinimap::setView(double start, double duration, bool preserveEdge)
         viewDuration_ = std::clamp(duration, 0.25, totalDuration_);
         startBeat_ = std::clamp(start, 0.0, std::max(0.0, totalDuration_ - viewDuration_));
     }
+    if (startBeat_ == beforeStart && viewDuration_ == beforeDuration) return;
     repaint();
 }
 
 void PianoRollMinimap::setTotalDuration(double total) {
+    if (totalDuration_ == std::max(1.0, total)) return; // unchanged: nothing moves (SPEC 3 §4)
     const double previousTotal = totalDuration_;
     const double previousStart = startBeat_;
     const double previousEnd = startBeat_ + viewDuration_;
@@ -69,7 +74,9 @@ void PianoRollMinimap::setTotalDuration(double total) {
 }
 
 void PianoRollMinimap::setPlayheadBeat(double beat) {
-    playheadBeat_ = std::max(0.0, beat);
+    const double next = std::max(0.0, beat);
+    if (playheadBeat_ == next) return; // polled every frame (SPEC 3 §4)
+    playheadBeat_ = next;
     repaint();
 }
 

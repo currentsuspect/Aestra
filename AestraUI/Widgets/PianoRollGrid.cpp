@@ -101,9 +101,9 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
 
     renderer.clearClipRect();
 }
-void PianoRollGrid::setPixelsPerBeat(float ppb) { pixelsPerBeat_ = std::max(10.0f, ppb); repaint(); }
-void PianoRollGrid::setKeyHeight(float height) { keyHeight_ = std::max(8.0f, height); repaint(); }
-void PianoRollGrid::setScrollOffsetX(float offset) { scrollX_ = offset; repaint(); }
-void PianoRollGrid::setScrollOffsetY(float offset) { scrollY_ = offset; repaint(); }
+void PianoRollGrid::setPixelsPerBeat(float ppb) { const auto next = std::max(10.0f, ppb); if (pixelsPerBeat_ == next) return; pixelsPerBeat_ = next; repaint(); }
+void PianoRollGrid::setKeyHeight(float height) { const auto next = std::max(8.0f, height); if (keyHeight_ == next) return; keyHeight_ = next; repaint(); }
+void PianoRollGrid::setScrollOffsetX(float offset) { const auto next = offset; if (scrollX_ == next) return; scrollX_ = next; repaint(); }
+void PianoRollGrid::setScrollOffsetY(float offset) { const auto next = offset; if (scrollY_ == next) return; scrollY_ = next; repaint(); }
 
 } // namespace AestraUI
