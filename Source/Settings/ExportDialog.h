@@ -5,6 +5,7 @@
 #include "NUIButton.h"
 #include "NUIProgressBar.h"
 #include "NUIDropdown.h"
+#include "AestraFileDialog.h"
 #include <string>
 #include <functional>
 #include <atomic>
@@ -136,8 +137,8 @@ private:
     std::atomic<bool> m_exporting{false};
     std::atomic<bool> m_cancelRequested{false};
     std::future<ExportJobResult> m_exportFuture;
-    std::future<std::string> m_fileDialogFuture;
-    bool m_fileDialogPending = false;
+    // Browse picker: off the UI thread, never waited on (see AestraFileDialog.h).
+    Aestra::PendingFileDialog m_fileDialog;
     std::string m_exportResultPath;
     double m_exportDuration = 0.0;
     double m_exportPeakDb = -96.0;

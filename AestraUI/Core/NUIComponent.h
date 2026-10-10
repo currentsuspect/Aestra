@@ -65,8 +65,10 @@ public:
     // Layout & Bounds
     void setBounds(float x, float y, float width, float height);
     void setBounds(const NUIRect& bounds);
+    /// Window-absolute (V8-X2b Window space): components render and hit-test at bounds_ as-is.
+    /// There is no separate "global" rect; getGlobalBounds(), localToGlobal() and globalToLocal()
+    /// added every ancestor's origin on top of it and were removed in phase 6b.
     NUIRect getBounds() const { return bounds_; }
-    NUIRect getGlobalBounds() const;
     
     void setPosition(float x, float y);
     NUIPoint getPosition() const { return {bounds_.x, bounds_.y}; }
@@ -108,8 +110,6 @@ public:
     const std::vector<std::shared_ptr<NUIComponent>>& getChildren() const { return children_; }
     
     std::shared_ptr<NUIComponent> findChildById(const std::string& id);
-    NUIPoint localToGlobal(const NUIPoint& local) const;
-    NUIPoint globalToLocal(const NUIPoint& global) const;
     
     // State
     void setVisible(bool visible);

@@ -23,18 +23,89 @@ set(failures 0)
 
 # Writes a fixture tree. Each list is passed as a ready-made string so a fixture
 # can express a divergence that a shared list could not.
+#
+# `extra_ui_tests` names add_test() calls placed inside the UI block but NOT in the
+# required list -- the shape of the defect check (4) exists to catch. Without it a
+# fixture tree contains no add_test() at all, and the guard's zero-derivation check
+# would reject every fixture for a reason unrelated to what each fixture tests.
+#
+# `tests_outside_ui` names add_test() calls placed OUTSIDE any UI block. They must be
+# ignored by check (4), which is one-directional: four Contract* tests are required
+# without being lexically inside a UI block, so requiring the converse would fail on
+# them and force an exception list, and a guard with an exception list gets switched
+# off.
 function(write_tree cmake_list build_list run_list)
+    set(extra_ui_tests "")
+    set(tests_outside_ui "")
+    # ARGV is 0-based and ARGC is the COUNT, so the optional arguments are ARGV3
+    # through ARGV(ARGC-1). The first draft iterated RANGE 3 ${ARGC} and read
+    # index _i-1, which walked one past the end AND shifted every read down by one
+    # -- so `run_list` was consumed as an extra argument. CodeRabbit caught it.
+    #
+    # The fixtures still produced their expected results afterwards, because the
+    # guard's regex reads only the first name before '|' and that name was already
+    # required. Passing for the wrong reason is the failure mode worth designing
+    # against, hence the assertion below.
+    if(ARGC GREATER 3)
+        math(EXPR _last_arg "${ARGC} - 1")
+        foreach(_i RANGE 3 ${_last_arg})
+            set(_arg "${ARGV${_i}}")
+            if(_arg MATCHES "^outside:")
+                string(REGEX REPLACE "^outside:" "" _arg "${_arg}")
+                list(APPEND tests_outside_ui "${_arg}")
+            else()
+                # A name containing '|' or a space is a run_list or a cmake_list
+                # that leaked in through an index error, not a test name. Without
+                # this the malformed fixture is written, the guard reads only the
+                # part before the '|', finds it already required, and the fixture
+                # passes while testing nothing it claims.
+                #
+                # Both tests are plain character classes with no backslash, because
+                # an attempted "[|\\n]" matched ordinary letters -- the escape
+                # sequence does not survive CMake's argument parsing into REGEX the
+                # way the same string survives in Python.
+                if(_arg MATCHES "[|]" OR _arg MATCHES " ")
+                    message(FATAL_ERROR
+                        "write_tree: optional argument '${_arg}' is not a single test name.\n"
+                        "It looks like a run_list leaked through an index error. Refusing to write a "
+                        "fixture that would pass for the wrong reason.")
+                endif()
+                list(APPEND extra_ui_tests "${_arg}")
+            endif()
+        endforeach()
+    endif()
+
     file(REMOVE_RECURSE "${WORK_DIR}/tree")
     file(MAKE_DIRECTORY "${WORK_DIR}/tree/Tests")
     file(MAKE_DIRECTORY "${WORK_DIR}/tree/.github/workflows")
+
+    # One add_test() per required name, inside the UI block, exactly as a real tree
+    # declares them. Built by iterating rather than by string surgery so a name
+    # with odd whitespace cannot produce a malformed fixture.
+    set(add_lines "")
+    string(REPLACE "\n" ";" _raw_names "${cmake_list}")
+    foreach(_raw IN LISTS _raw_names)
+        string(STRIP "${_raw}" _n)
+        if(NOT _n STREQUAL "")
+            string(APPEND add_lines "    add_test(NAME ${_n} COMMAND ${_n})\n")
+        endif()
+    endforeach()
+    foreach(_n IN LISTS extra_ui_tests)
+        string(APPEND add_lines "    add_test(NAME ${_n} COMMAND ${_n})\n")
+    endforeach()
+
+    set(outside_lines "")
+    foreach(_n IN LISTS tests_outside_ui)
+        string(APPEND outside_lines "add_test(NAME ${_n} COMMAND ${_n})\n")
+    endforeach()
 
     file(WRITE "${WORK_DIR}/tree/Tests/CMakeLists.txt"
 "if(AESTRA_ENABLE_UI)
     set(AESTRA_REQUIRED_UI_TESTS
 ${cmake_list}
     )
-endif()
-")
+${add_lines}endif()
+${outside_lines}")
 
     file(WRITE "${WORK_DIR}/tree/.github/workflows/ci.yml"
 "      - name: Build UI test targets
@@ -100,6 +171,26 @@ run_fixture("unreadable ci.yml UI steps" FAIL)
 # --- an empty list is not agreement -----------------------------------------
 write_tree("" "" "")
 run_fixture("all three empty" FAIL)
+
+# --- check (4): reality against the required list ----------------------------
+# These three lists can all AGREE and all be wrong together, because none of them
+# is derived from the tree. That is the hole closed on 2026-10-02, and it is what
+# let BPMEditorPaintTest, MixerDropdownKeyboardTest and TransportClockFormatTest
+# build, pass and gate nothing.
+
+write_tree("${BASE_CMAKE}" "${BASE_BUILD}" "${BASE_RUN}" "UnlistedUITest")
+run_fixture("UI test declared but absent from all three lists (gates nothing)" FAIL)
+
+write_tree("${BASE_CMAKE}" "${BASE_BUILD}" "${BASE_RUN}" "UnlistedUITest" "outside:AlphaTest")
+run_fixture("the same unlisted test, plus one outside the UI block (still FAIL)" FAIL)
+
+# The converse must NOT fail, or the guard is wrong in the other direction. Four
+# Contract* tests are required without living inside a UI block.
+write_tree("${BASE_CMAKE}" "${BASE_BUILD}" "${BASE_RUN}" "outside:ContractTest")
+run_fixture("an add_test outside the UI block is ignored (check 4 is one-directional)" PASS)
+
+write_tree("${BASE_CMAKE}" "${BASE_BUILD}" "${BASE_RUN}")
+run_fixture("every UI test is required (baseline still passes)" PASS)
 
 if(failures)
     message(FATAL_ERROR "ui_required_test_lists self-test failed")

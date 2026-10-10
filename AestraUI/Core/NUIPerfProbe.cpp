@@ -2,12 +2,15 @@
 #include "NUIPerfProbe.h"
 
 #include "NUIComponent.h"
+#include "../../AestraCore/include/AestraLog.h"
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <map>
+#include <sstream>
 #include <typeinfo>
 #include <utility>
 #include <vector>
@@ -60,12 +63,63 @@ std::string topN(const std::map<std::string, T>& values, size_t n, double diviso
 
 } // namespace
 
-bool enabled() {
-    static const bool on = [] {
+int level() {
+    static const int value = [] {
         const char* v = std::getenv("AESTRA_FRAME_STATS");
-        return v && std::atoi(v) >= 2;
+        return v ? std::max(0, std::atoi(v)) : 0;
     }();
-    return on;
+    return value;
+}
+
+bool enabled() { return level() >= 2; }
+
+namespace {
+struct FrameWork {
+    std::vector<double> ms;
+    std::chrono::steady_clock::time_point windowStart = std::chrono::steady_clock::now();
+    std::chrono::steady_clock::time_point workStart = windowStart;
+};
+FrameWork& frameWork() {
+    static FrameWork f;
+    return f;
+}
+} // namespace
+
+void frameWorkBegin() {
+    if (level() > 0) frameWork().workStart = std::chrono::steady_clock::now();
+}
+
+void frameWorkEnd(bool presented) {
+    if (level() <= 0) return;
+    auto& f = frameWork();
+    const auto now = std::chrono::steady_clock::now();
+    if (presented) f.ms.push_back(std::chrono::duration<double, std::milli>(now - f.workStart).count());
+    if (now - f.windowStart < std::chrono::seconds(1)) return;
+    f.windowStart = now;
+    if (f.ms.empty()) return;
+
+    std::sort(f.ms.begin(), f.ms.end());
+    double sum = 0.0;
+    for (const double ms : f.ms) sum += ms;
+    const auto over = [&](double budget) {
+        return static_cast<long>(std::count_if(f.ms.begin(), f.ms.end(), [budget](double ms) { return ms > budget; }));
+    };
+    const std::size_t p95 = (f.ms.size() * 95 + 99) / 100 - 1; // nearest rank: ceil(0.95 n) - 1
+    std::array<char, 256> line{};
+    std::snprintf(line.data(), line.size(),
+                  "[FrameStats] frames=%zu work avg=%.2fms p95=%.2fms max=%.2fms over16.7=%ld over33=%ld",
+                  f.ms.size(), sum / static_cast<double>(f.ms.size()), f.ms[p95], f.ms.back(), over(16.7), over(33.3));
+    Aestra::Log::info(line.data());
+    if (enabled()) {
+        std::istringstream report(takeReport(f.ms.size()));
+        for (std::string detail; std::getline(report, detail);) Aestra::Log::info(detail);
+    }
+    f.ms.clear();
+}
+
+bool presentBecause(const char* reason) {
+    if (enabled()) recordPresentReason(reason);
+    return true;
 }
 
 void recordDirtyOrigin(const NUIComponent& component, const NUIComponent* parent) {
@@ -78,7 +132,7 @@ void recordPhase(Phase phase, double ms) { counters().phaseMs.at(static_cast<siz
 
 void recordPresentReason(const char* reason) { counters().presentReasons[reason]++; }
 
-std::string takeReport(size_t presentedFrames) {
+std::string takeReport(std::size_t presentedFrames) {
     auto& c = counters();
     const double frames = static_cast<double>(std::max<size_t>(1, presentedFrames));
     std::string report = "[FrameWhy]" + topN(c.presentReasons, kTopN, 1.0, " %s=%.0f");

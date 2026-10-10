@@ -796,6 +796,18 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/RoutingContractTest.cpp")
     set_tests_properties(RoutingContractTest PROPERTIES LABELS "audio;routing;contract:audio")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/RoutingModelTest.cpp")
+    add_executable(RoutingModelTest AestraAudio/RoutingModelTest.cpp)
+    target_link_libraries(RoutingModelTest PRIVATE AestraAudio)
+    target_include_directories(RoutingModelTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME RoutingModelTest COMMAND RoutingModelTest)
+    set_tests_properties(RoutingModelTest PROPERTIES LABELS "audio;routing;contract:audio")
+endif()
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/RoutingRenderSemanticsTest.cpp")
     add_executable(RoutingRenderSemanticsTest AestraAudio/RoutingRenderSemanticsTest.cpp)
     target_link_libraries(RoutingRenderSemanticsTest PRIVATE AestraAudio)
@@ -1031,6 +1043,17 @@ target_include_directories(AestraTransientTest PRIVATE
 )
 add_test(NAME AestraTransientTest COMMAND AestraTransientTest)
 set_tests_properties(AestraTransientTest PROPERTIES LABELS "audio;plugin;contract:audio")
+
+# RenderSummary: the numbers AestraHeadless --check judges a render by (levels,
+# DC, clipping, NaN/Inf, silence padding, the bit-exact hash and the golden diff).
+add_executable(RenderSummaryTest AestraAudio/RenderSummaryTest.cpp)
+target_link_libraries(RenderSummaryTest PRIVATE AestraAudio)
+target_include_directories(RenderSummaryTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME RenderSummaryTest COMMAND RenderSummaryTest)
+set_tests_properties(RenderSummaryTest PROPERTIES LABELS "audio;headless;contract:audio")
 
 # #845 regression: recording in a session with existing clips + patterns
 add_executable(RecordingSessionContentTest AestraAudio/RecordingSessionContentTest.cpp)
@@ -1741,6 +1764,28 @@ add_test(NAME NoAudioEngineSingletonGuardSelfTest
         -P ${CMAKE_SOURCE_DIR}/Tests/Guards/no_audioengine_singleton_selftest.cmake)
 set_tests_properties(NoAudioEngineSingletonGuardSelfTest PROPERTIES LABELS "guard;architecture;contract:core" TIMEOUT 120)
 
+# Zero-tolerance source guard: fails if any process() body reaches CPU feature
+# detection. CPUDetection::get() is a guarded singleton whose constructor runs
+# __cpuid/xgetbv — a VM exit on a virtualised host, on the callback, mid-render.
+# Issue #1009. Complements check-rt-effects.sh, which cannot see a plugin that is
+# not yet annotated.
+add_test(NAME NoRtThreadCpuDetectionGuard
+    COMMAND ${CMAKE_COMMAND}
+        -DREPO_ROOT=${CMAKE_SOURCE_DIR}
+        -P ${CMAKE_SOURCE_DIR}/Tests/Guards/no_rt_thread_cpu_detection.cmake)
+set_tests_properties(NoRtThreadCpuDetectionGuard PROPERTIES LABELS "guard;architecture;realtime;contract:core" TIMEOUT 120)
+
+# Self-test: the guard must actually catch the defect. A textual tripwire that
+# cannot fail is worse than none, so each CPU token is injected into a fixture
+# process() body — including one buried mid-body, which is where all three
+# AestraVerb sites were — and benign resolve-in-initialize shapes must pass.
+add_test(NAME NoRtThreadCpuDetectionGuardSelfTest
+    COMMAND ${CMAKE_COMMAND}
+        -DGUARD_SCRIPT=${CMAKE_SOURCE_DIR}/Tests/Guards/no_rt_thread_cpu_detection.cmake
+        -DWORK_DIR=${CMAKE_BINARY_DIR}/guard_selftest_rt_cpu
+        -P ${CMAKE_SOURCE_DIR}/Tests/Guards/no_rt_thread_cpu_detection_selftest.cmake)
+set_tests_properties(NoRtThreadCpuDetectionGuardSelfTest PROPERTIES LABELS "guard;architecture;realtime;contract:core" TIMEOUT 120)
+
 # V8-C14 step 4 surface-resolution ratchet: today's known R2/R4/R5/R6 violations
 # are pinned as a baseline table; the build fails if any count rises, if a pattern
 # spreads to a file outside the table, or if a count falls without the table being
@@ -1764,6 +1809,27 @@ add_test(NAME UISurfaceResolutionGuardSelfTest
         -DWORK_DIR=${CMAKE_BINARY_DIR}/ui_surface_guard_selftest
         -P ${CMAKE_SOURCE_DIR}/Tests/Guards/ui_surface_resolution_selftest.cmake)
 set_tests_properties(UISurfaceResolutionGuardSelfTest PROPERTIES LABELS "guard;architecture;contract:application" TIMEOUT 120)
+
+# File-size ratchet: no first-party source file may pass 1500 lines, and the
+# files already over it are pinned in Tests/Guards/file_size_baseline.txt at
+# their exact count. They may shrink, never grow, and a shrink must lower the
+# row so the improvement is kept. The cheap half of keeping a hub from forming:
+# it bounds size, not coupling.
+add_test(NAME FileSizeRatchetGuard
+    COMMAND ${CMAKE_COMMAND}
+        -DREPO_ROOT=${CMAKE_SOURCE_DIR}
+        -P ${CMAKE_SOURCE_DIR}/Tests/Guards/file_size_ratchet.cmake)
+set_tests_properties(FileSizeRatchetGuard PROPERTIES LABELS "guard;architecture;contract:core" TIMEOUT 120)
+
+# Self-test: the exact baseline and at-cap files pass; growth, a stale row, a
+# row for a file now under the cap, a missing pinned file, an unpinned file over
+# the cap and a malformed row each fail with their own message.
+add_test(NAME FileSizeRatchetGuardSelfTest
+    COMMAND ${CMAKE_COMMAND}
+        -DGUARD_SCRIPT=${CMAKE_SOURCE_DIR}/Tests/Guards/file_size_ratchet.cmake
+        -DWORK_DIR=${CMAKE_BINARY_DIR}/file_size_guard_selftest
+        -P ${CMAKE_SOURCE_DIR}/Tests/Guards/file_size_ratchet_selftest.cmake)
+set_tests_properties(FileSizeRatchetGuardSelfTest PROPERTIES LABELS "guard;architecture;contract:core" TIMEOUT 120)
 
 # V8-G2 — the required-UI-test list must be identical in all three places it
 # lives: AESTRA_REQUIRED_UI_TESTS (fails configure), ci.yml's --target list
@@ -2062,6 +2128,34 @@ target_include_directories(TimelineGeometryTest PRIVATE
 add_test(NAME TimelineGeometryTest COMMAND TimelineGeometryTest)
 set_tests_properties(TimelineGeometryTest PROPERTIES LABELS "ui;timeline;geometry;regression;contract:application")
 
+# V8-X2b phase 4: the timeline's regions and track rows come from the layout
+# system (TrackManagerUILayout.h); proven equal to the hand-written arithmetic
+# they replaced. Header-only, so AESTRA_CI=ON cannot skip it.
+add_executable(TimelineLayoutTest AestraUI/TimelineLayoutTest.cpp)
+target_include_directories(TimelineLayoutTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Components
+)
+add_test(NAME TimelineLayoutTest COMMAND TimelineLayoutTest)
+set_tests_properties(TimelineLayoutTest PROPERTIES LABELS "ui;timeline;layout;regression;contract:application")
+
+# V8-X2b phase 5: the file browser's panes and chrome from the layout system
+# (FileBrowserLayout.h); the folder rows are drawn and hit-tested by one rect.
+add_executable(FileBrowserLayoutTest AestraUI/FileBrowserLayoutTest.cpp)
+target_include_directories(FileBrowserLayoutTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Components
+)
+add_test(NAME FileBrowserLayoutTest COMMAND FileBrowserLayoutTest)
+set_tests_properties(FileBrowserLayoutTest PROPERTIES LABELS "ui;browser;layout;regression;contract:application")
+
+# V8-X2b criterion 4: the layout algorithms explain each rect they place
+# (NUILayoutExplain.h), proven on the timeline's real layout. Header-only.
+add_executable(NUILayoutExplainTest AestraUI/NUILayoutExplainTest.cpp)
+target_include_directories(NUILayoutExplainTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Components
+)
+add_test(NAME NUILayoutExplainTest COMMAND NUILayoutExplainTest)
+set_tests_properties(NUILayoutExplainTest PROPERTIES LABELS "ui;layout;regression;contract:application")
+
 # Invisible pointer over clip context menus: a hover cursor claim made from a
 # position a popup froze must not hide the real pointer (header-only rule).
 add_executable(TimelineCursorClaimTest AestraUI/TimelineCursorClaimTest.cpp)
@@ -2297,6 +2391,22 @@ if(AESTRA_ENABLE_UI)
     )
     add_test(NAME PanelWindowClickSwallowTest COMMAND PanelWindowClickSwallowTest)
     set_tests_properties(PanelWindowClickSwallowTest PROPERTIES LABELS "ui;input;regression;contract:application")
+endif()
+
+# AestraPanelWindow::handleKnobDrag(): the knob interaction the Sat, OTT, Filter
+# and LFO editors share. Press grabs, motion steps (clamped, Shift is fine),
+# release lets go, and a press away from every knob grabs nothing.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(PanelWindowKnobDragTest AestraUI_Core AestraUI_Platform)
+    add_executable(PanelWindowKnobDragTest AestraUI/PanelWindowKnobDragTest.cpp)
+    target_link_libraries(PanelWindowKnobDragTest PRIVATE AestraUI_Core AestraUI_Platform)
+    target_include_directories(PanelWindowKnobDragTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+    )
+    add_test(NAME PanelWindowKnobDragTest COMMAND PanelWindowKnobDragTest)
+    set_tests_properties(PanelWindowKnobDragTest PROPERTIES LABELS "ui;input;regression;contract:application")
 endif()
 
 # FD-16 seam test: persisted lane curves must reach ChannelViewModel through
@@ -2871,6 +2981,55 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/Contract/ContractOwnershipTests.cmake)
 # V8-G3b (FD-19): the absence of failures is not the presence of coverage.
 # This list names every UI test that must be configured whenever
 # AESTRA_ENABLE_UI is ON. Renaming or removing a UI test must update it.
+# The file browser's library: browsing outside the library root, system places,
+# Favorites and Collections as cross-folder listings, category folders without a
+# hidden tag filter, and the library state file (round trip + legacy import).
+# FileBrowser references the FBO render cache, hence AestraUI_OpenGL (see
+# ClipContextMenuReachabilityTest); the paint pass goes through NullRenderer.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(FileBrowserLibraryTest AestraUI_Core AestraUI_Platform AestraUI_OpenGL)
+    add_executable(FileBrowserLibraryTest
+        AestraUI/FileBrowserLibraryTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowser.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserNavigation.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserLibrary.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserScan.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/BrowserLibrary.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/BrowserLibraryIndex.cpp
+    )
+    target_link_libraries(FileBrowserLibraryTest PRIVATE
+        AestraUI_Core AestraUI_Platform AestraUI_OpenGL AestraAudio AestraCore AestraPlat)
+    target_include_directories(FileBrowserLibraryTest PRIVATE
+        ${CMAKE_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/AestraPlat/include
+    )
+    add_test(NAME FileBrowserLibraryTest COMMAND FileBrowserLibraryTest)
+    set_tests_properties(FileBrowserLibraryTest PROPERTIES
+        LABELS "ui;filebrowser;persistence;regression;contract:application")
+endif()
+
+# SPEC 3 §4: the adaptive-FPS governor falls idle after input instead of latching active.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(AdaptiveFPSIdleTest AestraUI_Core)
+    add_executable(AdaptiveFPSIdleTest AestraUI/AdaptiveFPSIdleTest.cpp)
+    target_link_libraries(AdaptiveFPSIdleTest PRIVATE AestraUI_Core)
+    target_include_directories(AdaptiveFPSIdleTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraUI)
+    add_test(NAME AdaptiveFPSIdleTest COMMAND AdaptiveFPSIdleTest)
+    set_tests_properties(AdaptiveFPSIdleTest PROPERTIES LABELS "ui;perf;contract:application")
+endif()
+
 if(AESTRA_ENABLE_UI)
     set(AESTRA_REQUIRED_UI_TESTS
         NUIThemeConsistencyTest
@@ -2887,6 +3046,9 @@ if(AESTRA_ENABLE_UI)
         EditorCloseDeferredTest
         PanelWindowClickSwallowTest
         MixerViewModelAutomationPresenceTest
+        MixerDropdownKeyboardTest
+        BPMEditorPaintTest
+        TransportClockFormatTest
         PanelResizeLayoutTest
         UnitRowStepSelectionTest
         PluginRackBindingLifecycleTest
@@ -2904,6 +3066,9 @@ if(AESTRA_ENABLE_UI)
         ContractPianoRollUndoStaysInPatternTest
         ContractPianoRollReachesGlobalUndoTest
         ContractPianoRollPasteTargetsEditingUnitTest
+        FileBrowserLibraryTest
+        PanelWindowKnobDragTest
+        AdaptiveFPSIdleTest
     )
     foreach(_t IN LISTS AESTRA_REQUIRED_UI_TESTS)
         if(NOT TARGET ${_t})
@@ -3261,6 +3426,13 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraCore/JSONLocaleIndependenceTest.cpp
     message(STATUS "JSONLocaleIndependenceTest added - JSON decimal separator locale independence")
 endif()
 
+# JSON::asArray() const / asObject() const return real data (they returned an
+# always-empty static from #179 on, silently hiding every const read).
+add_executable(JSONConstAccessTest AestraCore/JSONConstAccessTest.cpp)
+target_include_directories(JSONConstAccessTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraCore/include)
+add_test(NAME JSONConstAccessTest COMMAND JSONConstAccessTest)
+set_tests_properties(JSONConstAccessTest PROPERTIES LABELS "core;json;regression;contract:core")
+
 # An instanceId identifies a scheduler SLOT, not an occurrence. Re-arming a slot used to
 # append another live copy, and nothing ever erased entries (flush() only rewinds), so the
 # Arsenal preview slot accumulated dozens of overlapping instances and survived into
@@ -3502,12 +3674,76 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ExportDialogPreferencesTest.c
         LABELS "serialization;preferences;regression;contract:durability")
 endif()
 
-# SPEC 3 §4: the adaptive-FPS governor falls idle after input instead of latching active.
-if(AESTRA_ENABLE_UI)
-    aestra_require_ui_targets(AdaptiveFPSIdleTest AestraUI_Core)
-    add_executable(AdaptiveFPSIdleTest AestraUI/AdaptiveFPSIdleTest.cpp)
-    target_link_libraries(AdaptiveFPSIdleTest PRIVATE AestraUI_Core)
-    target_include_directories(AdaptiveFPSIdleTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraUI)
-    add_test(NAME AdaptiveFPSIdleTest COMMAND AdaptiveFPSIdleTest)
-    set_tests_properties(AdaptiveFPSIdleTest PROPERTIES LABELS "ui;perf;contract:application")
+# P5: the floating-panel registry guard. Deliberately NOT behind
+# aestra_require_ui_targets — it includes only FloatingPanelDescriptors.h,
+# which has no UI dependency, because AESTRA_HEADLESS_ONLY builds skip the UI
+# targets and a registry guard that only runs in a lane most of CI skips would
+# be a guard that mostly does not run. Adding a ViewType with no registry row
+# must fail here, in the headless lane.
+add_executable(PanelDescriptorRegistryTest
+    AestraUI/PanelDescriptorRegistryTest.cpp
+)
+target_include_directories(PanelDescriptorRegistryTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+    ${CMAKE_SOURCE_DIR}/Source/Core
+)
+add_test(NAME PanelDescriptorRegistryTest COMMAND PanelDescriptorRegistryTest)
+set_tests_properties(PanelDescriptorRegistryTest PROPERTIES
+    LABELS "ui;panels;contract:application;regression"
+    TIMEOUT 120)
+# P4: the editor dispatch registry. NOT behind aestra_require_ui_targets — this
+# test checks the registry's ids and factories, which needs no window, no
+# platform bridge and no live plugin instance. Gating it behind the UI target set
+# would mean a dispatch table is only guarded in the one lane CI runs least.
+# The registry's ids and lookups are header-inline, so this links no .cpp at all.
+# Linking PluginEditorRegistry.cpp would pull in all eleven editor constructors
+# and the NUI widget stack, for a test that only inspects a list of strings.
+add_executable(PluginEditorRegistryTest
+    AestraUI/PluginEditorRegistryTest.cpp
+)
+# AestraUI_Core's own public include directories, reproduced rather than linked:
+# linking it would drag thorvg and the whole widget stack into a test that only
+# needs to resolve headers. Reproducing the list is the lesser evil and is
+# checked against AestraUI_Core's own list in this comment rather than trusted.
+target_include_directories(PluginEditorRegistryTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraUI
+    ${CMAKE_SOURCE_DIR}/AestraUI/Core
+    ${CMAKE_SOURCE_DIR}/AestraUI/Base
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+    ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
+    ${CMAKE_SOURCE_DIR}/AestraUI/Common
+    ${CMAKE_SOURCE_DIR}/Source
+)
+add_test(NAME PluginEditorRegistryTest COMMAND PluginEditorRegistryTest)
+set_tests_properties(PluginEditorRegistryTest PROPERTIES
+    LABELS "ui;plugins;contract:application;regression"
+    TIMEOUT 120)
+
+
+# XDG portal file chooser: filter translation and file:// URI decoding. The
+# D-Bus round trip needs a desktop session, so only the pure halves run here.
+# Compiled standalone (not via AestraPlat) so it runs even where SDL2, and so
+# the Linux platform layer, is absent.
+if(UNIX AND NOT APPLE)
+    add_executable(XdgPortalFileChooserTest
+        AestraPlat/XdgPortalFileChooserTest.cpp
+        ${CMAKE_SOURCE_DIR}/AestraPlat/src/Linux/XdgPortalFileChooser.cpp
+    )
+    target_link_libraries(XdgPortalFileChooserTest PRIVATE ${CMAKE_DL_LIBS})
+    add_test(NAME XdgPortalFileChooserTest COMMAND XdgPortalFileChooserTest)
+    set_tests_properties(XdgPortalFileChooserTest PROPERTIES LABELS "platform;dialog;regression;contract:application")
 endif()
+
+# AestraFileDialog.h: pickers run off the UI thread and nothing ever waits for
+# them — not start(), not polling, not destroying the owner — and the worker
+# survives Platform::shutdown(). SDL runs with the dummy video driver.
+add_executable(AsyncFileDialogTest AestraPlat/AsyncFileDialogTest.cpp)
+target_link_libraries(AsyncFileDialogTest PRIVATE AestraPlat)
+target_include_directories(AsyncFileDialogTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraPlat/include)
+add_test(NAME AsyncFileDialogTest COMMAND AsyncFileDialogTest)
+set_tests_properties(AsyncFileDialogTest PROPERTIES LABELS "platform;dialog;threading;regression;contract:application" TIMEOUT 30
+    SKIP_RETURN_CODE 77)

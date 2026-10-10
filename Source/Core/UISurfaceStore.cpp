@@ -198,11 +198,6 @@ UISurfaceStore UISurfaceStore::load(const std::string& path) {
     }
     const int fromVersion = static_cast<int>(rawVersion);
 
-    // Non-const on purpose: JSON::asObject() const always returns a static
-    // empty map regardless of content (AestraJSON.h's const overload is a
-    // stub), while the non-const overload returns the real data. Nothing
-    // else in the tree hits this because nothing else iterates a JSON object
-    // by dynamic key -- editor.<id> is the first key shape that needs to.
     JSON migrated = migrateToCurrent(root, fromVersion);
     store.schemaVersion = kCurrentSchemaVersion;
 
@@ -227,9 +222,6 @@ UISurfaceStore UISurfaceStore::load(const std::string& path) {
     }
 
     if (migrated.has("listPreferences") && migrated["listPreferences"].isObject()) {
-        // `value` non-const, not `const auto&`: JSON::asArray() const is the
-        // same always-empty stub as asObject() const (see the comment on
-        // `migrated` above) -- only the non-const overload returns real data.
         for (auto& [key, value] : migrated["listPreferences"].asObject()) {
             if (!value.isArray()) {
                 continue;

@@ -234,6 +234,106 @@ void testScrollingRowHonorsANonZeroViewportOrigin() {
     check(nearly(items[1].rect.x, 376.0f), "strip 1 follows at one step past strip 0: 260 + 116");
 }
 
+void testScrollingRowIsTheHorizontalStack() {
+    // arrangeScrollingRow() now delegates to arrangeScrollingStack(); the
+    // mixer's numbers above prove the row, this proves the two never diverge.
+    const NUILocalRect viewport(260.0f, 10.0f, 300.0f, 220.0f);
+    const auto row = arrangeScrollingRow(viewport, 110.0f, 6.0f, 5, 37.0f);
+    const auto stack = arrangeScrollingStack(viewport, NUIAxis::Horizontal, 110.0f, 6.0f, 5, 37.0f);
+    bool same = row.size() == stack.size();
+    for (std::size_t i = 0; same && i < row.size(); ++i) {
+        same = nearly(row[i].rect.x, stack[i].rect.x) && nearly(row[i].rect.y, stack[i].rect.y) &&
+               nearly(row[i].rect.width, stack[i].rect.width) && nearly(row[i].rect.height, stack[i].rect.height) &&
+               row[i].visible == stack[i].visible;
+    }
+    check(same, "the row is exactly the horizontal stack");
+}
+
+void testVerticalStackMirrorsTheRow() {
+    // The same strip scenario turned on its side: each item spans the
+    // viewport's width, steps down by extent+spacing, and is anchored at the
+    // viewport's own y.
+    const NUILocalRect viewport(0.0f, 52.0f, 400.0f, 500.0f);
+    const auto items = arrangeScrollingStack(viewport, NUIAxis::Vertical, 110.0f, 6.0f, 6, 200.0f);
+    check(nearly(items[0].rect.y, -148.0f) && !items[0].visible, "item 0 scrolled above the viewport (bottom at -38, top edge 52)");
+    check(nearly(items[1].rect.y, -32.0f) && items[1].visible,
+          "item 1's bottom (78) is below the viewport's top (52), so it straddles the edge and counts as visible");
+    check(nearly(items[5].rect.y, 432.0f) && items[5].visible, "item 5 has scrolled into view");
+    check(nearly(items[2].rect.x, 0.0f) && nearly(items[2].rect.width, 400.0f) && nearly(items[2].rect.height, 110.0f),
+          "a vertical item spans the viewport's width and takes its own extent as height");
+}
+
+void testSlotAtInvertsTheStack() {
+    const NUILocalRect viewport(0.0f, 52.0f, 400.0f, 500.0f);
+    check(scrollingStackSlotAt(viewport, NUIAxis::Vertical, 38.0f, 0.0f, 0.0f, 51.9f) == -1, "before the first item: -1");
+    check(scrollingStackSlotAt(viewport, NUIAxis::Vertical, 38.0f, 0.0f, 0.0f, 52.0f) == 0, "first pixel: slot 0");
+    check(scrollingStackSlotAt(viewport, NUIAxis::Vertical, 38.0f, 0.0f, 0.0f, 89.9f) == 0, "last pixel of slot 0");
+    check(scrollingStackSlotAt(viewport, NUIAxis::Vertical, 38.0f, 0.0f, 0.0f, 90.0f) == 1, "first pixel of slot 1");
+    check(scrollingStackSlotAt(viewport, NUIAxis::Vertical, 38.0f, 6.0f, 0.0f, 93.0f) == 0,
+          "a point in the gap after item 0 belongs to slot 0");
+    check(scrollingStackSlotAt(viewport, NUIAxis::Vertical, 38.0f, 0.0f, 76.0f, 52.0f) == 2,
+          "scrolled two rows, the top pixel is slot 2");
+    check(scrollingStackSlotAt(viewport, NUIAxis::Horizontal, 110.0f, 6.0f, 0.0f, 116.0f) == 1,
+          "horizontal stacks answer the same way");
+    check(scrollingStackSlotAt(viewport, NUIAxis::Vertical, 0.0f, 0.0f, 0.0f, 100.0f) == -1,
+          "a zero step has no slots rather than dividing by zero");
+}
+
+void testSplitHorizontalClampsLikeSplitVertical() {
+    const NUILocalRect container(10.0f, 20.0f, 300.0f, 40.0f);
+    const auto split = splitHorizontal(container, 290.0f);
+    check(nearly(split.leading.x, 10.0f) && nearly(split.leading.width, 290.0f), "leading column takes its width");
+    check(nearly(split.trailing.x, 300.0f) && nearly(split.trailing.width, 10.0f), "trailing column fills the rest");
+    check(nearly(split.trailing.y, 20.0f) && nearly(split.trailing.height, 40.0f), "both keep the container's height");
+    const auto over = splitHorizontal(container, 500.0f);
+    check(nearly(over.leading.width, 300.0f) && nearly(over.trailing.width, 0.0f), "too-wide leading clamps");
+    const auto under = splitHorizontal(container, -5.0f);
+    check(nearly(under.leading.width, 0.0f) && nearly(under.trailing.width, 300.0f), "negative leading clamps to 0");
+}
+
+void testLeadingRowMatchesTheTransportBarWalk() {
+    // TransportBar's original placement, before phase 6: x starts at the edge pad
+    // and walks `x += width + gap`. Real constants: buttons 34 wide, gap 6, pad 10;
+    // record chips of four widths, gap 4, module pad 14, starting at a module x.
+    const NUILocalRect transport(0.0f, 9.0f, 132.0f, 30.0f);
+    const auto buttons = arrangeLeadingRow(transport, {34.0f, 34.0f, 34.0f}, 30.0f, 6.0f, 10.0f);
+    float x = 10.0f;
+    bool same = buttons.size() == 3;
+    for (std::size_t i = 0; same && i < buttons.size(); ++i) {
+        same = nearly(buttons[i].x, x) && nearly(buttons[i].y, 9.0f) && nearly(buttons[i].width, 34.0f);
+        x += 34.0f + 6.0f;
+    }
+    check(same, "transport buttons land where the hand-walked x put them (10, 50, 90)");
+
+    const std::vector<float> chips{71.5f, 48.0f, 83.25f, 40.0f};
+    const NUILocalRect record(372.0f, 22.0f, 300.0f, 22.0f);
+    const auto row = arrangeLeadingRow(record, chips, 22.0f, 4.0f, 14.0f);
+    float cx = 372.0f + 14.0f;
+    same = row.size() == chips.size();
+    for (std::size_t i = 0; same && i < row.size(); ++i) {
+        same = nearly(row[i].x, cx) && nearly(row[i].width, chips[i]);
+        cx += chips[i] + 4.0f;
+    }
+    check(same, "record chips of different widths follow each other at the original x");
+    check(nearly(row[0].y, 22.0f), "a container exactly the item height keeps the caller's snapped y");
+}
+
+void testLeadingRowCentresAndReportsOverflow() {
+    const NUILocalRect container(0.0f, 0.0f, 60.0f, 40.0f);
+    NUILayoutRecorder rec("t");
+    rec.beginPass(NUIWindowPoint(0.0f, 0.0f));
+    rec.scope("row");
+    const auto row = arrangeLeadingRow(container, {30.0f, 30.0f}, 20.0f, 4.0f, 2.0f, &rec);
+    check(nearly(row[0].y, 10.0f), "items centre vertically in a taller container");
+    check(nearly(row[1].x, 36.0f) && row[1].right() > container.right(),
+          "an item past the trailing edge is placed there, not clipped or reflowed");
+    bool reported = false;
+    for (const auto& p : rec.problems()) {
+        if (p.step == "t.row[1]" && p.what.find("outside") != std::string::npos) reported = true;
+    }
+    check(reported, "and the recorder reports it as outside its space");
+}
+
 } // namespace
 
 int main() {
@@ -249,6 +349,12 @@ int main() {
     testScrollingRowAtZeroScrollMatchesMixerPanel();
     testScrollingRowUnderScrollMatchesMixerPanel();
     testScrollingRowHonorsANonZeroViewportOrigin();
+    testScrollingRowIsTheHorizontalStack();
+    testVerticalStackMirrorsTheRow();
+    testSlotAtInvertsTheStack();
+    testSplitHorizontalClampsLikeSplitVertical();
+    testLeadingRowMatchesTheTransportBarWalk();
+    testLeadingRowCentresAndReportsOverflow();
 
     if (failures != 0) {
         std::cout << "\n" << failures << " check(s) failed\n";

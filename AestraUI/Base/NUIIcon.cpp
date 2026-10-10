@@ -45,6 +45,7 @@ void NUIIcon::loadSVG(const std::string& svgContent) {
 }
 
 void NUIIcon::loadSVGFile(const std::string& filePath) {
+    loadedSvgContent_.clear(); // a later loadSVG() of the old inline content must reload, not skip
     svgDoc_ = NUISVGParser::parseFile(filePath);
     updateBounds();
     setDirty(true);

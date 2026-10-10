@@ -316,13 +316,14 @@ void AudioVisualizer::setInterleavedWaveform(const float* interleavedStereo, siz
         rightRMS_.store(rmsR);
     }
 
-    // A block of silence after silence draws the same flat line (SPEC 3 §4). Below -100 dB
-    // counts as silence: a live output history carries denormals, never bit-exact zero.
+    // Silence written over a history that is already all silence draws the same flat line
+    // (SPEC 3 §4); until then the last audible samples are still scrolling out, so redraw.
+    // Below -100 dB counts as silence: a live output history carries denormals, never zero.
     constexpr float kSilence = 1e-5f;
     const bool silent = peakL < kSilence && peakR < kSilence;
-    const bool stillSilent = silent && lastWaveformSilent_;
-    lastWaveformSilent_ = silent;
-    if (!stillSilent) {
+    const bool historyWasSilent = silentFramesInHistory_ >= displayBufferSize_;
+    silentFramesInHistory_ = silent ? std::min(displayBufferSize_, silentFramesInHistory_ + framesToCopy) : 0;
+    if (!(silent && historyWasSilent)) {
         setDirty(true);
     }
 }

@@ -205,6 +205,41 @@ cmake -S . -B build-headless \
 cmake --build build-headless --parallel
 ```
 
+Correct for audio, DSP and plugin work, and it is what most changes need. It does
+**not** compile `Source/Core/` or `AestraUI/` — see the `AESTRA_CI` note in §8.
+
+### UI/App Build — required for `Source/` and `AestraUI/` changes
+
+```bash
+# Every UI-affecting flag is set EXPLICITLY, including to OFF. All three are
+# CACHE variables: reconfiguring an existing build-ui/ that was configured with
+# either flag keeps the cached value, and CMake then force-disables the UI again
+# with the Aestra target simply absent. Omitting a flag is not an instruction.
+cmake -S . -B build-ui \
+  -DAESTRA_CI=OFF \
+  -DAESTRA_HEADLESS_ONLY=OFF \
+  -DAESTRA_ENABLE_UI=ON \
+  -DAESTRA_ENABLE_TESTS=ON \
+  -DAESTRA_ALLOW_LICENSE_GATE_OFF=ON \
+  -DCMAKE_BUILD_TYPE=Release
+
+cmake --build build-ui --parallel
+```
+
+```bash
+# The single target that proves the app links. Cheaper than a full UI build and
+# catches the whole Source/ tree.
+cmake --build build-ui --target Aestra --parallel
+```
+
+> [!gotcha] Two builds, for two kinds of change
+> An agent that verifies UI work with the headless recipe has verified **nothing**,
+> because the file was never compiled. This is not a theoretical hazard: PR #1025
+> reached review with twelve compile errors in `Source/Core/AestraContent.cpp` and
+> every local build reported it clean. Run the headless build for the test suite,
+> and additionally run this one whenever the diff touches `Source/` or
+> `AestraUI/`.
+
 ### Preset Build
 
 ```bash
@@ -230,6 +265,23 @@ ctest --test-dir build --output-on-failure
 * GNU ld circular dependency fixes using linker groups must not be removed without validating Linux builds.
 * FreeType warning suppressions are intentional. Do not “clean them up” unless explicitly asked.
 * UI dependencies should not leak into headless builds.
+* **`AESTRA_CI=ON` force-disables the UI.** It sets `AESTRA_HEADLESS_ONLY=ON` with
+  `CACHE ... FORCE`, which sets `AESTRA_ENABLE_UI=OFF`. So
+  `-DAESTRA_CI=ON -DAESTRA_HEADLESS_ONLY=ON` is redundant *and* self-defeating if
+  you meant to build the app: the second flag looks like the only one that matters,
+  and the first silently forces it. Drop `AESTRA_CI` for UI work (§7).
+* **`AESTRAUI_ENABLE_PREMIUM_EDITORS` enables the premium editor sources.** When a
+  private plugin is present and the UI build is on, verify the premium editor with
+  `-DAESTRAUI_ENABLE_PREMIUM_EDITORS=ON`. It is a source-inclusion switch, so a
+  default-build pass says nothing about that configuration — and if any table is
+  conditionally populated, its declared size must be derived rather than written,
+  because a hardcoded size compiles the default build and breaks the premium one.
+* Agent scratch written into the source tree is gitignored: `msg*.txt` and
+  `commitmsg.txt`. `git add -A` skips ignored *untracked* files, so the rule
+  holds — but a file that is **already tracked** keeps being staged regardless.
+  If `git ls-files` lists one, `git rm --cached` it before trusting the ignore rule.
+  That was the actual cause of five stray commit messages in the repository: they
+  predated the rule.
 
 ---
 
@@ -257,6 +309,19 @@ Follow `.clang-format` and `.clang-tidy`.
 | Constants/macros | `UPPER_SNAKE_CASE`  | `AESTRA_HEADLESS_ONLY` |
 | Files            | `PascalCase.h/.cpp` | `AudioEngine.cpp`      |
 | Namespace        | `Aestra`            | `Aestra::AudioEngine`  |
+
+### File size
+
+No first-party source file may exceed **1500 lines**. The files already over it
+are pinned in `Tests/Guards/file_size_baseline.txt` at their exact count:
+
+* They may **shrink**, never grow. When one shrinks, lower its row in the same
+  PR, or `FileSizeRatchetGuard` fails it as stale.
+* A feature that would grow a pinned file goes into a new file instead. That is
+  the point: a hub such as `AestraContent.cpp` grows a few reasonable lines at a
+  time until no reviewer can say what a change to it touches.
+* Raising a row is the explicit exception. Do it in the PR that needs it, and say
+  why in the description.
 
 ---
 
@@ -401,6 +466,15 @@ General CI rules:
 * Do not remove failing tests to make CI pass.
 * Do not convert real failures into advisory checks without explicit approval.
 
+### Budget gate (V8-G5 · FD-39)
+
+The "Linux (UI/App compile)" lane runs `scripts/ci/check-budgets.py`: the stripped
+app binary plus its assets, and `AestraHeadless` peak RSS for fixed offline scenarios,
+compared with `Tests/Guards/budget_baseline.txt`. It fails on a regression of more than
+10% or a cap breach, and warns on an improvement of more than 10% (lower the row to
+keep the win). A change that legitimately costs more raises its row in the same PR and
+says why. Timing budgets never block a PR (FD-39 tier 2 is nightly, tier 3 the release cut).
+
 All public CI builds should remain compatible with core/headless mode unless explicitly changed.
 
 ---
@@ -515,6 +589,65 @@ com.Aestrastudios.comp
 com.Aestrastudios.verb
 com.Aestrastudios.delay
 ```
+
+### Adding a built-in effect
+
+A built-in plugin is now **DSP + a ParamSpec table + one registration line**.
+`AestraAudio/include/Plugin/InternalPluginBase.h` owns the parameter array, the
+clamp and non-finite guards, `getParameters()`, the state blob, and the
+editor and watchdog stubs. `AestraSat.h` is the reference implementation.
+
+```cpp
+class AestraFoo : public InternalPluginBase {
+    inline static constexpr ParamSpec kSpecs[] = {
+        {kDrive, "Drive", "DRV", "dB", 0.25f, 0.0f, 1.0f, true},
+        {kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
+    };
+    const ParamSpec* paramSpecs() const override { return kSpecs; }
+    uint32_t paramSpecCount() const override { return kParamCount; }
+    uint32_t stateMagic() const override { return kStateMagic; }
+    // ... initialize() calling seedDefaultsOnce(), and process()
+};
+```
+
+Register it in `AestraAudio/src/Plugin/BuiltInPlugins.cpp`. The plugin ID is
+permanent; choose it once.
+
+Rules for the rest:
+
+* Call `seedDefaultsOnce()` from `initialize()`. The base gates it to the first
+  initialize, so a re-prepare preserves the user's parameters and loaded state.
+  A plugin that skips it starts with every parameter at `0.0f`.
+* Read parameters with `paramValue(id)` and `isBypassed()`; do not reach for the
+  storage directly.
+* Override `getParameterDisplay()` only when labels are in musician units.
+  Override `onParameterChanged()` only to invalidate derived state.
+* **The inherited state blob is `{magic, version=1, params[count]}` sized by
+  `paramSpecCount()` — byte-identical to what the older plugins shipped.** That
+  is what makes inheriting it safe. If your blob needs fields beyond the
+  parameters, keep your own `saveState()`/`loadState()` and do not inherit.
+  `AestraEQ` is the worked example, and it carries eight blob versions; a
+  ParamSpec table does not remove that debt.
+* **Bypass must be a pure delay of `getLatencySamples()`.** `EffectChain::getTotalLatency()`
+  counts plugin latency and cannot see the plugin's own Bypass knob, so a
+  straight copy in bypass places the plugin early against everything downstream
+  in a delay-compensated chain. `AestraSat` shows the pattern.
+* Report the latency the path **actually** delays, not the one you intended.
+  An impulse probe is how you check.
+
+Generic contracts need no tests of their own: `PluginConformanceSweepTest` loops
+`InternalPluginRegistry`, so registering a plugin gets it 11 contracts —
+prepare matrix, silence in/silence out, hostile input, parameter table,
+non-finite rejection, state round-trip, garbage state, latency stability,
+bypass alignment, zero steady-state allocations, reset idempotence. **Write
+tests only for what is specific to the plugin** (its material lab, its quality
+measurements), and append the new target to the end of
+`Tests/cmake/PluginTests.cmake`, which is append-only so parallel branches do not
+collide on it.
+
+`.claude/` is gitignored in this repository, which is why this section lives
+here rather than in a skill file: an agent that checks out Aestra gets AGENTS.md
+and nothing else.
 
 ---
 

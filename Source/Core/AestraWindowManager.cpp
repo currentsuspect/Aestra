@@ -395,7 +395,7 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             // Only hide the menu if clicking OUTSIDE of it
             if (m_activeMenu && m_activeMenu->isVisible()) {
                 AestraUI::NUIPoint clickPos(static_cast<float>(m_lastMouseX), static_cast<float>(m_lastMouseY));
-                AestraUI::NUIRect menuBounds = m_activeMenu->getGlobalBounds();
+                AestraUI::NUIRect menuBounds = m_activeMenu->getBounds();
                 if (!menuBounds.contains(clickPos)) {
                     hideActiveMenu();
                 }
@@ -891,10 +891,6 @@ void AestraWindowManager::render() {
     const bool probe = AestraUI::PerfProbe::enabled();
     const auto treeStart = std::chrono::steady_clock::now();
     m_rootComponent->onRender(*m_renderer);
-    if (probe) {
-        AestraUI::PerfProbe::recordPhase(AestraUI::PerfProbe::Phase::Tree,
-            std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - treeStart).count());
-    }
     NUIDragDropManager::getInstance().renderDragGhost(*m_renderer);
 
     // Render RecoveryDialog on top of everything if visible
@@ -932,6 +928,10 @@ void AestraWindowManager::render() {
         }
     }
 
+    if (probe) { // the tree, the drag ghost, modal dialogs and the cursor: all UI drawing
+        AestraUI::PerfProbe::recordPhase(AestraUI::PerfProbe::Phase::Tree,
+            std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - treeStart).count());
+    }
     const auto submitStart = std::chrono::steady_clock::now();
     m_renderer->endFrame();
     if (probe) {

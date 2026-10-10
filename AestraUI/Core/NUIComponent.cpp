@@ -227,18 +227,6 @@ void NUIComponent::setSize(float width, float height) {
     setBounds(bounds_.x, bounds_.y, width, height);
 }
 
-NUIRect NUIComponent::getGlobalBounds() const {
-    NUIRect r = getBounds();
-    const NUIComponent* p = getParent();
-    while (p) {
-        const NUIRect& pb = p->getBounds();
-        r.x += pb.x;
-        r.y += pb.y;
-        p = p->getParent();
-    }
-    return r;
-}
-
 // ============================================================================
 // Hierarchy
 // ============================================================================
@@ -429,31 +417,6 @@ std::shared_ptr<NUIComponent> NUIComponent::findChildById(const std::string& id)
         }
     }
     return nullptr;
-}
-
-NUIPoint NUIComponent::localToGlobal(const NUIPoint& local) const {
-    NUIPoint global = local;
-    global.x += bounds_.x;
-    global.y += bounds_.y;
-    
-    if (parent_) {
-        global = parent_->localToGlobal(global);
-    }
-    
-    return global;
-}
-
-NUIPoint NUIComponent::globalToLocal(const NUIPoint& global) const {
-    NUIPoint local = global;
-    
-    if (parent_) {
-        local = parent_->globalToLocal(local);
-    }
-    
-    local.x -= bounds_.x;
-    local.y -= bounds_.y;
-    
-    return local;
 }
 
 // ============================================================================
@@ -760,8 +723,8 @@ NUIRect NUIComponent::pointerTooltipAnchor(const NUIPoint& point) {
 
 NUIRect NUIComponent::globalTooltipAnchor() const {
     // Bounds are window-absolute here: components render and hit-test at bounds_ as-is.
-    // localToGlobal() adds every ancestor's position again, which displaced the tooltips of
-    // nested controls (review, #965).
+    // Adding every ancestor's position again (the removed localToGlobal()) displaced the
+    // tooltips of nested controls (review, #965).
     return bounds_;
 }
 

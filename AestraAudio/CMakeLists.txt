@@ -217,6 +217,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Models/UnitManager.cpp
     src/Models/PatternManager.cpp
     src/Models/ClipSource.cpp
+    src/Models/RoutingModel.cpp
     src/Models/ClipRenderService.cpp
     src/Models/AudioClip.cpp
 
@@ -272,10 +273,20 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/MuseStubs.cpp
     src/Commands/HostVerbRegistry.cpp
     src/Commands/MuseService.cpp
+    # One translation unit per Muse verb family. MuseService.cpp is the
+    # dispatcher; these hold the verbs themselves. See MuseServiceInternal.h.
+    src/Commands/MuseServiceQueries.cpp
+    src/Commands/MuseServiceRouting.cpp
+    src/Commands/MuseServiceLibraryQueries.cpp
+    src/Commands/MuseServiceHistory.cpp
+    src/Commands/MuseServiceRender.cpp
+    src/Commands/MuseFileDigest.cpp
     src/Commands/MuseSocketServer.cpp
     
     # Headless / batch processing
     src/Headless/HeadlessMusicGenerator.cpp
+    src/Headless/OfflineProjectRender.cpp
+    src/Headless/RenderSummary.cpp
     
     # Plugin hosting system
     src/Plugin/PluginScanner.cpp
@@ -352,6 +363,7 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Drivers/AudioDriverRegistry.h   # Registry interface
     include/DSP/AudioProcessor.h
     include/Models/MeterSnapshot.h
+    include/Models/RoutingModel.h
     include/Core/MixerBus.h
     include/DSP/Oscillator.h
     include/Playback/MetronomeEngine.h
@@ -412,6 +424,8 @@ set(AESTRA_AUDIO_CORE_HEADERS
 
     # Headless / batch processing
     include/Headless/HeadlessMusicGenerator.h
+    include/Headless/OfflineProjectRender.h
+    include/Headless/RenderSummary.h
 
     src/DummyAudioDriver.h
     # Plugin hosting system

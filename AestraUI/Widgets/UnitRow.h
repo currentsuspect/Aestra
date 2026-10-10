@@ -31,8 +31,8 @@ public:
     UnitRow(std::shared_ptr<Aestra::Audio::TrackManager> trackManager, Aestra::Audio::UnitManager& manager, Aestra::Audio::UnitID unitId, Aestra::Audio::PatternID patternId);
     ~UnitRow() override;
 
-    // Structural 4-step group gap shared by rows and the Arsenal header ruler.
-    // Keep in sync with ArsenalPanel's kGroupGap.
+    // Structural 4-step group gap shared by rows and the Arsenal header ruler
+    // (ArsenalPanel's kGroupGap is defined as this constant).
     static constexpr float kStepGroupGap = 2.0f;
 
     void onRender(NUIRenderer& renderer) override;

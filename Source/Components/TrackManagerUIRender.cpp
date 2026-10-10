@@ -856,12 +856,7 @@ void TrackManagerUI::onResize(int width, int height) {
     m_backgroundCachedHeight = height;
     invalidateCache(); // Full invalidation on resize for immediate repaint
 
-    layoutTracks();
-    // Cropped minimap: bounds already start at the track-controls boundary,
-    // so no leading inset — keep this site in sync with the constructor.
-    if (m_timelineMinimap) {
-        m_timelineMinimap->setLeadingInset(0.0f);
-    }
+    layoutTracks(); // the minimap's leading inset is set once, in the constructor
     // Zebra Striping: Assign row index to tracks
     for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
         if (m_trackUIComponents[i]) {

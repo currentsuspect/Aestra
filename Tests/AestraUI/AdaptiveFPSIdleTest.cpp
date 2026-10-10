@@ -60,6 +60,20 @@ int main() {
     }
     check(fps.getIdleTime() >= 0.05, "and once it stops, it goes idle again");
 
+    // The locked modes keep their frame rate but must still track idleness the same way.
+    for (const auto mode : {AestraUI::NUIAdaptiveFPS::Mode::Locked30, AestraUI::NUIAdaptiveFPS::Mode::Locked60}) {
+        AestraUI::NUIAdaptiveFPS locked(config);
+        locked.setMode(mode);
+        locked.signalActivity(AestraUI::NUIAdaptiveFPS::ActivityType::MouseMove);
+        frame(locked);
+        check(locked.getIdleTime() < 0.05, "a locked mode starts active after input");
+        for (int i = 0; i < 6; ++i) {
+            std::this_thread::sleep_for(15ms);
+            frame(locked);
+        }
+        check(locked.getIdleTime() >= 0.05, "a locked mode goes idle after the timeout too");
+    }
+
     // A component keeps a fractional size: setBounds() calls onResize() with the size truncated
     // to ints, and the default onResize() used to re-apply that truncation, so 146.56 became 146
     // inside the same call and the parent's next layout "changed" it back, every frame.

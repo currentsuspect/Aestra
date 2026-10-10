@@ -201,7 +201,7 @@ bool TrackManagerUI::isCustomCursorActive() const {
     // Use getBounds() (not getGlobalBounds()) so this suppression region shares
     // the exact coordinate basis renderToolCursor()/renderMinimapResizeCursor()
     // draw in. m_lastMousePos is window-space and this component's bounds are
-    // already window-absolute, so getGlobalBounds() double-counts the parent
+    // already window-absolute, so getGlobalBounds() (gone since V8-X2b 6b) double-counted the parent
     // offset and shifts the region down, leaving a top strip where the arrow is
     // not suppressed while the tool cursor still draws (both cursors visible).
     if (hoverCurrent && (m_currentTool == PlaylistTool::Split || m_currentTool == PlaylistTool::Paint)) {

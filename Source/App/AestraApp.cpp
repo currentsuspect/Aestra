@@ -2,13 +2,13 @@
 #include "AestraApp.h"
 #include "MuseHostVerbs.h"
 #include "MuseProjectLoadReport.h"
+#include "ProjectLifecycle.h"
 #include "AppLifecycle.h"
 #include "CrashFlagPath.h"
 #include "ServiceLocator.h"
 #include "AestraRootComponent.h"
 #include "Preferences.h"
 #include "../AestraUI/Core/NUIPerfProbe.h"
-
 #include <cstdlib>
 #include "../AestraCore/include/AestraFile.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
@@ -38,10 +38,10 @@
 #include <fstream>
 #include <sstream>
 #include <chrono>
-#include <cstdio>
-#include <vector>
 #include "../Core/AudioSettingsStore.h"
 #include "../Core/DockedRailWidths.h"
+#include "AestraJSONFile.h"
+#include "AestraFileDialog.h"
 #include "../Core/LegacyMixerSettingsImport.h"
 #include "PlaylistMixer.h"
 #include "ClipResampler.h"
@@ -68,15 +68,6 @@ struct StartupTimer {
         Log::info(std::string("[Startup] ") + name + ": " + std::to_string(elapsed) + " ms");
     }
 };
-
-void syncRecordingProjectPath(const std::shared_ptr<AestraContent>& content, const std::string& projectPath) {
-    if (!content) {
-        return;
-    }
-    if (auto trackManager = content->getTrackManager()) {
-        trackManager->setRecordingProjectPath(projectPath);
-    }
-}
 
 /** @brief True when @p filePath's text contains @p needle (generic path form).
  *
@@ -876,41 +867,18 @@ void AestraApp::buildMenuBar() {
     menuBar->addItem("File", [this]() {
         auto menu = std::make_shared<AestraUI::NUIContextMenu>();
 
-        menu->addItem("New Project", [this]() {
-            if (m_content && m_content->getTrackManager()) m_content->getTrackManager()->stop();
-            // Leave the old session: discards its unsaved/unreferenced takes.
-            cleanupUnreferencedRecordings();
-            if (m_content) m_content->resetToDefaultProject();
-            clearProjectLoadReport();
-            m_documentState.startUntitled(autosavePathOrEmpty());
-            reinitAutosaveManager();
-            syncRecordingProjectPath(m_content, m_documentState.canonicalPath());
-            m_lastWindowTitle.clear();
-            updateWindowTitle();
-            Log::info("New project created");
-        });
+        menu->addItem("New Project", [this]() { createNewProject(); });
 
         menu->addItem("Open Project...", [this]() {
-            if (auto* utils = Aestra::Platform::getUtils()) {
-                const std::string filter = std::string("Aestra Project\0*.aes\0All Files\0*.*\0",
-                                                       sizeof("Aestra Project\0*.aes\0All Files\0*.*\0") - 1);
-                const std::string pickedPath = utils->openFileDialog("Open Project", filter);
+            const std::string filter = std::string("Aestra Project\0*.aes\0All Files\0*.*\0",
+                                                   sizeof("Aestra Project\0*.aes\0All Files\0*.*\0") - 1);
+            pickFileAsync(
+                [filter](Aestra::IPlatformUtils& utils) { return utils.openFileDialog("Open Project", filter); },
+                [this](const std::string& pickedPath) {
                 if (!pickedPath.empty() && std::filesystem::exists(pickedPath)) {
-                    // Old session's keeper path: captured BEFORE the load, so
-                    // discarded-take cleanup (run only on a successful switch)
-                    // keeps exactly the previous project's recordings.
-                    const std::string oldKeeperPath = m_documentState.canonicalPath();
-                    auto result = loadProjectFromPath(pickedPath);
-                    if (result.ok) {
-                        // Cleanup runs only after the transition SUCCEEDED: the
-                        // old session's redo history may still require its WAVs
-                        // if the new project failed to load.
-                        cleanupUnreferencedRecordings(oldKeeperPath);
-                    } else {
-                        Log::error("Failed to load project: " + pickedPath + " (" + result.errorMessage + ")");
-                    }
+                    openProjectFromPath(pickedPath);
                 }
-            }
+            });
         });
 
         menu->addSeparator();
@@ -1188,6 +1156,24 @@ void AestraApp::restoreUIState(const UIState& uiState) {
 
     if (m_content && m_content->getFileBrowser()) {
         auto fileBrowser = m_content->getFileBrowser();
+        // Library state (favorites, places, collections, sort, library root) is
+        // the browser's own file; where it was looking is restored from UIState below.
+        fileBrowser->initLibraryState(resolveAppDataFilePath("Aestra", "browser_library.json"));
+        // "Current Project" lists the audio the project has loaded (clip and
+        // recording sources). Weak: the browser must not keep the model alive.
+        std::weak_ptr<Aestra::Audio::TrackManager> weakTracks = m_content->getTrackManager();
+        fileBrowser->setProjectFilesProvider([weakTracks]() {
+            std::vector<std::string> paths;
+            if (auto tracks = weakTracks.lock()) {
+                const auto& sources = tracks->getSourceManager();
+                for (const auto id : sources.getAllSourceIDs()) {
+                    if (const auto* source = sources.getSource(id); source && !source->getFilePath().empty()) {
+                        paths.push_back(source->getFilePath());
+                    }
+                }
+            }
+            return paths;
+        });
         if (!uiState.lastBrowsedPath.empty() && std::filesystem::exists(uiState.lastBrowsedPath)) {
             fileBrowser->setCurrentPath(uiState.lastBrowsedPath);
             Log::info("[UIState] Restored file browser path: " + uiState.lastBrowsedPath);
@@ -1484,14 +1470,6 @@ void AestraApp::run() {
         }).detach();
     }
 
-    // Opt-in frame-work report (SPEC 3 §4): AESTRA_FRAME_STATS=1 logs, once a second, how long
-    // each presented frame's WORK took (events + update + render + swap, before the pacing
-    // sleep). UnifiedProfiler's totalTimeMs includes that sleep, so it cannot show a dropped
-    // frame; this can. Off by default: no cost unless the variable is set.
-    const bool frameStatsEnabled = std::getenv("AESTRA_FRAME_STATS") != nullptr;
-    std::vector<double> frameWorkMs;
-    auto frameStatsWindowStart = std::chrono::steady_clock::now();
-    auto frameWorkStart = frameStatsWindowStart;
 
     while (m_running && m_windowManager->processEvents()) {
         // Worker → UI hop (native dialogs/decode off the UI thread); pumped
@@ -1602,36 +1580,7 @@ void AestraApp::run() {
             m_windowManager->swapBuffers();
             m_lastPresentedFrame = std::chrono::steady_clock::now();
         }
-        if (frameStatsEnabled) {
-            const auto now = std::chrono::steady_clock::now();
-            if (presentThisFrame) {
-                frameWorkMs.push_back(std::chrono::duration<double, std::milli>(now - frameWorkStart).count());
-            }
-            if (now - frameStatsWindowStart >= std::chrono::seconds(1)) {
-                if (!frameWorkMs.empty()) {
-                    std::sort(frameWorkMs.begin(), frameWorkMs.end());
-                    double sum = 0.0;
-                    for (const double ms : frameWorkMs) sum += ms;
-                    const auto over = [&](double budget) {
-                        return std::count_if(frameWorkMs.begin(), frameWorkMs.end(),
-                                             [budget](double ms) { return ms > budget; });
-                    };
-                    char line[256];
-                    std::snprintf(line, sizeof(line),
-                                  "[FrameStats] frames=%zu work avg=%.2fms p95=%.2fms max=%.2fms over16.7=%ld over33=%ld",
-                                  frameWorkMs.size(), sum / static_cast<double>(frameWorkMs.size()),
-                                  frameWorkMs[(frameWorkMs.size() * 95) / 100], frameWorkMs.back(),
-                                  static_cast<long>(over(16.7)), static_cast<long>(over(33.3)));
-                    Log::info(line);
-                    if (AestraUI::PerfProbe::enabled()) {
-                        std::istringstream report(AestraUI::PerfProbe::takeReport(frameWorkMs.size()));
-                        for (std::string detail; std::getline(report, detail);) Log::info(detail);
-                    }
-                }
-                frameWorkMs.clear();
-                frameStatsWindowStart = now;
-            }
-        }
+        AestraUI::PerfProbe::frameWorkEnd(presentThisFrame); // AESTRA_FRAME_STATS report (NUIPerfProbe.h)
         if (sleepTime > 0.0) {
              if (auto fps = m_windowManager->getAdaptiveFPS()) {
                  fps->sleep(sleepTime);
@@ -1641,53 +1590,49 @@ void AestraApp::run() {
          }
 
         UnifiedProfiler::getInstance().endFrame();
-        frameWorkStart = std::chrono::steady_clock::now();
+        AestraUI::PerfProbe::frameWorkBegin();
     }
 }
 
 bool AestraApp::shouldRenderThisFrame() {
-    // AESTRA_FRAME_STATS=2 records why each frame was presented ([FrameWhy]).
-    const auto present = [](const char* reason) {
-        if (AestraUI::PerfProbe::enabled()) AestraUI::PerfProbe::recordPresentReason(reason);
-        return true;
-    };
+    using AestraUI::PerfProbe::presentBecause; // records the reason at AESTRA_FRAME_STATS=2
     // Conservative v1 gate: render unless EVERY skip condition holds
     // (dirty == false && realtime_visuals == false && input_recent == false).
 
     // Pending invalidation — any component's setDirty(true) propagates here.
     auto* root = m_windowManager->getRootComponent();
     if (!root || root->isDirty())
-        return present("dirty");
+        return presentBecause("dirty");
 
     // Input recency — the adaptive FPS governor already tracks this (fed by
     // mouse/key callbacks); align with its idle timeout.
     auto* fps = m_windowManager->getAdaptiveFPS();
     if (!fps || fps->getIdleTime() < 2.0)
-        return present("input");
+        return presentBecause("input");
 
     // Realtime visuals — transport (playhead/meters), record-arm input
     // monitoring, file preview, and Audition playback.
     if (m_audioController && m_audioController->getEngine() && m_audioController->getEngine()->isTransportPlaying()) {
-        return present("transport");
+        return presentBecause("transport");
     }
     if (m_content) {
         if (auto tm = m_content->getTrackManager()) {
             if (tm->isPlaying() || tm->isRecordArmed())
-                return present("playing or armed");
+                return presentBecause("playing or armed");
         }
         if (m_content->hasRealtimePlaybackVisuals())
-            return present("realtime visuals");
+            return presentBecause("realtime visuals");
     }
 
     // Overlays that animate or need fresh samples (HUD, dialogs, menus).
     if (m_windowManager->requiresContinuousRender())
-        return present("overlay");
+        return presentBecause("overlay");
 
     // Deeply idle: heartbeat only (~3.3 fps) so caret blink, tooltips and any
     // unsignaled change still surface within ~300 ms.
     const auto now = std::chrono::steady_clock::now();
     const double sinceLastPresent = std::chrono::duration<double>(now - m_lastPresentedFrame).count();
-    return sinceLastPresent >= 0.3 && present("heartbeat");
+    return sinceLastPresent >= 0.3 && presentBecause("heartbeat");
 }
 
 void AestraApp::startMuseSocketIfConfigured() {
@@ -1722,7 +1667,7 @@ void AestraApp::startMuseSocketIfConfigured() {
     // false and refuse them with a reason rather than running host code on a
     // thread that does not own the state it touches.
     m_museService->setHostUiThreadAvailable(true);
-    registerMuseHostVerbs(*m_museService, *m_content);
+    registerMuseHostVerbs(*m_museService, *m_content, *this);
 
     m_museSocketServer = std::make_unique<Aestra::Audio::MuseSocketServer>();
     std::string error;
@@ -1955,11 +1900,15 @@ void AestraApp::requestClose() {
                  [this](Aestra::DialogResponse response) {
                      switch (response) {
                      case Aestra::DialogResponse::Save:
-                         if (saveCurrentProject()) {
-                             m_running = false;
-                         } else {
-                             m_pendingClose = false;
-                         }
+                         // Save As answers asynchronously; keep the close
+                         // pending until the save has actually landed.
+                         saveCurrentProject([this](bool saved) {
+                             if (saved) {
+                                 m_running = false;
+                             } else {
+                                 m_pendingClose = false;
+                             }
+                         });
                          break;
                      case Aestra::DialogResponse::DontSave: {
                          // User explicitly chose not to save — remove the autosave
@@ -1986,33 +1935,57 @@ void AestraApp::requestClose() {
                  });
 }
 
-bool AestraApp::saveCurrentProject() {
-    return m_documentState.requiresSaveAs() ? saveProjectAs() : saveProject();
+void AestraApp::saveCurrentProject(std::function<void(bool)> onDone) {
+    if (m_documentState.requiresSaveAs()) {
+        saveProjectAs(std::move(onDone));
+        return;
+    }
+    const bool ok = saveProject();
+    if (onDone) onDone(ok);
 }
 
-bool AestraApp::saveProjectAs() {
-    auto* utils = Aestra::Platform::getUtils();
-    if (!utils) {
-        Log::warning("Cannot save project: platform file dialog is unavailable");
-        return false;
-    }
-
+void AestraApp::saveProjectAs(std::function<void(bool)> onDone) {
     Aestra::IPlatformUtils::SaveFileDialogOptions options;
     options.title = "Save Project As";
     options.filter =
         std::string("Aestra Project\0*.aes\0All Files\0*.*\0", sizeof("Aestra Project\0*.aes\0All Files\0*.*\0") - 1);
     options.defaultPath = m_documentState.canonicalPath();
     options.defaultExtension = "aes";
-    const std::string pickedPath = utils->saveFileDialog(options);
-    if (pickedPath.empty()) {
+
+    const bool started = pickFileAsync(
+        [options](Aestra::IPlatformUtils& utils) { return utils.saveFileDialog(options); },
+        [this, onDone](const std::string& pickedPath) {
+            bool ok = false;
+            if (!pickedPath.empty()) {
+                ok = saveProjectToPath(pickedPath, true);
+                if (ok) Log::info("Project saved as: " + pickedPath);
+            }
+            if (onDone) onDone(ok);
+        });
+    if (!started) {
+        Log::warning("Cannot save project: a file picker is already open or the platform layer is unavailable");
+        if (onDone) onDone(false);
+    }
+}
+
+bool AestraApp::pickFileAsync(Aestra::FileDialogCall call, std::function<void(const std::string&)> onPicked) {
+    auto queue = m_mainThreadQueue;
+    if (!queue || queue->fileDialogInFlight.exchange(true)) {
         return false;
     }
-
-    const bool ok = saveProjectToPath(pickedPath, true);
-    if (ok) {
-        Log::info("Project saved as: " + pickedPath);
-    }
-    return ok;
+    // The worker never calls onPicked (which captures `this`): it only queues
+    // it, under the shutdown gate, for drainMainThreadTasks() on the UI thread.
+    const bool started = Aestra::runFileDialogDetached(
+        std::move(call), [queue, onPicked = std::move(onPicked)](std::string picked) mutable {
+            std::lock_guard<std::mutex> lock(queue->mutex);
+            if (queue->shuttingDown) return;
+            queue->tasks.push_back([queue, onPicked = std::move(onPicked), picked = std::move(picked)]() {
+                queue->fileDialogInFlight.store(false);
+                onPicked(picked);
+            });
+        });
+    if (!started) queue->fileDialogInFlight.store(false);
+    return started;
 }
 
 ProjectSerializer::LoadResult AestraApp::loadProjectFromPath(const std::string& path, ProjectLoadSource source,

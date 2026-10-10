@@ -13,8 +13,10 @@ childComponent->setBounds(NUIRect(0, 0, 100, 50));
 NUIRect parentBounds = getBounds();
 childComponent->setBounds(NUIRect(parentBounds.x, parentBounds.y, 100, 50));
 
-// ✅ BETTER - Using utility helper
-childComponent->setBounds(NUIAbsolute(getBounds(), 0, 0, 100, 50));
+// ✅ BETTER - Work in Local space, convert once (AestraUI/Layout/NUILayoutSpace.h)
+using namespace AestraUI::Layout;
+const NUIWindowPoint origin(getBounds().x, getBounds().y);
+childComponent->setBounds(localToWindow(NUILocalRect(0, 0, 100, 50), origin).raw());
 ```
 
 ### 2. Never Reset Position in onResize()
@@ -41,8 +43,8 @@ void layoutChildren() {
     float childY = bounds.y + 20;
     child->setBounds(NUIRect(childX, childY, 100, 50));
     
-    // Better way - use utility helper
-    child->setBounds(NUIAbsolute(bounds, 10, 20, 100, 50));
+    // Better way - Local rect, one typed conversion
+    child->setBounds(localToWindow(NUILocalRect(10, 20, 100, 50), NUIWindowPoint(bounds.x, bounds.y)).raw());
 }
 ```
 
@@ -57,70 +59,53 @@ void onRender(NUIRenderer& renderer) {
     // Manual way
     renderer.drawText("Text", NUIPoint(bounds.x + 10, bounds.y + 20), 16, color);
     
-    // Better way - use utility helper
-    renderer.drawText("Text", NUIAbsolutePoint(bounds, 10, 20), 16, color);
-    
     renderChildren(renderer);
 }
 ```
 
-## Utility Helpers
+## Layout Helpers
 
-Make positioning easier with these helpers from `NUITypes.h`:
+The old `NUITypes.h` placement helpers (`NUIAbsolute`, `NUICentered`, `NUIStack*`,
+`NUIGridCell`, …) were removed in V8-X2b phase 6. Use `AestraUI/Layout/`:
 
-{% raw %}
 ```cpp
-// Position child with offset
-child->setBounds(NUIAbsolute(getBounds(), 10, 20, 100, 50));
+using namespace AestraUI::Layout;
+const NUIRect b = getBounds();
+const NUIWindowPoint origin(b.x, b.y);
+const NUILocalRect me(0, 0, b.width, b.height);
 
-// Draw text at offset
-renderer.drawText("Text", NUIAbsolutePoint(getBounds(), 10, 20), 16, color);
+// Bands and columns
+const auto bands = splitVertical(me, 28.0f);              // header + body
+const auto cols  = splitHorizontal(bands.trailing, 200);  // sidebar + content
 
-// Center child in parent
-child->setBounds(NUICentered(getBounds(), 200, 100));
+// Rows of fixed-size items (leading or trailing edge), scrolling stacks
+auto buttons = arrangeTrailingRow(bands.leading, {24, 24, 24}, 24, 4, 8);
+auto rows    = arrangeScrollingStack(cols.trailing, NUIAxis::Vertical, 38, 0, count, scroll);
 
-// Fill parent with margins
-child->setBounds(NUIAligned(getBounds(), 10, 10, 10, 10));
-
-// Stack children horizontally
-std::vector<NUISize> sizes = {{100, 50}, {200, 50}};
-auto rects = NUIStackHorizontal(getBounds(), sizes, 10);
-for (size_t i = 0; i < rects.size(); ++i) {
-    children[i]->setBounds(rects[i]);
-}
-
-// Position in grid
-child->setBounds(NUIGridCell(getBounds(), 1, 2, 3, 4));
-
-// Apply scroll offset for scrollable containers
-child->setBounds(NUIApplyScrollOffset(originalBounds, 0, scrollY));
-
-// Clamp popup to screen
-popup->setBounds(NUIScreenClamp(popupBounds, screenWidth, screenHeight));
-
-// Check if rects intersect for optimization
-if (NUIRectsIntersect(rectA, rectB)) {
-    // Handle intersection
-}
+// One conversion to the window-absolute bounds setBounds() expects
+closeButton->setBounds(localToWindow(buttons[0], origin).raw());
 ```
-{% endraw %}
+
+Every algorithm takes an optional `NUILayoutRecorder*`; with
+`AESTRA_LAYOUT_TRACE=<surface>` the layout explains each rect it placed
+(`NUILayoutExplain.h`).
 
 ## Common Mistakes
 
 | Mistake | Result | Fix |
 |---------|--------|-----|
 | `setBounds(0, 0, w, h)` in onResize | Component jumps to (0,0) | Preserve current x,y |
-| Positioning child at (0, 0) | Child renders at screen origin | Use `NUIAbsolute()` helper |
+| Positioning child at (0, 0) | Child renders at screen origin | Convert with `localToWindow()` |
 | Using relative coordinates | Overlapping components | Always use absolute coords |
-| Manual offset calculations | Error-prone, verbose | Use utility helpers |
+| Manual offset calculations | Error-prone, verbose | Use the `Layout/` algorithms |
 
 ## Quick Reference Table
 
 | Rule | Purpose | Code Pattern |
 |------|---------|--------------|
 | **Preserve X,Y in onResize()** | Prevents visual drift | `setBounds(current.x, current.y, w, h)` |
-| **Add parent offsets** | Correct global placement | `NUIAbsolute(parent, offsetX, offsetY, w, h)` |
-| **Use helpers** | Cleaner code | `NUICentered()`, `NUIAligned()` |
+| **Add parent offsets** | Correct global placement | `localToWindow(localRect, parentOrigin)` |
+| **Use layout algorithms** | Cleaner, explainable | `splitVertical()`, `arrangeTrailingRow()` |
 | **Render order = Z-order** | Control stacking | First added = bottom layer |
 | **Origin (0,0) = top-left** | Standard coordinates | Y increases downward |
 

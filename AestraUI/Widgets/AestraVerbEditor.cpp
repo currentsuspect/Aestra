@@ -37,6 +37,16 @@ constexpr int kModeCount = 9;
 constexpr float kPresetListTopOffset = 112.0f;
 constexpr float kPresetCardHeight = 58.0f;
 constexpr float kPresetCardGap = 6.0f;
+
+// The preset strip's visible band in whole pixels. One definition for what
+// drawPresetStrip() draws and what layout leaves clickable (V8-X2b phase 5).
+struct PresetBand { int top, bottom; };
+PresetBand presetBand(const NUIRect& b) {
+    return {static_cast<int>(std::round(b.y + 60.0f)), static_cast<int>(std::round(b.y + b.height - 14.0f)) - 10};
+}
+bool presetCardShown(const NUIRect& card, const PresetBand& band) {
+    return static_cast<int>(std::round(card.y)) >= band.top && static_cast<int>(std::round(card.bottom())) <= band.bottom;
+}
 constexpr float kPresetListBottomPadding = 24.0f;
 constexpr float kPresetArtworkSize = 44.0f;
 constexpr float kPresetArtworkPixels = 256.0f; // matches the committed 256x256 preset artwork
@@ -363,10 +373,7 @@ void AestraVerbEditor::layoutControls() {
     const float presetY = b.y + kPresetListTopOffset;
     m_presetScroll = std::clamp(m_presetScroll, 0, maxPresetScroll());
     const float scrollOffsetY = static_cast<float>(m_presetScroll) * (kPresetCardHeight + kPresetCardGap);
-    // Visible clip band — must match drawPresetStrip so hit-testing never selects
-    // a card that isn't actually drawn (e.g. rows scrolled off-screen).
-    const int clipTop = static_cast<int>(std::round(b.y + 60.0f));
-    const int clipBottom = static_cast<int>(std::round(b.y + b.height - 14.0f)) - 10;
+    const PresetBand band = presetBand(b);
     int categoryRow = 0;
     for (auto& preset : m_presets) {
         if (!presetIsInSelectedCategory(preset)) {
@@ -377,11 +384,8 @@ void AestraVerbEditor::layoutControls() {
                                  presetY + static_cast<float>(categoryRow) * (kPresetCardHeight + kPresetCardGap) - scrollOffsetY,
                                  presetW, kPresetCardHeight);
         ++categoryRow;
-        // Clear bounds for cards clipped out of the visible band; a card that
-        // isn't rendered must not remain clickable.
-        const int cardTop = static_cast<int>(std::round(cardBounds.y));
-        const int cardBottom = static_cast<int>(std::round(cardBounds.bottom()));
-        preset.bounds = (cardTop < clipTop || cardBottom > clipBottom) ? NUIRect{} : cardBounds;
+        // A card outside the visible band isn't drawn, so it must not stay clickable.
+        preset.bounds = presetCardShown(cardBounds, band) ? cardBounds : NUIRect{};
     }
 
     const float contentX = editorContentX(b);
@@ -602,14 +606,10 @@ void AestraVerbEditor::drawPresetStrip(NUIRenderer& renderer, NUIColor accent) {
         if (distance < bestDistance) { bestDistance = distance; activePreset = static_cast<int>(i); }
     }
 
-    const int clipTop = static_cast<int>(std::round(stripTopY));
-    const int clipBottom = static_cast<int>(std::round(stripBottomY)) - 10;
-
+    const PresetBand band = presetBand(b);
     for (size_t i = 0; i < m_presets.size(); ++i) {
         auto& p = m_presets[i];
-        const int presetTop = static_cast<int>(std::round(p.bounds.y));
-        const int presetBottom = static_cast<int>(std::round(p.bounds.bottom()));
-        if (presetTop < clipTop || presetBottom > clipBottom) continue;
+        if (!presetCardShown(p.bounds, band)) continue;
         const bool active = static_cast<int>(i) == activePreset && bestDistance < 0.55f;
         const bool focused = static_cast<int>(i) == m_focusedPreset;
         const bool pressed = static_cast<int>(i) == m_pressedPreset;

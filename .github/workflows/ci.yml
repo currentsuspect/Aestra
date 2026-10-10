@@ -190,6 +190,24 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         run: cmake --build build-app --config ${{env.BUILD_TYPE}} --target Aestra --parallel
 
+      # V8-G5 · FD-39 tier 1. AestraHeadless is the offline engine the budget gate
+      # measures; it is tiny next to the app, so building it here costs seconds.
+      - name: Build AestraHeadless (budget gate)
+        if: steps.scope.outputs.run == 'true'
+        run: cmake --build build-app --config ${{env.BUILD_TYPE}} --target AestraHeadless --parallel 2
+
+      # FD-39 tier 1: deterministic budgets block the PR, timing never does (tier 2 is
+      # nightly, tier 3 is the release cut). Self-tests run first, so a broken gate is
+      # reported as a broken gate rather than as a budget violation. The gate fails only
+      # on a >10% regression or a cap breach; see scripts/ci/check-budgets.py.
+      - name: Budget gate self-tests
+        if: steps.scope.outputs.run == 'true'
+        run: python3 scripts/ci/test-check-budgets.py
+
+      - name: Budget gate (V8-G5)
+        if: steps.scope.outputs.run == 'true'
+        run: python3 scripts/ci/check-budgets.py --bin-dir build-app/bin
+
       - name: Build UI test targets
         if: steps.scope.outputs.run == 'true'
         # Bounded parallelism: an unbounded --parallel full build OOM'd the
@@ -201,13 +219,17 @@ jobs:
           ModalDialogInteractionTest
           PianoRollInteractionTest PianoRollPanelPersistenceTest PianoRollStrokeInteractionTest
           PianoRollExternalEditCommitTest EditorCloseDeferredTest PanelWindowClickSwallowTest
-          MixerViewModelAutomationPresenceTest PanelResizeLayoutTest UnitRowStepSelectionTest
+          MixerViewModelAutomationPresenceTest MixerDropdownKeyboardTest
+          BPMEditorPaintTest TransportClockFormatTest PanelResizeLayoutTest
+          UnitRowStepSelectionTest
           PluginRackBindingLifecycleTest WindowPanelRaiseTest TakesHistoryPanelTest
           PluginBrowserSelectionTest UIInsertRoutePickerTest NUITextInputLayoutTest
           NUITextInputEditingTest NUIDropdownInteractionTest NUIComponentTooltipTest
           NUIHiddenChildDispatchTest NUIWidgetHiddenInputTest
           ContractPianoRollOneEntryPerGestureTest ContractPianoRollUndoStaysInPatternTest
           ContractPianoRollReachesGlobalUndoTest ContractPianoRollPasteTargetsEditingUnitTest
+          FileBrowserLibraryTest
+          PanelWindowKnobDragTest AdaptiveFPSIdleTest
           --parallel 2
 
       - name: Run UI tests
@@ -216,7 +238,7 @@ jobs:
         # broken selector runs zero tests and ctest still exits 0. A step that
         # silently runs nothing is worse than no step, because it reports
         # success (same precedent as the security contract steps).
-        run: ctest --test-dir build-app -C ${{env.BUILD_TYPE}} -R '^(NUIThemeConsistencyTest|NUIContextMenuInteractionTest|ClipContextMenuReachabilityTest|ClipDragReleaseTest|TimelineFollowPreferenceTest|TimelineGridSelectionTest|ModalDialogInteractionTest|PianoRollInteractionTest|PianoRollPanelPersistenceTest|PianoRollStrokeInteractionTest|PianoRollExternalEditCommitTest|EditorCloseDeferredTest|PanelWindowClickSwallowTest|MixerViewModelAutomationPresenceTest|PanelResizeLayoutTest|UnitRowStepSelectionTest|PluginRackBindingLifecycleTest|WindowPanelRaiseTest|TakesHistoryPanelTest|PluginBrowserSelectionTest|UIInsertRoutePickerTest|NUITextInputLayoutTest|NUITextInputEditingTest|NUIDropdownInteractionTest|NUIComponentTooltipTest|NUIHiddenChildDispatchTest|NUIWidgetHiddenInputTest|ContractPianoRollOneEntryPerGestureTest|ContractPianoRollUndoStaysInPatternTest|ContractPianoRollReachesGlobalUndoTest|ContractPianoRollPasteTargetsEditingUnitTest)$' --no-tests=error --output-on-failure
+        run: ctest --test-dir build-app -C ${{env.BUILD_TYPE}} -R '^(NUIThemeConsistencyTest|NUIContextMenuInteractionTest|ClipContextMenuReachabilityTest|ClipDragReleaseTest|TimelineFollowPreferenceTest|TimelineGridSelectionTest|ModalDialogInteractionTest|PianoRollInteractionTest|PianoRollPanelPersistenceTest|PianoRollStrokeInteractionTest|PianoRollExternalEditCommitTest|EditorCloseDeferredTest|PanelWindowClickSwallowTest|MixerViewModelAutomationPresenceTest|MixerDropdownKeyboardTest|BPMEditorPaintTest|TransportClockFormatTest|PanelResizeLayoutTest|UnitRowStepSelectionTest|PluginRackBindingLifecycleTest|WindowPanelRaiseTest|TakesHistoryPanelTest|PluginBrowserSelectionTest|UIInsertRoutePickerTest|NUITextInputLayoutTest|NUITextInputEditingTest|NUIDropdownInteractionTest|NUIComponentTooltipTest|NUIHiddenChildDispatchTest|NUIWidgetHiddenInputTest|ContractPianoRollOneEntryPerGestureTest|ContractPianoRollUndoStaysInPatternTest|ContractPianoRollReachesGlobalUndoTest|ContractPianoRollPasteTargetsEditingUnitTest|FileBrowserLibraryTest|PanelWindowKnobDragTest|AdaptiveFPSIdleTest)$' --no-tests=error --output-on-failure
 
       - name: Verify desktop font bundle
         if: steps.scope.outputs.run == 'true'
@@ -949,9 +971,24 @@ jobs:
           if-no-files-found: ignore
 
   tsan-linux:
-    name: ThreadSanitizer (TSan, advisory)
+    # Required, and deliberately NOT scope-gated (P6).
+    #
+    # This lane was advisory with a classify-scope step, which made it cheap: a
+    # change the classifier judged irrelevant skipped the build. But a skipped
+    # step still leaves the JOB reporting success, so promoting it to required
+    # unchanged would buy a green tick on exactly the PRs least likely to
+    # contain a race — a no-op gate, which is worse than an advisory one because
+    # people stop reading it. That is the failure mode the contract-coverage
+    # job's comment calls "reportable-sometimes ... false green rather than a
+    # block".
+    #
+    # So the classifier is gone and this lane runs on every PR. The runner cost
+    # is real and was accepted deliberately: the lane was green on 30
+    # consecutive develop runs before promotion, and the two audio-thread
+    # races another project shipped through an equivalent gap are the reason it
+    # is worth having.
+    name: ThreadSanitizer (TSan)
     runs-on: ubuntu-latest
-    continue-on-error: true
     env:
       TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1:suppress_equal_stacks=1
     steps:
@@ -960,41 +997,25 @@ jobs:
           submodules: false
           persist-credentials: false
 
-      # --- Lane selection (#620) ---------------------------------------------
-      # Advisory lanes are not required contexts, but they are 38.8 of the 85
-      # runner-minutes a PR costs. They build with AESTRA_CI=ON, which force-disables
-      # the UI, so a docs-only or UI-only change cannot produce a finding here.
-      - name: Classify change scope
-        id: scope
-        uses: ./.github/actions/classify-scope
-        with:
-          lane: tsan
-          github-token: ${{ github.token }}
-
       - name: Setup sccache
-        if: steps.scope.outputs.run == 'true'
         uses: ./.github/actions/setup-sccache
       - name: Install Dependencies
-        if: steps.scope.outputs.run == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev cmake
 
       - name: Configure
-        if: steps.scope.outputs.run == 'true'
         run: cmake --preset ci-tsan -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
-        if: steps.scope.outputs.run == 'true'
         run: cmake --build --preset ci-tsan --parallel 2
 
       - name: Test
-        if: steps.scope.outputs.run == 'true'
         working-directory: build/ci-tsan
         run: ctest --parallel 2 --output-on-failure --output-junit ctest-results-tsan.xml
 
       - name: Upload TSan test report
-        if: always() && steps.scope.outputs.run == 'true'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ctest-results-tsan
