@@ -395,6 +395,31 @@ int main() {
         std::cout << "[PASS] G1 geometry accessors save on change, stay silent otherwise\n";
     }
 
+    // --- L1. List preferences (V8-C14 favorites): absent vs empty, save on change, reload. ---
+    {
+        const auto path = (tempDir / "owner-lists.json").string();
+        const std::string key = UISurfaceKeys::kPluginBrowserFavorites;
+        {
+            UISurfaceStoreFile owner(path);
+            require(!owner.listPreference(key).has_value(), "L1: a list never stored reads as absent");
+            require(owner.setListPreference(key, {"com.a.reverb", "com.b.eq"}), "L1: setting a list reports success");
+        }
+        UISurfaceStoreFile reopened(path);
+        require(reopened.listPreference(key) == std::optional<std::vector<std::string>>(
+                                                    std::vector<std::string>{"com.a.reverb", "com.b.eq"}),
+                "L1: the list was saved, in order, so a fresh owner reads it");
+
+        std::filesystem::remove(path);
+        require(reopened.setListPreference(key, {"com.a.reverb", "com.b.eq"}), "L1: re-setting the same list succeeds");
+        require(!std::filesystem::exists(path), "L1: an unchanged list writes nothing");
+
+        require(reopened.setListPreference(key, {}), "L1: clearing every entry succeeds");
+        const UISurfaceStoreFile cleared(path);
+        require(cleared.listPreference(key).has_value() && cleared.listPreference(key)->empty(),
+                "L1: an emptied list is stored as empty, not as absent (no re-import of old favorites)");
+        std::cout << "[PASS] L1 list preferences: absent vs empty, save on change, round-trip\n";
+    }
+
     std::cout << "\nAll UISurfaceStore tests passed.\n";
     return 0;
 }

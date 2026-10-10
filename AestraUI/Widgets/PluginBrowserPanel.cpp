@@ -117,7 +117,26 @@ void PluginBrowserPanel::loadFavorites() {
     } catch (...) {}
 }
 
+void PluginBrowserPanel::setFavoritesProvider(FavoritesLoader load, FavoritesSaver save) {
+    m_favoritesSaver = std::move(save);
+    if (const auto stored = load ? load() : std::nullopt) {
+        m_favoritesSet = std::unordered_set<std::string>(stored->begin(), stored->end());
+        for (auto* list : {&m_allPlugins, &m_filteredPlugins}) {
+            for (auto& p : *list) p.isFavorite = m_favoritesSet.count(p.id) > 0;
+        }
+        applyFilters();
+    } else if (m_favoritesSaver && !m_favoritesSet.empty()) {
+        saveFavorites(); // one-way import of favorites.json into the store
+    }
+}
+
 void PluginBrowserPanel::saveFavorites() {
+    if (m_favoritesSaver) {
+        std::vector<std::string> ids(m_favoritesSet.begin(), m_favoritesSet.end());
+        std::sort(ids.begin(), ids.end()); // a stable order on disk
+        m_favoritesSaver(ids);
+        return;
+    }
     Aestra::JSON j = Aestra::JSON::object();
     j.set("version", Aestra::JSON(1.0));
     Aestra::JSON arr = Aestra::JSON::array();

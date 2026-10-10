@@ -26,11 +26,13 @@ constexpr int kCountInStartupFrameLimit = 60;
 #include "AudioGraphBuilder.h"
 #include "AuditionEngine.h" // Audition Mode backend
 #include "AuditionPanel.h"  // Audition Mode UI
+#include "Commands/ClipPlacement.h"
 #include "Commands/PluginCommands.h"
 #include "MidiInputService.h"
 #include "MixerChannel.h"
 #include "MixerPanel.h"
 #include "PatternBrowserPanel.h"
+#include "UISurfaceStoreProviders.h"
 #include "PianoRollPanel.h"
 #include "Plugin/AestraDelay.h"
 #include "Plugin/AestraLFO.h"
@@ -835,6 +837,9 @@ void AestraContent::setupBrowserPanels() {
     // Create Plugin Browser
     m_pluginBrowser = std::make_shared<AestraUI::PluginBrowserPanel>();
     m_pluginBrowser->setVisible(false); // Hidden by default
+    // V8-C14: favorites live in the UI-state store (imported once from favorites.json).
+    m_pluginBrowser->setFavoritesProvider(Aestra::storedListLoader(Aestra::UISurfaceKeys::kPluginBrowserFavorites),
+                                          Aestra::storedListSaver(Aestra::UISurfaceKeys::kPluginBrowserFavorites));
 
     m_pluginBrowser->setPluginList({}); // Initialize empty, refresh called later
     refreshPluginList();
@@ -4054,10 +4059,8 @@ void AestraContent::showToast(const std::string& message, double seconds) {
     if (!m_notificationToast) {
         return;
     }
-    m_notificationToast->setText(message);
-    m_notificationToast->setDuration(seconds);
+    m_notificationToast->show(message, seconds); // queues behind a toast already showing
     m_notificationToast->setBounds(toastRect(getBounds()));
-    m_notificationToast->setVisible(true);
     m_notificationToast->bringToFront();
 }
 
@@ -4240,15 +4243,8 @@ void AestraContent::loadSampleIntoSelectedTrack(const std::string& filePath) {
     }
 
     auto& playlist = m_trackManager->getPlaylistModel();
-    if (!targetLaneId.isValid()) {
-        if (playlist.getLaneCount() == 0) {
-            targetLaneId = playlist.createLane("Sample Lane");
-            // FD-14 ownership: a lane created in-session must own a Track too,
-            // or record arm / monitoring have no ownership to bind to.
-            m_trackManager->createTrack(targetLaneId, "Sample Lane");
-        } else {
-            targetLaneId = playlist.getLaneId(0);
-        }
+    if (!targetLaneId.isValid() && playlist.getLaneCount() > 0) {
+        targetLaneId = playlist.getLaneId(0); // with no lanes, placement creates one and its Track
     }
 
     double playheadPositionSeconds = m_transportBar ? m_transportBar->getPosition() : 0.0;
@@ -4263,8 +4259,9 @@ void AestraContent::loadSampleIntoSelectedTrack(const std::string& filePath) {
     clip.durationSeconds = durationSeconds;
     clip.name = patternName;
     clip.edits = Aestra::Audio::ClipEdits::forNewAudioClip();
-    const auto clipId = playlist.addClip(targetLaneId, clip);
-    if (!clipId.isValid()) {
+    // V8-W6: one undo step through the command history, so it is undoable, dirty and autosaved.
+    if (!Aestra::Audio::placeClipAsOneUndoStep(*m_trackManager, targetLaneId, clip, "Sample Lane",
+                                               "Add Sample Clip")) {
         patternManager.removePattern(patternId);
         AESTRA_LOG_ERROR("Failed to add sample clip to arrangement; removed orphan pattern");
         return;

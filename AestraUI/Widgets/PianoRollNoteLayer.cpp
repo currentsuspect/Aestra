@@ -4,6 +4,7 @@
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include "PianoRollGhostCompare.h"
+#include "PianoRollPressedKeys.h"
 #include "PianoRollWidgetShared.h"
 #include <algorithm>
 #include <cmath>
@@ -63,7 +64,14 @@ int PianoRollNoteLayer::snapPitchToScale(int pitch) {
     return bestPitch;
 }
 
-void PianoRollNoteLayer::auditionPitch(int pitch) {
+void PianoRollNoteLayer::showKeyPressed(int pitch, bool addToPress) {
+    pressPianoRollKey(pressedPitches_, pitch, addToPress, onKeyPressChanged_);
+}
+void PianoRollNoteLayer::releasePressedKeys() { releasePianoRollKeys(pressedPitches_, onKeyPressChanged_); }
+
+void PianoRollNoteLayer::auditionPitch(int pitch, bool addToPress) {
+    // The key shows pressed whether or not it sounds: the press is what the user did.
+    showKeyPressed(std::clamp(pitch, 0, 127), addToPress);
     // Never talk over the transport — playback owns the audio focus. Clear the
     // sounding pitch while suppressed so the very next idle placement re-fires
     // (otherwise the same-pitch guard below would swallow it after playback stops).
@@ -87,6 +95,7 @@ void PianoRollNoteLayer::auditionStop() {
     // The one-shot voice releases itself; just clear the guard so the next
     // placement or pitch-drag can audition again, even on the same pitch.
     auditionPitch_ = -1;
+    releasePressedKeys();
 }
 
 std::vector<int> PianoRollNoteLayer::buildTriad(int rootPitch) const {
@@ -137,7 +146,7 @@ bool PianoRollNoteLayer::paintBrushAt(float localX, float localY) {
         note.selected = true;
         note.animationScale = 1.0f;
         notes_.push_back(note);
-        auditionPitch(pitch);
+        auditionPitch(pitch, /*addToPress=*/true); // a chord holds all its keys down
         changed = true;
     }
     return changed;

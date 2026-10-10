@@ -117,8 +117,7 @@ struct UISurfaceStore {
     /// "panel.mixer.inspectorExpanded".
     std::map<std::string, bool> boolPreferences;
 
-    /// Reserved for a later step's plugin-favorites migration
-    /// (e.g. "pluginBrowser.favorites"). Empty and unread today.
+    /// Ordered string lists by key; "pluginBrowser.favorites" since the V8-C14 favorites migration.
     std::map<std::string, std::vector<std::string>> listPreferences;
 
     /// Full path to the store's file in app data, or empty when there is nowhere
@@ -153,6 +152,8 @@ inline constexpr char kPanelTakes[] = "panel.takes";
 // Timeline follow-playhead (SPEC 3 §3.1): how this user arranges the app, so FD-23's store.
 inline constexpr char kTimelineFollowPlayhead[] = "panel.timeline.followPlayhead";
 inline constexpr char kTimelineFollowContinuous[] = "panel.timeline.followContinuous";
+// Plugin browser favorites (V8-C14): plugin ids, imported once from the legacy favorites.json.
+inline constexpr char kPluginBrowserFavorites[] = "pluginBrowser.favorites";
 } // namespace UISurfaceKeys
 
 /**
@@ -204,6 +205,14 @@ public:
     /// dialog and re-exporting the same settings never echoes into a write.
     /// Same save/ownership contract as setBoolPreference.
     bool setDialogExportOptions(const UIDialogExportOptions& value);
+
+    /// The stored list, or nullopt when nothing was ever stored under @p key (an empty
+    /// stored list is a real answer: the user removed every entry).
+    std::optional<std::vector<std::string>> listPreference(const std::string& key) const;
+
+    /// Sets and saves. A no-op when the key already holds exactly @p value.
+    /// Same save/ownership contract as setBoolPreference.
+    bool setListPreference(const std::string& key, const std::vector<std::string>& value);
 
 private:
     UISurfaceStore m_store;

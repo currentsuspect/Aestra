@@ -2148,6 +2148,11 @@ target_include_directories(AutomationTensionTest PRIVATE
 add_test(NAME AutomationTensionTest COMMAND AutomationTensionTest)
 set_tests_properties(AutomationTensionTest PROPERTIES LABELS "automation;migration;regression;contract:durability")
 
+# V8-C14 ranked gap 4: a toast that arrives while another shows waits its turn (ToastQueue.h).
+add_executable(ToastQueueTest AestraUI/ToastQueueTest.cpp)
+add_test(NAME ToastQueueTest COMMAND ToastQueueTest)
+set_tests_properties(ToastQueueTest PROPERTIES LABELS "ui;toast;regression;contract:application")
+
 # V8-X2b phase 5: the file browser's panes and chrome from the layout system
 # (FileBrowserLayout.h); the folder rows are drawn and hit-tested by one rect.
 add_executable(FileBrowserLayoutTest AestraUI/FileBrowserLayoutTest.cpp)
@@ -3030,6 +3035,20 @@ if(AESTRA_ENABLE_UI)
         LABELS "ui;filebrowser;persistence;regression;contract:application")
 endif()
 
+# SPEC 3 §3.2: the renderer's text-centring contract (drawText takes the line box's top;
+# calculateOpticalTextY centres the cap band on the requested centre).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(TextCentringTest AestraUI_Core)
+    add_executable(TextCentringTest AestraUI/TextCentringTest.cpp)
+    target_link_libraries(TextCentringTest PRIVATE AestraUI_Core)
+    target_include_directories(TextCentringTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Common
+    )
+    add_test(NAME TextCentringTest COMMAND TextCentringTest)
+    set_tests_properties(TextCentringTest PROPERTIES LABELS "ui;text;contract:application")
+endif()
+
 # SPEC 3 §4: the adaptive-FPS governor falls idle after input instead of latching active.
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(AdaptiveFPSIdleTest AestraUI_Core)
@@ -3078,6 +3097,7 @@ if(AESTRA_ENABLE_UI)
         ContractPianoRollPasteTargetsEditingUnitTest
         FileBrowserLibraryTest
         PanelWindowKnobDragTest
+        TextCentringTest
         AdaptiveFPSIdleTest
     )
     foreach(_t IN LISTS AESTRA_REQUIRED_UI_TESTS)
