@@ -88,6 +88,7 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/NUIArrangementWidgets.h
     Widgets/NUIArrangementWidgets.cpp
     Widgets/NUIPianoRollWidgets.h
+    Widgets/PianoRollPressedKeys.h
     Widgets/PianoRollWidgetShared.h
     Widgets/PianoRollKeyLane.cpp
     Widgets/PianoRollMinimap.cpp

@@ -10,7 +10,7 @@
 3643 AestraUI/Graphics/OpenGL/NUIRendererGL.cpp
 5646 AestraUI/Widgets/AestraEQEditor.cpp
 1621 AestraUI/Widgets/AestraVerbEditor.cpp
-2012 AestraUI/Widgets/PianoRollNoteLayer.cpp
+2021 AestraUI/Widgets/PianoRollNoteLayer.cpp
 2733 AestraUI/Widgets/UIRoutingMap.cpp
 1947 AestraUI/Widgets/UnitRow.cpp
 2595 Source/App/AestraApp.cpp

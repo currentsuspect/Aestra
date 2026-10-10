@@ -3,6 +3,7 @@
 #include "NUIPianoRollWidgets.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
+#include "PianoRollPressedKeys.h"
 #include "PianoRollWidgetShared.h"
 #include <algorithm>
 #include <cmath>
@@ -63,27 +64,9 @@ int PianoRollNoteLayer::snapPitchToScale(int pitch) {
 }
 
 void PianoRollNoteLayer::showKeyPressed(int pitch, bool addToPress) {
-    if (!addToPress) {
-        // One pitch at a time (a drag onto a new row): the previous key comes back up.
-        for (const int held : pressedPitches_) {
-            if (held != pitch && onKeyPressChanged_) onKeyPressChanged_(held, false);
-        }
-        pressedPitches_.erase(std::remove_if(pressedPitches_.begin(), pressedPitches_.end(),
-                                             [pitch](int held) { return held != pitch; }),
-                              pressedPitches_.end());
-    }
-    if (std::find(pressedPitches_.begin(), pressedPitches_.end(), pitch) == pressedPitches_.end()) {
-        pressedPitches_.push_back(pitch);
-        if (onKeyPressChanged_) onKeyPressChanged_(pitch, true);
-    }
+    pressPianoRollKey(pressedPitches_, pitch, addToPress, onKeyPressChanged_);
 }
-
-void PianoRollNoteLayer::releasePressedKeys() {
-    for (const int held : pressedPitches_) {
-        if (onKeyPressChanged_) onKeyPressChanged_(held, false);
-    }
-    pressedPitches_.clear();
-}
+void PianoRollNoteLayer::releasePressedKeys() { releasePianoRollKeys(pressedPitches_, onKeyPressChanged_); }
 
 void PianoRollNoteLayer::auditionPitch(int pitch, bool addToPress) {
     // The key shows pressed whether or not it sounds: the press is what the user did.
