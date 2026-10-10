@@ -2346,7 +2346,7 @@ void TrackUIComponent::onResize(int width, int height) {
     const float localNameY = localButtonsY + std::max(0.0f, (buttonH - localNameHeight) * 0.5f);
     const float localLabelWidth = std::max(40.0f, localInlineWidth);
 
-    // Name label - use NUIAbsolute for global coordinate system
+    // Name label: our bounds are window-absolute, so offset by bounds.x/y
     if (m_nameLabel) {
         m_nameLabel->setBounds(AestraUI::NUIRect(bounds.x + localLabelLeft, bounds.y + localNameY, localLabelWidth, localNameHeight));
     }

@@ -127,7 +127,7 @@ public:
         /** @brief View currently being dragged. */
         Aestra::Audio::ViewType draggingView = Aestra::Audio::ViewType::Playlist;
         /** @brief Mouse origin in overlay coordinates for the active drag. */
-        AestraUI::NUIPoint dragStartMouseOverlay = {0, 0};
+        AestraUI::NUIPoint dragStartMouse = {0, 0}; // window-absolute
         /** @brief Panel origin in overlay coordinates at drag start. Drag
          * gestures reuse the stored size preference, never the displayed
          * size, so dragging a fitted panel cannot bake the fit into the
@@ -565,7 +565,7 @@ private:
     Aestra::Events::ScopedConnections m_connections;
     Aestra::Audio::UnitID m_sampleEditorUnitId{0};
     bool m_sampleEditorDragging{false};
-    AestraUI::NUIPoint m_sampleEditorDragStartMouseOverlay{0.0f, 0.0f};
+    AestraUI::NUIPoint m_sampleEditorDragStartMouse{0.0f, 0.0f}; // window-absolute
     AestraUI::NUIRect m_sampleEditorDragStartRect{0.0f, 0.0f, 0.0f, 0.0f};
 
     void openSampleEditorForUnit(Aestra::Audio::UnitID unitId, const std::string& samplePath);

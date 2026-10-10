@@ -291,6 +291,49 @@ void testSplitHorizontalClampsLikeSplitVertical() {
     check(nearly(under.leading.width, 0.0f) && nearly(under.trailing.width, 300.0f), "negative leading clamps to 0");
 }
 
+void testLeadingRowMatchesTheTransportBarWalk() {
+    // TransportBar's original placement, before phase 6: x starts at the edge pad
+    // and walks `x += width + gap`. Real constants: buttons 34 wide, gap 6, pad 10;
+    // record chips of four widths, gap 4, module pad 14, starting at a module x.
+    const NUILocalRect transport(0.0f, 9.0f, 132.0f, 30.0f);
+    const auto buttons = arrangeLeadingRow(transport, {34.0f, 34.0f, 34.0f}, 30.0f, 6.0f, 10.0f);
+    float x = 10.0f;
+    bool same = buttons.size() == 3;
+    for (std::size_t i = 0; same && i < buttons.size(); ++i) {
+        same = nearly(buttons[i].x, x) && nearly(buttons[i].y, 9.0f) && nearly(buttons[i].width, 34.0f);
+        x += 34.0f + 6.0f;
+    }
+    check(same, "transport buttons land where the hand-walked x put them (10, 50, 90)");
+
+    const std::vector<float> chips{71.5f, 48.0f, 83.25f, 40.0f};
+    const NUILocalRect record(372.0f, 22.0f, 300.0f, 22.0f);
+    const auto row = arrangeLeadingRow(record, chips, 22.0f, 4.0f, 14.0f);
+    float cx = 372.0f + 14.0f;
+    same = row.size() == chips.size();
+    for (std::size_t i = 0; same && i < row.size(); ++i) {
+        same = nearly(row[i].x, cx) && nearly(row[i].width, chips[i]);
+        cx += chips[i] + 4.0f;
+    }
+    check(same, "record chips of different widths follow each other at the original x");
+    check(nearly(row[0].y, 22.0f), "a container exactly the item height keeps the caller's snapped y");
+}
+
+void testLeadingRowCentresAndReportsOverflow() {
+    const NUILocalRect container(0.0f, 0.0f, 60.0f, 40.0f);
+    NUILayoutRecorder rec("t");
+    rec.beginPass(NUIWindowPoint(0.0f, 0.0f));
+    rec.scope("row");
+    const auto row = arrangeLeadingRow(container, {30.0f, 30.0f}, 20.0f, 4.0f, 2.0f, &rec);
+    check(nearly(row[0].y, 10.0f), "items centre vertically in a taller container");
+    check(nearly(row[1].x, 36.0f) && row[1].right() > container.right(),
+          "an item past the trailing edge is placed there, not clipped or reflowed");
+    bool reported = false;
+    for (const auto& p : rec.problems()) {
+        if (p.step == "t.row[1]" && p.what.find("outside") != std::string::npos) reported = true;
+    }
+    check(reported, "and the recorder reports it as outside its space");
+}
+
 } // namespace
 
 int main() {
@@ -310,6 +353,8 @@ int main() {
     testVerticalStackMirrorsTheRow();
     testSlotAtInvertsTheStack();
     testSplitHorizontalClampsLikeSplitVertical();
+    testLeadingRowMatchesTheTransportBarWalk();
+    testLeadingRowCentresAndReportsOverflow();
 
     if (failures != 0) {
         std::cout << "\n" << failures << " check(s) failed\n";

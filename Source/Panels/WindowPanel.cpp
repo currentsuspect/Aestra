@@ -276,7 +276,7 @@ bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         // raise the panel when the press actually lands inside its bounds;
         // otherwise any click on the transport bar would pop every panel to
         // the front.
-        if (getGlobalBounds().contains(event.position)) {
+        if (getBounds().contains(event.position)) { // both window-absolute
             bringToFront();
         }
     }
@@ -456,9 +456,8 @@ void WindowPanel::layoutContent() {
     const float buttonSize = std::max(18.0f, m_titleBarHeight - 8.0f);
     const float buttonPadding = 4.0f;
 
-    // bounds_ is window-absolute on this codepath (NUIAbsolute added the
-    // panel's own absolute origin to every child rect); localToWindow is the
-    // typed equivalent of that addition, so this panel's origin is where every
+    // bounds_ is window-absolute on this codepath; localToWindow adds the
+    // panel's own absolute origin to every child rect, so this panel's origin is where every
     // layout-space computation below re-enters window space.
     const NUIWindowPoint panelOrigin(bounds.x, bounds.y);
 

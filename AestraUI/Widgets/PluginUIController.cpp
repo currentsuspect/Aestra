@@ -498,7 +498,7 @@ void PluginUIController::openPluginEditor(
         const auto layerBounds = m_popupLayer->getBounds();
         const Layout::NUILocalRect localRegion(0.0f, 0.0f, layerBounds.width, layerBounds.height);
         const Layout::NUISizeLimits limits{0.0, 0.0};
-        const auto popupGlobal = m_popupLayer->getGlobalBounds();
+        const auto popupGlobal = m_popupLayer->getBounds(); // window-absolute: the layer's origin
         bool placementApplied = false;
         if (!popupGlobal.isEmpty() && !layerBounds.isEmpty()) {
             // Measured window frame: resolve there, convert back for setBounds.
@@ -555,7 +555,7 @@ void PluginUIController::openPluginEditor(
                             std::clamp(dropped.x, 0.0f, std::max(0.0f, layer.width - dropped.width));
                         const float clampedY =
                             std::clamp(dropped.y, 0.0f, std::max(0.0f, layer.height - dropped.height));
-                        const auto popupGlobalNow = m_popupLayer->getGlobalBounds();
+                        const auto popupGlobalNow = m_popupLayer->getBounds();
                         if (popupGlobalNow.isEmpty()) {
                             return;
                         }

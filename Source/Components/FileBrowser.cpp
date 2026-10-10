@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "FileBrowserInternal.h"
+#include "FileBrowserLayout.h"
 
 
 
@@ -400,33 +401,32 @@ FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
     NUIRect bounds = getBounds();
     const float effectiveW = bounds.width;
     const float searchH = BROWSER_SEARCH_ROW_H;
-    const float headerH = searchH;
-    const float contentY = bounds.y + headerH;
-    const float contentH = std::max(0.0f, bounds.height - headerH);
     const float navW = computeNavigationWidth(effectiveW);
-    const float listX = bounds.x + navW;
-    const float listW = std::max(0.0f, effectiveW - navW);
+    const float previewH =
+        previewPanelVisible_ ? std::min(kPreviewPanelHeight, std::max(0.0f, bounds.height - searchH)) : 0.0f;
+
+    // V8-X2b: panes and chrome in Local space (FileBrowserLayout.h), converted once.
+    const Layout::NUIWindowPoint origin(bounds.x, bounds.y);
+    const auto win = [&](const Layout::NUILocalRect& r) { return Layout::localToWindow(r, origin).raw(); };
+    auto* trace = Layout::beginLayoutPass("browser", origin); // AESTRA_LAYOUT_TRACE=browser
+    const auto local = resolveFileBrowserLayout(effectiveW, bounds.height, searchH, searchQueryIsEmpty() ? 34.0f : 60.0f,
+                                                navW, BROWSER_LIST_HEADER_H, previewH, trace);
+    Layout::finishLayoutPass(trace);
 
     BrowserLayout layout;
-    layout.searchBar = NUIRect(bounds.x, bounds.y, std::max(0.0f, effectiveW), searchH);
-    const float searchTrailing = searchQueryIsEmpty() ? 34.0f : 60.0f;
-    layout.search = NUIRect(bounds.x + 26.0f, bounds.y + 4.0f,
-                            std::max(0.0f, effectiveW - searchTrailing), searchH - 8.0f);
-    layout.navPane = NUIRect(bounds.x, contentY, navW, contentH);
-    layout.listHeader = NUIRect(listX, contentY, listW, BROWSER_LIST_HEADER_H);
-    const float previewH = previewPanelVisible_ ? std::min(kPreviewPanelHeight, contentH) : 0.0f;
-    layout.list = NUIRect(listX, contentY + BROWSER_LIST_HEADER_H, listW,
-                          std::max(0.0f, contentH - BROWSER_LIST_HEADER_H - previewH));
-    const float chromeY = layout.listHeader.y + 5.0f;
-    layout.backButton = NUIRect(layout.listHeader.x + 5.0f, chromeY, 22.0f, 24.0f);
-    layout.forwardButton = NUIRect(layout.backButton.right() + 2.0f, chromeY, 22.0f, 24.0f);
-    layout.upButton = NUIRect(layout.forwardButton.right() + 2.0f, chromeY, 22.0f, 24.0f);
-    // The sort control names its key ("Name", "Date", ...) once the list has
-    // room; narrower lists keep the bare glyph.
-    const float sortW = listW >= 300.0f ? 62.0f : 22.0f;
-    layout.sortButton = NUIRect(layout.listHeader.right() - 5.0f - sortW, chromeY, sortW, 24.0f);
-    layout.filterButton = NUIRect(layout.sortButton.x - 24.0f, chromeY, 22.0f, 24.0f);
-    layout.pathLabel = NUIRect(layout.upButton.right() + 7.0f, chromeY,
+    layout.searchBar = win(local.searchBar);
+    layout.search = win(local.search);
+    layout.navPane = win(local.navPane);
+    layout.navHeader = win(local.navHeader);
+    layout.navViewport = win(local.navViewport);
+    layout.listHeader = win(local.listHeader);
+    layout.list = win(local.list);
+    layout.backButton = win(local.back);
+    layout.forwardButton = win(local.forward);
+    layout.upButton = win(local.up);
+    layout.sortButton = win(local.sort);
+    layout.filterButton = win(local.filter);
+    layout.pathLabel = NUIRect(layout.upButton.right() + 7.0f, layout.upButton.y,
                                std::max(0.0f, layout.filterButton.x - layout.upButton.right() - 11.0f), 24.0f);
     // Clear-query button only. The filter control that used to share this slot
     // was a duplicate of the funnel in the list header below (spec 2 §3), and

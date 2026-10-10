@@ -441,10 +441,10 @@ void AuditionPanel::layoutComponents() {
     const float controlsInlineY = subtitleY + 22.0f + rowGap1;
 
     m_trackTitle->setFontSize(clampf(bounds.width * 0.021f, 22.0f, 30.0f));
-    m_trackTitle->setBounds(AestraUI::NUIAbsolute(bounds, infoX - bounds.x, titleY - bounds.y, infoW, 34.0f));
+    m_trackTitle->setBounds(AestraUI::NUIRect(infoX, titleY, infoW, 34.0f));
     m_trackTitle->setAlignment(AestraUI::NUILabel::Alignment::Left);
     m_trackArtist->setFontSize(15.0f);
-    m_trackArtist->setBounds(AestraUI::NUIAbsolute(bounds, infoX - bounds.x, subtitleY - bounds.y, infoW, 22.0f));
+    m_trackArtist->setBounds(AestraUI::NUIRect(infoX, subtitleY, infoW, 22.0f));
     m_trackArtist->setAlignment(AestraUI::NUILabel::Alignment::Left);
 
     // Centered transport row
@@ -460,19 +460,19 @@ void AuditionPanel::layoutComponents() {
     const float transportStartX = hasCurrentTrack
         ? infoX
         : (headerRect.x + headerRect.width * 0.5f - transportWidth * 0.5f);
-    m_prevButton->setBounds(AestraUI::NUIAbsolute(bounds, transportStartX - bounds.x, controlsInlineY + (playSize - navSize) * 0.5f - bounds.y, navSize, navSize));
+    m_prevButton->setBounds(AestraUI::NUIRect(transportStartX, controlsInlineY + (playSize - navSize) * 0.5f, navSize, navSize));
     m_prevButton->setBackgroundColor(navButtonBg);
     m_prevButton->setBorderColor(navButtonBorder);
     m_prevButton->setBorderWidth(1.0f);
     m_prevButton->setCornerRadius(navSize * 0.5f);
 
-    m_playPauseButton->setBounds(AestraUI::NUIAbsolute(bounds, transportStartX + navSize + navGap - bounds.x, controlsInlineY - bounds.y, playSize, playSize));
+    m_playPauseButton->setBounds(AestraUI::NUIRect(transportStartX + navSize + navGap, controlsInlineY, playSize, playSize));
     m_playPauseButton->setBackgroundColor(navButtonBg);
     m_playPauseButton->setBorderColor(theme.getColor("accentPrimary").withAlpha(0.95f));
     m_playPauseButton->setBorderWidth(1.0f);
     m_playPauseButton->setCornerRadius(playSize * 0.5f);
 
-    m_nextButton->setBounds(AestraUI::NUIAbsolute(bounds, transportStartX + navSize + navGap + playSize + navGap - bounds.x, controlsInlineY + (playSize - navSize) * 0.5f - bounds.y, navSize, navSize));
+    m_nextButton->setBounds(AestraUI::NUIRect(transportStartX + navSize + navGap + playSize + navGap, controlsInlineY + (playSize - navSize) * 0.5f, navSize, navSize));
     m_nextButton->setBackgroundColor(navButtonBg);
     m_nextButton->setBorderColor(navButtonBorder);
     m_nextButton->setBorderWidth(1.0f);
@@ -484,11 +484,11 @@ void AuditionPanel::layoutComponents() {
     const float timeW = 48.0f;
     const float sliderX = progressLeft + timeW + 8.0f;
     const float sliderW = std::max(120.0f, progressRight - sliderX - timeW - 8.0f);
-    m_currentTime->setBounds(AestraUI::NUIAbsolute(bounds, progressLeft - bounds.x, progressY + 3.0f - bounds.y, timeW, 16.0f));
+    m_currentTime->setBounds(AestraUI::NUIRect(progressLeft, progressY + 3.0f, timeW, 16.0f));
     m_currentTime->setAlignment(AestraUI::NUILabel::Alignment::Left);
-    m_totalTime->setBounds(AestraUI::NUIAbsolute(bounds, progressRight - timeW - bounds.x, progressY + 3.0f - bounds.y, timeW, 16.0f));
+    m_totalTime->setBounds(AestraUI::NUIRect(progressRight - timeW, progressY + 3.0f, timeW, 16.0f));
     m_totalTime->setAlignment(AestraUI::NUILabel::Alignment::Right);
-    m_progressSlider->setBounds(AestraUI::NUIAbsolute(bounds, sliderX - bounds.x, progressY + 8.0f - bounds.y, sliderW, 6.0f));
+    m_progressSlider->setBounds(AestraUI::NUIRect(sliderX, progressY + 8.0f, sliderW, 6.0f));
 
     // Bottom utility row: pills left, volume right on one line.
     const float dspW = 124.0f;
@@ -500,8 +500,8 @@ void AuditionPanel::layoutComponents() {
     const float volumeW = std::min(volumeWDefault, maxVolumeW);
     const float volumeX = progressRight - volumeW;
 
-    m_dspPresetButton->setBounds(AestraUI::NUIAbsolute(bounds, progressLeft - bounds.x, utilityY - bounds.y, dspW, 26.0f));
-    m_abToggleButton->setBounds(AestraUI::NUIAbsolute(bounds, progressLeft + dspW + 8.0f - bounds.x, utilityY - bounds.y, abW, 26.0f));
+    m_dspPresetButton->setBounds(AestraUI::NUIRect(progressLeft, utilityY, dspW, 26.0f));
+    m_abToggleButton->setBounds(AestraUI::NUIRect(progressLeft + dspW + 8.0f, utilityY, abW, 26.0f));
     m_dspPresetButton->setBackgroundColor(utilityButtonBg);
     m_dspPresetButton->setBorderColor(utilityButtonBorder);
     m_dspPresetButton->setBorderWidth(1.0f);
@@ -510,7 +510,7 @@ void AuditionPanel::layoutComponents() {
     m_abToggleButton->setBorderColor(utilityButtonBorder);
     m_abToggleButton->setBorderWidth(1.0f);
     m_abToggleButton->setCornerRadius(13.0f);
-    m_volumeSlider->setBounds(AestraUI::NUIAbsolute(bounds, volumeX - bounds.x, utilityY + 10.0f - bounds.y, volumeW, 8.0f));
+    m_volumeSlider->setBounds(AestraUI::NUIRect(volumeX, utilityY + 10.0f, volumeW, 8.0f));
 
     m_waveformArea = waveformRect;
     m_queueArea = queueRect;

@@ -319,6 +319,8 @@ public:
         NUIRect searchBar;
         NUIRect search;
         NUIRect navPane;
+        NUIRect navHeader;   //!< navPane's folder-name band
+        NUIRect navViewport; //!< navPane below its folder-name header: the scrolled, clipped, clickable rows
         NUIRect listHeader;
         NUIRect list;
         NUIRect backButton;
