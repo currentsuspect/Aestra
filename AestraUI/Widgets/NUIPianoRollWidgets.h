@@ -71,10 +71,26 @@ public:
     /** @brief How pressed @p pitch looks: 1 held, easing to 0 after release. */
     float keyPressLevel(int pitch) const { return pitch >= 0 && pitch < 128 ? pressLevel_[pitch] : 0.0f; }
 
-    void onUpdate(double deltaTime) override;
-
     /** Seconds a released key takes to ease back to rest. */
     static constexpr float kKeyReleaseSeconds = 0.16f;
+
+    /**
+     * @brief The keys whose notes are under the playhead while this pattern plays (SPEC 3 §5.1).
+     *
+     * Drawn as a soft accent overlay with a lit tip, deliberately quieter than a key the user
+     * presses. A key that stops playing eases out over kPlayReleaseSeconds, so fast passages
+     * glide instead of strobing. An all-false set lets every key ease back to rest.
+     */
+    void setPlayingPitches(const std::array<bool, 128>& playing);
+    /** @brief True while @p pitch has a note under the playhead. */
+    bool isKeyPlaying(int pitch) const { return pitch >= 0 && pitch < 128 && playing_[pitch]; }
+    /** @brief How lit @p pitch is for playback: 1 while playing, easing to 0 after. */
+    float keyPlayLevel(int pitch) const { return pitch >= 0 && pitch < 128 ? playLevel_[pitch] : 0.0f; }
+
+    void onUpdate(double deltaTime) override;
+
+    /** Seconds a key takes to ease back to rest after its note stops playing. */
+    static constexpr float kPlayReleaseSeconds = 0.16f;
 
 private:
     float keyHeight_;
@@ -84,6 +100,9 @@ private:
     std::array<bool, 128> keyHeld_{};    // held by a key click or a pressed note
     std::array<float, 128> pressLevel_{}; // 1 while held, eases to 0 after release
     bool pressAnimating_ = false;        // some key is still easing out
+    std::array<bool, 128> playing_{};    // a note of this pattern is under the playhead
+    std::array<float, 128> playLevel_{}; // 1 while playing, eases to 0 after
+    bool playAnimating_ = false;         // some key is still easing out
     std::function<void(int pitch, int velocity)> onPreviewNote_;
     std::function<void(int pitch)> onHoveredKeyChanged_;
     std::function<bool()> m_isPlayingCallback;
@@ -763,6 +782,15 @@ public:
     void setScrollX(float scrollX);
     /** @brief Set the bar signature so the lane grid matches the ruler/note grid. */
     void setBeatsPerBar(int bpb) { const auto next = std::max(1, bpb); if (beatsPerBar_ == next) return; beatsPerBar_ = next; repaint(); }
+    /**
+     * @brief The width of the label sidebar, which must equal the view's key lane.
+     *
+     * The lane's beat 0 sits at the sidebar's right edge, so this is what lines
+     * its stems and grid up with the notes above. It was a hard-coded 76 after the
+     * key lane shrank to 58 (spec 2 §6), which drew every stem 18 px right of its
+     * note and turned a click on a beat-0 stem into a Velocity/Pan flip.
+     */
+    void setSidebarWidth(float width) { sidebarWidth_ = std::max(0.0f, width); repaint(); }
 
 private:
     std::weak_ptr<PianoRollNoteLayer> noteLayer_;
@@ -771,6 +799,7 @@ private:
     float pixelsPerBeat_;
     float scrollX_;
     int beatsPerBar_ = 4;
+    float sidebarWidth_ = 58.0f; // PianoRollView keeps it equal to its key lane
     LaneMode laneMode_ = LaneMode::Velocity; // Toggled by clicking the lane's sidebar
 
     // Interaction
@@ -842,6 +871,15 @@ public:
     void setPatternLengthBeats(double beats);
     void setPlayheadBeat(double beat, bool follow = false);
     double getPlayheadBeat() const { return m_playheadBeat; }
+    /**
+     * @brief Whether this editor's pattern is the one playing (the panel decides, per frame).
+     *
+     * While true, setPlayheadBeat() lights the keys of the notes under the playhead; while
+     * false every key eases back to rest. Set it before setPlayheadBeat() each frame.
+     */
+    void setPlaybackKeysActive(bool active) { m_playbackKeysActive = active; }
+    /** @brief True while @p pitch's key shows a note under the playhead. */
+    bool isKeyPlaying(int pitch) const;
     void setTotalDurationBeats(double beats);
     void setLocalMinimapVisible(bool visible);
     void applyEdgeAutoScroll(float scrollX, float scrollY);
@@ -921,6 +959,7 @@ private:
     float m_targetScrollX;
     float m_targetScrollY;
     double m_playheadBeat = 0.0;
+    bool m_playbackKeysActive = false; // this pattern is playing: keys follow the playhead
     double m_totalDurationBeats = 400.0;
     double m_patternLengthBeats = 8.0;
     // Scrollable domain (bars the user can traverse), mirroring the Track

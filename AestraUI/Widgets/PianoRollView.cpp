@@ -4,6 +4,7 @@
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include "PianoRollWidgetShared.h"
+#include "../Helpers/PianoRollInteraction.h"
 #include <algorithm>
 #include <cmath>
 
@@ -461,6 +462,7 @@ void PianoRollView::layoutChildren() {
     // 6. Control Panel (Bottom) - Spans Full Width (Keys + Content)
     // Ensures "Control" sidebar aligns with Keys
     m_controls->setBounds(NUIRect(b.x, b.y + topTotalH + contentH + hScrollH, b.width, m_controlPanelHeight));
+    m_controls->setSidebarWidth(m_keyLaneWidth); // its beat 0 must sit under the grid's
     
     updateScrollbars();
     syncChildren();
@@ -868,6 +870,10 @@ void PianoRollView::applyZoom(float factor, float anchorX) {
 
 void PianoRollView::setPlayheadBeat(double beat, bool follow) {
     m_playheadBeat = std::max(0.0, beat);
+    if (m_keys) {
+        m_keys->setPlayingPitches(m_playbackKeysActive && m_notes ? pitchesUnderBeat(m_notes->getNotes(), m_playheadBeat)
+                                                                  : std::array<bool, 128>{});
+    }
 
     if (follow && m_grid) {
         const float visibleW = m_grid->getWidth();
@@ -881,6 +887,8 @@ void PianoRollView::setPlayheadBeat(double beat, bool follow) {
 
     syncChildren();
 }
+
+bool PianoRollView::isKeyPlaying(int pitch) const { return m_keys && m_keys->isKeyPlaying(pitch); }
 
 void PianoRollView::setTotalDurationBeats(double beats) {
     m_totalDurationBeats = std::max(8.0, beats);
