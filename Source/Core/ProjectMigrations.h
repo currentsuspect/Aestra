@@ -109,6 +109,7 @@ public:
         static const std::vector<Migration> migrations = {
             {1, 2, migrateV1ToV2, "No-op migration marker for v2 schema baseline"},
             {2, 3, migrateV2ToV3, "Separate Playlist placement from source-level mixer routing"},
+            {3, 4, migrateV3ToV4, "Automation tension becomes audible; stored tension reset to linear"},
         };
         return migrations;
     }
@@ -222,6 +223,38 @@ private:
     // `Transformed` (and do the rewrite) rather than the loader quietly
     // upgrading meaning.
     static MigrationStepResult migrateV2ToV3(JSON&) { return MigrationStepResult::Unchanged; }
+
+    // v4 (V8-A6): automation tension is honoured (AutomationCurve.h, automationTensionShape).
+    // Before v4 it was serialized but evaluation was linear, and the UI stored 0.5 on every
+    // point, so honouring stored values would bend every curve ever drawn. The founder ruling
+    // (2026-09-12): no silent activation; same saved state, same audio. So every point's
+    // tension becomes 0, which is exactly the audio the file always produced, and any point
+    // that changes makes this a transformation: the project is marked upgraded.
+    static MigrationStepResult migrateV3ToV4(JSON& root) {
+        bool changed = false;
+        if (!root.has("lanes") || !root["lanes"].isArray()) {
+            return MigrationStepResult::Unchanged;
+        }
+        JSON& lanes = root["lanes"];
+        for (size_t l = 0; l < lanes.size(); ++l) {
+            JSON& lane = lanes[l];
+            if (!lane.isObject() || !lane.has("automation") || !lane["automation"].isArray()) continue;
+            JSON& curves = lane["automation"];
+            for (size_t c = 0; c < curves.size(); ++c) {
+                JSON& curve = curves[c];
+                if (!curve.isObject() || !curve.has("points") || !curve["points"].isArray()) continue;
+                JSON& points = curve["points"];
+                for (size_t p = 0; p < points.size(); ++p) {
+                    JSON& point = points[p];
+                    if (point.isObject() && point.has("c") && point["c"].isNumber() && point["c"].asNumber() != 0.0) {
+                        point.set("c", JSON(0.0));
+                        changed = true;
+                    }
+                }
+            }
+        }
+        return changed ? MigrationStepResult::Transformed : MigrationStepResult::Unchanged;
+    }
 };
 
 } // namespace Aestra

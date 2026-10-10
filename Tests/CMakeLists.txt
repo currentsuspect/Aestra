@@ -2138,6 +2138,16 @@ target_include_directories(TimelineLayoutTest PRIVATE
 add_test(NAME TimelineLayoutTest COMMAND TimelineLayoutTest)
 set_tests_properties(TimelineLayoutTest PROPERTIES LABELS "ui;timeline;layout;regression;contract:application")
 
+# V8-A6: automation tension shapes a segment, and the v3->v4 migration resets pre-v4
+# tension so an old project's audio does not change on load. Header-only.
+add_executable(AutomationTensionTest AestraAudio/AutomationTensionTest.cpp)
+target_include_directories(AutomationTensionTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AutomationTensionTest COMMAND AutomationTensionTest)
+set_tests_properties(AutomationTensionTest PROPERTIES LABELS "automation;migration;regression;contract:durability")
+
 # V8-X2b phase 5: the file browser's panes and chrome from the layout system
 # (FileBrowserLayout.h); the folder rows are drawn and hit-tested by one rect.
 add_executable(FileBrowserLayoutTest AestraUI/FileBrowserLayoutTest.cpp)

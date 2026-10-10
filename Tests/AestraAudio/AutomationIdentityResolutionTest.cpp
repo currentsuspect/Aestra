@@ -165,9 +165,9 @@ struct Fixture {
         curve.deviceInstanceId = gainId;
         curve.paramId = 0;
         curve.setDefaultValue(1.0f);
-        curve.addPoint(0.0, 1.0f, kSpbAt120, 0.5f);
-        curve.addPoint(0.5, 1.0f, kSpbAt120, 0.5f);
-        curve.addPoint(1.0, 0.0f, kSpbAt120, 0.5f);
+        curve.addPoint(0.0, 1.0f, kSpbAt120, 0.0f);
+        curve.addPoint(0.5, 1.0f, kSpbAt120, 0.0f);
+        curve.addPoint(1.0, 0.0f, kSpbAt120, 0.0f);
 
         auto& playlist = tm->getPlaylistModel();
         playlist.setProjectSampleRate(static_cast<double>(kSampleRate));

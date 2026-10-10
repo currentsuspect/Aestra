@@ -38,6 +38,7 @@ set(FIXTURES
     "v2/serializer-v2-legacy-audio-split.aes|d41550c593bc4a6f4a60d4dc61737b6c931af76101864f4b04414f0fcb28765f"
     "v2/legacy_audio_assets/shared.wav|856b60bb9680b5cc5bd5ea6925f38df292bf76e807813b51334ac30b74d85134"
     "v3/serializer-v3-independent-mixer.aes|8a5cf58ed79f994421464c163fc555fcf2516eb45c0dd0e4c58f53c83c272ab4"
+    "v4/serializer-v4-automation-tension.aes|916c178c257ebec2d79c476157784f93f056654b07d4d0f3b21a71b884c29ef0"
 )
 
 if(NOT DEFINED FIXTURE_ROOT OR FIXTURE_ROOT STREQUAL "")
