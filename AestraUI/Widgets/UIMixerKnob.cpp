@@ -149,7 +149,9 @@ void UIMixerKnob::updateGlobalTooltip() const
 {
     const auto b = getBounds();
     const NUIPoint anchor{b.x + b.width * 0.5f, b.y + b.height + 8.0f};
-    NUIComponent::showRemoteTooltip(m_cachedText, anchor, this);
+    // While dragging this is the knob's own live value readout: force it, or the held button and
+    // the cursor capture suppress it as a hover tooltip and the value disappears mid-drag.
+    NUIComponent::showRemoteTooltip(m_cachedText, anchor, this, m_dragging);
 }
 
 // Helper to draw an arc using polyline
