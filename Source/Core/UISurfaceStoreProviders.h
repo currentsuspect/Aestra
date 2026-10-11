@@ -6,6 +6,7 @@
 // A missing store reads as "nothing stored" and writes nothing.
 
 #include "../App/ServiceLocator.h"
+#include "../../AestraUI/Widgets/PluginBrowserPanel.h"
 #include "UISurfaceStore.h"
 
 #include <functional>
@@ -28,6 +29,14 @@ inline std::function<void(const std::vector<std::string>&)> storedListSaver(std:
             store->setListPreference(key, value);
         }
     };
+}
+
+/// Binds the plugin browser's favorites and recents to the UI-state store (V8-C14, V8-S5).
+inline void bindPluginBrowserStore(AestraUI::PluginBrowserPanel& browser) {
+    browser.setFavoritesProvider(storedListLoader(UISurfaceKeys::kPluginBrowserFavorites),
+                                 storedListSaver(UISurfaceKeys::kPluginBrowserFavorites));
+    browser.setRecentsProvider(storedListLoader(UISurfaceKeys::kPluginBrowserRecents),
+                               storedListSaver(UISurfaceKeys::kPluginBrowserRecents));
 }
 
 } // namespace Aestra

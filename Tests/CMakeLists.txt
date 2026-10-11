@@ -2552,6 +2552,25 @@ if(AESTRA_ENABLE_UI)
     add_test(NAME MixerViewModelDynamicInsertsTest COMMAND MixerViewModelDynamicInsertsTest)
     set_tests_properties(MixerViewModelDynamicInsertsTest PROPERTIES
         LABELS "audio;mixer;contract:audio")
+    # V8-S4: the master chain behaves like a channel chain through the view model.
+    aestra_require_ui_targets(MasterInsertParityTest AestraUI_Core AestraUI_Platform)
+    add_executable(MasterInsertParityTest
+        AestraAudio/MasterInsertParityTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/MixerViewModel.cpp
+    )
+    target_link_libraries(MasterInsertParityTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(MasterInsertParityTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME MasterInsertParityTest COMMAND MasterInsertParityTest)
+    set_tests_properties(MasterInsertParityTest PROPERTIES LABELS "audio;mixer;contract:audio")
 endif()
 
 # Panel resize/layout regression (triage 2026-08-14): audio clip editor
@@ -3266,6 +3285,7 @@ if(AESTRA_ENABLE_UI)
         PanelWindowClickSwallowTest
         MixerViewModelAutomationPresenceTest
         MixerViewModelDynamicInsertsTest
+        MasterInsertParityTest
         MixerDropdownKeyboardTest
         BPMEditorPaintTest
         TransportClockFormatTest
