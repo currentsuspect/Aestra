@@ -233,6 +233,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
 
     # IO
     src/IO/AudioExporter.cpp
+    src/IO/BounceInPlace.cpp
     src/IO/MiniAudioDecoder.cpp
     src/IO/StreamingDecoder.cpp
     src/IO/WaveformCache.cpp
@@ -254,6 +255,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/CommandTransaction.cpp
     src/Commands/SplitClipCommand.cpp
     src/Commands/RenderAudioClipCommand.cpp
+    src/Commands/BounceInPlaceCommand.cpp
     src/Commands/ImportAudioClipCommand.cpp
     src/Commands/AddClipCommand.cpp
     src/Commands/AttachLaneToTrackCommand.cpp
@@ -373,6 +375,8 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Playback/MetronomeEngine.h
     include/IO/PathUtils.h
     include/IO/AudioExportQuantization.h
+    include/IO/BounceInPlace.h
+    include/Commands/BounceInPlaceCommand.h
     include/IO/AudioExporter.h
     include/Playback/PreviewEngine.h
     include/IO/SamplePool.h

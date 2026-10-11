@@ -443,6 +443,22 @@ void TrackManagerUI::pasteClipToRight() {
     Log::info("Paste-to-right at beat " + std::to_string(newClip.startBeat));
 }
 
+void TrackManagerUI::bounceSelectedClipsInPlace() {
+    if (!m_trackManager || !m_onBounceInPlace)
+        return;
+    std::vector<ClipInstanceID> targets;
+    m_clipSelection.forEachClip([&](const ClipInstanceID& id) { targets.push_back(id); });
+    if (targets.empty() && m_selectedClipId.isValid())
+        targets.push_back(m_selectedClipId);
+    m_onBounceInPlace(targets);
+    // The bounce replaced clips: the selection and the cached lanes both point at the old ones.
+    clearClipSelection();
+    m_trackManager->refreshTimelinePatternInstances();
+    refreshTracks();
+    invalidateCache();
+    scheduleTimelineMinimapRebuild();
+}
+
 void TrackManagerUI::duplicateSelectedClip() {
     if (!m_trackManager || !m_selectedClipId.isValid())
         return;

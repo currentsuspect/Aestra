@@ -216,6 +216,8 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager, 
         // so a lane may host curves for multiple inserts without owning any of them.
         for (auto& laneInfo : snapshot->lanes) {
             for (auto& curve : laneInfo.automationCurves) {
+                if (curve.muted)
+                    continue; // baked into audio (Bounce in Place): kept in the project, not evaluated
                 const auto destination =
                     std::find_if(graph.tracks.begin(), graph.tracks.end(), [&curve](const TrackRenderState& track) {
                         return curve.mixerChannelId != 0 && track.trackId == curve.mixerChannelId;

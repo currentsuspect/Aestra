@@ -113,6 +113,10 @@ struct AutomationCurve {
     uint32_t effectSlot{0};
     uint32_t paramId{0};
 
+    /** Not evaluated by the engine. Bounce in Place sets it once the curve's effect is baked into audio;
+     *  the points stay in the project so undo, or turning it back on, loses nothing. */
+    bool muted{false};
+
     AutomationCurve() = default;
     // defaultValue follows the target, so no construction path can produce a
     // Volume curve that is neutral-at-silence. Only reachable when points is
@@ -266,7 +270,7 @@ inline bool automationCurvesEqual(const std::vector<AutomationCurve>& a,
         const AutomationCurve& x = a[i];
         const AutomationCurve& y = b[i];
         if (x.name != y.name || x.target != y.target || x.mixerChannelId != y.mixerChannelId ||
-            x.defaultValue != y.defaultValue || x.deviceInstanceId != y.deviceInstanceId || x.paramId != y.paramId) {
+            x.defaultValue != y.defaultValue || x.muted != y.muted || x.deviceInstanceId != y.deviceInstanceId || x.paramId != y.paramId) {
             return false;
         }
         if (x.points.size() != y.points.size())

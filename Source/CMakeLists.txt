@@ -27,6 +27,7 @@ set(Aestra_SOURCES
 	Core/AestraRootComponent.cpp
 	Core/AestraContent.h
 	Core/AestraContent.cpp
+	Core/AestraContentBounce.cpp
 	Core/WorkspaceFocus.h
 	Core/MusicalTypingController.h
 	Core/MusicalTypingController.cpp
