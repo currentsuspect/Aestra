@@ -56,8 +56,9 @@ target_include_directories(ContractClipModelTest PRIVATE ${_contract_audio_inclu
 aestra_contract_test(ContractSplitReferentTest ContractClipModelTest split-referent GUARDS F8)
 # guards: F6,F7 — split undo recomputes durationSeconds and leaks the cloned pattern. Fix: Pass 3.
 aestra_contract_test(ContractSplitUndoExactTest ContractClipModelTest split-undo-exact GUARDS F6 F7 KNOWN_VIOLATION)
-# guards: F24 — the scheduler treats sourceOffset as a filter, not an origin shift. Fix: Pass 3.
-aestra_contract_test(ContractMidiOffsetWindowTest ContractClipModelTest midi-offset GUARDS F24 KNOWN_VIOLATION)
+# guards: F24 — a clip's window [sourceOffset, +duration) plays at clipStart - sourceOffset + t. Closed by the
+# timeline handing the scheduler the pattern's origin (SPEC 3 section 5.2 side finding); TimelineMidiTrimTimingTest too.
+aestra_contract_test(ContractMidiOffsetWindowTest ContractClipModelTest midi-offset GUARDS F24)
 # guards: F10 — splitting an offset MIDI clip changes what plays. Fix: Pass 3.
 aestra_contract_test(ContractMidiSplitOffsetTest ContractClipModelTest midi-split-offset GUARDS F10 KNOWN_VIOLATION)
 # guards: F11 — left-trim slides MIDI notes instead of hiding them. Fix: Pass 3.

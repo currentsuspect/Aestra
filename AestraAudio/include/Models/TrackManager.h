@@ -1264,9 +1264,8 @@ public:
         if (!m_isPlaying.load(std::memory_order_relaxed) || m_patternMode.load(std::memory_order_relaxed)) {
             return;
         }
-        // Incremental, NOT clear-and-reschedule. A clear dropped every sounding note's
-        // tracked gate and queued note-off, and re-queued from the UI's lagging playhead:
-        // moving one clip cut the notes of every other clip and re-fired them late.
+        // Incremental, NOT clear-and-reschedule: a clear dropped every sounding note's gate and queued
+        // note-off and re-queued from the UI's lagging playhead (moving one clip cut every other clip's notes).
         // Each clip keeps its slot (held-note tracking is per slot), a slot keeps its
         // frontier, and the content-edit refill re-queues from the engine's real playhead.
         const auto instances = m_playlistModel.collectMidiClipInstances(m_patternManager);
@@ -1288,7 +1287,7 @@ public:
                 continue;
             }
             nextSlots[instance.clipId] = it->second;
-            m_patternPlaybackEngine.updatePatternInstance(instance.patternId, instance.startBeat, it->second,
+            m_patternPlaybackEngine.updatePatternInstance(instance.patternId, instance.patternStartBeat(), it->second,
                                                           instance.sourceOffsetBeats, instance.durationBeats);
         }
         for (const auto& [clip, slot] : m_timelineSlots) {
@@ -1310,7 +1309,7 @@ public:
             }
             used[cursor] = true;
             nextSlots[instance->clipId] = cursor;
-            m_patternPlaybackEngine.updatePatternInstance(instance->patternId, instance->startBeat, cursor,
+            m_patternPlaybackEngine.updatePatternInstance(instance->patternId, instance->patternStartBeat(), cursor,
                                                           instance->sourceOffsetBeats, instance->durationBeats);
         }
         m_timelineSlots = std::move(nextSlots);
@@ -2173,9 +2172,10 @@ private:
             Log::info("[TimelinePattern] pattern=" + std::to_string(instance.patternId.value) +
                       " clipStart=" + std::to_string(instance.startBeat) +
                       " sourceOffset=" + std::to_string(instance.sourceOffsetBeats) +
-                      " schedStart=" + std::to_string(instance.startBeat) + " " + routeSummary);
+                      " schedStart=" + std::to_string(instance.patternStartBeat()) + " " + routeSummary);
             m_timelineSlots[instance.clipId] = instanceId;
-            m_patternPlaybackEngine.schedulePatternInstance(instance.patternId, instance.startBeat, instanceId++,
+            // startBeat is where PATTERN beat 0 falls (clip start minus left trim), not the clip's start.
+            m_patternPlaybackEngine.schedulePatternInstance(instance.patternId, instance.patternStartBeat(), instanceId++,
                                                             instance.sourceOffsetBeats, instance.durationBeats);
         }
     }
