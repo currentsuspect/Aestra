@@ -192,6 +192,21 @@ public:
     void setFavoritesProvider(FavoritesLoader load, FavoritesSaver save);
 
     // ==============================
+    // Recents (V8-S5)
+    // ==============================
+
+    /** @brief Most recently loaded first; at most kMaxRecents. */
+    const std::vector<std::string>& getRecents() const { return m_recents; }
+    /** @brief Note that @p pluginId was loaded: it moves to the front of the recents. */
+    void recordRecent(const std::string& pluginId);
+    /** @brief Show only recently loaded plugins, newest first. */
+    void setShowRecentOnly(bool show);
+    bool getShowRecentOnly() const { return m_showRecentOnly; }
+    /** @brief Same arrangement as favorites: a stored list wins; without a provider recents last for the session. */
+    void setRecentsProvider(FavoritesLoader load, FavoritesSaver save);
+    static constexpr size_t kMaxRecents = 12;
+
+    // ==============================
     // Callbacks
     // ==============================
 
@@ -240,10 +255,12 @@ private:
     // Favorites persistence
     void loadFavorites();
     void saveFavorites();
+    int recentRank(const std::string& id) const; ///< position in the recents, -1 if absent
+    void requestLoad(const PluginListItem& plugin); ///< notes the recent, then asks the app to load
 
     // Filter pill hit testing
     struct FilterPillHit {
-        enum Type { None, TypeAll, TypeFX, TypeInst, FormatVST3, FormatCLAP, Fav } type;
+        enum Type { None, TypeAll, TypeFX, TypeInst, FormatVST3, FormatCLAP, Fav, Recent } type;
         NUIRect bounds;
     };
     std::vector<FilterPillHit> m_filterPillHits;
@@ -260,6 +277,9 @@ private:
     PluginTypeFilter m_typeFilter = PluginTypeFilter::All;
     PluginFormatFilter m_formatFilter = PluginFormatFilter::All;
     bool m_showFavoritesOnly = false;
+    bool m_showRecentOnly = false;
+    std::vector<std::string> m_recents;
+    FavoritesSaver m_recentsSaver;
 
     // UI State
     int m_selectedIndex = -1;

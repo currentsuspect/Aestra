@@ -837,9 +837,7 @@ void AestraContent::setupBrowserPanels() {
     // Create Plugin Browser
     m_pluginBrowser = std::make_shared<AestraUI::PluginBrowserPanel>();
     m_pluginBrowser->setVisible(false); // Hidden by default
-    // V8-C14: favorites live in the UI-state store (imported once from favorites.json).
-    m_pluginBrowser->setFavoritesProvider(Aestra::storedListLoader(Aestra::UISurfaceKeys::kPluginBrowserFavorites),
-                                          Aestra::storedListSaver(Aestra::UISurfaceKeys::kPluginBrowserFavorites));
+    Aestra::bindPluginBrowserStore(*m_pluginBrowser); // favorites and recents live in the UI-state store
 
     m_pluginBrowser->setPluginList({}); // Initialize empty, refresh called later
     refreshPluginList();

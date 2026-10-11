@@ -78,13 +78,6 @@ std::string fitText(NUIRenderer& renderer, const std::string& text, float fontSi
     return out + ellipsis;
 }
 
-static std::filesystem::path getFavoritesPath() {
-    const char* home = getenv("HOME");
-    if (!home) home = "/tmp";
-    auto dir = std::filesystem::path(home) / ".config" / "aestra";
-    std::filesystem::create_directories(dir);
-    return dir / "favorites.json";
-}
 }
 
 // ============================================================================
@@ -94,58 +87,6 @@ static std::filesystem::path getFavoritesPath() {
 PluginBrowserPanel::PluginBrowserPanel() {
     setSize(300, 500);
     loadFavorites();
-}
-
-void PluginBrowserPanel::loadFavorites() {
-    m_favoritesSet.clear();
-    auto path = getFavoritesPath();
-    std::ifstream f(path);
-    if (!f.is_open()) return;
-    std::string content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
-    f.close();
-    if (content.empty()) return;
-    try {
-        Aestra::JSON j = Aestra::JSON::parse(content);
-        if (j.has("favorites") && j["favorites"].isArray()) {
-            auto arr = j["favorites"].asArray();
-            for (size_t i = 0; i < arr.size(); ++i) {
-                if (arr[i].isString()) {
-                    m_favoritesSet.insert(arr[i].asString());
-                }
-            }
-        }
-    } catch (...) {}
-}
-
-void PluginBrowserPanel::setFavoritesProvider(FavoritesLoader load, FavoritesSaver save) {
-    m_favoritesSaver = std::move(save);
-    if (const auto stored = load ? load() : std::nullopt) {
-        m_favoritesSet = std::unordered_set<std::string>(stored->begin(), stored->end());
-        for (auto* list : {&m_allPlugins, &m_filteredPlugins}) {
-            for (auto& p : *list) p.isFavorite = m_favoritesSet.count(p.id) > 0;
-        }
-        applyFilters();
-    } else if (m_favoritesSaver && !m_favoritesSet.empty()) {
-        saveFavorites(); // one-way import of favorites.json into the store
-    }
-}
-
-void PluginBrowserPanel::saveFavorites() {
-    if (m_favoritesSaver) {
-        std::vector<std::string> ids(m_favoritesSet.begin(), m_favoritesSet.end());
-        std::sort(ids.begin(), ids.end()); // a stable order on disk
-        m_favoritesSaver(ids);
-        return;
-    }
-    Aestra::JSON j = Aestra::JSON::object();
-    j.set("version", Aestra::JSON(1.0));
-    Aestra::JSON arr = Aestra::JSON::array();
-    for (const auto& id : m_favoritesSet) {
-        arr.push(Aestra::JSON(id));
-    }
-    j.set("favorites", arr);
-    std::ofstream f(getFavoritesPath());
-    if (f.is_open()) f << j.toString(2);
 }
 
 void PluginBrowserPanel::onRender(NUIRenderer& renderer) {
@@ -184,7 +125,7 @@ void PluginBrowserPanel::renderHeaderBar(NUIRenderer& renderer) {
     if (!m_allPlugins.empty()) {
         float titleW = renderer.measureText("Plugins", 12.0f).width;
         const bool filtered = m_typeFilter != PluginTypeFilter::All || m_formatFilter != PluginFormatFilter::All ||
-                              m_showFavoritesOnly || !m_searchQuery.empty();
+                              m_showFavoritesOnly || m_showRecentOnly || !m_searchQuery.empty();
         std::string count = std::to_string(m_filteredPlugins.size());
         if (filtered) {
             count += " / " + std::to_string(m_allPlugins.size());
@@ -229,8 +170,10 @@ void PluginBrowserPanel::renderFilterBar(NUIRenderer& renderer) {
     const float row1Y = barY + 5.0f;
     const float row2Y = barY + 28.0f;
 
-    auto drawPill = [&](const std::string& label, bool active, FilterPillHit::Type type, int col, float y) {
-        NUIRect rect = {startX + col * (pillW + gap), y, pillW, pillH};
+    auto drawPill = [&](const std::string& label, bool active, FilterPillHit::Type type, int col, float y,
+                        int columns = 3) {
+        const float w = std::max(24.0f, (availW - (columns - 1) * gap) / static_cast<float>(columns));
+        NUIRect rect = {startX + col * (w + gap), y, w, pillH};
         renderer.fillRoundedRect(rect, pillH * 0.5f, active ? Colors::pillActiveBg() : Colors::pillInactiveBg());
 
         NUIColor textColor = active ? Colors::pillActiveText() : Colors::pillInactiveText();
@@ -241,15 +184,16 @@ void PluginBrowserPanel::renderFilterBar(NUIRenderer& renderer) {
     };
 
     // Row 1 — plugin type (primary axis)
-    bool allActive = (m_typeFilter == PluginTypeFilter::All && m_formatFilter == PluginFormatFilter::All && !m_showFavoritesOnly);
+    bool allActive = (m_typeFilter == PluginTypeFilter::All && m_formatFilter == PluginFormatFilter::All && !m_showFavoritesOnly && !m_showRecentOnly);
     drawPill("All", allActive, FilterPillHit::TypeAll, 0, row1Y);
     drawPill("FX", m_typeFilter == PluginTypeFilter::Effects, FilterPillHit::TypeFX, 1, row1Y);
     drawPill("Inst", m_typeFilter == PluginTypeFilter::Instruments, FilterPillHit::TypeInst, 2, row1Y);
 
     // Row 2 — format + favorites (secondary axis)
-    drawPill("VST3", m_formatFilter == PluginFormatFilter::VST3, FilterPillHit::FormatVST3, 0, row2Y);
-    drawPill("CLAP", m_formatFilter == PluginFormatFilter::CLAP, FilterPillHit::FormatCLAP, 1, row2Y);
-    drawPill("Faves", m_showFavoritesOnly, FilterPillHit::Fav, 2, row2Y);
+    drawPill("VST3", m_formatFilter == PluginFormatFilter::VST3, FilterPillHit::FormatVST3, 0, row2Y, 4);
+    drawPill("CLAP", m_formatFilter == PluginFormatFilter::CLAP, FilterPillHit::FormatCLAP, 1, row2Y, 4);
+    drawPill("Faves", m_showFavoritesOnly, FilterPillHit::Fav, 2, row2Y, 4);
+    drawPill("Recent", m_showRecentOnly, FilterPillHit::Recent, 3, row2Y, 4);
 }
 
 void PluginBrowserPanel::renderPluginList(NUIRenderer& renderer) {
@@ -422,6 +366,7 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
                         m_typeFilter = PluginTypeFilter::All;
                         m_formatFilter = PluginFormatFilter::All;
                         m_showFavoritesOnly = false;
+                        m_showRecentOnly = false;
                         break;
                     case FilterPillHit::TypeFX:
                         m_typeFilter = (m_typeFilter == PluginTypeFilter::Effects) ? PluginTypeFilter::All : PluginTypeFilter::Effects;
@@ -437,6 +382,9 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
                         break;
                     case FilterPillHit::Fav:
                         m_showFavoritesOnly = !m_showFavoritesOnly;
+                        break;
+                    case FilterPillHit::Recent:
+                        m_showRecentOnly = !m_showRecentOnly;
                         break;
                     default:
                         break;
@@ -496,9 +444,7 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
 
                 if (m_pressedIndex == m_lastClickIndex && elapsed < 0.3) {
                     // Double-click detected - trigger load
-                    if (m_onPluginLoadRequested) {
-                        m_onPluginLoadRequested(m_filteredPlugins[m_pressedIndex]);
-                    }
+                    requestLoad(m_filteredPlugins[m_pressedIndex]);
                     m_lastClickIndex = -1; // Reset to prevent triple-click triggering
                     m_lastClickTime = 0.0;
                 } else {
@@ -708,6 +654,7 @@ void PluginBrowserPanel::applyFilters() {
 
         // Favorites filter
         if (m_showFavoritesOnly && !p.isFavorite) continue;
+        if (m_showRecentOnly && recentRank(p.id) < 0) continue;
 
         // Search filter
         if (!m_searchQuery.empty()) {
@@ -727,6 +674,10 @@ void PluginBrowserPanel::applyFilters() {
         }
 
         m_filteredPlugins.push_back(p);
+    }
+    if (m_showRecentOnly) { // most recently loaded first
+        std::stable_sort(m_filteredPlugins.begin(), m_filteredPlugins.end(),
+                         [this](const PluginListItem& a, const PluginListItem& b) { return recentRank(a.id) < recentRank(b.id); });
     }
 
     m_selectedIndex = -1;
@@ -795,9 +746,7 @@ void PluginBrowserPanel::moveSelection(int delta) {
 
 void PluginBrowserPanel::activateSelected() {
     if (m_selectedIndex >= 0 && m_selectedIndex < static_cast<int>(m_filteredPlugins.size())) {
-        if (m_onPluginLoadRequested) {
-            m_onPluginLoadRequested(m_filteredPlugins[m_selectedIndex]);
-        }
+        requestLoad(m_filteredPlugins[m_selectedIndex]);
         repaint();
     }
 }
@@ -819,27 +768,6 @@ void PluginBrowserPanel::ensureSelectionVisible() {
         target = rowBottom - listHeight;
     }
     m_targetScrollOffset = std::clamp(target, 0.0f, maxScroll);
-}
-
-void PluginBrowserPanel::toggleFavorite(const std::string& pluginId) {
-    if (m_favoritesSet.count(pluginId)) {
-        m_favoritesSet.erase(pluginId);
-    } else {
-        m_favoritesSet.insert(pluginId);
-    }
-    bool isFav = m_favoritesSet.count(pluginId) > 0;
-    auto patch = [&](std::vector<PluginListItem>& list) {
-        for (auto& p : list)
-            if (p.id == pluginId) { p.isFavorite = isFav; break; }
-    };
-    patch(m_allPlugins);
-    patch(m_filteredPlugins);
-    saveFavorites();
-    applyFilters();
-}
-
-std::vector<std::string> PluginBrowserPanel::getFavorites() const {
-    return std::vector<std::string>(m_favoritesSet.begin(), m_favoritesSet.end());
 }
 
 void PluginBrowserPanel::setOnPluginSelected(std::function<void(const PluginListItem&)> callback) {

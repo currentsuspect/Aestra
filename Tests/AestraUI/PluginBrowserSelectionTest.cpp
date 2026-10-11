@@ -4,6 +4,8 @@
 #include "PluginBrowserPanel.h"
 
 #include <iostream>
+#include <optional>
+#include <string>
 #include <vector>
 
 using namespace AestraUI;
@@ -138,6 +140,48 @@ void testKeyboardScrollsSelectionIntoView() {
     check(browser.getTargetScrollOffset() > 0.0f, "the list scrolls to follow keyboard selection");
 }
 
+
+// V8-S5: recents. A load request (Enter or double-click) moves the plugin to the front.
+void testRecentsFollowLoads() {
+    PluginBrowserPanel browser;
+    browser.setVisible(true);
+    browser.setBounds(NUIRect(0.0f, 0.0f, 300.0f, 400.0f));
+    browser.setPluginList(threePlugins());
+    browser.setFocused(true);
+    check(browser.getRecents().empty(), "nothing is recent before anything loads");
+
+    browser.selectPlugin("fx-c");
+    browser.onKeyEvent(keyDown(NUIKeyCode::Enter));
+    browser.selectPlugin("fx-a");
+    browser.onKeyEvent(keyDown(NUIKeyCode::Enter));
+    browser.selectPlugin("fx-c");
+    browser.onKeyEvent(keyDown(NUIKeyCode::Enter));
+    check(browser.getRecents().size() == 2, "a plugin loaded twice appears once");
+    check(browser.getRecents().size() == 2 && browser.getRecents()[0] == "fx-c" && browser.getRecents()[1] == "fx-a",
+          "newest first");
+
+    browser.setShowRecentOnly(true);
+    const auto& shown = browser.getPluginList();
+    check(shown.size() == 2 && shown[0].id == "fx-c" && shown[1].id == "fx-a",
+          "the Recent filter lists only recent plugins, newest first");
+    browser.setShowRecentOnly(false);
+    check(browser.getPluginList().size() == 3, "turning it off restores the full list");
+}
+
+void testRecentsAreCappedAndPersisted() {
+    std::vector<std::string> saved;
+    PluginBrowserPanel browser;
+    browser.setRecentsProvider([] { return std::optional<std::vector<std::string>>{{"stored-1", "stored-2"}}; },
+                               [&saved](const std::vector<std::string>& ids) { saved = ids; });
+    check(browser.getRecents().size() == 2 && browser.getRecents()[0] == "stored-1", "a stored list is restored");
+    for (int i = 0; i < 20; ++i) {
+        browser.recordRecent("p" + std::to_string(i));
+    }
+    check(browser.getRecents().size() == PluginBrowserPanel::kMaxRecents, "recents are capped");
+    check(browser.getRecents()[0] == "p19", "the newest is first");
+    check(saved == browser.getRecents(), "every change is handed to the saver");
+}
+
 } // namespace
 
 int main() {
@@ -147,6 +191,8 @@ int main() {
     testKeyboardMovesSelection();
     testKeyboardEnterWithoutSelectionLoadsNothing();
     testKeyboardScrollsSelectionIntoView();
+    testRecentsFollowLoads();
+    testRecentsAreCappedAndPersisted();
 
     if (failures != 0) {
         std::cout << failures << " plugin-browser selection check(s) failed\n";

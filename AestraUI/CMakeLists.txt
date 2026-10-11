@@ -145,6 +145,7 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/UIItemSelector.cpp
     Widgets/PluginBrowserPanel.h
     Widgets/PluginBrowserPanel.cpp
+    Widgets/PluginBrowserFavorites.cpp
     Widgets/PluginUIController.h
     Widgets/PluginUIController.cpp
     Widgets/PluginEditorRegistry.cpp

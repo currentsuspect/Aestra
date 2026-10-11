@@ -154,6 +154,8 @@ inline constexpr char kTimelineFollowPlayhead[] = "panel.timeline.followPlayhead
 inline constexpr char kTimelineFollowContinuous[] = "panel.timeline.followContinuous";
 // Plugin browser favorites (V8-C14): plugin ids, imported once from the legacy favorites.json.
 inline constexpr char kPluginBrowserFavorites[] = "pluginBrowser.favorites";
+// Plugin browser recents (V8-S5): plugin ids, most recently loaded first.
+inline constexpr char kPluginBrowserRecents[] = "pluginBrowser.recents";
 } // namespace UISurfaceKeys
 
 /**
