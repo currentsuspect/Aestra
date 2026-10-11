@@ -17,10 +17,13 @@
 #include "IO/BounceInPlace.h"
 #include "Plugin/EffectChain.h"
 #include "Plugin/PluginHost.h"
+#include "Plugin/PluginManager.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -171,6 +174,27 @@ double maxDiff(const std::vector<float>& a, const std::vector<float>& b) {
     return d;
 }
 
+// A mono 16-bit tone, for a Sampler unit.
+bool writeToneWav(const std::string& path, double hz, double amp, uint32_t frames, uint32_t sr) {
+    std::ofstream out(path, std::ios::binary);
+    if (!out)
+        return false;
+    const uint32_t dataBytes = frames * 2;
+    const uint32_t riff = 36 + dataBytes, fmt = 16, byteRate = sr * 2;
+    const uint16_t pcmFmt = 1, ch = 1, align = 2, bits = 16;
+    out.write("RIFF", 4); out.write(reinterpret_cast<const char*>(&riff), 4); out.write("WAVEfmt ", 8);
+    out.write(reinterpret_cast<const char*>(&fmt), 4); out.write(reinterpret_cast<const char*>(&pcmFmt), 2);
+    out.write(reinterpret_cast<const char*>(&ch), 2); out.write(reinterpret_cast<const char*>(&sr), 4);
+    out.write(reinterpret_cast<const char*>(&byteRate), 4); out.write(reinterpret_cast<const char*>(&align), 2);
+    out.write(reinterpret_cast<const char*>(&bits), 2); out.write("data", 4);
+    out.write(reinterpret_cast<const char*>(&dataBytes), 4);
+    for (uint32_t i = 0; i < frames; ++i) {
+        const int16_t v = static_cast<int16_t>(std::sin(kTau * hz * i / sr) * amp * 32767.0);
+        out.write(reinterpret_cast<const char*>(&v), 2);
+    }
+    return out.good();
+}
+
 } // namespace
 
 int main() {
@@ -282,6 +306,99 @@ int main() {
         s.tm->getPatternManager().setPatternMixerChannel(clipA->patternId, 0);
         const auto r = bounceClipsInPlace(*s.engine, *s.tm, {s.clip});
         check(!r.ok && r.error.find("master") != std::string::npos, "a master-routed clip: " + r.error);
+    }
+
+    std::cout << "[6] a pattern clip bounces too\n";
+    {
+        // The Sampler unit comes from the built-in plugin registry.
+        check(PluginManager::getInstance().initialize(), "plugin registry initialises");
+        SessionConfig cfg;
+        auto tm = std::make_shared<TrackManager>();
+        tm->setOutputSampleRate(cfg.sampleRate);
+        tm->getPlaylistModel().setBPM(cfg.bpm);
+        auto* channel = tm->addChannel("Keys");
+        channel->getEffectChain().insertPlugin(0, std::make_shared<HalfGain>());
+        const std::string wav = (std::filesystem::temp_directory_path() / "bounce_pattern_tone.wav").string();
+        writeToneWav(wav, 440.0, 0.8, cfg.sampleRate * 4, cfg.sampleRate);
+        auto& units = tm->getUnitManager();
+        const UnitID unit = units.createUnit("Keys", UnitType::Sampler);
+        units.setUnitAudioClip(unit, wav);
+        units.setUnitEnabled(unit, true);
+        units.setUnitGain(unit, 1.0f);
+        units.setUnitMixerChannel(unit, channel->getChannelId());
+
+        auto& patterns = tm->getPatternManager();
+        const PatternID pid = patterns.createPattern();
+        auto* pat = patterns.getPattern(pid);
+        pat->type = PatternSource::Type::Midi;
+        pat->lengthBeats = 4.0;
+        pat->payload = MidiPayload{};
+        std::get<MidiPayload>(pat->payload).notes.push_back(MidiNote{60, 0.0, 3.5, 1.0f, 0.0f, unit});
+        auto& pm = tm->getPlaylistModel();
+        const auto lane = pm.createLane("Keys");
+        ClipInstance ci;
+        ci.patternId = pid;
+        ci.sourceId = pid.value;
+        ci.startBeat = 0.0;
+        ci.durationBeats = 4.0;
+        const ClipInstanceID midiClip = pm.addClip(lane, ci);
+        auto engine = std::make_unique<AudioEngine>();
+        prepareEngine(*engine, tm, cfg);
+        engine->setUnitManager(&tm->getUnitManager());
+        engine->setPatternPlaybackEngine(&tm->getPatternPlaybackEngine());
+
+        const auto master = [&]() {
+            tm->getPatternPlaybackEngine().clearScheduledInstances();
+            tm->scheduleTimelineForOfflineRender(0.0);
+
+            AudioExporter exporter(*engine, *tm);
+            AudioExporter::Config c;
+            c.scope = AudioExporter::RenderScope::FullSong;
+            c.endBeat = 4.0;
+            c.sampleRate = cfg.sampleRate;
+            c.bitDepth = AudioExporter::BitDepth::Float_32;
+            c.tailSeconds = 0.0;
+            AudioExporter::RenderedAudio out;
+            exporter.renderToBuffer(c, out);
+            return out.interleaved;
+        };
+        const auto cold = master();
+        const auto before = master();
+        check(maxDiff(cold, before) < 1e-6, "two renders in a row are identical (no voice rings into the next)");
+        check(peak(before, 4096) > 0.05, "the pattern plays through the track before the bounce (peak " +
+                                             std::to_string(peak(before, 4096)) + ")");
+        const auto r = bounceClipsInPlace(*engine, *tm, {midiClip});
+        check(r.ok, "bounce succeeds: " + r.error);
+        const auto* bounced = pm.getClip(r.clip);
+        const auto* bouncedPattern = bounced ? patterns.getPattern(bounced->patternId) : nullptr;
+        check(pm.getClip(midiClip) == nullptr && bouncedPattern && bouncedPattern->isAudio(),
+              "the pattern clip became an audio clip");
+        check(channel->getEffectChain().isSlotBypassed(0), "the insert is bypassed");
+        const auto after = master();
+        check(maxDiff(before, after) < 1e-3, "master render before == after (max diff " +
+                                                 std::to_string(maxDiff(before, after)) + ", peaks " +
+                                                 std::to_string(peak(before, 4096)) + " / " +
+                                                 std::to_string(peak(after, 4096)) + ")");
+        tm->getCommandHistory().undo();
+        check(pm.getClip(midiClip) != nullptr && pm.getClip(r.clip) == nullptr, "undo: the pattern clip is back");
+        check(maxDiff(before, master()) < 1e-3, "undo: sounds as it did");
+
+        // Another clip of the same instrument playing in the span would play twice.
+        const auto laneB = pm.createLane("B");
+        const auto twin = pm.addClipFromPattern(laneB, pid, 1.0, 2.0);
+        const auto refused = bounceClipsInPlace(*engine, *tm, {midiClip});
+        check(twin.isValid() && !refused.ok && !refused.error.empty(),
+              "another clip of the same instrument in the span is refused: " + refused.error);
+
+        // A pattern with no notes has nothing to bounce.
+        const PatternID emptyId = patterns.createPattern();
+        auto* emptyPat = patterns.getPattern(emptyId);
+        emptyPat->type = PatternSource::Type::Midi;
+        emptyPat->lengthBeats = 4.0;
+        emptyPat->payload = MidiPayload{};
+        const auto laneC = pm.createLane("C");
+        const auto emptyClip = pm.addClipFromPattern(laneC, emptyId, 8.0, 4.0);
+        check(!bounceClipsInPlace(*engine, *tm, {emptyClip}).ok, "an empty pattern is refused");
     }
 
     std::cout << (g_failures == 0 ? "ALL PASS\n" : "FAILURES\n");

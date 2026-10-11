@@ -239,6 +239,8 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         ~EngineStateGuard() {
             self.m_engine.trackOutputTap().disarm();
             self.m_engine.setOfflineRenderActive(false);
+            // A note still releasing at the range end must not ring into whatever plays next.
+            self.m_engine.resetCachedSamplerVoicesRt();
             self.m_engine.setTransportPlaying(false);
             self.m_engine.setSampleRate(savedSampleRate);
             self.m_trackManager.setOutputSampleRate(static_cast<double>(savedSampleRate));
@@ -279,6 +281,8 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     m_engine.setPreviewDuckingAttenuationDb(0.0f);
     m_engine.resetPreviewDuckForOfflineRender();
     m_engine.setGlobalSamplePos(startSample);
+    // Sampler voices ringing from live playback or an earlier render would be mixed into this one.
+    m_engine.resetCachedSamplerVoicesRt();
     m_engine.setTransportPlaying(true);
 
     // Offline render: track/send gains render snapped to target from frame 0
