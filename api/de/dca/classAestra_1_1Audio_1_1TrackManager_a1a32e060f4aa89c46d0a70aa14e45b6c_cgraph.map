@@ -1,0 +1,11 @@
+<map id="Aestra::Audio::TrackManager::prewarmSamplerKeepLength" name="Aestra::Audio::TrackManager::prewarmSamplerKeepLength">
+<area shape="rect" id="Node000001" title="Queue keep&#45;length renders for every note a keep&#45;length sampler unit can play." alt="" coords="5,69,224,109"/>
+<area shape="rect" id="Node000002" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a2f38f4b25a7aa61512084f6470e90829" title="Get all patterns." alt="" coords="272,5,492,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="198,67,284,46,285,51,200,72"/>
+<area shape="rect" id="Node000003" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#aac74b831a3f7ddec240a7bfa49cb5ce3" title="Get all unit identifiers in display order." alt="" coords="281,69,483,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="224,87,267,87,267,92,224,92"/>
+<area shape="rect" id="Node000004" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a82a1e326b2d555a4b7bbee755a30e0f5" title="Get the plugin instance attached to a unit." alt="" coords="281,133,483,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="200,107,285,128,284,133,198,112"/>
+<area shape="rect" id="Node000005" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="540,133,741,173"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="483,151,526,151,526,156,483,156"/>
+</map>

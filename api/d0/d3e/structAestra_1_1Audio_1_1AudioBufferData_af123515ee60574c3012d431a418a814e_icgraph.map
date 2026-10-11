@@ -1,0 +1,20 @@
+<map id="Aestra::Audio::AudioBufferData::storedSamples" name="Aestra::Audio::AudioBufferData::storedSamples">
+<area shape="rect" id="Node000001" title="Samples held (frames x channels), whichever storage holds them." alt="" coords="771,83,964,123"/>
+<area shape="rect" id="Node000002" href="$d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#aa9e50e44f1a3704408300a571d2491cb" title="Copy count interleaved samples starting at firstSample as float." alt="" coords="529,53,723,93"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="757,92,723,88,723,82,758,87"/>
+<area shape="rect" id="Node000003" href="$da/df9/classAestra_1_1Audio_1_1ClipRenderService.html#ab2265a8632b5bcf3f9e5221b82ef71dd" title="Copy a frame range out of source into a fresh buffer." alt="" coords="291,9,479,49"/>
+<area shape="poly" id="edge8_Node000001_Node000003" title=" " alt="" coords="816,79,771,59,722,44,660,33,596,28,479,26,479,21,596,22,660,28,723,39,773,54,818,74"/>
+<area shape="rect" id="Node000006" href="$d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#a9e550fc6255b3def12b8a032f705137e" title="Largest finite |sample| in the buffer (0 when empty)." alt="" coords="288,76,481,116"/>
+<area shape="poly" id="edge9_Node000001_Node000006" title=" " alt="" coords="757,108,529,108,481,106,482,100,529,103,757,103"/>
+<area shape="rect" id="Node000007" href="$d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#ae5b7f4854c2092c03d871e80210c588e" title="Every sample as float (a copy). Large for long audio: prefer copyFloats() over a window." alt="" coords="288,143,481,183"/>
+<area shape="poly" id="edge10_Node000001_Node000007" title=" " alt="" coords="757,119,482,153,481,148,757,114"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="515,56,478,49,479,44,516,51"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="516,86,482,90,481,84,516,81"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="561,101,482,130,442,145,441,140,480,126,559,96"/>
+<area shape="rect" id="Node000004" href="$d0/d62/classAestra_1_1Audio_1_1ReverseAudioClipCommand.html#a96c8a9f625eea70ef256c3f46ead14fc" title="Produce the replacement audio for this clip." alt="" coords="19,69,226,109"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="284,55,211,72,210,67,283,50"/>
+<area shape="rect" id="Node000005" href="$dd/dde/classAestra_1_1Audio_1_1CommitAudioClipEditsCommand.html#a3e074459ab4eaf54e0750ecad0c25aa8" title="Produce the replacement audio for this clip." alt="" coords="5,5,240,45"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="277,30,240,30,240,24,277,25"/>
+<area shape="rect" id="Node000008" href="$d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#a5d6ea33d8815f2e60d935153506495ba" title="Becomes float32 again (e.g. before an in&#45;place edit). No&#45;op if already float." alt="" coords="26,143,219,183"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="274,165,220,165,220,160,274,160"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="AestraUI::PanelModeMenuActions" name="AestraUI::PanelModeMenuActions">
+<area shape="rect" id="Node000001" title="What the user picked from a panel&#39;s menu. Each callback gets the new mode already computed." alt="" coords="65,108,306,133"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,184,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="125,53,176,106,172,110,121,57"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="208,13,347,38"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="258,50,199,110,195,106,254,46"/>
+</map>

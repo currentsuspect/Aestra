@@ -88,14 +88,14 @@ $(function() {
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-0-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d9/d0b/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient__inherit__graph.svg" width="227" height="124"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d9/d0b/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient__inherit__graph.svg" width="250" height="198"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 <center><span class="legend">[<a href="../../graph_legend.html">legend</a>]</span></center></div>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Collaboration diagram for Aestra::Audio::Plugins::AestraTransient:</div>
 <div id="dynsection-1-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-1-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d2/dc0/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient__coll__graph.svg" width="519" height="227"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d2/dc0/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient__coll__graph.svg" width="100%" height="550"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 <center><span class="legend">[<a href="../../graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
@@ -132,72 +132,103 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:aa87879d2d46eee6f5ef3248fba5e9448" id="r_aa87879d2d46eee6f5ef3248fba5e9448"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#aa87879d2d46eee6f5ef3248fba5e9448">process</a> (const float *const *inputs, float **outputs, uint32_t numInputChannels, uint32_t numOutputChannels, uint32_t numFrames, const <a class="el" href="../../dc/d62/classAestra_1_1Audio_1_1MidiBuffer.html">MidiBuffer</a> *midiInput=nullptr, <a class="el" href="../../dc/d62/classAestra_1_1Audio_1_1MidiBuffer.html">MidiBuffer</a> *midiOutput=nullptr) override</td></tr>
 <tr class="memdesc:aa87879d2d46eee6f5ef3248fba5e9448"><td class="mdescLeft">&#160;</td><td class="mdescRight">Process audio through the plugin.  <br /></td></tr>
 <tr class="separator:aa87879d2d46eee6f5ef3248fba5e9448"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5728d5d48ef3df975b6689f7cd3f680e" id="r_a5728d5d48ef3df975b6689f7cd3f680e"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a5728d5d48ef3df975b6689f7cd3f680e">getParameterCount</a> () const override</td></tr>
-<tr class="memdesc:a5728d5d48ef3df975b6689f7cd3f680e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get parameter count.  <br /></td></tr>
-<tr class="separator:a5728d5d48ef3df975b6689f7cd3f680e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab1e351e8b061b2f3557e39eb10cc2517" id="r_ab1e351e8b061b2f3557e39eb10cc2517"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#ab1e351e8b061b2f3557e39eb10cc2517">getParameter</a> (uint32_t id) const override</td></tr>
-<tr class="memdesc:ab1e351e8b061b2f3557e39eb10cc2517"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get current parameter value (normalized 0-1)  <br /></td></tr>
-<tr class="separator:ab1e351e8b061b2f3557e39eb10cc2517"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a345f3ec84be3759190a6f5bacf424b1d" id="r_a345f3ec84be3759190a6f5bacf424b1d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a345f3ec84be3759190a6f5bacf424b1d">setParameter</a> (uint32_t id, float value) override</td></tr>
-<tr class="memdesc:a345f3ec84be3759190a6f5bacf424b1d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set parameter value (normalized 0-1)  <br /></td></tr>
-<tr class="separator:a345f3ec84be3759190a6f5bacf424b1d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3e893cadc4eb41a567b97dc2529a16e4" id="r_a3e893cadc4eb41a567b97dc2529a16e4"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="../../d7/d5d/structAestra_1_1Audio_1_1PluginParameter.html">PluginParameter</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a3e893cadc4eb41a567b97dc2529a16e4">getParameters</a> () const override</td></tr>
-<tr class="memdesc:a3e893cadc4eb41a567b97dc2529a16e4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get all parameter descriptors.  <br /></td></tr>
-<tr class="separator:a3e893cadc4eb41a567b97dc2529a16e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a88876fb70bc69091470f5159efacf758" id="r_a88876fb70bc69091470f5159efacf758"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="../../d2/d02/structAestra_1_1Audio_1_1ParamSpec.html">ParamSpec</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a88876fb70bc69091470f5159efacf758">paramSpecs</a> () const override</td></tr>
+<tr class="memdesc:a88876fb70bc69091470f5159efacf758"><td class="mdescLeft">&#160;</td><td class="mdescRight">The plugin's parameter table. Must outlive the instance.  <br /></td></tr>
+<tr class="separator:a88876fb70bc69091470f5159efacf758"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a763e468a3bcb3b431cb4c3343920fad6" id="r_a763e468a3bcb3b431cb4c3343920fad6"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a763e468a3bcb3b431cb4c3343920fad6">paramSpecCount</a> () const override</td></tr>
+<tr class="memdesc:a763e468a3bcb3b431cb4c3343920fad6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of rows in <a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a88876fb70bc69091470f5159efacf758" title="The plugin&#39;s parameter table. Must outlive the instance.">paramSpecs()</a>.  <br /></td></tr>
+<tr class="separator:a763e468a3bcb3b431cb4c3343920fad6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a66e2805bf00bcb51f1e063afc22192a8" id="r_a66e2805bf00bcb51f1e063afc22192a8"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a66e2805bf00bcb51f1e063afc22192a8">stateMagic</a> () const override</td></tr>
+<tr class="memdesc:a66e2805bf00bcb51f1e063afc22192a8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Magic for the state blob.  <br /></td></tr>
+<tr class="separator:a66e2805bf00bcb51f1e063afc22192a8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abdb974c4ccb9c0e1c40cf1512f5af88c" id="r_abdb974c4ccb9c0e1c40cf1512f5af88c"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#abdb974c4ccb9c0e1c40cf1512f5af88c">getParameterDisplay</a> (uint32_t id) const override</td></tr>
 <tr class="memdesc:abdb974c4ccb9c0e1c40cf1512f5af88c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get parameter value as display string.  <br /></td></tr>
 <tr class="separator:abdb974c4ccb9c0e1c40cf1512f5af88c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aaa1d15c4e03f5a907436bffb611b83e4" id="r_aaa1d15c4e03f5a907436bffb611b83e4"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint8_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#aaa1d15c4e03f5a907436bffb611b83e4">saveState</a> () const override</td></tr>
-<tr class="memdesc:aaa1d15c4e03f5a907436bffb611b83e4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Save plugin state to binary data.  <br /></td></tr>
-<tr class="separator:aaa1d15c4e03f5a907436bffb611b83e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acfb246a059a10e0c59804d979934b7fd" id="r_acfb246a059a10e0c59804d979934b7fd"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#acfb246a059a10e0c59804d979934b7fd">loadState</a> (const std::vector&lt; uint8_t &gt; &amp;state) override</td></tr>
-<tr class="memdesc:acfb246a059a10e0c59804d979934b7fd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load plugin state from binary data.  <br /></td></tr>
-<tr class="separator:acfb246a059a10e0c59804d979934b7fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8038ade2071cca009a92175bbd59a441" id="r_a8038ade2071cca009a92175bbd59a441"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a8038ade2071cca009a92175bbd59a441">hasEditor</a> () const override</td></tr>
 <tr class="memdesc:a8038ade2071cca009a92175bbd59a441"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if plugin has a graphical editor.  <br /></td></tr>
 <tr class="separator:a8038ade2071cca009a92175bbd59a441"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3aa2d4931fc30ef343500919c57a8467" id="r_a3aa2d4931fc30ef343500919c57a8467"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a3aa2d4931fc30ef343500919c57a8467">openEditor</a> (void *) override</td></tr>
-<tr class="memdesc:a3aa2d4931fc30ef343500919c57a8467"><td class="mdescLeft">&#160;</td><td class="mdescRight">Open the plugin editor window.  <br /></td></tr>
-<tr class="separator:a3aa2d4931fc30ef343500919c57a8467"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9e571c32ab2152713215281fb004d052" id="r_a9e571c32ab2152713215281fb004d052"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a9e571c32ab2152713215281fb004d052">closeEditor</a> () override</td></tr>
-<tr class="memdesc:a9e571c32ab2152713215281fb004d052"><td class="mdescLeft">&#160;</td><td class="mdescRight">Close the plugin editor window.  <br /></td></tr>
-<tr class="separator:a9e571c32ab2152713215281fb004d052"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a10a9088b99d5eb8e86510f6eb0b43358" id="r_a10a9088b99d5eb8e86510f6eb0b43358"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a10a9088b99d5eb8e86510f6eb0b43358">isEditorOpen</a> () const override</td></tr>
-<tr class="memdesc:a10a9088b99d5eb8e86510f6eb0b43358"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if editor is currently open.  <br /></td></tr>
-<tr class="separator:a10a9088b99d5eb8e86510f6eb0b43358"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ace442386d7951c750fad6d0fb575e0a5" id="r_ace442386d7951c750fad6d0fb575e0a5"><td class="memItemLeft" align="right" valign="top">std::pair&lt; int, int &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#ace442386d7951c750fad6d0fb575e0a5">getEditorSize</a> () const override</td></tr>
 <tr class="memdesc:ace442386d7951c750fad6d0fb575e0a5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get preferred editor size.  <br /></td></tr>
 <tr class="separator:ace442386d7951c750fad6d0fb575e0a5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4c271e282f7c0dfa00665efacdae8d54" id="r_a4c271e282f7c0dfa00665efacdae8d54"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a4c271e282f7c0dfa00665efacdae8d54">resizeEditor</a> (int, int) override</td></tr>
-<tr class="memdesc:a4c271e282f7c0dfa00665efacdae8d54"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resize editor to new size.  <br /></td></tr>
-<tr class="separator:a4c271e282f7c0dfa00665efacdae8d54"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8ea573552b694be63bf409eb37ae5e32" id="r_a8ea573552b694be63bf409eb37ae5e32"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="../../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html">PluginInfo</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a8ea573552b694be63bf409eb37ae5e32">getInfo</a> () const override</td></tr>
 <tr class="memdesc:a8ea573552b694be63bf409eb37ae5e32"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get plugin information.  <br /></td></tr>
 <tr class="separator:a8ea573552b694be63bf409eb37ae5e32"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8615da2cd518a80e261b17100332a761" id="r_a8615da2cd518a80e261b17100332a761"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a8615da2cd518a80e261b17100332a761">getLatencySamples</a> () const override</td></tr>
 <tr class="memdesc:a8615da2cd518a80e261b17100332a761"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get latency introduced by the plugin in samples.  <br /></td></tr>
 <tr class="separator:a8615da2cd518a80e261b17100332a761"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aae48ae90afa2ca3e546cda76a1ab1054" id="r_aae48ae90afa2ca3e546cda76a1ab1054"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#aae48ae90afa2ca3e546cda76a1ab1054">getTailSamples</a> () const override</td></tr>
-<tr class="memdesc:aae48ae90afa2ca3e546cda76a1ab1054"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get tail length in samples (for effects like reverb)  <br /></td></tr>
-<tr class="separator:aae48ae90afa2ca3e546cda76a1ab1054"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a588faf861445163937ca80f235319384" id="r_a588faf861445163937ca80f235319384"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d7/d54/structAestra_1_1Audio_1_1IPluginInstance_1_1WatchdogStats.html">WatchdogStats</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a588faf861445163937ca80f235319384">getWatchdogStats</a> () const override</td></tr>
-<tr class="memdesc:a588faf861445163937ca80f235319384"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get current watchdog statistics.  <br /></td></tr>
-<tr class="separator:a588faf861445163937ca80f235319384"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7d02e75d1478015782e97a0a23793708" id="r_a7d02e75d1478015782e97a0a23793708"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a7d02e75d1478015782e97a0a23793708">resetWatchdog</a> () override</td></tr>
-<tr class="memdesc:a7d02e75d1478015782e97a0a23793708"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reset watchdog statistics and re-enable plugin if bypassed.  <br /></td></tr>
-<tr class="separator:a7d02e75d1478015782e97a0a23793708"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1a1137729e7acbb177cb1dd85c50ad43" id="r_a1a1137729e7acbb177cb1dd85c50ad43"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a1a1137729e7acbb177cb1dd85c50ad43">isBypassedByWatchdog</a> () const override</td></tr>
-<tr class="memdesc:a1a1137729e7acbb177cb1dd85c50ad43"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if plugin was bypassed by the watchdog.  <br /></td></tr>
-<tr class="separator:a1a1137729e7acbb177cb1dd85c50ad43"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a76146dc2423a06d858a80270126bf19b" id="r_a76146dc2423a06d858a80270126bf19b"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a76146dc2423a06d858a80270126bf19b">isCrashed</a> () const override</td></tr>
-<tr class="memdesc:a76146dc2423a06d858a80270126bf19b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if plugin has crashed (fatal exception caught)  <br /></td></tr>
-<tr class="separator:a76146dc2423a06d858a80270126bf19b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a320addbd8f5295fbebb65e83b9f03eac" id="r_a320addbd8f5295fbebb65e83b9f03eac"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a320addbd8f5295fbebb65e83b9f03eac">setInfo</a> (const <a class="el" href="../../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html">PluginInfo</a> &amp;info)</td></tr>
 <tr class="separator:a320addbd8f5295fbebb65e83b9f03eac"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4b7eca9da54af408e79212c64bc7b1c9" id="r_a4b7eca9da54af408e79212c64bc7b1c9"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a4b7eca9da54af408e79212c64bc7b1c9">getInputLevel</a> () const</td></tr>
 <tr class="separator:a4b7eca9da54af408e79212c64bc7b1c9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a94b7c60196b16709c4e64aa19cec6d08" id="r_a94b7c60196b16709c4e64aa19cec6d08"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a94b7c60196b16709c4e64aa19cec6d08">getOutputLevel</a> () const</td></tr>
 <tr class="separator:a94b7c60196b16709c4e64aa19cec6d08"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td colspan="2" onclick="javascript:toggleInherit('pub_methods_classAestra_1_1Audio_1_1InternalPluginBase')"><img src="../../closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html">Aestra::Audio::InternalPluginBase</a></td></tr>
+<tr class="memitem:a2e301b64b16ed67a488e198646eef78c inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_a2e301b64b16ed67a488e198646eef78c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a2e301b64b16ed67a488e198646eef78c">seedDefaults</a> ()</td></tr>
+<tr class="memdesc:a2e301b64b16ed67a488e198646eef78c inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Writes the table's defaults into storage.  <br /></td></tr>
+<tr class="separator:a2e301b64b16ed67a488e198646eef78c inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aab2b659d581559924c8a2f9ead2d8612 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_aab2b659d581559924c8a2f9ead2d8612"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#aab2b659d581559924c8a2f9ead2d8612">onParameterChanged</a> (uint32_t, float)</td></tr>
+<tr class="memdesc:aab2b659d581559924c8a2f9ead2d8612 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Called after a parameter is stored, so a plugin can invalidate derived state (filter coefficients, oversampling config) or mirror the value into a smoothed copy.  <br /></td></tr>
+<tr class="separator:aab2b659d581559924c8a2f9ead2d8612 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a885641069e7a07a71033105373d4d98c inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_a885641069e7a07a71033105373d4d98c"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="../../d7/d5d/structAestra_1_1Audio_1_1PluginParameter.html">PluginParameter</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a885641069e7a07a71033105373d4d98c">getParameters</a> () const override</td></tr>
+<tr class="memdesc:a885641069e7a07a71033105373d4d98c inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get all parameter descriptors.  <br /></td></tr>
+<tr class="separator:a885641069e7a07a71033105373d4d98c inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a82b00203b54e76a6a699882c42b2d50f inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_a82b00203b54e76a6a699882c42b2d50f"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a82b00203b54e76a6a699882c42b2d50f">getParameterCount</a> () const override</td></tr>
+<tr class="memdesc:a82b00203b54e76a6a699882c42b2d50f inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get parameter count.  <br /></td></tr>
+<tr class="separator:a82b00203b54e76a6a699882c42b2d50f inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acd2100c923f5538067bf3a8899f45aa7 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_acd2100c923f5538067bf3a8899f45aa7"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#acd2100c923f5538067bf3a8899f45aa7">getParameter</a> (uint32_t id) const override</td></tr>
+<tr class="memdesc:acd2100c923f5538067bf3a8899f45aa7 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get current parameter value (normalized 0-1)  <br /></td></tr>
+<tr class="separator:acd2100c923f5538067bf3a8899f45aa7 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1d94762f30bbbecc81a1d1a2bc48708e inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_a1d94762f30bbbecc81a1d1a2bc48708e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a1d94762f30bbbecc81a1d1a2bc48708e">setParameter</a> (uint32_t id, float value) override</td></tr>
+<tr class="memdesc:a1d94762f30bbbecc81a1d1a2bc48708e inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">A non-finite value is rejected outright, leaving the previous value in place.  <br /></td></tr>
+<tr class="separator:a1d94762f30bbbecc81a1d1a2bc48708e inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab9c0092bf57cbc7f6ea2c03ddaea1681 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_ab9c0092bf57cbc7f6ea2c03ddaea1681"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#ab9c0092bf57cbc7f6ea2c03ddaea1681">supportsRealtimeAutomation</a> () const noexcept override</td></tr>
+<tr class="memdesc:ab9c0092bf57cbc7f6ea2c03ddaea1681 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Render-thread automation contract (V8-A5): parameter storage here is atomic, so a store from the render thread is lock-free.  <br /></td></tr>
+<tr class="separator:ab9c0092bf57cbc7f6ea2c03ddaea1681 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6d48aef4b6d6e8b0b45c212ed6d87485 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_a6d48aef4b6d6e8b0b45c212ed6d87485"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a6d48aef4b6d6e8b0b45c212ed6d87485">applyAutomation</a> (uint32_t id, float normalizedValue) noexcept override</td></tr>
+<tr class="memdesc:a6d48aef4b6d6e8b0b45c212ed6d87485 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Hand the plugin the automated value for this block.  <br /></td></tr>
+<tr class="separator:a6d48aef4b6d6e8b0b45c212ed6d87485 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a794dcbca5ac35391f7091d18c2639a85 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_a794dcbca5ac35391f7091d18c2639a85"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a794dcbca5ac35391f7091d18c2639a85">getParameterDisplay</a> (uint32_t id) const override</td></tr>
+<tr class="memdesc:a794dcbca5ac35391f7091d18c2639a85 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Display formatting.  <br /></td></tr>
+<tr class="separator:a794dcbca5ac35391f7091d18c2639a85 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abfa518adbc4541a87b4dece4c8299e6c inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_abfa518adbc4541a87b4dece4c8299e6c"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint8_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#abfa518adbc4541a87b4dece4c8299e6c">saveState</a> () const override</td></tr>
+<tr class="memdesc:abfa518adbc4541a87b4dece4c8299e6c inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">The blob is keyed: {magic, version=2, count, (paramId, value) * count}.  <br /></td></tr>
+<tr class="separator:abfa518adbc4541a87b4dece4c8299e6c inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a551820afa00ce157be395b081b65335f inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_a551820afa00ce157be395b081b65335f"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a551820afa00ce157be395b081b65335f">loadState</a> (const std::vector&lt; uint8_t &gt; &amp;state) override</td></tr>
+<tr class="memdesc:a551820afa00ce157be395b081b65335f inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads a keyed v2 blob, applying by id rather than by position.  <br /></td></tr>
+<tr class="separator:a551820afa00ce157be395b081b65335f inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7fc923e2800cc1bf077fe690542177e5 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_a7fc923e2800cc1bf077fe690542177e5"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a7fc923e2800cc1bf077fe690542177e5">hasEditor</a> () const override</td></tr>
+<tr class="memdesc:a7fc923e2800cc1bf077fe690542177e5 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if plugin has a graphical editor.  <br /></td></tr>
+<tr class="separator:a7fc923e2800cc1bf077fe690542177e5 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a41d7acd7a554ca469d417d2ec18787d9 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_a41d7acd7a554ca469d417d2ec18787d9"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a41d7acd7a554ca469d417d2ec18787d9">openEditor</a> (void *) override</td></tr>
+<tr class="memdesc:a41d7acd7a554ca469d417d2ec18787d9 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Open the plugin editor window.  <br /></td></tr>
+<tr class="separator:a41d7acd7a554ca469d417d2ec18787d9 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0923510b45a9aa877c8c4865876c839c inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_a0923510b45a9aa877c8c4865876c839c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a0923510b45a9aa877c8c4865876c839c">closeEditor</a> () override</td></tr>
+<tr class="memdesc:a0923510b45a9aa877c8c4865876c839c inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Close the plugin editor window.  <br /></td></tr>
+<tr class="separator:a0923510b45a9aa877c8c4865876c839c inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abef9780d0ccb191e6dac78811560e383 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_abef9780d0ccb191e6dac78811560e383"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#abef9780d0ccb191e6dac78811560e383">isEditorOpen</a> () const override</td></tr>
+<tr class="memdesc:abef9780d0ccb191e6dac78811560e383 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if editor is currently open.  <br /></td></tr>
+<tr class="separator:abef9780d0ccb191e6dac78811560e383 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3d436f6f2a1c9bc085c867382d62c674 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_a3d436f6f2a1c9bc085c867382d62c674"><td class="memItemLeft" align="right" valign="top">std::pair&lt; int, int &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a3d436f6f2a1c9bc085c867382d62c674">getEditorSize</a> () const override</td></tr>
+<tr class="memdesc:a3d436f6f2a1c9bc085c867382d62c674 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get preferred editor size.  <br /></td></tr>
+<tr class="separator:a3d436f6f2a1c9bc085c867382d62c674 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a920946765f3404256962b6c9c9fa20a2 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_a920946765f3404256962b6c9c9fa20a2"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a920946765f3404256962b6c9c9fa20a2">resizeEditor</a> (int, int) override</td></tr>
+<tr class="memdesc:a920946765f3404256962b6c9c9fa20a2 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resize editor to new size.  <br /></td></tr>
+<tr class="separator:a920946765f3404256962b6c9c9fa20a2 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abc46455bb11a67cbeb6750bc62cb2d13 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_abc46455bb11a67cbeb6750bc62cb2d13"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#abc46455bb11a67cbeb6750bc62cb2d13">getTailSamples</a> () const override</td></tr>
+<tr class="memdesc:abc46455bb11a67cbeb6750bc62cb2d13 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get tail length in samples (for effects like reverb)  <br /></td></tr>
+<tr class="separator:abc46455bb11a67cbeb6750bc62cb2d13 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8e29186b4274aa1ed609119e3e710c79 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_a8e29186b4274aa1ed609119e3e710c79"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d7/d54/structAestra_1_1Audio_1_1IPluginInstance_1_1WatchdogStats.html">WatchdogStats</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a8e29186b4274aa1ed609119e3e710c79">getWatchdogStats</a> () const override</td></tr>
+<tr class="memdesc:a8e29186b4274aa1ed609119e3e710c79 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get current watchdog statistics.  <br /></td></tr>
+<tr class="separator:a8e29186b4274aa1ed609119e3e710c79 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aede6e3e20c027dbe859fe51743113ac5 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_aede6e3e20c027dbe859fe51743113ac5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#aede6e3e20c027dbe859fe51743113ac5">resetWatchdog</a> () override</td></tr>
+<tr class="memdesc:aede6e3e20c027dbe859fe51743113ac5 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reset watchdog statistics and re-enable plugin if bypassed.  <br /></td></tr>
+<tr class="separator:aede6e3e20c027dbe859fe51743113ac5 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6f2e14d773614bda04f3d15a9619a335 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_a6f2e14d773614bda04f3d15a9619a335"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a6f2e14d773614bda04f3d15a9619a335">isBypassedByWatchdog</a> () const override</td></tr>
+<tr class="memdesc:a6f2e14d773614bda04f3d15a9619a335 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if plugin was bypassed by the watchdog.  <br /></td></tr>
+<tr class="separator:a6f2e14d773614bda04f3d15a9619a335 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa2f172712d45fc8e2945fd223ceddb73 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_aa2f172712d45fc8e2945fd223ceddb73"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#aa2f172712d45fc8e2945fd223ceddb73">isCrashed</a> () const override</td></tr>
+<tr class="memdesc:aa2f172712d45fc8e2945fd223ceddb73 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if plugin has crashed (fatal exception caught)  <br /></td></tr>
+<tr class="separator:aa2f172712d45fc8e2945fd223ceddb73 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
@@ -210,6 +241,8 @@ Static Public Member Functions</h2></td></tr>
 Static Public Attributes</h2></td></tr>
 <tr class="memitem:aac4fa711a003b51d0a2d9e58c329ccaf" id="r_aac4fa711a003b51d0a2d9e58c329ccaf"><td class="memItemLeft" align="right" valign="top">static constexpr uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#aac4fa711a003b51d0a2d9e58c329ccaf">kStateMagic</a> = 0x54524E31</td></tr>
 <tr class="separator:aac4fa711a003b51d0a2d9e58c329ccaf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1d6fd3e673614270f54b312a80c64ecc" id="r_a1d6fd3e673614270f54b312a80c64ecc"><td class="memItemLeft" align="right" valign="top">static constexpr <a class="el" href="../../d2/d02/structAestra_1_1Audio_1_1ParamSpec.html">ParamSpec</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a1d6fd3e673614270f54b312a80c64ecc">kSpecs</a> []</td></tr>
+<tr class="separator:a1d6fd3e673614270f54b312a80c64ecc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2b9c770c6cf546a58fa67f5de22c8b40" id="r_a2b9c770c6cf546a58fa67f5de22c8b40"><td class="memItemLeft" align="right" valign="top">static constexpr float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a2b9c770c6cf546a58fa67f5de22c8b40">kFastAttackSec</a> = 0.001f</td></tr>
 <tr class="separator:a2b9c770c6cf546a58fa67f5de22c8b40"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abd4f8cd9e1f223595a2927fafa6d2acf" id="r_abd4f8cd9e1f223595a2927fafa6d2acf"><td class="memItemLeft" align="right" valign="top">static constexpr float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#abd4f8cd9e1f223595a2927fafa6d2acf">kFastReleaseSec</a> = 0.008f</td></tr>
@@ -224,10 +257,33 @@ Static Public Attributes</h2></td></tr>
 <tr class="separator:a7284614d2c23379b41014c6f5f10e8ee"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab25b05b79078582b7376382b09331d06" id="r_ab25b05b79078582b7376382b09331d06"><td class="memItemLeft" align="right" valign="top">static constexpr float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#ab25b05b79078582b7376382b09331d06">kEnvFloor</a> = 1.0e-6f</td></tr>
 <tr class="separator:ab25b05b79078582b7376382b09331d06"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="inherited" name="inherited"></a>
+Additional Inherited Members</h2></td></tr>
+<tr class="inherit_header pro_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td colspan="2" onclick="javascript:toggleInherit('pro_methods_classAestra_1_1Audio_1_1InternalPluginBase')"><img src="../../closed.png" alt="-"/>&#160;Protected Member Functions inherited from <a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html">Aestra::Audio::InternalPluginBase</a></td></tr>
+<tr class="memitem:ad944cdc9be0469fcae64d98617c63145 inherit pro_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_ad944cdc9be0469fcae64d98617c63145"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#ad944cdc9be0469fcae64d98617c63145">seedDefaultsOnce</a> ()</td></tr>
+<tr class="memdesc:ad944cdc9be0469fcae64d98617c63145 inherit pro_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Seeds defaults on the first <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a3f57ac8a0a89a69c6358a74e6fb0eec8" title="Initialize the plugin for processing.">initialize()</a> of a fresh instance only.  <br /></td></tr>
+<tr class="separator:ad944cdc9be0469fcae64d98617c63145 inherit pro_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9aa58c835cb557a83214a51d403b0cfc inherit pro_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_a9aa58c835cb557a83214a51d403b0cfc"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a9aa58c835cb557a83214a51d403b0cfc">paramValue</a> (uint32_t id) const</td></tr>
+<tr class="memdesc:a9aa58c835cb557a83214a51d403b0cfc inherit pro_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Relaxed read for a plugin's own DSP.  <br /></td></tr>
+<tr class="separator:a9aa58c835cb557a83214a51d403b0cfc inherit pro_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4f18baeddc491328b50de64d74e0384c inherit pro_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_a4f18baeddc491328b50de64d74e0384c"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a4f18baeddc491328b50de64d74e0384c">isBypassed</a> () const</td></tr>
+<tr class="memdesc:a4f18baeddc491328b50de64d74e0384c inherit pro_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">The bypass knob, read the way every plugin reads it.  <br /></td></tr>
+<tr class="separator:a4f18baeddc491328b50de64d74e0384c inherit pro_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pro_static_attribs_classAestra_1_1Audio_1_1InternalPluginBase"><td colspan="2" onclick="javascript:toggleInherit('pro_static_attribs_classAestra_1_1Audio_1_1InternalPluginBase')"><img src="../../closed.png" alt="-"/>&#160;Static Protected Attributes inherited from <a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html">Aestra::Audio::InternalPluginBase</a></td></tr>
+<tr class="memitem:aa2820d6207fdfdb01df1509ee7e4292c inherit pro_static_attribs_classAestra_1_1Audio_1_1InternalPluginBase" id="r_aa2820d6207fdfdb01df1509ee7e4292c"><td class="memItemLeft" align="right" valign="top">static constexpr uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#aa2820d6207fdfdb01df1509ee7e4292c">kMaxSpecParams</a> = kMaxInternalPluginParams</td></tr>
+<tr class="memdesc:aa2820d6207fdfdb01df1509ee7e4292c inherit pro_static_attribs_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Ceiling on a plugin's parameter count.  <br /></td></tr>
+<tr class="separator:aa2820d6207fdfdb01df1509ee7e4292c inherit pro_static_attribs_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1a00f70bea1bca78259f9c3ca2630a64 inherit pro_static_attribs_classAestra_1_1Audio_1_1InternalPluginBase" id="r_a1a00f70bea1bca78259f9c3ca2630a64"><td class="memItemLeft" align="right" valign="top">static constexpr uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a1a00f70bea1bca78259f9c3ca2630a64">kStateVersion</a> = 2</td></tr>
+<tr class="memdesc:a1a00f70bea1bca78259f9c3ca2630a64 inherit pro_static_attribs_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">v1 was positional and is no longer read.  <br /></td></tr>
+<tr class="separator:a1a00f70bea1bca78259f9c3ca2630a64 inherit pro_static_attribs_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3a492bb3d952613b84c996fc6235d467 inherit pro_static_attribs_classAestra_1_1Audio_1_1InternalPluginBase" id="r_a3a492bb3d952613b84c996fc6235d467"><td class="memItemLeft" align="right" valign="top">static constexpr uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a3a492bb3d952613b84c996fc6235d467">kStateVersionV1</a> = 1</td></tr>
+<tr class="memdesc:a3a492bb3d952613b84c996fc6235d467 inherit pro_static_attribs_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">v1's version number, named only so the reader's rejection is testable against a blob built to the real v1 layout.  <br /></td></tr>
+<tr class="separator:a3a492bb3d952613b84c996fc6235d467 inherit pro_static_attribs_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00036">36</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00038">38</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 </div><h2 class="groupheader">Member Enumeration Documentation</h2>
 <a id="a2ffc03ba12fd451fe76040f8e751e034" name="a2ffc03ba12fd451fe76040f8e751e034"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a2ffc03ba12fd451fe76040f8e751e034">&#9670;&#160;</a></span>Param</h2>
@@ -241,7 +297,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00040">40</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00042">42</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
 </div>
 </div>
@@ -273,7 +329,7 @@ Static Public Attributes</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a8c5884486cf915aecc040ed47579f137">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00080">80</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00086">86</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
 </div>
 </div>
@@ -301,38 +357,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00300">300</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
-
-</div>
-</div>
-<a id="a9e571c32ab2152713215281fb004d052" name="a9e571c32ab2152713215281fb004d052"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9e571c32ab2152713215281fb004d052">&#9670;&#160;</a></span>closeEditor()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">void Aestra::Audio::Plugins::AestraTransient::closeEditor </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Close the plugin editor window. </p>
-
-<p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#abbbd61d2c9b8113b4fa8842ac1ea025b">Aestra::Audio::IPluginInstance</a>.</p>
-
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00280">280</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00238">238</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
 </div>
 </div>
@@ -363,7 +388,7 @@ Static Public Attributes</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ae8873fee63c09979fd8235b66cf82b74">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00086">86</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00092">92</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
 </div>
 </div>
@@ -395,7 +420,7 @@ Static Public Attributes</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a4e9c8e50888e323296ad29ce7465b030">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00282">282</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00226">226</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
 </div>
 </div>
@@ -426,7 +451,7 @@ Static Public Attributes</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a0416678fedc43a77f2e208d999559acb">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00285">285</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00228">228</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
 </div>
 </div>
@@ -453,7 +478,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00296">296</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00234">234</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
 </div>
 </div>
@@ -484,7 +509,7 @@ Static Public Attributes</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ab213ce811c289ca2c97d1135cc5f2785">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00286">286</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00229">229</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
 </div>
 </div>
@@ -511,86 +536,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00297">297</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
-
-</div>
-</div>
-<a id="ab1e351e8b061b2f3557e39eb10cc2517" name="ab1e351e8b061b2f3557e39eb10cc2517"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab1e351e8b061b2f3557e39eb10cc2517">&#9670;&#160;</a></span>getParameter()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">float Aestra::Audio::Plugins::AestraTransient::getParameter </td>
-          <td>(</td>
-          <td class="paramtype">uint32_t&#160;</td>
-          <td class="paramname"><em>id</em></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Get current parameter value (normalized 0-1) </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">id</td><td>Parameter ID </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>Current value, or 0 if parameter not found </dd></dl>
-
-<p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a50146239d3ee44ece1f7ce021a7d9ab7">Aestra::Audio::IPluginInstance</a>.</p>
-
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00183">183</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00207">getParameterDisplay()</a>, <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00089">process()</a>, and <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00235">saveState()</a>.</p>
-<div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-2-summary" class="dynsummary" style="display:block;">
-</div>
-<div id="dynsection-2-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient_ab1e351e8b061b2f3557e39eb10cc2517_icgraph.svg" width="512" height="195"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
-</div>
-
-</div>
-</div>
-<a id="a5728d5d48ef3df975b6689f7cd3f680e" name="a5728d5d48ef3df975b6689f7cd3f680e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5728d5d48ef3df975b6689f7cd3f680e">&#9670;&#160;</a></span>getParameterCount()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">uint32_t Aestra::Audio::Plugins::AestraTransient::getParameterCount </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Get parameter count. </p>
-
-<p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a6d28828563a9f99c2e25d8fd3df742a9">Aestra::Audio::IPluginInstance</a>.</p>
-
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00181">181</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00235">235</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
 </div>
 </div>
@@ -629,118 +575,16 @@ Static Public Attributes</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a93980dfb9c9c5baf9830e57bda018067">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00207">207</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00196">196</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00183">getParameter()</a>.</p>
-<div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-3-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../d9/d40/InternalPluginBase_8h_source.html#l00202">Aestra::Audio::InternalPluginBase::getParameter()</a>.</p>
+<div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-2-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-3-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient_abdb974c4ccb9c0e1c40cf1512f5af88c_cgraph.svg" width="512" height="66"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div id="dynsection-2-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient_abdb974c4ccb9c0e1c40cf1512f5af88c_cgraph.svg" width="492" height="66"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
-
-</div>
-</div>
-<a id="a3e893cadc4eb41a567b97dc2529a16e4" name="a3e893cadc4eb41a567b97dc2529a16e4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3e893cadc4eb41a567b97dc2529a16e4">&#9670;&#160;</a></span>getParameters()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::vector&lt; <a class="el" href="../../d7/d5d/structAestra_1_1Audio_1_1PluginParameter.html">PluginParameter</a> &gt; Aestra::Audio::Plugins::AestraTransient::getParameters </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Get all parameter descriptors. </p>
-
-<p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a4556ebedc550a3946d87bb73b7981dae">Aestra::Audio::IPluginInstance</a>.</p>
-
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00197">197</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00061">initialize()</a>.</p>
-<div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-4-summary" class="dynsummary" style="display:block;">
-</div>
-<div id="dynsection-4-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient_a3e893cadc4eb41a567b97dc2529a16e4_icgraph.svg" width="488" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
-</div>
-
-</div>
-</div>
-<a id="aae48ae90afa2ca3e546cda76a1ab1054" name="aae48ae90afa2ca3e546cda76a1ab1054"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aae48ae90afa2ca3e546cda76a1ab1054">&#9670;&#160;</a></span>getTailSamples()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">uint32_t Aestra::Audio::Plugins::AestraTransient::getTailSamples </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Get tail length in samples (for effects like reverb) </p>
-
-<p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ae30ed96e97c3ee9f6e0b67ca02456c30">Aestra::Audio::IPluginInstance</a>.</p>
-
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00287">287</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
-
-</div>
-</div>
-<a id="a588faf861445163937ca80f235319384" name="a588faf861445163937ca80f235319384"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a588faf861445163937ca80f235319384">&#9670;&#160;</a></span>getWatchdogStats()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="../../d7/d54/structAestra_1_1Audio_1_1IPluginInstance_1_1WatchdogStats.html">WatchdogStats</a> Aestra::Audio::Plugins::AestraTransient::getWatchdogStats </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Get current watchdog statistics. </p>
-
-<p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aff2c900e33f79f27430b9fc27751d3aa">Aestra::Audio::IPluginInstance</a>.</p>
-
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00288">288</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
 </div>
 </div>
@@ -771,7 +615,7 @@ Static Public Attributes</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a3493c6f26130010549f41db956f476f7">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00278">278</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00225">225</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
 </div>
 </div>
@@ -821,15 +665,15 @@ Static Public Attributes</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a3f57ac8a0a89a69c6358a74e6fb0eec8">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00061">61</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00075">75</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00197">getParameters()</a>.</p>
-<div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-5-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../d9/d40/InternalPluginBase_8h_source.html#l00431">Aestra::Audio::InternalPluginBase::seedDefaultsOnce()</a>.</p>
+<div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-3-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-5-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient_a36e0160b59824e6d54960130802a1992_cgraph.svg" width="488" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div id="dynsection-3-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient_a36e0160b59824e6d54960130802a1992_cgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -861,187 +705,7 @@ Static Public Attributes</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aaf189f5b44c01bf9af82e3e4cc389449">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00087">87</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
-
-</div>
-</div>
-<a id="a1a1137729e7acbb177cb1dd85c50ad43" name="a1a1137729e7acbb177cb1dd85c50ad43"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1a1137729e7acbb177cb1dd85c50ad43">&#9670;&#160;</a></span>isBypassedByWatchdog()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool Aestra::Audio::Plugins::AestraTransient::isBypassedByWatchdog </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Check if plugin was bypassed by the watchdog. </p>
-
-<p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a4dd1d460cb57e7eebbdf7562638a5388">Aestra::Audio::IPluginInstance</a>.</p>
-
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00290">290</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
-
-</div>
-</div>
-<a id="a76146dc2423a06d858a80270126bf19b" name="a76146dc2423a06d858a80270126bf19b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a76146dc2423a06d858a80270126bf19b">&#9670;&#160;</a></span>isCrashed()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool Aestra::Audio::Plugins::AestraTransient::isCrashed </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Check if plugin has crashed (fatal exception caught) </p>
-
-<p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a0d662ab4e5e2206e4118d6ba4ea1ee33">Aestra::Audio::IPluginInstance</a>.</p>
-
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00291">291</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
-
-</div>
-</div>
-<a id="a10a9088b99d5eb8e86510f6eb0b43358" name="a10a9088b99d5eb8e86510f6eb0b43358"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a10a9088b99d5eb8e86510f6eb0b43358">&#9670;&#160;</a></span>isEditorOpen()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool Aestra::Audio::Plugins::AestraTransient::isEditorOpen </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Check if editor is currently open. </p>
-
-<p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a4ca73e835125be8f4c1057c16104f19a">Aestra::Audio::IPluginInstance</a>.</p>
-
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00281">281</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
-
-</div>
-</div>
-<a id="acfb246a059a10e0c59804d979934b7fd" name="acfb246a059a10e0c59804d979934b7fd"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#acfb246a059a10e0c59804d979934b7fd">&#9670;&#160;</a></span>loadState()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool Aestra::Audio::Plugins::AestraTransient::loadState </td>
-          <td>(</td>
-          <td class="paramtype">const std::vector&lt; uint8_t &gt; &amp;&#160;</td>
-          <td class="paramname"><em>state</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Load plugin state from binary data. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">state</td><td>State data from previous <a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#aaa1d15c4e03f5a907436bffb611b83e4" title="Save plugin state to binary data.">saveState()</a> </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>true on success </dd></dl>
-
-<p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a364b42104ca80c8d86d71a69372c6b93">Aestra::Audio::IPluginInstance</a>.</p>
-
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00248">248</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
-
-<p class="reference">References <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00189">setParameter()</a>.</p>
-<div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-6-summary" class="dynsummary" style="display:block;">
-</div>
-<div id="dynsection-6-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient_acfb246a059a10e0c59804d979934b7fd_cgraph.svg" width="487" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
-</div>
-
-</div>
-</div>
-<a id="a3aa2d4931fc30ef343500919c57a8467" name="a3aa2d4931fc30ef343500919c57a8467"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3aa2d4931fc30ef343500919c57a8467">&#9670;&#160;</a></span>openEditor()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool Aestra::Audio::Plugins::AestraTransient::openEditor </td>
-          <td>(</td>
-          <td class="paramtype">void *&#160;</td>
-          <td class="paramname"><em>parentWindow</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Open the plugin editor window. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">parentWindow</td><td>Native parent window handle (HWND on Windows) </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>true if editor opened successfully </dd></dl>
-
-<p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aa054540a8ed06135b947ea3c71d6cc42">Aestra::Audio::IPluginInstance</a>.</p>
-
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00279">279</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00093">93</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
 </div>
 </div>
@@ -1069,7 +733,69 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00302">302</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00240">240</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+
+</div>
+</div>
+<a id="a763e468a3bcb3b431cb4c3343920fad6" name="a763e468a3bcb3b431cb4c3343920fad6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a763e468a3bcb3b431cb4c3343920fad6">&#9670;&#160;</a></span>paramSpecCount()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint32_t Aestra::Audio::Plugins::AestraTransient::paramSpecCount </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Number of rows in <a class="el" href="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a88876fb70bc69091470f5159efacf758" title="The plugin&#39;s parameter table. Must outlive the instance.">paramSpecs()</a>. </p>
+
+<p>Implements <a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a7dec060338b713ecd42311bc7439b820">Aestra::Audio::InternalPluginBase</a>.</p>
+
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00192">192</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+
+</div>
+</div>
+<a id="a88876fb70bc69091470f5159efacf758" name="a88876fb70bc69091470f5159efacf758"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a88876fb70bc69091470f5159efacf758">&#9670;&#160;</a></span>paramSpecs()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const <a class="el" href="../../d2/d02/structAestra_1_1Audio_1_1ParamSpec.html">ParamSpec</a> * Aestra::Audio::Plugins::AestraTransient::paramSpecs </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The plugin's parameter table. Must outlive the instance. </p>
+
+<p>Implements <a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a853525e44b013bf858624c0683d2dfac">Aestra::Audio::InternalPluginBase</a>.</p>
+
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00191">191</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
 </div>
 </div>
@@ -1158,137 +884,15 @@ Static Public Attributes</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ad68239e36c4c06b2f56e9ef03c6efb99">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00089">89</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00095">95</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00183">getParameter()</a>.</p>
-<div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-7-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../d9/d40/InternalPluginBase_8h_source.html#l00202">Aestra::Audio::InternalPluginBase::getParameter()</a>, and <a class="el" href="../../d9/d40/InternalPluginBase_8h_source.html#l00441">Aestra::Audio::InternalPluginBase::isBypassed()</a>.</p>
+<div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-4-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-7-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient_aa87879d2d46eee6f5ef3248fba5e9448_cgraph.svg" width="475" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
-</div>
-
-</div>
-</div>
-<a id="a7d02e75d1478015782e97a0a23793708" name="a7d02e75d1478015782e97a0a23793708"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7d02e75d1478015782e97a0a23793708">&#9670;&#160;</a></span>resetWatchdog()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">void Aestra::Audio::Plugins::AestraTransient::resetWatchdog </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Reset watchdog statistics and re-enable plugin if bypassed. </p>
-
-<p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a6d96b47bc0a727596e2a2e80dcdb2240">Aestra::Audio::IPluginInstance</a>.</p>
-
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00289">289</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
-
-</div>
-</div>
-<a id="a4c271e282f7c0dfa00665efacdae8d54" name="a4c271e282f7c0dfa00665efacdae8d54"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4c271e282f7c0dfa00665efacdae8d54">&#9670;&#160;</a></span>resizeEditor()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool Aestra::Audio::Plugins::AestraTransient::resizeEditor </td>
-          <td>(</td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>width</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>height</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Resize editor to new size. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">width</td><td>New width in pixels </td></tr>
-    <tr><td class="paramname">height</td><td>New height in pixels </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>true if resize was successful </dd></dl>
-
-<p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#abf06171c7364cfe62ebcc23fe1cabc1f">Aestra::Audio::IPluginInstance</a>.</p>
-
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00283">283</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
-
-</div>
-</div>
-<a id="aaa1d15c4e03f5a907436bffb611b83e4" name="aaa1d15c4e03f5a907436bffb611b83e4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aaa1d15c4e03f5a907436bffb611b83e4">&#9670;&#160;</a></span>saveState()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::vector&lt; uint8_t &gt; Aestra::Audio::Plugins::AestraTransient::saveState </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Save plugin state to binary data. </p>
-<dl class="section return"><dt>Returns</dt><dd>State data, empty vector on failure </dd></dl>
-
-<p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a8c7d2dc9a6e2ccb6f56202a0fdbeab5c">Aestra::Audio::IPluginInstance</a>.</p>
-
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00235">235</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
-
-<p class="reference">References <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00183">getParameter()</a>.</p>
-<div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-8-summary" class="dynsummary" style="display:block;">
-</div>
-<div id="dynsection-8-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient_aaa1d15c4e03f5a907436bffb611b83e4_cgraph.svg" width="490" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div id="dynsection-4-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient_aa87879d2d46eee6f5ef3248fba5e9448_cgraph.svg" width="455" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -1317,65 +921,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00293">293</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
-
-</div>
-</div>
-<a id="a345f3ec84be3759190a6f5bacf424b1d" name="a345f3ec84be3759190a6f5bacf424b1d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a345f3ec84be3759190a6f5bacf424b1d">&#9670;&#160;</a></span>setParameter()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">void Aestra::Audio::Plugins::AestraTransient::setParameter </td>
-          <td>(</td>
-          <td class="paramtype">uint32_t&#160;</td>
-          <td class="paramname"><em>id</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float&#160;</td>
-          <td class="paramname"><em>value</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Set parameter value (normalized 0-1) </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">id</td><td>Parameter ID </td></tr>
-    <tr><td class="paramname">value</td><td>Normalized value (0-1) </td></tr>
-  </table>
-  </dd>
-</dl>
-
-<p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aad11d079af48a8b2492ad744ca1b1b89">Aestra::Audio::IPluginInstance</a>.</p>
-
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00189">189</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00248">loadState()</a>.</p>
-<div id="dynsection-9" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-9-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-9-summary" class="dynsummary" style="display:block;">
-</div>
-<div id="dynsection-9-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient_a345f3ec84be3759190a6f5bacf424b1d_icgraph.svg" width="487" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
-</div>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00231">231</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
 </div>
 </div>
@@ -1406,7 +952,39 @@ Static Public Attributes</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#afbdcfe0566bdc5d54de9cc4c3f82e0c7">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00078">78</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00084">84</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+
+</div>
+</div>
+<a id="a66e2805bf00bcb51f1e063afc22192a8" name="a66e2805bf00bcb51f1e063afc22192a8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a66e2805bf00bcb51f1e063afc22192a8">&#9670;&#160;</a></span>stateMagic()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint32_t Aestra::Audio::Plugins::AestraTransient::stateMagic </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Magic for the state blob. </p>
+<p>Stable across releases: it is what tells this plugin's saved state apart from another's. </p>
+
+<p>Implements <a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#abd1a758de5cf5298a30d9b56c5790f4e">Aestra::Audio::InternalPluginBase</a>.</p>
+
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00194">194</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
 </div>
 </div>
@@ -1431,7 +1009,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00057">57</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00071">71</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
 </div>
 </div>
@@ -1455,7 +1033,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00051">51</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00065">65</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
 </div>
 </div>
@@ -1479,7 +1057,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00052">52</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00066">66</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
 </div>
 </div>
@@ -1503,7 +1081,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00056">56</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00070">70</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
 </div>
 </div>
@@ -1527,7 +1105,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00055">55</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00069">69</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
 </div>
 </div>
@@ -1551,7 +1129,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00053">53</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00067">67</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
 </div>
 </div>
@@ -1575,7 +1153,38 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00054">54</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00068">68</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+
+</div>
+</div>
+<a id="a1d6fd3e673614270f54b312a80c64ecc" name="a1d6fd3e673614270f54b312a80c64ecc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1d6fd3e673614270f54b312a80c64ecc">&#9670;&#160;</a></span>kSpecs</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">constexpr <a class="el" href="../../d2/d02/structAestra_1_1Audio_1_1ParamSpec.html">ParamSpec</a> Aestra::Audio::Plugins::AestraTransient::kSpecs[]</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span><span class="mlabel">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line">= {</div>
+<div class="line">        {kAttack, <span class="stringliteral">&quot;Attack&quot;</span>, <span class="stringliteral">&quot;ATK&quot;</span>, <span class="stringliteral">&quot;&quot;</span>, 0.5f, 0.0f, 1.0f, <span class="keyword">true</span>},</div>
+<div class="line">        {kSustain, <span class="stringliteral">&quot;Sustain&quot;</span>, <span class="stringliteral">&quot;SUS&quot;</span>, <span class="stringliteral">&quot;&quot;</span>, 0.5f, 0.0f, 1.0f, <span class="keyword">true</span>},</div>
+<div class="line">        {kOutput, <span class="stringliteral">&quot;Output&quot;</span>, <span class="stringliteral">&quot;OUT&quot;</span>, <span class="stringliteral">&quot;dB&quot;</span>, 0.5f, 0.0f, 1.0f, <span class="keyword">true</span>},</div>
+<div class="line">        {kMix, <span class="stringliteral">&quot;Mix&quot;</span>, <span class="stringliteral">&quot;MIX&quot;</span>, <span class="stringliteral">&quot;%&quot;</span>, 1.0f, 0.0f, 1.0f, <span class="keyword">true</span>},</div>
+<div class="line">        {kBypass, <span class="stringliteral">&quot;Bypass&quot;</span>, <span class="stringliteral">&quot;BYP&quot;</span>, <span class="stringliteral">&quot;&quot;</span>, 0.0f, 0.0f, 1.0f, <span class="keyword">true</span>, <span class="keyword">true</span>, <span class="keyword">false</span>, 1},</div>
+<div class="line">    }</div>
+</div><!-- fragment -->
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00055">55</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
 </div>
 </div>
@@ -1599,7 +1208,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00038">38</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d6e/AestraTransient_8h_source.html#l00040">40</a> of file <a class="el" href="../../df/d6e/AestraTransient_8h_source.html">AestraTransient.h</a>.</p>
 
 </div>
 </div>

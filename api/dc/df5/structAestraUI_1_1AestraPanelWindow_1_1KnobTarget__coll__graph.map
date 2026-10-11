@@ -1,0 +1,9 @@
+<map id="AestraUI::AestraPanelWindow::KnobTarget" name="AestraUI::AestraPanelWindow::KnobTarget">
+<area shape="rect" id="Node000001" title=" " alt="" coords="65,225,279,265"/>
+<area shape="rect" id="Node000002" href="$da/d4e/structAestraUI_1_1NUIRect.html" title=" " alt="" coords="5,137,144,163"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="98,170,154,223,150,227,95,174"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="49,5,100,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="77,44,77,137,72,137,72,44"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="168,137,243,163"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="199,176,181,226,176,224,194,175"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="AestraUI::EditorKit::KnobLook" name="AestraUI::EditorKit::KnobLook">
+<area shape="rect" id="Node000001" title="The variable parts of the standard knob." alt="" coords="5,123,148,163"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="11,5,62,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="35,45,35,71,40,98,57,121,52,124,36,100,30,72,30,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="91,5,142,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="111,45,85,123,80,122,106,43"/>
+</map>

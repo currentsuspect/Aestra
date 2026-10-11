@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::InternalPluginBase::seedDefaultsOnce" name="Aestra::Audio::InternalPluginBase::seedDefaultsOnce">
+<area shape="rect" id="Node000001" title="Seeds defaults on the first initialize() of a fresh instance only." alt="" coords="5,5,212,45"/>
+<area shape="rect" id="Node000002" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a2e301b64b16ed67a488e198646eef78c" title="Writes the table&#39;s defaults into storage." alt="" coords="260,5,467,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="212,23,246,23,246,28,212,28"/>
+</map>

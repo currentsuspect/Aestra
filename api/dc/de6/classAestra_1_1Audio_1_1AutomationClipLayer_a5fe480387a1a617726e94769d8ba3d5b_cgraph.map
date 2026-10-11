@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::AutomationClipLayer::onMouse" name="Aestra::Audio::AutomationClipLayer::onMouse">
+<area shape="rect" id="Node000001" title="True when the layer took the event. editedCurve is set to the curve the user touched,..." alt="" coords="5,37,199,77"/>
+<area shape="rect" id="Node000002" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ac43fba7fdd869090f01e2271ebd4717b" title="Get a mutable lane by identifier." alt="" coords="248,5,453,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="198,42,234,38,235,43,199,48"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aacc633d4302bc413e6aead5df052520b" title="Get the playlist model." alt="" coords="247,69,455,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="199,67,233,72,233,77,198,72"/>
+</map>

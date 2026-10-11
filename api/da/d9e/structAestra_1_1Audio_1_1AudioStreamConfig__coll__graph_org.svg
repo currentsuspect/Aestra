@@ -138,10 +138,10 @@
 <text text-anchor="middle" x="518.5" y="-192.5" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">maxCallbackNs</text>
 <text text-anchor="middle" x="518.5" y="-181.5" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">overruns</text>
 <text text-anchor="middle" x="518.5" y="-170.5" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">recoveryModeActivations</text>
-<text text-anchor="middle" x="518.5" y="-159.5" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">rtAllocationViolations</text>
-<text text-anchor="middle" x="518.5" y="-148.5" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">rtLockViolations</text>
-<text text-anchor="middle" x="518.5" y="-137.5" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">rtLogViolations</text>
-<text text-anchor="middle" x="518.5" y="-126.5" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">srcActiveBlocks</text>
+<text text-anchor="middle" x="518.5" y="-159.5" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">rtMisuseViolations</text>
+<text text-anchor="middle" x="518.5" y="-148.5" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">srcActiveBlocks</text>
+<text text-anchor="middle" x="518.5" y="-137.5" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">timedCallbackCount</text>
+<text text-anchor="middle" x="518.5" y="-126.5" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">totalCallbackNs</text>
 <text text-anchor="middle" x="518.5" y="-115.5" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">...</text>
 </g>
 <!-- Node6 -->

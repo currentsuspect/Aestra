@@ -1,11 +1,15 @@
 <map id="Aestra::Audio::Plugins::AestraComp::process" name="Aestra::Audio::Plugins::AestraComp::process">
-<area shape="rect" id="Node000001" title="Process audio through the plugin." alt="" coords="5,37,173,77"/>
-<area shape="rect" id="Node000002" href="$d5/d6c/classAestra_1_1Audio_1_1DSP_1_1Oversampler.html#a4e5e6bd41d3e14fdadfc07f5c5735b0f" title="factor() subsamples &#45;&gt; one output sample." alt="" coords="221,5,427,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="173,43,207,39,208,44,174,49"/>
-<area shape="rect" id="Node000004" href="$d5/d6c/classAestra_1_1Audio_1_1DSP_1_1Oversampler.html#a3883291e06ad5a73a2eb19b68b2aa1f9" title="One input sample &#45;&gt; factor() subsamples in out (out must hold &gt;= 4)." alt="" coords="231,69,417,109"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="174,66,217,72,217,77,173,71"/>
-<area shape="rect" id="Node000003" href="$d0/d72/classAestra_1_1Audio_1_1DSP_1_1HalfbandStage.html#aaa020a93b14553df4a2272b9483ee4f6" title="Two input samples at 2x rate &#45;&gt; one output sample (decimating FIR)." alt="" coords="475,5,692,45"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="427,23,461,23,461,28,427,28"/>
-<area shape="rect" id="Node000005" href="$d0/d72/classAestra_1_1Audio_1_1DSP_1_1HalfbandStage.html#ab3411bf8dbae79ddf6ae16fafdb6d056" title="One input sample &#45;&gt; two output samples at 2x rate." alt="" coords="484,69,683,109"/>
-<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="418,87,470,87,470,92,418,92"/>
+<area shape="rect" id="Node000001" title="Process audio through the plugin." alt="" coords="5,101,173,141"/>
+<area shape="rect" id="Node000002" href="$d5/d6c/classAestra_1_1Audio_1_1DSP_1_1Oversampler.html#a4e5e6bd41d3e14fdadfc07f5c5735b0f" title="factor() subsamples &#45;&gt; one output sample." alt="" coords="222,5,427,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="127,99,220,55,240,47,242,52,222,60,129,104"/>
+<area shape="rect" id="Node000004" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a4f18baeddc491328b50de64d74e0384c" title="The bypass knob, read the way every plugin reads it." alt="" coords="221,69,428,109"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="173,107,207,103,208,108,174,113"/>
+<area shape="rect" id="Node000005" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a9aa58c835cb557a83214a51d403b0cfc" title="Relaxed read for a plugin&#39;s own DSP." alt="" coords="221,133,428,173"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="174,130,208,135,207,140,173,135"/>
+<area shape="rect" id="Node000006" href="$d5/d6c/classAestra_1_1Audio_1_1DSP_1_1Oversampler.html#a3883291e06ad5a73a2eb19b68b2aa1f9" title="One input sample &#45;&gt; factor() subsamples in out (out must hold &gt;= 4)." alt="" coords="231,197,418,237"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="129,139,222,183,242,190,240,195,220,188,127,144"/>
+<area shape="rect" id="Node000003" href="$d0/d72/classAestra_1_1Audio_1_1DSP_1_1HalfbandStage.html#aaa020a93b14553df4a2272b9483ee4f6" title="Two input samples at 2x rate &#45;&gt; one output sample (decimating FIR)." alt="" coords="476,5,693,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="427,23,462,23,462,28,427,28"/>
+<area shape="rect" id="Node000007" href="$d0/d72/classAestra_1_1Audio_1_1DSP_1_1HalfbandStage.html#ab3411bf8dbae79ddf6ae16fafdb6d056" title="One input sample &#45;&gt; two output samples at 2x rate." alt="" coords="485,197,684,237"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="418,215,472,215,472,220,418,220"/>
 </map>

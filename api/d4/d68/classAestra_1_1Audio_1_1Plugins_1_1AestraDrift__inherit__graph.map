@@ -1,5 +1,7 @@
 <map id="Aestra::Audio::Plugins::AestraDrift" name="Aestra::Audio::Plugins::AestraDrift">
-<area shape="rect" id="Node000001" title=" " alt="" coords="31,79,195,119"/>
-<area shape="rect" id="Node000002" href="$de/d54/classAestra_1_1Audio_1_1IPluginInstance.html" title="Abstract plugin instance interface." alt="" coords="5,5,221,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="116,44,116,79,111,79,111,44"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="43,152,207,192"/>
+<area shape="rect" id="Node000002" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html" title="Shared base for built&#45;in effect plugins." alt="" coords="5,79,244,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="127,118,127,152,122,152,122,118"/>
+<area shape="rect" id="Node000003" href="$de/d54/classAestra_1_1Audio_1_1IPluginInstance.html" title="Abstract plugin instance interface." alt="" coords="17,5,233,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="127,44,127,79,122,79,122,44"/>
 </map>

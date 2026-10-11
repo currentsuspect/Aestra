@@ -46,7 +46,7 @@
   </g>
 </defs>
 <script type="application/ecmascript">
-var viewWidth = 604;
+var viewWidth = 808;
 var viewHeight = 326;
 var sectionId = 'dynsection-5';
 </script>
@@ -159,39 +159,39 @@ var sectionId = 'dynsection-5';
 </a>
 </g>
 </g>
-<!-- Node8 -->
-<g id="Node000008" class="node">
-<title>Node8</title>
-<g id="a_Node000008"><a xlink:href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a46d9c986c264576c28e32e061b81d877" target="_top" xlink:title="Request a non&#45;real&#45;time rebuild of the live playback graph.">
+<!-- Node11 -->
+<g id="Node000011" class="node">
+<title>Node11</title>
+<g id="a_Node000011"><a xlink:href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a46d9c986c264576c28e32e061b81d877" target="_top" xlink:title="Request a non&#45;real&#45;time rebuild of the live playback graph.">
 <polygon fill="white" stroke="#666666" points="371.5,-78 215.5,-78 215.5,-48 371.5,-48 371.5,-78"/>
 <text text-anchor="start" x="223.5" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackManager</text>
 <text text-anchor="middle" x="293.5" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">::requestAudioGraphRebuild</text>
 </a>
 </g>
 </g>
-<!-- Node1&#45;&gt;Node8 -->
-<g id="edge7_Node000001_Node000008" class="edge">
-<title>Node1&#45;&gt;Node8</title>
-<g id="a_edge7_Node000001_Node000008"><a xlink:title=" ">
+<!-- Node1&#45;&gt;Node11 -->
+<g id="edge10_Node000001_Node000011" class="edge">
+<title>Node1&#45;&gt;Node11</title>
+<g id="a_edge10_Node000001_Node000011"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M105.35,-143.8C128.28,-127.7 166.7,-102.52 203,-87 207.78,-84.96 212.77,-83.05 217.86,-81.27"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="219.31,-84.48 227.71,-78.02 217.12,-77.83 219.31,-84.48"/>
 </a>
 </g>
 </g>
-<!-- Node9 -->
-<g id="Node000009" class="node">
-<title>Node9</title>
-<g id="a_Node000009"><a xlink:href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#afef7f68c8b1a5e22fb9b0ddfb21731ed" target="_top" xlink:title="Replace the source pattern referenced by one clip instance.">
+<!-- Node12 -->
+<g id="Node000012" class="node">
+<title>Node12</title>
+<g id="a_Node000012"><a xlink:href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#afef7f68c8b1a5e22fb9b0ddfb21731ed" target="_top" xlink:title="Replace the source pattern referenced by one clip instance.">
 <polygon fill="white" stroke="#666666" points="370.5,-30 216.5,-30 216.5,0 370.5,0 370.5,-30"/>
 <text text-anchor="start" x="224.5" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::PlaylistModel</text>
 <text text-anchor="middle" x="293.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::setClipPattern</text>
 </a>
 </g>
 </g>
-<!-- Node1&#45;&gt;Node9 -->
-<g id="edge8_Node000001_Node000009" class="edge">
-<title>Node1&#45;&gt;Node9</title>
-<g id="a_edge8_Node000001_Node000009"><a xlink:title=" ">
+<!-- Node1&#45;&gt;Node12 -->
+<g id="edge11_Node000001_Node000012" class="edge">
+<title>Node1&#45;&gt;Node12</title>
+<g id="a_edge11_Node000001_Node000012"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M95.07,-143.96C113.81,-118.42 155.42,-66.68 203,-39 206.01,-37.25 209.15,-35.62 212.38,-34.11"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="213.85,-37.29 221.68,-30.15 211.11,-30.85 213.85,-37.29"/>
 </a>
@@ -200,10 +200,10 @@ var sectionId = 'dynsection-5';
 <!-- Node7 -->
 <g id="Node000007" class="node">
 <title>Node7</title>
-<g id="a_Node000007"><a xlink:href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#aff1a4e0952563ea158cd48104e3dde38" target="_top" xlink:title="Remove every scheduled instance and queued event.">
-<polygon fill="white" stroke="#666666" points="596,-126 420,-126 420,-96 596,-96 596,-126"/>
-<text text-anchor="start" x="428" y="-114" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::PatternPlayback</text>
-<text text-anchor="middle" x="508" y="-103" font-family="Helvetica,sans-Serif" font-size="10.00">Engine::clearScheduledInstances</text>
+<g id="a_Node000007"><a xlink:href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#aafad448642f0a160f19c5f9000c48cb2" target="_top" xlink:title="Pattern content changed while playing (RT&#45;safe producer&#45;side flag).">
+<polygon fill="white" stroke="#666666" points="588,-174 421,-174 421,-144 588,-144 588,-174"/>
+<text text-anchor="start" x="429" y="-162" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::PatternPlayback</text>
+<text text-anchor="middle" x="504.5" y="-151" font-family="Helvetica,sans-Serif" font-size="10.00">Engine::patternContentEdited</text>
 </a>
 </g>
 </g>
@@ -211,8 +211,65 @@ var sectionId = 'dynsection-5';
 <g id="edge6_Node000006_Node000007" class="edge">
 <title>Node6&#45;&gt;Node7</title>
 <g id="a_edge6_Node000006_Node000007"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M384,-111C392.56,-111 401.27,-111 409.9,-111"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="409.98,-114.5 419.98,-111 409.98,-107.5 409.98,-114.5"/>
+<path fill="none" stroke="#63b8ff" d="M360.06,-126.06C381.75,-131.04 406.05,-136.62 428.4,-141.75"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="427.65,-145.17 438.18,-144 429.21,-138.35 427.65,-145.17"/>
+</a>
+</g>
+</g>
+<!-- Node8 -->
+<g id="Node000008" class="node">
+<title>Node8</title>
+<g id="a_Node000008"><a xlink:href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a54dd8e4432b826123bfab7358b029a7e" target="_top" xlink:title="Remove a slot while playing (non&#45;RT thread).">
+<polygon fill="white" stroke="#666666" points="589,-126 420,-126 420,-96 589,-96 589,-126"/>
+<text text-anchor="start" x="428" y="-114" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::PatternPlayback</text>
+<text text-anchor="middle" x="504.5" y="-103" font-family="Helvetica,sans-Serif" font-size="10.00">Engine::removePatternInstance</text>
+</a>
+</g>
+</g>
+<!-- Node6&#45;&gt;Node8 -->
+<g id="edge7_Node000006_Node000008" class="edge">
+<title>Node6&#45;&gt;Node8</title>
+<g id="a_edge7_Node000006_Node000008"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M384.04,-111C392.47,-111 401.03,-111 409.5,-111"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="409.77,-114.5 419.77,-111 409.77,-107.5 409.77,-114.5"/>
+</a>
+</g>
+</g>
+<!-- Node9 -->
+<g id="Node000009" class="node">
+<title>Node9</title>
+<g id="a_Node000009"><a xlink:href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a2477b5e6144cf3ec4606170c5bfca1b8" target="_top" xlink:title="Re&#45;place a slot while playing without disturbing what already sounds (non&#45;RT thread).">
+<polygon fill="white" stroke="#666666" points="588,-78 421,-78 421,-48 588,-48 588,-78"/>
+<text text-anchor="start" x="429" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::PatternPlayback</text>
+<text text-anchor="middle" x="504.5" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">Engine::updatePatternInstance</text>
+</a>
+</g>
+</g>
+<!-- Node6&#45;&gt;Node9 -->
+<g id="edge8_Node000006_Node000009" class="edge">
+<title>Node6&#45;&gt;Node9</title>
+<g id="a_edge8_Node000006_Node000009"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M360.06,-95.94C381.75,-90.96 406.05,-85.38 428.4,-80.25"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="429.21,-83.65 438.18,-78 427.65,-76.83 429.21,-83.65"/>
+</a>
+</g>
+</g>
+<!-- Node10 -->
+<g id="Node000010" class="node">
+<title>Node10</title>
+<g id="a_Node000010"><a xlink:href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a4a8cd3c7804784b829d93cc5556ddda5" target="_top" xlink:title="Schedule new pattern instance (non&#45;RT thread)">
+<polygon fill="white" stroke="#666666" points="800,-78 625,-78 625,-48 800,-48 800,-78"/>
+<text text-anchor="start" x="633" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::PatternPlayback</text>
+<text text-anchor="middle" x="712.5" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">Engine::schedulePatternInstance</text>
+</a>
+</g>
+</g>
+<!-- Node9&#45;&gt;Node10 -->
+<g id="edge9_Node000009_Node000010" class="edge">
+<title>Node9&#45;&gt;Node10</title>
+<g id="a_edge9_Node000009_Node000010"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M588.1,-63C596.88,-63 605.87,-63 614.8,-63"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="614.84,-66.5 624.84,-63 614.84,-59.5 614.84,-66.5"/>
 </a>
 </g>
 </g>

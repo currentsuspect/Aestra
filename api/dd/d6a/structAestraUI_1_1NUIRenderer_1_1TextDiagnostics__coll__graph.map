@@ -1,0 +1,16 @@
+<map id="AestraUI::NUIRenderer::TextDiagnostics" name="AestraUI::NUIRenderer::TextDiagnostics">
+<area shape="rect" id="Node000001" title="Read&#45;only introspection of the text pipeline, for diagnostics (V8&#45;C9)." alt="" coords="221,255,390,295"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,130,56,155"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="26,169,23,201,26,216,34,229,46,238,63,246,109,258,165,265,221,269,220,274,164,270,108,263,61,251,43,243,30,232,21,218,18,201,21,169"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="161,5,212,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="192,44,203,99,224,162,256,213,289,253,285,256,251,216,219,164,197,101,187,45"/>
+<area shape="rect" id="Node000004" href="$dc/dac/structAestraUI_1_1NUIRenderer_1_1TextDiagnostics_1_1Tier.html" title=" " alt="" coords="389,123,558,163"/>
+<area shape="poly" id="edge6_Node000004_Node000003" title=" " alt="" coords="211,38,249,68,296,96,335,109,389,122,388,127,333,114,294,101,246,73,207,42"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="440,173,331,257,328,252,436,169"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="321,5,372,31"/>
+<area shape="poly" id="edge8_Node000001_Node000005" title=" " alt="" coords="341,45,320,123,311,196,308,255,303,254,306,195,315,122,335,44"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="371,39,455,120,452,124,367,43"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="533,5,571,31"/>
+<area shape="poly" id="edge7_Node000001_Node000006" title=" " alt="" coords="581,38,590,54,600,85,600,111,591,137,573,164,534,202,488,230,438,250,391,263,389,258,437,245,485,225,531,198,569,161,586,135,595,111,595,85,586,56,576,41"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="536,43,526,56,486,124,481,121,522,53,532,40"/>
+</map>

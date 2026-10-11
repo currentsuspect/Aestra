@@ -206,7 +206,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>}</div>
 <div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span> </div>
 <div class="foldopen" id="foldopen00124" data-start="{" data-end="}">
-<div class="line"><a id="l00124" name="l00124"></a><span class="lineno"><a class="line" href="../../d0/d3f/classAestra_1_1Audio_1_1AudioGraphBuilder.html#a808cde6e5a45b7255833bcdab7ac081b">  124</a></span><a class="code hl_struct" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html">AudioGraph</a> <a class="code hl_function" href="../../d0/d3f/classAestra_1_1Audio_1_1AudioGraphBuilder.html#a808cde6e5a45b7255833bcdab7ac081b">AudioGraphBuilder::buildFromTrackManager</a>(<a class="code hl_class" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html">TrackManager</a>&amp; trackManager) {</div>
+<div class="line"><a id="l00124" name="l00124"></a><span class="lineno"><a class="line" href="../../d0/d3f/classAestra_1_1Audio_1_1AudioGraphBuilder.html#a0e05724d04fe5147f5aa306914aa6fbf">  124</a></span><a class="code hl_struct" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html">AudioGraph</a> <a class="code hl_function" href="../../d0/d3f/classAestra_1_1Audio_1_1AudioGraphBuilder.html#a0e05724d04fe5147f5aa306914aa6fbf">AudioGraphBuilder::buildFromTrackManager</a>(<a class="code hl_class" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html">TrackManager</a>&amp; trackManager, <span class="keywordtype">bool</span> includeClips) {</div>
 <div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>    <span class="comment">// Phase 4 (F1): apply finished anti-alias prefilter results and queue missing</span></div>
 <div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>    <span class="comment">// work for downsampled clips BEFORE the snapshot resolves clip buffers, so this</span></div>
 <div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>    <span class="comment">// build picks up every copy that is ready (never blocks; fallback = original).</span></div>
@@ -252,75 +252,86 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span> </div>
 <div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>    <span class="keyword">auto</span> snapshot = playlist.buildRuntimeSnapshot(patterns, sources);</div>
 <div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>    <span class="keywordflow">if</span> (snapshot) {</div>
-<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>        uint64_t maxEndSample = 0;</div>
-<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span>        <span class="keywordtype">double</span> projectSampleRate = playlist.getProjectSampleRate();</div>
-<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span> </div>
-<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>        <span class="comment">// Playlist lanes are arrangement-only. Audio patterns carry their own</span></div>
-<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>        <span class="comment">// stable mixer destination, so moving a clip between lanes cannot reroute it.</span></div>
-<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> laneIdx = 0; laneIdx &lt; snapshot-&gt;lanes.size(); ++laneIdx) {</div>
-<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>            <span class="comment">// Non-const: automationCurves below is genuinely moved out of the</span></div>
-<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>            <span class="comment">// snapshot (std::move through a const ref silently copies).</span></div>
-<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>            <span class="keyword">auto</span>&amp; laneInfo = snapshot-&gt;lanes[laneIdx];</div>
-<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span> </div>
-<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>            <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; clipInfo : laneInfo.clips) {</div>
-<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>                <span class="keywordflow">if</span> (!clipInfo.isValid())</div>
-<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>                    <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span> </div>
-<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>                <a class="code hl_struct" href="../../de/d56/structAestra_1_1Audio_1_1ClipRenderState.html">ClipRenderState</a> clip = ClipRenderKernel::makeClipRenderState(clipInfo, projectSampleRate);</div>
-<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span> </div>
-<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>                <span class="keywordflow">if</span> (clip.endSample &gt; maxEndSample) {</div>
-<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>                    maxEndSample = clip.endSample;</div>
-<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>                }</div>
-<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span> </div>
-<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>                <span class="keywordflow">if</span> (clipInfo.mixerChannelId == 0) {</div>
-<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>                    graph.<a class="code hl_variable" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html#a61d3d4298e57aed0e73fca99dca855f7">masterClips</a>.push_back(std::move(clip));</div>
-<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>                } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>                    <span class="keyword">const</span> <span class="keyword">auto</span> destination = std::find_if(graph.tracks.begin(), graph.tracks.end(),</div>
-<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>                                                          [&amp;clipInfo](<span class="keyword">const</span> <a class="code hl_struct" href="../../d0/d5c/structAestra_1_1Audio_1_1TrackRenderState.html">TrackRenderState</a>&amp; track) {</div>
-<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>                                                              return track.trackId == clipInfo.mixerChannelId;</div>
-<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>                                                          });</div>
-<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>                    <span class="keywordflow">if</span> (destination != graph.tracks.end()) {</div>
-<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>                        destination-&gt;clips.push_back(std::move(clip));</div>
-<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>                    } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>                        <span class="comment">// Missing/corrupt destinations fail safe to Master rather</span></div>
-<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>                        <span class="comment">// than dropping an audible source from the project.</span></div>
-<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>                        graph.<a class="code hl_variable" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html#a61d3d4298e57aed0e73fca99dca855f7">masterClips</a>.push_back(std::move(clip));</div>
-<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>                    }</div>
-<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>                }</div>
-<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>            }</div>
-<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span> </div>
-<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>            <span class="comment">// Automation is displayed on Playlist lanes but targets an</span></div>
-<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>            <span class="comment">// explicit stable mixer insert. A lane may host curves for</span></div>
-<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>            <span class="comment">// multiple inserts without owning any of them.</span></div>
-<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>            <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; curve : laneInfo.automationCurves) {</div>
-<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>                <span class="keyword">const</span> <span class="keyword">auto</span> destination =</div>
-<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>                    std::find_if(graph.tracks.begin(), graph.tracks.end(), [&amp;curve](<span class="keyword">const</span> <a class="code hl_struct" href="../../d0/d5c/structAestra_1_1Audio_1_1TrackRenderState.html">TrackRenderState</a>&amp; track) {</div>
-<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>                        return curve.mixerChannelId != 0 &amp;&amp; track.trackId == curve.mixerChannelId;</div>
-<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>                    });</div>
-<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>                <span class="keywordflow">if</span> (destination != graph.tracks.end()) {</div>
-<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>                    destination-&gt;automationCurves.push_back(std::move(curve));</div>
-<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>                }</div>
-<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>            }</div>
-<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>        }</div>
-<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span> </div>
-<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>        graph.timelineEndSample = maxEndSample;</div>
-<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>        graph.bpm = snapshot-&gt;bpm;</div>
-<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>    }</div>
-<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span> </div>
-<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>    finalizeAudioGraphRouting(graph);</div>
-<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>    <span class="keywordflow">return</span> graph;</div>
-<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>}</div>
+<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>        <span class="comment">// Control values are not clip data: AudioEngine converts samples to beats</span></div>
+<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span>        <span class="comment">// with graph.bpm and evaluates TrackRenderState::automationCurves, so a</span></div>
+<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span>        <span class="comment">// clip-free tail must keep both or it loses automation and falls back to</span></div>
+<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>        <span class="comment">// the default tempo.</span></div>
+<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>        graph.bpm = snapshot-&gt;bpm;</div>
+<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>        uint64_t maxEndSample = 0;</div>
+<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>        <span class="keywordtype">double</span> projectSampleRate = playlist.getProjectSampleRate();</div>
+<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span> </div>
+<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>        <span class="comment">// Playlist lanes are arrangement-only. Audio patterns carry their own</span></div>
+<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>        <span class="comment">// stable mixer destination, so moving a clip between lanes cannot reroute it.</span></div>
+<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> laneIdx = 0; includeClips &amp;&amp; laneIdx &lt; snapshot-&gt;lanes.size(); ++laneIdx) {</div>
+<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>            <span class="comment">// Non-const: automationCurves below is genuinely moved out of the</span></div>
+<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>            <span class="comment">// snapshot (std::move through a const ref silently copies).</span></div>
+<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>            <span class="keyword">auto</span>&amp; laneInfo = snapshot-&gt;lanes[laneIdx];</div>
+<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span> </div>
+<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>            <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; clipInfo : laneInfo.clips) {</div>
+<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>                <span class="keywordflow">if</span> (!clipInfo.isValid())</div>
+<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>                    <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span> </div>
+<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>                <a class="code hl_struct" href="../../de/d56/structAestra_1_1Audio_1_1ClipRenderState.html">ClipRenderState</a> clip = ClipRenderKernel::makeClipRenderState(clipInfo, projectSampleRate);</div>
+<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span> </div>
+<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>                <span class="keywordflow">if</span> (clip.endSample &gt; maxEndSample) {</div>
+<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>                    maxEndSample = clip.endSample;</div>
+<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>                }</div>
+<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span> </div>
+<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>                <span class="keywordflow">if</span> (clipInfo.mixerChannelId == 0) {</div>
+<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>                    graph.<a class="code hl_variable" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html#a61d3d4298e57aed0e73fca99dca855f7">masterClips</a>.push_back(std::move(clip));</div>
+<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>                } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>                    <span class="keyword">const</span> <span class="keyword">auto</span> destination = std::find_if(graph.tracks.begin(), graph.tracks.end(),</div>
+<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>                                                          [&amp;clipInfo](<span class="keyword">const</span> <a class="code hl_struct" href="../../d0/d5c/structAestra_1_1Audio_1_1TrackRenderState.html">TrackRenderState</a>&amp; track) {</div>
+<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>                                                              return track.trackId == clipInfo.mixerChannelId;</div>
+<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>                                                          });</div>
+<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>                    <span class="keywordflow">if</span> (destination != graph.tracks.end()) {</div>
+<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>                        destination-&gt;clips.push_back(std::move(clip));</div>
+<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>                    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>                        <span class="comment">// Missing/corrupt destinations fail safe to Master rather</span></div>
+<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>                        <span class="comment">// than dropping an audible source from the project.</span></div>
+<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>                        graph.<a class="code hl_variable" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html#a61d3d4298e57aed0e73fca99dca855f7">masterClips</a>.push_back(std::move(clip));</div>
+<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>                    }</div>
+<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>                }</div>
+<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>            }</div>
+<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>        }</div>
+<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span> </div>
+<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>        <span class="comment">// Automation is control data, not clip data: a clip-free tail still has</span></div>
+<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>        <span class="comment">// to follow it, so this runs whether or not clips are included. Curves are</span></div>
+<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>        <span class="comment">// displayed on Playlist lanes but target an explicit stable mixer insert,</span></div>
+<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>        <span class="comment">// so a lane may host curves for multiple inserts without owning any of them.</span></div>
+<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>        <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; laneInfo : snapshot-&gt;lanes) {</div>
+<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>            <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; curve : laneInfo.automationCurves) {</div>
+<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>                <span class="keywordflow">if</span> (curve.muted)</div>
+<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>                    <span class="keywordflow">continue</span>; <span class="comment">// baked into audio (Bounce in Place): kept in the project, not evaluated</span></div>
+<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>                <span class="keyword">const</span> <span class="keyword">auto</span> destination =</div>
+<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>                    std::find_if(graph.tracks.begin(), graph.tracks.end(), [&amp;curve](<span class="keyword">const</span> <a class="code hl_struct" href="../../d0/d5c/structAestra_1_1Audio_1_1TrackRenderState.html">TrackRenderState</a>&amp; track) {</div>
+<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>                        return curve.mixerChannelId != 0 &amp;&amp; track.trackId == curve.mixerChannelId;</div>
+<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>                    });</div>
+<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>                <span class="keywordflow">if</span> (destination != graph.tracks.end()) {</div>
+<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>                    destination-&gt;automationCurves.push_back(std::move(curve));</div>
+<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>                }</div>
+<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>            }</div>
+<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>        }</div>
+<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span> </div>
+<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>        <span class="keywordflow">if</span> (includeClips) {</div>
+<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>            graph.timelineEndSample = maxEndSample;</div>
+<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>        }</div>
+<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>    }</div>
+<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span> </div>
+<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>    finalizeAudioGraphRouting(graph);</div>
+<div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span>    <span class="keywordflow">return</span> graph;</div>
+<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span>}</div>
 </div>
-<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span> </div>
-<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>} <span class="comment">// namespace Audio</span></div>
-<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span> </div>
+<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span>} <span class="comment">// namespace Audio</span></div>
+<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>} <span class="comment">// namespace Aestra</span></div>
 <div class="ttc" id="aAestraDebug_8h_html"><div class="ttname"><a href="../../dc/d50/AestraDebug_8h.html">AestraDebug.h</a></div><div class="ttdoc">Central debug flag definitions for Aestra.</div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1AudioGraphBuilder_html_a808cde6e5a45b7255833bcdab7ac081b"><div class="ttname"><a href="../../d0/d3f/classAestra_1_1Audio_1_1AudioGraphBuilder.html#a808cde6e5a45b7255833bcdab7ac081b">Aestra::Audio::AudioGraphBuilder::buildFromTrackManager</a></div><div class="ttdeci">static AudioGraph buildFromTrackManager(TrackManager &amp;trackManager)</div><div class="ttdoc">Build a render graph from the current TrackManager state.</div><div class="ttdef"><b>Definition</b> <a href="../../d7/d53/AudioGraphBuilder_8cpp_source.html#l00124">AudioGraphBuilder.cpp:124</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1MixerChannel_html_a76446df746c8a8b7fa97e05ea6e205f5"><div class="ttname"><a href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a76446df746c8a8b7fa97e05ea6e205f5">Aestra::Audio::MixerChannel::getEffectChainSnapshot</a></div><div class="ttdeci">std::shared_ptr&lt; const EffectChainSnapshot &gt; getEffectChainSnapshot() const</div><div class="ttdoc">The channel's effect chain snapshot, owned by EffectChain.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d8f/MixerChannel_8h_source.html#l00263">MixerChannel.h:263</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1AudioGraphBuilder_html_a0e05724d04fe5147f5aa306914aa6fbf"><div class="ttname"><a href="../../d0/d3f/classAestra_1_1Audio_1_1AudioGraphBuilder.html#a0e05724d04fe5147f5aa306914aa6fbf">Aestra::Audio::AudioGraphBuilder::buildFromTrackManager</a></div><div class="ttdeci">static AudioGraph buildFromTrackManager(TrackManager &amp;trackManager, bool includeClips=true)</div><div class="ttdoc">Build a render graph from the current TrackManager state.</div><div class="ttdef"><b>Definition</b> <a href="../../d7/d53/AudioGraphBuilder_8cpp_source.html#l00124">AudioGraphBuilder.cpp:124</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1MixerChannel_html_a76446df746c8a8b7fa97e05ea6e205f5"><div class="ttname"><a href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a76446df746c8a8b7fa97e05ea6e205f5">Aestra::Audio::MixerChannel::getEffectChainSnapshot</a></div><div class="ttdeci">std::shared_ptr&lt; const EffectChainSnapshot &gt; getEffectChainSnapshot() const</div><div class="ttdoc">The channel's effect chain snapshot, owned by EffectChain.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d8f/MixerChannel_8h_source.html#l00276">MixerChannel.h:276</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1TrackManager_html"><div class="ttname"><a href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html">Aestra::Audio::TrackManager</a></div><div class="ttdoc">Track/Channel manager for the audio engine.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/dfc/TrackManager_8h_source.html#l00056">TrackManager.h:56</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1TrackManager_html_a099a5c98a6cc1822fd44c1ca47dfb073"><div class="ttname"><a href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a099a5c98a6cc1822fd44c1ca47dfb073">Aestra::Audio::TrackManager::getChannelCount</a></div><div class="ttdeci">size_t getChannelCount() const</div><div class="ttdoc">Get the number of channels.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/dfc/TrackManager_8h_source.html#l00121">TrackManager.h:121</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1TrackManager_html_a653ee5f8eb05faa264a54e339a258233"><div class="ttname"><a href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a653ee5f8eb05faa264a54e339a258233">Aestra::Audio::TrackManager::getMasterChannel</a></div><div class="ttdeci">MixerChannel * getMasterChannel()</div><div class="ttdoc">Access the Master strip's mixer channel (id 0).</div><div class="ttdef"><b>Definition</b> <a href="../../d4/dfc/TrackManager_8h_source.html#l00113">TrackManager.h:113</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1TrackManager_html_a93242cb25f3e5b28316741a5efac881f"><div class="ttname"><a href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a93242cb25f3e5b28316741a5efac881f">Aestra::Audio::TrackManager::ensureClipPrefilters</a></div><div class="ttdeci">void ensureClipPrefilters()</div><div class="ttdoc">Drain finished anti-alias prefilter results into their sources, clear stale filtered variants,...</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d5a/TrackManager_8cpp_source.html#l00021">TrackManager.cpp:21</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1TrackManager_html_a93242cb25f3e5b28316741a5efac881f"><div class="ttname"><a href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a93242cb25f3e5b28316741a5efac881f">Aestra::Audio::TrackManager::ensureClipPrefilters</a></div><div class="ttdeci">void ensureClipPrefilters()</div><div class="ttdoc">Drain finished anti-alias prefilter results into their sources, clear stale filtered variants,...</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d5a/TrackManager_8cpp_source.html#l00025">TrackManager.cpp:25</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1TrackManager_html_aacc633d4302bc413e6aead5df052520b"><div class="ttname"><a href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#aacc633d4302bc413e6aead5df052520b">Aestra::Audio::TrackManager::getPlaylistModel</a></div><div class="ttdeci">PlaylistModel &amp; getPlaylistModel()</div><div class="ttdoc">Get the playlist model.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/dfc/TrackManager_8h_source.html#l00636">TrackManager.h:636</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1TrackManager_html_ae2a894b9df65e65c63cc1b05f4b2e2d1"><div class="ttname"><a href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae2a894b9df65e65c63cc1b05f4b2e2d1">Aestra::Audio::TrackManager::getSourceManager</a></div><div class="ttdeci">SourceManager &amp; getSourceManager()</div><div class="ttdoc">Get the source manager.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/dfc/TrackManager_8h_source.html#l00650">TrackManager.h:650</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1TrackManager_html_aef9478cbb19fa91eb0bcc60d51b77b77"><div class="ttname"><a href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#aef9478cbb19fa91eb0bcc60d51b77b77">Aestra::Audio::TrackManager::getChannel</a></div><div class="ttdeci">MixerChannel * getChannel(size_t index)</div><div class="ttdoc">Get a channel by index.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/dfc/TrackManager_8h_source.html#l00126">TrackManager.h:126</a></div></div>

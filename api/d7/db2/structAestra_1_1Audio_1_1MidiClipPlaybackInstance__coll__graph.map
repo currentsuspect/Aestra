@@ -1,9 +1,14 @@
 <map id="Aestra::Audio::MidiClipPlaybackInstance" name="Aestra::Audio::MidiClipPlaybackInstance">
-<area shape="rect" id="Node000001" title=" " alt="" coords="53,211,282,251"/>
-<area shape="rect" id="Node000002" href="$d0/dd3/structAestra_1_1Audio_1_1PatternID.html" title="Type&#45;safe identifier for patterns." alt="" coords="5,93,183,119"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="110,129,158,209,154,212,106,132"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="57,5,131,31"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="97,45,97,93,91,93,91,45"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="207,93,274,119"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="237,133,228,160,214,188,192,212,188,209,209,185,223,158,232,131"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="149,324,379,364"/>
+<area shape="rect" id="Node000002" href="$dd/da9/structAestra_1_1Audio_1_1ClipInstanceID.html" title="Unique identifier for a clip instance." alt="" coords="5,207,216,232"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="136,239,207,298,239,322,236,326,204,302,133,243"/>
+<area shape="rect" id="Node000003" href="$db/d96/structAestra_1_1Audio_1_1AestraUUID.html" title=" " alt="" coords="27,108,221,133"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="123,147,115,207,110,206,118,147"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="157,5,232,31"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="181,43,134,110,130,106,177,40"/>
+<area shape="rect" id="Node000005" href="$d0/dd3/structAestra_1_1Audio_1_1PatternID.html" title="Type&#45;safe identifier for patterns." alt="" coords="174,157,351,183"/>
+<area shape="poly" id="edge5_Node000005_Node000004" title=" " alt="" coords="208,42,260,156,255,158,203,44"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="266,197,267,324,261,324,260,197"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="352,207,419,232"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="366,244,285,326,281,322,362,240"/>
 </map>

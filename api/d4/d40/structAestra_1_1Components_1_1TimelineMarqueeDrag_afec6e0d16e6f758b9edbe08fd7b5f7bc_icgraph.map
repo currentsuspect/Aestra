@@ -1,0 +1,5 @@
+<map id="Aestra::Components::TimelineMarqueeDrag::begin" name="Aestra::Components::TimelineMarqueeDrag::begin">
+<area shape="rect" id="Node000001" title="Begin a drag on a marquee&#45;button press inside the track area." alt="" coords="261,5,436,60"/>
+<area shape="rect" id="Node000002" href="$d1/d11/classAestra_1_1Audio_1_1TrackManagerUI.html#a444e0cabb5e2d70130cb5aeb6c483cff" title="A left press on empty grid in the Select tool (SPEC 3 §1.2): the default marquee." alt="" coords="5,13,213,53"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="248,35,214,35,214,30,248,30"/>
+</map>

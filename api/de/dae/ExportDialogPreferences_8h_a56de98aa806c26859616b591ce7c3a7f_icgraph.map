@@ -1,0 +1,7 @@
+<map id="Aestra::isUsableOptionIndex" name="Aestra::isUsableOptionIndex">
+<area shape="rect" id="Node000001" title="True when index is a usable selection for a list of count entries." alt="" coords="245,37,452,62"/>
+<area shape="poly" id="edge3_Node000001_Node000001" title=" " alt="" coords="392,27,390,23,382,19,349,15,322,17,308,22,306,28,313,35,309,38,300,28,305,18,321,12,349,10,383,14,393,19,397,24"/>
+<area shape="rect" id="Node000002" href="$de/dae/ExportDialogPreferences_8h.html#a4d3300bb23839c03d4b78b449de63b10" title="Applies the stored record over live, field by field." alt="" coords="5,29,197,69"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="232,52,198,52,198,47,232,47"/>
+<area shape="poly" id="edge2_Node000002_Node000002" title=" " alt="" coords="143,18,128,11,101,8,78,10,63,15,58,21,61,28,56,30,53,20,60,10,77,5,101,3,130,6,145,13"/>
+</map>

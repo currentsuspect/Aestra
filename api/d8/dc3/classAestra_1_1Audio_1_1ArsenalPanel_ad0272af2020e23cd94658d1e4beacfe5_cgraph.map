@@ -1,11 +1,13 @@
 <map id="Aestra::Audio::ArsenalPanel::onRender" name="Aestra::Audio::ArsenalPanel::onRender">
-<area shape="rect" id="Node000001" title="Render the Arsenal panel and unit rows." alt="" coords="5,69,207,109"/>
-<area shape="rect" id="Node000002" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#aa94a93c30f05a4177c1cd16390cf7706" title="Drag&#45;hover ghost: dashed &quot;new unit&quot; outline while dragging a sample over empty Arsenal space." alt="" coords="255,69,456,109"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="207,87,241,87,241,92,207,92"/>
-<area shape="rect" id="Node000003" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#a8287a2b8a0d43d3eb03d7354121b4a95" title="Draw a line." alt="" coords="504,5,673,45"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="428,67,501,46,503,52,430,72"/>
-<area shape="rect" id="Node000004" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc" title="Draw text at the given position." alt="" coords="504,69,673,109"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="456,87,490,87,490,92,456,92"/>
-<area shape="rect" id="Node000005" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#abe394d6a3fb11601766324bcd8793ac3" title="Measure text dimensions." alt="" coords="504,133,673,173"/>
-<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="430,107,503,127,501,132,428,112"/>
+<area shape="rect" id="Node000001" title="Render the Arsenal panel and unit rows." alt="" coords="5,101,207,141"/>
+<area shape="rect" id="Node000002" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#aa94a93c30f05a4177c1cd16390cf7706" title="Drag&#45;hover ghost: dashed &quot;new unit&quot; outline while dragging a sample over empty Arsenal space." alt="" coords="255,101,456,141"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="207,119,241,119,241,124,207,124"/>
+<area shape="rect" id="Node000003" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#a8287a2b8a0d43d3eb03d7354121b4a95" title="Draw a line." alt="" coords="512,5,681,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="400,99,503,55,523,47,524,52,505,60,402,104"/>
+<area shape="rect" id="Node000004" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc" title="Draw text at the given position." alt="" coords="512,69,681,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="456,105,498,100,499,105,457,111"/>
+<area shape="rect" id="Node000005" href="$db/d1a/classAestraUI_1_1NUIComponent.html#a8ff75e00805b13ff9a6babd21f6cc556" title="Window&#45;absolute (V8&#45;X2b Window space): components render and hit&#45;test at bounds_ as&#45;is." alt="" coords="504,133,689,173"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="457,132,491,137,490,142,456,137"/>
+<area shape="rect" id="Node000006" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#abe394d6a3fb11601766324bcd8793ac3" title="Measure text dimensions." alt="" coords="512,197,681,237"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="402,139,505,183,524,190,523,195,503,188,400,144"/>
 </map>

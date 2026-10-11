@@ -46,9 +46,9 @@
   </g>
 </defs>
 <script type="application/ecmascript">
-var viewWidth = 509;
+var viewWidth = 531;
 var viewHeight = 86;
-var sectionId = 'dynsection-6';
+var sectionId = 'dynsection-4';
 </script>
 <script type="application/ecmascript" xlink:href="../../svg.min.js"/>
 <svg id="graph" class="graph">
@@ -67,10 +67,10 @@ var sectionId = 'dynsection-6';
 <!-- Node2 -->
 <g id="Node000002" class="node">
 <title>Node2</title>
-<g id="a_Node000002"><a xlink:href="../../d7/db4/classAestra_1_1Audio_1_1Plugins_1_1AestraComp.html#a82f07a156b7f1296bac8aac191c2d9d2" target="_top" xlink:title="Get all parameter descriptors.">
-<polygon fill="white" stroke="#666666" points="329.5,-78 169.5,-78 169.5,-48 329.5,-48 329.5,-78"/>
-<text text-anchor="start" x="177.5" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::Plugins</text>
-<text text-anchor="middle" x="249.5" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">::AestraComp::getParameters</text>
+<g id="a_Node000002"><a xlink:href="../../d5/d6c/classAestra_1_1Audio_1_1DSP_1_1Oversampler.html#a6d833467d0dec03356467e757b411b2b" target="_top" xlink:title="Non&#45;RT: design both stage kernels (factor&#45;independent).">
+<polygon fill="white" stroke="#666666" points="332,-78 167,-78 167,-48 332,-48 332,-78"/>
+<text text-anchor="start" x="175" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::DSP</text>
+<text text-anchor="middle" x="249.5" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">::Oversampler::prepareKernels</text>
 </a>
 </g>
 </g>
@@ -78,46 +78,65 @@ var sectionId = 'dynsection-6';
 <g id="edge1_Node000001_Node000002" class="edge">
 <title>Node1&#45;&gt;Node2</title>
 <g id="a_edge1_Node000001_Node000002"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M131.18,-47.53C140.26,-48.73 149.72,-49.97 159.16,-51.22"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="159,-54.73 169.37,-52.57 159.91,-47.79 159,-54.73"/>
-</a>
-</g>
-</g>
-<!-- Node3 -->
-<g id="Node000003" class="node">
-<title>Node3</title>
-<g id="a_Node000003"><a xlink:href="../../d5/d6c/classAestra_1_1Audio_1_1DSP_1_1Oversampler.html#a6d833467d0dec03356467e757b411b2b" target="_top" xlink:title="Non&#45;RT: design both stage kernels (factor&#45;independent).">
-<polygon fill="white" stroke="#666666" points="332,-30 167,-30 167,0 332,0 332,-30"/>
-<text text-anchor="start" x="175" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::DSP</text>
-<text text-anchor="middle" x="249.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::Oversampler::prepareKernels</text>
-</a>
-</g>
-</g>
-<!-- Node1&#45;&gt;Node3 -->
-<g id="edge2_Node000001_Node000003" class="edge">
-<title>Node1&#45;&gt;Node3</title>
-<g id="a_edge2_Node000001_Node000003"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M131.18,-30.47C139.48,-29.38 148.09,-28.24 156.72,-27.1"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="157.38,-30.55 166.84,-25.77 156.46,-23.61 157.38,-30.55"/>
+<path fill="none" stroke="#63b8ff" d="M131.18,-47.53C139.48,-48.62 148.09,-49.76 156.72,-50.9"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="156.46,-54.39 166.84,-52.23 157.38,-47.45 156.46,-54.39"/>
 </a>
 </g>
 </g>
 <!-- Node4 -->
 <g id="Node000004" class="node">
 <title>Node4</title>
-<g id="a_Node000004"><a xlink:href="../../d0/d72/classAestra_1_1Audio_1_1DSP_1_1HalfbandStage.html#af0c00e1a6d3fd776f0c322d2cb7e5c50" target="_top" xlink:title="Compute the Kaiser&#45;windowed&#45;sinc halfband kernel.">
-<polygon fill="white" stroke="#666666" points="501,-30 368,-30 368,0 501,0 501,-30"/>
-<text text-anchor="start" x="376" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::DSP</text>
-<text text-anchor="middle" x="434.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::HalfbandStage::design</text>
+<g id="a_Node000004"><a xlink:href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#ad944cdc9be0469fcae64d98617c63145" target="_top" xlink:title="Seeds defaults on the first initialize() of a fresh instance only.">
+<polygon fill="white" stroke="#666666" points="327,-30 172,-30 172,0 327,0 327,-30"/>
+<text text-anchor="start" x="180" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::InternalPlugin</text>
+<text text-anchor="middle" x="249.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Base::seedDefaultsOnce</text>
 </a>
 </g>
 </g>
-<!-- Node3&#45;&gt;Node4 -->
-<g id="edge3_Node000003_Node000004" class="edge">
-<title>Node3&#45;&gt;Node4</title>
-<g id="a_edge3_Node000003_Node000004"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M332.1,-15C340.64,-15 349.29,-15 357.76,-15"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="357.98,-18.5 367.98,-15 357.98,-11.5 357.98,-18.5"/>
+<!-- Node1&#45;&gt;Node4 -->
+<g id="edge3_Node000001_Node000004" class="edge">
+<title>Node1&#45;&gt;Node4</title>
+<g id="a_edge3_Node000001_Node000004"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M131.18,-30.47C141.06,-29.17 151.4,-27.8 161.67,-26.45"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="162.44,-29.88 171.89,-25.1 161.52,-22.94 162.44,-29.88"/>
+</a>
+</g>
+</g>
+<!-- Node3 -->
+<g id="Node000003" class="node">
+<title>Node3</title>
+<g id="a_Node000003"><a xlink:href="../../d0/d72/classAestra_1_1Audio_1_1DSP_1_1HalfbandStage.html#af0c00e1a6d3fd776f0c322d2cb7e5c50" target="_top" xlink:title="Compute the Kaiser&#45;windowed&#45;sinc halfband kernel.">
+<polygon fill="white" stroke="#666666" points="512,-78 379,-78 379,-48 512,-48 512,-78"/>
+<text text-anchor="start" x="387" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::DSP</text>
+<text text-anchor="middle" x="445.5" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">::HalfbandStage::design</text>
+</a>
+</g>
+</g>
+<!-- Node2&#45;&gt;Node3 -->
+<g id="edge2_Node000002_Node000003" class="edge">
+<title>Node2&#45;&gt;Node3</title>
+<g id="a_edge2_Node000002_Node000003"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M332.21,-63C344.22,-63 356.56,-63 368.45,-63"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="368.77,-66.5 378.77,-63 368.77,-59.5 368.77,-66.5"/>
+</a>
+</g>
+</g>
+<!-- Node5 -->
+<g id="Node000005" class="node">
+<title>Node5</title>
+<g id="a_Node000005"><a xlink:href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a2e301b64b16ed67a488e198646eef78c" target="_top" xlink:title="Writes the table&#39;s defaults into storage.">
+<polygon fill="white" stroke="#666666" points="523,-30 368,-30 368,0 523,0 523,-30"/>
+<text text-anchor="start" x="376" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::InternalPlugin</text>
+<text text-anchor="middle" x="445.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Base::seedDefaults</text>
+</a>
+</g>
+</g>
+<!-- Node4&#45;&gt;Node5 -->
+<g id="edge4_Node000004_Node000005" class="edge">
+<title>Node4&#45;&gt;Node5</title>
+<g id="a_edge4_Node000004_Node000005"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M327.17,-15C337.18,-15 347.49,-15 357.65,-15"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="357.75,-18.5 367.75,-15 357.75,-11.5 357.75,-18.5"/>
 </a>
 </g>
 </g>

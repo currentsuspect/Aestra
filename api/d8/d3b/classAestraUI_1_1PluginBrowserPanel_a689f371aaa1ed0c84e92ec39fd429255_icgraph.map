@@ -1,0 +1,5 @@
+<map id="AestraUI::PluginBrowserPanel::ensureSelectionVisible" name="AestraUI::PluginBrowserPanel::ensureSelectionVisible">
+<area shape="rect" id="Node000001" title="Scroll just enough to bring the selection into view." alt="" coords="268,5,483,45"/>
+<area shape="rect" id="Node000002" href="$d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#a5e023557113bb2a937cfaeaeb413df37" title="Move the selection through the filtered list (spec item 4)." alt="" coords="5,5,220,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="255,28,220,28,220,23,255,23"/>
+</map>

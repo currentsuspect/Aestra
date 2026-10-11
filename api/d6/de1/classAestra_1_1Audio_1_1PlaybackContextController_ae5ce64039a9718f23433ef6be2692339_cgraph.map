@@ -1,0 +1,11 @@
+<map id="Aestra::Audio::PlaybackContextController::playTimeline" name="Aestra::Audio::PlaybackContextController::playTimeline">
+<area shape="rect" id="Node000001" title="Timeline play: the pattern loop override ends, so the timeline&#39;s own loop applies again." alt="" coords="5,37,232,77"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a8e30da675f03638f3700e7ad4719bb96" title="Start transport playback from the current UI position." alt="" coords="280,5,488,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="232,41,266,37,267,42,232,46"/>
+<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#abd605c4c1cc4109adfb007934cad24cd" title="Pattern&#45;mode loop override (#845)." alt="" coords="280,69,488,109"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="232,68,267,73,266,78,232,74"/>
+<area shape="rect" id="Node000003" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#aff1a4e0952563ea158cd48104e3dde38" title="Remove every scheduled instance and queued event." alt="" coords="536,5,771,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="488,23,522,23,522,28,488,28"/>
+<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a3f29d6ac9ec1fd351964bd9b0ff4958d" title="Effective loop = pattern override when active, else timeline region." alt="" coords="549,69,757,109"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="488,87,535,87,535,92,488,92"/>
+</map>

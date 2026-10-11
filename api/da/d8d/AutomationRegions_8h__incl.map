@@ -1,0 +1,21 @@
+<map id="AestraAudio/include/Core/AutomationRegions.h" name="AestraAudio/include/Core/AutomationRegions.h">
+<area shape="rect" id="Node000001" title="Automation clips (V8&#45;A7): the operations, as pure functions on one curve." alt="" coords="192,5,392,45"/>
+<area shape="rect" id="Node000002" href="$df/dfc/AutomationCurve_8h_source.html" title=" " alt="" coords="137,93,319,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="279,47,248,84,244,81,274,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,167,91,192"/>
+<area shape="poly" id="edge7_Node000001_Node000003" title=" " alt="" coords="215,48,163,68,115,95,85,125,63,156,59,153,81,121,112,91,161,63,213,43"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="115,167,178,192"/>
+<area shape="poly" id="edge8_Node000001_Node000004" title=" " alt="" coords="193,47,155,66,139,79,126,95,121,109,122,124,133,154,128,156,116,125,116,108,122,92,136,75,152,62,191,43"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="285,167,352,192"/>
+<area shape="poly" id="edge9_Node000001_Node000005" title=" " alt="" coords="310,44,324,67,335,93,337,125,331,154,325,153,331,124,329,94,319,69,305,47"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="377,167,439,192"/>
+<area shape="poly" id="edge11_Node000001_Node000007" title=" " alt="" coords="312,44,353,92,396,153,391,156,349,95,308,47"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="445,93,520,119"/>
+<area shape="poly" id="edge10_Node000001_Node000008" title=" " alt="" coords="339,43,443,86,441,91,337,48"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="200,121,91,164,89,159,198,116"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="217,121,172,160,168,156,213,117"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="244,117,295,156,291,160,241,121"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="203,167,261,192"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="231,119,233,153,228,153,226,119"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="258,116,367,159,365,164,256,121"/>
+</map>

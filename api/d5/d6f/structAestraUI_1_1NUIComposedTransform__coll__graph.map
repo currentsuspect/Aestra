@@ -1,0 +1,5 @@
+<map id="AestraUI::NUIComposedTransform" name="AestraUI::NUIComposedTransform">
+<area shape="rect" id="Node000001" title="A whole stack collapsed into a single affine map to the outermost space." alt="" coords="5,123,249,148"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="102,5,153,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="130,44,130,123,125,123,125,44"/>
+</map>

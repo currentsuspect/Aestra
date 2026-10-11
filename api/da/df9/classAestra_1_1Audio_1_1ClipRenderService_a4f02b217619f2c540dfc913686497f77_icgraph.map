@@ -1,7 +1,11 @@
 <map id="Aestra::Audio::ClipRenderService::commit" name="Aestra::Audio::ClipRenderService::commit">
-<area shape="rect" id="Node000001" title="Write buffer to disk and register it as a new source + pattern." alt="" coords="501,5,689,45"/>
-<area shape="rect" id="Node000002" href="$db/dd1/classAestra_1_1Audio_1_1RenderAudioClipCommand.html#a02798abf02b4c53a3f28a7bd35521041" title="Execute the command (first time)" alt="" coords="253,5,453,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="487,28,453,28,453,23,487,23"/>
-<area shape="rect" id="Node000003" href="$db/dd1/classAestra_1_1Audio_1_1RenderAudioClipCommand.html#ac9aa69760b9cd441d6a6d15af5aa19d5" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,205,45"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="240,28,206,28,206,23,240,23"/>
+<area shape="rect" id="Node000001" title="Write buffer to disk and register it as a new source + pattern." alt="" coords="525,37,713,77"/>
+<area shape="rect" id="Node000002" href="$de/dcd/classAestra_1_1Audio_1_1BounceInPlaceCommand.html#afbe4f02786c364e618089bcc795ac2ca" title="Execute the command (first time)" alt="" coords="265,5,477,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="512,46,477,42,478,36,512,41"/>
+<area shape="rect" id="Node000004" href="$db/dd1/classAestra_1_1Audio_1_1RenderAudioClipCommand.html#a02798abf02b4c53a3f28a7bd35521041" title="Execute the command (first time)" alt="" coords="271,69,471,109"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="512,74,472,79,471,74,512,69"/>
+<area shape="rect" id="Node000003" href="$de/dcd/classAestra_1_1Audio_1_1BounceInPlaceCommand.html#a5b4c210872c2aebd5943b80a0f812157" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,217,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="252,28,218,28,218,23,252,23"/>
+<area shape="rect" id="Node000005" href="$db/dd1/classAestra_1_1Audio_1_1RenderAudioClipCommand.html#ac9aa69760b9cd441d6a6d15af5aa19d5" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="11,69,211,109"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="258,92,212,92,212,87,258,87"/>
 </map>

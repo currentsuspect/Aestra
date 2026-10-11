@@ -1,0 +1,11 @@
+<map id="Aestra::Audio::ParamSpec" name="Aestra::Audio::ParamSpec">
+<area shape="rect" id="Node000001" title="Declarative description of one automatable parameter." alt="" coords="97,123,287,148"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,80,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="45,44,49,72,63,97,81,110,101,120,99,125,78,115,59,100,44,74,40,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="115,5,165,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="137,44,137,71,144,97,154,110,168,120,165,125,150,114,139,100,131,72,132,44"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="219,5,269,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="239,45,217,100,202,124,198,121,212,97,234,43"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="336,5,387,31"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="358,45,346,74,326,101,303,115,279,125,277,120,301,110,322,97,342,72,353,43"/>
+</map>

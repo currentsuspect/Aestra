@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::AudioEngine::isPatternPlaybackMode" name="Aestra::Audio::AudioEngine::isPatternPlaybackMode">
+<area shape="rect" id="Node000001" title="Check whether Arsenal pattern playback mode is active." alt="" coords="515,37,713,77"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a764c614826bc19e174a3d7dc13ad00e4" title="Log every playback&#45;mode mirror when any of them changes (mode&#45;drift probe)." alt="" coords="247,5,460,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="501,46,460,41,461,36,501,41"/>
+<area shape="rect" id="Node000004" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a2a05f06dc04ef4d978c56b09773956b6" title="Read every mirror from where it actually lives (the UI mirror from the last value pushed)." alt="" coords="240,69,467,109"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="501,74,467,78,467,73,500,69"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#a9cd2ff0a44640c8c7c68543fc33f56d1" title="Advance workspace state and child&#45;panel updates." alt="" coords="5,13,192,38"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="233,28,192,28,192,23,233,23"/>
+</map>

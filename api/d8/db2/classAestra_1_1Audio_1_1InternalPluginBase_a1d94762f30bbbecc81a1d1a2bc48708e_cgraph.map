@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::InternalPluginBase::setParameter" name="Aestra::Audio::InternalPluginBase::setParameter">
+<area shape="rect" id="Node000001" title="A non&#45;finite value is rejected outright, leaving the previous value in place." alt="" coords="5,5,212,45"/>
+<area shape="rect" id="Node000002" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#aab2b659d581559924c8a2f9ead2d8612" title="Called after a parameter is stored, so a plugin can invalidate derived state (filter coefficients,..." alt="" coords="260,5,467,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="212,23,246,23,246,28,212,28"/>
+</map>

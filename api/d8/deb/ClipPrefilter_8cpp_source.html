@@ -157,9 +157,43 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    }</div>
 <div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>}</div>
 <div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span> </div>
-<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>} <span class="comment">// namespace ClipPrefilter</span></div>
-<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>} <span class="comment">// namespace Audio</span></div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span><span class="keywordtype">void</span> applyStreaming(<span class="keyword">const</span> ReadFrames&amp; read, <span class="keywordtype">float</span>* out, uint64_t frames, uint32_t channels,</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>                    <span class="keyword">const</span> std::vector&lt;double&gt;&amp; h) {</div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>    <span class="keywordflow">if</span> (!read || out == <span class="keyword">nullptr</span> || frames == 0 || channels == 0 || h.empty()) {</div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>        <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    }</div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    <span class="keyword">const</span> <span class="keywordtype">int</span> taps = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(h.size());</div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>    <span class="keyword">const</span> <span class="keywordtype">int</span> mid = (taps - 1) / 2;</div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>    <span class="keyword">const</span> int64_t n = <span class="keyword">static_cast&lt;</span>int64_t<span class="keyword">&gt;</span>(frames);</div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>    <span class="keyword">constexpr</span> int64_t kBlock = 16384;</div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>    std::vector&lt;float&gt; window;</div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    <span class="keywordflow">for</span> (int64_t i0 = 0; i0 &lt; n; i0 += kBlock) {</div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>        <span class="keyword">const</span> int64_t i1 = std::min(n, i0 + kBlock);</div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>        <span class="comment">// Output frame i reads input frames i - mid .. i + mid; frames outside [0, n) contribute nothing.</span></div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>        <span class="keyword">const</span> int64_t w0 = std::max&lt;int64_t&gt;(0, i0 - mid);</div>
+<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>        <span class="keyword">const</span> int64_t w1 = std::min&lt;int64_t&gt;(n, i1 + mid + 1);</div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>        window.resize(<span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(w1 - w0) * channels);</div>
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>        read(<span class="keyword">static_cast&lt;</span>uint64_t<span class="keyword">&gt;</span>(w0), <span class="keyword">static_cast&lt;</span>uint64_t<span class="keyword">&gt;</span>(w1 - w0), window.data());</div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>        <span class="keywordflow">for</span> (int64_t i = i0; i &lt; i1; ++i) {</div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>            <span class="keywordflow">for</span> (uint32_t ch = 0; ch &lt; channels; ++ch) {</div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>                <span class="keywordtype">double</span> acc = 0.0;</div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>                <span class="keywordflow">for</span> (<span class="keywordtype">int</span> k = 0; k &lt; taps; ++k) {</div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>                    <span class="keyword">const</span> int64_t j = i + mid - k; <span class="comment">// same delay-compensated read as apply()</span></div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>                    <span class="keywordflow">if</span> (j &lt; 0 || j &gt;= n) {</div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>                        <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>                    }</div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>                    acc += h[<span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(k)] *</div>
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>                           <span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(window[<span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(j - w0) * channels + ch]);</div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>                }</div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>                out[(<span class="keyword">static_cast&lt;</span>uint64_t<span class="keyword">&gt;</span>(i) * channels) + ch] = <span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(acc);</div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>            }</div>
+<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>        }</div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>    }</div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>}</div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span> </div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>} <span class="comment">// namespace ClipPrefilter</span></div>
+<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>} <span class="comment">// namespace Audio</span></div>
+<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>} <span class="comment">// namespace Aestra</span></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

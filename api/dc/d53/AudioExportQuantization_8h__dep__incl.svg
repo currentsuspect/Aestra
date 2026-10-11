@@ -46,7 +46,7 @@
   </g>
 </defs>
 <script type="application/ecmascript">
-var viewWidth = 1069;
+var viewWidth = 1579;
 var viewHeight = 236;
 var sectionId = 'dynsection-1';
 </script>
@@ -58,9 +58,9 @@ var sectionId = 'dynsection-1';
 <g id="Node000001" class="node">
 <title>Node1</title>
 <g id="a_Node000001"><a xlink:title="PCM quantization with optional triangular&#45;pdf dither for offline export.">
-<polygon fill="#999999" stroke="#666666" points="662.5,-228 498.5,-228 498.5,-198 662.5,-198 662.5,-228"/>
-<text text-anchor="start" x="506.5" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
-<text text-anchor="middle" x="580.5" y="-205" font-family="Helvetica,sans-Serif" font-size="10.00">/IO/AudioExportQuantization.h</text>
+<polygon fill="#999999" stroke="#666666" points="1020.5,-228 856.5,-228 856.5,-198 1020.5,-198 1020.5,-228"/>
+<text text-anchor="start" x="864.5" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
+<text text-anchor="middle" x="938.5" y="-205" font-family="Helvetica,sans-Serif" font-size="10.00">/IO/AudioExportQuantization.h</text>
 </a>
 </g>
 </g>
@@ -68,9 +68,9 @@ var sectionId = 'dynsection-1';
 <g id="Node000002" class="node">
 <title>Node2</title>
 <g id="a_Node000002"><a xlink:href="../../d8/da6/AudioExporter_8h_source.html" target="_top" xlink:title=" ">
-<polygon fill="white" stroke="#666666" points="637.5,-162 523.5,-162 523.5,-132 637.5,-132 637.5,-162"/>
-<text text-anchor="start" x="531.5" y="-150" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
-<text text-anchor="middle" x="580.5" y="-139" font-family="Helvetica,sans-Serif" font-size="10.00">/IO/AudioExporter.h</text>
+<polygon fill="white" stroke="#666666" points="995.5,-162 881.5,-162 881.5,-132 995.5,-132 995.5,-162"/>
+<text text-anchor="start" x="889.5" y="-150" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
+<text text-anchor="middle" x="938.5" y="-139" font-family="Helvetica,sans-Serif" font-size="10.00">/IO/AudioExporter.h</text>
 </a>
 </g>
 </g>
@@ -78,8 +78,8 @@ var sectionId = 'dynsection-1';
 <g id="edge1_Node000001_Node000002" class="edge">
 <title>Node1&#45;&gt;Node2</title>
 <g id="a_edge1_Node000001_Node000002"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M580.5,-187.54C580.5,-178.96 580.5,-169.61 580.5,-162.16"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="577,-187.8 580.5,-197.8 584,-187.8 577,-187.8"/>
+<path fill="none" stroke="#63b8ff" d="M938.5,-187.54C938.5,-178.96 938.5,-169.61 938.5,-162.16"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="935,-187.8 938.5,-197.8 942,-187.8 935,-187.8"/>
 </a>
 </g>
 </g>
@@ -87,9 +87,9 @@ var sectionId = 'dynsection-1';
 <g id="Node000003" class="node">
 <title>Node3</title>
 <g id="a_Node000003"><a xlink:href="../../d0/d48/HeadlessMusicGenerator_8h_source.html" target="_top" xlink:title=" ">
-<polygon fill="white" stroke="#666666" points="266.5,-96 68.5,-96 68.5,-66 266.5,-66 266.5,-96"/>
-<text text-anchor="start" x="76.5" y="-84" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
-<text text-anchor="middle" x="167.5" y="-73" font-family="Helvetica,sans-Serif" font-size="10.00">/Headless/HeadlessMusicGenerator.h</text>
+<polygon fill="white" stroke="#666666" points="348.5,-96 150.5,-96 150.5,-66 348.5,-66 348.5,-96"/>
+<text text-anchor="start" x="158.5" y="-84" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
+<text text-anchor="middle" x="249.5" y="-73" font-family="Helvetica,sans-Serif" font-size="10.00">/Headless/HeadlessMusicGenerator.h</text>
 </a>
 </g>
 </g>
@@ -97,18 +97,18 @@ var sectionId = 'dynsection-1';
 <g id="edge2_Node000002_Node000003" class="edge">
 <title>Node2&#45;&gt;Node3</title>
 <g id="a_edge2_Node000002_Node000003"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M513.13,-135.56C443.72,-124.8 335.1,-107.97 258.17,-96.05"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="512.66,-139.03 523.07,-137.1 513.73,-132.11 512.66,-139.03"/>
+<path fill="none" stroke="#63b8ff" d="M870.91,-139.72C748.81,-128.38 490.95,-104.43 348.78,-91.22"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="870.96,-143.24 881.24,-140.68 871.6,-136.27 870.96,-143.24"/>
 </a>
 </g>
 </g>
 <!-- Node6 -->
 <g id="Node000006" class="node">
 <title>Node6</title>
-<g id="a_Node000006"><a xlink:href="../../d1/d59/MuseService_8cpp_source.html" target="_top" xlink:title=" ">
-<polygon fill="white" stroke="#666666" points="436.5,-96 284.5,-96 284.5,-66 436.5,-66 436.5,-96"/>
-<text text-anchor="start" x="292.5" y="-84" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/src/Commands</text>
-<text text-anchor="middle" x="360.5" y="-73" font-family="Helvetica,sans-Serif" font-size="10.00">/MuseService.cpp</text>
+<g id="a_Node000006"><a xlink:href="../../d6/d8e/OfflineProjectRender_8h_source.html" target="_top" xlink:title=" ">
+<polygon fill="white" stroke="#666666" points="608.5,-96 432.5,-96 432.5,-66 608.5,-66 608.5,-96"/>
+<text text-anchor="start" x="440.5" y="-84" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
+<text text-anchor="middle" x="520.5" y="-73" font-family="Helvetica,sans-Serif" font-size="10.00">/Headless/OfflineProjectRender.h</text>
 </a>
 </g>
 </g>
@@ -116,82 +116,139 @@ var sectionId = 'dynsection-1';
 <g id="edge5_Node000002_Node000006" class="edge">
 <title>Node2&#45;&gt;Node6</title>
 <g id="a_edge5_Node000002_Node000006"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M522.48,-129.12C487.01,-118.8 442.17,-105.76 408.67,-96.01"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="521.64,-132.52 532.22,-131.95 523.6,-125.8 521.64,-132.52"/>
-</a>
-</g>
-</g>
-<!-- Node7 -->
-<g id="Node000007" class="node">
-<title>Node7</title>
-<g id="a_Node000007"><a xlink:href="../../df/dc3/AudioEngine_8cpp_source.html" target="_top" xlink:title=" ">
-<polygon fill="white" stroke="#666666" points="574,-96 455,-96 455,-66 574,-66 574,-96"/>
-<text text-anchor="start" x="463" y="-84" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/src/Core</text>
-<text text-anchor="middle" x="514.5" y="-73" font-family="Helvetica,sans-Serif" font-size="10.00">/AudioEngine.cpp</text>
-</a>
-</g>
-</g>
-<!-- Node2&#45;&gt;Node7 -->
-<g id="edge6_Node000002_Node000007" class="edge">
-<title>Node2&#45;&gt;Node7</title>
-<g id="a_edge6_Node000002_Node000007"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M558.48,-124.65C548.81,-115.27 537.73,-104.53 529.11,-96.16"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="556.24,-127.35 565.85,-131.8 561.11,-122.32 556.24,-127.35"/>
-</a>
-</g>
-</g>
-<!-- Node8 -->
-<g id="Node000008" class="node">
-<title>Node8</title>
-<g id="a_Node000008"><a xlink:href="../../d0/dd9/AudioExporter_8cpp_source.html" target="_top" xlink:title=" ">
-<polygon fill="white" stroke="#666666" points="700.5,-96 592.5,-96 592.5,-66 700.5,-66 700.5,-96"/>
-<text text-anchor="start" x="600.5" y="-84" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/src/IO</text>
-<text text-anchor="middle" x="646.5" y="-73" font-family="Helvetica,sans-Serif" font-size="10.00">/AudioExporter.cpp</text>
-</a>
-</g>
-</g>
-<!-- Node2&#45;&gt;Node8 -->
-<g id="edge7_Node000002_Node000008" class="edge">
-<title>Node2&#45;&gt;Node8</title>
-<g id="a_edge7_Node000002_Node000008"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M602.52,-124.65C612.19,-115.27 623.27,-104.53 631.89,-96.16"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="599.89,-122.32 595.15,-131.8 604.76,-127.35 599.89,-122.32"/>
+<path fill="none" stroke="#63b8ff" d="M871.05,-135.67C799.76,-124.76 687.04,-107.5 608.73,-95.51"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="870.84,-139.18 881.26,-137.24 871.9,-132.26 870.84,-139.18"/>
 </a>
 </g>
 </g>
 <!-- Node9 -->
 <g id="Node000009" class="node">
 <title>Node9</title>
-<g id="a_Node000009"><a xlink:href="../../db/d11/AestraApp_8cpp_source.html" target="_top" xlink:title=" ">
-<polygon fill="white" stroke="#666666" points="864,-90.5 719,-90.5 719,-71.5 864,-71.5 864,-90.5"/>
-<text text-anchor="middle" x="791.5" y="-78.5" font-family="Helvetica,sans-Serif" font-size="10.00">Source/App/AestraApp.cpp</text>
+<g id="a_Node000009"><a xlink:href="../../d2/dff/StemExport_8h_source.html" target="_top" xlink:title=" ">
+<polygon fill="white" stroke="#666666" points="806.5,-96 692.5,-96 692.5,-66 806.5,-66 806.5,-96"/>
+<text text-anchor="start" x="700.5" y="-84" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
+<text text-anchor="middle" x="749.5" y="-73" font-family="Helvetica,sans-Serif" font-size="10.00">/IO/StemExport.h</text>
 </a>
 </g>
 </g>
 <!-- Node2&#45;&gt;Node9 -->
-<g id="edge8_Node000002_Node000009" class="edge">
+<g id="edge9_Node000002_Node000009" class="edge">
 <title>Node2&#45;&gt;Node9</title>
-<g id="a_edge8_Node000002_Node000009"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M636.38,-129.05C677.3,-116.64 731.13,-100.31 763.42,-90.52"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="635.36,-125.7 626.8,-131.95 637.39,-132.4 635.36,-125.7"/>
+<g id="a_edge9_Node000002_Node000009"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M887.48,-128.72C857.2,-118.47 819.29,-105.63 790.88,-96.01"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="886.43,-132.06 897.02,-131.95 888.67,-125.43 886.43,-132.06"/>
 </a>
 </g>
 </g>
-<!-- Node10 -->
-<g id="Node000010" class="node">
-<title>Node10</title>
-<g id="a_Node000010"><a xlink:href="../../da/d3c/ExportDialog_8cpp_source.html" target="_top" xlink:title=" ">
-<polygon fill="white" stroke="#666666" points="1061,-90.5 882,-90.5 882,-71.5 1061,-71.5 1061,-90.5"/>
-<text text-anchor="middle" x="971.5" y="-78.5" font-family="Helvetica,sans-Serif" font-size="10.00">Source/Settings/ExportDialog.cpp</text>
+<!-- Node11 -->
+<g id="Node000011" class="node">
+<title>Node11</title>
+<g id="a_Node000011"><a xlink:href="../../da/d3c/ExportDialog_8cpp_source.html" target="_top" xlink:title=" ">
+<polygon fill="white" stroke="#666666" points="1000,-24.5 821,-24.5 821,-5.5 1000,-5.5 1000,-24.5"/>
+<text text-anchor="middle" x="910.5" y="-12.5" font-family="Helvetica,sans-Serif" font-size="10.00">Source/Settings/ExportDialog.cpp</text>
 </a>
 </g>
 </g>
-<!-- Node2&#45;&gt;Node10 -->
-<g id="edge9_Node000002_Node000010" class="edge">
-<title>Node2&#45;&gt;Node10</title>
-<g id="a_edge9_Node000002_Node000010"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M647.85,-134.98C724.89,-122.37 849.39,-101.99 919.39,-90.53"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="647.08,-131.56 637.77,-136.63 648.21,-138.46 647.08,-131.56"/>
+<!-- Node2&#45;&gt;Node11 -->
+<g id="edge17_Node000002_Node000011" class="edge">
+<title>Node2&#45;&gt;Node11</title>
+<g id="a_edge17_Node000002_Node000011"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M887.75,-127.33C874.23,-119.76 861.24,-109.53 853.5,-96 846.88,-84.43 848,-78.15 853.5,-66 861.92,-47.41 881.04,-33.01 894.82,-24.53"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="886.17,-130.45 896.66,-131.93 889.38,-124.23 886.17,-130.45"/>
+</a>
+</g>
+</g>
+<!-- Node12 -->
+<g id="Node000012" class="node">
+<title>Node12</title>
+<g id="a_Node000012"><a xlink:href="../../d6/d8f/MuseServiceRender_8cpp_source.html" target="_top" xlink:title=" ">
+<polygon fill="white" stroke="#666666" points="1014.5,-96 862.5,-96 862.5,-66 1014.5,-66 1014.5,-96"/>
+<text text-anchor="start" x="870.5" y="-84" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/src/Commands</text>
+<text text-anchor="middle" x="938.5" y="-73" font-family="Helvetica,sans-Serif" font-size="10.00">/MuseServiceRender.cpp</text>
+</a>
+</g>
+</g>
+<!-- Node2&#45;&gt;Node12 -->
+<g id="edge12_Node000002_Node000012" class="edge">
+<title>Node2&#45;&gt;Node12</title>
+<g id="a_edge12_Node000002_Node000012"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M938.5,-121.54C938.5,-112.96 938.5,-103.61 938.5,-96.16"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="935,-121.8 938.5,-131.8 942,-121.8 935,-121.8"/>
+</a>
+</g>
+</g>
+<!-- Node13 -->
+<g id="Node000013" class="node">
+<title>Node13</title>
+<g id="a_Node000013"><a xlink:href="../../df/dc3/AudioEngine_8cpp_source.html" target="_top" xlink:title=" ">
+<polygon fill="white" stroke="#666666" points="1152,-96 1033,-96 1033,-66 1152,-66 1152,-96"/>
+<text text-anchor="start" x="1041" y="-84" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/src/Core</text>
+<text text-anchor="middle" x="1092.5" y="-73" font-family="Helvetica,sans-Serif" font-size="10.00">/AudioEngine.cpp</text>
+</a>
+</g>
+</g>
+<!-- Node2&#45;&gt;Node13 -->
+<g id="edge13_Node000002_Node000013" class="edge">
+<title>Node2&#45;&gt;Node13</title>
+<g id="a_edge13_Node000002_Node000013"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M981.68,-128.05C1006.08,-117.91 1036.13,-105.43 1058.78,-96.01"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="980.19,-124.89 972.3,-131.95 982.87,-131.35 980.19,-124.89"/>
+</a>
+</g>
+</g>
+<!-- Node14 -->
+<g id="Node000014" class="node">
+<title>Node14</title>
+<g id="a_Node000014"><a xlink:href="../../d0/dd9/AudioExporter_8cpp_source.html" target="_top" xlink:title=" ">
+<polygon fill="white" stroke="#666666" points="1278.5,-96 1170.5,-96 1170.5,-66 1278.5,-66 1278.5,-96"/>
+<text text-anchor="start" x="1178.5" y="-84" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/src/IO</text>
+<text text-anchor="middle" x="1224.5" y="-73" font-family="Helvetica,sans-Serif" font-size="10.00">/AudioExporter.cpp</text>
+</a>
+</g>
+</g>
+<!-- Node2&#45;&gt;Node14 -->
+<g id="edge14_Node000002_Node000014" class="edge">
+<title>Node2&#45;&gt;Node14</title>
+<g id="a_edge14_Node000002_Node000014"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M1005.48,-131.01C1055.69,-119.78 1123.51,-104.6 1170.32,-94.12"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="1004.68,-127.6 995.69,-133.2 1006.21,-134.43 1004.68,-127.6"/>
+</a>
+</g>
+</g>
+<!-- Node15 -->
+<g id="Node000015" class="node">
+<title>Node15</title>
+<g id="a_Node000015"><a xlink:href="../../d4/d73/BounceInPlace_8cpp_source.html" target="_top" xlink:title=" ">
+<polygon fill="white" stroke="#666666" points="1408,-96 1297,-96 1297,-66 1408,-66 1408,-96"/>
+<text text-anchor="start" x="1305" y="-84" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/src/IO</text>
+<text text-anchor="middle" x="1352.5" y="-73" font-family="Helvetica,sans-Serif" font-size="10.00">/BounceInPlace.cpp</text>
+</a>
+</g>
+</g>
+<!-- Node2&#45;&gt;Node15 -->
+<g id="edge15_Node000002_Node000015" class="edge">
+<title>Node2&#45;&gt;Node15</title>
+<g id="a_edge15_Node000002_Node000015"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M1005.59,-137.8C1076.02,-128.87 1189.88,-113.48 1287.5,-96 1290.57,-95.45 1293.71,-94.86 1296.88,-94.25"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="1005,-134.35 995.52,-139.07 1005.88,-141.29 1005,-134.35"/>
+</a>
+</g>
+</g>
+<!-- Node16 -->
+<g id="Node000016" class="node">
+<title>Node16</title>
+<g id="a_Node000016"><a xlink:href="../../db/d11/AestraApp_8cpp_source.html" target="_top" xlink:title=" ">
+<polygon fill="white" stroke="#666666" points="1571,-90.5 1426,-90.5 1426,-71.5 1571,-71.5 1571,-90.5"/>
+<text text-anchor="middle" x="1498.5" y="-78.5" font-family="Helvetica,sans-Serif" font-size="10.00">Source/App/AestraApp.cpp</text>
+</a>
+</g>
+</g>
+<!-- Node2&#45;&gt;Node16 -->
+<g id="edge16_Node000002_Node000016" class="edge">
+<title>Node2&#45;&gt;Node16</title>
+<g id="a_edge16_Node000002_Node000016"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M1005.9,-140.4C1098.77,-132.36 1271.21,-116.25 1417.5,-96 1428.81,-94.43 1440.96,-92.48 1452.32,-90.53"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="1005.46,-136.93 995.79,-141.27 1006.06,-143.9 1005.46,-136.93"/>
 </a>
 </g>
 </g>
@@ -199,9 +256,9 @@ var sectionId = 'dynsection-1';
 <g id="Node000004" class="node">
 <title>Node4</title>
 <g id="a_Node000004"><a xlink:href="../../d0/d01/HeadlessMusicGenerator_8cpp_source.html" target="_top" xlink:title=" ">
-<polygon fill="white" stroke="#666666" points="161,-30 0,-30 0,0 161,0 161,-30"/>
-<text text-anchor="start" x="8" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/src/Headless</text>
-<text text-anchor="middle" x="80.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">/HeadlessMusicGenerator.cpp</text>
+<polygon fill="white" stroke="#666666" points="330,-30 169,-30 169,0 330,0 330,-30"/>
+<text text-anchor="start" x="177" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/src/Headless</text>
+<text text-anchor="middle" x="249.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">/HeadlessMusicGenerator.cpp</text>
 </a>
 </g>
 </g>
@@ -209,8 +266,8 @@ var sectionId = 'dynsection-1';
 <g id="edge3_Node000003_Node000004" class="edge">
 <title>Node3&#45;&gt;Node4</title>
 <g id="a_edge3_Node000003_Node000004"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M139.98,-59.75C126.89,-50.13 111.57,-38.86 99.75,-30.16"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="138.06,-62.69 148.19,-65.8 142.21,-57.05 138.06,-62.69"/>
+<path fill="none" stroke="#63b8ff" d="M249.5,-55.54C249.5,-46.96 249.5,-37.61 249.5,-30.16"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="246,-55.8 249.5,-65.8 253,-55.8 246,-55.8"/>
 </a>
 </g>
 </g>
@@ -218,9 +275,9 @@ var sectionId = 'dynsection-1';
 <g id="Node000005" class="node">
 <title>Node5</title>
 <g id="a_Node000005"><a xlink:href="../../de/db1/HeadlessExportMain_8cpp.html" target="_top" xlink:title="CLI tool for headless music generation and export.">
-<polygon fill="white" stroke="#666666" points="330,-30 179,-30 179,0 330,0 330,-30"/>
-<text text-anchor="start" x="187" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Source/App/HeadlessExport</text>
-<text text-anchor="middle" x="254.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Main.cpp</text>
+<polygon fill="white" stroke="#666666" points="151,-30 0,-30 0,0 151,0 151,-30"/>
+<text text-anchor="start" x="8" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Source/App/HeadlessExport</text>
+<text text-anchor="middle" x="75.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Main.cpp</text>
 </a>
 </g>
 </g>
@@ -228,8 +285,82 @@ var sectionId = 'dynsection-1';
 <g id="edge4_Node000003_Node000005" class="edge">
 <title>Node3&#45;&gt;Node5</title>
 <g id="a_edge4_Node000003_Node000005"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M195.02,-59.75C208.11,-50.13 223.43,-38.86 235.25,-30.16"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="192.79,-57.05 186.81,-65.8 196.94,-62.69 192.79,-57.05"/>
+<path fill="none" stroke="#63b8ff" d="M201.8,-62.46C174.04,-52.25 139.53,-39.55 113.6,-30.01"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="200.72,-65.79 211.31,-65.95 203.14,-59.22 200.72,-65.79"/>
+</a>
+</g>
+</g>
+<!-- Node6&#45;&gt;Node4 -->
+<g id="edge6_Node000006_Node000004" class="edge">
+<title>Node6&#45;&gt;Node4</title>
+<g id="a_edge6_Node000006_Node000004"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M451.26,-63.65C407.23,-53.25 350.81,-39.93 308.83,-30.01"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="450.49,-67.06 461.03,-65.95 452.1,-60.25 450.49,-67.06"/>
+</a>
+</g>
+</g>
+<!-- Node7 -->
+<g id="Node000007" class="node">
+<title>Node7</title>
+<g id="a_Node000007"><a xlink:href="../../d9/dbc/OfflineProjectRender_8cpp_source.html" target="_top" xlink:title=" ">
+<polygon fill="white" stroke="#666666" points="489,-30 348,-30 348,0 489,0 489,-30"/>
+<text text-anchor="start" x="356" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/src/Headless</text>
+<text text-anchor="middle" x="418.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">/OfflineProjectRender.cpp</text>
+</a>
+</g>
+</g>
+<!-- Node6&#45;&gt;Node7 -->
+<g id="edge7_Node000006_Node000007" class="edge">
+<title>Node6&#45;&gt;Node7</title>
+<g id="a_edge7_Node000006_Node000007"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M489.29,-60.42C473.64,-50.6 455.04,-38.93 440.83,-30.01"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="487.78,-63.6 498.12,-65.95 491.51,-57.68 487.78,-63.6"/>
+</a>
+</g>
+</g>
+<!-- Node8 -->
+<g id="Node000008" class="node">
+<title>Node8</title>
+<g id="a_Node000008"><a xlink:href="../../d8/d1e/HeadlessCheck_8cpp_source.html" target="_top" xlink:title=" ">
+<polygon fill="white" stroke="#666666" points="677.5,-24.5 507.5,-24.5 507.5,-5.5 677.5,-5.5 677.5,-24.5"/>
+<text text-anchor="middle" x="592.5" y="-12.5" font-family="Helvetica,sans-Serif" font-size="10.00">Source/App/HeadlessCheck.cpp</text>
+</a>
+</g>
+</g>
+<!-- Node6&#45;&gt;Node8 -->
+<g id="edge8_Node000006_Node000008" class="edge">
+<title>Node6&#45;&gt;Node8</title>
+<g id="a_edge8_Node000006_Node000008"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M544.2,-58.93C557.23,-47.35 572.69,-33.61 582.55,-24.84"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="541.63,-56.54 536.48,-65.8 546.28,-61.77 541.63,-56.54"/>
+</a>
+</g>
+</g>
+<!-- Node10 -->
+<g id="Node000010" class="node">
+<title>Node10</title>
+<g id="a_Node000010"><a xlink:href="../../db/de7/StemExport_8cpp_source.html" target="_top" xlink:title=" ">
+<polygon fill="white" stroke="#666666" points="803,-30 696,-30 696,0 803,0 803,-30"/>
+<text text-anchor="start" x="704" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/src/IO</text>
+<text text-anchor="middle" x="749.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">/StemExport.cpp</text>
+</a>
+</g>
+</g>
+<!-- Node9&#45;&gt;Node10 -->
+<g id="edge10_Node000009_Node000010" class="edge">
+<title>Node9&#45;&gt;Node10</title>
+<g id="a_edge10_Node000009_Node000010"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M749.5,-55.54C749.5,-46.96 749.5,-37.61 749.5,-30.16"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="746,-55.8 749.5,-65.8 753,-55.8 746,-55.8"/>
+</a>
+</g>
+</g>
+<!-- Node9&#45;&gt;Node11 -->
+<g id="edge11_Node000009_Node000011" class="edge">
+<title>Node9&#45;&gt;Node11</title>
+<g id="a_edge11_Node000009_Node000011"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M794.13,-62.26C825.09,-49.95 864.95,-34.11 889.07,-24.52"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="792.83,-59.01 784.83,-65.95 795.42,-65.51 792.83,-59.01"/>
 </a>
 </g>
 </g>

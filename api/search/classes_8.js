@@ -10,11 +10,13 @@ var searchData=
   ['insertslot_7',['InsertSlot',['../d9/d5b/classAestraUI_1_1InsertSlot.html',1,'AestraUI']]],
   ['insertviewmodel_8',['InsertViewModel',['../dd/d28/structAestra_1_1ChannelViewModel_1_1InsertViewModel.html',1,'Aestra::ChannelViewModel']]],
   ['inspectorcollapsestate_9',['InspectorCollapseState',['../d3/d73/structAestraUI_1_1InspectorCollapseState.html',1,'AestraUI']]],
-  ['internalpluginregistry_10',['InternalPluginRegistry',['../de/d56/classAestra_1_1Audio_1_1InternalPluginRegistry.html',1,'Aestra::Audio']]],
-  ['iplatformutils_11',['IPlatformUtils',['../d5/d9d/classAestra_1_1IPlatformUtils.html',1,'Aestra']]],
-  ['iplatformwindow_12',['IPlatformWindow',['../d8/d57/classAestra_1_1IPlatformWindow.html',1,'Aestra']]],
-  ['ipluginfactory_13',['IPluginFactory',['../dc/d24/classAestra_1_1Audio_1_1IPluginFactory.html',1,'Aestra::Audio']]],
-  ['iplugininstance_14',['IPluginInstance',['../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html',1,'Aestra::Audio']]],
-  ['isettingspage_15',['ISettingsPage',['../da/d9f/classAestra_1_1ISettingsPage.html',1,'Aestra']]],
-  ['item_16',['Item',['../d0/d85/structAestraUI_1_1NUIComboBox_1_1Item.html',1,'AestraUI::NUIComboBox']]]
+  ['instancesnapshot_10',['InstanceSnapshot',['../d6/df3/structAestra_1_1Audio_1_1PatternPlaybackEngine_1_1InstanceSnapshot.html',1,'Aestra::Audio::PatternPlaybackEngine']]],
+  ['internalpluginbase_11',['InternalPluginBase',['../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html',1,'Aestra::Audio']]],
+  ['internalpluginregistry_12',['InternalPluginRegistry',['../de/d56/classAestra_1_1Audio_1_1InternalPluginRegistry.html',1,'Aestra::Audio']]],
+  ['iplatformutils_13',['IPlatformUtils',['../d5/d9d/classAestra_1_1IPlatformUtils.html',1,'Aestra']]],
+  ['iplatformwindow_14',['IPlatformWindow',['../d8/d57/classAestra_1_1IPlatformWindow.html',1,'Aestra']]],
+  ['ipluginfactory_15',['IPluginFactory',['../dc/d24/classAestra_1_1Audio_1_1IPluginFactory.html',1,'Aestra::Audio']]],
+  ['iplugininstance_16',['IPluginInstance',['../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html',1,'Aestra::Audio']]],
+  ['isettingspage_17',['ISettingsPage',['../da/d9f/classAestra_1_1ISettingsPage.html',1,'Aestra']]],
+  ['item_18',['Item',['../d0/d85/structAestraUI_1_1NUIComboBox_1_1Item.html',1,'AestraUI::NUIComboBox']]]
 ];

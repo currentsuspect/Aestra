@@ -340,65 +340,68 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span> </div>
 <div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>    <span class="keyword">virtual</span> std::string</div>
 <div class="line"><a id="l00357" name="l00357"></a><span class="lineno"><a class="line" href="../../d5/d9d/classAestra_1_1IPlatformUtils.html#a93945f74d88f6ff480566a3b6e6e972c">  357</a></span>    <a class="code hl_function" href="../../d5/d9d/classAestra_1_1IPlatformUtils.html#a93945f74d88f6ff480566a3b6e6e972c">getAppDataPath</a>(<span class="keyword">const</span> std::string&amp; appName) <span class="keyword">const</span> = 0; <span class="comment">// Returns platform-specific app data directory</span></div>
-<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span>};</div>
+<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span> </div>
+<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>    <span class="keyword">enum class</span> KnownFolder { Desktop, Downloads, Documents, Music };</div>
+<div class="line"><a id="l00365" name="l00365"></a><span class="lineno"><a class="line" href="../../d5/d9d/classAestra_1_1IPlatformUtils.html#aa87b482e2731d52f664c3a540709f07e">  365</a></span>    <span class="keyword">virtual</span> std::string <a class="code hl_function" href="../../d5/d9d/classAestra_1_1IPlatformUtils.html#aa87b482e2731d52f664c3a540709f07e">getKnownFolderPath</a>(KnownFolder <span class="comment">/*folder*/</span>)<span class="keyword"> const </span>{ <span class="keywordflow">return</span> {}; }</div>
+<div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>};</div>
 </div>
-<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span> </div>
-<div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span><span class="comment">// =============================================================================</span></div>
-<div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span><span class="comment">// Platform Factory</span></div>
-<div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span><span class="comment">// =============================================================================</span></div>
-<div class="foldopen" id="foldopen00363" data-start="{" data-end="};">
-<div class="line"><a id="l00363" name="l00363"></a><span class="lineno"><a class="line" href="../../de/d4a/classAestra_1_1Platform.html">  363</a></span><span class="keyword">class </span><a class="code hl_class" href="../../de/d4a/classAestra_1_1Platform.html">Platform</a> {</div>
-<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span><span class="keyword">public</span>:</div>
-<div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span>    <span class="comment">// Create platform-specific window</span></div>
-<div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>    <span class="keyword">static</span> <a class="code hl_class" href="../../d8/d57/classAestra_1_1IPlatformWindow.html">IPlatformWindow</a>* createWindow();</div>
 <div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span> </div>
-<div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span>    <span class="comment">// Get platform utilities</span></div>
-<div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span>    <span class="keyword">static</span> <a class="code hl_class" href="../../d5/d9d/classAestra_1_1IPlatformUtils.html">IPlatformUtils</a>* getUtils();</div>
-<div class="line"><a id="l00370" name="l00370"></a><span class="lineno">  370</span>    <span class="comment">// Shared ownership for detached workers (e.g. the relink picker): the</span></div>
-<div class="line"><a id="l00371" name="l00371"></a><span class="lineno">  371</span>    <span class="comment">// raw pointer from getUtils() can be freed by shutdown() mid-call.</span></div>
-<div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span>    <span class="keyword">static</span> std::shared_ptr&lt;IPlatformUtils&gt; getUtilsShared();</div>
-<div class="line"><a id="l00373" name="l00373"></a><span class="lineno">  373</span>    <span class="keyword">static</span> <span class="keywordtype">bool</span> isInitialized();</div>
-<div class="line"><a id="l00374" name="l00374"></a><span class="lineno">  374</span> </div>
-<div class="line"><a id="l00375" name="l00375"></a><span class="lineno">  375</span>    <span class="comment">// Initialize/shutdown platform</span></div>
-<div class="line"><a id="l00376" name="l00376"></a><span class="lineno">  376</span>    <span class="keyword">static</span> <span class="keywordtype">bool</span> initialize();</div>
-<div class="line"><a id="l00377" name="l00377"></a><span class="lineno">  377</span>    <span class="keyword">static</span> <span class="keywordtype">void</span> shutdown();</div>
-<div class="line"><a id="l00378" name="l00378"></a><span class="lineno">  378</span> </div>
-<div class="line"><a id="l00379" name="l00379"></a><span class="lineno">  379</span>    <span class="comment">// Threading</span></div>
-<div class="line"><a id="l00380" name="l00380"></a><span class="lineno">  380</span>    <span class="keyword">enum class</span> ThreadPriority {</div>
-<div class="line"><a id="l00381" name="l00381"></a><span class="lineno">  381</span>        Low,</div>
-<div class="line"><a id="l00382" name="l00382"></a><span class="lineno">  382</span>        Normal,</div>
-<div class="line"><a id="l00383" name="l00383"></a><span class="lineno">  383</span>        High,</div>
-<div class="line"><a id="l00384" name="l00384"></a><span class="lineno">  384</span>        RealtimeAudio <span class="comment">// Maps to MMCSS &quot;Pro Audio&quot; on Windows</span></div>
-<div class="line"><a id="l00385" name="l00385"></a><span class="lineno">  385</span>    };</div>
+<div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span><span class="comment">// =============================================================================</span></div>
+<div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span><span class="comment">// Platform Factory</span></div>
+<div class="line"><a id="l00370" name="l00370"></a><span class="lineno">  370</span><span class="comment">// =============================================================================</span></div>
+<div class="foldopen" id="foldopen00371" data-start="{" data-end="};">
+<div class="line"><a id="l00371" name="l00371"></a><span class="lineno"><a class="line" href="../../de/d4a/classAestra_1_1Platform.html">  371</a></span><span class="keyword">class </span><a class="code hl_class" href="../../de/d4a/classAestra_1_1Platform.html">Platform</a> {</div>
+<div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span><span class="keyword">public</span>:</div>
+<div class="line"><a id="l00373" name="l00373"></a><span class="lineno">  373</span>    <span class="comment">// Create platform-specific window</span></div>
+<div class="line"><a id="l00374" name="l00374"></a><span class="lineno">  374</span>    <span class="keyword">static</span> <a class="code hl_class" href="../../d8/d57/classAestra_1_1IPlatformWindow.html">IPlatformWindow</a>* createWindow();</div>
+<div class="line"><a id="l00375" name="l00375"></a><span class="lineno">  375</span> </div>
+<div class="line"><a id="l00376" name="l00376"></a><span class="lineno">  376</span>    <span class="comment">// Get platform utilities</span></div>
+<div class="line"><a id="l00377" name="l00377"></a><span class="lineno">  377</span>    <span class="keyword">static</span> <a class="code hl_class" href="../../d5/d9d/classAestra_1_1IPlatformUtils.html">IPlatformUtils</a>* getUtils();</div>
+<div class="line"><a id="l00378" name="l00378"></a><span class="lineno">  378</span>    <span class="comment">// Shared ownership for detached workers (e.g. the relink picker): the</span></div>
+<div class="line"><a id="l00379" name="l00379"></a><span class="lineno">  379</span>    <span class="comment">// raw pointer from getUtils() can be freed by shutdown() mid-call.</span></div>
+<div class="line"><a id="l00380" name="l00380"></a><span class="lineno">  380</span>    <span class="keyword">static</span> std::shared_ptr&lt;IPlatformUtils&gt; getUtilsShared();</div>
+<div class="line"><a id="l00381" name="l00381"></a><span class="lineno">  381</span>    <span class="keyword">static</span> <span class="keywordtype">bool</span> isInitialized();</div>
+<div class="line"><a id="l00382" name="l00382"></a><span class="lineno">  382</span> </div>
+<div class="line"><a id="l00383" name="l00383"></a><span class="lineno">  383</span>    <span class="comment">// Initialize/shutdown platform</span></div>
+<div class="line"><a id="l00384" name="l00384"></a><span class="lineno">  384</span>    <span class="keyword">static</span> <span class="keywordtype">bool</span> initialize();</div>
+<div class="line"><a id="l00385" name="l00385"></a><span class="lineno">  385</span>    <span class="keyword">static</span> <span class="keywordtype">void</span> shutdown();</div>
 <div class="line"><a id="l00386" name="l00386"></a><span class="lineno">  386</span> </div>
-<div class="line"><a id="l00387" name="l00387"></a><span class="lineno">  387</span>    <span class="comment">// Set priority for the CURRENT thread</span></div>
-<div class="line"><a id="l00388" name="l00388"></a><span class="lineno">  388</span>    <span class="keyword">static</span> <span class="keywordtype">bool</span> setCurrentThreadPriority(ThreadPriority priority);</div>
-<div class="line"><a id="l00389" name="l00389"></a><span class="lineno">  389</span> </div>
-<div class="line"><a id="l00390" name="l00390"></a><span class="lineno">  390</span><span class="keyword">private</span>:</div>
-<div class="line"><a id="l00391" name="l00391"></a><span class="lineno">  391</span>    <span class="keyword">static</span> std::shared_ptr&lt;IPlatformUtils&gt; s_utils;</div>
-<div class="line"><a id="l00392" name="l00392"></a><span class="lineno">  392</span> </div>
-<div class="line"><a id="l00393" name="l00393"></a><span class="lineno">  393</span>    <span class="comment">// RAII scope for Realtime Audio threads (MMCSS on Windows)</span></div>
-<div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span>    <span class="comment">// Usage: Create this ONLY on the main audio callback thread.</span></div>
-<div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span>    <span class="comment">// WARNING: Do NOT create this in a loop or per-callback! Create once per thread lifetime.</span></div>
-<div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span>    <span class="keyword">class </span>AudioThreadScope {</div>
-<div class="line"><a id="l00397" name="l00397"></a><span class="lineno">  397</span>    <span class="keyword">public</span>:</div>
-<div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span>        AudioThreadScope();</div>
-<div class="line"><a id="l00399" name="l00399"></a><span class="lineno">  399</span>        ~AudioThreadScope();</div>
+<div class="line"><a id="l00387" name="l00387"></a><span class="lineno">  387</span>    <span class="comment">// Threading</span></div>
+<div class="line"><a id="l00388" name="l00388"></a><span class="lineno">  388</span>    <span class="keyword">enum class</span> ThreadPriority {</div>
+<div class="line"><a id="l00389" name="l00389"></a><span class="lineno">  389</span>        Low,</div>
+<div class="line"><a id="l00390" name="l00390"></a><span class="lineno">  390</span>        Normal,</div>
+<div class="line"><a id="l00391" name="l00391"></a><span class="lineno">  391</span>        High,</div>
+<div class="line"><a id="l00392" name="l00392"></a><span class="lineno">  392</span>        RealtimeAudio <span class="comment">// Maps to MMCSS &quot;Pro Audio&quot; on Windows</span></div>
+<div class="line"><a id="l00393" name="l00393"></a><span class="lineno">  393</span>    };</div>
+<div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span> </div>
+<div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span>    <span class="comment">// Set priority for the CURRENT thread</span></div>
+<div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span>    <span class="keyword">static</span> <span class="keywordtype">bool</span> setCurrentThreadPriority(ThreadPriority priority);</div>
+<div class="line"><a id="l00397" name="l00397"></a><span class="lineno">  397</span> </div>
+<div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span><span class="keyword">private</span>:</div>
+<div class="line"><a id="l00399" name="l00399"></a><span class="lineno">  399</span>    <span class="keyword">static</span> std::shared_ptr&lt;IPlatformUtils&gt; s_utils;</div>
 <div class="line"><a id="l00400" name="l00400"></a><span class="lineno">  400</span> </div>
-<div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span>        <span class="comment">// Prevent copying</span></div>
-<div class="line"><a id="l00402" name="l00402"></a><span class="lineno">  402</span>        AudioThreadScope(<span class="keyword">const</span> AudioThreadScope&amp;) = <span class="keyword">delete</span>;</div>
-<div class="line"><a id="l00403" name="l00403"></a><span class="lineno">  403</span>        AudioThreadScope&amp; operator=(<span class="keyword">const</span> AudioThreadScope&amp;) = <span class="keyword">delete</span>;</div>
-<div class="line"><a id="l00404" name="l00404"></a><span class="lineno">  404</span> </div>
-<div class="line"><a id="l00405" name="l00405"></a><span class="lineno">  405</span>        <span class="keywordtype">bool</span> isValid()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> m_valid; }</div>
-<div class="line"><a id="l00406" name="l00406"></a><span class="lineno">  406</span> </div>
-<div class="line"><a id="l00407" name="l00407"></a><span class="lineno">  407</span>    <span class="keyword">private</span>:</div>
-<div class="line"><a id="l00408" name="l00408"></a><span class="lineno">  408</span>        <span class="keywordtype">void</span>* m_handle = <span class="keyword">nullptr</span>; <span class="comment">// Windows: HANDLE (MMCSS)</span></div>
-<div class="line"><a id="l00409" name="l00409"></a><span class="lineno">  409</span>        <span class="keywordtype">bool</span> m_valid = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00410" name="l00410"></a><span class="lineno">  410</span>    };</div>
-<div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span>};</div>
-</div>
+<div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span>    <span class="comment">// RAII scope for Realtime Audio threads (MMCSS on Windows)</span></div>
+<div class="line"><a id="l00402" name="l00402"></a><span class="lineno">  402</span>    <span class="comment">// Usage: Create this ONLY on the main audio callback thread.</span></div>
+<div class="line"><a id="l00403" name="l00403"></a><span class="lineno">  403</span>    <span class="comment">// WARNING: Do NOT create this in a loop or per-callback! Create once per thread lifetime.</span></div>
+<div class="line"><a id="l00404" name="l00404"></a><span class="lineno">  404</span>    <span class="keyword">class </span>AudioThreadScope {</div>
+<div class="line"><a id="l00405" name="l00405"></a><span class="lineno">  405</span>    <span class="keyword">public</span>:</div>
+<div class="line"><a id="l00406" name="l00406"></a><span class="lineno">  406</span>        AudioThreadScope();</div>
+<div class="line"><a id="l00407" name="l00407"></a><span class="lineno">  407</span>        ~AudioThreadScope();</div>
+<div class="line"><a id="l00408" name="l00408"></a><span class="lineno">  408</span> </div>
+<div class="line"><a id="l00409" name="l00409"></a><span class="lineno">  409</span>        <span class="comment">// Prevent copying</span></div>
+<div class="line"><a id="l00410" name="l00410"></a><span class="lineno">  410</span>        AudioThreadScope(<span class="keyword">const</span> AudioThreadScope&amp;) = <span class="keyword">delete</span>;</div>
+<div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span>        AudioThreadScope&amp; operator=(<span class="keyword">const</span> AudioThreadScope&amp;) = <span class="keyword">delete</span>;</div>
 <div class="line"><a id="l00412" name="l00412"></a><span class="lineno">  412</span> </div>
-<div class="line"><a id="l00413" name="l00413"></a><span class="lineno">  413</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="line"><a id="l00413" name="l00413"></a><span class="lineno">  413</span>        <span class="keywordtype">bool</span> isValid()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> m_valid; }</div>
+<div class="line"><a id="l00414" name="l00414"></a><span class="lineno">  414</span> </div>
+<div class="line"><a id="l00415" name="l00415"></a><span class="lineno">  415</span>    <span class="keyword">private</span>:</div>
+<div class="line"><a id="l00416" name="l00416"></a><span class="lineno">  416</span>        <span class="keywordtype">void</span>* m_handle = <span class="keyword">nullptr</span>; <span class="comment">// Windows: HANDLE (MMCSS)</span></div>
+<div class="line"><a id="l00417" name="l00417"></a><span class="lineno">  417</span>        <span class="keywordtype">bool</span> m_valid = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00418" name="l00418"></a><span class="lineno">  418</span>    };</div>
+<div class="line"><a id="l00419" name="l00419"></a><span class="lineno">  419</span>};</div>
+</div>
+<div class="line"><a id="l00420" name="l00420"></a><span class="lineno">  420</span> </div>
+<div class="line"><a id="l00421" name="l00421"></a><span class="lineno">  421</span>} <span class="comment">// namespace Aestra</span></div>
 <div class="ttc" id="aclassAestra_1_1IPlatformUtils_html"><div class="ttname"><a href="../../d5/d9d/classAestra_1_1IPlatformUtils.html">Aestra::IPlatformUtils</a></div><div class="ttdef"><b>Definition</b> <a href="../../da/d7c/AestraPlatform_8h_source.html#l00312">AestraPlatform.h:312</a></div></div>
 <div class="ttc" id="aclassAestra_1_1IPlatformUtils_html_a20735e4e1974a30ed7c94a93ac36692f"><div class="ttname"><a href="../../d5/d9d/classAestra_1_1IPlatformUtils.html#a20735e4e1974a30ed7c94a93ac36692f">Aestra::IPlatformUtils::getPlatformName</a></div><div class="ttdeci">virtual std::string getPlatformName() const =0</div><div class="ttdoc">Get a short platform name used for diagnostics.</div></div>
 <div class="ttc" id="aclassAestra_1_1IPlatformUtils_html_a2c1cc8f0386315ef23a01207c7e0b9be"><div class="ttname"><a href="../../d5/d9d/classAestra_1_1IPlatformUtils.html#a2c1cc8f0386315ef23a01207c7e0b9be">Aestra::IPlatformUtils::sleep</a></div><div class="ttdeci">virtual void sleep(int milliseconds) const =0</div><div class="ttdoc">Sleep the current thread for the requested number of milliseconds.</div></div>
@@ -409,6 +412,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="ttc" id="aclassAestra_1_1IPlatformUtils_html_a72db29a1599ecb89ddebfdd7c800d310"><div class="ttname"><a href="../../d5/d9d/classAestra_1_1IPlatformUtils.html#a72db29a1599ecb89ddebfdd7c800d310">Aestra::IPlatformUtils::getProcessorCount</a></div><div class="ttdeci">virtual int getProcessorCount() const =0</div><div class="ttdoc">Get the number of logical processors available to the process.</div></div>
 <div class="ttc" id="aclassAestra_1_1IPlatformUtils_html_a93945f74d88f6ff480566a3b6e6e972c"><div class="ttname"><a href="../../d5/d9d/classAestra_1_1IPlatformUtils.html#a93945f74d88f6ff480566a3b6e6e972c">Aestra::IPlatformUtils::getAppDataPath</a></div><div class="ttdeci">virtual std::string getAppDataPath(const std::string &amp;appName) const =0</div><div class="ttdoc">Get the platform-specific application data directory for an app name.</div></div>
 <div class="ttc" id="aclassAestra_1_1IPlatformUtils_html_a9af28fa56d1b8522774b294c279ef922"><div class="ttname"><a href="../../d5/d9d/classAestra_1_1IPlatformUtils.html#a9af28fa56d1b8522774b294c279ef922">Aestra::IPlatformUtils::selectFolderDialog</a></div><div class="ttdeci">virtual std::string selectFolderDialog(const std::string &amp;title) const =0</div><div class="ttdoc">Open a native folder-selection dialog.</div></div>
+<div class="ttc" id="aclassAestra_1_1IPlatformUtils_html_aa87b482e2731d52f664c3a540709f07e"><div class="ttname"><a href="../../d5/d9d/classAestra_1_1IPlatformUtils.html#aa87b482e2731d52f664c3a540709f07e">Aestra::IPlatformUtils::getKnownFolderPath</a></div><div class="ttdeci">virtual std::string getKnownFolderPath(KnownFolder) const</div><div class="ttdoc">Where the OS says a user folder really is (it may be redirected, localised or moved to another drive)...</div><div class="ttdef"><b>Definition</b> <a href="../../da/d7c/AestraPlatform_8h_source.html#l00365">AestraPlatform.h:365</a></div></div>
 <div class="ttc" id="aclassAestra_1_1IPlatformUtils_html_addd566b7452890dd89931e43515cba64"><div class="ttname"><a href="../../d5/d9d/classAestra_1_1IPlatformUtils.html#addd566b7452890dd89931e43515cba64">Aestra::IPlatformUtils::getSystemMemory</a></div><div class="ttdeci">virtual size_t getSystemMemory() const =0</div><div class="ttdoc">Get total system memory in bytes.</div></div>
 <div class="ttc" id="aclassAestra_1_1IPlatformUtils_html_af5a5452c47a4e9b158d16e592efd2a33"><div class="ttname"><a href="../../d5/d9d/classAestra_1_1IPlatformUtils.html#af5a5452c47a4e9b158d16e592efd2a33">Aestra::IPlatformUtils::getClipboardText</a></div><div class="ttdeci">virtual std::string getClipboardText() const =0</div><div class="ttdoc">Read UTF-8 text from the clipboard.</div></div>
 <div class="ttc" id="aclassAestra_1_1IPlatformUtils_html_afb769e5dfddc64cd45fa8bc79b0a93a8"><div class="ttname"><a href="../../d5/d9d/classAestra_1_1IPlatformUtils.html#afb769e5dfddc64cd45fa8bc79b0a93a8">Aestra::IPlatformUtils::getTime</a></div><div class="ttdeci">virtual double getTime() const =0</div><div class="ttdoc">Get high-resolution wall-clock time in seconds.</div></div>
@@ -461,7 +465,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="ttc" id="aclassAestra_1_1IPlatformWindow_html_af2c01e9f401251727b1df9c997ed4c84"><div class="ttname"><a href="../../d8/d57/classAestra_1_1IPlatformWindow.html#af2c01e9f401251727b1df9c997ed4c84">Aestra::IPlatformWindow::setCloseCallback</a></div><div class="ttdeci">virtual void setCloseCallback(std::function&lt; void()&gt; callback)=0</div><div class="ttdoc">Set the close-request callback.</div></div>
 <div class="ttc" id="aclassAestra_1_1IPlatformWindow_html_af4f8dab4b69f6e77e25e39359567f332"><div class="ttname"><a href="../../d8/d57/classAestra_1_1IPlatformWindow.html#af4f8dab4b69f6e77e25e39359567f332">Aestra::IPlatformWindow::isValid</a></div><div class="ttdeci">virtual bool isValid() const =0</div><div class="ttdoc">Check whether the native window handle is valid.</div></div>
 <div class="ttc" id="aclassAestra_1_1IPlatformWindow_html_afa74d78fa1bcd6503de7dc5add4a8524"><div class="ttname"><a href="../../d8/d57/classAestra_1_1IPlatformWindow.html#afa74d78fa1bcd6503de7dc5add4a8524">Aestra::IPlatformWindow::getDPIScale</a></div><div class="ttdeci">virtual float getDPIScale() const =0</div><div class="ttdoc">Query the current DPI scale factor for the window.</div></div>
-<div class="ttc" id="aclassAestra_1_1Platform_html"><div class="ttname"><a href="../../de/d4a/classAestra_1_1Platform.html">Aestra::Platform</a></div><div class="ttdef"><b>Definition</b> <a href="../../da/d7c/AestraPlatform_8h_source.html#l00363">AestraPlatform.h:363</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Platform_html"><div class="ttname"><a href="../../de/d4a/classAestra_1_1Platform.html">Aestra::Platform</a></div><div class="ttdef"><b>Definition</b> <a href="../../da/d7c/AestraPlatform_8h_source.html#l00371">AestraPlatform.h:371</a></div></div>
 <div class="ttc" id="astructAestra_1_1IPlatformUtils_1_1SaveFileDialogOptions_html"><div class="ttname"><a href="../../d0/da3/structAestra_1_1IPlatformUtils_1_1SaveFileDialogOptions.html">Aestra::IPlatformUtils::SaveFileDialogOptions</a></div><div class="ttdef"><b>Definition</b> <a href="../../da/d7c/AestraPlatform_8h_source.html#l00316">AestraPlatform.h:316</a></div></div>
 <div class="ttc" id="astructAestra_1_1IPlatformUtils_1_1SaveFileDialogOptions_html_a05346c2ff7d7b8b4d8f80ec42744d4ee"><div class="ttname"><a href="../../d0/da3/structAestra_1_1IPlatformUtils_1_1SaveFileDialogOptions.html#a05346c2ff7d7b8b4d8f80ec42744d4ee">Aestra::IPlatformUtils::SaveFileDialogOptions::title</a></div><div class="ttdeci">std::string title</div><div class="ttdoc">Window title presented by the native save dialog.</div><div class="ttdef"><b>Definition</b> <a href="../../da/d7c/AestraPlatform_8h_source.html#l00318">AestraPlatform.h:318</a></div></div>
 <div class="ttc" id="astructAestra_1_1IPlatformUtils_1_1SaveFileDialogOptions_html_a6154f2c34123a411d43ca8c14a484112"><div class="ttname"><a href="../../d0/da3/structAestra_1_1IPlatformUtils_1_1SaveFileDialogOptions.html#a6154f2c34123a411d43ca8c14a484112">Aestra::IPlatformUtils::SaveFileDialogOptions::defaultExtension</a></div><div class="ttdeci">std::string defaultExtension</div><div class="ttdoc">Default extension appended when the backend supports it.</div><div class="ttdef"><b>Definition</b> <a href="../../da/d7c/AestraPlatform_8h_source.html#l00324">AestraPlatform.h:324</a></div></div>

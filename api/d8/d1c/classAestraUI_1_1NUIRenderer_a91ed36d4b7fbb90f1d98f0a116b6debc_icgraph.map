@@ -1,7 +1,10 @@
 <map id="AestraUI::NUIRenderer::drawText" name="AestraUI::NUIRenderer::drawText">
-<area shape="rect" id="Node000001" title="Draw text at the given position." alt="" coords="504,5,673,45"/>
-<area shape="rect" id="Node000002" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#aa94a93c30f05a4177c1cd16390cf7706" title="Drag&#45;hover ghost: dashed &quot;new unit&quot; outline while dragging a sample over empty Arsenal space." alt="" coords="255,5,456,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="490,28,456,28,456,23,490,23"/>
-<area shape="rect" id="Node000003" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#ad0272af2020e23cd94658d1e4beacfe5" title="Render the Arsenal panel and unit rows." alt="" coords="5,5,207,45"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="241,28,207,28,207,23,241,23"/>
+<area shape="rect" id="Node000001" title="Draw text at the given position." alt="" coords="504,61,673,101"/>
+<area shape="rect" id="Node000002" href="$da/d71/TransportModuleStyle_8h.html#ac54fa9a745e37d5df9b9a74f4339009f" title="Draw a module&#39;s caps label at the module&#39;s content x." alt="" coords="265,29,445,69"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="490,70,445,64,446,59,490,65"/>
+<area shape="rect" id="Node000003" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#aa94a93c30f05a4177c1cd16390cf7706" title="Drag&#45;hover ghost: dashed &quot;new unit&quot; outline while dragging a sample over empty Arsenal space." alt="" coords="255,93,456,133"/>
+<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="490,97,457,102,456,97,490,92"/>
+<area shape="poly" id="edge2_Node000002_Node000002" title=" " alt="" coords="395,18,381,11,355,8,333,10,320,15,315,21,317,28,312,30,309,20,316,10,332,5,355,3,382,6,397,13"/>
+<area shape="rect" id="Node000004" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#ad0272af2020e23cd94658d1e4beacfe5" title="Render the Arsenal panel and unit rows." alt="" coords="5,93,207,133"/>
+<area shape="poly" id="edge4_Node000003_Node000004" title=" " alt="" coords="241,116,207,116,207,111,241,111"/>
 </map>

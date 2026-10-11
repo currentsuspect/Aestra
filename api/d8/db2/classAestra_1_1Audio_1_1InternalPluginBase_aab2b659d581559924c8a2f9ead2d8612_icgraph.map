@@ -1,0 +1,11 @@
+<map id="Aestra::Audio::InternalPluginBase::onParameterChanged" name="Aestra::Audio::InternalPluginBase::onParameterChanged">
+<area shape="rect" id="Node000001" title="Called after a parameter is stored, so a plugin can invalidate derived state (filter coefficients,..." alt="" coords="515,37,721,77"/>
+<area shape="rect" id="Node000002" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a551820afa00ce157be395b081b65335f" title="Reads a keyed v2 blob, applying by id rather than by position." alt="" coords="260,5,467,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="501,45,467,41,467,36,502,40"/>
+<area shape="rect" id="Node000003" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a1d94762f30bbbecc81a1d1a2bc48708e" title="A non&#45;finite value is rejected outright, leaving the previous value in place." alt="" coords="260,69,467,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="502,75,467,79,467,74,501,69"/>
+<area shape="rect" id="Node000004" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a6d48aef4b6d6e8b0b45c212ed6d87485" title="Hand the plugin the automated value for this block." alt="" coords="5,37,212,77"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="246,77,212,73,213,68,247,72"/>
+<area shape="rect" id="Node000005" href="$db/d0e/classAestra_1_1Audio_1_1Plugins_1_1AestraEQ.html#ad1843accd94e7e6616ceb8e0c402236b" title="Load plugin state from binary data." alt="" coords="27,101,191,141"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="247,107,191,114,191,108,246,101"/>
+</map>

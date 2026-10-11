@@ -1,13 +1,24 @@
 <map id="Aestra::Audio::UnitManager::getUnitPlugin" name="Aestra::Audio::UnitManager::getUnitPlugin">
-<area shape="rect" id="Node000001" title="Get the plugin instance attached to a unit." alt="" coords="713,69,915,109"/>
-<area shape="rect" id="Node000002" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#ab81d5561c6aa7f194691299c69f9fbdd" title="Get the MIDI note that plays a unit&#39;s sample untransposed (60 fallback)." alt="" coords="464,69,665,109"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="699,92,666,92,666,87,699,87"/>
-<area shape="rect" id="Node000003" href="$da/d6f/classAestraUI_1_1UnitRow.html#a463bb23535731d91ef746e1e6a82407f" title="Refresh cached unit state from the backing managers." alt="" coords="268,69,416,109"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="450,92,416,92,416,87,450,87"/>
-<area shape="rect" id="Node000004" href="$da/d6f/classAestraUI_1_1UnitRow.html#ab2a22e6d50638047c26ab0353bb49107" title="Called when drop occurs." alt="" coords="39,5,187,45"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="256,68,184,48,186,43,257,63"/>
-<area shape="rect" id="Node000005" href="$da/d6f/classAestraUI_1_1UnitRow.html#a834aa18ceb45757fa37756c95a995406" title="Route this unit to the first unused mixer insert, creating one when needed." alt="" coords="5,69,220,109"/>
-<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="254,92,220,92,220,87,254,87"/>
-<area shape="rect" id="Node000006" href="$da/d6f/classAestraUI_1_1UnitRow.html#a3fd8f3f2017082c5b9a30bc2b1301d44" title="Create a sequencer row for an Arsenal unit." alt="" coords="39,133,187,173"/>
-<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="257,116,186,136,184,131,256,110"/>
+<area shape="rect" id="Node000001" title="Get the plugin instance attached to a unit." alt="" coords="1039,133,1240,173"/>
+<area shape="rect" id="Node000002" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#ab81d5561c6aa7f194691299c69f9fbdd" title="Get the MIDI note that plays a unit&#39;s sample untransposed (60 fallback)." alt="" coords="781,85,982,125"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="1025,135,982,127,983,121,1026,130"/>
+<area shape="rect" id="Node000007" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a1a32e060f4aa89c46d0a70aa14e45b6c" title="Queue keep&#45;length renders for every note a keep&#45;length sampler unit can play." alt="" coords="772,165,991,205"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="1026,170,991,174,990,169,1025,165"/>
+<area shape="rect" id="Node000003" href="$da/d6f/classAestraUI_1_1UnitRow.html#a463bb23535731d91ef746e1e6a82407f" title="Refresh cached unit state from the backing managers." alt="" coords="545,77,693,117"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="767,105,693,102,693,97,767,99"/>
+<area shape="rect" id="Node000004" href="$da/d6f/classAestraUI_1_1UnitRow.html#ab2a22e6d50638047c26ab0353bb49107" title="Called when drop occurs." alt="" coords="285,5,433,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="532,76,432,48,433,43,534,71"/>
+<area shape="rect" id="Node000005" href="$da/d6f/classAestraUI_1_1UnitRow.html#a834aa18ceb45757fa37756c95a995406" title="Route this unit to the first unused mixer insert, creating one when needed." alt="" coords="252,69,467,109"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="532,97,467,95,467,90,532,92"/>
+<area shape="rect" id="Node000006" href="$da/d6f/classAestraUI_1_1UnitRow.html#a3fd8f3f2017082c5b9a30bc2b1301d44" title="Create a sequencer row for an Arsenal unit." alt="" coords="285,133,433,173"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="532,119,434,140,433,135,531,113"/>
+<area shape="rect" id="Node000008" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a9312fb6a7145e21d39409a19c0203284" title="Render the project to an audio file using the full live engine path (processBlock)." alt="" coords="515,197,724,237"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="759,203,724,207,724,202,758,198"/>
+<area shape="rect" id="Node000009" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a7db2feb78f7e58219497974d28a5225f" title="Convenience helper matching AudioEngine::bounceRangeToWav signature." alt="" coords="255,197,464,237"/>
+<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="501,220,464,220,464,215,501,215"/>
+<area shape="rect" id="Node000011" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a1400dd1c5eded988d4e0c4bc78e592e2" title="Render the same range render() would, into memory (V8&#45;W4)." alt="" coords="255,261,464,301"/>
+<area shape="poly" id="edge11_Node000008_Node000011" title=" " alt="" coords="525,243,442,264,440,259,523,238"/>
+<area shape="rect" id="Node000010" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file." alt="" coords="5,197,204,237"/>
+<area shape="poly" id="edge9_Node000009_Node000010" title=" " alt="" coords="241,229,204,229,204,223,241,224"/>
+<area shape="poly" id="edge10_Node000010_Node000009" title=" " alt="" coords="218,206,254,206,254,211,218,211"/>
 </map>

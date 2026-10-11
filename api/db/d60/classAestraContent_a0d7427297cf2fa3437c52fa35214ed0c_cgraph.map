@@ -1,0 +1,5 @@
+<map id="AestraContent::persistDockedRailWidths" name="AestraContent::persistDockedRailWidths">
+<area shape="rect" id="Node000001" title="Persist the dragged rail&#39;s width at resize&#45;drag end." alt="" coords="5,5,220,45"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#afbf0a48523732326319bb02e131fbd24" title="The app&#45;owned surface store, or nullptr before AestraApp provides it." alt="" coords="268,13,473,38"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="220,23,254,23,254,28,220,28"/>
+</map>

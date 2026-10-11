@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::AudioEngine::getRequestedContextGeneration" name="Aestra::Audio::AudioEngine::getRequestedContextGeneration">
+<area shape="rect" id="Node000001" title="Generation of the last requested / audio&#45;applied playback context." alt="" coords="280,5,523,45"/>
+<area shape="rect" id="Node000002" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a11fa485d01512dd3aa2791a76bf2fde1" title="True once the audio thread has applied the last context this controller requested." alt="" coords="5,5,232,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="266,28,232,28,232,23,266,23"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::InternalPluginBase::stateMagic" name="Aestra::Audio::InternalPluginBase::stateMagic">
+<area shape="rect" id="Node000001" title="Magic for the state blob." alt="" coords="260,37,467,77"/>
+<area shape="rect" id="Node000002" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a551820afa00ce157be395b081b65335f" title="Reads a keyed v2 blob, applying by id rather than by position." alt="" coords="5,5,212,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="246,45,212,41,213,36,247,40"/>
+<area shape="rect" id="Node000003" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#abfa518adbc4541a87b4dece4c8299e6c" title="The blob is keyed: {magic, version=2, count, (paramId, value) * count}." alt="" coords="5,69,212,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="247,75,213,79,212,74,246,69"/>
+</map>

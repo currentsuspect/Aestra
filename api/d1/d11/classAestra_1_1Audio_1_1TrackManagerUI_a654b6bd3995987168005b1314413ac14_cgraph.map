@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::TrackManagerUI::bounceSelectedClipsInPlace" name="Aestra::Audio::TrackManagerUI::bounceSelectedClipsInPlace">
+<area shape="rect" id="Node000001" title="Bounce the selected clips in place (V8&#45;W5)." alt="" coords="5,5,232,45"/>
+<area shape="rect" id="Node000002" href="$d6/dc9/classAestra_1_1Audio_1_1TimelineClipSelection.html#a6d22f77c5dca63074b681accad8ffd33" title="Visit selected clips without exposing the container type." alt="" coords="280,5,479,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="232,23,266,23,266,28,232,28"/>
+</map>

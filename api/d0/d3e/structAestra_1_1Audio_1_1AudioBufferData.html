@@ -75,6 +75,7 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
+<a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="../../d5/dbe/structAestra_1_1Audio_1_1AudioBufferData-members.html">List of all members</a>  </div>
@@ -91,20 +92,63 @@ $(function() {
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-0-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../da/dee/structAestra_1_1Audio_1_1AudioBufferData__coll__graph.svg" width="422" height="315"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../da/dee/structAestra_1_1Audio_1_1AudioBufferData__coll__graph.svg" width="100%" height="549"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 <center><span class="legend">[<a href="../../graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
+Public Types</h2></td></tr>
+<tr class="memitem:abe362aa423b72cc02253981031c18e2c" id="r_abe362aa423b72cc02253981031c18e2c"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><b>Storage</b> : uint8_t { <b>Float32</b>
+, <b>Pcm16</b>
+, <b>Pcm24</b>
+ }</td></tr>
+<tr class="separator:abe362aa423b72cc02253981031c18e2c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a9877455742156722eba1549dcbb1ec28" id="r_a9877455742156722eba1549dcbb1ec28"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#a9877455742156722eba1549dcbb1ec28">durationSeconds</a> () const</td></tr>
 <tr class="separator:a9877455742156722eba1549dcbb1ec28"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5e212c9aa99d01516c28412cc455f997" id="r_a5e212c9aa99d01516c28412cc455f997"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#a5e212c9aa99d01516c28412cc455f997">isCompact</a> () const</td></tr>
+<tr class="separator:a5e212c9aa99d01516c28412cc455f997"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af123515ee60574c3012d431a418a814e" id="r_af123515ee60574c3012d431a418a814e"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#af123515ee60574c3012d431a418a814e">storedSamples</a> () const</td></tr>
+<tr class="memdesc:af123515ee60574c3012d431a418a814e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Samples held (frames x channels), whichever storage holds them.  <br /></td></tr>
+<tr class="separator:af123515ee60574c3012d431a418a814e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3ff7510dad624ed032eb3dba1a7f8ca2" id="r_a3ff7510dad624ed032eb3dba1a7f8ca2"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#a3ff7510dad624ed032eb3dba1a7f8ca2">residentBytes</a> () const</td></tr>
+<tr class="memdesc:a3ff7510dad624ed032eb3dba1a7f8ca2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bytes of sample memory this buffer holds.  <br /></td></tr>
+<tr class="separator:a3ff7510dad624ed032eb3dba1a7f8ca2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3592f87508e74e5789ace035d1abe056" id="r_a3592f87508e74e5789ace035d1abe056"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#a3592f87508e74e5789ace035d1abe056">isValid</a> () const</td></tr>
 <tr class="separator:a3592f87508e74e5789ace035d1abe056"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a478037d685098aad5b5e1f6a9fd2e7ce" id="r_a478037d685098aad5b5e1f6a9fd2e7ce"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#a478037d685098aad5b5e1f6a9fd2e7ce">sampleAt</a> (uint64_t index) const</td></tr>
+<tr class="memdesc:a478037d685098aad5b5e1f6a9fd2e7ce"><td class="mdescLeft">&#160;</td><td class="mdescRight">One sample as float, by interleaved index. For occasional reads; use <a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#aa9e50e44f1a3704408300a571d2491cb" title="Copy count interleaved samples starting at firstSample as float.">copyFloats()</a> in loops.  <br /></td></tr>
+<tr class="separator:a478037d685098aad5b5e1f6a9fd2e7ce"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa9e50e44f1a3704408300a571d2491cb" id="r_aa9e50e44f1a3704408300a571d2491cb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#aa9e50e44f1a3704408300a571d2491cb">copyFloats</a> (uint64_t firstSample, uint64_t count, float *out) const</td></tr>
+<tr class="memdesc:aa9e50e44f1a3704408300a571d2491cb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copy <code>count</code> interleaved samples starting at <code>firstSample</code> as float.  <br /></td></tr>
+<tr class="separator:aa9e50e44f1a3704408300a571d2491cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae5b7f4854c2092c03d871e80210c588e" id="r_ae5b7f4854c2092c03d871e80210c588e"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#ae5b7f4854c2092c03d871e80210c588e">toFloat</a> () const</td></tr>
+<tr class="memdesc:ae5b7f4854c2092c03d871e80210c588e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Every sample as float (a copy). Large for long audio: prefer <a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#aa9e50e44f1a3704408300a571d2491cb" title="Copy count interleaved samples starting at firstSample as float.">copyFloats()</a> over a window.  <br /></td></tr>
+<tr class="separator:ae5b7f4854c2092c03d871e80210c588e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9e550fc6255b3def12b8a032f705137e" id="r_a9e550fc6255b3def12b8a032f705137e"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#a9e550fc6255b3def12b8a032f705137e">peakAbs</a> () const</td></tr>
+<tr class="memdesc:a9e550fc6255b3def12b8a032f705137e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Largest finite |sample| in the buffer (0 when empty).  <br /></td></tr>
+<tr class="separator:a9e550fc6255b3def12b8a032f705137e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5d6ea33d8815f2e60d935153506495ba" id="r_a5d6ea33d8815f2e60d935153506495ba"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#a5d6ea33d8815f2e60d935153506495ba">expandToFloat</a> ()</td></tr>
+<tr class="memdesc:a5d6ea33d8815f2e60d935153506495ba"><td class="mdescLeft">&#160;</td><td class="mdescRight">Becomes float32 again (e.g. before an in-place edit). No-op if already float.  <br /></td></tr>
+<tr class="separator:a5d6ea33d8815f2e60d935153506495ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa0c6860c7c7225c96a29917107047ed1" id="r_aa0c6860c7c7225c96a29917107047ed1"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#aa0c6860c7c7225c96a29917107047ed1">tryCompact</a> ()</td></tr>
+<tr class="memdesc:aa0c6860c7c7225c96a29917107047ed1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Keep the samples as 16- or 24-bit PCM when that loses nothing.  <br /></td></tr>
+<tr class="separator:aa0c6860c7c7225c96a29917107047ed1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr class="memitem:a602cb2f3f87200372e8f6906973e5e4a" id="r_a602cb2f3f87200372e8f6906973e5e4a"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#a602cb2f3f87200372e8f6906973e5e4a">interleavedData</a></td></tr>
+<tr class="memdesc:a602cb2f3f87200372e8f6906973e5e4a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Float32 storage; EMPTY once the buffer is compact.  <br /></td></tr>
 <tr class="separator:a602cb2f3f87200372e8f6906973e5e4a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af96045d601267f4d4749cd85f84083d7" id="r_af96045d601267f4d4749cd85f84083d7"><td class="memItemLeft" align="right" valign="top">std::vector&lt; int16_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#af96045d601267f4d4749cd85f84083d7">pcm16</a></td></tr>
+<tr class="memdesc:af96045d601267f4d4749cd85f84083d7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Storage::Pcm16.  <br /></td></tr>
+<tr class="separator:af96045d601267f4d4749cd85f84083d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a149aad1745a10f6c457d802d6cda5b51" id="r_a149aad1745a10f6c457d802d6cda5b51"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint8_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#a149aad1745a10f6c457d802d6cda5b51">pcm24</a></td></tr>
+<tr class="memdesc:a149aad1745a10f6c457d802d6cda5b51"><td class="mdescLeft">&#160;</td><td class="mdescRight">Storage::Pcm24, little-endian, 3 bytes per sample.  <br /></td></tr>
+<tr class="separator:a149aad1745a10f6c457d802d6cda5b51"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac5570fca0b1bc113cc5fabe10cf0207e" id="r_ac5570fca0b1bc113cc5fabe10cf0207e"><td class="memItemLeft" align="right" valign="top">Storage&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#ac5570fca0b1bc113cc5fabe10cf0207e">storage</a> {Storage::Float32}</td></tr>
+<tr class="separator:ac5570fca0b1bc113cc5fabe10cf0207e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a408d12d8e023fda34a505a16aa72053b" id="r_a408d12d8e023fda34a505a16aa72053b"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#a408d12d8e023fda34a505a16aa72053b">sampleRate</a> {44100}</td></tr>
 <tr class="separator:a408d12d8e023fda34a505a16aa72053b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3d4628e4040d92430d2caa3135757d47" id="r_a3d4628e4040d92430d2caa3135757d47"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#a3d4628e4040d92430d2caa3135757d47">numChannels</a> {2}</td></tr>
@@ -114,9 +158,100 @@ Public Attributes</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Audio buffer data for clip sources. </p>
+<p>Samples live in exactly one of three storages. Decoded audio is float32 (4 bytes per sample), which is most of a session's memory: a 4-minute stereo track is ~92 MB. When a buffer's samples are exactly the values of 16- or 24-bit PCM (a 16/24-bit WAV or FLAC), <a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#aa0c6860c7c7225c96a29917107047ed1" title="Keep the samples as 16- or 24-bit PCM when that loses nothing.">tryCompact()</a> keeps them as that PCM (2 or 3 bytes per sample) and everything reads them back through <a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#aa9e50e44f1a3704408300a571d2491cb" title="Copy count interleaved samples starting at firstSample as float.">copyFloats()</a>. The conversion is exact, so what the engine plays is bit-identical; a buffer that is not exactly representable (MP3, a rendered float result, anything processed) stays float32 untouched. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00031">31</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
-</div><h2 class="groupheader">Member Function Documentation</h2>
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00041">41</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+</div><h2 class="groupheader">Member Enumeration Documentation</h2>
+<a id="abe362aa423b72cc02253981031c18e2c" name="abe362aa423b72cc02253981031c18e2c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abe362aa423b72cc02253981031c18e2c">&#9670;&#160;</a></span>Storage</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum class Aestra::Audio::AudioBufferData::Storage : uint8_t</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00042">42</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Member Function Documentation</h2>
+<a id="aa9e50e44f1a3704408300a571d2491cb" name="aa9e50e44f1a3704408300a571d2491cb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa9e50e44f1a3704408300a571d2491cb">&#9670;&#160;</a></span>copyFloats()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::AudioBufferData::copyFloats </td>
+          <td>(</td>
+          <td class="paramtype">uint64_t&#160;</td>
+          <td class="paramname"><em>firstSample</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint64_t&#160;</td>
+          <td class="paramname"><em>count</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float *&#160;</td>
+          <td class="paramname"><em>out</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Copy <code>count</code> interleaved samples starting at <code>firstSample</code> as float. </p>
+<p>Out-of-range samples are 0. Allocation-free (callable from the audio thread). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00093">93</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00044">interleavedData</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00045">pcm16</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00046">pcm24</a>, and <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00061">storedSamples()</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html#l00119">Aestra::Audio::ClipRenderService::extractRegion()</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00129">peakAbs()</a>, and <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00119">toFloat()</a>.</p>
+<div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-1-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-1-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData_aa9e50e44f1a3704408300a571d2491cb_cgraph.svg" width="446" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+<div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-2-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-2-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData_aa9e50e44f1a3704408300a571d2491cb_icgraph.svg" width="100%" height="458"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+
+</div>
+</div>
 <a id="a9877455742156722eba1549dcbb1ec28" name="a9877455742156722eba1549dcbb1ec28"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a9877455742156722eba1549dcbb1ec28">&#9670;&#160;</a></span>durationSeconds()</h2>
 
@@ -140,7 +275,72 @@ Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00037">37</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00052">52</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+
+</div>
+</div>
+<a id="a5d6ea33d8815f2e60d935153506495ba" name="a5d6ea33d8815f2e60d935153506495ba"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5d6ea33d8815f2e60d935153506495ba">&#9670;&#160;</a></span>expandToFloat()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::AudioBufferData::expandToFloat </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Becomes float32 again (e.g. before an in-place edit). No-op if already float. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00149">149</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00044">interleavedData</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00045">pcm16</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00046">pcm24</a>, and <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00119">toFloat()</a>.</p>
+<div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-3-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-3-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData_a5d6ea33d8815f2e60d935153506495ba_cgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+
+</div>
+</div>
+<a id="a5e212c9aa99d01516c28412cc455f997" name="a5e212c9aa99d01516c28412cc455f997"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5e212c9aa99d01516c28412cc455f997">&#9670;&#160;</a></span>isCompact()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::AudioBufferData::isCompact </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00058">58</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
 
 </div>
 </div>
@@ -167,7 +367,228 @@ Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00043">43</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00077">77</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+
+</div>
+</div>
+<a id="a9e550fc6255b3def12b8a032f705137e" name="a9e550fc6255b3def12b8a032f705137e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9e550fc6255b3def12b8a032f705137e">&#9670;&#160;</a></span>peakAbs()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float Aestra::Audio::AudioBufferData::peakAbs </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Largest finite |sample| in the buffer (0 when empty). </p>
+<p>Walks compact storage in small slices, so it never builds a whole-file float copy. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00129">129</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00093">copyFloats()</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00044">interleavedData</a>, and <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00061">storedSamples()</a>.</p>
+<div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-4-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-4-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData_a9e550fc6255b3def12b8a032f705137e_cgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+
+</div>
+</div>
+<a id="a3ff7510dad624ed032eb3dba1a7f8ca2" name="a3ff7510dad624ed032eb3dba1a7f8ca2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3ff7510dad624ed032eb3dba1a7f8ca2">&#9670;&#160;</a></span>residentBytes()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint64_t Aestra::Audio::AudioBufferData::residentBytes </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Bytes of sample memory this buffer holds. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00073">73</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00044">interleavedData</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00045">pcm16</a>, and <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00046">pcm24</a>.</p>
+
+</div>
+</div>
+<a id="a478037d685098aad5b5e1f6a9fd2e7ce" name="a478037d685098aad5b5e1f6a9fd2e7ce"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a478037d685098aad5b5e1f6a9fd2e7ce">&#9670;&#160;</a></span>sampleAt()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float Aestra::Audio::AudioBufferData::sampleAt </td>
+          <td>(</td>
+          <td class="paramtype">uint64_t&#160;</td>
+          <td class="paramname"><em>index</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>One sample as float, by interleaved index. For occasional reads; use <a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#aa9e50e44f1a3704408300a571d2491cb" title="Copy count interleaved samples starting at firstSample as float.">copyFloats()</a> in loops. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00080">80</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00044">interleavedData</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00045">pcm16</a>, and <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00046">pcm24</a>.</p>
+
+</div>
+</div>
+<a id="af123515ee60574c3012d431a418a814e" name="af123515ee60574c3012d431a418a814e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af123515ee60574c3012d431a418a814e">&#9670;&#160;</a></span>storedSamples()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint64_t Aestra::Audio::AudioBufferData::storedSamples </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Samples held (frames x channels), whichever storage holds them. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00061">61</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00044">interleavedData</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00045">pcm16</a>, and <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00046">pcm24</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00093">copyFloats()</a>, <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html#l00119">Aestra::Audio::ClipRenderService::extractRegion()</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00129">peakAbs()</a>, and <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00119">toFloat()</a>.</p>
+<div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-5-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-5-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData_af123515ee60574c3012d431a418a814e_icgraph.svg" width="100%" height="441"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+
+</div>
+</div>
+<a id="ae5b7f4854c2092c03d871e80210c588e" name="ae5b7f4854c2092c03d871e80210c588e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae5b7f4854c2092c03d871e80210c588e">&#9670;&#160;</a></span>toFloat()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; float &gt; Aestra::Audio::AudioBufferData::toFloat </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Every sample as float (a copy). Large for long audio: prefer <a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#aa9e50e44f1a3704408300a571d2491cb" title="Copy count interleaved samples starting at firstSample as float.">copyFloats()</a> over a window. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00119">119</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00093">copyFloats()</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00044">interleavedData</a>, and <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00061">storedSamples()</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00149">expandToFloat()</a>.</p>
+<div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-6-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-6-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData_ae5b7f4854c2092c03d871e80210c588e_cgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+<div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-7-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-7-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData_ae5b7f4854c2092c03d871e80210c588e_icgraph.svg" width="446" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+
+</div>
+</div>
+<a id="aa0c6860c7c7225c96a29917107047ed1" name="aa0c6860c7c7225c96a29917107047ed1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa0c6860c7c7225c96a29917107047ed1">&#9670;&#160;</a></span>tryCompact()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::AudioBufferData::tryCompact </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Keep the samples as 16- or 24-bit PCM when that loses nothing. </p>
+<dl class="section return"><dt>Returns</dt><dd>true if the buffer is now compact. Verified sample by sample: any value that is not exactly k / 2^15 (or k / 2^23) with an integer k in range, including NaN and anything over full scale, leaves the buffer float32 and unchanged. Main/import thread only. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00164">164</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00044">interleavedData</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00045">pcm16</a>, and <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00046">pcm24</a>.</p>
 
 </div>
 </div>
@@ -184,7 +605,11 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00032">32</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+<p>Float32 storage; EMPTY once the buffer is compact. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00044">44</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html#l00228">Aestra::Audio::ClipRenderService::applyFades()</a>, <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html#l00219">Aestra::Audio::ClipRenderService::applyGain()</a>, <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html#l00172">Aestra::Audio::ClipRenderService::applyPlaybackRate()</a>, <a class="el" href="../../dc/dd3/WaveformCache_8cpp_source.html#l00024">Aestra::Audio::WaveformCache::buildFromBuffer()</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00093">copyFloats()</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00149">expandToFloat()</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00129">peakAbs()</a>, <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html#l00276">Aestra::Audio::ClipRenderService::peakMagnitude()</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00073">residentBytes()</a>, <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html#l00149">Aestra::Audio::ClipRenderService::reverseInPlace()</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00080">sampleAt()</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00061">storedSamples()</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00119">toFloat()</a>, and <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00164">tryCompact()</a>.</p>
 
 </div>
 </div>
@@ -200,7 +625,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00034">34</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00049">49</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
 
 </div>
 </div>
@@ -216,7 +641,47 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00035">35</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00050">50</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+
+</div>
+</div>
+<a id="af96045d601267f4d4749cd85f84083d7" name="af96045d601267f4d4749cd85f84083d7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af96045d601267f4d4749cd85f84083d7">&#9670;&#160;</a></span>pcm16</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;int16_t&gt; Aestra::Audio::AudioBufferData::pcm16</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Storage::Pcm16. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00045">45</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00093">copyFloats()</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00149">expandToFloat()</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00073">residentBytes()</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00080">sampleAt()</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00061">storedSamples()</a>, and <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00164">tryCompact()</a>.</p>
+
+</div>
+</div>
+<a id="a149aad1745a10f6c457d802d6cda5b51" name="a149aad1745a10f6c457d802d6cda5b51"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a149aad1745a10f6c457d802d6cda5b51">&#9670;&#160;</a></span>pcm24</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;uint8_t&gt; Aestra::Audio::AudioBufferData::pcm24</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Storage::Pcm24, little-endian, 3 bytes per sample. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00046">46</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00093">copyFloats()</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00149">expandToFloat()</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00073">residentBytes()</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00080">sampleAt()</a>, <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00061">storedSamples()</a>, and <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00164">tryCompact()</a>.</p>
 
 </div>
 </div>
@@ -232,7 +697,23 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00033">33</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00048">48</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+
+</div>
+</div>
+<a id="ac5570fca0b1bc113cc5fabe10cf0207e" name="ac5570fca0b1bc113cc5fabe10cf0207e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac5570fca0b1bc113cc5fabe10cf0207e">&#9670;&#160;</a></span>storage</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">Storage Aestra::Audio::AudioBufferData::storage {Storage::Float32}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00047">47</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
 
 </div>
 </div>

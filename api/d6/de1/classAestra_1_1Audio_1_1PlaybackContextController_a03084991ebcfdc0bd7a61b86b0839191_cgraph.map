@@ -1,0 +1,21 @@
+<map id="Aestra::Audio::PlaybackContextController::startClipPreview" name="Aestra::Audio::PlaybackContextController::startClipPreview">
+<area shape="rect" id="Node000001" title="A pattern clip previews from the Timeline: pattern playback without an Arsenal focus." alt="" coords="5,229,232,269"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#af47f2b977f84c15cf5b7770c358454a5" title="Start Arsenal playback for the supplied pattern." alt="" coords="280,165,488,205"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="202,227,287,206,288,211,203,232"/>
+<area shape="rect" id="Node000009" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a6fb4ec85fe6d89ceb031d1add145dbe6" title="Rewind the Arsenal scheduler before arming a pattern for playback." alt="" coords="280,261,488,301"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="232,260,267,265,266,270,232,266"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aeae68fd7ad35f4229ef6ee5e7d086e5a" title="The zone Arsenal playback of pattern would use: the stored zone if it was drawn on that pattern." alt="" coords="555,5,763,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="401,163,457,109,494,80,535,55,550,48,552,53,537,60,498,84,461,113,405,167"/>
+<area shape="rect" id="Node000004" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#abee9e6cbed1f10357d030516169e842d" title="Apply a mutation lambda to a pattern, creating it on demand." alt="" coords="549,69,769,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="427,163,535,119,561,111,563,116,537,124,429,168"/>
+<area shape="rect" id="Node000006" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#aff1a4e0952563ea158cd48104e3dde38" title="Remove every scheduled instance and queued event." alt="" coords="542,133,777,173"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="488,171,528,166,529,171,488,176"/>
+<area shape="rect" id="Node000007" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a" title="Get a pattern by ID (returns nullptr if not found)" alt="" coords="549,197,769,237"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="488,195,536,200,535,206,488,200"/>
+<area shape="rect" id="Node000008" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a4a8cd3c7804784b829d93cc5556ddda5" title="Schedule new pattern instance (non&#45;RT thread)" alt="" coords="543,261,776,301"/>
+<area shape="poly" id="edge7_Node000002_Node000008" title=" " alt="" coords="429,203,537,247,563,255,561,260,535,252,427,208"/>
+<area shape="rect" id="Node000005" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a14e806e03276c9b4ea16c838fab092d8" title="Get or create a pattern." alt="" coords="831,69,1051,109"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="770,87,817,87,817,92,770,92"/>
+<area shape="rect" id="Node000010" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#ab5fe99cf5fa482111f0386497e58c931" title="Rewind queued events and all scheduled instances." alt="" coords="536,325,783,365"/>
+<area shape="poly" id="edge9_Node000009_Node000010" title=" " alt="" coords="471,299,560,320,559,325,470,304"/>
+</map>

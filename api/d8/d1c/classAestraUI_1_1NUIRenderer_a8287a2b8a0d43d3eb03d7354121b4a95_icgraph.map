@@ -1,9 +1,14 @@
 <map id="AestraUI::NUIRenderer::drawLine" name="AestraUI::NUIRenderer::drawLine">
-<area shape="rect" id="Node000001" title="Draw a line." alt="" coords="504,27,673,67"/>
-<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a3a105b59305ebc04e7f57f6f3ab61b06" title="Render the workspace and active overlays." alt="" coords="263,5,448,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="489,38,448,32,449,27,490,32"/>
-<area shape="rect" id="Node000003" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#aa94a93c30f05a4177c1cd16390cf7706" title="Drag&#45;hover ghost: dashed &quot;new unit&quot; outline while dragging a sample over empty Arsenal space." alt="" coords="255,55,456,95"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="490,62,457,66,456,61,490,57"/>
-<area shape="rect" id="Node000004" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#ad0272af2020e23cd94658d1e4beacfe5" title="Render the Arsenal panel and unit rows." alt="" coords="5,55,207,95"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="241,78,207,78,207,73,241,73"/>
+<area shape="rect" id="Node000001" title="Draw a line." alt="" coords="504,123,673,163"/>
+<area shape="rect" id="Node000002" href="$da/d71/TransportModuleStyle_8h.html#a61226f7514c260b1e506caf8e7471b49" title="Hairline between two modules, inset from the row&#39;s top and bottom." alt="" coords="265,29,445,69"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="535,119,455,84,422,72,424,67,457,79,537,114"/>
+<area shape="rect" id="Node000003" href="$d8/d10/namespaceAestraUI_1_1EditorKit.html#a2b98b886407d052270f1a636f14f3e70" title="The standard rotary knob: inset disc, track arc, value arc, needle, centre well, then the label and t..." alt="" coords="284,93,427,133"/>
+<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="489,133,427,125,427,120,490,128"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a3a105b59305ebc04e7f57f6f3ab61b06" title="Render the workspace and active overlays." alt="" coords="263,158,448,183"/>
+<area shape="poly" id="edge4_Node000001_Node000004" title=" " alt="" coords="490,157,449,162,448,157,489,152"/>
+<area shape="rect" id="Node000005" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#aa94a93c30f05a4177c1cd16390cf7706" title="Drag&#45;hover ghost: dashed &quot;new unit&quot; outline while dragging a sample over empty Arsenal space." alt="" coords="255,208,456,248"/>
+<area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="527,170,457,197,419,210,417,205,455,192,525,165"/>
+<area shape="poly" id="edge2_Node000002_Node000002" title=" " alt="" coords="395,18,381,11,355,8,333,10,320,15,315,21,317,28,312,30,309,20,316,10,332,5,355,3,382,6,397,13"/>
+<area shape="rect" id="Node000006" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#ad0272af2020e23cd94658d1e4beacfe5" title="Render the Arsenal panel and unit rows." alt="" coords="5,208,207,248"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="241,231,207,231,207,225,241,225"/>
 </map>

@@ -1,0 +1,7 @@
+<map id="AestraUI::PluginBrowserPanel::moveSelection" name="AestraUI::PluginBrowserPanel::moveSelection">
+<area shape="rect" id="Node000001" title="Move the selection through the filtered list (spec item 4)." alt="" coords="5,5,220,45"/>
+<area shape="rect" id="Node000002" href="$d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#a689f371aaa1ed0c84e92ec39fd429255" title="Scroll just enough to bring the selection into view." alt="" coords="268,5,483,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="220,23,254,23,254,28,220,28"/>
+<area shape="rect" id="Node000003" href="$db/d1a/classAestraUI_1_1NUIComponent.html#a8ff75e00805b13ff9a6babd21f6cc556" title="Window&#45;absolute (V8&#45;X2b Window space): components render and hit&#45;test at bounds_ as&#45;is." alt="" coords="531,5,716,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="483,23,517,23,517,28,483,28"/>
+</map>

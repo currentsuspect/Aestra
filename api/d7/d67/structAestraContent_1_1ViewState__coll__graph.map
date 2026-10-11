@@ -1,14 +1,11 @@
 <map id="AestraContent::ViewState" name="AestraContent::ViewState">
-<area shape="rect" id="Node000001" title="Persisted overlay&#45;panel state for the current workspace." alt="" coords="132,299,321,324"/>
-<area shape="rect" id="Node000002" title=" " alt="" coords="5,137,56,163"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="28,176,25,226,30,251,43,273,57,282,77,289,132,300,131,305,76,294,54,287,39,276,25,253,20,226,22,176"/>
-<area shape="rect" id="Node000003" href="$da/d4e/structAestraUI_1_1NUIRect.html" title=" " alt="" coords="87,137,225,163"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="154,176,152,224,156,250,166,273,178,286,194,296,191,301,175,291,162,276,151,251,146,224,148,176"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="212,5,263,31"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="225,44,166,138,161,136,221,41"/>
-<area shape="rect" id="Node000006" href="$dd/d25/structAestraUI_1_1NUIPoint.html" title=" " alt="" coords="250,137,393,163"/>
-<area shape="poly" id="edge6_Node000006_Node000004" title=" " alt="" coords="256,40,265,53,317,136,312,138,260,56,252,44"/>
-<area shape="rect" id="Node000005" title=" " alt="" coords="438,137,522,163"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="484,177,479,227,469,254,452,277,431,289,399,298,322,308,321,303,398,292,429,284,449,273,465,252,474,226,479,176"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="303,175,294,188,284,211,280,232,275,252,264,276,243,300,239,297,259,273,270,250,275,230,279,210,290,185,299,172"/>
+<area shape="rect" id="Node000001" title="Persisted overlay&#45;panel state for the current workspace." alt="" coords="68,255,257,280"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,108,56,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="33,147,38,189,46,210,58,229,75,243,95,252,93,257,72,247,54,232,41,213,33,190,27,148"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="121,108,205,133"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="165,147,165,254,160,254,160,147"/>
+<area shape="rect" id="Node000004" href="$dd/d25/structAestraUI_1_1NUIPoint.html" title=" " alt="" coords="229,108,371,133"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="300,148,289,191,278,213,263,233,244,247,222,257,220,252,241,243,259,229,274,210,284,189,295,147"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="275,5,325,31"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="303,45,303,108,297,108,297,45"/>
 </map>

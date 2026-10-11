@@ -1,0 +1,21 @@
+<map id="Aestra::Audio::BounceInPlaceCommand::execute" name="Aestra::Audio::BounceInPlaceCommand::execute">
+<area shape="rect" id="Node000001" title="Execute the command (first time)" alt="" coords="5,133,217,173"/>
+<area shape="rect" id="Node000002" href="$da/df9/classAestra_1_1Audio_1_1ClipRenderService.html#a4f02b217619f2c540dfc913686497f77" title="Write buffer to disk and register it as a new source + pattern." alt="" coords="265,133,453,173"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="217,151,252,151,252,156,217,156"/>
+<area shape="rect" id="Node000003" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a4213fb303f26d646b6b418b203723e31" title="Create an audio pattern." alt="" coords="501,37,721,77"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="412,131,544,80,546,85,414,136"/>
+<area shape="rect" id="Node000005" href="$d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a6fff22f797d8e03841f60afdcda1bf7a" title="Create or replace a source for a recorded take." alt="" coords="502,133,721,173"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="454,151,488,151,488,156,454,156"/>
+<area shape="rect" id="Node000009" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a054ad8e9a176915d83d883854fa19d5c" title="Route an audio pattern to a stable mixer channel ID (0 means Master)." alt="" coords="501,229,721,269"/>
+<area shape="poly" id="edge8_Node000002_Node000009" title=" " alt="" coords="414,171,546,222,544,227,412,176"/>
+<area shape="rect" id="Node000004" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a06fe24536a8be9e7c0d7acf64da1b3ae" title="Create an audio pattern restoring a serialized identity (#446)." alt="" coords="769,5,989,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="721,42,755,37,756,43,722,47"/>
+<area shape="rect" id="Node000006" href="$d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a8d8c3b6f0853d13fea0b514f800caf2a" title="Canonical entry point for handing decoded audio to a managed source." alt="" coords="770,69,989,109"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="695,131,781,110,783,115,697,136"/>
+<area shape="rect" id="Node000007" href="$d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a313c3de5cc2eb2b11a0f947ebe89d11e" title="Get or create a source for a file path." alt="" coords="770,133,989,173"/>
+<area shape="poly" id="edge6_Node000005_Node000007" title=" " alt="" coords="721,151,756,151,756,156,721,156"/>
+<area shape="rect" id="Node000008" href="$d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a9df135788c4b7117579dc103b01d9f94" title="Get a source by ID." alt="" coords="770,197,989,237"/>
+<area shape="poly" id="edge7_Node000005_Node000008" title=" " alt="" coords="697,171,783,192,781,197,695,176"/>
+<area shape="rect" id="Node000010" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a" title="Get a pattern by ID (returns nullptr if not found)" alt="" coords="769,261,989,301"/>
+<area shape="poly" id="edge9_Node000009_Node000010" title=" " alt="" coords="722,260,756,264,755,269,721,265"/>
+</map>

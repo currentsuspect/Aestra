@@ -1,22 +1,27 @@
 <map id="AestraAudio/include/Commands/HostVerbRegistry.h" name="AestraAudio/include/Commands/HostVerbRegistry.h">
-<area shape="rect" id="Node000001" title="The seam that lets Muse operate Aestra, not just its audio engine." alt="" coords="796,5,1023,45"/>
-<area shape="rect" id="Node000002" href="$d1/d13/MuseService_8h_source.html" title=" " alt="" coords="561,93,759,133"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="842,52,715,96,714,91,841,47"/>
-<area shape="rect" id="Node000008" href="$d8/d83/MuseHostVerbs_8cpp_source.html" title=" " alt="" coords="909,189,1136,214"/>
-<area shape="poly" id="edge10_Node000001_Node000008" title=" " alt="" coords="914,59,921,95,937,132,967,164,1001,186,998,191,964,168,932,135,916,97,909,60"/>
-<area shape="rect" id="Node000010" href="$d9/d62/HostVerbRegistry_8cpp_source.html" title=" " alt="" coords="947,93,1149,133"/>
-<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="953,50,1019,91,1016,96,950,55"/>
-<area shape="rect" id="Node000003" href="$d1/d59/MuseService_8cpp_source.html" title=" " alt="" coords="5,181,208,221"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="547,134,220,184,209,186,208,181,220,179,547,129"/>
-<area shape="rect" id="Node000004" href="$d7/d64/MuseSocketServer_8cpp_source.html" title=" " alt="" coords="232,181,435,221"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="576,139,406,184,404,179,575,134"/>
-<area shape="rect" id="Node000005" href="$d8/d97/AestraApp_8h_source.html" title=" " alt="" coords="459,189,637,214"/>
-<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="626,144,565,190,562,186,623,140"/>
-<area shape="poly" id="edge7_Node000002_Node000008" title=" " alt="" coords="754,134,975,186,974,191,752,139"/>
-<area shape="rect" id="Node000009" href="$de/d6c/MuseReplMain_8cpp_source.html" title=" " alt="" coords="662,189,885,214"/>
-<area shape="poly" id="edge8_Node000002_Node000009" title=" " alt="" coords="698,140,759,186,756,190,695,144"/>
-<area shape="rect" id="Node000006" href="$db/d11/AestraApp_8cpp_source.html" title=" " alt="" coords="351,269,545,295"/>
-<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="524,225,464,271,461,267,521,221"/>
-<area shape="rect" id="Node000007" href="$d5/de0/Main_8cpp.html" title="Aestra &#45; Main Application Entry Point." alt="" coords="569,269,727,295"/>
-<area shape="poly" id="edge6_Node000005_Node000007" title=" " alt="" coords="575,221,635,267,632,271,572,225"/>
+<area shape="rect" id="Node000001" title="The seam that lets Muse operate Aestra, not just its audio engine." alt="" coords="807,5,1033,45"/>
+<area shape="rect" id="Node000002" href="$d1/d13/MuseService_8h_source.html" title=" " alt="" coords="619,93,818,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="864,53,764,96,762,91,862,48"/>
+<area shape="rect" id="Node000008" href="$d8/d83/MuseHostVerbs_8cpp_source.html" title=" " alt="" coords="5,269,232,295"/>
+<area shape="poly" id="edge13_Node000001_Node000008" title=" " alt="" coords="793,35,613,49,512,60,410,76,315,95,231,119,163,148,138,165,119,183,110,204,108,227,117,269,112,270,103,227,104,202,115,180,135,161,161,144,229,114,314,90,410,70,511,55,613,43,793,29"/>
+<area shape="rect" id="Node000009" href="$dd/da3/ProjectLifecycle_8cpp_source.html" title=" " alt="" coords="840,269,1069,295"/>
+<area shape="poly" id="edge14_Node000001_Node000009" title=" " alt="" coords="969,50,1004,73,1041,103,1074,139,1100,180,1106,202,1100,223,1084,240,1066,254,1024,272,1022,267,1063,249,1081,236,1095,220,1101,202,1095,182,1070,142,1037,107,1001,77,966,55"/>
+<area shape="rect" id="Node000011" href="$d9/d62/HostVerbRegistry_8cpp_source.html" title=" " alt="" coords="1160,93,1363,133"/>
+<area shape="poly" id="edge12_Node000001_Node000011" title=" " alt="" coords="1009,46,1187,91,1186,96,1007,51"/>
+<area shape="rect" id="Node000003" href="$d1/d59/MuseService_8cpp_source.html" title=" " alt="" coords="883,181,1085,221"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="791,135,927,179,925,184,789,140"/>
+<area shape="rect" id="Node000004" href="$d7/d64/MuseSocketServer_8cpp_source.html" title=" " alt="" coords="403,181,605,221"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="660,141,552,184,550,179,658,136"/>
+<area shape="rect" id="Node000005" href="$d8/d97/AestraApp_8h_source.html" title=" " alt="" coords="629,189,808,214"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="721,147,721,188,716,188,716,147"/>
+<area shape="poly" id="edge9_Node000002_Node000008" title=" " alt="" coords="606,124,472,133,328,146,208,163,167,173,144,183,130,203,123,226,120,269,115,269,118,225,126,200,141,179,165,168,207,158,327,141,471,128,605,118"/>
+<area shape="poly" id="edge11_Node000002_Node000009" title=" " alt="" coords="762,139,822,179,872,219,939,267,936,271,869,223,818,183,759,143"/>
+<area shape="rect" id="Node000010" href="$de/d6c/MuseReplMain_8cpp_source.html" title=" " alt="" coords="155,189,378,214"/>
+<area shape="poly" id="edge10_Node000002_Node000010" title=" " alt="" coords="607,139,327,191,326,186,606,133"/>
+<area shape="rect" id="Node000006" href="$db/d11/AestraApp_8cpp_source.html" title=" " alt="" coords="622,269,815,295"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="721,228,721,269,716,269,716,228"/>
+<area shape="rect" id="Node000007" href="$d5/de0/Main_8cpp.html" title="Aestra &#45; Main Application Entry Point." alt="" coords="439,269,598,295"/>
+<area shape="poly" id="edge6_Node000005_Node000007" title=" " alt="" coords="678,222,549,272,547,267,676,217"/>
+<area shape="poly" id="edge7_Node000005_Node000008" title=" " alt="" coords="647,219,618,224,413,251,232,272,231,267,412,246,617,219,647,214"/>
+<area shape="poly" id="edge8_Node000005_Node000009" title=" " alt="" coords="767,216,921,267,919,272,765,221"/>
 </map>

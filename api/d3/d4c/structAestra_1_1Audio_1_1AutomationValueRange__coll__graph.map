@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::AutomationValueRange" name="Aestra::Audio::AutomationValueRange">
+<area shape="rect" id="Node000001" title="How an automation lane reads and draws its curves (V8&#45;A2)." alt="" coords="5,108,199,148"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="69,5,135,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="105,45,105,108,99,108,99,45"/>
+</map>

@@ -16,7 +16,7 @@ var searchData=
   ['scopedconnections_13',['ScopedConnections',['../d9/d36/classAestra_1_1Events_1_1ScopedConnections.html',1,'Aestra::Events']]],
   ['scopedrealtimeaudiothread_14',['ScopedRealtimeAudioThread',['../de/dce/classAestra_1_1Audio_1_1ScopedRealtimeAudioThread.html',1,'Aestra::Audio']]],
   ['scopedtimer_15',['ScopedTimer',['../d6/d29/classAestra_1_1ScopedTimer.html',1,'Aestra']]],
-  ['selectionbox_16',['SelectionBox',['../d0/d44/classAestraUI_1_1SelectionBox.html',1,'AestraUI']]],
+  ['searchquery_16',['SearchQuery',['../d8/d86/structAestraUI_1_1BrowserLibrary_1_1SearchQuery.html',1,'AestraUI::BrowserLibrary']]],
   ['sendviewmodel_17',['SendViewModel',['../dd/d45/structAestra_1_1ChannelViewModel_1_1SendViewModel.html',1,'Aestra::ChannelViewModel']]],
   ['sequencerstep_18',['SequencerStep',['../d3/d53/structAestraUI_1_1SequencerStep.html',1,'AestraUI']]],
   ['serializeresult_19',['SerializeResult',['../dc/dd2/structProjectSerializer_1_1SerializeResult.html',1,'ProjectSerializer']]],
@@ -68,8 +68,13 @@ var searchData=
   ['stageprofiledata_65',['StageProfileData',['../d7/d12/structAestra_1_1Audio_1_1Plugins_1_1AestraVerb_1_1StageProfileData.html',1,'Aestra::Audio::Plugins::AestraVerb']]],
   ['stats_66',['stats',['../db/dce/structAestraUI_1_1NUIAdaptiveFPS_1_1Stats.html',1,'AestraUI::NUIAdaptiveFPS::Stats'],['../d0/d7d/structAestraUI_1_1NUIFrameProfiler_1_1Stats.html',1,'AestraUI::NUIFrameProfiler::Stats'],['../d0/da3/structStats.html',1,'Stats']]],
   ['statusbar_67',['StatusBar',['../df/d96/classAestraUI_1_1StatusBar.html',1,'AestraUI']]],
-  ['stepsequencerview_68',['StepSequencerView',['../d5/d99/classAestraUI_1_1StepSequencerView.html',1,'AestraUI']]],
-  ['stopbutton_69',['StopButton',['../d4/d78/classAestraUI_1_1StopButton.html',1,'AestraUI']]],
-  ['stopcommand_70',['StopCommand',['../db/d15/classAestra_1_1Audio_1_1StopCommand.html',1,'Aestra::Audio']]],
-  ['streamingdecoder_71',['StreamingDecoder',['../dc/d73/classAestra_1_1Audio_1_1StreamingDecoder.html',1,'Aestra::Audio']]]
+  ['stemexportresult_68',['StemExportResult',['../d8/d8d/structAestra_1_1Audio_1_1StemExportResult.html',1,'Aestra::Audio']]],
+  ['stemfile_69',['StemFile',['../d8/d1f/structAestra_1_1Audio_1_1StemFile.html',1,'Aestra::Audio']]],
+  ['stepsequencerview_70',['StepSequencerView',['../d5/d99/classAestraUI_1_1StepSequencerView.html',1,'AestraUI']]],
+  ['stopbutton_71',['StopButton',['../d4/d78/classAestraUI_1_1StopButton.html',1,'AestraUI']]],
+  ['stopcommand_72',['StopCommand',['../db/d15/classAestra_1_1Audio_1_1StopCommand.html',1,'Aestra::Audio']]],
+  ['streamingdecoder_73',['StreamingDecoder',['../dc/d73/classAestra_1_1Audio_1_1StreamingDecoder.html',1,'Aestra::Audio']]],
+  ['stretchtarget_74',['StretchTarget',['../d9/db9/structAestra_1_1Audio_1_1StretchTarget.html',1,'Aestra::Audio']]],
+  ['stretchtargetlist_75',['StretchTargetList',['../da/da4/structAestra_1_1Audio_1_1StretchTargetList.html',1,'Aestra::Audio']]],
+  ['systemplace_76',['SystemPlace',['../db/d3a/structAestraUI_1_1BrowserLibrary_1_1SystemPlace.html',1,'AestraUI::BrowserLibrary']]]
 ];

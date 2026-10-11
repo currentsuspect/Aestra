@@ -1,0 +1,19 @@
+<map id="AestraContent::savePanelPreference" name="AestraContent::savePanelPreference">
+<area shape="rect" id="Node000001" title="Persist a captured preference (save&#45;on&#45;change, shared store)." alt="" coords="796,88,985,128"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#af10a2012402159e071496c9c57f61d57" title="View &gt; Reset Panel Positions: default geometry for every panel; editors re&#45;centred." alt="" coords="535,5,726,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="813,86,694,48,695,43,815,81"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#ab90c78e0fe24a2ff739817b3c4a4440d" title="Create the Arsenal and sample&#45;editor overlays." alt="" coords="5,63,213,103"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="782,107,214,89,214,83,782,102"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#abf75859f00b70e490c26fdad50391fc0" title="Update the active overlay&#45;panel drag." alt="" coords="513,121,748,146"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="782,121,749,125,748,119,782,116"/>
+<area shape="rect" id="Node000005" href="$db/d60/classAestraContent.html#a589ca44aee5e7aab4b6ead3f635adda5" title="Wire the floating&#45;panel behaviors shared by every overlay panel." alt="" coords="261,145,465,185"/>
+<area shape="poly" id="edge9_Node000001_Node000005" title=" " alt="" coords="834,136,792,150,749,161,675,171,601,176,466,175,466,170,600,171,675,166,747,156,791,145,832,131"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="511,150,466,156,465,150,511,145"/>
+<area shape="poly" id="edge5_Node000005_Node000003" title=" " alt="" coords="290,143,213,117,175,105,177,100,214,112,292,138"/>
+<area shape="rect" id="Node000006" href="$db/d60/classAestraContent.html#a82a35ff5bbf8d6f1445e1016d19679c6" title="Create the History and Takes overlays." alt="" coords="6,127,213,167"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="247,159,213,157,213,152,248,154"/>
+<area shape="rect" id="Node000007" href="$db/d60/classAestraContent.html#a59842dc639e11b43359a064651907ae6" title="Create the mixer overlay and the routing&#45;map full panel." alt="" coords="12,191,207,231"/>
+<area shape="poly" id="edge7_Node000005_Node000007" title=" " alt="" coords="248,189,207,196,207,191,247,183"/>
+<area shape="rect" id="Node000008" href="$db/d60/classAestraContent.html#af64a8d147bdef97ae8aa8a7e48dc6bf8" title="Create the piano&#45;roll overlay and musical&#45;typing wiring." alt="" coords="12,255,207,295"/>
+<area shape="poly" id="edge8_Node000005_Node000008" title=" " alt="" coords="317,195,214,245,182,257,180,252,212,240,314,190"/>
+</map>

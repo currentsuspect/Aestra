@@ -1,24 +1,36 @@
 <map id="Aestra::Audio::ClipPrefilterService::Job" name="Aestra::Audio::ClipPrefilterService::Job">
-<area shape="rect" id="Node000001" title=" " alt="" coords="69,500,262,540"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="74,500,267,540"/>
 <area shape="rect" id="Node000002" title=" " alt="" coords="5,192,80,217"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="43,231,44,297,49,335,60,372,78,410,101,444,148,498,144,501,97,448,73,412,55,374,44,336,39,297,38,231"/>
-<area shape="rect" id="Node000005" href="$d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html" title="Audio buffer data for clip sources." alt="" coords="207,295,431,320"/>
-<area shape="poly" id="edge10_Node000005_Node000002" title=" " alt="" coords="62,226,84,249,112,268,158,286,207,297,206,302,157,291,109,273,81,253,58,230"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="141,192,216,217"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="180,231,169,500,163,499,175,231"/>
-<area shape="poly" id="edge9_Node000005_Node000003" title=" " alt="" coords="193,228,207,249,226,269,248,282,273,292,271,297,246,287,222,273,203,253,188,231"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="203,397,445,437"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="284,447,196,502,194,498,281,443"/>
-<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="323,334,326,397,320,397,317,334"/>
-<area shape="rect" id="Node000006" title=" " alt="" coords="255,192,406,217"/>
-<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="330,232,323,295,317,294,325,231"/>
-<area shape="rect" id="Node000007" title=" " alt="" coords="311,93,361,119"/>
-<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="330,132,328,143,328,169,331,191,325,192,322,169,323,142,325,131"/>
-<area shape="rect" id="Node000008" title=" " alt="" coords="157,93,286,119"/>
-<area shape="poly" id="edge7_Node000006_Node000008" title=" " alt="" coords="233,130,243,149,257,166,275,179,295,189,293,194,272,184,253,170,238,152,228,133"/>
-<area shape="rect" id="Node000009" title=" " alt="" coords="330,5,369,31"/>
-<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="322,41,240,95,237,91,319,36"/>
-<area shape="rect" id="Node000010" title=" " alt="" coords="403,143,560,168"/>
-<area shape="poly" id="edge12_Node000010_Node000009" title=" " alt="" coords="372,38,472,141,468,144,368,42"/>
-<area shape="poly" id="edge11_Node000004_Node000010" title=" " alt="" coords="483,182,473,248,462,286,445,321,426,346,404,367,359,399,356,395,401,363,422,342,440,319,457,284,468,247,478,181"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="41,231,38,297,42,335,52,372,72,411,97,445,150,498,146,502,93,449,67,413,47,374,37,336,33,297,36,231"/>
+<area shape="rect" id="Node000005" href="$d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html" title="Audio buffer data for clip sources." alt="" coords="296,295,520,320"/>
+<area shape="poly" id="edge17_Node000005_Node000002" title=" " alt="" coords="58,227,77,250,101,268,135,280,183,288,296,299,296,304,182,294,134,285,99,273,73,253,54,230"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="121,192,196,217"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="162,231,173,499,167,500,157,231"/>
+<area shape="poly" id="edge16_Node000005_Node000003" title=" " alt="" coords="178,227,198,252,216,268,255,285,296,296,295,301,253,290,213,273,194,256,173,230"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="287,397,529,437"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="352,445,216,502,214,497,350,440"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="411,334,411,397,405,397,405,334"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="221,192,371,217"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="308,229,320,250,336,269,355,282,375,292,373,297,352,287,333,273,316,253,304,231"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="208,93,259,119"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="231,132,232,150,237,167,249,180,264,189,261,194,245,184,232,169,226,151,226,132"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="409,93,538,119"/>
+<area shape="poly" id="edge7_Node000006_Node000008" title=" " alt="" coords="398,125,353,145,326,169,306,193,302,190,322,165,351,140,396,120"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="395,192,562,217"/>
+<area shape="poly" id="edge11_Node000010_Node000008" title=" " alt="" coords="440,129,428,144,424,155,428,167,438,180,452,190,449,194,435,184,423,169,419,155,423,141,436,125"/>
+<area shape="rect" id="Node000012" title=" " alt="" coords="586,192,753,217"/>
+<area shape="poly" id="edge14_Node000012_Node000008" title=" " alt="" coords="496,128,532,166,562,180,594,189,592,195,560,185,529,170,492,131"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="643,5,682,31"/>
+<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="632,36,500,95,498,91,630,31"/>
+<area shape="rect" id="Node000015" title=" " alt="" coords="813,143,971,168"/>
+<area shape="poly" id="edge19_Node000015_Node000009" title=" " alt="" coords="695,35,874,140,871,145,693,40"/>
+<area shape="poly" id="edge9_Node000005_Node000010" title=" " alt="" coords="473,232,451,272,426,297,423,293,447,269,468,229"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="612,93,679,119"/>
+<area shape="poly" id="edge10_Node000010_Node000011" title=" " alt="" coords="641,133,632,153,618,170,592,186,563,196,561,191,589,181,614,166,628,150,636,131"/>
+<area shape="poly" id="edge12_Node000005_Node000012" title=" " alt="" coords="633,226,521,273,449,297,447,292,519,268,631,221"/>
+<area shape="rect" id="Node000013" title=" " alt="" coords="708,93,775,119"/>
+<area shape="poly" id="edge13_Node000012_Node000013" title=" " alt="" coords="735,133,714,170,688,194,685,190,710,166,730,130"/>
+<area shape="rect" id="Node000014" title=" " alt="" coords="777,192,849,217"/>
+<area shape="poly" id="edge15_Node000005_Node000014" title=" " alt="" coords="777,225,716,250,645,273,581,287,518,297,517,292,580,282,643,268,714,245,775,220"/>
+<area shape="poly" id="edge18_Node000004_Node000015" title=" " alt="" coords="885,182,863,219,829,251,788,273,705,314,619,349,472,400,470,395,617,344,702,309,785,268,826,246,859,216,881,180"/>
 </map>

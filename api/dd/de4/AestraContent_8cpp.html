@@ -75,14 +75,18 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
-<a href="#define-members">Macros</a>  </div>
+<a href="#define-members">Macros</a> &#124;
+<a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">AestraContent.cpp File Reference</div></div>
 </div><!--header-->
 <div class="contents">
 
 <p>Main content area for Aestra - Implementation.  
 <a href="#details">More...</a></p>
-<div class="textblock"><code>#include &quot;<a class="el" href="../../dc/dd6/AestraContent_8h_source.html">AestraContent.h</a>&quot;</code><br />
+<div class="textblock"><code>#include &quot;<a class="el" href="../../da/d71/TransportModuleStyle_8h_source.html">../Components/TransportModuleStyle.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../dc/dd6/AestraContent_8h_source.html">AestraContent.h</a>&quot;</code><br />
+<code>#include &quot;FloatingPanelDescriptors.h&quot;</code><br />
+<code>#include &quot;../AestraUI/Layout/NUILayoutAlgorithms.h&quot;</code><br />
 <code>#include &quot;../AestraUI/Widgets/PluginBrowserPanel.h&quot;</code><br />
 <code>#include &quot;../AestraUI/Widgets/PluginUIController.h&quot;</code><br />
 <code>#include &quot;../AestraUI/Widgets/UIMixerInspector.h&quot;</code><br />
@@ -93,11 +97,13 @@ $(function() {
 <code>#include &quot;AudioGraphBuilder.h&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../d5/d0c/AuditionEngine_8h_source.html">AuditionEngine.h</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../d3/d97/AuditionPanel_8h_source.html">AuditionPanel.h</a>&quot;</code><br />
+<code>#include &quot;Commands/ClipPlacement.h&quot;</code><br />
 <code>#include &quot;Commands/PluginCommands.h&quot;</code><br />
 <code>#include &quot;MidiInputService.h&quot;</code><br />
 <code>#include &quot;MixerChannel.h&quot;</code><br />
 <code>#include &quot;MixerPanel.h&quot;</code><br />
 <code>#include &quot;PatternBrowserPanel.h&quot;</code><br />
+<code>#include &quot;UISurfaceStoreProviders.h&quot;</code><br />
 <code>#include &quot;PianoRollPanel.h&quot;</code><br />
 <code>#include &quot;Plugin/AestraDelay.h&quot;</code><br />
 <code>#include &quot;Plugin/AestraLFO.h&quot;</code><br />
@@ -116,7 +122,11 @@ $(function() {
 <code>#include &quot;FilePreviewPanel.h&quot;</code><br />
 <code>#include &quot;TrackManagerUI.h&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../d3/df6/TransportBar_8h_source.html">TransportBar.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../dc/d81/UISurfaceResolution_8h_source.html">UISurfaceResolution.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d2/d95/DockedRailWidths_8h_source.html">DockedRailWidths.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../de/d6c/ServiceLocator_8h_source.html">../App/ServiceLocator.h</a>&quot;</code><br />
 <code>#include &quot;../AestraAudio/include/Commands/CommandRegistry.h&quot;</code><br />
+<code>#include &quot;../AestraAudio/include/Playback/PlaybackContextController.h&quot;</code><br />
 <code>#include &quot;../AestraCore/include/AestraLog.h&quot;</code><br />
 <code>#include &quot;AudioEngine.h&quot;</code><br />
 <code>#include &quot;ChannelSlotMap.h&quot;</code><br />
@@ -129,6 +139,7 @@ $(function() {
 <code>#include &quot;TrackManager.h&quot;</code><br />
 <code>#include &lt;algorithm&gt;</code><br />
 <code>#include &lt;cmath&gt;</code><br />
+<code>#include &lt;cstdio&gt;</code><br />
 <code>#include &lt;filesystem&gt;</code><br />
 <code>#include &lt;fstream&gt;</code><br />
 <code>#include &lt;sstream&gt;</code><br />
@@ -140,6 +151,11 @@ $(function() {
 Macros</h2></td></tr>
 <tr class="memitem:ae71449b1cc6e6250b91f539153a7a0d3" id="r_ae71449b1cc6e6250b91f539153a7a0d3"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de4/AestraContent_8cpp.html#ae71449b1cc6e6250b91f539153a7a0d3">M_PI</a>&#160;&#160;&#160;3.14159265358979323846</td></tr>
 <tr class="separator:ae71449b1cc6e6250b91f539153a7a0d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Functions</h2></td></tr>
+<tr class="memitem:a0ebe690bafaaafd7afd94d77c0535c7a" id="r_a0ebe690bafaaafd7afd94d77c0535c7a"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de4/AestraContent_8cpp.html#a0ebe690bafaaafd7afd94d77c0535c7a">toastRect</a> (const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> &amp;b)</td></tr>
+<tr class="separator:a0ebe690bafaaafd7afd94d77c0535c7a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Main content area for Aestra - Implementation. </p>
@@ -158,7 +174,36 @@ Macros</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l00075">75</a> of file <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html">AestraContent.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l00087">87</a> of file <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html">AestraContent.cpp</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Function Documentation</h2>
+<a id="a0ebe690bafaaafd7afd94d77c0535c7a" name="a0ebe690bafaaafd7afd94d77c0535c7a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0ebe690bafaaafd7afd94d77c0535c7a">&#9670;&#160;</a></span>toastRect()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> toastRect </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> &amp;&#160;</td>
+          <td class="paramname"><em>b</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l02011">2011</a> of file <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html">AestraContent.cpp</a>.</p>
 
 </div>
 </div>

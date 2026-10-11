@@ -1,7 +1,9 @@
 <map id="AestraUI::NUIRenderer::fillRect" name="AestraUI::NUIRenderer::fillRect">
-<area shape="rect" id="Node000001" title="Draw a filled rectangle." alt="" coords="239,27,408,67"/>
+<area shape="rect" id="Node000001" title="Draw a filled rectangle." alt="" coords="239,47,408,87"/>
 <area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a3a105b59305ebc04e7f57f6f3ab61b06" title="Render the workspace and active overlays." alt="" coords="5,5,191,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="225,37,190,33,191,27,226,32"/>
-<area shape="rect" id="Node000003" href="$d5/d99/classAestraUI_1_1FileBrowser.html#ab3728bdebc18bd1dcfc38413229e7a68" title="Hover washes drawn per&#45;frame OUTSIDE the FBO cache, so hover changes never force a cache rebuild (see..." alt="" coords="13,55,183,95"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="225,62,183,67,183,62,225,57"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="224,48,156,33,157,28,225,43"/>
+<area shape="rect" id="Node000003" href="$da/d6d/classExportDialog.html#ac45e36ae25f9a881980de32b3f64b74b" title="Render the modal overlay and active export panel." alt="" coords="10,55,186,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="225,70,186,70,186,65,225,65"/>
+<area shape="rect" id="Node000004" href="$d5/d99/classAestraUI_1_1FileBrowser.html#ab3728bdebc18bd1dcfc38413229e7a68" title="Hover washes drawn per&#45;frame OUTSIDE the FBO cache, so hover changes never force a cache rebuild (see..." alt="" coords="13,105,183,145"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="231,93,178,107,177,102,230,88"/>
 </map>

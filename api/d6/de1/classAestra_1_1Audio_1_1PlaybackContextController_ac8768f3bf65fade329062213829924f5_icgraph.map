@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::PlaybackContextController::teardownPatternPlayback" name="Aestra::Audio::PlaybackContextController::teardownPatternPlayback">
+<area shape="rect" id="Node000001" title="Leave pattern playback: stop, drop the scheduled instances, leave pattern mode." alt="" coords="280,69,540,109"/>
+<area shape="rect" id="Node000002" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a9d6a64ac582b4cacdb4772ade4536931" title="A clip preview ends while focus is NOT Arsenal." alt="" coords="5,5,232,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="304,69,210,48,211,43,306,64"/>
+<area shape="rect" id="Node000003" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a99046b73ab17f1cb029fe8baf214ee6a" title="Focus entered Audition: the DAW transport is parked and exclusive audition takes over." alt="" coords="5,69,232,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="266,92,232,92,232,87,266,87"/>
+<area shape="rect" id="Node000004" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a029092bcaac56bceeb4bb5b0a226b64e" title="Focus entered Timeline." alt="" coords="5,133,232,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="306,115,211,136,210,131,304,110"/>
+</map>

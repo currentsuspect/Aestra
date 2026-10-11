@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::PlaybackContextController::setArsenalLoopZone" name="Aestra::Audio::PlaybackContextController::setArsenalLoopZone">
+<area shape="rect" id="Node000001" title="A piano&#45;roll ruler zone: pattern playback loops only that range (SPEC 3 §5.2)." alt="" coords="5,69,232,109"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#adc6c625cccc4db87d777ad77b39c1cd1" title="Check whether pattern mode is active." alt="" coords="280,5,488,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="202,67,287,46,288,51,203,72"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae2870cfd7029834a595de2b2a48cef87" title="Check whether timeline playback is active." alt="" coords="280,69,488,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="232,87,266,87,266,92,232,92"/>
+<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a25d3ab626f8ab6f294448f5bf40f8b79" title="Set or clear the zone." alt="" coords="280,133,488,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="203,107,288,128,287,133,202,112"/>
+</map>

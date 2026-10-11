@@ -1,0 +1,15 @@
+<map id="Aestra::Audio::OfflineRenderRequest" name="Aestra::Audio::OfflineRenderRequest">
+<area shape="rect" id="Node000001" title="What one offline render of a project should produce." alt="" coords="190,183,397,223"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="31,95,118,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="89,131,100,145,113,156,151,175,191,187,189,192,149,180,111,161,96,148,85,134"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,144,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="77,59,77,94,72,94,72,59"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="143,95,217,120"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="189,132,205,157,239,180,236,185,201,161,185,135"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="251,95,330,120"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="294,134,295,182,290,183,289,134"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="355,95,421,120"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="379,134,361,160,330,185,327,180,357,157,375,131"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="445,95,613,120"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="505,130,453,161,383,185,381,180,451,156,502,126"/>
+</map>

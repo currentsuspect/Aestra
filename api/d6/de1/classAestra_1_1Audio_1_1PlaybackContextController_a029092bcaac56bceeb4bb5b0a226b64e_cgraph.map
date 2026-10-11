@@ -1,0 +1,17 @@
+<map id="Aestra::Audio::PlaybackContextController::enterTimeline" name="Aestra::Audio::PlaybackContextController::enterTimeline">
+<area shape="rect" id="Node000001" title="Focus entered Timeline." alt="" coords="5,37,232,77"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#abd605c4c1cc4109adfb007934cad24cd" title="Pattern&#45;mode loop override (#845)." alt="" coords="306,5,514,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="232,42,292,36,292,41,232,48"/>
+<area shape="rect" id="Node000004" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#ac8768f3bf65fade329062213829924f5" title="Leave pattern playback: stop, drop the scheduled instances, leave pattern mode." alt="" coords="280,69,540,109"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="232,67,267,71,266,76,232,72"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a3f29d6ac9ec1fd351964bd9b0ff4958d" title="Effective loop = pattern override when active, else timeline region." alt="" coords="588,5,796,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="514,23,574,23,574,28,514,28"/>
+<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#adc6c625cccc4db87d777ad77b39c1cd1" title="Check whether pattern mode is active." alt="" coords="588,69,796,109"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="540,87,574,87,574,92,540,92"/>
+<area shape="rect" id="Node000006" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ab6b68f372de3313993120fd3de47e016" title="Stop Arsenal playback and optionally remain in pattern mode." alt="" coords="588,133,796,173"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="500,107,591,128,590,133,498,112"/>
+<area shape="rect" id="Node000007" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#aff1a4e0952563ea158cd48104e3dde38" title="Remove every scheduled instance and queued event." alt="" coords="844,101,1079,141"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="796,138,830,134,830,140,796,144"/>
+<area shape="rect" id="Node000008" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a2206c36c5c97de4986bd6c081226acb4" title="Stop transport playback and return the playhead to the cue." alt="" coords="857,165,1065,205"/>
+<area shape="poly" id="edge7_Node000006_Node000008" title=" " alt="" coords="796,163,844,169,843,174,796,168"/>
+</map>

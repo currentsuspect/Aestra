@@ -1,9 +1,11 @@
 <map id="Aestra::Audio::MixerChannel::getMainOutputId" name="Aestra::Audio::MixerChannel::getMainOutputId">
-<area shape="rect" id="Node000001" title="Get the primary output destination identifier." alt="" coords="840,39,1047,79"/>
+<area shape="rect" id="Node000001" title="Get the primary output destination identifier." alt="" coords="840,67,1047,107"/>
 <area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a8e8a0ddb09f99d50dd977579c3a73086" title="Whether routing source &#45;&gt; target is legal (Routing Contract D1)." alt="" coords="584,67,792,107"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="827,74,792,78,792,73,826,69"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="827,89,792,89,792,84,827,84"/>
 <area shape="rect" id="Node000003" href="$d3/d13/classAestra_1_1Audio_1_1SetMainOutputCommand.html#a03204a262d4571e5b1141320d550756d" title="Execute the command (first time)" alt="" coords="308,5,523,45"/>
-<area shape="poly" id="edge8_Node000001_Node000003" title=" " alt="" coords="826,54,523,35,523,29,826,49"/>
+<area shape="poly" id="edge9_Node000001_Node000003" title=" " alt="" coords="844,67,792,57,652,42,523,33,523,27,652,36,792,52,845,61"/>
+<area shape="rect" id="Node000009" href="$d1/dfb/classAestra_1_1Audio_1_1RoutingModel.html#a13b26edb012330fa689e2354da9a7802" title="Snapshot the manager&#39;s channels. Master is included as a target only." alt="" coords="585,131,791,171"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="850,113,769,133,768,128,849,108"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="584,66,504,48,505,43,586,61"/>
 <area shape="rect" id="Node000005" href="$d0/d48/classAestra_1_1Audio_1_1AddSendCommand.html#a4eaa9dd33e7dc8be649ddd105408771f" title="Execute the command (first time)" alt="" coords="295,69,536,109"/>
 <area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="570,90,536,91,536,85,570,85"/>

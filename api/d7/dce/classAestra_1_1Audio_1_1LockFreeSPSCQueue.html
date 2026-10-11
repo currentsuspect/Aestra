@@ -119,7 +119,7 @@ Public Member Functions</h2></td></tr>
 class Aestra::Audio::LockFreeSPSCQueue&lt; T, Capacity &gt;</div><p>Lock-free SPSC (single-producer, single-consumer) ring buffer. </p>
 <p>Simple bounded queue for RT-safe event transfer </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00052">52</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00053">53</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="af9998ff0a2b24c885b4d2980b76b2f4a" name="af9998ff0a2b24c885b4d2980b76b2f4a"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#af9998ff0a2b24c885b4d2980b76b2f4a">&#9670;&#160;</a></span>LockFreeSPSCQueue()</h2>
@@ -148,7 +148,7 @@ template&lt;typename T , size_t Capacity&gt; </div>
 
 <p>Create an empty single-producer/single-consumer queue. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00057">57</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00058">58</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 
 </div>
 </div>
@@ -181,7 +181,7 @@ template&lt;typename T , size_t Capacity&gt; </div>
 <p>Drain all items from the producer side (RT-safe). </p>
 <p>Resets the write head to the current read tail, discarding all queued items. Only safe to call from the producer thread when the consumer thread is known to be idle or tolerant of an empty queue. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00106">106</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00107">107</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 
 </div>
 </div>
@@ -220,7 +220,7 @@ template&lt;typename T , size_t Capacity&gt; </div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>False when the queue is empty. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00082">82</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00083">83</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 
 </div>
 </div>
@@ -251,7 +251,7 @@ template&lt;typename T , size_t Capacity&gt; </div>
 
 <p>Remove the current front item. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00094">94</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00095">95</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 
 </div>
 </div>
@@ -290,7 +290,7 @@ template&lt;typename T , size_t Capacity&gt; </div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>False when the queue is full. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00064">64</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00065">65</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 
 </div>
 </div>
@@ -322,7 +322,7 @@ template&lt;typename T , size_t Capacity&gt; </div>
 <p>Get the current queue occupancy. </p>
 <dl class="section return"><dt>Returns</dt><dd>Number of queued items. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00115">115</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00116">116</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 
 </div>
 </div>

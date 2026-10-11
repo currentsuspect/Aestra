@@ -98,6 +98,9 @@ $(function() {
 Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d6f/structAestraUI_1_1NUIRenderer_1_1FontMetrics.html">FontMetrics</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/d16/structAestraUI_1_1NUIRenderer_1_1TextDiagnostics.html">TextDiagnostics</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Read-only introspection of the text pipeline, for diagnostics (V8-C9).  <a href="../../d9/d16/structAestraUI_1_1NUIRenderer_1_1TextDiagnostics.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
@@ -119,15 +122,17 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a92e047ab1b4161ac9f8b019615b95373" id="r_a92e047ab1b4161ac9f8b019615b95373"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a92e047ab1b4161ac9f8b019615b95373">clear</a> (const <a class="el" href="../../d2/d25/structAestraUI_1_1NUIColor.html">NUIColor</a> &amp;color)=0</td></tr>
 <tr class="memdesc:a92e047ab1b4161ac9f8b019615b95373"><td class="mdescLeft">&#160;</td><td class="mdescRight">Clear the framebuffer with the given color.  <br /></td></tr>
 <tr class="separator:a92e047ab1b4161ac9f8b019615b95373"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a720fbe1be7c806b9d67eddb85a5714a4" id="r_a720fbe1be7c806b9d67eddb85a5714a4"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a720fbe1be7c806b9d67eddb85a5714a4">pushTransform</a> (float tx, float ty, float rotation=0.0f, float scale=1.0f)=0</td></tr>
-<tr class="memdesc:a720fbe1be7c806b9d67eddb85a5714a4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Push a transform matrix onto the stack.  <br /></td></tr>
-<tr class="separator:a720fbe1be7c806b9d67eddb85a5714a4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4b94d8c268a2616d657675f91d473747" id="r_a4b94d8c268a2616d657675f91d473747"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a4b94d8c268a2616d657675f91d473747">pushTransform</a> (float tx, float ty, float scale=1.0f)=0</td></tr>
+<tr class="memdesc:a4b94d8c268a2616d657675f91d473747"><td class="mdescLeft">&#160;</td><td class="mdescRight">Push a transform level onto the stack.  <br /></td></tr>
+<tr class="separator:a4b94d8c268a2616d657675f91d473747"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1f69a868e1cf13e9488d3882ba1b7232" id="r_a1f69a868e1cf13e9488d3882ba1b7232"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a1f69a868e1cf13e9488d3882ba1b7232">popTransform</a> ()=0</td></tr>
 <tr class="memdesc:a1f69a868e1cf13e9488d3882ba1b7232"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pop the transform matrix from the stack.  <br /></td></tr>
 <tr class="separator:a1f69a868e1cf13e9488d3882ba1b7232"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a240d987e33b22ccd5ee1b29361d2ddd5" id="r_a240d987e33b22ccd5ee1b29361d2ddd5"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a240d987e33b22ccd5ee1b29361d2ddd5">setTextContrast</a> (float contrast)</td></tr>
 <tr class="memdesc:a240d987e33b22ccd5ee1b29361d2ddd5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the current clip rectangle (scissor test).  <br /></td></tr>
 <tr class="separator:a240d987e33b22ccd5ee1b29361d2ddd5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a95c93eeac0c0a253997efacdc716da57" id="r_a95c93eeac0c0a253997efacdc716da57"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a95c93eeac0c0a253997efacdc716da57">getTextDiagnostics</a> (<a class="el" href="../../d9/d16/structAestraUI_1_1NUIRenderer_1_1TextDiagnostics.html">TextDiagnostics</a> &amp;out) const</td></tr>
+<tr class="separator:a95c93eeac0c0a253997efacdc716da57"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:accd62edde630040ee7f67c0503497069" id="r_accd62edde630040ee7f67c0503497069"><td class="memItemLeft" align="right" valign="top"><a id="accd62edde630040ee7f67c0503497069" name="accd62edde630040ee7f67c0503497069"></a>
 virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>setClipRect</b> (const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;rect)=0</td></tr>
 <tr class="separator:accd62edde630040ee7f67c0503497069"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -192,11 +197,17 @@ virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>setClipRect</
 <tr class="memdesc:a65d6e0b19c83fbaca18c25e8082b1673"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieve font metrics (scaled for the requested font size).  <br /></td></tr>
 <tr class="separator:a65d6e0b19c83fbaca18c25e8082b1673"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a775bef147c377ce07bfeca99e04d7479" id="r_a775bef147c377ce07bfeca99e04d7479"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a775bef147c377ce07bfeca99e04d7479">calculateTextBaselineY</a> (const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;rect, float fontSize) const</td></tr>
-<tr class="memdesc:a775bef147c377ce07bfeca99e04d7479"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculate baseline-aligned Y position for vertically centered text.  <br /></td></tr>
+<tr class="memdesc:a775bef147c377ce07bfeca99e04d7479"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculate the BASELINE Y of text vertically centred in <code>rect</code> by its line box.  <br /></td></tr>
 <tr class="separator:a775bef147c377ce07bfeca99e04d7479"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7cef2d4a1418396f273e2b1afd8660fe" id="r_a7cef2d4a1418396f273e2b1afd8660fe"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a7cef2d4a1418396f273e2b1afd8660fe">calculateTextY</a> (const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;rect, float fontSize) const</td></tr>
 <tr class="memdesc:a7cef2d4a1418396f273e2b1afd8660fe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculate baseline-aligned Y position for vertically centered text using measured size.  <br /></td></tr>
 <tr class="separator:a7cef2d4a1418396f273e2b1afd8660fe"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa8e3dedbf17a1c26a7563e21b5d6b9c6" id="r_aa8e3dedbf17a1c26a7563e21b5d6b9c6"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#aa8e3dedbf17a1c26a7563e21b5d6b9c6">calculateOpticalTextY</a> (float centreY, float fontSize) const</td></tr>
+<tr class="memdesc:aa8e3dedbf17a1c26a7563e21b5d6b9c6"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc" title="Draw text at the given position.">drawText()</a> Y that centres the CAP HEIGHT on <code>centreY</code> (SPEC 3 §3.2).  <br /></td></tr>
+<tr class="separator:aa8e3dedbf17a1c26a7563e21b5d6b9c6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5f433d5d8471345923eeb42551e53e50" id="r_a5f433d5d8471345923eeb42551e53e50"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a5f433d5d8471345923eeb42551e53e50">calculateOpticalTextY</a> (const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;rect, float fontSize) const</td></tr>
+<tr class="memdesc:a5f433d5d8471345923eeb42551e53e50"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#aa8e3dedbf17a1c26a7563e21b5d6b9c6" title="drawText() Y that centres the CAP HEIGHT on centreY (SPEC 3 §3.2).">calculateOpticalTextY()</a> on <code>rect's</code> vertical centre.  <br /></td></tr>
+<tr class="separator:a5f433d5d8471345923eeb42551e53e50"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4425b596188bd9cd4a81cd267c0f2774" id="r_a4425b596188bd9cd4a81cd267c0f2774"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a4425b596188bd9cd4a81cd267c0f2774">drawTexture</a> (uint32_t textureId, const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;destRect, const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;sourceRect)=0</td></tr>
 <tr class="memdesc:a4425b596188bd9cd4a81cd267c0f2774"><td class="mdescLeft">&#160;</td><td class="mdescRight">Draw a texture/image.  <br /></td></tr>
 <tr class="separator:a4425b596188bd9cd4a81cd267c0f2774"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -230,18 +241,9 @@ virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>setClipRect</
 <tr class="memitem:a1a2b958eb243b1215963b960c6e3d2da" id="r_a1a2b958eb243b1215963b960c6e3d2da"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a1a2b958eb243b1215963b960c6e3d2da">flush</a> ()=0</td></tr>
 <tr class="memdesc:a1a2b958eb243b1215963b960c6e3d2da"><td class="mdescLeft">&#160;</td><td class="mdescRight">Flush all pending draw calls immediately.  <br /></td></tr>
 <tr class="separator:a1a2b958eb243b1215963b960c6e3d2da"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aec33feabd988580f2137ab083a910415" id="r_aec33feabd988580f2137ab083a910415"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#aec33feabd988580f2137ab083a910415">setDirtyRegionTrackingEnabled</a> (bool enabled)=0</td></tr>
-<tr class="memdesc:aec33feabd988580f2137ab083a910415"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable/disable dirty region tracking.  <br /></td></tr>
-<tr class="separator:aec33feabd988580f2137ab083a910415"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aace41af31c1002322e3eeaf53683a2c2" id="r_aace41af31c1002322e3eeaf53683a2c2"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#aace41af31c1002322e3eeaf53683a2c2">setCachingEnabled</a> (bool enabled)=0</td></tr>
 <tr class="memdesc:aace41af31c1002322e3eeaf53683a2c2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable/disable render caching.  <br /></td></tr>
 <tr class="separator:aace41af31c1002322e3eeaf53683a2c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a77b4e2956bb507589a69cf9549209d2b" id="r_a77b4e2956bb507589a69cf9549209d2b"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a77b4e2956bb507589a69cf9549209d2b">getOptimizationStats</a> (size_t &amp;batchedQuads, size_t &amp;dirtyRegions, size_t &amp;cachedWidgets, size_t &amp;cacheMemoryBytes)=0</td></tr>
-<tr class="memdesc:a77b4e2956bb507589a69cf9549209d2b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get optimization stats.  <br /></td></tr>
-<tr class="separator:a77b4e2956bb507589a69cf9549209d2b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5f514c001489af3c3f3163aadb622043" id="r_a5f514c001489af3c3f3163aadb622043"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="../../dd/ddd/classAestraUI_1_1NUIDirtyRegionManager.html">NUIDirtyRegionManager</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a5f514c001489af3c3f3163aadb622043">getDirtyRegionManager</a> ()=0</td></tr>
-<tr class="memdesc:a5f514c001489af3c3f3163aadb622043"><td class="mdescLeft">&#160;</td><td class="mdescRight">Access to dirty region manager.  <br /></td></tr>
-<tr class="separator:a5f514c001489af3c3f3163aadb622043"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a242ddb3be7073b453b3d39fb23bc1607" id="r_a242ddb3be7073b453b3d39fb23bc1607"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="../../de/d45/classAestraUI_1_1NUIRenderCache.html">NUIRenderCache</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a242ddb3be7073b453b3d39fb23bc1607">getRenderCache</a> ()=0</td></tr>
 <tr class="memdesc:a242ddb3be7073b453b3d39fb23bc1607"><td class="mdescLeft">&#160;</td><td class="mdescRight">Access to render cache.  <br /></td></tr>
 <tr class="separator:a242ddb3be7073b453b3d39fb23bc1607"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -263,9 +265,9 @@ virtual const char *&#160;</td><td class="memItemRight" valign="bottom"><b>getBa
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Abstract renderer interface for the Aestra UI framework. </p>
-<p>This provides a platform-agnostic API for rendering UI elements. Implementations exist for OpenGL and Vulkan. </p>
+<p>This provides a platform-agnostic API for rendering UI elements. The only implementation is <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html" title="OpenGL 3.3+ renderer implementation for Aestra UI.">NUIRendererGL</a> (OpenGL). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00022">22</a> of file <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html">NUIRenderer.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00021">21</a> of file <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html">NUIRenderer.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="af2b1d7445d7b815148b9bc2458a0c885" name="af2b1d7445d7b815148b9bc2458a0c885"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#af2b1d7445d7b815148b9bc2458a0c885">&#9670;&#160;</a></span>beginBatch()</h2>
@@ -325,6 +327,115 @@ virtual const char *&#160;</td><td class="memItemRight" valign="bottom"><b>getBa
 
 </div>
 </div>
+<a id="a5f433d5d8471345923eeb42551e53e50" name="a5f433d5d8471345923eeb42551e53e50"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5f433d5d8471345923eeb42551e53e50">&#9670;&#160;</a></span>calculateOpticalTextY() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float AestraUI::NUIRenderer::calculateOpticalTextY </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;&#160;</td>
+          <td class="paramname"><em>rect</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>fontSize</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p><a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#aa8e3dedbf17a1c26a7563e21b5d6b9c6" title="drawText() Y that centres the CAP HEIGHT on centreY (SPEC 3 §3.2).">calculateOpticalTextY()</a> on <code>rect's</code> vertical centre. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00342">342</a> of file <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html">NUIRenderer.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00335">calculateOpticalTextY()</a>.</p>
+<div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-1-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-1-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_a5f433d5d8471345923eeb42551e53e50_cgraph.svg" width="618" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+
+</div>
+</div>
+<a id="aa8e3dedbf17a1c26a7563e21b5d6b9c6" name="aa8e3dedbf17a1c26a7563e21b5d6b9c6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa8e3dedbf17a1c26a7563e21b5d6b9c6">&#9670;&#160;</a></span>calculateOpticalTextY() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float AestraUI::NUIRenderer::calculateOpticalTextY </td>
+          <td>(</td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>centreY</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>fontSize</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p><a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc" title="Draw text at the given position.">drawText()</a> Y that centres the CAP HEIGHT on <code>centreY</code> (SPEC 3 §3.2). </p>
+<p><a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a7cef2d4a1418396f273e2b1afd8660fe" title="Calculate baseline-aligned Y position for vertically centered text using measured size.">calculateTextY()</a> centres the whole line box, which reserves room above the caps for ascenders and below the baseline for descenders. That is right for mixed-case prose, but caps and digits have neither, so line-box centring left labels such as "COUNT IN" and track numbers 1-1.5 px low next to their icons. This puts the band between the baseline and the cap line on the centre, which is what the eye reads.</p>
+<dl class="section return"><dt>Returns</dt><dd>The top-left Y to pass to <a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc" title="Draw text at the given position.">drawText()</a>. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00335">335</a> of file <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html">NUIRenderer.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00028">AestraUI::NUIRenderer::FontMetrics::capHeight</a>, and <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00281">getFontMetrics()</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00342">calculateOpticalTextY()</a>.</p>
+<div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-2-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-2-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_aa8e3dedbf17a1c26a7563e21b5d6b9c6_cgraph.svg" width="399" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+<div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-3-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-3-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_aa8e3dedbf17a1c26a7563e21b5d6b9c6_icgraph.svg" width="400" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+
+</div>
+</div>
 <a id="a775bef147c377ce07bfeca99e04d7479" name="a775bef147c377ce07bfeca99e04d7479"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a775bef147c377ce07bfeca99e04d7479">&#9670;&#160;</a></span>calculateTextBaselineY()</h2>
 
@@ -359,8 +470,8 @@ virtual const char *&#160;</td><td class="memItemRight" valign="bottom"><b>getBa
 </table>
 </div><div class="memdoc">
 
-<p>Calculate baseline-aligned Y position for vertically centered text. </p>
-<p>This accounts for the MSDF renderer's baseline coordinate system.</p>
+<p>Calculate the BASELINE Y of text vertically centred in <code>rect</code> by its line box. </p>
+<p>This is a baseline, not a <a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc" title="Draw text at the given position.">drawText()</a> position: <a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc" title="Draw text at the given position.">drawText()</a> takes the top of the line box and adds the ascent itself, so passing this to it draws the text a full ascent low.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">rect</td><td>The rectangle to center text within </td></tr>
@@ -370,14 +481,14 @@ virtual const char *&#160;</td><td class="memItemRight" valign="bottom"><b>getBa
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Baseline Y coordinate for centered text </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00237">237</a> of file <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html">NUIRenderer.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00301">301</a> of file <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html">NUIRenderer.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00220">getFontMetrics()</a>.</p>
-<div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-1-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00281">getFontMetrics()</a>.</p>
+<div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-4-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-1-content" class="dyncontent" style="display:none;">
+<div id="dynsection-4-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_a775bef147c377ce07bfeca99e04d7479_cgraph.svg" width="408" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -418,7 +529,7 @@ virtual const char *&#160;</td><td class="memItemRight" valign="bottom"><b>getBa
 </div><div class="memdoc">
 
 <p>Calculate baseline-aligned Y position for vertically centered text using measured size. </p>
-<p>This accounts for the MSDF renderer's top-left coordinate system.</p>
+<p>Returns a top-left Y rather than a baseline, for the call sites that measure first and position from the top edge.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">rect</td><td>The rectangle to center text within </td></tr>
@@ -428,24 +539,24 @@ virtual const char *&#160;</td><td class="memItemRight" valign="bottom"><b>getBa
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Top-left Y coordinate for centered text </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00253">253</a> of file <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html">NUIRenderer.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00318">318</a> of file <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html">NUIRenderer.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00220">getFontMetrics()</a>.</p>
+<p class="reference">References <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00281">getFontMetrics()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/dd5/NUIRendererGL_8cpp_source.html#l01962">AestraUI::NUIRendererGL::drawTextCentered()</a>.</p>
-<div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-2-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../da/d71/TransportModuleStyle_8h_source.html#l00034">Aestra::TransportModule::drawLabel()</a>, and <a class="el" href="../../dd/dd5/NUIRendererGL_8cpp_source.html#l02111">AestraUI::NUIRendererGL::drawTextCentered()</a>.</p>
+<div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-5-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-2-content" class="dyncontent" style="display:none;">
+<div id="dynsection-5-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_a7cef2d4a1418396f273e2b1afd8660fe_cgraph.svg" width="398" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
-<div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-3-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-6-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-3-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_a7cef2d4a1418396f273e2b1afd8660fe_icgraph.svg" width="415" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div id="dynsection-6-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_a7cef2d4a1418396f273e2b1afd8660fe_icgraph.svg" width="415" height="139"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -507,12 +618,12 @@ virtual const char *&#160;</td><td class="memItemRight" valign="bottom"><b>getBa
 
 <p>Implemented in <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html#afdee9e13cdbf67176f053c4c2aaf979f">AestraUI::NUIRendererGL</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01419">AestraUI::FileBrowser::renderHoverOverlays()</a>.</p>
-<div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-4-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00625">AestraUI::FileBrowser::renderHoverOverlays()</a>.</p>
+<div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-7-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-4-content" class="dyncontent" style="display:none;">
+<div id="dynsection-7-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_a54f60f3fc2af410bce11eee76e28cc36_icgraph.svg" width="398" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -593,11 +704,11 @@ virtual const char *&#160;</td><td class="memItemRight" valign="bottom"><b>getBa
 <p>Implemented in <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html#a8ba45b3a5f6ab343f802ef8b2bcb4e02">AestraUI::NUIRendererGL</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d1/db2/NUISVGCache_8cpp_source.html#l00066">AestraUI::NUISVGCache::cleanup()</a>, <a class="el" href="../../d1/db2/NUISVGCache_8cpp_source.html#l00083">AestraUI::NUISVGCache::clear()</a>, and <a class="el" href="../../d1/db2/NUISVGCache_8cpp_source.html#l00034">AestraUI::NUISVGCache::put()</a>.</p>
-<div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-5-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-8-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-5-content" class="dyncontent" style="display:none;">
+<div id="dynsection-8-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_a0e6675b003c18245e126cef2f15ddbda_icgraph.svg" width="435" height="166"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -705,13 +816,13 @@ virtual const char *&#160;</td><td class="memItemRight" valign="bottom"><b>getBa
 
 <p>Implemented in <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html#ad66fdf8729e47c299721aef9c0b5e2b1">AestraUI::NUIRendererGL</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01570">AestraContent::onRender()</a>, and <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01358">Aestra::Audio::ArsenalPanel::renderDragPreview()</a>.</p>
-<div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-6-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../da/d71/TransportModuleStyle_8h_source.html#l00042">Aestra::TransportModule::drawDivider()</a>, <a class="el" href="../../dd/d06/PluginEditorKit_8cpp_source.html#l00031">AestraUI::EditorKit::drawKnob()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01896">AestraContent::onRender()</a>, and <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01358">Aestra::Audio::ArsenalPanel::renderDragPreview()</a>.</p>
+<div id="dynsection-9" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-9-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-9-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-6-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_a8287a2b8a0d43d3eb03d7354121b4a95_icgraph.svg" width="100%" height="376"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div id="dynsection-9-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_a8287a2b8a0d43d3eb03d7354121b4a95_icgraph.svg" width="100%" height="490"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -765,6 +876,15 @@ virtual const char *&#160;</td><td class="memItemRight" valign="bottom"><b>getBa
 <p>Draw a polyline (connected line segments). </p>
 
 <p>Implemented in <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html#a0271b1b51fb587f21831f81b79bc7735">AestraUI::NUIRendererGL</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../dd/d06/PluginEditorKit_8cpp_source.html#l00015">AestraUI::EditorKit::drawArc()</a>.</p>
+<div id="dynsection-10" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-10-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-10-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-10-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_a009fc67f4482e0e2700046544dae8e1f_icgraph.svg" width="562" height="75"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 
 </div>
 </div>
@@ -824,6 +944,15 @@ virtual const char *&#160;</td><td class="memItemRight" valign="bottom"><b>getBa
 
 <p>Implemented in <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html#a2f9dcea16004a018f574519ce1ee2763">AestraUI::NUIRendererGL</a>.</p>
 
+<p class="reference">Referenced by <a class="el" href="../../da/d3c/ExportDialog_8cpp_source.html#l00480">ExportDialog::onRender()</a>.</p>
+<div id="dynsection-11" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-11-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-11-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-11-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_aea8ca15d63d3497f11e0c3e4b166ca66_icgraph.svg" width="404" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+
 </div>
 </div>
 <a id="a91ed36d4b7fbb90f1d98f0a116b6debc" name="a91ed36d4b7fbb90f1d98f0a116b6debc"></a>
@@ -873,16 +1002,17 @@ virtual const char *&#160;</td><td class="memItemRight" valign="bottom"><b>getBa
 </div><div class="memdoc">
 
 <p>Draw text at the given position. </p>
+<p><code>position</code> is the TOP-LEFT of the text's line box, not its baseline: the renderer adds the font's ascent itself. To centre a label in a rect, pass <a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a7cef2d4a1418396f273e2b1afd8660fe" title="Calculate baseline-aligned Y position for vertically centered text using measured size.">calculateTextY()</a> (the line box, for mixed-case prose) or <a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#aa8e3dedbf17a1c26a7563e21b5d6b9c6" title="drawText() Y that centres the CAP HEIGHT on centreY (SPEC 3 §3.2).">calculateOpticalTextY()</a> (the cap height, for labels, caps and numbers). Hand-rolled <code>rect.y + N</code> offsets are how labels drift off-centre. </p>
 
 <p>Implemented in <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html#ac359f689269c174f6ccd7e66bca259cc">AestraUI::NUIRendererGL</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01358">Aestra::Audio::ArsenalPanel::renderDragPreview()</a>.</p>
-<div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-7-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../da/d71/TransportModuleStyle_8h_source.html#l00034">Aestra::TransportModule::drawLabel()</a>, and <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01358">Aestra::Audio::ArsenalPanel::renderDragPreview()</a>.</p>
+<div id="dynsection-12" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-12-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-12-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-7-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_a91ed36d4b7fbb90f1d98f0a116b6debc_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div id="dynsection-12-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_a91ed36d4b7fbb90f1d98f0a116b6debc_icgraph.svg" width="100%" height="404"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -936,6 +1066,15 @@ virtual const char *&#160;</td><td class="memItemRight" valign="bottom"><b>getBa
 <p>Draw text centered within a rectangle. </p>
 
 <p>Implemented in <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html#a51ce416466511d58d05585fae224dc08">AestraUI::NUIRendererGL</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../dd/d06/PluginEditorKit_8cpp_source.html#l00031">AestraUI::EditorKit::drawKnob()</a>.</p>
+<div id="dynsection-13" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-13-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-13-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-13-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_aa89fb8461f9b876452eee397232544bf_icgraph.svg" width="371" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 
 </div>
 </div>
@@ -1152,6 +1291,15 @@ The current transform and opacity state will be applied to the rendering. </dd><
 
 <p>Implemented in <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html#a5ac960a30645a5d4696821b11a8a6934">AestraUI::NUIRendererGL</a>.</p>
 
+<p class="reference">Referenced by <a class="el" href="../../dd/d06/PluginEditorKit_8cpp_source.html#l00031">AestraUI::EditorKit::drawKnob()</a>.</p>
+<div id="dynsection-14" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-14-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-14-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-14-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_a6ac3309ac29927b53f81c6150fc44d6e_icgraph.svg" width="371" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+
 </div>
 </div>
 <a id="a3cec6af4c481a95f0ebb35e12dafa13d" name="a3cec6af4c481a95f0ebb35e12dafa13d"></a>
@@ -1244,13 +1392,13 @@ The current transform and opacity state will be applied to the rendering. </dd><
 
 <p>Implemented in <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html#a74fdbd4713da791b3aad61be11a759e6">AestraUI::NUIRendererGL</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01570">AestraContent::onRender()</a>, and <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01419">AestraUI::FileBrowser::renderHoverOverlays()</a>.</p>
-<div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-8-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01896">AestraContent::onRender()</a>, <a class="el" href="../../da/d3c/ExportDialog_8cpp_source.html#l00480">ExportDialog::onRender()</a>, and <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00625">AestraUI::FileBrowser::renderHoverOverlays()</a>.</p>
+<div id="dynsection-15" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-15-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-15-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-8-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_a316c06990c4cb6f5a13fd7de95bca7a4_icgraph.svg" width="414" height="102"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div id="dynsection-15-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_a316c06990c4cb6f5a13fd7de95bca7a4_icgraph.svg" width="414" height="151"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -1351,12 +1499,12 @@ The current transform and opacity state will be applied to the rendering. </dd><
 
 <p>Implemented in <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html#ab55e173a07505601830baab20e208696">AestraUI::NUIRendererGL</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01570">AestraContent::onRender()</a>, and <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01419">AestraUI::FileBrowser::renderHoverOverlays()</a>.</p>
-<div id="dynsection-9" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-9-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-9-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01896">AestraContent::onRender()</a>, and <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00625">AestraUI::FileBrowser::renderHoverOverlays()</a>.</p>
+<div id="dynsection-16" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-16-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-16-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-9-content" class="dyncontent" style="display:none;">
+<div id="dynsection-16-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_a8edd36aab59578f6c121fae6046db289_icgraph.svg" width="414" height="102"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -1511,35 +1659,6 @@ The current transform and opacity state will be applied to the rendering. </dd><
 
 </div>
 </div>
-<a id="a5f514c001489af3c3f3163aadb622043" name="a5f514c001489af3c3f3163aadb622043"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5f514c001489af3c3f3163aadb622043">&#9670;&#160;</a></span>getDirtyRegionManager()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual <a class="el" href="../../dd/ddd/classAestraUI_1_1NUIDirtyRegionManager.html">NUIDirtyRegionManager</a> * AestraUI::NUIRenderer::getDirtyRegionManager </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Access to dirty region manager. </p>
-
-<p>Implemented in <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html#a24291cefffab4c91db5a5ff2fc7ae245">AestraUI::NUIRendererGL</a>.</p>
-
-</div>
-</div>
 <a id="a65d6e0b19c83fbaca18c25e8082b1673" name="a65d6e0b19c83fbaca18c25e8082b1673"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a65d6e0b19c83fbaca18c25e8082b1673">&#9670;&#160;</a></span>getFontMetrics()</h2>
 
@@ -1569,68 +1688,18 @@ The current transform and opacity state will be applied to the rendering. </dd><
 
 <p>Reimplemented in <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html#a8061af9dd03d366f073e30b87d024e35">AestraUI::NUIRendererGL</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00220">220</a> of file <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html">NUIRenderer.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00281">281</a> of file <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html">NUIRenderer.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00237">calculateTextBaselineY()</a>, and <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00253">calculateTextY()</a>.</p>
-<div id="dynsection-10" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-10-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-10-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00028">AestraUI::NUIRenderer::FontMetrics::capHeight</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00335">calculateOpticalTextY()</a>, <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00301">calculateTextBaselineY()</a>, and <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00318">calculateTextY()</a>.</p>
+<div id="dynsection-17" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-17-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-17-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-10-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_a65d6e0b19c83fbaca18c25e8082b1673_icgraph.svg" width="643" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div id="dynsection-17-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_a65d6e0b19c83fbaca18c25e8082b1673_icgraph.svg" width="643" height="223"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
-
-</div>
-</div>
-<a id="a77b4e2956bb507589a69cf9549209d2b" name="a77b4e2956bb507589a69cf9549209d2b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a77b4e2956bb507589a69cf9549209d2b">&#9670;&#160;</a></span>getOptimizationStats()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual void AestraUI::NUIRenderer::getOptimizationStats </td>
-          <td>(</td>
-          <td class="paramtype">size_t &amp;&#160;</td>
-          <td class="paramname"><em>batchedQuads</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">size_t &amp;&#160;</td>
-          <td class="paramname"><em>dirtyRegions</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">size_t &amp;&#160;</td>
-          <td class="paramname"><em>cachedWidgets</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">size_t &amp;&#160;</td>
-          <td class="paramname"><em>cacheMemoryBytes</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Get optimization stats. </p>
-
-<p>Implemented in <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html#a900b142a0e98156eb77d3758f9d69627">AestraUI::NUIRendererGL</a>.</p>
 
 </div>
 </div>
@@ -1660,6 +1729,34 @@ The current transform and opacity state will be applied to the rendering. </dd><
 <p>Access to render cache. </p>
 
 <p>Implemented in <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html#ae344b41b0fb869e5c055a8b810d14c3a">AestraUI::NUIRendererGL</a>.</p>
+
+</div>
+</div>
+<a id="a95c93eeac0c0a253997efacdc716da57" name="a95c93eeac0c0a253997efacdc716da57"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a95c93eeac0c0a253997efacdc716da57">&#9670;&#160;</a></span>getTextDiagnostics()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual bool AestraUI::NUIRenderer::getTextDiagnostics </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d9/d16/structAestraUI_1_1NUIRenderer_1_1TextDiagnostics.html">TextDiagnostics</a> &amp;&#160;</td>
+          <td class="paramname"><em>out</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00149">149</a> of file <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html">NUIRenderer.h</a>.</p>
 
 </div>
 </div>
@@ -1802,11 +1899,11 @@ The current transform and opacity state will be applied to the rendering. </dd><
 <p>Implemented in <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html#aae4a2b7c5862fbc6f5ae91d894b1d25a">AestraUI::NUIRendererGL</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01358">Aestra::Audio::ArsenalPanel::renderDragPreview()</a>.</p>
-<div id="dynsection-11" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-11-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-11-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-18" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-18-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-18-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-11-content" class="dyncontent" style="display:none;">
+<div id="dynsection-18-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_abe394d6a3fb11601766324bcd8793ac3_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -1841,8 +1938,8 @@ The current transform and opacity state will be applied to the rendering. </dd><
 
 </div>
 </div>
-<a id="a720fbe1be7c806b9d67eddb85a5714a4" name="a720fbe1be7c806b9d67eddb85a5714a4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a720fbe1be7c806b9d67eddb85a5714a4">&#9670;&#160;</a></span>pushTransform()</h2>
+<a id="a4b94d8c268a2616d657675f91d473747" name="a4b94d8c268a2616d657675f91d473747"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4b94d8c268a2616d657675f91d473747">&#9670;&#160;</a></span>pushTransform()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1866,12 +1963,6 @@ The current transform and opacity state will be applied to the rendering. </dd><
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">float&#160;</td>
-          <td class="paramname"><em>rotation</em> = <code>0.0f</code>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float&#160;</td>
           <td class="paramname"><em>scale</em> = <code>1.0f</code>&#160;</td>
         </tr>
         <tr>
@@ -1887,9 +1978,11 @@ The current transform and opacity state will be applied to the rendering. </dd><
 </table>
 </div><div class="memdoc">
 
-<p>Push a transform matrix onto the stack. </p>
+<p>Push a transform level onto the stack. </p>
+<p>Maps the pushed level's children into the current space as <code>p_current = scale * p_child + (tx, ty)</code>, so a translation pushed inside a scaled level is scaled by it.</p>
+<p>There is no rotation parameter. One was accepted and stored here for years and never applied by any backend — the composition ended with a bare <code>// Apply rotation</code> comment. It is removed rather than implemented because no caller ever passed a non-zero value, and an ignored parameter reads as a supported feature. </p>
 
-<p>Implemented in <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html#abc5ba7c53d84a6332f174523daf5445c">AestraUI::NUIRendererGL</a>.</p>
+<p>Implemented in <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html#a1b4e5ef7a7db1a80c2d86f0408829f70">AestraUI::NUIRendererGL</a>.</p>
 
 </div>
 </div>
@@ -1980,7 +2073,7 @@ The current transform and opacity state will be applied to the rendering. </dd><
 
 <p>Reimplemented in <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html#a55450a568a3b620d6b631ec5f84d9bcf">AestraUI::NUIRendererGL</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00313">313</a> of file <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html">NUIRenderer.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00400">400</a> of file <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html">NUIRenderer.h</a>.</p>
 
 </div>
 </div>
@@ -2012,7 +2105,7 @@ The current transform and opacity state will be applied to the rendering. </dd><
 
 <p>Reimplemented in <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html#a4afe15df575e2330a2573cd3f5358533">AestraUI::NUIRendererGL</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00319">319</a> of file <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html">NUIRenderer.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00406">406</a> of file <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html">NUIRenderer.h</a>.</p>
 
 </div>
 </div>
@@ -2114,37 +2207,7 @@ The current transform and opacity state will be applied to the rendering. </dd><
 
 <p>Reimplemented in <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html#a49c2613fc07e43b539600a72a8806731">AestraUI::NUIRendererGL</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00271">271</a> of file <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html">NUIRenderer.h</a>.</p>
-
-</div>
-</div>
-<a id="aec33feabd988580f2137ab083a910415" name="aec33feabd988580f2137ab083a910415"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aec33feabd988580f2137ab083a910415">&#9670;&#160;</a></span>setDirtyRegionTrackingEnabled()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual void AestraUI::NUIRenderer::setDirtyRegionTrackingEnabled </td>
-          <td>(</td>
-          <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>enabled</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Enable/disable dirty region tracking. </p>
-
-<p>Implemented in <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html#a673221ef08e1350fa380ad3849a67ea4">AestraUI::NUIRendererGL</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00358">358</a> of file <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html">NUIRenderer.h</a>.</p>
 
 </div>
 </div>
@@ -2207,7 +2270,7 @@ The current transform and opacity state will be applied to the rendering. </dd><
 
 <p>Reimplemented in <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html#a5475a54aaadf70cea172d8c89cd8d39a">AestraUI::NUIRendererGL</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00093">93</a> of file <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html">NUIRenderer.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html#l00104">104</a> of file <a class="el" href="../../de/d2d/NUIRenderer_8h_source.html">NUIRenderer.h</a>.</p>
 
 </div>
 </div>
@@ -2289,6 +2352,15 @@ The current transform and opacity state will be applied to the rendering. </dd><
 <p>Draw a circle outline. </p>
 
 <p>Implemented in <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html#ab25e13a9c3ec5c5484585caa12a49875">AestraUI::NUIRendererGL</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../dd/d06/PluginEditorKit_8cpp_source.html#l00031">AestraUI::EditorKit::drawKnob()</a>.</p>
+<div id="dynsection-19" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-19-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-19-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-19-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_ac82c677cff0d5838d3312af1b65ed84b_icgraph.svg" width="371" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 
 </div>
 </div>
@@ -2388,12 +2460,12 @@ The current transform and opacity state will be applied to the rendering. </dd><
 
 <p>Implemented in <a class="el" href="../../d0/dc4/classAestraUI_1_1NUIRendererGL.html#a1d6b153a9824b0cba28d443a463a7f1e">AestraUI::NUIRendererGL</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01570">AestraContent::onRender()</a>.</p>
-<div id="dynsection-12" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-12-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-12-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01896">AestraContent::onRender()</a>.</p>
+<div id="dynsection-20" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-20-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-20-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-12-content" class="dyncontent" style="display:none;">
+<div id="dynsection-20-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d1c/classAestraUI_1_1NUIRenderer_a8ca30417ddb0b0523e3d9e9ba3eaefdf_icgraph.svg" width="414" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 

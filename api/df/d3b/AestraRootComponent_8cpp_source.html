@@ -119,7 +119,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
 <div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    }</div>
 <div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span> </div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    <span class="comment">// 4. Fallback: F12 HUD toggle</span></div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    <span class="comment">// 4. Fallback: overlay toggles. F12 performance, F11 text pipeline (V8-C9).</span></div>
 <div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    <span class="keywordflow">if</span> (event.pressed) {</div>
 <div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>        <span class="keywordflow">if</span> (event.keyCode == NUIKeyCode::F12) {</div>
 <div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>            <span class="keywordflow">if</span> (m_rootUnifiedHUD) {</div>
@@ -127,13 +127,19 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>                <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
 <div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>            }</div>
 <div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>        }</div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    }</div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    </div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>}</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>        <span class="keywordflow">if</span> (event.keyCode == NUIKeyCode::F11) {</div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>            <span class="keywordflow">if</span> (m_rootTextDiagnostics) {</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>                m_rootTextDiagnostics-&gt;setVisible(!m_rootTextDiagnostics-&gt;isVisible());</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>                <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>            }</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>        }</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    }</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    </div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>}</div>
 <div class="ttc" id="aAestraContent_8h_html"><div class="ttname"><a href="../../dc/dd6/AestraContent_8h.html">AestraContent.h</a></div><div class="ttdoc">Main content area for Aestra.</div></div>
-<div class="ttc" id="aclassAestraContent_html_a93c11d72cedc0fa43592a62e6d2c23a0"><div class="ttname"><a href="../../db/d60/classAestraContent.html#a93c11d72cedc0fa43592a62e6d2c23a0">AestraContent::onKeyEvent</a></div><div class="ttdeci">bool onKeyEvent(const AestraUI::NUIKeyEvent &amp;event) override</div><div class="ttdoc">Handle global keyboard shortcuts for the workspace.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/de4/AestraContent_8cpp_source.html#l04427">AestraContent.cpp:4427</a></div></div>
-<div class="ttc" id="astructAestraUI_1_1NUIKeyEvent_html"><div class="ttname"><a href="../../dd/d88/structAestraUI_1_1NUIKeyEvent.html">AestraUI::NUIKeyEvent</a></div><div class="ttdef"><b>Definition</b> <a href="../../dc/d90/NUITypes_8h_source.html#l00452">NUITypes.h:452</a></div></div>
+<div class="ttc" id="aclassAestraContent_html_a93c11d72cedc0fa43592a62e6d2c23a0"><div class="ttname"><a href="../../db/d60/classAestraContent.html#a93c11d72cedc0fa43592a62e6d2c23a0">AestraContent::onKeyEvent</a></div><div class="ttdeci">bool onKeyEvent(const AestraUI::NUIKeyEvent &amp;event) override</div><div class="ttdoc">Handle global keyboard shortcuts for the workspace.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/de4/AestraContent_8cpp_source.html#l04605">AestraContent.cpp:4605</a></div></div>
+<div class="ttc" id="astructAestraUI_1_1NUIKeyEvent_html"><div class="ttname"><a href="../../dd/d88/structAestraUI_1_1NUIKeyEvent.html">AestraUI::NUIKeyEvent</a></div><div class="ttdef"><b>Definition</b> <a href="../../dc/d90/NUITypes_8h_source.html#l00457">NUITypes.h:457</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

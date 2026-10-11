@@ -1,13 +1,15 @@
 <map id="Aestra::Audio::MixerChannel::getName" name="Aestra::Audio::MixerChannel::getName">
-<area shape="rect" id="Node000001" title="Get the display name shown in the UI." alt="" coords="519,101,725,141"/>
-<area shape="rect" id="Node000002" href="$da/d55/classAestra_1_1Audio_1_1DeleteTrackCommand.html#af90a9908fac33e06940460d03ddd9436" title="Execute the command (first time)" alt="" coords="271,5,465,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="563,98,470,60,435,48,437,43,472,55,565,93"/>
-<area shape="rect" id="Node000003" href="$dc/d3a/classAestra_1_1Audio_1_1RenameTrackCommand.html#a11da8593018d249a3c1e73433f4266bc" title="Execute the command (first time)" alt="" coords="265,69,471,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="505,109,471,105,471,100,505,104"/>
-<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a9274902c21392bdc5757a71c146978fe" title="Load an effect plugin onto the selected track." alt="" coords="274,133,462,173"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="505,139,462,144,462,139,504,133"/>
-<area shape="rect" id="Node000006" href="$d3/d1a/classAestraUI_1_1UIMixerPanel.html#ab344f8f36dd9531a345623027ca5428c" title="Called when drop occurs." alt="" coords="283,197,453,237"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="565,149,472,188,437,200,435,195,470,183,563,145"/>
-<area shape="rect" id="Node000005" href="$db/d60/classAestraContent.html#af214284a167c0d4485e8c7849733eee2" title="Create the file/plugin/preview/pattern browser panels." alt="" coords="5,133,217,173"/>
-<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="260,156,218,156,218,151,260,151"/>
+<area shape="rect" id="Node000001" title="Get the display name shown in the UI." alt="" coords="520,133,727,173"/>
+<area shape="rect" id="Node000002" href="$d1/dfb/classAestra_1_1Audio_1_1RoutingModel.html#a13b26edb012330fa689e2354da9a7802" title="Snapshot the manager&#39;s channels. Master is included as a target only." alt="" coords="265,5,472,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="583,127,531,93,471,60,441,48,443,43,473,55,534,88,586,123"/>
+<area shape="rect" id="Node000003" href="$da/d55/classAestra_1_1Audio_1_1DeleteTrackCommand.html#af90a9908fac33e06940460d03ddd9436" title="Execute the command (first time)" alt="" coords="271,69,466,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="529,132,448,112,449,107,530,127"/>
+<area shape="rect" id="Node000004" href="$dc/d3a/classAestra_1_1Audio_1_1RenameTrackCommand.html#a11da8593018d249a3c1e73433f4266bc" title="Execute the command (first time)" alt="" coords="266,133,471,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="506,156,471,156,471,151,506,151"/>
+<area shape="rect" id="Node000005" href="$db/d60/classAestraContent.html#a9274902c21392bdc5757a71c146978fe" title="Load an effect plugin onto the selected track." alt="" coords="275,197,463,237"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="530,179,449,200,448,195,529,174"/>
+<area shape="rect" id="Node000007" href="$d3/d1a/classAestraUI_1_1UIMixerPanel.html#ab344f8f36dd9531a345623027ca5428c" title="Called when drop occurs." alt="" coords="283,261,454,301"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="586,184,534,219,473,252,443,264,441,259,471,247,531,214,583,179"/>
+<area shape="rect" id="Node000006" href="$db/d60/classAestraContent.html#af214284a167c0d4485e8c7849733eee2" title="Create the file/plugin/preview/pattern browser panels." alt="" coords="5,197,217,237"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="261,220,217,220,217,215,261,215"/>
 </map>

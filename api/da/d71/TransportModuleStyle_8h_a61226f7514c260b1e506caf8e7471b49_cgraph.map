@@ -1,0 +1,6 @@
+<map id="Aestra::TransportModule::drawDivider" name="Aestra::TransportModule::drawDivider">
+<area shape="rect" id="Node000001" title="Hairline between two modules, inset from the row&#39;s top and bottom." alt="" coords="5,29,185,69"/>
+<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="54,30,51,20,58,10,73,5,95,3,121,6,135,13,133,18,120,11,95,8,74,10,61,15,57,21,59,28"/>
+<area shape="rect" id="Node000002" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#a8287a2b8a0d43d3eb03d7354121b4a95" title="Draw a line." alt="" coords="233,29,403,69"/>
+<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="186,47,220,47,220,52,186,52"/>
+</map>

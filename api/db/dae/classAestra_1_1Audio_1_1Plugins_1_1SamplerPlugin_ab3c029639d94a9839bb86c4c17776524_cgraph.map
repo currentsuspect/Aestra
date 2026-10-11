@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::Plugins::SamplerPlugin::applyAutomation" name="Aestra::Audio::Plugins::SamplerPlugin::applyAutomation">
+<area shape="rect" id="Node000001" title="Hand the plugin the automated value for this block." alt="" coords="5,5,249,45"/>
+<area shape="rect" id="Node000002" href="$db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html#acb8ccbc391a73173846507a8f062ac90" title="Set parameter value (normalized 0&#45;1)" alt="" coords="297,5,516,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="250,23,284,23,284,28,250,28"/>
+</map>

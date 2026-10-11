@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::Plugins::KeepLengthCache::prewarm" name="Aestra::Audio::Plugins::KeepLengthCache::prewarm">
+<area shape="rect" id="Node000001" title="Queue renders for these semitone offsets (0 and out&#45;of&#45;range offsets are ignored)." alt="" coords="267,13,479,53"/>
+<area shape="rect" id="Node000002" href="$d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#aef48ba1b9be6c21bab0e92f29541c661" title="Wait until every listed offset is ready or unsupported. False on timeout." alt="" coords="5,5,219,60"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="253,35,219,35,219,30,253,30"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="AestraUI::NUIComposedTransform::applyToRect" name="AestraUI::NUIComposedTransform::applyToRect">
+<area shape="rect" id="Node000001" title="Map an axis&#45;aligned rectangle, given as two corners." alt="" coords="5,5,249,45"/>
+<area shape="rect" id="Node000002" href="$d5/dba/structAestraUI_1_1NUIComposedTransform.html#a2414f16345756bbf70ea7e6a896d8b38" title="Map a point from the innermost local space to the outermost space." alt="" coords="297,5,541,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="250,23,283,23,283,28,250,28"/>
+</map>

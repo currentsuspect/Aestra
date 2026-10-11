@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['registerstatus_0',['RegisterStatus',['../d4/d8f/classAestra_1_1Audio_1_1HostVerbRegistry.html#a8ad8fd72c16f66cc54db72f76b202f41',1,'Aestra::Audio::HostVerbRegistry']]]
+  ['outcome_0',['Outcome',['../d0/d70/classAestra_1_1MuseAgent_1_1MuseSocketClient.html#a75e925977614e2f4df0010efef14ed8f',1,'Aestra::MuseAgent::MuseSocketClient']]]
 ];

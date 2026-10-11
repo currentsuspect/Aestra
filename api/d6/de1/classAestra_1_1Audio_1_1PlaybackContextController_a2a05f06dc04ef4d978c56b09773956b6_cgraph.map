@@ -1,0 +1,11 @@
+<map id="Aestra::Audio::PlaybackContextController::observe" name="Aestra::Audio::PlaybackContextController::observe">
+<area shape="rect" id="Node000001" title="Read every mirror from where it actually lives (the UI mirror from the last value pushed)." alt="" coords="5,101,232,141"/>
+<area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a40afe410124fc61652bdda25beec4e81" title="Check whether audition mode is enabled." alt="" coords="288,5,487,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="166,99,279,55,302,47,304,52,281,60,168,104"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#abaa8adeeacecd9999e606638336a5617" title="True while Arsenal&#39;s pattern loop is the effective loop (setPatternLoopOverride)." alt="" coords="280,69,495,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="232,105,266,101,267,106,232,111"/>
+<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#adc6c625cccc4db87d777ad77b39c1cd1" title="Check whether pattern mode is active." alt="" coords="283,133,491,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="232,132,270,137,269,142,232,137"/>
+<area shape="rect" id="Node000005" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ab9a7f9d556efdfa7b6cfe5ee7acbbbad" title="Check whether Arsenal pattern playback mode is active." alt="" coords="288,197,487,237"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="168,139,281,183,304,191,302,196,279,188,166,144"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::RoutingModel" name="Aestra::Audio::RoutingModel">
+<area shape="rect" id="Node000001" title="Read&#45;only view of the routing graph (V8&#45;C15, FD&#45;29)." alt="" coords="5,93,212,119"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="71,5,146,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="111,45,111,93,106,93,106,45"/>
+</map>

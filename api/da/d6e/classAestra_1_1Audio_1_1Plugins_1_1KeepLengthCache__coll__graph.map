@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::Plugins::KeepLengthCache" name="Aestra::Audio::Plugins::KeepLengthCache">
+<area shape="rect" id="Node000001" title="Pre&#45;rendered, length&#45;preserving versions of one sampler source, one per semitone." alt="" coords="203,123,367,163"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,243,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="163,51,261,120,258,125,160,56"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="266,13,305,38"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="288,52,288,122,283,122,283,52"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="403,13,463,38"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="431,52,422,77,406,101,388,114,368,125,365,120,385,110,402,97,417,75,426,50"/>
+</map>

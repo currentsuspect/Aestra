@@ -2,4 +2,6 @@
 <area shape="rect" id="Node000001" title="Reset all plugins in the effect chain (panic/hard reset)." alt="" coords="5,5,212,45"/>
 <area shape="rect" id="Node000002" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a90194fa45ef946130b2a299134aa01e1" title="Reset all plugins in the chain (Panic/Double&#45;Stop)" alt="" coords="260,5,451,45"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="212,23,246,23,246,28,212,28"/>
+<area shape="rect" id="Node000003" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#aae4750ff03b629d7895c64fc62066bf7" title="How many slots the chain currently has (&gt;= kInitialSlots)." alt="" coords="499,5,689,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="451,23,485,23,485,28,451,28"/>
 </map>

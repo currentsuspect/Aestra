@@ -78,6 +78,7 @@ $(function() {
 <a href="#nested-classes">Classes</a> &#124;
 <a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-static-attribs">Static Public Attributes</a> &#124;
 <a href="../../db/d8b/classAestraUI_1_1PluginBrowserPanel-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">AestraUI::PluginBrowserPanel Class Reference</div></div>
 </div><!--header-->
@@ -114,6 +115,11 @@ Public Types</h2></td></tr>
 , <b>CLAP</b>
  }</td></tr>
 <tr class="separator:a0766a06531de03c5dd6744c6b757c247"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3e032c16e34ab726777ccc527573b929" id="r_a3e032c16e34ab726777ccc527573b929"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#a3e032c16e34ab726777ccc527573b929">FavoritesLoader</a> = std::function&lt; std::optional&lt; std::vector&lt; std::string &gt; &gt;()&gt;</td></tr>
+<tr class="memdesc:a3e032c16e34ab726777ccc527573b929"><td class="mdescLeft">&#160;</td><td class="mdescRight">Persist favorites through the app's UI-state store (V8-C14).  <br /></td></tr>
+<tr class="separator:a3e032c16e34ab726777ccc527573b929"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a923a42091a054a12091f190e38b731df" id="r_a923a42091a054a12091f190e38b731df"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#a923a42091a054a12091f190e38b731df">FavoritesSaver</a> = std::function&lt; void(const std::vector&lt; std::string &gt; &amp;)&gt;</td></tr>
+<tr class="separator:a923a42091a054a12091f190e38b731df"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
@@ -165,12 +171,40 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a52f7e261797bb53dca0545780b5ffc3f" id="r_a52f7e261797bb53dca0545780b5ffc3f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#a52f7e261797bb53dca0545780b5ffc3f">clearSelection</a> ()</td></tr>
 <tr class="memdesc:a52f7e261797bb53dca0545780b5ffc3f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Clear selection.  <br /></td></tr>
 <tr class="separator:a52f7e261797bb53dca0545780b5ffc3f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5e023557113bb2a937cfaeaeb413df37" id="r_a5e023557113bb2a937cfaeaeb413df37"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#a5e023557113bb2a937cfaeaeb413df37">moveSelection</a> (int delta)</td></tr>
+<tr class="memdesc:a5e023557113bb2a937cfaeaeb413df37"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move the selection through the filtered list (spec item 4).  <br /></td></tr>
+<tr class="separator:a5e023557113bb2a937cfaeaeb413df37"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0af1d0acbaa93605bfc33d09df5aeab3" id="r_a0af1d0acbaa93605bfc33d09df5aeab3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#a0af1d0acbaa93605bfc33d09df5aeab3">activateSelected</a> ()</td></tr>
+<tr class="memdesc:a0af1d0acbaa93605bfc33d09df5aeab3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load the highlighted plugin (spec item 4).  <br /></td></tr>
+<tr class="separator:a0af1d0acbaa93605bfc33d09df5aeab3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3396d5dcccfc7947b52dd6f040eab9b1" id="r_a3396d5dcccfc7947b52dd6f040eab9b1"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#a3396d5dcccfc7947b52dd6f040eab9b1">getTargetScrollOffset</a> () const</td></tr>
+<tr class="memdesc:a3396d5dcccfc7947b52dd6f040eab9b1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Target scroll offset (the lerped scroll converges here).  <br /></td></tr>
+<tr class="separator:a3396d5dcccfc7947b52dd6f040eab9b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a689f371aaa1ed0c84e92ec39fd429255" id="r_a689f371aaa1ed0c84e92ec39fd429255"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#a689f371aaa1ed0c84e92ec39fd429255">ensureSelectionVisible</a> ()</td></tr>
+<tr class="memdesc:a689f371aaa1ed0c84e92ec39fd429255"><td class="mdescLeft">&#160;</td><td class="mdescRight">Scroll just enough to bring the selection into view.  <br /></td></tr>
+<tr class="separator:a689f371aaa1ed0c84e92ec39fd429255"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2f197f14f73a088dbf80c4f0c1150325" id="r_a2f197f14f73a088dbf80c4f0c1150325"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#a2f197f14f73a088dbf80c4f0c1150325">toggleFavorite</a> (const std::string &amp;pluginId)</td></tr>
 <tr class="memdesc:a2f197f14f73a088dbf80c4f0c1150325"><td class="mdescLeft">&#160;</td><td class="mdescRight">Toggle favorite status for a plugin.  <br /></td></tr>
 <tr class="separator:a2f197f14f73a088dbf80c4f0c1150325"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa382e56f568d640b0c5ad2213de4f4e6" id="r_aa382e56f568d640b0c5ad2213de4f4e6"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#aa382e56f568d640b0c5ad2213de4f4e6">getFavorites</a> () const</td></tr>
 <tr class="memdesc:aa382e56f568d640b0c5ad2213de4f4e6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get favorite plugin IDs.  <br /></td></tr>
 <tr class="separator:aa382e56f568d640b0c5ad2213de4f4e6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a72ca1f79927df9bc9450192d15e2d843" id="r_a72ca1f79927df9bc9450192d15e2d843"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#a72ca1f79927df9bc9450192d15e2d843">setFavoritesProvider</a> (<a class="el" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#a3e032c16e34ab726777ccc527573b929">FavoritesLoader</a> load, FavoritesSaver save)</td></tr>
+<tr class="separator:a72ca1f79927df9bc9450192d15e2d843"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ace914e24d4f0f3c0fecbb577cdec9b01" id="r_ace914e24d4f0f3c0fecbb577cdec9b01"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; std::string &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#ace914e24d4f0f3c0fecbb577cdec9b01">getRecents</a> () const</td></tr>
+<tr class="memdesc:ace914e24d4f0f3c0fecbb577cdec9b01"><td class="mdescLeft">&#160;</td><td class="mdescRight">Most recently loaded first; at most kMaxRecents.  <br /></td></tr>
+<tr class="separator:ace914e24d4f0f3c0fecbb577cdec9b01"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab4c33dfccdbd2d455d6b2a6f540a48d1" id="r_ab4c33dfccdbd2d455d6b2a6f540a48d1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#ab4c33dfccdbd2d455d6b2a6f540a48d1">recordRecent</a> (const std::string &amp;pluginId)</td></tr>
+<tr class="memdesc:ab4c33dfccdbd2d455d6b2a6f540a48d1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Note that <code>pluginId</code> was loaded: it moves to the front of the recents.  <br /></td></tr>
+<tr class="separator:ab4c33dfccdbd2d455d6b2a6f540a48d1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a150b2fb126b96f850ab60be8b50c1007" id="r_a150b2fb126b96f850ab60be8b50c1007"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#a150b2fb126b96f850ab60be8b50c1007">setShowRecentOnly</a> (bool show)</td></tr>
+<tr class="memdesc:a150b2fb126b96f850ab60be8b50c1007"><td class="mdescLeft">&#160;</td><td class="mdescRight">Show only recently loaded plugins, newest first.  <br /></td></tr>
+<tr class="separator:a150b2fb126b96f850ab60be8b50c1007"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a31aff495cde2378ac4bb9492e7d18ffc" id="r_a31aff495cde2378ac4bb9492e7d18ffc"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#a31aff495cde2378ac4bb9492e7d18ffc">getShowRecentOnly</a> () const</td></tr>
+<tr class="separator:a31aff495cde2378ac4bb9492e7d18ffc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af320540336117b5f51b2b44aa4770433" id="r_af320540336117b5f51b2b44aa4770433"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#af320540336117b5f51b2b44aa4770433">setRecentsProvider</a> (<a class="el" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#a3e032c16e34ab726777ccc527573b929">FavoritesLoader</a> load, FavoritesSaver save)</td></tr>
+<tr class="memdesc:af320540336117b5f51b2b44aa4770433"><td class="mdescLeft">&#160;</td><td class="mdescRight">Same arrangement as favorites: a stored list wins; without a provider recents last for the session.  <br /></td></tr>
+<tr class="separator:af320540336117b5f51b2b44aa4770433"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a691d47deaf3b195cc93276034d17f20c" id="r_a691d47deaf3b195cc93276034d17f20c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#a691d47deaf3b195cc93276034d17f20c">setOnPluginSelected</a> (std::function&lt; void(const <a class="el" href="../../d8/d1a/structAestraUI_1_1PluginListItem.html">PluginListItem</a> &amp;)&gt; callback)</td></tr>
 <tr class="memdesc:a691d47deaf3b195cc93276034d17f20c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set callback for plugin selection (single click)  <br /></td></tr>
 <tr class="separator:a691d47deaf3b195cc93276034d17f20c"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -202,9 +236,8 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:aef3555c0cda0d0efe874d064de7cb040 inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_aef3555c0cda0d0efe874d064de7cb040"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#aef3555c0cda0d0efe874d064de7cb040">setBounds</a> (const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;bounds)</td></tr>
 <tr class="separator:aef3555c0cda0d0efe874d064de7cb040 inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8ff75e00805b13ff9a6babd21f6cc556 inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a8ff75e00805b13ff9a6babd21f6cc556"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a8ff75e00805b13ff9a6babd21f6cc556">getBounds</a> () const</td></tr>
+<tr class="memdesc:a8ff75e00805b13ff9a6babd21f6cc556 inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="mdescLeft">&#160;</td><td class="mdescRight">Window-absolute (V8-X2b Window space): components render and hit-test at bounds_ as-is.  <br /></td></tr>
 <tr class="separator:a8ff75e00805b13ff9a6babd21f6cc556 inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a056af2e39c4ef600c8b8360a536da56c inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a056af2e39c4ef600c8b8360a536da56c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a056af2e39c4ef600c8b8360a536da56c">getGlobalBounds</a> () const</td></tr>
-<tr class="separator:a056af2e39c4ef600c8b8360a536da56c inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a261d90fc5c43b7cafd5007bac378de09 inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a261d90fc5c43b7cafd5007bac378de09"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a261d90fc5c43b7cafd5007bac378de09">setPosition</a> (float x, float y)</td></tr>
 <tr class="separator:a261d90fc5c43b7cafd5007bac378de09 inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a561ba8d4c81897cc76199e786fb9cb34 inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a561ba8d4c81897cc76199e786fb9cb34"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/d25/structAestraUI_1_1NUIPoint.html">NUIPoint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a561ba8d4c81897cc76199e786fb9cb34">getPosition</a> () const</td></tr>
@@ -236,10 +269,6 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a3a07e69f6d5bee5fa05f044b6b1f599e inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4a0678a4b752497765ddd2842d25354d inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a4a0678a4b752497765ddd2842d25354d"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">NUIComponent</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a4a0678a4b752497765ddd2842d25354d">findChildById</a> (const std::string &amp;id)</td></tr>
 <tr class="separator:a4a0678a4b752497765ddd2842d25354d inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4fbce2c1f4365b803a8a8f2098224b94 inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a4fbce2c1f4365b803a8a8f2098224b94"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/d25/structAestraUI_1_1NUIPoint.html">NUIPoint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a4fbce2c1f4365b803a8a8f2098224b94">localToGlobal</a> (const <a class="el" href="../../dd/d25/structAestraUI_1_1NUIPoint.html">NUIPoint</a> &amp;local) const</td></tr>
-<tr class="separator:a4fbce2c1f4365b803a8a8f2098224b94 inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a17ac5d4cc11482271bff360834c67882 inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a17ac5d4cc11482271bff360834c67882"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/d25/structAestraUI_1_1NUIPoint.html">NUIPoint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a17ac5d4cc11482271bff360834c67882">globalToLocal</a> (const <a class="el" href="../../dd/d25/structAestraUI_1_1NUIPoint.html">NUIPoint</a> &amp;global) const</td></tr>
-<tr class="separator:a17ac5d4cc11482271bff360834c67882 inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a673acc85dcf82d6550f87333ab1ca474 inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a673acc85dcf82d6550f87333ab1ca474"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a673acc85dcf82d6550f87333ab1ca474">setVisible</a> (bool visible)</td></tr>
 <tr class="separator:a673acc85dcf82d6550f87333ab1ca474 inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4149aca2bc7a939570350ec5eeaebbf1 inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a4149aca2bc7a939570350ec5eeaebbf1"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a4149aca2bc7a939570350ec5eeaebbf1">isVisible</a> () const</td></tr>
@@ -290,11 +319,18 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a1d87d5d3062bbbbab05b21752e5c2f4d inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a1d87d5d3062bbbbab05b21752e5c2f4d"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a1d87d5d3062bbbbab05b21752e5c2f4d">getTooltip</a> () const</td></tr>
 <tr class="separator:a1d87d5d3062bbbbab05b21752e5c2f4d inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
+Static Public Attributes</h2></td></tr>
+<tr class="memitem:a352d5e12159705535a150d8ae556d849" id="r_a352d5e12159705535a150d8ae556d849"><td class="memItemLeft" align="right" valign="top">static constexpr size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#a352d5e12159705535a150d8ae556d849">kMaxRecents</a> = 12</td></tr>
+<tr class="separator:a352d5e12159705535a150d8ae556d849"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="inherited" name="inherited"></a>
 Additional Inherited Members</h2></td></tr>
 <tr class="inherit_header pub_static_methods_classAestraUI_1_1NUIComponent"><td colspan="2" onclick="javascript:toggleInherit('pub_static_methods_classAestraUI_1_1NUIComponent')"><img src="../../closed.png" alt="-"/>&#160;Static Public Member Functions inherited from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a></td></tr>
 <tr class="memitem:a2c997dcc987fff37c232e9c7a56668b7 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a2c997dcc987fff37c232e9c7a56668b7"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a2c997dcc987fff37c232e9c7a56668b7">dispatchMouseEvent</a> (<a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">NUIComponent</a> *target, const <a class="el" href="../../db/d1d/structAestraUI_1_1NUIMouseEvent.html">NUIMouseEvent</a> &amp;event)</td></tr>
 <tr class="separator:a2c997dcc987fff37c232e9c7a56668b7 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a017e051e0f6d2526dddcbbe27176c946 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a017e051e0f6d2526dddcbbe27176c946"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a017e051e0f6d2526dddcbbe27176c946">dispatchKeyEvent</a> (<a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">NUIComponent</a> *target, const <a class="el" href="../../dd/d88/structAestraUI_1_1NUIKeyEvent.html">NUIKeyEvent</a> &amp;event)</td></tr>
+<tr class="separator:a017e051e0f6d2526dddcbbe27176c946 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a33cdfac9c2668312c7e7e59b8224bc54 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a33cdfac9c2668312c7e7e59b8224bc54"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a33cdfac9c2668312c7e7e59b8224bc54">beginEventDispatch</a> ()</td></tr>
 <tr class="separator:a33cdfac9c2668312c7e7e59b8224bc54 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3e42ae5c56238ce1cd24773df5f3b338 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a3e42ae5c56238ce1cd24773df5f3b338"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a3e42ae5c56238ce1cd24773df5f3b338">endEventDispatch</a> ()</td></tr>
@@ -303,6 +339,9 @@ Additional Inherited Members</h2></td></tr>
 <tr class="separator:a6c28a70d5e6de801933f936bb09494fd inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af8f731ad79f21d48ffe2ceb2c36ff50f inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_af8f731ad79f21d48ffe2ceb2c36ff50f"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#af8f731ad79f21d48ffe2ceb2c36ff50f">clearFocusedComponent</a> ()</td></tr>
 <tr class="separator:af8f731ad79f21d48ffe2ceb2c36ff50f inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8bf5e4108af9da1780373f2a00d86600 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a8bf5e4108af9da1780373f2a00d86600"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a8bf5e4108af9da1780373f2a00d86600">showRemoteTooltip</a> (const std::string &amp;text, const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;anchor, const void *owner=nullptr, bool force=false)</td></tr>
+<tr class="memdesc:a8bf5e4108af9da1780373f2a00d86600 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="mdescLeft">&#160;</td><td class="mdescRight">Show the one app-level tooltip (SPEC 3 §1.3).  <br /></td></tr>
+<tr class="separator:a8bf5e4108af9da1780373f2a00d86600 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a89d02676a450391f38f5ad124d638b04 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a89d02676a450391f38f5ad124d638b04"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a89d02676a450391f38f5ad124d638b04">showRemoteTooltip</a> (const std::string &amp;text, const <a class="el" href="../../dd/d25/structAestraUI_1_1NUIPoint.html">NUIPoint</a> &amp;position, const void *owner=nullptr, bool force=false)</td></tr>
 <tr class="separator:a89d02676a450391f38f5ad124d638b04 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1f583fe21c1d8c1c4269668f2179d68a inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a1f583fe21c1d8c1c4269668f2179d68a"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a1f583fe21c1d8c1c4269668f2179d68a">hideRemoteTooltip</a> (const void *owner=nullptr)</td></tr>
@@ -311,8 +350,24 @@ Additional Inherited Members</h2></td></tr>
 <tr class="separator:ac48c836258df2124192f9587f13c136a inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3eac5db91525b693d57e82eea061221e inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a3eac5db91525b693d57e82eea061221e"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a3eac5db91525b693d57e82eea061221e">updateGlobalTooltip</a> (double deltaTime)</td></tr>
 <tr class="separator:a3eac5db91525b693d57e82eea061221e inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9f0afa658ac1b7b90f621b931bc426ff inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a9f0afa658ac1b7b90f621b931bc426ff"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a9f0afa658ac1b7b90f621b931bc426ff">calculateTooltipBounds</a> (const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;anchor, const <a class="el" href="../../d7/db4/structAestraUI_1_1NUISize.html">NUISize</a> &amp;tooltipSize, const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;viewport)</td></tr>
+<tr class="separator:a9f0afa658ac1b7b90f621b931bc426ff inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9d03469d1edb3f5a08f1d361253034e2 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a9d03469d1edb3f5a08f1d361253034e2"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a9d03469d1edb3f5a08f1d361253034e2">calculateTooltipBounds</a> (const <a class="el" href="../../dd/d25/structAestraUI_1_1NUIPoint.html">NUIPoint</a> &amp;anchor, const <a class="el" href="../../d7/db4/structAestraUI_1_1NUISize.html">NUISize</a> &amp;tooltipSize, const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;viewport)</td></tr>
 <tr class="separator:a9d03469d1edb3f5a08f1d361253034e2 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a096242b24d72c2148235e18df259d42f inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a096242b24d72c2148235e18df259d42f"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a096242b24d72c2148235e18df259d42f">pointerTooltipAnchor</a> (const <a class="el" href="../../dd/d25/structAestraUI_1_1NUIPoint.html">NUIPoint</a> &amp;point)</td></tr>
+<tr class="memdesc:a096242b24d72c2148235e18df259d42f inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="mdescLeft">&#160;</td><td class="mdescRight">The box a point anchor keeps clear: the pointer glyph below the hotspot.  <br /></td></tr>
+<tr class="separator:a096242b24d72c2148235e18df259d42f inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af8edbe1ed5d776c96a836c0f5e3853f3 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_af8edbe1ed5d776c96a836c0f5e3853f3"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#af8edbe1ed5d776c96a836c0f5e3853f3">notePointerGesture</a> (const <a class="el" href="../../db/d1d/structAestraUI_1_1NUIMouseEvent.html">NUIMouseEvent</a> &amp;event)</td></tr>
+<tr class="memdesc:af8edbe1ed5d776c96a836c0f5e3853f3 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pointer gestures seen by dispatchMouseEvent: a press or scroll dismisses the tooltip.  <br /></td></tr>
+<tr class="separator:af8edbe1ed5d776c96a836c0f5e3853f3 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af2eaeadf98ee2bc8555cac08e5df264e inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_af2eaeadf98ee2bc8555cac08e5df264e"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#af2eaeadf98ee2bc8555cac08e5df264e">resetPointerGestureState</a> ()</td></tr>
+<tr class="memdesc:af2eaeadf98ee2bc8555cac08e5df264e inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="mdescLeft">&#160;</td><td class="mdescRight">Forget a held button (window focus lost: its release may never arrive).  <br /></td></tr>
+<tr class="separator:af2eaeadf98ee2bc8555cac08e5df264e inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0aceca1dc0bb10cd1977b84ffc41210d inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a0aceca1dc0bb10cd1977b84ffc41210d"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a0aceca1dc0bb10cd1977b84ffc41210d">isPointerButtonHeld</a> ()</td></tr>
+<tr class="separator:a0aceca1dc0bb10cd1977b84ffc41210d inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa88fcc574c77442e1742cfba0390be4f inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_aa88fcc574c77442e1742cfba0390be4f"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#aa88fcc574c77442e1742cfba0390be4f">dismissHoverTooltipAfterScroll</a> ()</td></tr>
+<tr class="memdesc:aa88fcc574c77442e1742cfba0390be4f inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="mdescLeft">&#160;</td><td class="mdescRight">After a scroll has been dispatched: a hover tooltip its target re-showed goes too.  <br /></td></tr>
+<tr class="separator:aa88fcc574c77442e1742cfba0390be4f inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2fcd72d9bfc37efa75f736b64e2cf8e0 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a2fcd72d9bfc37efa75f736b64e2cf8e0"><td class="memItemLeft" align="right" valign="top">static const <a class="el" href="../../d1/d33/structAestraUI_1_1TooltipState.html">TooltipState</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a2fcd72d9bfc37efa75f736b64e2cf8e0">getGlobalTooltipState</a> ()</td></tr>
 <tr class="separator:a2fcd72d9bfc37efa75f736b64e2cf8e0 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7c0eefbb0906e4a3732cc101938f50fe inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a7c0eefbb0906e4a3732cc101938f50fe"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a7c0eefbb0906e4a3732cc101938f50fe">setCursorCaptureActive</a> (bool active)</td></tr>
@@ -357,10 +412,46 @@ Additional Inherited Members</h2></td></tr>
 <div class="line">browser-&gt;setOnPluginSelected([](<span class="keyword">const</span> <a class="code hl_struct" href="../../d8/d1a/structAestraUI_1_1PluginListItem.html">PluginListItem</a>&amp; p) {</div>
 <div class="line">    <span class="comment">// Load the plugin</span></div>
 <div class="line">});</div>
-<div class="ttc" id="astructAestraUI_1_1PluginListItem_html"><div class="ttname"><a href="../../d8/d1a/structAestraUI_1_1PluginListItem.html">AestraUI::PluginListItem</a></div><div class="ttdoc">Plugin list item for display in the browser.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00024">PluginBrowserPanel.h:24</a></div></div>
+<div class="ttc" id="astructAestraUI_1_1PluginListItem_html"><div class="ttname"><a href="../../d8/d1a/structAestraUI_1_1PluginListItem.html">AestraUI::PluginListItem</a></div><div class="ttdoc">Plugin list item for display in the browser.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00025">PluginBrowserPanel.h:25</a></div></div>
 </div><!-- fragment --> 
-<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00055">55</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
-</div><h2 class="groupheader">Member Enumeration Documentation</h2>
+<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00056">56</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
+</div><h2 class="groupheader">Member Typedef Documentation</h2>
+<a id="a3e032c16e34ab726777ccc527573b929" name="a3e032c16e34ab726777ccc527573b929"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3e032c16e34ab726777ccc527573b929">&#9670;&#160;</a></span>FavoritesLoader</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#a3e032c16e34ab726777ccc527573b929">AestraUI::PluginBrowserPanel::FavoritesLoader</a> =  std::function&lt;std::optional&lt;std::vector&lt;std::string&gt; &gt;()&gt;</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Persist favorites through the app's UI-state store (V8-C14). </p>
+<p>AestraUI must not include the store, so the app supplies two callbacks, as for editor anchors (step 5b). A stored list wins. With nothing stored yet, the favorites already read from the legacy favorites.json are written once into the store (one-way import; the old file is left alone). Without a provider the panel keeps using favorites.json. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00190">190</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
+
+</div>
+</div>
+<a id="a923a42091a054a12091f190e38b731df" name="a923a42091a054a12091f190e38b731df"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a923a42091a054a12091f190e38b731df">&#9670;&#160;</a></span>FavoritesSaver</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using AestraUI::PluginBrowserPanel::FavoritesSaver =  std::function&lt;void(const std::vector&lt;std::string&gt;&amp;)&gt;</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00191">191</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Member Enumeration Documentation</h2>
 <a id="a0766a06531de03c5dd6744c6b757c247" name="a0766a06531de03c5dd6744c6b757c247"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a0766a06531de03c5dd6744c6b757c247">&#9670;&#160;</a></span>PluginFormatFilter</h2>
 
@@ -381,7 +472,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00094">94</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00095">95</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
 
 </div>
 </div>
@@ -405,7 +496,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00093">93</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00094">94</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
 
 </div>
 </div>
@@ -425,11 +516,33 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00094">94</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00087">87</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a0af1d0acbaa93605bfc33d09df5aeab3" name="a0af1d0acbaa93605bfc33d09df5aeab3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0af1d0acbaa93605bfc33d09df5aeab3">&#9670;&#160;</a></span>activateSelected()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::PluginBrowserPanel::activateSelected </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Load the highlighted plugin (spec item 4). </p>
+<p>Same action as double-click (fires onPluginLoadRequested). No-op without a valid selection. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00747">747</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+
+</div>
+</div>
 <a id="a52f7e261797bb53dca0545780b5ffc3f" name="a52f7e261797bb53dca0545780b5ffc3f"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a52f7e261797bb53dca0545780b5ffc3f">&#9670;&#160;</a></span>clearSelection()</h2>
 
@@ -447,7 +560,46 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Clear selection. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00724">724</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00721">721</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a689f371aaa1ed0c84e92ec39fd429255" name="a689f371aaa1ed0c84e92ec39fd429255"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a689f371aaa1ed0c84e92ec39fd429255">&#9670;&#160;</a></span>ensureSelectionVisible()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::PluginBrowserPanel::ensureSelectionVisible </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Scroll just enough to bring the selection into view. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00754">754</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d9/d36/NUIComponent_8h_source.html#l00071">AestraUI::NUIComponent::getBounds()</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00725">moveSelection()</a>.</p>
+<div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-2-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-2-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel_a689f371aaa1ed0c84e92ec39fd429255_cgraph.svg" width="459" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+<div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-3-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-3-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel_a689f371aaa1ed0c84e92ec39fd429255_icgraph.svg" width="488" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 
 </div>
 </div>
@@ -476,7 +628,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Get all plugins (unfiltered) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00087">87</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00088">88</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
 
 </div>
 </div>
@@ -497,7 +649,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Get favorite plugin IDs. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00745">745</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d2c/PluginBrowserFavorites_8cpp_source.html#l00094">94</a> of file <a class="el" href="../../d7/d2c/PluginBrowserFavorites_8cpp_source.html">PluginBrowserFavorites.cpp</a>.</p>
 
 </div>
 </div>
@@ -524,7 +676,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00106">106</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00107">107</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
 
 </div>
 </div>
@@ -553,7 +705,36 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Get current plugin list (may be filtered) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00082">82</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00083">83</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
+
+</div>
+</div>
+<a id="ace914e24d4f0f3c0fecbb577cdec9b01" name="ace914e24d4f0f3c0fecbb577cdec9b01"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ace914e24d4f0f3c0fecbb577cdec9b01">&#9670;&#160;</a></span>getRecents()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::vector&lt; std::string &gt; &amp; AestraUI::PluginBrowserPanel::getRecents </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Most recently loaded first; at most kMaxRecents. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00199">199</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
 
 </div>
 </div>
@@ -580,7 +761,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00118">118</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00119">119</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
 
 </div>
 </div>
@@ -601,7 +782,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Get currently selected plugin (if any) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00708">708</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00705">705</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
 
 </div>
 </div>
@@ -628,7 +809,63 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00112">112</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00113">113</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
+
+</div>
+</div>
+<a id="a31aff495cde2378ac4bb9492e7d18ffc" name="a31aff495cde2378ac4bb9492e7d18ffc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a31aff495cde2378ac4bb9492e7d18ffc">&#9670;&#160;</a></span>getShowRecentOnly()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool AestraUI::PluginBrowserPanel::getShowRecentOnly </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00204">204</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
+
+</div>
+</div>
+<a id="a3396d5dcccfc7947b52dd6f040eab9b1" name="a3396d5dcccfc7947b52dd6f040eab9b1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3396d5dcccfc7947b52dd6f040eab9b1">&#9670;&#160;</a></span>getTargetScrollOffset()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float AestraUI::PluginBrowserPanel::getTargetScrollOffset </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Target scroll offset (the lerped scroll converges here). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00160">160</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
 
 </div>
 </div>
@@ -655,7 +892,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00100">100</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00101">101</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
 
 </div>
 </div>
@@ -682,7 +919,39 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00180">180</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00236">236</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
+
+</div>
+</div>
+<a id="a5e023557113bb2a937cfaeaeb413df37" name="a5e023557113bb2a937cfaeaeb413df37"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5e023557113bb2a937cfaeaeb413df37">&#9670;&#160;</a></span>moveSelection()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::PluginBrowserPanel::moveSelection </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>delta</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Move the selection through the filtered list (spec item 4). </p>
+<p>Same selection identity as a single click (fires onPluginSelected), clamped at the ends; a fresh list starts at the top (Down) or bottom (Up). No-op on an empty list. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00725">725</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00754">ensureSelectionVisible()</a>.</p>
+<div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-4-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-4-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel_a5e023557113bb2a937cfaeaeb413df37_cgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
 
 </div>
 </div>
@@ -711,7 +980,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00588">588</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00580">580</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
 
 </div>
 </div>
@@ -741,7 +1010,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00553">553</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00520">520</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
 
 </div>
 </div>
@@ -771,7 +1040,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00385">385</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00348">348</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
 
 </div>
 </div>
@@ -801,7 +1070,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00132">132</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00092">92</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
 
 </div>
 </div>
@@ -831,7 +1100,29 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00594">594</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00586">586</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab4c33dfccdbd2d455d6b2a6f540a48d1" name="ab4c33dfccdbd2d455d6b2a6f540a48d1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab4c33dfccdbd2d455d6b2a6f540a48d1">&#9670;&#160;</a></span>recordRecent()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::PluginBrowserPanel::recordRecent </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>pluginId</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Note that <code>pluginId</code> was loaded: it moves to the front of the recents. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d7/d2c/PluginBrowserFavorites_8cpp_source.html#l00106">106</a> of file <a class="el" href="../../d7/d2c/PluginBrowserFavorites_8cpp_source.html">PluginBrowserFavorites.cpp</a>.</p>
 
 </div>
 </div>
@@ -853,7 +1144,37 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Select plugin by ID. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00715">715</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00712">712</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a72ca1f79927df9bc9450192d15e2d843" name="a72ca1f79927df9bc9450192d15e2d843"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a72ca1f79927df9bc9450192d15e2d843">&#9670;&#160;</a></span>setFavoritesProvider()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::PluginBrowserPanel::setFavoritesProvider </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#a3e032c16e34ab726777ccc527573b929">FavoritesLoader</a>&#160;</td>
+          <td class="paramname"><em>load</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">FavoritesSaver&#160;</td>
+          <td class="paramname"><em>save</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d7/d2c/PluginBrowserFavorites_8cpp_source.html#l00046">46</a> of file <a class="el" href="../../d7/d2c/PluginBrowserFavorites_8cpp_source.html">PluginBrowserFavorites.cpp</a>.</p>
 
 </div>
 </div>
@@ -875,7 +1196,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set format filter (All, VST3, CLAP) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00621">621</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00613">613</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
 
 </div>
 </div>
@@ -897,14 +1218,14 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set callback for plugin load (double click) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00753">753</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00777">777</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00063">AestraUI::PluginUIController::bindBrowser()</a>, and <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00082">AestraUI::PluginUIController::unbindBrowser()</a>.</p>
-<div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-2-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00183">AestraUI::PluginUIController::bindBrowser()</a>, and <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00202">AestraUI::PluginUIController::unbindBrowser()</a>.</p>
+<div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-5-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-2-content" class="dyncontent" style="display:none;">
+<div id="dynsection-5-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel_a777f1adff73f9c00b66716f9add64c03_icgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -928,7 +1249,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set callback for plugin selection (single click) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00749">749</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00773">773</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
 
 </div>
 </div>
@@ -950,14 +1271,14 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set callback for scan request. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00757">757</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00781">781</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00063">AestraUI::PluginUIController::bindBrowser()</a>, and <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00082">AestraUI::PluginUIController::unbindBrowser()</a>.</p>
-<div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-3-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00183">AestraUI::PluginUIController::bindBrowser()</a>, and <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00202">AestraUI::PluginUIController::unbindBrowser()</a>.</p>
+<div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-6-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-3-content" class="dyncontent" style="display:none;">
+<div id="dynsection-6-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel_ab087ea4f3058a66ddc54035a4da36fef_icgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -981,16 +1302,48 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the list of available plugins. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00607">607</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00599">599</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00090">AestraUI::PluginUIController::refreshBrowserList()</a>.</p>
-<div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-4-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00210">AestraUI::PluginUIController::refreshBrowserList()</a>.</p>
+<div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-7-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-4-content" class="dyncontent" style="display:none;">
+<div id="dynsection-7-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel_af67938d1cdeccb1b9a9ddb12096ce77d_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
+
+</div>
+</div>
+<a id="af320540336117b5f51b2b44aa4770433" name="af320540336117b5f51b2b44aa4770433"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af320540336117b5f51b2b44aa4770433">&#9670;&#160;</a></span>setRecentsProvider()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::PluginBrowserPanel::setRecentsProvider </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#a3e032c16e34ab726777ccc527573b929">FavoritesLoader</a>&#160;</td>
+          <td class="paramname"><em>load</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">FavoritesSaver&#160;</td>
+          <td class="paramname"><em>save</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Same arrangement as favorites: a stored list wins; without a provider recents last for the session. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d7/d2c/PluginBrowserFavorites_8cpp_source.html#l00119">119</a> of file <a class="el" href="../../d7/d2c/PluginBrowserFavorites_8cpp_source.html">PluginBrowserFavorites.cpp</a>.</p>
 
 </div>
 </div>
@@ -1022,14 +1375,14 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set scanning state (shows progress indicator) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00761">761</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00785">785</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00104">AestraUI::PluginUIController::startScan()</a>.</p>
-<div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-5-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00224">AestraUI::PluginUIController::startScan()</a>.</p>
+<div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-8-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-5-content" class="dyncontent" style="display:none;">
+<div id="dynsection-8-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel_ad744a08ac456fd16e83ec716f3d89d1a_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -1053,14 +1406,14 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set scanning status text. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00767">767</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00791">791</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00104">AestraUI::PluginUIController::startScan()</a>.</p>
-<div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-6-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00224">AestraUI::PluginUIController::startScan()</a>.</p>
+<div id="dynsection-9" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-9-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-9-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-6-content" class="dyncontent" style="display:none;">
+<div id="dynsection-9-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel_a20748d718ad38a4bb9da306c9c3326bb_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -1084,7 +1437,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set search query. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00631">631</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00623">623</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1106,7 +1459,29 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Toggle favorites-only filter. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00626">626</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00618">618</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a150b2fb126b96f850ab60be8b50c1007" name="a150b2fb126b96f850ab60be8b50c1007"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a150b2fb126b96f850ab60be8b50c1007">&#9670;&#160;</a></span>setShowRecentOnly()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::PluginBrowserPanel::setShowRecentOnly </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>show</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Show only recently loaded plugins, newest first. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d7/d2c/PluginBrowserFavorites_8cpp_source.html#l00114">114</a> of file <a class="el" href="../../d7/d2c/PluginBrowserFavorites_8cpp_source.html">PluginBrowserFavorites.cpp</a>.</p>
 
 </div>
 </div>
@@ -1128,7 +1503,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set type filter (All, Effects, Instruments) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00616">616</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00608">608</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1150,12 +1525,38 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Toggle favorite status for a plugin. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00728">728</a> of file <a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d2c/PluginBrowserFavorites_8cpp_source.html#l00077">77</a> of file <a class="el" href="../../d7/d2c/PluginBrowserFavorites_8cpp_source.html">PluginBrowserFavorites.cpp</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Member Data Documentation</h2>
+<a id="a352d5e12159705535a150d8ae556d849" name="a352d5e12159705535a150d8ae556d849"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a352d5e12159705535a150d8ae556d849">&#9670;&#160;</a></span>kMaxRecents</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">constexpr size_t AestraUI::PluginBrowserPanel::kMaxRecents = 12</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span><span class="mlabel">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00207">207</a> of file <a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a>.</p>
 
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>AestraUI/Widgets/<a class="el" href="../../d5/db9/PluginBrowserPanel_8h_source.html">PluginBrowserPanel.h</a></li>
+<li>AestraUI/Widgets/<a class="el" href="../../d7/d2c/PluginBrowserFavorites_8cpp_source.html">PluginBrowserFavorites.cpp</a></li>
 <li>AestraUI/Widgets/<a class="el" href="../../d6/d72/PluginBrowserPanel_8cpp_source.html">PluginBrowserPanel.cpp</a></li>
 </ul>
 </div><!-- contents -->

@@ -1,0 +1,9 @@
+<map id="Aestra::ExportDialogValues" name="Aestra::ExportDialogValues">
+<area shape="rect" id="Node000001" title="The dialog&#39;s live settings, in the shape both operations work on." alt="" coords="5,212,204,237"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="13,95,52,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="29,134,28,161,36,187,49,200,65,210,62,214,45,204,32,189,23,162,24,134"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="135,95,221,120"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="175,134,166,162,151,190,125,214,122,210,147,186,161,160,170,132"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="109,5,247,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="181,59,181,94,175,94,175,59"/>
+</map>

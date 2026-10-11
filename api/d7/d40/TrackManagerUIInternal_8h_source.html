@@ -128,13 +128,17 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    <span class="keywordflow">if</span> (!root)</div>
 <div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>        root = owner;</div>
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    root-&gt;addChild(menu);</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>    menu-&gt;showAt(position);</div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    root-&gt;repaint();</div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>}</div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span> </div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>} <span class="comment">// namespace Audio</span></div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>} <span class="comment">// namespace Aestra</span></div>
-<div class="ttc" id="aclassAestraUI_1_1NUIComponent_html"><div class="ttname"><a href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a></div><div class="ttdoc">Base class for all UI components in the Aestra UI framework.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d36/NUIComponent_8h_source.html#l00045">NUIComponent.h:45</a></div></div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>    <span class="comment">// The menu lives on the root, so it outlives `owner`; bind the owner so the</span></div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    <span class="comment">// menu drops its (owner-capturing) callbacks if the owner is destroyed</span></div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    <span class="comment">// while the menu is still up.</span></div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    menu-&gt;setOwner(owner-&gt;weak_from_this());</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    menu-&gt;showAt(position);</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    root-&gt;repaint();</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>}</div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span> </div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>} <span class="comment">// namespace Audio</span></div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="ttc" id="aclassAestraUI_1_1NUIComponent_html"><div class="ttname"><a href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a></div><div class="ttdoc">Base class for all UI components in the Aestra UI framework.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d36/NUIComponent_8h_source.html#l00047">NUIComponent.h:47</a></div></div>
 <div class="ttc" id="astructAestraUI_1_1NUIPoint_html"><div class="ttname"><a href="../../dd/d25/structAestraUI_1_1NUIPoint.html">AestraUI::NUIPoint</a></div><div class="ttdef"><b>Definition</b> <a href="../../dc/d90/NUITypes_8h_source.html#l00026">NUITypes.h:26</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

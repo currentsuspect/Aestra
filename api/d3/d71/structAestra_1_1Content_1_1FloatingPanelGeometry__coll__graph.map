@@ -1,0 +1,9 @@
+<map id="Aestra::Content::FloatingPanelGeometry" name="Aestra::Content::FloatingPanelGeometry">
+<area shape="rect" id="Node000001" title="One floating panel: its identity and its geometry." alt="" coords="47,167,231,207"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,89,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="57,43,74,90,100,141,120,165,116,168,96,144,69,92,52,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="114,5,165,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="142,44,142,166,137,166,137,44"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="198,5,265,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="233,45,226,93,217,120,204,144,178,169,175,165,200,141,212,118,221,92,228,44"/>
+</map>

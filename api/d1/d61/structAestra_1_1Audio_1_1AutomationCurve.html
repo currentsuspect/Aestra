@@ -116,9 +116,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ad3a140109742ec9da4cb34b89f28e4ed" id="r_ad3a140109742ec9da4cb34b89f28e4ed"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#ad3a140109742ec9da4cb34b89f28e4ed">setDefaultValue</a> (float val)</td></tr>
 <tr class="memdesc:ad3a140109742ec9da4cb34b89f28e4ed"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the default value for this curve.  <br /></td></tr>
 <tr class="separator:ad3a140109742ec9da4cb34b89f28e4ed"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8b57acfb9ef2ad413aff69b25b4015a8" id="r_a8b57acfb9ef2ad413aff69b25b4015a8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a8b57acfb9ef2ad413aff69b25b4015a8">addPoint</a> (double beat, float value, double samplesPerBeat, float tension=0.5f)</td></tr>
-<tr class="memdesc:a8b57acfb9ef2ad413aff69b25b4015a8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a control point to the curve.  <br /></td></tr>
-<tr class="separator:a8b57acfb9ef2ad413aff69b25b4015a8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5150a86382305b3fc318bc784f8f2172" id="r_a5150a86382305b3fc318bc784f8f2172"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a5150a86382305b3fc318bc784f8f2172">addPoint</a> (double beat, float value, double samplesPerBeat, float tension=0.0f)</td></tr>
+<tr class="memdesc:a5150a86382305b3fc318bc784f8f2172"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a control point to the curve.  <br /></td></tr>
+<tr class="separator:a5150a86382305b3fc318bc784f8f2172"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a62dc7781fe341c3d515090f88b0a4ed2" id="r_a62dc7781fe341c3d515090f88b0a4ed2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a62dc7781fe341c3d515090f88b0a4ed2">removePoint</a> (size_t index)</td></tr>
 <tr class="separator:a62dc7781fe341c3d515090f88b0a4ed2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae322ae554bd490a4eb15a75e4347a722" id="r_ae322ae554bd490a4eb15a75e4347a722"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#ae322ae554bd490a4eb15a75e4347a722">sortPoints</a> ()</td></tr>
@@ -147,10 +147,16 @@ Public Attributes</h2></td></tr>
 <tr class="separator:adabc423b59c5750f38e5c664ef64962b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac991e4e7ce11b732822d9257feece61e" id="r_ac991e4e7ce11b732822d9257feece61e"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#ac991e4e7ce11b732822d9257feece61e">paramId</a> {0}</td></tr>
 <tr class="separator:ac991e4e7ce11b732822d9257feece61e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad953a413cfe712f3c1c8c83abc83b57f" id="r_ad953a413cfe712f3c1c8c83abc83b57f"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#ad953a413cfe712f3c1c8c83abc83b57f">muted</a> {false}</td></tr>
+<tr class="memdesc:ad953a413cfe712f3c1c8c83abc83b57f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Not evaluated by the engine.  <br /></td></tr>
+<tr class="separator:ad953a413cfe712f3c1c8c83abc83b57f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a38a1cf775a71b741993874a58d527bee" id="r_a38a1cf775a71b741993874a58d527bee"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="../../d4/d61/structAestra_1_1Audio_1_1AutomationRegion.html">AutomationRegion</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a38a1cf775a71b741993874a58d527bee">regions</a></td></tr>
+<tr class="memdesc:a38a1cf775a71b741993874a58d527bee"><td class="mdescLeft">&#160;</td><td class="mdescRight">Clips on this curve (V8-A7).  <br /></td></tr>
+<tr class="separator:a38a1cf775a71b741993874a58d527bee"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00049">49</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00105">105</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a52c7d8de49f017b350367b9d34401c07" name="a52c7d8de49f017b350367b9d34401c07"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a52c7d8de49f017b350367b9d34401c07">&#9670;&#160;</a></span>AutomationCurve()</h2>
@@ -186,13 +192,13 @@ Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00074">74</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00142">142</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="a8b57acfb9ef2ad413aff69b25b4015a8" name="a8b57acfb9ef2ad413aff69b25b4015a8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8b57acfb9ef2ad413aff69b25b4015a8">&#9670;&#160;</a></span>addPoint()</h2>
+<a id="a5150a86382305b3fc318bc784f8f2172" name="a5150a86382305b3fc318bc784f8f2172"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5150a86382305b3fc318bc784f8f2172">&#9670;&#160;</a></span>addPoint()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -222,7 +228,7 @@ Public Attributes</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">float&#160;</td>
-          <td class="paramname"><em>tension</em> = <code>0.5f</code>&#160;</td>
+          <td class="paramname"><em>tension</em> = <code>0.0f</code>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -243,12 +249,12 @@ Public Attributes</h2></td></tr>
     <tr><td class="paramname">beat</td><td>Beat position </td></tr>
     <tr><td class="paramname">samplesPerBeat</td><td>Samples per beat for the current project tempo/rate </td></tr>
     <tr><td class="paramname">value</td><td>Value at this point (normalized 0-1 for volume/pan) </td></tr>
-    <tr><td class="paramname">tension</td><td>Curve tension for serialization (rendering does not use it yet) </td></tr>
+    <tr><td class="paramname">tension</td><td>Tension of the segment starting at this point (0 = linear; see automationTensionShape) </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00167">167</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00236">236</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
 
 </div>
 </div>
@@ -277,7 +283,7 @@ Public Attributes</h2></td></tr>
 
 <p>Get the automation target type. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00079">79</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00148">148</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
 
 </div>
 </div>
@@ -306,7 +312,7 @@ Public Attributes</h2></td></tr>
 
 <p>Get default value. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00089">89</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00158">158</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
 
 </div>
 </div>
@@ -333,7 +339,7 @@ Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00096">96</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00165">165</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
 
 </div>
 </div>
@@ -362,7 +368,7 @@ Public Attributes</h2></td></tr>
 
 <p>Get all points. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00094">94</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00163">163</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
 
 </div>
 </div>
@@ -391,7 +397,7 @@ Public Attributes</h2></td></tr>
 
 <p>Get target as double for <a class="el" href="../../df/dee/classAestra_1_1JSON.html">JSON</a> serialization. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00084">84</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00153">153</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
 
 </div>
 </div>
@@ -429,7 +435,7 @@ Public Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Interpolated value, or defaultValue if no points </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00109">109</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00178">178</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
 
 </div>
 </div>
@@ -470,11 +476,11 @@ Public Attributes</h2></td></tr>
 <p>Legacy overload — samplesPerBeat is ignored; beat is authoritative. </p>
 <p>Kept so older call sites/tests compile; new code should call the single-argument form. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00153">153</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00222">222</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00153">getValueAtBeat()</a>.</p>
+<p class="reference">References <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00222">getValueAtBeat()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00153">getValueAtBeat()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00222">getValueAtBeat()</a>.</p>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-1-summary" class="dynsummary" style="display:block;">
@@ -515,7 +521,7 @@ Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00198">198</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00267">267</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
 
 </div>
 </div>
@@ -543,7 +549,7 @@ Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00185">185</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00254">254</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
 
 </div>
 </div>
@@ -573,7 +579,7 @@ Public Attributes</h2></td></tr>
 
 <p>Set the default value for this curve. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00158">158</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00227">227</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
 
 </div>
 </div>
@@ -600,7 +606,7 @@ Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00191">191</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00260">260</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
 
 </div>
 </div>
@@ -617,7 +623,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00058">58</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00114">114</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
 
 </div>
 </div>
@@ -633,7 +639,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00069">69</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00127">127</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
 
 </div>
 </div>
@@ -649,7 +655,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00070">70</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00128">128</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
 
 </div>
 </div>
@@ -665,7 +671,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00050">50</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00106">106</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
 
 </div>
 </div>
@@ -684,7 +690,26 @@ Public Attributes</h2></td></tr>
 <p>Stable mixer insert destination. </p>
 <p>Zero means unassigned, not lane index zero. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00052">52</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00108">108</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+
+</div>
+</div>
+<a id="ad953a413cfe712f3c1c8c83abc83b57f" name="ad953a413cfe712f3c1c8c83abc83b57f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad953a413cfe712f3c1c8c83abc83b57f">&#9670;&#160;</a></span>muted</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::AutomationCurve::muted {false}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Not evaluated by the engine. </p>
+<p>Bounce in Place sets it once the curve's effect is baked into audio; the points stay in the project so undo, or turning it back on, loses nothing. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00133">133</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
 
 </div>
 </div>
@@ -700,7 +725,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00056">56</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00112">112</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
 
 </div>
 </div>
@@ -716,7 +741,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00071">71</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00129">129</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
 
 </div>
 </div>
@@ -732,7 +757,28 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00053">53</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00109">109</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+
+</div>
+</div>
+<a id="a38a1cf775a71b741993874a58d527bee" name="a38a1cf775a71b741993874a58d527bee"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a38a1cf775a71b741993874a58d527bee">&#9670;&#160;</a></span>regions</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;<a class="el" href="../../d4/d61/structAestra_1_1Audio_1_1AutomationRegion.html">AutomationRegion</a>&gt; Aestra::Audio::AutomationCurve::regions</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Clips on this curve (V8-A7). </p>
+<p>Empty until the first clip operation; see <a class="el" href="../../d3/dbe/AutomationRegions_8h.html" title="Automation clips (V8-A7): the operations, as pure functions on one curve.">AutomationRegions.h</a>. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00136">136</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00128">Aestra::Audio::AutomationRegions::copy()</a>, <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00065">Aestra::Audio::AutomationRegions::materialize()</a>, <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00093">Aestra::Audio::AutomationRegions::move()</a>, <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00050">Aestra::Audio::AutomationRegions::regionAt()</a>, <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00188">Aestra::Audio::AutomationRegions::remove()</a>, <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00199">Aestra::Audio::AutomationRegions::retighten()</a>, and <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00159">Aestra::Audio::AutomationRegions::split()</a>.</p>
 
 </div>
 </div>
@@ -748,7 +794,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00057">57</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00113">113</a> of file <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html">AutomationCurve.h</a>.</p>
 
 </div>
 </div>

@@ -1,0 +1,9 @@
+<map id="ExportDialog::onRender" name="ExportDialog::onRender">
+<area shape="rect" id="Node000001" title="Render the modal overlay and active export panel." alt="" coords="5,77,181,102"/>
+<area shape="rect" id="Node000002" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#aea8ca15d63d3497f11e0c3e4b166ca66" title="Draw a shadow." alt="" coords="237,5,407,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="139,74,236,46,238,52,141,79"/>
+<area shape="rect" id="Node000003" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4" title="Draw a filled rectangle." alt="" coords="237,69,407,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="181,87,224,87,224,92,181,92"/>
+<area shape="rect" id="Node000004" href="$db/d1a/classAestraUI_1_1NUIComponent.html#a8ff75e00805b13ff9a6babd21f6cc556" title="Window&#45;absolute (V8&#45;X2b Window space): components render and hit&#45;test at bounds_ as&#45;is." alt="" coords="229,133,415,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="141,100,238,127,236,132,139,105"/>
+</map>

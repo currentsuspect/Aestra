@@ -1,0 +1,5 @@
+<map id="ExportDialog::onUpdate" name="ExportDialog::onUpdate">
+<area shape="rect" id="Node000001" title="Poll background export state and update the active panel." alt="" coords="5,13,183,38"/>
+<area shape="rect" id="Node000002" href="$d5/d04/classAestra_1_1PendingFileDialog.html#adcce127c6ed4d2f7eec64464252403be" title="On the UI thread: the picker&#39;s result once it has closed (exactly once), std::nullopt while it is sti..." alt="" coords="231,5,420,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="183,23,217,23,217,28,183,28"/>
+</map>

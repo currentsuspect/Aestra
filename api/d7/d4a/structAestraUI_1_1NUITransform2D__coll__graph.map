@@ -1,0 +1,5 @@
+<map id="AestraUI::NUITransform2D" name="AestraUI::NUITransform2D">
+<area shape="rect" id="Node000001" title="One level of the transform stack." alt="" coords="5,123,199,148"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="77,5,127,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="105,44,105,123,99,123,99,44"/>
+</map>

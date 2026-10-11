@@ -1,0 +1,15 @@
+<map id="Aestra::Audio::Plugins::EQStateBlob" name="Aestra::Audio::Plugins::EQStateBlob">
+<area shape="rect" id="Node000001" title=" " alt="" coords="580,83,744,123"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,33,80,58"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="94,42,233,44,395,57,556,80,580,84,579,89,556,85,395,62,233,49,94,47"/>
+<area shape="rect" id="Node000003" href="$d7/d15/structAestra_1_1Audio_1_1Plugins_1_1EQKeyedParam.html" title="One keyed parameter entry: the id travels with the value, so a parameter&#39;s identity does not depend o..." alt="" coords="262,83,426,123"/>
+<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="94,56,105,59,262,88,261,93,103,64,93,61"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="440,100,580,100,580,105,440,105"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="17,183,68,209"/>
+<area shape="poly" id="edge4_Node000003_Node000004" title=" " alt="" coords="60,171,79,151,103,135,131,125,171,118,261,106,262,112,172,123,133,131,105,140,82,155,64,174"/>
+<area shape="rect" id="Node000005" href="$d4/d02/structAestra_1_1Audio_1_1Plugins_1_1EQDynamicBandState.html" title=" " alt="" coords="257,295,431,335"/>
+<area shape="poly" id="edge7_Node000005_Node000004" title=" " alt="" coords="51,221,68,272,84,297,105,316,145,333,188,340,232,338,273,332,273,337,233,344,188,345,144,338,103,321,80,301,64,275,46,223"/>
+<area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="385,285,629,121,632,125,388,289"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="9,391,76,417"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="90,409,159,413,196,409,232,400,260,387,284,370,324,333,327,337,288,374,262,392,234,405,197,414,159,418,90,415"/>
+</map>

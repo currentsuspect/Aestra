@@ -1,0 +1,10 @@
+<map id="Aestra::TransportModule::drawLabel" name="Aestra::TransportModule::drawLabel">
+<area shape="rect" id="Node000001" title="Draw a module&#39;s caps label at the module&#39;s content x." alt="" coords="5,37,185,77"/>
+<area shape="poly" id="edge3_Node000001_Node000001" title=" " alt="" coords="54,38,51,28,58,18,73,13,95,11,121,14,135,21,133,26,120,19,95,16,74,18,61,23,57,29,59,36"/>
+<area shape="rect" id="Node000002" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#a7cef2d4a1418396f273e2b1afd8660fe" title="Calculate baseline&#45;aligned Y position for vertically centered text using measured size." alt="" coords="233,5,403,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="185,42,220,37,220,42,186,47"/>
+<area shape="rect" id="Node000004" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc" title="Draw text at the given position." alt="" coords="233,69,403,109"/>
+<area shape="poly" id="edge4_Node000001_Node000004" title=" " alt="" coords="186,68,220,73,220,78,185,73"/>
+<area shape="rect" id="Node000003" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#a65d6e0b19c83fbaca18c25e8082b1673" title="Retrieve font metrics (scaled for the requested font size)." alt="" coords="451,5,620,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="403,23,437,23,437,28,403,28"/>
+</map>

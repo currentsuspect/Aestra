@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::AutomationClipLayer::Hooks" name="Aestra::Audio::AutomationClipLayer::Hooks">
+<area shape="rect" id="Node000001" title=" " alt="" coords="215,93,408,133"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,204,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="143,34,271,91,269,96,141,39"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="228,5,395,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="314,44,314,93,309,93,309,44"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="419,5,558,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="463,41,415,72,363,96,361,91,413,67,461,37"/>
+</map>

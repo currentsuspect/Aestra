@@ -1,0 +1,8 @@
+<map id="Aestra::Audio::AudioBufferData::toFloat" name="Aestra::Audio::AudioBufferData::toFloat">
+<area shape="rect" id="Node000001" title="Every sample as float (a copy). Large for long audio: prefer copyFloats() over a window." alt="" coords="5,35,199,75"/>
+<area shape="rect" id="Node000002" href="$d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#aa9e50e44f1a3704408300a571d2491cb" title="Copy count interleaved samples starting at firstSample as float." alt="" coords="247,5,440,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="198,40,233,36,233,41,199,46"/>
+<area shape="rect" id="Node000003" href="$d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#af123515ee60574c3012d431a418a814e" title="Samples held (frames x channels), whichever storage holds them." alt="" coords="488,35,681,75"/>
+<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="199,54,247,55,440,55,474,54,474,60,440,60,247,60,199,59"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="440,34,475,39,474,44,440,40"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="AestraUI::PluginBrowserPanel::ensureSelectionVisible" name="AestraUI::PluginBrowserPanel::ensureSelectionVisible">
+<area shape="rect" id="Node000001" title="Scroll just enough to bring the selection into view." alt="" coords="5,5,220,45"/>
+<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html#a8ff75e00805b13ff9a6babd21f6cc556" title="Window&#45;absolute (V8&#45;X2b Window space): components render and hit&#45;test at bounds_ as&#45;is." alt="" coords="268,5,453,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="220,23,254,23,254,28,220,28"/>
+</map>

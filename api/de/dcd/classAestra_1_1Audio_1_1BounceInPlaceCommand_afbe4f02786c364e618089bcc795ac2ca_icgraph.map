@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::BounceInPlaceCommand::execute" name="Aestra::Audio::BounceInPlaceCommand::execute">
+<area shape="rect" id="Node000001" title="Execute the command (first time)" alt="" coords="265,5,477,45"/>
+<area shape="rect" id="Node000002" href="$de/dcd/classAestra_1_1Audio_1_1BounceInPlaceCommand.html#a5b4c210872c2aebd5943b80a0f812157" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,217,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="252,28,218,28,218,23,252,23"/>
+</map>

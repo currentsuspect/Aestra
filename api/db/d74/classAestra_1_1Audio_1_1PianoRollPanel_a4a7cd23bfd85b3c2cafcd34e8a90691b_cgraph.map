@@ -1,0 +1,11 @@
+<map id="Aestra::Audio::PianoRollPanel::loadPattern" name="Aestra::Audio::PianoRollPanel::loadPattern">
+<area shape="rect" id="Node000001" title="Load a pattern into the piano&#45;roll editor." alt="" coords="5,69,184,109"/>
+<area shape="rect" id="Node000002" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a0b2c544ab749091d77452cf6942a7590" title="A piano&#45;roll ruler zone: pattern playback loops only that range (SPEC 3 §5.2)." alt="" coords="232,69,459,109"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="184,87,218,87,218,92,184,92"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#adc6c625cccc4db87d777ad77b39c1cd1" title="Check whether pattern mode is active." alt="" coords="507,5,715,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="428,67,514,46,515,51,430,72"/>
+<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae2870cfd7029834a595de2b2a48cef87" title="Check whether timeline playback is active." alt="" coords="507,69,715,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="459,87,493,87,493,92,459,92"/>
+<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a25d3ab626f8ab6f294448f5bf40f8b79" title="Set or clear the zone." alt="" coords="507,133,715,173"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="430,107,515,128,514,133,428,112"/>
+</map>

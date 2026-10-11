@@ -1,0 +1,6 @@
+<map id="Aestra::importLegacyBrowserRailWidth" name="Aestra::importLegacyBrowserRailWidth">
+<area shape="rect" id="Node000001" title="One&#45;time, one&#45;way import of the pre&#45;V8&#45;C14 ui_state.json rail width." alt="" coords="207,29,421,69"/>
+<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="353,18,340,11,314,8,292,10,278,15,273,21,276,28,271,30,268,20,275,10,290,5,314,3,341,6,356,13"/>
+<area shape="rect" id="Node000002" href="$d6/d43/classAestraApp.html#a12653cc93e99665a6fe3e795f6724058" title="Initialize all subsystems." alt="" coords="5,37,159,62"/>
+<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="193,52,159,52,159,47,193,47"/>
+</map>

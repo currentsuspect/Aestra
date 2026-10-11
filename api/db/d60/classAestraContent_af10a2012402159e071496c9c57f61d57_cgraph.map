@@ -1,0 +1,30 @@
+<map id="AestraContent::resetPanelPositions" name="AestraContent::resetPanelPositions">
+<area shape="rect" id="Node000001" title="View &gt; Reset Panel Positions: default geometry for every panel; editors re&#45;centred." alt="" coords="5,187,196,227"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a1e0d0671846c7430d1d4c113656dd140" title="Show a panel from its preference: setBounds from resolveSurfacePlacement against the current region,..." alt="" coords="244,137,439,177"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="196,185,232,177,233,182,197,190"/>
+<area shape="rect" id="Node000007" href="$db/d60/classAestraContent.html#a5fe05d59abf371680c7ec9a3bbf12b2a" title="The panel owned for a floating view, or nullptr for other views." alt="" coords="506,5,717,31"/>
+<area shape="poly" id="edge14_Node000001_Node000007" title=" " alt="" coords="131,185,183,154,243,122,309,94,362,75,486,41,526,31,528,36,487,46,364,80,311,99,245,127,185,158,134,189"/>
+<area shape="rect" id="Node000009" href="$dc/d81/UISurfaceResolution_8h.html#aa9d79ef377bd570002f8646bed567f35" title="The preference a surface uses when the store has no entry for it." alt="" coords="785,219,1022,244"/>
+<area shape="poly" id="edge13_Node000001_Node000009" title=" " alt="" coords="197,212,487,227,771,230,771,235,487,233,196,217"/>
+<area shape="rect" id="Node000012" href="$db/d60/classAestraContent.html#ac2c701b3e6ef7592073e7e100f9ad0ea" title="Persist a captured preference (save&#45;on&#45;change, shared store)." alt="" coords="247,294,436,334"/>
+<area shape="poly" id="edge15_Node000001_Node000012" title=" " alt="" coords="143,225,245,273,277,286,275,291,243,278,141,230"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#af34b406e2d5b037466124205f95b0543" title="The single placement region for persistent surfaces (V8&#45;C14 step 5)." alt="" coords="487,55,736,95"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="397,134,486,105,515,96,516,102,487,110,399,139"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="366,134,434,78,485,41,508,32,510,37,488,46,438,83,369,138"/>
+<area shape="rect" id="Node000008" href="$db/d60/classAestraContent.html#a81eb24bc36ae457b76640a9b4ff0bfa6" title="The stored preference for a floating panel, or its per&#45;panel default when the user never moved,..." alt="" coords="497,193,726,219"/>
+<area shape="poly" id="edge7_Node000002_Node000008" title=" " alt="" coords="439,172,528,188,527,193,438,177"/>
+<area shape="rect" id="Node000011" href="$dc/d81/UISurfaceResolution_8h.html#a817ab042598424fcb029737cc375494c" title="The on&#45;screen rect for a stored preference in the current placement region." alt="" coords="492,144,731,169"/>
+<area shape="poly" id="edge11_Node000002_Node000011" title=" " alt="" coords="439,154,479,154,479,159,439,159"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a747fc3bfb5c3b565623f999c228c9e75" title="Compute the safe workspace rectangle after chrome and sidebars." alt="" coords="784,35,1023,60"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="736,61,770,57,771,63,736,66"/>
+<area shape="rect" id="Node000006" href="$db/d60/classAestraContent.html#a75c1ce436d0185fc1d0acf11d301ee83" title="Get the x coordinate of the visible browser edge." alt="" coords="809,85,997,125"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="736,85,796,91,795,96,736,91"/>
+<area shape="rect" id="Node000005" href="$db/d1a/classAestraUI_1_1NUIComponent.html#a8ff75e00805b13ff9a6babd21f6cc556" title="Window&#45;absolute (V8&#45;X2b Window space): components render and hit&#45;test at bounds_ as&#45;is." alt="" coords="1071,27,1256,67"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="1023,45,1057,45,1057,50,1023,50"/>
+<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="726,213,771,217,771,223,726,219"/>
+<area shape="rect" id="Node000010" href="$db/d60/classAestraContent.html#afbf0a48523732326319bb02e131fbd24" title="The app&#45;owned surface store, or nullptr before AestraApp provides it." alt="" coords="801,268,1006,293"/>
+<area shape="poly" id="edge10_Node000008_Node000010" title=" " alt="" coords="655,216,785,253,826,262,825,268,783,258,653,221"/>
+<area shape="poly" id="edge9_Node000009_Node000009" title=" " alt="" coords="862,220,852,210,857,200,874,194,903,192,940,196,950,201,954,206,950,209,947,205,938,201,903,197,876,199,861,204,858,210,865,217"/>
+<area shape="poly" id="edge12_Node000011_Node000011" title=" " alt="" coords="568,146,558,136,563,126,581,119,611,117,650,121,660,126,664,132,660,135,657,130,648,127,611,123,582,125,567,130,564,135,572,142"/>
+<area shape="poly" id="edge16_Node000012_Node000010" title=" " alt="" coords="436,306,787,285,787,290,436,311"/>
+</map>

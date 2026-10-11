@@ -1,0 +1,27 @@
+<map id="Aestra::Audio::AudioAnalysis" name="Aestra::Audio::AudioAnalysis">
+<area shape="rect" id="Node000001" title="What a piece of audio measures as: loudness, peaks, stereo image, spectrum balance." alt="" coords="800,189,1009,214"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="189,295,255,321"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="269,299,310,293,481,278,555,271,650,257,761,235,856,212,857,217,762,240,651,263,556,276,481,283,311,299,269,304"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="502,321,649,361"/>
+<area shape="poly" id="edge9_Node000009_Node000002" title=" " alt="" coords="269,310,502,332,502,337,269,315"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="502,385,649,425"/>
+<area shape="poly" id="edge13_Node000011_Node000002" title=" " alt="" coords="258,325,312,348,357,361,393,367,476,380,502,386,501,391,476,385,392,372,356,366,310,353,256,330"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="538,57,613,82"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="627,72,699,85,739,95,777,110,811,127,843,148,891,186,888,191,840,152,808,132,775,114,737,100,698,90,626,77"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="538,106,613,131"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="627,129,854,186,852,191,625,134"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="500,7,651,33"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="665,24,722,37,777,60,818,90,852,126,898,187,893,190,848,129,814,94,775,65,721,42,664,30"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="197,57,247,82"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="261,63,358,53,476,37,516,30,517,35,476,43,359,58,261,69"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="157,7,287,33"/>
+<area shape="poly" id="edge6_Node000005_Node000007" title=" " alt="" coords="300,17,499,17,499,23,300,23"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="5,205,44,230"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="37,191,83,118,117,77,156,42,175,31,178,35,159,46,120,81,87,121,41,194"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="161,401,283,426"/>
+<area shape="poly" id="edge11_Node000010_Node000008" title=" " alt="" coords="51,238,209,398,206,402,47,242"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="662,334,719,323,775,304,811,284,843,258,890,212,894,216,847,262,814,288,777,309,720,328,663,339"/>
+<area shape="poly" id="edge10_Node000009_Node000010" title=" " alt="" coords="285,426,329,432,378,434,428,427,475,410,483,402,486,393,490,382,498,371,516,359,519,364,502,375,495,385,491,395,487,405,477,414,429,432,378,439,328,438,284,431"/>
+<area shape="poly" id="edge14_Node000011_Node000010" title=" " alt="" coords="255,431,282,445,311,455,357,464,393,468,430,465,475,455,512,441,544,423,546,428,514,446,477,460,431,470,393,473,356,470,310,460,280,449,253,436"/>
+<area shape="poly" id="edge12_Node000001_Node000011" title=" " alt="" coords="662,400,720,389,748,379,775,366,818,330,853,287,879,245,895,213,900,216,883,248,857,290,821,334,777,370,750,384,721,394,663,406"/>
+</map>

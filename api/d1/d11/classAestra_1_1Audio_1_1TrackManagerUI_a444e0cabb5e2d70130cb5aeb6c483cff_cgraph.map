@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::TrackManagerUI::beginGridMarquee" name="Aestra::Audio::TrackManagerUI::beginGridMarquee">
+<area shape="rect" id="Node000001" title="A left press on empty grid in the Select tool (SPEC 3 §1.2): the default marquee." alt="" coords="5,49,213,89"/>
+<area shape="rect" id="Node000002" href="$d4/d40/structAestra_1_1Components_1_1TimelineMarqueeDrag.html#afec6e0d16e6f758b9edbe08fd7b5f7bc" title="Begin a drag on a marquee&#45;button press inside the track area." alt="" coords="278,5,453,60"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="213,51,264,44,265,49,214,57"/>
+<area shape="rect" id="Node000003" href="$d1/d11/classAestra_1_1Audio_1_1TrackManagerUI.html#a339e8d4adad74349db17d442581080d0" title="Drop the ruler zone." alt="" coords="261,85,469,125"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="214,81,248,86,247,91,213,86"/>
+</map>

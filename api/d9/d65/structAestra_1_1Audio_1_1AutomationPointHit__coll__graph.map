@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::AutomationPointHit" name="Aestra::Audio::AutomationPointHit">
+<area shape="rect" id="Node000001" title="A point under the pointer: which curve, which point. &#45;1/&#45;1 for none." alt="" coords="5,108,199,148"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="83,5,121,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="105,45,105,108,99,108,99,45"/>
+</map>

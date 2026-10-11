@@ -1,6 +1,6 @@
 <map id="AestraContent::endPanelDrag" name="AestraContent::endPanelDrag">
 <area shape="rect" id="Node000001" title="End the active overlay&#45;panel drag." alt="" coords="513,109,727,134"/>
-<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a96fb8097d6143d45d2d6ce3b65949b6f" title="Wire the floating&#45;panel behaviors shared by every overlay panel." alt="" coords="261,101,465,141"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a589ca44aee5e7aab4b6ead3f635adda5" title="Wire the floating&#45;panel behaviors shared by every overlay panel." alt="" coords="261,101,465,141"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="500,124,465,124,465,119,500,119"/>
 <area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#ab90c78e0fe24a2ff739817b3c4a4440d" title="Create the Arsenal and sample&#45;editor overlays." alt="" coords="5,5,213,45"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="305,98,212,60,178,48,179,43,214,55,307,93"/>

@@ -1,0 +1,5 @@
+<map id="AestraUI::PluginUIController::openPluginEditor" name="AestraUI::PluginUIController::openPluginEditor">
+<area shape="rect" id="Node000001" title="Open plugin editor window." alt="" coords="257,5,461,45"/>
+<area shape="rect" id="Node000002" href="$da/d71/classAestraUI_1_1PluginUIController.html#a51dc8a35899e9a50cd85ba935c56a6be" title="Bind an EffectChainRack to a mixer channel&#39;s effect chain." alt="" coords="5,5,209,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="244,28,210,28,210,23,244,23"/>
+</map>

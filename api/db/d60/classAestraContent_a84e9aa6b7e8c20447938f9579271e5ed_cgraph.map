@@ -1,5 +1,9 @@
 <map id="AestraContent::onMouseEvent" name="AestraContent::onMouseEvent">
-<area shape="rect" id="Node000001" title="Handle workspace mouse interactions (including dock resize drags)." alt="" coords="5,13,224,38"/>
-<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a4562c612f3077ec2f11a97610a4520be" title="Get the active browser column width." alt="" coords="272,5,469,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="224,23,258,23,258,28,224,28"/>
+<area shape="rect" id="Node000001" title="Handle workspace mouse interactions (including dock resize drags)." alt="" coords="5,45,224,70"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a4562c612f3077ec2f11a97610a4520be" title="Get the active browser column width." alt="" coords="281,5,478,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="220,42,267,36,267,42,220,47"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#a0d7427297cf2fa3437c52fa35214ed0c" title="Persist the dragged rail&#39;s width at resize&#45;drag end." alt="" coords="272,69,487,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="220,67,259,72,258,77,220,73"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#afbf0a48523732326319bb02e131fbd24" title="The app&#45;owned surface store, or nullptr before AestraApp provides it." alt="" coords="535,77,740,102"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="487,87,521,87,521,92,487,92"/>
 </map>

@@ -6,4 +6,6 @@
 <area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="216,68,259,73,258,78,216,73"/>
 <area shape="rect" id="Node000004" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a38d290063ec53ffaff3f54a2c2ac25d6" title="Find the slot currently holding plugin instance instanceId (#667)." alt="" coords="519,69,709,109"/>
 <area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="463,87,505,87,505,92,463,92"/>
+<area shape="rect" id="Node000005" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#aae4750ff03b629d7895c64fc62066bf7" title="How many slots the chain currently has (&gt;= kInitialSlots)." alt="" coords="757,69,948,109"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="710,87,743,87,743,92,710,92"/>
 </map>

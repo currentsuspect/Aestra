@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::EffectChain::getSlot" name="Aestra::Audio::EffectChain::getSlot">
+<area shape="rect" id="Node000001" title="Get slot information." alt="" coords="277,5,468,45"/>
+<area shape="rect" id="Node000002" href="$df/df3/classAestra_1_1Audio_1_1EffectChainSnapshot.html#ac77d993d04d2e1df2a5767a3405c34cb" title="Copy the chain&#39;s current slots." alt="" coords="5,5,229,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="264,28,229,28,229,23,264,23"/>
+</map>

@@ -1,0 +1,9 @@
+<map id="Aestra::UISurfaceGeometry" name="Aestra::UISurfaceGeometry">
+<area shape="rect" id="Node000001" title="The shared, disk&#45;backed store for &quot;how this user arranges the app&quot;." alt="" coords="27,137,227,163"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,72,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="43,44,50,78,66,112,80,125,97,135,94,140,77,129,62,115,45,80,38,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="101,5,152,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="129,44,129,137,124,137,124,44"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="201,5,268,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="235,45,227,80,219,99,207,115,190,130,170,140,168,135,187,125,203,112,214,96,222,79,230,44"/>
+</map>

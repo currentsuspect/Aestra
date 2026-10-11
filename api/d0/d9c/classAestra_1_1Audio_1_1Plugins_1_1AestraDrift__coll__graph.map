@@ -1,5 +1,19 @@
 <map id="Aestra::Audio::Plugins::AestraDrift" name="Aestra::Audio::Plugins::AestraDrift">
-<area shape="rect" id="Node000001" title=" " alt="" coords="31,79,195,119"/>
-<area shape="rect" id="Node000002" href="$de/d54/classAestra_1_1Audio_1_1IPluginInstance.html" title="Abstract plugin instance interface." alt="" coords="5,5,221,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="116,44,116,79,111,79,111,44"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="215,211,379,251"/>
+<area shape="rect" id="Node000002" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html" title="Shared base for built&#45;in effect plugins." alt="" coords="10,123,249,148"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="163,152,264,208,262,213,161,157"/>
+<area shape="rect" id="Node000003" href="$de/d54/classAestra_1_1Audio_1_1IPluginInstance.html" title="Abstract plugin instance interface." alt="" coords="5,5,221,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="119,44,130,122,125,123,114,44"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="260,5,335,31"/>
+<area shape="poly" id="edge9_Node000001_Node000004" title=" " alt="" coords="300,45,300,211,295,211,295,45"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="247,32,192,46,160,57,148,72,140,90,133,123,128,122,135,88,144,69,157,52,191,40,246,27"/>
+<area shape="rect" id="Node000005" href="$d2/d02/structAestra_1_1Audio_1_1ParamSpec.html" title="Declarative description of one automatable parameter." alt="" coords="407,123,596,148"/>
+<area shape="poly" id="edge5_Node000005_Node000004" title=" " alt="" coords="312,41,332,71,360,96,387,110,416,120,415,125,385,115,357,101,328,74,307,44"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="465,156,340,213,337,208,463,151"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="413,5,464,31"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="434,45,433,71,440,97,452,111,467,120,464,125,448,115,435,100,427,72,429,44"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="517,5,568,31"/>
+<area shape="poly" id="edge7_Node000005_Node000007" title=" " alt="" coords="536,44,508,124,503,122,531,43"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="635,5,685,31"/>
+<area shape="poly" id="edge8_Node000005_Node000008" title=" " alt="" coords="656,45,644,74,623,101,601,115,576,125,574,120,598,110,620,97,639,71,651,43"/>
 </map>

@@ -1,0 +1,11 @@
+<map id="AestraApp::registerMuseProjectVerbs" name="AestraApp::registerMuseProjectVerbs">
+<area shape="rect" id="Node000001" title="Register the project." alt="" coords="5,69,232,109"/>
+<area shape="rect" id="Node000002" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#ad026cd99c7a20e8f5f097c14ede90e90" title="The seam the application registers its capabilities into." alt="" coords="295,5,495,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="205,67,295,46,296,51,207,72"/>
+<area shape="rect" id="Node000003" href="$d4/d8f/classAestra_1_1Audio_1_1HostVerbRegistry.html#a38e5bb4a60b68bf42c03dd94c4921d81" title=" " alt="" coords="280,69,511,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="232,87,266,87,266,92,232,92"/>
+<area shape="rect" id="Node000005" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a1dfa90038ccd10759dd650594ccaf239" title="Publish the application&#45;owned result of the latest project load attempt." alt="" coords="295,133,495,173"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="207,107,296,128,295,133,205,112"/>
+<area shape="rect" id="Node000004" href="$d4/d8f/classAestra_1_1Audio_1_1HostVerbRegistry.html#a579c91f9cf5e9834a1b8b77710111832" title="The domain prefix for a name, or empty when it has none." alt="" coords="559,69,789,109"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="511,87,545,87,545,92,511,92"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::RoutingModel::groupByOutput" name="Aestra::Audio::RoutingModel::groupByOutput">
+<area shape="rect" id="Node000001" title="Main&#45;output groups: Master first when non&#45;empty, then by target order." alt="" coords="5,5,212,45"/>
+<area shape="rect" id="Node000002" href="$d1/dfb/classAestra_1_1Audio_1_1RoutingModel.html#a769506c8ca08ca09b9b7e655af4fb18c" title="Display name for an id; &quot;Master&quot; for kMaster; empty when unknown." alt="" coords="260,5,467,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="212,23,246,23,246,28,212,28"/>
+</map>

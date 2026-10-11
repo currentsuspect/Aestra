@@ -6,4 +6,6 @@
 <area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="181,87,216,87,216,92,181,92"/>
 <area shape="rect" id="Node000004" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#af9cffe835ebac825b10b033f7faf06b0" title="Set bypass state for a slot." alt="" coords="238,133,429,173"/>
 <area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="170,107,245,127,244,132,168,112"/>
+<area shape="rect" id="Node000005" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#aae4750ff03b629d7895c64fc62066bf7" title="How many slots the chain currently has (&gt;= kInitialSlots)." alt="" coords="485,133,676,173"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="429,151,472,151,472,156,429,156"/>
 </map>

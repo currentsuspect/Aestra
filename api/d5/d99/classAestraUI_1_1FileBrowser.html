@@ -111,10 +111,15 @@ Classes</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
 Public Types</h2></td></tr>
-<tr class="memitem:a11feffe6f35bcfc9ee029b3bd322aae4" id="r_a11feffe6f35bcfc9ee029b3bd322aae4"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><b>SortMode</b> { <b>Name</b>
+<tr class="memitem:a11feffe6f35bcfc9ee029b3bd322aae4" id="r_a11feffe6f35bcfc9ee029b3bd322aae4"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><b>SortMode</b> { <br />
+&#160;&#160;<b>Name</b>
 , <b>Type</b>
 , <b>Size</b>
 , <b>Modified</b>
+, <br />
+&#160;&#160;<b>Length</b>
+, <b>Bpm</b>
+<br />
  }</td></tr>
 <tr class="separator:a11feffe6f35bcfc9ee029b3bd322aae4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1c43d4039b0bf12b61658e0a4b742767" id="r_a1c43d4039b0bf12b61658e0a4b742767"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><b>QuickFilter</b> { <b>All</b>
@@ -125,27 +130,26 @@ Public Types</h2></td></tr>
 <tr class="separator:a1c43d4039b0bf12b61658e0a4b742767"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa7336c6f5411b22285c4d385565833a1" id="r_aa7336c6f5411b22285c4d385565833a1"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><b>BrowserNavAction</b> { <br />
 &#160;&#160;<b>Favorites</b>
-, <b>Purple</b>
-, <b>CollectionDrums</b>
-, <b>CollectionInstruments</b>
-, <br />
-&#160;&#160;<b>Vocals</b>
+, <b>Collection</b>
+, <b>AddCollection</b>
 , <b>Sounds</b>
-, <b>Drums</b>
+, <br />
+&#160;&#160;<b>Drums</b>
 , <b>Instruments</b>
-, <br />
-&#160;&#160;<b>AudioEffects</b>
+, <b>AudioEffects</b>
 , <b>Plugins</b>
-, <b>Patterns</b>
+, <br />
+&#160;&#160;<b>Patterns</b>
 , <b>Clips</b>
-, <br />
-&#160;&#160;<b>Samples</b>
+, <b>Samples</b>
 , <b>Packs</b>
-, <b>UserLibrary</b>
-, <b>CurrentProject</b>
 , <br />
-&#160;&#160;<b>CustomPlace</b>
+&#160;&#160;<b>UserLibrary</b>
+, <b>CurrentProject</b>
+, <b>CustomPlace</b>
 , <b>AddFolder</b>
+, <br />
+&#160;&#160;<b>SystemPlace</b>
 <br />
  }</td></tr>
 <tr class="separator:aa7336c6f5411b22285c4d385565833a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -238,10 +242,68 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>setCurrentPath</b> (c
 <tr class="separator:a8cb457e59647a0ea8d432e0ac4974067"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab1cf9c897b739b0b6d8d859c149c40e0" id="r_ab1cf9c897b739b0b6d8d859c149c40e0"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; std::string &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#ab1cf9c897b739b0b6d8d859c149c40e0">getFavorites</a> () const</td></tr>
 <tr class="separator:ab1cf9c897b739b0b6d8d859c149c40e0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a09af7f962575f2b159aabd9edcd72031" id="r_a09af7f962575f2b159aabd9edcd72031"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a09af7f962575f2b159aabd9edcd72031">saveState</a> (const std::string &amp;filePath)</td></tr>
-<tr class="separator:a09af7f962575f2b159aabd9edcd72031"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a79014136f0bbb04b8641d733344e7279" id="r_a79014136f0bbb04b8641d733344e7279"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a79014136f0bbb04b8641d733344e7279">loadState</a> (const std::string &amp;filePath)</td></tr>
-<tr class="separator:a79014136f0bbb04b8641d733344e7279"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a72dac8893d159b1fe63c3debf55ed0ba" id="r_a72dac8893d159b1fe63c3debf55ed0ba"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a72dac8893d159b1fe63c3debf55ed0ba">addPlace</a> (const std::string &amp;path)</td></tr>
+<tr class="separator:a72dac8893d159b1fe63c3debf55ed0ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a35d544f8751fcea195d4ccfc6e530ce9" id="r_a35d544f8751fcea195d4ccfc6e530ce9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a35d544f8751fcea195d4ccfc6e530ce9">removePlace</a> (const std::string &amp;path)</td></tr>
+<tr class="separator:a35d544f8751fcea195d4ccfc6e530ce9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4d46b71e0852851fd5f8a601d5f027c4" id="r_a4d46b71e0852851fd5f8a601d5f027c4"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a4d46b71e0852851fd5f8a601d5f027c4">isPlace</a> (const std::string &amp;path) const</td></tr>
+<tr class="separator:a4d46b71e0852851fd5f8a601d5f027c4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6db469c0b9df245ca16d44fa11cb5240" id="r_a6db469c0b9df245ca16d44fa11cb5240"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; std::string &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a6db469c0b9df245ca16d44fa11cb5240">getPlaces</a> () const</td></tr>
+<tr class="separator:a6db469c0b9df245ca16d44fa11cb5240"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aafe41c0568c530a286065028b473991f" id="r_aafe41c0568c530a286065028b473991f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#aafe41c0568c530a286065028b473991f">toggleTag</a> (const std::string &amp;path, const std::string &amp;tag)</td></tr>
+<tr class="separator:aafe41c0568c530a286065028b473991f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3447875d220b7544816b8fbf9392fe18" id="r_a3447875d220b7544816b8fbf9392fe18"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a3447875d220b7544816b8fbf9392fe18">hasTag</a> (const std::string &amp;path, const std::string &amp;tag) const</td></tr>
+<tr class="separator:a3447875d220b7544816b8fbf9392fe18"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa33438e7cbdf260571fc6f8227f498e4" id="r_aa33438e7cbdf260571fc6f8227f498e4"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; std::string &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#aa33438e7cbdf260571fc6f8227f498e4">getCollections</a> () const</td></tr>
+<tr class="separator:aa33438e7cbdf260571fc6f8227f498e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a386de7ff491933bffa8f3d517f8dd102" id="r_a386de7ff491933bffa8f3d517f8dd102"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a386de7ff491933bffa8f3d517f8dd102">createCollection</a> (const std::string &amp;name)</td></tr>
+<tr class="memdesc:a386de7ff491933bffa8f3d517f8dd102"><td class="mdescLeft">&#160;</td><td class="mdescRight">false if empty or taken  <br /></td></tr>
+<tr class="separator:a386de7ff491933bffa8f3d517f8dd102"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a42e5207978a4f2628e966ccc1382ee57" id="r_a42e5207978a4f2628e966ccc1382ee57"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a42e5207978a4f2628e966ccc1382ee57">renameCollection</a> (const std::string &amp;from, const std::string &amp;to)</td></tr>
+<tr class="memdesc:a42e5207978a4f2628e966ccc1382ee57"><td class="mdescLeft">&#160;</td><td class="mdescRight">retags every member  <br /></td></tr>
+<tr class="separator:a42e5207978a4f2628e966ccc1382ee57"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0d35d49c1573905e0d6b555a605ad470" id="r_a0d35d49c1573905e0d6b555a605ad470"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a0d35d49c1573905e0d6b555a605ad470">deleteCollection</a> (const std::string &amp;name)</td></tr>
+<tr class="memdesc:a0d35d49c1573905e0d6b555a605ad470"><td class="mdescLeft">&#160;</td><td class="mdescRight">untags members; files untouched  <br /></td></tr>
+<tr class="separator:a0d35d49c1573905e0d6b555a605ad470"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aba6fed1cb00da7e43fe3cc56867e6f19" id="r_aba6fed1cb00da7e43fe3cc56867e6f19"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#aba6fed1cb00da7e43fe3cc56867e6f19">beginCollectionRename</a> (const std::string &amp;name)</td></tr>
+<tr class="memdesc:aba6fed1cb00da7e43fe3cc56867e6f19"><td class="mdescLeft">&#160;</td><td class="mdescRight">Open an inline name editor on the collection's nav row (Enter/click-away commits, Esc cancels).  <br /></td></tr>
+<tr class="separator:aba6fed1cb00da7e43fe3cc56867e6f19"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ade60f4d811b3567a4399f9efff1ae04b" id="r_ade60f4d811b3567a4399f9efff1ae04b"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#ade60f4d811b3567a4399f9efff1ae04b">isRenamingCollection</a> () const</td></tr>
+<tr class="separator:ade60f4d811b3567a4399f9efff1ae04b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaa9e40deafc1e6c9bebd2d8c4571b2a3" id="r_aaa9e40deafc1e6c9bebd2d8c4571b2a3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#aaa9e40deafc1e6c9bebd2d8c4571b2a3">setProjectFilesProvider</a> (std::function&lt; std::vector&lt; std::string &gt;()&gt; provider)</td></tr>
+<tr class="memdesc:aaa9e40deafc1e6c9bebd2d8c4571b2a3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Current Project: supplies the audio files the open project uses.  <br /></td></tr>
+<tr class="separator:aaa9e40deafc1e6c9bebd2d8c4571b2a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7d9afd0dc050000fd1d4984acab33f88" id="r_a7d9afd0dc050000fd1d4984acab33f88"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a7d9afd0dc050000fd1d4984acab33f88">showCurrentProject</a> ()</td></tr>
+<tr class="separator:a7d9afd0dc050000fd1d4984acab33f88"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a09e79bb9b6a4869b19abaf0778183a8b" id="r_a09e79bb9b6a4869b19abaf0778183a8b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a09e79bb9b6a4869b19abaf0778183a8b">showFavorites</a> ()</td></tr>
+<tr class="separator:a09e79bb9b6a4869b19abaf0778183a8b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af6f684f0d6591f8ce1e919d042139b63" id="r_af6f684f0d6591f8ce1e919d042139b63"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#af6f684f0d6591f8ce1e919d042139b63">showCollection</a> (const std::string &amp;tag)</td></tr>
+<tr class="separator:af6f684f0d6591f8ce1e919d042139b63"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a786ba419058f8dcce75dd289ccc48407" id="r_a786ba419058f8dcce75dd289ccc48407"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a786ba419058f8dcce75dd289ccc48407">isShowingListing</a> () const</td></tr>
+<tr class="separator:a786ba419058f8dcce75dd289ccc48407"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a272d063744ffa56631b57244c9e53cd1" id="r_a272d063744ffa56631b57244c9e53cd1"><td class="memItemLeft" align="right" valign="top">const std::string &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a272d063744ffa56631b57244c9e53cd1">getListingTitle</a> () const</td></tr>
+<tr class="separator:a272d063744ffa56631b57244c9e53cd1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a113c2d1aedfe61c0d3578ce6a789bcb5" id="r_a113c2d1aedfe61c0d3578ce6a789bcb5"><td class="memItemLeft" align="right" valign="top">const std::string &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a113c2d1aedfe61c0d3578ce6a789bcb5">getLibraryRoot</a> () const</td></tr>
+<tr class="memdesc:a113c2d1aedfe61c0d3578ce6a789bcb5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Library root: the folder the Library categories (User Library, Packs, ...) live under, and where the browser starts.  <br /></td></tr>
+<tr class="separator:a113c2d1aedfe61c0d3578ce6a789bcb5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a879541d28fb35673fd1986efaf405fe6" id="r_a879541d28fb35673fd1986efaf405fe6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a879541d28fb35673fd1986efaf405fe6">setLibraryRoot</a> (const std::string &amp;path)</td></tr>
+<tr class="separator:a879541d28fb35673fd1986efaf405fe6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3c676a62e51dcd2bf38e718c4ecfb0cc" id="r_a3c676a62e51dcd2bf38e718c4ecfb0cc"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a3c676a62e51dcd2bf38e718c4ecfb0cc">saveState</a> (const std::string &amp;filePath) const</td></tr>
+<tr class="separator:a3c676a62e51dcd2bf38e718c4ecfb0cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a26369be0cb4c55d7fe3b050e7ce9ff7b" id="r_a26369be0cb4c55d7fe3b050e7ce9ff7b"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a26369be0cb4c55d7fe3b050e7ce9ff7b">loadState</a> (const std::string &amp;filePath)</td></tr>
+<tr class="separator:a26369be0cb4c55d7fe3b050e7ce9ff7b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aea1057f2e1f2268dec9c6d07747cc880" id="r_aea1057f2e1f2268dec9c6d07747cc880"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#aea1057f2e1f2268dec9c6d07747cc880">setStatePath</a> (const std::string &amp;filePath)</td></tr>
+<tr class="separator:aea1057f2e1f2268dec9c6d07747cc880"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aae6226d7eff873f9c148e4a109ef7d48" id="r_aae6226d7eff873f9c148e4a109ef7d48"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#aae6226d7eff873f9c148e4a109ef7d48">initLibraryState</a> (const std::string &amp;statePath)</td></tr>
+<tr class="memdesc:aae6226d7eff873f9c148e4a109ef7d48"><td class="mdescLeft">&#160;</td><td class="mdescRight">App startup: adopt <code>statePath</code> as the autosave target and load it, or, on first run, import the pre-v3 ~/.config/aestra/browser_settings.json.  <br /></td></tr>
+<tr class="separator:aae6226d7eff873f9c148e4a109ef7d48"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0d0e263954e8d2d36d9e6a4a9baf2c0a" id="r_a0d0e263954e8d2d36d9e6a4a9baf2c0a"><td class="memItemLeft" align="right" valign="top">const std::string &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a0d0e263954e8d2d36d9e6a4a9baf2c0a">getStatePath</a> () const</td></tr>
+<tr class="separator:a0d0e263954e8d2d36d9e6a4a9baf2c0a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac22ef1d089cc1c831601bea774fe3c14" id="r_ac22ef1d089cc1c831601bea774fe3c14"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#ac22ef1d089cc1c831601bea774fe3c14">pollScanResults</a> ()</td></tr>
+<tr class="memdesc:ac22ef1d089cc1c831601bea774fe3c14"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pump background scan results into the model.  <br /></td></tr>
+<tr class="separator:ac22ef1d089cc1c831601bea774fe3c14"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a26e25b4af34cee528ada7cfef8cebf5a" id="r_a26e25b4af34cee528ada7cfef8cebf5a"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a26e25b4af34cee528ada7cfef8cebf5a">isScanPending</a> () const</td></tr>
+<tr class="separator:a26e25b4af34cee528ada7cfef8cebf5a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aeddc93327969af4d3f25309a30a22503" id="r_aeddc93327969af4d3f25309a30a22503"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#aeddc93327969af4d3f25309a30a22503">getExpandedFolders</a> () const</td></tr>
 <tr class="separator:aeddc93327969af4d3f25309a30a22503"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa702010a49e783124f9ac617db4f3621" id="r_aa702010a49e783124f9ac617db4f3621"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#aa702010a49e783124f9ac617db4f3621">expandFolders</a> (const std::vector&lt; std::string &gt; &amp;folders)</td></tr>
@@ -252,12 +314,33 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>setCurrentPath</b> (c
 <tr class="separator:a06f9ad650e14b53bf2bac0d2d5d138f0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6b7dd4e159a824e753bf593848b406a2" id="r_a6b7dd4e159a824e753bf593848b406a2"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; const <a class="el" href="../../d6/d8a/structAestraUI_1_1FileItem.html">FileItem</a> * &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a6b7dd4e159a824e753bf593848b406a2">getFiles</a> () const</td></tr>
 <tr class="separator:a6b7dd4e159a824e753bf593848b406a2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acf4f35667cd770fdd9bbd8c1180f7279" id="r_acf4f35667cd770fdd9bbd8c1180f7279"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; const <a class="el" href="../../d6/d8a/structAestraUI_1_1FileItem.html">FileItem</a> * &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#acf4f35667cd770fdd9bbd8c1180f7279">getVisibleFiles</a> () const</td></tr>
+<tr class="memdesc:acf4f35667cd770fdd9bbd8c1180f7279"><td class="mdescLeft">&#160;</td><td class="mdescRight">The rows actually on screen: getFiles() after search, quick and tag filters.  <br /></td></tr>
+<tr class="separator:acf4f35667cd770fdd9bbd8c1180f7279"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac4b0639675a171c9971d2154a0e87c8a" id="r_ac4b0639675a171c9971d2154a0e87c8a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#ac4b0639675a171c9971d2154a0e87c8a">setSortMode</a> (SortMode mode)</td></tr>
 <tr class="separator:ac4b0639675a171c9971d2154a0e87c8a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abb8ad78fe17cc95f673480bde93ba425" id="r_abb8ad78fe17cc95f673480bde93ba425"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#abb8ad78fe17cc95f673480bde93ba425">rescanLibrary</a> ()</td></tr>
+<tr class="separator:abb8ad78fe17cc95f673480bde93ba425"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8930457ec7179be16784b23065caebb5" id="r_a8930457ec7179be16784b23065caebb5"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a8930457ec7179be16784b23065caebb5">isLibraryIndexing</a> () const</td></tr>
+<tr class="separator:a8930457ec7179be16784b23065caebb5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af01159b57209ffea0d5c57b9cb38d7df" id="r_af01159b57209ffea0d5c57b9cb38d7df"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#af01159b57209ffea0d5c57b9cb38d7df">setSearchWholeLibrary</a> (bool wholeLibrary)</td></tr>
+<tr class="separator:af01159b57209ffea0d5c57b9cb38d7df"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6e064c2263f8231f4a01f46d46532aaf" id="r_a6e064c2263f8231f4a01f46d46532aaf"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a6e064c2263f8231f4a01f46d46532aaf">isSearchingWholeLibrary</a> () const</td></tr>
+<tr class="separator:a6e064c2263f8231f4a01f46d46532aaf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a50699e03f09614c1c0cd0de24c140b0e" id="r_a50699e03f09614c1c0cd0de24c140b0e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a50699e03f09614c1c0cd0de24c140b0e">setSortAscending</a> (bool ascending)</td></tr>
 <tr class="separator:a50699e03f09614c1c0cd0de24c140b0e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aea93bff61da3c77fdcd484b3168ee3c1" id="r_aea93bff61da3c77fdcd484b3168ee3c1"><td class="memItemLeft" align="right" valign="top">SortMode&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#aea93bff61da3c77fdcd484b3168ee3c1">getSortMode</a> () const</td></tr>
+<tr class="separator:aea93bff61da3c77fdcd484b3168ee3c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6eedcea67a795c09a824cedaed2fe654" id="r_a6eedcea67a795c09a824cedaed2fe654"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a6eedcea67a795c09a824cedaed2fe654">isSortAscending</a> () const</td></tr>
+<tr class="separator:a6eedcea67a795c09a824cedaed2fe654"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa9a61bd8301a1f65e5b41bf2d82e1c84" id="r_aa9a61bd8301a1f65e5b41bf2d82e1c84"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/d3d/structAestraUI_1_1FileBrowser_1_1BrowserLayout.html">BrowserLayout</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#aa9a61bd8301a1f65e5b41bf2d82e1c84">computeBrowserLayout</a> () const</td></tr>
 <tr class="separator:aa9a61bd8301a1f65e5b41bf2d82e1c84"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6da8eb551688092f5a738405a677890c" id="r_a6da8eb551688092f5a738405a677890c"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; <a class="el" href="../../d1/d75/structAestraUI_1_1FileBrowser_1_1BrowserNavHit.html">BrowserNavHit</a> &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a6da8eb551688092f5a738405a677890c">getNavHits</a> () const</td></tr>
+<tr class="memdesc:a6da8eb551688092f5a738405a677890c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Navigation rows as laid out by the last paint (bounds are screen space).  <br /></td></tr>
+<tr class="separator:a6da8eb551688092f5a738405a677890c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a931234a4bdee3ec45617290b02a6677a" id="r_a931234a4bdee3ec45617290b02a6677a"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a931234a4bdee3ec45617290b02a6677a">searchQueryIsEmpty</a> () const</td></tr>
+<tr class="memdesc:a931234a4bdee3ec45617290b02a6677a"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when the search field is empty (or absent) — the search row's trailing clear button exists only when there is a query to clear.  <br /></td></tr>
+<tr class="separator:a931234a4bdee3ec45617290b02a6677a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab3728bdebc18bd1dcfc38413229e7a68" id="r_ab3728bdebc18bd1dcfc38413229e7a68"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#ab3728bdebc18bd1dcfc38413229e7a68">renderHoverOverlays</a> (<a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">NUIRenderer</a> &amp;renderer)</td></tr>
 <tr class="memdesc:ab3728bdebc18bd1dcfc38413229e7a68"><td class="mdescLeft">&#160;</td><td class="mdescRight">Hover washes drawn per-frame OUTSIDE the FBO cache, so hover changes never force a cache rebuild (see renderFileList / nav drawRow).  <br /></td></tr>
 <tr class="separator:ab3728bdebc18bd1dcfc38413229e7a68"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -298,9 +381,8 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>setCurrentPath</b> (c
 <tr class="memitem:aef3555c0cda0d0efe874d064de7cb040 inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_aef3555c0cda0d0efe874d064de7cb040"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#aef3555c0cda0d0efe874d064de7cb040">setBounds</a> (const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;bounds)</td></tr>
 <tr class="separator:aef3555c0cda0d0efe874d064de7cb040 inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8ff75e00805b13ff9a6babd21f6cc556 inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a8ff75e00805b13ff9a6babd21f6cc556"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a8ff75e00805b13ff9a6babd21f6cc556">getBounds</a> () const</td></tr>
+<tr class="memdesc:a8ff75e00805b13ff9a6babd21f6cc556 inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="mdescLeft">&#160;</td><td class="mdescRight">Window-absolute (V8-X2b Window space): components render and hit-test at bounds_ as-is.  <br /></td></tr>
 <tr class="separator:a8ff75e00805b13ff9a6babd21f6cc556 inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a056af2e39c4ef600c8b8360a536da56c inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a056af2e39c4ef600c8b8360a536da56c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a056af2e39c4ef600c8b8360a536da56c">getGlobalBounds</a> () const</td></tr>
-<tr class="separator:a056af2e39c4ef600c8b8360a536da56c inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a261d90fc5c43b7cafd5007bac378de09 inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a261d90fc5c43b7cafd5007bac378de09"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a261d90fc5c43b7cafd5007bac378de09">setPosition</a> (float x, float y)</td></tr>
 <tr class="separator:a261d90fc5c43b7cafd5007bac378de09 inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a561ba8d4c81897cc76199e786fb9cb34 inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a561ba8d4c81897cc76199e786fb9cb34"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/d25/structAestraUI_1_1NUIPoint.html">NUIPoint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a561ba8d4c81897cc76199e786fb9cb34">getPosition</a> () const</td></tr>
@@ -332,10 +414,6 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>setCurrentPath</b> (c
 <tr class="separator:a3a07e69f6d5bee5fa05f044b6b1f599e inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4a0678a4b752497765ddd2842d25354d inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a4a0678a4b752497765ddd2842d25354d"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">NUIComponent</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a4a0678a4b752497765ddd2842d25354d">findChildById</a> (const std::string &amp;id)</td></tr>
 <tr class="separator:a4a0678a4b752497765ddd2842d25354d inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4fbce2c1f4365b803a8a8f2098224b94 inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a4fbce2c1f4365b803a8a8f2098224b94"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/d25/structAestraUI_1_1NUIPoint.html">NUIPoint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a4fbce2c1f4365b803a8a8f2098224b94">localToGlobal</a> (const <a class="el" href="../../dd/d25/structAestraUI_1_1NUIPoint.html">NUIPoint</a> &amp;local) const</td></tr>
-<tr class="separator:a4fbce2c1f4365b803a8a8f2098224b94 inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a17ac5d4cc11482271bff360834c67882 inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a17ac5d4cc11482271bff360834c67882"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/d25/structAestraUI_1_1NUIPoint.html">NUIPoint</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a17ac5d4cc11482271bff360834c67882">globalToLocal</a> (const <a class="el" href="../../dd/d25/structAestraUI_1_1NUIPoint.html">NUIPoint</a> &amp;global) const</td></tr>
-<tr class="separator:a17ac5d4cc11482271bff360834c67882 inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a673acc85dcf82d6550f87333ab1ca474 inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a673acc85dcf82d6550f87333ab1ca474"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a673acc85dcf82d6550f87333ab1ca474">setVisible</a> (bool visible)</td></tr>
 <tr class="separator:a673acc85dcf82d6550f87333ab1ca474 inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4149aca2bc7a939570350ec5eeaebbf1 inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a4149aca2bc7a939570350ec5eeaebbf1"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a4149aca2bc7a939570350ec5eeaebbf1">isVisible</a> () const</td></tr>
@@ -391,6 +469,8 @@ Additional Inherited Members</h2></td></tr>
 <tr class="inherit_header pub_static_methods_classAestraUI_1_1NUIComponent"><td colspan="2" onclick="javascript:toggleInherit('pub_static_methods_classAestraUI_1_1NUIComponent')"><img src="../../closed.png" alt="-"/>&#160;Static Public Member Functions inherited from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a></td></tr>
 <tr class="memitem:a2c997dcc987fff37c232e9c7a56668b7 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a2c997dcc987fff37c232e9c7a56668b7"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a2c997dcc987fff37c232e9c7a56668b7">dispatchMouseEvent</a> (<a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">NUIComponent</a> *target, const <a class="el" href="../../db/d1d/structAestraUI_1_1NUIMouseEvent.html">NUIMouseEvent</a> &amp;event)</td></tr>
 <tr class="separator:a2c997dcc987fff37c232e9c7a56668b7 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a017e051e0f6d2526dddcbbe27176c946 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a017e051e0f6d2526dddcbbe27176c946"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a017e051e0f6d2526dddcbbe27176c946">dispatchKeyEvent</a> (<a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">NUIComponent</a> *target, const <a class="el" href="../../dd/d88/structAestraUI_1_1NUIKeyEvent.html">NUIKeyEvent</a> &amp;event)</td></tr>
+<tr class="separator:a017e051e0f6d2526dddcbbe27176c946 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a33cdfac9c2668312c7e7e59b8224bc54 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a33cdfac9c2668312c7e7e59b8224bc54"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a33cdfac9c2668312c7e7e59b8224bc54">beginEventDispatch</a> ()</td></tr>
 <tr class="separator:a33cdfac9c2668312c7e7e59b8224bc54 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3e42ae5c56238ce1cd24773df5f3b338 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a3e42ae5c56238ce1cd24773df5f3b338"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a3e42ae5c56238ce1cd24773df5f3b338">endEventDispatch</a> ()</td></tr>
@@ -399,6 +479,9 @@ Additional Inherited Members</h2></td></tr>
 <tr class="separator:a6c28a70d5e6de801933f936bb09494fd inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af8f731ad79f21d48ffe2ceb2c36ff50f inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_af8f731ad79f21d48ffe2ceb2c36ff50f"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#af8f731ad79f21d48ffe2ceb2c36ff50f">clearFocusedComponent</a> ()</td></tr>
 <tr class="separator:af8f731ad79f21d48ffe2ceb2c36ff50f inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8bf5e4108af9da1780373f2a00d86600 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a8bf5e4108af9da1780373f2a00d86600"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a8bf5e4108af9da1780373f2a00d86600">showRemoteTooltip</a> (const std::string &amp;text, const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;anchor, const void *owner=nullptr, bool force=false)</td></tr>
+<tr class="memdesc:a8bf5e4108af9da1780373f2a00d86600 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="mdescLeft">&#160;</td><td class="mdescRight">Show the one app-level tooltip (SPEC 3 §1.3).  <br /></td></tr>
+<tr class="separator:a8bf5e4108af9da1780373f2a00d86600 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a89d02676a450391f38f5ad124d638b04 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a89d02676a450391f38f5ad124d638b04"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a89d02676a450391f38f5ad124d638b04">showRemoteTooltip</a> (const std::string &amp;text, const <a class="el" href="../../dd/d25/structAestraUI_1_1NUIPoint.html">NUIPoint</a> &amp;position, const void *owner=nullptr, bool force=false)</td></tr>
 <tr class="separator:a89d02676a450391f38f5ad124d638b04 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1f583fe21c1d8c1c4269668f2179d68a inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a1f583fe21c1d8c1c4269668f2179d68a"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a1f583fe21c1d8c1c4269668f2179d68a">hideRemoteTooltip</a> (const void *owner=nullptr)</td></tr>
@@ -407,8 +490,24 @@ Additional Inherited Members</h2></td></tr>
 <tr class="separator:ac48c836258df2124192f9587f13c136a inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3eac5db91525b693d57e82eea061221e inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a3eac5db91525b693d57e82eea061221e"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a3eac5db91525b693d57e82eea061221e">updateGlobalTooltip</a> (double deltaTime)</td></tr>
 <tr class="separator:a3eac5db91525b693d57e82eea061221e inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9f0afa658ac1b7b90f621b931bc426ff inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a9f0afa658ac1b7b90f621b931bc426ff"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a9f0afa658ac1b7b90f621b931bc426ff">calculateTooltipBounds</a> (const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;anchor, const <a class="el" href="../../d7/db4/structAestraUI_1_1NUISize.html">NUISize</a> &amp;tooltipSize, const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;viewport)</td></tr>
+<tr class="separator:a9f0afa658ac1b7b90f621b931bc426ff inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9d03469d1edb3f5a08f1d361253034e2 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a9d03469d1edb3f5a08f1d361253034e2"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a9d03469d1edb3f5a08f1d361253034e2">calculateTooltipBounds</a> (const <a class="el" href="../../dd/d25/structAestraUI_1_1NUIPoint.html">NUIPoint</a> &amp;anchor, const <a class="el" href="../../d7/db4/structAestraUI_1_1NUISize.html">NUISize</a> &amp;tooltipSize, const <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> &amp;viewport)</td></tr>
 <tr class="separator:a9d03469d1edb3f5a08f1d361253034e2 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a096242b24d72c2148235e18df259d42f inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a096242b24d72c2148235e18df259d42f"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a096242b24d72c2148235e18df259d42f">pointerTooltipAnchor</a> (const <a class="el" href="../../dd/d25/structAestraUI_1_1NUIPoint.html">NUIPoint</a> &amp;point)</td></tr>
+<tr class="memdesc:a096242b24d72c2148235e18df259d42f inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="mdescLeft">&#160;</td><td class="mdescRight">The box a point anchor keeps clear: the pointer glyph below the hotspot.  <br /></td></tr>
+<tr class="separator:a096242b24d72c2148235e18df259d42f inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af8edbe1ed5d776c96a836c0f5e3853f3 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_af8edbe1ed5d776c96a836c0f5e3853f3"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#af8edbe1ed5d776c96a836c0f5e3853f3">notePointerGesture</a> (const <a class="el" href="../../db/d1d/structAestraUI_1_1NUIMouseEvent.html">NUIMouseEvent</a> &amp;event)</td></tr>
+<tr class="memdesc:af8edbe1ed5d776c96a836c0f5e3853f3 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pointer gestures seen by dispatchMouseEvent: a press or scroll dismisses the tooltip.  <br /></td></tr>
+<tr class="separator:af8edbe1ed5d776c96a836c0f5e3853f3 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af2eaeadf98ee2bc8555cac08e5df264e inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_af2eaeadf98ee2bc8555cac08e5df264e"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#af2eaeadf98ee2bc8555cac08e5df264e">resetPointerGestureState</a> ()</td></tr>
+<tr class="memdesc:af2eaeadf98ee2bc8555cac08e5df264e inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="mdescLeft">&#160;</td><td class="mdescRight">Forget a held button (window focus lost: its release may never arrive).  <br /></td></tr>
+<tr class="separator:af2eaeadf98ee2bc8555cac08e5df264e inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0aceca1dc0bb10cd1977b84ffc41210d inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a0aceca1dc0bb10cd1977b84ffc41210d"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a0aceca1dc0bb10cd1977b84ffc41210d">isPointerButtonHeld</a> ()</td></tr>
+<tr class="separator:a0aceca1dc0bb10cd1977b84ffc41210d inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa88fcc574c77442e1742cfba0390be4f inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_aa88fcc574c77442e1742cfba0390be4f"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#aa88fcc574c77442e1742cfba0390be4f">dismissHoverTooltipAfterScroll</a> ()</td></tr>
+<tr class="memdesc:aa88fcc574c77442e1742cfba0390be4f inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="mdescLeft">&#160;</td><td class="mdescRight">After a scroll has been dispatched: a hover tooltip its target re-showed goes too.  <br /></td></tr>
+<tr class="separator:aa88fcc574c77442e1742cfba0390be4f inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2fcd72d9bfc37efa75f736b64e2cf8e0 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a2fcd72d9bfc37efa75f736b64e2cf8e0"><td class="memItemLeft" align="right" valign="top">static const <a class="el" href="../../d1/d33/structAestraUI_1_1TooltipState.html">TooltipState</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a2fcd72d9bfc37efa75f736b64e2cf8e0">getGlobalTooltipState</a> ()</td></tr>
 <tr class="separator:a2fcd72d9bfc37efa75f736b64e2cf8e0 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7c0eefbb0906e4a3732cc101938f50fe inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a7c0eefbb0906e4a3732cc101938f50fe"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a7c0eefbb0906e4a3732cc101938f50fe">setCursorCaptureActive</a> (bool active)</td></tr>
@@ -464,7 +563,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00201">201</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00291">291</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -488,7 +587,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00190">190</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00271">271</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -512,7 +611,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00183">183</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00262">262</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -540,7 +639,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00296">296</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00018">18</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -567,11 +666,31 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00546">546</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00283">283</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a72dac8893d159b1fe63c3debf55ed0ba" name="a72dac8893d159b1fe63c3debf55ed0ba"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a72dac8893d159b1fe63c3debf55ed0ba">&#9670;&#160;</a></span>addPlace()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::FileBrowser::addPlace </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>path</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html#l00046">46</a> of file <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html">FileBrowserLibrary.cpp</a>.</p>
+
+</div>
+</div>
 <a id="a1523e6ddcb90f05fab9fd1ba0d174f97" name="a1523e6ddcb90f05fab9fd1ba0d174f97"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a1523e6ddcb90f05fab9fd1ba0d174f97">&#9670;&#160;</a></span>addToFavorites()</h2>
 
@@ -588,7 +707,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02707">2707</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html#l00028">28</a> of file <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html">FileBrowserLibrary.cpp</a>.</p>
 
 </div>
 </div>
@@ -607,7 +726,29 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l04141">4141</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03222">3222</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aba6fed1cb00da7e43fe3cc56867e6f19" name="aba6fed1cb00da7e43fe3cc56867e6f19"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aba6fed1cb00da7e43fe3cc56867e6f19">&#9670;&#160;</a></span>beginCollectionRename()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::FileBrowser::beginCollectionRename </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>name</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Open an inline name editor on the collection's nav row (Enter/click-away commits, Esc cancels). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html#l00149">149</a> of file <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html">FileBrowserLibrary.cpp</a>.</p>
 
 </div>
 </div>
@@ -627,7 +768,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l04666">4666</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03697">3697</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -646,7 +787,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l04111">4111</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03192">3192</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -665,7 +806,51 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00891">891</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00400">400</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a386de7ff491933bffa8f3d517f8dd102" name="a386de7ff491933bffa8f3d517f8dd102"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a386de7ff491933bffa8f3d517f8dd102">&#9670;&#160;</a></span>createCollection()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool AestraUI::FileBrowser::createCollection </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>name</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>false if empty or taken </p>
+
+<p class="definition">Definition at line <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html#l00087">87</a> of file <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html">FileBrowserLibrary.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a0d35d49c1573905e0d6b555a605ad470" name="a0d35d49c1573905e0d6b555a605ad470"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0d35d49c1573905e0d6b555a605ad470">&#9670;&#160;</a></span>deleteCollection()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::FileBrowser::deleteCollection </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>name</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>untags members; files untouched </p>
+
+<p class="definition">Definition at line <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html#l00132">132</a> of file <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html">FileBrowserLibrary.cpp</a>.</p>
 
 </div>
 </div>
@@ -685,7 +870,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l04954">4954</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03901">3901</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -712,7 +897,34 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00252">252</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00350">350</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+
+</div>
+</div>
+<a id="aa33438e7cbdf260571fc6f8227f498e4" name="aa33438e7cbdf260571fc6f8227f498e4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa33438e7cbdf260571fc6f8227f498e4">&#9670;&#160;</a></span>getCollections()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::vector&lt; std::string &gt; &amp; AestraUI::FileBrowser::getCollections </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00205">205</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -731,7 +943,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00936">936</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00452">452</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -785,7 +997,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00178">178</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00254">254</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -804,7 +1016,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l04934">4934</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03881">3881</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -831,7 +1043,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00167">167</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00191">191</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -858,7 +1070,93 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00180">180</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00256">256</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+
+</div>
+</div>
+<a id="a113c2d1aedfe61c0d3578ce6a789bcb5" name="a113c2d1aedfe61c0d3578ce6a789bcb5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a113c2d1aedfe61c0d3578ce6a789bcb5">&#9670;&#160;</a></span>getLibraryRoot()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::string &amp; AestraUI::FileBrowser::getLibraryRoot </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Library root: the folder the Library categories (User Library, Packs, ...) live under, and where the browser starts. </p>
+<p>It does not restrict navigation. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00230">230</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+
+</div>
+</div>
+<a id="a272d063744ffa56631b57244c9e53cd1" name="a272d063744ffa56631b57244c9e53cd1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a272d063744ffa56631b57244c9e53cd1">&#9670;&#160;</a></span>getListingTitle()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::string &amp; AestraUI::FileBrowser::getListingTitle </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00226">226</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+
+</div>
+</div>
+<a id="a6da8eb551688092f5a738405a677890c" name="a6da8eb551688092f5a738405a677890c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6da8eb551688092f5a738405a677890c">&#9670;&#160;</a></span>getNavHits()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::vector&lt; <a class="el" href="../../d1/d75/structAestraUI_1_1FileBrowser_1_1BrowserNavHit.html">BrowserNavHit</a> &gt; &amp; AestraUI::FileBrowser::getNavHits </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Navigation rows as laid out by the last paint (bounds are screen space). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00339">339</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -877,7 +1175,34 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00926">926</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00446">446</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a6db469c0b9df245ca16d44fa11cb5240" name="a6db469c0b9df245ca16d44fa11cb5240"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6db469c0b9df245ca16d44fa11cb5240">&#9670;&#160;</a></span>getPlaces()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::vector&lt; std::string &gt; &amp; AestraUI::FileBrowser::getPlaces </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00198">198</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -896,7 +1221,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l04658">4658</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03689">3689</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -923,7 +1248,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00179">179</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00255">255</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -950,7 +1275,142 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00144">144</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00168">168</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+
+</div>
+</div>
+<a id="aea93bff61da3c77fdcd484b3168ee3c1" name="aea93bff61da3c77fdcd484b3168ee3c1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aea93bff61da3c77fdcd484b3168ee3c1">&#9670;&#160;</a></span>getSortMode()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">SortMode AestraUI::FileBrowser::getSortMode </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00287">287</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+
+</div>
+</div>
+<a id="a0d0e263954e8d2d36d9e6a4a9baf2c0a" name="a0d0e263954e8d2d36d9e6a4a9baf2c0a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0d0e263954e8d2d36d9e6a4a9baf2c0a">&#9670;&#160;</a></span>getStatePath()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::string &amp; AestraUI::FileBrowser::getStatePath </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00242">242</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+
+</div>
+</div>
+<a id="acf4f35667cd770fdd9bbd8c1180f7279" name="acf4f35667cd770fdd9bbd8c1180f7279"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acf4f35667cd770fdd9bbd8c1180f7279">&#9670;&#160;</a></span>getVisibleFiles()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::vector&lt; const <a class="el" href="../../d6/d8a/structAestraUI_1_1FileItem.html">FileItem</a> * &gt; &amp; AestraUI::FileBrowser::getVisibleFiles </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The rows actually on screen: getFiles() after search, quick and tag filters. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00258">258</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+
+</div>
+</div>
+<a id="a3447875d220b7544816b8fbf9392fe18" name="a3447875d220b7544816b8fbf9392fe18"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3447875d220b7544816b8fbf9392fe18">&#9670;&#160;</a></span>hasTag()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool AestraUI::FileBrowser::hasTag </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>path</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>tag</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02615">2615</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aae6226d7eff873f9c148e4a109ef7d48" name="aae6226d7eff873f9c148e4a109ef7d48"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aae6226d7eff873f9c148e4a109ef7d48">&#9670;&#160;</a></span>initLibraryState()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::FileBrowser::initLibraryState </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>statePath</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>App startup: adopt <code>statePath</code> as the autosave target and load it, or, on first run, import the pre-v3 ~/.config/aestra/browser_settings.json. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html#l00014">14</a> of file <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html">FileBrowserLibrary.cpp</a>.</p>
 
 </div>
 </div>
@@ -977,7 +1437,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00273">273</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00371">371</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -997,7 +1457,26 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02720">2720</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html#l00245">245</a> of file <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html">FileBrowserLibrary.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a8930457ec7179be16784b23065caebb5" name="a8930457ec7179be16784b23065caebb5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8930457ec7179be16784b23065caebb5">&#9670;&#160;</a></span>isLibraryIndexing()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool AestraUI::FileBrowser::isLibraryIndexing </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html#l00224">224</a> of file <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html">FileBrowserLibrary.cpp</a>.</p>
 
 </div>
 </div>
@@ -1024,7 +1503,27 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00138">138</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00162">162</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+
+</div>
+</div>
+<a id="a4d46b71e0852851fd5f8a601d5f027c4" name="a4d46b71e0852851fd5f8a601d5f027c4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4d46b71e0852851fd5f8a601d5f027c4">&#9670;&#160;</a></span>isPlace()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool AestraUI::FileBrowser::isPlace </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>path</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html#l00071">71</a> of file <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html">FileBrowserLibrary.cpp</a>.</p>
 
 </div>
 </div>
@@ -1054,7 +1553,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02477">2477</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html#l00394">394</a> of file <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html">FileBrowserNavigation.cpp</a>.</p>
 
 </div>
 </div>
@@ -1081,7 +1580,53 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00160">160</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00184">184</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+
+</div>
+</div>
+<a id="ade60f4d811b3567a4399f9efff1ae04b" name="ade60f4d811b3567a4399f9efff1ae04b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ade60f4d811b3567a4399f9efff1ae04b">&#9670;&#160;</a></span>isRenamingCollection()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool AestraUI::FileBrowser::isRenamingCollection </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00212">212</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+
+</div>
+</div>
+<a id="a26e25b4af34cee528ada7cfef8cebf5a" name="a26e25b4af34cee528ada7cfef8cebf5a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a26e25b4af34cee528ada7cfef8cebf5a">&#9670;&#160;</a></span>isScanPending()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool AestraUI::FileBrowser::isScanPending </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02077">2077</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1100,18 +1645,99 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l04662">4662</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03693">3693</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
-<a id="a79014136f0bbb04b8641d733344e7279" name="a79014136f0bbb04b8641d733344e7279"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a79014136f0bbb04b8641d733344e7279">&#9670;&#160;</a></span>loadState()</h2>
+<a id="a6e064c2263f8231f4a01f46d46532aaf" name="a6e064c2263f8231f4a01f46d46532aaf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6e064c2263f8231f4a01f46d46532aaf">&#9670;&#160;</a></span>isSearchingWholeLibrary()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool AestraUI::FileBrowser::isSearchingWholeLibrary </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00285">285</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+
+</div>
+</div>
+<a id="a786ba419058f8dcce75dd289ccc48407" name="a786ba419058f8dcce75dd289ccc48407"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a786ba419058f8dcce75dd289ccc48407">&#9670;&#160;</a></span>isShowingListing()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool AestraUI::FileBrowser::isShowingListing </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00225">225</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+
+</div>
+</div>
+<a id="a6eedcea67a795c09a824cedaed2fe654" name="a6eedcea67a795c09a824cedaed2fe654"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6eedcea67a795c09a824cedaed2fe654">&#9670;&#160;</a></span>isSortAscending()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool AestraUI::FileBrowser::isSortAscending </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00288">288</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+
+</div>
+</div>
+<a id="a26369be0cb4c55d7fe3b050e7ce9ff7b" name="a26369be0cb4c55d7fe3b050e7ce9ff7b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a26369be0cb4c55d7fe3b050e7ce9ff7b">&#9670;&#160;</a></span>loadState()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void AestraUI::FileBrowser::loadState </td>
+          <td class="memname">bool AestraUI::FileBrowser::loadState </td>
           <td>(</td>
           <td class="paramtype">const std::string &amp;&#160;</td>
           <td class="paramname"><em>filePath</em></td><td>)</td>
@@ -1120,7 +1746,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l04739">4739</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03757">3757</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1140,7 +1766,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02638">2638</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01855">1855</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1159,7 +1785,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02622">2622</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01841">1841</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1179,7 +1805,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02491">2491</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html#l00408">408</a> of file <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html">FileBrowserNavigation.cpp</a>.</p>
 
 </div>
 </div>
@@ -1209,7 +1835,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02235">2235</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01463">1463</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1239,7 +1865,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01712">1712</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00939">939</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1268,7 +1894,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02437">2437</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01665">1665</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1366,7 +1992,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01648">1648</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00874">874</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1396,7 +2022,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01579">1579</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00784">784</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1416,7 +2042,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02690">2690</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01907">1907</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1436,7 +2062,37 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02703">2703</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01920">1920</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ac22ef1d089cc1c831601bea774fe3c14" name="ac22ef1d089cc1c831601bea774fe3c14"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac22ef1d089cc1c831601bea774fe3c14">&#9670;&#160;</a></span>pollScanResults()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::FileBrowser::pollScanResults </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Pump background scan results into the model. </p>
+<p>onUpdate() does this every frame; exposed so headless callers (tests) can drive the browser. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00246">246</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1455,7 +2111,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02591">2591</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01805">1805</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1485,7 +2141,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00942">942</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00458">458</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1505,7 +2161,59 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02714">2714</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html#l00037">37</a> of file <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html">FileBrowserLibrary.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a35d544f8751fcea195d4ccfc6e530ce9" name="a35d544f8751fcea195d4ccfc6e530ce9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a35d544f8751fcea195d4ccfc6e530ce9">&#9670;&#160;</a></span>removePlace()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::FileBrowser::removePlace </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>path</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html#l00060">60</a> of file <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html">FileBrowserLibrary.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a42e5207978a4f2628e966ccc1382ee57" name="a42e5207978a4f2628e966ccc1382ee57"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a42e5207978a4f2628e966ccc1382ee57">&#9670;&#160;</a></span>renameCollection()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool AestraUI::FileBrowser::renameCollection </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>from</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>to</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>retags every member </p>
+
+<p class="definition">Definition at line <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html#l00107">107</a> of file <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html">FileBrowserLibrary.cpp</a>.</p>
 
 </div>
 </div>
@@ -1527,7 +2235,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Hover washes drawn per-frame OUTSIDE the FBO cache, so hover changes never force a cache rebuild (see renderFileList / nav drawRow). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01419">1419</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00625">625</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a54f60f3fc2af410bce11eee76e28cc36">AestraUI::NUIRenderer::clearClipRect()</a>, <a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4">AestraUI::NUIRenderer::fillRect()</a>, and <a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8edd36aab59578f6c121fae6046db289">AestraUI::NUIRenderer::fillRoundedRect()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -1540,23 +2248,63 @@ Additional Inherited Members</h2></td></tr>
 
 </div>
 </div>
-<a id="a09af7f962575f2b159aabd9edcd72031" name="a09af7f962575f2b159aabd9edcd72031"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a09af7f962575f2b159aabd9edcd72031">&#9670;&#160;</a></span>saveState()</h2>
+<a id="abb8ad78fe17cc95f673480bde93ba425" name="abb8ad78fe17cc95f673480bde93ba425"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abb8ad78fe17cc95f673480bde93ba425">&#9670;&#160;</a></span>rescanLibrary()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void AestraUI::FileBrowser::saveState </td>
+          <td class="memname">void AestraUI::FileBrowser::rescanLibrary </td>
           <td>(</td>
-          <td class="paramtype">const std::string &amp;&#160;</td>
-          <td class="paramname"><em>filePath</em></td><td>)</td>
+          <td class="paramname"></td><td>)</td>
           <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l04676">4676</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html#l00219">219</a> of file <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html">FileBrowserLibrary.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a3c676a62e51dcd2bf38e718c4ecfb0cc" name="a3c676a62e51dcd2bf38e718c4ecfb0cc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3c676a62e51dcd2bf38e718c4ecfb0cc">&#9670;&#160;</a></span>saveState()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool AestraUI::FileBrowser::saveState </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>filePath</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03715">3715</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a931234a4bdee3ec45617290b02a6677a" name="a931234a4bdee3ec45617290b02a6677a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a931234a4bdee3ec45617290b02a6677a">&#9670;&#160;</a></span>searchQueryIsEmpty()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool AestraUI::FileBrowser::searchQueryIsEmpty </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>True when the search field is empty (or absent) — the search row's trailing clear button exists only when there is a query to clear. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00396">396</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1576,7 +2324,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02644">2644</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01861">1861</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1599,7 +2347,7 @@ Additional Inherited Members</h2></td></tr>
 <p>Programmatically select a navigation entry — same pipeline as clicking it (content view swap, nav callback), minus hit-testing. </p>
 <p>Lets host surfaces (e.g. the mixer plugin dropdown's "Browse all plugins") open a specific library section. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00967">967</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html#l00018">18</a> of file <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html">FileBrowserNavigation.cpp</a>.</p>
 
 </div>
 </div>
@@ -1619,7 +2367,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02683">2683</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01900">1900</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1639,7 +2387,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00959">959</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00475">475</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1687,7 +2435,27 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00272">272</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00370">370</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+
+</div>
+</div>
+<a id="a879541d28fb35673fd1986efaf405fe6" name="a879541d28fb35673fd1986efaf405fe6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a879541d28fb35673fd1986efaf405fe6">&#9670;&#160;</a></span>setLibraryRoot()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::FileBrowser::setLibraryRoot </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>path</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html#l00078">78</a> of file <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html">FileBrowserLibrary.cpp</a>.</p>
 
 </div>
 </div>
@@ -1715,7 +2483,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00133">133</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00157">157</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1743,7 +2511,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00127">127</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00151">151</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1771,7 +2539,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00126">126</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00150">150</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1799,7 +2567,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00267">267</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00365">365</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1827,7 +2595,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00128">128</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00152">152</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1855,7 +2623,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00130">130</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00154">154</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1883,7 +2651,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00129">129</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00153">153</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1913,7 +2681,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the platform bridge for hover cursor styling (grab on rows). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00111">111</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00135">135</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1933,7 +2701,38 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l04130">4130</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03211">3211</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aaa9e40deafc1e6c9bebd2d8c4571b2a3" name="aaa9e40deafc1e6c9bebd2d8c4571b2a3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaa9e40deafc1e6c9bebd2d8c4571b2a3">&#9670;&#160;</a></span>setProjectFilesProvider()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::FileBrowser::setProjectFilesProvider </td>
+          <td>(</td>
+          <td class="paramtype">std::function&lt; std::vector&lt; std::string &gt;()&gt;&#160;</td>
+          <td class="paramname"><em>provider</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Current Project: supplies the audio files the open project uses. </p>
+<p>The app wires it to the engine's source list; the browser stays engine-agnostic. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00216">216</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1953,7 +2752,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l04124">4124</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03205">3205</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1973,7 +2772,27 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l04118">4118</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03199">3199</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+
+</div>
+</div>
+<a id="af01159b57209ffea0d5c57b9cb38d7df" name="af01159b57209ffea0d5c57b9cb38d7df"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af01159b57209ffea0d5c57b9cb38d7df">&#9670;&#160;</a></span>setSearchWholeLibrary()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::FileBrowser::setSearchWholeLibrary </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>wholeLibrary</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html#l00228">228</a> of file <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html">FileBrowserLibrary.cpp</a>.</p>
 
 </div>
 </div>
@@ -1993,7 +2812,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02785">2785</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02134">2134</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -2013,7 +2832,93 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02734">2734</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02082">2082</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aea1057f2e1f2268dec9c6d07747cc880" name="aea1057f2e1f2268dec9c6d07747cc880"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aea1057f2e1f2268dec9c6d07747cc880">&#9670;&#160;</a></span>setStatePath()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::FileBrowser::setStatePath </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>filePath</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00238">238</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+
+</div>
+</div>
+<a id="af6f684f0d6591f8ce1e919d042139b63" name="af6f684f0d6591f8ce1e919d042139b63"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af6f684f0d6591f8ce1e919d042139b63">&#9670;&#160;</a></span>showCollection()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::FileBrowser::showCollection </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>tag</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html#l00239">239</a> of file <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html">FileBrowserLibrary.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a7d9afd0dc050000fd1d4984acab33f88" name="a7d9afd0dc050000fd1d4984acab33f88"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7d9afd0dc050000fd1d4984acab33f88">&#9670;&#160;</a></span>showCurrentProject()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::FileBrowser::showCurrentProject </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01980">1980</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a09e79bb9b6a4869b19abaf0778183a8b" name="a09e79bb9b6a4869b19abaf0778183a8b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a09e79bb9b6a4869b19abaf0778183a8b">&#9670;&#160;</a></span>showFavorites()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::FileBrowser::showFavorites </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html#l00235">235</a> of file <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html">FileBrowserLibrary.cpp</a>.</p>
 
 </div>
 </div>
@@ -2033,7 +2938,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02725">2725</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html#l00250">250</a> of file <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html">FileBrowserLibrary.cpp</a>.</p>
 
 </div>
 </div>
@@ -2069,7 +2974,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l04077">4077</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03158">3158</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -2089,7 +2994,37 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02907">2907</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02257">2257</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aafe41c0568c530a286065028b473991f" name="aafe41c0568c530a286065028b473991f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aafe41c0568c530a286065028b473991f">&#9670;&#160;</a></span>toggleTag()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::FileBrowser::toggleTag </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>path</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>tag</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02625">2625</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -2108,7 +3043,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00932">932</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html#l00014">14</a> of file <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html">FileBrowserNavigation.cpp</a>.</p>
 
 </div>
 </div>
@@ -2117,6 +3052,9 @@ Additional Inherited Members</h2></td></tr>
 <li>Source/Components/<a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a></li>
 <li>AestraUI/Widgets/<a class="el" href="../../dd/d8f/NUIUtilityWidgets_8cpp_source.html">NUIUtilityWidgets.cpp</a></li>
 <li>Source/Components/<a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a></li>
+<li>Source/Components/<a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html">FileBrowserLibrary.cpp</a></li>
+<li>Source/Components/<a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html">FileBrowserNavigation.cpp</a></li>
+<li>Source/Components/<a class="el" href="../../d3/d92/FileBrowserScan_8cpp_source.html">FileBrowserScan.cpp</a></li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->

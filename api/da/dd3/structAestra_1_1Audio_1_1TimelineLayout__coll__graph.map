@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::TimelineLayout" name="Aestra::Audio::TimelineLayout">
+<area shape="rect" id="Node000001" title="The timeline&#39;s fixed regions, in the component&#39;s Local space." alt="" coords="5,123,224,148"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="60,5,169,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="117,44,117,123,112,123,112,44"/>
+</map>

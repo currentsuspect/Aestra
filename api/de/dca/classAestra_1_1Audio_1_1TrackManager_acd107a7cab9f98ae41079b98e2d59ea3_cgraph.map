@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::TrackManager::arsenalLoopLengthBeats" name="Aestra::Audio::TrackManager::arsenalLoopLengthBeats">
+<area shape="rect" id="Node000001" title="The Arsenal loop length for pattern: the zone&#39;s length when one applies, else the pattern&#39;s." alt="" coords="5,5,213,45"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aeae68fd7ad35f4229ef6ee5e7d086e5a" title="The zone Arsenal playback of pattern would use: the stored zone if it was drawn on that pattern." alt="" coords="261,5,469,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="213,23,248,23,248,28,213,28"/>
+</map>

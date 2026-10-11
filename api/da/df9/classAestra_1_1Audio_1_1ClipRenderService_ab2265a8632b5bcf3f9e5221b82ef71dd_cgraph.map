@@ -1,0 +1,8 @@
+<map id="Aestra::Audio::ClipRenderService::extractRegion" name="Aestra::Audio::ClipRenderService::extractRegion">
+<area shape="rect" id="Node000001" title="Copy a frame range out of source into a fresh buffer." alt="" coords="5,35,193,75"/>
+<area shape="rect" id="Node000002" href="$d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#aa9e50e44f1a3704408300a571d2491cb" title="Copy count interleaved samples starting at firstSample as float." alt="" coords="241,5,435,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="193,40,227,36,228,42,194,46"/>
+<area shape="rect" id="Node000003" href="$d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#af123515ee60574c3012d431a418a814e" title="Samples held (frames x channels), whichever storage holds them." alt="" coords="483,35,676,75"/>
+<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="193,54,241,55,435,55,469,54,469,60,435,60,241,60,193,59"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="435,34,469,39,469,44,434,40"/>
+</map>

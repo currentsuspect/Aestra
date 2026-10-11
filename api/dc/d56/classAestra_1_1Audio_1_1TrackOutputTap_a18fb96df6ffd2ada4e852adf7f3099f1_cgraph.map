@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::TrackOutputTap::wantsAt" name="Aestra::Audio::TrackOutputTap::wantsAt">
+<area shape="rect" id="Node000001" title="True when the armed channel is mixerChannelId and the tap sits at this side of the fader." alt="" coords="5,5,200,45"/>
+<area shape="rect" id="Node000002" href="$dc/d56/classAestra_1_1Audio_1_1TrackOutputTap.html#a58a86feebd2828306d33e7edaa1d83e6" title="True when mixerChannelId is the armed channel." alt="" coords="248,5,443,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="200,23,234,23,234,28,200,28"/>
+</map>

@@ -1,5 +1,7 @@
 <map id="Aestra::Audio::TrackManager::play" name="Aestra::Audio::TrackManager::play">
-<area shape="rect" id="Node000001" title="Start transport playback from the current UI position." alt="" coords="261,5,469,45"/>
-<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a0b39cad61c2499af3cd2cfe71b20a683" title="Finish the count&#45;in phase and start playback at the pinned position." alt="" coords="5,5,213,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="248,28,213,28,213,23,248,23"/>
+<area shape="rect" id="Node000001" title="Start transport playback from the current UI position." alt="" coords="280,37,488,77"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a0b39cad61c2499af3cd2cfe71b20a683" title="Finish the count&#45;in phase and start playback at the pinned position." alt="" coords="15,5,223,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="266,46,223,41,223,35,267,41"/>
+<area shape="rect" id="Node000003" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#ae5ce64039a9718f23433ef6be2692339" title="Timeline play: the pattern loop override ends, so the timeline&#39;s own loop applies again." alt="" coords="5,69,232,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="267,74,232,78,232,73,266,69"/>
 </map>

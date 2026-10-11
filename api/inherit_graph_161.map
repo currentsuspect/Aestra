@@ -1,3 +1,35 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="Node000000" href="$d0/db8/classAestra_1_1Audio_1_1MetadataParser.html" title="Native metadata parser for MP3 (ID3v2) and FLAC files." alt="" coords="5,5,224,31"/>
+<area shape="rect" id="Node000000" href="$de/d54/classAestra_1_1Audio_1_1IPluginInstance.html" title="Abstract plugin instance interface." alt="" coords="5,390,221,415"/>
+<area shape="rect" id="Node000001" href="$d8/d09/classAestra_1_1Audio_1_1CLAPPluginInstance.html" title="CLAP plugin instance implementation." alt="" coords="293,268,484,308"/>
+<area shape="poly" id="edge78_Node000000_Node000001" title=" " alt="" coords="145,381,202,349,268,318,303,306,305,311,270,322,204,354,148,385"/>
+<area shape="rect" id="Node000002" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html" title="Shared base for built&#45;in effect plugins." alt="" coords="269,333,508,358"/>
+<area shape="poly" id="edge79_Node000000_Node000002" title=" " alt="" coords="188,385,326,355,328,361,189,390"/>
+<area shape="rect" id="Node000014" href="$d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html" title=" " alt="" coords="286,383,491,423"/>
+<area shape="poly" id="edge91_Node000000_Node000014" title=" " alt="" coords="235,400,286,400,286,405,235,405"/>
+<area shape="rect" id="Node000015" href="$db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html" title=" " alt="" coords="307,447,471,487"/>
+<area shape="poly" id="edge92_Node000000_Node000015" title=" " alt="" coords="183,416,307,445,306,450,182,421"/>
+<area shape="rect" id="Node000016" href="$d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance.html" title="VST3 plugin instance implementation." alt="" coords="293,511,484,551"/>
+<area shape="poly" id="edge93_Node000000_Node000016" title=" " alt="" coords="144,421,201,459,270,496,302,508,300,513,268,501,198,464,141,425"/>
+<area shape="rect" id="Node000003" href="$d7/db4/classAestra_1_1Audio_1_1Plugins_1_1AestraComp.html" title=" " alt="" coords="556,5,720,45"/>
+<area shape="poly" id="edge80_Node000002_Node000003" title=" " alt="" coords="501,323,506,318,528,287,537,256,537,224,532,192,527,159,526,125,533,90,554,56,567,44,571,48,558,59,538,92,531,125,532,158,537,191,542,223,542,256,533,289,510,322,505,327"/>
+<area shape="rect" id="Node000004" href="$dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html" title=" " alt="" coords="556,69,720,109"/>
+<area shape="poly" id="edge81_Node000002_Node000004" title=" " alt="" coords="501,323,506,318,524,295,532,271,533,247,531,223,529,198,530,172,537,146,554,120,568,107,571,112,558,123,542,148,535,173,534,198,537,222,539,247,537,272,529,297,510,322,504,327"/>
+<area shape="rect" id="Node000005" href="$d3/d79/classAestra_1_1Audio_1_1Plugins_1_1AestraDrift.html" title=" " alt="" coords="556,133,720,173"/>
+<area shape="poly" id="edge82_Node000002_Node000005" title=" " alt="" coords="499,324,506,318,520,303,527,287,531,254,534,219,541,201,554,183,569,171,573,176,558,187,546,204,539,220,536,254,532,288,524,306,510,322,502,328"/>
+<area shape="rect" id="Node000006" href="$db/d0e/classAestra_1_1Audio_1_1Plugins_1_1AestraEQ.html" title=" " alt="" coords="556,197,720,237"/>
+<area shape="poly" id="edge83_Node000002_Node000006" title=" " alt="" coords="494,325,506,318,522,302,530,285,538,266,554,247,573,235,576,240,558,251,543,269,535,287,527,305,510,322,497,329"/>
+<area shape="rect" id="Node000007" href="$d1/d96/classAestra_1_1Audio_1_1Plugins_1_1AestraFilter.html" title=" " alt="" coords="556,261,720,301"/>
+<area shape="poly" id="edge84_Node000002_Node000007" title=" " alt="" coords="467,327,507,317,573,299,574,304,509,323,468,332"/>
+<area shape="rect" id="Node000008" href="$df/d51/classAestra_1_1Audio_1_1Plugins_1_1AestraLFO.html" title=" " alt="" coords="556,325,720,365"/>
+<area shape="poly" id="edge85_Node000002_Node000008" title=" " alt="" coords="522,343,556,343,556,348,522,348"/>
+<area shape="rect" id="Node000009" href="$d0/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraLimit.html" title=" " alt="" coords="556,389,720,429"/>
+<area shape="poly" id="edge86_Node000002_Node000009" title=" " alt="" coords="468,358,509,368,574,387,573,392,507,373,467,364"/>
+<area shape="rect" id="Node000010" href="$d7/d6c/classAestra_1_1Audio_1_1Plugins_1_1AestraOTT.html" title=" " alt="" coords="556,453,720,493"/>
+<area shape="poly" id="edge87_Node000002_Node000010" title=" " alt="" coords="497,361,510,369,527,386,535,404,543,422,558,439,576,451,573,455,554,443,538,425,530,406,522,389,506,373,494,366"/>
+<area shape="rect" id="Node000011" href="$d0/da7/classAestra_1_1Audio_1_1Plugins_1_1AestraSat.html" title=" " alt="" coords="556,517,720,557"/>
+<area shape="poly" id="edge88_Node000002_Node000011" title=" " alt="" coords="502,363,510,369,524,385,532,402,536,436,539,470,546,487,558,503,573,515,569,519,554,507,541,489,534,472,531,437,527,404,520,388,506,373,499,367"/>
+<area shape="rect" id="Node000012" href="$d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html" title=" " alt="" coords="556,581,720,621"/>
+<area shape="poly" id="edge89_Node000002_Node000012" title=" " alt="" coords="504,364,510,369,529,393,537,418,539,443,537,468,534,493,535,518,542,543,558,568,571,579,568,583,554,571,537,545,530,519,529,493,531,468,533,443,532,419,524,396,506,372,501,368"/>
+<area shape="rect" id="Node000013" href="$d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html" title=" " alt="" coords="556,645,720,685"/>
+<area shape="poly" id="edge90_Node000002_Node000013" title=" " alt="" coords="505,364,510,369,533,401,542,434,542,467,537,500,532,533,531,565,538,598,558,632,571,643,567,647,554,635,533,600,526,566,527,532,532,499,537,467,537,435,528,404,506,372,501,368"/>
 </map>

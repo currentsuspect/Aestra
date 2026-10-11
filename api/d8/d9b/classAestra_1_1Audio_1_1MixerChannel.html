@@ -75,6 +75,7 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
+<a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="../../d7/d5e/classAestra_1_1Audio_1_1MixerChannel-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">Aestra::Audio::MixerChannel Class Reference</div></div>
@@ -86,6 +87,12 @@ $(function() {
 
 <p><code>#include &lt;<a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>&gt;</code></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
+Public Types</h2></td></tr>
+<tr class="memitem:a995507996787315914d1f2da71bb6145" id="r_a995507996787315914d1f2da71bb6145"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a995507996787315914d1f2da71bb6145">CommandSink</a> = std::function&lt; bool(const <a class="el" href="../../d7/d99/structAestra_1_1Audio_1_1AudioQueueCommand.html">AudioQueueCommand</a> &amp;)&gt;</td></tr>
+<tr class="memdesc:a995507996787315914d1f2da71bb6145"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the audio-thread command sink used for RT-safe updates.  <br /></td></tr>
+<tr class="separator:a995507996787315914d1f2da71bb6145"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:ad9c0be954286a7a4da34b4613c3086fd" id="r_ad9c0be954286a7a4da34b4613c3086fd"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#ad9c0be954286a7a4da34b4613c3086fd">MixerChannel</a> (const std::string &amp;name=&quot;Channel&quot;, uint32_t channelId=0)</td></tr>
@@ -193,9 +200,14 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a098094bd5426c4daf8244ae8d4523431" id="r_a098094bd5426c4daf8244ae8d4523431"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="../../dd/dcd/classAestra_1_1Audio_1_1MixerBus.html">MixerBus</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a098094bd5426c4daf8244ae8d4523431">getMixerBus</a> () const</td></tr>
 <tr class="memdesc:a098094bd5426c4daf8244ae8d4523431"><td class="mdescLeft">&#160;</td><td class="mdescRight">Access the owned mixer bus.  <br /></td></tr>
 <tr class="separator:a098094bd5426c4daf8244ae8d4523431"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afb01a4f67fc65a8dfaf0473af7c5d58b" id="r_afb01a4f67fc65a8dfaf0473af7c5d58b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#afb01a4f67fc65a8dfaf0473af7c5d58b">setCommandSink</a> (std::function&lt; void(const <a class="el" href="../../d7/d99/structAestra_1_1Audio_1_1AudioQueueCommand.html">AudioQueueCommand</a> &amp;)&gt; cb)</td></tr>
-<tr class="memdesc:afb01a4f67fc65a8dfaf0473af7c5d58b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the audio-thread command sink used for RT-safe updates.  <br /></td></tr>
-<tr class="separator:afb01a4f67fc65a8dfaf0473af7c5d58b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae3b03ff999004446c4e242f6578541aa" id="r_ae3b03ff999004446c4e242f6578541aa"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#ae3b03ff999004446c4e242f6578541aa">setCommandSink</a> (<a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a995507996787315914d1f2da71bb6145">CommandSink</a> cb)</td></tr>
+<tr class="separator:ae3b03ff999004446c4e242f6578541aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a31408f52299ad72e9014345d9c5aea10" id="r_a31408f52299ad72e9014345d9c5aea10"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a31408f52299ad72e9014345d9c5aea10">markStateDirty</a> ()</td></tr>
+<tr class="separator:a31408f52299ad72e9014345d9c5aea10"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a41e2175279f750332b6d4c4da56fc42b" id="r_a41e2175279f750332b6d4c4da56fc42b"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a41e2175279f750332b6d4c4da56fc42b">isStateDirty</a> () const</td></tr>
+<tr class="separator:a41e2175279f750332b6d4c4da56fc42b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abebd92250f744f0a33ae1b20bab3aea6" id="r_abebd92250f744f0a33ae1b20bab3aea6"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#abebd92250f744f0a33ae1b20bab3aea6">resyncEngineState</a> ()</td></tr>
+<tr class="separator:abebd92250f744f0a33ae1b20bab3aea6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afda9f0245752f7a66dea0b4d97849326" id="r_afda9f0245752f7a66dea0b4d97849326"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#afda9f0245752f7a66dea0b4d97849326">setInputMonitoringStateChangedCallback</a> (std::function&lt; void()&gt; cb)</td></tr>
 <tr class="memdesc:afda9f0245752f7a66dea0b4d97849326"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set callback used to refresh input monitoring snapshots after route-affecting changes.  <br /></td></tr>
 <tr class="separator:afda9f0245752f7a66dea0b4d97849326"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -238,7 +250,7 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a10f7a504ea3bba99081df5d67b618040"><td class="mdescLeft">&#160;</td><td class="mdescRight">Positional lookup for a stable sendId; -1 when absent.  <br /></td></tr>
 <tr class="separator:a10f7a504ea3bba99081df5d67b618040"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a76446df746c8a8b7fa97e05ea6e205f5" id="r_a76446df746c8a8b7fa97e05ea6e205f5"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; const <a class="el" href="../../df/df3/classAestra_1_1Audio_1_1EffectChainSnapshot.html">EffectChainSnapshot</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a76446df746c8a8b7fa97e05ea6e205f5">getEffectChainSnapshot</a> () const</td></tr>
-<tr class="memdesc:a76446df746c8a8b7fa97e05ea6e205f5"><td class="mdescLeft">&#160;</td><td class="mdescRight">The channel's effect chain snapshot, owned by <a class="el" href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html" title="Effect chain for insert effects on a mixer channel.">EffectChain</a>.  <br /></td></tr>
+<tr class="memdesc:a76446df746c8a8b7fa97e05ea6e205f5"><td class="mdescLeft">&#160;</td><td class="mdescRight">The channel's effect chain snapshot, owned by <a class="el" href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html">EffectChain</a>.  <br /></td></tr>
 <tr class="separator:a76446df746c8a8b7fa97e05ea6e205f5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab54ca09fd219de23fa5a33a732ee995e" id="r_ab54ca09fd219de23fa5a33a732ee995e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#ab54ca09fd219de23fa5a33a732ee995e">setMainOutputId</a> (uint32_t id)</td></tr>
 <tr class="memdesc:ab54ca09fd219de23fa5a33a732ee995e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the primary output destination identifier.  <br /></td></tr>
@@ -253,7 +265,27 @@ Public Member Functions</h2></td></tr>
 </ul>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00111">111</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
-</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+</div><h2 class="groupheader">Member Typedef Documentation</h2>
+<a id="a995507996787315914d1f2da71bb6145" name="a995507996787315914d1f2da71bb6145"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a995507996787315914d1f2da71bb6145">&#9670;&#160;</a></span>CommandSink</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a995507996787315914d1f2da71bb6145">Aestra::Audio::MixerChannel::CommandSink</a> =  std::function&lt;bool(const <a class="el" href="../../d7/d99/structAestra_1_1Audio_1_1AudioQueueCommand.html">AudioQueueCommand</a>&amp;)&gt;</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the audio-thread command sink used for RT-safe updates. </p>
+<p>Returns true when accepted. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00209">209</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="ad9c0be954286a7a4da34b4613c3086fd" name="ad9c0be954286a7a4da34b4613c3086fd"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ad9c0be954286a7a4da34b4613c3086fd">&#9670;&#160;</a></span>MixerChannel()</h2>
 
@@ -327,7 +359,7 @@ Public Member Functions</h2></td></tr>
 <p>Add a send route. </p>
 <p>Mints a stable sendId when the route carries none (0); a caller-supplied nonzero sendId is preserved (undo restore). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00134">134</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00180">180</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../dc/d64/RoutingCommands_8h_source.html#l00072">Aestra::Audio::AddSendCommand::execute()</a>.</p>
 <div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -358,7 +390,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Positional lookup for a stable sendId; -1 when absent. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00194">194</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00240">240</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../dc/d64/RoutingCommands_8h_source.html#l00125">Aestra::Audio::RemoveSendCommand::execute()</a>, and <a class="el" href="../../dc/d64/RoutingCommands_8h_source.html#l00174">Aestra::Audio::EditSendCommand::execute()</a>.</p>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -398,13 +430,13 @@ Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00121">121</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00101">Aestra::Audio::DeleteTrackCommand::execute()</a>, and <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00235">Aestra::Audio::MuseService::handleRequest()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/dcc/RoutingModel_8cpp_source.html#l00022">Aestra::Audio::RoutingModel::capture()</a>, and <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00101">Aestra::Audio::DeleteTrackCommand::execute()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-2-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel_aa8dcc69c79ea17dbdda639e14771608c_icgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel_aa8dcc69c79ea17dbdda639e14771608c_icgraph.svg" width="472" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -463,9 +495,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Access the insert-effect chain. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00221">221</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00234">234</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00029">Aestra::Audio::AddEffectCommand::execute()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00078">Aestra::Audio::RemoveEffectCommand::execute()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00163">Aestra::Audio::SetEffectBypassCommand::execute()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00212">Aestra::Audio::MovePluginCommand::execute()</a>, <a class="el" href="../../d6/d02/PluginCommands_8h_source.html#l00015">Aestra::Audio::AddPluginCommand::execute()</a>, <a class="el" href="../../d6/d02/PluginCommands_8h_source.html#l00047">Aestra::Audio::RemovePluginCommand::execute()</a>, <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00235">Aestra::Audio::MuseService::handleRequest()</a>, <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00166">Aestra::Audio::CommandRegistry::initialize()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l04117">AestraContent::loadEffectToSelectedTrack()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00040">Aestra::Audio::AddEffectCommand::undo()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00088">Aestra::Audio::RemoveEffectCommand::undo()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00171">Aestra::Audio::SetEffectBypassCommand::undo()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00239">Aestra::Audio::MovePluginCommand::undo()</a>, <a class="el" href="../../d6/d02/PluginCommands_8h_source.html#l00023">Aestra::Audio::AddPluginCommand::undo()</a>, and <a class="el" href="../../d6/d02/PluginCommands_8h_source.html#l00057">Aestra::Audio::RemovePluginCommand::undo()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00029">Aestra::Audio::AddEffectCommand::execute()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00078">Aestra::Audio::RemoveEffectCommand::execute()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00163">Aestra::Audio::SetEffectBypassCommand::execute()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00212">Aestra::Audio::MovePluginCommand::execute()</a>, <a class="el" href="../../d6/d02/PluginCommands_8h_source.html#l00015">Aestra::Audio::AddPluginCommand::execute()</a>, <a class="el" href="../../d6/d02/PluginCommands_8h_source.html#l00047">Aestra::Audio::RemovePluginCommand::execute()</a>, <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00166">Aestra::Audio::CommandRegistry::initialize()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l04314">AestraContent::loadEffectToSelectedTrack()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00040">Aestra::Audio::AddEffectCommand::undo()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00088">Aestra::Audio::RemoveEffectCommand::undo()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00171">Aestra::Audio::SetEffectBypassCommand::undo()</a>, <a class="el" href="../../dc/df2/EffectCommands_8h_source.html#l00241">Aestra::Audio::MovePluginCommand::undo()</a>, <a class="el" href="../../d6/d02/PluginCommands_8h_source.html#l00023">Aestra::Audio::AddPluginCommand::undo()</a>, and <a class="el" href="../../d6/d02/PluginCommands_8h_source.html#l00057">Aestra::Audio::RemovePluginCommand::undo()</a>.</p>
 <div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-3-summary" class="dynsummary" style="display:block;">
@@ -501,7 +533,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Access the insert-effect chain. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00223">223</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00236">236</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
 
 </div>
 </div>
@@ -528,11 +560,11 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>The channel's effect chain snapshot, owned by <a class="el" href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html" title="Effect chain for insert effects on a mixer channel.">EffectChain</a>. </p>
+<p>The channel's effect chain snapshot, owned by <a class="el" href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html">EffectChain</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00263">263</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00276">276</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l01039">Aestra::Audio::EffectChain::getSnapshot()</a>.</p>
+<p class="reference">References <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l01135">Aestra::Audio::EffectChain::getSnapshot()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d7/d53/AudioGraphBuilder_8cpp_source.html#l00124">Aestra::Audio::AudioGraphBuilder::buildFromTrackManager()</a>.</p>
 <div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -547,7 +579,7 @@ Public Member Functions</h2></td></tr>
 <div id="dynsection-5-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-5-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel_a76446df746c8a8b7fa97e05ea6e205f5_icgraph.svg" width="100%" height="434"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel_a76446df746c8a8b7fa97e05ea6e205f5_icgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -664,9 +696,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the primary output destination identifier. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00233">233</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00246">246</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00568">Aestra::Audio::TrackManager::canRouteTo()</a>, and <a class="el" href="../../dc/d64/RoutingCommands_8h_source.html#l00030">Aestra::Audio::SetMainOutputCommand::execute()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00568">Aestra::Audio::TrackManager::canRouteTo()</a>, <a class="el" href="../../d4/dcc/RoutingModel_8cpp_source.html#l00022">Aestra::Audio::RoutingModel::capture()</a>, and <a class="el" href="../../dc/d64/RoutingCommands_8h_source.html#l00030">Aestra::Audio::SetMainOutputCommand::execute()</a>.</p>
 <div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-6-summary" class="dynsummary" style="display:block;">
@@ -762,13 +794,13 @@ Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00131">131</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00101">Aestra::Audio::DeleteTrackCommand::execute()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00196">Aestra::Audio::RenameTrackCommand::execute()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l04117">AestraContent::loadEffectToSelectedTrack()</a>, and <a class="el" href="../../de/d7b/UIMixerPanel_8cpp_source.html#l00917">AestraUI::UIMixerPanel::onDrop()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/dcc/RoutingModel_8cpp_source.html#l00022">Aestra::Audio::RoutingModel::capture()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00101">Aestra::Audio::DeleteTrackCommand::execute()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00196">Aestra::Audio::RenameTrackCommand::execute()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l04314">AestraContent::loadEffectToSelectedTrack()</a>, and <a class="el" href="../../de/d7b/UIMixerPanel_8cpp_source.html#l00956">AestraUI::UIMixerPanel::onDrop()</a>.</p>
 <div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-7-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-7-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel_a1b69c77ab991681c9ce3f7ce4b8a4959_icgraph.svg" width="100%" height="482"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel_a1b69c77ab991681c9ce3f7ce4b8a4959_icgraph.svg" width="100%" height="530"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -829,15 +861,15 @@ Public Member Functions</h2></td></tr>
 <p>Get a copy of the current send list. </p>
 <p>Thread-safe: caller must not be RT. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00117">117</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00163">163</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00568">Aestra::Audio::TrackManager::canRouteTo()</a>, <a class="el" href="../../dc/d64/RoutingCommands_8h_source.html#l00072">Aestra::Audio::AddSendCommand::execute()</a>, <a class="el" href="../../dc/d64/RoutingCommands_8h_source.html#l00125">Aestra::Audio::RemoveSendCommand::execute()</a>, and <a class="el" href="../../dc/d64/RoutingCommands_8h_source.html#l00174">Aestra::Audio::EditSendCommand::execute()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00568">Aestra::Audio::TrackManager::canRouteTo()</a>, <a class="el" href="../../d4/dcc/RoutingModel_8cpp_source.html#l00022">Aestra::Audio::RoutingModel::capture()</a>, <a class="el" href="../../dc/d64/RoutingCommands_8h_source.html#l00072">Aestra::Audio::AddSendCommand::execute()</a>, <a class="el" href="../../dc/d64/RoutingCommands_8h_source.html#l00125">Aestra::Audio::RemoveSendCommand::execute()</a>, and <a class="el" href="../../dc/d64/RoutingCommands_8h_source.html#l00174">Aestra::Audio::EditSendCommand::execute()</a>.</p>
 <div id="dynsection-9" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-9-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-9-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-9-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel_a8d71d598a1c2a2cfac6df269776ee594_icgraph.svg" width="100%" height="482"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel_a8d71d598a1c2a2cfac6df269776ee594_icgraph.svg" width="100%" height="520"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -1034,7 +1066,7 @@ Public Member Functions</h2></td></tr>
 <p>Insert a send route at a position (undo of removeSend). </p>
 <p>Preserves the route's sendId. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00144">144</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00190">190</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1210,6 +1242,60 @@ Public Member Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="a41e2175279f750332b6d4c4da56fc42b" name="a41e2175279f750332b6d4c4da56fc42b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a41e2175279f750332b6d4c4da56fc42b">&#9670;&#160;</a></span>isStateDirty()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::MixerChannel::isStateDirty </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00219">219</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
+
+</div>
+</div>
+<a id="a31408f52299ad72e9014345d9c5aea10" name="a31408f52299ad72e9014345d9c5aea10"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a31408f52299ad72e9014345d9c5aea10">&#9670;&#160;</a></span>markStateDirty()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::MixerChannel::markStateDirty </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00218">218</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
+
+</div>
+</div>
 <a id="a8052061d1ca743786d95a5a9de34f96e" name="a8052061d1ca743786d95a5a9de34f96e"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a8052061d1ca743786d95a5a9de34f96e">&#9670;&#160;</a></span>removeSend()</h2>
 
@@ -1228,7 +1314,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Remove the send with the given stable sendId. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00184">184</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00230">230</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../dc/d64/RoutingCommands_8h_source.html#l00125">Aestra::Audio::RemoveSendCommand::execute()</a>.</p>
 <div id="dynsection-15" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -1259,7 +1345,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Replace all send routes from an off-audio-thread snapshot. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00169">169</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00215">215</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1288,16 +1374,35 @@ Public Member Functions</h2></td></tr>
 
 <p>Reset all plugins in the effect chain (panic/hard reset). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00230">230</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00243">243</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l01015">Aestra::Audio::EffectChain::reset()</a>.</p>
+<p class="reference">References <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l01110">Aestra::Audio::EffectChain::reset()</a>.</p>
 <div id="dynsection-16" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-16-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-16-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-16-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel_ae3ec436385410d376d4a27487c2cd195_cgraph.svg" width="456" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel_ae3ec436385410d376d4a27487c2cd195_cgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
+
+</div>
+</div>
+<a id="abebd92250f744f0a33ae1b20bab3aea6" name="abebd92250f744f0a33ae1b20bab3aea6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abebd92250f744f0a33ae1b20bab3aea6">&#9670;&#160;</a></span>resyncEngineState()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::MixerChannel::resyncEngineState </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00117">117</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1362,8 +1467,8 @@ Public Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="afb01a4f67fc65a8dfaf0473af7c5d58b" name="afb01a4f67fc65a8dfaf0473af7c5d58b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afb01a4f67fc65a8dfaf0473af7c5d58b">&#9670;&#160;</a></span>setCommandSink()</h2>
+<a id="ae3b03ff999004446c4e242f6578541aa" name="ae3b03ff999004446c4e242f6578541aa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae3b03ff999004446c4e242f6578541aa">&#9670;&#160;</a></span>setCommandSink()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1374,7 +1479,7 @@ Public Member Functions</h2></td></tr>
         <tr>
           <td class="memname">void Aestra::Audio::MixerChannel::setCommandSink </td>
           <td>(</td>
-          <td class="paramtype">std::function&lt; void(const <a class="el" href="../../d7/d99/structAestra_1_1Audio_1_1AudioQueueCommand.html">AudioQueueCommand</a> &amp;)&gt;&#160;</td>
+          <td class="paramtype"><a class="el" href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a995507996787315914d1f2da71bb6145">CommandSink</a>&#160;</td>
           <td class="paramname"><em>cb</em></td><td>)</td>
           <td></td>
         </tr>
@@ -1386,9 +1491,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Set the audio-thread command sink used for RT-safe updates. </p>
-
-<p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00209">209</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00210">210</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
 
 </div>
 </div>
@@ -1416,7 +1519,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00225">225</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00238">238</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
 
 </div>
 </div>
@@ -1477,7 +1580,7 @@ Public Member Functions</h2></td></tr>
 <p>Set callback used to refresh input monitoring snapshots after route-affecting changes. </p>
 <p>NOTE: Must be set before audio engine processing starts. Caller is responsible for thread safety. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00212">212</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00225">225</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
 
 </div>
 </div>
@@ -1507,7 +1610,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Set the primary output destination identifier. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00268">268</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00281">281</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../dc/d64/RoutingCommands_8h_source.html#l00030">Aestra::Audio::SetMainOutputCommand::execute()</a>.</p>
 <div id="dynsection-18" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -1568,7 +1671,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Set mute state. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00079">79</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00083">83</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d6/d66/SetMuteCommand_8h_source.html#l00028">Aestra::Audio::SetMuteCommand::execute()</a>, <a class="el" href="../../d6/d66/SetMuteCommand_8h_source.html#l00047">Aestra::Audio::SetMuteCommand::redo()</a>, and <a class="el" href="../../d6/d66/SetMuteCommand_8h_source.html#l00038">Aestra::Audio::SetMuteCommand::undo()</a>.</p>
 <div id="dynsection-19" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -1630,7 +1733,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Set stereo pan. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00056">56</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00058">58</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../dc/d1d/SetPanCommand_8h_source.html#l00027">Aestra::Audio::SetPanCommand::execute()</a>, <a class="el" href="../../dc/d1d/SetPanCommand_8h_source.html#l00046">Aestra::Audio::SetPanCommand::redo()</a>, and <a class="el" href="../../dc/d1d/SetPanCommand_8h_source.html#l00037">Aestra::Audio::SetPanCommand::undo()</a>.</p>
 <div id="dynsection-21" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -1669,7 +1772,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Apply quality settings to the channel. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00218">218</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00231">231</a> of file <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html">MixerChannel.h</a>.</p>
 
 </div>
 </div>
@@ -1702,7 +1805,7 @@ Public Member Functions</h2></td></tr>
 <p>Replace the send with the given stable sendId. </p>
 <p>The replacement keeps the existing sendId (identity is owned by the channel). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00155">155</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00201">201</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../dc/d64/RoutingCommands_8h_source.html#l00174">Aestra::Audio::EditSendCommand::execute()</a>.</p>
 <div id="dynsection-22" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -1733,7 +1836,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Set solo state. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00094">94</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00100">100</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../df/d6b/SetSoloCommand_8h_source.html#l00027">Aestra::Audio::SetSoloCommand::execute()</a>, <a class="el" href="../../df/d6b/SetSoloCommand_8h_source.html#l00046">Aestra::Audio::SetSoloCommand::redo()</a>, and <a class="el" href="../../df/d6b/SetSoloCommand_8h_source.html#l00037">Aestra::Audio::SetSoloCommand::undo()</a>.</p>
 <div id="dynsection-23" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -1764,7 +1867,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Set solo-safe state. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00109">109</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00155">155</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1907,7 +2010,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Set stereo width. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00071">71</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00075">75</a> of file <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html">MixerChannel.cpp</a>.</p>
 
 </div>
 </div>

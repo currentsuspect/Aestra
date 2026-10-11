@@ -49,12 +49,12 @@
 <text text-anchor="middle" x="114.5" y="-150" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">automationTint</text>
 <text text-anchor="middle" x="114.5" y="-139" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">baseline</text>
 <text text-anchor="middle" x="114.5" y="-128" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">cornerSeparator</text>
-<text text-anchor="middle" x="114.5" y="-117" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">glassBorder</text>
-<text text-anchor="middle" x="114.5" y="-106" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">glassFill</text>
-<text text-anchor="middle" x="114.5" y="-95" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">loopFill</text>
-<text text-anchor="middle" x="114.5" y="-84" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">midiTint</text>
-<text text-anchor="middle" x="114.5" y="-73" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">playheadBright</text>
-<text text-anchor="middle" x="114.5" y="-62" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">playheadDark</text>
+<text text-anchor="middle" x="114.5" y="-117" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">densityTint</text>
+<text text-anchor="middle" x="114.5" y="-106" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">glassBorder</text>
+<text text-anchor="middle" x="114.5" y="-95" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">glassFill</text>
+<text text-anchor="middle" x="114.5" y="-84" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">loopFill</text>
+<text text-anchor="middle" x="114.5" y="-73" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">midiTint</text>
+<text text-anchor="middle" x="114.5" y="-62" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">playheadBright</text>
 <text text-anchor="middle" x="114.5" y="-51" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">...</text>
 </g>
 <!-- Node3 -->

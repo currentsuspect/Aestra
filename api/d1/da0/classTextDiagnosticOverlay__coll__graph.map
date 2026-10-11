@@ -1,0 +1,13 @@
+<map id="TextDiagnosticOverlay" name="TextDiagnosticOverlay">
+<area shape="rect" id="Node000001" title="Read&#45;only text pipeline diagnostic overlay." alt="" coords="740,131,909,157"/>
+<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="375,91,560,117"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="574,106,716,120,767,129,766,134,716,125,574,112"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,225,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="240,23,296,29,351,41,406,64,449,89,446,94,403,69,350,47,295,35,239,29"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="35,84,195,124"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="209,101,374,101,374,107,209,107"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="36,148,195,188"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="208,157,278,149,350,136,429,114,430,119,351,141,279,154,209,163"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="442,170,493,195"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="507,184,602,187,659,185,716,179,757,168,794,154,796,159,759,173,716,184,659,191,602,193,507,189"/>
+</map>

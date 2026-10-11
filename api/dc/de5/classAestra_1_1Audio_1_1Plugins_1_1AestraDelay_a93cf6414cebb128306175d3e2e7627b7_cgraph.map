@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::Plugins::AestraDelay::process" name="Aestra::Audio::Plugins::AestraDelay::process">
+<area shape="rect" id="Node000001" title="Process audio through the plugin." alt="" coords="5,37,172,77"/>
+<area shape="rect" id="Node000002" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a4f18baeddc491328b50de64d74e0384c" title="The bypass knob, read the way every plugin reads it." alt="" coords="220,5,427,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="172,43,206,39,207,44,173,49"/>
+<area shape="rect" id="Node000003" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a9aa58c835cb557a83214a51d403b0cfc" title="Relaxed read for a plugin&#39;s own DSP." alt="" coords="220,69,427,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="173,66,207,71,206,76,172,71"/>
+</map>

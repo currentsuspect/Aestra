@@ -11,10 +11,10 @@
 <!-- Node0 -->
 <g id="Node000000" class="node">
 <title>Node0</title>
-<g id="a_Node000000"><a xlink:href="d1/dfe/structAestra_1_1Audio_1_1ASIO_1_1ASIOSamples.html" target="_top" xlink:title=" ">
+<g id="a_Node000000"><a xlink:href="d0/d1b/structAestra_1_1Audio_1_1ASIO_1_1ASIODriverInfo.html" target="_top" xlink:title=" ">
 <polygon fill="white" stroke="#666666" points="111,-30 0,-30 0,0 111,0 111,-30"/>
 <text text-anchor="start" x="8" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::ASIO</text>
-<text text-anchor="middle" x="55.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::ASIOSamples</text>
+<text text-anchor="middle" x="55.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::ASIODriverInfo</text>
 </a>
 </g>
 </g>

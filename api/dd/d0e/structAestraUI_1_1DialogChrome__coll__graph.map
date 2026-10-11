@@ -1,0 +1,13 @@
+<map id="AestraUI::DialogChrome" name="AestraUI::DialogChrome">
+<area shape="rect" id="Node000001" title="What the shared chrome needs to know about a dialog." alt="" coords="123,255,301,280"/>
+<area shape="rect" id="Node000002" href="$da/d4e/structAestraUI_1_1NUIRect.html" title=" " alt="" coords="5,152,144,177"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="103,183,198,253,195,257,100,188"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="49,13,100,38"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="77,52,77,152,72,152,72,52"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="169,152,255,177"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="215,191,215,255,209,255,209,191"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="143,5,281,45"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="215,59,215,152,209,152,209,59"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="280,152,331,177"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="289,190,250,233,226,256,222,253,246,229,285,186"/>
+</map>

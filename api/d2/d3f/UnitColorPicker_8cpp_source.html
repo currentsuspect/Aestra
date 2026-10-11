@@ -109,7 +109,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span><span class="keywordtype">void</span> UnitColorPicker::onRender(NUIRenderer&amp; renderer) {</div>
 <div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    <span class="keywordflow">if</span> (!m_isVisible) <span class="keywordflow">return</span>;</div>
 <div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>    </div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>    <span class="keyword">auto</span> bounds = getBounds();</div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>    <span class="keyword">auto</span> bounds = <a class="code hl_function" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a8ff75e00805b13ff9a6babd21f6cc556">getBounds</a>();</div>
 <div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    <span class="keyword">auto</span>&amp; theme = NUIThemeManager::getInstance();</div>
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>    </div>
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>    <span class="comment">// Background with shadow</span></div>
@@ -156,7 +156,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span><span class="keywordtype">bool</span> UnitColorPicker::onMouseEvent(<span class="keyword">const</span> NUIMouseEvent&amp; event) {</div>
 <div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    <span class="keywordflow">if</span> (!m_isVisible) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
 <div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    </div>
-<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    <span class="keyword">auto</span> bounds = getBounds();</div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    <span class="keyword">auto</span> bounds = <a class="code hl_function" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a8ff75e00805b13ff9a6babd21f6cc556">getBounds</a>();</div>
 <div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    </div>
 <div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>    <span class="comment">// Check if click is outside bounds (to close)</span></div>
 <div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>    <span class="keywordflow">if</span> (event.pressed &amp;&amp; event.button == NUIMouseButton::Left) {</div>
@@ -206,6 +206,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>}</div>
 <div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span> </div>
 <div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>} <span class="comment">// namespace AestraUI</span></div>
+<div class="ttc" id="aclassAestraUI_1_1NUIComponent_html_a8ff75e00805b13ff9a6babd21f6cc556"><div class="ttname"><a href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a8ff75e00805b13ff9a6babd21f6cc556">AestraUI::NUIComponent::getBounds</a></div><div class="ttdeci">NUIRect getBounds() const</div><div class="ttdoc">Window-absolute (V8-X2b Window space): components render and hit-test at bounds_ as-is.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d36/NUIComponent_8h_source.html#l00071">NUIComponent.h:71</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

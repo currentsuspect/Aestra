@@ -1,5 +1,9 @@
 <map id="Aestra::Audio::Plugins::AestraVerb::process" name="Aestra::Audio::Plugins::AestraVerb::process">
-<area shape="rect" id="Node000001" title="Process audio through the plugin." alt="" coords="5,5,169,45"/>
-<area shape="rect" id="Node000002" href="$de/dee/namespaceAestra_1_1Audio_1_1FastMath.html#a602759081e528cd637b8e1991089dde5" title="Fast sine approximation using 5th&#45;order polynomial." alt="" coords="217,5,393,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="169,23,204,23,204,28,169,28"/>
+<area shape="rect" id="Node000001" title="Process audio through the plugin." alt="" coords="5,69,169,109"/>
+<area shape="rect" id="Node000002" href="$de/dee/namespaceAestra_1_1Audio_1_1FastMath.html#a602759081e528cd637b8e1991089dde5" title="Fast sine approximation using 5th&#45;order polynomial." alt="" coords="233,5,409,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="160,67,233,46,235,52,162,72"/>
+<area shape="rect" id="Node000003" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a4f18baeddc491328b50de64d74e0384c" title="The bypass knob, read the way every plugin reads it." alt="" coords="217,69,424,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="169,87,204,87,204,92,169,92"/>
+<area shape="rect" id="Node000004" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a9aa58c835cb557a83214a51d403b0cfc" title="Relaxed read for a plugin&#39;s own DSP." alt="" coords="217,133,424,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="162,107,235,127,233,132,160,112"/>
 </map>

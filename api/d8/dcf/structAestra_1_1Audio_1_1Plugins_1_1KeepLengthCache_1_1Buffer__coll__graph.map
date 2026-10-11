@@ -1,0 +1,11 @@
+<map id="Aestra::Audio::Plugins::KeepLengthCache::Buffer" name="Aestra::Audio::Plugins::KeepLengthCache::Buffer">
+<area shape="rect" id="Node000001" title="Interleaved stereo frames at the source&#39;s sample rate." alt="" coords="5,269,199,309"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="27,181,177,207"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="105,220,105,269,99,269,99,220"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="29,93,79,119"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="59,132,67,156,88,179,84,183,62,159,54,133"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="104,93,233,119"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="154,131,132,159,113,183,109,179,128,156,149,128"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="149,5,188,31"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="171,45,171,93,166,93,166,45"/>
+</map>

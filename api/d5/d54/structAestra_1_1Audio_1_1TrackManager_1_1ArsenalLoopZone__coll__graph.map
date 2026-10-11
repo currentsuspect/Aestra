@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::TrackManager::ArsenalLoopZone" name="Aestra::Audio::TrackManager::ArsenalLoopZone">
+<area shape="rect" id="Node000001" title="A piano&#45;roll ruler zone: pattern playback loops only [startBeat, endBeat) of the pattern (SPEC 3 §5...." alt="" coords="63,196,271,236"/>
+<area shape="rect" id="Node000002" href="$d0/dd3/structAestra_1_1Audio_1_1PatternID.html" title="Type&#45;safe identifier for patterns." alt="" coords="5,93,183,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="112,129,157,194,152,197,107,132"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="57,5,131,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="97,45,97,93,91,93,91,45"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="207,93,274,119"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="227,132,182,197,178,194,223,129"/>
+</map>

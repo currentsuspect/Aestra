@@ -1,0 +1,10 @@
+<map id="Aestra::Audio::AutomationRegions::copy" name="Aestra::Audio::AutomationRegions::copy">
+<area shape="rect" id="Node000001" title="Copy region id to deltaBeats away. Returns the new region&#39;s id, or nothing if refused." alt="" coords="5,73,199,113"/>
+<area shape="poly" id="edge3_Node000001_Node000001" title=" " alt="" coords="57,74,55,64,62,54,78,49,102,47,130,50,145,57,143,62,128,55,102,52,79,54,65,59,60,65,62,72"/>
+<area shape="rect" id="Node000002" href="$d3/dbe/AutomationRegions_8h.html#ae62b9829f2dfd5e8543be4d9a387c1e6" title="Removes every point inside [start, end]. Callers have already checked the span holds no other region." alt="" coords="247,29,440,69"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="198,73,233,67,234,72,199,78"/>
+<area shape="rect" id="Node000003" href="$d3/dbe/AutomationRegions_8h.html#ac9b13f65ec62dcf69d8c5670c899e7dc" title="Stores the implicit region (all points) if the curve has points and no regions. True if it did." alt="" coords="247,117,440,157"/>
+<area shape="poly" id="edge4_Node000001_Node000003" title=" " alt="" coords="199,108,234,115,233,120,198,114"/>
+<area shape="poly" id="edge2_Node000002_Node000002" title=" " alt="" coords="299,30,296,20,303,10,319,5,343,3,371,6,386,13,384,18,370,11,343,8,320,10,306,15,301,21,304,28"/>
+<area shape="poly" id="edge5_Node000003_Node000003" title=" " alt="" coords="299,118,296,108,303,98,319,93,343,91,371,94,386,101,384,106,370,99,343,96,320,98,306,103,301,109,304,116"/>
+</map>

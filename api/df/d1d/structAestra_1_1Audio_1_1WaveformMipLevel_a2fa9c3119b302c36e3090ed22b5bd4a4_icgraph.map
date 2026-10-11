@@ -1,9 +1,7 @@
 <map id="Aestra::Audio::WaveformMipLevel::getPeak" name="Aestra::Audio::WaveformMipLevel::getPeak">
-<area shape="rect" id="Node000001" title="Get peak at index for channel." alt="" coords="533,37,741,77"/>
-<area shape="rect" id="Node000002" href="$df/d1d/structAestra_1_1Audio_1_1WaveformMipLevel.html#ae75aaf1ccc70ee7abd5b2982e92c59c2" title="Get interpolated peak at fractional index (advisory: interpolation of min/max is not physically meani..." alt="" coords="277,5,485,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="520,45,485,41,486,36,520,40"/>
-<area shape="rect" id="Node000003" href="$df/d1d/structAestra_1_1Audio_1_1WaveformMipLevel.html#a0d898191af243ee635b386e65d0f9cd1" title="Get peaks for a range, merged." alt="" coords="277,69,485,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="520,75,486,79,485,74,520,69"/>
-<area shape="rect" id="Node000004" href="$d7/dae/classAestra_1_1Audio_1_1WaveformCache.html#a002f9e75679c04a2b910673828c27e65" title="Get a single peak for quick display." alt="" coords="5,69,229,109"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="263,92,230,92,230,87,263,87"/>
+<area shape="rect" id="Node000001" title="Get peak at index for channel." alt="" coords="261,37,469,77"/>
+<area shape="rect" id="Node000002" href="$df/d1d/structAestra_1_1Audio_1_1WaveformMipLevel.html#ae75aaf1ccc70ee7abd5b2982e92c59c2" title="Get interpolated peak at fractional index (advisory: interpolation of min/max is not physically meani..." alt="" coords="5,5,213,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="248,45,213,41,214,36,248,40"/>
+<area shape="rect" id="Node000003" href="$df/d1d/structAestra_1_1Audio_1_1WaveformMipLevel.html#a0d898191af243ee635b386e65d0f9cd1" title="Get peaks for a range, merged." alt="" coords="5,69,213,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="248,75,214,79,213,74,248,69"/>
 </map>

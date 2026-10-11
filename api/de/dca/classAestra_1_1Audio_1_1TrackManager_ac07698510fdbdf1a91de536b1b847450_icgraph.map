@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::TrackManager::record" name="Aestra::Audio::TrackManager::record">
+<area shape="rect" id="Node000001" title="Toggle record&#45;arm state and manage capture session lifetime." alt="" coords="280,5,488,45"/>
+<area shape="rect" id="Node000002" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a6b8b62c8b78c0dc3f1460bc1ae83b264" title="Arm or disarm recording (TrackManager::record) and keep the Arsenal loop consistent." alt="" coords="5,5,232,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="267,28,232,28,232,23,267,23"/>
+</map>

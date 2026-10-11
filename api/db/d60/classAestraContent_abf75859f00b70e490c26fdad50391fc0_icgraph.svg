@@ -48,7 +48,7 @@
 <script type="application/ecmascript">
 var viewWidth = 565;
 var viewHeight = 182;
-var sectionId = 'dynsection-85';
+var sectionId = 'dynsection-104';
 </script>
 <script type="application/ecmascript" xlink:href="../../svg.min.js"/>
 <svg id="graph" class="graph">
@@ -66,7 +66,7 @@ var sectionId = 'dynsection-85';
 <!-- Node2 -->
 <g id="Node000002" class="node">
 <title>Node2</title>
-<g id="a_Node000002"><a xlink:href="../../db/d60/classAestraContent.html#a96fb8097d6143d45d2d6ce3b65949b6f" target="_top" xlink:title="Wire the floating&#45;panel behaviors shared by every overlay panel.">
+<g id="a_Node000002"><a xlink:href="../../db/d60/classAestraContent.html#a589ca44aee5e7aab4b6ead3f635adda5" target="_top" xlink:title="Wire the floating&#45;panel behaviors shared by every overlay panel.">
 <polygon fill="white" stroke="#666666" points="345,-102 192,-102 192,-72 345,-72 345,-102"/>
 <text text-anchor="start" x="200" y="-90" font-family="Helvetica,sans-Serif" font-size="10.00">AestraContent::wireFloating</text>
 <text text-anchor="middle" x="268.5" y="-79" font-family="Helvetica,sans-Serif" font-size="10.00">Panel</text>

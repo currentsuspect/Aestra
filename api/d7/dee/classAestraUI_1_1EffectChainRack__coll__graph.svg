@@ -46,7 +46,7 @@
   </g>
 </defs>
 <script type="application/ecmascript">
-var viewWidth = 666;
+var viewWidth = 678;
 var viewHeight = 145;
 var sectionId = 'dynsection-1';
 </script>
@@ -58,8 +58,8 @@ var sectionId = 'dynsection-1';
 <g id="Node000001" class="node">
 <title>Node1</title>
 <g id="a_Node000001"><a xlink:title=" ">
-<polygon fill="#999999" stroke="#666666" points="658,-48.5 514,-48.5 514,-29.5 658,-29.5 658,-48.5"/>
-<text text-anchor="middle" x="586" y="-36.5" font-family="Helvetica,sans-Serif" font-size="10.00">AestraUI::EffectChainRack</text>
+<polygon fill="#999999" stroke="#666666" points="670,-53.5 526,-53.5 526,-34.5 670,-34.5 670,-53.5"/>
+<text text-anchor="middle" x="598" y="-41.5" font-family="Helvetica,sans-Serif" font-size="10.00">AestraUI::EffectChainRack</text>
 </a>
 </g>
 </g>
@@ -76,8 +76,8 @@ var sectionId = 'dynsection-1';
 <g id="edge1_Node000001_Node000002" class="edge">
 <title>Node2&#45;&gt;Node1</title>
 <g id="a_edge1_Node000001_Node000002"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M426.45,-55.02C454.73,-52.16 486.41,-48.96 513.98,-46.18"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="425.79,-51.57 416.19,-56.06 426.5,-58.53 425.79,-51.57"/>
+<path fill="none" stroke="#63b8ff" d="M426.17,-57.01C458.02,-54.58 494.53,-51.8 525.6,-49.44"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="425.71,-53.53 416.01,-57.78 426.24,-60.51 425.71,-53.53"/>
 </a>
 </g>
 </g>
@@ -157,11 +157,12 @@ var sectionId = 'dynsection-1';
 <g id="edge5_Node000001_Node000006" class="edge">
 <title>Node6&#45;&gt;Node1</title>
 <g id="a_edge5_Node000001_Node000006"><a xlink:title=" ">
-<path fill="none" stroke="#9a32cd" stroke-dasharray="5,2" d="M371.11,-26.68C400.41,-27.58 451.92,-29.38 496,-32 501.72,-32.34 507.65,-32.73 513.61,-33.14"/>
-<polygon fill="#9a32cd" stroke="#9a32cd" points="371.12,-23.18 361.02,-26.37 370.91,-30.17 371.12,-23.18"/>
+<path fill="none" stroke="#9a32cd" stroke-dasharray="5,2" d="M371.68,-24.78C403.15,-23.51 459.84,-22.29 508,-27 523.66,-28.53 540.66,-31.46 555.57,-34.46"/>
+<polygon fill="#9a32cd" stroke="#9a32cd" points="371.12,-21.3 361.28,-25.24 371.43,-28.3 371.12,-21.3"/>
 </a>
 </g>
-<text text-anchor="middle" x="465" y="-35" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey"> MAX_SLOTS</text>
+<text text-anchor="middle" x="471" y="-41" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey"> INITIAL_SLOTS</text>
+<text text-anchor="middle" x="471" y="-30" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">MAX_SLOTS</text>
 </g>
 </g>
 </svg>

@@ -1,0 +1,13 @@
+<map id="Aestra::Audio::PlaybackContextController::endClipPreview" name="Aestra::Audio::PlaybackContextController::endClipPreview">
+<area shape="rect" id="Node000001" title="A clip preview ends while focus is NOT Arsenal." alt="" coords="5,37,232,77"/>
+<area shape="rect" id="Node000002" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#ac8768f3bf65fade329062213829924f5" title="Leave pattern playback: stop, drop the scheduled instances, leave pattern mode." alt="" coords="280,37,540,77"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="232,55,266,55,266,60,232,60"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#adc6c625cccc4db87d777ad77b39c1cd1" title="Check whether pattern mode is active." alt="" coords="588,5,796,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="540,40,574,36,574,41,541,45"/>
+<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ab6b68f372de3313993120fd3de47e016" title="Stop Arsenal playback and optionally remain in pattern mode." alt="" coords="588,69,796,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="541,69,574,73,574,79,540,75"/>
+<area shape="rect" id="Node000005" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#aff1a4e0952563ea158cd48104e3dde38" title="Remove every scheduled instance and queued event." alt="" coords="844,37,1079,77"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="796,74,830,70,830,76,796,80"/>
+<area shape="rect" id="Node000006" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a2206c36c5c97de4986bd6c081226acb4" title="Stop transport playback and return the playhead to the cue." alt="" coords="857,101,1065,141"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="796,99,844,105,843,110,796,104"/>
+</map>

@@ -1,9 +1,20 @@
 <map id="Aestra::Audio::Plugins::AestraFilter" name="Aestra::Audio::Plugins::AestraFilter">
-<area shape="rect" id="Node000001" title=" " alt="" coords="201,93,365,133"/>
-<area shape="rect" id="Node000002" href="$de/d54/classAestra_1_1Audio_1_1IPluginInstance.html" title="Abstract plugin instance interface." alt="" coords="5,5,221,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="147,35,250,91,247,95,145,40"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="245,5,320,31"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="285,44,285,93,280,93,280,44"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="373,5,424,31"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="390,45,371,71,335,96,332,91,367,67,386,42"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="282,211,446,251"/>
+<area shape="rect" id="Node000002" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html" title="Shared base for built&#45;in effect plugins." alt="" coords="10,123,249,148"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="172,150,318,208,316,213,170,155"/>
+<area shape="rect" id="Node000003" href="$de/d54/classAestra_1_1Audio_1_1IPluginInstance.html" title="Abstract plugin instance interface." alt="" coords="5,5,221,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="119,44,130,122,125,123,114,44"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="260,5,335,31"/>
+<area shape="poly" id="edge4_Node000001_Node000004" title=" " alt="" coords="301,44,306,93,319,147,334,181,352,209,348,212,329,183,313,149,300,93,295,44"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="247,32,192,46,160,57,148,72,140,90,133,123,128,122,135,88,144,69,157,52,191,40,246,27"/>
+<area shape="rect" id="Node000006" href="$d2/d02/structAestra_1_1Audio_1_1ParamSpec.html" title="Declarative description of one automatable parameter." alt="" coords="572,123,761,148"/>
+<area shape="poly" id="edge7_Node000006_Node000004" title=" " alt="" coords="324,37,372,68,430,96,490,110,572,121,571,126,489,115,428,101,369,73,321,41"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="445,5,496,31"/>
+<area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="461,44,376,212,371,209,456,42"/>
+<area shape="poly" id="edge9_Node000006_Node000005" title=" " alt="" coords="490,39,519,69,555,96,583,110,613,120,612,125,581,115,552,101,515,73,487,43"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="617,155,426,213,424,208,616,149"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="623,5,673,31"/>
+<area shape="poly" id="edge8_Node000006_Node000007" title=" " alt="" coords="648,44,648,70,652,98,662,121,657,123,647,99,643,71,643,44"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="727,5,777,31"/>
+<area shape="poly" id="edge10_Node000006_Node000008" title=" " alt="" coords="750,45,741,73,725,100,710,114,694,125,691,120,707,110,721,97,736,71,745,43"/>
 </map>

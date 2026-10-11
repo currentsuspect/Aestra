@@ -1,7 +1,10 @@
 var searchData=
 [
-  ['unit_0',['unit',['../d7/d5d/structAestra_1_1Audio_1_1PluginParameter.html#a14926dfba925fb9b754b7e0b104486da',1,'Aestra::Audio::PluginParameter']]],
-  ['unitid_1',['unitid',['../d5/dfd/structAestra_1_1Audio_1_1LiveMidiQueue_1_1Event.html#a6dafcb3ba5a0c53f6e7c992533e7c3a2',1,'Aestra::Audio::LiveMidiQueue::Event::unitId'],['../db/d5e/structAestra_1_1Audio_1_1ScheduledEvent.html#a6beec890856985a8e8e72c1652840335',1,'Aestra::Audio::ScheduledEvent::unitId'],['../d7/d44/structAestra_1_1Audio_1_1PatternPlaybackEngine_1_1UnitMidiRoute.html#a3fd0f983dc79435bea81559ccfae39e9',1,'Aestra::Audio::PatternPlaybackEngine::UnitMidiRoute::unitId']]],
-  ['units_2',['units',['../dd/de8/structAestra_1_1Audio_1_1AudioArsenalSnapshot.html#a9b730a0052900aabb519dbcc2f61f09d',1,'Aestra::Audio::AudioArsenalSnapshot']]],
-  ['updatedatms_3',['updatedAtMs',['../d6/d74/structTakeManager_1_1TakeEntry.html#aa295abc549e42eab1bd187caa61e1af3',1,'TakeManager::TakeEntry']]]
+  ['uipattern_0',['uiPattern',['../d0/d77/structAestra_1_1Audio_1_1PlaybackMirrors.html#a54e032c1f7934045d91d3478057d7ba8',1,'Aestra::Audio::PlaybackMirrors']]],
+  ['unit_1',['unit',['../d7/d5d/structAestra_1_1Audio_1_1PluginParameter.html#a14926dfba925fb9b754b7e0b104486da',1,'Aestra::Audio::PluginParameter']]],
+  ['unitid_2',['unitid',['../d5/dfd/structAestra_1_1Audio_1_1LiveMidiQueue_1_1Event.html#a6dafcb3ba5a0c53f6e7c992533e7c3a2',1,'Aestra::Audio::LiveMidiQueue::Event::unitId'],['../db/d5e/structAestra_1_1Audio_1_1ScheduledEvent.html#a6beec890856985a8e8e72c1652840335',1,'Aestra::Audio::ScheduledEvent::unitId'],['../d7/d44/structAestra_1_1Audio_1_1PatternPlaybackEngine_1_1UnitMidiRoute.html#a3fd0f983dc79435bea81559ccfae39e9',1,'Aestra::Audio::PatternPlaybackEngine::UnitMidiRoute::unitId']]],
+  ['units_3',['units',['../dd/de8/structAestra_1_1Audio_1_1AudioArsenalSnapshot.html#a9b730a0052900aabb519dbcc2f61f09d',1,'Aestra::Audio::AudioArsenalSnapshot']]],
+  ['unreadablepluginstate_4',['unreadablePluginState',['../d8/ddf/structProjectSerializer_1_1LoadResult.html#a6513ecb74241b3b0d7ecd28d6b2f82cd',1,'ProjectSerializer::LoadResult']]],
+  ['up_5',['up',['../db/dc7/structAestraUI_1_1FileBrowserLocalLayout.html#a5132e35cf551699ab2fc131266d6a4a6',1,'AestraUI::FileBrowserLocalLayout']]],
+  ['updatedatms_6',['updatedAtMs',['../d6/d74/structTakeManager_1_1TakeEntry.html#aa295abc549e42eab1bd187caa61e1af3',1,'TakeManager::TakeEntry']]]
 ];

@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['main_2ecpp_0',['Main.cpp',['../d5/de0/Main_8cpp.html',1,'']]]
+  ['editorsurfaceplacement_2eh_0',['EditorSurfacePlacement.h',['../d7/d79/EditorSurfacePlacement_8h.html',1,'']]],
+  ['exportdialogpreferences_2eh_1',['ExportDialogPreferences.h',['../de/dae/ExportDialogPreferences_8h.html',1,'']]]
 ];

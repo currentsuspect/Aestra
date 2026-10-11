@@ -1,7 +1,11 @@
 <map id="Aestra::Audio::Plugins::AestraLFO::process" name="Aestra::Audio::Plugins::AestraLFO::process">
-<area shape="rect" id="Node000001" title="Process audio through the plugin." alt="" coords="5,37,169,77"/>
-<area shape="rect" id="Node000002" href="$df/d51/classAestra_1_1Audio_1_1Plugins_1_1AestraLFO.html#a38b1e885f6eaa5c7c109f7241c3fe89c" title="Get current parameter value (normalized 0&#45;1)" alt="" coords="245,5,439,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="169,44,231,37,232,42,170,50"/>
-<area shape="rect" id="Node000003" href="$df/d51/classAestra_1_1Audio_1_1Plugins_1_1AestraLFO.html#aeb0e95d8759de4fcb9222b4513d40269" title="Division length in beats (quarter notes), matching AestraDelay&#39;s table." alt="" coords="217,69,467,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="170,65,204,69,204,75,169,70"/>
+<area shape="rect" id="Node000001" title="Process audio through the plugin." alt="" coords="5,101,169,141"/>
+<area shape="rect" id="Node000002" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#acd2100c923f5538067bf3a8899f45aa7" title="Get current parameter value (normalized 0&#45;1)" alt="" coords="239,5,445,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="123,99,167,76,216,55,240,47,241,52,218,60,169,81,126,103"/>
+<area shape="rect" id="Node000003" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a4f18baeddc491328b50de64d74e0384c" title="The bypass knob, read the way every plugin reads it." alt="" coords="239,69,445,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="169,108,225,101,225,107,170,114"/>
+<area shape="rect" id="Node000004" href="$df/d51/classAestra_1_1Audio_1_1Plugins_1_1AestraLFO.html#aeb0e95d8759de4fcb9222b4513d40269" title="Division length in beats (quarter notes), matching AestraDelay&#39;s table." alt="" coords="217,133,467,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="170,129,204,133,204,139,169,134"/>
+<area shape="rect" id="Node000005" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a9aa58c835cb557a83214a51d403b0cfc" title="Relaxed read for a plugin&#39;s own DSP." alt="" coords="239,197,445,237"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="126,139,169,162,218,183,241,191,240,196,216,188,167,166,123,144"/>
 </map>

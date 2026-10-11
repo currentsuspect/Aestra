@@ -1,0 +1,6 @@
+<map id="AestraUI::EditorKit::drawArc" name="AestraUI::EditorKit::drawArc">
+<area shape="rect" id="Node000001" title="A polyline arc from startAngle to endAngle (radians, either order)." alt="" coords="196,29,339,69"/>
+<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="299,17,288,11,267,8,249,10,239,15,235,21,237,28,231,30,229,20,235,11,248,5,267,3,290,6,302,13"/>
+<area shape="rect" id="Node000002" href="$d8/d10/namespaceAestraUI_1_1EditorKit.html#a2b98b886407d052270f1a636f14f3e70" title="The standard rotary knob: inset disc, track arc, value arc, needle, centre well, then the label and t..." alt="" coords="5,29,148,69"/>
+<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="183,52,148,52,148,47,183,47"/>
+</map>

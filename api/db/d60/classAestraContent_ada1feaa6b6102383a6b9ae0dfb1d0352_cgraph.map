@@ -1,0 +1,8 @@
+<map id="AestraContent::seedDockedRailWidths" name="AestraContent::seedDockedRailWidths">
+<area shape="rect" id="Node000001" title="Seed rail widths from the surface store on first layout." alt="" coords="5,47,208,87"/>
+<area shape="rect" id="Node000002" href="$d2/d95/DockedRailWidths_8h.html#a5964638a3187994feff993621c5e0539" title="Applies a stored rail width to the live pref." alt="" coords="256,29,469,55"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="208,55,242,51,243,57,208,60"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#afbf0a48523732326319bb02e131fbd24" title="The app&#45;owned surface store, or nullptr before AestraApp provides it." alt="" coords="260,79,465,104"/>
+<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="208,74,247,78,246,83,208,79"/>
+<area shape="poly" id="edge2_Node000002_Node000002" title=" " alt="" coords="321,31,312,21,317,11,334,5,363,3,399,7,409,11,413,17,408,20,406,15,397,12,363,8,335,10,320,15,318,20,325,27"/>
+</map>

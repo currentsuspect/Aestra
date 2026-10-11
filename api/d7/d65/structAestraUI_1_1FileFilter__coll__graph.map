@@ -1,13 +1,17 @@
 <map id="AestraUI::FileFilter" name="AestraUI::FileFilter">
-<area shape="rect" id="Node000001" title="Smart File Filter &#45; Whitelist approach." alt="" coords="82,313,225,339"/>
-<area shape="rect" id="Node000002" title=" " alt="" coords="82,196,225,236"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="156,250,156,313,151,313,151,250"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="31,108,118,133"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="95,142,139,194,135,198,91,145"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="5,5,144,45"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="77,59,77,108,72,108,72,59"/>
-<area shape="rect" id="Node000005" title=" " alt="" coords="142,108,325,133"/>
-<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="217,146,172,198,168,194,213,142"/>
-<area shape="rect" id="Node000006" title=" " alt="" coords="214,13,253,38"/>
-<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="236,52,236,108,231,108,231,52"/>
+<area shape="rect" id="Node000001" title="Smart File Filter &#45; Whitelist approach." alt="" coords="132,313,275,339"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="28,211,192,251"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="127,262,147,287,180,311,177,315,143,291,123,265"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="26,108,151,133"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="49,142,34,159,29,172,34,185,44,198,58,208,55,213,41,202,29,188,24,172,29,156,45,139"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="216,211,380,251"/>
+<area shape="poly" id="edge7_Node000007_Node000003" title=" " alt="" coords="98,145,108,166,124,184,157,196,217,210,215,215,155,201,120,189,104,169,93,148"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="5,5,172,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="91,59,91,108,86,108,86,59"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="197,108,319,133"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="236,144,220,159,208,174,194,189,155,213,153,208,191,185,204,171,216,156,232,140"/>
+<area shape="poly" id="edge8_Node000007_Node000005" title=" " alt="" coords="332,137,352,156,358,172,352,188,332,212,328,209,348,185,352,172,348,159,328,141"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="239,13,277,38"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="261,52,261,108,255,108,255,52"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="281,264,258,291,226,315,223,311,255,287,277,260"/>
 </map>

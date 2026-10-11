@@ -1,0 +1,7 @@
+<map id="AestraWindowManager::initializeCustomCursors" name="AestraWindowManager::initializeCustomCursors">
+<area shape="rect" id="Node000001" title="Load and prepare custom cursor assets." alt="" coords="448,5,633,45"/>
+<area shape="rect" id="Node000002" href="$d6/de3/classAestraWindowManager.html#a7ae60654f3abbb4adef1c2ffcb3ab9b4" title="Render the current custom cursor." alt="" coords="227,5,400,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="435,28,400,28,400,23,435,23"/>
+<area shape="rect" id="Node000003" href="$d6/de3/classAestraWindowManager.html#a0aadf9364d335c3d88d7dc54e9bca1ba" title="Render the current UI frame." alt="" coords="5,5,179,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="213,28,179,28,179,23,213,23"/>
+</map>

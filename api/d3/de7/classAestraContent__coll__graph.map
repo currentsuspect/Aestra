@@ -1,11 +1,21 @@
 <map id="AestraContent" name="AestraContent">
-<area shape="rect" id="Node000001" title="Main content area for Aestra." alt="" coords="609,91,724,117"/>
-<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="375,91,560,117"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="574,101,609,101,609,107,574,107"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,225,45"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="240,23,296,29,351,41,406,64,449,89,446,94,403,69,350,47,295,35,239,29"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="35,84,195,124"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="209,101,374,101,374,107,209,107"/>
-<area shape="rect" id="Node000005" title=" " alt="" coords="36,148,195,188"/>
-<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="208,157,278,149,350,136,429,114,430,119,351,141,279,154,209,163"/>
+<area shape="rect" id="Node000001" title="Main content area for Aestra." alt="" coords="997,151,1112,177"/>
+<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="617,94,803,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="816,106,894,114,974,128,1029,149,1027,154,973,133,893,119,816,112"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="157,5,377,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="391,17,491,22,543,30,594,41,649,65,692,92,690,96,647,70,593,47,542,35,490,28,391,22"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="187,81,347,121"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="362,100,617,103,617,108,361,105"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="188,145,347,185"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="361,160,472,153,593,137,671,117,672,122,594,143,473,158,361,166"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="691,151,729,177"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="743,161,997,161,997,167,743,167"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="634,203,786,243"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="799,209,973,181,1005,174,1006,179,974,187,800,214"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="225,210,309,235"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="323,220,634,220,634,225,323,225"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="203,259,332,285"/>
+<area shape="poly" id="edge8_Node000007_Node000009" title=" " alt="" coords="346,264,462,254,593,240,633,234,634,239,594,245,463,260,346,269"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="5,259,44,285"/>
+<area shape="poly" id="edge9_Node000009_Node000010" title=" " alt="" coords="58,269,202,269,202,275,58,275"/>
 </map>

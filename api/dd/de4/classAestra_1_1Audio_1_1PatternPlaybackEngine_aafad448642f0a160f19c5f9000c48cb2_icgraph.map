@@ -1,5 +1,13 @@
 <map id="Aestra::Audio::PatternPlaybackEngine::patternContentEdited" name="Aestra::Audio::PatternPlaybackEngine::patternContentEdited">
-<area shape="rect" id="Node000001" title="Pattern content changed while playing (RT&#45;safe producer&#45;side flag)." alt="" coords="261,5,484,45"/>
-<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a9ca7f85f6a75559189b4e33b9e1f41fa" title="Pattern notes changed while playing (Arsenal grid / Piano Roll edits)." alt="" coords="5,5,213,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="248,28,213,28,213,23,248,23"/>
+<area shape="rect" id="Node000001" title="Pattern content changed while playing (RT&#45;safe producer&#45;side flag)." alt="" coords="836,37,1059,77"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a9ca7f85f6a75559189b4e33b9e1f41fa" title="Pattern notes changed while playing (Arsenal grid / Piano Roll edits)." alt="" coords="563,5,771,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="822,46,771,40,772,35,823,40"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a863ce855848e16c90945d5650f1cc7b9" title="Re&#45;schedule timeline pattern instances from the current playhead without stopping playback." alt="" coords="547,69,788,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="823,74,788,78,788,73,822,69"/>
+<area shape="rect" id="Node000004" href="$d4/d9d/classAestra_1_1Audio_1_1MakeClipPatternUniqueCommand.html#ae03ba8e3fd255a8ca1f34724b55cf9f4" title="Execute the command (first time)" alt="" coords="276,37,499,77"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="533,77,498,73,499,67,533,71"/>
+<area shape="rect" id="Node000006" href="$d4/d9d/classAestra_1_1Audio_1_1MakeClipPatternUniqueCommand.html#a1d84adc4a520423e34e4013128406f92" title="Undo the command." alt="" coords="276,101,499,141"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="533,107,499,111,498,106,533,102"/>
+<area shape="rect" id="Node000005" href="$d4/d9d/classAestra_1_1Audio_1_1MakeClipPatternUniqueCommand.html#a6dfae4bf667e4ea3e882cf7f1274a970" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,37,228,77"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="262,60,228,60,228,55,262,55"/>
 </map>

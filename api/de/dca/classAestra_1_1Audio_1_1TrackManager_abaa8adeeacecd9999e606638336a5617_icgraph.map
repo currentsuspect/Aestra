@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::TrackManager::isPatternLoopOverrideActive" name="Aestra::Audio::TrackManager::isPatternLoopOverrideActive">
+<area shape="rect" id="Node000001" title="True while Arsenal&#39;s pattern loop is the effective loop (setPatternLoopOverride)." alt="" coords="280,5,495,45"/>
+<area shape="rect" id="Node000002" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a2a05f06dc04ef4d978c56b09773956b6" title="Read every mirror from where it actually lives (the UI mirror from the last value pushed)." alt="" coords="5,5,232,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="266,28,232,28,232,23,266,23"/>
+</map>

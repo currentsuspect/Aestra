@@ -1,0 +1,5 @@
+<map id="AestraUI::NUICursorHotspot" name="AestraUI::NUICursorHotspot">
+<area shape="rect" id="Node000001" title="Where the click lands inside a glyph, in its 24x24 viewBox." alt="" coords="5,108,208,133"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="81,5,132,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="109,45,109,108,104,108,104,45"/>
+</map>

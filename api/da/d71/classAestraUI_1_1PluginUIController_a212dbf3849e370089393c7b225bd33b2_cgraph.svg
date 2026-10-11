@@ -48,7 +48,7 @@
 <script type="application/ecmascript">
 var viewWidth = 776;
 var viewHeight = 326;
-var sectionId = 'dynsection-4';
+var sectionId = 'dynsection-5';
 </script>
 <script type="application/ecmascript" xlink:href="../../svg.min.js"/>
 <svg id="graph" class="graph">
@@ -102,20 +102,20 @@ var sectionId = 'dynsection-4';
 </a>
 </g>
 </g>
-<!-- Node8 -->
-<g id="Node000008" class="node">
-<title>Node8</title>
-<g id="a_Node000008"><a xlink:href="../../da/d71/classAestraUI_1_1PluginUIController.html#a4989078f2e5a64d24f32437e694dd792" target="_top" xlink:title="Refresh rack display from effect chain state.">
+<!-- Node9 -->
+<g id="Node000009" class="node">
+<title>Node9</title>
+<g id="a_Node000009"><a xlink:href="../../da/d71/classAestraUI_1_1PluginUIController.html#a4989078f2e5a64d24f32437e694dd792" target="_top" xlink:title="Refresh rack display from effect chain state.">
 <polygon fill="white" stroke="#666666" points="346,-126 193,-126 193,-96 346,-96 346,-126"/>
 <text text-anchor="start" x="201" y="-114" font-family="Helvetica,sans-Serif" font-size="10.00">AestraUI::PluginUIController</text>
 <text text-anchor="middle" x="269.5" y="-103" font-family="Helvetica,sans-Serif" font-size="10.00">::refreshRackDisplay</text>
 </a>
 </g>
 </g>
-<!-- Node1&#45;&gt;Node8 -->
-<g id="edge7_Node000001_Node000008" class="edge">
-<title>Node1&#45;&gt;Node8</title>
-<g id="a_edge7_Node000001_Node000008"><a xlink:title=" ">
+<!-- Node1&#45;&gt;Node9 -->
+<g id="edge8_Node000001_Node000009" class="edge">
+<title>Node1&#45;&gt;Node9</title>
+<g id="a_edge8_Node000001_Node000009"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M107.34,-192C140.19,-175.49 193.11,-148.89 229.28,-130.71"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="231.19,-133.67 238.55,-126.05 228.04,-127.42 231.19,-133.67"/>
 </a>
@@ -197,79 +197,125 @@ var sectionId = 'dynsection-4';
 </a>
 </g>
 </g>
-<!-- Node9 -->
-<g id="Node000009" class="node">
-<title>Node9</title>
-<g id="a_Node000009"><a xlink:href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a75a3b9245de1b918055973941eb00244" target="_top" xlink:title="Get plugin in slot.">
-<polygon fill="white" stroke="#666666" points="552,-174 409,-174 409,-144 552,-144 552,-174"/>
-<text text-anchor="start" x="417" y="-162" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::EffectChain</text>
-<text text-anchor="middle" x="480.5" y="-151" font-family="Helvetica,sans-Serif" font-size="10.00">::getPlugin</text>
+<!-- Node8 -->
+<g id="Node000008" class="node">
+<title>Node8</title>
+<g id="a_Node000008"><a xlink:href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#aae4750ff03b629d7895c64fc62066bf7" target="_top" xlink:title="How many slots the chain currently has (&gt;= kInitialSlots).">
+<polygon fill="white" stroke="#666666" points="761,-150 618,-150 618,-120 761,-120 761,-150"/>
+<text text-anchor="start" x="626" y="-138" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::EffectChain</text>
+<text text-anchor="middle" x="689.5" y="-127" font-family="Helvetica,sans-Serif" font-size="10.00">::slotCount</text>
 </a>
 </g>
 </g>
-<!-- Node8&#45;&gt;Node9 -->
-<g id="edge8_Node000008_Node000009" class="edge">
-<title>Node8&#45;&gt;Node9</title>
-<g id="a_edge8_Node000008_Node000009"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M336.06,-126.06C357.75,-131.04 382.05,-136.62 404.4,-141.75"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="403.65,-145.17 414.18,-144 405.21,-138.35 403.65,-145.17"/>
+<!-- Node7&#45;&gt;Node8 -->
+<g id="edge7_Node000007_Node000008" class="edge">
+<title>Node7&#45;&gt;Node8</title>
+<g id="a_edge7_Node000007_Node000008"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M545.25,-191.99C555.28,-189.24 565.47,-186.22 575,-183 599.26,-174.81 625.64,-163.79 646.86,-154.37"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="648.52,-157.46 656.22,-150.17 645.66,-151.07 648.52,-157.46"/>
 </a>
 </g>
 </g>
 <!-- Node10 -->
 <g id="Node000010" class="node">
 <title>Node10</title>
-<g id="a_Node000010"><a xlink:href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a871b0ffa96ec2073201f8b80a960ecbb" target="_top" xlink:title="Check if slot is bypassed.">
-<polygon fill="white" stroke="#666666" points="552,-126 409,-126 409,-96 552,-96 552,-126"/>
-<text text-anchor="start" x="417" y="-114" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::EffectChain</text>
-<text text-anchor="middle" x="480.5" y="-103" font-family="Helvetica,sans-Serif" font-size="10.00">::isSlotBypassed</text>
+<g id="a_Node000010"><a xlink:href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a75a3b9245de1b918055973941eb00244" target="_top" xlink:title="Get plugin in slot.">
+<polygon fill="white" stroke="#666666" points="552,-174 409,-174 409,-144 552,-144 552,-174"/>
+<text text-anchor="start" x="417" y="-162" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::EffectChain</text>
+<text text-anchor="middle" x="480.5" y="-151" font-family="Helvetica,sans-Serif" font-size="10.00">::getPlugin</text>
 </a>
 </g>
 </g>
-<!-- Node8&#45;&gt;Node10 -->
-<g id="edge9_Node000008_Node000010" class="edge">
-<title>Node8&#45;&gt;Node10</title>
-<g id="a_edge9_Node000008_Node000010"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M346.25,-111C363.34,-111 381.54,-111 398.82,-111"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="398.88,-114.5 408.88,-111 398.88,-107.5 398.88,-114.5"/>
+<!-- Node9&#45;&gt;Node10 -->
+<g id="edge9_Node000009_Node000010" class="edge">
+<title>Node9&#45;&gt;Node10</title>
+<g id="a_edge9_Node000009_Node000010"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M336.06,-126.06C357.75,-131.04 382.05,-136.62 404.4,-141.75"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="403.65,-145.17 414.18,-144 405.21,-138.35 403.65,-145.17"/>
 </a>
 </g>
 </g>
 <!-- Node11 -->
 <g id="Node000011" class="node">
 <title>Node11</title>
-<g id="a_Node000011"><a xlink:href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#ad3d64d4092a82321d954487d102aa432" target="_top" xlink:title="Check if a slot was automatically bypassed after unsafe non&#45;finite output.">
-<polygon fill="white" stroke="#666666" points="575,-78 386,-78 386,-48 575,-48 575,-78"/>
-<text text-anchor="start" x="394" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::EffectChain</text>
-<text text-anchor="middle" x="480.5" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">::isSlotBypassedByNonFiniteOutput</text>
+<g id="a_Node000011"><a xlink:href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a871b0ffa96ec2073201f8b80a960ecbb" target="_top" xlink:title="Check if slot is bypassed.">
+<polygon fill="white" stroke="#666666" points="552,-126 409,-126 409,-96 552,-96 552,-126"/>
+<text text-anchor="start" x="417" y="-114" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::EffectChain</text>
+<text text-anchor="middle" x="480.5" y="-103" font-family="Helvetica,sans-Serif" font-size="10.00">::isSlotBypassed</text>
 </a>
 </g>
 </g>
-<!-- Node8&#45;&gt;Node11 -->
-<g id="edge10_Node000008_Node000011" class="edge">
-<title>Node8&#45;&gt;Node11</title>
-<g id="a_edge10_Node000008_Node000011"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M336.06,-95.94C357.75,-90.96 382.05,-85.38 404.4,-80.25"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="405.21,-83.65 414.18,-78 403.65,-76.83 405.21,-83.65"/>
+<!-- Node9&#45;&gt;Node11 -->
+<g id="edge11_Node000009_Node000011" class="edge">
+<title>Node9&#45;&gt;Node11</title>
+<g id="a_edge11_Node000009_Node000011"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M346.25,-111C363.34,-111 381.54,-111 398.82,-111"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="398.88,-114.5 408.88,-111 398.88,-107.5 398.88,-114.5"/>
 </a>
 </g>
 </g>
 <!-- Node12 -->
 <g id="Node000012" class="node">
 <title>Node12</title>
-<g id="a_Node000012"><a xlink:href="../../dc/d87/classAestraUI_1_1EffectChainRack.html#aa1a49c978b7db7520556bfd002d93835" target="_top" xlink:title="Update slot info.">
+<g id="a_Node000012"><a xlink:href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#ad3d64d4092a82321d954487d102aa432" target="_top" xlink:title="Check if a slot was automatically bypassed after unsafe non&#45;finite output.">
+<polygon fill="white" stroke="#666666" points="575,-78 386,-78 386,-48 575,-48 575,-78"/>
+<text text-anchor="start" x="394" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::EffectChain</text>
+<text text-anchor="middle" x="480.5" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">::isSlotBypassedByNonFiniteOutput</text>
+</a>
+</g>
+</g>
+<!-- Node9&#45;&gt;Node12 -->
+<g id="edge13_Node000009_Node000012" class="edge">
+<title>Node9&#45;&gt;Node12</title>
+<g id="a_edge13_Node000009_Node000012"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M336.06,-95.94C357.75,-90.96 382.05,-85.38 404.4,-80.25"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="405.21,-83.65 414.18,-78 403.65,-76.83 405.21,-83.65"/>
+</a>
+</g>
+</g>
+<!-- Node13 -->
+<g id="Node000013" class="node">
+<title>Node13</title>
+<g id="a_Node000013"><a xlink:href="../../dc/d87/classAestraUI_1_1EffectChainRack.html#aa1a49c978b7db7520556bfd002d93835" target="_top" xlink:title="Update slot info.">
 <polygon fill="white" stroke="#666666" points="552.5,-30 408.5,-30 408.5,0 552.5,0 552.5,-30"/>
 <text text-anchor="start" x="416.5" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">AestraUI::EffectChainRack</text>
 <text text-anchor="middle" x="480.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::setSlot</text>
 </a>
 </g>
 </g>
-<!-- Node8&#45;&gt;Node12 -->
-<g id="edge11_Node000008_Node000012" class="edge">
-<title>Node8&#45;&gt;Node12</title>
-<g id="a_edge11_Node000008_Node000012"><a xlink:title=" ">
+<!-- Node9&#45;&gt;Node13 -->
+<g id="edge15_Node000009_Node000013" class="edge">
+<title>Node9&#45;&gt;Node13</title>
+<g id="a_edge15_Node000009_Node000013"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M290.32,-95.99C312.54,-79.82 350.16,-54.34 386,-39 390.79,-36.95 395.79,-35.05 400.89,-33.28"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="402.35,-36.48 410.77,-30.05 400.18,-29.83 402.35,-36.48"/>
+</a>
+</g>
+</g>
+<!-- Node10&#45;&gt;Node8 -->
+<g id="edge10_Node000010_Node000008" class="edge">
+<title>Node10&#45;&gt;Node8</title>
+<g id="a_edge10_Node000010_Node000008"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M552.16,-150.81C570.05,-148.73 589.39,-146.49 607.74,-144.36"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="608.28,-147.82 617.81,-143.2 607.47,-140.87 608.28,-147.82"/>
+</a>
+</g>
+</g>
+<!-- Node11&#45;&gt;Node8 -->
+<g id="edge12_Node000011_Node000008" class="edge">
+<title>Node11&#45;&gt;Node8</title>
+<g id="a_edge12_Node000011_Node000008"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M552.16,-119.19C570.05,-121.27 589.39,-123.51 607.74,-125.64"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="607.47,-129.13 617.81,-126.8 608.28,-122.18 607.47,-129.13"/>
+</a>
+</g>
+</g>
+<!-- Node12&#45;&gt;Node8 -->
+<g id="edge14_Node000012_Node000008" class="edge">
+<title>Node12&#45;&gt;Node8</title>
+<g id="a_edge14_Node000012_Node000008"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M545.25,-78.01C555.28,-80.76 565.47,-83.78 575,-87 599.26,-95.19 625.64,-106.21 646.86,-115.63"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="645.66,-118.93 656.22,-119.83 648.52,-112.54 645.66,-118.93"/>
 </a>
 </g>
 </g>

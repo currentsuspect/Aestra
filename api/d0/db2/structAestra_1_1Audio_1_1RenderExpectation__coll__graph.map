@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::RenderExpectation" name="Aestra::Audio::RenderExpectation">
+<area shape="rect" id="Node000001" title="The parts of a summary a golden file pins." alt="" coords="9,137,249,163"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,80,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="49,44,58,78,75,112,89,125,104,135,102,139,86,129,71,115,53,80,44,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="104,5,155,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="132,44,132,137,127,137,127,44"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="212,5,279,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="246,45,238,80,230,99,218,115,200,130,179,140,177,135,197,125,214,112,225,96,233,79,241,43"/>
+</map>

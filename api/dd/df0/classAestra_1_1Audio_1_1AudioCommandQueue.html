@@ -99,6 +99,8 @@ $(function() {
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a4a80378020433e50c333e00b74a681f9" id="r_a4a80378020433e50c333e00b74a681f9"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/df0/classAestra_1_1Audio_1_1AudioCommandQueue.html#a4a80378020433e50c333e00b74a681f9">push</a> (const <a class="el" href="../../d7/d99/structAestra_1_1Audio_1_1AudioQueueCommand.html">AudioQueueCommand</a> &amp;cmd)</td></tr>
 <tr class="separator:a4a80378020433e50c333e00b74a681f9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac6b4340eccc2640e09cc4d4d684f586c" id="r_ac6b4340eccc2640e09cc4d4d684f586c"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/df0/classAestra_1_1Audio_1_1AudioCommandQueue.html#ac6b4340eccc2640e09cc4d4d684f586c">pushReliable</a> (const <a class="el" href="../../d7/d99/structAestra_1_1Audio_1_1AudioQueueCommand.html">AudioQueueCommand</a> &amp;cmd, uint32_t timeoutMs=200)</td></tr>
+<tr class="separator:ac6b4340eccc2640e09cc4d4d684f586c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae9f02d275e1e5fa31b1e797e14d6cfd4" id="r_ae9f02d275e1e5fa31b1e797e14d6cfd4"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/df0/classAestra_1_1Audio_1_1AudioCommandQueue.html#ae9f02d275e1e5fa31b1e797e14d6cfd4">pop</a> (<a class="el" href="../../d7/d99/structAestra_1_1Audio_1_1AudioQueueCommand.html">AudioQueueCommand</a> &amp;outCmd)</td></tr>
 <tr class="separator:ae9f02d275e1e5fa31b1e797e14d6cfd4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2ce903645a0fcbde1451f76f52ccc379" id="r_a2ce903645a0fcbde1451f76f52ccc379"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/df0/classAestra_1_1Audio_1_1AudioCommandQueue.html#a2ce903645a0fcbde1451f76f52ccc379">empty</a> () const</td></tr>
@@ -109,9 +111,13 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a592ac5536cdf4d7da2bda5aab4219e07"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8494765f26893ed7fe7e6265b45adc1e" id="r_a8494765f26893ed7fe7e6265b45adc1e"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/df0/classAestra_1_1Audio_1_1AudioCommandQueue.html#a8494765f26893ed7fe7e6265b45adc1e">droppedCount</a> () const noexcept</td></tr>
 <tr class="separator:a8494765f26893ed7fe7e6265b45adc1e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa25711087e99d000d6e000cd15cd23a5" id="r_aa25711087e99d000d6e000cd15cd23a5"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/df0/classAestra_1_1Audio_1_1AudioCommandQueue.html#aa25711087e99d000d6e000cd15cd23a5">edgeDroppedCount</a> () const noexcept</td></tr>
+<tr class="separator:aa25711087e99d000d6e000cd15cd23a5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
+<tr class="memitem:ae77d3b9de5c8a14df639081b3c9806d4" id="r_ae77d3b9de5c8a14df639081b3c9806d4"><td class="memItemLeft" align="right" valign="top">static constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/df0/classAestra_1_1Audio_1_1AudioCommandQueue.html#ae77d3b9de5c8a14df639081b3c9806d4">isEdgeCommand</a> (AudioQueueCommandType type) noexcept</td></tr>
+<tr class="separator:ae77d3b9de5c8a14df639081b3c9806d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a13c42d3cf849065826df68270f503c4c" id="r_a13c42d3cf849065826df68270f503c4c"><td class="memItemLeft" align="right" valign="top">static constexpr uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/df0/classAestra_1_1Audio_1_1AudioCommandQueue.html#a13c42d3cf849065826df68270f503c4c">capacity</a> () noexcept</td></tr>
 <tr class="separator:a13c42d3cf849065826df68270f503c4c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
@@ -124,7 +130,7 @@ Static Public Attributes</h2></td></tr>
 <div class="textblock"><p>Single-producer/single-consumer command queue for UI → Audio. </p>
 <p>Uses the existing lock-free ring buffer from AestraCore. Capacity is fixed to avoid allocations and keep RT guarantees. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html#l00065">65</a> of file <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html">AudioCommandQueue.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html#l00073">73</a> of file <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html">AudioCommandQueue.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="a6e9cb06a7790a75befb4b0ec75554990" name="a6e9cb06a7790a75befb4b0ec75554990"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a6e9cb06a7790a75befb4b0ec75554990">&#9670;&#160;</a></span>approxDepth()</h2>
@@ -149,7 +155,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html#l00088">88</a> of file <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html">AudioCommandQueue.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html#l00143">143</a> of file <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html">AudioCommandQueue.h</a>.</p>
 
 </div>
 </div>
@@ -176,7 +182,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html#l00094">94</a> of file <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html">AudioCommandQueue.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html#l00151">151</a> of file <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html">AudioCommandQueue.h</a>.</p>
 
 </div>
 </div>
@@ -203,7 +209,34 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html#l00092">92</a> of file <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html">AudioCommandQueue.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html#l00147">147</a> of file <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html">AudioCommandQueue.h</a>.</p>
+
+</div>
+</div>
+<a id="aa25711087e99d000d6e000cd15cd23a5" name="aa25711087e99d000d6e000cd15cd23a5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa25711087e99d000d6e000cd15cd23a5">&#9670;&#160;</a></span>edgeDroppedCount()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint64_t Aestra::Audio::AudioCommandQueue::edgeDroppedCount </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html#l00149">149</a> of file <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html">AudioCommandQueue.h</a>.</p>
 
 </div>
 </div>
@@ -230,7 +263,35 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html#l00086">86</a> of file <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html">AudioCommandQueue.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html#l00141">141</a> of file <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html">AudioCommandQueue.h</a>.</p>
+
+</div>
+</div>
+<a id="ae77d3b9de5c8a14df639081b3c9806d4" name="ae77d3b9de5c8a14df639081b3c9806d4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae77d3b9de5c8a14df639081b3c9806d4">&#9670;&#160;</a></span>isEdgeCommand()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static constexpr bool Aestra::Audio::AudioCommandQueue::isEdgeCommand </td>
+          <td>(</td>
+          <td class="paramtype">AudioQueueCommandType&#160;</td>
+          <td class="paramname"><em>type</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span><span class="mlabel">constexpr</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html#l00081">81</a> of file <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html">AudioCommandQueue.h</a>.</p>
 
 </div>
 </div>
@@ -257,7 +318,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html#l00090">90</a> of file <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html">AudioCommandQueue.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html#l00145">145</a> of file <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html">AudioCommandQueue.h</a>.</p>
 
 </div>
 </div>
@@ -285,7 +346,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html#l00084">84</a> of file <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html">AudioCommandQueue.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html#l00139">139</a> of file <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html">AudioCommandQueue.h</a>.</p>
 
 </div>
 </div>
@@ -313,7 +374,45 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html#l00069">69</a> of file <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html">AudioCommandQueue.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html#l00088">88</a> of file <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html">AudioCommandQueue.h</a>.</p>
+
+</div>
+</div>
+<a id="ac6b4340eccc2640e09cc4d4d684f586c" name="ac6b4340eccc2640e09cc4d4d684f586c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac6b4340eccc2640e09cc4d4d684f586c">&#9670;&#160;</a></span>pushReliable()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::AudioCommandQueue::pushReliable </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="../../d7/d99/structAestra_1_1Audio_1_1AudioQueueCommand.html">AudioQueueCommand</a> &amp;&#160;</td>
+          <td class="paramname"><em>cmd</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname"><em>timeoutMs</em> = <code>200</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html#l00112">112</a> of file <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html">AudioCommandQueue.h</a>.</p>
 
 </div>
 </div>
@@ -338,7 +437,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html#l00067">67</a> of file <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html">AudioCommandQueue.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html#l00075">75</a> of file <a class="el" href="../../d9/d0e/AudioCommandQueue_8h_source.html">AudioCommandQueue.h</a>.</p>
 
 </div>
 </div>

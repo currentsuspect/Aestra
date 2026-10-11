@@ -1,5 +1,7 @@
 <map id="Aestra::Audio::Plugins::AestraTransient::process" name="Aestra::Audio::Plugins::AestraTransient::process">
-<area shape="rect" id="Node000001" title="Process audio through the plugin." alt="" coords="5,5,195,45"/>
-<area shape="rect" id="Node000002" href="$d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#ab1e351e8b061b2f3557e39eb10cc2517" title="Get current parameter value (normalized 0&#45;1)" alt="" coords="243,5,469,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="195,23,229,23,229,28,195,28"/>
+<area shape="rect" id="Node000001" title="Process audio through the plugin." alt="" coords="5,37,195,77"/>
+<area shape="rect" id="Node000002" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#acd2100c923f5538067bf3a8899f45aa7" title="Get current parameter value (normalized 0&#45;1)" alt="" coords="243,5,449,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="194,42,229,38,229,43,195,48"/>
+<area shape="rect" id="Node000003" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a4f18baeddc491328b50de64d74e0384c" title="The bypass knob, read the way every plugin reads it." alt="" coords="243,69,449,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="195,67,229,71,229,77,194,72"/>
 </map>

@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::AudioBufferData::toFloat" name="Aestra::Audio::AudioBufferData::toFloat">
+<area shape="rect" id="Node000001" title="Every sample as float (a copy). Large for long audio: prefer copyFloats() over a window." alt="" coords="247,5,440,45"/>
+<area shape="rect" id="Node000002" href="$d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#a5d6ea33d8815f2e60d935153506495ba" title="Becomes float32 again (e.g. before an in&#45;place edit). No&#45;op if already float." alt="" coords="5,5,199,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="233,28,199,28,199,23,233,23"/>
+</map>

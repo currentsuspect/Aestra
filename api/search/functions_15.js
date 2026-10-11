@@ -1,12 +1,9 @@
 var searchData=
 [
-  ['waitforclipprefilters_0',['waitForClipPrefilters',['../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a053a4811d93fb0e055bb0e745126e404',1,'Aestra::Audio::TrackManager']]],
-  ['waitidle_1',['waitIdle',['../d9/dee/classAestra_1_1Audio_1_1ClipPrefilterService.html#aac01548f4017ee6a58c309247b64df30',1,'Aestra::Audio::ClipPrefilterService']]],
-  ['wasexecuted_2',['wasExecuted',['../de/dfe/classAestra_1_1Audio_1_1AddEffectCommand.html#a3eeb9029f62b182be9707ae97b7bc1e2',1,'Aestra::Audio::AddEffectCommand']]],
-  ['widetoutf8_3',['wideToUtf8',['../d4/dc5/PathUtils_8h.html#a4c65b3de74449ae15e1654f2684f79d9',1,'Aestra::Audio']]],
-  ['wirefloatingpanel_4',['wireFloatingPanel',['../db/d60/classAestraContent.html#a96fb8097d6143d45d2d6ce3b65949b6f',1,'AestraContent']]],
-  ['wireheadlessengine_5',['wireHeadlessEngine',['../da/dfd/classAestra_1_1Audio_1_1MuseService.html#a4193ccb9e33e6ad56eb3f03a98fdfa65',1,'Aestra::Audio::MuseService']]],
-  ['withlanes_6',['withLanes',['../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#aa49c28cd47a0b61b3839a90c57d9ae18',1,'Aestra::Audio::PlaylistModel']]],
-  ['workspacefocusname_7',['workspaceFocusName',['../d3/d28/WorkspaceFocus_8h.html#a6171d0d9d1c444e554c3acf066913db3',1,'WorkspaceFocusModel']]],
-  ['write_8',['write',['../d9/d8e/classAestra_1_1Audio_1_1AudioRingBuffer.html#acdc4186abf4e4594e8d229c1997ba982',1,'Aestra::Audio::AudioRingBuffer']]]
+  ['validate_0',['validate',['../d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#ade37b96adfcfe9b84004e0086e390fa5',1,'Aestra::Audio::HeadlessMusicGenerator']]],
+  ['validateall_1',['validateAll',['../d9/dd3/classAestra_1_1PointerRegistry.html#a091fbfbe5d3f8c97f92e2967cde0d78c',1,'Aestra::PointerRegistry']]],
+  ['validatedeviceconfig_2',['validateDeviceConfig',['../df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a099645077cfa3fb29d55a2b1041812e5',1,'Aestra::Audio::AudioDeviceManager']]],
+  ['validatefileheader_3',['validateFileHeader',['../dd/d6c/classAestra_1_1Audio_1_1AudioFileValidator.html#afa2555f4e0c755598856f71ee166b6ff',1,'Aestra::Audio::AudioFileValidator']]],
+  ['validatemixerchannels_4',['validateMixerChannels',['../d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a0a3034855460c1b4bcbecf814b696b05',1,'Aestra::Audio::PatternManager']]],
+  ['validateregistry_5',['validateRegistry',['../dc/d25/classAestra_1_1ProjectMigrations.html#a37848d12e5fa2c5d5af5e80b80949584',1,'Aestra::ProjectMigrations']]]
 ];

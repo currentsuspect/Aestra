@@ -1,5 +1,9 @@
 <map id="Aestra::Audio::PianoRollPanel::savePattern" name="Aestra::Audio::PianoRollPanel::savePattern">
 <area shape="rect" id="Node000001" title="Persist the currently edited notes back to the pattern manager." alt="" coords="5,5,184,45"/>
-<area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a1d47a21a48da22811eabfc9f49dab695" title="Enable or disable Arsenal pattern playback mode." alt="" coords="232,5,431,45"/>
+<area shape="rect" id="Node000002" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#afb1d469c7cedc517b944e2ccccccd9f0" title="The engine loop only: the sequencer re&#45;requesting activation, and piano&#45;roll length edits during patt..." alt="" coords="232,5,459,45"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="184,23,218,23,218,28,184,28"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#acd107a7cab9f98ae41079b98e2d59ea3" title="The Arsenal loop length for pattern: the zone&#39;s length when one applies, else the pattern&#39;s." alt="" coords="507,5,715,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="459,23,493,23,493,28,459,28"/>
+<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aeae68fd7ad35f4229ef6ee5e7d086e5a" title="The zone Arsenal playback of pattern would use: the stored zone if it was drawn on that pattern." alt="" coords="763,5,971,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="715,23,749,23,749,28,715,28"/>
 </map>

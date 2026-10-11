@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::PlaybackMirrors" name="Aestra::Audio::PlaybackMirrors">
+<area shape="rect" id="Node000001" title="The four playback&#45;mode mirrors, read back from where they actually live." alt="" coords="5,152,228,177"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="91,5,142,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="119,45,119,152,114,152,114,45"/>
+</map>

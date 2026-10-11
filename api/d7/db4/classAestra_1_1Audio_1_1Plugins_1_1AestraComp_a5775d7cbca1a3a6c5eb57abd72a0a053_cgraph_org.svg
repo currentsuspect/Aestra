@@ -21,10 +21,10 @@
 <!-- Node2 -->
 <g id="Node000002" class="node">
 <title>Node2</title>
-<g id="a_Node000002"><a xlink:href="../../d7/db4/classAestra_1_1Audio_1_1Plugins_1_1AestraComp.html#ac3643d77924395a8be58ee18b2419a5a" target="_top" xlink:title="Get current parameter value (normalized 0&#45;1)">
+<g id="a_Node000002"><a xlink:href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#acd2100c923f5538067bf3a8899f45aa7" target="_top" xlink:title="Get current parameter value (normalized 0&#45;1)">
 <polygon fill="white" stroke="#666666" points="382,-30 227,-30 227,0 382,0 382,-30"/>
-<text text-anchor="start" x="235" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::Plugins</text>
-<text text-anchor="middle" x="304.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::AestraComp::getParameter</text>
+<text text-anchor="start" x="235" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::InternalPlugin</text>
+<text text-anchor="middle" x="304.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Base::getParameter</text>
 </a>
 </g>
 </g>

@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::AutomationRegion" name="Aestra::Audio::AutomationRegion">
+<area shape="rect" id="Node000001" title="A movable, copyable stretch of a curve: an automation &quot;clip&quot; (V8&#45;A7)." alt="" coords="5,108,199,148"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="18,5,93,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="68,42,96,107,91,109,63,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="117,5,183,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="142,44,113,109,108,107,137,42"/>
+</map>

@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::InternalPluginBase::loadState" name="Aestra::Audio::InternalPluginBase::loadState">
+<area shape="rect" id="Node000001" title="Reads a keyed v2 blob, applying by id rather than by position." alt="" coords="5,69,212,109"/>
+<area shape="rect" id="Node000002" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#aab2b659d581559924c8a2f9ead2d8612" title="Called after a parameter is stored, so a plugin can invalidate derived state (filter coefficients,..." alt="" coords="260,5,467,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="188,67,269,46,271,51,190,72"/>
+<area shape="rect" id="Node000003" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a7dec060338b713ecd42311bc7439b820" title="Number of rows in paramSpecs()." alt="" coords="260,69,467,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="212,87,246,87,246,92,212,92"/>
+<area shape="rect" id="Node000004" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#abd1a758de5cf5298a30d9b56c5790f4e" title="Magic for the state blob." alt="" coords="260,133,467,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="190,107,271,127,269,133,188,112"/>
+</map>

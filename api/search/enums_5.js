@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['outcome_0',['Outcome',['../d0/d70/classAestra_1_1MuseAgent_1_1MuseSocketClient.html#a75e925977614e2f4df0010efef14ed8f',1,'Aestra::MuseAgent::MuseSocketClient']]]
+  ['mode_0',['Mode',['../dc/d08/classAestraUI_1_1NUIAdaptiveFPS.html#a6e29841c9e42922b6a81671a5fc59638',1,'AestraUI::NUIAdaptiveFPS']]]
 ];

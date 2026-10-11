@@ -46,7 +46,7 @@
   </g>
 </defs>
 <script type="application/ecmascript">
-var viewWidth = 536;
+var viewWidth = 715;
 var viewHeight = 86;
 var sectionId = 'dynsection-5';
 </script>
@@ -118,6 +118,25 @@ var sectionId = 'dynsection-5';
 <g id="a_edge3_Node000003_Node000004"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M343.25,-15C353.62,-15 364.36,-15 374.9,-15"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="374.94,-18.5 384.94,-15 374.94,-11.5 374.94,-18.5"/>
+</a>
+</g>
+</g>
+<!-- Node5 -->
+<g id="Node000005" class="node">
+<title>Node5</title>
+<g id="a_Node000005"><a xlink:href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#aae4750ff03b629d7895c64fc62066bf7" target="_top" xlink:title="How many slots the chain currently has (&gt;= kInitialSlots).">
+<polygon fill="white" stroke="#666666" points="707,-30 564,-30 564,0 707,0 707,-30"/>
+<text text-anchor="start" x="572" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::EffectChain</text>
+<text text-anchor="middle" x="635.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::slotCount</text>
+</a>
+</g>
+</g>
+<!-- Node4&#45;&gt;Node5 -->
+<g id="edge4_Node000004_Node000005" class="edge">
+<title>Node4&#45;&gt;Node5</title>
+<g id="a_edge4_Node000004_Node000005"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M528.22,-15C536.57,-15 545.14,-15 553.62,-15"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="553.89,-18.5 563.89,-15 553.89,-11.5 553.89,-18.5"/>
 </a>
 </g>
 </g>

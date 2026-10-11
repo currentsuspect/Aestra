@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::Plugins::AestraEQ::initialize" name="Aestra::Audio::Plugins::AestraEQ::initialize">
+<area shape="rect" id="Node000001" title="Initialize the plugin for processing." alt="" coords="5,37,169,77"/>
+<area shape="rect" id="Node000002" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a9aa58c835cb557a83214a51d403b0cfc" title="Relaxed read for a plugin&#39;s own DSP." alt="" coords="217,5,424,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="169,43,203,39,204,44,170,49"/>
+<area shape="rect" id="Node000003" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#ad944cdc9be0469fcae64d98617c63145" title="Seeds defaults on the first initialize() of a fresh instance only." alt="" coords="217,69,424,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="170,66,204,71,203,76,169,71"/>
+<area shape="rect" id="Node000004" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a2e301b64b16ed67a488e198646eef78c" title="Writes the table&#39;s defaults into storage." alt="" coords="472,69,679,109"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="424,87,458,87,458,92,424,92"/>
+</map>

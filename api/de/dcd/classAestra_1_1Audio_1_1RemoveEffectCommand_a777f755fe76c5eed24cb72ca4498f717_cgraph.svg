@@ -46,7 +46,7 @@
   </g>
 </defs>
 <script type="application/ecmascript">
-var viewWidth = 548;
+var viewWidth = 727;
 var viewHeight = 182;
 var sectionId = 'dynsection-4';
 </script>
@@ -121,32 +121,13 @@ var sectionId = 'dynsection-4';
 </a>
 </g>
 </g>
-<!-- Node5 -->
-<g id="Node000005" class="node">
-<title>Node5</title>
-<g id="a_Node000005"><a xlink:href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a05ca8fc22e7be0358516ecb73098996e" target="_top" xlink:title="Remove plugin from slot.">
-<polygon fill="white" stroke="#666666" points="533.5,-78 390.5,-78 390.5,-48 533.5,-48 533.5,-78"/>
-<text text-anchor="start" x="398.5" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::EffectChain</text>
-<text text-anchor="middle" x="462" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">::removePlugin</text>
-</a>
-</g>
-</g>
-<!-- Node2&#45;&gt;Node5 -->
-<g id="edge4_Node000002_Node000005" class="edge">
-<title>Node2&#45;&gt;Node5</title>
-<g id="a_edge4_Node000002_Node000005"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M348.01,-77.27C358.61,-75.93 369.52,-74.56 380.19,-73.21"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="380.84,-76.65 390.32,-71.93 379.96,-69.71 380.84,-76.65"/>
-</a>
-</g>
-</g>
 <!-- Node6 -->
 <g id="Node000006" class="node">
 <title>Node6</title>
-<g id="a_Node000006"><a xlink:href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a46d9c986c264576c28e32e061b81d877" target="_top" xlink:title="Request a non&#45;real&#45;time rebuild of the live playback graph.">
-<polygon fill="white" stroke="#666666" points="540,-30 384,-30 384,0 540,0 540,-30"/>
-<text text-anchor="start" x="392" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackManager</text>
-<text text-anchor="middle" x="462" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::requestAudioGraphRebuild</text>
+<g id="a_Node000006"><a xlink:href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a05ca8fc22e7be0358516ecb73098996e" target="_top" xlink:title="Remove plugin from slot.">
+<polygon fill="white" stroke="#666666" points="533.5,-78 390.5,-78 390.5,-48 533.5,-48 533.5,-78"/>
+<text text-anchor="start" x="398.5" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::EffectChain</text>
+<text text-anchor="middle" x="462" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">::removePlugin</text>
 </a>
 </g>
 </g>
@@ -154,8 +135,55 @@ var sectionId = 'dynsection-4';
 <g id="edge5_Node000002_Node000006" class="edge">
 <title>Node2&#45;&gt;Node6</title>
 <g id="a_edge5_Node000002_Node000006"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M348.01,-77.27C358.61,-75.93 369.52,-74.56 380.19,-73.21"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="380.84,-76.65 390.32,-71.93 379.96,-69.71 380.84,-76.65"/>
+</a>
+</g>
+</g>
+<!-- Node7 -->
+<g id="Node000007" class="node">
+<title>Node7</title>
+<g id="a_Node000007"><a xlink:href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a46d9c986c264576c28e32e061b81d877" target="_top" xlink:title="Request a non&#45;real&#45;time rebuild of the live playback graph.">
+<polygon fill="white" stroke="#666666" points="540,-30 384,-30 384,0 540,0 540,-30"/>
+<text text-anchor="start" x="392" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackManager</text>
+<text text-anchor="middle" x="462" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::requestAudioGraphRebuild</text>
+</a>
+</g>
+</g>
+<!-- Node2&#45;&gt;Node7 -->
+<g id="edge7_Node000002_Node000007" class="edge">
+<title>Node2&#45;&gt;Node7</title>
+<g id="a_edge7_Node000002_Node000007"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M304.27,-71.83C326.6,-61.91 356.79,-48.99 384,-39 389.39,-37.02 395.03,-35.06 400.7,-33.16"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="401.82,-36.48 410.23,-30.04 399.63,-29.83 401.82,-36.48"/>
+</a>
+</g>
+</g>
+<!-- Node5 -->
+<g id="Node000005" class="node">
+<title>Node5</title>
+<g id="a_Node000005"><a xlink:href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#aae4750ff03b629d7895c64fc62066bf7" target="_top" xlink:title="How many slots the chain currently has (&gt;= kInitialSlots).">
+<polygon fill="white" stroke="#666666" points="719,-102 576,-102 576,-72 719,-72 719,-102"/>
+<text text-anchor="start" x="584" y="-90" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::EffectChain</text>
+<text text-anchor="middle" x="647.5" y="-79" font-family="Helvetica,sans-Serif" font-size="10.00">::slotCount</text>
+</a>
+</g>
+</g>
+<!-- Node4&#45;&gt;Node5 -->
+<g id="edge4_Node000004_Node000005" class="edge">
+<title>Node4&#45;&gt;Node5</title>
+<g id="a_edge4_Node000004_Node000005"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M533.68,-101.76C544.17,-100.38 555.04,-98.96 565.7,-97.57"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="566.39,-101.01 575.85,-96.24 565.48,-94.07 566.39,-101.01"/>
+</a>
+</g>
+</g>
+<!-- Node6&#45;&gt;Node5 -->
+<g id="edge6_Node000006_Node000005" class="edge">
+<title>Node6&#45;&gt;Node5</title>
+<g id="a_edge6_Node000006_Node000005"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M533.68,-72.24C544.17,-73.62 555.04,-75.04 565.7,-76.43"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="565.48,-79.93 575.85,-77.76 566.39,-72.99 565.48,-79.93"/>
 </a>
 </g>
 </g>

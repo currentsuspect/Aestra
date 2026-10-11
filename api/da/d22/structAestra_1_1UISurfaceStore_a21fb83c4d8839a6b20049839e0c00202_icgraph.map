@@ -1,0 +1,20 @@
+<map id="Aestra::UISurfaceStore::save" name="Aestra::UISurfaceStore::save">
+<area shape="rect" id="Node000001" title="Write the store to path via the shared atomic&#45;write helper." alt="" coords="709,101,879,141"/>
+<area shape="rect" id="Node000002" href="$dc/d45/classAestra_1_1UISurfaceStoreFile.html#a958d1a018c67184dd775e5406d9d2ceb" title="Sets and saves." alt="" coords="469,5,661,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="742,98,660,60,629,48,631,43,662,55,744,93"/>
+<area shape="rect" id="Node000005" href="$dc/d45/classAestra_1_1UISurfaceStoreFile.html#aa1100902496522702c7fd608eb6f50c0" title="Sets and saves." alt="" coords="469,69,661,109"/>
+<area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="696,110,661,105,662,100,696,105"/>
+<area shape="rect" id="Node000006" href="$dc/d45/classAestra_1_1UISurfaceStoreFile.html#a56dd4dcdd20c32c44ac83c3f01e94bab" title="Sets and saves." alt="" coords="469,133,661,173"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="696,138,662,143,661,137,696,132"/>
+<area shape="rect" id="Node000007" href="$dc/d45/classAestra_1_1UISurfaceStoreFile.html#a2c92395c23c00f10222c669f336d6d6f" title="Sets and saves." alt="" coords="469,197,661,237"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="744,150,662,188,631,200,629,195,660,183,742,145"/>
+<area shape="rect" id="Node000003" href="$d2/d39/LegacyMixerSettingsImport_8h.html#acd5ab3e31d622aa85d7c833838211a38" title="Runs once at startup, before any surface reads the store." alt="" coords="215,32,413,72"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="456,40,413,44,412,39,455,34"/>
+<area shape="poly" id="edge3_Node000003_Node000003" title=" " alt="" coords="353,20,340,13,314,11,292,13,278,17,273,23,276,31,271,32,268,22,275,13,290,7,314,5,341,8,356,15"/>
+<area shape="rect" id="Node000004" href="$d6/d43/classAestraApp.html#a12653cc93e99665a6fe3e795f6724058" title="Initialize all subsystems." alt="" coords="5,109,159,134"/>
+<area shape="poly" id="edge4_Node000003_Node000004" title=" " alt="" coords="234,79,126,111,125,106,232,73"/>
+<area shape="rect" id="Node000008" href="$d2/d95/DockedRailWidths_8h.html#a397ffe445ffa6ea7f7c96e18d9e7ed80" title="One&#45;time, one&#45;way import of the pre&#45;V8&#45;C14 ui_state.json rail width." alt="" coords="207,145,421,185"/>
+<area shape="poly" id="edge8_Node000007_Node000008" title=" " alt="" coords="456,197,410,188,412,183,457,192"/>
+<area shape="poly" id="edge10_Node000008_Node000004" title=" " alt="" coords="194,145,149,137,150,131,195,140"/>
+<area shape="poly" id="edge9_Node000008_Node000008" title=" " alt="" coords="353,134,340,127,314,124,292,126,278,131,273,137,276,144,271,146,268,136,275,126,290,121,314,119,341,122,356,129"/>
+</map>

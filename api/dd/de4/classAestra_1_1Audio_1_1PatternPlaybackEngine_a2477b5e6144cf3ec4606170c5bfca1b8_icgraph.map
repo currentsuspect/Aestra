@@ -1,0 +1,11 @@
+<map id="Aestra::Audio::PatternPlaybackEngine::updatePatternInstance" name="Aestra::Audio::PatternPlaybackEngine::updatePatternInstance">
+<area shape="rect" id="Node000001" title="Re&#45;place a slot while playing without disturbing what already sounds (non&#45;RT thread)." alt="" coords="836,37,1059,77"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a863ce855848e16c90945d5650f1cc7b9" title="Re&#45;schedule timeline pattern instances from the current playhead without stopping playback." alt="" coords="547,37,788,77"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="823,60,788,60,788,55,823,55"/>
+<area shape="rect" id="Node000003" href="$d4/d9d/classAestra_1_1Audio_1_1MakeClipPatternUniqueCommand.html#ae03ba8e3fd255a8ca1f34724b55cf9f4" title="Execute the command (first time)" alt="" coords="276,5,499,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="533,45,498,41,499,35,533,39"/>
+<area shape="rect" id="Node000005" href="$d4/d9d/classAestra_1_1Audio_1_1MakeClipPatternUniqueCommand.html#a1d84adc4a520423e34e4013128406f92" title="Undo the command." alt="" coords="276,69,499,109"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="533,75,499,79,498,74,533,70"/>
+<area shape="rect" id="Node000004" href="$d4/d9d/classAestra_1_1Audio_1_1MakeClipPatternUniqueCommand.html#a6dfae4bf667e4ea3e882cf7f1274a970" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,228,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="262,28,228,28,228,23,262,23"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="AestraUI::NUIRenderer::calculateOpticalTextY" name="AestraUI::NUIRenderer::calculateOpticalTextY">
+<area shape="rect" id="Node000001" title="drawText() Y that centres the CAP HEIGHT on centreY (SPEC 3 §3.2)." alt="" coords="224,5,395,45"/>
+<area shape="rect" id="Node000002" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#a5f433d5d8471345923eeb42551e53e50" title="calculateOpticalTextY() on rect&#39;s vertical centre." alt="" coords="5,5,176,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="210,28,176,28,176,23,210,23"/>
+</map>

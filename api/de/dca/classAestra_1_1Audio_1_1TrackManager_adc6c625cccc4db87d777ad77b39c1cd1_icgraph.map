@@ -1,0 +1,23 @@
+<map id="Aestra::Audio::TrackManager::isPatternMode" name="Aestra::Audio::TrackManager::isPatternMode">
+<area shape="rect" id="Node000001" title="Check whether pattern mode is active." alt="" coords="1041,81,1249,121"/>
+<area shape="rect" id="Node000002" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a2a05f06dc04ef4d978c56b09773956b6" title="Read every mirror from where it actually lives (the UI mirror from the last value pushed)." alt="" coords="750,17,977,57"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="1043,81,951,60,953,55,1044,76"/>
+<area shape="rect" id="Node000003" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a0b2c544ab749091d77452cf6942a7590" title="A piano&#45;roll ruler zone: pattern playback loops only that range (SPEC 3 §5.2)." alt="" coords="750,81,977,121"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="1028,104,977,104,977,99,1028,99"/>
+<area shape="rect" id="Node000007" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#ac8768f3bf65fade329062213829924f5" title="Leave pattern playback: stop, drop the scheduled instances, leave pattern mode." alt="" coords="733,173,993,213"/>
+<area shape="poly" id="edge8_Node000001_Node000007" title=" " alt="" coords="1071,128,926,176,925,171,1069,123"/>
+<area shape="rect" id="Node000004" href="$db/d74/classAestra_1_1Audio_1_1PianoRollPanel.html#a4a7cd23bfd85b3c2cafcd34e8a90691b" title="Load a pattern into the piano&#45;roll editor." alt="" coords="483,24,661,64"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="747,81,661,64,662,59,748,76"/>
+<area shape="rect" id="Node000005" href="$db/d74/classAestra_1_1Audio_1_1PianoRollPanel.html#ae66c8a1f925037421cdb8bd97449bc7c" title="Create the piano&#45;roll editor bound to the shared track manager." alt="" coords="5,24,184,64"/>
+<area shape="poly" id="edge7_Node000003_Node000005" title=" " alt="" coords="736,106,501,101,366,93,232,79,169,67,170,61,232,73,366,88,502,96,736,101"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="473,24,410,15,321,8,232,15,168,26,167,21,232,9,321,3,411,9,474,19"/>
+<area shape="rect" id="Node000006" href="$db/d74/classAestra_1_1Audio_1_1PianoRollPanel.html#ad54d0aa6ab8faf7e98408cf3ef5aa773" title="Set the default unit assigned to newly created notes." alt="" coords="232,24,411,64"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="469,47,411,47,411,41,469,41"/>
+<area shape="poly" id="edge6_Node000006_Node000005" title=" " alt="" coords="218,47,184,47,184,41,218,41"/>
+<area shape="rect" id="Node000008" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a9d6a64ac582b4cacdb4772ade4536931" title="A clip preview ends while focus is NOT Arsenal." alt="" coords="459,139,685,179"/>
+<area shape="poly" id="edge9_Node000007_Node000008" title=" " alt="" coords="719,179,685,175,686,169,720,173"/>
+<area shape="rect" id="Node000009" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a99046b73ab17f1cb029fe8baf214ee6a" title="Focus entered Audition: the DAW transport is parked and exclusive audition takes over." alt="" coords="459,203,685,243"/>
+<area shape="poly" id="edge10_Node000007_Node000009" title=" " alt="" coords="720,210,686,214,685,208,720,205"/>
+<area shape="rect" id="Node000010" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a029092bcaac56bceeb4bb5b0a226b64e" title="Focus entered Timeline." alt="" coords="459,267,685,307"/>
+<area shape="poly" id="edge11_Node000007_Node000010" title=" " alt="" coords="795,220,686,257,647,269,645,264,685,252,793,215"/>
+</map>

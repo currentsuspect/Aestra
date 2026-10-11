@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::PatternPlaybackEngine::updatePatternInstance" name="Aestra::Audio::PatternPlaybackEngine::updatePatternInstance">
+<area shape="rect" id="Node000001" title="Re&#45;place a slot while playing without disturbing what already sounds (non&#45;RT thread)." alt="" coords="5,5,228,45"/>
+<area shape="rect" id="Node000002" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a4a8cd3c7804784b829d93cc5556ddda5" title="Schedule new pattern instance (non&#45;RT thread)" alt="" coords="276,5,509,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="228,23,262,23,262,28,228,28"/>
+</map>

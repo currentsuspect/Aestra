@@ -1,27 +1,27 @@
 <map id="Aestra::Audio::PatternPlaybackEngine::clearScheduledInstances" name="Aestra::Audio::PatternPlaybackEngine::clearScheduledInstances">
-<area shape="rect" id="Node000001" title="Remove every scheduled instance and queued event." alt="" coords="836,165,1071,205"/>
-<area shape="rect" id="Node000002" href="$d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#a3caf88466d0e3d9bb27d8a9d23abce1b" title="Export with progress callback." alt="" coords="560,5,775,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="920,158,861,107,825,82,787,60,758,48,760,43,789,55,828,77,864,103,924,154"/>
-<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a9d7ad028ebaafeecef9c986566700f13" title="Pause Arsenal/pattern playback: hard&#45;cut voices while preserving the playhead for resume." alt="" coords="563,69,771,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="891,163,787,124,748,112,749,107,789,119,893,158"/>
-<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a8e30da675f03638f3700e7ad4719bb96" title="Start transport playback from the current UI position." alt="" coords="563,133,771,173"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="822,173,771,168,772,162,823,168"/>
-<area shape="rect" id="Node000006" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aeccd21184c921cc6ed16d473d86f0b5a" title="Start Arsenal playback for the supplied pattern." alt="" coords="563,197,771,237"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="823,203,772,208,771,203,822,197"/>
-<area shape="rect" id="Node000007" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a863ce855848e16c90945d5650f1cc7b9" title="Re&#45;schedule timeline pattern instances from the current playhead without stopping playback." alt="" coords="547,261,788,301"/>
-<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="893,213,789,252,749,264,748,259,787,247,891,208"/>
-<area shape="rect" id="Node000011" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ab6b68f372de3313993120fd3de47e016" title="Stop Arsenal playback and optionally remain in pattern mode." alt="" coords="563,325,771,365"/>
-<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="924,217,864,268,828,293,789,316,760,328,758,323,787,311,825,289,861,263,920,213"/>
-<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a0b39cad61c2499af3cd2cfe71b20a683" title="Finish the count&#45;in phase and start playback at the pinned position." alt="" coords="283,133,491,173"/>
-<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="549,156,491,156,491,151,549,151"/>
-<area shape="rect" id="Node000008" href="$d4/d9d/classAestra_1_1Audio_1_1MakeClipPatternUniqueCommand.html#ae03ba8e3fd255a8ca1f34724b55cf9f4" title="Execute the command (first time)" alt="" coords="276,197,499,237"/>
-<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="565,261,475,240,476,235,566,256"/>
-<area shape="rect" id="Node000010" href="$d4/d9d/classAestra_1_1Audio_1_1MakeClipPatternUniqueCommand.html#a1d84adc4a520423e34e4013128406f92" title="Undo the command." alt="" coords="276,261,499,301"/>
-<area shape="poly" id="edge9_Node000007_Node000010" title=" " alt="" coords="533,284,499,284,499,279,533,279"/>
-<area shape="rect" id="Node000009" href="$d4/d9d/classAestra_1_1Audio_1_1MakeClipPatternUniqueCommand.html#a6dfae4bf667e4ea3e882cf7f1274a970" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,197,228,237"/>
-<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="262,220,228,220,228,215,262,215"/>
-<area shape="rect" id="Node000012" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a59ffe55e7bb9da7a1f78a89225b896e3" title="Process one JSON request line and return the JSON response." alt="" coords="287,325,487,365"/>
-<area shape="poly" id="edge11_Node000011_Node000012" title=" " alt="" coords="550,348,488,348,488,343,550,343"/>
-<area shape="rect" id="Node000013" href="$de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#afd6910159d448765265eb9884cf80360" title="Execute every fully received request line on the caller&#39;s thread." alt="" coords="19,325,214,365"/>
-<area shape="poly" id="edge12_Node000012_Node000013" title=" " alt="" coords="273,348,214,348,214,343,273,343"/>
+<area shape="rect" id="Node000001" title="Remove every scheduled instance and queued event." alt="" coords="844,101,1079,141"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a9d7ad028ebaafeecef9c986566700f13" title="Pause Arsenal/pattern playback: hard&#45;cut voices while preserving the playhead for resume." alt="" coords="588,5,796,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="898,99,795,60,760,48,761,43,797,55,899,94"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a8e30da675f03638f3700e7ad4719bb96" title="Start transport playback from the current UI position." alt="" coords="588,69,796,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="830,108,796,104,796,99,831,103"/>
+<area shape="rect" id="Node000006" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#af47f2b977f84c15cf5b7770c358454a5" title="Start Arsenal playback for the supplied pattern." alt="" coords="588,133,796,173"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="831,140,796,144,796,138,830,134"/>
+<area shape="rect" id="Node000009" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ab6b68f372de3313993120fd3de47e016" title="Stop Arsenal playback and optionally remain in pattern mode." alt="" coords="588,229,796,269"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="907,150,736,232,734,227,905,145"/>
+<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a0b39cad61c2499af3cd2cfe71b20a683" title="Finish the count&#45;in phase and start playback at the pinned position." alt="" coords="306,5,514,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="589,69,498,48,499,43,591,64"/>
+<area shape="rect" id="Node000005" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#ae5ce64039a9718f23433ef6be2692339" title="Timeline play: the pattern loop override ends, so the timeline&#39;s own loop applies again." alt="" coords="297,69,523,109"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="574,92,523,92,523,87,574,87"/>
+<area shape="rect" id="Node000007" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#aacf1d628dbee0767beabeebf50da6148" title="Play pressed in Arsenal." alt="" coords="294,133,526,173"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="574,156,526,156,526,151,574,151"/>
+<area shape="rect" id="Node000008" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a03084991ebcfdc0bd7a61b86b0839191" title="A pattern clip previews from the Timeline: pattern playback without an Arsenal focus." alt="" coords="297,197,523,237"/>
+<area shape="poly" id="edge7_Node000006_Node000008" title=" " alt="" coords="591,179,499,200,498,195,589,174"/>
+<area shape="rect" id="Node000010" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#ac8768f3bf65fade329062213829924f5" title="Leave pattern playback: stop, drop the scheduled instances, leave pattern mode." alt="" coords="280,261,540,301"/>
+<area shape="poly" id="edge9_Node000009_Node000010" title=" " alt="" coords="575,265,540,269,540,264,574,260"/>
+<area shape="rect" id="Node000011" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a9d6a64ac582b4cacdb4772ade4536931" title="A clip preview ends while focus is NOT Arsenal." alt="" coords="5,197,232,237"/>
+<area shape="poly" id="edge10_Node000010_Node000011" title=" " alt="" coords="304,261,210,240,211,235,306,256"/>
+<area shape="rect" id="Node000012" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a99046b73ab17f1cb029fe8baf214ee6a" title="Focus entered Audition: the DAW transport is parked and exclusive audition takes over." alt="" coords="5,261,232,301"/>
+<area shape="poly" id="edge11_Node000010_Node000012" title=" " alt="" coords="266,284,232,284,232,279,266,279"/>
+<area shape="rect" id="Node000013" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a029092bcaac56bceeb4bb5b0a226b64e" title="Focus entered Timeline." alt="" coords="5,325,232,365"/>
+<area shape="poly" id="edge12_Node000010_Node000013" title=" " alt="" coords="306,307,211,328,210,323,304,302"/>
 </map>

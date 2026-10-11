@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::EditAutomationCurvesCommand" name="Aestra::Audio::EditAutomationCurvesCommand">
+<area shape="rect" id="Node000001" title="Undoable whole&#45;vector replacement of a lane&#39;s automation curves." alt="" coords="5,79,224,119"/>
+<area shape="rect" id="Node000002" href="$d1/d5e/classAestra_1_1Audio_1_1ICommand.html" title="Abstract base class for all undoable operations." alt="" coords="21,5,209,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="117,44,117,79,112,79,112,44"/>
+</map>

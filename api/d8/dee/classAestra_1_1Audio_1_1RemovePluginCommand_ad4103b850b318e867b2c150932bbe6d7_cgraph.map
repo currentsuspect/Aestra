@@ -4,6 +4,9 @@
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="191,67,273,46,274,51,192,72"/>
 <area shape="rect" id="Node000003" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a86c3dbaad785b1f341561936dec18fc4" title="The permanent identity of whatever occupies slotIndex (#667)." alt="" coords="272,69,463,109"/>
 <area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="216,87,259,87,259,92,216,92"/>
-<area shape="rect" id="Node000004" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a05ca8fc22e7be0358516ecb73098996e" title="Remove plugin from slot." alt="" coords="272,133,463,173"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="192,107,274,127,273,133,191,112"/>
+<area shape="rect" id="Node000005" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a05ca8fc22e7be0358516ecb73098996e" title="Remove plugin from slot." alt="" coords="272,133,463,173"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="192,107,274,127,273,133,191,112"/>
+<area shape="rect" id="Node000004" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#aae4750ff03b629d7895c64fc62066bf7" title="How many slots the chain currently has (&gt;= kInitialSlots)." alt="" coords="519,101,709,141"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="463,99,506,105,505,110,463,104"/>
+<area shape="poly" id="edge5_Node000005_Node000004" title=" " alt="" coords="463,138,505,133,506,138,463,144"/>
 </map>

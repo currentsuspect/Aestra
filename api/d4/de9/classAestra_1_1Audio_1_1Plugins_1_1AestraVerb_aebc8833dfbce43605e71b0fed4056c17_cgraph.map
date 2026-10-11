@@ -1,5 +1,15 @@
 <map id="Aestra::Audio::Plugins::AestraVerb::initialize" name="Aestra::Audio::Plugins::AestraVerb::initialize">
-<area shape="rect" id="Node000001" title="Initialize the plugin for processing." alt="" coords="5,5,171,45"/>
-<area shape="rect" id="Node000002" href="$d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#a49065590cbe7d4a373aec815f32d3bc6" title="Get all parameter descriptors." alt="" coords="219,5,423,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="171,23,205,23,205,28,171,28"/>
+<area shape="rect" id="Node000001" title="Initialize the plugin for processing." alt="" coords="5,133,171,173"/>
+<area shape="rect" id="Node000002" href="$d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#a583afbb4a037642e2a637ebafc69c3fa" title="Number of rows in paramSpecs()." alt="" coords="242,5,462,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="109,131,157,92,217,55,236,47,238,52,220,60,160,96,113,135"/>
+<area shape="rect" id="Node000003" href="$d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#a8d3699fb172c9b287183afe226736ec0" title="The plugin&#39;s parameter table. Must outlive the instance." alt="" coords="257,69,447,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="169,131,218,119,254,110,255,115,219,124,171,136"/>
+<area shape="rect" id="Node000004" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a9aa58c835cb557a83214a51d403b0cfc" title="Relaxed read for a plugin&#39;s own DSP." alt="" coords="249,133,455,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="171,151,235,151,235,156,171,156"/>
+<area shape="rect" id="Node000005" href="$d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#afa2132609f97cd176b51731a9297a856" title="Resolves CPU feature flags on the preparing thread and stores them as plain members,..." alt="" coords="219,197,485,237"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="171,171,219,183,255,191,254,197,218,188,169,176"/>
+<area shape="rect" id="Node000006" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#ad944cdc9be0469fcae64d98617c63145" title="Seeds defaults on the first initialize() of a fresh instance only." alt="" coords="249,261,455,301"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="113,172,160,210,220,247,238,254,236,259,217,252,157,215,109,176"/>
+<area shape="rect" id="Node000007" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a2e301b64b16ed67a488e198646eef78c" title="Writes the table&#39;s defaults into storage." alt="" coords="533,261,740,301"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="456,279,519,279,519,284,456,284"/>
 </map>

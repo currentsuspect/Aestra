@@ -10,13 +10,14 @@ var searchData=
   ['destination_7',['Destination',['../da/d8e/structAestra_1_1MixerViewModel_1_1Destination.html',1,'Aestra::MixerViewModel']]],
   ['diagnosticepoch_8',['DiagnosticEpoch',['../d9/d69/structAestra_1_1Audio_1_1DiagnosticEpoch.html',1,'Aestra::Audio']]],
   ['dialogbox_9',['DialogBox',['../d7/d5c/classAestraUI_1_1DialogBox.html',1,'AestraUI']]],
-  ['ditherutils_10',['DitherUtils',['../da/d7e/classAestra_1_1Audio_1_1DitherUtils.html',1,'Aestra::Audio']]],
-  ['dragdata_11',['DragData',['../d5/de7/structAestraUI_1_1DragData.html',1,'AestraUI']]],
-  ['driverpriority_12',['DriverPriority',['../d7/dba/structAestra_1_1Audio_1_1DriverPriority.html',1,'Aestra::Audio']]],
-  ['driverstatistics_13',['DriverStatistics',['../d0/d11/structAestra_1_1Audio_1_1DriverStatistics.html',1,'Aestra::Audio']]],
-  ['dropresult_14',['DropResult',['../da/d8b/structAestraUI_1_1DropResult.html',1,'AestraUI']]],
-  ['dummyaudiodriver_15',['DummyAudioDriver',['../db/d2a/classAestra_1_1Audio_1_1DummyAudioDriver.html',1,'Aestra::Audio']]],
-  ['duplicateclipcommand_16',['DuplicateClipCommand',['../d1/d39/classAestra_1_1Audio_1_1DuplicateClipCommand.html',1,'Aestra::Audio']]],
-  ['dynamicbandslotdefaults_17',['DynamicBandSlotDefaults',['../de/de7/structAestra_1_1Audio_1_1Plugins_1_1AestraEQ_1_1DynamicBandSlotDefaults.html',1,'Aestra::Audio::Plugins::AestraEQ']]],
-  ['dynamicbandslotsnapshot_18',['DynamicBandSlotSnapshot',['../dc/dcd/structAestra_1_1Audio_1_1Plugins_1_1AestraEQ_1_1DynamicBandSlotSnapshot.html',1,'Aestra::Audio::Plugins::AestraEQ']]]
+  ['dialogchrome_10',['DialogChrome',['../dc/d61/structAestraUI_1_1DialogChrome.html',1,'AestraUI']]],
+  ['ditherutils_11',['DitherUtils',['../da/d7e/classAestra_1_1Audio_1_1DitherUtils.html',1,'Aestra::Audio']]],
+  ['dragdata_12',['DragData',['../d5/de7/structAestraUI_1_1DragData.html',1,'AestraUI']]],
+  ['driverpriority_13',['DriverPriority',['../d7/dba/structAestra_1_1Audio_1_1DriverPriority.html',1,'Aestra::Audio']]],
+  ['driverstatistics_14',['DriverStatistics',['../d0/d11/structAestra_1_1Audio_1_1DriverStatistics.html',1,'Aestra::Audio']]],
+  ['dropresult_15',['DropResult',['../da/d8b/structAestraUI_1_1DropResult.html',1,'AestraUI']]],
+  ['dummyaudiodriver_16',['DummyAudioDriver',['../db/d2a/classAestra_1_1Audio_1_1DummyAudioDriver.html',1,'Aestra::Audio']]],
+  ['duplicateclipcommand_17',['DuplicateClipCommand',['../d1/d39/classAestra_1_1Audio_1_1DuplicateClipCommand.html',1,'Aestra::Audio']]],
+  ['dynamicbandslotdefaults_18',['DynamicBandSlotDefaults',['../de/de7/structAestra_1_1Audio_1_1Plugins_1_1AestraEQ_1_1DynamicBandSlotDefaults.html',1,'Aestra::Audio::Plugins::AestraEQ']]],
+  ['dynamicbandslotsnapshot_19',['DynamicBandSlotSnapshot',['../dc/dcd/structAestra_1_1Audio_1_1Plugins_1_1AestraEQ_1_1DynamicBandSlotSnapshot.html',1,'Aestra::Audio::Plugins::AestraEQ']]]
 ];

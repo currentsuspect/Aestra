@@ -1,0 +1,13 @@
+<map id="Aestra::importLegacyMixerInspectorPreference" name="Aestra::importLegacyMixerInspectorPreference">
+<area shape="rect" id="Node000001" title="Runs once at startup, before any surface reads the store." alt="" coords="5,93,203,133"/>
+<area shape="poly" id="edge2_Node000001_Node000001" title=" " alt="" coords="58,94,55,84,63,74,79,69,104,67,133,70,149,77,146,82,131,75,104,72,80,74,66,79,60,85,63,92"/>
+<area shape="rect" id="Node000002" href="$dc/d45/classAestra_1_1UISurfaceStoreFile.html#aa35af609557ba38282dafde93eaed2a3" title="The stored value, or nullopt when the user has never set this preference." alt="" coords="258,5,450,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="154,91,250,55,273,47,274,52,252,60,156,96"/>
+<area shape="rect" id="Node000003" href="$d2/d39/LegacyMixerSettingsImport_8h.html#a115b1a9b1330e562655d7d072324828a" title="The legacy file&#39;s inspector preference, if it holds a usable one." alt="" coords="251,93,457,133"/>
+<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="203,111,237,111,237,116,203,116"/>
+<area shape="rect" id="Node000004" href="$dc/d45/classAestra_1_1UISurfaceStoreFile.html#a958d1a018c67184dd775e5406d9d2ceb" title="Sets and saves." alt="" coords="258,157,450,197"/>
+<area shape="poly" id="edge5_Node000001_Node000004" title=" " alt="" coords="184,131,263,151,262,157,182,136"/>
+<area shape="poly" id="edge4_Node000003_Node000003" title=" " alt="" coords="310,94,308,84,315,74,330,69,354,67,381,70,396,77,394,82,380,75,354,72,331,74,318,79,313,85,315,92"/>
+<area shape="rect" id="Node000005" href="$da/d22/structAestra_1_1UISurfaceStore.html#a21fb83c4d8839a6b20049839e0c00202" title="Write the store to path via the shared atomic&#45;write helper." alt="" coords="505,157,675,197"/>
+<area shape="poly" id="edge6_Node000004_Node000005" title=" " alt="" coords="450,175,492,175,492,180,450,180"/>
+</map>

@@ -1,0 +1,18 @@
+<map id="Aestra::captureSurfaceGesture" name="Aestra::captureSurfaceGesture">
+<area shape="rect" id="Node000001" title="A new preference from a drag or resize gesture." alt="" coords="796,63,1017,89"/>
+<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="956,54,953,50,945,46,907,42,877,44,861,49,858,54,866,61,862,65,853,55,858,45,876,39,907,37,946,41,957,46,960,52"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#ab90c78e0fe24a2ff739817b3c4a4440d" title="Create the Arsenal and sample&#45;editor overlays." alt="" coords="5,5,213,45"/>
+<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="824,64,748,53,603,42,458,34,214,28,214,23,458,29,603,36,748,48,825,58"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#abf75859f00b70e490c26fdad50391fc0" title="Update the active overlay&#45;panel drag." alt="" coords="513,63,748,89"/>
+<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="782,79,748,79,748,73,782,73"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a589ca44aee5e7aab4b6ead3f635adda5" title="Wire the floating&#45;panel behaviors shared by every overlay panel." alt="" coords="261,88,465,128"/>
+<area shape="poly" id="edge9_Node000001_Node000004" title=" " alt="" coords="827,94,748,104,600,112,465,113,465,107,600,107,748,99,826,88"/>
+<area shape="poly" id="edge4_Node000003_Node000004" title=" " alt="" coords="511,93,466,98,465,93,511,88"/>
+<area shape="poly" id="edge5_Node000004_Node000002" title=" " alt="" coords="290,86,213,60,175,48,177,43,214,55,292,81"/>
+<area shape="rect" id="Node000005" href="$db/d60/classAestraContent.html#a82a35ff5bbf8d6f1445e1016d19679c6" title="Create the History and Takes overlays." alt="" coords="6,69,213,109"/>
+<area shape="poly" id="edge6_Node000004_Node000005" title=" " alt="" coords="247,102,213,100,213,94,248,97"/>
+<area shape="rect" id="Node000006" href="$db/d60/classAestraContent.html#a59842dc639e11b43359a064651907ae6" title="Create the mixer overlay and the routing&#45;map full panel." alt="" coords="12,133,207,173"/>
+<area shape="poly" id="edge7_Node000004_Node000006" title=" " alt="" coords="248,131,207,139,207,133,247,126"/>
+<area shape="rect" id="Node000007" href="$db/d60/classAestraContent.html#af64a8d147bdef97ae8aa8a7e48dc6bf8" title="Create the piano&#45;roll overlay and musical&#45;typing wiring." alt="" coords="12,197,207,237"/>
+<area shape="poly" id="edge8_Node000004_Node000007" title=" " alt="" coords="317,137,214,188,182,200,180,195,212,183,314,132"/>
+</map>

@@ -1,0 +1,19 @@
+<map id="Aestra::Audio::StretchTargetList" name="Aestra::Audio::StretchTargetList">
+<area shape="rect" id="Node000001" title=" " alt="" coords="213,328,439,353"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="238,211,414,251"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="329,264,329,327,323,327,323,264"/>
+<area shape="rect" id="Node000003" href="$d9/db9/structAestra_1_1Audio_1_1StretchTarget.html" title=" " alt="" coords="130,108,333,133"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="253,142,311,209,307,212,249,146"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="5,5,44,31"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="50,38,79,61,114,82,147,95,180,105,178,110,145,100,111,86,76,65,46,42"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="69,5,135,31"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="129,37,218,106,215,110,126,41"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="160,5,303,31"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="234,45,234,108,229,108,229,45"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="327,5,378,31"/>
+<area shape="poly" id="edge6_Node000003_Node000007" title=" " alt="" coords="330,41,247,110,243,106,327,37"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="369,108,499,133"/>
+<area shape="poly" id="edge7_Node000002_Node000008" title=" " alt="" coords="414,145,347,212,343,208,411,141"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="439,5,477,31"/>
+<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="455,45,439,109,434,107,449,43"/>
+</map>

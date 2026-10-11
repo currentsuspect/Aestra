@@ -1,12 +1,23 @@
 var searchData=
 [
-  ['kdoubleclickms_0',['kDoubleClickMs',['../db/d6c/classAestraUI_1_1NUIDoubleClickTracker.html#ae7aa9bc8a5f89486e7c548db1fd41d46',1,'AestraUI::NUIDoubleClickTracker']]],
-  ['kmaxtrackedplugins_1',['kMaxTrackedPlugins',['../de/dd7/classAestra_1_1Audio_1_1EngineSupervisor.html#a04948c64a7bde624639ad2e1117af82e',1,'Aestra::Audio::EngineSupervisor']]],
-  ['kpcm16lsb_2',['kPcm16Lsb',['../d0/d8a/AudioExportQuantization_8h.html#a6e8e9da8978c7a9da8bc95c0e9127bde',1,'Aestra::Audio::ExportQuantization']]],
-  ['kpcm16scale_3',['kPcm16Scale',['../d0/d8a/AudioExportQuantization_8h.html#abbe341056064bac2507375fa22cbd167',1,'Aestra::Audio::ExportQuantization']]],
-  ['kpcm24lsb_4',['kPcm24Lsb',['../d0/d8a/AudioExportQuantization_8h.html#aec13df6986cd4f10e89a031f5848bc65',1,'Aestra::Audio::ExportQuantization']]],
-  ['kpcm24scale_5',['kPcm24Scale',['../d0/d8a/AudioExportQuantization_8h.html#a6e30354c1b2dd230ca42b810c424d7f9',1,'Aestra::Audio::ExportQuantization']]],
-  ['ksegmentcount_6',['kSegmentCount',['../d3/d28/WorkspaceFocus_8h.html#acf971ab5aff3e9604fcbd859b09b7432',1,'WorkspaceFocusModel']]],
-  ['kunknowntransportframe_7',['kUnknownTransportFrame',['../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a04ccb2575f2b4a43b9e55286a38ab04c',1,'Aestra::Audio::TrackManager']]],
-  ['kunset_8',['kUnset',['../d3/d4d/structAestra_1_1AudioSettings.html#aa3e817a8c30d44b71082fe90088528d1',1,'Aestra::AudioSettings']]]
+  ['kcurrentschemaversion_0',['kCurrentSchemaVersion',['../da/d22/structAestra_1_1UISurfaceStore.html#ac05f69ba18761498821a7120f699f03a',1,'Aestra::UISurfaceStore']]],
+  ['kdoubleclickms_1',['kDoubleClickMs',['../db/d6c/classAestraUI_1_1NUIDoubleClickTracker.html#ae7aa9bc8a5f89486e7c548db1fd41d46',1,'AestraUI::NUIDoubleClickTracker']]],
+  ['key_2',['key',['../d8/d86/structAestraUI_1_1BrowserLibrary_1_1SearchQuery.html#abc33828cc36cb7c92772e58c12d9714c',1,'AestraUI::BrowserLibrary::SearchQuery']]],
+  ['kinitialslots_3',['kInitialSlots',['../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a5b6bc7108e6b28dccbdad2ece425470a',1,'Aestra::Audio::EffectChain']]],
+  ['kkeyreleaseseconds_4',['kKeyReleaseSeconds',['../d0/d7a/classAestraUI_1_1PianoRollKeyLane.html#a0ddc0edd776fbc44a3533d00fd8acc88',1,'AestraUI::PianoRollKeyLane']]],
+  ['kknobstart_5',['kKnobStart',['../d8/d10/namespaceAestraUI_1_1EditorKit.html#a0992626b406c595ed2940b132fad6475',1,'AestraUI::EditorKit']]],
+  ['kmaxslots_6',['kMaxSlots',['../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#afe765cafd37e0deb123dae8cb16b0164',1,'Aestra::Audio::EffectChain']]],
+  ['kmaxspecparams_7',['kMaxSpecParams',['../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#aa2820d6207fdfdb01df1509ee7e4292c',1,'Aestra::Audio::InternalPluginBase']]],
+  ['kmaxtrackedplugins_8',['kMaxTrackedPlugins',['../de/dd7/classAestra_1_1Audio_1_1EngineSupervisor.html#a04948c64a7bde624639ad2e1117af82e',1,'Aestra::Audio::EngineSupervisor']]],
+  ['knoslot_9',['kNoSlot',['../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#ac8ddb7cc179df9aef8ecc3049bfd61b7',1,'Aestra::Audio::EffectChain']]],
+  ['kpcm16lsb_10',['kPcm16Lsb',['../d0/d8a/AudioExportQuantization_8h.html#a6e8e9da8978c7a9da8bc95c0e9127bde',1,'Aestra::Audio::ExportQuantization']]],
+  ['kpcm16scale_11',['kPcm16Scale',['../d0/d8a/AudioExportQuantization_8h.html#abbe341056064bac2507375fa22cbd167',1,'Aestra::Audio::ExportQuantization']]],
+  ['kpcm24lsb_12',['kPcm24Lsb',['../d0/d8a/AudioExportQuantization_8h.html#aec13df6986cd4f10e89a031f5848bc65',1,'Aestra::Audio::ExportQuantization']]],
+  ['kpcm24scale_13',['kPcm24Scale',['../d0/d8a/AudioExportQuantization_8h.html#a6e30354c1b2dd230ca42b810c424d7f9',1,'Aestra::Audio::ExportQuantization']]],
+  ['kplayreleaseseconds_14',['kPlayReleaseSeconds',['../d0/d7a/classAestraUI_1_1PianoRollKeyLane.html#ace1a44ecd786e001f542740069fb6165',1,'AestraUI::PianoRollKeyLane']]],
+  ['ksegmentcount_15',['kSegmentCount',['../d3/d28/WorkspaceFocus_8h.html#acf971ab5aff3e9604fcbd859b09b7432',1,'WorkspaceFocusModel']]],
+  ['kstateversion_16',['kStateVersion',['../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a1a00f70bea1bca78259f9c3ca2630a64',1,'Aestra::Audio::InternalPluginBase']]],
+  ['kstateversionv1_17',['kStateVersionV1',['../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a3a492bb3d952613b84c996fc6235d467',1,'Aestra::Audio::InternalPluginBase']]],
+  ['kunknowntransportframe_18',['kUnknownTransportFrame',['../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a04ccb2575f2b4a43b9e55286a38ab04c',1,'Aestra::Audio::TrackManager']]],
+  ['kunset_19',['kUnset',['../d3/d4d/structAestra_1_1AudioSettings.html#aa3e817a8c30d44b71082fe90088528d1',1,'Aestra::AudioSettings']]]
 ];

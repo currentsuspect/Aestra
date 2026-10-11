@@ -1,7 +1,9 @@
 <map id="AestraContent::loadSampleIntoSelectedTrack" name="AestraContent::loadSampleIntoSelectedTrack">
-<area shape="rect" id="Node000001" title="Load a sample into the currently selected track." alt="" coords="5,37,205,77"/>
-<area shape="rect" id="Node000002" href="$d7/d56/structAestra_1_1Audio_1_1ClipEdits.html#a75714600a82dab3bed3d9d497cc6ec89" title="Defaults for a newly created audio clip." alt="" coords="261,5,436,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="205,42,248,36,248,41,206,47"/>
-<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#a148523f2593cf55bbf1087010ba6bcc1" title="Stop the active file&#45;browser preview." alt="" coords="253,69,444,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="206,68,240,72,239,78,205,73"/>
+<area shape="rect" id="Node000001" title="Load a sample into the currently selected track." alt="" coords="5,35,205,75"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#aef3e3a8bb8bba476bd30cd517b6e25b1" title="Show a transient status pill (bottom&#45;center overlay)." alt="" coords="253,13,444,38"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="205,40,239,36,240,41,206,45"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a148523f2593cf55bbf1087010ba6bcc1" title="Stop the active file&#45;browser preview." alt="" coords="253,63,444,103"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="206,64,240,68,239,73,205,69"/>
+<area shape="rect" id="Node000003" href="$db/d1a/classAestraUI_1_1NUIComponent.html#a8ff75e00805b13ff9a6babd21f6cc556" title="Window&#45;absolute (V8&#45;X2b Window space): components render and hit&#45;test at bounds_ as&#45;is." alt="" coords="492,5,677,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="444,23,478,23,478,28,444,28"/>
 </map>

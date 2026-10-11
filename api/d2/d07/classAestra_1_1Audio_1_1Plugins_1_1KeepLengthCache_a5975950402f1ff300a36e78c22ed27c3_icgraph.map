@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::Plugins::KeepLengthCache::request" name="Aestra::Audio::Plugins::KeepLengthCache::request">
+<area shape="rect" id="Node000001" title="Ask the render service for semitones if nobody has yet. Never blocks." alt="" coords="527,13,729,53"/>
+<area shape="rect" id="Node000002" href="$d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#a824ac0b4df9f9a4d98b606705bfb22eb" title="Queue renders for these semitone offsets (0 and out&#45;of&#45;range offsets are ignored)." alt="" coords="267,13,479,53"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="513,35,479,35,479,30,513,30"/>
+<area shape="rect" id="Node000003" href="$d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#aef48ba1b9be6c21bab0e92f29541c661" title="Wait until every listed offset is ready or unsupported. False on timeout." alt="" coords="5,5,219,60"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="253,35,219,35,219,30,253,30"/>
+</map>

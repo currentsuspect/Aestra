@@ -87,18 +87,49 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span> </div>
 <div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="preprocessor">#include &quot;DSP/ReverbSIMD.h&quot;</span></div>
 <div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span> </div>
-<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="keyword">namespace </span>Aestra {</div>
-<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="keyword">namespace </span>Audio {</div>
-<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="keyword">namespace </span>DSP {</div>
-<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="keyword">namespace </span>ReverbSIMD {</div>
-<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span> </div>
-<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="keywordtype">bool</span> g_forceScalarFallback = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="keywordtype">bool</span> g_forceLinearInterpolation = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span> </div>
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span>} <span class="comment">// namespace ReverbSIMD</span></div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span>} <span class="comment">// namespace DSP</span></div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span>} <span class="comment">// namespace Audio</span></div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#include &lt;mutex&gt;</span></div>
+<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span> </div>
+<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="keyword">namespace </span>Aestra {</div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="keyword">namespace </span>Audio {</div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="keyword">namespace </span>DSP {</div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="keyword">namespace </span>ReverbSIMD {</div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span> </div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="keywordtype">bool</span> g_forceScalarFallback = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="keywordtype">bool</span> g_forceLinearInterpolation = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span> </div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="keywordtype">bool</span> g_useAVX2 = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="keywordtype">bool</span> g_useSSE41 = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span> </div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="keyword">namespace </span>{</div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="comment">// One-time gate. Without it these writes are a data race whenever a second</span></div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span><span class="comment">// instance is prepared while a first is already processing: the write is</span></div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span><span class="comment">// concurrent with processFDNSample()&#39;s read, and writing the same value is</span></div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="comment">// still a race in C++. Making the assignment happen exactly once, ever, means</span></div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span><span class="comment">// the flags are effectively immutable after first use and the audio thread can</span></div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span><span class="comment">// keep reading them unsynchronized.</span></div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>std::once_flag g_resolveOnce;</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>} <span class="comment">// namespace</span></div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span> </div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span><span class="keywordtype">void</span> resolveSimdCapabilities() noexcept {</div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>    std::call_once(g_resolveOnce, []() <span class="keyword">noexcept</span> {</div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span><span class="preprocessor">#ifdef AESTRA_REVERB_HAS_AVX2</span></div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>        <span class="keyword">const</span> <span class="keyword">auto</span>&amp; cpu = Aestra::Core::CPUDetection::get();</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>        g_useAVX2 = cpu.hasAVX2() &amp;&amp; cpu.hasFMA();</div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span><span class="preprocessor">#else</span></div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>        g_useAVX2 = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span><span class="preprocessor">#ifdef AESTRA_REVERB_HAS_SSE</span></div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>        g_useSSE41 = Aestra::Core::CPUDetection::get().hasSSE41();</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span><span class="preprocessor">#else</span></div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>        g_useSSE41 = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    });</div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>}</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span> </div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>} <span class="comment">// namespace ReverbSIMD</span></div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>} <span class="comment">// namespace DSP</span></div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>} <span class="comment">// namespace Audio</span></div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>} <span class="comment">// namespace Aestra</span></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

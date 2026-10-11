@@ -12,9 +12,9 @@
 <g id="Node000001" class="node">
 <title>Node1</title>
 <g id="a_Node000001"><a xlink:title="Get the primary output destination identifier.">
-<polygon fill="#999999" stroke="#666666" points="781,-101 626,-101 626,-71 781,-71 781,-101"/>
-<text text-anchor="start" x="634" y="-89" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::MixerChannel</text>
-<text text-anchor="middle" x="703.5" y="-78" font-family="Helvetica,sans-Serif" font-size="10.00">::getMainOutputId</text>
+<polygon fill="#999999" stroke="#666666" points="781,-80 626,-80 626,-50 781,-50 781,-80"/>
+<text text-anchor="start" x="634" y="-68" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::MixerChannel</text>
+<text text-anchor="middle" x="703.5" y="-57" font-family="Helvetica,sans-Serif" font-size="10.00">::getMainOutputId</text>
 </a>
 </g>
 </g>
@@ -32,8 +32,8 @@
 <g id="edge1_Node000001_Node000002" class="edge">
 <title>Node1&#45;&gt;Node2</title>
 <g id="a_edge1_Node000001_Node000002"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M615.93,-76.41C607.32,-75.45 598.62,-74.49 590.12,-73.55"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="615.64,-79.9 625.97,-77.52 616.42,-72.94 615.64,-79.9"/>
+<path fill="none" stroke="#63b8ff" d="M615.93,-65C607.32,-65 598.62,-65 590.12,-65"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="615.97,-68.5 625.97,-65 615.97,-61.5 615.97,-68.5"/>
 </a>
 </g>
 </g>
@@ -48,11 +48,30 @@
 </g>
 </g>
 <!-- Node1&#45;&gt;Node3 -->
-<g id="edge8_Node000001_Node000003" class="edge">
+<g id="edge9_Node000001_Node000003" class="edge">
 <title>Node1&#45;&gt;Node3</title>
-<g id="a_edge8_Node000001_Node000003"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M615.36,-91.53C547.52,-95.83 454.13,-101.76 388.25,-105.94"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="615.84,-95.01 625.6,-90.88 615.4,-88.02 615.84,-95.01"/>
+<g id="a_edge9_Node000001_Node000003"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M629.25,-82.09C616.23,-84.71 602.76,-87.15 590,-89 522.32,-98.82 444.82,-104.47 388.29,-107.58"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="630.02,-85.5 639.1,-80.06 628.6,-78.65 630.02,-85.5"/>
+</a>
+</g>
+</g>
+<!-- Node9 -->
+<g id="Node000009" class="node">
+<title>Node9</title>
+<g id="a_Node000009"><a xlink:href="../../d1/dfb/classAestra_1_1Audio_1_1RoutingModel.html#a13b26edb012330fa689e2354da9a7802" target="_top" xlink:title="Snapshot the manager&#39;s channels. Master is included as a target only.">
+<polygon fill="white" stroke="#666666" points="589.5,-32 434.5,-32 434.5,-2 589.5,-2 589.5,-32"/>
+<text text-anchor="start" x="442.5" y="-20" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::RoutingModel</text>
+<text text-anchor="middle" x="512" y="-9" font-family="Helvetica,sans-Serif" font-size="10.00">::capture</text>
+</a>
+</g>
+</g>
+<!-- Node1&#45;&gt;Node9 -->
+<g id="edge8_Node000001_Node000009" class="edge">
+<title>Node1&#45;&gt;Node9</title>
+<g id="a_edge8_Node000001_Node000009"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M633.1,-47.42C613.12,-42.36 591.53,-36.89 572.23,-32"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="632.51,-50.88 643.06,-49.94 634.23,-44.1 632.51,-50.88"/>
 </a>
 </g>
 </g>

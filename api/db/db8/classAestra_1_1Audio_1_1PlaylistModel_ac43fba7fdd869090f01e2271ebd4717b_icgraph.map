@@ -1,17 +1,34 @@
 <map id="Aestra::Audio::PlaylistModel::getLane" name="Aestra::Audio::PlaylistModel::getLane">
-<area shape="rect" id="Node000001" title="Get a mutable lane by identifier." alt="" coords="517,165,723,205"/>
-<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a262ce40712294e22aa79f9d9119c2f6d" title="Attach an existing lane to a Track (lane created after the track, e.g." alt="" coords="261,5,469,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="589,157,536,107,503,82,468,60,442,48,444,43,471,55,506,77,539,103,593,153"/>
-<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a5aa4bddbf54e346a7e26910eabc5078a" title="Create a Track owning the given lane (FD&#45;14)." alt="" coords="261,69,469,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="561,162,468,124,434,112,435,107,470,119,563,157"/>
-<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a50d14f8477298a3c5d0bbdd3ac8fe26f" title="Detach a lane from its Track (undo of attachLaneToTrack)." alt="" coords="261,133,469,173"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="504,173,469,169,470,164,504,168"/>
-<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a6792df40ce4390062fb4838be36167ec" title="Resolve the Track owning a lane, or nullptr when unowned." alt="" coords="261,197,469,237"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="504,203,470,207,469,202,504,197"/>
-<area shape="rect" id="Node000007" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a6dc29e3bc28436dab4977f10b9161a77" title="Remove a Track entirely." alt="" coords="261,261,469,301"/>
-<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="563,214,470,252,435,264,434,259,468,247,561,209"/>
-<area shape="rect" id="Node000008" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a4f6d7d5b8c6517bf0cc4d5460baf8376" title="Restore a Track from serialized state (project load)." alt="" coords="261,325,469,365"/>
-<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="593,217,539,267,506,293,471,316,444,328,442,323,468,311,503,289,536,263,589,214"/>
-<area shape="rect" id="Node000006" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a6871faaa658f9f26cd3ad5745173df5d" title="Stable routing channel for a lane&#39;s automation defaults: lane → owning Track → track channelId (FD&#45;14..." alt="" coords="5,197,213,237"/>
-<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="248,220,213,220,213,215,248,215"/>
+<area shape="rect" id="Node000001" title="Get a mutable lane by identifier." alt="" coords="1303,229,1508,269"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a262ce40712294e22aa79f9d9119c2f6d" title="Attach an existing lane to a Track (lane created after the track, e.g." alt="" coords="1047,5,1255,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="1385,218,1363,181,1333,139,1296,96,1253,60,1232,48,1235,43,1256,55,1300,92,1337,135,1367,179,1389,216"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a5aa4bddbf54e346a7e26910eabc5078a" title="Create a Track owning the given lane (FD&#45;14)." alt="" coords="1047,69,1255,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="1374,221,1321,171,1288,146,1253,124,1227,112,1230,107,1256,119,1291,141,1324,167,1378,217"/>
+<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a50d14f8477298a3c5d0bbdd3ac8fe26f" title="Detach a lane from its Track (undo of attachLaneToTrack)." alt="" coords="1047,133,1255,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="1347,226,1254,188,1219,176,1221,171,1256,183,1349,221"/>
+<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a93242cb25f3e5b28316741a5efac881f" title="Drain finished anti&#45;alias prefilter results into their sources, clear stale filtered variants,..." alt="" coords="1047,197,1255,237"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="1289,237,1255,233,1255,228,1290,232"/>
+<area shape="rect" id="Node000012" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a6792df40ce4390062fb4838be36167ec" title="Resolve the Track owning a lane, or nullptr when unowned." alt="" coords="1047,261,1255,301"/>
+<area shape="poly" id="edge12_Node000001_Node000012" title=" " alt="" coords="1290,267,1255,271,1255,266,1289,261"/>
+<area shape="rect" id="Node000014" href="$dc/de6/classAestra_1_1Audio_1_1AutomationClipLayer.html#a5fe480387a1a617726e94769d8ba3d5b" title="True when the layer took the event. editedCurve is set to the curve the user touched,..." alt="" coords="1054,325,1247,365"/>
+<area shape="poly" id="edge14_Node000001_Node000014" title=" " alt="" coords="1349,278,1256,316,1221,328,1219,323,1254,311,1347,273"/>
+<area shape="rect" id="Node000015" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a6dc29e3bc28436dab4977f10b9161a77" title="Remove a Track entirely." alt="" coords="1047,389,1255,429"/>
+<area shape="poly" id="edge15_Node000001_Node000015" title=" " alt="" coords="1378,281,1324,331,1291,357,1256,380,1230,392,1227,387,1253,375,1288,353,1321,327,1374,278"/>
+<area shape="rect" id="Node000016" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a4f6d7d5b8c6517bf0cc4d5460baf8376" title="Restore a Track from serialized state (project load)." alt="" coords="1047,453,1255,493"/>
+<area shape="poly" id="edge16_Node000001_Node000016" title=" " alt="" coords="1389,283,1367,320,1337,363,1300,406,1256,444,1235,456,1232,451,1253,439,1296,403,1333,360,1363,317,1385,280"/>
+<area shape="rect" id="Node000006" href="$d0/d3f/classAestra_1_1Audio_1_1AudioGraphBuilder.html#a0e05724d04fe5147f5aa306914aa6fbf" title="Build a render graph from the current TrackManager state." alt="" coords="767,133,999,173"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="1052,197,966,176,968,171,1054,191"/>
+<area shape="rect" id="Node000011" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a053a4811d93fb0e055bb0e745126e404" title="Block the calling NON&#45;AUDIO thread until all queued prefilter jobs are done, then apply them." alt="" coords="779,197,987,237"/>
+<area shape="poly" id="edge11_Node000005_Node000011" title=" " alt="" coords="1033,220,987,220,987,215,1033,215"/>
+<area shape="rect" id="Node000007" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a9312fb6a7145e21d39409a19c0203284" title="Render the project to an audio file using the full live engine path (processBlock)." alt="" coords="509,133,719,173"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="753,156,719,156,719,151,753,151"/>
+<area shape="rect" id="Node000008" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a7db2feb78f7e58219497974d28a5225f" title="Convenience helper matching AudioEngine::bounceRangeToWav signature." alt="" coords="252,101,461,141"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="495,141,461,137,462,132,496,136"/>
+<area shape="rect" id="Node000010" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a1400dd1c5eded988d4e0c4bc78e592e2" title="Render the same range render() would, into memory (V8&#45;W4)." alt="" coords="252,165,461,205"/>
+<area shape="poly" id="edge10_Node000007_Node000010" title=" " alt="" coords="496,171,462,175,461,170,495,165"/>
+<area shape="rect" id="Node000009" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file." alt="" coords="5,101,204,141"/>
+<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="238,133,204,133,204,127,238,128"/>
+<area shape="poly" id="edge9_Node000009_Node000008" title=" " alt="" coords="217,110,252,110,252,115,217,115"/>
+<area shape="rect" id="Node000013" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a6871faaa658f9f26cd3ad5745173df5d" title="Stable routing channel for a lane&#39;s automation defaults: lane → owning Track → track channelId (FD&#45;14..." alt="" coords="779,261,987,301"/>
+<area shape="poly" id="edge13_Node000012_Node000013" title=" " alt="" coords="1033,284,987,284,987,279,1033,279"/>
 </map>

@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::AutomationRegions::split" name="Aestra::Audio::AutomationRegions::split">
+<area shape="rect" id="Node000001" title="Cut region id in two at the segment holding beat. Returns the new (right&#45;hand) id,..." alt="" coords="5,29,199,69"/>
+<area shape="poly" id="edge3_Node000001_Node000001" title=" " alt="" coords="57,30,55,20,62,10,78,5,102,3,130,6,145,13,143,18,128,11,102,8,79,10,65,15,60,21,62,28"/>
+<area shape="rect" id="Node000002" href="$d3/dbe/AutomationRegions_8h.html#ac9b13f65ec62dcf69d8c5670c899e7dc" title="Stores the implicit region (all points) if the curve has points and no regions. True if it did." alt="" coords="247,29,440,69"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="199,47,233,47,233,52,199,52"/>
+<area shape="poly" id="edge2_Node000002_Node000002" title=" " alt="" coords="299,30,296,20,303,10,319,5,343,3,371,6,386,13,384,18,370,11,343,8,320,10,306,15,301,21,304,28"/>
+</map>

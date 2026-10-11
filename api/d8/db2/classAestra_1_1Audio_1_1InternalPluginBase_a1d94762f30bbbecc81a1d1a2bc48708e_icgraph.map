@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::InternalPluginBase::setParameter" name="Aestra::Audio::InternalPluginBase::setParameter">
+<area shape="rect" id="Node000001" title="A non&#45;finite value is rejected outright, leaving the previous value in place." alt="" coords="260,37,467,77"/>
+<area shape="rect" id="Node000002" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a6d48aef4b6d6e8b0b45c212ed6d87485" title="Hand the plugin the automated value for this block." alt="" coords="5,5,212,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="246,45,212,41,213,36,247,40"/>
+<area shape="rect" id="Node000003" href="$db/d0e/classAestra_1_1Audio_1_1Plugins_1_1AestraEQ.html#ad1843accd94e7e6616ceb8e0c402236b" title="Load plugin state from binary data." alt="" coords="27,69,191,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="247,75,191,82,191,76,246,69"/>
+</map>

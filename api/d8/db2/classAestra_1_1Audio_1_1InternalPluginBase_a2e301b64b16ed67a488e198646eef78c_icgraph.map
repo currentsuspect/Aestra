@@ -1,0 +1,27 @@
+<map id="Aestra::Audio::InternalPluginBase::seedDefaults" name="Aestra::Audio::InternalPluginBase::seedDefaults">
+<area shape="rect" id="Node000001" title="Writes the table&#39;s defaults into storage." alt="" coords="503,325,709,365"/>
+<area shape="rect" id="Node000002" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#ad944cdc9be0469fcae64d98617c63145" title="Seeds defaults on the first initialize() of a fresh instance only." alt="" coords="248,325,455,365"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="489,348,455,348,455,343,489,343"/>
+<area shape="rect" id="Node000003" href="$db/d0e/classAestra_1_1Audio_1_1Plugins_1_1AestraEQ.html#a310873c9140428d90be6469635a2cada" title="Initialize the plugin for processing." alt="" coords="21,5,185,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="339,313,321,258,293,190,252,120,227,88,198,59,181,48,184,43,202,55,231,84,257,117,298,187,326,256,344,311"/>
+<area shape="rect" id="Node000004" href="$d7/db4/classAestra_1_1Audio_1_1Plugins_1_1AestraComp.html#af421647d28cc94b7332fa3dbe5689499" title="Initialize the plugin for processing." alt="" coords="15,69,190,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="334,313,313,270,283,219,245,168,198,123,179,112,182,107,202,119,249,164,287,216,318,268,339,311"/>
+<area shape="rect" id="Node000005" href="$dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html#a9f686e420c56ccd25d958091ea1518b0" title="Initialize the plugin for processing." alt="" coords="16,133,189,173"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="326,316,272,251,237,217,199,188,176,176,178,171,201,183,241,213,276,247,330,312"/>
+<area shape="rect" id="Node000006" href="$d3/d79/classAestra_1_1Audio_1_1Plugins_1_1AestraDrift.html#ac4eb95f4d8d54e12c2ab7b8ed2871bd0" title="Initialize the plugin for processing." alt="" coords="21,197,185,237"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="311,319,259,285,199,252,170,240,172,235,201,247,261,280,313,315"/>
+<area shape="rect" id="Node000007" href="$d1/d96/classAestra_1_1Audio_1_1Plugins_1_1AestraFilter.html#a08eb4b3a8b4b25e4341f8a4514e3a2ab" title="Initialize the plugin for processing." alt="" coords="18,261,187,301"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="259,324,180,304,182,299,261,319"/>
+<area shape="rect" id="Node000008" href="$df/d51/classAestra_1_1Audio_1_1Plugins_1_1AestraLFO.html#a2f7a9e5e0b094e39e13d27126a34260e" title="Initialize the plugin for processing." alt="" coords="21,325,185,365"/>
+<area shape="poly" id="edge7_Node000002_Node000008" title=" " alt="" coords="234,348,185,348,185,343,234,343"/>
+<area shape="rect" id="Node000009" href="$d0/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraLimit.html#a0ab64c6fbfcfc91a0d8720363a4d22fd" title="Initialize the plugin for processing." alt="" coords="18,389,187,429"/>
+<area shape="poly" id="edge8_Node000002_Node000009" title=" " alt="" coords="261,371,182,392,180,387,259,366"/>
+<area shape="rect" id="Node000010" href="$d7/d6c/classAestra_1_1Audio_1_1Plugins_1_1AestraOTT.html#a90fac0efc2875b638cc58948876242bb" title="Initialize the plugin for processing." alt="" coords="21,453,185,493"/>
+<area shape="poly" id="edge9_Node000002_Node000010" title=" " alt="" coords="313,376,261,410,201,444,172,456,170,451,199,439,259,406,311,371"/>
+<area shape="rect" id="Node000011" href="$d0/da7/classAestra_1_1Audio_1_1Plugins_1_1AestraSat.html#ac2136c0961a098ab9bdb5b6822f34f4b" title="Initialize the plugin for processing." alt="" coords="21,517,185,557"/>
+<area shape="poly" id="edge10_Node000002_Node000011" title=" " alt="" coords="330,379,276,443,241,478,201,508,178,520,176,515,199,503,237,474,272,440,326,375"/>
+<area shape="rect" id="Node000012" href="$d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a36e0160b59824e6d54960130802a1992" title="Initialize the plugin for processing." alt="" coords="5,581,200,621"/>
+<area shape="poly" id="edge11_Node000002_Node000012" title=" " alt="" coords="339,380,318,423,287,474,249,526,202,571,182,584,179,579,198,567,245,523,283,471,313,420,334,377"/>
+<area shape="rect" id="Node000013" href="$d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#aebc8833dfbce43605e71b0fed4056c17" title="Initialize the plugin for processing." alt="" coords="20,645,185,685"/>
+<area shape="poly" id="edge12_Node000002_Node000013" title=" " alt="" coords="344,379,326,434,298,503,257,574,231,607,202,635,184,647,181,643,198,631,227,603,252,571,293,501,321,433,339,378"/>
+</map>

@@ -1,5 +1,7 @@
 <map id="Aestra::Audio::Plugins::AestraTransient::initialize" name="Aestra::Audio::Plugins::AestraTransient::initialize">
 <area shape="rect" id="Node000001" title="Initialize the plugin for processing." alt="" coords="5,5,200,45"/>
-<area shape="rect" id="Node000002" href="$d9/dde/classAestra_1_1Audio_1_1Plugins_1_1AestraTransient.html#a3e893cadc4eb41a567b97dc2529a16e4" title="Get all parameter descriptors." alt="" coords="248,5,483,45"/>
+<area shape="rect" id="Node000002" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#ad944cdc9be0469fcae64d98617c63145" title="Seeds defaults on the first initialize() of a fresh instance only." alt="" coords="248,5,455,45"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="200,23,234,23,234,28,200,28"/>
+<area shape="rect" id="Node000003" href="$d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a2e301b64b16ed67a488e198646eef78c" title="Writes the table&#39;s defaults into storage." alt="" coords="503,5,709,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="455,23,489,23,489,28,455,28"/>
 </map>

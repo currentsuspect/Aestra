@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::ArsenalPanel::onMouseEvent" name="Aestra::Audio::ArsenalPanel::onMouseEvent">
+<area shape="rect" id="Node000001" title="Handle mouse input routed to the Arsenal panel." alt="" coords="5,5,207,45"/>
+<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html#a8ff75e00805b13ff9a6babd21f6cc556" title="Window&#45;absolute (V8&#45;X2b Window space): components render and hit&#45;test at bounds_ as&#45;is." alt="" coords="255,5,440,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="207,23,241,23,241,28,207,28"/>
+</map>

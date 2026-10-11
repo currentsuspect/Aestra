@@ -1,0 +1,12 @@
+<map id="Aestra::Audio::TrackManager::prewarmSamplerKeepLength" name="Aestra::Audio::TrackManager::prewarmSamplerKeepLength">
+<area shape="rect" id="Node000001" title="Queue keep&#45;length renders for every note a keep&#45;length sampler unit can play." alt="" coords="767,37,985,77"/>
+<area shape="rect" id="Node000002" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a9312fb6a7145e21d39409a19c0203284" title="Render the project to an audio file using the full live engine path (processBlock)." alt="" coords="509,37,719,77"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="753,60,719,60,719,55,753,55"/>
+<area shape="rect" id="Node000003" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a7db2feb78f7e58219497974d28a5225f" title="Convenience helper matching AudioEngine::bounceRangeToWav signature." alt="" coords="252,5,461,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="495,45,461,41,462,36,496,40"/>
+<area shape="rect" id="Node000005" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a1400dd1c5eded988d4e0c4bc78e592e2" title="Render the same range render() would, into memory (V8&#45;W4)." alt="" coords="252,69,461,109"/>
+<area shape="poly" id="edge5_Node000002_Node000005" title=" " alt="" coords="496,75,462,79,461,74,495,69"/>
+<area shape="rect" id="Node000004" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file." alt="" coords="5,5,204,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="238,37,204,37,204,31,238,32"/>
+<area shape="poly" id="edge4_Node000004_Node000003" title=" " alt="" coords="217,14,252,14,252,19,217,19"/>
+</map>

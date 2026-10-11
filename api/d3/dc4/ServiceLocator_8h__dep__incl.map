@@ -1,11 +1,18 @@
 <map id="Source/App/ServiceLocator.h" name="Source/App/ServiceLocator.h">
-<area shape="rect" id="Node000001" title="B&#45;003: Service locator for global services." alt="" coords="353,5,560,31"/>
+<area shape="rect" id="Node000001" title="B&#45;003: Service locator for global services." alt="" coords="517,5,724,31"/>
 <area shape="rect" id="Node000002" href="$db/d11/AestraApp_8cpp_source.html" title=" " alt="" coords="5,86,199,111"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="393,36,154,89,153,83,391,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="525,35,212,81,168,89,167,83,211,76,524,30"/>
 <area shape="rect" id="Node000003" href="$d5/d10/MixerViewModel_8cpp_source.html" title=" " alt="" coords="223,79,447,119"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="429,41,366,81,363,76,426,36"/>
-<area shape="rect" id="Node000004" href="$d6/dda/MixerPanel_8cpp_source.html" title=" " alt="" coords="472,86,687,111"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="488,36,563,84,560,88,485,40"/>
-<area shape="rect" id="Node000005" href="$da/d3c/ExportDialog_8cpp_source.html" title=" " alt="" coords="711,86,949,111"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="525,31,776,83,775,89,524,36"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="567,37,405,81,403,76,565,32"/>
+<area shape="rect" id="Node000004" href="$dd/de4/AestraContent_8cpp.html" title="Main content area for Aestra &#45; Implementation." alt="" coords="553,167,777,192"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="565,38,535,55,512,80,505,99,512,117,527,134,545,147,586,164,584,169,542,151,523,138,508,120,500,99,508,77,532,51,563,34"/>
+<area shape="rect" id="Node000005" href="$d3/d93/AestraContentBounce_8cpp_source.html" title=" " alt="" coords="522,79,719,119"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="623,44,623,79,618,79,618,44"/>
+<area shape="rect" id="Node000006" href="$df/d2e/UISurfaceStoreProviders_8h_source.html" title=" " alt="" coords="744,79,945,119"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="667,33,792,76,790,81,665,38"/>
+<area shape="rect" id="Node000007" href="$d6/dda/MixerPanel_8cpp_source.html" title=" " alt="" coords="969,86,1184,111"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="701,30,1011,83,1010,89,700,36"/>
+<area shape="rect" id="Node000008" href="$da/d3c/ExportDialog_8cpp_source.html" title=" " alt="" coords="1208,86,1447,111"/>
+<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="738,27,952,49,1197,76,1252,83,1251,89,1196,81,951,54,738,33"/>
+<area shape="poly" id="edge6_Node000006_Node000004" title=" " alt="" coords="790,127,692,169,690,164,788,122"/>
 </map>

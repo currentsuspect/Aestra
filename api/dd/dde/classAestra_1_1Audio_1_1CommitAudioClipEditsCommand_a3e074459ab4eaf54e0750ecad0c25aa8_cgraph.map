@@ -8,22 +8,27 @@
 <area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="143,291,204,238,244,209,287,183,301,176,304,181,289,188,247,213,208,242,146,295"/>
 <area shape="rect" id="Node000005" href="$da/df9/classAestra_1_1Audio_1_1ClipRenderService.html#ab2265a8632b5bcf3f9e5221b82ef71dd" title="Copy a frame range out of source into a fresh buffer." alt="" coords="298,197,486,237"/>
 <area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="172,291,287,247,310,239,312,244,289,252,174,296"/>
-<area shape="rect" id="Node000006" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a2615e7b498918ebcdbe90ed82f900670" title="Get BPM." alt="" coords="289,261,495,301"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="240,297,275,293,276,298,241,302"/>
-<area shape="rect" id="Node000007" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#af01fa49b38f12155c47b1917bad27ea4" title="Get the pattern manager." alt="" coords="288,325,496,365"/>
-<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="241,325,275,329,274,334,240,330"/>
-<area shape="rect" id="Node000008" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aacc633d4302bc413e6aead5df052520b" title="Get the playlist model." alt="" coords="288,389,496,429"/>
-<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="174,331,289,375,312,382,310,388,287,380,172,336"/>
-<area shape="rect" id="Node000009" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a9ff176b37e38e80db51e298f112c9fa3" title="Get the project sample rate." alt="" coords="289,453,495,493"/>
-<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="146,331,208,385,247,414,289,439,304,446,301,451,287,444,244,418,204,389,143,335"/>
-<area shape="rect" id="Node000010" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae2a894b9df65e65c63cc1b05f4b2e2d1" title="Get the source manager." alt="" coords="288,517,496,557"/>
-<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="138,332,162,369,196,415,239,462,290,503,299,509,297,514,286,508,236,466,192,418,157,372,133,335"/>
-<area shape="rect" id="Node000011" href="$da/df9/classAestra_1_1Audio_1_1ClipRenderService.html#adbc6b59ea80b9b1efca3eb534d66ef27" title="Resolve the audio a clip currently plays." alt="" coords="294,581,490,621"/>
-<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="134,332,154,380,187,444,232,510,259,541,290,567,297,572,294,577,286,571,256,544,228,513,182,446,149,383,129,334"/>
-<area shape="rect" id="Node000012" href="$d7/d56/structAestra_1_1Audio_1_1ClipEdits.html#a11adbc682b20b39cdbbdba80ac21e840" title="Combined varispeed factor (Speed x 2^(Pitch/12)), clamped to the render envelope." alt="" coords="567,517,741,557"/>
-<area shape="poly" id="edge11_Node000011_Node000012" title=" " alt="" coords="474,579,558,558,559,563,475,584"/>
-<area shape="rect" id="Node000013" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a" title="Get a pattern by ID (returns nullptr if not found)" alt="" coords="544,581,764,621"/>
-<area shape="poly" id="edge12_Node000011_Node000013" title=" " alt="" coords="490,599,530,599,530,604,490,604"/>
-<area shape="rect" id="Node000014" href="$d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a9df135788c4b7117579dc103b01d9f94" title="Get a source by ID." alt="" coords="545,645,763,685"/>
-<area shape="poly" id="edge13_Node000011_Node000014" title=" " alt="" coords="475,619,559,639,558,645,474,624"/>
+<area shape="rect" id="Node000008" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a2615e7b498918ebcdbe90ed82f900670" title="Get BPM." alt="" coords="289,261,495,301"/>
+<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="240,297,275,293,276,298,241,302"/>
+<area shape="rect" id="Node000009" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#af01fa49b38f12155c47b1917bad27ea4" title="Get the pattern manager." alt="" coords="288,325,496,365"/>
+<area shape="poly" id="edge9_Node000001_Node000009" title=" " alt="" coords="241,325,275,329,274,334,240,330"/>
+<area shape="rect" id="Node000010" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aacc633d4302bc413e6aead5df052520b" title="Get the playlist model." alt="" coords="288,389,496,429"/>
+<area shape="poly" id="edge10_Node000001_Node000010" title=" " alt="" coords="174,331,289,375,312,382,310,388,287,380,172,336"/>
+<area shape="rect" id="Node000011" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a9ff176b37e38e80db51e298f112c9fa3" title="Get the project sample rate." alt="" coords="289,453,495,493"/>
+<area shape="poly" id="edge11_Node000001_Node000011" title=" " alt="" coords="146,331,208,385,247,414,289,439,304,446,301,451,287,444,244,418,204,389,143,335"/>
+<area shape="rect" id="Node000012" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae2a894b9df65e65c63cc1b05f4b2e2d1" title="Get the source manager." alt="" coords="288,517,496,557"/>
+<area shape="poly" id="edge12_Node000001_Node000012" title=" " alt="" coords="138,332,162,369,196,415,239,462,290,503,299,509,297,514,286,508,236,466,192,418,157,372,133,335"/>
+<area shape="rect" id="Node000013" href="$da/df9/classAestra_1_1Audio_1_1ClipRenderService.html#adbc6b59ea80b9b1efca3eb534d66ef27" title="Resolve the audio a clip currently plays." alt="" coords="294,581,490,621"/>
+<area shape="poly" id="edge13_Node000001_Node000013" title=" " alt="" coords="134,332,154,380,187,444,232,510,259,541,290,567,297,572,294,577,286,571,256,544,228,513,182,446,149,383,129,334"/>
+<area shape="rect" id="Node000006" href="$d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#aa9e50e44f1a3704408300a571d2491cb" title="Copy count interleaved samples starting at firstSample as float." alt="" coords="557,169,751,209"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="486,205,543,198,544,204,487,210"/>
+<area shape="rect" id="Node000007" href="$d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html#af123515ee60574c3012d431a418a814e" title="Samples held (frames x channels), whichever storage holds them." alt="" coords="812,199,1005,239"/>
+<area shape="poly" id="edge7_Node000005_Node000007" title=" " alt="" coords="486,218,544,219,764,219,798,218,798,224,764,224,544,224,486,223"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="751,198,798,203,798,209,751,203"/>
+<area shape="rect" id="Node000014" href="$d7/d56/structAestra_1_1Audio_1_1ClipEdits.html#a11adbc682b20b39cdbbdba80ac21e840" title="Combined varispeed factor (Speed x 2^(Pitch/12)), clamped to the render envelope." alt="" coords="567,517,741,557"/>
+<area shape="poly" id="edge14_Node000013_Node000014" title=" " alt="" coords="474,579,558,558,559,563,475,584"/>
+<area shape="rect" id="Node000015" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a" title="Get a pattern by ID (returns nullptr if not found)" alt="" coords="544,581,764,621"/>
+<area shape="poly" id="edge15_Node000013_Node000015" title=" " alt="" coords="490,599,530,599,530,604,490,604"/>
+<area shape="rect" id="Node000016" href="$d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a9df135788c4b7117579dc103b01d9f94" title="Get a source by ID." alt="" coords="545,645,763,685"/>
+<area shape="poly" id="edge16_Node000013_Node000016" title=" " alt="" coords="475,619,559,639,558,645,474,624"/>
 </map>

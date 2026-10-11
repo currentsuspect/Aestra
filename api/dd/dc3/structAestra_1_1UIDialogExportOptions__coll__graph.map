@@ -1,0 +1,9 @@
+<map id="Aestra::UIDialogExportOptions" name="Aestra::UIDialogExportOptions">
+<area shape="rect" id="Node000001" title="The dialog.export record." alt="" coords="5,212,225,237"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="24,95,63,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="40,134,39,161,47,187,59,200,76,210,73,214,56,204,42,189,34,162,35,134"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="145,95,232,120"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="186,134,176,162,161,190,136,214,132,210,157,186,172,160,181,132"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="119,5,258,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="191,59,191,94,186,94,186,59"/>
+</map>

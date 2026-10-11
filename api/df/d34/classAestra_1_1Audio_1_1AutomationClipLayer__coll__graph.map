@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::AutomationClipLayer" name="Aestra::Audio::AutomationClipLayer">
+<area shape="rect" id="Node000001" title="The automation clips of one lane: drawn as headed bands, dragged by their grip to move,..." alt="" coords="5,93,199,133"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="77,5,127,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="105,44,105,93,99,93,99,44"/>
+</map>
