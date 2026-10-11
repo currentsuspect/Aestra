@@ -9,6 +9,7 @@
 #include "AudioRenderer.h"
 #include "AudioTelemetry.h"
 #include "ChannelSlotMap.h"
+#include "TrackOutputTap.h"
 #include "ContinuousParamBuffer.h"
 #include "DSP/DCBlocker.h"
 #include "DSP/TruePeakMeter.h"
@@ -234,6 +235,8 @@ public:
      */
     void setOfflineRenderActive(bool active) { m_offlineRenderActive.store(active, std::memory_order_relaxed); }
     bool isOfflineRenderActive() const { return m_offlineRenderActive.load(std::memory_order_relaxed); }
+    /** @brief V8-W5: the offline renderer arms this to read one channel's output before it reaches the master. */
+    TrackOutputTap& trackOutputTap() { return m_trackOutputTap; }
 
     /// V8-A5: how many times a Custom automation curve was skipped because its
     /// target plugin does not declare supportsRealtimeAutomation(). A non-zero
@@ -957,6 +960,7 @@ private:
     std::atomic<uint32_t> m_outputChannels{2};
     std::atomic<bool> m_transportPlaying{false};
     std::atomic<bool> m_offlineRenderActive{false};
+    TrackOutputTap m_trackOutputTap;
     std::atomic<uint64_t> m_automationUnsupportedSkips{0};
     // RT-side tracking of last known transport state (avoids race with UI atomic updates)
     bool m_rtLastTransportPlaying{false};

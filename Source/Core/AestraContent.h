@@ -570,6 +570,8 @@ private:
 
     void openSampleEditorForUnit(Aestra::Audio::UnitID unitId, const std::string& samplePath);
     void openAudioClipEditor(Aestra::Audio::ClipInstanceID clipId);
+    /** V8-W5: render the clips' track output, replace them with it, tell the user the outcome. */
+    void bounceClipsInPlace(const std::vector<Aestra::Audio::ClipInstanceID>& clipIds);
     void syncSampleEditorToUnit(Aestra::Audio::UnitID unitId);
     void enqueueMainThreadTask(std::function<void()> task);
     void drainMainThreadTasks();

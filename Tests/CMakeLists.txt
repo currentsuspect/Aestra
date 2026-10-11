@@ -1717,6 +1717,19 @@ target_include_directories(GraphRenderBufferTest PRIVATE
 add_test(NAME GraphRenderBufferTest COMMAND GraphRenderBufferTest)
 set_tests_properties(GraphRenderBufferTest PROPERTIES LABELS "audio;quality;export;parity;integrity;contract:audio" TIMEOUT 180)
 
+# V8-W5: Bounce in Place -- the track-output tap, the bounce command, refusals,
+# and that the project sounds the same before and after.
+add_executable(BounceInPlaceTest AestraAudio/BounceInPlaceTest.cpp)
+target_link_libraries(BounceInPlaceTest PRIVATE AestraAudio)
+target_include_directories(BounceInPlaceTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME BounceInPlaceTest COMMAND BounceInPlaceTest)
+set_tests_properties(BounceInPlaceTest PROPERTIES LABELS "audio;clips;export;undo;contract:audio" TIMEOUT 180)
+
 # Playlist Split/Trim Varispeed — split/trim keep source-domain invariants
 # (durationSeconds, sourceOffsetSeconds) under Speed/Pitch varispeed (#746).
 add_executable(PlaylistSplitVarispeedTest AestraAudio/PlaylistSplitVarispeedTest.cpp)

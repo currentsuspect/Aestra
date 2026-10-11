@@ -105,6 +105,12 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         return result;
     }
 
+    const bool captureChannel = config.captureMixerChannelId != TrackOutputTap::kNoChannel;
+    if (captureChannel && (!config.blockSink || config.numChannels != 2)) {
+        result.errorMessage = "A track-output render needs a block sink and stereo output";
+        return result;
+    }
+
     // Compute render duration from actual playlist
     double startBeat = 0.0;
     double durationBeats = computeRenderDurationBeats(config, startBeat);
@@ -231,6 +237,7 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         bool savedAuditionEnabled;
         bool wasPlaying;
         ~EngineStateGuard() {
+            self.m_engine.trackOutputTap().disarm();
             self.m_engine.setOfflineRenderActive(false);
             self.m_engine.setTransportPlaying(false);
             self.m_engine.setSampleRate(savedSampleRate);
@@ -278,6 +285,9 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     // (parity with a warmed live engine and isolated bounces, #745). Restored
     // by engineStateGuard on every exit path.
     m_engine.setOfflineRenderActive(true);
+    if (captureChannel) {
+        m_engine.trackOutputTap().arm(config.captureMixerChannelId, RENDER_BLOCK_FRAMES);
+    }
 
     // Zero the render buffer before the first block so stale DSP state from
     // prior playback cannot bleed into the export render.
@@ -316,8 +326,20 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         uint32_t framesThisBlock = static_cast<uint32_t>(blockLimit);
 
         // Master bounce: use full live engine path with master stage
+        m_engine.trackOutputTap().clearBlock();
         m_engine.processBlock(m_renderBufferF.data(), nullptr, framesThisBlock, 0.0);
         m_engine.performNonRealtimeMaintenance();
+        if (captureChannel) {
+            // The channel's own output replaces the master mix as this block's audio;
+            // a channel that did not render this block (no such channel) is silence.
+            const auto& tap = m_engine.trackOutputTap();
+            const size_t samples = static_cast<size_t>(framesThisBlock) * 2u;
+            if (tap.frames() == framesThisBlock) {
+                std::copy(tap.block(), tap.block() + samples, m_renderBufferF.begin());
+            } else {
+                std::fill_n(m_renderBufferF.begin(), samples, 0.0f);
+            }
+        }
 
         // Track peak level
         float blockPeak = calculatePeakDb(m_renderBufferF.data(), framesThisBlock, config.numChannels);

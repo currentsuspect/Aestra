@@ -112,6 +112,16 @@ public:
          */
         std::function<bool(const float* interleaved, uint32_t frames, uint32_t channels)> blockSink;
 
+        /**
+         * @brief V8-W5: render this mixer channel's OWN output instead of the master mix.
+         *
+         * The channel's post-insert, post-fader/pan buffer, read before it is
+         * routed anywhere (see TrackOutputTap), through the same engine loop, so
+         * inserts, automation, delay compensation and routed-in audio are all in
+         * it and the master stage is not. Requires @ref blockSink and stereo.
+         */
+        uint32_t captureMixerChannelId = TrackOutputTap::kNoChannel;
+
         /** @brief Maximum allowed true peak in dBTP (Spotify spec is -1.0). */
         float truePeakCeilingdBTP = -1.0f;
 

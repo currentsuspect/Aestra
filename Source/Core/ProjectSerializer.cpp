@@ -1000,6 +1000,8 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 cj.set("targetEnum", JSON(static_cast<double>(curve.getAutomationTarget())));
                 cj.set("mixerChannelId", JSON(static_cast<double>(curve.mixerChannelId)));
                 cj.set("default", JSON(curve.getDefaultValue()));
+                if (curve.muted)
+                    cj.set("muted", JSON(true)); // absent = evaluated; older builds ignore the key
                 if (curve.getAutomationTarget() == Aestra::Audio::AutomationTarget::Custom) {
                     // Plugin-parameter address. instanceId is the authoritative
                     // decimal-string identity (Automation Identity Contract);
@@ -2255,15 +2257,13 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                 // Pre-v3 curves inherited their lane's paired insert.
                                 curve.mixerChannelId = channel->getChannelId();
                             }
-                            // An absent "default" keeps the target-derived neutral rather than
-                            // 0.0, which would silence an empty Volume curve (FD-20). Projects
-                            // written by this build always carry the key, so this only affects
-                            // files predating it.
+                            // Absent "default" keeps the target-derived neutral, not 0.0, which
+                            // would silence an empty Volume curve (FD-20); only pre-key files.
                             curve.setDefaultValue(finiteNumberOr(aj[a], "default",
                                                                  static_cast<double>(curve.getDefaultValue()),
                                                                  -1.0e6, 1.0e6));
-                            // Plugin-parameter address (Custom target). Bounded:
-                            // slot to the effect-chain size, paramId defensively.
+                            curve.muted = aj[a].has("muted") && aj[a]["muted"].isBool() && aj[a]["muted"].asBool();
+                            // Plugin address (Custom target); slot and paramId bounded.
                             curve.effectSlot = static_cast<uint32_t>(finiteNumberOr(aj[a], "slot", 0.0, 0.0, 9.0));
                             curve.paramId = static_cast<uint32_t>(finiteNumberOr(aj[a], "paramId", 0.0, 0.0, 1.0e6));
                             // Automation Identity Contract: a v2 curve carries

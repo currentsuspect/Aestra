@@ -2692,13 +2692,16 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
         }
     }
 
+    // V8-W5: Bounce in Place reads the strip's output here, after the inserts and delay
+    // compensation, before fader/pan, which stay live on the bounced clip.
+    if (m_trackOutputTap.wants(track.trackId))
+        m_trackOutputTap.capture(buffer.data(), numFrames);
+
     // Route post-fader output to the selected main destination and any audible sends.
-    // Pan law: stereoBalance, always. equalPower (-3 dB per leg at centre) is the
-    // law for placing a MONO source in a stereo field; applying it to the strip
-    // attenuated already-stereo content by -3.01 dB and made a channel's own
-    // level depend on whether it happens to receive an audible route (the old
-    // receivesAudibleRoute conditional). Direct-to-Master clips never passed a
-    // strip, so channel-routed music was quieter than Master-routed music.
+    // Pan law: stereoBalance, always. equalPower (-3 dB per leg at centre) places a
+    // MONO source in a stereo field; on the strip it attenuated stereo content by
+    // -3.01 dB and made a channel's level depend on whether it had an audible route,
+    // so channel-routed music was quieter than Master-routed music.
     double tL, tR;
     fastStereoBalanceGainsD(panTarget, volTarget, tL, tR);
     state.gainL.setTarget(tL);
@@ -2998,16 +3001,12 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
         }
     }
 
-    // Gain staging: the channel strip is driven by track.volume (the mixer
-    // fader, written by SetVolumeCommand/undo and the project loader) and the
-    // trim knob (continuous slot). The continuous faderDb/panParam mirrors are
-    // deliberately NOT multiplied here — one UI gesture used to write both
-    // stores, which squared every non-unity fader position and summed pan
-    // twice (e.g. UI -6 dB became -12 dB actual). The continuous buffer keeps
-    // its role for the master strip (slot 127) and for UI display sync.
-    // clampD passes NaN through (both comparisons are false), so a non-finite
-    // trim from the continuous slot must be rejected before it reaches the
-    // gain; treat it as neutral (no trim).
+    // Gain staging: the strip is driven by track.volume (the mixer fader) and
+    // the trim knob (continuous slot). The continuous faderDb/panParam mirrors
+    // are deliberately NOT multiplied here: one UI gesture used to write both
+    // stores, squaring every non-unity fader and summing pan twice (UI -6 dB
+    // became -12 dB). They still serve the master strip (slot 127) and the UI.
+    // clampD passes NaN through, so a non-finite trim is rejected here (neutral).
     double gain = 1.0;
     if (std::isfinite(trimDb)) {
         const double trimDbClamped = clampD(static_cast<double>(trimDb), -24.0, 24.0);
@@ -3064,8 +3063,8 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
     const bool muted = track.mute || state.mute;
     const bool audibleEligible =
         !anySolo || (static_cast<size_t>(trackIdx) < availableTracks && m_rtAudibleEligible[trackIdx]);
-    const bool processActive =
-        !anySolo || (static_cast<size_t>(trackIdx) < availableTracks && m_rtProcessActive[trackIdx]);
+    const bool processActive = !anySolo || m_trackOutputTap.wants(track.trackId) ||
+                               (static_cast<size_t>(trackIdx) < availableTracks && m_rtProcessActive[trackIdx]);
 
     // Initialize send gain smoothers when send count changes.
     // Vectors are pre-sized to kMaxSendsPerTrack in setBufferConfig(),

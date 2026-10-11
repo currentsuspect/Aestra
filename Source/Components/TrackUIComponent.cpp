@@ -378,15 +378,15 @@ void TrackUIComponent::showClipRoutingMenu(const ClipInstanceID& clipId, const A
     }
 
     if (auto* parentManager = dynamic_cast<TrackManagerUI*>(getParent())) {
-        if (m_clipRoutingMenu->getItemCount() > 0) {
+        if (m_clipRoutingMenu->getItemCount() > 0)
             m_clipRoutingMenu->addSeparator();
-        }
         addAction("Cut", "Ctrl+X", [parentManager]() { parentManager->cutSelectedClip(); });
         addAction("Copy", "Ctrl+C", [parentManager]() { parentManager->copySelectedClip(); });
         addAction("Duplicate", "Ctrl+D", [parentManager]() { parentManager->duplicateSelectedClip(); });
+        if (pattern && pattern->isAudio())
+            addAction("Bounce in Place", "", [parentManager]() { parentManager->bounceSelectedClipsInPlace(); });
         if (pattern && m_trackManager) {
-            // Break shared pattern identity for this clip only (Extra Session
-            // 2026-08-21: duplicate → make unique workflow).
+            // Break shared pattern identity for this clip only (duplicate → make unique).
             addAction("Make Unique", "", [this, clipId]() {
                 if (!m_trackManager)
                     return;

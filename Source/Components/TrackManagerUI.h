@@ -154,6 +154,12 @@ public:
     void setOnOpenAudioClipEditor(std::function<void(ClipInstanceID)> cb) {
         m_onOpenAudioClipEditor = std::move(cb);
     }
+    /** @brief V8-W5: the owner renders and replaces the clips, and tells the user if it refuses. */
+    void setOnBounceInPlace(std::function<void(const std::vector<ClipInstanceID>&)> cb) {
+        m_onBounceInPlace = std::move(cb);
+    }
+    /** @brief Bounce the selected clips in place (V8-W5). */
+    void bounceSelectedClipsInPlace();
 
     // Loop control callback (preset: 0=Off, 1=1Bar, 2=2Bars, 3=4Bars, 4=8Bars, 5=Selection, 6=Project)
     void setOnLoopPresetChanged(std::function<void(int preset)> cb) { m_onLoopPresetChanged = cb; }
@@ -627,6 +633,7 @@ private:
     std::function<void()> m_onTogglePlaylist;
     std::function<void(PatternID)> m_onOpenPatternInPianoRoll;
     std::function<void(ClipInstanceID)> m_onOpenAudioClipEditor;
+    std::function<void(const std::vector<ClipInstanceID>&)> m_onBounceInPlace;
     std::function<void(int)> m_onLoopPresetChanged;        // Called when loop preset dropdown changes
     std::function<void(double, double)> m_onSelectionMade; // Called when ruler selection finalized
     std::function<void(double, double)>
