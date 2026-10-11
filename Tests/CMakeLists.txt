@@ -2829,6 +2829,25 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(UnitRowStepSelectionTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
 
+# Arsenal: a loaded one-shot (Sampler / 808 unit) must offer "Open in Piano Roll" on right-click; the
+# grid stays the erase gesture (owner report, 2026-10-11).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(UnitRowContextMenuTest AestraUI_Core)
+    add_executable(UnitRowContextMenuTest AestraUI/UnitRowContextMenuTest.cpp)
+    target_link_libraries(UnitRowContextMenuTest PRIVATE AestraUI_Core AestraAudio)
+    target_include_directories(UnitRowContextMenuTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME UnitRowContextMenuTest COMMAND UnitRowContextMenuTest)
+    set_tests_properties(UnitRowContextMenuTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
 # The inspector rack must follow the LAST-bound chain: bindEffectRack() used
 # to append bindings and refreshRackDisplay() read the first match, so a
 # selection switch left the rack bound to a chain that died with its channel
@@ -3410,6 +3429,7 @@ if(AESTRA_ENABLE_UI)
         AutomationClipLayerTest
         PanelModeBehaviourTest
         UnitRowStepSelectionTest
+        UnitRowContextMenuTest
         PluginRackBindingLifecycleTest
         WindowPanelRaiseTest
         TakesHistoryPanelTest
