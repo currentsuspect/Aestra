@@ -137,6 +137,8 @@ public:
     void setOnCursorVisibilityChanged(std::function<void(bool)> callback) { m_onCursorVisibilityChanged = callback; }
     bool isMinimapResizeCursorActive() const;
     bool isCustomCursorActive() const; // Returns true if any tool/resize cursor is active
+    /** @brief True if the tool-cursor draw gate ran since the last call (the cursor watchdog's evidence). */
+    bool consumeToolCursorGate() { const bool v = m_toolCursorGate; m_toolCursorGate = false; return v; }
     /** @brief True while the timeline ruler row is the interaction (playhead
      *  scrub, loop markers, ruler selection) — grab-hand cursor territory. */
     bool isRulerPointerActive() const;
@@ -497,6 +499,7 @@ private:
 
     // Instant clip dragging (no ghost)
     bool m_isDraggingClipInstant = false;
+    bool m_toolCursorGate = false; // set when the tool-cursor gate in onRender ran (consumeToolCursorGate)
     TrackUIComponent* m_draggedClipTrack = nullptr;
     ClipInstanceID m_draggedClipId;
     double m_clipDragOffsetBeats = 0.0;

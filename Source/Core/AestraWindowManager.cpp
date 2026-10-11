@@ -992,9 +992,25 @@ void AestraWindowManager::resolveCursorState() {
     // drawn (custom overlay or the TrackManager tool cursor) or intentionally
     // hidden by an active drag capture. Any other state shows the native
     // cursor — the guaranteed fallback.
-    const bool hideNative =
+    bool hideNative =
         m_window->isCursorCaptured() ||
         (m_windowFocused && (trackManagerHasCustomCursor || style != AestraUI::NUICursorStyle::Hidden));
+    // The net under every stale-claim / lost-capture case: if the OS pointer is hidden and neither the
+    // overlay arrow nor the timeline's tool cursor is actually being drawn, show the OS pointer.
+    const bool toolCursorDrawn = trackManagerHasCustomCursor && m_content->getTrackManagerUI()->consumeToolCursorGate();
+    const bool rescue = m_pointerWatchdog.update(hideNative, m_overlayCursorDrawn || toolCursorDrawn, m_window->isCursorCaptured());
+    m_overlayCursorDrawn = false;
+    if (rescue) {
+        if (hideNative) {
+            Log::warning("[Cursor] pointer was hidden with nothing drawn for " +
+                         std::to_string(AestraUI::NUIPointerVisibilityWatchdog::kGraceFrames) +
+                         " frames; showing the OS pointer (style=" + std::to_string(static_cast<int>(style)) +
+                         ", toolClaim=" + std::to_string(trackManagerHasCustomCursor) +
+                         ", dragging=" + std::to_string(AestraUI::NUIDragDropManager::getInstance().isDragging()) +
+                         ", modal=" + std::to_string(modalOpen) + ")");
+        }
+        hideNative = false;
+    }
     if (hideNative != m_cachedNativeCursorHidden) {
         m_cachedNativeCursorHidden = hideNative;
         m_window->setCursorVisible(!hideNative);
@@ -1094,6 +1110,7 @@ void AestraWindowManager::renderCustomCursor() {
         float y = cursorY + offsetY;
         cursorIcon->setBounds(AestraUI::NUIRect(x, y, size, size));
         cursorIcon->onRender(*m_renderer);
+        m_overlayCursorDrawn = true;
     }
 }
 

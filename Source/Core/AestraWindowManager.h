@@ -9,6 +9,7 @@
 
 #include "../AestraPlat/include/AestraPlatform.h"
 #include "../AestraUI/Core/NUIComponent.h"
+#include "../AestraUI/Core/NUIPointerVisibilityWatchdog.h"
 #include "NUICustomWindow.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Core/NUIAdaptiveFPS.h"
@@ -236,6 +237,8 @@ private:
     AestraUI::NUICursorStyle m_panelCursorStyle{AestraUI::NUICursorStyle::Arrow}; // set per mouse move
     AestraUI::NUICursorStyle m_activeCursorStyle{AestraUI::NUICursorStyle::Arrow}; // the drawn glyph
     bool m_cachedNativeCursorHidden{false};
+    AestraUI::NUIPointerVisibilityWatchdog m_pointerWatchdog; // never leave the pointer invisible
+    bool m_overlayCursorDrawn{false};                          // renderCustomCursor drew the arrow last frame
 
     // Input State
     std::function<void(TransportAction)> m_transportCallback;

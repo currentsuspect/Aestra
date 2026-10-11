@@ -15,7 +15,7 @@
 1947 AestraUI/Widgets/UnitRow.cpp
 2616 Source/App/AestraApp.cpp
 3954 Source/Components/FileBrowser.cpp
-1510 Source/Components/TrackManagerUIRender.cpp
+1509 Source/Components/TrackManagerUIRender.cpp
 3632 Source/Components/TrackUIComponent.cpp
 4828 Source/Core/AestraContent.cpp
 2827 Source/Core/ProjectSerializer.cpp

@@ -181,10 +181,9 @@ void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
     // frozen tool glyph on screen after the arrow had been restored.
     if ((!m_window || m_window->getCursorStyle() != AestraUI::NUICursorStyle::Hidden) && isCustomCursorActive() &&
         !AestraUI::NUIDragDropManager::getInstance().isDragging()) {
-        // CURSOR PIPELINE BYPASS: renderToolCursor draws directly on renderer at
-        // m_lastMousePos. Outside both SVG cursor system and SDL cursor system.
-        // Suppressed here rather than through cursor abstraction — intentional.
-        // See renderMinimapResizeCursor below for identical pattern.
+        // CURSOR PIPELINE BYPASS: renderToolCursor draws at m_lastMousePos, outside the SVG cursor system.
+        // See renderMinimapResizeCursor below for the identical pattern.
+        m_toolCursorGate = true; // evidence for the pointer-visibility watchdog (consumeToolCursorGate)
         renderToolCursor(renderer, m_lastMousePos);
 
         // CURSOR PIPELINE BYPASS: renderMinimapResizeCursor draws directly on

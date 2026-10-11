@@ -2829,6 +2829,16 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(UnitRowStepSelectionTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
 
+# The pointer is never left invisible: hidden-with-nothing-drawn is rescued (owner reports, 2026-10-11).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(NUIPointerVisibilityWatchdogTest AestraUI_Core)
+    add_executable(NUIPointerVisibilityWatchdogTest AestraUI/NUIPointerVisibilityWatchdogTest.cpp)
+    target_link_libraries(NUIPointerVisibilityWatchdogTest PRIVATE AestraUI_Core)
+    target_include_directories(NUIPointerVisibilityWatchdogTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraUI/Core)
+    add_test(NAME NUIPointerVisibilityWatchdogTest COMMAND NUIPointerVisibilityWatchdogTest)
+    set_tests_properties(NUIPointerVisibilityWatchdogTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
 # The inspector rack must follow the LAST-bound chain: bindEffectRack() used
 # to append bindings and refreshRackDisplay() read the first match, so a
 # selection switch left the rack bound to a chain that died with its channel
@@ -3410,6 +3420,7 @@ if(AESTRA_ENABLE_UI)
         AutomationClipLayerTest
         PanelModeBehaviourTest
         UnitRowStepSelectionTest
+        NUIPointerVisibilityWatchdogTest
         PluginRackBindingLifecycleTest
         WindowPanelRaiseTest
         TakesHistoryPanelTest
