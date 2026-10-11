@@ -1768,6 +1768,17 @@ target_include_directories(PanelPlacementTest PRIVATE
 )
 add_test(NAME PanelPlacementTest COMMAND PanelPlacementTest)
 set_tests_properties(PanelPlacementTest PROPERTIES LABELS "ui;panels;preferences;contract:application" TIMEOUT 60)
+# SPEC 3 section 5.2 side finding: a left-trimmed MIDI clip plays its notes where they are drawn.
+add_executable(TimelineMidiTrimTimingTest AestraAudio/TimelineMidiTrimTimingTest.cpp)
+target_link_libraries(TimelineMidiTrimTimingTest PRIVATE AestraAudio)
+target_include_directories(TimelineMidiTrimTimingTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME TimelineMidiTrimTimingTest COMMAND TimelineMidiTrimTimingTest)
+set_tests_properties(TimelineMidiTrimTimingTest PROPERTIES LABELS "audio;midi;timeline;regression;contract:audio" TIMEOUT 60)
 
 # Playlist Split/Trim Varispeed — split/trim keep source-domain invariants
 # (durationSeconds, sourceOffsetSeconds) under Speed/Pitch varispeed (#746).
