@@ -3,6 +3,7 @@
 #include "ProjectMigrations.h"
 #include "ProjectUpgradeCopy.h"
 #include "WorkspaceFocus.h"
+#include "AutomationRegionJson.h"
 #include "AestraFile.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "MiniAudioDecoder.h"
@@ -1002,6 +1003,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 cj.set("default", JSON(curve.getDefaultValue()));
                 if (curve.muted)
                     cj.set("muted", JSON(true)); // absent = evaluated; older builds ignore the key
+                writeAutomationRegions(cj, curve);
                 if (curve.getAutomationTarget() == Aestra::Audio::AutomationTarget::Custom) {
                     // Plugin-parameter address. instanceId is the authoritative
                     // decimal-string identity (Automation Identity Contract);
@@ -2263,20 +2265,16 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                                                  static_cast<double>(curve.getDefaultValue()),
                                                                  -1.0e6, 1.0e6));
                             curve.muted = aj[a].has("muted") && aj[a]["muted"].isBool() && aj[a]["muted"].asBool();
+                            readAutomationRegions(aj[a], curve);
                             // Plugin address (Custom target); slot and paramId bounded.
                             curve.effectSlot = static_cast<uint32_t>(finiteNumberOr(aj[a], "slot", 0.0, 0.0, 9.0));
                             curve.paramId = static_cast<uint32_t>(finiteNumberOr(aj[a], "paramId", 0.0, 0.0, 1.0e6));
-                            // Automation Identity Contract: a v2 curve carries
-                            // its exact instance id. A v1 curve (no key)
-                            // migrates exactly once: the slot's minted instance
-                            // id, resolved against the already-loaded chains.
-                            // Empty slots yield 0 — the curve is preserved as
-                            // dangling (diagnostic), never re-pointed.
+                            // Automation Identity Contract: a v2 curve carries its exact instance id; a v1
+                            // curve (no key) migrates once, to the slot's minted id. Empty slots yield 0:
+                            // preserved as dangling (diagnostic), never re-pointed.
                             if (aj[a].has("instanceId") && aj[a]["instanceId"].isString()) {
-                                // Untrusted input: digits-only parse. std::stoull
-                                // would accept "-1" (wraps to UINT64_MAX, which the
-                                // chain refuses by design) and "12abc" (trailing
-                                // junk silently attaching the curve to id 12).
+                                // Untrusted input: digits-only. std::stoull would accept "-1" (wraps to
+                                // UINT64_MAX, refused by design) and "12abc" (silently attaching to id 12).
                                 const std::string rawId = aj[a]["instanceId"].asString();
                                 const bool digitsOnly =
                                     !rawId.empty() &&

@@ -466,6 +466,7 @@ void TrackUIComponent::pushAutomationEditCommand(std::vector<AutomationCurve> be
     auto lane = m_trackManager->getPlaylistModel().getLane(m_laneId);
     if (!lane)
         return;
+    for (auto& curve : lane->automationCurves) AutomationRegions::retighten(curve); // clips follow their points
     const auto& after = lane->automationCurves;
     if (automationCurvesEqual(before, after))
         return; // a click that only selected a point is not an undo step
@@ -504,11 +505,9 @@ TrackUIComponent::FadeHandle TrackUIComponent::fadeHandleAt(const AestraUI::NUIR
     const float dIn = std::abs(position.x - inX);
     const float dOut = std::abs(position.x - outX);
 
-    // A handle that has never been dragged sits ON the clip edge, where there is
-    // nothing drawn to aim at — a 9px target on an invisible point, which made
-    // the gesture land only by luck. So an UNSET fade claims a wider zone
-    // inward from its edge: the corner is grabbable, as it is in other DAWs.
-    // Once a fade exists its handle is visible, and the tight tolerance applies.
+    // An unset fade handle sits ON the clip edge with nothing drawn to aim at (a 9px target on an
+    // invisible point), so it claims a wider zone inward from the edge, as in other DAWs. Once
+    // a fade exists its handle is visible and the tight tolerance applies.
     const bool inUnset = clip.edits.fadeInBeats <= 0.0f;
     const bool outUnset = clip.edits.fadeOutBeats <= 0.0f;
     const float inReach = inUnset ? FADE_CORNER_REACH : FADE_HANDLE_GRAB;
@@ -2397,7 +2396,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     
     // Early exit: If event is outside our bounds and we're not in an active operation, don't handle it
     bool isInsideBounds = bounds.contains(event.position);
-    bool isActiveOperation = m_isTrimming || m_isDraggingClip || m_clipDragPotential || m_isDraggingPoint ||
+    bool isActiveOperation = m_isTrimming || m_isDraggingClip || m_clipDragPotential || m_isDraggingPoint || m_clipLayer.isDragging() ||
                              m_fadeDragHandle != FadeHandle::None;
     bool isControlCapture = (m_muteButton && m_muteButton->isPressed()) ||
                             (m_soloButton && m_soloButton->isPressed()) ||
@@ -2430,12 +2429,10 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         TrimEdge newHoverEdge = TrimEdge::None;
         FadeHandle newHoverFade = FadeHandle::None;
 
-        // The menu glyph outranks the trim edge it overlaps, exactly as the press does: hovering it
-        // used to show the TRIM cursor on its left half and nothing on its centre, while a click
-        // anywhere on it opened the menu (SPEC 3 §3.3).
+        // The menu glyph outranks the trim edge it overlaps, as the press does (SPEC 3 §3.3): hover
+        // used to show the TRIM cursor on its left half and nothing on its centre.
         const ClipInstanceID previousMenuHover = m_hoveredClipMenuId;
-        // In Automation mode a press on the glyph edits automation (that branch runs first), so the
-        // hover must not advertise the menu there (review, #968).
+        // In Automation mode a press on the glyph edits automation first: no menu hover (#968).
         m_hoveredClipMenuId =
             m_playlistMode == PlaylistMode::Automation ? ClipInstanceID{} : clipMenuAt(event.position);
 
@@ -2600,8 +2597,10 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     }
 
     // PRIORITY 3: Automation Layer (v3.1)
-    // Handle Mouse Release for automation point dragging FIRST - before any bounds checks
-    // This ensures release is processed even when mouse has moved far outside bounds
+    // Clips first (V8-A7), then point-drag release before any bounds check, so it lands outside the lane too.
+    if (m_playlistMode == PlaylistMode::Automation && m_trackManager &&
+        handleAutomationClipMouse(event, bounds, gridStartX))
+        return true;
     if (m_playlistMode == PlaylistMode::Automation && m_isDraggingPoint) {
         if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
             // Compare the dragged point against its drag-start value BEFORE
@@ -3395,6 +3394,7 @@ void TrackUIComponent::renderAutomationLayer(AestraUI::NUIRenderer& renderer, co
     // lane shows which curve a click edits while keeping every curve visible.
     int editedIndex = automationCurveIndexFor(lane->automationCurves, m_editedAutomationTarget);
     if (editedIndex < 0 && !m_automationTargetChosen && !lane->automationCurves.empty()) editedIndex = 0;
+    renderAutomationClips(renderer, bounds, gridStartX, editedIndex);
     for (size_t ci = 0; ci < lane->automationCurves.size(); ++ci) {
         const auto& curve = lane->automationCurves[ci];
         if (!curve.isVisible()) continue;

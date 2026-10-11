@@ -109,6 +109,8 @@ set(Aestra_SOURCES
 	Components/AudioVisualizer.cpp
 	Components/TrackUIComponent.h
 	Components/TrackUIComponent.cpp
+	Components/TrackUIComponentAutomationClips.cpp
+	Components/AutomationClipLayer.cpp
 	Components/TrackManagerUI.h
 	Components/TrackManagerUI.cpp
 	Components/TrackManagerUIInternal.h
