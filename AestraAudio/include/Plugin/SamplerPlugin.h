@@ -108,9 +108,17 @@ public:
     // RT-safe: requests an immediate voice reset on the next process() call.
     void requestHardResetVoices() noexcept { m_resetVoicesRequested.store(true, std::memory_order_release); }
 
+    // RT-safe: asks every sounding voice to enter its ADSR release on the next process() call,
+    // BEFORE that block's MIDI is handled (so a note that starts in the same block still sounds).
+    // This is what a pause, a stop and a timeline loop wrap need: the queued note-offs for notes
+    // still held at that moment are discarded with the transport jump, and without this the voices
+    // sustain until the sample runs out. A tight release stays tight.
+    void requestReleaseAllVoices() noexcept { m_releaseVoicesRequested.store(true, std::memory_order_release); }
+
 private:
     std::atomic<bool> m_active{false};
     std::atomic<bool> m_resetVoicesRequested{false};
+    std::atomic<bool> m_releaseVoicesRequested{false};
     double m_sampleRate = 44100.0;
 
     // Sample Data encapsulated for Atomic Swap

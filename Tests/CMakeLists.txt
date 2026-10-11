@@ -772,6 +772,18 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerStereoParityTest.cpp")
     set_tests_properties(SamplerStereoParityTest PROPERTIES LABELS "audio;sampler;regression;contract:audio")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerReleaseAllTest.cpp")
+    add_executable(SamplerReleaseAllTest AestraAudio/SamplerReleaseAllTest.cpp)
+    target_link_libraries(SamplerReleaseAllTest PRIVATE AestraAudio)
+    target_include_directories(SamplerReleaseAllTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME SamplerReleaseAllTest COMMAND SamplerReleaseAllTest)
+    set_tests_properties(SamplerReleaseAllTest PROPERTIES LABELS "audio;sampler;regression;contract:audio")
+endif()
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerCutSelfTest.cpp")
     add_executable(SamplerCutSelfTest AestraAudio/SamplerCutSelfTest.cpp)
     target_link_libraries(SamplerCutSelfTest PRIVATE AestraAudio)
@@ -2843,6 +2855,25 @@ if(AESTRA_ENABLE_UI)
     )
     add_test(NAME UIMixerKnobDragReadoutTest COMMAND UIMixerKnobDragReadoutTest)
     set_tests_properties(UIMixerKnobDragReadoutTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+||||||| d495c9bf
+
+# Arsenal: a loaded one-shot (Sampler / 808 unit) must offer "Open in Piano Roll" on right-click; the
+# grid stays the erase gesture (owner report, 2026-10-11).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(UnitRowContextMenuTest AestraUI_Core)
+    add_executable(UnitRowContextMenuTest AestraUI/UnitRowContextMenuTest.cpp)
+    target_link_libraries(UnitRowContextMenuTest PRIVATE AestraUI_Core AestraAudio)
+    target_include_directories(UnitRowContextMenuTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME UnitRowContextMenuTest COMMAND UnitRowContextMenuTest)
+    set_tests_properties(UnitRowContextMenuTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
 
 # The inspector rack must follow the LAST-bound chain: bindEffectRack() used
@@ -3427,6 +3458,8 @@ if(AESTRA_ENABLE_UI)
         PanelModeBehaviourTest
         UnitRowStepSelectionTest
         UIMixerKnobDragReadoutTest
+||||||| d495c9bf
+        UnitRowContextMenuTest
         PluginRackBindingLifecycleTest
         WindowPanelRaiseTest
         TakesHistoryPanelTest
