@@ -1075,9 +1075,7 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
                     }
                 }
 
-                // Right-drag across a step grid erases every crossed pad.
-                // Right-click raises the row context menu only from the name
-                // label (far left) — the grid never opens menus.
+                // Right-drag across the step grid erases crossed pads; the grid never opens menus.
                 if (localContextRect.contains(localPoint) && usesStepSequencerForType(m_type) &&
                     !shouldUseNoteRoll() && m_patternId.isValid() && m_trackManager) {
                     const int stepIndex = resolveGridStep(localPoint, localGridRect);
@@ -1095,8 +1093,9 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
                         return true;
                     }
                 }
-                // Row context menu lives on the far-left text (name) area only.
-                if (m_nameLabel && m_nameLabel->getBounds().contains(localPoint)) {
+                // The row menu opens from anywhere on the row except the step grid, where a right-press
+                // is the erase gesture (it used to open only from the name label).
+                if (!localGridRect.contains(localPoint)) {
                     showRowContextMenu(event.position);
                 }
                 return true;
@@ -1866,7 +1865,8 @@ void UnitRow::showRowContextMenu(const NUIPoint& pos) {
     m_rowContextMenu = std::make_shared<NUIContextMenu>();
     m_rowContextMenu->setOnHide([this]() { detachContextMenu(m_rowContextMenu); });
 
-    if (usesPianoRollForType(type) && hasPattern) {
+    // Every pattern unit can open in the piano roll, a loaded one-shot included (it was Instrument-only).
+    if (hasPattern && type != Aestra::Audio::UnitType::Audio) {
         m_rowContextMenu->addItem("Open in Piano Roll", [this]() {
             // Verify unit still exists (defensive check against use-after-free)
             if (!m_manager.getUnit(m_unitId))
