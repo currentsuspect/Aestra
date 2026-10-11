@@ -205,8 +205,21 @@ public:
     /** @brief Access the owned mixer bus. */
     const MixerBus* getMixerBus() const { return m_mixerBus.get(); }
 
-    /** @brief Set the audio-thread command sink used for RT-safe updates. */
-    void setCommandSink(std::function<void(const AudioQueueCommand&)> cb) { m_commandSink = std::move(cb); }
+    /** @brief Set the audio-thread command sink used for RT-safe updates. Returns true when accepted. */
+    using CommandSink = std::function<bool(const AudioQueueCommand&)>;
+    void setCommandSink(CommandSink cb) {
+        m_commandSink = std::move(cb);
+        markStateDirty();
+    }
+
+    // A dropped state push leaves the engine stale until the next UI touch, so
+    // a rejected push (or a newly installed sink, whose engine is unconfirmed)
+    // marks the channel dirty and the UI pump re-pushes latest values (#913).
+    void markStateDirty() { m_stateDirty.store(true, std::memory_order_relaxed); }
+    bool isStateDirty() const { return m_stateDirty.load(std::memory_order_relaxed); }
+    // Re-push current volume/pan/mute/solo when dirty. True when clean (or
+    // became clean); false keeps the flag for the next pump. Non-RT only.
+    bool resyncEngineState();
     /** @brief Set callback used to refresh input monitoring snapshots after route-affecting changes.
      * NOTE: Must be set before audio engine processing starts. Caller is responsible for thread safety. */
     void setInputMonitoringStateChangedCallback(std::function<void()> cb) {
@@ -283,6 +296,9 @@ private:
     std::atomic<bool> m_soloed{false};
     std::atomic<bool> m_soloSafe{false};
 
+    // True while the engine may hold older mixer values than these atomics.
+    std::atomic<bool> m_stateDirty{false};
+
     // Recording
     std::atomic<bool> m_isArmed{false};
     std::atomic<bool> m_monitorInput{false};
@@ -294,7 +310,7 @@ private:
     // Effect chain for insert effects
     EffectChain m_effectChain;
 
-    std::function<void(const AudioQueueCommand&)> m_commandSink;
+    CommandSink m_commandSink;
 
     // Input monitoring callback — protected by its own mutex (not m_sendMutex)
     mutable std::mutex m_monitoringCallbackMutex;

@@ -72,12 +72,15 @@ struct TimelineSummary
     float maxPeakSum = 0.0f;
 
     uint64_t version = 0;
+    // The requestRebuild() generation this summary's layout comes from (deltas keep it).
+    uint64_t rebuildGeneration = 0;
 };
 
 struct TimelineSummarySnapshot
 {
     const TimelineSummary* summary = nullptr;
     uint64_t version = 0;
+    uint64_t rebuildGeneration = 0;
 };
 
 class TimelineSummaryCache final
@@ -91,8 +94,10 @@ public:
     TimelineSummaryCache(const TimelineSummaryCache&) = delete;
     TimelineSummaryCache& operator=(const TimelineSummaryCache&) = delete;
 
-    void requestRebuild(std::vector<TimelineMinimapClipSpan> spans, double domainStartBeat, double domainEndBeat,
-                        uint32_t bucketCount = kDefaultBucketCount);
+    // Returns this rebuild's generation. A snapshot whose rebuildGeneration equals it holds this
+    // rebuild's layout; a newer request supersedes an older queued one, so wait on the latest.
+    uint64_t requestRebuild(std::vector<TimelineMinimapClipSpan> spans, double domainStartBeat, double domainEndBeat,
+                            uint32_t bucketCount = kDefaultBucketCount);
     void requestApplyDeltas(std::vector<TimelineMinimapClipDelta> deltas, double expectedDomainStartBeat,
                             double expectedDomainEndBeat);
 
@@ -119,6 +124,7 @@ private:
         double domainStartBeat = 0.0;
         double domainEndBeat = 0.0;
         uint32_t bucketCount = kDefaultBucketCount;
+        uint64_t rebuildGeneration = 0;
         std::vector<TimelineMinimapClipSpan> spans;
         std::vector<TimelineMinimapClipDelta> deltas;
     };
@@ -148,6 +154,7 @@ private:
     std::mutex mutex_;
     std::condition_variable cv_;
     std::deque<Task> tasks_;
+    uint64_t lastRebuildGeneration_ = 0; // guarded by mutex_
     std::atomic<bool> stop_{false};
     bool workerStarted_ = false;
 

@@ -5,6 +5,7 @@
 #include "NUICustomWindow.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "SettingsDialog.h"
+#include "TextDiagnosticOverlay.h"
 #include "UnifiedHUD.h"
 #include "TransportTypes.h"
 #include "../AestraPlat/include/AestraPlatform.h"
@@ -33,6 +34,7 @@ private:
     std::shared_ptr<NUICustomWindow> m_rootCustomWindow;
     std::shared_ptr<Aestra::SettingsDialog> m_rootSettingsDialog;
     std::shared_ptr<UnifiedHUD> m_rootUnifiedHUD;
+    std::shared_ptr<TextDiagnosticOverlay> m_rootTextDiagnostics;
     class AestraContent* m_rootContent{nullptr};
     std::function<void(TransportAction)> m_rootTransportCallback;
     std::function<void()> m_rootSaveCallback;
@@ -70,6 +72,15 @@ public:
     
     std::shared_ptr<UnifiedHUD> getUnifiedHUD() const {
         return m_rootUnifiedHUD;
+    }
+
+    void setTextDiagnostics(std::shared_ptr<TextDiagnosticOverlay> overlay) {
+        m_rootTextDiagnostics = overlay;
+        addChild(m_rootTextDiagnostics);
+    }
+
+    std::shared_ptr<TextDiagnosticOverlay> getTextDiagnostics() const {
+        return m_rootTextDiagnostics;
     }
     
     void onUpdate(double deltaTime) override {

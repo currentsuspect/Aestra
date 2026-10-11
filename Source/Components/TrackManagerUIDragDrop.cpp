@@ -539,11 +539,23 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                     // Heavy IO/Decoding operation
                     bool success = decodeAudioFile(filePath, decodedData, sampleRate, numChannels, progressCb);
 
+                    // Build (and compact) the buffer here, off the UI thread; it is not published yet.
+                    std::shared_ptr<AudioBufferData> decodedBuffer;
+                    if (success && numChannels > 0) {
+                        decodedBuffer = std::make_shared<AudioBufferData>();
+                        decodedBuffer->interleavedData = std::move(decodedData);
+                        decodedBuffer->sampleRate = sampleRate;
+                        decodedBuffer->numChannels = numChannels;
+                        decodedBuffer->numFrames = decodedBuffer->interleavedData.size() / numChannels;
+                        if (numChannels <= 2)
+                            decodedBuffer->tryCompact();
+                    }
+
                     // Post completion task to main thread
                     if (auto self = std::dynamic_pointer_cast<TrackManagerUI>(weakSelf.lock())) {
                         std::lock_guard<std::mutex> lock(self->m_pendingTasksMutex);
                         self->m_pendingTasks.push_back([weakSelf, tm, sourceId, success,
-                                                        decodedData = std::move(decodedData), sampleRate, numChannels,
+                                                        decodedBuffer = std::move(decodedBuffer),
                                                         displayName, createClipFromSource, filePath]() mutable {
                             auto self = std::dynamic_pointer_cast<TrackManagerUI>(weakSelf.lock());
                             if (!self)
@@ -554,13 +566,8 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                             if (!src)
                                 return;
 
-                            if (success) {
-                                auto buffer = std::make_shared<AudioBufferData>();
-                                buffer->interleavedData = std::move(decodedData);
-                                buffer->sampleRate = sampleRate;
-                                buffer->numChannels = numChannels;
-                                buffer->numFrames = buffer->interleavedData.size() / numChannels;
-                                src->setBuffer(buffer);
+                            if (success && decodedBuffer) {
+                                src->setBuffer(std::move(decodedBuffer));
                                 const uint64_t sourceRevision = src->getContentRevision();
 
                                 Log::info("[TrackManagerUI] Async load complete for: " + filePath);
@@ -685,24 +692,10 @@ double TrackManagerUI::snapBeatToGridForward(double beat) const {
 // =============================================================================
 
 int TrackManagerUI::getTrackAtPosition(float y) const {
-    AestraUI::NUIRect bounds = getBounds();
-    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-
-    // Get ruler height and track area start
-    // MUST match the render layout exactly: minimap(24) + ruler(28)
-    float trackAreaY = bounds.y + kTimelineTimeBandHeight;
-
-    // Relative Y position in track area
-    float relativeY = y - trackAreaY + m_scrollOffset;
-
-    if (relativeY < 0) {
-        return -1; // Above track area
-    }
-
-    // Calculate track index based on track height + spacing
-    int trackIndex = static_cast<int>(relativeY / (m_trackHeight + m_trackSpacing));
-
-    return trackIndex;
+    // y arrives window-absolute; the timeline layout answers in our Local space.
+    // -1 above the first row; may be >= the row count below the last one.
+    return timelineRowSlotAt(currentTimelineLayout(), static_cast<float>(m_trackHeight),
+                             static_cast<float>(m_trackSpacing), m_scrollOffset, y - getBounds().y);
 }
 
 double TrackManagerUI::getTimeAtPosition(float x) const {
@@ -746,10 +739,9 @@ void TrackManagerUI::renderDropPreview(AestraUI::NUIRenderer& renderer) {
     float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
     float gridStartX = bounds.x + controlAreaWidth + kTimelineGridInsetX;
 
-    // Calculate track Y position - MUST match layoutTracks() calculation exactly
-    // layoutTracks uses: minimapHeight(24) + rulerHeight(28)
-    float trackAreaStartY = bounds.y + kTimelineTimeBandHeight;
-    float trackY = trackAreaStartY + (m_dropTargetTrack * (m_trackHeight + m_trackSpacing)) - m_scrollOffset;
+    // The target row's top, from the same layout layoutTracks() places rows with.
+    float trackY = bounds.y + timelineRowTopY(currentTimelineLayout(), static_cast<float>(m_trackHeight),
+                                              static_cast<float>(m_trackSpacing), m_dropTargetTrack, m_scrollOffset);
 
     // Calculate X position from time
     double bpm = m_trackManager->getPlaylistModel().getBPM();

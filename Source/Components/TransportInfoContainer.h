@@ -14,9 +14,11 @@
 #include "../AestraUI/Core/NUIComponent.h"
 #include "NUILabel.h"
 #include "NUIIcon.h"
+#include "../AestraUI/Base/NUITextInput.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 
+#include <chrono>
 #include <memory>
 #include <functional>
 
@@ -31,7 +33,7 @@ namespace Aestra {
 class BPMDisplay : public AestraUI::NUIComponent {
 public:
     BPMDisplay();
-    ~BPMDisplay() = default;
+    ~BPMDisplay();
 
     void setBPM(float bpm);
     float getBPM() const { return m_currentBPM; }
@@ -39,7 +41,12 @@ public:
     // BPM adjustment
     void incrementBPM(float amount);
     void decrementBPM(float amount);
-    
+
+    // Direct editing (spec item 5): double-click the value opens an inline
+    // numeric field; Return commits through the same setBPM path as the
+    // arrows (existing 20..999 limits). Escape cancels; focus loss commits.
+    bool isEditingBPM() const { return m_editInput != nullptr; }
+
     // Callback when BPM changes via arrows
     void setOnBPMChange(std::function<void(float)> callback) { m_onBPMChange = callback; }
     
@@ -67,11 +74,19 @@ private:
     float m_holdDelay;           // Initial delay before repeat
     
     // Cached bounds for dynamic centering
-    AestraUI::NUIRect m_cachedUpArrowBounds;
-    AestraUI::NUIRect m_cachedDownArrowBounds;
+    static constexpr float kArrowColumnWidth = 10.0f;
     
     AestraUI::NUIRect getUpArrowBounds() const;
     AestraUI::NUIRect getDownArrowBounds() const;
+
+    // Inline BPM editing state
+    std::shared_ptr<AestraUI::NUITextInput> m_editInput;
+    std::chrono::steady_clock::time_point m_lastValueClickTime{};
+    void openBPMEditor();
+    void commitBPMEdit();
+    void cancelBPMEdit();
+    void closeBPMEditor();
+    static std::string trimBPMValue(float bpm);
 };
 
 /**
@@ -114,21 +129,42 @@ public:
     TimerDisplay();
     ~TimerDisplay() = default;
 
+    /** @brief The two transport-clock representations (spec item 2). */
+    enum class DisplayMode { Time, Musical };
+
     void setTime(double seconds);
     double getTime() const { return m_currentTime; }
-    
+
+    /** @brief Position in beats + meter for musical mode (fed alongside seconds). */
+    void setMusicalPosition(double beats, int beatsPerBar);
+
+    /** @brief Single tap/click toggles Time <-> Musical; position is untouched. */
+    void toggleDisplayMode();
+    DisplayMode getDisplayMode() const { return m_displayMode; }
+
     // Set playing state to change color
     void setPlaying(bool playing) { m_isPlaying = playing; }
     bool isPlaying() const { return m_isPlaying; }
-    
+
     void onRender(AestraUI::NUIRenderer& renderer) override;
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
+
+    /** @brief Existing time representation (minutes:seconds.centiseconds), preserved verbatim. */
+    static std::string formatTime(double seconds);
+    /** @brief Existing bar/beat representation (1-based bar:beat.centibeats), as in note labels. */
+    static std::string formatMusical(double beats, int beatsPerBar);
+    /** @brief Transport position as bar.beat.sixteenth, all 1-based (e.g. "13.4.2"). */
+    static std::string formatBarBeatSixteenth(double beats, int beatsPerBar);
 
 private:
     double m_currentTime;
     bool m_isPlaying;
-    
-    std::string formatTime(double seconds) const;
+    // Bars first: while music plays you read where you are in the song, so the
+    // musical position is the large reading and clock time sits beside it.
+    DisplayMode m_displayMode{DisplayMode::Musical};
+    double m_positionBeats{0.0};
+    int m_beatsPerBar{4};
+    bool m_tapArmed{false};
 };
 
 /**
@@ -150,6 +186,11 @@ public:
     void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
+
+    // Two transport modules live here: POSITION (clock) and TEMPO (BPM + meter).
+    static constexpr float kPositionModuleWidth = 164.0f;
+    static constexpr float kTempoModuleWidth = 142.0f;
+    static constexpr float kPreferredWidth = kPositionModuleWidth + kTempoModuleWidth;
 
 private:
     std::shared_ptr<BPMDisplay> m_bpmDisplay;

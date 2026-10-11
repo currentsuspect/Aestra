@@ -245,6 +245,46 @@ if(TARGET AestraAudioCore)
     )
 endif()
 
+# Sampler Voice Behaviour Test: layering one-shots. Pitching (incl. a 44.1 kHz
+# file on a 48 kHz engine and chords), one note-off per note for same-pitch
+# overlaps in poly/cut-self/mono, and a square envelope leaves no tail.
+# Drives SamplerPlugin directly; core-linked, every CI lane.
+if(TARGET AestraAudioCore)
+    add_executable(SamplerVoiceBehaviourTest
+        SamplerVoiceBehaviourTest.cpp
+    )
+    target_link_libraries(SamplerVoiceBehaviourTest PRIVATE AestraAudioCore)
+    target_include_directories(SamplerVoiceBehaviourTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME SamplerVoiceBehaviourTest COMMAND SamplerVoiceBehaviourTest)
+    set_tests_properties(SamplerVoiceBehaviourTest PROPERTIES
+        LABELS "headless;sampler;audio;dsp;regression;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
+# Sampler Keep-Length Test: keep-length pitch mode (pitch without the resampling
+# speed change). Exact pitch + source decay, Resample unchanged, render fallback,
+# no stale buffers after a sample swap, save/load. Core-linked, every CI lane.
+if(TARGET AestraAudioCore)
+    add_executable(SamplerKeepLengthTest
+        SamplerKeepLengthTest.cpp
+    )
+    target_link_libraries(SamplerKeepLengthTest PRIVATE AestraAudioCore)
+    target_include_directories(SamplerKeepLengthTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME SamplerKeepLengthTest COMMAND SamplerKeepLengthTest)
+    set_tests_properties(SamplerKeepLengthTest PROPERTIES
+        LABELS "headless;sampler;audio;dsp;regression;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+        TIMEOUT 120
+    )
+endif()
+
 # Automation Playback Test — end-to-end regression: lane automation curves
 # must reach the engine (snapshot copy), evaluate in the beat domain across
 # tempo changes, and follow UI point drags. Core-linked, every CI lane.
@@ -261,6 +301,42 @@ if(TARGET AestraAudioCore)
     add_test(NAME AutomationPlaybackTest COMMAND AutomationPlaybackTest)
     set_tests_properties(AutomationPlaybackTest PROPERTIES
         LABELS "headless;automation;audio;engine;regression;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
+# V8-A1 (FD-20): automation mutations go through the command history, and V8-A9's
+# neutral-is-unity model fix which the command layer would otherwise have
+# resurrected through a second construction path. Core-linked, every CI lane.
+# No EXISTS guard: a missing committed test source must fail configure.
+if(TARGET AestraAudioCore)
+    add_executable(AutomationCommandHistoryTest
+        AutomationCommandHistoryTest.cpp
+    )
+    target_link_libraries(AutomationCommandHistoryTest PRIVATE AestraAudioCore)
+    target_include_directories(AutomationCommandHistoryTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME AutomationCommandHistoryTest COMMAND AutomationCommandHistoryTest)
+    set_tests_properties(AutomationCommandHistoryTest PROPERTIES
+        LABELS "headless;automation;undo;regression;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
+# V8-W6: placing a clip is ONE undo step through the command history, with the lane
+# (and owning Track) it may need; a failed placement leaves no history. Core-linked.
+if(TARGET AestraAudioCore)
+    add_executable(ClipPlacementTest ClipPlacementTest.cpp)
+    target_link_libraries(ClipPlacementTest PRIVATE AestraAudioCore)
+    target_include_directories(ClipPlacementTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ClipPlacementTest COMMAND ClipPlacementTest)
+    set_tests_properties(ClipPlacementTest PROPERTIES
+        LABELS "headless;clips;undo;regression;contract:audio"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()
@@ -464,4 +540,100 @@ set_tests_properties(HeadlessExportInstanceIsolationTest PROPERTIES
     ENVIRONMENT "AESTRA_HEADLESS=1"
 )
 
+# Spec 1 item 1: Timeline -> Arsenal -> Timeline must not go silent. Drives
+# the real setViewFocus teardown + hot-swap call sequence against live
+# TrackManager/AudioEngine state with committed audible content.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/TimelineArsenalSwitchAudioTest.cpp")
+    add_executable(TimelineArsenalSwitchAudioTest
+        TimelineArsenalSwitchAudioTest.cpp
+    )
+    target_link_libraries(TimelineArsenalSwitchAudioTest PRIVATE AestraAudio)
+    target_include_directories(TimelineArsenalSwitchAudioTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME TimelineArsenalSwitchAudioTest
+        COMMAND TimelineArsenalSwitchAudioTest
+    )
+    set_tests_properties(TimelineArsenalSwitchAudioTest PROPERTIES
+        LABELS "headless;engine;regression;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
+# Playback Context Authority PR 2: PlaybackContextController is the single writer of
+# the playback-mode mirrors. Pins the documented mirror table and the invariant that
+# entering Timeline/Audition clears every pattern mirror from every prior state.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PlaybackContextTest.cpp")
+    add_executable(PlaybackContextTest
+        PlaybackContextTest.cpp
+    )
+    target_link_libraries(PlaybackContextTest PRIVATE AestraAudio)
+    target_include_directories(PlaybackContextTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PlaybackContextTest COMMAND PlaybackContextTest)
+    set_tests_properties(PlaybackContextTest PROPERTIES
+        LABELS "headless;engine;transport;regression;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
+# SPEC 3 §2.1: the piano roll's playhead follows the clip playing its pattern during
+# timeline playback (it used to park at 0).
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PianoRollPlayheadMappingTest.cpp")
+    add_executable(PianoRollPlayheadMappingTest
+        PianoRollPlayheadMappingTest.cpp
+    )
+    target_link_libraries(PianoRollPlayheadMappingTest PRIVATE AestraAudioCore)
+    target_include_directories(PianoRollPlayheadMappingTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PianoRollPlayheadMappingTest COMMAND PianoRollPlayheadMappingTest)
+    set_tests_properties(PianoRollPlayheadMappingTest PROPERTIES
+        LABELS "headless;pattern;timeline;regression;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 message(STATUS "Headless tests enabled - AudioEngine API implemented")
+
+# AestraHeadless --check end to end: a real project file, loaded like the app,
+# rendered through AudioExporter like Export, judged; determinism (bit-exact
+# re-render), a level change and a missing asset each caught. Builds the same
+# sources AestraHeadless does, so it tests the code the CLI ships.
+add_executable(HeadlessCheckEndToEndTest
+    HeadlessCheckEndToEndTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/App/HeadlessCheck.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/AudioSettingsStore.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+)
+target_link_libraries(HeadlessCheckEndToEndTest PRIVATE AestraAudio)
+target_include_directories(HeadlessCheckEndToEndTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+)
+if(MSVC)
+    target_compile_options(HeadlessCheckEndToEndTest PRIVATE /utf-8)
+    target_compile_definitions(HeadlessCheckEndToEndTest PRIVATE _CRT_SECURE_NO_WARNINGS NOMINMAX)
+    target_link_libraries(HeadlessCheckEndToEndTest PRIVATE mfplat mfreadwrite mfuuid)
+endif()
+add_test(NAME HeadlessCheckEndToEndTest COMMAND HeadlessCheckEndToEndTest)
+set_tests_properties(HeadlessCheckEndToEndTest PROPERTIES
+    LABELS "headless;export;integration;contract:audio"
+    ENVIRONMENT "AESTRA_HEADLESS=1"
+    TIMEOUT 300
+)

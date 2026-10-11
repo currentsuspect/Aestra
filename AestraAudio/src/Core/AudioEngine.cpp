@@ -7,6 +7,7 @@
 #include "AuditionEngine.h"
 #include "Core/ClipRenderKernel.h"
 #include "DSP/PanLaw.h"
+#include "DSP/KWeighting.h"
 #include "EffectChain.h" // [NEW]
 #include "GarbageCollector.h"
 #include "IO/AudioExporter.h"
@@ -100,13 +101,14 @@ bool AudioEngine::isPreviewDuckingEnabled() const {
 }
 
 namespace {
-std::atomic<uint64_t> g_rtMisuseCount{0};
-std::atomic<uint64_t> g_rtMisuseReportedCount{0};
+std::atomic<AudioTelemetry*> g_misuseTelemetry{nullptr};
 std::atomic<const char*> g_rtMisuseLastApi{nullptr};
 
 void recordRealtimeMisuse(const char* apiName) noexcept {
     g_rtMisuseLastApi.store(apiName, std::memory_order_relaxed);
-    g_rtMisuseCount.fetch_add(1, std::memory_order_relaxed);
+    if (auto* telemetry = g_misuseTelemetry.load(std::memory_order_acquire)) {
+        telemetry->incrementRtMisuseViolations();
+    }
 }
 
 void installRealtimeMisuseHandler() noexcept {
@@ -245,6 +247,25 @@ void AudioEngine::applyPendingMetronomeCountInRt() {
 }
 
 void AudioEngine::applyPendingCommands() {
+    // Saturated-queue fallback (requestPlaybackContext): applied here, on the audio thread, so
+    // the context has exactly one writer. A slot newer than anything applied wins; any older
+    // command still queued behind it is rejected by the generation check below. Reading the
+    // payload after the generation can only yield the same or a newer payload, and a newer one
+    // is simply re-applied under its own generation on the next block.
+    {
+        const uint64_t fallbackGeneration = m_fallbackContextGeneration.load(std::memory_order_acquire);
+        if (fallbackGeneration > m_appliedContextGeneration.load(std::memory_order_relaxed)) {
+            const uint64_t packed = m_fallbackContextPacked.load(std::memory_order_relaxed);
+            m_patternPlaybackMode.store((packed & 1u) != 0, std::memory_order_relaxed);
+            m_auditionModeEnabled.store((packed & 2u) != 0, std::memory_order_relaxed);
+            float length = 0.0f;
+            const uint32_t lengthBits = static_cast<uint32_t>(packed >> 32);
+            std::memcpy(&length, &lengthBits, sizeof(length));
+            m_patternLengthBeats.store(static_cast<double>(length), std::memory_order_relaxed);
+            m_appliedContextGeneration.store(fallbackGeneration, std::memory_order_release);
+        }
+    }
+
     AudioQueueCommand cmd;
     // Bounded drain - max 16 commands per block (less work = less RT risk)
     int cmdCount = 0;
@@ -274,8 +295,37 @@ void AudioEngine::applyPendingCommands() {
         return command.channelId - 1;
     };
 
-    while (cmdCount < 16 && m_commandQueue.pop(cmd)) {
+    // A playback-context request and its transition's transport command must land in ONE
+    // block (PR 3). The 16-command drain limit could split such a pair across two blocks, so at
+    // the limit, right after one half of a pair, exactly one more command is taken: applied if
+    // it is the other half, otherwise carried to the front of the next block. Bounded (<= 17)
+    // and order-preserving. (Review, #957.)
+    const auto isPairHalf = [](AudioQueueCommandType type) {
+        return type == AudioQueueCommandType::SetPlaybackContext || type == AudioQueueCommandType::SetTransportState;
+    };
+    AudioQueueCommandType lastType = AudioQueueCommandType::None;
+    bool pairExtended = false;
+    for (;;) {
+        if (cmdCount < 16) {
+            if (m_hasCarriedCommand) {
+                cmd = m_carriedCommand;
+                m_hasCarriedCommand = false;
+            } else if (!m_commandQueue.pop(cmd)) {
+                break;
+            }
+        } else {
+            if (!isPairHalf(lastType) || pairExtended || !m_commandQueue.pop(cmd)) {
+                break;
+            }
+            if (!isPairHalf(cmd.type) || cmd.type == lastType) {
+                m_carriedCommand = cmd;
+                m_hasCarriedCommand = true;
+                break;
+            }
+            pairExtended = true;
+        }
         ++cmdCount;
+        lastType = cmd.type;
         // Transport commands: keep only the latest per block, but record edges.
         if (cmd.type == AudioQueueCommandType::SetTransportState) {
             const bool nextPlaying = (cmd.value1 != 0.0f);
@@ -313,6 +363,19 @@ void AudioEngine::applyPendingCommands() {
             break;
         case AudioQueueCommandType::SetMetronomeEnabled:
             setMetronomeEnabled(static_cast<bool>(cmd.value1));
+            break;
+        case AudioQueueCommandType::SetPlaybackContext:
+            // Stores only. The scheduler rewind a mode or length change needs already ran on
+            // the main thread when the context was requested (see requestPlaybackContext).
+            // Generations are monotonic: a context already superseded (by the saturated-queue
+            // direct fallback) must not be re-applied from the queue behind it.
+            if (cmd.samplePos <= m_appliedContextGeneration.load(std::memory_order_relaxed)) {
+                break;
+            }
+            m_patternPlaybackMode.store(cmd.value1 != 0.0f, std::memory_order_relaxed);
+            m_patternLengthBeats.store(static_cast<double>(cmd.value2), std::memory_order_relaxed);
+            m_auditionModeEnabled.store(cmd.trackIndex != 0, std::memory_order_relaxed);
+            m_appliedContextGeneration.store(cmd.samplePos, std::memory_order_release);
             break;
         case AudioQueueCommandType::MetronomeCountInStart: {
             // Clamp before the float→unsigned narrowing: negative/NaN/oversized
@@ -638,6 +701,10 @@ void AudioEngine::refreshSamplerCacheToSnapshot(UnitManager& mgr, SamplerCacheSn
 }
 
 void AudioEngine::setPatternPlaybackMode(bool enabled, double lengthBeats) {
+    // Legacy direct store (Muse's offline renders until Playback Context PR 4). Keep the request
+    // bookkeeping in step, or the next requestPlaybackContext() could skip a rewind it needs.
+    m_requestedPatternMode = enabled;
+    m_requestedPatternLength = lengthBeats;
     const double oldLength = m_patternLengthBeats.exchange(lengthBeats, std::memory_order_relaxed);
     const bool wasEnabled = m_patternPlaybackMode.exchange(enabled, std::memory_order_relaxed);
     // A loop-length change while playing shifts the monotonic scheduling
@@ -651,6 +718,44 @@ void AudioEngine::setPatternPlaybackMode(bool enabled, double lengthBeats) {
     }
 }
 
+void AudioEngine::requestPlaybackContext(bool patternMode, double patternLengthBeats, bool audition) {
+    if (reportRealtimeMisuse("AudioEngine::requestPlaybackContext")) {
+        return;
+    }
+    // Same rule as setPatternPlaybackMode(): entering pattern mode, or changing its loop length
+    // while in it, shifts the monotonic scheduling domain, so queued events must re-queue.
+    // Judged against the last REQUEST, not the applied state, so two requests inside one block
+    // cannot both skip it.
+    if (patternMode && (!m_requestedPatternMode || std::abs(m_requestedPatternLength - patternLengthBeats) > 1e-9)) {
+        if (auto* patEng = m_patternEngine.load(std::memory_order_acquire)) {
+            patEng->rewindScheduledInstances();
+        }
+    }
+    m_requestedPatternMode = patternMode;
+    m_requestedPatternLength = patternLengthBeats;
+
+    const uint64_t generation = m_requestedContextGeneration.fetch_add(1, std::memory_order_acq_rel) + 1;
+    AudioQueueCommand cmd{};
+    cmd.type = AudioQueueCommandType::SetPlaybackContext;
+    cmd.value1 = patternMode ? 1.0f : 0.0f;
+    // Pattern lengths are whole or quarter beats, all exact in float.
+    cmd.value2 = static_cast<float>(patternLengthBeats);
+    cmd.trackIndex = audition ? 1u : 0u;
+    cmd.samplePos = generation;
+    if (!m_commandQueue.pushReliable(cmd)) {
+        // Queue saturated: post the context to a generation-tagged slot the audio thread applies
+        // at the start of its next block. The producer never writes the context itself. Writing
+        // it directly (the first version) raced an older command the audio thread was mid-way
+        // through applying, which could restore a stale context AND lower the applied generation,
+        // leaving settled() false forever. (Review, #957.)
+        Aestra::Log::warning("[AudioEngine] Playback context command queue saturated; posting the context to the "
+                             "fallback slot");
+        m_fallbackContextPacked.store(packPlaybackContext(patternMode, patternLengthBeats, audition),
+                                      std::memory_order_relaxed);
+        m_fallbackContextGeneration.store(generation, std::memory_order_release);
+    }
+}
+
 void AudioEngine::performNonRealtimeMaintenance() {
     if (reportRealtimeMisuse("AudioEngine::performNonRealtimeMaintenance")) {
         return;
@@ -660,10 +765,9 @@ void AudioEngine::performNonRealtimeMaintenance() {
         preview->handleDeferredCompletion();
     }
 
-    const uint64_t rtMisuseCount = g_rtMisuseCount.load(std::memory_order_relaxed);
-    const uint64_t reportedCount = g_rtMisuseReportedCount.load(std::memory_order_relaxed);
-    if (rtMisuseCount != reportedCount) {
-        g_rtMisuseReportedCount.store(rtMisuseCount, std::memory_order_relaxed);
+    const uint64_t rtMisuseCount = m_telemetry.getRtMisuseViolations();
+    if (rtMisuseCount != m_reportedMisuseCount.load(std::memory_order_relaxed)) {
+        m_reportedMisuseCount.store(rtMisuseCount, std::memory_order_relaxed);
         const char* apiName = g_rtMisuseLastApi.load(std::memory_order_relaxed);
         Aestra::Log::warning(
             "[RTGuard] Non-real-time API reached audio thread: " + std::string(apiName ? apiName : "unknown") +
@@ -1121,10 +1225,23 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
                 patternLoopLenSamples = loopEndSample - loopStartSample;
             }
 
-            // Check for loop crossing
-            // Enhanced Logic: In Pattern Mode, we might start WAY past loop end (Timeline position).
-            // We must wrap if nextGlobalPos exceeds loopEndSample, regardless of where current started.
-            if (nextGlobalPos > loopEndSample && loopEndSample > loopStartSample) {
+            // Check for loop crossing.
+            // Pattern mode: we might start WAY past the loop end (a stale timeline
+            // position), and the pattern is the whole world, so wrap regardless of
+            // where playback started.
+            // Timeline mode: the loop only catches a playhead that crosses the loop
+            // end from inside. Playback started past the loop end runs on linearly —
+            // otherwise dragging the playhead there and pressing play folded it
+            // into the loop by modulo, and the drag looked ignored.
+            // Exactly AT the loop end is ambiguous: a block can end on it without
+            // wrapping (the test below is next > loopEnd), so arriving there by
+            // advancing must still wrap — but a play/seek that PLACED the playhead
+            // there (a grid-snapped drag onto the loop's end bar) did not come
+            // from inside. transportRestart is exactly "placed by a command".
+            const bool crossesFromInside = currentGlobalPos < loopEndSample ||
+                                           (currentGlobalPos == loopEndSample && !transportRestart);
+            if (nextGlobalPos > loopEndSample && loopEndSample > loopStartSample &&
+                (patternMode || crossesFromInside)) {
                 // Loop Triggered!
                 // Calculate wrap
                 // Case 1: Standard crossing (inside -> outside)
@@ -1472,8 +1589,9 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         }
     }
 
-    // Fade envelopes (short ramps prevent clicks on stop/seek)
+    // Fade envelopes (short ramps prevent clicks on stop/seek). An offline render takes no fade-in (V8-W4).
     if (m_fadeState.load(std::memory_order_relaxed) == FadeState::FadingIn) {
+        const bool snapFade = m_offlineRenderActive.load(std::memory_order_relaxed);
         const double fadeTotal = static_cast<double>(FADE_IN_SAMPLES);
         for (uint32_t i = 0; i < numFrames; ++i) {
             if (m_fadeSamplesRemaining == 0) {
@@ -1481,7 +1599,7 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
                 break;
             }
             const double progress = 1.0 - (static_cast<double>(m_fadeSamplesRemaining) / fadeTotal);
-            const double fadeGain = progress * progress * (3.0 - 2.0 * progress); // Smoothstep
+            const double fadeGain = snapFade ? 1.0 : progress * progress * (3.0 - 2.0 * progress); // Smoothstep
             const size_t frameBase = static_cast<size_t>(i) * numOutputChannels;
             for (uint32_t ch = 0; ch < numOutputChannels; ++ch) {
                 outputBuffer[frameBase + ch] *= static_cast<float>(fadeGain);
@@ -1922,91 +2040,17 @@ void AudioEngine::captureWaveformHistory(const float* interleavedOutput, uint32_
 }
 
 // --- Constants ---
-// Sample-rate-aware LUFS K-weighting coefficients via bilinear transform
-// ITU-R BS.1770-4 specification
+// BS.1770-4 K-weighting at the device rate. One implementation, shared with offline
+// analysis (DSP/KWeighting.h), so the master meter and a render's analysis agree.
 AudioEngine::BiquadCoeff AudioEngine::computeKWeightPreFilter(double sampleRate) {
-    // ITU-R BS.1770 K-weighting pre-filter analog prototype
-    // Reference design parameters chosen so the 48 kHz digital coefficients match:
-    // b0=1.53512485958697, b1=-2.69169618940638, b2=1.19839281085285,
-    // a1=-1.69065929318241, a2=0.73248077421585
-    const double fs = sampleRate;
-    const double f0 = 1681.974450955533;
-    const double Q = 0.7071752369554196;
-    const double gainDb = 4.0; // 4.0 dB per BS.1770
-
-    // RBJ high-shelf form using bilinear transform of the BS.1770 prototype.
-    // A = 10^(gain/40) per the standard (not linear gain)
-    const double K = std::tan(PI_D * f0 / fs);
-    const double K2 = K * K;
-    const double A = std::pow(10.0, gainDb / 40.0);
-    const double norm = 1.0 + K / Q + K2;
-
-    const double b0 = (A + K / Q + K2) / norm;
-    const double b1 = 2.0 * (K2 - A) / norm;
-    const double b2 = (A - K / Q + K2) / norm;
-    const double a1 = 2.0 * (K2 - 1.0) / norm;
-    const double a2 = (1.0 - K / Q + K2) / norm;
-
-    // Validate that the computed 48 kHz coefficients reproduce the existing reference
-    // values within tolerance; fall back to the reference constants if they do not.
-    if (std::abs(fs - 48000.0) < 1.0e-9) {
-        constexpr double tolerance = 1.0e-9;
-        if (std::abs(b0 - kKWeightPreFilter.b0) > tolerance || std::abs(b1 - kKWeightPreFilter.b1) > tolerance ||
-            std::abs(b2 - kKWeightPreFilter.b2) > tolerance || std::abs(a1 - kKWeightPreFilter.a1) > tolerance ||
-            std::abs(a2 - kKWeightPreFilter.a2) > tolerance) {
-            return kKWeightPreFilter;
-        }
-    }
-
-    return {b0, b1, b2, a1, a2};
+    const KWeighting::Biquad c = KWeighting::preFilter(sampleRate);
+    return {c.b0, c.b1, c.b2, c.a1, c.a2};
 }
 
 AudioEngine::BiquadCoeff AudioEngine::computeKWeightRLB(double sampleRate) {
-    // BS.1770 RLB high-pass filter.
-    //
-    // The standard 48 kHz reference coefficients already used by this engine are:
-    //   b = { 1.0, -2.0, 1.0 }
-    //   a = { -1.99004745483398, 0.99007225036621 }
-    //
-    // To preserve that behavior across sample rates, compute the denominator from the
-    // BS.1770 analog prototype parameters and keep the existing numerator convention.
-    double fs = sampleRate;
-    double f0 = 38.13547087602444;
-    double Q = 0.5;
-
-    // Bilinear transform pre-warping
-    double K = std::tan(PI_D * f0 / fs);
-    double K2 = K * K;
-    double norm = 1.0 + K / Q + K2;
-
-    double a1 = 2.0 * (K2 - 1.0) / norm;
-    double a2 = (1.0 - K / Q + K2) / norm;
-    AudioEngine::BiquadCoeff coeff{1.0, -2.0, 1.0, a1, a2};
-
-    // Validate that the computed 48 kHz coefficients reproduce the existing reference
-    // values within tolerance; fall back to the reference constants if they do not.
-    if (std::abs(fs - 48000.0) < 1.0e-9) {
-        constexpr double tolerance = 1.0e-9;
-        if (std::abs(coeff.b0 - kKWeightRLB.b0) > tolerance || std::abs(coeff.b1 - kKWeightRLB.b1) > tolerance ||
-            std::abs(coeff.b2 - kKWeightRLB.b2) > tolerance || std::abs(coeff.a1 - kKWeightRLB.a1) > tolerance ||
-            std::abs(coeff.a2 - kKWeightRLB.a2) > tolerance) {
-            return kKWeightRLB;
-        }
-    }
-
-    return coeff;
+    const KWeighting::Biquad c = KWeighting::rlbHighPass(sampleRate);
+    return {c.b0, c.b1, c.b2, c.a1, c.a2};
 }
-
-// Fallback to 48 kHz coefficients for compatibility
-const AudioEngine::BiquadCoeff AudioEngine::kKWeightPreFilter = {
-    1.53512485958697, -2.69169618940638, 1.19839281085285, // b0, b1, b2
-    -1.69065929318241, 0.73248077421585                    // a1, a2
-};
-
-const AudioEngine::BiquadCoeff AudioEngine::kKWeightRLB = {
-    1.0, -2.0, 1.0,                     // b0, b1, b2
-    -1.99004745483398, 0.99007225036621 // a1, a2
-};
 
 /**
  * @brief Initialize AudioEngine runtime state.
@@ -2016,6 +2060,7 @@ const AudioEngine::BiquadCoeff AudioEngine::kKWeightRLB = {
  */
 AudioEngine::AudioEngine() {
     installRealtimeMisuseHandler();
+    g_misuseTelemetry.store(&m_telemetry, std::memory_order_release);
     Aestra::Log::info("[AudioEngine] Created (Original Ctor). Ptr: " +
                       std::to_string(reinterpret_cast<uintptr_t>(this)));
 
@@ -2040,6 +2085,8 @@ AudioEngine::AudioEngine() {
 }
 
 AudioEngine::~AudioEngine() {
+    AudioTelemetry* expected = &m_telemetry;
+    g_misuseTelemetry.compare_exchange_strong(expected, nullptr, std::memory_order_acq_rel);
     if (auto trackMgr = m_trackManager.lock()) {
         trackMgr->setChannelPrepareCallback(nullptr);
         for (size_t i = 0; i < trackMgr->getChannelCount(); ++i) {
@@ -2599,14 +2646,12 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
     // The ring is prepared off-RT and only for tracks with a nonzero delay, so a
     // null pointer here means "nothing to compensate" rather than an error.
     //
-    // The published unit is a single immutable CompensationRingDescriptor behind
-    // one atomic pointer (PR #730 follow-up): RT acquire-loads it once per block
-    // and reads {buffer, capacity, delay, generation} from that one descriptor,
-    // so control publications can never interleave into a mixed-generation
-    // snapshot. The `delay < capacity` guard is retained verbatim: it is what
-    // previously caused delays at or beyond the old fixed 16384-frame ring to
-    // pass through uncompensated, and changing that would silently alter mix
-    // alignment.
+    // The published unit is one immutable CompensationRingDescriptor behind an
+    // atomic pointer (PR #730 follow-up): RT acquire-loads it once per block and
+    // reads {buffer, capacity, delay, generation} from it, so publications never
+    // interleave into a mixed-generation snapshot. The `delay < capacity` guard
+    // stays verbatim: delays at or beyond the old 16384-frame ring pass through
+    // uncompensated, and changing that would silently alter mix alignment.
     auto* const comp = state.compensation.get();
     const CompensationRingDescriptor* desc = comp ? comp->published.load(std::memory_order_acquire) : nullptr;
     if (desc != nullptr && desc->delaySamples > 0 && desc->buffer != nullptr) {
@@ -2631,12 +2676,10 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
         }
     }
 
-    // RT acknowledgement: once this block is done with the descriptor it
-    // observed, publish that generation to the slot. Control acquire-loads this
-    // before reclaiming retired generations, so no buffer is freed while an
-    // in-flight RT block could still be reading it. Monotonic, and a relaxed
-    // read is enough here because ack only moves forward when the descriptor
-    // generation does (control publishes ascending generations).
+    // RT acknowledgement: once this block is done with the descriptor it observed,
+    // publish that generation. Control acquire-loads it before reclaiming retired
+    // generations, so no buffer is freed while an RT block may still read it.
+    // Monotonic (control publishes ascending generations), so a relaxed read suffices.
     if (comp != nullptr) {
         const uint32_t observed = desc ? desc->generation : 0;
         const uint32_t acked = comp->ackedGeneration.load(std::memory_order_relaxed);
@@ -2645,13 +2688,16 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
         }
     }
 
+    // V8-W5: Bounce in Place reads the strip's output here, after the inserts and delay
+    // compensation, before fader/pan, which stay live on the bounced clip.
+    if (m_trackOutputTap.wantsAt(track.trackId, false))
+        m_trackOutputTap.capture(buffer.data(), numFrames);
+
     // Route post-fader output to the selected main destination and any audible sends.
-    // Pan law: stereoBalance, always. equalPower (-3 dB per leg at centre) is the
-    // law for placing a MONO source in a stereo field; applying it to the strip
-    // attenuated already-stereo content by -3.01 dB and made a channel's own
-    // level depend on whether it happens to receive an audible route (the old
-    // receivesAudibleRoute conditional). Direct-to-Master clips never passed a
-    // strip, so channel-routed music was quieter than Master-routed music.
+    // Pan law: stereoBalance, always. equalPower (-3 dB per leg at centre) places a
+    // MONO source in a stereo field; on the strip it attenuated stereo content by
+    // -3.01 dB and made a channel's level depend on whether it had an audible route,
+    // so channel-routed music was quieter than Master-routed music.
     double tL, tR;
     fastStereoBalanceGainsD(panTarget, volTarget, tL, tR);
     state.gainL.setTarget(tL);
@@ -2754,6 +2800,9 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
             sumLRTrack += outL * outR;
         }
     }
+
+    if (m_trackOutputTap.wantsAt(track.trackId, true)) // V8-S1: stems are the strip after fader/pan
+        m_trackOutputTap.capture(buffer.data(), numFrames);
 
     // Send processing (Routing Contract I9/V1/V2):
     // - The mute gate applies to the main path and POST-fader sends only.
@@ -2951,16 +3000,12 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
         }
     }
 
-    // Gain staging: the channel strip is driven by track.volume (the mixer
-    // fader, written by SetVolumeCommand/undo and the project loader) and the
-    // trim knob (continuous slot). The continuous faderDb/panParam mirrors are
-    // deliberately NOT multiplied here — one UI gesture used to write both
-    // stores, which squared every non-unity fader position and summed pan
-    // twice (e.g. UI -6 dB became -12 dB actual). The continuous buffer keeps
-    // its role for the master strip (slot 127) and for UI display sync.
-    // clampD passes NaN through (both comparisons are false), so a non-finite
-    // trim from the continuous slot must be rejected before it reaches the
-    // gain; treat it as neutral (no trim).
+    // Gain staging: the strip is driven by track.volume (the mixer fader) and
+    // the trim knob (continuous slot). The continuous faderDb/panParam mirrors
+    // are deliberately NOT multiplied here: one UI gesture used to write both
+    // stores, squaring every non-unity fader and summing pan twice (UI -6 dB
+    // became -12 dB). They still serve the master strip (slot 127) and the UI.
+    // clampD passes NaN through, so a non-finite trim is rejected here (neutral).
     double gain = 1.0;
     if (std::isfinite(trimDb)) {
         const double trimDbClamped = clampD(static_cast<double>(trimDb), -24.0, 24.0);
@@ -2981,35 +3026,30 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
             } else if (curve.getAutomationTarget() == AutomationTarget::Pan) {
                 panTarget = clampD(curve.getValueAtBeat(currentBeat), -1.0, 1.0);
             } else if (curve.getAutomationTarget() == AutomationTarget::Custom) {
-                // Plugin-parameter automation. Internal-format plugins only:
-                // their parameter storage is atomic, so a per-block
-                // setParameter from this thread is lock-free and RT-safe.
-                // Third-party formats are skipped until host param queues
-                // exist (#467). Applied before the effect chain processes
-                // this block, so the value is in effect for these frames.
+                // Plugin-parameter automation through the render-thread
+                // contract (V8-A5, PluginHost.h): the engine asks the plugin,
+                // never its format. Internal plugins store atomically; a
+                // hosted-format adapter will enqueue for the format's own
+                // queue (#467). A plugin that does not declare support is
+                // skipped and counted, never guessed at. Applied before the
+                // chain processes this block.
                 //
-                // Smoothing policy: the *plugin* owns parameter smoothing.
-                // setParameter only stores a target; each internal plugin's
-                // process() ramps toward it — the same contract used for UI
-                // knob moves. We deliberately hand the raw target over once
-                // per block instead of ramping engine-side, so automation
-                // and manual edits share one smoother and never cascade into
-                // double-smoothing. Every internal effect honors this (Drift
-                // was the last to gain per-sample Mix/Pitch smoothing).
+                // The plugin owns smoothing: the raw target is handed over once
+                // per block, the same contract as UI knob moves, so automation
+                // and manual edits never double-smooth.
                 // Automation Identity Contract: resolve by instance id, never
-                // by slot position. A curve whose instance is gone (dangling)
-                // is skipped — it is never re-pointed at whatever now occupies
-                // a slot.
+                // by slot position; a dangling instance is skipped, never
+                // re-pointed at whatever now occupies a slot.
                 if (track.effectChainSnapshot && curve.deviceInstanceId != 0) {
                     const size_t slotIndex =
                         track.effectChainSnapshot->findSlotByInstanceId(curve.deviceInstanceId);
-                    if (slotIndex < EffectChainSnapshot::MAX_SLOTS) {
+                    if (slotIndex != EffectChain::kNoSlot) {
                         const auto& slot = track.effectChainSnapshot->slot(slotIndex);
-                        if (slot.plugin && slot.plugin->getInfo().format == PluginFormat::Internal) {
-                            const float value = curve.getValueAtBeat(currentBeat);
-                            if (std::isfinite(value)) {
-                                slot.plugin->setParameter(curve.paramId, value);
-                            }
+                        const float value = curve.getValueAtBeat(currentBeat);
+                        if (slot.plugin && !slot.plugin->supportsRealtimeAutomation()) {
+                            m_automationUnsupportedSkips.fetch_add(1, std::memory_order_relaxed);
+                        } else if (slot.plugin && std::isfinite(value)) {
+                            slot.plugin->applyAutomation(curve.paramId, value); // empty slot: nothing to drive
                         }
                     }
                 }
@@ -3022,8 +3062,8 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
     const bool muted = track.mute || state.mute;
     const bool audibleEligible =
         !anySolo || (static_cast<size_t>(trackIdx) < availableTracks && m_rtAudibleEligible[trackIdx]);
-    const bool processActive =
-        !anySolo || (static_cast<size_t>(trackIdx) < availableTracks && m_rtProcessActive[trackIdx]);
+    const bool processActive = !anySolo || m_trackOutputTap.wants(track.trackId) ||
+                               (static_cast<size_t>(trackIdx) < availableTracks && m_rtProcessActive[trackIdx]);
 
     // Initialize send gain smoothers when send count changes.
     // Vectors are pre-sized to kMaxSendsPerTrack in setBufferConfig(),

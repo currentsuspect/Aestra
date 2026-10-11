@@ -27,6 +27,14 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
     renderer.setClipRect(bounds);
     renderer.fillRect(bounds, theme.getColor("timelineBed"));
 
+    // The ruler loop zone: pattern playback loops only this range (SPEC 3 §5.2).
+    if (loopZoneActive_ && loopZoneEnd_ > loopZoneStart_) {
+        const float x1 = bounds.x + static_cast<float>(loopZoneStart_ * pixelsPerBeat_) - scrollX_;
+        const float x2 = bounds.x + static_cast<float>(loopZoneEnd_ * pixelsPerBeat_) - scrollX_;
+        renderer.fillRect(NUIRect(x1, bounds.y, x2 - x1, bounds.height),
+                          theme.getColor("accentPrimary").withAlpha(0.07f));
+    }
+
     const auto gridInk = theme.getCurrentTheme().textPrimary;
     const auto accidentalRow = gridInk.withAlpha(0.018f);
     const auto rootRow = theme.getColor("accentPrimary").withAlpha(0.035f);
@@ -57,10 +65,16 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
     }
 
     TimelineGridStyle gridStyle;
-    gridStyle.barLineAlpha = 0.02f;
-    gridStyle.beatLineAlpha = 0.005f;
-    gridStyle.subdivisionLineAlpha = 0.002f;
-    gridStyle.zebraAlpha = 0.006f;
+    // Gamma-space alphas (F3): converted from linear-era tuning, which inflated
+    // low-alpha light-on-dark roughly 6x before compositing was unified. Same
+    // rendered result, different number to express it.
+    gridStyle.barLineAlpha = 0.148f;         // was 0.02
+    gridStyle.beatLineAlpha = 0.057f;        // was 0.005
+    gridStyle.subdivisionLineAlpha = 0.023f; // was 0.002
+    // No bar zebra (SPEC 3 §5.1, owner): at 0.066 every other bar read as a band of near
+    // black (bed RGB 0-4 against 15-19) in which the beat lines vanished. The timeline gets
+    // by with lines alone, and at matching line alphas so does this.
+    gridStyle.zebraAlpha = 0.0f;
     renderTimelineGrid(renderer, bounds, bounds.x, bounds.right(), scrollX_, pixelsPerBeat_, beatsPerBar_, gridInk,
                        gridStyle, getSnapSubdivisionBeats());
 
@@ -90,9 +104,9 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
 
     renderer.clearClipRect();
 }
-void PianoRollGrid::setPixelsPerBeat(float ppb) { pixelsPerBeat_ = std::max(10.0f, ppb); repaint(); }
-void PianoRollGrid::setKeyHeight(float height) { keyHeight_ = std::max(8.0f, height); repaint(); }
-void PianoRollGrid::setScrollOffsetX(float offset) { scrollX_ = offset; repaint(); }
-void PianoRollGrid::setScrollOffsetY(float offset) { scrollY_ = offset; repaint(); }
+void PianoRollGrid::setPixelsPerBeat(float ppb) { const auto next = std::max(10.0f, ppb); if (pixelsPerBeat_ == next) return; pixelsPerBeat_ = next; repaint(); }
+void PianoRollGrid::setKeyHeight(float height) { const auto next = std::max(8.0f, height); if (keyHeight_ == next) return; keyHeight_ = next; repaint(); }
+void PianoRollGrid::setScrollOffsetX(float offset) { const auto next = offset; if (scrollX_ == next) return; scrollX_ = next; repaint(); }
+void PianoRollGrid::setScrollOffsetY(float offset) { const auto next = offset; if (scrollY_ == next) return; scrollY_ = next; repaint(); }
 
 } // namespace AestraUI

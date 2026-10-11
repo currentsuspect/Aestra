@@ -30,10 +30,12 @@ enum class NUILayer {
  */
 struct TooltipState {
     std::string text;
-    NUIPoint position;
+    NUIPoint position;  ///< The point anchor as given; for a rect anchor, its bottom-left.
+    NUIRect anchor;     ///< What the tooltip must not cover: the control, or the pointer's clearance box.
     const void* owner = nullptr;
     bool active = false;
     bool immediate = false;
+    bool forced = false;  ///< A live readout (force=true): exempt from gesture dismissal.
     float alpha = 0.0f;
     float delayTimer = 0.0f;
     float dismissGraceTimer = 0.0f;
@@ -63,8 +65,10 @@ public:
     // Layout & Bounds
     void setBounds(float x, float y, float width, float height);
     void setBounds(const NUIRect& bounds);
+    /// Window-absolute (V8-X2b Window space): components render and hit-test at bounds_ as-is.
+    /// There is no separate "global" rect; getGlobalBounds(), localToGlobal() and globalToLocal()
+    /// added every ancestor's origin on top of it and were removed in phase 6b.
     NUIRect getBounds() const { return bounds_; }
-    NUIRect getGlobalBounds() const;
     
     void setPosition(float x, float y);
     NUIPoint getPosition() const { return {bounds_.x, bounds_.y}; }
@@ -87,6 +91,11 @@ public:
     // deferred until the full component traversal unwinds.
     static bool dispatchMouseEvent(NUIComponent* target, const NUIMouseEvent& event);
 
+    // Canonical key-event entry point. Same deferral contract as the mouse
+    // path: a key handler may close/destroy its own popup (mixer insert
+    // dropdown Enter/Escape), which must not run while dispatch is in flight.
+    static bool dispatchKeyEvent(NUIComponent* target, const NUIKeyEvent& event);
+
     // Low-level nestable guard retained for code that brackets a larger custom
     // dispatch. Prefer dispatchMouseEvent() for a single target.
     static void beginEventDispatch();
@@ -101,8 +110,6 @@ public:
     const std::vector<std::shared_ptr<NUIComponent>>& getChildren() const { return children_; }
     
     std::shared_ptr<NUIComponent> findChildById(const std::string& id);
-    NUIPoint localToGlobal(const NUIPoint& local) const;
-    NUIPoint globalToLocal(const NUIPoint& global) const;
     
     // State
     void setVisible(bool visible);
@@ -187,10 +194,15 @@ private:
     NUILayer layer_ = NUILayer::Content;
     
     std::string tooltipText_;
+    /** This component's global bounds: what its own tooltip must not cover. */
+    NUIRect globalTooltipAnchor() const;
+    /** True if @p candidate is this component or any descendant (tooltip owners are raw pointers). */
+    bool subtreeContains(const void* candidate) const;
     
     // Static Global Tooltip State
     static TooltipState s_tooltipState;
     static bool s_cursorCaptureActive;
+    static unsigned s_pointerButtonsHeld; ///< One bit per NUIMouseButton currently down.
     
     std::shared_ptr<NUITheme> theme_;
     
@@ -200,12 +212,37 @@ public:
     std::string getTooltip() const { return tooltipText_; }
     
     // Global Tooltip Management
+    /**
+     * @brief Show the one app-level tooltip (SPEC 3 §1.3).
+     *
+     * Policy, the same everywhere: it sits BELOW its anchor, left-aligned, and flips above only
+     * where the viewport has no room below, so it never covers the control it explains. A hover
+     * tooltip waits ~0.45s; moving to another control while one is showing hands off at once.
+     * A press, a drag (any held button), a scroll, a cursor capture or hiding the owner's panel
+     * dismisses it. @p force (a live value readout during a drag) bypasses delay and suppression.
+     *
+     * The rect overload anchors to a control's global bounds; prefer it. The point overload is
+     * for pointer-following readouts and keeps a pointer-sized clearance below the point.
+     */
+    static void showRemoteTooltip(const std::string& text, const NUIRect& anchor, const void* owner = nullptr,
+                                  bool force = false);
     static void showRemoteTooltip(const std::string& text, const NUIPoint& position, const void* owner = nullptr, bool force = false);
     static void hideRemoteTooltip(const void* owner = nullptr);
     static void renderGlobalTooltip(NUIRenderer& renderer, const NUIRect& viewport = {});
     static void updateGlobalTooltip(double deltaTime);
+    static NUIRect calculateTooltipBounds(const NUIRect& anchor, const NUISize& tooltipSize,
+                                          const NUIRect& viewport);
     static NUIRect calculateTooltipBounds(const NUIPoint& anchor, const NUISize& tooltipSize,
                                           const NUIRect& viewport);
+    /** @brief The box a point anchor keeps clear: the pointer glyph below the hotspot. */
+    static NUIRect pointerTooltipAnchor(const NUIPoint& point);
+    /** @brief Pointer gestures seen by dispatchMouseEvent: a press or scroll dismisses the tooltip. */
+    static void notePointerGesture(const NUIMouseEvent& event);
+    /** @brief Forget a held button (window focus lost: its release may never arrive). */
+    static void resetPointerGestureState() { s_pointerButtonsHeld = 0; }
+    static bool isPointerButtonHeld() { return s_pointerButtonsHeld != 0; }
+    /** @brief After a scroll has been dispatched: a hover tooltip its target re-showed goes too. */
+    static void dismissHoverTooltipAfterScroll();
     static const TooltipState& getGlobalTooltipState() { return s_tooltipState; }
     static void setCursorCaptureActive(bool active);
     static bool isCursorCaptureActive() { return s_cursorCaptureActive; }

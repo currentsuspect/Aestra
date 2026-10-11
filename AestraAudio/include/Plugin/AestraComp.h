@@ -6,6 +6,8 @@
 #pragma once
 
 #include "DSP/Oversampler.h"
+#include "RealtimeThreadGuard.h"
+#include "Plugin/InternalPluginBase.h"
 #include "Plugin/PluginHost.h"
 
 #include <algorithm>
@@ -22,10 +24,12 @@ namespace Aestra {
 namespace Audio {
 namespace Plugins {
 
-class AestraComp : public IPluginInstance {
+class AestraComp : public InternalPluginBase {
 public:
-    static constexpr uint32_t kStateMagicV2 = 0x434D5002; // 'CMP' v2
-    static constexpr uint32_t kStateMagicV1 = 0x434D5001; // 'CMP' v1
+    // Canonical magic, carrying the v2 value. The reset renumbers the version
+    // field, not the magic, so a pre-reset blob is still recognisably this
+    // plugin's and is rejected on version rather than on magic.
+    static constexpr uint32_t kStateMagic = 0x434D5002; // 'CMP' v2
 
     // FFT spectrum data for analyzer display
     static constexpr uint32_t kFftSize = 2048;
@@ -80,24 +84,9 @@ public:
         kSCListen,
         kOutputTrim,
         kStyle,
-        kQuality,
-        kLegacyParamCount
+        kQuality
     };
 
-    static constexpr uint32_t kLegacyDetectorModeIndex = 8;
-    static constexpr uint32_t kLegacyTopologyIndex = 9;
-    static constexpr uint32_t kLegacyHoldIndex = 10;
-    static constexpr uint32_t kLegacyAutoReleaseIndex = 11;
-    static constexpr uint32_t kLegacyRangeIndex = 12;
-    static constexpr uint32_t kLegacyLookaheadIndex = 13;
-    static constexpr uint32_t kLegacyStereoLinkIndex = 14;
-    static constexpr uint32_t kLegacyStereoLinkLawIndex = 15;
-    static constexpr uint32_t kLegacySCHPFIndex = 16;
-    static constexpr uint32_t kLegacySCLPFIndex = 17;
-    static constexpr uint32_t kLegacySCListenIndex = 18;
-    static constexpr uint32_t kLegacyOutputTrimIndex = 19;
-    static constexpr uint32_t kLegacyStyleIndex = 20;
-    static constexpr uint32_t kLegacyQualityIndex = 21;
 
     AestraComp() = default;
 
@@ -108,11 +97,7 @@ public:
         // instance. EffectChain::prepare() re-calls initialize() on the live
         // instance during sample-rate/device changes and must preserve the
         // user's current parameter values (and any loaded project state).
-        if (!m_paramsInitialized.exchange(true)) {
-            for (const auto& param : getParameters()) {
-                m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
-            }
-        }
+        seedDefaultsOnce();
         m_osL.prepareKernels();
         m_osR.prepareKernels();
         applyOversamplingConfig();
@@ -144,7 +129,7 @@ public:
     void process(const float* const* inputs, float** outputs,
                  uint32_t numInputChannels, uint32_t numOutputChannels,
                  uint32_t numFrames, const MidiBuffer* midiInput = nullptr,
-                 MidiBuffer* midiOutput = nullptr) override {
+                 MidiBuffer* midiOutput = nullptr) AESTRA_RT_NONBLOCKING override {
         (void)midiInput;
         (void)midiOutput;
 
@@ -154,7 +139,7 @@ public:
         const uint32_t osFactor = m_osFactor;
 
         if (!m_active.load(std::memory_order_relaxed) ||
-            m_params[kBypass].load(std::memory_order_relaxed) > 0.5f) {
+            isBypassed()) {
             if (osFactor <= 1u) {
                 copyOrClear(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
             } else {
@@ -202,7 +187,7 @@ public:
             const float mix = std::clamp(m_mixSmoothed, 0.0f, 1.0f);
 
             const uint32_t prevMode = m_mode;
-            const float rawMode = m_params[kCompMode].load(std::memory_order_relaxed) * 2.0f;
+            const float rawMode = paramValue(kCompMode) * 2.0f;
             m_mode = static_cast<uint32_t>(rawMode + 0.5f);
             if (m_mode != prevMode) {
                 m_feedbackL = 0.0f;
@@ -299,58 +284,69 @@ public:
         m_hasProcessed.store(true, std::memory_order_relaxed);
     }
 
-    uint32_t getParameterCount() const override { return kParamCount; }
-
-    float getParameter(uint32_t id) const override {
-        if (id >= kParamCount) return 0.0f;
-        return m_params[id].load(std::memory_order_relaxed);
-    }
-
-    void setParameter(uint32_t id, float value) override {
-        if (id >= kParamCount) return;
-        if (!std::isfinite(value)) return;
-        const float clampedValue = std::clamp(value, 0.0f, 1.0f);
-        m_params[id].store(clampedValue, std::memory_order_relaxed);
+    // The base's setParameter does the storage, the non-finite rejection and the
+    // clamp; this hook carries everything Comp did on top of them.
+    //
+    // Two groups, both of which used to live inside setParameter:
+    //
+    // 1. Dirty flags, read by the audio thread to decide whether derived state
+    //    needs recomputing. Release ordering pairs with the acquire the reader
+    //    uses.
+    //
+    // 2. The pre-first-process snap. Until the compressor has processed a block,
+    //    a changed parameter is snapped straight into the smoothed value instead
+    //    of gliding toward it. Without this the first block after a parameter
+    //    change compresses against the PREVIOUS smoothed value, which is
+    //    measurable: the transparent-path test (ratio 1:1 set after activate)
+    //    reads -12.8 dB of error instead of -91 dB. Smooth glide is correct for
+    //    a running compressor and wrong before the first block.
+    void onParameterChanged(uint32_t id, float value) AESTRA_RT_NONBLOCKING override {
         if (id == kDetectorHPF) {
             m_detectorHPFDirty.store(true, std::memory_order_release);
-        }
-        if (id == kOversampling) {
+        } else if (id == kOversampling) {
             m_oversamplingDirty.store(true, std::memory_order_release);
         }
 
         if (!m_hasProcessed.load(std::memory_order_relaxed)) {
             switch (id) {
-            case kThreshold: m_thresholdSmoothed = clampedValue; break;
-            case kRatio: m_ratioSmoothed = clampedValue; break;
-            case kAttack: m_attackSmoothed = clampedValue; break;
-            case kRelease: m_releaseSmoothed = clampedValue; break;
-            case kMakeup: m_makeupSmoothed = clampedValue; break;
-            case kKnee: m_kneeSmoothed = clampedValue; break;
-            case kMix: m_mixSmoothed = clampedValue; break;
-            case kInputGain: m_inputGainSmoothed = clampedValue; break;
-            case kOutputGain: m_outputGainSmoothed = clampedValue; break;
+            case kThreshold: m_thresholdSmoothed = value; break;
+            case kRatio: m_ratioSmoothed = value; break;
+            case kAttack: m_attackSmoothed = value; break;
+            case kRelease: m_releaseSmoothed = value; break;
+            case kMakeup: m_makeupSmoothed = value; break;
+            case kKnee: m_kneeSmoothed = value; break;
+            case kMix: m_mixSmoothed = value; break;
+            case kInputGain: m_inputGainSmoothed = value; break;
+            case kOutputGain: m_outputGainSmoothed = value; break;
             default: break;
             }
         }
     }
 
-    std::vector<PluginParameter> getParameters() const override {
-        return {
-            {kThreshold, "Threshold", "THR", "dB", 0.6667f, 0.0f, 1.0f, true},
-            {kRatio, "Ratio", "RAT", ":1", 0.1579f, 0.0f, 1.0f, true},
-            {kAttack, "Attack", "ATK", "ms", 0.0991f, 0.0f, 1.0f, true},
-            {kRelease, "Release", "REL", "ms", 0.1414f, 0.0f, 1.0f, true},
-            {kMakeup, "Makeup Gain", "MKP", "dB", 0.0f, 0.0f, 1.0f, true},
-            {kKnee, "Knee", "KNE", "dB", 0.0f, 0.0f, 1.0f, true},
-            {kMix, "Mix", "MIX", "%", 1.0f, 0.0f, 1.0f, true},
-            {kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
-            {kInputGain, "Input Gain", "IN", "dB", 0.5f, 0.0f, 1.0f, true},
-            {kOutputGain, "Output Gain", "OUT", "dB", 0.5f, 0.0f, 1.0f, true},
-            {kDetectorHPF, "Detector HPF", "HPF", "Hz", 0.0f, 0.0f, 1.0f, true},
-            {kCompMode, "Mode", "MODE", "", 0.0f, 0.0f, 1.0f, true},
-            {kOversampling, "Oversampling", "OS", "", 0.0f, 0.0f, 1.0f, true, false, false, 2},
-        };
-    }
+    // Declarative parameter table: this is the whole plugin-side surface now.
+    // The rows are the table this plugin already shipped in getParameters(),
+    // unchanged, so this is a type rename rather than a behavioural change.
+    inline static constexpr ParamSpec kSpecs[] = {
+        {kThreshold, "Threshold", "THR", "dB", 0.6667f, 0.0f, 1.0f, true},
+        {kRatio, "Ratio", "RAT", ":1", 0.1579f, 0.0f, 1.0f, true},
+        {kAttack, "Attack", "ATK", "ms", 0.0991f, 0.0f, 1.0f, true},
+        {kRelease, "Release", "REL", "ms", 0.1414f, 0.0f, 1.0f, true},
+        {kMakeup, "Makeup Gain", "MKP", "dB", 0.0f, 0.0f, 1.0f, true},
+        {kKnee, "Knee", "KNE", "dB", 0.0f, 0.0f, 1.0f, true},
+        {kMix, "Mix", "MIX", "%", 1.0f, 0.0f, 1.0f, true},
+        {kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
+        {kInputGain, "Input Gain", "IN", "dB", 0.5f, 0.0f, 1.0f, true},
+        {kOutputGain, "Output Gain", "OUT", "dB", 0.5f, 0.0f, 1.0f, true},
+        {kDetectorHPF, "Detector HPF", "HPF", "Hz", 0.0f, 0.0f, 1.0f, true},
+        {kCompMode, "Mode", "MODE", "", 0.0f, 0.0f, 1.0f, true},
+        {kOversampling, "Oversampling", "OS", "", 0.0f, 0.0f, 1.0f, true, false, false, 2},
+    };
+
+    const ParamSpec* paramSpecs() const override { return kSpecs; }
+    uint32_t paramSpecCount() const override { return kParamCount; }
+    AESTRA_VALIDATE_PARAM_SPECS(kSpecs, kParamCount);
+    uint32_t stateMagic() const override { return kStateMagic; }
+
 
     std::string getParameterDisplay(uint32_t id) const override {
         if (id >= kParamCount) return "";
@@ -391,97 +387,30 @@ public:
         }
     }
 
-    std::vector<uint8_t> saveState() const override {
-        struct Blob {
-            uint32_t magic = kStateMagicV2;
-            uint32_t version = 5;
-            float params[kLegacyParamCount] = {};
-        } blob;
+// Canonical base format, version 1, with NO override at all -- the first
+    // built-in to reach this. This plugin previously wrote version 5 into a
+    // 24-slot array to carry 13 live parameters, then overwrote seven of those
+    // slots with frozen constants:
+    //
+    //     blob.params[kLegacyLookaheadIndex]      = 0.0f;
+    //     blob.params[kLegacyStereoLinkIndex]     = 1.0f;
+    //     blob.params[kLegacyStereoLinkLawIndex]  = 0.0f;
+    //     blob.params[kLegacySCLPFIndex]          = 0.0f;
+    //     blob.params[kLegacySCListenIndex]       = 0.0f;
+    //     blob.params[kLegacyStyleIndex]          = 0.0f;
+    //     blob.params[kLegacyQualityIndex]        = 0.5f;
+    //
+    // Those were constants that happened to live in a float array, not
+    // parameters. They are deleted rather than preserved: a frozen value does
+    // not belong in a persisted format, and preserving them would require
+    // Comp to keep hand-writing a blob the base already owns. FD-24 records the
+    // decision; the blob is now 60 bytes instead of 104.
+    //
+    // kLegacyParamCount and the fourteen kLegacy*Index constants go with them --
+    // they have no remaining reader.
 
-        // v5: slot 12 (formerly the unused legacy Range filler) now carries
-        // kOversampling. Older readers never consume slot 12, so v5 blobs
-        // load cleanly in pre-oversampling builds.
-        for (uint32_t i = 0; i < kParamCount; ++i) {
-            blob.params[i] = getParameter(i);
-        }
-        blob.params[kLegacyLookaheadIndex] = 0.0f;
-        blob.params[kLegacyStereoLinkIndex] = 1.0f;
-        blob.params[kLegacyStereoLinkLawIndex] = 0.0f;
-        blob.params[kLegacySCLPFIndex] = 0.0f;
-        blob.params[kLegacySCListenIndex] = 0.0f;
-        blob.params[kLegacyStyleIndex] = 0.0f;
-        blob.params[kLegacyQualityIndex] = 0.5f;
-
-        const auto* data = reinterpret_cast<const uint8_t*>(&blob);
-        return { data, data + sizeof(blob) };
-    }
-
-    bool loadState(const std::vector<uint8_t>& state) override {
-        if (state.size() < sizeof(uint32_t) * 2) return false;
-
-        uint32_t magic = 0;
-        std::memcpy(&magic, state.data(), sizeof(magic));
-
-        if (magic == kStateMagicV2) {
-            struct BlobV2 {
-                uint32_t magic;
-                uint32_t version;
-                float params[kLegacyParamCount];
-            };
-            if (state.size() < sizeof(BlobV2)) return false;
-            BlobV2 blob{};
-            std::memcpy(&blob, state.data(), sizeof(blob));
-            loadDefaults();
-            for (uint32_t i = 0; i < std::min<uint32_t>(8, kParamCount); ++i) {
-                setParameter(i, blob.params[i]);
-            }
-            if (blob.version >= 5) {
-                setParameter(kOversampling,
-                             isNormalized(blob.params[kOversampling]) ? blob.params[kOversampling] : 0.0f);
-            } else {
-                setParameter(kOversampling, 0.0f);
-            }
-            if (blob.version >= 4) {
-                setParameter(kInputGain, isNormalized(blob.params[kInputGain]) ? blob.params[kInputGain] : 0.5f);
-                setParameter(kOutputGain, isNormalized(blob.params[kOutputGain]) ? blob.params[kOutputGain] : 0.5f);
-                setParameter(kDetectorHPF, isNormalized(blob.params[kDetectorHPF]) ? blob.params[kDetectorHPF] : 0.0f);
-                setParameter(kCompMode, isNormalized(blob.params[kCompMode]) ? blob.params[kCompMode] : 0.0f);
-            } else if (blob.version >= 3) {
-                setParameter(kInputGain, isNormalized(blob.params[kInputGain]) ? blob.params[kInputGain] : 0.5f);
-                setParameter(kOutputGain, isNormalized(blob.params[kOutputGain]) ? blob.params[kOutputGain] : 0.5f);
-                setParameter(kDetectorHPF, isNormalized(blob.params[kDetectorHPF]) ? blob.params[kDetectorHPF] : 0.0f);
-                setParameter(kCompMode, 0.0f);
-            } else {
-                setParameter(kInputGain, 0.5f);
-                setParameter(kOutputGain,
-                             isNormalized(blob.params[kLegacyOutputTrimIndex]) ? blob.params[kLegacyOutputTrimIndex]
-                                                                               : 0.5f);
-                setParameter(kDetectorHPF,
-                             isNormalized(blob.params[kLegacySCHPFIndex]) ? blob.params[kLegacySCHPFIndex] : 0.0f);
-                setParameter(kCompMode, 0.0f);
-            }
-            return true;
-        }
-
-        if (magic == kStateMagicV1) {
-            constexpr uint32_t v1ParamCount = 8;
-            struct BlobV1 {
-                uint32_t magic;
-                uint32_t version;
-                float params[v1ParamCount];
-            };
-            if (state.size() < sizeof(BlobV1)) return false;
-            BlobV1 blob{};
-            std::memcpy(&blob, state.data(), sizeof(blob));
-            loadDefaults();
-            for (uint32_t i = 0; i < v1ParamCount; ++i) {
-                setParameter(i, blob.params[i]);
-            }
-            return true;
-        }
-
-        return false;
-    }
+    // Kept as overrides: the base's editor stubs report hasEditor() == false and
+    // size {0,0}, and this plugin has a real editor.
 
     bool hasEditor() const override { return true; }
     bool openEditor(void*) override { return false; }
@@ -521,9 +450,7 @@ private:
     static constexpr float kRmsWindowSec = 0.01f;
 
     void loadDefaults() {
-        for (const auto& param : getParameters()) {
-            m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
-        }
+        seedDefaults();
         snapSmoothedParamsToTargets();
         updateDetectorHPF();
         updateRmsCoeff();
@@ -533,9 +460,19 @@ private:
     /// VCA) at the detector rate. With oversampling Off this is called once per
     /// input sample and matches the pre-oversampling implementation exactly;
     /// with 2x/4x it is called once per subsample.
+    // Optical-mode detector constants. Hoisted to class scope from
+    // function-local `static constexpr` inside processCore(): Clang refuses any
+    // static local in a function annotated AESTRA_RT_NONBLOCKING, because
+    // thread-safe static initialisation is a guard variable and a guard on an
+    // audio-thread path is a lock. The old code declared K_OPTICAL_ENVELOPE_REF
+    // TWICE, once per branch; both were 0.1f, so there is now one declaration.
+    inline static constexpr float K_OPTICAL_WINDOW_MIN = 0.005f;
+    inline static constexpr float K_OPTICAL_WINDOW_MAX = 0.030f;
+    inline static constexpr float K_OPTICAL_ENVELOPE_REF = 0.1f;
+
     void processCore(float inL, float inR, float attackCoeff, float releaseCoeff, float thresholdDb, float ratio,
                      float kneeDb, float makeupLinear, float& env, float& hpfXL, float& hpfYL, float& hpfXR,
-                     float& hpfYR, float& blockGainReductionDb, float& wetL, float& wetR) {
+                     float& hpfYR, float& blockGainReductionDb, float& wetL, float& wetR)  AESTRA_RT_NONBLOCKING {
         float detInputL, detInputR;
         if (m_mode == kModeClassic) {
             detInputL = m_feedbackL;
@@ -559,11 +496,8 @@ private:
         const float powerInstant = (detL * detL + detR * detR) * 0.5f;
         float sampleRmsCoeff;
         if (m_mode == kModeOptical) {
-            static constexpr float kOpticalWindowMin = 0.005f;
-            static constexpr float kOpticalWindowMax = 0.030f;
-            static constexpr float kOpticalEnvelopeRef = 0.1f;
-            float t = std::clamp(m_rmsEnvelope / kOpticalEnvelopeRef, 0.0f, 1.0f);
-            float window = kOpticalWindowMax - t * (kOpticalWindowMax - kOpticalWindowMin);
+            float t = std::clamp(m_rmsEnvelope / K_OPTICAL_ENVELOPE_REF, 0.0f, 1.0f);
+            float window = K_OPTICAL_WINDOW_MAX - t * (K_OPTICAL_WINDOW_MAX - K_OPTICAL_WINDOW_MIN);
             // Gate exp() — only recompute when window changes by >0.5ms
             if (std::abs(window - m_prevOpticalWindow) > 0.0005f || m_prevOpticalWindow < 0.0f) {
                 m_prevOpticalWindow = window;
@@ -579,8 +513,7 @@ private:
 
         float aCoeff, rCoeff;
         if (m_mode == kModeOptical) {
-            static constexpr float kOpticalEnvelopeRef = 0.1f;
-            float grNorm = std::clamp(m_rmsEnvelope / kOpticalEnvelopeRef, 0.0f, 1.0f);
+            float grNorm = std::clamp(m_rmsEnvelope / K_OPTICAL_ENVELOPE_REF, 0.0f, 1.0f);
             aCoeff = attackCoeff * (1.0f + grNorm * 2.0f);
             rCoeff = releaseCoeff * (1.0f - grNorm * 0.5f);
         } else {
@@ -615,7 +548,7 @@ private:
     /// only switches the factor, resets filter state, and rescales the
     /// detector-rate coefficients, so it is safe on the audio thread.
     void applyOversamplingConfig() {
-        const uint32_t factor = oversamplingFactorFromNorm(m_params[kOversampling].load(std::memory_order_relaxed));
+        const uint32_t factor = oversamplingFactorFromNorm(paramValue(kOversampling));
         m_osL.setFactor(factor);
         m_osR.setFactor(factor);
         m_osFactor = m_osL.factor();
@@ -944,7 +877,6 @@ private:
     double m_sampleRate = 48000.0;
     uint32_t m_maxBlockSize = 512;
     std::atomic<bool> m_active{false};
-    std::atomic<bool> m_paramsInitialized{false};
     std::atomic<bool> m_hasProcessed{false};
     std::atomic<bool> m_detectorHPFDirty{false};
     std::array<std::atomic<float>, kParamCount> m_params{};

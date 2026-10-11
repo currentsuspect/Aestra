@@ -119,7 +119,10 @@ private:
 // the test can prove non-Internal formats are NOT driven by Custom curves.
 class GainParamPlugin : public IPluginInstance {
 public:
-    explicit GainParamPlugin(PluginFormat format) {
+    // `realtimeAutomation` is what the plugin DECLARES through the V8-A5
+    // contract. It is deliberately independent of `format`: the engine must
+    // act on the declaration, never on the format name.
+    GainParamPlugin(PluginFormat format, bool realtimeAutomation) : m_realtimeAutomation(realtimeAutomation) {
         m_info.id = "aestra.test.automation_gain";
         m_info.name = "AutomationGain";
         m_info.vendor = "Aestra Test";
@@ -158,6 +161,8 @@ public:
             m_gain.store(value, std::memory_order_relaxed);
         }
     }
+    bool supportsRealtimeAutomation() const noexcept override { return m_realtimeAutomation; }
+    void applyAutomation(uint32_t id, float normalizedValue) noexcept override { setParameter(id, normalizedValue); }
     std::string getParameterDisplay(uint32_t) const override { return {}; }
     std::vector<uint8_t> saveState() const override { return {}; }
     bool loadState(const std::vector<uint8_t>&) override { return true; }
@@ -179,12 +184,14 @@ private:
     PluginInfo m_info{};
     std::atomic<float> m_gain{1.0f};
     bool m_active{false};
+    bool m_realtimeAutomation{false};
 };
 
 struct Rendered {
     std::vector<float> left;
     std::vector<float> right;
     bool hasInvalid = false;
+    uint64_t unsupportedSkips = 0; // AudioEngine::automationUnsupportedSkips() after the render
 };
 
 // Builds a one-insert project whose Playlist-hosted `curves` explicitly target
@@ -192,7 +199,8 @@ struct Rendered {
 // An optional extra effect is inserted at chain slot 1 (after the generator).
 Rendered renderWithAutomation(const std::vector<AutomationCurve>& curves, double renderBpm, double beats,
                               std::shared_ptr<IPluginInstance> slot1Fx = nullptr,
-                              std::function<void(AutomationCurve&, MixerChannel&)> fixup = nullptr) {
+                              std::function<void(AutomationCurve&, MixerChannel&)> fixup = nullptr,
+                              size_t fxSlot = 1) {
     auto trackManager = std::make_shared<TrackManager>();
     trackManager->setOutputSampleRate(static_cast<double>(kSampleRate));
 
@@ -200,7 +208,7 @@ Rendered renderWithAutomation(const std::vector<AutomationCurve>& curves, double
     require(src != nullptr, "addChannel failed");
     require(src->getEffectChain().insertPlugin(0, std::make_shared<SineGeneratorPlugin>()), "generator insert failed");
     if (slot1Fx) {
-        require(src->getEffectChain().insertPlugin(1, std::move(slot1Fx)), "slot-1 effect insert failed");
+        require(src->getEffectChain().insertPlugin(fxSlot, std::move(slot1Fx)), "effect insert failed");
     }
 
     auto& playlist = trackManager->getPlaylistModel();
@@ -251,6 +259,7 @@ Rendered renderWithAutomation(const std::vector<AutomationCurve>& curves, double
         }
         rendered += kBlockFrames;
     }
+    out.unsupportedSkips = engine.automationUnsupportedSkips();
     return out;
 }
 
@@ -272,7 +281,7 @@ AutomationCurve volumeCurve(std::initializer_list<std::pair<double, float>> pts,
     AutomationCurve curve("Volume", AutomationTarget::Volume);
     curve.setDefaultValue(1.0f);
     for (const auto& [beat, value] : pts) {
-        curve.addPoint(beat, value, addTimeSamplesPerBeat, 0.5f);
+        curve.addPoint(beat, value, addTimeSamplesPerBeat, 0.0f);
     }
     return curve;
 }
@@ -332,9 +341,9 @@ int main() {
     {
         AutomationCurve pan("Pan", AutomationTarget::Pan);
         pan.setDefaultValue(0.0f);
-        pan.addPoint(0.0, -1.0f, kSpbAt120, 0.5f);
-        pan.addPoint(2.0, -1.0f, kSpbAt120, 0.5f);
-        pan.addPoint(2.5, 1.0f, kSpbAt120, 0.5f);
+        pan.addPoint(0.0, -1.0f, kSpbAt120, 0.0f);
+        pan.addPoint(2.0, -1.0f, kSpbAt120, 0.0f);
+        pan.addPoint(2.5, 1.0f, kSpbAt120, 0.0f);
         const auto r = renderWithAutomation({pan}, 120.0, 5.0);
         require(!r.hasInvalid, "pan: output contains NaN/Inf");
         const double leftEarly = rmsWindow(r.left, 0.5, 1.5, 120.0);
@@ -350,21 +359,23 @@ int main() {
     }
 
     // ---------------- 5. Plugin-parameter automation (Custom target): a curve
-    // addressed at {effect slot 1, param 0} drives an Internal-format gain
-    // plugin — output fades even though volume/pan automation is absent.
+    // addressed at {effect slot 1, param 0} drives a gain plugin that declares
+    // render-thread automation — output fades even though volume/pan
+    // automation is absent. Nothing is skipped.
     {
         AutomationCurve param("Gain", AutomationTarget::Custom);
         param.setDefaultValue(1.0f);
         param.paramId = 0;
-        param.addPoint(0.0, 1.0f, kSpbAt120, 0.5f);
-        param.addPoint(2.0, 1.0f, kSpbAt120, 0.5f);
-        param.addPoint(4.0, 0.0f, kSpbAt120, 0.5f);
+        param.addPoint(0.0, 1.0f, kSpbAt120, 0.0f);
+        param.addPoint(2.0, 1.0f, kSpbAt120, 0.0f);
+        param.addPoint(4.0, 0.0f, kSpbAt120, 0.0f);
         const auto r = renderWithAutomation(
-            {param}, 120.0, 6.0, std::make_shared<GainParamPlugin>(PluginFormat::Internal),
+            {param}, 120.0, 6.0, std::make_shared<GainParamPlugin>(PluginFormat::Internal, true),
             [](AutomationCurve& curve, MixerChannel& channel) {
                 curve.deviceInstanceId = channel.getEffectChain().getSlotInstanceId(1);
             });
         require(!r.hasInvalid, "param: output contains NaN/Inf");
+        require(r.unsupportedSkips == 0, "param: a plugin that declares support was counted as unsupported");
         const double loud = rmsWindow(r.left, 0.5, 1.5, 120.0);
         const double mid = rmsWindow(r.left, 2.9, 3.1, 120.0);
         const double silent = rmsWindow(r.left, 4.5, 5.5, 120.0);
@@ -374,25 +385,75 @@ int main() {
         require(silent < 0.02 * loud, "param automation did not drive the plugin parameter");
     }
 
-    // ---------------- 6. Third-party guard: the identical curve must NOT drive
-    // a non-Internal plugin (no host param queue yet — silently skipping is the
-    // contract until #467's third-party slice).
-    {
+    // ---------------- 6. The render-thread automation contract (V8-A5). The
+    // engine drives a plugin because it DECLARES supportsRealtimeAutomation(),
+    // never because of its format name. Four plugins, same curve:
+    //   6a Internal + declares  -> driven (section 5)
+    //   6b VST3     + no declare -> skipped and counted (no host queue yet)
+    //   6c VST3     + declares  -> DRIVEN: a third-party adapter that satisfies
+    //                              the contract needs no engine change
+    //   6d Internal + no declare -> skipped: the engine no longer trusts the
+    //                              format, the plugin has to say so
+    auto fadeCurve = [] {
         AutomationCurve param("Gain", AutomationTarget::Custom);
         param.setDefaultValue(1.0f);
         param.paramId = 0;
-        param.addPoint(0.0, 1.0f, kSpbAt120, 0.5f);
-        param.addPoint(4.0, 0.0f, kSpbAt120, 0.5f);
-        const auto r = renderWithAutomation(
-            {param}, 120.0, 6.0, std::make_shared<GainParamPlugin>(PluginFormat::VST3),
-            [](AutomationCurve& curve, MixerChannel& channel) {
-                curve.deviceInstanceId = channel.getEffectChain().getSlotInstanceId(1);
-            });
-        require(!r.hasInvalid, "guard: output contains NaN/Inf");
+        param.addPoint(0.0, 1.0f, kSpbAt120, 0.0f);
+        param.addPoint(4.0, 0.0f, kSpbAt120, 0.0f);
+        return param;
+    };
+    auto aimAtSlot1 = [](AutomationCurve& curve, MixerChannel& channel) {
+        curve.deviceInstanceId = channel.getEffectChain().getSlotInstanceId(1);
+    };
+    {
+        const auto r = renderWithAutomation({fadeCurve()}, 120.0, 6.0,
+                                            std::make_shared<GainParamPlugin>(PluginFormat::VST3, false), aimAtSlot1);
+        require(!r.hasInvalid, "6b: output contains NaN/Inf");
         const double early = rmsWindow(r.left, 0.5, 1.5, 120.0);
         const double late = rmsWindow(r.left, 4.5, 5.5, 120.0);
-        require(early > 1.0e-3, "guard: output is silent");
-        require(late > 0.8 * early, "guard: Custom curve drove a non-Internal plugin (RT-unsafe path)");
+        require(early > 1.0e-3, "6b: output is silent");
+        require(late > 0.8 * early, "6b: a curve drove a plugin that does not declare render-thread automation");
+        require(r.unsupportedSkips > 0, "6b: the skip was silent: the unsupported-automation counter did not move");
+    }
+    {
+        const auto r = renderWithAutomation({fadeCurve()}, 120.0, 6.0,
+                                            std::make_shared<GainParamPlugin>(PluginFormat::VST3, true), aimAtSlot1);
+        require(!r.hasInvalid, "6c: output contains NaN/Inf");
+        const double early = rmsWindow(r.left, 0.5, 1.5, 120.0);
+        const double late = rmsWindow(r.left, 4.5, 5.5, 120.0);
+        std::cout << "contract (VST3 format, declares support): early=" << early << " late=" << late << "\n";
+        require(early > 1.0e-3, "6c: output is silent");
+        require(late < 0.02 * early, "6c: a non-Internal plugin that declares support was not driven (format is still gating)");
+        require(r.unsupportedSkips == 0, "6c: a plugin that declares support was counted as unsupported");
+    }
+    {
+        const auto r = renderWithAutomation({fadeCurve()}, 120.0, 6.0,
+                                            std::make_shared<GainParamPlugin>(PluginFormat::Internal, false), aimAtSlot1);
+        require(!r.hasInvalid, "6d: output contains NaN/Inf");
+        const double early = rmsWindow(r.left, 0.5, 1.5, 120.0);
+        const double late = rmsWindow(r.left, 4.5, 5.5, 120.0);
+        require(early > 1.0e-3, "6d: output is silent");
+        require(late > 0.8 * early, "6d: an Internal-format plugin that does not declare support was driven by its format name");
+        require(r.unsupportedSkips > 0, "6d: the skip was silent");
+    }
+
+    // ---------------- 6e. Insert slots are no longer a fixed ten (V8-S3). The
+    // effect sits at slot 12, past the old array; the audio thread renders it
+    // through the grown snapshot and a curve addressed to its identity drives it.
+    {
+        const auto r = renderWithAutomation(
+            {fadeCurve()}, 120.0, 6.0, std::make_shared<GainParamPlugin>(PluginFormat::Internal, true),
+            [](AutomationCurve& curve, MixerChannel& channel) {
+                curve.deviceInstanceId = channel.getEffectChain().getSlotInstanceId(12);
+            },
+            12);
+        require(!r.hasInvalid, "6e: output contains NaN/Inf");
+        const double early = rmsWindow(r.left, 0.5, 1.5, 120.0);
+        const double late = rmsWindow(r.left, 4.5, 5.5, 120.0);
+        std::cout << "automation at slot 12: early=" << early << " late=" << late << "\n";
+        require(early > 1.0e-3, "6e: a plugin at slot 12 does not pass audio (the chain stopped at ten)");
+        require(late < 0.02 * early, "6e: automation did not drive a plugin past the tenth slot");
+        require(r.unsupportedSkips == 0, "6e: the plugin was counted as unsupported");
     }
 
     // ---------------- 7. UI-created empty curve contract: the first point on

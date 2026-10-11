@@ -3,6 +3,8 @@
 // Split out of the former monolithic TrackManagerUI.cpp — bodies moved verbatim.
 #include "TrackManagerUI.h"
 
+#include <cstring>
+
 #include "../AestraCore/include/AestraLog.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include "../AestraUI/Core/NUIDragDrop.h"
@@ -38,13 +40,11 @@ void TrackManagerUI::updateScrollbar() {
     if (!m_scrollbar)
         return;
 
-    AestraUI::NUIRect bounds = getBounds();
-
     // In v3.1, panels are floating overlays and do not affect the scrollbar's viewport directly.
-    float viewportHeight = bounds.height - kTimelineTimeBandHeight;
-
-    const float laneCount = static_cast<float>(m_trackUIComponents.size());
-    float totalContentHeight = laneCount * (m_trackHeight + m_trackSpacing);
+    const TimelineLayout layout = currentTimelineLayout();
+    const float viewportHeight = layout.rows.height;
+    const float totalContentHeight = timelineRowsContentHeight(
+        static_cast<float>(m_trackHeight), static_cast<float>(m_trackSpacing), m_trackUIComponents.size());
 
     // Set scrollbar range
     m_scrollbar->setRangeLimit(0, totalContentHeight);
@@ -318,6 +318,11 @@ void TrackManagerUI::updateTimelineMinimap(double deltaTime) {
     }
 
     if (m_minimapNeedsRebuild) {
+        // The rebuild publishes asynchronously, but the lane colours below follow the new lane order
+        // immediately. Hold them back until the summary catches up, or a reorder/delete would pair
+        // the old lane presence at index i with the new lane's colour for a frame or two.
+        m_minimapLaneColorsPending = true;
+
         std::vector<AestraUI::TimelineMinimapClipSpan> spans;
 
         const auto& laneIds = playlist.getLaneIDs();
@@ -341,11 +346,17 @@ void TrackManagerUI::updateTimelineMinimap(double deltaTime) {
             }
         }
 
-        m_timelineSummaryCache.requestRebuild(std::move(spans), m_minimapDomainStartBeat, m_minimapDomainEndBeat);
+        m_minimapLaneColorsGeneration =
+            m_timelineSummaryCache.requestRebuild(std::move(spans), m_minimapDomainStartBeat, m_minimapDomainEndBeat);
         m_minimapNeedsRebuild = false;
     }
 
     m_timelineSummarySnapshot = m_timelineSummaryCache.getSnapshot();
+    // Match the exact rebuild: an older rebuild already taken by the worker can still publish
+    // after this request, and its summary has the old lane order.
+    if (m_minimapLaneColorsPending && m_timelineSummarySnapshot.rebuildGeneration == m_minimapLaneColorsGeneration) {
+        m_minimapLaneColorsPending = false;
+    }
 
     if (m_marquee.active()) {
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
@@ -377,6 +388,44 @@ void TrackManagerUI::updateTimelineMinimap(double deltaTime) {
     model.showMarkers = false;
     model.showDiagnostics = false;
     model.showPlayhead = !m_patternMode; // Hide playhead in Arsenal Pattern Mode
+
+    // Each lane's clip colour, exactly as the lane row paints it, indexed like the spans'
+    // trackIndex (the lane order). A lane with no clips gets a transparent entry (palette fallback).
+    m_minimapLaneColors.clear();
+    uint64_t laneColorsHash = 1469598103934665603ull; // FNV-1a over the colour bits
+    const auto& minimapLaneIds = playlist.getLaneIDs();
+    // Rows are matched by lane id, not position: a lane can own secondary rows. The first row
+    // for a lane wins, so emplace (which never overwrites) keeps that rule.
+    m_minimapRowByLane.clear();
+    for (const auto& row : m_trackUIComponents) {
+        if (row) {
+            m_minimapRowByLane.emplace(row->getLaneId(), row.get());
+        }
+    }
+    // The renderer only draws the first kTrackLaneCount lanes; resolving more is wasted work.
+    const size_t minimapLaneCount =
+        std::min(minimapLaneIds.size(), static_cast<size_t>(AestraUI::TimelineSummaryBucket::kTrackLaneCount));
+    for (size_t i = 0; i < minimapLaneCount; ++i) {
+        AestraUI::NUIColor colour(0.0f, 0.0f, 0.0f, 0.0f);
+        const auto* lane = playlist.getLane(minimapLaneIds[i]);
+        if (lane && !lane->clips.empty()) {
+            const auto rowIt = m_minimapRowByLane.find(minimapLaneIds[i]);
+            if (rowIt != m_minimapRowByLane.end()) {
+                colour = rowIt->second->resolveClipDisplayColor(lane->clips.front());
+            }
+        }
+        m_minimapLaneColors.push_back(colour);
+        for (const float channel : {colour.r, colour.g, colour.b, colour.a}) {
+            uint32_t bits = 0;
+            std::memcpy(&bits, &channel, sizeof(bits));
+            laneColorsHash = (laneColorsHash ^ bits) * 1099511628211ull;
+        }
+    }
+    // While pending, publish no colours: the renderer falls back to its palette for that short window.
+    const bool laneColorsMatchSummary = !m_minimapLaneColorsPending;
+    model.laneColors = laneColorsMatchSummary ? m_minimapLaneColors.data() : nullptr;
+    model.laneColorCount = laneColorsMatchSummary ? m_minimapLaneColors.size() : 0;
+    model.laneColorsHash = laneColorsMatchSummary ? laneColorsHash : 0;
 
     m_timelineMinimap->setModel(model);
 }

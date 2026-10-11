@@ -13,7 +13,10 @@ enum class ViewType {
     PianoRoll,
     Playlist,
     History,
-    Takes
+    Takes,
+    /// Not a view. The number of views, so kAllViewTypes (FloatingPanelDescriptors.h)
+    /// can static_assert that it lists every one. Keep it last.
+    Count
 };
 
 } // namespace Audio

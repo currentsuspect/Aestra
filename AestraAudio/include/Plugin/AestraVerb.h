@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "Plugin/InternalPluginBase.h"
 #include "Plugin/PluginHost.h"
 #include "DSP/FastMath.h"
 #include "DSP/ReverbSIMD.h"
@@ -99,7 +100,7 @@ namespace Plugins {
 #define AESTRA_MOD_TRACE(off) do { } while(0)
 #endif
 
-class AestraVerb : public IPluginInstance {
+class AestraVerb : public InternalPluginBase {
 public:
     static constexpr uint32_t kStateMagic = 0x52564205; // 'RVB' v5
 
@@ -283,26 +284,41 @@ public:
     bool initialize(double sampleRate, uint32_t maxBlockSize) override {
         (void)maxBlockSize;
         m_sampleRate = sampleRate > 1.0 ? sampleRate : 48000.0;
-        const auto defaults = getParameters();
-        // Seed parameter defaults only on the first initialization of a fresh
-        // instance. EffectChain::prepare() re-calls initialize() on the live
-        // instance during sample-rate/device changes and must preserve the
-        // user's current parameter values (and any loaded project state).
-        if (!m_paramsInitialized.exchange(true)) {
-            for (const auto& param : defaults) {
-                if (param.id < kParamCount) {
-                    m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
-                }
-            }
-        }
+        seedDefaultsOnce();
         // Snap smoothed values to the current (preserved-or-default) params.
-        for (const auto& param : defaults) {
-            if (param.id < kParamCount) {
-                m_smoothedParams[param.id] = m_params[param.id].load(std::memory_order_relaxed);
-            }
+        // Runs on every initialize, not just the first, because a re-prepare
+        // must re-align the smoothers to preserved values rather than leave
+        // them ramping from whatever was there before.
+        for (const ParamSpec* spec = paramSpecs(); spec != paramSpecs() + paramSpecCount(); ++spec) {
+            m_smoothedParams[spec->id] = paramValue(spec->id);
         }
         prepareDelayLines(true);
+        resolveSimdCapabilities();
         return true;
+    }
+
+    /// Resolves CPU feature flags on the preparing thread and stores them as
+    /// plain members, so process() never has to ask.
+    ///
+    /// The #ifdefs mirror the ones guarding the call sites, which is what keeps
+    /// a non-x86 build unchanged: on ARM neither macro is defined, no SIMD path
+    /// is compiled, and these stay false.
+    ///
+    /// CPUID is a VM exit on virtualised hosts. Called from the audio thread it
+    /// was unbounded work inside a callback; called from here it is once, on a
+    /// thread with no deadline. Issue #1009.
+    void resolveSimdCapabilities() {
+        DSP::ReverbSIMD::resolveSimdCapabilities();
+#ifdef AESTRA_REVERB_HAS_AVX2
+        m_useAVX2 = DSP::ReverbSIMD::g_useAVX2;
+#else
+        m_useAVX2 = false;
+#endif
+#ifdef AESTRA_REVERB_HAS_SSE
+        m_useSSE = DSP::ReverbSIMD::g_useSSE41;
+#else
+        m_useSSE = false;
+#endif
     }
 
     void shutdown() override {}
@@ -321,12 +337,12 @@ public:
     void process(const float* const* inputs, float** outputs,
                  uint32_t numInputChannels, uint32_t numOutputChannels,
                  uint32_t numFrames, const MidiBuffer* midiInput = nullptr,
-                 MidiBuffer* midiOutput = nullptr) override {
+                 MidiBuffer* midiOutput = nullptr) AESTRA_RT_NONBLOCKING override {
         (void)midiInput;
         (void)midiOutput;
 
         if (!m_active.load(std::memory_order_acquire) ||
-            m_params[kBypass].load(std::memory_order_relaxed) > 0.5f) {
+            isBypassed()) {
             copyDry(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
             return;
         }
@@ -363,7 +379,7 @@ public:
 
             if (!inputSilent) m_sleepFaded = false;
 
-            const bool freezeHeld = m_params[kFreeze].load(std::memory_order_relaxed) > 0.5f;
+            const bool freezeHeld = paramValue(kFreeze) > 0.5f;
             const uint32_t guardSamples = static_cast<uint32_t>(0.75f * static_cast<float>(m_sampleRate));
             const bool wantSleep = inputSilent && !freezeHeld && m_tailEnv < kDormantThreshold &&
                                    m_silentSamples > guardSamples;
@@ -375,13 +391,13 @@ public:
                 // pre-sleep value. Snapping is inaudible here because the output is
                 // silent, and it makes the wake start from the latest automation.
                 for (uint32_t p = 0; p < kParamCount; ++p) {
-                    m_smoothedParams[p] = m_params[p].load(std::memory_order_relaxed);
+                    m_smoothedParams[p] = paramValue(p);
                 }
 
                 // Fully dormant: emit only the dry path (silent input -> silence),
                 // skipping the entire wet pipeline. The FDN state is untouched and
                 // near zero, so the first non-silent block resumes seamlessly.
-                const float mix = std::clamp(m_params[kMix].load(std::memory_order_relaxed), 0.0f, 1.0f);
+                const float mix = paramValue(kMix);
                 const float dryGain = std::cos(mix * (kTwoPi * 0.25f));
                 for (uint32_t i = 0; i < numFrames; ++i) {
                     const float inL = (numInputChannels > 0 && inputs[0]) ? inputs[0][i] : 0.0f;
@@ -400,7 +416,6 @@ public:
         const ModeConstants constants = constantsForMode(mode);
         const float sampleScale = static_cast<float>(m_sampleRate) / kReferenceSampleRate;
         const float blockSmoothingCoeff = 1.0f - std::exp(-4.0f / std::max(1.0f, static_cast<float>(m_sampleRate) * 0.015f));
-        static constexpr uint32_t kSmoothBlock = 4;
         const float lowDampCoeff = 1.0f - std::exp(-kTwoPi * 110.0f / static_cast<float>(m_sampleRate));
         const float srFloat = static_cast<float>(m_sampleRate);
         // Session 006: restore random modulation smoothing coefficient.
@@ -486,10 +501,11 @@ public:
             if (smoothCountdown == 0) {
                 for (uint32_t p = 0; p < kParamCount; ++p) {
                     if (p == kBypass || p == kMode || p == kFreeze) {
-                        smoothedParams[p] = m_params[p].load(std::memory_order_relaxed);
+                        // Stepped and hold controls snap rather than glide.
+                        smoothedParams[p] = paramValue(p);
                         continue;
                     }
-                    const float target = m_params[p].load(std::memory_order_relaxed);
+                    const float target = paramValue(p);
                     smoothedParams[p] += (target - smoothedParams[p]) * blockSmoothingCoeff;
                 }
                 smoothCountdown = kSmoothBlock;
@@ -500,9 +516,7 @@ public:
             AESTRA_PROFILE_STAGE(kLFOControl);
             if (controlCountdown == 0) {
 #ifdef AESTRA_REVERB_HAS_AVX2
-                static const bool useAVX2 =
-                    Aestra::Core::CPUDetection::get().hasAVX2() && Aestra::Core::CPUDetection::get().hasFMA();
-                if (useAVX2) {
+                if (m_useAVX2) {
                     DSP::ReverbSIMD::normalizeLFOsAVX2(lfoSin.data(), lfoCos.data());
                     DSP::ReverbSIMD::normalizeLFOsAVX2(lfoSin2.data(), lfoCos2.data());
                 } else
@@ -551,8 +565,7 @@ public:
             AESTRA_PROFILE_STAGE(kDiffuser);
             if (control.diffusionEnabled) {
 #ifdef AESTRA_REVERB_HAS_SSE
-                static const bool useSSE = Aestra::Core::CPUDetection::get().hasSSE41();
-                if (useSSE) {
+                if (m_useSSE) {
                     DSP::ReverbSIMD::processDiffusersSSE(delayedL, delayedR, control.diffusionG,
                                                          diffuserPtrsL.data(), diffuserPtrsR.data(),
                                                          diffuserPos.data(), diffuserMasks.data(),
@@ -575,9 +588,7 @@ public:
             // Vectorized LFO updates (sin/cos quadrature oscillators)
             if (control.modulationEnabled) {
 #ifdef AESTRA_REVERB_HAS_AVX2
-                static const bool useAVX2 =
-                    Aestra::Core::CPUDetection::get().hasAVX2() && Aestra::Core::CPUDetection::get().hasFMA();
-                if (useAVX2) {
+                if (m_useAVX2) {
                     // NOTE argument order: the kernels take (sinInc, cosInc).
                     // These were passed swapped, which rotated every LFO by
                     // ~pi/2 per sample: the "0.3 Hz" modulators actually ran
@@ -853,42 +864,14 @@ public:
         if (fadeToSleep) m_sleepFaded = true;
     }
 
-    uint32_t getParameterCount() const override { return kParamCount; }
-    float getParameter(uint32_t id) const override {
-        if (id >= kParamCount) return 0.0f;
-        return m_params[id].load(std::memory_order_relaxed);
-    }
-
-    void setParameter(uint32_t id, float value) override {
-        if (id >= kParamCount) return;
-        const float clamped = std::clamp(value, 0.0f, 1.0f);
-        m_params[id].store(clamped, std::memory_order_relaxed);
-        if (!m_active.load(std::memory_order_relaxed)) {
-            m_smoothedParams[id] = clamped;
+    // The base stores, guards and clamps; this hook exists because the reverb
+    // smooths every parameter on the audio thread, so a value that changes
+    // while inactive must be snapped immediately or the next block ramps to it
+    // from the wrong place.
+    void onParameterChanged(uint32_t id, float value) AESTRA_RT_NONBLOCKING override {
+        if (!m_active.load(std::memory_order_relaxed) && id < kParamCount) {
+            m_smoothedParams[id] = value;
         }
-    }
-
-    std::vector<PluginParameter> getParameters() const override {
-        return {
-            { kDecay, "Decay", "DEC", "", 0.56f, 0.0f, 1.0f, true },
-            { kDamping, "Damping", "DMP", "", 0.50f, 0.0f, 1.0f, true },
-            { kPredelayMs, "Predelay", "PRE", "ms", 0.02f, 0.0f, 1.0f, true },
-            { kWidth, "Width", "WID", "", 0.68f, 0.0f, 1.0f, true },
-            { kMix, "Mix", "MIX", "%", 0.36f, 0.0f, 1.0f, true },
-            { kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1 },
-            { kSize, "Size", "SIZ", "x", 0.52f, 0.0f, 1.0f, true },
-            { kDiffusion, "Diffusion", "DIF", "%", 0.64f, 0.0f, 1.0f, true },
-            { kModRate, "Mod Rate", "RTE", "x", 0.42f, 0.0f, 1.0f, true },
-            { kModDepth, "Mod Depth", "DEP", "smpl", 0.07f, 0.0f, 1.0f, true },
-            { kMode, "Mode", "MOD", "", 0.0f, 0.0f, 1.0f, true, false, false, kModeCount - 1 },
-            { kLowCut, "Low Cut", "LO", "Hz", 0.0f, 0.0f, 1.0f, true },
-            { kHighCut, "High Cut", "HI", "Hz", 1.0f, 0.0f, 1.0f, true },
-            { kFreeze, "Freeze", "FRZ", "", 0.0f, 0.0f, 1.0f, true, true, false, 1 },
-            { kAttack, "Attack", "ATK", "", 0.0f, 0.0f, 1.0f, true },
-            { kShape, "Shape", "SHP", "", 0.5f, 0.0f, 1.0f, true },
-            { kPredelaySync, "Pre Sync", "PSYNC", "", 0.0f, 0.0f, 1.0f, true, false, false, kPredelaySyncCount - 1 },
-            { kModCharacter, "Mod Char", "MCHR", "", 0.0f, 0.0f, 1.0f, true, false, false, kModCharacterCount - 1 },
-        };
     }
 
     std::string getParameterDisplay(uint32_t id) const override {
@@ -986,43 +969,39 @@ public:
         return text;
     }
 
-    std::vector<uint8_t> saveState() const override {
-        struct Blob { uint32_t magic = kStateMagic; uint32_t version = 5; float params[kParamCount]; } blob;
-        for (uint32_t i = 0; i < kParamCount; ++i) blob.params[i] = getParameter(i);
-        const auto* data = reinterpret_cast<const uint8_t*>(&blob);
-        return { data, data + sizeof(blob) };
-    }
+    // Canonical base format, version 1. This plugin previously wrote version 5 and
+    // carried readers for v1 through v5; those readers are gone by decision, not
+    // omission — see the format-reset note in this PR. A pre-reset Verb blob is
+    // now rejected rather than half-read.
+    inline static constexpr ParamSpec kSpecs[] = {
+        {kDecay, "Decay", "DEC", "", 0.56f, 0.0f, 1.0f, true},
+        {kDamping, "Damping", "DMP", "", 0.50f, 0.0f, 1.0f, true},
+        {kPredelayMs, "Predelay", "PRE", "ms", 0.02f, 0.0f, 1.0f, true},
+        {kWidth, "Width", "WID", "", 0.68f, 0.0f, 1.0f, true},
+        {kMix, "Mix", "MIX", "%", 0.36f, 0.0f, 1.0f, true},
+        {kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
+        {kSize, "Size", "SIZ", "x", 0.52f, 0.0f, 1.0f, true},
+        {kDiffusion, "Diffusion", "DIF", "%", 0.64f, 0.0f, 1.0f, true},
+        {kModRate, "Mod Rate", "RTE", "x", 0.42f, 0.0f, 1.0f, true},
+        {kModDepth, "Mod Depth", "DEP", "smpl", 0.07f, 0.0f, 1.0f, true},
+        {kMode, "Mode", "MOD", "", 0.0f, 0.0f, 1.0f, true, false, false, kModeCount - 1},
+        {kLowCut, "Low Cut", "LO", "Hz", 0.0f, 0.0f, 1.0f, true},
+        {kHighCut, "High Cut", "HI", "Hz", 1.0f, 0.0f, 1.0f, true},
+        {kFreeze, "Freeze", "FRZ", "", 0.0f, 0.0f, 1.0f, true, false, false, 1},
+        {kAttack, "Attack", "ATK", "", 0.0f, 0.0f, 1.0f, true},
+        {kShape, "Shape", "SHP", "", 0.5f, 0.0f, 1.0f, true},
+        {kPredelaySync, "Pre Sync", "PSYNC", "", 0.0f, 0.0f, 1.0f, true, false, false, kPredelaySyncCount - 1},
+        {kModCharacter, "Mod Char", "MCHR", "", 0.0f, 0.0f, 1.0f, true, false, false, kModCharacterCount - 1},
+    };
 
-    bool loadState(const std::vector<uint8_t>& state) override {
-        if (state.size() < sizeof(uint32_t) * 2) return false;
-        struct Header { uint32_t magic; uint32_t version; };
-        const auto* header = reinterpret_cast<const Header*>(state.data());
-        // Accept v1, v2, v3, v4, v5 magic values
-        if (header->magic != 0x52564201 && header->magic != 0x52564202 &&
-            header->magic != 0x52564203 && header->magic != 0x52564204 &&
-            header->magic != kStateMagic) return false;
-        const size_t availableParams = (state.size() - sizeof(uint32_t) * 2) / sizeof(float);
-        const auto* params = reinterpret_cast<const float*>(state.data() + sizeof(uint32_t) * 2);
-        // v3 had 11 params (kDecay..kMode). v4 adds kLowCut, kHighCut, kFreeze. v5 adds kAttack, kShape, kPredelaySync, kModCharacter.
-        // Old state: param indices 0-10 map directly. New params get defaults.
-        for (size_t i = 0; i < std::min<size_t>(availableParams, kParamCount); ++i) {
-            setParameter(static_cast<uint32_t>(i), params[i]);
-        }
-        // If old state, set new params to defaults
-        if (availableParams < kParamCount) {
-            const auto defaults = getParameters();
-            for (size_t i = availableParams; i < kParamCount; ++i) {
-                if (i < defaults.size()) {
-                    setParameter(static_cast<uint32_t>(i), defaults[i].defaultValue);
-                }
-            }
-        }
-        if (!m_active.load(std::memory_order_acquire)) {
-            prepareDelayLines(false);
-        }
-        return true;
-    }
+    const ParamSpec* paramSpecs() const override { return kSpecs; }
+    uint32_t paramSpecCount() const override { return kParamCount; }
+    AESTRA_VALIDATE_PARAM_SPECS(kSpecs, kParamCount);
+    uint32_t stateMagic() const override { return kStateMagic; }
 
+    // Kept as overrides, not deleted. The base reports hasEditor() == false and
+    // a zero size; this plugin has a real editor at 760x560, and dropping these
+    // would have silently taken it away.
     bool hasEditor() const override { return false; }
     bool openEditor(void*) override { return false; }
     void closeEditor() override {}
@@ -1242,11 +1221,11 @@ private:
         }
     }
 
-    int modeIndex() const {
+    int modeIndex() const AESTRA_RT_NONBLOCKING {
         return std::clamp(static_cast<int>(std::round(getParameter(kMode) * static_cast<float>(kModeCount - 1))), 0, kModeCount - 1);
     }
 
-    Mode currentMode() const {
+    Mode currentMode() const AESTRA_RT_NONBLOCKING {
         return static_cast<Mode>(modeIndex());
     }
 
@@ -1262,18 +1241,30 @@ private:
         return maxVal;
     }
 
+    // Early-reflection tap times and gains. Hoisted to class scope from function-
+    // local `static constexpr`: Clang refuses ANY static local inside a function
+    // annotated AESTRA_RT_NONBLOCKING, because thread-safe static initialisation
+    // is a guard variable, and a guard on an audio-thread path is a lock. These
+    // were compile-time constants either way, so hoisting them changes nothing
+    // about the generated code -- it only removes the guard the compiler is
+    // right to refuse.
+    // Control-rate block interval for parameter smoothing. Hoisted for the same
+    // reason as the tap tables: a static local is a guard variable, and a guard
+    // on the audio thread is a lock, however constexpr the value is.
+    inline static constexpr uint32_t kSmoothBlock = 4;
+
+    inline static constexpr std::array<float, kEarlyTapCount> kTapMs = {
+        5.1f, 7.9f, 11.3f, 13.7f, 17.1f, 19.9f, 23.5f, 29.7f, 34.1f, 41.9f, 53.3f, 67.7f
+    };
+    inline static constexpr std::array<float, kEarlyTapCount> kTapGain = {
+        0.34f, -0.24f, 0.21f, 0.18f, -0.16f, 0.14f, -0.12f, 0.105f, 0.092f, -0.078f, 0.062f, -0.052f
+    };
+
     void updateControlCache(ControlCache& cache,
                             const std::array<float, kParamCount>& smoothedParams,
                             const ModeConstants& constants,
                             Mode mode,
-                            float sampleScale) const {
-        static constexpr std::array<float, kEarlyTapCount> tapMs = {
-            5.1f, 7.9f, 11.3f, 13.7f, 17.1f, 19.9f, 23.5f, 29.7f, 34.1f, 41.9f, 53.3f, 67.7f
-        };
-        static constexpr std::array<float, kEarlyTapCount> tapGain = {
-            0.34f, -0.24f, 0.21f, 0.18f, -0.16f, 0.14f, -0.12f, 0.105f, 0.092f, -0.078f, 0.062f, -0.052f
-        };
-
+                            float sampleScale) const AESTRA_RT_NONBLOCKING {
         const float sr = static_cast<float>(m_sampleRate);
         const float size = 0.1f + std::clamp(smoothedParams[kSize], 0.0f, 1.0f) * 1.9f;
         const float decayTime = (0.3f + smoothedParams[kDecay] * 9.7f) * constants.decayScalar;
@@ -1444,14 +1435,14 @@ private:
         const int maxDelay = std::max(1, ringSize - 1);
         for (size_t tap = 0; tap < kEarlyTapCount; ++tap) {
             const int delay = std::clamp(
-                static_cast<int>(std::round(tapMs[tap] * modeSpread * sizeTerm * sr / 1000.0f)),
+                static_cast<int>(std::round(kTapMs[tap] * modeSpread * sizeTerm * sr / 1000.0f)),
                 1,
                 maxDelay
             );
             const int decorrelate = static_cast<int>((tap % 3U) + 1U);
             cache.earlyDelayL[tap] = delay;
             cache.earlyDelayR[tap] = std::min(maxDelay, delay + decorrelate);
-            cache.earlyGains[tap] = tapGain[tap] * modeLevel;
+            cache.earlyGains[tap] = kTapGain[tap] * modeLevel;
         }
 
         // Post-reverb EQ: Low Cut (one-pole HP) and High Cut (one-pole LP).
@@ -1861,9 +1852,24 @@ private:
 
     PluginInfo m_info;
     double m_sampleRate = 48000.0;
+
+    // SIMD capability, resolved once on the preparing thread (see
+    // resolveSimdCapabilities). Plain bools rather than function-local statics:
+    // the statics carried a thread-safe-initialisation guard, and their
+    // initializer called CPUDetection::get() -- itself a guarded singleton whose
+    // constructor runs __cpuid/__cpidex/xgetbv. The first audio-thread pass
+    // through process() therefore took two guard variables and a CPUID, which is
+    // a VM exit on a virtualised host and unbounded work on the callback.
+    // initialize() already runs off the audio thread and is the established
+    // place for one-time setup. See issue #1009.
+    //
+    // These are written before the instance is published to the audio thread and
+    // only read afterwards, so a plain bool is sound: no concurrent write, so no
+    // atomic needed.
+    bool m_useAVX2 = false;
+    bool m_useSSE = false;
+
     std::atomic<bool> m_active{false};
-    std::atomic<bool> m_paramsInitialized{false};
-    std::array<std::atomic<float>, kParamCount> m_params{};
     std::array<float, kParamCount> m_smoothedParams{};
 
     std::array<std::vector<float>, kFDNLineCount> m_delayLines;

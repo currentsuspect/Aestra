@@ -8,6 +8,8 @@
 #include "DSP/Interpolators.h"
 
 #include <algorithm>
+#include <limits>
+#include <chrono>
 #include <cctype>
 #include <cmath>
 #include <filesystem>
@@ -113,6 +115,43 @@ void SamplerPlugin::setGlideTimeMs(float glideTimeMs) noexcept {
     m_glideTimeMs.store(std::clamp(glideTimeMs, 0.0f, 2000.0f), std::memory_order_relaxed);
 }
 
+void SamplerPlugin::setPitchMode(PitchMode mode) {
+    m_pitchMode.store(static_cast<int>(mode), std::memory_order_relaxed);
+    if (mode == PitchMode::KeepLength) {
+        m_keepLength->prewarm({}); // registers with the render service; notes are prewarmed by the host
+    }
+}
+
+int SamplerPlugin::keepLengthSemitones(int midiNote) const noexcept {
+    const float pitchParam = m_params[kParamPitch].load(std::memory_order_relaxed);
+    const float globalSemitones =
+        (pitchParam - 0.5f) * 24.0f + (m_fineTuneCents.load(std::memory_order_relaxed) / 100.0f);
+    const float noteSemitones = static_cast<float>(midiNote - m_rootMidiNote.load(std::memory_order_relaxed));
+    return static_cast<int>(std::lround(globalSemitones + noteSemitones));
+}
+
+bool SamplerPlugin::prewarmKeepLength(const std::vector<int>& midiNotes, bool wait,
+                                      std::chrono::milliseconds timeout) {
+    if (getPitchMode() != PitchMode::KeepLength) return true;
+    std::vector<int> semitones;
+    semitones.reserve(midiNotes.size());
+    for (int note : midiNotes) semitones.push_back(keepLengthSemitones(note));
+    if (!wait) {
+        m_keepLength->prewarm(semitones);
+        return true;
+    }
+    return m_keepLength->waitUntilSettled(semitones, timeout);
+}
+
+void SamplerPlugin::publishToKeepLength(const std::shared_ptr<SampleData>& data) {
+    if (!data || data->data.empty()) {
+        m_keepLength->setSource(nullptr, 0);
+        return;
+    }
+    // Aliasing: the cache shares ownership of the SampleData, viewing only its frames.
+    m_keepLength->setSource(std::shared_ptr<const std::vector<float>>(data, &data->data), data->rate);
+}
+
 float SamplerPlugin::getCoarseSemitones() const noexcept {
     const float pitchParam = m_params[kParamPitch].load(std::memory_order_relaxed);
     return (pitchParam - 0.5f) * 24.0f;
@@ -142,6 +181,7 @@ void SamplerPlugin::shutdown() {
     m_active = false;
     // Force release of data to ensure cleanup
     auto old = m_data.exchange(std::shared_ptr<SampleData>(nullptr), std::memory_order_acq_rel);
+    publishToKeepLength(nullptr);
     GarbageCollector::instance().release(old, "SamplerPlugin::SampleData shutdown");
 }
 
@@ -206,6 +246,7 @@ bool SamplerPlugin::loadSampleData(const std::string& path, std::vector<float> d
     // Atomic Swap (Thread-Safe, Lock-Free-ish)
     // std::atomic_exchange uses standard atomics for shared_ptr
     auto oldData = m_data.exchange(newData, std::memory_order_acq_rel);
+    publishToKeepLength(newData);
 
     // Safely dispose of old data via Garbage Collector (avoids delete on Audio Thread)
     GarbageCollector::instance().release(oldData, "SamplerPlugin::SampleData");
@@ -234,6 +275,7 @@ bool SamplerPlugin::normalizeSample(float targetPeak) {
     }
 
     auto oldData = m_data.exchange(edited, std::memory_order_acq_rel);
+    publishToKeepLength(edited);
     GarbageCollector::instance().release(oldData, "SamplerPlugin::SampleData");
     return true;
 }
@@ -260,6 +302,7 @@ bool SamplerPlugin::reverseSample() {
     }
 
     auto oldData = m_data.exchange(edited, std::memory_order_acq_rel);
+    publishToKeepLength(edited);
     GarbageCollector::instance().release(oldData, "SamplerPlugin::SampleData");
     return true;
 }
@@ -285,7 +328,12 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
             v.stageTime = 0.0;
             v.currentGain = 0.0f;
             v.releaseGain = 0.0f;
+            v.ownData.reset(); // refcount drop only: the cache or GarbageCollector owns the buffer
         }
+    }
+    // Idle voices let go of stretched buffers so evicted ones can be collected.
+    for (auto& v : m_voices) {
+        if (!v.active && v.ownData) v.ownData.reset();
     }
 
     // Thread-safe access to sample data
@@ -317,11 +365,22 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
     }
     const float startNorm = std::clamp(m_loopStartNorm.load(std::memory_order_relaxed), 0.0f, 0.999f);
     const float endNorm = std::clamp(m_loopEndNorm.load(std::memory_order_relaxed), startNorm + 0.001f, 1.0f);
-    const double startFrame = startNorm * (totalFrames - 1.0);
-    const double endFrame = std::max(startFrame + 1.0, endNorm * totalFrames);
-    const double loopLength = std::max(1.0, endFrame - startFrame);
-    const double pingPongEndFrame = std::max(startFrame, std::min(totalFrames - 1.0, endFrame - 1.0));
-    const double pingPongSpan = pingPongEndFrame - startFrame;
+    // The sample window in frames. A keep-length voice plays a stretched copy of a
+    // different length, so each voice takes the window of the buffer it plays.
+    struct Window {
+        double total, start, end, loopLength, pingPongEnd, pingPongSpan;
+    };
+    const auto windowFor = [&](double frames) {
+        Window w{};
+        w.total = frames;
+        w.start = startNorm * (frames - 1.0);
+        w.end = std::max(w.start + 1.0, endNorm * frames);
+        w.loopLength = std::max(1.0, w.end - w.start);
+        w.pingPongEnd = std::max(w.start, std::min(frames - 1.0, w.end - 1.0));
+        w.pingPongSpan = w.pingPongEnd - w.start;
+        return w;
+    };
+    const Window sharedWindow = windowFor(totalFrames);
     const LoopMode loopMode = getLoopMode();
     const bool loopEnabled = loopMode != LoopMode::OneShot;
     int activeVoiceCount = 0;
@@ -364,6 +423,15 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
         for (auto& v : m_voices) {
             if (!v.active)
                 continue;
+
+            const Window w = v.ownData ? windowFor(static_cast<double>(v.ownData->frames())) : sharedWindow;
+            const std::vector<float>& voiceSamples = v.ownData ? v.ownData->interleaved : sampleVec;
+            const double voiceFrames = w.total;
+            const double startFrame = w.start;
+            const double endFrame = w.end;
+            const double loopLength = w.loopLength;
+            const double pingPongEndFrame = w.pingPongEnd;
+            const double pingPongSpan = w.pingPongSpan;
 
             if (v.glideActive) {
                 if (cachedGlideTimeMs <= 0.0f) {
@@ -453,7 +521,7 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
                     continue;
                 }
             }
-            if (v.position >= totalFrames) {
+            if (v.position >= voiceFrames) {
                 v.active = false;
                 activeVoiceCountDirty = true;
                 continue;
@@ -461,10 +529,10 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
 
             // Sinc64Turbo Interpolation (data is now interleaved)
             float outL = 0.0f, outR = 0.0f;
-            if (v.position >= 0.0 && v.position < static_cast<double>(totalFrames)) {
+            if (v.position >= 0.0 && v.position < voiceFrames) {
                 Interpolators::Sinc64Turbo::interpolate(
-                    sampleVec.data(),        // interleaved stereo [L,R,L,R...]
-                    totalFrames,              // total frames (not samples)
+                    voiceSamples.data(),     // interleaved stereo [L,R,L,R...]
+                    voiceFrames,              // total frames (not samples)
                     v.position,                // fractional position
                     outL, outR                // output
                 );
@@ -520,6 +588,21 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
         const float ratio = std::pow(2.0f, (globalSemitones + noteSemitones) / 12.0f);
         const double targetRate = baseRate * ratio;
 
+        // Keep-length: play this pitch's stretched copy (same targetRate, so the pitch is
+        // unchanged; the copy was lengthened by `ratio` beforehand, so the note lasts as long
+        // as the source). Not rendered yet: ask for it, and this hit plays resampled.
+        std::shared_ptr<const KeepLengthCache::Buffer> keepBuffer;
+        if (getPitchMode() == PitchMode::KeepLength) {
+            const int semitones = static_cast<int>(std::lround(globalSemitones + noteSemitones));
+            keepBuffer = m_keepLength->tryGet(semitones);
+            if (!keepBuffer) m_keepLength->request(semitones);
+        }
+        const auto startFrameFor = [&](double sharedStartFrame) {
+            if (!keepBuffer) return sharedStartFrame;
+            return std::clamp(static_cast<double>(m_loopStartNorm.load(std::memory_order_relaxed)), 0.0, 0.999) *
+                   std::max(1.0, static_cast<double>(keepBuffer->frames()) - 1.0);
+        };
+
         // Cut-self: a new trigger chokes every previous voice in this sampler,
         // so retriggered one-shots (e.g. an 808) never overlap in the Piano
         // Roll when their pitches differ. This is an explicit voice-layer
@@ -548,6 +631,8 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
 
             auto& voice = m_voices[0];
             const bool legato = voice.active && voice.stage != EnvStage::Release && voice.stage != EnvStage::Off;
+            voice.order = m_nextVoiceOrder++;
+            voice.noteId = event.noteId; // the previous note no longer owns the voice; its note-off won't match
 
             voice.active = true;
             voice.note = note;
@@ -566,7 +651,8 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
                     voice.glideActive = std::abs(voice.targetPlaybackRate - voice.playbackRate) > 1.0e-5;
                 }
             } else {
-                voice.position = noteStartFrame;
+                voice.ownData = keepBuffer;
+                voice.position = startFrameFor(noteStartFrame);
                 voice.playbackRate = targetRate;
                 voice.targetPlaybackRate = targetRate;
                 voice.playbackDirection = 1;
@@ -617,13 +703,16 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
             if (!freeVoice)
                 freeVoice = &m_voices[0]; // Fallback
         }
+        freeVoice->order = m_nextVoiceOrder++;
+        freeVoice->noteId = event.noteId;
 
         freeVoice->active = true;
         freeVoice->note = note;
         freeVoice->velocity = velocity / 127.0f;
         freeVoice->gainL = noteGainL;
         freeVoice->gainR = noteGainR;
-        freeVoice->position = noteStartFrame;
+        freeVoice->ownData = keepBuffer;
+        freeVoice->position = startFrameFor(noteStartFrame);
         freeVoice->playbackRate = targetRate;
         freeVoice->targetPlaybackRate = targetRate;
         freeVoice->playbackDirection = 1;
@@ -632,13 +721,25 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
         freeVoice->stageTime = 0.0;
         freeVoice->currentGain = 0.0f;
     } else if (status == 0x80 || (status == 0x90 && velocity == 0)) { // Note Off
-        // ADSR-driven one-shot: note-off enters release so envelope fully shapes each hit.
+        // One note-off ends one note. With the scheduler's id: exactly that note's voice,
+        // or nothing if it is already gone. Without one (live MIDI): the oldest held
+        // voice of this pitch.
+        Voice* oldest = nullptr;
         for (auto& v : m_voices) {
-            if (v.active && v.note == note && v.stage != EnvStage::Release) {
-                v.stage = EnvStage::Release;
-                v.stageTime = 0.0;
-                v.releaseGain = v.currentGain;
+            if (!v.active || v.note != note || v.stage == EnvStage::Release || v.stage == EnvStage::Off) continue;
+            if (event.noteId != 0) {
+                if (v.noteId == event.noteId) {
+                    oldest = &v;
+                    break;
+                }
+                continue;
             }
+            if (!oldest || v.order < oldest->order) oldest = &v;
+        }
+        if (oldest) {
+            oldest->stage = EnvStage::Release;
+            oldest->stageTime = 0.0;
+            oldest->releaseGain = oldest->currentGain;
         }
     }
 }
@@ -713,8 +814,13 @@ float SamplerPlugin::getParameter(uint32_t id) const {
 }
 
 void SamplerPlugin::setParameter(uint32_t id, float value) {
-    if (id < kParamCount)
-        m_params[id].store(value);
+    if (id >= kParamCount)
+        return;
+    if (!std::isfinite(value))
+        return; // NaN would poison the envelope smoothers
+    // No range clamp here: Attack/Decay/Release are declared 0-2 and 0-5, not
+    // 0-1, so a blanket clamp would halve the sampler's envelope ranges.
+    m_params[id].store(value);
 }
 
 std::string SamplerPlugin::getParameterDisplay(uint32_t id) const {
@@ -746,6 +852,7 @@ std::vector<uint8_t> SamplerPlugin::saveState() const {
     // bidirectional projects as an ordinary enabled loop.
     json.set("loopEnabled", Aestra::JSON(loopMode != LoopMode::OneShot));
     json.set("maxVoices", Aestra::JSON(static_cast<double>(m_maxVoices.load(std::memory_order_relaxed))));
+    json.set("pitchMode", Aestra::JSON(static_cast<double>(static_cast<int>(getPitchMode()))));
     json.set("rootMidiNote", Aestra::JSON(static_cast<double>(m_rootMidiNote.load(std::memory_order_relaxed))));
     json.set("monoMode", Aestra::JSON(m_monoMode.load(std::memory_order_relaxed)));
     json.set("cutSelfMode", Aestra::JSON(m_cutSelfMode.load(std::memory_order_relaxed)));
@@ -797,6 +904,14 @@ bool SamplerPlugin::loadState(const std::vector<uint8_t>& state) {
                         : (storedMode == static_cast<int>(LoopMode::Forward) ? LoopMode::Forward : LoopMode::OneShot));
     } else if (json.has("loopEnabled")) {
         setLoopEnabled(json["loopEnabled"].asBool());
+    }
+    // Absent in older projects, and unknown values from newer ones, mean Resample:
+    // the only behaviour those projects were made with.
+    if (json.has("pitchMode") && json["pitchMode"].isNumber() &&
+        static_cast<int>(json["pitchMode"].asNumber()) == static_cast<int>(PitchMode::KeepLength)) {
+        setPitchMode(PitchMode::KeepLength);
+    } else {
+        setPitchMode(PitchMode::Resample);
     }
     if (json.has("maxVoices")) {
         setMaxVoices(static_cast<int>(json["maxVoices"].asNumber()));

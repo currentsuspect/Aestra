@@ -81,7 +81,7 @@ int main() {
     // (b) Unknown/future version is refused gracefully (no crash, no misparse).
     {
         std::vector<uint8_t> future = makeChainState(0.42f);
-        future[3] = static_cast<uint8_t>(EffectChain::kStateFormatVersion + 1);
+        future[3] = static_cast<uint8_t>(EffectChain::kStateFormatVersionLong + 1);
 
         EffectChain chain;
         // Pre-load a valid plugin so we can confirm a rejected load doesn't

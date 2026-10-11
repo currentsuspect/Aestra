@@ -22,6 +22,22 @@ uint8_t toMidiVelocity(float velocity) {
     return static_cast<uint8_t>(std::clamp<int>(static_cast<int>(std::lround(clamped)), 0, 127));
 }
 
+// One id per note occurrence: its instance, its ON and OFF frames (distinct per loop pass; the
+// off frame tells apart stacked same-pitch notes of different lengths) and its resolved pitch.
+// The note-off is often scheduled in a later window than the note-on, so the id must be
+// recomputable from the occurrence alone. Never 0 (0 means "no id"). An edit that moves a
+// sounding note changes this id; the gate record keeps the voice's id (see refillWindow).
+uint32_t noteOccurrenceId(uint32_t instanceId, uint64_t noteFrame, uint64_t offFrame, uint8_t midiNote) {
+    uint64_t h = 0x9E3779B97F4A7C15ull ^ (static_cast<uint64_t>(instanceId) << 32) ^ midiNote;
+    h ^= noteFrame + 0x9E3779B97F4A7C15ull + (h << 6) + (h >> 2);
+    h ^= offFrame + 0x9E3779B97F4A7C15ull + (h << 6) + (h >> 2);
+    h ^= h >> 33;
+    h *= 0xff51afd7ed558ccdull;
+    h ^= h >> 33;
+    const uint32_t id = static_cast<uint32_t>(h ^ (h >> 32));
+    return id != 0 ? id : 1u;
+}
+
 bool eventComesBefore(const ScheduledEvent& a, const ScheduledEvent& b) {
     if (a.sampleFrame != b.sampleFrame) {
         return a.sampleFrame < b.sampleFrame;
@@ -54,6 +70,33 @@ const MidiNote* findNextActiveStepForUnit(const MidiPayload& midi, const MidiNot
         }
     }
     return nullptr;
+}
+
+// When a scheduled note ends, and whether it ends at all. ONE definition, used by the refill
+// that queues the note-off and by the live-edit reconciliation that decides whether a sounding
+// note still exists: a pitched-sampler gate can outlast the note's duration, so the two
+// computing it differently released notes early (or kept stale ones).
+struct NoteOffTiming {
+    double offBeat;
+    bool suppressNoteOff; // pitched-sampler slide into the next step holds the voice
+};
+
+NoteOffTiming calculateNoteOffTiming(const MidiPayload& midi, const MidiNote& note, double instanceStartBeat,
+                                     double sourceEndBeatAbsolute, bool isPitchedSampler) {
+    const double noteBeat = instanceStartBeat + note.startBeat;
+    NoteOffTiming timing{std::min(noteBeat + note.durationBeats, sourceEndBeatAbsolute), false};
+    if (isPitchedSampler) {
+        const double gate = std::clamp(static_cast<double>(note.gate), 0.1, 2.0);
+        timing.offBeat = std::min(noteBeat + gate * kPitchedSamplerStepBeats, sourceEndBeatAbsolute);
+        if (const auto* nextStep = findNextActiveStepForUnit(midi, note)) {
+            if (note.slide) {
+                timing.suppressNoteOff = true;
+            } else {
+                timing.offBeat = std::min(timing.offBeat, instanceStartBeat + nextStep->startBeat);
+            }
+        }
+    }
+    return timing;
 }
 
 int resolvePitchedSamplerMidiNote(const MidiNote& note, int rootMidiNote) {
@@ -116,6 +159,39 @@ void PatternPlaybackEngine::schedulePatternInstance(PatternID pid, double startB
                       std::to_string(pid.value) + " at beat " + std::to_string(startBeat) +
                       " sourceStart=" + std::to_string(sourceStartBeat) +
                       " duration=" + std::to_string(durationBeats));
+}
+
+void PatternPlaybackEngine::updatePatternInstance(PatternID pid, double startBeat, uint32_t instanceId,
+                                                  double sourceStartBeat, double durationBeats) {
+    if (instanceId >= 256) {
+        Aestra::Log::error("[PatternPlayback] Instance ID must be < 256");
+        return;
+    }
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        auto existing = std::find_if(m_activeInstances.begin(), m_activeInstances.end(),
+                                     [instanceId](const PatternInstance& e) { return e.instanceId == instanceId; });
+        if (existing != m_activeInstances.end()) {
+            existing->patternId = pid;
+            existing->startBeat = startBeat;
+            existing->sourceStartBeat = std::max(0.0, sourceStartBeat);
+            existing->sourceEndBeat = durationBeats > 0.0 ? (existing->sourceStartBeat + durationBeats)
+                                                          : std::numeric_limits<double>::infinity();
+            // scheduledThroughFrame deliberately kept: see the header.
+            return;
+        }
+    }
+    schedulePatternInstance(pid, startBeat, instanceId, sourceStartBeat, durationBeats);
+}
+
+void PatternPlaybackEngine::removePatternInstance(uint32_t instanceId) {
+    if (instanceId >= 256)
+        return;
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_activeInstances.erase(
+        std::remove_if(m_activeInstances.begin(), m_activeInstances.end(),
+                       [instanceId](const PatternInstance& inst) { return inst.instanceId == instanceId; }),
+        m_activeInstances.end());
 }
 
 void PatternPlaybackEngine::cancelPatternInstance(uint32_t instanceId) {
@@ -210,16 +286,29 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
         {
             continue;
         }
-        for (const auto& gated : m_gatedNotes) {
-            if (gated.offFrame <= currentFrame)
-                continue;
+        // Gate records released here, or already past, are dropped after the pass. A surviving
+        // record takes its note's CURRENT off frame: an edit that lengthened a sounding note left
+        // the old one, the record was purged once that passed while the note still sounded, and a
+        // later edit deleting the note then had nothing to release it with (review, #956).
+        std::vector<size_t> consumedGates;
+        // Each gate follows ITS note: first the note whose id is unchanged (an unedited note,
+        // even among overlapping same-pitch notes); only for gates left over, a same-pitch note
+        // still spanning the playhead that no other gate claimed (the note was moved or resized
+        // while sounding; the gate adopts its new id and keeps its voice's). Exact matches run
+        // for every gate before any fallback, so a fallback can't take another gate's note.
+        struct GateMatch {
+            bool found = false;
+            uint64_t offFrame = 0;
+            uint32_t currentId = 0;
+        };
+        std::vector<GateMatch> matches(m_gatedNotes.size());
+        std::vector<uint32_t> claimedIds;
+        const auto forEachSpanningNote = [&](const GatedNote& gated, auto&& visit) {
             PatternInstance* instPtr = findInstance(gated.instanceId);
-            if (!instPtr)
-                continue;
-            auto* pattern = m_patternManager->getPattern(instPtr->patternId);
-            if (!pattern || !pattern->isMidi())
-                continue;
-            bool stillExists = false;
+            // A removed slot (a clip deleted, muted or moved out of the timeline while its
+            // note sounds) can re-emit nothing, so its held note is released below or it hangs.
+            auto* pattern = instPtr ? m_patternManager->getPattern(instPtr->patternId) : nullptr;
+            if (!instPtr || !pattern || !pattern->isMidi()) return;
             for (const auto& note : std::get<MidiPayload>(pattern->payload).notes) {
                 if (note.unitId != gated.unitId)
                     continue;
@@ -235,13 +324,54 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                     continue;
                 const double onBeat = instPtr->startBeat + note.startBeat;
                 const uint64_t onFrame = loopBase + m_clock->sampleFrameAtBeat(onBeat, sampleRate);
-                if (onFrame < currentFrame) {
-                    stillExists = true;
-                    break;
+                // The note must still SPAN the playhead at its current placement. Started
+                // before the playhead is not enough: a clip moved (or a note shortened) so the
+                // note has already ended there gets no re-queued off, so the old voice would hang.
+                const NoteOffTiming offTiming =
+                    calculateNoteOffTiming(std::get<MidiPayload>(pattern->payload), note, instPtr->startBeat,
+                                           instPtr->startBeat + instPtr->sourceEndBeat, isPitchedSampler);
+                const uint64_t offFrame = loopBase + m_clock->sampleFrameAtBeat(offTiming.offBeat, sampleRate);
+                if (onFrame < currentFrame && (offTiming.suppressNoteOff || offFrame > currentFrame)) {
+                    const uint32_t id =
+                        noteOccurrenceId(gated.instanceId, onFrame, offFrame, static_cast<uint8_t>(resolved));
+                    if (visit(id, offFrame)) return;
                 }
             }
-            if (stillExists)
+        };
+        const auto claimed = [&](uint32_t id) {
+            return std::find(claimedIds.begin(), claimedIds.end(), id) != claimedIds.end();
+        };
+        for (size_t i = 0; i < m_gatedNotes.size(); ++i) { // exact: the unedited note
+            const auto& gated = m_gatedNotes[i];
+            if (gated.offFrame <= currentFrame) continue;
+            forEachSpanningNote(gated, [&](uint32_t id, uint64_t offFrame) {
+                if (id != gated.currentId || claimed(id)) return false;
+                matches[i] = {true, offFrame, id};
+                claimedIds.push_back(id);
+                return true;
+            });
+        }
+        for (size_t i = 0; i < m_gatedNotes.size(); ++i) { // fallback: the note was edited
+            const auto& gated = m_gatedNotes[i];
+            if (gated.offFrame <= currentFrame || matches[i].found) continue;
+            forEachSpanningNote(gated, [&](uint32_t id, uint64_t offFrame) {
+                if (claimed(id)) return false;
+                matches[i] = {true, offFrame, id};
+                claimedIds.push_back(id);
+                return true;
+            });
+        }
+        for (size_t gateIndex = 0; gateIndex < m_gatedNotes.size(); ++gateIndex) {
+            auto& gated = m_gatedNotes[gateIndex];
+            if (gated.offFrame <= currentFrame) {
+                consumedGates.push_back(gateIndex);
                 continue;
+            }
+            if (matches[gateIndex].found) {
+                gated.offFrame = matches[gateIndex].offFrame;
+                gated.currentId = matches[gateIndex].currentId;
+                continue;
+            }
             ScheduledEvent off{};
             off.sampleFrame = currentFrame;
             off.instanceId = gated.instanceId;
@@ -251,14 +381,14 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
             off.data1 = gated.noteNumber;
             off.data2 = 0;
             off.priority = 0;
+            off.noteId = gated.noteId;
             deletedOffs.push_back(off);
+            consumedGates.push_back(gateIndex);
         }
-        // Drop consumed gate records in the same pass.
-        m_gatedNotes.erase(std::remove_if(m_gatedNotes.begin(), m_gatedNotes.end(),
-                                          [currentFrame](const GatedNote& g) {
-                                              return g.offFrame <= currentFrame;
-                                          }),
-                           m_gatedNotes.end());
+        // Drop consumed gate records in the same pass (indices ascend; erase from the back).
+        for (auto it = consumedGates.rbegin(); it != consumedGates.rend(); ++it) {
+            m_gatedNotes.erase(m_gatedNotes.begin() + static_cast<std::ptrdiff_t>(*it));
+        }
         for (auto& inst : m_activeInstances) {
             inst.scheduledThroughFrame = std::min(inst.scheduledThroughFrame, currentFrame);
         }
@@ -322,30 +452,20 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                                              : std::clamp(note.pitch, 0, 127);
             double noteBeat = inst.startBeat + note.startBeat;
             uint64_t noteFrame = loopBase + m_clock->sampleFrameAtBeat(noteBeat, sampleRate);
-            double offBeat = std::min(noteBeat + note.durationBeats, inst.startBeat + inst.sourceEndBeat);
             // A one-shot sample may continue to its natural endpoint when no
             // note gate is present, but a Piano Roll note still owns an ADSR
             // gate. Always emit its note-off so the sampler can enter release
             // when the note ends. Pitched-sampler slides are the one explicit
             // exception because they intentionally hold the voice across the
             // next step.
-            bool suppressNoteOff = false;
-
-            if (isPitchedSampler) {
-                const double gate = std::clamp(static_cast<double>(note.gate), 0.1, 2.0);
-                offBeat = std::min(noteBeat + gate * kPitchedSamplerStepBeats, inst.startBeat + inst.sourceEndBeat);
-
-                if (const auto* nextStep = findNextActiveStepForUnit(midi, note)) {
-                    const double nextStepBeat = inst.startBeat + nextStep->startBeat;
-                    if (note.slide) {
-                        suppressNoteOff = true;
-                    } else {
-                        offBeat = std::min(offBeat, nextStepBeat);
-                    }
-                }
-            }
+            const NoteOffTiming offTiming =
+                calculateNoteOffTiming(midi, note, inst.startBeat, inst.startBeat + inst.sourceEndBeat, isPitchedSampler);
+            const double offBeat = offTiming.offBeat;
+            const bool suppressNoteOff = offTiming.suppressNoteOff;
 
             uint64_t offFrame = loopBase + m_clock->sampleFrameAtBeat(offBeat, sampleRate);
+            const uint32_t noteId =
+                noteOccurrenceId(inst.instanceId, noteFrame, offFrame, static_cast<uint8_t>(resolvedMidiNote));
 
             uint16_t channelIdx = getChannelForUnit(note.unitId);
 
@@ -381,10 +501,11 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                 onEvent.data1 = static_cast<uint8_t>(resolvedMidiNote);
                 onEvent.data2 = toMidiVelocity(note.velocity);
                 onEvent.priority = 2;
+                onEvent.noteId = noteId;
                 m_scratchEvents.push_back(onEvent);
                 if (!suppressNoteOff) {
                     m_gatedNotes.push_back({inst.instanceId, note.unitId,
-                                            static_cast<uint8_t>(resolvedMidiNote), channelIdx, offFrame});
+                                            static_cast<uint8_t>(resolvedMidiNote), channelIdx, offFrame, noteId, noteId});
                 }
             } else if (noteFrame < scheduleFromFrame && offFrame > scheduleFromFrame &&
                        noteFrame >= previousScheduledThroughFrame) {
@@ -410,10 +531,11 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                 resumeOnEvent.data1 = static_cast<uint8_t>(resolvedMidiNote);
                 resumeOnEvent.data2 = toMidiVelocity(note.velocity);
                 resumeOnEvent.priority = 2;
+                resumeOnEvent.noteId = noteId;
                 m_scratchEvents.push_back(resumeOnEvent);
                 if (!suppressNoteOff) {
                     m_gatedNotes.push_back({inst.instanceId, note.unitId,
-                                            static_cast<uint8_t>(resolvedMidiNote), channelIdx, offFrame});
+                                            static_cast<uint8_t>(resolvedMidiNote), channelIdx, offFrame, noteId, noteId});
                 }
             }
 
@@ -427,6 +549,15 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                 offEvent.data1 = static_cast<uint8_t>(resolvedMidiNote);
                 offEvent.data2 = 0;
                 offEvent.priority = 0;
+                // An edited sounding note: its gate keeps the id its voice was started with.
+                offEvent.noteId = noteId;
+                for (const auto& gated : m_gatedNotes) {
+                    if (gated.currentId == noteId && gated.instanceId == inst.instanceId &&
+                        gated.unitId == note.unitId && gated.noteNumber == static_cast<uint8_t>(resolvedMidiNote)) {
+                        offEvent.noteId = gated.noteId;
+                        break;
+                    }
+                }
                 m_scratchEvents.push_back(offEvent);
             }
         }
@@ -479,13 +610,23 @@ void PatternPlaybackEngine::processAudio(uint64_t currentFrame, int bufferSize, 
 
             if (target) {
                 uint8_t data[3] = {ev.statusByte, ev.data1, ev.data2};
-                target->addEvent(static_cast<uint32_t>(offset), data, 3);
+                target->addEvent(static_cast<uint32_t>(offset), data, 3, ev.noteId);
                 m_processedCounter.fetch_add(1, std::memory_order_relaxed);
             }
         }
 
         m_rtQueue.pop();
     }
+}
+
+std::vector<PatternPlaybackEngine::InstanceSnapshot> PatternPlaybackEngine::snapshotInstances() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    std::vector<InstanceSnapshot> out;
+    out.reserve(m_activeInstances.size());
+    for (const auto& inst : m_activeInstances) {
+        out.push_back({inst.patternId, inst.instanceId, inst.startBeat, inst.sourceStartBeat, inst.sourceEndBeat});
+    }
+    return out;
 }
 
 void PatternPlaybackEngine::clearScheduledInstances() {

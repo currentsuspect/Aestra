@@ -188,6 +188,19 @@ static void test_prepend_regression_is_gone() {
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
+// SPEC 3 §2.6: an inline editor opens with its value selected; the caret must sit at the
+// selection's END (right of "120.00"), not at the far left where a fresh field starts it.
+static void test_select_all_leaves_caret_at_end() {
+    std::cout << "[select-all caret]\n";
+    auto input = makeFocusedInput("120.00");
+    ASSERT(input->getCaretPosition() == 0, "precondition: a fresh field's caret starts at 0");
+    input->selectAll();
+    ASSERT(input->getCaretPosition() == 6, "after selectAll the caret is at the end of the text, got " +
+                                               std::to_string(input->getCaretPosition()));
+    ASSERT(input->getSelectionStart() == 0, "and the whole text is still selected");
+    PASS("selectAll leaves the caret at the selection's end");
+}
+
 int main() {
     std::cout << "========================================\n";
     std::cout << "  NUITextInput Editing Regression Tests\n";
@@ -201,6 +214,7 @@ int main() {
     test_no_selection_append_at_end();
     test_negative_value_entry_over_selection();
     test_prepend_regression_is_gone();
+    test_select_all_leaves_caret_at_end();
 
     std::cout << "\n========================================\n";
     if (testsFailed == 0) {

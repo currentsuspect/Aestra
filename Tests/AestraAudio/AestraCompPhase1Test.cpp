@@ -132,11 +132,29 @@ bool testNanStateDoesNotEnterParametersOrProcessing() {
     writeFloat(state, kParamOffset + sizeof(float) * AestraComp::kMakeup,
                std::numeric_limits<float>::infinity());
 
+    // The contract is now InternalPluginBase's, not Comp's own reader's.
+    // Comp used to accept such a blob and sanitise the two bad values; the base
+    // rejects the WHOLE blob, deliberately and citing AGENTS.md §12 -- a corrupt
+    // blob must not leave the instance half-updated.
+    //
+    // So this asserts rejection, and then asserts the thing that actually
+    // matters under that policy: a rejected blob leaves every parameter alone.
+    // Accept-and-sanitise versus reject-and-keep-defaults is a real design
+    // choice, not an implementation detail -- see issue #1015 -- and this test
+    // pins whichever side the base is on rather than the side Comp used to be.
     AestraComp restored;
     restored.initialize(48000.0, 256);
-    if (!restored.loadState(state)) {
-        std::cerr << "state with non-finite compressor params failed to load\n";
+    AestraComp pristine;
+    pristine.initialize(48000.0, 256);
+    if (restored.loadState(state)) {
+        std::cerr << "state with non-finite compressor params was accepted\n";
         return false;
+    }
+    for (uint32_t i = 0; i < AestraComp::kParamCount; ++i) {
+        if (std::fabs(restored.getParameter(i) - pristine.getParameter(i)) > 1.0e-6f) {
+            std::cerr << "a rejected blob still mutated parameter " << i << "\n";
+            return false;
+        }
     }
     if (!std::isfinite(restored.getParameter(AestraComp::kThreshold)) ||
         !std::isfinite(restored.getParameter(AestraComp::kMakeup))) {

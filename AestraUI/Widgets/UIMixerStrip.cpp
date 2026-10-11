@@ -160,7 +160,7 @@ namespace {
         }
 
         auto& chain = channel.channel->getEffectChain();
-        for (size_t i = 0; i < Aestra::Audio::EffectChain::MAX_SLOTS; ++i) {
+        for (size_t i = 0, slotTotal = chain.slotCount(); i < slotTotal; ++i) {
             auto plugin = chain.getPlugin(i);
             auto comp = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraComp>(plugin);
             if (!comp) {
@@ -537,8 +537,8 @@ void UIMixerStrip::renderMasterReadout(NUIRenderer& renderer,
     if (meterArea.width <= 0.0f || meterArea.height <= 0.0f) return;
 
     auto& theme = NUIThemeManager::getInstance();
-    const NUIColor labelColor = theme.getColor("textSecondary").withAlpha(0.72f);
-    const NUIColor valueColor = theme.getColor("textPrimary").withAlpha(0.95f);
+    const NUIColor labelColor = theme.getColor("textSecondary").withAlpha(0.864f);
+    const NUIColor valueColor = theme.getColor("textPrimary").withAlpha(0.978f);
     const NUIColor clipColor = theme.getColor("meterCrit");
 
     const bool clipped = channel.clipLatchL || channel.clipLatchR;
@@ -871,7 +871,7 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
         const NUIRect badge(bounds.x + (bounds.width - badgeW) * 0.5f, badgeY, badgeW, 17.0f);
         renderer.fillRoundedRect(badge, 5.0f, accent.withAlpha(0.18f));
         renderer.strokeRoundedRect(badge, 5.0f, 1.0f, accent.withAlpha(0.52f));
-        renderer.drawTextCentered(label, badge, 8.4f, text.withAlpha(0.92f));
+        renderer.drawTextCentered(label, badge, 8.4f, text.withAlpha(0.964f));
     }
     if (channel && channel->muted) {
         renderer.fillRect(getBounds(), m_mutedOverlay);

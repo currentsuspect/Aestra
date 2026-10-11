@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "RecoveryDialog.h"
+#include "../AestraUI/Widgets/AestraPanelWindow.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "../AestraCore/include/AestraLog.h"
@@ -109,9 +110,10 @@ void RecoveryDialog::calculateLayout() {
     auto bounds = getBounds();
     const auto& theme = AestraUI::NUIThemeManager::getInstance().getCurrentTheme();
     
-    // Dialog size
+    // Dialog size. The extra height over the old 180 is the 32px title bar the
+    // shared chrome adds (spec 2 §5); the body below it is unchanged.
     float dialogWidth = 450.0f;
-    float dialogHeight = 180.0f;
+    float dialogHeight = 180.0f + AestraUI::AestraPanelWindow::TITLE_BAR_H;
     
     // Center the dialog
     float dialogX = (bounds.width - dialogWidth) * 0.5f;
@@ -143,19 +145,18 @@ void RecoveryDialog::onRender(AestraUI::NUIRenderer& renderer) {
     // Semi-transparent overlay
     renderer.fillRect(AestraUI::NUIRect(0, 0, bounds.width, bounds.height), theme.overlay);
     
-    // Dialog background
-    renderer.fillRoundedRect(m_dialogRect, theme.radiusL, theme.surfaceTertiary);
-    renderer.strokeRoundedRect(m_dialogRect, theme.radiusL, theme.layout.dividerWidth, theme.borderStrong);
-    
-    // Title
-    const float contentX = m_dialogRect.x + theme.spacingM;
-    float titleY = m_dialogRect.y + theme.spacingL;
-    renderer.drawText("Recover Unsaved Work?", 
-                     AestraUI::NUIPoint(contentX, titleY),
-                     theme.fontSizeXL, theme.textPrimary);
-    
-    // Message
-    float messageY = titleY + theme.spacingXL;
+    // Surface and title bar come from the shared dialog chrome, so this panel
+    // speaks the same language as the rest of the DAW (spec 2 §5). The question
+    // that used to be a 20px bold heading inside a plain card is now the panel's
+    // title; the body below it carries the detail.
+    AestraUI::DialogChrome chrome;
+    chrome.panel = m_dialogRect;
+    chrome.title = "Recover Unsaved Work";
+    chrome.showClose = false; // Neither answer is a safe default, so there is no dismiss.
+    const AestraUI::NUIRect content = AestraUI::drawDialogChrome(renderer, chrome);
+
+    const float contentX = content.x + theme.spacingL;
+    float messageY = content.y + theme.spacingL;
     renderer.drawText("An autosave was found from:", 
                      AestraUI::NUIPoint(contentX, messageY),
                      theme.fontSizeL, theme.textSecondary);

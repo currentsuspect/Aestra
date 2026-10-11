@@ -33,6 +33,19 @@ public:
     // landing above it (panels clip their children).
     void showAt(const NUIRect& triggerRect, float panelBottomY, float panelTopY = 0.0f);
     void hide();
+
+    /**
+     * @brief Move keyboard selection through item rows (spec item 4b).
+     *
+     * Category headers are skipped; clamped at the ends. Highlights like
+     * hover so there is one visible selection.
+     */
+    void moveSelection(int direction);
+
+    /**
+     * @brief Load the keyboard-selected row (same as click).
+     */
+    void activateSelected();
     bool isOpen() const { return m_open; }
 
     // Callback: plugin ID, display name
@@ -82,6 +95,7 @@ private:
     std::string m_searchQuery;
     int m_hoveredRow{-1};     // -1 = none, 0+ = flat index across all visible rows
     int m_hoveredFooter{-1};  // -1 = none, 0 = browse link
+    int m_selectedRow{-1};    // keyboard selection; highlighted like hover, loads on Enter
     std::vector<Category> m_categories;
     std::vector<Category> m_filtered;
 

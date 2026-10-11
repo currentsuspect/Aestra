@@ -6,6 +6,7 @@
 #include "NUICoreWidgets.h"
 #include <array>
 #include <functional>
+#include <optional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -136,6 +137,33 @@ public:
      */
     void clearSelection();
 
+    /**
+     * @brief Move the selection through the filtered list (spec item 4).
+     *
+     * Same selection identity as a single click (fires onPluginSelected),
+     * clamped at the ends; a fresh list starts at the top (Down) or bottom
+     * (Up). No-op on an empty list.
+     */
+    void moveSelection(int delta);
+
+    /**
+     * @brief Load the highlighted plugin (spec item 4).
+     *
+     * Same action as double-click (fires onPluginLoadRequested). No-op
+     * without a valid selection.
+     */
+    void activateSelected();
+
+    /**
+     * @brief Target scroll offset (the lerped scroll converges here).
+     */
+    float getTargetScrollOffset() const { return m_targetScrollOffset; }
+
+    /**
+     * @brief Scroll just enough to bring the selection into view.
+     */
+    void ensureSelectionVisible();
+
     // ==============================
     // Favorites
     // ==============================
@@ -149,6 +177,34 @@ public:
      * @brief Get favorite plugin IDs
      */
     std::vector<std::string> getFavorites() const;
+
+    /**
+     * @brief Persist favorites through the app's UI-state store (V8-C14).
+     *
+     * AestraUI must not include the store, so the app supplies two callbacks, as for
+     * editor anchors (step 5b). A stored list wins. With nothing stored yet, the
+     * favorites already read from the legacy favorites.json are written once into
+     * the store (one-way import; the old file is left alone). Without a provider the
+     * panel keeps using favorites.json.
+     */
+    using FavoritesLoader = std::function<std::optional<std::vector<std::string>>()>;
+    using FavoritesSaver = std::function<void(const std::vector<std::string>&)>;
+    void setFavoritesProvider(FavoritesLoader load, FavoritesSaver save);
+
+    // ==============================
+    // Recents (V8-S5)
+    // ==============================
+
+    /** @brief Most recently loaded first; at most kMaxRecents. */
+    const std::vector<std::string>& getRecents() const { return m_recents; }
+    /** @brief Note that @p pluginId was loaded: it moves to the front of the recents. */
+    void recordRecent(const std::string& pluginId);
+    /** @brief Show only recently loaded plugins, newest first. */
+    void setShowRecentOnly(bool show);
+    bool getShowRecentOnly() const { return m_showRecentOnly; }
+    /** @brief Same arrangement as favorites: a stored list wins; without a provider recents last for the session. */
+    void setRecentsProvider(FavoritesLoader load, FavoritesSaver save);
+    static constexpr size_t kMaxRecents = 12;
 
     // ==============================
     // Callbacks
@@ -199,10 +255,12 @@ private:
     // Favorites persistence
     void loadFavorites();
     void saveFavorites();
+    int recentRank(const std::string& id) const; ///< position in the recents, -1 if absent
+    void requestLoad(const PluginListItem& plugin); ///< notes the recent, then asks the app to load
 
     // Filter pill hit testing
     struct FilterPillHit {
-        enum Type { None, TypeAll, TypeFX, TypeInst, FormatVST3, FormatCLAP, Fav } type;
+        enum Type { None, TypeAll, TypeFX, TypeInst, FormatVST3, FormatCLAP, Fav, Recent } type;
         NUIRect bounds;
     };
     std::vector<FilterPillHit> m_filterPillHits;
@@ -212,12 +270,16 @@ private:
     std::vector<PluginListItem> m_allPlugins;
     std::vector<PluginListItem> m_filteredPlugins;
     std::unordered_set<std::string> m_favoritesSet; // O(1) lookup, persisted to disk
+    FavoritesSaver m_favoritesSaver;                // set by setFavoritesProvider(); else favorites.json
 
     // Search & Filter
     std::string m_searchQuery;
     PluginTypeFilter m_typeFilter = PluginTypeFilter::All;
     PluginFormatFilter m_formatFilter = PluginFormatFilter::All;
     bool m_showFavoritesOnly = false;
+    bool m_showRecentOnly = false;
+    std::vector<std::string> m_recents;
+    FavoritesSaver m_recentsSaver;
 
     // UI State
     int m_selectedIndex = -1;
@@ -275,7 +337,13 @@ class NUIPlatformBridge;
 
 class EffectChainRack : public NUIComponent {
 public:
-    static constexpr int MAX_SLOTS = 10;
+    /// Ceiling on rows the rack can hold. Mirrors Audio::EffectChain::kMaxSlots
+    /// (asserted in PluginUIController.cpp, which sees both). The rack shows only
+    /// the populated rows plus one "+ Add insert" row, so a larger ceiling costs
+    /// nothing until a chain actually grows (V8-S3).
+    static constexpr int MAX_SLOTS = 64;
+    /// Rows shown as drop targets during a reorder drag when the chain is short.
+    static constexpr int INITIAL_SLOTS = 10;
 
     struct EffectSlotInfo {
         std::string name;       ///< Plugin name or "Empty"

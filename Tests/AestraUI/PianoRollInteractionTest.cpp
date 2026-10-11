@@ -4,9 +4,17 @@
 #include "Common/MusicHelpers.h"
 #include "Widgets/NUIPianoRollWidgets.h"
 #include "Widgets/PianoRollWidgetShared.h"
+#include "../Support/NullRenderer.h"
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <string>
 #include <cassert>
 #include <iostream>
+#include <optional>
+#include <utility>
 #include <limits>
+#include <vector>
 
 using namespace AestraUI;
 
@@ -362,11 +370,15 @@ static void test_ctrl_wheel_zoom_uses_grid_local_anchor() {
     // startBeat 1.25 at 80 ppb over an 810 px grid: scrollX = 100.
     view.setViewWindow(1.25, 810.0 / 80.0);
 
-    // Default layout: key lane 76 px, vertical scrollbar 14 px.
-    const float keyLaneWidth = 76.0f;
-    const float gridWidthPx = 900.0f - keyLaneWidth - 14.0f;
-    const float gridLocalCursorX = 500.0f; // 500 px into the grid
-    const float cursorWindowX = kViewOffsetX + keyLaneWidth + gridLocalCursorX;
+    // Take the grid's REAL geometry rather than restating the key-lane width and
+    // scrollbar gutter. Both are layout values that get retuned (the key lane
+    // went 76 -> 58 and the gutter 14 -> 10 in the spec 2 pass), and a test that
+    // copies them fails on the retune instead of on the behaviour it guards.
+    const NUIRect gridBounds = view.getGridBounds();
+    ASSERT(gridBounds.width > 100.0f, "grid has a usable width to anchor in");
+    const float gridWidthPx = gridBounds.width;
+    const float gridLocalCursorX = gridWidthPx * 0.5f; // mid-grid
+    const float cursorWindowX = gridBounds.x + gridLocalCursorX;
 
     const auto beatAtCursor = [&]() {
         const double ppb = static_cast<double>(gridWidthPx) / view.getViewDurationBeats();
@@ -443,6 +455,67 @@ static void test_grid_subdivision_matches_snap() {
 // ---------------------------------------------------------------------------
 // Test: grid tiers never advertise positions the snap does not allow
 // ---------------------------------------------------------------------------
+// Owner report 2026-09-24: "the grid on timeline doesn't respect snap". The tiers were PRESENT
+// (the test above) but not VISIBLE: at a 1/4 snap the snap lines were drawn at the decorative
+// subdivision alpha, RGB 2 on the timeline's black bed, so 1/4 looked identical to Beat. A tier
+// that exists because of the snap now gets a visible floor. Uses the timeline plane's own style.
+static void test_snap_tiers_are_visible_not_just_present() {
+    const TimelineGridStyle plane{0.179f, 0.057f, 0.019f, 0.0f};
+    constexpr float WIDE_SPACING_PX = 40.0f; // spacing past the zoom fade: the tier is fully faded in
+
+    const float quarter = timelineSnapTierAlpha(plane, 0.25, WIDE_SPACING_PX);
+    ASSERT(quarter >= plane.beatLineAlpha * 0.75f - 1e-6f,
+           "a 1/4 snap's lines are drawn at a visible level (at least 3/4 of the beat tier)");
+    ASSERT(quarter < plane.beatLineAlpha, "and still below the beat tier, keeping the hierarchy");
+    ASSERT(quarter > plane.subdivisionLineAlpha * 1.5f,
+           "clearly brighter than the decorative whisper it used to use (so this is not vacuous)");
+    ASSERT(timelineSnapTierAlpha(plane, 0.5, WIDE_SPACING_PX) >= plane.beatLineAlpha * 0.75f - 1e-6f,
+           "the half-beat tier under a 1/2 snap is visible too");
+    ASSERT(std::abs(timelineSnapTierAlpha(plane, 0.0, WIDE_SPACING_PX) - plane.subdivisionLineAlpha) < 1e-6f,
+           "with no snap the subdivisions stay decorative");
+    ASSERT(timelineSnapTierAlpha(plane, 0.25, 4.0f) == 0.0f, "lines closer than 4 px are still dropped");
+    ASSERT(timelineSnapTierFade(10.0f) > 0.5f && timelineGridLevelFade(10.0f) == 0.0f,
+           "at ~10 px (a beat at default zoom) snap lines show where decorative tiers stay hidden");
+
+    // At the default timeline zoom (~10 px per beat) a 1/4 snap must not look like a Beat snap
+    // (review, #973): its half-beat tier (5 px) is drawn at the snap floor, the quarter tier
+    // (2.5 px) is too dense and stays hidden, and a Beat snap draws no half-beat tier at all.
+    constexpr float DEFAULT_PX_PER_BEAT = 10.0f;
+    ASSERT(timelineGridTierAlignedToSnap(0.5, 0.25) &&
+               timelineSnapTierAlpha(plane, 0.25, DEFAULT_PX_PER_BEAT * 0.5f) >= plane.beatLineAlpha * 0.75f - 1e-6f,
+           "default zoom, 1/4 snap: the half-beat lines are drawn at the snap floor");
+    ASSERT(timelineSnapTierAlpha(plane, 0.25, DEFAULT_PX_PER_BEAT * 0.25f) == 0.0f,
+           "default zoom, 1/4 snap: the 2.5 px quarter lines stay hidden");
+    ASSERT(!timelineGridTierAlignedToSnap(0.5, 1.0), "default zoom, Beat snap: no half-beat tier, so the two differ");
+
+    // The same, through the real renderer (review, #973): record every vertical line it draws for
+    // one bar at the default zoom, under a 1/4 snap and under a Beat snap.
+    struct LineRecorder : Aestra::Testing::NullRenderer {
+        std::vector<float> xs;
+        void drawLine(const NUIPoint& a, const NUIPoint&, float, const NUIColor& c) override {
+            if (c.a > 0.001f) xs.push_back(a.x);
+        }
+        bool drew(float x) const {
+            for (const float v : xs) {
+                if (std::abs(v - x) < 0.01f) return true;
+            }
+            return false;
+        }
+    };
+    const NUIRect bed(0.0f, 0.0f, 40.0f, 100.0f); // one 4-beat bar at 10 px per beat
+    LineRecorder quarterSnap;
+    renderTimelineGrid(quarterSnap, bed, 0.0f, 40.0f, 0.0f, DEFAULT_PX_PER_BEAT, 4, NUIColor::white(), plane, 0.25);
+    ASSERT(quarterSnap.drew(10.0f) && quarterSnap.drew(5.0f) && quarterSnap.drew(15.0f),
+           "renderer, default zoom, 1/4 snap: beat and half-beat lines are drawn");
+    ASSERT(!quarterSnap.drew(2.5f) && !quarterSnap.drew(7.5f),
+           "renderer, default zoom, 1/4 snap: the 2.5 px quarter lines are not");
+    LineRecorder beatSnap;
+    renderTimelineGrid(beatSnap, bed, 0.0f, 40.0f, 0.0f, DEFAULT_PX_PER_BEAT, 4, NUIColor::white(), plane, 1.0);
+    ASSERT(beatSnap.drew(10.0f) && !beatSnap.drew(5.0f),
+           "renderer, default zoom, Beat snap: beat lines only, so it differs from 1/4");
+    PASS("snap tiers are visible, not just present");
+}
+
 static void test_grid_tiers_follow_snap() {
     // Without snap info (timeline contract) every tier stays visible.
     ASSERT(timelineGridTierAlignedToSnap(1.0, 0.0), "no snap keeps the beat tier");
@@ -494,6 +567,289 @@ static void test_grid_tiers_follow_snap() {
 // Scrollable-domain parity with the Track Manager timeline
 // ---------------------------------------------------------------------------
 
+// SPEC 3 §2.4 (owner: "the minimap scrollbar on piano roll ... when I come back, it
+// 'remembers' that it was still clicked"). PianoRollView dropped every event outside its
+// bounds, releases included, so a minimap drag released above the editor never ended: back
+// over the editor, plain mouse moves kept scrolling the view. A release now always reaches
+// the children, wherever the button comes up.
+static void test_minimap_drag_released_outside_the_editor_ends() {
+    PianoRollView view;
+    view.setBounds({200.0f, 120.0f, 900.0f, 600.0f}); // away from the window origin
+    view.onResize(900, 600);
+    view.setBeatsPerBar(4);
+    view.setTotalDurationBeats(16.0);
+    view.setNotes({});
+    view.setViewWindow(0.0, 16.0); // the bar covers the first quarter of the 64-beat domain
+
+    const NUIRect mm = view.getMinimapBounds();
+    ASSERT(mm.width > 100.0f && mm.height > 4.0f, "the minimap is laid out");
+    const float barY = mm.y + mm.height * 0.5f;
+
+    auto mouse = [](NUIMouseEventType type, NUIMouseButton button, float x, float y) {
+        NUIMouseEvent e;
+        e.type = type;
+        e.button = button;
+        e.position = {x, y};
+        e.pressed = type == NUIMouseEventType::Down;
+        e.released = type == NUIMouseEventType::Up;
+        return e;
+    };
+
+    // Grab the bar (clear of its edge grips) and drag it right, inside the editor.
+    view.onMouseEvent(mouse(NUIMouseEventType::Down, NUIMouseButton::Left, mm.x + 60.0f, barY));
+    view.onMouseEvent(mouse(NUIMouseEventType::Move, NUIMouseButton::None, mm.x + 160.0f, barY));
+    const double afterDrag = view.getViewStartBeat();
+    ASSERT(afterDrag > 0.5, "dragging the minimap bar scrolls the view (so the next checks are not vacuous)");
+
+    // Let go ABOVE the editor (over the transport bar, in the app).
+    const NUIRect vb = view.getBounds();
+    view.onMouseEvent(mouse(NUIMouseEventType::Up, NUIMouseButton::Left, mm.x + 160.0f, vb.y - 40.0f));
+
+    // Come back over the editor with no button held: nothing may scroll.
+    view.onMouseEvent(mouse(NUIMouseEventType::Move, NUIMouseButton::None, mm.x + 300.0f, barY));
+    view.onMouseEvent(mouse(NUIMouseEventType::Move, NUIMouseButton::None, mm.x + 450.0f, vb.y + 300.0f));
+    ASSERT(std::abs(view.getViewStartBeat() - afterDrag) < 1e-9,
+           "a minimap drag released outside the editor has ended: later moves do not scroll");
+    PASS("a minimap drag released outside the editor ends there");
+}
+
+// SPEC 3 §5.2 (owner ruling): a right-drag, or Ctrl+left-drag, on the piano-roll ruler makes a
+// loop zone; a plain left press still scrubs. Esc, or a Select-tool press on empty grid, clears
+// it. The zone never selects notes (a separate, future interaction).
+static void test_ruler_draws_and_clears_a_loop_zone() {
+    PianoRollView view;
+    view.setBounds({0.0f, 0.0f, 900.0f, 600.0f});
+    view.onResize(900, 600);
+    view.setBeatsPerBar(4);
+    view.setTotalDurationBeats(16.0);
+    view.setViewWindow(0.0, 16.0);
+
+    int notifications = 0;
+    std::optional<std::pair<double, double>> last;
+    view.setOnLoopZoneChanged([&](std::optional<std::pair<double, double>> zone) {
+        ++notifications;
+        last = zone;
+    });
+
+    const NUIRect ruler = view.getRulerBounds();
+    ASSERT(ruler.width > 100.0f, "the ruler is laid out");
+    const double ppb = static_cast<double>(view.getGridBounds().width) / view.getViewDurationBeats();
+    const float y = ruler.y + ruler.height * 0.5f;
+    const auto xAt = [&](double beat) { return ruler.x + static_cast<float>(beat * ppb); };
+    auto mouse = [](NUIMouseEventType type, NUIMouseButton button, float x, float y, NUIModifiers mods = NUIModifiers::None) {
+        NUIMouseEvent e;
+        e.type = type;
+        e.button = button;
+        e.position = {x, y};
+        e.pressed = type == NUIMouseEventType::Down;
+        e.released = type == NUIMouseEventType::Up;
+        e.modifiers = mods;
+        return e;
+    };
+
+    // Right-drag from ~beat 4 to ~beat 8.
+    view.onMouseEvent(mouse(NUIMouseEventType::Down, NUIMouseButton::Right, xAt(4.02), y));
+    view.onMouseEvent(mouse(NUIMouseEventType::Move, NUIMouseButton::None, xAt(7.98), y));
+    view.onMouseEvent(mouse(NUIMouseEventType::Up, NUIMouseButton::Right, xAt(7.98), y));
+    ASSERT(notifications == 1 && last.has_value(), "a right-drag on the ruler makes one zone");
+    ASSERT(std::abs(last->first - 4.0) < 1e-6 && std::abs(last->second - 8.0) < 1e-6,
+           "the zone snaps to the editor's grid: [4, 8)");
+    ASSERT(view.getLoopZone().has_value(), "the view keeps the zone");
+
+    // A plain left press scrubs: no new zone.
+    view.onMouseEvent(mouse(NUIMouseEventType::Down, NUIMouseButton::Left, xAt(2.0), y));
+    view.onMouseEvent(mouse(NUIMouseEventType::Up, NUIMouseButton::Left, xAt(2.0), y));
+    ASSERT(notifications == 1 && view.getLoopZone().has_value(), "a plain left press on the ruler still just scrubs");
+
+    // Esc clears it.
+    NUIKeyEvent esc;
+    esc.keyCode = NUIKeyCode::Escape;
+    esc.pressed = true;
+    view.onKeyEvent(esc);
+    ASSERT(notifications == 2 && !last.has_value() && !view.getLoopZone(), "Esc clears the zone");
+
+    // Ctrl+left-drag makes one too; a Select-tool press on empty grid clears it.
+    view.onMouseEvent(mouse(NUIMouseEventType::Down, NUIMouseButton::Left, xAt(1.0), y, NUIModifiers::Ctrl));
+    view.onMouseEvent(mouse(NUIMouseEventType::Up, NUIMouseButton::Left, xAt(3.0), y, NUIModifiers::Ctrl));
+    ASSERT(view.getLoopZone().has_value(), "Ctrl+left-drag on the ruler makes a zone");
+    view.setTool(PianoRollTool::Pointer);
+    const NUIRect grid = view.getGridBounds();
+    view.onMouseEvent(mouse(NUIMouseEventType::Down, NUIMouseButton::Left, grid.x + 40.0f, grid.y + 40.0f));
+    view.onMouseEvent(mouse(NUIMouseEventType::Up, NUIMouseButton::Left, grid.x + 40.0f, grid.y + 40.0f));
+    ASSERT(!view.getLoopZone(), "a Select-tool press on empty grid clears the zone");
+
+    // A drag past the pattern end is clamped to it: past the end there is only silence to loop
+    // (review, #970). The pattern here is 16 beats.
+    view.onMouseEvent(mouse(NUIMouseEventType::Down, NUIMouseButton::Right, xAt(12.0), y));
+    view.onMouseEvent(mouse(NUIMouseEventType::Move, NUIMouseButton::None, xAt(20.0), y));
+    view.onMouseEvent(mouse(NUIMouseEventType::Up, NUIMouseButton::Right, xAt(20.0), y));
+    ASSERT(view.getLoopZone().has_value() && std::abs(view.getLoopZone()->first - 12.0) < 1e-6 &&
+               std::abs(view.getLoopZone()->second - 16.0) < 1e-6,
+           "a zone dragged past the pattern end stops at the end: [12, 16)");
+
+    // Shortening the pattern cuts the zone to the new end, and the listener hears it (#970).
+    notifications = 0;
+    view.setLoopZone(std::make_pair(8.0, 16.0));
+    view.setTotalDurationBeats(12.0);
+    ASSERT(notifications == 1 && last.has_value() && std::abs(last->first - 8.0) < 1e-6 &&
+               std::abs(last->second - 12.0) < 1e-6,
+           "a 16 -> 12 beat pattern cuts [8, 16) to [8, 12)");
+    // A zone wholly past the new end ends.
+    view.setTotalDurationBeats(16.0);
+    view.setLoopZone(std::make_pair(12.0, 16.0));
+    view.setTotalDurationBeats(8.0);
+    ASSERT(!view.getLoopZone() && notifications == 2 && !last.has_value(),
+           "a zone wholly past the new end is cleared");
+    PASS("the ruler makes a loop zone; Esc and an empty-grid click clear it");
+}
+
+
+// SPEC 3 §5.1: a key shows pressed while a note is pressed in the grid or the key itself is
+// clicked, follows a note dragged to a new row, and eases back out after release instead of
+// snapping. A real note layer and key lane, wired the way PianoRollView wires them.
+static void test_pressed_notes_press_their_keys() {
+    constexpr float kPpb = 80.0f;
+    constexpr float kKey = 24.0f;
+    PianoRollNoteLayer layer;
+    layer.setBounds(NUIRect(0.0f, 0.0f, 1600.0f, 128.0f * kKey));
+    layer.setPixelsPerBeat(kPpb);
+    layer.setKeyHeight(kKey);
+    layer.setSnap(SnapGrid::Quarter);
+    layer.setTool(GlobalTool::Pencil);
+    layer.setVisible(true);
+    PianoRollKeyLane keys;
+    keys.setBounds(NUIRect(0.0f, 0.0f, 58.0f, 128.0f * kKey));
+    keys.setKeyHeight(kKey);
+    keys.setVisible(true);
+    layer.setOnKeyPressChanged([&keys](int pitch, bool down) {
+        if (down) keys.pressKey(pitch); else keys.releaseKey(pitch);
+    });
+    auto rowY = [&](int pitch) { return (127.0f - static_cast<float>(pitch)) * kKey + kKey * 0.5f; };
+    auto event = [](NUIMouseEventType type, float x, float y) {
+        NUIMouseEvent e;
+        e.type = type;
+        e.position = NUIPoint(x, y);
+        e.button = NUIMouseButton::Left;
+        e.pressed = type == NUIMouseEventType::Down;
+        e.released = type == NUIMouseEventType::Up;
+        return e;
+    };
+
+    ASSERT(!keys.isKeyHeld(60) && keys.keyPressLevel(60) == 0.0f, "at rest before any press");
+    layer.onMouseEvent(event(NUIMouseEventType::Down, 0.1f * kPpb, rowY(60)));
+    ASSERT(keys.isKeyHeld(60) && keys.keyPressLevel(60) == 1.0f, "a pencil press in the grid presses its key at once");
+    layer.onMouseEvent(event(NUIMouseEventType::Up, 0.1f * kPpb, rowY(60)));
+    ASSERT(!keys.isKeyHeld(60), "release lets the key go");
+    ASSERT(keys.keyPressLevel(60) == 1.0f, "but it does not snap off: it eases out");
+    keys.onUpdate(PianoRollKeyLane::kKeyReleaseSeconds * 0.5);
+    ASSERT(std::abs(keys.keyPressLevel(60) - 0.5f) < 0.01f, "half way through the release, half pressed");
+    keys.onUpdate(PianoRollKeyLane::kKeyReleaseSeconds);
+    ASSERT(keys.keyPressLevel(60) == 0.0f, "and back at rest when the release is over");
+
+    // Grab that note and drag it two rows up: the key follows the note.
+    layer.setTool(GlobalTool::Pointer);
+    layer.onMouseEvent(event(NUIMouseEventType::Down, 0.4f * kPpb, rowY(60)));
+    ASSERT(keys.isKeyHeld(60), "grabbing a note presses its key");
+    layer.onMouseEvent(event(NUIMouseEventType::Move, 0.4f * kPpb, rowY(62)));
+    ASSERT(keys.isKeyHeld(62) && !keys.isKeyHeld(60), "dragged to 62, key 62 is down and 60 came back up");
+    layer.onMouseEvent(event(NUIMouseEventType::Up, 0.4f * kPpb, rowY(62)));
+    ASSERT(!keys.isKeyHeld(62), "and release lets it go");
+
+    // The key itself: down on press, up on release.
+    keys.onMouseEvent(event(NUIMouseEventType::Down, 20.0f, rowY(64)));
+    ASSERT(keys.isKeyHeld(64) && keys.keyPressLevel(64) == 1.0f, "a click on a key presses it");
+    keys.onMouseEvent(event(NUIMouseEventType::Up, 20.0f, rowY(64)));
+    ASSERT(!keys.isKeyHeld(64), "and releasing lets it go");
+    PASS("pressed notes and keys show their keys pressed, and ease back out");
+}
+
+// SPEC 3 §5.1: the velocity lane's beat 0 sits under the grid's. Its label sidebar was a
+// hard-coded 76 px after the key lane shrank to 58, so every stem drew 18 px right of its
+// note, a click on a note's own x missed it (the hit window is +-10 px), and a click on a
+// beat-0 stem landed in the "sidebar" and flipped Velocity/Pan instead of editing.
+static void test_velocity_lane_lines_up_with_the_grid() {
+    PianoRollView view;
+    view.setBounds({0.0f, 0.0f, 900.0f, 600.0f});
+    view.onResize(900, 600);
+    view.setBeatsPerBar(4);
+    view.setTotalDurationBeats(16.0);
+    view.setViewWindow(0.0, 16.0);
+
+    std::vector<MidiNote> notes;
+    notes.push_back({60, 0.0, 1.0, 0.2f, 0.0f, 0, false, false, 1.0f}); // beat 0
+    notes.push_back({64, 4.0, 1.0, 0.2f, 0.0f, 0, false, false, 1.0f}); // beat 4
+    view.setNotes(notes);
+
+    const NUIRect grid = view.getGridBounds();
+    const double ppb = static_cast<double>(grid.width) / view.getViewDurationBeats();
+    // Near the top of the lane (the panel is the view's bottom 88 px; its value area
+    // runs from bottom - 8 up by height - 28), so a hit sets a high velocity.
+    const float laneY = 600.0f - 8.0f - (88.0f - 28.0f) * 0.9f;
+    auto press = [&](float x) {
+        NUIMouseEvent down;
+        down.type = NUIMouseEventType::Down;
+        down.button = NUIMouseButton::Left;
+        down.position = {x, laneY};
+        down.pressed = true;
+        view.onMouseEvent(down);
+        NUIMouseEvent up = down;
+        up.type = NUIMouseEventType::Up;
+        up.pressed = false;
+        up.released = true;
+        view.onMouseEvent(up);
+    };
+
+    press(grid.x + static_cast<float>(4.0 * ppb));
+    ASSERT(view.getNotes()[1].velocity > 0.8f,
+           "a click on the lane at a note's own x (beat 4) edits that note's velocity");
+    press(grid.x + 1.0f);
+    ASSERT(view.getNotes()[0].velocity > 0.8f,
+           "a click on the beat-0 stem edits velocity, not the Velocity/Pan sidebar");
+    PASS("the velocity lane lines up with the grid");
+}
+
+// SPEC 3 §5.1: while this pattern plays, the keys of the notes under the playhead light up;
+// they follow the playhead, go dark when another pattern plays, and ease out, not snap off.
+static void test_playback_lights_the_keys_under_the_playhead() {
+    PianoRollView view;
+    view.setBounds({0.0f, 0.0f, 900.0f, 600.0f});
+    view.onResize(900, 600);
+    view.setTotalDurationBeats(8.0);
+    std::vector<MidiNote> notes;
+    notes.push_back({60, 0.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f}); // [0, 1)
+    notes.push_back({64, 2.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f}); // [2, 3)
+    notes.push_back({67, 2.0, 1.0, 0.8f, 0.0f, 0, false, true, 1.0f});  // deleted: never lights
+    view.setNotes(notes);
+
+    view.setPlaybackKeysActive(true);
+    view.setPlayheadBeat(0.5);
+    ASSERT(view.isKeyPlaying(60) && !view.isKeyPlaying(64), "at beat 0.5 only C (60) is under the playhead");
+    view.setPlayheadBeat(1.5);
+    ASSERT(!view.isKeyPlaying(60) && !view.isKeyPlaying(64), "between notes, no key is playing");
+    view.setPlayheadBeat(2.5);
+    ASSERT(view.isKeyPlaying(64) && !view.isKeyPlaying(67), "at 2.5 E (64) plays; a deleted note never lights");
+    ASSERT(!view.isKeyPlaying(60), "and the end is exclusive: 60 ended at 1");
+
+    // The panel clears the flag when another pattern (or nothing) is playing.
+    view.setPlaybackKeysActive(false);
+    view.setPlayheadBeat(2.5);
+    ASSERT(!view.isKeyPlaying(64), "not this pattern playing: no key lights, even with a note under the playhead");
+
+    // Release eases out on the key lane itself.
+    PianoRollKeyLane keys;
+    std::array<bool, 128> on{};
+    on[60] = true;
+    keys.setPlayingPitches(on);
+    ASSERT(keys.isKeyPlaying(60) && keys.keyPlayLevel(60) == 1.0f, "a playing key is fully lit at once");
+    keys.setPlayingPitches(std::array<bool, 128>{});
+    ASSERT(!keys.isKeyPlaying(60) && keys.keyPlayLevel(60) == 1.0f, "when its note ends it does not snap off");
+    keys.onUpdate(PianoRollKeyLane::kPlayReleaseSeconds * 0.5);
+    ASSERT(std::abs(keys.keyPlayLevel(60) - 0.5f) < 0.01f, "half way through the release, half lit");
+    keys.onUpdate(PianoRollKeyLane::kPlayReleaseSeconds);
+    ASSERT(keys.keyPlayLevel(60) == 0.0f, "then at rest");
+    PASS("playback lights the keys under the playhead, only for this pattern, and eases them out");
+}
+
 static void test_scroll_domain_floor_and_growth() {
     PianoRollView view;
     view.setBounds({0.0f, 0.0f, 900.0f, 600.0f});
@@ -534,10 +890,312 @@ static void test_scroll_domain_floor_and_growth() {
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// SPEC 3 §2.5: a pencil click places the note in the cell UNDER the pointer.
+// Placement rounded to the nearest grid line, so a click in the right half of a
+// cell started the note on the NEXT cell, to the right of the pointer (and the
+// pencil's phantom preview, faithfully, too). Drives a real note layer.
+// ---------------------------------------------------------------------------
+static void test_pencil_places_in_the_cell_under_the_pointer() {
+    constexpr float kPpb = 80.0f;
+    constexpr float kKey = 24.0f;
+    PianoRollNoteLayer layer;
+    layer.setBounds(NUIRect(0.0f, 0.0f, 1600.0f, 128.0f * kKey));
+    layer.setPixelsPerBeat(kPpb);
+    layer.setKeyHeight(kKey);
+    layer.setSnap(SnapGrid::Quarter); // 0.25-beat cells
+    layer.setTool(GlobalTool::Pencil);
+    layer.setVisible(true);
+
+    // Beat 0.45 is in cell [0.25, 0.5), right of its middle: rounding gives 0.5.
+    const float x = 0.45f * kPpb;
+    const float y = (127.0f - 60.0f) * kKey + kKey * 0.5f;
+    NUIMouseEvent press;
+    press.type = NUIMouseEventType::Down;
+    press.position = NUIPoint(x, y);
+    press.button = NUIMouseButton::Left;
+    press.pressed = true;
+    layer.onMouseEvent(press);
+    NUIMouseEvent release = press;
+    release.type = NUIMouseEventType::Up;
+    release.pressed = false;
+    release.released = true;
+    layer.onMouseEvent(release);
+
+    const auto& notes = layer.getNotes();
+    ASSERT(notes.size() == 1, "one pencil click places one note, got " + std::to_string(notes.size()));
+    ASSERT(std::abs(notes[0].startBeat - 0.25) < 1e-9,
+           "the note starts on the cell under the pointer (0.25), not the next line (0.5); got " +
+               std::to_string(notes[0].startBeat));
+    PASS("pencil places the note in the cell under the pointer");
+}
+
+// Review, #959: with bar snap, a double-click at beat 3.5 is two presses. The first places a
+// note on the snapped cell (0..1), NOT under the pointer; the second looked only under the
+// pointer, found nothing, and added a duplicate on top of the first. It must open that note.
+static void test_bar_snap_double_click_does_not_duplicate() {
+    constexpr float kPpb = 80.0f;
+    constexpr float kKey = 24.0f;
+    PianoRollNoteLayer layer;
+    layer.setBounds(NUIRect(0.0f, 0.0f, 1600.0f, 128.0f * kKey));
+    layer.setPixelsPerBeat(kPpb);
+    layer.setKeyHeight(kKey);
+    layer.setSnap(SnapGrid::Bar);
+    layer.setTool(GlobalTool::Pencil);
+    layer.setVisible(true);
+
+    const NUIPoint at(3.5f * kPpb, (127.0f - 60.0f) * kKey + kKey * 0.5f);
+    auto click = [&]() {
+        NUIMouseEvent press;
+        press.type = NUIMouseEventType::Down;
+        press.position = at;
+        press.button = NUIMouseButton::Left;
+        press.pressed = true;
+        layer.onMouseEvent(press);
+        NUIMouseEvent release = press;
+        release.type = NUIMouseEventType::Up;
+        release.pressed = false;
+        release.released = true;
+        layer.onMouseEvent(release);
+    };
+    click(); // places a note on the snapped cell
+    ASSERT(layer.getNotes().size() == 1, "the first click places one note");
+    ASSERT(std::abs(layer.getNotes()[0].startBeat - 0.0) < 1e-9, "on the bar-snapped cell, not under the pointer");
+    click(); // same spot within the double-click window
+    ASSERT(layer.getNotes().size() == 1, "the double-click opens that note instead of adding a duplicate; got " +
+                                             std::to_string(layer.getNotes().size()) + " notes");
+    PASS("a bar-snap double-click does not duplicate the note it just placed");
+}
+
+// Review, #981: Alt+drag copy commits live every frame. Without the layer's own undo stack each
+// of those commits became its own CommandHistory entry, so one copy gesture needed several
+// Ctrl+Z. Every commit after the gesture's first must be flagged as a continuation.
+// The live commit also sorts notes_, which moved the clone out from under copyDragIndices_:
+// later frames then dragged a different note (here B), so the gesture destroyed a note.
+static void test_alt_drag_copy_is_one_gesture_and_moves_only_the_clone() {
+    constexpr float kPpb = 80.0f;
+    constexpr float kKey = 24.0f;
+    PianoRollNoteLayer layer;
+    layer.setBounds(NUIRect(0.0f, 0.0f, 1600.0f, 128.0f * kKey));
+    layer.setPixelsPerBeat(kPpb);
+    layer.setKeyHeight(kKey);
+    layer.setSnap(SnapGrid::Beat);
+    layer.setTool(GlobalTool::Pointer);
+    layer.setVisible(true);
+    // A at beat 0 (pitch 60) and B at beat 4 (pitch 64): after A's clone is committed once,
+    // sorting places it before B, so the clone's original index now holds B.
+    layer.setNotes({{60, 0.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f},
+                    {64, 4.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f}});
+
+    int commits = 0;
+    int newEntries = 0; // commits the owner records as a new history entry
+    layer.setOnNotesChanged([&](const std::vector<MidiNote>&) {
+        ++commits;
+        if (!layer.isContinuingEdit()) ++newEntries;
+    });
+
+    const float y = (127.0f - 60.0f) * kKey + kKey * 0.5f;
+    NUIMouseEvent press;
+    press.type = NUIMouseEventType::Down;
+    press.position = NUIPoint(0.5f * kPpb, y);
+    press.button = NUIMouseButton::Left;
+    press.pressed = true;
+    press.modifiers = NUIModifiers::Alt;
+    layer.onMouseEvent(press);
+
+    NUIMouseEvent move;
+    move.type = NUIMouseEventType::Move;
+    move.modifiers = NUIModifiers::Alt;
+    for (float beat : {1.5f, 2.5f, 3.5f}) { // clone ends at beat 3 (A's start 0 + 3 beats)
+        move.position = NUIPoint(beat * kPpb, y);
+        layer.onMouseEvent(move);
+    }
+    NUIMouseEvent release = move;
+    release.type = NUIMouseEventType::Up;
+    release.button = NUIMouseButton::Left;
+    release.released = true;
+    layer.onMouseEvent(release);
+
+    ASSERT(commits >= 2, "the copy drag commits live (precondition), got " + std::to_string(commits) + " commits");
+    ASSERT(newEntries == 1, "one Alt+drag copy is one history entry, got " + std::to_string(newEntries));
+
+    std::vector<std::pair<int, double>> live;
+    for (const auto& n : layer.getNotes())
+        if (!n.isDeleted) live.emplace_back(n.pitch, n.startBeat);
+    std::sort(live.begin(), live.end());
+    std::string got;
+    for (const auto& [p, b] : live) got += " (" + std::to_string(p) + "@" + std::to_string(b) + ")";
+    const std::vector<std::pair<int, double>> expected = {{60, 0.0}, {60, 3.0}, {64, 4.0}};
+    ASSERT(live == expected, "original A stays, its clone lands at beat 3, B is untouched; got" + got);
+    PASS("Alt+drag copy is one gesture and moves only the clone");
+}
+
+// Review, #981 round 2: mid copy-drag the clones sit unsorted at the end of the notes, so the
+// renderer's "first note past the view ends the scan" skipped a visible clone whenever an
+// off-screen note came before it. The clone must be drawn while it is being dragged.
+class NoteBodyRecorder : public Aestra::Testing::NullRenderer {
+public:
+    std::vector<NUIRect> strokes;
+    void strokeRoundedRect(const NUIRect& r, float, float, const NUIColor&) override { strokes.push_back(r); }
+};
+
+static void test_alt_drag_clone_is_drawn_while_dragging() {
+    constexpr float kPpb = 80.0f;
+    constexpr float kKey = 24.0f;
+    PianoRollNoteLayer layer;
+    layer.setBounds(NUIRect(0.0f, 0.0f, 1600.0f, 128.0f * kKey)); // 20 beats visible
+    layer.setPixelsPerBeat(kPpb);
+    layer.setKeyHeight(kKey);
+    layer.setSnap(SnapGrid::Beat);
+    layer.setTool(GlobalTool::Pointer);
+    layer.setVisible(true);
+    layer.setNotes({{60, 0.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f},
+                    {64, 30.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f}}); // B is off-screen
+
+    const float y = (127.0f - 60.0f) * kKey + kKey * 0.5f;
+    NUIMouseEvent press;
+    press.type = NUIMouseEventType::Down;
+    press.position = NUIPoint(0.5f * kPpb, y);
+    press.button = NUIMouseButton::Left;
+    press.pressed = true;
+    press.modifiers = NUIModifiers::Alt;
+    layer.onMouseEvent(press);
+    NUIMouseEvent move;
+    move.type = NUIMouseEventType::Move;
+    move.modifiers = NUIModifiers::Alt;
+    move.position = NUIPoint(3.5f * kPpb, y); // clone to beat 3
+    layer.onMouseEvent(move);
+
+    NoteBodyRecorder rec;
+    layer.onRender(rec); // still mid-drag: no release yet
+    const bool cloneDrawn = std::any_of(rec.strokes.begin(), rec.strokes.end(), [&](const NUIRect& r) {
+        return std::abs(r.x - (3.0f * kPpb + 1.0f)) < 1.5f;
+    });
+    const bool originalDrawn = std::any_of(rec.strokes.begin(), rec.strokes.end(), [&](const NUIRect& r) {
+        return std::abs(r.x - 1.0f) < 1.5f;
+    });
+    ASSERT(originalDrawn, "precondition: the original note is drawn (" + std::to_string(rec.strokes.size()) +
+                              " note bodies drawn)");
+    ASSERT(cloneDrawn, "the clone being dragged is drawn even though an off-screen note precedes it");
+    PASS("the Alt+drag clone is drawn while dragging");
+}
+
+// Drag-painting sets a note's length from its start to the pointer. It used to add the drag to
+// the remembered length (and remember the sum), so equal ~2-beat drags painted 3, 5, 7 beats.
+static void test_drag_painted_notes_keep_the_dragged_length() {
+    constexpr float kPpb = 80.0f;
+    constexpr float kKey = 24.0f;
+    PianoRollNoteLayer layer;
+    layer.setBounds(NUIRect(0.0f, 0.0f, 1600.0f, 128.0f * kKey));
+    layer.setPixelsPerBeat(kPpb);
+    layer.setKeyHeight(kKey);
+    layer.setSnap(SnapGrid::Beat);
+    layer.setTool(GlobalTool::Pencil);
+    layer.setVisible(true);
+
+    auto paint = [&](int pitch, float fromBeat, float toBeat) {
+        const float y = (127.0f - pitch) * kKey + kKey * 0.5f;
+        NUIMouseEvent press;
+        press.type = NUIMouseEventType::Down;
+        press.position = NUIPoint(fromBeat * kPpb, y);
+        press.button = NUIMouseButton::Left;
+        press.pressed = true;
+        layer.onMouseEvent(press);
+        NUIMouseEvent move;
+        move.type = NUIMouseEventType::Move;
+        for (int i = 1; i <= 8; ++i) {
+            move.position = NUIPoint((fromBeat + (toBeat - fromBeat) * i / 8.0f) * kPpb, y);
+            layer.onMouseEvent(move);
+        }
+        NUIMouseEvent release = move;
+        release.type = NUIMouseEventType::Up;
+        release.button = NUIMouseButton::Left;
+        release.released = true;
+        layer.onMouseEvent(release);
+    };
+    auto lengthAt = [&](int pitch) {
+        for (const auto& n : layer.getNotes())
+            if (!n.isDeleted && n.pitch == pitch) return n.durationBeats;
+        return -1.0;
+    };
+
+    paint(72, 0.1f, 2.0f); // each drag covers ~1.9 beats: snaps to 2
+    paint(69, 0.1f, 2.0f);
+    paint(65, 0.1f, 2.0f);
+    std::string got = std::to_string(lengthAt(72)) + ", " + std::to_string(lengthAt(69)) + ", " +
+                      std::to_string(lengthAt(65));
+    ASSERT(std::abs(lengthAt(72) - 2.0) < 1e-9 && std::abs(lengthAt(69) - 2.0) < 1e-9 &&
+               std::abs(lengthAt(65) - 2.0) < 1e-9,
+           "three equal drags paint three 2-beat notes; got " + got);
+
+    paint(60, 4.1f, 4.1f); // a plain click reuses the last painted length
+    ASSERT(std::abs(lengthAt(60) - 2.0) < 1e-9,
+           "a click places the remembered 2-beat length; got " + std::to_string(lengthAt(60)));
+
+    // Drag out to 4 beats, then back to the start: the note returns to the click length (2),
+    // not the last dragged length (review, #1001).
+    {
+        const int pitch = 55;
+        const float y = (127.0f - pitch) * kKey + kKey * 0.5f;
+        NUIMouseEvent press;
+        press.type = NUIMouseEventType::Down;
+        press.position = NUIPoint(8.1f * kPpb, y);
+        press.button = NUIMouseButton::Left;
+        press.pressed = true;
+        layer.onMouseEvent(press);
+        NUIMouseEvent move;
+        move.type = NUIMouseEventType::Move;
+        move.position = NUIPoint(12.0f * kPpb, y);
+        layer.onMouseEvent(move);
+        move.position = NUIPoint(8.1f * kPpb, y); // back to where it started
+        layer.onMouseEvent(move);
+        NUIMouseEvent release = move;
+        release.type = NUIMouseEventType::Up;
+        release.button = NUIMouseButton::Left;
+        release.released = true;
+        layer.onMouseEvent(release);
+        ASSERT(std::abs(lengthAt(pitch) - 2.0) < 1e-9,
+               "dragging back to the start restores the click length; got " + std::to_string(lengthAt(pitch)));
+    }
+
+    // Alt fine-drag keeps a sub-cell length (review, #1001): 0.3 beats under Beat snap, not a
+    // whole 1-beat cell.
+    {
+        const int pitch = 50;
+        const float y = (127.0f - pitch) * kKey + kKey * 0.5f;
+        NUIMouseEvent press;
+        press.type = NUIMouseEventType::Down;
+        press.position = NUIPoint(12.0f * kPpb, y); // snapped start: beat 12
+        press.button = NUIMouseButton::Left;
+        press.pressed = true;
+        layer.onMouseEvent(press);
+        NUIMouseEvent move;
+        move.type = NUIMouseEventType::Move;
+        move.modifiers = NUIModifiers::Alt;
+        move.position = NUIPoint(12.3f * kPpb, y);
+        layer.onMouseEvent(move);
+        NUIMouseEvent release = move;
+        release.type = NUIMouseEventType::Up;
+        release.button = NUIMouseButton::Left;
+        release.released = true;
+        layer.onMouseEvent(release);
+        ASSERT(std::abs(lengthAt(pitch) - 0.3) < 0.01,
+               "an Alt fine-drag keeps its sub-cell length; got " + std::to_string(lengthAt(pitch)));
+    }
+    PASS("drag-painted notes keep the dragged length");
+}
+
 int main() {
     std::cout << "=== PianoRollInteraction Unit Tests ===\n\n";
 
+    test_alt_drag_clone_is_drawn_while_dragging();
+
+    test_alt_drag_copy_is_one_gesture_and_moves_only_the_clone();
+    test_drag_painted_notes_keep_the_dragged_length();
+
     test_deleted_notes_ignored();
+    test_pencil_places_in_the_cell_under_the_pointer();
+    test_bar_snap_double_click_does_not_duplicate();
     test_topmost_note_returned();
     test_no_note_found_outside();
     test_marquee_detects_note_inside();
@@ -559,7 +1217,13 @@ int main() {
     test_ctrl_wheel_zoom_uses_grid_local_anchor();
     test_grid_subdivision_matches_snap();
     test_grid_tiers_follow_snap();
+    test_snap_tiers_are_visible_not_just_present();
     test_scroll_domain_floor_and_growth();
+    test_minimap_drag_released_outside_the_editor_ends();
+    test_ruler_draws_and_clears_a_loop_zone();
+    test_pressed_notes_press_their_keys();
+    test_velocity_lane_lines_up_with_the_grid();
+    test_playback_lights_the_keys_under_the_playhead();
 
     std::cout << "\n=== Results: " << testsPassed << " passed, " << testsFailed << " failed ===\n";
     return testsFailed > 0 ? 1 : 0;

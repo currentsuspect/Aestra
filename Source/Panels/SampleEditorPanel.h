@@ -79,6 +79,9 @@ public:
     bool isMonoMode() const { return m_monoMode; }
     void setCutSelfMode(bool cutSelf);
     bool isCutSelfMode() const { return m_cutSelfMode; }
+    /// Keep-length pitch: notes keep the sample's length instead of speeding up / slowing down.
+    void setKeepLengthPitch(bool keepLength);
+    bool isKeepLengthPitch() const { return m_keepLengthPitch; }
 
     // Normalize and Reverse
     void normalize();
@@ -91,6 +94,7 @@ public:
     std::function<void(int)> onVoiceCountChanged;
     std::function<void(bool)> onMonoModeChanged;
     std::function<void(bool)> onCutSelfModeChanged;
+    std::function<void(bool)> onKeepLengthPitchChanged;
     std::function<void()> onControlCommitRequested;
     std::function<void()> onNormalizeRequested;
     std::function<void()> onReverseRequested;
@@ -115,6 +119,7 @@ private:
     LoopPoints m_loopPoints;
     bool m_monoMode{false};
     bool m_cutSelfMode{false};
+    bool m_keepLengthPitch{false};
 
     // Pitch/Tune
     PitchTune m_pitchTune;
@@ -136,6 +141,7 @@ private:
     std::shared_ptr<AestraUI::NUIButton> m_monoModeBtn;
     std::shared_ptr<AestraUI::NUIButton> m_polyModeBtn;
     std::shared_ptr<AestraUI::NUIButton> m_cutSelfModeBtn;
+    std::shared_ptr<AestraUI::NUIButton> m_keepLengthBtn;
     std::shared_ptr<AestraUI::NUILabel> m_waveformHintLabel;
     std::shared_ptr<AestraUI::NUILabel> m_modeLabel;
     std::shared_ptr<AestraUI::NUILabel> m_voiceCountLabel;
@@ -160,6 +166,7 @@ private:
     void onVoiceCountControlChanged();
     void setMonoModeInternal(bool mono, bool notify);
     void setCutSelfModeInternal(bool cutSelf, bool notify);
+    void setKeepLengthPitchInternal(bool keepLength, bool notify);
     void setLoopMode(LoopMode mode);
     void updateModeButtons();
     void updateMonoPolyControls();

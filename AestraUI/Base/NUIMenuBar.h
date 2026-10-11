@@ -83,8 +83,8 @@ public:
     bool onMouseEvent(const NUIMouseEvent& event) override {
         if (!isVisible() || !isEnabled()) return false;
         
-        // Use global bounds since mouse event position is in window coordinates
-        auto globalBounds = getGlobalBounds();
+        // Bounds and mouse positions are both window-absolute
+        auto globalBounds = getBounds();
         
         // Check if mouse is in our bounds
         if (!globalBounds.contains(event.position)) {

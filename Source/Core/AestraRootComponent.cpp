@@ -35,11 +35,17 @@ bool AestraRootComponent::onKeyEvent(const NUIKeyEvent& event) {
         return true;
     }
 
-    // 4. Fallback: F12 HUD toggle
+    // 4. Fallback: overlay toggles. F12 performance, F11 text pipeline (V8-C9).
     if (event.pressed) {
         if (event.keyCode == NUIKeyCode::F12) {
             if (m_rootUnifiedHUD) {
                 m_rootUnifiedHUD->setVisible(!m_rootUnifiedHUD->isVisible());
+                return true;
+            }
+        }
+        if (event.keyCode == NUIKeyCode::F11) {
+            if (m_rootTextDiagnostics) {
+                m_rootTextDiagnostics->setVisible(!m_rootTextDiagnostics->isVisible());
                 return true;
             }
         }

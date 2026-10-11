@@ -62,6 +62,10 @@ void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
         }
     }
 
+    // Fully covered by an opaque panel (AestraContent decides per frame): nothing to see.
+    if (m_renderOccluded)
+        return;
+
     AestraUI::NUIRect bounds = getBounds();
 
     // Normal rendering with FBO CACHING for massive FPS boost! 🚀
@@ -170,8 +174,13 @@ void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
 
     // Render tool cursor (Split, Paint, AND trim resize cursor)
     // renderToolCursor handles: trim edges, split tool, paint tool
-    // Skip custom tool/minimap cursor rendering during hidden-cursor drag
-    if (!m_window || m_window->getCursorStyle() != AestraUI::NUICursorStyle::Hidden) {
+    // Skip custom tool/minimap cursor rendering during hidden-cursor drag, and
+    // draw only while isCustomCursorActive() claims the cursor: the same answer
+    // the window manager uses to skip its arrow, so exactly one cursor draws.
+    // Without this gate a stale hover claim (pointer over a context menu) kept a
+    // frozen tool glyph on screen after the arrow had been restored.
+    if ((!m_window || m_window->getCursorStyle() != AestraUI::NUICursorStyle::Hidden) && isCustomCursorActive() &&
+        !AestraUI::NUIDragDropManager::getInstance().isDragging()) {
         // CURSOR PIPELINE BYPASS: renderToolCursor draws directly on renderer at
         // m_lastMousePos. Outside both SVG cursor system and SDL cursor system.
         // Suppressed here rather than through cursor abstraction — intentional.
@@ -290,7 +299,9 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
     // stack of boxed cells instead of a workspace.
     if (m_playlistVisible && viewportHeight > 0.0f) {
         const float planeStartX = bounds.x + gridStartX;
-        const float planeEndX = std::max(planeStartX, bounds.x + trackWidth - kTimelineGridInsetX);
+        // The plane ends where a row does (timelineTrackRowWidth): clips paint to the row's
+        // right edge, so a plane ending 5px short left gridlines missing under them (SPEC 3 §2.3).
+        const float planeEndX = std::max(planeStartX, bounds.x + timelineTrackRowWidth(bounds.width));
         // The plane begins at the ruler's top edge so the bar lines run
         // through the ruler row itself — numbers read as labels attached to
         // the grid, not a separate strip. The minimap row above stays its own
@@ -299,11 +310,18 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
         const float planeHeight = viewportBottom - planeTop;
         // Same quiet arrangement grammar the per-track grid used, with bars
         // carrying the continuity: majors obvious, beats/subdivisions whispers.
+        // Alphas are gamma-space (F3). They were previously tuned against linear
+        // blending, which inflated low-alpha light-on-dark by ~6x on its way to
+        // the screen — bar lines authored at 0.028 rendered as (42,42,42) and,
+        // once compositing was unified, as (7,7,7): a 1.04:1 ratio against the
+        // black bed, mathematically present and visually gone. These values
+        // reproduce the ORIGINAL rendered result, so the design is unchanged;
+        // only the number needed to express it moved.
         const AestraUI::TimelineGridStyle planeStyle{
-            0.028f, // bars
-            0.005f, // beats
-            0.0016f, // subdivisions
-            0.0f    // no empty-canvas zebra
+            0.179f,  // bars          (was 0.028 linear-era)
+            0.057f,  // beats         (was 0.005)
+            0.019f,  // subdivisions  (was 0.0016)
+            0.0f     // no empty-canvas zebra
         };
         // Snap drives the drawn tiers (same contract as the piano roll): a
         // tier finer than or misaligned with the active snap is hidden, and
@@ -331,16 +349,21 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
         // expanded lanes read as one block under their track. Translucent, so
         // the shared grid plane shows through.
         if (track->isNestedLane()) {
-            renderer.fillRect(trackBounds, themeManager.getColor("accentSecondary").withAlpha(0.05f));
+            renderer.fillRect(trackBounds, themeManager.getColor("accentSecondary").withAlpha(0.244f)); // gamma-space (F3), was 0.05
         }
 
         track->renderStatic(renderer);
 
         // Row separators sit ON the plane: a quiet full-width line that says
         // "another track" without cutting the vertical grid or forming cells.
+        // Gamma-space alpha (F3). Authored as 0.018 against linear blending, which
+        // rendered it (33,33,33) on the black bed; after compositing was unified
+        // the same number gave (4,4,4) — a 1.02:1 ratio, which is why the
+        // horizontals disappeared while the verticals merely dimmed. 0.139
+        // reproduces the original rendered line.
         renderer.drawLine({bounds.x + gridStartX, trackBounds.bottom()},
                           {bounds.x + trackWidth, trackBounds.bottom()}, 1.0f,
-                          themeManager.getCurrentTheme().textPrimary.withAlpha(0.018f));
+                          themeManager.getCurrentTheme().textPrimary.withAlpha(0.139f));
     }
 
     // Clear clip rect before drawing the time band (it should draw fully)
@@ -656,7 +679,7 @@ void TrackManagerUI::onUpdate(double deltaTime) {
     }
 
     // === Follow Playhead Logic (Page & Continuous) ===
-    if (m_followPlayhead && m_trackManager && m_trackManager->isPlaying()) {
+    if (isFollowActive() && m_trackManager && m_trackManager->isPlaying()) {
         if (!AestraUI::NUIDragDropManager::getInstance().isDragging() && !m_isDraggingPlayhead &&
             !m_isDraggingRulerSelection && !m_isDraggingLoopStart && !m_isDraggingLoopEnd) {
             double currentBeat = secondsToBeats(m_trackManager->getUIPosition());
@@ -833,12 +856,7 @@ void TrackManagerUI::onResize(int width, int height) {
     m_backgroundCachedHeight = height;
     invalidateCache(); // Full invalidation on resize for immediate repaint
 
-    layoutTracks();
-    // Cropped minimap: bounds already start at the track-controls boundary,
-    // so no leading inset — keep this site in sync with the constructor.
-    if (m_timelineMinimap) {
-        m_timelineMinimap->setLeadingInset(0.0f);
-    }
+    layoutTracks(); // the minimap's leading inset is set once, in the constructor
     // Zebra Striping: Assign row index to tracks
     for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
         if (m_trackUIComponents[i]) {
@@ -1114,6 +1132,31 @@ void TrackManagerUI::renderPlayhead(AestraUI::NUIRenderer& renderer) {
     // We just cull against the workspace grid area.
     float playheadEndX = bounds.x + bounds.width - scrollbarWidth;
     float playheadEndY = bounds.y + bounds.height;
+
+    // Return marker: where a single stop will put the playhead (the cue that
+    // play() stored, or wherever the user last dragged it). Only visible while
+    // it differs from the playhead — once stopped, the playhead sits on it.
+    // Dashed and dimmer so it never reads as the playhead itself.
+    const double cueBeats = m_trackManager->getPlayStartPosition() / secondsPerBeat;
+    const float cueX =
+        gridStartX + static_cast<float>((cueBeats * m_pixelsPerBeat) - static_cast<double>(m_timelineScrollOffset));
+    if (std::abs(cueX - playheadX) >= 1.0f && cueX >= gridStartX && cueX <= playheadEndX) {
+        const AestraUI::NUIColor cueColor = themeManager.getColor("accentPrimary");
+        constexpr float CUE_DASH_LENGTH = 4.0f;
+        constexpr float CUE_DASH_GAP = 4.0f;
+        for (float y = playheadStartY; y < playheadEndY; y += CUE_DASH_LENGTH + CUE_DASH_GAP) {
+            renderer.drawLine(AestraUI::NUIPoint(cueX, y), AestraUI::NUIPoint(cueX, std::min(y + CUE_DASH_LENGTH, playheadEndY)),
+                              1.0f, cueColor.withAlpha(0.38f));
+        }
+        constexpr float CUE_MARKER_HALF_WIDTH = 4.0f;
+        constexpr float CUE_MARKER_HEIGHT = 5.0f;
+        const AestraUI::NUIPoint cueTip(cueX, playheadStartY);
+        const AestraUI::NUIPoint cueLeft(cueX - CUE_MARKER_HALF_WIDTH, playheadStartY - CUE_MARKER_HEIGHT);
+        const AestraUI::NUIPoint cueRight(cueX + CUE_MARKER_HALF_WIDTH, playheadStartY - CUE_MARKER_HEIGHT);
+        renderer.drawLine(cueLeft, cueRight, 1.0f, cueColor.withAlpha(0.5f));
+        renderer.drawLine(cueLeft, cueTip, 1.0f, cueColor.withAlpha(0.5f));
+        renderer.drawLine(cueRight, cueTip, 1.0f, cueColor.withAlpha(0.5f));
+    }
 
     // PRECISE CULLING: Draw if the playhead CENTER is within bounds
     // We allow the triangle to extend slightly outside for better visibility at boundaries

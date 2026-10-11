@@ -49,6 +49,57 @@
 
 namespace AestraUI {
 
+// The text uniforms are derived, not configured: one float — textContrast_, set
+// per frame from background luminance — resolves into all three. They live here
+// as functions rather than inline expressions so the shader and
+// getTextDiagnostics() cannot disagree about what the pipeline is doing. A
+// diagnostic that recomputes its own answer is a second implementation, and
+// would eventually report a pipeline that no longer exists.
+namespace {
+constexpr float kTextGammaTiny  = 0.74f;  // x-small / small atlases
+constexpr float kTextGammaLarge = 0.93f;  // medium / regular atlases
+constexpr float kTextSharpenTiny  = 0.20f;
+constexpr float kTextSharpenLarge = 0.28f;
+// ATLAS TIER CONTRACT
+//
+// A tier's atlas must be baked at or above the largest font size it serves.
+// Below that it MAGNIFIES its own glyphs — blurring exactly the text the tier
+// exists to sharpen — and, because the aggressive gamma/sharpen treatment is
+// keyed to "this tier is heavily supersampled", it then thickens the blur.
+//
+// F5 was this: Small baked at 16 px served up to 17 px while being treated as
+// the most supersampled tier in the set. The static_asserts below make that
+// state unrepresentable rather than merely wrong.
+constexpr float kTierMaxXSmall = 11.25f;
+constexpr float kTierMaxSmall  = 17.0f;
+constexpr float kTierMaxMedium = 20.5f;
+
+constexpr int kAtlasSizeXSmall  = 20;
+constexpr int kAtlasSizeSmall   = 18;  // was 16: below its own 17 px ceiling
+constexpr int kAtlasSizeMedium  = 22;
+constexpr int kAtlasSizeRegular = 40;
+
+static_assert(kAtlasSizeXSmall >= kTierMaxXSmall, "XSmall atlas magnifies its own range");
+static_assert(kAtlasSizeSmall  >= kTierMaxSmall,  "Small atlas magnifies its own range");
+static_assert(kAtlasSizeMedium >= kTierMaxMedium, "Medium atlas magnifies its own range");
+
+// Whether a tier is supersampled enough to need the softening compensation.
+// Derived from the ratio rather than named tiers: the old code listed XSmall
+// and Small by texture id, so Small kept the heavy treatment long after its
+// ratio stopped justifying it. A ratio cannot fall out of step with itself.
+constexpr float kHeavySupersampleRatio = 1.5f;
+inline bool isHeavilySupersampled(int atlasSize, float maxServed) {
+    return maxServed > 0.0f && static_cast<float>(atlasSize) / maxServed >= kHeavySupersampleRatio;
+}
+
+inline float resolveTextGamma(bool tinyAtlas, float textContrast) {
+    return (tinyAtlas ? kTextGammaTiny : kTextGammaLarge) * textContrast;
+}
+inline float resolveTextSharpen(bool tinyAtlas) {
+    return tinyAtlas ? kTextSharpenTiny : kTextSharpenLarge;
+}
+} // namespace
+
 // ============================================================================
 // UTF-8 Decoding Helper
 // ============================================================================
@@ -205,9 +256,6 @@ uniform bool uUseTexture;
 uniform vec2 uTextTexelSize;
 uniform float uTextSharpen;
 uniform float uTextGamma;
-uniform float uTextBold; // SDF edge-center shift; 0 = neutral, positive = bolder
-uniform float uTextAlphaLift; // exponent on text alpha; 1 = neutral, <1 lifts faded text
-uniform bool uOutputLinear;
 
 // Squircle SDF Implementation
 // Based on "sdContinuousRect" logic but optimized for GLSL 3.3
@@ -252,29 +300,29 @@ float sampleTextCoverage(vec2 uv) {
     return clamp(sharpened, 0.0, 1.0);
 }
 
-vec3 srgbToLinear(vec3 c) {
-    return pow(max(c, vec3(0.0)), vec3(2.2));
-}
-
 void main() {
     vec4 color = vColor;
     int primitiveID = int(floor(vPrimitiveType + 0.5));
     
-    // Apply texture if enabled (Only for Image=0, SDFText=2, BitmapText=4)
-    if (uUseTexture && (primitiveID == 0 || primitiveID == 2 || primitiveID == 4)) {
+    // Apply texture if enabled (Only for Image=0, BitmapText=4)
+    if (uUseTexture && (primitiveID == 0 || primitiveID == 4)) {
         vec4 texColor = texture(uTexture, vTexCoord);
-        if (primitiveID == 2) {
-             // Standard SDF rendering (MSDF/SDF text)
-             float dist = texColor.r;
-             float ddist = fwidth(dist);
-             float edgeWidth = ddist * 0.7;
-             float center = 0.5 - smoothstep(0.1, 0.5, ddist) * 0.08 - uTextBold; 
-             float alpha = smoothstep(center - edgeWidth, center + edgeWidth, dist);
-             color.a = pow(color.a, uTextAlphaLift) * alpha;
-        } else if (primitiveID == 4) {
+        if (primitiveID == 4) {
                // Bitmap text — atlas stores coverage in alpha channel.
+               //
+               // The caller's alpha is multiplied, never reshaped. It used to be
+               // raised to uTextAlphaLift (0.35 on light themes) to compensate
+               // for dark-on-light strokes reading thin. That mechanism could
+               // not do the job it was given and did damage instead: pow(1, k)
+               // is 1 for every k, so it left primary text — which carries the
+               // whole of the problem — untouched, while pulling alpha 0.5 up
+               // to 0.78 and collapsing the gap between secondary and primary.
+               // Stroke weight is a property of coverage and belongs to
+               // uTextGamma, which already carries it. Alpha is what the caller
+               // meant by "this label is secondary", and the renderer does not
+               // get to reinterpret that.
                float coverage = pow(sampleTextCoverage(vTexCoord), uTextGamma);
-               color.a = pow(color.a, uTextAlphaLift) * coverage;
+               color.a *= coverage;
         } else {
              // Regular textured primitive
              color *= texColor;
@@ -296,6 +344,22 @@ void main() {
         color.a *= alpha;
     }
     
+    if (primitiveID == 8) {
+        // Blurred Filled Squircle — shadows and glows.
+        //
+        // This is the one primitive where vBlur is a real radius. Type 1 cannot
+        // be it: fillRoundedRect passes blur=1.0f purely as an "use standard AA"
+        // marker, so reading vBlur there would soften every widget in the app.
+        vec2 pos = (vTexCoord - 0.5) * vQuadSize;
+        float dist = sdSquircle(pos, vRectSize * 0.5, vRadius);
+
+        // Falloff straddles the shape edge, as a Gaussian does, so the interior
+        // near the edge is not fully opaque. fwidth is the floor: a blur smaller
+        // than a pixel must still anti-alias rather than alias.
+        float edge = max(vBlur, fwidth(dist) * 1.25);
+        color.a *= 1.0 - smoothstep(-edge, edge, dist);
+    }
+
     if (primitiveID == 3) {
         // Stroked Squircle
         vec2 pos = (vTexCoord - 0.5) * vQuadSize;
@@ -337,9 +401,6 @@ void main() {
     
     // Type 5: Solid colored geometry (lines, triangles) - already handled by default color
     
-    if (uOutputLinear) {
-        color.rgb = srgbToLinear(color.rgb);
-    }
     FragColor = color;
 }
 
@@ -351,7 +412,6 @@ void main() {
 
 NUIRendererGL::NUIRendererGL() {
     renderCache_.setRenderer(this);
-    sdfRenderer_ = std::make_unique<NUITextRendererSDF>();
 }
 
 NUIRendererGL::~NUIRendererGL() {
@@ -377,13 +437,8 @@ bool NUIRendererGL::initialize(int width, int height) {
     createBuffers();
     updateProjectionMatrix();
 
-    // Initialize Glassmorphism Pass (Retina Blur)
-    if (!glassPass_.initialize(width, height)) {
-        AESTRA_LOG_WARNING("Glassmorphism Pass failed to init.");
-    }
-    
-    // Text rendering will be initialized with FreeType below
-    
+    // Text rendering is FreeType-only; initialized below.
+
     // Initialize FreeType
     fontInitialized_ = false;
     if (FT_Init_FreeType(&ftLibrary_) != 0) {
@@ -409,12 +464,33 @@ bool NUIRendererGL::initialize(int width, int height) {
         std::vector<std::string> fontPaths;
         if (const char* fontDir = std::getenv("AESTRA_FONT_DIR")) {
             const std::string base(fontDir);
+            fontPaths.push_back(base + "/Archivo/Archivo-Medium.ttf");
+            fontPaths.push_back(base + "/Archivo/Archivo-Regular.ttf");
+            fontPaths.push_back(base + "/Archivo/Archivo-Bold.ttf");
             fontPaths.push_back(base + "/Geist/Geist-Medium.ttf");
             fontPaths.push_back(base + "/Geist/Geist-Regular.ttf");
             fontPaths.push_back(base + "/Geist/Geist-Bold.ttf");
             fontPaths.push_back(base + "/Manrope/Manrope-Regular.ttf");
         }
         std::vector<std::string> fallbackFontPaths = {
+            "AestraAssets/fonts/Archivo/Archivo-Medium.ttf",
+            "../AestraAssets/fonts/Archivo/Archivo-Medium.ttf",
+            "../../AestraAssets/fonts/Archivo/Archivo-Medium.ttf",
+            "../../../AestraAssets/fonts/Archivo/Archivo-Medium.ttf",
+            "../../../../AestraAssets/fonts/Archivo/Archivo-Medium.ttf",
+
+            "AestraAssets/fonts/Archivo/Archivo-Regular.ttf",
+            "../AestraAssets/fonts/Archivo/Archivo-Regular.ttf",
+            "../../AestraAssets/fonts/Archivo/Archivo-Regular.ttf",
+            "../../../AestraAssets/fonts/Archivo/Archivo-Regular.ttf",
+            "../../../../AestraAssets/fonts/Archivo/Archivo-Regular.ttf",
+
+            "AestraAssets/fonts/Archivo/Archivo-Bold.ttf",
+            "../AestraAssets/fonts/Archivo/Archivo-Bold.ttf",
+            "../../AestraAssets/fonts/Archivo/Archivo-Bold.ttf",
+            "../../../AestraAssets/fonts/Archivo/Archivo-Bold.ttf",
+            "../../../../AestraAssets/fonts/Archivo/Archivo-Bold.ttf",
+
             "AestraAssets/fonts/Geist/Geist-Medium.ttf",
             "../AestraAssets/fonts/Geist/Geist-Medium.ttf",
             "../../AestraAssets/fonts/Geist/Geist-Medium.ttf",
@@ -470,12 +546,15 @@ bool NUIRendererGL::initialize(int width, int height) {
         }
         
         if (!fontLoaded) {
-            AESTRA_LOG_WARNING("Could not load any font, using fallback");
-            useSDFText_ = false;
-        } else {
-            // Force bitmap text for now - SDF has glyph rendering issues
-            useSDFText_ = false;
-            AESTRA_LOG_DEBUG("Using bitmap text renderer");
+            // Two different fallbacks, and naming only one of them has misled a
+            // reader before: drawText() draws a rectangle per printable character
+            // so a fontless build is visibly wrong rather than silently blank,
+            // while measureText() estimates width at 0.6 em. Both key off
+            // effectiveFontSize, so the placeholder a caller measures is the
+            // placeholder it gets.
+            AESTRA_LOG_WARNING(
+                "Could not load any font: drawText falls back to rectangle placeholders "
+                "and measureText to width estimation");
         }
 
         // Load CJK fallback face (no atlas — glyphs added on demand)
@@ -509,21 +588,41 @@ bool NUIRendererGL::initialize(int width, int height) {
     glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE); // Ensure we don't write to depth buffer in 2D mode
     glDisable(GL_CULL_FACE);
-    // Leave framebuffer sRGB disabled; palette is authored in sRGB and shaders output in sRGB
-    
     // Prefer smoother edges when a multisampled default framebuffer is available.
     glEnable(GL_MULTISAMPLE);
-    glEnable(GL_FRAMEBUFFER_SRGB);
-    framebufferSRGBEnabled_ = (glGetError() == GL_NO_ERROR);
+
+    // ONE COMPOSITING SPACE: gamma (sRGB), everywhere.
+    //
+    // The palette is authored in sRGB, so the simplest correct pipeline stores
+    // it unchanged and blends it where it was authored. GL_FRAMEBUFFER_SRGB
+    // would instead have the driver decode, blend in linear light and re-encode,
+    // and that is the wrong choice for a UI for two measured reasons:
+    //
+    //   Alpha stops meaning what the caller meant. Linear blending is correct
+    //   light mixing, but a UI's alpha is a perceptual weight — "this label is
+    //   secondary" — and CSS, Qt, Cocoa and Skia all composite in gamma space
+    //   for exactly that reason. Measured on the light theme, textPrimary at
+    //   alpha 0.72 (what track names use) gives 7.2:1 contrast blended in gamma
+    //   and 3.1:1 blended in linear. The same alpha on a dark theme goes the
+    //   other way, 8.7:1 to 12.2:1. So alpha-based hierarchy read correctly in
+    //   dark and failed WCAG in light, from the blend space alone.
+    //
+    //   It was never uniform anyway. The widget cache renders into a plain
+    //   RGBA8 target where GL_FRAMEBUFFER_SRGB does nothing, so cached content
+    //   always blended in gamma space while the screen blended in linear. One
+    //   space removes the split rather than propagating it.
+    //
+    // This also retires the probe that used to live here: glEnable does not
+    // fail when there is no sRGB attachment, so framebufferSRGBEnabled_ was
+    // reporting true on Win32 where no sRGB pixel format is ever requested.
+    // Nothing now depends on the answer.
+    glDisable(GL_FRAMEBUFFER_SRGB);
+    framebufferSRGBEnabled_ = false;
     
     return true;
 }
 
 void NUIRendererGL::shutdown() {
-    if (sdfRenderer_) {
-        sdfRenderer_->shutdown();
-    }
-    
     // Cleanup FreeType
     if (fontInitialized_) {
         // Clean up atlas texture
@@ -595,10 +694,6 @@ void NUIRendererGL::resize(int width, int height) {
     // to avoid sampling from stale textures after minimize/restore.
     renderCache_.clearAll();
     
-    // MSDF text renderer viewport will be updated externally
-    
-    glassPass_.resize(width, height);
-
     glViewport(0, 0, width, height);
 }
 
@@ -634,17 +729,12 @@ void NUIRendererGL::beginFrame() {
     currentQuadSize_ = {0.0f, 0.0f};
     renderCache_.setCurrentFrame(frameCounter_);
     
-    // OPTIMIZED: Don't mark all dirty - let widgets mark their own dirty regions
-    // This enables true incremental rendering where only changed areas are redrawn
-    // dirtyRegionManager_.markAllDirty(NUISize(static_cast<float>(width_), static_cast<float>(height_)));
-    
 }
 
 void NUIRendererGL::endFrame() {
     flush();
     
     // Clear dirty regions for next frame
-    dirtyRegionManager_.clear();
     
     // Cleanup old caches every 60 frames
     if (frameCounter_ % 60 == 0) {
@@ -661,11 +751,10 @@ void NUIRendererGL::clear(const NUIColor& color) {
 // State Management
 // ============================================================================
 
-void NUIRendererGL::pushTransform(float tx, float ty, float rotation, float scale) {
-    Transform t;
+void NUIRendererGL::pushTransform(float tx, float ty, float scale) {
+    NUITransform2D t;
     t.tx = tx;
     t.ty = ty;
-    t.rotation = rotation;
     t.scale = scale;
     transformStack_.push_back(t);
 }
@@ -687,23 +776,14 @@ void NUIRendererGL::setClipRect(const NUIRect& rect) {
     float y1 = rect.y;
     float x2 = rect.right();
     float y2 = rect.bottom();
-    
-    // Apply transform stack manually
+
+    // The same composition applyTransform() uses. This block used to walk the
+    // stack itself, scaling before translating while applyTransform() translated
+    // before scaling — so the scissor rectangle and the geometry it was meant to
+    // clip disagreed for every scale != 1. Both now go through one function, so
+    // they cannot drift apart again.
     if (!transformStack_.empty()) {
-        struct Transform { float tx, ty, rot, scale; };
-        for (const auto& t : transformStack_) {
-            // Apply scale
-            x1 *= t.scale;
-            y1 *= t.scale;
-            x2 *= t.scale;
-            y2 *= t.scale;
-            
-            // Apply translation
-            x1 += t.tx;
-            y1 += t.ty;
-            x2 += t.tx;
-            y2 += t.ty;
-        }
+        composeTransformStack(transformStack_).applyToRect(x1, y1, x2, y2);
     }
     
     // Normalize if scale was negative (unlikely but safe)
@@ -1179,17 +1259,45 @@ void NUIRendererGL::fillCircleGradient(const NUIPoint& center, float radius, con
 // ============================================================================
 
 void NUIRendererGL::drawGlow(const NUIRect& rect, float radius, float intensity, const NUIColor& color) {
-    // Simple glow as expanded semi-transparent rect
-    NUIRect glowRect = rect;
-    glowRect.x -= radius;
-    glowRect.y -= radius;
-    glowRect.width += radius * 2;
-    glowRect.height += radius * 2;
-    
+    AESTRA_ZONE("Renderer_DrawGlow");
+
+    // This was one expanded fillRect at alpha * intensity * 0.3 — a hard-edged
+    // SQUARE halo, which read especially wrong around its only caller: the
+    // audition panel's drop target, a 16px-rounded header. A glow with a visible
+    // straight edge is not a glow.
+    if (radius <= 0.0f || intensity <= 0.0f || color.a <= 0.0f) {
+        return;
+    }
+
+    // The quad has to contain the whole falloff, which completes at `radius`.
+    NUIRect glowQuad = rect;
+    glowQuad.x -= radius;
+    glowQuad.y -= radius;
+    glowQuad.width += radius * 2.0f;
+    glowQuad.height += radius * 2.0f;
+
+    // The placeholder's 0.3f is KEPT, and the reasoning for dropping it was wrong.
+    // The falloff straddles the shape edge, so the interior saturates at full
+    // alpha — a glow is a solid fill with soft edges, not a ring. The interior
+    // wash therefore still exists and this factor still scales it. Measured on
+    // the audition drop target: without it the effective interior alpha runs
+    // 0.19 at the pulse trough to 0.63 at the crest, where the previous range
+    // was 0.06 to 0.19 — the new trough equalled the old crest, and at the crest
+    // it washed out the header's own text. Re-tuning glow strength is a separate
+    // pass (FD-21's precedent puts it last); removing a constant the call site
+    // was written against is not a mechanism fix.
     NUIColor glowColor = color;
-    glowColor.a *= intensity * 0.3f;
-    
-    fillRect(glowRect, glowColor);
+    glowColor.a = std::clamp(color.a * intensity * 0.3f, 0.0f, 1.0f);
+
+    //
+    // Corner radius is fixed for the same reason drawShadow fixes it — the
+    // signature carries no rounding for the source shape — and at these blur
+    // radii the falloff dominates the corner anyway. Clamped like
+    // fillRoundedRect does, so a glow around something smaller than 16px does
+    // not get a corner radius larger than its own half-extent.
+    const float cornerRadius = std::min(8.0f, std::min(rect.width, rect.height) * 0.5f);
+    addQuad(glowQuad, glowColor, rect.width, rect.height, glowQuad.width, glowQuad.height, cornerRadius, radius, 0.0f,
+            8.0f);
 }
 
 void NUIRendererGL::drawShadow(const NUIRect& rect, float offsetX, float offsetY, float blur, const NUIColor& color) {
@@ -1206,7 +1314,10 @@ void NUIRendererGL::drawShadow(const NUIRect& rect, float offsetX, float offsetY
     // Pass RectSize (logic size) and QuadSize (drawing size) separately
     // Radius fixed at 8.0f for standard shadows for now, matching previous logic
     // Type 1 = Filled Rect (Shadows use same SDF logic with blur)
-    addQuad(shadowQuad, color, rect.width, rect.height, shadowQuad.width, shadowQuad.height, 8.0f, blur, 0.0f, 1.0f);
+    // Type 8, not 1: until now this passed `blur` into a varying nothing read,
+    // so every shadow in the app was a hard-edged squircle expanded by blur*2.
+    addQuad(shadowQuad, color, rect.width, rect.height, shadowQuad.width, shadowQuad.height, 8.0f, blur, 0.0f,
+            8.0f);
 }
 
 // ============================================================================
@@ -1265,9 +1376,9 @@ float NUIRendererGL::getDPIScale() {
 NUIRendererGL::AtlasInfo NUIRendererGL::selectAtlas(float fontSize) const {
     AtlasInfo info;
     
-    const bool useXSmallAtlas = (fontSize <= 11.25f);
-    const bool useSmallAtlas = (!useXSmallAtlas && fontSize <= 17.0f);
-    const bool useMediumAtlas = (!useXSmallAtlas && !useSmallAtlas && fontSize <= 20.5f);
+    const bool useXSmallAtlas = (fontSize <= kTierMaxXSmall);
+    const bool useSmallAtlas = (!useXSmallAtlas && fontSize <= kTierMaxSmall);
+    const bool useMediumAtlas = (!useXSmallAtlas && !useSmallAtlas && fontSize <= kTierMaxMedium);
     
     if (useXSmallAtlas && fontAtlasTextureIdXSmall_ != 0 && atlasFontSizeXSmall_ > 0) {
         info.textureId = fontAtlasTextureIdXSmall_;
@@ -1300,6 +1411,44 @@ NUIRendererGL::AtlasInfo NUIRendererGL::selectAtlas(float fontSize) const {
     }
     
     return info;
+}
+
+// Deliberately adjacent to selectAtlas(): the thresholds below must match the
+// branch conditions above, and the only thing keeping them matched is that a
+// reader changing one has the other on screen. The resolved uniforms come from
+// the shared resolveText* helpers rather than being recomputed here, so those
+// cannot drift at all.
+bool NUIRendererGL::getTextDiagnostics(TextDiagnostics& out) const {
+    if (!fontInitialized_) {
+        return false;
+    }
+
+    out = TextDiagnostics{};
+    out.lcdSubpixel = fontUseLCD_;
+    out.framebufferSRGB = framebufferSRGBEnabled_;
+    out.textContrast = textContrast_;
+    out.alphaPreserved = true;  // color.a *= coverage — no reshaping. See the type 4 shader branch.
+    out.fontPath = defaultFontPath_.c_str();
+
+    // Order matches selectAtlas()'s branch order, smallest served size first.
+    const struct { const char* name; int size; float maxFont; } kTiers[] = {
+        {"XSmall",  atlasFontSizeXSmall_, kTierMaxXSmall},
+        {"Small",   atlasFontSizeSmall_,  kTierMaxSmall},
+        {"Medium",  atlasFontSizeMedium_, kTierMaxMedium},
+        {"Regular", static_cast<int>(atlasFontSize_), 0.0f},
+    };
+
+    out.tierCount = 0;
+    for (const auto& t : kTiers) {
+        TextDiagnostics::Tier& tier = out.tiers[out.tierCount++];
+        tier.name = t.name;
+        tier.atlasSize = t.size;
+        tier.maxFontSize = t.maxFont;
+        const bool tiny = isHeavilySupersampled(t.size, t.maxFont);
+        tier.gamma = resolveTextGamma(tiny, textContrast_);
+        tier.sharpen = resolveTextSharpen(tiny);
+    }
+    return true;
 }
 
 void NUIRendererGL::drawCleanCharacter(char c, float x, float y, float width, float height, const NUIColor& color) {
@@ -1982,6 +2131,12 @@ NUIRenderer::FontMetrics NUIRendererGL::getFontMetrics(float fontSize) const {
             metrics.ascent = atlas.ascent * scale;
             metrics.descent = atlas.descent * scale;
             metrics.lineHeight = atlas.lineHeight * scale;
+            // Cap height = top bearing of the 'H' in this atlas (0 falls back in calculateOpticalTextY()).
+            if (atlas.cache) {
+                if (const auto it = atlas.cache->find(static_cast<uint32_t>('H')); it != atlas.cache->end()) {
+                    metrics.capHeight = static_cast<float>(it->second.bearingY) * scale;
+                }
+            }
             return metrics;
         }
         return metrics;
@@ -2072,16 +2227,11 @@ NUISize NUIRendererGL::measureText(const std::string& text, float fontSize) {
             result = {text.length() * fontSize * 0.6f, fontSize};
         }
     } else {
-        // Fallback: SDF measurement (if atlas text isn't available).
-        if (!useSDFText_ && !triedSDFInit_ && sdfRenderer_ && !defaultFontPath_.empty()) {
-            useSDFText_ = sdfRenderer_->initialize(defaultFontPath_, 64.0f);
-            triedSDFInit_ = true;
-        }
-        if (useSDFText_ && sdfRenderer_ && sdfRenderer_->isInitialized()) {
-            result = sdfRenderer_->measureText(text, fontSize);
-        } else {
-            result = {text.length() * fontSize * 0.6f, fontSize};
-        }
+        // No atlas yet: the caller is measuring before the font finished loading.
+        // A width estimate is the only honest answer here — it is wrong, but it
+        // is wrong in a bounded way and the measurement cache is keyed per size,
+        // so real metrics replace it as soon as the atlas exists.
+        result = {text.length() * fontSize * 0.6f, fontSize};
     }
     
     // Store in cache (with simple eviction if needed)
@@ -2343,7 +2493,7 @@ charSet.push_back(0x23F9); // ⏹ Stop
 
     // Large atlas (36px) for headings and larger controls without oversoft downsampling.
     {
-        const int ATLAS_FONT_SIZE = 40;
+        const int ATLAS_FONT_SIZE = kAtlasSizeRegular;
         atlasFontSize_ = ATLAS_FONT_SIZE;
         if (!buildAtlas(ATLAS_FONT_SIZE,
                         fontAtlasTextureId_,
@@ -2360,7 +2510,7 @@ charSet.push_back(0x23F9); // ⏹ Stop
 
     // Medium atlas (20px) for the common 15-18 px UI copy.
     {
-        const int ATLAS_FONT_SIZE_MEDIUM = 22;
+        const int ATLAS_FONT_SIZE_MEDIUM = kAtlasSizeMedium;
         atlasFontSizeMedium_ = ATLAS_FONT_SIZE_MEDIUM;
         (void)buildAtlas(ATLAS_FONT_SIZE_MEDIUM,
                          fontAtlasTextureIdMedium_,
@@ -2375,7 +2525,7 @@ charSet.push_back(0x23F9); // ⏹ Stop
 
     // Small atlas tuned for dense UI labels around 10-12 px.
     {
-        const int ATLAS_FONT_SIZE_SMALL = 16;
+        const int ATLAS_FONT_SIZE_SMALL = kAtlasSizeSmall;
         atlasFontSizeSmall_ = ATLAS_FONT_SIZE_SMALL;
         (void)buildAtlas(ATLAS_FONT_SIZE_SMALL,
                          fontAtlasTextureIdSmall_,
@@ -2390,7 +2540,7 @@ charSet.push_back(0x23F9); // ⏹ Stop
 
     // Extra-small atlas for the densest 10-11 px copy.
     {
-        const int ATLAS_FONT_SIZE_XSMALL = 20;
+        const int ATLAS_FONT_SIZE_XSMALL = kAtlasSizeXSmall;
         atlasFontSizeXSmall_ = ATLAS_FONT_SIZE_XSMALL;
         (void)buildAtlas(ATLAS_FONT_SIZE_XSMALL,
                          fontAtlasTextureIdXSmall_,
@@ -2567,11 +2717,9 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
         currentTextureId_ = atlas.textureId;
     }
     
-    // Switch to pre-multiplied alpha blend mode for text rendering.
-    // This gives: result = text * coverage + bg * (1 - coverage)
-    // instead of the standard blend which gives: result = text * coverage^2 + bg * (1 - coverage)
-    glBlendFunc(GL_ONE, GL_SRC_ALPHA);
-    // Actually revert — pre-multiplied bleeds edges on dark backgrounds. Use standard.
+    // Straight (non-premultiplied) alpha, matching every other blend site. See the
+    // note above beginOffscreen() for why the alpha channel uses ONE rather than
+    // SRC_ALPHA.
     glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     
     // Pre-allocate vertex buffer space (4 vertices per glyph, 6 indices per glyph)
@@ -2583,35 +2731,27 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
     // fontSize is in logical pixels - no DPI scaling needed here
     // Scale factor from atlas size to requested font size
     float scale = fontSize / static_cast<float>(atlas.atlasSize);
-    NUIColor glyphColor = color;
-    constexpr float kPrimaryAlphaFloor = 0.94f;
-    constexpr float kSecondaryAlphaFloor = 0.88f;
-    constexpr float kTertiaryAlphaFloor = 0.84f;
-    const bool isSecondary = color.a < 0.92f;
-    const bool isTertiary = color.a < 0.80f;
-    if (fontSize <= 13.5f) {
-        // Small UI text can look dim compared to larger readouts (e.g. BPM/timer).
-        // Lift opacity/brightness slightly so dense labels stay readable.
-        glyphColor.a = std::min(1.0f, glyphColor.a * 1.08f + 0.02f);
-        if (!isSecondary) {
-            glyphColor.a = std::max(glyphColor.a, kPrimaryAlphaFloor);
-        } else if (!isTertiary) {
-            glyphColor.a = std::max(glyphColor.a, kSecondaryAlphaFloor);
-        } else {
-            glyphColor.a = std::max(glyphColor.a, kTertiaryAlphaFloor);
-        }
-        if (fontSize <= 11.75f) {
-            glyphColor.a = std::max(glyphColor.a, 0.84f);
-        }
-        const float luma = 0.2126f * glyphColor.r + 0.7152f * glyphColor.g + 0.0722f * glyphColor.b;
-        const float targetLuma = (fontSize <= 11.75f) ? 0.80f : 0.73f;
-        if (luma < targetLuma) {
-            const float lift = std::min(0.10f, (targetLuma - luma) * 0.20f);
-            glyphColor.r = std::min(1.0f, glyphColor.r + lift);
-            glyphColor.g = std::min(1.0f, glyphColor.g + lift);
-            glyphColor.b = std::min(1.0f, glyphColor.b + lift);
-        }
-    }
+    // The caller's colour is used as given. This used to be rewritten for any
+    // text at or below 13.5 px — which is most of the UI — and the rewrite is
+    // the larger half of V8-C9 finding F7:
+    //
+    //   alpha was scaled by 1.08 + 0.02, then floored at 0.94 / 0.88 / 0.84
+    //   depending on a tier the renderer inferred from the alpha it was handed,
+    //   with a further 0.84 floor below 11.75 px; then the colour itself was
+    //   brightened toward a luminance target.
+    //
+    // The effect was that a label requested at alpha 0.25 rendered at 0.84, so
+    // primary, secondary and tertiary text converged on the same weight. The
+    // diagnostic's alpha ramp measured 0.891 of full ink at a requested 0.25 —
+    // alpha-based hierarchy was not attenuated, it was very nearly absent.
+    //
+    // It cannot be rescued by retuning the constants, because the mechanism is
+    // wrong in kind: the renderer was inferring a semantic tier from alpha and
+    // then overriding the caller's choice for it. Tiers are the caller's to
+    // decide and the theme's to define. If small text reads too dim after this,
+    // the fix is the theme's alpha values — a decision someone can see and
+    // argue with — not a floor buried in the glyph path.
+    const NUIColor& glyphColor = color;
 
     // position.y is the BASELINE position (already adjusted by caller)
     // Pixel-align starting position for crisp text
@@ -2857,12 +2997,9 @@ void NUIRendererGL::drawTexture(const NUIRect& bounds, const unsigned char* rgba
     glUseProgram(primitiveShader_.id);
     glUniformMatrix4fv(primitiveShader_.projectionLoc, 1, GL_FALSE, projectionMatrix_);
     glUniform1i(primitiveShader_.primitiveTypeLoc, 0);
-    glUniform1i(primitiveShader_.outputLinearLoc, (framebufferSRGBEnabled_ && !renderingToLinearTarget_) ? 1 : 0);
     glUniform2f(primitiveShader_.textTexelSizeLoc, 0.0f, 0.0f);
     glUniform1f(primitiveShader_.textSharpenLoc, 0.0f);
     glUniform1f(primitiveShader_.textGammaLoc, 1.0f);
-    glUniform1f(primitiveShader_.textBoldLoc, (1.0f - textContrast_) * 0.25f);
-    glUniform1f(primitiveShader_.textAlphaLiftLoc, textContrast_ < 1.0f ? 0.35f : 1.0f);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
@@ -3102,16 +3239,11 @@ uint32_t NUIRendererGL::getGLTextureId(uint32_t textureId) const {
 // glyphs against the surface behind the panel — invisible over dark themes,
 // a gray wash over light ones (and sub-1.0 backbuffer alpha for DWM).
 void NUIRendererGL::beginOffscreen(int width, int height) {
-    // Offscreen caches render into linear GL_RGBA8 textures where
-    // GL_FRAMEBUFFER_SRGB does NOT re-encode on write. The shader's
-    // sRGB->linear conversion (uOutputLinear) must therefore be disabled while
-    // rendering into them: values are stored as-authored (sRGB), and the
-    // conversion happens exactly once when the cached texture is composited to
-    // the sRGB screen. With the flag left on, cached content was linearized
-    // on the way in AND on the way out — one uncompensated pow(2.2) that
-    // crushed every dark color drawn through the cache (#observed as the
-    // timeline rendering far darker than its authored palette).
-    renderingToLinearTarget_ = true;
+    // No colour-space switch here any more. The cache renders into a plain
+    // RGBA8 target and the screen composites in the same gamma space, so the
+    // cached and direct paths are now the same pipeline — which is the point.
+    // This function used to flip uOutputLinear off on the way in and back on at
+    // the way out, and that asymmetry was the whole of F3.
 
     // Backup current size and projection
     widthBackup_ = width_;
@@ -3127,9 +3259,8 @@ void NUIRendererGL::beginOffscreen(int width, int height) {
 }
 
 void NUIRendererGL::endOffscreen() {
-    // Flush offscreen geometry before restoring the screen color-space mode.
+    // Flush offscreen geometry before restoring the screen projection.
     flush();
-    renderingToLinearTarget_ = false;
 
     // Restore original projection and size
     width_ = widthBackup_;
@@ -3171,12 +3302,9 @@ void NUIRendererGL::flush() {
     // Use shader
     glUseProgram(primitiveShader_.id);
     glUniformMatrix4fv(primitiveShader_.projectionLoc, 1, GL_FALSE, projectionMatrix_);
-    glUniform1i(primitiveShader_.outputLinearLoc, (framebufferSRGBEnabled_ && !renderingToLinearTarget_) ? 1 : 0);
     glUniform2f(primitiveShader_.textTexelSizeLoc, 0.0f, 0.0f);
     glUniform1f(primitiveShader_.textSharpenLoc, 0.0f);
     glUniform1f(primitiveShader_.textGammaLoc, 1.0f);
-    glUniform1f(primitiveShader_.textBoldLoc, (1.0f - textContrast_) * 0.25f);
-    glUniform1f(primitiveShader_.textAlphaLiftLoc, textContrast_ < 1.0f ? 0.35f : 1.0f);
     // Note: opacity is already in vertex colors
     glUniform1i(primitiveShader_.primitiveTypeLoc, currentPrimitiveType_);
     // Default to no texturing; enable below if a texture is bound
@@ -3210,10 +3338,21 @@ void NUIRendererGL::flush() {
             // coverage lift (gamma < 1 thickens strokes uniformly); the unsharp
             // mask stays gentle because a strong one undershoots and erodes thin
             // features — the 'e' crossbar thins to a 'c' and edges go ragged.
-            const bool tinyAtlas = (currentTextureId_ == fontAtlasTextureIdXSmall_
-                                    || currentTextureId_ == fontAtlasTextureIdSmall_);
-            glUniform1f(primitiveShader_.textSharpenLoc, tinyAtlas ? 0.20f : 0.28f);
-            glUniform1f(primitiveShader_.textGammaLoc, (tinyAtlas ? 0.74f : 0.93f) * textContrast_);
+            // Derived from this tier's actual supersampling ratio, not from a
+            // list of tier names. The old test named XSmall and Small, so Small
+            // kept the heavy compensation long after its ratio (16/17, i.e.
+            // magnification) stopped justifying it — that mis-classification
+            // was half of F5.
+            const bool tinyAtlas =
+                (currentTextureId_ == fontAtlasTextureIdXSmall_
+                     ? isHeavilySupersampled(atlasFontSizeXSmall_, kTierMaxXSmall)
+                 : currentTextureId_ == fontAtlasTextureIdSmall_
+                     ? isHeavilySupersampled(atlasFontSizeSmall_, kTierMaxSmall)
+                 : currentTextureId_ == fontAtlasTextureIdMedium_
+                     ? isHeavilySupersampled(atlasFontSizeMedium_, kTierMaxMedium)
+                     : false);
+            glUniform1f(primitiveShader_.textSharpenLoc, resolveTextSharpen(tinyAtlas));
+            glUniform1f(primitiveShader_.textGammaLoc, resolveTextGamma(tinyAtlas, textContrast_));
         }
     }
     
@@ -3299,9 +3438,6 @@ bool NUIRendererGL::loadShaders() {
     primitiveShader_.textTexelSizeLoc = glGetUniformLocation(primitiveShader_.id, "uTextTexelSize");
     primitiveShader_.textSharpenLoc = glGetUniformLocation(primitiveShader_.id, "uTextSharpen");
     primitiveShader_.textGammaLoc = glGetUniformLocation(primitiveShader_.id, "uTextGamma");
-    primitiveShader_.textBoldLoc = glGetUniformLocation(primitiveShader_.id, "uTextBold");
-    primitiveShader_.textAlphaLiftLoc = glGetUniformLocation(primitiveShader_.id, "uTextAlphaLift");
-    primitiveShader_.outputLinearLoc = glGetUniformLocation(primitiveShader_.id, "uOutputLinear");
 
     
     return true;
@@ -3447,14 +3583,11 @@ void NUIRendererGL::applyTransform(float& x, float& y) {
     if (transformStack_.empty()) {
         return;
     }
-    
-    for (const auto& t : transformStack_) {
-        x += t.tx;
-        y += t.ty;
-        x *= t.scale;
-        y *= t.scale;
-        // Apply rotation
-    }
+
+    // One composition, shared with setClipRect(). These used to be two separate
+    // walks of the same stack in opposite operation orders, so clipped geometry
+    // and its clip rectangle landed in different places for any scale != 1.
+    composeTransformStack(transformStack_).applyToPoint(x, y);
 }
 
 void NUIRendererGL::updateProjectionMatrix() {
@@ -3508,20 +3641,9 @@ bool NUIRendererGL::renderCachedOrUpdate(uint64_t widgetId, const NUIRect& destR
     return true;
 }
 
-void NUIRendererGL::setDirtyRegionTrackingEnabled(bool enabled) {
-    dirtyRegionManager_.setEnabled(enabled);
-}
-
 void NUIRendererGL::setCachingEnabled(bool enabled) {
     renderCache_.setEnabled(enabled);
 }
 
-void NUIRendererGL::getOptimizationStats(size_t& batchedQuads, size_t& dirtyRegions, 
-                                        size_t& cachedWidgets, size_t& cacheMemoryBytes) {
-    batchedQuads = submittedQuadCount_ + indices_.size() / 6;
-    dirtyRegions = dirtyRegionManager_.getDirtyRegionCount();
-    cachedWidgets = renderCache_.getCacheCount();
-    cacheMemoryBytes = renderCache_.getMemoryUsage();
-}
 
 } // namespace AestraUI

@@ -1,0 +1,120 @@
+# © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
+#
+# Actions artifact retention sweep.
+#
+# WHY THIS EXISTS
+#
+# Per-upload `retention-days` is the primary control and should stay the primary
+# control — this lane is a backstop, not a substitute for uploading less. It exists
+# because the failure it guards against is silent: an upload step that grows, or a
+# new workflow that forgets a retention setting, costs nothing visible until someone
+# happens to look at the billing page.
+#
+# It was found the hard way. On 2026-09-12 the repository held 32.95 GB of live
+# artifacts, 25.4 GB of which was seven nightly uploads of an entire build tree.
+# Nothing alerted; nothing failed. The nightly upload is fixed at source in
+# nightly.yml, and this lane is what notices the next one.
+#
+# WHAT IT DOES NOT DO
+#
+# It does not delete anything attached to a release. Release assets live on the
+# release object, not in Actions artifacts, so they are out of scope by
+# construction — but artifacts produced BY a tagged run are in scope, and those are
+# the ones worth keeping, so they are protected explicitly below. As of writing no
+# such artifact exists; the rule is here before the need, which is the point.
+
+name: Artifact Retention
+
+on:
+  schedule:
+    # 03:30 UTC daily — after the 23:00 UTC nightly has finished and uploaded.
+    - cron: "30 3 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Report what would be deleted without deleting it
+        type: boolean
+        default: true
+      max_age_days:
+        description: Delete unprotected artifacts older than this many days
+        default: "14"
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  sweep:
+    name: Sweep old artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sweep
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          # A scheduled run always deletes; a manual run defaults to reporting only,
+          # so the lane can be inspected without consequences.
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+          MAX_AGE_DAYS: ${{ inputs.max_age_days || '14' }}
+        run: |
+          set -euo pipefail
+
+          # PROTECTED — never swept, regardless of age.
+          #
+          # Matched against the artifact name as an extended regex. Keep this list
+          # short and justified: every entry is storage that grows forever.
+          #
+          #   release-*   artifacts produced by a release/tag run
+          #   *-signed    signed binaries, which are expensive to reproduce
+          PROTECTED='^(release-|.*-signed$)'
+
+          cutoff=$(date -u -d "${MAX_AGE_DAYS} days ago" +%s)
+          echo "Cutoff: $(date -u -d "@${cutoff}" +%Y-%m-%dT%H:%M:%SZ)  (age > ${MAX_AGE_DAYS}d)"
+          echo "Dry run: ${DRY_RUN}"
+          echo
+
+          # `expired` artifacts have already had their content removed by GitHub and
+          # cost nothing; skipping them keeps the reported numbers honest.
+          gh api "repos/${REPO}/actions/artifacts?per_page=100" --paginate \
+            --jq '.artifacts[] | select(.expired == false)
+                  | [.id, .name, .size_in_bytes, .created_at] | @tsv' > all.tsv
+
+          total_live=$(awk -F'\t' '{s+=$3} END {printf "%.2f", s/1024/1024/1024}' all.tsv)
+          echo "Live artifacts: $(wc -l < all.tsv), ${total_live} GB"
+          echo
+
+          deleted=0
+          freed=0
+          kept_protected=0
+          while IFS=$'\t' read -r id name size created; do
+            if printf '%s' "${name}" | grep -qE "${PROTECTED}"; then
+              kept_protected=$((kept_protected + 1))
+              continue
+            fi
+            created_s=$(date -u -d "${created}" +%s)
+            [ "${created_s}" -ge "${cutoff}" ] && continue
+
+            if [ "${DRY_RUN}" = "true" ]; then
+              echo "would delete: ${name} ($(( size / 1024 / 1024 )) MB, ${created})"
+            else
+              gh api -X DELETE "repos/${REPO}/actions/artifacts/${id}" >/dev/null
+            fi
+            deleted=$((deleted + 1))
+            freed=$((freed + size))
+          done < all.tsv
+
+          echo
+          echo "Protected (skipped): ${kept_protected}"
+          printf 'Swept: %d artifacts, %.2f GB\n' "${deleted}" "$(echo "${freed} / 1024 / 1024 / 1024" | bc -l)"
+
+          {
+            echo "### Artifact retention sweep"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Live before | ${total_live} GB |"
+            echo "| Age limit | ${MAX_AGE_DAYS} days |"
+            echo "| Protected | ${kept_protected} |"
+            printf '| Swept | %d artifacts, %.2f GB |\n' "${deleted}" "$(echo "${freed} / 1024 / 1024 / 1024" | bc -l)"
+            echo "| Dry run | ${DRY_RUN} |"
+          } >> "${GITHUB_STEP_SUMMARY}"

@@ -3,15 +3,62 @@
 
 #include "NUIComponent.h"
 #include "NUITypes.h"
-#include "NUIIcon.h"
 #include <functional>
 
 namespace AestraUI {
 
+// ---------------------------------------------------------------------------
+// Overlay scrollbar look — one authority for every scrollbar in the DAW
+//
+// Four surfaces drew their own scrollbar before this: NUIScrollbar (timeline,
+// piano roll), the File Browser's file list, and the File Browser's Collections
+// rail. They agreed on nothing — 3px vs 6px vs 16px thumbs, gradients and grip
+// markers in two of them, a permanently visible gradient track in another.
+//
+// The painting lives here as free functions rather than in the component so the
+// File Browser can share it without having to give up its own scroll and drag
+// state machine, which is wired through its event handling. Nothing about the
+// *behaviour* of a scrollbar is decided here; callers keep owning position,
+// range and interaction, and hand over the two rects and how hot they are.
+//
+// Spec 2 §2: minimal track, subtle thumb, no dominant border, and nothing drawn
+// at all when the content fits.
+// ---------------------------------------------------------------------------
+
+/** @brief Nominal gutter thickness. Layout reserves this; the thumb insets within it. */
+inline constexpr float kOverlayScrollbarThickness = 10.0f;
+
+/** @brief Shortest a thumb is ever drawn, so a long document keeps a grabbable target. */
+inline constexpr float kOverlayScrollbarMinThumb = 28.0f;
+
+/** @brief How hot the scrollbar is, and how visible. */
+struct ScrollbarPaintState {
+    bool hovered = false;
+    bool pressed = false;
+    /** @brief 0 fades the whole scrollbar out; callers that never fade pass 1. */
+    float opacity = 1.0f;
+};
+
+/**
+ * @brief Paint one overlay scrollbar.
+ *
+ * @param gutter The full strip the scrollbar occupies (the "track").
+ * @param thumb  The thumb inside that strip, already positioned by the caller.
+ *
+ * Draws nothing for an empty thumb — that is how "the content fits, so there is
+ * no scrollbar" is expressed, and it is why callers may simply pass a zero rect
+ * rather than branching around the call.
+ */
+void drawOverlayScrollbar(NUIRenderer& renderer, const NUIRect& gutter, const NUIRect& thumb,
+                          const ScrollbarPaintState& state);
+
+
 /**
  * NUIScrollbar - A scrollbar component for scrollable content
- * Supports both horizontal and vertical scrolling with customizable appearance
- * Replaces juce::ScrollBar with AestraUI styling and theming
+ * Owns scroll range, position and interaction for both orientations. It does NOT
+ * own its appearance: drawOverlayScrollbar() above is the DAW-wide look, and
+ * there is deliberately no colour, border or arrow API for a call site to
+ * diverge with.
  */
 class NUIScrollbar : public NUIComponent
 {
@@ -23,13 +70,6 @@ public:
         Vertical
     };
 
-    // Scrollbar styles
-    enum class Style
-    {
-        Standard,
-        Timeline
-    };
-
     // Scrollbar parts
     enum class Part
     {
@@ -38,10 +78,8 @@ public:
         Thumb,
         ThumbStartEdge, // Left or Top edge of thumb
         ThumbEndEdge,   // Right or Bottom edge of thumb
-        LeftArrow,   // or UpArrow for vertical
-        RightArrow,  // or DownArrow for vertical
-        LeftTrack,   // Track before thumb
-        RightTrack   // Track after thumb
+        LeftTrack,      // Track before thumb
+        RightTrack      // Track after thumb
     };
 
     NUIScrollbar(Orientation orientation = Orientation::Vertical);
@@ -80,47 +118,12 @@ public:
     void setOrientation(Orientation orientation);
     Orientation getOrientation() const { return orientation_; }
 
-    void setStyle(Style style);
-    Style getStyle() const { return style_; }
-
     void setThumbSize(double size);
     double getThumbSize() const { return thumbSize_; }
 
     void setMinimumThumbSize(double size);
     double getMinimumThumbSize() const { return minimumThumbSize_; }
 
-    void setTrackColor(const NUIColor& color);
-    NUIColor getTrackColor() const { return trackColor_; }
-
-    void setThumbColor(const NUIColor& color);
-    NUIColor getThumbColor() const { return thumbColor_; }
-
-    void setThumbHoverColor(const NUIColor& color);
-    NUIColor getThumbHoverColor() const { return thumbHoverColor_; }
-
-    void setThumbPressedColor(const NUIColor& color);
-    NUIColor getThumbPressedColor() const { return thumbPressedColor_; }
-
-    void setArrowColor(const NUIColor& color);
-    NUIColor getArrowColor() const { return arrowColor_; }
-
-    void setArrowHoverColor(const NUIColor& color);
-    NUIColor getArrowHoverColor() const { return arrowHoverColor_; }
-
-    void setArrowPressedColor(const NUIColor& color);
-    NUIColor getArrowPressedColor() const { return arrowPressedColor_; }
-
-    void setBorderColor(const NUIColor& color);
-    NUIColor getBorderColor() const { return borderColor_; }
-
-    void setBorderWidth(float width);
-    float getBorderWidth() const { return borderWidth_; }
-
-    void setBorderRadius(float radius);
-    float getBorderRadius() const { return borderRadius_; }
-
-    void setArrowSize(float size);
-    float getArrowSize() const { return arrowSize_; }
 
     // Scrolling methods
     void scrollBy(double delta);
@@ -148,23 +151,15 @@ protected:
     // Override these for custom scrollbar appearance
     virtual void drawTrack(NUIRenderer& renderer);
     virtual void drawThumb(NUIRenderer& renderer);
-    virtual void drawArrows(NUIRenderer& renderer);
-    virtual void drawLeftArrow(NUIRenderer& renderer);
-    virtual void drawRightArrow(NUIRenderer& renderer);
 
     // Hit testing
     virtual Part getPartAtPosition(const NUIPoint& position) const;
     virtual NUIRect getThumbRect() const;
-    virtual NUIRect getLeftArrowRect() const;
-    virtual NUIRect getRightArrowRect() const;
     virtual NUIRect getTrackRect() const;
 
     // Scrolling calculations
     virtual double positionToValue(const NUIPoint& position) const;
     virtual NUIPoint valueToPosition(double value) const;
-
-    // Helper drawing methods
-    virtual void drawArrowIcon(NUIRenderer& renderer, const NUIRect& rect, float rotation, const NUIColor& color);
 
 private:
     void updateThumbSize();
@@ -175,10 +170,6 @@ private:
     void triggerScrollStart();
     void triggerScrollEnd();
     
-    // Enhanced drawing methods
-    void drawEnhancedTrack(NUIRenderer& renderer, const NUIRect& trackRect);
-    void drawEnhancedThumb(NUIRenderer& renderer, const NUIRect& thumbRect);
-
     // Scroll state
     double currentRangeStart_ = 0.0;
     double currentRangeSize_ = 0.0;
@@ -189,20 +180,9 @@ private:
     double thumbSize_ = 0.0;
     double minimumThumbSize_ = 0.1;
 
-    // Visual properties
+    // Visual properties. Everything else about how a scrollbar looks lives in
+    // drawOverlayScrollbar() above, deliberately out of reach of call sites.
     Orientation orientation_ = Orientation::Vertical;
-    NUIColor trackColor_ = NUIColor(0.15f, 0.15f, 0.15f, 1.0f);          // Track base (alpha applied at draw time)
-    NUIColor thumbColor_ = NUIColor(0.85f, 0.85f, 0.85f, 0.28f);         // Quiet thumb default
-    NUIColor thumbHoverColor_ = NUIColor(0.95f, 0.95f, 0.95f, 0.45f);    // Brighter on hover
-    NUIColor thumbPressedColor_ = NUIColor(0.70f, 0.70f, 0.70f, 0.65f);  // Stronger on press
-    NUIColor arrowColor_ = NUIColor(0.85f, 0.85f, 0.85f, 0.25f);         // Subtle arrows
-    NUIColor arrowHoverColor_ = NUIColor(0.95f, 0.95f, 0.95f, 0.45f);    // Brighter on hover
-    NUIColor arrowPressedColor_ = NUIColor(0.70f, 0.70f, 0.70f, 0.65f);  // Stronger on press
-    NUIColor borderColor_ = NUIColor(0.30f, 0.30f, 0.30f, 0.35f);        // Subtle border
-    bool customColors_ = false;
-    float borderWidth_ = 1.0f;
-    float borderRadius_ = 4.0f;
-    float arrowSize_ = 12.0f;
 
     // Auto-hide behavior
     bool autoHide_ = false;
@@ -236,11 +216,6 @@ private:
     // Dragging state for resizing
     double resizeStartSize_ = 0.0;
     double resizeStartValue_ = 0.0;
-    Style style_ = Style::Standard;
-
-    // SVG Icons for arrow buttons (Bug #11: Scrollbar Icons)
-    std::shared_ptr<NUIIcon> upArrowIcon_;
-    std::shared_ptr<NUIIcon> downArrowIcon_;
 };
 
 } // namespace AestraUI

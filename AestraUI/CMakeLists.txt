@@ -31,6 +31,8 @@ set(AESTRAUI_CORE_SOURCES
     Core/NUIThemeSystem.cpp
     Core/NUIAdaptiveFPS.h
     Core/NUIAdaptiveFPS.cpp
+    Core/NUIPerfProbe.h
+    Core/NUIPerfProbe.cpp
     Core/NUIFrameProfiler.h
     Core/NUIFrameProfiler.cpp
     Core/NUIDragDrop.h
@@ -85,9 +87,9 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/NUITransportWidgets.cpp
     Widgets/NUIMixerWidgets.h
     Widgets/NUIMixerWidgets.cpp
-    Widgets/NUIArrangementWidgets.h
-    Widgets/NUIArrangementWidgets.cpp
     Widgets/NUIPianoRollWidgets.h
+    Widgets/PianoRollGhostCompare.h
+    Widgets/PianoRollPressedKeys.h
     Widgets/PianoRollWidgetShared.h
     Widgets/PianoRollKeyLane.cpp
     Widgets/PianoRollMinimap.cpp
@@ -143,10 +145,14 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/UIItemSelector.cpp
     Widgets/PluginBrowserPanel.h
     Widgets/PluginBrowserPanel.cpp
+    Widgets/PluginBrowserFavorites.cpp
     Widgets/PluginUIController.h
     Widgets/PluginUIController.cpp
+    Widgets/PluginEditorRegistry.cpp
     Widgets/AestraPanelWindow.h
     Widgets/AestraPanelWindow.cpp
+    Widgets/PluginEditorKit.cpp
+    Widgets/AestraDialogChrome.cpp
     Widgets/GenericPluginEditor.h
     Widgets/GenericPluginEditor.cpp
     Widgets/AestraEQEditor.h
@@ -189,7 +195,9 @@ set(AESTRAUI_GRAPHICS_SOURCES
     Graphics/NUISVGCache.cpp
 )
 
-# Text rendering removed - using external MSDF text renderer
+# Text rendering lives in NUIRendererGL: a FreeType bitmap glyph atlas, sampled by
+# the inline shader's primitiveID == 4 branch. There is no separate text renderer
+# target, and there is no MSDF anywhere in the tree.
 
 # Create core library (without text rendering - that's OpenGL-specific)
 add_library(AestraUI_Core STATIC
@@ -240,7 +248,7 @@ target_include_directories(AestraUI_Core PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../Source/HUD
 )
 
-# FreeType dependency removed - handled by MSDF text renderer
+# FreeType is required: it is the only glyph rasteriser in the project.
 
 # =============================================================================
 # ThorVG — SVG rasterization engine (vendored)
@@ -305,14 +313,8 @@ if(AESTRAUI_BUILD_OPENGL)
     set(AESTRAUI_OPENGL_SOURCES
         Graphics/OpenGL/NUIRendererGL.h
         Graphics/OpenGL/NUIRendererGL.cpp
-        Graphics/OpenGL/NUIDirtyRegion.h
-        Graphics/OpenGL/NUIDirtyRegion.cpp
         Graphics/OpenGL/NUIRenderCache.h
         Graphics/OpenGL/NUIRenderCache.cpp
-        Graphics/NUITextRendererSDF.h
-        Graphics/NUITextRendererSDF.cpp
-        Graphics/GlassmorphismPass.h
-        Graphics/GlassmorphismPass.cpp
     )
     
     add_library(AestraUI_OpenGL STATIC

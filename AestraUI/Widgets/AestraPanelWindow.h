@@ -3,6 +3,9 @@
 
 #include "NUIComponent.h"
 #include "NUITypes.h"
+
+#include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <string>
 
@@ -10,6 +13,44 @@ namespace AestraUI {
 
 // Forward declaration
 class NUIPlatformBridge;
+
+// ---------------------------------------------------------------------------
+// Shared modal-dialog chrome
+//
+// AestraPanelWindow below is the DAW's panel chrome, but it is a base class: a
+// surface that owns dragging, content clipping and a close button, which the
+// plugin editors inherit. The modal dialogs (Save Changes, Recovery, Export,
+// Settings) cannot inherit it without giving up their own layout and modality,
+// and every one of them had therefore grown its own idea of what an Aestra
+// panel looks like — Settings open-coded a passable copy, Recovery drew a
+// centred 20px bold heading inside a plain card with no title bar at all.
+//
+// These two functions are the same chrome as a free painter, so a dialog gets
+// the title-bar language by calling one function instead of by inheriting a
+// component it is not. Constants live once, here, alongside the class that uses
+// them (spec 2 §5).
+// ---------------------------------------------------------------------------
+
+/** @brief What the shared chrome needs to know about a dialog. */
+struct DialogChrome {
+    /** @brief The dialog surface, in global coordinates. */
+    NUIRect panel;
+    /** @brief Title-bar text. Rendered in the panel title style, not as a heading. */
+    std::string title;
+    /** @brief Draw the close affordance and reserve its slot. */
+    bool showClose = true;
+    /** @brief Pointer is over the close button. */
+    bool closeHovered = false;
+};
+
+/**
+ * @brief Paint a dialog's surface and title bar.
+ * @return The content rect below the title bar, for the caller to lay out into.
+ */
+NUIRect drawDialogChrome(NUIRenderer& renderer, const DialogChrome& chrome);
+
+/** @brief The close button's rect for a dialog surface — hit testing and hover. */
+NUIRect dialogCloseButtonRect(const NUIRect& panel);
 
 /**
  * @brief Unified panel chrome for all child windows (plugin editors, Settings, etc.).
@@ -35,6 +76,11 @@ public:
     void setBadgeText(const std::string& text);   // empty = no badge
     void setOnClose(std::function<void()> callback) { m_onClose = std::move(callback); }
     void setCloseOnOutsideClick(bool close) { m_closeOnOutsideClick = close; }
+    bool closesOnOutsideClick() const { return m_closeOnOutsideClick; }
+    // SPEC 3 section 1.1: a docked panel is locked where it is; a right-click on the title bar asks for its menu.
+    void setLocked(bool locked) { m_locked = locked; }
+    bool isLocked() const { return m_locked; }
+    void setOnMenuRequested(std::function<void(const NUIPoint&)> callback) { m_onMenuRequested = std::move(callback); }
     bool isDraggingWindow() const { return m_isDraggingWindow; }
 
     // Derived classes render here; rect is the global content area (below title bar)
@@ -42,6 +88,11 @@ public:
 
     // Called when a title-bar drag ends (before m_isDraggingWindow is cleared)
     virtual void onDragEnd() {}
+
+    // Fired alongside onDragEnd when a title-bar drag ends. The plugin-editor
+    // position persistence (V8-C14 step 5b) hooks here to capture the dropped
+    // position; inert for every other AestraPanelWindow user.
+    void setOnWindowDragEnd(std::function<void()> callback) { m_onWindowDragEnd = std::move(callback); }
 
     // Helpers
     static constexpr float TITLE_BAR_H = 32.0f;
@@ -87,6 +138,29 @@ protected:
     // feel is unchanged. Add to the current value each drag frame.
     float knobDragStep(const NUIMouseEvent& event, float rangePx) const;
 
+    // One continuous knob an editor hands to handleKnobDrag(): where it is, and
+    // which parameter it moves.
+    struct KnobTarget {
+        NUIRect rect;
+        uint32_t paramId = 0;
+    };
+
+    // The whole knob interaction in one call, so editors stop repeating it:
+    //   - press on a target: begins a capture drag on that parameter
+    //   - motion while dragging: steps the value by knobDragStep(), clamped to
+    //     0..1, through @p set, and marks the editor dirty
+    //   - release while dragging: ends the capture
+    // Returns true when the event was consumed. Call it where the editor used to
+    // test its own knob rects, after any control that must win a press first.
+    // @p get / @p set read and write a normalised parameter value.
+    bool handleKnobDrag(const NUIMouseEvent& event, const KnobTarget* targets, size_t count, float rangePx,
+                        const std::function<float(uint32_t)>& get, const std::function<void(uint32_t, float)>& set);
+    // The parameter being dragged, or -1. Read-only for subclasses that draw a
+    // drag highlight; handleKnobDrag() owns it.
+    int knobDragParam() const { return m_knobDragParam; }
+
+    int m_knobDragParam = -1;
+
     // Window dragging from title bar
     bool m_isDraggingWindow = false;
     NUIPoint m_dragStartPos;
@@ -107,7 +181,10 @@ private:
     std::string m_title;
     std::string m_badgeText;
     std::function<void()> m_onClose;
+    std::function<void()> m_onWindowDragEnd;
     bool m_closeOnOutsideClick = true;
+    bool m_locked = false;
+    std::function<void(const NUIPoint&)> m_onMenuRequested;
     bool m_closeHovered = false;
     bool m_closePressed = false;
 

@@ -27,7 +27,11 @@ namespace Audio {
 constexpr float kTimelineRulerHeight = 28.0f;
 constexpr float kTimelineMinimapHeight = 24.0f;
 constexpr float kTimelineTimeBandHeight = kTimelineMinimapHeight + kTimelineRulerHeight;
-constexpr float kTimelineScrollbarWidth = 15.0f;
+// Must equal AestraUI::kOverlayScrollbarThickness — the DAW-wide gutter width
+// (spec 2 §2). It is restated rather than included because this header is kept
+// free of UI-framework dependencies so tests can use it; TrackManagerUI.cpp
+// carries a static_assert that turns any drift into a compile error.
+constexpr float kTimelineScrollbarWidth = 10.0f;
 
 // FD-14 §10: nested lane rows (owned lanes of an expanded track) indent this
 // far inside the track's primary row, leaving a gutter that reads as nesting.
@@ -57,6 +61,17 @@ inline float timelineGridStartX(float basisOriginX, float controlAreaWidth) {
 /** @brief Resolve the last interactive grid pixel in the same stated basis. */
 inline float timelineGridEndX(float basisOriginX, float boundsWidth) {
     return basisOriginX + boundsWidth - kTimelineScrollbarWidth;
+}
+
+/**
+ * @brief Width of a track row: the whole plane, up to the scrollbar.
+ *
+ * Rows used to stop 5px short of timelineGridEndX() while the plane's gridlines ran on to the
+ * scrollbar, and clips painted a further 5px short of the row. The result was a strip at the
+ * right edge where clips never reached (SPEC 3 §2.3). A row ends exactly where the grid does.
+ */
+inline float timelineTrackRowWidth(float boundsWidth) {
+    return std::max(0.0f, timelineGridEndX(0.0f, boundsWidth));
 }
 
 /** @brief Resolve the first track-row pixel in the caller's stated y basis. */
@@ -136,6 +151,28 @@ inline float safeClampFloat(float value, float a, float b) {
     if (value >= hi)
         return hi;
     return value;
+}
+
+/**
+ * @brief Whether a hover-based timeline cursor claim is still current.
+ *
+ * The timeline learns the pointer position only from mouse events that reach
+ * it. A popup above it (a clip context menu, a dialog) consumes those events, so
+ * the timeline's position freezes where the pointer left it. The window sees
+ * every move, so the two positions disagree exactly when something above the
+ * timeline took the event, and a claim made from the frozen position must not
+ * hide the real pointer.
+ *
+ * Both positions are the same window-space integers converted to float, so they
+ * match exactly when current; the tolerance only absorbs float noise. Before the
+ * window has reported any position there is nothing to compare against, and the
+ * claim stands.
+ */
+inline bool isTimelineHoverPointerCurrent(float timelineX, float timelineY, float windowX, float windowY,
+                                          bool haveWindowPointer) {
+    if (!haveWindowPointer)
+        return true;
+    return std::abs(timelineX - windowX) < 0.5f && std::abs(timelineY - windowY) < 0.5f;
 }
 
 } // namespace Audio

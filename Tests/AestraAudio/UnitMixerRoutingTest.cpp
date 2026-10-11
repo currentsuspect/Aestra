@@ -334,8 +334,10 @@ int main() {
     auto* alternateDestination = tracks.addChannelWithId("Alternate Insert", 88);
     require(alternateDestination != nullptr, "Alternate insert setup failed");
     AudioQueueCommand capturedMixerCommand{};
-    alternateDestination->setCommandSink(
-        [&capturedMixerCommand](const AudioQueueCommand& command) { capturedMixerCommand = command; });
+    alternateDestination->setCommandSink([&capturedMixerCommand](const AudioQueueCommand& command) {
+        capturedMixerCommand = command;
+        return true;
+    });
     alternateDestination->setPan(0.25f);
     require(capturedMixerCommand.type == AudioQueueCommandType::SetTrackPan && capturedMixerCommand.channelId == 88,
             "Mixer control command used a derived dense index instead of its stable Insert ID");

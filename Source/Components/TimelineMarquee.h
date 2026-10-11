@@ -40,6 +40,36 @@ enum class MarqueeEventKind {
     Other,   // scroll, enter/leave, synthetic: consumed, no state change
 };
 
+/// Where a marquee began. The two differ only in what its release selects (SPEC 3 §1.2).
+enum class MarqueeOrigin {
+    Tool, // the Multi-Select tool: either button, anywhere in the track area
+    Grid, // a left press on empty grid in the Select tool: the default gesture
+};
+
+/// A grid press that never travels this far is a click, not a band.
+inline constexpr float kGridMarqueeClickSlopPx = 3.0f;
+
+/// What a finished marquee does with its band.
+struct MarqueeReleasePlan {
+    bool applySelection; ///< Hit-test clips against the band and apply the modifier intent.
+    bool trackFallback;  ///< When no clip was boxed, select the lanes the band crossed.
+};
+
+/**
+ * The Multi-Select tool keeps its lane fallback. A grid marquee selects clips and nothing else:
+ * the grid is the grid and lane selection belongs to the header rail (owner direction
+ * 2026-09-19), so a plain click on empty grid, the most common grid gesture there is, must not
+ * light up a lane. And a grid click that never became a band selects nothing at all: the press
+ * already cleared the selection, and applying a zero-size band would re-run that with no gain.
+ */
+constexpr MarqueeReleasePlan marqueeReleasePlan(MarqueeOrigin origin, float width, float height) {
+    if (origin == MarqueeOrigin::Grid) {
+        const bool click = width < kGridMarqueeClickSlopPx && height < kGridMarqueeClickSlopPx;
+        return {!click, false};
+    }
+    return {true, true};
+}
+
 struct TimelineMarqueeDrag {
     /// Begin a drag on a marquee-button press inside the track area. Returns
     /// true when a new drag started (the event is consumed).

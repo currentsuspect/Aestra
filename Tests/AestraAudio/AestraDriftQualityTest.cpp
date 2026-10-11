@@ -232,23 +232,50 @@ bool testSampleRateExtremes() {
     return ok;
 }
 
+// Bypass must be a pure delay of exactly getLatencySamples(), not a
+// sample-exact copy. EffectChain::getTotalLatency() counts this plugin's
+// latency whenever the slot is not host-bypassed and it cannot see the
+// plugin's own Bypass knob, so a straight copy placed Drift's reported
+// latency (up to ~964 samples) early against everything downstream in a
+// delay-compensated chain. The priming block is silent so the expected output
+// is exactly "input delayed by the reported latency".
 bool testBypassParity() {
     AestraDrift drift;
-    drift.initialize(48000.0, 257u);
+    drift.initialize(48000.0, 2048u);
     drift.activate();
     drift.setParameter(AestraDrift::kBypass, 1.0f);
-    std::vector<float> inputL(257);
-    std::vector<float> inputR(257);
-    std::vector<float> outputL(257, std::numeric_limits<float>::quiet_NaN());
-    std::vector<float> outputR(257, std::numeric_limits<float>::quiet_NaN());
+
+    constexpr uint32_t kFrames = 2048;
+    const std::vector<float> silence(kFrames, 0.0f);
+    {
+        std::vector<float> outL(kFrames, 0.0f), outR(kFrames, 0.0f);
+        const float* inputs[] = {silence.data(), silence.data()};
+        float* outs[] = {outL.data(), outR.data()};
+        drift.process(inputs, outs, 2u, 2u, kFrames);
+    }
+
+    const uint32_t latency = drift.getLatencySamples();
+    std::vector<float> inputL(kFrames);
+    std::vector<float> inputR(kFrames);
+    std::vector<float> outputL(kFrames, std::numeric_limits<float>::quiet_NaN());
+    std::vector<float> outputR(kFrames, std::numeric_limits<float>::quiet_NaN());
     for (size_t i = 0; i < inputL.size(); ++i) {
         inputL[i] = static_cast<float>(i) / static_cast<float>(inputL.size());
         inputR[i] = -inputL[i];
     }
     const float* inputs[] = {inputL.data(), inputR.data()};
     float* outputs[] = {outputL.data(), outputR.data()};
-    drift.process(inputs, outputs, 2u, 2u, static_cast<uint32_t>(inputL.size()));
-    return require(outputL == inputL && outputR == inputR, "bypass is not sample-exact");
+    drift.process(inputs, outputs, 2u, 2u, kFrames);
+
+    for (size_t i = 0; i < inputL.size(); ++i) {
+        const float expectL = (i >= latency) ? inputL[i - latency] : 0.0f;
+        const float expectR = (i >= latency) ? inputR[i - latency] : 0.0f;
+        if (std::fabs(outputL[i] - expectL) > 1e-6f)
+            return require(false, "bypassed left channel is not the input delayed by the reported latency");
+        if (std::fabs(outputR[i] - expectR) > 1e-6f)
+            return require(false, "bypassed right channel is not the input delayed by the reported latency");
+    }
+    return require(true, "bypass is not latency-aligned");
 }
 
 bool testCenteredStereoSpread() {
@@ -290,42 +317,90 @@ bool testTextureIsOptional() {
     return ok;
 }
 
+// Inverted under the pre-user format reset (FD-24). This used to assert that V1
+// and V2 blobs load, that parameter IDs did not move across the migration, and
+// that parameters added since then arrive at their defaults. All of that
+// migration machinery is deleted by decision.
+//
+// What replaces it is the direction that matters and that nothing else checks:
+// a pre-reset blob is REJECTED, and a rejected load leaves the plugin untouched
+// at its declared defaults. Half-reading is the failure being guarded -- it
+// silently accepts a short parameter array, leaves the remainder at defaults,
+// and is indistinguishable from a successful load. Drift's deleted reader even
+// had a v1 quirk (forcing kGrain to zero) that proves the shape: a version
+// number was being interpreted as "this many parameters", which is exactly the
+// assumption the canonical format removes.
 bool testStateMigration() {
     constexpr uint32_t magic = 0x44524654;
-    constexpr uint32_t version = 1;
-    const float legacyValues[] = {0.75f, 0.2f, 0.8f, 0.0f};
-    std::vector<uint8_t> legacy(sizeof(magic) + sizeof(version) + sizeof(legacyValues));
-    std::memcpy(legacy.data(), &magic, sizeof(magic));
-    std::memcpy(legacy.data() + sizeof(magic), &version, sizeof(version));
-    std::memcpy(legacy.data() + sizeof(magic) + sizeof(version), legacyValues, sizeof(legacyValues));
+    bool ok = true;
 
+    // Declared defaults, read from the ParamSpec table rather than repeated here,
+    // so this cannot drift from the table it is checking.
+    // Defaults read off a freshly-initialized instance, so this compares against
+    // what the ParamSpec table actually seeds rather than a second hand-written
+    // copy of it that could drift.
+    AestraDrift reference;
+    reference.initialize(48000.0, 256);
+    std::vector<float> declared(AestraDrift::kParamCount);
+    for (uint32_t i = 0; i < AestraDrift::kParamCount; ++i)
+        declared[i] = reference.getParameter(i);
+
+    const auto expectsDeclaredDefaults = [&](const AestraDrift& d, const char* what) {
+        for (uint32_t i = 0; i < AestraDrift::kParamCount; ++i) {
+            if (std::fabs(d.getParameter(i) - declared[i]) > 1.0e-7f) {
+                std::cerr << what << ": a rejected blob still mutated parameter " << i << " (" << d.getParameter(i)
+                          << " vs declared " << declared[i] << ")\n";
+                return false;
+            }
+        }
+        return true;
+    };
+
+    // Pre-reset V1: 4 parameters, and a version field the old reader used as a
+    // parameter count.
+    {
+        constexpr uint32_t version1 = 1;
+        const float legacyValues[] = {0.75f, 0.2f, 0.8f, 0.0f};
+        std::vector<uint8_t> legacy(sizeof(magic) + sizeof(version1) + sizeof(legacyValues));
+        std::memcpy(legacy.data(), &magic, sizeof(magic));
+        std::memcpy(legacy.data() + sizeof(magic), &version1, sizeof(version1));
+        std::memcpy(legacy.data() + sizeof(magic) + sizeof(version1), legacyValues, sizeof(legacyValues));
+
+        AestraDrift drift;
+        drift.initialize(48000.0, 256);
+        ok &= require(!drift.loadState(legacy), "pre-reset V1 state was accepted");
+        ok &= expectsDeclaredDefaults(drift, "V1");
+    }
+
+    // Pre-reset V2: 9 parameters.
+    {
+        constexpr uint32_t version2 = 2;
+        const float v2Values[] = {0.6f, 0.3f, 0.7f, 0.0f, 0.45f, 0.2f, 0.1f, 0.4f, 0.55f};
+        std::vector<uint8_t> v2(sizeof(magic) + sizeof(version2) + sizeof(v2Values));
+        std::memcpy(v2.data(), &magic, sizeof(magic));
+        std::memcpy(v2.data() + sizeof(magic), &version2, sizeof(version2));
+        std::memcpy(v2.data() + sizeof(magic) + sizeof(version2), v2Values, sizeof(v2Values));
+
+        AestraDrift driftV2;
+        driftV2.initialize(48000.0, 256);
+        ok &= require(!driftV2.loadState(v2), "pre-reset V2 state was accepted");
+        ok &= expectsDeclaredDefaults(driftV2, "V2");
+    }
+
+    // The canonical format still round-trips, including across a sample-rate
+    // change -- that is the contract the reset has to preserve.
     AestraDrift drift;
     drift.initialize(48000.0, 256);
-    bool ok = require(drift.loadState(legacy), "legacy V1 state was rejected");
-    for (uint32_t i : {AestraDrift::kPitch, AestraDrift::kMix, AestraDrift::kBypass})
-        ok &= require(std::fabs(drift.getParameter(i) - legacyValues[i]) < 1.0e-7f,
-                      "legacy parameter ID moved during migration");
-    ok &= require(drift.getParameter(AestraDrift::kGrain) == 0.0f, "legacy Grain did not migrate to PURE");
-    ok &= require(drift.getParameter(AestraDrift::kFine) == 0.5f, "legacy Fine default is not neutral");
-    ok &= require(drift.getParameter(AestraDrift::kSpread) == 0.0f, "legacy Spread default is not pure");
-    ok &= require(drift.getParameter(AestraDrift::kMotion) == 0.0f, "legacy Motion default is not pure");
-    ok &= require(drift.getParameter(AestraDrift::kOutput) == 0.5f, "legacy Output default is not unity");
-    ok &= require(drift.getParameter(AestraDrift::kTexture) == 0.0f, "legacy Texture default is not off");
-
-    constexpr uint32_t version2 = 2;
-    const float v2Values[] = {0.6f, 0.3f, 0.7f, 0.0f, 0.45f, 0.2f, 0.1f, 0.4f, 0.55f};
-    std::vector<uint8_t> v2(sizeof(magic) + sizeof(version2) + sizeof(v2Values));
-    std::memcpy(v2.data(), &magic, sizeof(magic));
-    std::memcpy(v2.data() + sizeof(magic), &version2, sizeof(version2));
-    std::memcpy(v2.data() + sizeof(magic) + sizeof(version2), v2Values, sizeof(v2Values));
-    AestraDrift restoredV2;
-    restoredV2.initialize(48000.0, 256);
-    ok &= require(restoredV2.loadState(v2), "V2 state was rejected");
-    ok &= require(restoredV2.getParameter(AestraDrift::kTexture) == 0.0f, "V2 Texture default is not off");
-
     for (uint32_t i = 0; i < AestraDrift::kParamCount; ++i)
         drift.setParameter(i, 0.1f + 0.8f * static_cast<float>(i) / static_cast<float>(AestraDrift::kParamCount - 1));
     const auto state = drift.saveState();
+
+    uint32_t version = 0;
+    std::memcpy(&version, state.data() + sizeof(uint32_t), sizeof(version));
+    // v2 since the keyed format landed: each entry carries its own id, so a
+    // parameter's identity no longer depends on its position in the table.
+    ok &= require(version == 2u, "canonical Drift blob is written at the keyed version 2");
+
     AestraDrift restored;
     restored.initialize(96000.0, 511);
     ok &= require(restored.loadState(state), "current state round-trip was rejected");

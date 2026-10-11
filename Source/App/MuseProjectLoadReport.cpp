@@ -105,6 +105,10 @@ bool isDegraded(const ProjectSerializer::LoadResult& result, MuseProjectLoadOrig
            origin == MuseProjectLoadOrigin::Recovery ||
            result.integrity == ProjectSerializer::LoadIntegrity::Mismatch ||
            !result.missingAssets.empty() || !result.missingPlugins.empty() ||
+           // A slot left empty by a plugin that rejected its state is a degraded
+           // load even though the blob parsed cleanly: those settings are not
+           // being applied right now (#1014).
+           !result.unreadablePluginState.empty() ||
            (result.report && !result.report->issues.empty());
 }
 
@@ -115,6 +119,7 @@ JSON makeMuseProjectLoadReport(const ProjectSerializer::LoadResult& result,
     JSON warnings = JSON::array();
     JSON errors = JSON::array();
     JSON missingPlugins = JSON::array();
+    JSON unreadablePluginState = JSON::array();
     JSON missingAssets = JSON::array();
     JSON unrestoredState = JSON::array();
 
@@ -170,6 +175,40 @@ JSON makeMuseProjectLoadReport(const ProjectSerializer::LoadResult& result,
         unrestoredState.push(unrestored);
     }
 
+    // A plugin that IS installed but rejected its own state (#1014). Structurally
+    // identical to the block above and semantically the opposite: a missing
+    // plugin is not on this machine, this one IS installed and simply could not
+    // read what it was given. placeholderPreserved is false on the rejection
+    // entry because it is the STATE that was rejected, not the plugin.
+    for (const auto& plugin : result.unreadablePluginState) {
+        const JSON evidence = pluginEvidence(plugin.location);
+
+        JSON rejected = JSON::object();
+        rejected.set("pluginId", JSON(plugin.pluginId));
+        rejected.set("location", JSON(plugin.location));
+        rejected.set("placeholderPreserved", JSON(false));
+        rejected.set("issueCode", JSON("plugin_state_rejected"));
+        rejected.set("evidence", evidence);
+        unreadablePluginState.push(rejected);
+
+        warnings.push(makeIssueEntry(
+            "plugin_state_rejected",
+            "Plugin rejected its saved settings; the slot was left empty and the settings preserved on save",
+            evidence));
+
+        JSON unrestored = JSON::object();
+        unrestored.set("issueCode", JSON("plugin_state_rejected"));
+        // NOT "plugin_instance": the slot is empty, but the reason is that the
+        // saved state would not load -- not that the plugin is absent. A
+        // consumer keying off plugin_instance would report the user as missing
+        // a plugin they have installed, and tell them to install it.
+        unrestored.set("stateKind", JSON("plugin_state"));
+        unrestored.set("restored", JSON(false));
+        unrestored.set("placeholderPreserved", JSON(false));
+        unrestored.set("evidence", evidence);
+        unrestoredState.push(unrestored);
+    }
+
     for (const auto& path : result.missingAssets) {
         const JSON evidence = assetEvidence(path);
 
@@ -212,6 +251,7 @@ JSON makeMuseProjectLoadReport(const ProjectSerializer::LoadResult& result,
     report.set("recovery", recovery);
     report.set("integrity", JSON(integrityName(result.integrity)));
     report.set("missingPlugins", missingPlugins);
+    report.set("unreadablePluginState", unreadablePluginState);
     report.set("missingAssets", missingAssets);
     report.set("unrestoredState", unrestoredState);
     report.set("warnings", warnings);

@@ -7,7 +7,7 @@
 #include "../AestraUI/Base/NUISlider.h"
 #include "../App/ServiceLocator.h"
 #include "AudioDeviceManager.h"
-#include "../Core/MixerUIPreferences.h"
+#include "../Core/UISurfaceStore.h"
 #include "../../AestraCore/include/AestraLog.h"
 
 using namespace AestraUI;
@@ -41,6 +41,8 @@ MixerPanel::MixerPanel(std::shared_ptr<TrackManager> trackManager)
     // Set as content of WindowPanel
     setContent(m_newMixer);
 
+    // Apply the stored preference BEFORE wiring the callback: setInspectorExpandedPreference
+    // fires onInspectorPreferenceChanged, so wiring first would echo the load into a save.
     loadUIPreferences();
     m_newMixer->onInspectorPreferenceChanged = [this](bool) { saveUIPreferences(); };
 
@@ -51,27 +53,30 @@ void MixerPanel::loadUIPreferences()
 {
     if (!m_newMixer) return;
 
-    const std::string path = Aestra::MixerUIPreferences::settingsPath();
-    if (path.empty()) {
-        AESTRA_LOG_WARNING("No config directory available; mixer layout will not persist");
+    const auto* store = Aestra::ServiceLocator::get<Aestra::UISurfaceStoreFile>();
+    if (!store) {
+        AESTRA_LOG_WARNING("No UI preference store; mixer layout will not persist");
         return;
     }
 
-    // Absent keys keep the panel's own defaults; load() never invents a false.
-    const Aestra::MixerUIPreferences prefs = Aestra::MixerUIPreferences::load(path);
-    m_newMixer->setInspectorExpandedPreference(prefs.inspectorExpanded);
+    // A preference the user never set keeps the panel's own default; nothing is invented.
+    if (const auto expanded = store->boolPreference(Aestra::UISurfaceKeys::kMixerInspectorExpanded)) {
+        m_newMixer->setInspectorExpandedPreference(*expanded);
+    }
 }
 
 void MixerPanel::saveUIPreferences() const
 {
     if (!m_newMixer) return;
 
-    const std::string path = Aestra::MixerUIPreferences::settingsPath();
-    if (path.empty()) return;
+    auto* store = Aestra::ServiceLocator::get<Aestra::UISurfaceStoreFile>();
+    if (!store) return;
 
-    Aestra::MixerUIPreferences prefs;
-    prefs.inspectorExpanded = m_newMixer->getInspectorExpandedPreference();
-    prefs.save(path);
+    // The explicit preference, never the width-constrained effective state.
+    if (!store->setBoolPreference(Aestra::UISurfaceKeys::kMixerInspectorExpanded,
+                                  m_newMixer->getInspectorExpandedPreference())) {
+        AESTRA_LOG_WARNING("Failed to save mixer layout to " + store->path());
+    }
 }
 
 

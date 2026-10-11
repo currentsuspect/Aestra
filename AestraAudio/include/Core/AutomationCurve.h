@@ -2,6 +2,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -33,6 +34,46 @@ inline AutomationTarget automationTargetFromRawInt(int rawValue) noexcept {
     return static_cast<AutomationTarget>(static_cast<uint8_t>(std::clamp(rawValue, 0, 255)));
 }
 
+/**
+ * @brief The value a curve of this target evaluates to when it has no points.
+ *
+ * A Volume curve is a gain multiplier, so its neutral is unity — 0.0f is
+ * silence, not "no automation". Pan is bipolar with centre at 0. Custom is
+ * plugin-defined, where 0 is the only safe assumption.
+ *
+ * This lives in the model deliberately (FD-20): a Volume curve is unity
+ * because it is a Volume curve, not because one UI path remembered to say so.
+ * Before this existed, exactly one call site patched it — the UI's
+ * create-on-first-click path — so a curve arriving by any other route was
+ * neutral-at-silence.
+ */
+inline constexpr float neutralDefaultFor(AutomationTarget target) noexcept {
+    return target == AutomationTarget::Volume ? 1.0f : 0.0f;
+}
+
+/**
+ * @brief Shape of one automation segment (V8-A6, project format v4).
+ *
+ * @p t is the position within the segment (0..1); @p tension is the segment's
+ * starting point's `curve`, clamped to [-1, 1]. 0 is exactly linear. Positive tension
+ * moves toward the end value early (a fast rise), negative late. A symmetric
+ * exponential: exact at both ends and monotonic for every tension, so a segment never
+ * overshoots its two values.
+ *
+ * Before v4 evaluation ignored tension while the UI stored 0.5 on every point, so
+ * honouring the stored values would have bent every curve ever drawn. Loading a
+ * pre-v4 project therefore runs ProjectMigrations' v3->v4 step, which sets every
+ * tension to 0 (the same audio) and marks the project upgraded.
+ */
+inline double automationTensionShape(double t, float tension) {
+    constexpr double kStrength = 6.0; // the bend at |tension| == 1
+    const double k = std::clamp(static_cast<double>(tension), -1.0, 1.0) * kStrength;
+    if (std::abs(k) < 1e-6) {
+        return t;
+    }
+    return (1.0 - std::exp(-k * t)) / (1.0 - std::exp(-k));
+}
+
 struct AutomationPoint {
     // beat is the authoritative position domain: it is what the serializer
     // persists, what the UI edits, and what evaluation/sorting use. sample is
@@ -42,8 +83,23 @@ struct AutomationPoint {
     uint64_t sample{0};
     float value{0.0f};
     double beat{0.0};
-    float curve{0.0f};    // Curve tension (serialized; rendering does not use it yet)
+    float curve{0.0f};    // Tension of the segment that starts here: 0 linear, (0,1] early, [-1,0) late (V8-A6)
     bool selected{false}; // Selection state for UI
+};
+
+/**
+ * @brief A movable, copyable stretch of a curve: an automation "clip" (V8-A7).
+ *
+ * A region is a closed span of beats on one curve, tight to its points: startBeat
+ * is its first point, endBeat its last. The points inside the span ARE the region;
+ * nothing else is stored, so the engine still evaluates the curve exactly as before
+ * and a curve without regions plays and saves as it always has. Points outside every
+ * span are loose, as drawn by hand. Regions of one curve never overlap.
+ */
+struct AutomationRegion {
+    uint64_t id{0}; ///< unique within its curve
+    double startBeat{0.0};
+    double endBeat{0.0};
 };
 
 struct AutomationCurve {
@@ -63,15 +119,28 @@ struct AutomationCurve {
     // findSlotByInstanceId. effectSlot is LEGACY — kept only for v1 project
     // migration and older-build compatibility; it never participates in
     // resolution. paramId is the plugin's stable parameter id (AGENTS.md §19).
-    // The engine applies Custom curves to Internal-format plugins only:
-    // their parameter storage is atomic, so per-block setParameter from the
-    // render thread is RT-safe; third-party formats need host param queues.
+    // The engine applies a Custom curve through the plugin's render-thread
+    // contract (IPluginInstance::supportsRealtimeAutomation / applyAutomation,
+    // V8-A5), never by checking the plugin's format. Internal plugins satisfy
+    // it with atomic parameter storage; VST3/CLAP adapters will satisfy it with
+    // a host parameter queue (#467) and until then are skipped and counted.
     uint64_t deviceInstanceId{0};
     uint32_t effectSlot{0};
     uint32_t paramId{0};
 
+    /** Not evaluated by the engine. Bounce in Place sets it once the curve's effect is baked into audio;
+     *  the points stay in the project so undo, or turning it back on, loses nothing. */
+    bool muted{false};
+
+    /** Clips on this curve (V8-A7). Empty until the first clip operation; see AutomationRegions.h. */
+    std::vector<AutomationRegion> regions;
+
     AutomationCurve() = default;
-    AutomationCurve(const std::string& n, AutomationTarget t) : name(n), target(t) {}
+    // defaultValue follows the target, so no construction path can produce a
+    // Volume curve that is neutral-at-silence. Only reachable when points is
+    // empty — getValueAtBeat returns a point value in every other case.
+    AutomationCurve(const std::string& n, AutomationTarget t)
+        : name(n), target(t), defaultValue(neutralDefaultFor(t)) {}
 
     /**
      * @brief Get the automation target type
@@ -134,13 +203,13 @@ struct AutomationCurve {
             return prev->value;
         }
 
-        // Linear interpolation in beat domain
+        // Interpolation in the beat domain, shaped by the segment's tension
         const double beatRange = next->beat - prev->beat;
         if (beatRange <= 0.0) {
             return prev->value;
         }
 
-        const double t = (beat - prev->beat) / beatRange;
+        const double t = automationTensionShape((beat - prev->beat) / beatRange, prev->curve);
         return prev->value + static_cast<float>(t) * (next->value - prev->value);
     }
 
@@ -162,9 +231,9 @@ struct AutomationCurve {
      * @param beat Beat position
      * @param samplesPerBeat Samples per beat for the current project tempo/rate
      * @param value Value at this point (normalized 0-1 for volume/pan)
-     * @param tension Curve tension for serialization (rendering does not use it yet)
+     * @param tension Tension of the segment starting at this point (0 = linear; see automationTensionShape)
      */
-    void addPoint(double beat, float value, double samplesPerBeat, float tension = 0.5f) {
+    void addPoint(double beat, float value, double samplesPerBeat, float tension = 0.0f) {
         AutomationPoint pt;
         pt.sample = static_cast<uint64_t>(beat * samplesPerBeat);
         pt.value = value;
@@ -197,6 +266,50 @@ struct AutomationCurve {
 
     bool isVisible() const { return true; }
 };
+
+/**
+ * @brief Compare two automation points by their undoable content.
+ *
+ * `selected` is UI state and `sample` is a stale tempo cache that nothing may
+ * evaluate or sort by (see AutomationPoint), so neither is content. Without
+ * this distinction a click that merely selected a point would register as an
+ * edit and push an undo step for nothing.
+ */
+inline bool automationPointsEqual(const AutomationPoint& a, const AutomationPoint& b) noexcept {
+    return a.beat == b.beat && a.value == b.value && a.curve == b.curve;
+}
+
+inline bool automationRegionsEqual(const std::vector<AutomationRegion>& a, const std::vector<AutomationRegion>& b) noexcept {
+    if (a.size() != b.size())
+        return false;
+    for (size_t i = 0; i < a.size(); ++i) {
+        if (a[i].id != b[i].id || a[i].startBeat != b[i].startBeat || a[i].endBeat != b[i].endBeat)
+            return false;
+    }
+    return true;
+}
+
+/** @brief Compare two curve vectors by undoable content; the V8-A1 no-op guard. */
+inline bool automationCurvesEqual(const std::vector<AutomationCurve>& a,
+                                  const std::vector<AutomationCurve>& b) noexcept {
+    if (a.size() != b.size())
+        return false;
+    for (size_t i = 0; i < a.size(); ++i) {
+        const AutomationCurve& x = a[i];
+        const AutomationCurve& y = b[i];
+        if (x.name != y.name || x.target != y.target || x.mixerChannelId != y.mixerChannelId ||
+            x.defaultValue != y.defaultValue || x.muted != y.muted || !automationRegionsEqual(x.regions, y.regions) || x.deviceInstanceId != y.deviceInstanceId || x.paramId != y.paramId) {
+            return false;
+        }
+        if (x.points.size() != y.points.size())
+            return false;
+        for (size_t p = 0; p < x.points.size(); ++p) {
+            if (!automationPointsEqual(x.points[p], y.points[p]))
+                return false;
+        }
+    }
+    return true;
+}
 
 } // namespace Audio
 } // namespace Aestra

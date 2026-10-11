@@ -689,6 +689,8 @@ void SampleEditorPanel::buildUI() {
     m_monoModeBtn = std::make_shared<NUIButton>("Mono");
     m_polyModeBtn = std::make_shared<NUIButton>("Poly");
     m_cutSelfModeBtn = std::make_shared<NUIButton>("Cut-Self");
+    m_keepLengthBtn = std::make_shared<NUIButton>("Keep length");
+    m_keepLengthBtn->setTooltip("Pitch notes without speeding up or slowing down the sample");
     styleActionButton(m_normalizeBtn);
     styleActionButton(m_reverseBtn);
     styleModeButton(m_oneShotModeBtn);
@@ -697,6 +699,7 @@ void SampleEditorPanel::buildUI() {
     styleModeButton(m_monoModeBtn);
     styleModeButton(m_polyModeBtn);
     styleModeButton(m_cutSelfModeBtn);
+    styleModeButton(m_keepLengthBtn);
     m_waveformHintLabel = makeLabel("Scroll to zoom  |  Drag handles to trim");
     m_waveformHintLabel->setTextColor(theme.getColor("textSecondary").withAlpha(0.56f));
     m_waveformHintLabel->setAlignment(NUILabel::Alignment::Right);
@@ -719,6 +722,7 @@ void SampleEditorPanel::buildUI() {
     m_monoModeBtn->setOnClick([this]() { setMonoModeInternal(true, true); });
     m_polyModeBtn->setOnClick([this]() { setMonoModeInternal(false, true); });
     m_cutSelfModeBtn->setOnClick([this]() { setCutSelfModeInternal(!m_cutSelfMode, true); });
+    m_keepLengthBtn->setOnClick([this]() { setKeepLengthPitchInternal(!m_keepLengthPitch, true); });
     updateModeButtons();
     updateMonoPolyControls();
 
@@ -763,6 +767,7 @@ void SampleEditorPanel::buildUI() {
     m_contentContainer->addChild(m_monoModeBtn);
     m_contentContainer->addChild(m_polyModeBtn);
     m_contentContainer->addChild(m_cutSelfModeBtn);
+    m_contentContainer->addChild(m_keepLengthBtn);
     m_contentContainer->addChild(m_pitchRootSlider);
     m_contentContainer->addChild(m_pitchCoarseSlider);
     m_contentContainer->addChild(m_pitchFineSlider);
@@ -965,6 +970,11 @@ void SampleEditorPanel::onResize(int width, int height) {
 
     const float pitchRowY = y;
     m_pitchLabel->setBounds(NUIRect(cb.x + pad, pitchRowY, contentW, labelH));
+    // Pitch mode lives with pitch: a toggle on the section's header row, centred on it.
+    const float keepLengthW = 92.0f;
+    const float keepLengthH = 20.0f;
+    m_keepLengthBtn->setBounds(NUIRect(cb.x + layoutW - pad - keepLengthW,
+                                       pitchRowY + (labelH - keepLengthH) * 0.5f, keepLengthW, keepLengthH));
     y = pitchRowY + labelH;
     const float pitchLabelW = 56.0f;
     const float pitchValueW = 64.0f;
@@ -1133,6 +1143,21 @@ void SampleEditorPanel::setCutSelfMode(bool cutSelf) {
     setCutSelfModeInternal(cutSelf, false);
 }
 
+void SampleEditorPanel::setKeepLengthPitchInternal(bool keepLength, bool notify) {
+    if (m_keepLengthPitch != keepLength) {
+        m_keepLengthPitch = keepLength;
+        if (notify && !m_suppressControlCallbacks) {
+            if (onKeepLengthPitchChanged) onKeepLengthPitchChanged(m_keepLengthPitch);
+            requestControlCommit();
+        }
+    }
+    updateMonoPolyControls();
+}
+
+void SampleEditorPanel::setKeepLengthPitch(bool keepLength) {
+    setKeepLengthPitchInternal(keepLength, false);
+}
+
 void SampleEditorPanel::updateMonoPolyControls() {
     auto& theme = NUIThemeManager::getInstance();
     const auto activeBg = theme.getColor("accentPrimary").withAlpha(0.22f);
@@ -1157,6 +1182,7 @@ void SampleEditorPanel::updateMonoPolyControls() {
     styleButton(m_monoModeBtn, m_monoMode);
     styleButton(m_polyModeBtn, !m_monoMode);
     styleButton(m_cutSelfModeBtn, m_cutSelfMode);
+    styleButton(m_keepLengthBtn, m_keepLengthPitch);
 
     const int voices = getVoiceCount();
     if (m_voiceCountValueLabel) {

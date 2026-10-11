@@ -16,6 +16,8 @@
 namespace Aestra {
 namespace Audio {
 class AudioEngine;
+class CommandTransaction;
+class PlaybackContextController;
 
 /**
  * @brief Piano Roll Panel - MIDI editor with piano keyboard
@@ -89,11 +91,15 @@ public:
     ScaleContext getHarmonyContext() const;
     /** @brief Current notes as shown by the editor view (including selection state). */
     const std::vector<AestraUI::MidiNote>& getNotes() const { return m_pianoRoll->getNotes(); }
+    /** @brief The playhead the editor shows, in pattern-local beats. */
+    double getPlayheadBeat() const { return m_pianoRoll->getPlayheadBeat(); }
     /**
      * @brief Bind the live audio engine used for transport/playhead sync.
      * @param engine Audio engine pointer, or nullptr to disable engine sync.
      */
     void setAudioEngine(AudioEngine* engine) { m_audioEngine = engine; }
+    /** @brief The playback-mode authority; the piano roll resizes the pattern loop only through it. */
+    void setPlaybackContext(PlaybackContextController* context) { m_playbackContext = context; }
     void setPlatformBridge(AestraUI::NUIPlatformBridge* bridge);
     bool handleKeyEvent(const AestraUI::NUIKeyEvent& event);
     
@@ -107,6 +113,7 @@ private:
 
     std::shared_ptr<TrackManager> m_trackManager;
     AudioEngine* m_audioEngine{nullptr};
+    PlaybackContextController* m_playbackContext{nullptr};
     std::shared_ptr<AestraUI::PianoRollView> m_pianoRoll;
     std::shared_ptr<AestraUI::TimelineMinimapBar> m_timelineMinimap;
     AestraUI::TimelineSummaryCache m_timelineSummaryCache;
@@ -124,6 +131,9 @@ private:
     // rendered as unit-colored ghosts, merged back verbatim on save.
     std::vector<MidiNote> m_otherUnitNotes;
     bool m_applyingUndoRedo{false};           // Guard flag to prevent re-entry
+    // The history entry recorded for the last edit, so a continuing edit (Alt+wheel
+    // velocity scrub) can fold into it instead of adding one entry per notch.
+    std::shared_ptr<CommandTransaction> m_lastEditTransaction;
     bool m_switchingUnit{false};              // Guards setEditingUnit against save-echo recursion
     bool m_wasVisible{false};
     bool m_followPlayhead{false}; // Opt-in viewport tracking (0.7.0 triage)

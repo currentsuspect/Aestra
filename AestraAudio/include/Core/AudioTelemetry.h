@@ -36,9 +36,7 @@ struct AudioTelemetry {
     // Running total + count of timed callbacks, for average callback time.
     std::atomic<uint64_t> totalCallbackNs{0};
     std::atomic<uint64_t> timedCallbackCount{0};
-    std::atomic<uint64_t> rtAllocationViolations{0};
-    std::atomic<uint64_t> rtLockViolations{0};
-    std::atomic<uint64_t> rtLogViolations{0};
+    std::atomic<uint64_t> rtMisuseViolations{0};
 
     // Callback budget context (set from the audio thread wrapper)
     std::atomic<uint32_t> lastBufferFrames{0};
@@ -89,11 +87,9 @@ struct AudioTelemetry {
     void incrementXruns() noexcept { xruns.fetch_add(1, std::memory_order_relaxed); }
     void incrementOverruns() noexcept { overruns.fetch_add(1, std::memory_order_relaxed); }
     void incrementSrcActiveBlocks() noexcept { srcActiveBlocks.fetch_add(1, std::memory_order_relaxed); }
-    void incrementRtAllocationViolations() noexcept {
-        rtAllocationViolations.fetch_add(1, std::memory_order_relaxed);
+    void incrementRtMisuseViolations() noexcept {
+        rtMisuseViolations.fetch_add(1, std::memory_order_relaxed);
     }
-    void incrementRtLockViolations() noexcept { rtLockViolations.fetch_add(1, std::memory_order_relaxed); }
-    void incrementRtLogViolations() noexcept { rtLogViolations.fetch_add(1, std::memory_order_relaxed); }
 
     /**
      * @brief B-009: Record an underrun and manage recovery state
@@ -231,11 +227,9 @@ struct AudioTelemetry {
     uint64_t getMaxCallbackNs() const noexcept { return maxCallbackNs.load(std::memory_order_relaxed); }
     uint64_t getLastCallbackNs() const noexcept { return lastCallbackNs.load(std::memory_order_relaxed); }
     uint64_t getTimedCallbackCount() const noexcept { return timedCallbackCount.load(std::memory_order_relaxed); }
-    uint64_t getRtAllocationViolations() const noexcept {
-        return rtAllocationViolations.load(std::memory_order_relaxed);
+    uint64_t getRtMisuseViolations() const noexcept {
+        return rtMisuseViolations.load(std::memory_order_relaxed);
     }
-    uint64_t getRtLockViolations() const noexcept { return rtLockViolations.load(std::memory_order_relaxed); }
-    uint64_t getRtLogViolations() const noexcept { return rtLogViolations.load(std::memory_order_relaxed); }
     uint32_t getLastBufferFrames() const noexcept { return lastBufferFrames.load(std::memory_order_relaxed); }
     uint32_t getLastSampleRate() const noexcept { return lastSampleRate.load(std::memory_order_relaxed); }
     uint64_t getCycleHz() const noexcept { return cycleHz.load(std::memory_order_relaxed); }

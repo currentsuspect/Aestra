@@ -1,5 +1,6 @@
 // © 2026 Aestra Studios — All Rights Reserved.
 
+#include "Widgets/AestraPanelWindow.h"
 #include "ConfirmationDialog.h"
 #include "NUIThemeSystem.h"
 #include "RecoveryDialog.h"
@@ -42,10 +43,14 @@ void testRecoveryRequiresMatchingPressAndRelease() {
 
     const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
     const float dialogX = (800.0f - 450.0f) * 0.5f;
-    const float dialogY = (600.0f - 180.0f) * 0.5f;
+    // These mirror RecoveryDialog::calculateLayout(). The title-bar term is the
+    // shared chrome's (spec 2 §5) rather than a second copy of 32, so the two
+    // cannot drift if the chrome's bar height is retuned.
+    const float dialogH = 180.0f + AestraUI::AestraPanelWindow::TITLE_BAR_H;
+    const float dialogY = (600.0f - dialogH) * 0.5f;
     const float startX = dialogX + (450.0f - (240.0f + theme.spacingM)) * 0.5f;
     const float discardX = startX + 120.0f + theme.spacingM + 20.0f;
-    const float buttonY = dialogY + 180.0f - theme.layout.dialogActionHeight - theme.spacingM + 10.0f;
+    const float buttonY = dialogY + dialogH - theme.layout.dialogActionHeight - theme.spacingM + 10.0f;
 
     check(dialog.onMouseEvent(leftButton(discardX, buttonY, true)), "recovery consumes the button press");
     check(dialog.isDialogVisible() && callbacks == 0, "recovery waits for the matching release");
@@ -66,11 +71,13 @@ void testConfirmationReleaseCannotEscapeModal() {
 
     const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
     const float dialogX = (800.0f - 400.0f) * 0.5f;
-    const float dialogY = (600.0f - 172.0f) * 0.5f;
+    // Mirrors ConfirmationDialog::calculateLayout(), title bar included.
+    const float dialogH = 172.0f + AestraUI::AestraPanelWindow::TITLE_BAR_H;
+    const float dialogY = (600.0f - dialogH) * 0.5f;
     const float totalWidth = 84.0f + 104.0f + 96.0f + theme.spacingS * 2.0f;
     const float startX = dialogX + 400.0f - theme.spacingL - totalWidth;
     const float dontSaveX = startX + 84.0f + theme.spacingS + 20.0f;
-    const float buttonY = dialogY + 172.0f - theme.spacingL - theme.layout.dialogActionHeight + 10.0f;
+    const float buttonY = dialogY + dialogH - theme.spacingL - theme.layout.dialogActionHeight + 10.0f;
 
     dialog.onMouseEvent(leftButton(dontSaveX, buttonY, true));
     dialog.onMouseEvent(leftButton(dontSaveX, buttonY, false));

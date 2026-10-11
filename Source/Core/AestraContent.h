@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include "../AestraUI/Widgets/PanelMode.h"
 #include "../AestraAudio/include/Commands/CommandParser.h"
 #include "../AestraAudio/include/Commands/CommandResult.h"
 #include "../AestraAudio/include/Commands/SessionLog.h"
@@ -28,6 +29,7 @@
 #include "OverlayLayer.h"
 #include "PatternSource.h"
 #include "TransportBar.h"
+#include "UISurfaceStore.h"
 #include "ViewTypes.h"
 
 #include <atomic>
@@ -37,6 +39,7 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 // Forward declarations - AestraUI
@@ -56,6 +59,7 @@ namespace AestraUI {
 namespace Aestra::Audio {
     class AudioEngine;
     class MidiInputService;
+    class PlaybackContextController;
     class TrackManager;
     class TrackManagerUI;
     class PreviewEngine;
@@ -120,23 +124,17 @@ public:
         /** @brief True when the playlist/timeline view is the active overlay. */
         bool playlistActive = true;
 
-        /** @brief Mixer overlay bounds in overlay-local coordinates. */
-        AestraUI::NUIRect mixerRect = {0, 0, 800, 400};
-        /** @brief Piano-roll overlay bounds in overlay-local coordinates. */
-        AestraUI::NUIRect pianoRollRect = {0, 0, 800, 450};
-        /** @brief Arsenal overlay bounds in overlay-local coordinates. */
-        AestraUI::NUIRect sequencerRect = {0, 0, 600, 300};
-        AestraUI::NUIRect historyRect = {0, 80, 280, 460};
-        AestraUI::NUIRect takesRect = {0, 80, 320, 480};
-
         /** @brief True while an overlay panel is being dragged. */
         bool isDragging = false;
         /** @brief View currently being dragged. */
         Aestra::Audio::ViewType draggingView = Aestra::Audio::ViewType::Playlist;
         /** @brief Mouse origin in overlay coordinates for the active drag. */
-        AestraUI::NUIPoint dragStartMouseOverlay = {0, 0};
-        /** @brief Panel rectangle captured at drag start. */
-        AestraUI::NUIRect dragStartRect = {0, 0, 0, 0};
+        AestraUI::NUIPoint dragStartMouse = {0, 0}; // window-absolute
+        /** @brief Panel origin in overlay coordinates at drag start. Drag
+         * gestures reuse the stored size preference, never the displayed
+         * size, so dragging a fitted panel cannot bake the fit into the
+         * preference. */
+        AestraUI::NUIPoint dragStartPos = {0, 0};
     };
 
     /** @brief Advance workspace state and child-panel updates. */
@@ -212,6 +210,20 @@ public:
     float getBrowserWidth() const;
     /** @brief Set the active browser column width. */
     void setBrowserWidth(float width);
+    /** @brief Seed rail widths from the surface store on first layout.
+     *
+     * V8-C14 step 5c: prefs start unset; a stored width applies wholesale,
+     * an absent entry leaves the pref for the computed default below. Runs
+     * every layout pass but only acts while a pref is still unset. */
+    void seedDockedRailWidths();
+    /** @brief Persist the dragged rail's width at resize-drag end.
+     *
+     * Single write per gesture (the store saves write-through): per-move
+     * drag updates stay in the memory prefs. Reads m_browserResizeTarget to
+     * write only the rail the user actually dragged — layout has by then
+     * backfilled both prefs with computed defaults, which must stay
+     * memory-only. Unset prefs are skipped. */
+    void persistDockedRailWidths();
     /** @brief Check whether the left browser area is visible. */
     bool isBrowserVisible() const;
     /** @brief Show or hide the left browser area. */
@@ -251,10 +263,16 @@ public:
     AestraUI::NUIRect computeSafeRect() const;
     /** @brief Get the x coordinate of the visible browser edge. */
     float getVisibleBrowserEdge() const;
-    /** @brief Compute the rectangle panels are allowed to occupy. */
-    AestraUI::NUIRect computeAllowedRectForPanels() const;
-    /** @brief Compute the maximized overlay rectangle. */
-    AestraUI::NUIRect computeMaximizedRect() const;
+    /**
+     * @brief The single placement region for persistent surfaces (V8-C14 step 5).
+     *
+     * Replaces computeAllowedRectForPanels()/computeMaximizedRect(): one region,
+     * no minimum floor — per-surface size limits live in NUISizeLimits, where
+     * FD-18 constraint 4 puts them. A degenerate region is reported as-is;
+     * resolveSurfacePlacement answers DegenerateRegion and callers keep current
+     * bounds instead of inventing geometry.
+     */
+    AestraUI::NUIRect computePlacementRegion() const;
     /** @brief Clamp an overlay rectangle to the current allowed bounds. */
     AestraUI::NUIRect clampRectToAllowed(AestraUI::NUIRect panel, const AestraUI::NUIRect& allowed) const;
     /** @brief Resolve resize cursor style for floating panel edges at a mouse position. */
@@ -281,13 +299,29 @@ public:
     /**
      * @brief Wire the floating-panel behaviors shared by every overlay panel.
      *
-     * Covers maximize-refresh, the drag trio (begin/update/end), the clamped
-     * resize that persists into @p stateRect, and an optional minimum size.
-     * Panel-specific wiring (close action, visibility, z-order addChild)
-     * stays at the call site.
+     * Covers maximize-capture, the drag trio (begin/update/end) routed through
+     * captureSurfaceGesture, the resize handler routed through capture, and the
+     * panel minimum size. Geometry itself lives in the UISurfaceStore under the
+     * panel's key — never in ViewState. Panel-specific wiring (close action,
+     * visibility, z-order addChild) stays at the call site.
      */
-    void wireFloatingPanel(const std::shared_ptr<Aestra::Audio::WindowPanel>& panel, Aestra::Audio::ViewType view,
-                           AestraUI::NUIRect ViewState::* stateRect, float minWidth = 0.0f, float minHeight = 0.0f);
+    void wireFloatingPanel(const std::shared_ptr<Aestra::Audio::WindowPanel>& panel, Aestra::Audio::ViewType view);
+
+    // SPEC 3 section 1.1 (AestraContentPanelMode.cpp): Floating/Docked and Contextual/Keep Open per panel.
+    AestraUI::PanelMode panelMode(Aestra::Audio::ViewType view) const;
+    void applyPanelMode(Aestra::Audio::ViewType view);
+    void wireEditorMode();  ///< the plugin editors' shared mode, from the store
+    void wirePanelMode(const std::shared_ptr<Aestra::Audio::WindowPanel>& panel, Aestra::Audio::ViewType view);
+    void showPanelMenu(Aestra::Audio::ViewType view, const AestraUI::NUIPoint& at);
+    void noteOutsidePress(Aestra::Audio::ViewType view);  ///< a contextual panel saw a press outside it
+    void closeContextualPanels();                         ///< runs a frame later, once the press has been handled
+    int m_viewChangeSerial = 0;                           ///< bumped whenever a view is opened or closed
+    int m_outsidePressSerial = -1;
+    std::vector<Aestra::Audio::ViewType> m_outsidePressViews;
+    /** @brief View > Gather Panels: every open panel and editor back fully inside the window. */
+    void gatherPanels();
+    /** @brief View > Reset Panel Positions: default geometry for every panel; editors re-centred. */
+    void resetPanelPositions();
 
     /** @brief Begin dragging an overlay panel. */
     void beginPanelDrag(Aestra::Audio::ViewType view, const AestraUI::NUIPoint& mouseScreen);
@@ -295,6 +329,40 @@ public:
     void updatePanelDrag(Aestra::Audio::ViewType view, const AestraUI::NUIPoint& mouseScreen);
     /** @brief End the active overlay-panel drag. */
     void endPanelDrag(Aestra::Audio::ViewType view);
+
+    /** @brief The panel owned for a floating view, or nullptr for other views. */
+    std::shared_ptr<Aestra::Audio::WindowPanel> panelForView(Aestra::Audio::ViewType view);
+
+    // One accessor per floating panel, existing so the descriptor table can name
+    // a panel without friendship or type erasure. The five members are distinct
+    // derived types (MixerPanel, PianoRollPanel, ArsenalPanel, AestraHistoryPanel,
+    // TakesPanel), so they cannot share a member pointer; a pointer-to-member-
+    // function is compile-checked, allocates nothing and carries no std::any or
+    // std::function through the frame loop. Each is the upcast panelForView()
+    // already performed inside its switch arm.
+    std::shared_ptr<Aestra::Audio::WindowPanel> mixerWindowFor() const;
+    std::shared_ptr<Aestra::Audio::WindowPanel> pianoRollWindowFor() const;
+    std::shared_ptr<Aestra::Audio::WindowPanel> sequencerWindowFor() const;
+    std::shared_ptr<Aestra::Audio::WindowPanel> historyWindowFor() const;
+    std::shared_ptr<Aestra::Audio::WindowPanel> takesWindowFor() const;
+    /** @brief The app-owned surface store, or nullptr before AestraApp provides it. */
+    Aestra::UISurfaceStoreFile* surfaceStore() const;
+    /**
+     * @brief The stored preference for a floating panel, or its per-panel
+     * default when the user never moved, resized or maximized it. Never writes:
+     * an absent entry stays absent until a real gesture arrives.
+     */
+    Aestra::UISurfaceGeometry panelPreference(Aestra::Audio::ViewType view) const;
+    /** @brief Persist a captured preference (save-on-change, shared store). */
+    void savePanelPreference(Aestra::Audio::ViewType view, const Aestra::UISurfaceGeometry& preference);
+    /**
+     * @brief Show a panel from its preference: setBounds from
+     * resolveSurfacePlacement against the current region, and derive the
+     * widget maximized flag from the preference — never the reverse.
+     * @return The applied bounds, or the panel's current bounds when the
+     * region is degenerate (nothing is moved then).
+     */
+    AestraUI::NUIRect applyPanelPreference(Aestra::Audio::ViewType view);
 
     /** @brief Update the transport/UI audio-active state. */
     void setAudioStatus(bool active);
@@ -322,6 +390,8 @@ public:
     void playFromCurrentFocus();
     /** @brief Stop playback based on the current focus mode. */
     void stopFromCurrentFocus(bool hardStop = false);
+    /** Log every playback-mode mirror when any of them changes (mode-drift probe). */
+    void logModeStateIfChanged();
     /** @brief Pause playback based on the current focus mode. */
     void pauseFromCurrentFocus();
 
@@ -443,6 +513,9 @@ private:
     std::shared_ptr<AestraUI::AudioVisualizer> m_waveformVisualizer;
     std::shared_ptr<Aestra::Audio::TrackManager> m_trackManager;
     std::shared_ptr<Aestra::Audio::TrackManagerUI> m_trackManagerUI;
+    // The single writer of the playback-mode mirrors. Declared after m_trackManager
+    // (it holds a reference to it), so it is destroyed first.
+    std::unique_ptr<Aestra::Audio::PlaybackContextController> m_playbackContext;
     AestraUI::NUIPlatformBridge* m_platformBridge = nullptr;
     Aestra::Audio::AudioEngine* m_audioEngine = nullptr;
     Aestra::Audio::MidiInputService* m_midiInput = nullptr;
@@ -454,9 +527,6 @@ private:
     std::shared_ptr<Aestra::Audio::ArsenalPanel> m_sequencerPanel;
     std::shared_ptr<Aestra::Audio::AestraHistoryPanel> m_historyPanel;
     std::shared_ptr<Aestra::Audio::TakesPanel> m_takesPanel;
-    // First-open flag: the Takes panel gets a default rect once, then keeps
-    // whatever bounds the user dragged/resized across close/reopen.
-    bool m_takesRectInitialized{false};
     std::shared_ptr<AestraUI::PluginUIController> m_pluginController;
     std::shared_ptr<AestraUI::UIRoutingMap> m_routingMapPanel;
 
@@ -492,6 +562,7 @@ private:
     // Playback state persistence
     double m_savedTimelinePosition = 0.0;
     bool m_patternClipPreviewActive{false};
+    std::string m_lastModeProbe;
     Aestra::Audio::PatternID m_previewPatternId{};
     bool m_countInEnabled{false};
     bool m_forcedMetronomeForCountIn{false};
@@ -512,13 +583,18 @@ private:
     Aestra::Events::ScopedConnections m_connections;
     Aestra::Audio::UnitID m_sampleEditorUnitId{0};
     bool m_sampleEditorDragging{false};
-    AestraUI::NUIPoint m_sampleEditorDragStartMouseOverlay{0.0f, 0.0f};
+    AestraUI::NUIPoint m_sampleEditorDragStartMouse{0.0f, 0.0f}; // window-absolute
     AestraUI::NUIRect m_sampleEditorDragStartRect{0.0f, 0.0f, 0.0f, 0.0f};
 
     void openSampleEditorForUnit(Aestra::Audio::UnitID unitId, const std::string& samplePath);
     void openAudioClipEditor(Aestra::Audio::ClipInstanceID clipId);
+    /** V8-W5: render the clips' track output, replace them with it, tell the user the outcome. */
+    void bounceClipsInPlace(const std::vector<Aestra::Audio::ClipInstanceID>& clipIds);
     void syncSampleEditorToUnit(Aestra::Audio::UnitID unitId);
     void enqueueMainThreadTask(std::function<void()> task);
+    // AestraContentImport.cpp: the sample decodes on a worker thread, the clip is placed on the main one.
+    void placeSampleOnTimeline(Aestra::Audio::ClipSourceID sourceId, const std::string& filePath);
+    std::unordered_set<std::string> m_sampleImportsInFlight; ///< main thread only
     void drainMainThreadTasks();
 
     std::mutex m_mainThreadTasksMutex;

@@ -5,6 +5,8 @@
 #include "Music/ScaleContext.h"
 #include "PianoRollPanel.h"
 
+#include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -106,11 +108,86 @@ void testSelectionSurvivesCommittedEditRoundTrip() {
            "selection must survive repeated committed edits");
 }
 
+// Review, #981 (owner ruling 2026-09-28): a note edit only ever grows a pattern. Shrinking is
+// the length control's job. Before, nudging the one note of an explicitly 4-bar pattern
+// recomputed the length from content and collapsed the loop to 1 bar.
+void testNoteEditsGrowButNeverShrinkThePattern() {
+    auto nudgeAll = [](PianoRollPanel& editor) {
+        AestraUI::NUIKeyEvent ctrlA;
+        ctrlA.keyCode = AestraUI::NUIKeyCode::A;
+        ctrlA.modifiers = AestraUI::NUIModifiers::Ctrl;
+        ctrlA.pressed = true;
+        editor.handleKeyEvent(ctrlA);
+        AestraUI::NUIKeyEvent right;
+        right.keyCode = AestraUI::NUIKeyCode::Right;
+        right.pressed = true;
+        editor.handleKeyEvent(right);
+    };
+    auto oneNotePattern = [](PatternManager& pm, const char* name, double noteStart, double lengthBeats) {
+        MidiPayload payload;
+        Aestra::Audio::MidiNote n;
+        n.pitch = 60; n.startBeat = noteStart; n.durationBeats = 1.0; n.velocity = 0.8f;
+        payload.notes = {n};
+        return pm.createMidiPattern(name, lengthBeats, payload);
+    };
+
+    auto trackManager = std::make_shared<TrackManager>();
+    auto& pm = trackManager->getPatternManager();
+
+    const PatternID wide = oneNotePattern(pm, "Four bars", 0.0, 16.0);
+    PianoRollPanel editor(trackManager);
+    editor.loadPattern(wide);
+    nudgeAll(editor);
+    const PatternSource* stored = pm.getPattern(wide);
+    expect(stored && std::abs(std::get<MidiPayload>(stored->payload).notes[0].startBeat - 1.0) < 0.001,
+           "precondition: the nudge reached the pattern");
+    expect(stored && std::abs(stored->lengthBeats - 16.0) < 0.001,
+           "a note edit keeps an explicitly 4-bar pattern at 4 bars");
+
+    const PatternID tight = oneNotePattern(pm, "One bar", 3.0, 4.0);
+    editor.loadPattern(tight);
+    nudgeAll(editor); // the note now ends at beat 5, past the 1-bar pattern
+    stored = pm.getPattern(tight);
+    expect(stored && std::abs(stored->lengthBeats - 8.0) < 0.001,
+           "a note edit past the end still grows the pattern to the next whole bar");
+}
+
 } // namespace
 
+// SPEC 3 §2.1 at the caller (review, #961): the helper tests prove the mapping, this proves
+// onUpdate() actually puts it on screen. While the timeline plays through a clip of the loaded
+// pattern, the editor's playhead sits at the clip-local beat, not parked at 0.
+void testTimelinePlaybackMovesThePanelPlayhead() {
+    auto trackManager = std::make_shared<TrackManager>();
+    auto& patternManager = trackManager->getPatternManager();
+    const PatternID patternId = patternManager.createMidiPattern("Timeline Playhead", 8.0, MidiPayload{});
+    auto& playlist = trackManager->getPlaylistModel();
+    const PlaylistLaneID lane = playlist.createLane("A");
+    ClipInstance clip;
+    clip.patternId = patternId;
+    clip.sourceId = patternId.value;
+    clip.startBeat = 8.0;
+    clip.durationBeats = 8.0;
+    playlist.addClip(lane, clip);
+
+    PianoRollPanel editor(trackManager);
+    editor.setVisible(true);
+    editor.loadPattern(patternId);
+
+    const double bpm = std::max(1.0, playlist.getBPM());
+    trackManager->setPosition(10.5 * 60.0 / bpm); // arrangement beat 10.5, 2.5 beats into the clip
+    trackManager->play();
+    editor.onUpdate(1.0 / 60.0);
+    expect(std::abs(editor.getPlayheadBeat() - 2.5) < 1e-6,
+           "timeline playback through a clip should put the editor playhead at the clip-local beat");
+    trackManager->stop();
+}
+
 int main() {
+    testTimelinePlaybackMovesThePanelPlayhead();
     testHarmonyContextRoundtripThroughPanel();
     testSelectionSurvivesCommittedEditRoundTrip();
+    testNoteEditsGrowButNeverShrinkThePattern();
     if (failures == 0) {
         std::cout << "PianoRollPanelPersistenceTest passed\n";
         return EXIT_SUCCESS;

@@ -659,6 +659,15 @@ public:
     const UnitManager& getUnitManager() const { return m_unitManager; }
 
     /**
+     * @brief Queue keep-length renders for every note a keep-length sampler unit can play.
+     *
+     * Non-RT. Collects each such unit's pitches from all patterns. With @p wait, blocks
+     * until they are rendered (export uses this, so an offline render never falls back
+     * to resampling). Returns false if a wait timed out.
+     */
+    bool prewarmSamplerKeepLength(bool wait);
+
+    /**
      * @brief Set output sample rate
      * @param rate Output device sample rate in Hz.
      *
@@ -1054,6 +1063,9 @@ public:
             }
 
             auto appendSample = [&](float sample) {
+                if (!std::isfinite(sample)) {
+                    sample = 0.0f;
+                }
                 size_t writeIndex = (head + size) % capacity;
                 capture->samples[writeIndex].store(sample, std::memory_order_relaxed);
                 if (size < capacity) {
@@ -1252,9 +1264,68 @@ public:
         if (!m_isPlaying.load(std::memory_order_relaxed) || m_patternMode.load(std::memory_order_relaxed)) {
             return;
         }
-        m_patternPlaybackEngine.clearScheduledInstances();
-        scheduleTimelinePatternInstances(m_position.load(std::memory_order_relaxed));
+        // Incremental, NOT clear-and-reschedule: a clear dropped every sounding note's gate and queued note-off
+        // and re-queued from the UI's lagging playhead (moving one clip cut other clips' notes).
+        // Each clip keeps its slot (held-note tracking is per slot), a slot keeps its
+        // frontier, and the content-edit refill re-queues from the engine's real playhead.
+        const auto instances = m_playlistModel.collectMidiClipInstances(m_patternManager);
+        std::unordered_map<ClipInstanceID, uint32_t> nextSlots;
+        std::array<bool, 256> used{};
+        used[0] = used[1] = true; // 0 unused; 1 is Arsenal's single-pattern slot
+        for (const auto& [clip, slot] : m_timelineSlots) {
+            (void)clip;
+            used[slot] = true; // survivors keep theirs; removed ones are free from the NEXT refresh
+        }
+        std::vector<const MidiClipPlaybackInstance*> fresh;
+        for (const auto& instance : instances) {
+            if (!instance.isValid()) {
+                continue;
+            }
+            auto it = m_timelineSlots.find(instance.clipId);
+            if (it == m_timelineSlots.end()) {
+                fresh.push_back(&instance);
+                continue;
+            }
+            nextSlots[instance.clipId] = it->second;
+            m_patternPlaybackEngine.updatePatternInstance(instance.patternId, instance.patternStartBeat(), it->second,
+                                                          instance.sourceOffsetBeats, instance.durationBeats);
+        }
+        for (const auto& [clip, slot] : m_timelineSlots) {
+            if (nextSlots.find(clip) == nextSlots.end()) {
+                // Stays marked used for THIS refresh: the content-edit refill still has to
+                // release the removed clip's held notes by slot, and a new clip reusing the
+                // slot now would be mistaken for them.
+                m_patternPlaybackEngine.removePatternInstance(slot);
+            }
+        }
+        uint32_t cursor = 2;
+        for (const auto* instance : fresh) {
+            while (cursor < used.size() && used[cursor]) {
+                ++cursor;
+            }
+            if (cursor >= used.size()) {
+                Log::warning("[TrackManager] Too many timeline MIDI clip instances to schedule; truncating at 254");
+                break;
+            }
+            used[cursor] = true;
+            nextSlots[instance->clipId] = cursor;
+            m_patternPlaybackEngine.updatePatternInstance(instance->patternId, instance->patternStartBeat(), cursor,
+                                                          instance->sourceOffsetBeats, instance->durationBeats);
+        }
+        m_timelineSlots = std::move(nextSlots);
+        // Record what the slots now play, with the timing just handed to the scheduler.
+        m_scheduledTimelineInstances.clear();
+        for (const auto& instance : instances) {
+            if (m_timelineSlots.find(instance.clipId) != m_timelineSlots.end()) {
+                m_scheduledTimelineInstances.push_back(instance);
+            }
+        }
+        m_patternPlaybackEngine.patternContentEdited();
+        m_timelineRescheduleCount.fetch_add(1, std::memory_order_relaxed);
     }
+
+    /** @brief How many times playing timeline MIDI was rescheduled in place (diagnostics / tests). */
+    uint64_t getTimelineRescheduleCount() const { return m_timelineRescheduleCount.load(std::memory_order_relaxed); }
 
     /**
      * @brief Start transport playback from the current UI position.
@@ -1294,23 +1365,27 @@ public:
     }
 
     /**
-     * @brief Stop transport playback and reset the playhead to 0.
+     * @brief Stop transport playback and return the playhead to the cue.
      *
-     * Single stop lands at 0 authoritatively (v0.7.1 T-8): the reset rides the
-     * transport command itself — the audio-thread drain is the single position
-     * authority, and a UI-side rewind after the fact races it (8714ede9 rule).
-     * The stored cue is dropped (play() cannot resurrect a scrubbed position)
-     * and any display override is cleared (a count-in leftover must not pin
-     * the UI to a stale position on a soft stop).
+     * A single stop goes back to where playback started, or to wherever the
+     * user last dragged the playhead (every seek path updates the cue), so a
+     * section can be replayed without re-placing the playhead. A hard stop
+     * (double stop) zeroes the cue BEFORE calling this, so it lands at 0.
+     *
+     * The return rides the transport command itself (kept from v0.7.1 T-8):
+     * the audio-thread drain is the single position authority, and a UI-side
+     * rewind after the fact races it (8714ede9 rule). Any display override is
+     * cleared — a count-in leftover must not pin the UI to a stale position.
      * Pause keeps its own preserve-sentinel path (#590) and is untouched.
      */
     void stop() {
         m_isPlaying.store(false, std::memory_order_relaxed);
         m_isPaused.store(false, std::memory_order_relaxed);
-        m_playStartPosition.store(0.0, std::memory_order_relaxed);
-        m_position.store(0.0, std::memory_order_relaxed);
+        const double cue = std::max(0.0, m_playStartPosition.load(std::memory_order_relaxed));
+        m_playStartPosition.store(cue, std::memory_order_relaxed);
+        m_position.store(cue, std::memory_order_relaxed);
         clearDisplayPositionOverride();
-        pushTransportCommand(0.0f, 0.0);
+        pushTransportCommand(0.0f, cue);
     }
 
     /**
@@ -1334,6 +1409,20 @@ public:
      * anything already scheduled stayed live and was rendered into the export alongside
      * the timeline.
      */
+    /**
+     * @brief The clip instances timeline playback has scheduled, with the timing it scheduled them at.
+     *
+     * Recorded by the full schedule and the in-place refresh as they hand instances to the
+     * scheduler, never read back from the playlist: a live clip drag moves the model on every
+     * motion but reschedules only on release, and until then the scheduler still plays the old
+     * timing. The piano-roll playhead follows a clip from this set, so it shows what is audible:
+     * never a clip past the scheduler's cap, never a clip's in-drag position (review, #961).
+     * Main thread, like the scheduler.
+     */
+    const std::vector<MidiClipPlaybackInstance>& getScheduledTimelineInstances() const {
+        return m_scheduledTimelineInstances;
+    }
+
     void scheduleTimelineForOfflineRender(double playStartPositionSeconds = 0.0) {
         scheduleTimelinePatternInstances(playStartPositionSeconds);
     }
@@ -1421,9 +1510,20 @@ public:
         recomputeEffectiveLoop();
     }
 
-    /** @brief Clamp a candidate deferred-capture beat into the effective loop region. */
+    /**
+     * @brief Clamp a candidate deferred-capture beat into the effective loop region.
+     *
+     * Only the pattern loop override needs it (Arsenal force-loops the engine,
+     * which wraps any position into the pattern loop, so a start outside it is
+     * never reached — #845). On the
+     * timeline the loop only catches a playhead crossing the loop end from
+     * inside, so playback always reaches its own start — clamping it there
+     * would place the take at the loop start while audio from the cue is
+     * captured.
+     */
     double reachableDeferredStart(double startBeat) const {
-        if (!m_loopEnabled.load(std::memory_order_relaxed)) {
+        if (!m_loopEnabled.load(std::memory_order_relaxed) ||
+            !m_patternOverrideActive.load(std::memory_order_relaxed)) {
             return startBeat;
         }
         const double loopStart = m_loopStartBeats.load(std::memory_order_relaxed);
@@ -1461,27 +1561,48 @@ public:
         m_countInPending.store(true, std::memory_order_release);
         setPlayStartPosition(clampedStart);
         m_position.store(clampedStart, std::memory_order_relaxed);
-        // Clamp into the active loop region: a cue beyond the loop end would
-        // pin capture to a beat the engine wraps past forever (#845).
+        // Pattern loop only: a cue outside the pattern loop would pin capture
+        // to a beat the engine wraps past forever (#845). See reachableDeferredStart.
         pinDeferredRecordingStartBeat(reachableDeferredStart(secondsToBeats(clampedStart)));
         setDisplayPositionOverride(clampedStart);
+        // No sink means no engine to notify (model-level tests, loader): the
+        // local commit stands. A present-but-rejecting sink rolls back below.
+        bool countInAccepted = true;
         if (m_commandSink) {
             AudioQueueCommand cmd{};
             cmd.type = AudioQueueCommandType::MetronomeCountInStart;
             cmd.value1 = static_cast<float>(std::max<uint32_t>(1, beats));
-            m_commandSink(cmd);
+            countInAccepted = m_commandSink(cmd);
+        }
+        if (!countInAccepted) {
+            // The engine never heard the start: roll back so the caller degrades
+            // (plain playback) instead of waiting on a count-in that cannot
+            // arrive. Position fields keep the requested cue. (#913)
+            m_countInPending.store(false, std::memory_order_release);
+            clearDeferredRecordingStartBeat();
+            clearDisplayPositionOverride();
+            clearNextCapturePlacementStartBeat();
+            return false;
         }
         return true;
     }
 
     /**
      * @brief Cancel a pending count-in and drop its deferred capture alignment.
+     *
+     * When the stop edge is rejected the pending state is retained: the engine
+     * may still be counting in, and the frame pump degrades or completes it.
+     * Clearing would strand the two sides disagreeing with no recovery. (#913)
      */
     void cancelCountIn() {
+        bool stopAccepted = true;
         if (m_commandSink) {
             AudioQueueCommand cmd{};
             cmd.type = AudioQueueCommandType::MetronomeCountInStop;
-            m_commandSink(cmd);
+            stopAccepted = m_commandSink(cmd);
+        }
+        if (!stopAccepted) {
+            return;
         }
         clearDeferredRecordingStartBeat();
         clearDisplayPositionOverride();
@@ -1508,9 +1629,9 @@ public:
             // recording — capture would skip frames to the old count-in beat.
             clearDeferredRecordingStartBeat();
         } else {
-            // Re-clamp into the loop region at the moment playback starts: a
-            // cue beyond the loop end would leave capture waiting for a beat
-            // the engine wraps past forever (#845).
+            // Re-clamp at the moment playback starts (pattern loop only — see
+            // reachableDeferredStart): the loop may have changed during the
+            // count-in (#845).
             pinDeferredRecordingStartBeat(
                 reachableDeferredStart(m_deferredRecordingStartBeat.load(std::memory_order_relaxed)));
         }
@@ -1553,7 +1674,30 @@ public:
             AudioQueueCommand cmd{};
             cmd.type = AudioQueueCommandType::SetMetronomeEnabled;
             cmd.value1 = enabled ? 1.0f : 0.0f;
-            m_commandSink(cmd);
+            if (!m_commandSink(cmd)) {
+                m_metronomeDirty.store(true, std::memory_order_relaxed);
+            }
+        } else {
+            m_metronomeDirty.store(true, std::memory_order_relaxed);
+        }
+    }
+
+    // Re-push latest mixer/metronome state for anything a dropped queue push
+    // left stale. Pumped from the UI frame update; cheap when clean (one
+    // atomic per channel) and converges when a flood ends (#913).
+    void resyncDirtyChannels() {
+        for (auto& channel : m_channels) {
+            if (channel) {
+                channel->resyncEngineState();
+            }
+        }
+        if (m_metronomeDirty.load(std::memory_order_relaxed) && m_commandSink) {
+            AudioQueueCommand cmd{};
+            cmd.type = AudioQueueCommandType::SetMetronomeEnabled;
+            cmd.value1 = m_metronomeEnabled.load(std::memory_order_relaxed) ? 1.0f : 0.0f;
+            if (m_commandSink(cmd)) {
+                m_metronomeDirty.store(false, std::memory_order_relaxed);
+            }
         }
     }
 
@@ -1567,6 +1711,8 @@ public:
      * @return True when Arsenal pattern transport owns playback.
      */
     bool isPatternMode() const { return m_patternMode.load(std::memory_order_relaxed); }
+    /** @brief True while Arsenal's pattern loop is the effective loop (setPatternLoopOverride). */
+    bool isPatternLoopOverrideActive() const { return m_patternOverrideActive.load(std::memory_order_relaxed); }
     /**
      * @brief Stop Arsenal playback and optionally remain in pattern mode.
      * @param keepPatternMode True to preserve pattern mode after stopping.
@@ -1576,6 +1722,7 @@ public:
         // Arsenal playback is over: drop its instances rather than rewinding them, so
         // nothing carries into whatever plays next.
         m_patternPlaybackEngine.clearScheduledInstances();
+        m_scheduledArsenalPattern = PatternID{};
         if (!keepPatternMode) {
             m_patternMode.store(false, std::memory_order_relaxed);
         }
@@ -1586,8 +1733,8 @@ public:
      *        the playhead for resume.
      *
      * The engine keeps its own authoritative position via the #590
-     * preserve-sentinel — routing pause through stop() would trigger T-8's
-     * single-stop reset (land at 0) and break resume. The cue and m_position
+     * preserve-sentinel — routing pause through stop() would return the
+     * playhead to the cue and break resume. The cue and m_position
      * are deliberately untouched: playPatternInArsenal(-1) resumes from
      * m_position, which the UI keeps synced to the engine during playback.
      */
@@ -1687,7 +1834,7 @@ public:
      * @brief Install the audio-command sink used to talk to the live engine.
      * @param sink Callback that forwards commands to the audio thread.
      */
-    void setCommandSink(std::function<void(const AudioQueueCommand&)> sink) {
+    void setCommandSink(MixerChannel::CommandSink sink) {
         m_commandSink = std::move(sink);
         for (auto& channel : m_channels) {
             channel->setCommandSink(m_commandSink);
@@ -1801,6 +1948,60 @@ public:
     const PatternPlaybackEngine& getPatternPlaybackEngine() const { return m_patternPlaybackEngine; }
 
     /**
+     * @brief A piano-roll ruler zone: pattern playback loops only [startBeat, endBeat) of the
+     *        pattern (SPEC 3 §5.2). Session-only; not saved with the project.
+     */
+    struct ArsenalLoopZone {
+        PatternID pattern; ///< The pattern the zone was drawn on; it applies to no other.
+        double startBeat = 0.0;
+        double endBeat = 0.0;
+    };
+
+    /**
+     * @brief Set or clear the zone. An empty or inverted range, or no pattern, clears it.
+     *        Main thread. Takes effect on the next playPatternInArsenal(..., true).
+     */
+    void setArsenalLoopZone(std::optional<ArsenalLoopZone> zone) {
+        if (zone && (!zone->pattern.isValid() || zone->startBeat < 0.0 || zone->endBeat <= zone->startBeat + 1e-6)) {
+            zone.reset();
+        }
+        m_arsenalLoopZone = zone;
+    }
+    std::optional<ArsenalLoopZone> getArsenalLoopZone() const { return m_arsenalLoopZone; }
+
+    /**
+     * @brief The zone Arsenal playback of @p pattern would use: the stored zone if it was drawn on
+     *        that pattern. None while recording is armed: a take is placed by transport beat, and
+     *        inside a zone transport beat 0 is pattern beat startBeat, so recording loops the whole
+     *        pattern until zone-aware capture exists.
+     */
+    std::optional<ArsenalLoopZone> activeArsenalLoopZone(PatternID pattern) const {
+        if (!m_arsenalLoopZone || m_arsenalLoopZone->pattern != pattern ||
+            m_recordArmed.load(std::memory_order_relaxed)) {
+            return std::nullopt;
+        }
+        return m_arsenalLoopZone;
+    }
+
+    /** @brief The Arsenal loop length for @p pattern: the zone's length when one applies, else the pattern's. */
+    double arsenalLoopLengthBeats(PatternID pattern, double patternLengthBeats) const {
+        if (const auto zone = activeArsenalLoopZone(pattern)) {
+            return zone->endBeat - zone->startBeat;
+        }
+        return patternLengthBeats;
+    }
+
+    /**
+     * @brief The zone the current pattern playback was scheduled with, if any. This, not the
+     *        stored zone, is what maps the transport to pattern beats while playing: a clip
+     *        preview or a render plays the whole pattern even when a zone exists.
+     */
+    std::optional<ArsenalLoopZone> scheduledArsenalLoopZone() const { return m_scheduledArsenalLoopZone; }
+    /// Pattern Arsenal playback last scheduled, invalid once stopped (main thread): "is THIS pattern
+    /// playing?" without the scheduler's audio-thread lock (piano-roll playback keys, SPEC 3 §5.1).
+    PatternID scheduledArsenalPattern() const { return m_scheduledArsenalPattern; }
+
+    /**
      * @brief Start Arsenal playback for the supplied pattern.
      * @param pid Pattern identifier to schedule for playback.
      * @param startSeconds Transport position to start from. Negative (the
@@ -1809,8 +2010,11 @@ public:
      *        explicit value (e.g. 0.0 for a from-the-top preview) to override.
      *        The engine wraps positions past the pattern length, so any cue
      *        point is safe.
+     * @param useLoopZone Confine playback to the piano-roll loop zone when one applies to
+     *        @p pid (activeArsenalLoopZone). Only Arsenal-focus playback opts in; clip previews
+     *        and offline renders play the whole pattern.
      */
-    void playPatternInArsenal(PatternID pid, double startSeconds = -1.0) {
+    void playPatternInArsenal(PatternID pid, double startSeconds = -1.0, bool useLoopZone = false) {
         if (startSeconds < 0.0) {
             startSeconds = std::max(0.0, m_position.load(std::memory_order_relaxed));
         }
@@ -1839,7 +2043,18 @@ public:
         }
 
         pushTransportCommand(1.0f, startSeconds);
-        m_patternPlaybackEngine.schedulePatternInstance(pid, 0.0, 1);
+        m_scheduledArsenalPattern = pid;
+        m_scheduledArsenalLoopZone = useLoopZone ? activeArsenalLoopZone(pid) : std::nullopt;
+        if (const auto zone = m_scheduledArsenalLoopZone) {
+            // The scheduler plays pattern beat b at startBeat + b, and only beats inside the
+            // source range. Starting the instance at -zone.start puts the zone's first beat on
+            // the engine's loop top (beat 0); the source range confines it to the zone, and the
+            // engine loops [0, zone length) (arsenalLoopLengthBeats). Same path trimmed clips use.
+            m_patternPlaybackEngine.schedulePatternInstance(pid, -zone->startBeat, 1, zone->startBeat,
+                                                            zone->endBeat - zone->startBeat);
+        } else {
+            m_patternPlaybackEngine.schedulePatternInstance(pid, 0.0, 1);
+        }
     }
 
     /**
@@ -1927,18 +2142,17 @@ private:
         Log::info("[TimelinePattern] scheduling " + std::to_string(instances.size()) +
                   " MIDI clip instances from beat " + std::to_string(playStartBeat));
 
+        bool truncated = false;
+        const auto scheduled = selectScheduledTimelineInstances(instances, playStartBeat, &truncated);
+        if (truncated) {
+            Log::warning("[TrackManager] Too many timeline MIDI clip instances to schedule; truncating at " +
+                         std::to_string(kMaxScheduledTimelineMidiInstances));
+        }
+
         uint32_t instanceId = 2; // Reserve 1 for Arsenal-focused single-pattern playback.
-        for (const auto& instance : instances) {
-            if (!instance.isValid()) {
-                continue;
-            }
-            if (instance.endBeat() <= playStartBeat) {
-                continue;
-            }
-            if (instanceId >= 256) {
-                Log::warning("[TrackManager] Too many timeline MIDI clip instances to schedule; truncating at 254");
-                break;
-            }
+        m_timelineSlots.clear(); // a full schedule starts from an empty scheduler
+        m_scheduledTimelineInstances = scheduled;
+        for (const auto& instance : scheduled) {
 
             std::string routeSummary = "no-pattern";
             if (auto* pattern = m_patternManager.getPattern(instance.patternId); pattern && pattern->isMidi()) {
@@ -1958,8 +2172,9 @@ private:
             Log::info("[TimelinePattern] pattern=" + std::to_string(instance.patternId.value) +
                       " clipStart=" + std::to_string(instance.startBeat) +
                       " sourceOffset=" + std::to_string(instance.sourceOffsetBeats) +
-                      " schedStart=" + std::to_string(instance.startBeat) + " " + routeSummary);
-            m_patternPlaybackEngine.schedulePatternInstance(instance.patternId, instance.startBeat, instanceId++,
+                      " schedStart=" + std::to_string(instance.patternStartBeat()) + " " + routeSummary);
+            m_timelineSlots[instance.clipId] = instanceId;
+            m_patternPlaybackEngine.schedulePatternInstance(instance.patternId, instance.patternStartBeat(), instanceId++,
                                                             instance.sourceOffsetBeats, instance.durationBeats);
         }
     }
@@ -2378,6 +2593,7 @@ private:
     }
 
     bool writeRecordedTakeWav(const std::string& path, const AudioBufferData& buffer) const {
+        if (buffer.isCompact()) { AudioBufferData f = buffer; f.expandToFloat(); return writeRecordedTakeWav(path, f); }
         std::ofstream file(path, std::ios::binary | std::ios::trunc);
         if (!file.is_open()) {
             return false;
@@ -2507,23 +2723,23 @@ private:
         return result;
     }
 
-    void pushTransportCommand(float playing, double positionSeconds) {
-        pushTransportCommandSamples(playing, static_cast<uint64_t>(positionSeconds * m_outputSampleRate));
+    bool pushTransportCommand(float playing, double positionSeconds) {
+        return pushTransportCommandSamples(playing, static_cast<uint64_t>(positionSeconds * m_outputSampleRate));
     }
 
     // Lower-level transport push that carries an absolute sample position (or the
     // kTransportPreservePosition sentinel) verbatim, without the seconds→samples
-    // conversion that would mangle the sentinel.
-    void pushTransportCommandSamples(float playing, uint64_t samplePos) {
+    // conversion that would mangle the sentinel. True when the sink accepted.
+    bool pushTransportCommandSamples(float playing, uint64_t samplePos) {
         if (!m_commandSink) {
-            return;
+            return false;
         }
 
         AudioQueueCommand cmd{};
         cmd.type = AudioQueueCommandType::SetTransportState;
         cmd.value1 = playing;
         cmd.samplePos = samplePos;
-        m_commandSink(cmd);
+        return m_commandSink(cmd);
     }
 
     std::vector<std::unique_ptr<MixerChannel>> m_channels;
@@ -2543,6 +2759,14 @@ private:
     int m_inputChannelCount{0};
     std::atomic<double> m_position{0.0};
     std::atomic<double> m_playStartPosition{0.0};
+    std::atomic<uint64_t> m_timelineRescheduleCount{0};
+    // Timeline MIDI clip -> scheduler slot for the current playback run. Main thread only.
+    std::unordered_map<ClipInstanceID, uint32_t> m_timelineSlots;
+    std::optional<ArsenalLoopZone> m_arsenalLoopZone; // main thread (see setArsenalLoopZone)
+    std::optional<ArsenalLoopZone> m_scheduledArsenalLoopZone; // main thread (see playPatternInArsenal)
+    PatternID m_scheduledArsenalPattern;                       // main thread (see playPatternInArsenal)
+    // What those slots play, as scheduled (see getScheduledTimelineInstances).
+    std::vector<MidiClipPlaybackInstance> m_scheduledTimelineInstances;
     std::atomic<bool> m_hasDisplayPositionOverride{false};
     std::atomic<double> m_displayPositionOverride{0.0};
     std::atomic<bool> m_hasNextCapturePlacementStartBeat{false};
@@ -2551,7 +2775,8 @@ private:
     std::shared_ptr<ContinuousParamBuffer> m_continuousParams; // STUB: Phase 2
     std::shared_ptr<ChannelSlotMap> m_channelSlotMap;
     UnitManager m_unitManager;
-    std::function<void(const AudioQueueCommand&)> m_commandSink;
+    std::function<bool(const AudioQueueCommand&)> m_commandSink;
+    std::atomic<bool> m_metronomeDirty{false};
     std::function<void(MixerChannel&)> m_channelPrepareCallback;
     std::function<void()> m_stopPreviewCallback;
     std::atomic<bool> m_isPlaying{false};

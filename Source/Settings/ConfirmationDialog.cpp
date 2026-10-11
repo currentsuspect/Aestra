@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ConfirmationDialog.h"
+#include "../AestraUI/Widgets/AestraPanelWindow.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "../AestraCore/include/AestraLog.h"
@@ -96,16 +97,24 @@ void ConfirmationDialog::calculateLayout() {
 
     // Dialog dimensions
     const float dialogWidth = 400.0f;
-    const float dialogHeight = 172.0f;
     const float buttonHeight = theme.layout.dialogActionHeight;
     const float buttonSpacing = theme.spacingS;
     const float margin = theme.spacingL;
+    // Sized to its content (SPEC 3 §3.2): title bar, the one-line message band, the divider
+    // and the buttons. It was a fixed 172 + title bar: 172 was sized when the title was drawn
+    // inside the body, so once the title moved into the shared title bar the message sat at
+    // the top of an empty band.
+    constexpr float kMessageBandH = 24.0f;
+    constexpr float kDividerGap = 16.0f; // divider sits this far above the buttons
+    const float dialogHeight =
+        AestraUI::AestraPanelWindow::TITLE_BAR_H + margin + kMessageBandH + margin + kDividerGap + buttonHeight + margin;
 
     // Center dialog in parent (rounded so 1px strokes/text stay crisp).
     m_dialogRect.x = std::round(parentBounds.x + (parentBounds.width - dialogWidth) / 2.0f);
     m_dialogRect.y = std::round(parentBounds.y + (parentBounds.height - dialogHeight) / 2.0f);
     m_dialogRect.width = dialogWidth;
     m_dialogRect.height = dialogHeight;
+    m_messageCentreY = m_dialogRect.y + AestraUI::AestraPanelWindow::TITLE_BAR_H + margin + kMessageBandH * 0.5f;
 
     // Right-aligned button row, primary rightmost — modern convention:
     // Save flow: [ Cancel ] [ Don't Save ] [ Save ].
@@ -148,25 +157,30 @@ void ConfirmationDialog::onRender(AestraUI::NUIRenderer& renderer) {
     // Soft drop shadow (offsetX, offsetY, blur, color).
     renderer.drawShadow(m_dialogRect, 0.0f, theme.spacingS, theme.spacingL, theme.shadow);
 
-    // Dialog surface.
-    renderer.fillRoundedRect(m_dialogRect, theme.radiusL, theme.surfaceTertiary);
-    renderer.strokeRoundedRect(m_dialogRect, theme.radiusL, theme.layout.dividerWidth, theme.borderStrong);
+    // Surface and title bar come from the shared dialog chrome (spec 2 §5), so
+    // this reads as an Aestra panel rather than as a generic alert box. The
+    // title moves into the title bar; the "unsaved" dot stays with the message,
+    // which is where the state it marks actually is.
+    AestraUI::DialogChrome chrome;
+    chrome.panel = m_dialogRect;
+    chrome.title = m_title;
+    chrome.showClose = false; // Cancel is the dismissal; two would be ambiguous.
+    const AestraUI::NUIRect content = AestraUI::drawDialogChrome(renderer, chrome);
 
-    // Header: an accent "unsaved" dot, then the title on its baseline.
-    const float padX = m_dialogRect.x + theme.spacingL;
-    const float titleBaselineY = m_dialogRect.y + 40.0f;
+    const float padX = content.x + theme.spacingL;
+    // Message and its dot share one centre line: the text optically by cap height, the dot
+    // geometrically (it used a hand-rolled messageY + 5).
+    const float messageY = std::round(renderer.calculateOpticalTextY(m_messageCentreY, theme.fontSizeM));
     const float dotR = 4.0f;
-    renderer.fillCircle({padX + dotR, titleBaselineY - 5.0f}, dotR, theme.warning);
-    renderer.drawText(m_title, AestraUI::NUIPoint(padX + dotR * 2.0f + 12.0f,
-                                                   std::round(titleBaselineY - 13.0f)),
-                      theme.fontSizeXL, theme.textPrimary);
-
-    // Message.
-    renderer.drawText(m_message, AestraUI::NUIPoint(padX, std::round(m_dialogRect.y + 66.0f)),
+    if (!m_isConfirmMode) {
+        renderer.fillCircle({padX + dotR, m_messageCentreY}, dotR, theme.warning);
+    }
+    renderer.drawText(m_message,
+                      AestraUI::NUIPoint(m_isConfirmMode ? padX : padX + dotR * 2.0f + 10.0f, messageY),
                       theme.fontSizeM, theme.textSecondary);
 
     // Divider above the button row.
-    const float dividerY = std::round(m_saveButtonRect.y - 16.0f);
+    const float dividerY = std::round(m_saveButtonRect.y - 16.0f); // kDividerGap in calculateLayout
     renderer.drawLine({m_dialogRect.x + theme.spacingM, dividerY},
                       {m_dialogRect.right() - theme.spacingM, dividerY},
                       theme.layout.dividerWidth, theme.borderSubtle);

@@ -4,6 +4,7 @@
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include "Plugin/AestraDrift.h"
+#include "PluginEditorKit.h"
 
 #include <algorithm>
 #include <array>
@@ -52,18 +53,7 @@ NUIColor parameterAccent(uint32_t parameterId) {
     }
 }
 
-void drawArc(NUIRenderer& renderer, NUIPoint center, float radius, float startAngle, float endAngle, float thickness,
-             NUIColor color) {
-    if (endAngle <= startAngle + 0.001f)
-        return;
-    std::array<NUIPoint, 49> points{};
-    for (size_t i = 0; i < points.size(); ++i) {
-        const float t = static_cast<float>(i) / static_cast<float>(points.size() - 1);
-        const float angle = startAngle + (endAngle - startAngle) * t;
-        points[i] = {center.x + std::cos(angle) * radius, center.y + std::sin(angle) * radius};
-    }
-    renderer.drawPolyline(points.data(), static_cast<int>(points.size()), thickness, color);
-}
+using EditorKit::drawArc;
 } // namespace
 
 AestraDriftEditor::AestraDriftEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance)
@@ -228,11 +218,12 @@ void AestraDriftEditor::drawPitchWheel(NUIRenderer& renderer) {
     }
     const NUIPoint needle{center.x + std::cos(angle) * (radius - 35.0f), center.y + std::sin(angle) * (radius - 35.0f)};
     renderer.drawLine(center, needle, 2.3f, pitchAccent().withAlpha(0.88f));
-    renderer.fillCircle(center, 28.0f, editorNeutral(NUIColor(0.048f, 0.045f, 0.060f, 1.0f)));
-    renderer.strokeCircle(center, 28.0f, 1.0f, pitchAccent().withAlpha(0.30f));
-    renderer.drawTextCentered(pitchValueString(), {center.x - 34.0f, center.y - 11.0f, 68.0f, 22.0f}, 18.0f,
+    // Readout disc sized so "SEMITONES" fits inside its edge (chord at +22 is ~52px).
+    renderer.fillCircle(center, 34.0f, editorNeutral(NUIColor(0.048f, 0.045f, 0.060f, 1.0f)));
+    renderer.strokeCircle(center, 34.0f, 1.0f, pitchAccent().withAlpha(0.30f));
+    renderer.drawTextCentered(pitchValueString(), {center.x - 34.0f, center.y - 15.0f, 68.0f, 22.0f}, 18.0f,
                               pitchAccent());
-    renderer.drawTextCentered("SEMITONES", {center.x - 42.0f, center.y + 17.0f, 84.0f, 11.0f}, 7.0f,
+    renderer.drawTextCentered("SEMITONES", {center.x - 42.0f, center.y + 11.0f, 84.0f, 11.0f}, 7.0f,
                               theme.getColor("textSecondary").withAlpha(0.54f));
 }
 

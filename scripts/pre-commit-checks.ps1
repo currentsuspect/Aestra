@@ -1,65 +1,35 @@
 <#
-Pre-commit checks: run from repo root. Scans staged files for common sensitive patterns
-Exit code: 0 = ok, non-zero = block commit
+Thin wrapper — the canonical implementation is scripts/pre_commit_checks.py
+(v0.8.0 FD-18: Python is the one implementation of each script check).
+This wrapper contains no check logic: it locates Python, runs the .py next
+to it with the same arguments, and exits with its exit code.
+Run from repo root.
 #>
-param()
 
-Write-Host "Running pre-commit checks..."
-
-# Get staged files
-$staged = git diff --cached --name-only
-if (-not $staged) {
-    Write-Host "No staged files." -ForegroundColor Yellow
-    exit 0
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$pyScript = Join-Path $scriptDir "pre_commit_checks.py"
+# scripts/install-hooks.ps1 copies this wrapper into .git/hooks, where the .py is not
+# alongside it; fall back to the repository copy.
+if (-not (Test-Path $pyScript)) {
+    $repoRoot = git rev-parse --show-toplevel 2>$null
+    if ($repoRoot) { $pyScript = Join-Path $repoRoot.Trim() "scripts/pre_commit_checks.py" }
 }
-
-$patterns = @(
-    '-----BEGIN .*PRIVATE KEY-----',
-    '-----BEGIN RSA PRIVATE KEY-----',
-    'BEGIN PRIVATE KEY',
-    '\.pfx$',
-    '\.p12$',
-    '\.pem$',
-    '\.key$',
-    'AestraCert',
-    'AKIA[A-Z0-9]{16}', # AWS Access Key ID heuristic
-    'ssh-rsa AAAA',
-    'api_key',
-    'API_KEY',
-    'password\s*=\s*',
-    '\.onnx$',
-    '\.pt$',
-    '\.pth$',
-    '\.h5$',
-    '\.ckpt$'
-)
-
-$failures = @()
-
-foreach ($f in $staged) {
-    if (Test-Path $f) {
-        $text = Get-Content -Path $f -Raw -ErrorAction SilentlyContinue
-        if ($null -eq $text) { continue }
-
-        foreach ($p in $patterns) {
-            if ($text -match $p) {
-                $failures += "$f => pattern: $p"
-            }
-        }
-
-        # filename checks for binary extensions
-        foreach ($ext in @('.pfx','.p12','.pem','.key','.onnx','.pt','.pth','.h5','.ckpt')) {
-            if ($f.ToLower().EndsWith($ext)) { $failures += "$f => blocked extension $ext" }
-        }
-    }
-}
-
-if ($failures.Count -gt 0) {
-    Write-Host "Pre-commit check failed. Sensitive patterns found:" -ForegroundColor Red
-    $failures | ForEach-Object { Write-Host $_ }
-    Write-Host "If this is a false positive, review and stage amended files. Otherwise remove secrets and try again." -ForegroundColor Yellow
+if (-not (Test-Path $pyScript)) {
+    Write-Error "pre_commit_checks.py not found (looked beside this script and in <repo>/scripts)."
     exit 1
 }
 
-Write-Host "Pre-commit checks passed." -ForegroundColor Green
-exit 0
+if (Get-Command "python3" -ErrorAction SilentlyContinue) {
+    & python3 $pyScript @args
+    exit $LASTEXITCODE
+}
+if (Get-Command "python" -ErrorAction SilentlyContinue) {
+    & python $pyScript @args
+    exit $LASTEXITCODE
+}
+if (Get-Command "py" -ErrorAction SilentlyContinue) {
+    & py -3 $pyScript @args
+    exit $LASTEXITCODE
+}
+Write-Error "No Python 3 interpreter found (tried python3, python, py -3). Cannot run pre_commit_checks.py."
+exit 1

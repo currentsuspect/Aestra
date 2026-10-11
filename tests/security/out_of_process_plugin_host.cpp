@@ -255,6 +255,22 @@ int main(int argc, char** argv) {
 
     auto* oopInstance = static_cast<OutOfProcessPluginInstance*>(instance.get());
 
+#ifndef _WIN32
+    // --- #710: the fork child must hold exactly fds 0, 1, 2 ------------------
+    // Anything else is a parent descriptor (project file, socket, device)
+    // leaked across fork+exec into untrusted plugin code. Exact match, not a
+    // marker-file probe: it also catches whatever else happens to be open at
+    // spawn time. Windows containment rides PROC_THREAD_ATTRIBUTE_HANDLE_LIST
+    // (#709) and is not observable through this hook.
+    {
+        const std::string childFds = oopInstance->sendRawCommandForTest("TESTFDS");
+        if (childFds != "OK 3 0 1 2") {
+            std::cerr << "helper inherited unexpected descriptors: \"" << childFds << "\"\n";
+            return 1;
+        }
+    }
+#endif
+
     float inL[4] = {0.1f, 0.2f, 0.3f, 0.4f};
     float inR[4] = {-0.1f, -0.2f, -0.3f, -0.4f};
     const float* inputs[2] = {inL, inR};

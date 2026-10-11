@@ -85,7 +85,7 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     Result result;
     result.outputPath = config.outputPath;
 
-    if (config.outputPath.empty()) {
+    if (config.outputPath.empty() && !config.blockSink) {
         result.errorMessage = "No output path specified";
         return result;
     }
@@ -95,6 +95,19 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     }
     if (config.numChannels == 0 || config.numChannels > 64) {
         result.errorMessage = "Invalid channel count";
+        return result;
+    }
+
+    // Keep-length samplers play pre-rendered copies; an offline render must never fall back
+    // to resampling (the file would not match what the producer set), so wait for them.
+    if (!m_trackManager.prewarmSamplerKeepLength(true)) {
+        result.errorMessage = "Keep-length sampler renders did not finish in time";
+        return result;
+    }
+
+    const bool captureChannel = config.captureMixerChannelId != TrackOutputTap::kNoChannel;
+    if (captureChannel && config.numChannels != 2) {
+        result.errorMessage = "A track-output render needs stereo output";
         return result;
     }
 
@@ -139,26 +152,31 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         result.errorMessage = "Nothing to render (zero frames)";
         return result;
     }
-    int bitsPerSample = static_cast<int>(config.bitDepth);
-    uint64_t blockAlign64 = static_cast<uint64_t>(config.numChannels) * static_cast<uint64_t>(bitsPerSample / 8);
-    if (blockAlign64 == 0 || blockAlign64 > std::numeric_limits<uint16_t>::max() ||
-        totalFrames > std::numeric_limits<uint32_t>::max() / blockAlign64 ||
-        36ull + totalFrames * blockAlign64 > std::numeric_limits<uint32_t>::max()) {
-        result.errorMessage = "WAV export is too large for RIFF/WAV; use a shorter range or lower format settings";
-        return result;
-    }
+    // The RIFF/WAV limits, the file and its header only exist for a file render;
+    // a block sink (V8-W4) renders the same blocks and keeps them in memory.
+    std::ofstream file;
+    if (!config.blockSink) {
+        int bitsPerSample = static_cast<int>(config.bitDepth);
+        uint64_t blockAlign64 = static_cast<uint64_t>(config.numChannels) * static_cast<uint64_t>(bitsPerSample / 8);
+        if (blockAlign64 == 0 || blockAlign64 > std::numeric_limits<uint16_t>::max() ||
+            totalFrames > std::numeric_limits<uint32_t>::max() / blockAlign64 ||
+            36ull + totalFrames * blockAlign64 > std::numeric_limits<uint32_t>::max()) {
+            result.errorMessage = "WAV export is too large for RIFF/WAV; use a shorter range or lower format settings";
+            return result;
+        }
 
-    // Open output file
-    std::ofstream file(config.outputPath, std::ios::binary);
-    if (!file) {
-        result.errorMessage = "Cannot open output file: " + config.outputPath;
-        return result;
-    }
+        // Open output file
+        file.open(config.outputPath, std::ios::binary);
+        if (!file) {
+            result.errorMessage = "Cannot open output file: " + config.outputPath;
+            return result;
+        }
 
-    // Write placeholder WAV header
-    if (!writeWavHeader(file, config, totalFrames)) {
-        result.errorMessage = "Failed to write WAV header";
-        return result;
+        // Write placeholder WAV header
+        if (!writeWavHeader(file, config, totalFrames)) {
+            result.errorMessage = "Failed to write WAV header";
+            return result;
+        }
     }
 
     // Setup render state
@@ -191,6 +209,54 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     bool wasPlaying = m_engine.isTransportPlaying();
     uint64_t savedSamplePos = m_engine.getGlobalSamplePos();
 
+    // Preview ducking is a monitoring convenience and must never attenuate an
+    // offline render: an audible browser preview during export was measured to
+    // duck the exported file by the full configured attenuation
+    // (RealtimeExportParityTest, Export_Immune_To_Preview_Ducking).
+    const float wasPreviewDuckDb = m_engine.getPreviewDuckingAttenuationDb();
+    // The transport loop is a playback convenience: an export renders its range
+    // once. Left on, rendering past the loop end (the tail) wrapped back to the
+    // loop start and played the arrangement again (#992).
+    const bool wasLoopEnabled = m_engine.isLoopEnabled();
+    // Offline export should follow the exact live engine path to avoid render-path
+    // mismatches between playback and export.
+    const bool wasMetronomeEnabled = m_engine.isMetronomeEnabled();
+    const bool wasAuditionEnabled = m_engine.isAuditionModeEnabled();
+
+    // Every setting this render parks is restored on scope exit, including when
+    // the render loop unwinds: updateProgress() is a caller callback and may
+    // throw, and OfflineRenderGuard alone restored only offlineRenderActive,
+    // which would have left the engine on the export rate with the loop off.
+    struct EngineStateGuard {
+        AudioExporter& self;
+        uint32_t savedSampleRate;
+        uint64_t savedSamplePos;
+        float savedPreviewDuckDb;
+        bool savedLoopEnabled;
+        bool savedMetronomeEnabled;
+        bool savedAuditionEnabled;
+        bool wasPlaying;
+        ~EngineStateGuard() {
+            self.m_engine.trackOutputTap().disarm();
+            self.m_engine.setOfflineRenderActive(false);
+            self.m_engine.setTransportPlaying(false);
+            self.m_engine.setSampleRate(savedSampleRate);
+            self.m_trackManager.setOutputSampleRate(static_cast<double>(savedSampleRate));
+            self.m_engine.setGraph(AudioGraphBuilder::buildFromTrackManager(self.m_trackManager));
+            self.m_engine.setMetronomeEnabled(savedMetronomeEnabled);
+            self.m_engine.setAuditionModeEnabled(savedAuditionEnabled);
+            self.m_engine.setLoopEnabled(savedLoopEnabled);
+            // Restore the configured duck depth only; live playback re-smooths the
+            // duck gain naturally from the current preview state.
+            self.m_engine.setPreviewDuckingAttenuationDb(savedPreviewDuckDb);
+            self.m_engine.setGlobalSamplePos(savedSamplePos);
+            if (wasPlaying) {
+                self.m_engine.setTransportPlaying(true);
+            }
+        }
+    } engineStateGuard{*this, originalSampleRate, savedSamplePos, wasPreviewDuckDb,
+                       wasLoopEnabled, wasMetronomeEnabled, wasAuditionEnabled, wasPlaying};
+
     // Stop transport for safe offline rendering
     if (wasPlaying) {
         m_engine.setTransportPlaying(false);
@@ -199,7 +265,6 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         }
     }
 
-    // Set engine to export sample rate
     m_engine.setSampleRate(config.sampleRate);
     m_trackManager.setOutputSampleRate(sampleRate);
     // Clip start/end samples in AudioGraph are derived from timeline beats at
@@ -208,15 +273,7 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     // the second half of every clip.
     m_engine.setGraph(AudioGraphBuilder::buildFromTrackManager(m_trackManager));
 
-    // Offline export should follow the exact live engine path to avoid render-path
-    // mismatches between playback and export.
-    const bool wasMetronomeEnabled = m_engine.isMetronomeEnabled();
-    const bool wasAuditionEnabled = m_engine.isAuditionModeEnabled();
-    // Preview ducking is a monitoring convenience and must never attenuate an
-    // offline render: an audible browser preview during export was measured to
-    // duck the exported file by the full configured attenuation
-    // (RealtimeExportParityTest, Export_Immune_To_Preview_Ducking).
-    const float wasPreviewDuckDb = m_engine.getPreviewDuckingAttenuationDb();
+    m_engine.setLoopEnabled(false);
     m_engine.setMetronomeEnabled(false);
     m_engine.setAuditionModeEnabled(false);
     m_engine.setPreviewDuckingAttenuationDb(0.0f);
@@ -225,13 +282,12 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     m_engine.setTransportPlaying(true);
 
     // Offline render: track/send gains render snapped to target from frame 0
-    // (parity with a warmed live engine and isolated bounces, #745). Restore
-    // on every exit path.
+    // (parity with a warmed live engine and isolated bounces, #745). Restored
+    // by engineStateGuard on every exit path.
     m_engine.setOfflineRenderActive(true);
-    struct OfflineRenderGuard {
-        AudioEngine& engine;
-        ~OfflineRenderGuard() { engine.setOfflineRenderActive(false); }
-    } offlineRenderGuard{m_engine};
+    if (captureChannel) {
+        m_engine.trackOutputTap().arm(config.captureMixerChannelId, RENDER_BLOCK_FRAMES, config.captureAfterFader);
+    }
 
     // Zero the render buffer before the first block so stale DSP state from
     // prior playback cannot bleed into the export render.
@@ -245,21 +301,57 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     uint64_t framesRemaining = totalFrames;
     result.framesRendered = 0;
 
+    // The tail exists to render effect decay past the range end. It must not
+    // also render arrangement audio: with the loop off the transport advances
+    // linearly, so a clip starting after the range end would be fed into the
+    // tail and the export would contain audio the range never asked for (#992).
+    // Past the range end the graph is rebuilt without clips, which silences the
+    // sources while the mixer topology and effect chains keep processing.
+    const uint64_t rangeEndSample = startSample + (tailBeats > 0.0 ? static_cast<uint64_t>(
+        (durationBeats - tailBeats) * samplesPerBeat) : totalFrames);
+    bool sourcesSilenced = false;
+
     while (framesRemaining > 0 && !shouldCancel()) {
-        uint32_t framesThisBlock = static_cast<uint32_t>(
-            std::min<uint64_t>(RENDER_BLOCK_FRAMES, framesRemaining));
+        const uint64_t position = m_engine.getGlobalSamplePos();
+        // Clamp the block so it stops exactly at the range end. Without this the
+        // swap happens a whole block late and a clip starting at the boundary
+        // bleeds up to RENDER_BLOCK_FRAMES of audio into the tail.
+        uint64_t blockLimit = std::min<uint64_t>(RENDER_BLOCK_FRAMES, framesRemaining);
+        if (!sourcesSilenced && position < rangeEndSample) {
+            blockLimit = std::min<uint64_t>(blockLimit, rangeEndSample - position);
+        } else if (!sourcesSilenced) {
+            m_engine.setGraph(AudioGraphBuilder::buildFromTrackManager(m_trackManager, /*includeClips=*/false));
+            sourcesSilenced = true;
+        }
+        uint32_t framesThisBlock = static_cast<uint32_t>(blockLimit);
 
         // Master bounce: use full live engine path with master stage
+        m_engine.trackOutputTap().clearBlock();
         m_engine.processBlock(m_renderBufferF.data(), nullptr, framesThisBlock, 0.0);
         m_engine.performNonRealtimeMaintenance();
+        if (captureChannel) {
+            // The channel's own output replaces the master mix as this block's audio;
+            // a channel that did not render this block (no such channel) is silence.
+            const auto& tap = m_engine.trackOutputTap();
+            const size_t samples = static_cast<size_t>(framesThisBlock) * 2u;
+            if (tap.frames() == framesThisBlock) {
+                std::copy(tap.block(), tap.block() + samples, m_renderBufferF.begin());
+            } else {
+                std::fill_n(m_renderBufferF.begin(), samples, 0.0f);
+            }
+        }
 
         // Track peak level
         float blockPeak = calculatePeakDb(m_renderBufferF.data(), framesThisBlock, config.numChannels);
         m_peakLevel.store(std::max(m_peakLevel.load(std::memory_order_relaxed), blockPeak),
                           std::memory_order_relaxed);
 
-        // Write samples
+        // Deliver the block: to the caller's sink (memory render), or quantised
+        // into the file.
         bool writeOk = false;
+        if (config.blockSink) {
+            writeOk = config.blockSink(m_renderBufferF.data(), framesThisBlock, config.numChannels);
+        } else
         switch (config.bitDepth) {
             case BitDepth::PCM_16:
                 writeOk = writeSamples<int16_t>(file, m_renderBufferF.data(), framesThisBlock, config.numChannels);
@@ -273,7 +365,7 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         }
 
         if (!writeOk) {
-            result.errorMessage = "Failed to write audio data";
+            result.errorMessage = config.blockSink ? "Render stopped by the block sink" : "Failed to write audio data";
             break;
         }
 
@@ -286,20 +378,7 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         updateProgress(progress);
     }
 
-    // Restore engine state
-    m_engine.setTransportPlaying(false);
-    m_engine.setSampleRate(originalSampleRate);
-    m_trackManager.setOutputSampleRate(static_cast<double>(originalSampleRate));
-    m_engine.setGraph(AudioGraphBuilder::buildFromTrackManager(m_trackManager));
-    m_engine.setMetronomeEnabled(wasMetronomeEnabled);
-    m_engine.setAuditionModeEnabled(wasAuditionEnabled);
-    // Restore the configured duck depth only; live playback re-smooths the
-    // duck gain naturally from the current preview state.
-    m_engine.setPreviewDuckingAttenuationDb(wasPreviewDuckDb);
-    m_engine.setGlobalSamplePos(savedSamplePos);
-    if (wasPlaying) {
-        m_engine.setTransportPlaying(true);
-    }
+    // Engine state is restored by engineStateGuard when this scope exits.
 
     // Check if render completed successfully
     if (framesRemaining == 0 && result.framesRendered > 0) {
@@ -309,12 +388,15 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     if (!result.success) {
         if (shouldCancel()) {
             result.errorMessage = "Render cancelled by user";
-        } else {
+        } else if (!config.blockSink || result.errorMessage.empty()) {
+            // A sink that stopped the render has already said so; a file render
+            // keeps its established generic message.
             result.errorMessage = "Render failed during audio processing";
         }
     }
 
     if (result.errorMessage.empty()) {
+      if (!config.blockSink) {
         // Rewrite WAV header with actual frame count
         file.seekp(0, std::ios::beg);
         writeWavHeader(file, config, result.framesRendered);
@@ -333,6 +415,7 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
             Log::warning("[Export] Failed to sync exported WAV directory; keeping completed export");
         }
 #endif
+      }
 
         result.success = true;
         result.durationSeconds = static_cast<double>(result.framesRendered) / config.sampleRate;
@@ -352,7 +435,9 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
                 Log::error(msg + " \u2014 export aborted");
                 result.errorMessage = msg;
                 result.success = false;
-                std::remove(config.outputPath.c_str());
+                if (!config.blockSink) {
+                    std::remove(config.outputPath.c_str());
+                }
             } else {
                 Log::warning(msg);
             }
@@ -363,12 +448,26 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
                       " frames, peak: " + std::to_string(result.peakDb) + " dB, true peak: " +
                       std::to_string(result.maxTruePeakdBTP) + " dBTP");
         }
-    } else {
+    } else if (!config.blockSink) {
         file.close();
         std::remove(config.outputPath.c_str());
     }
 
     updateProgress(1.0f);
+    return result;
+}
+
+AudioExporter::Result AudioExporter::renderToBuffer(Config config, RenderedAudio& out) {
+    out = RenderedAudio{};
+    out.sampleRate = config.sampleRate;
+    out.numChannels = config.numChannels;
+    config.blockSink = [&out](const float* interleaved, uint32_t frames, uint32_t channels) {
+        out.interleaved.insert(out.interleaved.end(), interleaved,
+                               interleaved + static_cast<size_t>(frames) * channels);
+        return true;
+    };
+    Result result = render(config);
+    out.frames = result.framesRendered;
     return result;
 }
 

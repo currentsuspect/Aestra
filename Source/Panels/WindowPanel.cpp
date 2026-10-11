@@ -2,6 +2,8 @@
 #include "WindowPanel.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
+#include "../AestraUI/Layout/NUILayoutAlgorithms.h"
+#include "../AestraUI/Layout/NUILayoutSpace.h"
 #include "../AestraUI/Platform/NUIPlatformBridge.h"
 #include "../AestraCore/include/AestraLog.h"
 
@@ -268,13 +270,18 @@ void WindowPanel::onResize(int width, int height) {
 bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (!isVisible() || !isEnabled()) return false;
 
+    if (m_contextual && event.pressed && event.button == AestraUI::NUIMouseButton::Left &&
+        !getBounds().contains(event.position) && m_onOutsidePress) {
+        m_onOutsidePress();
+    }
+
     if (event.pressed) {
         // The overlay layer forwards every press to every visible panel so that
         // clicks over empty overlay area pass through to the workspace. Only
         // raise the panel when the press actually lands inside its bounds;
         // otherwise any click on the transport bar would pop every panel to
         // the front.
-        if (getGlobalBounds().contains(event.position)) {
+        if (getBounds().contains(event.position)) { // both window-absolute
             bringToFront();
         }
     }
@@ -350,7 +357,7 @@ bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 
     if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
         // Edge/corner resize handling (skip when minimized/maximized).
-        if (!m_minimized && !m_maximized) {
+        if (!m_minimized && !m_maximized && !m_locked) {
             const int edges = getResizeEdgesAtPoint(event.position);
             if (edges != ResizeNone) {
                 m_resizing = true;
@@ -362,32 +369,40 @@ bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             }
         }
 
-        // Double-click the title bar to toggle maximize (excluding buttons).
+        // Double-click the title bar to toggle maximize (excluding its controls).
         bool insideTitle = m_titleBarBounds.contains(event.position);
-        
+
+        // Anything in the title bar that is itself interactive: the window
+        // buttons, and the accessory strip when a panel has put its controls up
+        // here. Both drag and double-click-maximize must decline these, because
+        // this whole branch runs BEFORE children are offered the event and
+        // returns true — so without this test a click on an accessory control
+        // starts a window drag and the control never sees it at all.
+        const auto onTitleBarControl = [this](const AestraUI::NUIPoint& p) {
+            if (m_closeButton && m_closeButton->getBounds().contains(p)) return true;
+            if (m_maximizeButton && m_maximizeButton->getBounds().contains(p)) return true;
+            if (m_minimizeButton && m_minimizeButton->getBounds().contains(p)) return true;
+            if (m_titleBarAccessory && m_titleBarAccessory->isVisible() &&
+                m_titleBarAccessory->getBounds().contains(p)) {
+                return true;
+            }
+            return false;
+        };
+
         auto now = std::chrono::steady_clock::now();
         auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastTitleBarClickTime).count();
         const bool manualDoubleClick = elapsedMs > 0 && elapsedMs < 350;
         if ((event.doubleClick || manualDoubleClick) && insideTitle) {
-            const auto onButton =
-                (m_closeButton && m_closeButton->getBounds().contains(event.position)) ||
-                (m_maximizeButton && m_maximizeButton->getBounds().contains(event.position)) ||
-                (m_minimizeButton && m_minimizeButton->getBounds().contains(event.position));
-            if (!onButton) {
+            if (!onTitleBarControl(event.position)) {
                 toggleMaximize();
                 m_lastTitleBarClickTime = std::chrono::steady_clock::time_point{};
                 return true;
             }
         }
 
-        // Start dragging when the title bar is clicked (excluding the title-bar buttons).
-        if (insideTitle) {
-            const auto onButton =
-                (m_closeButton && m_closeButton->getBounds().contains(event.position)) ||
-                (m_maximizeButton && m_maximizeButton->getBounds().contains(event.position)) ||
-                (m_minimizeButton && m_minimizeButton->getBounds().contains(event.position));
-
-            if (!onButton) {
+        // Start dragging when the title bar is clicked (excluding its controls). A docked panel stays put.
+        if (insideTitle && !m_locked) {
+            if (!onTitleBarControl(event.position)) {
                 m_lastTitleBarClickTime = now;
                 m_userPositioned = true;
                 m_draggingTitleBar = true;
@@ -397,6 +412,12 @@ bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 return true;
             }
         }
+    }
+
+    if (event.pressed && event.button == AestraUI::NUIMouseButton::Right && m_onMenuRequested &&
+        m_titleBarBounds.contains(event.position) && !m_closeButton->getBounds().contains(event.position)) {
+        m_onMenuRequested(event.position);
+        return true;
     }
 
     // Let children handle events (buttons, content, etc.)
@@ -410,41 +431,103 @@ bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     return false;
 }
 
+
+void WindowPanel::setTitleBarAccessory(std::shared_ptr<AestraUI::NUIComponent> accessory, float preferredHeight,
+                                       float titleZoneWidth) {
+    if (m_titleBarAccessory) {
+        removeChild(m_titleBarAccessory);
+    }
+    m_titleBarAccessory = std::move(accessory);
+    m_accessoryHeight = std::max(0.0f, preferredHeight);
+    m_accessoryTitleZone = std::max(0.0f, titleZoneWidth);
+
+    if (m_titleBarAccessory) {
+        addChild(m_titleBarAccessory);
+        // Padding above and below matches the window buttons' own inset, so the
+        // accessory sits on the same optical line as them.
+        m_titleBarHeight = std::max(kDefaultTitleBarHeight, m_accessoryHeight + 8.0f);
+    } else {
+        m_titleBarHeight = kDefaultTitleBarHeight;
+    }
+    layoutContent();
+    setDirty(true);
+}
+
 void WindowPanel::layoutContent() {
+    using namespace AestraUI::Layout;
+
     auto bounds = getBounds();
     const float panelWidth = std::max(100.0f, bounds.width);
+    // Guarantees the content band below is never under 20px BEFORE the split
+    // even runs — splitVertical's own clamp only refuses a negative height, on
+    // purpose (that clamp is a real invariant; a 20px floor is this panel's
+    // policy, not the algorithm's). Enforcing the floor here, once, is why
+    // the split below needs no separate floor of its own.
     const float panelHeight = std::max(m_titleBarHeight + 20.0f, bounds.height);
     const float buttonSize = std::max(18.0f, m_titleBarHeight - 8.0f);
     const float buttonPadding = 4.0f;
-    float currentX = panelWidth - buttonSize - buttonPadding;
-    
-    // Update title bar bounds for hit testing (absolute coordinates)
-    m_titleBarBounds = NUIAbsolute(bounds, 0, 0, panelWidth, m_titleBarHeight);
-    
-    // Layout buttons right-to-left: Close, Maximize, Minimize
+
+    // bounds_ is window-absolute on this codepath; localToWindow adds the
+    // panel's own absolute origin to every child rect, so this panel's origin is where every
+    // layout-space computation below re-enters window space.
+    const NUIWindowPoint panelOrigin(bounds.x, bounds.y);
+
+    // AESTRA_LAYOUT_TRACE=window.<title> or =all (V8-X2b criterion 4).
+    auto* trace = layoutRecorderFor("window." + m_title);
+    if (trace) {
+        trace->beginPass(panelOrigin);
+        trace->scope("buttons");
+    }
+
+    const NUILocalRect titleBar(0.0f, 0.0f, panelWidth, m_titleBarHeight);
+    m_titleBarBounds = localToWindow(titleBar, panelOrigin).raw();
+
+    // Layout buttons right-to-left: Close, Maximize, Minimize — nearest-to-
+    // the-edge first, exactly what arrangeTrailingRow's item order expects.
+    const std::vector<float> buttonWidths{buttonSize, buttonSize, buttonSize};
+    const auto buttonRects = arrangeTrailingRow(titleBar, buttonWidths, buttonSize, buttonPadding, buttonPadding, trace);
+
     if (m_closeButton) {
-        m_closeButton->setBounds(NUIAbsolute(bounds, currentX, (m_titleBarHeight - buttonSize) * 0.5f, buttonSize, buttonSize));
-        currentX -= buttonSize + buttonPadding;
+        m_closeButton->setBounds(localToWindow(buttonRects[0], panelOrigin).raw());
     }
-    
     if (m_maximizeButton) {
-        m_maximizeButton->setBounds(NUIAbsolute(bounds, currentX, (m_titleBarHeight - buttonSize) * 0.5f, buttonSize, buttonSize));
-        currentX -= buttonSize + buttonPadding;
+        m_maximizeButton->setBounds(localToWindow(buttonRects[1], panelOrigin).raw());
     }
-    
     if (m_minimizeButton) {
-        m_minimizeButton->setBounds(NUIAbsolute(bounds, currentX, (m_titleBarHeight - buttonSize) * 0.5f, buttonSize, buttonSize));
+        m_minimizeButton->setBounds(localToWindow(buttonRects[2], panelOrigin).raw());
     }
-    
+
+    // Accessory occupies the title bar between the title text and the window
+    // buttons. Computed from the same titleBar rect the buttons use, so the
+    // three cannot drift apart.
+    if (m_titleBarAccessory) {
+        const float buttonsWidth = buttonSize * 3.0f + buttonPadding * 4.0f;
+        const float accessoryX = m_accessoryTitleZone;
+        // Whole pixels: onResize() below takes ints, and NUIComponent::onResize re-applies the
+        // truncated size. A fractional width flipped the toolbar between the two every layout
+        // pass (916.56 <-> 916), so the piano roll never went idle (SPEC 3 §4).
+        const float accessoryW = std::floor(std::max(0.0f, panelWidth - accessoryX - buttonsWidth));
+        const float accessoryH = std::min(m_accessoryHeight, m_titleBarHeight);
+        const float accessoryY = (m_titleBarHeight - accessoryH) * 0.5f;
+        const NUILocalRect accessoryRect(accessoryX, accessoryY, accessoryW, accessoryH);
+        m_titleBarAccessory->setBounds(localToWindow(accessoryRect, panelOrigin).raw());
+        m_titleBarAccessory->onResize(static_cast<int>(accessoryW), static_cast<int>(accessoryH));
+    }
+
     // Layout content (below title bar)
     if (m_content && !m_minimized) {
-        float contentY = m_titleBarHeight;
-        float contentHeight = std::max(20.0f, panelHeight - m_titleBarHeight);
-        m_content->setBounds(NUIAbsolute(bounds, 0, contentY, panelWidth, contentHeight));
-        
+        const NUILocalRect panelLocal(0.0f, 0.0f, panelWidth, panelHeight);
+        if (trace) {
+            trace->scope("panel");
+        }
+        const NUIVerticalSplit split = splitVertical(panelLocal, m_titleBarHeight, trace);
+
+        m_content->setBounds(localToWindow(split.trailing, panelOrigin).raw());
+
         // Trigger content's internal layout
-        m_content->onResize(static_cast<int>(panelWidth), static_cast<int>(contentHeight));
+        m_content->onResize(static_cast<int>(split.trailing.width), static_cast<int>(split.trailing.height));
     }
+    finishLayoutPass(trace);
 }
 
 void WindowPanel::onMinimizeClicked() {
@@ -469,7 +552,7 @@ void WindowPanel::setMinimumPanelSize(float width, float height) {
 }
 
 AestraUI::NUICursorStyle WindowPanel::getResizeCursorStyleForPoint(const AestraUI::NUIPoint& point) const {
-    if (!isVisible() || !isEnabled() || m_minimized || m_maximized) {
+    if (!isVisible() || !isEnabled() || m_minimized || m_maximized || m_locked) {
         return AestraUI::NUICursorStyle::Arrow;
     }
 

@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "Headless/HeadlessMusicGenerator.h"
+#include "Headless/OfflineProjectRender.h"
 #include "AestraLog.h"
 #include "Core/AudioGraphBuilder.h"
 #include "Models/UnitManager.h"
@@ -381,88 +382,17 @@ bool HeadlessMusicGenerator::exportTo(const std::string& outputPath,
         }
     } toneCleanup{m_toneSamplePath};
 
-    // --- Wire the export engine to render the committed timeline ---------------
-    // AudioExporter::render drives AudioEngine::processBlock — the same path the
-    // live engine uses — so the committed MIDI clips synthesize through their
-    // sampler units (live/export parity, AGENTS.md §20).
-    //
-    // setTrackManager stores a weak_ptr, so `borrowedTrackManager` must stay
-    // alive for the whole render. The guard restores the engine to an unwired
-    // state on every exit path (including failures) — the engine keeps a raw
-    // UnitManager*, an owned slot map and a graph copy, none of which may
-    // outlive this call. The render is fully synchronous: no callback or
-    // retained object can touch this wiring once exportTo returns.
-    // Restores everything this render mutates on every exit path, so a
-    // synchronous export leaves the caller's engine and session unchanged:
-    //  - engine wiring (weak TrackManager ref, raw UnitManager*, owned slot map,
-    //    graph copy, pattern-engine pointer) is cleared;
-    //  - the pattern-playback engine is cleared so the timeline instances this
-    //    render scheduled do not leak into the caller's TrackManager.
-    // The transport flags/position are never touched (see
-    // scheduleTimelineForOfflineRender below), so there is nothing else to undo.
-    struct RenderStateGuard {
-        AudioEngine& engine;
-        TrackManager& trackManager;
-        ~RenderStateGuard() {
-            engine.setGraph(AudioGraph{});
-            engine.setPatternPlaybackEngine(nullptr);
-            engine.setUnitManager(nullptr);
-            engine.setChannelSlotMap(nullptr);
-            engine.setTrackManager(nullptr);
-            // Remove, don't rewind: this render's instances must not survive into the
-            // caller's session (rewindScheduledInstances() would leave them scheduled and
-            // merely restarted).
-            trackManager.getPatternPlaybackEngine().clearScheduledInstances();
-        }
-    };
+    // Wiring, render and restore live in renderProjectOffline() -- the same
+    // function AestraHeadless --check uses, so the two cannot drift apart.
+    OfflineRenderRequest request;
+    request.outputPath = outputPath;
+    request.sampleRate = sampleRate > 0 ? sampleRate : m_sampleRate;
+    request.bitDepth = bitDepth;
+    request.tempoBpm = m_tempo;
+    request.progress = progressCallback;
 
-    // Non-owning shared_ptr: setTrackManager currently requires shared ownership,
-    // but the caller owns m_trackManager and guarantees it outlives this render.
-    // The no-op deleter means the borrowed TrackManager is never freed here.
-    std::shared_ptr<TrackManager> borrowedTrackManager(&m_trackManager, [](TrackManager*) {});
-    RenderStateGuard renderGuard{m_engine, m_trackManager}; // destroyed before borrowedTrackManager
-
-    m_engine.setSampleRate(effectiveRate);
-    m_engine.setBufferConfig(512, 2);
-    m_engine.setBPM(static_cast<float>(m_tempo));
-    m_engine.setTrackManager(borrowedTrackManager);
-    m_engine.setUnitManager(&m_trackManager.getUnitManager());
-    m_engine.setPatternPlaybackEngine(&m_trackManager.getPatternPlaybackEngine());
-    m_trackManager.buildAndShareSlotMap();
-    if (auto slotMap = m_trackManager.getChannelSlotMapShared()) {
-        m_engine.setChannelSlotMap(slotMap);
-    }
-    m_engine.setGraph(AudioGraphBuilder::buildFromTrackManager(m_trackManager));
-    m_engine.initialize();
-
-    // MIDI clips reach their units through the pattern-playback engine
-    // (AudioEngine::processBlock pops scheduled notes into unit MIDI routes).
-    // Schedule the committed timeline into it WITHOUT starting live transport —
-    // the exporter drives the engine's own transport, so we must not mutate the
-    // caller's playing flag / position. clearScheduledInstances() first removes any prior
-    // contents; the render guard clears again on exit so these instances don't leak.
-    // rewindScheduledInstances() cannot serve here — it only REWINDS active instances
-    // (re-emit from the top, which a loop restart wants), so anything already scheduled
-    // would have been rendered into the export alongside the timeline we just asked for.
-    m_trackManager.getPatternPlaybackEngine().clearScheduledInstances();
-    m_trackManager.scheduleTimelineForOfflineRender(0.0);
-
-    // Setup exporter
-    AudioExporter exporter(m_engine, m_trackManager);
-    
-    if (progressCallback) {
-        exporter.setProgressCallback(progressCallback);
-    }
-    
-    AudioExporter::Config config;
-    config.outputPath = outputPath;
-    config.sampleRate = sampleRate > 0 ? sampleRate : m_sampleRate;
-    config.bitDepth = bitDepth;
-    config.scope = AudioExporter::RenderScope::FullSong;
-    
-    // Render
     Log::info("[HeadlessGenerator] Exporting to: " + outputPath);
-    auto result = exporter.render(config); // toneCleanup removes the temp sample on scope exit
+    auto result = renderProjectOffline(m_engine, m_trackManager, request); // toneCleanup removes the temp sample on scope exit
 
     if (result.success) {
         Log::info("[HeadlessGenerator] Export complete: " + 

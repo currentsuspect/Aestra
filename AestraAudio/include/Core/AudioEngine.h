@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include "AestraLog.h"
 #include "AestraThreading.h"
 #include "AudioCommandQueue.h"
 #include "AudioDriverTypes.h"
@@ -8,6 +9,7 @@
 #include "AudioRenderer.h"
 #include "AudioTelemetry.h"
 #include "ChannelSlotMap.h"
+#include "TrackOutputTap.h"
 #include "ContinuousParamBuffer.h"
 #include "DSP/DCBlocker.h"
 #include "DSP/TruePeakMeter.h"
@@ -22,6 +24,7 @@
 #include "Playback/LiveMidiQueue.h"
 #include "PluginHost.h" // For MidiBuffer [NEW]
 
+#include <cstring>
 #include <array>
 #include <atomic>
 #include <cmath>
@@ -210,7 +213,11 @@ public:
         cmd.type = AudioQueueCommandType::SetTransportState;
         cmd.value1 = playing ? 1.0f : 0.0f;
         cmd.samplePos = pos;
-        m_commandQueue.push(cmd);
+        // Transport is an edge, not state: a dropped stop leaves audio running
+        // against user intent, so deliver it reliably and fail loudly (#913).
+        if (!m_commandQueue.pushReliable(cmd)) {
+            Aestra::Log::error("[AudioEngine] setTransportPlaying dropped after retry: queue full");
+        }
     }
     /** @brief Check whether transport playback is active. */
     bool isTransportPlaying() const { return m_transportPlaying.load(std::memory_order_relaxed); }
@@ -228,6 +235,14 @@ public:
      */
     void setOfflineRenderActive(bool active) { m_offlineRenderActive.store(active, std::memory_order_relaxed); }
     bool isOfflineRenderActive() const { return m_offlineRenderActive.load(std::memory_order_relaxed); }
+    /** @brief V8-W5: the offline renderer arms this to read one channel's output before it reaches the master. */
+    TrackOutputTap& trackOutputTap() { return m_trackOutputTap; }
+
+    /// V8-A5: how many times a Custom automation curve was skipped because its
+    /// target plugin does not declare supportsRealtimeAutomation(). A non-zero
+    /// count is the honest boundary of third-party automation, visible to
+    /// diagnostics and tests instead of a silent no-op. Counts curve-blocks.
+    uint64_t automationUnsupportedSkips() const { return m_automationUnsupportedSkips.load(std::memory_order_relaxed); }
     /** @brief Replace the active audio graph and compile it for rendering. */
     void setGraph(const AudioGraph& graph) {
         auto preparedGraph = graph;
@@ -466,6 +481,28 @@ public:
     void setPatternPlaybackMode(bool enabled, double lengthBeats);
     /** @brief Check whether Arsenal pattern playback mode is active. */
     bool isPatternPlaybackMode() const { return m_patternPlaybackMode.load(std::memory_order_relaxed); }
+
+    /**
+     * @brief Request a playback-context change (main thread only).
+     *
+     * Rides the audio command queue as SetPlaybackContext, so the audio thread applies it in
+     * the same drain as the transport commands around it. The direct setPatternPlaybackMode()
+     * store raced them: a block could render a transition's transport under the previous
+     * context. The scheduler rewind it needs stays HERE, on the producer thread:
+     * rewindScheduledInstances() drains the pattern RT queue from the producer side and must
+     * never run on the audio thread.
+     *
+     * If the queue stays full past pushReliable()'s timeout, the context is posted to a
+     * generation-tagged fallback slot that the audio thread applies at the start of its next
+     * block: never lost, and never written by two threads.
+     */
+    void requestPlaybackContext(bool patternMode, double patternLengthBeats, bool audition);
+    /** @brief Generation of the last requested / audio-applied playback context. Equal means settled. */
+    uint64_t getRequestedContextGeneration() const {
+        return m_requestedContextGeneration.load(std::memory_order_acquire);
+    }
+    uint64_t getAppliedContextGeneration() const { return m_appliedContextGeneration.load(std::memory_order_acquire); }
+    double getPatternLengthBeats() const { return m_patternLengthBeats.load(std::memory_order_relaxed); }
 
     /** @brief Bind the unit manager used for Arsenal rendering. */
     void setUnitManager(UnitManager* mgr) {
@@ -904,6 +941,7 @@ private:
 
     AudioCommandQueue m_commandQueue;
     AudioTelemetry m_telemetry;
+    std::atomic<uint64_t> m_reportedMisuseCount{0};
     EngineState m_state;
 
     std::atomic<uint32_t> m_sampleRate{48000};
@@ -922,6 +960,8 @@ private:
     std::atomic<uint32_t> m_outputChannels{2};
     std::atomic<bool> m_transportPlaying{false};
     std::atomic<bool> m_offlineRenderActive{false};
+    TrackOutputTap m_trackOutputTap;
+    std::atomic<uint64_t> m_automationUnsupportedSkips{0};
     // RT-side tracking of last known transport state (avoids race with UI atomic updates)
     bool m_rtLastTransportPlaying{false};
     // Transport edge flags (set in applyPendingCommands, consumed in processBlock)
@@ -1217,6 +1257,25 @@ private:
     // Pattern Playback Mode State
     std::atomic<bool> m_patternPlaybackMode{false};
     std::atomic<double> m_patternLengthBeats{4.0};
+    // Playback-context requests (requestPlaybackContext). The requested* fields are main-thread
+    // only: they decide whether the producer-side scheduler rewind is due.
+    std::atomic<uint64_t> m_requestedContextGeneration{0};
+    std::atomic<uint64_t> m_appliedContextGeneration{0};
+    bool m_requestedPatternMode{false};
+    double m_requestedPatternLength{4.0};
+    // Saturated-queue fallback slot (requestPlaybackContext): written by the producer, applied
+    // ONLY by the audio thread. Packed: bit0 pattern, bit1 audition, bits 32-63 length (float).
+    std::atomic<uint64_t> m_fallbackContextGeneration{0};
+    std::atomic<uint64_t> m_fallbackContextPacked{0};
+    static uint64_t packPlaybackContext(bool pattern, double lengthBeats, bool audition) {
+        const float length = static_cast<float>(lengthBeats);
+        uint32_t lengthBits = 0;
+        std::memcpy(&lengthBits, &length, sizeof(length));
+        return (static_cast<uint64_t>(lengthBits) << 32) | (audition ? 2u : 0u) | (pattern ? 1u : 0u);
+    }
+    // Drain carry-over (applyPendingCommands): audio thread only. See the pair rule there.
+    AudioQueueCommand m_carriedCommand{};
+    bool m_hasCarriedCommand{false};
     // Completed pattern-loop passes (audio thread writes at each wrap, reset
     // while stopped). Gives pattern scheduling a MONOTONIC frame domain
     // (iteration * loopLen + wrapped pos) so the next iteration's events are
@@ -1372,11 +1431,7 @@ public:
 
 private:
     std::atomic<bool> m_loudnessResetRequested{false};
-    // Pre-computed filter coefficients (static 48 kHz fallback)
-    static const BiquadCoeff kKWeightPreFilter; // HS
-    static const BiquadCoeff kKWeightRLB;       // HPF
-
-    // Sample-rate-aware coefficient computation via bilinear transform
+    // K-weighting at the device rate, from DSP/KWeighting.h (with its 48 kHz reference fallback)
     static BiquadCoeff computeKWeightPreFilter(double sampleRate);
     static BiquadCoeff computeKWeightRLB(double sampleRate);
 

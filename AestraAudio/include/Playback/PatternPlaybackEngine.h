@@ -40,7 +40,8 @@ struct ScheduledEvent {
     uint8_t data2;        // 1 byte (velocity)
     /** @brief Event priority inside a frame. */
     uint8_t priority;     // 1 byte (0=note-off, 1=per-note pan, 2=note-on)
-    uint8_t _padding[6];  // 6 bytes -> Total 32.
+    /** @brief Note identity shared by a note's on and off (0 = none). 4 bytes, aligned -> Total 32. */
+    uint32_t noteId;
 };
 static_assert(sizeof(ScheduledEvent) == 32, "ScheduledEvent must be 32 bytes");
 
@@ -168,6 +169,28 @@ public:
                                  double sourceStartBeat = 0.0, double durationBeats = -1.0);
 
     /**
+     * @brief Re-place a slot while playing without disturbing what already sounds (non-RT thread).
+     *
+     * Like schedulePatternInstance(), but an existing slot keeps its scheduling frontier.
+     * schedulePatternInstance() resets it to 0, which wakes the refill's entry catch-up and
+     * re-fires every note already sounding. Pair with patternContentEdited(): the next refill
+     * re-queues this slot from the playhead at its new placement. Held notes that still span
+     * the playhead there carry on, and ones that no longer do are released at once.
+     * A slot that did not exist is scheduled fresh, exactly as by schedulePatternInstance().
+     */
+    void updatePatternInstance(PatternID pid, double startBeat, uint32_t instanceId, double sourceStartBeat = 0.0,
+                               double durationBeats = -1.0);
+
+    /**
+     * @brief Remove a slot while playing (non-RT thread). Pair with patternContentEdited().
+     *
+     * Unlike cancelPatternInstance(), this does NOT raise the cancellation flag. processAudio()
+     * drops every event of a cancelled slot, note-offs included, so a note sounding at removal
+     * would hang. The next content-edit refill releases the removed slot's held notes instead.
+     */
+    void removePatternInstance(uint32_t instanceId);
+
+    /**
      * Cancel pattern instance via atomic flag (RT-safe)
      * @param instanceId Pattern-instance identifier to cancel.
      */
@@ -235,6 +258,18 @@ public:
      * @return Count of live instances.
      */
     size_t getActiveInstanceCount() const;
+
+    /** @brief What one scheduled instance plays: pattern beat 0 lands at startBeat; only
+     *  pattern beats in [sourceStartBeat, sourceEndBeat) sound. */
+    struct InstanceSnapshot {
+        PatternID patternId;
+        uint32_t instanceId = 0;
+        double startBeat = 0.0;
+        double sourceStartBeat = 0.0;
+        double sourceEndBeat = 0.0;
+    };
+    /** @brief Copy of the scheduled instances (control thread; takes the scheduler lock). */
+    std::vector<InstanceSnapshot> snapshotInstances() const;
 
     /**
      * @brief Get the number of scheduler overflows observed so far.
@@ -306,6 +341,8 @@ private:
         uint8_t noteNumber;
         uint16_t channelIdx;
         uint64_t offFrame;
+        uint32_t noteId;    // the id its voice was started with; every note-off for it carries this
+        uint32_t currentId; // the id the scheduler computes for the note now (changes when edited)
     };
 
     // Gated-note registry (control thread only; refilled/pruned in refillWindow).

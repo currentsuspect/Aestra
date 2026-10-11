@@ -901,7 +901,7 @@ void CommandRegistry::initialize() {
                 return CommandRegistry::fail("slot " + it->second + " on track " +
                                              std::string(*trackRaw) + " is occupied");
         }
-        if (slot >= EffectChain::MAX_SLOTS)
+        if (slot >= EffectChain::kMaxSlots) // also catches getFirstEmptySlot() == kNoSlot
             return CommandRegistry::fail("no empty effect slots on track " +
                                          std::string(*trackRaw));
 

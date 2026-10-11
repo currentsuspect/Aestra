@@ -430,6 +430,31 @@ void testConfigSaveLoadRoundtrip() {
 
 } // namespace
 
+void testEditorNeutralsFollowTheme() {
+    std::cout << "[Test] plugin-editor neutrals carry the active theme\n";
+    auto& manager = NUIThemeManager::getInstance();
+
+    // Ember is a warm black, so an editor's tuned gray must come out warm
+    // (red >= green >= blue) at the same lightness, not as a cool gray.
+    manager.setActiveTheme("Aestra-dark");
+    const NUIColor warm = editorNeutral(0.045f, 0.9f);
+    check(warm.r > warm.b, "a dark editor surface leans toward the theme's warmth");
+    check(nearlyEqual((warm.r + warm.g + warm.b) / 3.0f, 0.045f, 0.002f), "tinting keeps the tuned lightness");
+    check(nearlyEqual(warm.a, 0.9f), "tinting keeps alpha");
+    const NUIColor fromCool = editorNeutral(NUIColor(0.035f, 0.035f, 0.040f, 0.96f));
+    check(fromCool.r > fromCool.b, "the old cool near-blacks are re-tinted, not kept blue");
+
+    // A neutral dark theme gets its grays back exactly.
+    auto neutral = NUIThemePresets::createAestraDark();
+    neutral.backgroundPrimary = NUIColor(0.05f, 0.05f, 0.05f, 1.0f);
+    manager.setCustomTheme("neutral-editor-test", neutral);
+    manager.setActiveTheme("neutral-editor-test");
+    check(colorsEqual(editorNeutral(0.045f, 0.9f), NUIColor(0.045f, 0.045f, 0.045f, 0.9f)),
+          "a neutral theme leaves editor grays untouched");
+
+    manager.setActiveTheme("Aestra-dark");
+}
+
 int main() {
     testSemanticDefaults();
     testStatePriorityAndGeometry();
@@ -443,6 +468,7 @@ int main() {
     testCompatibilityAliases();
     testLightPresetCompleteness();
     testHighContrastPreset();
+    testEditorNeutralsFollowTheme();
 
     if (gFailures == 0) {
         std::cout << "All UI theme consistency checks passed\n";

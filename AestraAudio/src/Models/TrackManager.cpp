@@ -1,6 +1,10 @@
+#include <unordered_set>
 #include "TrackManager.h"
+#include <unordered_map>
+#include <algorithm>
 
 #include "ClipPrefilterService.h"
+#include "Plugin/SamplerPlugin.h"
 #include "DSP/ClipPrefilter.h"
 
 namespace Aestra {
@@ -44,19 +48,34 @@ void TrackManager::ensureClipPrefilters() {
         return;
     }
 
-    // 2. Clear stale variants; queue missing work for downsampled sources.
+    // 2. Clear stale variants; queue missing work for downsampled sources THAT A CLIP PLAYS. A filtered
+    // copy is a full float32 copy of the source, so one made for a source nothing plays (a browser preview,
+    // a deleted clip's leftover) is memory for nothing.
+    std::unordered_set<uint64_t> playedSources;
+    for (size_t l = 0; l < m_playlistModel.getLaneCount(); ++l) {
+        const PlaylistLane* lane = m_playlistModel.getLane(m_playlistModel.getLaneId(l));
+        if (lane == nullptr) {
+            continue;
+        }
+        for (const ClipInstance& clip : lane->clips) {
+            const PatternSource* pattern = m_patternManager.getPattern(clip.patternId);
+            if (pattern != nullptr && pattern->isAudio()) {
+                playedSources.insert(std::get<AudioSlicePayload>(pattern->payload).audioSourceId.value);
+            }
+        }
+    }
     for (const ClipSourceID id : m_sourceManager.getAllSourceIDs()) {
         ClipSource* source = m_sourceManager.getSource(id);
         if (source == nullptr) {
             continue;
         }
         const auto buffer = source->getBuffer();
-        const bool needed =
-            buffer && buffer->isValid() && ClipPrefilter::isNeeded(buffer->sampleRate, targetRate);
+        const bool needed = buffer && buffer->isValid() && ClipPrefilter::isNeeded(buffer->sampleRate, targetRate) &&
+                            playedSources.count(id.value) > 0;
 
         if (!needed) {
             if (source->hasFilteredVariant()) {
-                source->clearFilteredVariant(); // rate no longer qualifies — free the copy
+                source->clearFilteredVariant(); // rate no longer qualifies, or nothing plays it — free the copy
             }
             continue;
         }
@@ -92,6 +111,30 @@ void TrackManager::waitForClipPrefilters() {
     }
     m_clipPrefilterService->waitIdle();
     ensureClipPrefilters(); // apply the drained results deterministically
+}
+
+bool TrackManager::prewarmSamplerKeepLength(bool wait) {
+    using Plugins::SamplerPlugin;
+    // Pitches each unit's notes use, across every pattern (a unit's notes can live in any pattern).
+    std::unordered_map<UnitID, std::vector<int>> pitchesByUnit;
+    for (const auto& pattern : m_patternManager.getAllPatterns()) {
+        if (!pattern || !pattern->isMidi()) continue;
+        for (const auto& note : pattern->getMidiNotes()) {
+            auto& pitches = pitchesByUnit[note.unitId];
+            if (std::find(pitches.begin(), pitches.end(), note.pitch) == pitches.end()) {
+                pitches.push_back(note.pitch);
+            }
+        }
+    }
+    bool allReady = true;
+    for (UnitID id : m_unitManager.getAllUnitIDs()) {
+        auto sampler = std::dynamic_pointer_cast<SamplerPlugin>(m_unitManager.getUnitPlugin(id));
+        if (!sampler || sampler->getPitchMode() != SamplerPlugin::PitchMode::KeepLength) continue;
+        const auto it = pitchesByUnit.find(id);
+        if (it == pitchesByUnit.end()) continue;
+        allReady = sampler->prewarmKeepLength(it->second, wait) && allReady;
+    }
+    return allReady;
 }
 
 } // namespace Audio

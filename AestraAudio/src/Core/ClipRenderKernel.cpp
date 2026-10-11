@@ -71,7 +71,8 @@ ClipRenderResult renderClipInto(const ClipRenderState& clip, uint64_t blockStart
             return result;
         }
 
-        if (!clip.audioData || blockEnd <= clip.startSample || blockStart >= clip.endSample) {
+        if ((!clip.audioData && !(clip.bufferOwner && clip.bufferOwner->isCompact())) || blockEnd <= clip.startSample ||
+            blockStart >= clip.endSample) {
             return result;
         }
 
@@ -117,7 +118,6 @@ ClipRenderResult renderClipInto(const ClipRenderState& clip, uint64_t blockStart
         const uint32_t stride = channels;
 
         double* dstBase = destination;
-        const float* data = clip.audioData;
         double* dst = dstBase + static_cast<size_t>(localOffset) * 2;
 
         const uint64_t clipLength = clip.endSample - clip.startSample;
@@ -145,13 +145,30 @@ ClipRenderResult renderClipInto(const ClipRenderState& clip, uint64_t blockStart
         const double clipGainL = clipGain * (clipPan > 0.0 ? 1.0 - clipPan : 1.0);
         const double clipGainR = clipGain * (clipPan < 0.0 ? 1.0 + clipPan : 1.0);
 
+        const double phaseEnd = static_cast<double>(totalFrames);
+        const bool directRate = std::abs(ratio - 1.0) < 1e-9;
+        // The first source frame the direct-rate path reads; it advances one frame per output frame.
+        const uint64_t directStart = static_cast<uint64_t>(phase);
+        if (!directRate)
+            result.usedSampleRateConversion = true;
+
+        // Mixes @p n output frames. `data` holds source frames [base, base + dataFrames) of the clip's
+        // audio as float; for float32 sources that is the whole file (base 0), for compact PCM it is a
+        // window converted just for this call. Every index below is relative to `base`, so the arithmetic
+        // is the same whichever storage the source uses. `phase` is carried by the caller (accumulated
+        // exactly as before) and `first` is the output frame this call starts at.
+        const auto mixFrames = [&](const float* data, int64_t dataFrames, int64_t base, uint32_t first, uint32_t n,
+                                   double& phase) {
+            const uint64_t startHere = start + first;
+            double* dstHere = dst + static_cast<size_t>(first) * 2;
+            const uint64_t dataFramesU = static_cast<uint64_t>(dataFrames);
+            const double rel = static_cast<double>(base);
         // Fast path: matching sample rates - direct copy to double
-        if (std::abs(ratio - 1.0) < 1e-9) {
-            const uint64_t srcStart = static_cast<uint64_t>(phase);
-            const float* src = data + srcStart * stride;
-            for (uint32_t i = 0; i < framesToRender; ++i) {
+        if (directRate) {
+            const float* src = data + (directStart + first - static_cast<uint64_t>(base)) * stride;
+            for (uint32_t i = 0; i < n; ++i) {
                 // Micro-fade at clip edges to avoid clicks/crackles.
-                const uint64_t projectSample = start + i;
+                const uint64_t projectSample = startHere + i;
                 const double fade = clipFadeAt(projectSample);
 
                 // Sanitize clip source reads: a corrupted audio file can
@@ -165,72 +182,70 @@ ClipRenderResult renderClipInto(const ClipRenderState& clip, uint64_t blockStart
                     sR = MixMath::sanitizeMix(static_cast<double>(src[i * 2 + 1]));
                 }
 
-                dst[i * 2] += sL * clipGainL * fade;
-                dst[i * 2 + 1] += sR * clipGainR * fade;
+                dstHere[i * 2] += sL * clipGainL * fade;
+                dstHere[i * 2 + 1] += sR * clipGainR * fade;
             }
         } else {
-            result.usedSampleRateConversion = true;
-            // Resampling - use selected quality, pre-compute end condition
-            const double phaseEnd = static_cast<double>(totalFrames);
+            // Resampling - use selected quality; phaseEnd (the file's end) is hoisted above
 
             if (channels == 1) {
                 // Mono Resampling — use the same quality interpolators as stereo.
                 // The mono path reads a single float per frame, so we duplicate to L/R.
                 switch (quality) {
                 case Interpolators::InterpolationQuality::Cubic:
-                    for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
-                        const uint64_t projectSample = start + i;
+                    for (uint32_t i = 0; i < n && phase < phaseEnd; ++i) {
+                        const uint64_t projectSample = startHere + i;
                         const double fade = clipFadeAt(projectSample);
                         float sample = 0.0f;
-                        uint64_t idx = static_cast<uint64_t>(phase);
-                        double frac = phase - static_cast<double>(idx);
+                        uint64_t idx = static_cast<uint64_t>(phase - rel);
+                        double frac = (phase - rel) - static_cast<double>(idx);
                         // Catmull-Rom 4-point on mono data
                         float s0 = (idx > 0) ? data[idx - 1] : data[idx];
                         float s1 = data[idx];
-                        float s2 = (idx + 1 < totalFrameCount) ? data[idx + 1] : data[idx];
-                        float s3 = (idx + 2 < totalFrameCount) ? data[idx + 2] : s2;
+                        float s2 = (idx + 1 < dataFramesU) ? data[idx + 1] : data[idx];
+                        float s3 = (idx + 2 < dataFramesU) ? data[idx + 2] : s2;
                         double f = frac;
                         sample = static_cast<float>(0.5 * ((2.0 * s1) + (-s0 + s2) * f +
                                                            (2.0 * s0 - 5.0 * s1 + 4.0 * s2 - s3) * f * f +
                                                            (-s0 + 3.0 * s1 - 3.0 * s2 + s3) * f * f * f));
                         const double s = MixMath::sanitizeMix(static_cast<double>(sample));
-                        dst[i * 2] += s * clipGainL * fade;
-                        dst[i * 2 + 1] += s * clipGainR * fade;
+                        dstHere[i * 2] += s * clipGainL * fade;
+                        dstHere[i * 2 + 1] += s * clipGainR * fade;
                         phase += ratio;
                     }
-                    return result;
+                    return;
                 case Interpolators::InterpolationQuality::Sinc8:
                 case Interpolators::InterpolationQuality::Sinc16:
                 case Interpolators::InterpolationQuality::Sinc32:
                 case Interpolators::InterpolationQuality::Sinc64:
                     // Sinc on mono: compute weighted sum, duplicate to L/R
-                    for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
-                        const uint64_t projectSample = start + i;
+                    for (uint32_t i = 0; i < n && phase < phaseEnd; ++i) {
+                        const uint64_t projectSample = startHere + i;
                         const double fade = clipFadeAt(projectSample);
                         double val =
-                            Interpolators::sincInterpolateMono(data, totalFrames, phase, quality);
+                            Interpolators::sincInterpolateMono(data, dataFramesU, phase - rel, quality);
                         const double v = MixMath::sanitizeMix(static_cast<double>(val));
-                        dst[i * 2] += v * clipGainL * fade;
-                        dst[i * 2 + 1] += v * clipGainR * fade;
+                        dstHere[i * 2] += v * clipGainL * fade;
+                        dstHere[i * 2 + 1] += v * clipGainR * fade;
                         phase += ratio;
                     }
-                    return result;
+                    return;
                 default:
                     // Linear fallback
-                    for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
-                        const uint64_t projectSample = start + i;
+                    for (uint32_t i = 0; i < n && phase < phaseEnd; ++i) {
+                        const uint64_t projectSample = startHere + i;
                         const double fade = clipFadeAt(projectSample);
-                        uint64_t idx = static_cast<uint64_t>(phase);
-                        double frac = phase - static_cast<double>(idx);
+                        uint64_t idx = static_cast<uint64_t>(phase - rel);
+                        double frac = (phase - rel) - static_cast<double>(idx);
                         float s0 = data[idx];
-                        float s1 = (idx + 1 < static_cast<uint64_t>(totalFrames)) ? data[idx + 1] : s0;
+                        float s1 = (idx + 1 < dataFramesU) ? data[idx + 1] : s0;
                         double val = s0 + frac * (s1 - s0);
                         const double v = MixMath::sanitizeMix(static_cast<double>(val));
-                        dst[i * 2] += v * clipGainL * fade;
-                        dst[i * 2 + 1] += v * clipGainR * fade;
+                        dstHere[i * 2] += v * clipGainL * fade;
+                        dstHere[i * 2 + 1] += v * clipGainR * fade;
                         phase += ratio;
                     }
-                    return result;
+                    return;
                 }
             }
 
@@ -245,61 +260,99 @@ ClipRenderResult renderClipInto(const ClipRenderState& clip, uint64_t blockStart
             // a free kernel that has no engine to load from.
             switch (quality) {
             case Interpolators::InterpolationQuality::Cubic:
-                for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
+                for (uint32_t i = 0; i < n && phase < phaseEnd; ++i) {
                     float outL, outR;
-                    Interpolators::CubicInterpolator::interpolate(data, totalFrames, phase, outL, outR);
-                    const uint64_t projectSample = start + i;
+                    Interpolators::CubicInterpolator::interpolate(data, dataFrames, phase - rel, outL, outR);
+                    const uint64_t projectSample = startHere + i;
                     const double fade = clipFadeAt(projectSample);
-                    dst[i * 2] += MixMath::sanitizeMix(static_cast<double>(outL)) * clipGainL * fade;
-                    dst[i * 2 + 1] += MixMath::sanitizeMix(static_cast<double>(outR)) * clipGainR * fade;
+                    dstHere[i * 2] += MixMath::sanitizeMix(static_cast<double>(outL)) * clipGainL * fade;
+                    dstHere[i * 2 + 1] += MixMath::sanitizeMix(static_cast<double>(outR)) * clipGainR * fade;
                     phase += ratio;
                 }
                 break;
             case Interpolators::InterpolationQuality::Sinc8:
-                for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
+                for (uint32_t i = 0; i < n && phase < phaseEnd; ++i) {
                     float outL, outR;
-                    Interpolators::Sinc8Interpolator::interpolate(data, totalFrames, phase, outL, outR);
-                    const uint64_t projectSample = start + i;
+                    Interpolators::Sinc8Interpolator::interpolate(data, dataFrames, phase - rel, outL, outR);
+                    const uint64_t projectSample = startHere + i;
                     const double fade = clipFadeAt(projectSample);
-                    dst[i * 2] += MixMath::sanitizeMix(static_cast<double>(outL)) * clipGainL * fade;
-                    dst[i * 2 + 1] += MixMath::sanitizeMix(static_cast<double>(outR)) * clipGainR * fade;
+                    dstHere[i * 2] += MixMath::sanitizeMix(static_cast<double>(outL)) * clipGainL * fade;
+                    dstHere[i * 2 + 1] += MixMath::sanitizeMix(static_cast<double>(outR)) * clipGainR * fade;
                     phase += ratio;
                 }
                 break;
             case Interpolators::InterpolationQuality::Sinc16:
-                for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
+                for (uint32_t i = 0; i < n && phase < phaseEnd; ++i) {
                     float outL, outR;
-                    Interpolators::Sinc16Interpolator::interpolate(data, totalFrames, phase, outL, outR);
-                    const uint64_t projectSample = start + i;
+                    Interpolators::Sinc16Interpolator::interpolate(data, dataFrames, phase - rel, outL, outR);
+                    const uint64_t projectSample = startHere + i;
                     const double fade = clipFadeAt(projectSample);
-                    dst[i * 2] += MixMath::sanitizeMix(static_cast<double>(outL)) * clipGainL * fade;
-                    dst[i * 2 + 1] += MixMath::sanitizeMix(static_cast<double>(outR)) * clipGainR * fade;
+                    dstHere[i * 2] += MixMath::sanitizeMix(static_cast<double>(outL)) * clipGainL * fade;
+                    dstHere[i * 2 + 1] += MixMath::sanitizeMix(static_cast<double>(outR)) * clipGainR * fade;
                     phase += ratio;
                 }
                 break;
             case Interpolators::InterpolationQuality::Sinc32:
-                for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
+                for (uint32_t i = 0; i < n && phase < phaseEnd; ++i) {
                     float outL, outR;
-                    Interpolators::Sinc32Interpolator::interpolate(data, totalFrames, phase, outL, outR);
-                    const uint64_t projectSample = start + i;
+                    Interpolators::Sinc32Interpolator::interpolate(data, dataFrames, phase - rel, outL, outR);
+                    const uint64_t projectSample = startHere + i;
                     const double fade = clipFadeAt(projectSample);
-                    dst[i * 2] += MixMath::sanitizeMix(static_cast<double>(outL)) * clipGainL * fade;
-                    dst[i * 2 + 1] += MixMath::sanitizeMix(static_cast<double>(outR)) * clipGainR * fade;
+                    dstHere[i * 2] += MixMath::sanitizeMix(static_cast<double>(outL)) * clipGainL * fade;
+                    dstHere[i * 2 + 1] += MixMath::sanitizeMix(static_cast<double>(outR)) * clipGainR * fade;
                     phase += ratio;
                 }
                 break;
             case Interpolators::InterpolationQuality::Sinc64:
-                for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
+                for (uint32_t i = 0; i < n && phase < phaseEnd; ++i) {
                     float outL, outR;
-                    Interpolators::Sinc64Interpolator::interpolate(data, totalFrames, phase, outL, outR);
-                    const uint64_t projectSample = start + i;
+                    Interpolators::Sinc64Interpolator::interpolate(data, dataFrames, phase - rel, outL, outR);
+                    const uint64_t projectSample = startHere + i;
                     const double fade = clipFadeAt(projectSample);
-                    dst[i * 2] += MixMath::sanitizeMix(static_cast<double>(outL)) * clipGainL * fade;
-                    dst[i * 2 + 1] += MixMath::sanitizeMix(static_cast<double>(outR)) * clipGainR * fade;
+                    dstHere[i * 2] += MixMath::sanitizeMix(static_cast<double>(outL)) * clipGainL * fade;
+                    dstHere[i * 2 + 1] += MixMath::sanitizeMix(static_cast<double>(outR)) * clipGainR * fade;
                     phase += ratio;
                 }
                 break;
             }
+        }
+        };
+
+        // float32 source: the whole file is the window.
+        const AudioBufferData* owner = clip.bufferOwner.get();
+        if (!owner || !owner->isCompact()) {
+            double carried = phase;
+            mixFrames(clip.audioData, totalFrames, 0, 0, framesToRender, carried);
+            return result;
+        }
+
+        // Compact PCM source: convert a window of source frames to float for each slice of output, then run
+        // the same arithmetic. The window reaches kWindowMargin frames either side of what the slice reads
+        // (more than any interpolator's reach), and is clipped to the file, so the file's start and end
+        // clamp exactly as they do for a float32 source. Stack scratch: nothing is allocated here.
+        constexpr int64_t kWindowMargin = 128;
+        constexpr int64_t kMaxWindowFrames = 8192;
+        constexpr uint32_t kMaxSliceFrames = 1024;
+        float scratch[kMaxWindowFrames * 2];
+        if (channels > 2)
+            return result; // tryCompact() never compacts these
+        const double perOutput = std::max(ratio, 1.0);
+        const uint32_t slice = static_cast<uint32_t>(std::max<double>(
+            1.0, std::min<double>(kMaxSliceFrames, (kMaxWindowFrames - 2 * kWindowMargin - 2) / perOutput)));
+        double carried = phase;
+        for (uint32_t first = 0; first < framesToRender;) {
+            if (!directRate && !(carried < phaseEnd))
+                break;
+            const uint32_t n = std::min(slice, framesToRender - first);
+            const double lo = directRate ? static_cast<double>(directStart + first) : carried;
+            const double hi = lo + static_cast<double>(n) * ratio;
+            const int64_t w0 = std::max<int64_t>(0, static_cast<int64_t>(std::floor(lo)) - kWindowMargin);
+            const int64_t w1 = std::min<int64_t>(totalFrames, static_cast<int64_t>(std::ceil(hi)) + kWindowMargin + 1);
+            if (w1 <= w0)
+                break;
+            owner->copyFloats(static_cast<uint64_t>(w0) * channels, static_cast<uint64_t>(w1 - w0) * channels, scratch);
+            mixFrames(scratch, w1 - w0, w0, first, n, carried);
+            first += n;
         }
     return result;
 }

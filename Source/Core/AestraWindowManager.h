@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include <array>
 #include <memory>
 #include <string>
 #include <atomic>
@@ -25,6 +26,7 @@ namespace Aestra {
     class MissingAssetsDialog;
 }
 class UnifiedHUD;
+class TextDiagnosticOverlay;
 class AestraRootComponent;
 class AestraContent;
 
@@ -83,6 +85,8 @@ public:
     void setContent(std::shared_ptr<AestraContent> content);
     /** @brief Attach the settings dialog. */
     void setSettingsDialog(std::shared_ptr<Aestra::SettingsDialog> dialog);
+    /// Wire the title bar's membership status cluster ("Signed out" / "Core"). Call at startup.
+    void setOnMembershipClicked(std::function<void()> callback);
     /** @brief Attach the confirmation dialog. */
     void setConfirmationDialog(std::shared_ptr<Aestra::ConfirmationDialog> dialog);
     /** @brief Attach the recovery dialog. */
@@ -91,6 +95,7 @@ public:
     void setMissingAssetsDialog(std::shared_ptr<Aestra::MissingAssetsDialog> dialog);
     /** @brief Attach the unified HUD overlay. */
     void setUnifiedHUD(std::shared_ptr<UnifiedHUD> hud);
+    void setTextDiagnostics(std::shared_ptr<TextDiagnosticOverlay> overlay);
 
     /** @brief Get the settings dialog. */
     std::shared_ptr<Aestra::SettingsDialog> getSettingsDialog() { return m_settingsDialog; }
@@ -116,6 +121,7 @@ public:
 
     /** @brief Update the native window title. */
     void setWindowTitle(const std::string& title);
+    void setProjectStatus(const std::string& name, bool modified, const std::string& note);
     /** @brief Toggle fullscreen mode. */
     void toggleFullScreen();
     /** @brief Check whether the native window is fullscreen. */
@@ -194,11 +200,15 @@ private:
     std::shared_ptr<AestraContent> m_content;
 
     std::shared_ptr<Aestra::SettingsDialog> m_settingsDialog;
+    bool m_modalWasOpen = false; // for the one-time cursor hand-back when a modal opens
+    /** True while any modal dialog covers the content (it then owns the cursor, not the content). */
+    bool isModalDialogOpen() const;
     std::shared_ptr<Aestra::ConfirmationDialog> m_confirmationDialog;
     bool m_confirmationDialogRaised{false};
     std::shared_ptr<Aestra::RecoveryDialog> m_recoveryDialog;
     std::shared_ptr<Aestra::MissingAssetsDialog> m_missingAssetsDialog;
     std::shared_ptr<UnifiedHUD> m_unifiedHUD;
+    std::shared_ptr<TextDiagnosticOverlay> m_textDiagnostics;
     std::shared_ptr<class ExportDialog> m_exportDialog;
 
     std::unique_ptr<AestraUI::NUIAdaptiveFPS> m_adaptiveFPS;
@@ -216,16 +226,15 @@ private:
      *  exactly one known state, and a hidden native pointer without a drawn
      *  custom cursor (the invisible-cursor failure) self-heals. */
     void resolveCursorState();
-    std::shared_ptr<AestraUI::NUIIcon> m_cursorArrow;
-    std::shared_ptr<AestraUI::NUIIcon> m_cursorHandPointing;
-    std::shared_ptr<AestraUI::NUIIcon> m_cursorHand;
-    std::shared_ptr<AestraUI::NUIIcon> m_cursorHandGrabbing;
-    std::shared_ptr<AestraUI::NUIIcon> m_cursorIBeam;
-    std::shared_ptr<AestraUI::NUIIcon> m_cursorResizeH;
-    std::shared_ptr<AestraUI::NUIIcon> m_cursorResizeV;
-    std::shared_ptr<AestraUI::NUIIcon> m_cursorResizeDiagNESW;
-    std::shared_ptr<AestraUI::NUIIcon> m_cursorResizeDiagNWSE;
-    AestraUI::NUICursorStyle m_activeCursorStyle{AestraUI::NUICursorStyle::Arrow};
+    // One overlay glyph per cursor style that has artwork in NUICursorRegistry, indexed by the
+    // style. A style without a glyph draws the arrow.
+    std::array<std::shared_ptr<AestraUI::NUIIcon>, AestraUI::kNUICursorStyleCount> m_cursorIcons{};
+    bool m_cursorsBuiltForDark = true; // polarity the cursor glyphs were built for
+    /** Combines the pointer position's panel cursor with the widgets' and drag-and-drop's claims,
+     *  per frame, after the widgets have handled the latest move (see the mouse-move handler). */
+    void resolveActiveCursorStyle();
+    AestraUI::NUICursorStyle m_panelCursorStyle{AestraUI::NUICursorStyle::Arrow}; // set per mouse move
+    AestraUI::NUICursorStyle m_activeCursorStyle{AestraUI::NUICursorStyle::Arrow}; // the drawn glyph
     bool m_cachedNativeCursorHidden{false};
 
     // Input State

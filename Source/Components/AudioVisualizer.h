@@ -121,12 +121,21 @@ private:
     bool showPeakHold_;
     
     // Display data
+    // Scope geometry, reused across frames. The scope redraws every frame at
+    // one column per pixel; returning fresh vectors would allocate on the UI
+    // thread ~60x a second for no gain (FD-06). Same pattern as
+    // TrackUIComponent's m_waveformTopPts.
+    std::vector<NUIPoint> scopeTopPts_;
+    std::vector<NUIPoint> scopeBottomPts_;
+    std::vector<float> scopeRmsVals_;
+
     std::vector<float> displayBuffer_;
     size_t displayBufferSize_;
     size_t currentSample_;
     
     // Animation
     float animationTime_;
+    size_t silentFramesInHistory_ = 0; // consecutive silent frames written; history is all silence at displayBufferSize_
     float peakDecayTime_;
     float smoothingFactor_;  // Exponential smoothing (0.0 = instant, 1.0 = slow)
 

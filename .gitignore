@@ -224,3 +224,14 @@ labs/perf/
 # CTest scratch written into the SOURCE tree when ctest runs from the repo root
 # rather than from a build directory. Generated scheduling data, never source.
 /Testing/
+
+# Agent scratch: commit messages and PR bodies drafted in the source tree, then
+# consumed by `git commit -F` / `gh pr create --body-file`. They are build
+# inputs, not source, and five of them had been committed by mistake because
+# `git add -A` swept the file the heredoc had just written.
+/msg*.txt
+/commitmsg.txt
+/eqmsg.txt
+# One-off fix-up scripts written to the root mid-change (tmp_p5fix3.py rode in
+# with #1025 the same way).
+/tmp_*.py

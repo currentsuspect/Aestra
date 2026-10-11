@@ -42,10 +42,16 @@ private:
     void createUI();
     void layoutComponents();
     void updateDialogBounds(const AestraUI::NUIRect& parentBounds);
+    /// Re-centre when the parent viewport differs from the one the current
+    /// layout was computed against. Called at paint time, where the parent link
+    /// is always live — unlike show(), which can run before it exists.
+    void syncToViewport();
     void updateSidebar();
 
     bool m_visible;
     AestraUI::NUIRect m_dialogBounds;
+    /// Parent bounds m_dialogBounds was last computed against.
+    AestraUI::NUIRect m_layoutViewport;
     AestraUI::NUIRect m_sidebarBounds;
     AestraUI::NUIRect m_contentBounds;
     AestraUI::NUIRect m_closeButtonBounds; 

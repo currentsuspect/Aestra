@@ -2,12 +2,10 @@
 #pragma once
 
 #include "../NUIRenderer.h"
-#include "../NUITextRendererSDF.h"
+#include "../NUITransformStack.h"
 #include <ft2build.h>
 #include FT_FREETYPE_H
-#include "NUIDirtyRegion.h"
 #include "NUIRenderCache.h"
-#include "../GlassmorphismPass.h" // Added GlassmorphismPass
 #include <vector>
 #include <tuple>
 #include <cstdint>
@@ -27,8 +25,8 @@ namespace AestraUI {
  * Features:
  * - Shader-based rendering
  * - Batched draw calls
- * - SDF text rendering
- * - Post-processing effects
+ * - FreeType bitmap glyph-atlas text
+ * - Render-to-texture (FBO) support for the widget render cache
  */
 class NUIRendererGL : public NUIRenderer {
 public:
@@ -49,6 +47,7 @@ public:
     
     void beginFrame() override;
     void setTextContrast(float contrast) override { textContrast_ = contrast; }
+    bool getTextDiagnostics(TextDiagnostics& out) const override;
     void endFrame() override;
     void clear(const NUIColor& color) override;
     
@@ -56,7 +55,7 @@ public:
     // State Management
     // ========================================================================
     
-    void pushTransform(float tx, float ty, float rotation = 0.0f, float scale = 1.0f) override;
+    void pushTransform(float tx, float ty, float scale = 1.0f) override;
     void popTransform() override;
     void setClipRect(const NUIRect& rect) override;
     void clearClipRect() override;
@@ -139,11 +138,7 @@ public:
     // Performance Optimizations
     // ========================================================================
     
-    void setDirtyRegionTrackingEnabled(bool enabled) override;
     void setCachingEnabled(bool enabled) override;
-    void getOptimizationStats(size_t& batchedQuads, size_t& dirtyRegions, 
-                             size_t& cachedWidgets, size_t& cacheMemoryBytes) override;
-    NUIDirtyRegionManager* getDirtyRegionManager() override { return &dirtyRegionManager_; }
     NUIRenderCache* getRenderCache() override { return &renderCache_; }
     void invalidateCache(uint64_t widgetId) override;
     bool renderCachedOrUpdate(uint64_t widgetId, const NUIRect& destRect,
@@ -164,16 +159,6 @@ public:
     // Query renderer state
     bool isScissorEnabled() const { return scissorEnabled_; }
 
-    // Glassmorphism API
-    void updateGlassBackground() {
-        // Capture screen 0 (default) or handle specific FBOs if needed
-        glassPass_.execute(0);
-    }
-    
-    GLuint getGlassTexture() const {
-        return glassPass_.getBlurredTexture();
-    }
-    
 private:
     // Vertex structure for batching
     struct Vertex {
@@ -185,7 +170,7 @@ private:
         float radius;       // Corner radius
         float blur;         // Blur amount
         float strokeWidth;  // Stroke width
-        float primitiveType; // Batching Primitive ID (0=Img, 1=Rect, 2=SDFText, 3=Stroke, 4=BitmapText, 6=FillCircle, 7=StrokeCircle)
+        float primitiveType; // Batching Primitive ID (0=Img, 1=Rect, 3=Stroke, 4=BitmapText, 5=SolidGeometry, 6=FillCircle, 7=StrokeCircle)
     };
     
     // Shader program
@@ -203,19 +188,10 @@ private:
         int32_t textTexelSizeLoc = -1;
         int32_t textSharpenLoc = -1;
         int32_t textGammaLoc = -1;
-        int32_t textBoldLoc = -1;
-        int32_t textAlphaLiftLoc = -1;
-        int32_t outputLinearLoc = -1;
     };
     
     // Transform stack
-    struct Transform {
-        float tx = 0.0f;
-        float ty = 0.0f;
-        float rotation = 0.0f;
-        float scale = 1.0f;
-    };
-    
+
     // Initialize OpenGL resources
     bool initializeGL();
     bool loadShaders();
@@ -329,7 +305,7 @@ private:
     std::vector<uint32_t> indices_;
     
     // Transform stack
-    std::vector<Transform> transformStack_;
+    std::vector<NUITransform2D> transformStack_;
     
     // Textures
     struct TextureData { uint32_t glId = 0; int width = 0; int height = 0; };
@@ -356,16 +332,12 @@ private:
     NUISize currentQuadSize_ = {0.0f, 0.0f};
     
     // Optimization systems
-    NUIDirtyRegionManager dirtyRegionManager_;
     NUIRenderCache renderCache_;
     uint64_t frameCounter_ = 0;
     size_t submittedQuadCount_ = 0;
     
     // Text rendering support
     std::string defaultFontPath_;
-    std::unique_ptr<NUITextRendererSDF> sdfRenderer_;
-    bool useSDFText_{false};
-    bool triedSDFInit_{false};
     
     // (FontData moved earlier in file for AtlasInfo reference)
 
@@ -452,14 +424,6 @@ private:
     int widthBackup_ = 0;
     int heightBackup_ = 0;
 
-    // True while rendering into a linear (non-sRGB) offscreen target such as
-    // the FBO render cache. Disables the shader's sRGB->linear output
-    // conversion so cached content is stored as-authored and converted exactly
-    // once when composited to the sRGB screen (see beginOffscreen()).
-    bool renderingToLinearTarget_ = false;
-
-    // Glassmorphism Pass
-    GlassmorphismPass glassPass_; 
 };
 
 } // namespace AestraUI

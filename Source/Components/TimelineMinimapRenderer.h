@@ -25,6 +25,7 @@ struct TimelineMinimapRenderColors
     NUIColor midiTint;
     NUIColor automationTint;
     NUIColor baseline;
+    NUIColor densityTint; // neutral ink for the density band (it shows how busy, not what kind)
 
     NUIColor viewFill;
     NUIColor viewOutline;

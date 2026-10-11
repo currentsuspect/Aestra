@@ -3,7 +3,9 @@
 
 #include "../AestraCore/include/AestraLog.h"
 #include "../Core/UIState.h"
+#include "../Core/UISurfaceStore.h"
 #include "AestraAudioController.h"
+#include "AestraFileDialog.h"
 #include "AestraContent.h"
 #include "AestraWindowManager.h"
 #include "AutosaveManager.h"
@@ -58,6 +60,22 @@ public:
         return m_audioController ? m_audioController->getEngine() : nullptr;
     }
 
+    /**
+     * @brief Register the project.* Muse host verbs (save, open, new).
+     *
+     * Defined in ProjectLifecycle.cpp, not here: the verbs need this class's
+     * private save/load path, and AestraApp.cpp is pinned at its exact line count
+     * by Tests/Guards/file_size_baseline.txt. A member function can be defined in
+     * any translation unit, so the capability surface lives in its own file and
+     * the menu items it replaced are gone from this one.
+     *
+     * These are host verbs rather than built-ins because ProjectSerializer lives
+     * in Source/ and AestraAudio must not depend upward. That also means they are
+     * genuinely absent from a headless MuseRepl: there is no application there to
+     * register them.
+     */
+    void registerMuseProjectVerbs(Aestra::Audio::MuseService& service);
+
     // Helpers exposed for easier refactoring.
     //
     // These return std::nullopt rather than a substitute path when the app-data
@@ -106,6 +124,7 @@ private:
 
     void buildSettingsAndDialogs();  // heavy — deferred until first open
     void ensureSettingsAndDialogs(); // lazy guard
+    void openSettings(const std::string& pageId = {}); // builds the dialogs if needed, then shows Settings
     void buildMenuBar();
     void initializePlugins();
     void loadOrRecoverProject(const std::string& projectPath, bool crashedSession);
@@ -119,9 +138,21 @@ private:
     void applyPersistedEngineSettings(); // #649: startup owns DSP config, not the dialog
 
     // Project management
+    // New and Open are the bodies of what were inline File-menu lambdas; the
+    // menu items and the project.* Muse verbs both call these, so there is one
+    // implementation. Defined in ProjectLifecycle.cpp.
+    void createNewProject();
+    ProjectSerializer::LoadResult openProjectFromPath(const std::string& path);
     void requestClose();
-    bool saveCurrentProject();
-    bool saveProjectAs();
+    /// Save, or Save As when the document has no path yet. Save As shows a
+    /// picker off the UI thread, so the outcome arrives through @p onDone
+    /// (true = written) on the UI thread, possibly frames later.
+    void saveCurrentProject(std::function<void(bool)> onDone = {});
+    void saveProjectAs(std::function<void(bool)> onDone = {});
+    /// Show a native picker without blocking the UI thread; @p onPicked runs on
+    /// the UI thread (empty = cancelled). One picker at a time: returns false,
+    /// without calling @p onPicked, if one is already open.
+    bool pickFileAsync(Aestra::FileDialogCall call, std::function<void(const std::string&)> onPicked);
     ProjectSerializer::LoadResult loadProjectFromPath(const std::string& path,
                                                       ProjectLoadSource source = ProjectLoadSource::Canonical,
                                                       const std::string& canonicalPath = "");
@@ -157,6 +188,8 @@ private:
      *  as the on-disk keeper (used after a successful Open, where the document
      *  path has already moved to the newly loaded project). */
     void cleanupUnreferencedRecordings(const std::string& keeperProjectPath = "");
+    /** @brief Push the project name and saved state to the title bar. */
+    void pushProjectStatus();
     static std::string getRecoveryMarkerPath(const std::string& autosavePath);
     static std::string readCrashFlagToken();
     static std::string readRecoveryOriginalProjectPath(const std::string& recoveryMarkerPath,
@@ -185,15 +218,26 @@ private:
         std::vector<std::function<void()>> tasks;
         bool shuttingDown{false};
         std::atomic<bool> relinkInFlight{false};
+        std::atomic<bool> fileDialogInFlight{false};
     };
     std::shared_ptr<MainThreadQueue> m_mainThreadQueue{std::make_shared<MainThreadQueue>()};
     void startMuseSocketIfConfigured();
 
+    // Declared before m_content so it outlives every surface that reads it (reverse destruction order).
+    std::unique_ptr<Aestra::UISurfaceStoreFile> m_uiSurfaceStore;
+    /// V8-C14 step 5c: set only when the one-time ui_state.json rail-width
+    /// import could not be saved to the surface store. The shutdown UIState is
+    /// default-constructed, so without carrying the value through, that save
+    /// would overwrite the legacy width with the default and the next launch
+    /// would see NothingToImport — the width would be unrecoverable.
+    std::optional<float> m_unimportedLegacyBrowserWidth;
     std::shared_ptr<AestraContent> m_content;
     std::shared_ptr<Aestra::ILogger> m_asyncLogger;
 
     bool m_running;
     bool m_pendingClose{false};
+    int m_exitSignal{0};                  // the SIGTERM/SIGINT that ended the run loop, or 0
+    bool m_keepSessionForRecovery{false}; // signal exit + emergency autosave written: keep the crash flag
     Aestra::ProjectDocumentState m_documentState;
 
     // Auto-save

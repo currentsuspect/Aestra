@@ -86,19 +86,23 @@ jobs:
             echo "📁 Output directory: \`docs/api-reference/html/\`" >> $GITHUB_STEP_SUMMARY
           fi
           
+      # Retention was 30 days. The generated HTML also deploys to GitHub Pages on
+      # main (below), so for every run except a PR preview the artifact is a second
+      # copy of something already published — 245 live copies at ~22 MB, 5.4 GB, when
+      # this was measured. 7 days is long enough to pull a preview off a PR.
       - name: Upload Documentation Artifact
         uses: actions/upload-artifact@v4
         with:
           name: api-documentation
           path: docs/api-reference/html/
-          retention-days: 30
-          
+          retention-days: 7
+
       - name: Upload XML Output (for integration)
         uses: actions/upload-artifact@v4
         with:
           name: api-documentation-xml
           path: docs/api-reference/xml/
-          retention-days: 30
+          retention-days: 7
           
       # Only deploy on main branch
       - name: Deploy to GitHub Pages

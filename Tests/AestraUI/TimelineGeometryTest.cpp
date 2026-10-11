@@ -36,7 +36,14 @@ int main() {
     expectNear(timelineGridStartX(80.0f, 236.0f), 321.0, 0.0001, "window-absolute grid origin");
     expectNear(timelineGridStartX(17.5f, 236.0f), 258.5, 0.0001, "ruler-relative grid origin");
 
-    expectNear(timelineGridEndX(80.0f, 800.0f), 865.0, 0.0001, "grid end excludes scrollbar");
+    // Derived from the constant rather than restating it: the contract is that
+    // the grid stops exactly one scrollbar gutter short of the basis edge, not
+    // that the gutter is any particular width — the gutter width is shared with
+    // the rest of the DAW and is expected to be retuned (spec 2 §2). The check
+    // below keeps that derivation from passing vacuously if it ever hits zero.
+    check(kTimelineScrollbarWidth > 0.0f, "scrollbar gutter must reserve real width");
+    expectNear(timelineGridEndX(80.0f, 800.0f), 80.0 + 800.0 - kTimelineScrollbarWidth, 0.0001,
+               "grid end excludes exactly one scrollbar gutter");
     // Time band = minimap row (24) + ruler row (28); the minimap surface is
     // cropped to start at the track-controls boundary.
     expectNear(timelineTrackAreaTopY(40.0f), 92.0, 0.0001, "track area follows shared vertical stack");
@@ -53,6 +60,11 @@ int main() {
     }
 
     const float infinity = std::numeric_limits<float>::infinity();
+    // SPEC 3 §2.3: a track row ends where the grid does, at the scrollbar. Rows used to stop 5px
+    // short while gridlines ran on, leaving a strip clips never painted into.
+    expectNear(timelineTrackRowWidth(800.0f), timelineGridEndX(0.0f, 800.0f), 0.0001,
+               "a track row spans the whole grid, up to the scrollbar");
+    check(timelineTrackRowWidth(4.0f) == 0.0f, "a manager narrower than the scrollbar has no row");
     check(timelineGridOffsetToBeat(100.0f, 0.0f, 0.0f) == 0.0, "zero zoom has deterministic fallback");
     check(timelineGridOffsetToBeat(100.0f, 0.0f, -4.0f) == 0.0, "negative zoom has deterministic fallback");
     check(timelineGridOffsetToBeat(100.0f, 0.0f, infinity) == 0.0, "non-finite zoom has deterministic fallback");

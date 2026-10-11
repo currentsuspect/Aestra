@@ -229,6 +229,16 @@ private:
     const std::shared_ptr<Aestra::Audio::IPluginInstance> m_instance;
     std::vector<Band> m_bands;
 
+    // Render scratch, reused across frames so the response-curve draw path does not
+    // allocate per repaint. drawResponseCurve runs on every dirty frame while the
+    // editor is open and clips once for the composite curve plus once per enabled
+    // band (up to 24), so these are held rather than rebuilt. Same pattern as
+    // TrackUIComponent's m_waveformTopPts/m_waveformBottomPts. Contents are only
+    // valid within a single draw call.
+    std::vector<NUIPoint> m_curveClipScratch;
+    std::vector<NUIPoint> m_curveFillTop;
+    std::vector<NUIPoint> m_curveFillBottom;
+
     NUIRect m_graphBounds;
     NUIRect m_lastGraphInner;
     NUIRect m_bypassRect;

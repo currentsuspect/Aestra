@@ -21,6 +21,9 @@
 
 using Aestra::Components::MarqueeButton;
 using Aestra::Components::MarqueeEventKind;
+using Aestra::Components::MarqueeOrigin;
+using Aestra::Components::kGridMarqueeClickSlopPx;
+using Aestra::Components::marqueeReleasePlan;
 using Aestra::Components::TimelineMarqueeDrag;
 
 namespace {
@@ -40,7 +43,7 @@ void check(bool condition, const char* label) {
 }
 
 void testBeginRules() {
-    std::cout << "  [1/8] Begin: marquee-button press inside the track area... ";
+    std::cout << "  [1/9] Begin: marquee-button press inside the track area... ";
     const int before = g_failures;
     TimelineMarqueeDrag drag;
     check(!drag.begin(false, kLeft, 100.0f, 200.0f, true), "release does not begin");
@@ -57,7 +60,7 @@ void testBeginRules() {
 }
 
 void testOwnershipUntilRelease() {
-    std::cout << "  [2/8] Active marquee owns every event until its button releases... ";
+    std::cout << "  [2/9] Active marquee owns every event until its button releases... ";
     const int before = g_failures;
     TimelineMarqueeDrag drag;
     drag.begin(true, kLeft, 100.0f, 200.0f, true);
@@ -77,7 +80,7 @@ void testOwnershipUntilRelease() {
 }
 
 void testForeignEventsDoNotMoveTheBand() {
-    std::cout << "  [3/8] Foreign press/release never moves the endpoint... ";
+    std::cout << "  [3/9] Foreign press/release never moves the endpoint... ";
     const int before = g_failures;
     TimelineMarqueeDrag drag;
     drag.begin(true, kLeft, 100.0f, 200.0f, true);
@@ -97,7 +100,7 @@ void testForeignEventsDoNotMoveTheBand() {
 }
 
 void testNonMoveKindsCannotMoveTheBand() {
-    std::cout << "  [4/8] Wheel-class (Other) and Press kinds never move the band... ";
+    std::cout << "  [4/9] Wheel-class (Other) and Press kinds never move the band... ";
     const int before = g_failures;
     TimelineMarqueeDrag drag;
     drag.begin(true, kLeft, 100.0f, 200.0f, true);
@@ -116,7 +119,7 @@ void testNonMoveKindsCannotMoveTheBand() {
 }
 
 void testMoveIsPureEndpointUpdate() {
-    std::cout << "  [5/8] Move mutates only the endpoint (no storm surface)... ";
+    std::cout << "  [5/9] Move mutates only the endpoint (no storm surface)... ";
     const int before = g_failures;
     TimelineMarqueeDrag drag;
     drag.begin(true, kLeft, 100.0f, 200.0f, true);
@@ -140,7 +143,7 @@ void testMoveIsPureEndpointUpdate() {
 }
 
 void testUpdateIgnoredWhenInactive() {
-    std::cout << "  [6/8] Events on an inactive machine are no-ops... ";
+    std::cout << "  [6/9] Events on an inactive machine are no-ops... ";
     const int before = g_failures;
     TimelineMarqueeDrag drag;
     drag.onEvent(MarqueeEventKind::Move, kLeft, 50.0f, 60.0f);
@@ -153,7 +156,7 @@ void testUpdateIgnoredWhenInactive() {
 }
 
 void testRectNormalization() {
-    std::cout << "  [7/8] Rectangle normalizes regardless of drag direction... ";
+    std::cout << "  [7/9] Rectangle normalizes regardless of drag direction... ";
     const int before = g_failures;
     TimelineMarqueeDrag drag;
     drag.begin(true, kLeft, 300.0f, 500.0f, true);
@@ -170,7 +173,7 @@ void testRectNormalization() {
 }
 
 void testRestartAfterFinalize() {
-    std::cout << "  [8/8] A finalize allows an immediate new drag... ";
+    std::cout << "  [8/9] A finalize allows an immediate new drag... ";
     const int before = g_failures;
     TimelineMarqueeDrag drag;
     drag.begin(true, kRight, 10.0f, 20.0f, true);
@@ -178,6 +181,26 @@ void testRestartAfterFinalize() {
     drag.finalize();
     check(drag.begin(true, kLeft, 100.0f, 200.0f, true), "new drag begins after finalize");
     check(drag.button() == kLeft && drag.startX() == 100.0f, "new drag carries its own button and start");
+    if (g_failures == before) {
+        std::cout << "PASSED\n";
+    }
+}
+
+// SPEC 3 §1.2: the default grid marquee selects clips only, and a grid click is not a band.
+void testReleasePlanByOrigin() {
+    std::cout << "  [9/9] A release plan follows where the marquee began... ";
+    const int before = g_failures;
+    const auto toolClick = marqueeReleasePlan(MarqueeOrigin::Tool, 0.0f, 0.0f);
+    check(toolClick.applySelection && toolClick.trackFallback,
+          "the Multi-Select tool keeps its behaviour, lane fallback included, even for a click");
+    const auto gridClick = marqueeReleasePlan(MarqueeOrigin::Grid, 2.0f, 2.0f);
+    check(!gridClick.applySelection && !gridClick.trackFallback,
+          "a grid press that never travelled is a click: it selects nothing and never a lane");
+    const auto gridWide = marqueeReleasePlan(MarqueeOrigin::Grid, kGridMarqueeClickSlopPx, 0.0f);
+    check(gridWide.applySelection && !gridWide.trackFallback,
+          "a grid band as wide as the slop is a band: clips only, no lane fallback");
+    const auto gridTall = marqueeReleasePlan(MarqueeOrigin::Grid, 0.0f, 40.0f);
+    check(gridTall.applySelection, "a vertical-only band is still a band");
     if (g_failures == before) {
         std::cout << "PASSED\n";
     }
@@ -199,6 +222,7 @@ int main() {
         {"inactive events are no-ops", testUpdateIgnoredWhenInactive},
         {"rectangle normalization", testRectNormalization},
         {"restart after finalize", testRestartAfterFinalize},
+        {"release plan by origin", testReleasePlanByOrigin},
     };
     for (const auto& test : tests) {
         const int before = g_failures;

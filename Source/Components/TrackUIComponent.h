@@ -6,6 +6,7 @@
 #include "PlaylistModel.h"
 #include "TimelineInteractionPolicy.h"
 #include "WaveformCache.h"
+#include "AutomationClipLayer.h"
 
 #include "NUIComponent.h"
 #include "NUIContextMenu.h"
@@ -89,7 +90,6 @@ public:
     void setOnAudioClipOpenRequested(std::function<void(ClipInstanceID)> callback) {
         m_onAudioClipOpenRequested = std::move(callback);
     }
-    void setOnPatternClipDragStarted(std::function<void(PatternID)> callback) { m_onPatternClipDragStarted = std::move(callback); }
 
     // Callback for track selection
     void setOnTrackSelected(std::function<void(TrackUIComponent*, TrackSelectionIntent)> callback) {
@@ -144,6 +144,18 @@ public:
         }
     }
     PlaylistMode getPlaylistMode() const { return m_playlistMode; }
+
+    // V8-A2: the curve automation edits on this lane. A press on another curve's
+    // point makes that curve the edited one; the target picker (V8-A3) sets it.
+    void setEditedAutomationTarget(AutomationTarget target) {
+        m_automationTargetChosen = true;
+        if (m_editedAutomationTarget != target) {
+            m_editedAutomationTarget = target;
+            setDirty(true);
+        }
+    }
+    AutomationTarget getEditedAutomationTarget() const { return m_editedAutomationTarget; }
+    bool hasChosenAutomationTarget() const { return m_automationTargetChosen; }
     
     // Timeline zoom settings
     // Timeline zoom settings
@@ -159,7 +171,7 @@ public:
     void setLoopRegion(double startBeat, double endBeat) { m_loopStartBeat = startBeat; m_loopEndBeat = endBeat; }
     
     // Automation State Query for Parent (Global Drag Handling)
-    bool isDraggingAutomation() const { return m_isDraggingPoint; }
+    bool isDraggingAutomation() const { return m_isDraggingPoint || m_clipLayer.isDragging(); }
     
     // Trim Edge Hover Query (for cursor icon)
     bool isHoveringTrimEdge() const { return m_hoverTrimEdge != TrimEdge::None; }
@@ -168,6 +180,8 @@ public:
     // Accessors
     std::shared_ptr<MixerChannel> getChannel() const { return m_channel; }
     const std::map<ClipInstanceID, AestraUI::NUIRect>& getAllClipBounds() const { return m_allClipBounds; }
+    /** @brief The colour this row paints @p clip in (its routed channel's colour, or its own). */
+    AestraUI::NUIColor resolveClipDisplayColor(const ClipInstance& clip) const;
 
     // Loading state for visual feedback
     void setLoading(bool loading, float progress = 0.0f) { 
@@ -220,7 +234,6 @@ private:
     std::function<void(TrackUIComponent*, ClipInstanceID)> m_onClipSelectionAddCallback;
     std::function<void(PatternID)> m_onPatternClipOpenRequested;
     std::function<void(ClipInstanceID)> m_onAudioClipOpenRequested;
-    std::function<void(PatternID)> m_onPatternClipDragStarted;
     std::function<void(TrackUIComponent*, TrackSelectionIntent)> m_onTrackSelectedCallback;
     std::function<void()> m_onSendToAuditionCallback;
 
@@ -252,6 +265,19 @@ private:
     
     // Multi-clip bounds for hit testing (maps ClipInstanceID to its rendered bounds)
     std::map<ClipInstanceID, AestraUI::NUIRect> m_allClipBounds;
+    // The clip-menu (hamburger) glyph as painted, per clip. Press AND hover hit-test this one
+    // rect, so the affordance answers where it is drawn (SPEC 3 §3.3).
+    std::map<ClipInstanceID, AestraUI::NUIRect> m_clipMenuGlyphRects;
+    ClipInstanceID m_hoveredClipMenuId;  // the clip whose menu glyph is under the pointer
+    bool m_clipMenuCursorClaimed = false; // hand the pointing-hand cursor back once on leaving
+    /** The clip-menu glyph's generous hit zone (the painted glyph, inflated). */
+    static AestraUI::NUIRect clipMenuHitRect(const AestraUI::NUIRect& glyph) {
+        return {glyph.x - 4.0f, glyph.y - 3.0f, glyph.width + 8.0f, glyph.height + 6.0f};
+    }
+    /** The clip whose menu glyph contains @p point, or an invalid id. */
+    ClipInstanceID clipMenuAt(const AestraUI::NUIPoint& point) const;
+    /** Drop the menu-glyph hover and hand the cursor back if this row claimed it. */
+    void releaseClipMenuHover();
     ClipInstanceID m_activeClipId;  // Currently clicked/dragged clip id
     ClipInstanceID m_lastClickedClipId;
     long long m_lastClipClickTimeMs = 0;
@@ -269,12 +295,81 @@ private:
     double m_trimOriginalDurationSeconds = 0.0;     // Original duration (seconds, audio) before drag
     float m_trimDragStartX = 0.0f;            // Mouse X when trim started
     static constexpr float TRIM_EDGE_WIDTH = 8.0f;  // Pixels for edge hit detection
+
+    // V8-W3 — timeline fade handles. The model, serialization, offline render,
+    // live playback (ClipRenderKernel) and the AudioClipEditorPanel sliders all
+    // already handle fades; this is only the timeline gesture.
+    //
+    // Handles live in the WAVEFORM BODY, not at the clip's top corners.
+    //
+    // The top-left carries the burger menu — a 21x18 hit box whose handler runs
+    // before any fade check, so a handle up there is unreachable however the
+    // hit-test is ordered (confirmed by driving, not assumed). Owner's call:
+    // put them where the waveform is. That also makes them a bigger grab
+    // target, and it yields one explainable rule:
+    //
+    //     clip HEADER = menu and trim   ·   clip BODY = fades
+    //
+    // FADE_BODY_TOP_INSET clears the burger box (17px) with a pixel to spare.
+    static constexpr float FADE_BODY_TOP_INSET = 18.0f;  // Where the fade band begins
+    static constexpr float FADE_HANDLE_GRAB = 9.0f;      // Tolerance once a fade is visible
+    // An unset fade has no drawn handle to aim at, so its corner claims a
+    // wider inward zone. Without this the gesture only landed by luck.
+    static constexpr float FADE_CORNER_REACH = 26.0f;
+    static constexpr float FADE_HANDLE_SIZE = 6.0f;      // Drawn marker size
+
+    enum class FadeHandle { None, In, Out };
     
     // Snap helper for trimming
     double snapBeatToGrid(double beat) const;
+    /**
+     * @brief Push one undo step for an automation gesture, or nothing if it changed nothing.
+     *
+     * Mirrors UnitRow::pushNotesEditCommand: the model is mutated live, the
+     * before/after snapshots are compared, and a no-op gesture (a click that
+     * selected without moving) pushes no command.
+     */
+    void pushAutomationEditCommand(std::vector<AutomationCurve> before, const char* name);
+    /** @brief Which fade handle (if any) the pointer is over for this clip. */
+    FadeHandle fadeHandleAt(const AestraUI::NUIRect& clipBounds, const ClipInstance& clip,
+                            const AestraUI::NUIPoint& position) const;
+
+    /**
+     * @brief Draw the fade ramps and their handles for one audio clip.
+     *
+     * @param clipBounds    the clip's FULL extent — fade geometry must sit at the
+     *                      clip's true edges, which may lie outside the viewport.
+     * @param visibleBounds the on-screen portion, used as a clip rect. Without it
+     *                      a partly-scrolled clip draws its ramp across the track
+     *                      header, because the full extent starts off-grid.
+     */
+    void drawClipFades(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
+                       const AestraUI::NUIRect& waveformRect, const ClipInstance& clip);
+
     double getSnapGridSizeBeats() const;
  
     // Automation Interaction State (v3.1)
+    // Fade-handle gesture state. m_fadeOriginalEdits is the undo "before",
+    // captured at press like m_trimOriginal* is for trimming.
+    FadeHandle m_hoverFadeHandle = FadeHandle::None;
+    FadeHandle m_fadeDragHandle = FadeHandle::None;
+    ClipInstanceID m_fadeDragClipId{};
+    ClipEdits m_fadeOriginalEdits{};
+
+    // Fade geometry the waveform draw applies per column (screen x). Set just
+    // for the duration of one clip's drawWaveformForClip call, then cleared, so
+    // no other caller can inherit a stale fade.
+    struct WaveformFade {
+        bool active = false;
+        float clipLeft = 0.0f;
+        float clipRight = 0.0f;
+        float fadeInPx = 0.0f;
+        float fadeOutPx = 0.0f;
+    };
+    WaveformFade m_waveformFade{};
+
+    AutomationTarget m_editedAutomationTarget = AutomationTarget::Volume;
+    bool m_automationTargetChosen = false; // until then, a lane edits the curve it already has
     bool m_isDraggingPoint = false;
     int m_draggedPointIndex = -1;
     int m_draggedCurveIndex = -1;
@@ -282,6 +377,8 @@ private:
     // (simple click-select) must not dirty the project or rebuild the graph.
     double m_dragStartBeat = -1.0;
     float m_dragStartValue = -1.0f;
+    /** @brief Lane's curves as they were when the current gesture began (V8-A1). */
+    std::vector<AutomationCurve> m_automationCurvesBefore;
     AestraUI::NUIPoint m_lastAutomationMousePos;
 
     // Optimization
@@ -326,9 +423,6 @@ private:
                               const ClipInstance& clip, float offsetRatio = 0.0f, float visibleRatio = 1.0f);
 
     void generateWaveformCache(int width, int height);
-
-    // Shared clip display color (bright track palette / channel / clip fallback)
-    AestraUI::NUIColor resolveClipDisplayColor(const ClipInstance& clip) const;
 
     // Zoom-aware waveform drawing helpers
     void drawChannelWaveform(AestraUI::NUIRenderer& renderer, float x, float y, float w, float h,
@@ -396,6 +490,12 @@ private:
 
     // Automation Layer (v3.1)
     void renderAutomationLayer(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float gridStartX);
+    // Automation clips (V8-A7): glue to AutomationClipLayer, in TrackUIComponentAutomationClips.cpp.
+    void renderAutomationClips(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float gridStartX,
+                               int editedIndex);
+    bool handleAutomationClipMouse(const AestraUI::NUIMouseEvent& event, const AestraUI::NUIRect& bounds,
+                                   float gridStartX);
+    AutomationClipLayer m_clipLayer{*this};
 
 
     // UI state

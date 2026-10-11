@@ -22,6 +22,8 @@ AestraPanelWindow::~AestraPanelWindow()
     }
 }
 
+
+
 void AestraPanelWindow::beginKnobCapture(const NUIPoint& knobCenter, const NUIPoint& grabPos)
 {
     if (!m_platformBridge) return;
@@ -45,6 +47,40 @@ float AestraPanelWindow::knobDragStep(const NUIMouseEvent& event, float rangePx)
     constexpr float kFineDragScale = 0.25f;
     const float fine = (event.modifiers & NUIModifiers::Shift) ? kFineDragScale : 1.0f;
     return (-event.delta.y / rangePx) * fine;
+}
+
+bool AestraPanelWindow::handleKnobDrag(const NUIMouseEvent& event, const KnobTarget* targets, size_t count,
+                                       float rangePx, const std::function<float(uint32_t)>& get,
+                                       const std::function<void(uint32_t, float)>& set) {
+    if (m_knobDragParam >= 0) {
+        // Only the button that grabbed the knob lets go of it. A synthetic
+        // release (focus loss, cancelled capture) always does, so nothing is
+        // left captured.
+        if (event.released && (event.button == NUIMouseButton::Left || event.synthetic)) {
+            endKnobCapture();
+            m_knobDragParam = -1;
+            return true;
+        }
+        if (event.button == NUIMouseButton::None) {
+            // Service-owned frame delta (up = increase), accumulated into the
+            // current value, so total travel matches an absolute mapping.
+            const uint32_t id = static_cast<uint32_t>(m_knobDragParam);
+            set(id, std::clamp(get(id) + knobDragStep(event, rangePx), 0.0f, 1.0f));
+            setDirty();
+            return true;
+        }
+    }
+    if (event.pressed && event.button == NUIMouseButton::Left) {
+        for (size_t i = 0; i < count; ++i) {
+            const NUIRect& r = targets[i].rect;
+            if (r.contains(event.position)) {
+                m_knobDragParam = static_cast<int>(targets[i].paramId);
+                beginKnobCapture({r.x + r.width * 0.5f, r.y + r.height * 0.5f}, event.position);
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 void AestraPanelWindow::cacheThemeColors()
@@ -193,8 +229,15 @@ bool AestraPanelWindow::onMouseEvent(const NUIMouseEvent& event)
         setDirty(true);
     }
 
-    // Window drag from title bar
-    if (event.pressed && event.button == NUIMouseButton::Left && hitTestTitleBar(event.position.x, event.position.y) && !overClose) {
+    if (event.pressed && event.button == NUIMouseButton::Right && m_onMenuRequested && !overClose &&
+        hitTestTitleBar(event.position.x, event.position.y)) {
+        m_onMenuRequested(event.position);
+        return true;
+    }
+
+    // Window drag from title bar (not when docked)
+    if (event.pressed && event.button == NUIMouseButton::Left && !m_locked &&
+        hitTestTitleBar(event.position.x, event.position.y) && !overClose) {
         m_isDraggingWindow = true;
         m_dragStartPos = event.position;
         m_windowStartPos = {b.x, b.y};
@@ -206,6 +249,9 @@ bool AestraPanelWindow::onMouseEvent(const NUIMouseEvent& event)
                 m_userPositioned = true;
             }
             onDragEnd();
+            if (m_onWindowDragEnd) {
+                m_onWindowDragEnd();
+            }
             m_isDraggingWindow = false;
             return true;
         }

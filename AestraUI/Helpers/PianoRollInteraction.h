@@ -3,6 +3,7 @@
 
 #include "MusicHelpers.h"
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <limits>
 #include <vector>
@@ -91,6 +92,23 @@ float velocityToPanelHeight(float velocity, float availableHeight);
 /**
  * Check if a note should be considered for interaction (not deleted).
  */
+/**
+ * @brief The pitches with a note under @p beat: start <= beat < end, deleted notes skipped.
+ *
+ * What the piano roll's keys show as playing while this pattern plays (SPEC 3 §5.1): the
+ * notes scheduled at the playhead, not a report of what the audio actually sounded.
+ */
+inline std::array<bool, 128> pitchesUnderBeat(const std::vector<MidiNote>& notes, double beat) {
+    std::array<bool, 128> under{};
+    for (const auto& note : notes) {
+        if (note.isDeleted || note.pitch < 0 || note.pitch > 127) continue;
+        if (beat >= note.startBeat && beat < note.startBeat + note.durationBeats) {
+            under[static_cast<size_t>(note.pitch)] = true;
+        }
+    }
+    return under;
+}
+
 inline bool isNoteActive(const MidiNote& note) {
     return !note.isDeleted;
 }

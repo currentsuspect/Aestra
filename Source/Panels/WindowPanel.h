@@ -51,6 +51,27 @@ public:
     const std::string& getTitle() const { return m_title; }
 
     float getTitleBarHeight() const { return m_titleBarHeight; }
+
+    /**
+     * @brief Host a controls strip inside the title bar, beside the title.
+     *
+     * A panel whose controls belong to the panel itself — the piano roll's tool
+     * strip, say — otherwise pays for two stacked chrome bands: a title bar that
+     * is mostly empty, and a toolbar under it. The accessory shares the title
+     * bar's row, so the panel's content starts one band higher.
+     *
+     * The accessory becomes a child of this panel, so it renders, hit-tests and
+     * clips like the window buttons rather than like content. It is laid out
+     * between the title text and the window buttons, and the title bar grows to
+     * @p preferredHeight plus padding if that is taller than the default bar.
+     *
+     * @param titleZoneWidth Space reserved for the title text to the accessory's
+     *        left. Layout has no renderer, so the caller states it rather than
+     *        measuring; overshoot costs a little accessory width, undershoot
+     *        would let the accessory sit on the title.
+     */
+    void setTitleBarAccessory(std::shared_ptr<AestraUI::NUIComponent> accessory, float preferredHeight,
+                              float titleZoneWidth);
     bool isUserPositioned() const { return m_userPositioned; }
 
     float getExpandedHeight() const { return m_expandedHeight; }
@@ -60,6 +81,16 @@ public:
     void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
+
+    // SPEC 3 section 1.1: a docked panel is locked in place (no title-bar drag, no edge resize).
+    void setLocked(bool locked) { m_locked = locked; }
+    bool isLocked() const { return m_locked; }
+    // Right-click on the title bar asks for the panel's own menu (Dock/Float, Keep Open/Contextual, Reset).
+    void setOnMenuRequested(std::function<void(const AestraUI::NUIPoint&)> callback) { m_onMenuRequested = callback; }
+    // A contextual panel reports a left press outside its bounds; the owner decides whether to close it.
+    void setContextual(bool contextual) { m_contextual = contextual; }
+    bool isContextual() const { return m_contextual; }
+    void setOnOutsidePress(std::function<void()> callback) { m_onOutsidePress = callback; }
 
     // Callbacks
     void setOnMinimizeToggle(std::function<void(bool)> callback) { m_onMinimizeToggle = callback; }
@@ -96,6 +127,10 @@ private:
     bool m_minimized{false};
     bool m_maximized{false};
     float m_titleBarHeight{28.0f};
+    static constexpr float kDefaultTitleBarHeight{28.0f};
+    std::shared_ptr<AestraUI::NUIComponent> m_titleBarAccessory;
+    float m_accessoryHeight{0.0f};
+    float m_accessoryTitleZone{0.0f};
     float m_expandedHeight{300.0f}; // Remember height when expanded
     
     // Title bar buttons
@@ -125,6 +160,10 @@ private:
     std::chrono::steady_clock::time_point m_lastTitleBarClickTime{};
     
     // Callbacks
+    bool m_locked{false};
+    bool m_contextual{false};
+    std::function<void(const AestraUI::NUIPoint&)> m_onMenuRequested;
+    std::function<void()> m_onOutsidePress;
     std::function<void(bool)> m_onMinimizeToggle;
     std::function<void(bool)> m_onMaximizeToggle;
     std::function<void()> m_onClose;

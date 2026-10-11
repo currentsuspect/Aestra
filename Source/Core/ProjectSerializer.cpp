@@ -1,7 +1,9 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ProjectSerializer.h"
 #include "ProjectMigrations.h"
+#include "ProjectUpgradeCopy.h"
 #include "WorkspaceFocus.h"
+#include "AutomationRegionJson.h"
 #include "AestraFile.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "MiniAudioDecoder.h"
@@ -366,6 +368,16 @@ namespace {
             return fallback;
         }
         return std::clamp(object[key].asNumber(), minValue, maxValue);
+    }
+
+    // Source ids are 64-bit (ClipSourceID), but a JSON number is exact only up to 2^53-1 (F20).
+    constexpr double MAX_EXACT_JSON_ID = 9007199254740991.0;
+
+    // True when the id is present but past the exact range: clamping it would load
+    // the project under a different identity, so the caller must refuse the file.
+    bool idBeyondExactRange(const JSON& object, const char* key) {
+        return object.has(key) && object[key].isNumber() && std::isfinite(object[key].asNumber()) &&
+               object[key].asNumber() > MAX_EXACT_JSON_ID;
     }
 
     std::string boundedStringOr(const JSON& object, const char* key, const std::string& fallback, size_t maxBytes) {
@@ -989,6 +1001,9 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 cj.set("targetEnum", JSON(static_cast<double>(curve.getAutomationTarget())));
                 cj.set("mixerChannelId", JSON(static_cast<double>(curve.mixerChannelId)));
                 cj.set("default", JSON(curve.getDefaultValue()));
+                if (curve.muted)
+                    cj.set("muted", JSON(true)); // absent = evaluated; older builds ignore the key
+                writeAutomationRegions(cj, curve);
                 if (curve.getAutomationTarget() == Aestra::Audio::AutomationTarget::Custom) {
                     // Plugin-parameter address. instanceId is the authoritative
                     // decimal-string identity (Automation Identity Contract);
@@ -1163,6 +1178,8 @@ bool ProjectSerializer::save(const std::string& path,
 
     // Only create backup once we know serialization succeeded
     if (fs::exists(path)) {
+        // An older schema's file is kept once as Song.vN.aes (ProjectUpgradeCopy.h).
+        ProjectUpgradeCopy::keepBeforeSave(path, PROJECT_VERSION_CURRENT);
         fs::path backupPath = path;
         backupPath += ".bak";
         std::error_code ec;
@@ -1359,7 +1376,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
 
     std::unordered_set<uint64_t> allPatternIds;
     std::unordered_set<uint64_t> allUnitIds;
-    std::unordered_set<uint32_t> allSourceIds;
+    std::unordered_set<uint64_t> allSourceIds;
     std::unordered_map<uint64_t, std::string> patternNames;
     std::unordered_set<uint64_t> unloadablePatternIds;
     std::unordered_set<uint64_t> recoverableClipPatternIds;
@@ -1369,7 +1386,12 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     if (root.has("sources")) {
         const JSON& sj = root["sources"];
         for (size_t i = 0; i < sj.size(); ++i) {
-            uint32_t id = static_cast<uint32_t>(finiteNumberOr(sj[i], "id", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
+            if (idBeyondExactRange(sj[i], "id")) {
+                result.errorMessage = "Invalid project file: a source id exceeds 2^53-1 and cannot be read exactly";
+                Log::error("[ProjectLoad] " + result.errorMessage);
+                return result;
+            }
+            uint64_t id = static_cast<uint64_t>(finiteNumberOr(sj[i], "id", 0.0, 0.0, MAX_EXACT_JSON_ID));
             if (id != 0) allSourceIds.insert(id);
         }
     }
@@ -1383,8 +1405,14 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 patternNames[id] = boundedStringOr(pj[i], "name", "Pattern", PROJECT_MAX_STRING_BYTES);
                 const std::string type = boundedStringOr(pj[i], "type", "midi", PROJECT_MAX_STRING_BYTES);
                 if (type == "audio") {
-                    const uint32_t sourceId = static_cast<uint32_t>(
-                        finiteNumberOr(pj[i], "sourceId", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
+                    if (idBeyondExactRange(pj[i], "sourceId")) {
+                        result.errorMessage =
+                            "Invalid project file: an audio pattern's source id exceeds 2^53-1 and cannot be read exactly";
+                        Log::error("[ProjectLoad] " + result.errorMessage);
+                        return result;
+                    }
+                    const uint64_t sourceId = static_cast<uint64_t>(
+                        finiteNumberOr(pj[i], "sourceId", 0.0, 0.0, MAX_EXACT_JSON_ID));
                     if (sourceId == 0 || !allSourceIds.count(sourceId)) {
                         unloadablePatternIds.insert(id);
                     }
@@ -1620,14 +1648,14 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         playlist.setBPM(result.tempo);
     
         // 2. Load Sources (and decode audio files)
-        std::unordered_map<uint32_t, ClipSourceID> idMap;
+        std::unordered_map<uint64_t, ClipSourceID> idMap;
         if (root.has("sources")) {
             const JSON& sj = root["sources"];
         #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
             Log::info("[ProjectLoad] Loading sources count=" + std::to_string(sj.size()));
         #endif
             for (size_t i = 0; i < sj.size(); ++i) {
-                uint32_t oldId = static_cast<uint32_t>(finiteNumberOr(sj[i], "id", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
+                uint64_t oldId = static_cast<uint64_t>(finiteNumberOr(sj[i], "id", 0.0, 0.0, MAX_EXACT_JSON_ID));
                 std::string storedPath = boundedStringOr(sj[i], "path", "", PROJECT_MAX_PATH_BYTES);
                 if (oldId == 0 || storedPath.empty()) {
                     continue;
@@ -1725,8 +1753,8 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 }
     
                 if (type == "audio") {
-                    uint32_t oldSrcId = static_cast<uint32_t>(
-                        finiteNumberOr(pj[i], "sourceId", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
+                    uint64_t oldSrcId = static_cast<uint64_t>(
+                        finiteNumberOr(pj[i], "sourceId", 0.0, 0.0, MAX_EXACT_JSON_ID));
                     if (idMap.count(oldSrcId)) {
                         AudioSlicePayload payload;
                         payload.audioSourceId = idMap[oldSrcId];
@@ -1948,14 +1976,28 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 chain.prepare(pluginManager.getDefaultSampleRate(), pluginManager.getDefaultBlockSize());
                 if (channels[i].has("effectChainStateHex") && channels[i]["effectChainStateHex"].isString()) {
                     const auto effectState = hexToBytes(channels[i]["effectChainStateHex"].asString());
-                    std::vector<std::string> missingIds;
-                    if (!effectState.empty() && !chain.loadState(effectState, pluginManager, &missingIds)) {
+                    Audio::LoadReport loadReport;
+                    if (!effectState.empty() && !chain.loadState(effectState, pluginManager, &loadReport)) {
                         warningLimiter.warning(ProjectLoadWarningCategory::EffectChain,
                                                "[ProjectLoad] Failed to restore mixer effect chain on: " + channelName,
                                                "[ProjectLoad] Additional mixer effect-chain warnings suppressed.");
                     }
-                    for (auto& id : missingIds) {
+                    for (auto& id : loadReport.missingPlugins) {
                         result.missingPlugins.push_back({std::move(id), channelName});
+                    }
+                    // Reported, not merely logged: the slot is live on DEFAULTS and
+                    // the project's settings for it were dropped (#1014).
+                    if (!loadReport.unreadableState.empty()) {
+                        warningLimiter.warning(
+                            ProjectLoadWarningCategory::EffectChain,
+                            "[ProjectLoad] " + std::to_string(loadReport.unreadableState.size()) +
+                                " plugin(s) on " + channelName +
+                                " could not read their saved settings. Those slots are left empty rather than"
+                                " run on defaults, and their settings are preserved on save.",
+                            "[ProjectLoad] Additional unreadable-plugin-state warnings suppressed.");
+                        for (auto& id : loadReport.unreadableState) {
+                            result.unreadablePluginState.push_back({std::move(id), channelName});
+                        }
                     }
                 }
             }
@@ -1971,14 +2013,28 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 masterChain.prepare(pluginManager.getDefaultSampleRate(), pluginManager.getDefaultBlockSize());
                 if (masterJson.has("effectChainStateHex") && masterJson["effectChainStateHex"].isString()) {
                     const auto effectState = hexToBytes(masterJson["effectChainStateHex"].asString());
-                    std::vector<std::string> missingIds;
-                    if (!effectState.empty() && !masterChain.loadState(effectState, pluginManager, &missingIds)) {
+                    Audio::LoadReport loadReport;
+                    if (!effectState.empty() && !masterChain.loadState(effectState, pluginManager, &loadReport)) {
                         warningLimiter.warning(ProjectLoadWarningCategory::EffectChain,
                                                "[ProjectLoad] Failed to restore Master effect chain",
                                                "[ProjectLoad] Additional Master effect-chain warnings suppressed.");
                     }
-                    for (auto& id : missingIds) {
+                    for (auto& id : loadReport.missingPlugins) {
                         result.missingPlugins.push_back({std::move(id), "Master"});
+                    }
+                    // Reported, not merely logged: the slot is live on DEFAULTS and
+                    // the project's settings for it were dropped (#1014).
+                    if (!loadReport.unreadableState.empty()) {
+                        warningLimiter.warning(
+                            ProjectLoadWarningCategory::EffectChain,
+                            "[ProjectLoad] " + std::to_string(loadReport.unreadableState.size()) +
+                                " plugin(s) on Master could not read their saved settings. Those slots are"
+                                " left empty rather than run on defaults, and their settings are preserved"
+                                " on save.",
+                            "[ProjectLoad] Additional unreadable-plugin-state warnings suppressed.");
+                        for (auto& id : loadReport.unreadableState) {
+                            result.unreadablePluginState.push_back({std::move(id), "Master"});
+                        }
                     }
                 }
             }
@@ -2134,15 +2190,30 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             if (lj[i].has("effectChainStateHex") && lj[i]["effectChainStateHex"].isString()) {
                                 const auto effectState = hexToBytes(lj[i]["effectChainStateHex"].asString());
                                 if (!effectState.empty()) {
-                                    std::vector<std::string> missingIds;
-                                    if (!chain.loadState(effectState, pluginManager, &missingIds)) {
+                                    Audio::LoadReport loadReport;
+                                    if (!chain.loadState(effectState, pluginManager, &loadReport)) {
                                         warningLimiter.warning(
                                             ProjectLoadWarningCategory::EffectChain,
                                             "[ProjectLoad] Failed to restore effect chain on lane: " + lane->name,
                                             "[ProjectLoad] Additional effect chain restore warnings suppressed.");
                                     }
-                                    for (auto& id : missingIds) {
+                                    for (auto& id : loadReport.missingPlugins) {
                                         result.missingPlugins.push_back({std::move(id), lane->name});
+                                    }
+                                    // Reported, not merely logged: the slot is live on DEFAULTS and
+                                    // the project's settings for it were dropped (#1014).
+                                    if (!loadReport.unreadableState.empty()) {
+                                        warningLimiter.warning(
+                                            ProjectLoadWarningCategory::EffectChain,
+                                            "[ProjectLoad] " + std::to_string(loadReport.unreadableState.size()) +
+                                                " plugin(s) on " + lane->name +
+                                                " could not read their saved settings. Those slots are left"
+                                                " empty rather than run on defaults, and their settings are"
+                                                " preserved on save.",
+                                            "[ProjectLoad] Additional unreadable-plugin-state warnings suppressed.");
+                                        for (auto& id : loadReport.unreadableState) {
+                                            result.unreadablePluginState.push_back({std::move(id), lane->name});
+                                        }
                                     }
                                 }
                             }
@@ -2188,22 +2259,22 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                 // Pre-v3 curves inherited their lane's paired insert.
                                 curve.mixerChannelId = channel->getChannelId();
                             }
-                            curve.setDefaultValue(finiteNumberOr(aj[a], "default", 0.0, -1.0e6, 1.0e6));
-                            // Plugin-parameter address (Custom target). Bounded:
-                            // slot to the effect-chain size, paramId defensively.
+                            // Absent "default" keeps the target-derived neutral, not 0.0, which
+                            // would silence an empty Volume curve (FD-20); only pre-key files.
+                            curve.setDefaultValue(finiteNumberOr(aj[a], "default",
+                                                                 static_cast<double>(curve.getDefaultValue()),
+                                                                 -1.0e6, 1.0e6));
+                            curve.muted = aj[a].has("muted") && aj[a]["muted"].isBool() && aj[a]["muted"].asBool();
+                            readAutomationRegions(aj[a], curve);
+                            // Plugin address (Custom target); slot and paramId bounded.
                             curve.effectSlot = static_cast<uint32_t>(finiteNumberOr(aj[a], "slot", 0.0, 0.0, 9.0));
                             curve.paramId = static_cast<uint32_t>(finiteNumberOr(aj[a], "paramId", 0.0, 0.0, 1.0e6));
-                            // Automation Identity Contract: a v2 curve carries
-                            // its exact instance id. A v1 curve (no key)
-                            // migrates exactly once: the slot's minted instance
-                            // id, resolved against the already-loaded chains.
-                            // Empty slots yield 0 — the curve is preserved as
-                            // dangling (diagnostic), never re-pointed.
+                            // Automation Identity Contract: a v2 curve carries its exact instance id; a v1
+                            // curve (no key) migrates once, to the slot's minted id. Empty slots yield 0:
+                            // preserved as dangling (diagnostic), never re-pointed.
                             if (aj[a].has("instanceId") && aj[a]["instanceId"].isString()) {
-                                // Untrusted input: digits-only parse. std::stoull
-                                // would accept "-1" (wraps to UINT64_MAX, which the
-                                // chain refuses by design) and "12abc" (trailing
-                                // junk silently attaching the curve to id 12).
+                                // Untrusted input: digits-only. std::stoull would accept "-1" (wraps to
+                                // UINT64_MAX, refused by design) and "12abc" (silently attaching to id 12).
                                 const std::string rawId = aj[a]["instanceId"].asString();
                                 const bool digitsOnly =
                                     !rawId.empty() &&

@@ -4,6 +4,7 @@
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include "Plugin/AestraTransient.h"
+#include "PluginEditorKit.h"
 
 #include <algorithm>
 #include <array>
@@ -33,20 +34,7 @@ NUIColor sketchSurface() {
     return editorNeutral(0.044f, 0.96f);
 }
 
-void drawArc(NUIRenderer& renderer, NUIPoint center, float radius, float startAngle, float endAngle, float thickness,
-             NUIColor color) {
-    if (endAngle - startAngle <= 0.001f) {
-        return;
-    }
-    std::array<NUIPoint, 49> pts{};
-    const float div = static_cast<float>(pts.size() - 1);
-    for (size_t i = 0; i < pts.size(); ++i) {
-        const float t = static_cast<float>(i) / div;
-        const float a = startAngle + (endAngle - startAngle) * t;
-        pts[i] = {center.x + std::cos(a) * radius, center.y + std::sin(a) * radius};
-    }
-    renderer.drawPolyline(pts.data(), static_cast<int>(pts.size()), thickness, color);
-}
+using EditorKit::drawArc;
 } // namespace
 
 AestraTransientEditor::AestraTransientEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance)

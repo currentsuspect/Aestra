@@ -134,7 +134,7 @@ bool UIMixerFXSummary::onMouseEvent(const NUIMouseEvent& event)
         if (hoveredNow != m_hovered) {
             m_hovered = hoveredNow;
             if (m_hovered && m_fxCount <= 0) {
-                const NUIPoint anchor = localToGlobal({b.center().x, b.bottom() + 8.0f});
+                const NUIPoint anchor{b.center().x, b.bottom() + 8.0f}; // b is window-absolute
                 NUIComponent::showRemoteTooltip("Add insert", anchor, this);
             } else if (!m_hovered) {
                 NUIComponent::hideRemoteTooltip(this);

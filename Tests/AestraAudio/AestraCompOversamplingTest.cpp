@@ -253,19 +253,21 @@ bool testStateRoundtripAndBackCompat() {
         return false;
     }
 
-    // Patch the version field down to 4: the oversampling slot must then be
-    // ignored and default to Off, regardless of its stored content.
+    // Inverted under the format reset (FD-24). This used to patch the version
+    // field down to 4 and assert the blob still loaded with oversampling
+    // defaulting to Off. That reader is deleted, so a v4 blob is now rejected.
+    // The rejection is the contract worth pinning: it must not half-apply.
     auto v4state = state;
     const uint32_t v4 = 4;
     std::memcpy(v4state.data() + sizeof(uint32_t), &v4, sizeof(uint32_t));
     AestraComp legacy;
     legacy.initialize(kSampleRate, kBlockSize);
-    if (!legacy.loadState(v4state)) {
-        std::cerr << "state: v4 load failed\n";
+    if (legacy.loadState(v4state)) {
+        std::cerr << "state: a pre-reset v4 blob was accepted\n";
         return false;
     }
     if (legacy.getParameter(AestraComp::kOversampling) != 0.0f) {
-        std::cerr << "state: pre-v5 blob must default oversampling to Off\n";
+        std::cerr << "state: a rejected v4 blob still changed oversampling\n";
         return false;
     }
     return true;

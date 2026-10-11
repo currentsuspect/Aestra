@@ -738,6 +738,100 @@ float quantizeSlopeNorm(float norm) {
     return best;
 }
 
+// Map a dB value to a y coordinate WITHOUT flattening out-of-range values onto the
+// plot edge. Clamping here is outbound (domain -> pixel) and is lossy: it makes a
+// -72 dB cut and a -19 dB cut render identically. Instead the geometry stays true and
+// is cut at the boundary by clipCurveToBand() below, so a steep filter visibly leaves
+// the display rather than crawling along it.
+//
+// The bound is generous rather than absent: Catmull-Rom smoothing overshoots, and
+// unbounded coordinates would produce degenerate capsule geometry in drawPolyline.
+// One plot-height beyond each edge preserves the slope at the crossing, which is the
+// only part still visible after clipping.
+inline float curveDbToY(float db, float dbRange, const NUIRect& inner) {
+    const float norm = (db + dbRange) / (dbRange * 2.0f);
+    return inner.bottom() - std::clamp(norm, -1.0f, 2.0f) * inner.height;
+}
+
+// Clip a polyline to the vertical band of `inner`, splitting it into the runs that are
+// actually visible and inserting the exact boundary crossing points.
+//
+// Geometry-space clipping, deliberately not renderer.setClipRect(): clearClipRect()
+// disables the scissor outright rather than restoring the previous rect, and
+// AestraPanelWindow already sets one around its content. Using scissor here would drop
+// the panel's clip for the rest of the frame.
+//
+// The curve is a function of x (one y per x, x strictly increasing), so only y needs
+// clipping and each crossing is a simple linear interpolation.
+// Each visible run is drawn the moment it closes, so no vector-of-vectors is ever
+// built and `scratch` is the only buffer involved. `scratch` is owned by the caller
+// and reused across frames.
+//
+// That ownership is the point, not a style preference. This runs once for the
+// composite curve and again for every enabled band — up to 24 — on every repaint of
+// an open editor, so returning fresh containers meant roughly 120 KB of allocate and
+// free per frame on a build whose whole promise is low-resource hardware (FD-06).
+// TrackUIComponent already solves the identical problem with m_waveformTopPts /
+// m_waveformBottomPts; this is that pattern, not a new one.
+void drawClippedCurve(NUIRenderer& renderer, const std::vector<NUIPoint>& pts, const NUIRect& inner, float thickness,
+                      const NUIColor& color, std::vector<NUIPoint>& scratch) {
+    if (pts.size() < 2)
+        return;
+
+    const float top = inner.y;
+    const float bottom = inner.bottom();
+    const auto inside = [&](const NUIPoint& p) { return p.y >= top && p.y <= bottom; };
+    const auto crossing = [&](const NUIPoint& a, const NUIPoint& b, float edgeY) {
+        const float dy = b.y - a.y;
+        // Guard the degenerate case; a horizontal segment cannot cross a horizontal edge.
+        if (std::abs(dy) < 1e-6f)
+            return NUIPoint{b.x, edgeY};
+        const float t = std::clamp((edgeY - a.y) / dy, 0.0f, 1.0f);
+        return NUIPoint{a.x + (b.x - a.x) * t, edgeY};
+    };
+    // Emit the run accumulated so far and reset for the next one. Capacity is kept,
+    // which is what makes the reuse worth anything.
+    const auto emit = [&]() {
+        if (scratch.size() > 1)
+            renderer.drawPolyline(scratch.data(), static_cast<int>(scratch.size()), thickness, color);
+        scratch.clear();
+    };
+
+    scratch.clear();
+    for (size_t i = 0; i + 1 < pts.size(); ++i) {
+        const NUIPoint& a = pts[i];
+        const NUIPoint& b = pts[i + 1];
+        const bool aIn = inside(a);
+        const bool bIn = inside(b);
+
+        if (aIn && scratch.empty())
+            scratch.push_back(a);
+
+        if (aIn && bIn) {
+            scratch.push_back(b);
+        } else if (aIn && !bIn) {
+            scratch.push_back(crossing(a, b, b.y < top ? top : bottom));
+            emit();
+        } else if (!aIn && bIn) {
+            scratch.clear();
+            scratch.push_back(crossing(a, b, a.y < top ? top : bottom));
+            scratch.push_back(b);
+        } else if ((a.y < top && b.y > bottom) || (a.y > bottom && b.y < top)) {
+            // Both outside, on opposite sides: the segment traverses the whole band and
+            // has two crossings. Reachable on the composite curve, where a high-Q boost
+            // adjacent to a high-Q cut can swing more than a plot height in one sample
+            // step; without this the curve silently breaks where it should read as a
+            // near-vertical edge. Emitted as its own run — scratch is always empty here,
+            // because reaching this branch means the previous segment ended outside.
+            scratch.push_back(crossing(a, b, a.y < top ? top : bottom));
+            scratch.push_back(crossing(a, b, b.y < top ? top : bottom));
+            emit();
+        }
+        // Both outside on the same side: no intersection with the band, nothing to draw.
+    }
+    emit();
+}
+
 std::vector<NUIPoint> smoothCurve(const std::vector<NUIPoint>& pts, int subdivisions) {
     if (pts.size() < 4 || subdivisions <= 1)
         return pts;
@@ -1459,7 +1553,7 @@ void AestraEQEditor::drawOutputGainPill(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
     const float gain = outputGain();
     const NUIColor outline =
-        m_outputGainHovered || m_draggingOutputGain ? accent().withAlpha(0.44f) : NUIColor(1, 1, 1, 0.14f);
+        m_outputGainHovered || m_draggingOutputGain ? accent().withAlpha(0.44f) : editorInk(0.14f);
     const NUIColor fill = m_outputGainHovered || m_draggingOutputGain ? accent().withAlpha(0.11f)
                                                                       : editorNeutral(0.035f, 0.88f);
     renderer.fillRoundedRect(m_outputGainRect, 7.0f, fill);
@@ -1484,7 +1578,7 @@ void AestraEQEditor::drawPolarityPill(NUIRenderer& renderer) {
     renderer.fillRoundedRect(m_polarityRect, 7.0f, fill);
     renderer.strokeRoundedRect(m_polarityRect, 7.0f, 1.0f,
                                inverted ? base.withAlpha(m_polarityHovered ? 0.56f : 0.42f)
-                                        : NUIColor(1, 1, 1, m_polarityHovered ? 0.22f : 0.14f));
+                                        : editorInk(m_polarityHovered ? 0.22f : 0.14f));
     drawSvgIcon(renderer, polarityIcon(), {m_polarityRect.x + 8.0f, m_polarityRect.y + 5.0f, 14.0f, 14.0f},
                 inverted ? base.withAlpha(1.0f) : theme.getColor("textSecondary").withAlpha(0.72f), 13.0f);
     renderer.drawText(inverted ? "INV" : "POL",
@@ -1495,13 +1589,13 @@ void AestraEQEditor::drawPolarityPill(NUIRenderer& renderer) {
 void AestraEQEditor::drawComparePills(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
     auto drawSlot = [&](const NUIRect& r, const char* label, bool active, bool hovered) {
-        const NUIColor base = active ? accent() : NUIColor(1, 1, 1, 1);
+        const NUIColor base = active ? accent() : editorInk(1);
         renderer.fillRoundedRect(r, 7.0f,
                                  active ? accent().withAlpha(hovered ? 0.16f : 0.10f)
                                         : NUIColor(0.035f, 0.035f, 0.035f, hovered ? 0.98f : 0.88f));
         renderer.strokeRoundedRect(r, 7.0f, 1.0f,
                                    active ? base.withAlpha(hovered ? 0.50f : 0.34f)
-                                          : NUIColor(1, 1, 1, hovered ? 0.22f : 0.13f));
+                                          : editorInk(hovered ? 0.22f : 0.13f));
         const NUIColor glyph =
             active ? theme.getColor("textPrimary").withAlpha(0.90f) : theme.getColor("textSecondary").withAlpha(0.46f);
         drawSvgIcon(renderer, compareSlotIcon(), {r.x + 6.0f, r.y + 6.0f, 12.0f, 12.0f}, glyph, 11.0f);
@@ -1517,7 +1611,7 @@ void AestraEQEditor::drawComparePills(NUIRenderer& renderer) {
                              m_compareCopyHovered ? accent().withAlpha(0.11f)
                                                   : editorNeutral(0.035f, 0.88f));
     renderer.strokeRoundedRect(m_compareCopyRect, 7.0f, 1.0f,
-                               m_compareCopyHovered ? accent().withAlpha(0.42f) : NUIColor(1, 1, 1, 0.13f));
+                               m_compareCopyHovered ? accent().withAlpha(0.42f) : editorInk(0.13f));
     drawSvgIcon(renderer, compareCopyIcon(), {m_compareCopyRect.x + 7.0f, m_compareCopyRect.y + 5.0f, 14.0f, 14.0f},
                 theme.getColor("textSecondary").withAlpha(m_compareCopyHovered ? 0.92f : 0.66f), 13.0f);
     renderer.drawText(label, {m_compareCopyRect.x + 28.0f, topPillTextY(renderer, m_compareCopyRect, 8.0f)}, 8.0f,
@@ -1766,7 +1860,7 @@ void AestraEQEditor::drawBandCard(NUIRenderer& renderer, size_t idx) {
                       theme.getColor("textSecondary").withAlpha(0.070f));
     if (m_selectedSlotRailRect.width > 0.0f) {
         const NUIRect slotRail = m_selectedSlotRailRect;
-        renderer.fillRoundedRect(slotRail, 3.0f, NUIColor(1, 1, 1, 0.018f));
+        renderer.fillRoundedRect(slotRail, 3.0f, editorInk(0.018f));
         for (uint32_t slot = 0; slot < Aestra::Audio::Plugins::AestraEQ::kMaxDynamicBands; ++slot) {
             const float t = Aestra::Audio::Plugins::AestraEQ::kMaxDynamicBands > 1
                                 ? static_cast<float>(slot) /
@@ -1816,9 +1910,9 @@ void AestraEQEditor::drawBandCard(NUIRenderer& renderer, size_t idx) {
         }
     }
     auto drawHeaderButtonFrame = [&](const NUIRect& rect, bool hovered, bool enabled) {
-        const NUIColor fill = enabled && hovered ? band.withAlpha(0.13f) : NUIColor(1, 1, 1, enabled ? 0.018f : 0.006f);
+        const NUIColor fill = enabled && hovered ? band.withAlpha(0.13f) : editorInk(enabled ? 0.018f : 0.006f);
         const NUIColor edge =
-            enabled ? (hovered ? band.withAlpha(0.34f) : NUIColor(1, 1, 1, 0.085f)) : NUIColor(1, 1, 1, 0.018f);
+            enabled ? (hovered ? band.withAlpha(0.34f) : editorInk(0.085f)) : editorInk(0.018f);
         renderer.fillRoundedRect(rect, 5.0f, fill);
         renderer.strokeRoundedRect(rect, 5.0f, 1.0f, edge);
         return enabled ? theme.getColor("textSecondary").withAlpha(hovered ? 0.88f : 0.42f)
@@ -1837,9 +1931,9 @@ void AestraEQEditor::drawBandCard(NUIRenderer& renderer, size_t idx) {
         const NUIColor icon =
             enabled ? deleteRed.withAlpha(hovered ? 1.0f : 0.60f) : theme.getColor("textSecondary").withAlpha(0.090f);
         renderer.fillRoundedRect(
-            rect, 5.0f, enabled && hovered ? deleteRed.withAlpha(0.08f) : NUIColor(1, 1, 1, enabled ? 0.010f : 0.006f));
+            rect, 5.0f, enabled && hovered ? deleteRed.withAlpha(0.08f) : editorInk(enabled ? 0.010f : 0.006f));
         renderer.strokeRoundedRect(rect, 5.0f, 1.0f,
-                                   enabled ? deleteRed.withAlpha(hovered ? 0.50f : 0.25f) : NUIColor(1, 1, 1, 0.018f));
+                                   enabled ? deleteRed.withAlpha(hovered ? 0.50f : 0.25f) : editorInk(0.018f));
         drawSvgIcon(renderer, removeIcon(), rect, icon, 12.0f);
     };
     auto drawCollapseButton = [&](const NUIRect& rect, bool hovered) {
@@ -1856,10 +1950,10 @@ void AestraEQEditor::drawBandCard(NUIRenderer& renderer, size_t idx) {
     drawDuplicateButton(m_selectedDuplicateRect, m_selectedDuplicateHovered, canCopy);
     drawDeleteButton(m_selectedDeleteRect, m_selectedDeleteHovered, canDelete);
     if (bd.typeId != 0 || !bd.legacySlot) {
-        renderer.fillRoundedRect(bd.typeButton, 5.0f, bd.enabled ? band.withAlpha(0.055f) : NUIColor(1, 1, 1, 0.010f));
+        renderer.fillRoundedRect(bd.typeButton, 5.0f, bd.enabled ? band.withAlpha(0.055f) : editorInk(0.010f));
         renderer.strokeRoundedRect(bd.typeButton, 5.0f, 1.0f, band.withAlpha(bd.enabled ? 0.22f : 0.08f));
     } else {
-        renderer.fillRoundedRect(bd.typeButton, 5.0f, NUIColor(1, 1, 1, bd.enabled ? 0.018f : 0.008f));
+        renderer.fillRoundedRect(bd.typeButton, 5.0f, editorInk(bd.enabled ? 0.018f : 0.008f));
     }
     renderer.drawTextCentered(typeLabel, bd.typeButton, 9.0f,
                               theme.getColor("textSecondary").withAlpha(bd.enabled ? 0.72f : 0.36f));
@@ -1868,10 +1962,10 @@ void AestraEQEditor::drawBandCard(NUIRenderer& renderer, size_t idx) {
     const bool stereoScoped = quantizeStereoNorm(stereoNorm) > 0.0f;
     renderer.fillRoundedRect(bd.stereoButton, 5.0f,
                              stereoScoped ? band.withAlpha(bd.enabled ? 0.16f : 0.06f)
-                                          : NUIColor(1, 1, 1, bd.enabled ? 0.030f : 0.018f));
+                                          : editorInk(bd.enabled ? 0.030f : 0.018f));
     renderer.strokeRoundedRect(bd.stereoButton, 5.0f, 1.0f,
                                stereoScoped ? band.withAlpha(bd.enabled ? 0.36f : 0.12f)
-                                            : NUIColor(1, 1, 1, bd.enabled ? 0.08f : 0.04f));
+                                            : editorInk(bd.enabled ? 0.08f : 0.04f));
     renderer.drawTextCentered(stereoModeShortName(stereoNorm), bd.stereoButton, 8.0f,
                               stereoScoped ? band.withAlpha(bd.enabled ? 0.96f : 0.42f)
                                            : theme.getColor("textSecondary").withAlpha(bd.enabled ? 0.62f : 0.28f));
@@ -1909,7 +2003,7 @@ void AestraEQEditor::drawBandCard(NUIRenderer& renderer, size_t idx) {
                                       std::abs(m_draggingLaneRect.x - lane.x) < 0.5f &&
                                       std::abs(m_draggingLaneRect.y - lane.y) < 0.5f;
         const NUIColor edge =
-            bd.enabled ? band.withAlpha(draggingThisLane ? 0.58f : (hot ? 0.38f : 0.19f)) : NUIColor(1, 1, 1, 0.065f);
+            bd.enabled ? band.withAlpha(draggingThisLane ? 0.58f : (hot ? 0.38f : 0.19f)) : editorInk(0.065f);
         const float labelW = 36.0f;
         const float valueW = 64.0f;
         const float trackX = lane.x + labelW + 6.0f;
@@ -1920,7 +2014,7 @@ void AestraEQEditor::drawBandCard(NUIRenderer& renderer, size_t idx) {
         renderer.fillRoundedRect(lane, 5.0f, editorNeutral(0.026f, 0.95f));
         renderer.fillRoundedRect({lane.x, lane.y, labelW, lane.height}, 5.0f,
                                  bd.enabled ? band.withAlpha(0.050f) : band.withAlpha(0.018f));
-        renderer.fillRoundedRect({trackX, trackY - 1.5f, trackW, 3.0f}, 1.5f, NUIColor(1, 1, 1, 0.080f));
+        renderer.fillRoundedRect({trackX, trackY - 1.5f, trackW, 3.0f}, 1.5f, editorInk(0.080f));
         renderer.fillRoundedRect({trackX, trackY - 1.5f, std::max(2.0f, tickX - trackX), 3.0f}, 1.5f,
                                  bd.enabled ? band.withAlpha(draggingThisLane ? 0.82f : 0.70f) : band.withAlpha(0.12f));
         renderer.fillRoundedRect({lane.right() - valueW - 5.0f, lane.y + 5.0f, valueW, lane.height - 10.0f}, 4.0f,
@@ -1951,7 +2045,19 @@ void AestraEQEditor::drawBandCard(NUIRenderer& renderer, size_t idx) {
 }
 
 NUIRect AestraEQEditor::graphInnerBounds(const NUIRect& outer) const {
-    return {outer.x + 38.0f, outer.y + 18.0f, outer.width - 48.0f, outer.height - 36.0f};
+    // Insets are asymmetric on purpose, and each one has to earn its width:
+    //   left   38 - the dB scale labels are drawn at outer.x + 3 (26 wide), so the
+    //               plot has to start clear of them
+    //   top    18 - the frequency/gain cursor readout
+    //   bottom 18 - the frequency axis labels, drawn at inner.bottom() + 1
+    //   right   1 - flush; sits just inside the 1px frame stroke
+    //
+    // The right inset used to be 10, which held nothing. The curve and the grid both
+    // stop at inner.right(), so those 10px read as the response being cut off before
+    // it reaches the frame — the whole plot looked truncated on that side while the
+    // left looked deliberate because its gutter is visibly occupied by labels.
+    // Founder call: flush, not merely closer. The plot now ends ON its own border.
+    return {outer.x + 38.0f, outer.y + 18.0f, outer.width - 39.0f, outer.height - 36.0f};
 }
 
 NUIPoint AestraEQEditor::graphNodePosition(size_t bandIdx, const NUIRect& graphBounds) const {
@@ -2086,31 +2192,39 @@ void AestraEQEditor::drawSpectrumBackdrop(NUIRenderer& renderer, const NUIRect& 
         const float mag = std::clamp(m_spectrumMagnitudes[i], 0.0f, 1.0f);
         const float peak = std::clamp(m_spectrumPeakMagnitudes[i], 0.0f, 1.0f);
         const float bh = mag * inner.height;
-        const float lowWeight = std::clamp(1.0f - t * 2.2f, 0.0f, 1.0f);
-        const float highWeight = std::clamp((t - 0.58f) * 2.4f, 0.0f, 1.0f);
-        const float midWeight = 1.0f - std::max(lowWeight, highWeight);
-        const NUIColor low(0.18f, 0.66f, 0.58f, 1.0f);
-        const NUIColor mid(0.86f, 0.68f, 0.26f, 1.0f);
-        const NUIColor high(0.96f, 0.44f, 0.30f, 1.0f);
-        const NUIColor band(low.r * lowWeight + mid.r * midWeight + high.r * highWeight,
-                            low.g * lowWeight + mid.g * midWeight + high.g * highWeight,
-                            low.b * lowWeight + mid.b * midWeight + high.b * highWeight, 1.0f);
 
-        renderer.fillRect({x, inner.bottom() - bh, bw, bh}, band.withAlpha(0.025f + mag * 0.085f));
+        // One cool neutral, not a hue ramp across frequency.
+        //
+        // The analyzer used to crossfade teal -> gold -> orange by position, which
+        // encoded frequency in colour when the x axis already encodes it — the same
+        // fact drawn twice — and the low/mid crossfade landed on a muddy olive right
+        // through the midrange where most material lives. It also made identical
+        // magnitudes look like different events at different frequencies.
+        //
+        // Magnitude is now the only thing the analyzer varies, and it varies it with
+        // opacity. A desaturated slate also keeps the analyzer behind the response
+        // curve: the spectrum is context, the curve is the subject, and they should
+        // not compete for the same attention.
+        const NUIColor band(0.56f, 0.63f, 0.72f, 1.0f);
+
+        renderer.fillRect({x, inner.bottom() - bh, bw, bh}, band.withAlpha(0.020f + mag * 0.055f));
         if (mag > 0.08f) {
             const float capY = inner.bottom() - bh;
-            renderer.drawLine({x, capY}, {x + bw, capY}, 1.0f, band.withAlpha(0.09f + mag * 0.12f));
+            renderer.drawLine({x, capY}, {x + bw, capY}, 1.0f, band.withAlpha(0.06f + mag * 0.10f));
         }
         if (peak > 0.12f && (i % 2 == 0)) {
             const float peakY = inner.bottom() - peak * inner.height;
-            renderer.drawLine({x, peakY}, {x + bw, peakY}, 1.0f, band.withAlpha(0.16f));
+            renderer.drawLine({x, peakY}, {x + bw, peakY}, 1.0f, band.withAlpha(0.13f));
         }
         contour.push_back({x + bw * 0.5f, inner.bottom() - bh});
     }
 
+    // Contour in the analyzer's own ink rather than the accent, so the spectrum reads
+    // as one object and the accent stays reserved for the response curve.
     const auto smooth = smoothCurve(contour, 3);
     if (smooth.size() > 1) {
-        renderer.drawPolyline(smooth.data(), static_cast<int>(smooth.size()), 1.1f, accent().withAlpha(0.20f));
+        renderer.drawPolyline(smooth.data(), static_cast<int>(smooth.size()), 1.0f,
+                              NUIColor(0.56f, 0.63f, 0.72f, 0.32f));
     }
 }
 
@@ -2207,23 +2321,19 @@ void AestraEQEditor::drawBandResponseCurves(NUIRenderer& renderer, const NUIRect
             const float hz = std::pow(10.0f, logMin + t * (logMax - logMin));
             const float db = static_cast<float>(eq->getBandMagnitudeResponseDb(m_bands[band].slotIndex, hz));
             const float x = inner.x + t * inner.width;
-            const float y = inner.bottom() - std::clamp((db + dbRange) / (dbRange * 2.0f), 0.0f, 1.0f) * inner.height;
-            pts.push_back({x, y});
+            pts.push_back({x, curveDbToY(db, dbRange, inner)});
         }
 
         const NUIColor c = bandColor(m_bands[band].slotIndex);
         const bool soloed = eq->isBandSoloed(m_bands[band].slotIndex);
-        if (soloed || selected || hovered) {
-            if (pts.size() > 1) {
-                renderer.drawPolyline(pts.data(), static_cast<int>(pts.size()), soloed ? 10.0f : 7.0f,
-                                      c.withAlpha(soloed ? 0.10f : 0.055f));
-                renderer.drawPolyline(pts.data(), static_cast<int>(pts.size()), soloed ? 4.5f : 3.0f,
-                                      c.withAlpha(soloed ? 0.28f : 0.16f));
-            }
-        }
-        const float alpha = soloed ? 0.74f : (selected || hovered ? 0.48f : 0.22f);
-        renderer.drawPolyline(pts.data(), static_cast<int>(pts.size()),
-                              soloed ? 1.85f : (selected || hovered ? 1.45f : 1.0f), c.withAlpha(alpha));
+        // No halo passes here either — the 10px/4.5px blooms behind a soloed or
+        // selected band were the same glare as on the composite curve, multiplied by
+        // however many bands were lit at once. Emphasis comes from weight and opacity
+        // alone, which is enough to pick a band out and does not smear into its
+        // neighbours.
+        const float alpha = soloed ? 0.90f : (selected || hovered ? 0.62f : 0.26f);
+        drawClippedCurve(renderer, pts, inner, soloed ? 1.9f : (selected || hovered ? 1.5f : 1.0f),
+                         c.withAlpha(alpha), m_curveClipScratch);
     }
 }
 
@@ -2537,9 +2647,7 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
     for (int p = 0; p < kNumPoints; ++p) {
         const float t = static_cast<float>(p) / static_cast<float>(kNumPoints - 1);
         const float x = inner.x + t * inner.width;
-        const float y =
-            inner.bottom() - std::clamp((response[p] + dbRange) / (dbRange * 2.0f), 0.0f, 1.0f) * inner.height;
-        pts.push_back({x, y});
+        pts.push_back({x, curveDbToY(response[p], dbRange, inner)});
     }
     auto smooth = smoothCurve(pts, 4);
     float maxAbsResponse = 0.0f;
@@ -2548,11 +2656,56 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
     }
 
     const NUIColor curveCol(0.54f, 0.92f, 0.70f, 0.96f);
+
+    // Area fill between the curve and the 0 dB line, drawn under the strokes.
+    //
+    // This is what closes the shape against the frame. A bare 1.6px line that
+    // terminates at the plot edge reads as unfinished — the eye expects the graph
+    // to continue past it — whereas a filled region meets the left and right edges
+    // and the floor, so the response reads as anchored.
+    //
+    // The LINE still tells the truth: it is clipped at the boundary, never bent to
+    // it, so a -3 dB cut at 20 kHz still draws at -3 dB. Only the FILL saturates at
+    // the plot edge, which is safe because a filled area carries no slope to lose —
+    // it says "at least this far", not "exactly this value".
+    // No edge walls. An earlier pass closed the curve to the floor at the left and
+    // right boundaries so nothing floated, which looked tidy but cost the reading
+    // that matters more: where the cut actually sits in the range. A curve that ends
+    // at its true value tells you it is -10 dB at 20 Hz; one that drops to the floor
+    // implies the filter keeps going down, which is an illusion. Ending honestly and
+    // hollow is worth more than ending neatly.
     if (maxAbsResponse > 0.02f) {
-        renderer.drawPolyline(smooth.data(), static_cast<int>(smooth.size()), 6.0f, curveCol.withAlpha(0.10f));
-        renderer.drawPolyline(smooth.data(), static_cast<int>(smooth.size()), 3.0f, curveCol.withAlpha(0.30f));
+        const float zeroY = inner.bottom() - 0.5f * inner.height;
+        // clear() keeps capacity, so these settle after the first frame and stop
+        // allocating entirely.
+        m_curveFillTop.clear();
+        m_curveFillBottom.clear();
+        m_curveFillTop.reserve(smooth.size());
+        m_curveFillBottom.reserve(smooth.size());
+        for (const auto& p : smooth) {
+            const float cy = std::clamp(p.y, inner.y, inner.bottom());
+            m_curveFillTop.push_back({p.x, std::min(cy, zeroY)});
+            m_curveFillBottom.push_back({p.x, std::max(cy, zeroY)});
+        }
+        if (m_curveFillTop.size() > 1) {
+            renderer.fillWaveform(m_curveFillTop.data(), m_curveFillBottom.data(),
+                                  static_cast<int>(m_curveFillTop.size()), curveCol.withAlpha(0.16f));
+        }
     }
-    renderer.drawPolyline(smooth.data(), static_cast<int>(smooth.size()), 1.6f, curveCol);
+
+    // One clean stroke. No glow passes.
+    //
+    // The curve used to be drawn three times — 6.0@0.10, 3.0@0.30, then 1.6@0.96 —
+    // to give it a halo. That halo is what made the line read as artificial: a wide
+    // soft bloom around a hard core is glare, not antialiasing, and the eye reads the
+    // bloom as a rendering artifact rather than as part of the shape. Widening the
+    // falloff (an earlier attempt here) makes it worse, not better, because it
+    // spreads the glare further.
+    //
+    // MSAA is 4x and is requested at context creation, so a single stroke already has
+    // properly antialiased edges. Nothing else is needed to make it look smooth.
+    constexpr float kCurveStrokeWidth = 1.7f;
+    drawClippedCurve(renderer, smooth, inner, kCurveStrokeWidth, curveCol, m_curveClipScratch);
     if (m_bands.empty()) {
         const NUIRect emptyTitle{inner.x, inner.center().y - 20.0f, inner.width, 18.0f};
         const NUIRect emptyHint{inner.x, inner.center().y + 2.0f, inner.width, 16.0f};
@@ -2741,7 +2894,7 @@ void AestraEQEditor::drawFloatingBandWindow(NUIRenderer& renderer, const NUIRect
                               stereoScoped ? c.withAlpha(0.96f) : theme.getColor("textSecondary").withAlpha(0.58f));
     renderer.fillCircle(layout.enableRect.center(), 3.0f,
                         bd.enabled ? c.withAlpha(0.95f) : theme.getColor("textSecondary").withAlpha(0.28f));
-    renderer.drawLine({r.x + 8.0f, r.y + 25.0f}, {r.right() - 8.0f, r.y + 25.0f}, 1.0f, NUIColor(1, 1, 1, 0.07f));
+    renderer.drawLine({r.x + 8.0f, r.y + 25.0f}, {r.right() - 8.0f, r.y + 25.0f}, 1.0f, editorInk(0.07f));
 
     auto drawRow = [&](const NUIRect& row, const char* label, const std::string& value, float normalized, Knob target) {
         constexpr float labelW = 44.0f;
@@ -2758,13 +2911,13 @@ void AestraEQEditor::drawFloatingBandWindow(NUIRenderer& renderer, const NUIRect
         renderer.fillRoundedRect(row, 4.0f, editorNeutral(0.018f, 0.86f));
         renderer.fillRoundedRect({row.x, row.y, labelW, row.height}, 4.0f,
                                  bd.enabled ? c.withAlpha(draggingThis ? 0.16f : 0.075f) : c.withAlpha(0.025f));
-        renderer.fillRoundedRect({trackX, trackY - 1.0f, trackW, 2.0f}, 1.0f, NUIColor(1, 1, 1, 0.055f));
+        renderer.fillRoundedRect({trackX, trackY - 1.0f, trackW, 2.0f}, 1.0f, editorInk(0.055f));
         renderer.fillRoundedRect({trackX, trackY - 1.0f, std::max(2.0f, tickX - trackX), 2.0f}, 1.0f,
                                  bd.enabled ? c.withAlpha(draggingThis ? 0.55f : 0.26f) : c.withAlpha(0.08f));
         renderer.fillRoundedRect({row.right() - valueW - 4.0f, row.y + 3.0f, valueW, row.height - 6.0f}, 3.0f,
                                  NUIColor(0, 0, 0, bd.enabled ? 0.20f : 0.10f));
         renderer.strokeRoundedRect(row, 4.0f, 1.0f,
-                                   bd.enabled ? c.withAlpha(draggingThis ? 0.46f : 0.16f) : NUIColor(1, 1, 1, 0.055f));
+                                   bd.enabled ? c.withAlpha(draggingThis ? 0.46f : 0.16f) : editorInk(0.055f));
         renderer.drawText(label, {row.x + 7.0f, row.y + 4.0f}, 9.5f,
                           theme.getColor("textSecondary").withAlpha(bd.enabled ? 0.64f : 0.32f));
         const float valueFont = value.size() > 8 ? 8.2f : 9.0f;
@@ -2909,7 +3062,7 @@ void AestraEQEditor::drawBandContextMenu(NUIRenderer& renderer) {
                       theme.getColor("textSecondary").withAlpha(0.70f));
     renderer.drawLine({m_bandContextMenuRect.x + 8.0f, m_bandContextMenuRect.y + 29.0f},
                       {m_bandContextMenuRect.right() - 8.0f, m_bandContextMenuRect.y + 29.0f}, 1.0f,
-                      NUIColor(1, 1, 1, 0.060f));
+                      editorInk(0.060f));
 
     static constexpr BandMenuAction kActions[] = {
         BandMenuAction::Reset,   BandMenuAction::InvertGain, BandMenuAction::ToggleDynamic, BandMenuAction::SplitLR,
@@ -2960,7 +3113,7 @@ void AestraEQEditor::drawBandContextMenu(NUIRenderer& renderer) {
         if (i == 3 || i == 5 || i == 8 || i == 9) {
             renderer.drawLine({m_bandContextMenuRect.x + 10.0f, r.y - 5.0f},
                               {m_bandContextMenuRect.right() - 10.0f, r.y - 5.0f}, 1.0f,
-                              NUIColor(1, 1, 1, destructive ? 0.070f : 0.052f));
+                              editorInk(destructive ? 0.070f : 0.052f));
         }
         if ((hovered && enabled) || dynamicOn) {
             renderer.fillRoundedRect(r, 5.0f,

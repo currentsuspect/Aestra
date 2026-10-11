@@ -41,9 +41,7 @@ private:
 
     // Vertical-drag knob state: which param is being dragged, and the value
     // at drag start so movement is relative, not absolute.
-    int m_draggingParam = -1;
     float m_dragStartY = 0.0f;
-    float m_dragStartValue = 0.0f;
     bool m_bypassHovered = false;
 
     static constexpr float kWinW = 560.0f;

@@ -126,6 +126,10 @@ public:
         }
     }
     float getParameter(uint32_t id) const override { return id == 0 ? m_gain : 0.0f; }
+    // V8-A5: this mock stands in for an internal plugin, so it declares the
+    // render-thread automation contract the engine now requires.
+    bool supportsRealtimeAutomation() const noexcept override { return true; }
+    void applyAutomation(uint32_t id, float normalizedValue) noexcept override { setParameter(id, normalizedValue); }
     void process(const float* const* inputs, float** outputs, uint32_t numInputChannels,
                  uint32_t numOutputChannels, uint32_t numFrames, const MidiBuffer* m = nullptr,
                  MidiBuffer* o = nullptr) override {
@@ -178,7 +182,7 @@ void registerTestPlugins() {
 // Slot order as a vector of plugin ids (empty slots skipped).
 std::vector<std::string> chainOrder(EffectChain& chain) {
     std::vector<std::string> order;
-    for (size_t i = 0; i < EffectChain::MAX_SLOTS; ++i) {
+    for (size_t i = 0; i < EffectChain::kInitialSlots; ++i) {
         const auto* slot = chain.getSlot(i);
         if (slot && slot->plugin) {
             order.push_back(slot->plugin->getInfo().id);
@@ -196,7 +200,7 @@ std::string join(const std::vector<std::string>& v) {
 }
 
 uint64_t instanceIdAt(EffectChain& chain, const std::string& pluginId) {
-    for (size_t i = 0; i < EffectChain::MAX_SLOTS; ++i) {
+    for (size_t i = 0; i < EffectChain::kInitialSlots; ++i) {
         const auto* slot = chain.getSlot(i);
         if (slot && slot->plugin && slot->plugin->getInfo().id == pluginId) {
             return chain.getSlotInstanceId(i);
@@ -296,9 +300,9 @@ int main() {
     curve.deviceInstanceId = gainId;
     curve.paramId = 0;
     curve.setDefaultValue(1.0f);
-    curve.addPoint(0.0, 1.0f, kSpbAt120, 0.5f);
-    curve.addPoint(0.5, 1.0f, kSpbAt120, 0.5f);
-    curve.addPoint(1.0, 0.0f, kSpbAt120, 0.5f);
+    curve.addPoint(0.0, 1.0f, kSpbAt120, 0.0f);
+    curve.addPoint(0.5, 1.0f, kSpbAt120, 0.0f);
+    curve.addPoint(1.0, 0.0f, kSpbAt120, 0.0f);
     lane->automationCurves.push_back(curve);
     lane->automationCurves.back().mixerChannelId = 41;
 

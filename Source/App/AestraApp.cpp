@@ -2,11 +2,15 @@
 #include "AestraApp.h"
 #include "MuseHostVerbs.h"
 #include "MuseProjectLoadReport.h"
+#include "ProjectLifecycle.h"
 #include "AppLifecycle.h"
 #include "CrashFlagPath.h"
 #include "ServiceLocator.h"
+#include "TerminationSignal.h"
 #include "AestraRootComponent.h"
 #include "Preferences.h"
+#include "../AestraUI/Core/NUIPerfProbe.h"
+#include <cstdlib>
 #include "../AestraCore/include/AestraFile.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include "../AestraCore/include/PointerRegistry.h"
@@ -36,6 +40,10 @@
 #include <sstream>
 #include <chrono>
 #include "../Core/AudioSettingsStore.h"
+#include "../Core/DockedRailWidths.h"
+#include "AestraJSONFile.h"
+#include "AestraFileDialog.h"
+#include "../Core/LegacyMixerSettingsImport.h"
 #include "PlaylistMixer.h"
 #include "ClipResampler.h"
 #include <thread>
@@ -61,15 +69,6 @@ struct StartupTimer {
         Log::info(std::string("[Startup] ") + name + ": " + std::to_string(elapsed) + " ms");
     }
 };
-
-void syncRecordingProjectPath(const std::shared_ptr<AestraContent>& content, const std::string& projectPath) {
-    if (!content) {
-        return;
-    }
-    if (auto trackManager = content->getTrackManager()) {
-        trackManager->setRecordingProjectPath(projectPath);
-    }
-}
 
 /** @brief True when @p filePath's text contains @p needle (generic path form).
  *
@@ -321,6 +320,11 @@ bool AestraApp::initialize(const std::string& projectPath) {
         }
     }
 
+    // After platform init, so it replaces SDL's handler (TerminationSignal.h); the close button keeps its prompt.
+    if (Aestra::TerminationSignal::install()) {
+        Log::info("[Close] SIGTERM/SIGINT autosave and exit without a prompt");
+    }
+
     // Resolve the crash-flag path ONCE, now that platform utilities exist, and
     // reuse it for every crash-flag operation in this process (#675).
     //
@@ -362,6 +366,47 @@ bool AestraApp::initialize(const std::string& projectPath) {
     UIState uiState;
     uiState.load();
 
+    // Before AestraContent exists: MixerPanel reads its preference from this store in its constructor.
+    m_uiSurfaceStore = std::make_unique<Aestra::UISurfaceStoreFile>(Aestra::UISurfaceStore::defaultPath());
+    if (m_uiSurfaceStore->path().empty()) {
+        Log::warning("[UISurfaceStore] No app-data directory; UI layout will not persist");
+    }
+    switch (Aestra::importLegacyMixerInspectorPreference(*m_uiSurfaceStore, Aestra::legacyMixerSettingsPath())) {
+    case Aestra::LegacyImportResult::Imported:
+        Log::info("[UISurfaceStore] Imported the mixer inspector preference from mixer_settings.json");
+        break;
+    case Aestra::LegacyImportResult::SaveFailed:
+        Log::warning("[UISurfaceStore] Could not save the imported mixer inspector preference to " +
+                     m_uiSurfaceStore->path());
+        break;
+    case Aestra::LegacyImportResult::AlreadyInStore:
+    case Aestra::LegacyImportResult::NothingToImport:
+        break;
+    }
+    // V8-C14 step 5c: one-time, one-way import of the pre-store ui_state.json
+    // rail width. A legacy value equal to the UIState default proves the user
+    // never resized, so nothing imports and the computed default flows.
+    const auto nowSeconds = static_cast<int64_t>(
+        std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch())
+            .count());
+    switch (Aestra::importLegacyBrowserRailWidth(*m_uiSurfaceStore, uiState.browserWidth, UIState{}.browserWidth,
+                                                 nowSeconds)) {
+    case Aestra::LegacyImportResult::Imported:
+        Log::info("[UISurfaceStore] Imported the browser rail width from ui_state.json");
+        break;
+    case Aestra::LegacyImportResult::SaveFailed:
+        // Keep the legacy value in ui_state.json so the next launch can retry:
+        // the shutdown save below starts from a default-constructed UIState.
+        m_unimportedLegacyBrowserWidth = uiState.browserWidth;
+        Log::warning("[UISurfaceStore] Could not save the imported browser rail width to " + m_uiSurfaceStore->path() +
+                     "; keeping it in ui_state.json to retry next launch");
+        break;
+    case Aestra::LegacyImportResult::AlreadyInStore:
+    case Aestra::LegacyImportResult::NothingToImport:
+        break;
+    }
+    Aestra::ServiceLocator::provide<Aestra::UISurfaceStoreFile>(m_uiSurfaceStore.get());
+
     {
         StartupTimer t("Platform + Window");
         if (!initializePlatformAndWindow(uiState)) return false;
@@ -389,6 +434,9 @@ bool AestraApp::initialize(const std::string& projectPath) {
     {
         StartupTimer t("Menu bar");
         buildMenuBar();
+        // The status cluster is the account/plan status, so it opens Settings on the Membership
+        // page, from the first click, before any dialog exists.
+        m_windowManager->setOnMembershipClicked([this]() { openSettings("membership"); });
     }
     {
         StartupTimer t("Plugins init");
@@ -488,6 +536,19 @@ void AestraApp::initializeContent() {
     unifiedHUD->setVisible(false);
     unifiedHUD->setAudioEngine(m_audioController->getEngine());
     m_windowManager->setUnifiedHUD(unifiedHUD);
+
+    // Text pipeline diagnostic (V8-C9, FD-21). Built here for the same reason
+    // the HUD is: an overlay created lazily is a key that does nothing until
+    // the user happens to open something else first.
+    auto textDiagnostics = std::make_shared<TextDiagnosticOverlay>();
+    // AESTRA_TEXT_DIAG=1 starts it open. A diagnostic that can only be reached
+    // by a keypress can only be used by a human at a keyboard — this one has to
+    // compose with AESTRA_DISABLE_LCD=1, because the LCD comparison is a
+    // two-run comparison by construction (fontUseLCD_ is read while the atlas
+    // is baked). Launch flag and F11 toggle are the same overlay.
+    const char* diagEnv = std::getenv("AESTRA_TEXT_DIAG");
+    textDiagnostics->setVisible(diagEnv != nullptr && diagEnv[0] == '1');
+    m_windowManager->setTextDiagnostics(textDiagnostics);
 }
 
 std::chrono::seconds AestraApp::resolveAutosaveInterval() {
@@ -791,6 +852,20 @@ void AestraApp::ensureSettingsAndDialogs() {
     }
 }
 
+// The one open-Settings path: File -> Settings and the title bar's status cluster both use it,
+// so neither depends on the other having built the (lazily created) dialog first.
+// @p pageId selects a page first (show() keeps the active page); empty keeps whichever page
+// the dialog was last on, which is what File -> Settings does.
+void AestraApp::openSettings(const std::string& pageId) {
+    ensureSettingsAndDialogs();
+    if (auto dialog = m_windowManager->getSettingsDialog()) {
+        if (!pageId.empty()) {
+            dialog->setActivePage(pageId);
+        }
+        dialog->show();
+    }
+}
+
 void AestraApp::buildMenuBar() {
     auto menuBar = std::make_shared<AestraUI::NUIMenuBar>();
 
@@ -798,41 +873,18 @@ void AestraApp::buildMenuBar() {
     menuBar->addItem("File", [this]() {
         auto menu = std::make_shared<AestraUI::NUIContextMenu>();
 
-        menu->addItem("New Project", [this]() {
-            if (m_content && m_content->getTrackManager()) m_content->getTrackManager()->stop();
-            // Leave the old session: discards its unsaved/unreferenced takes.
-            cleanupUnreferencedRecordings();
-            if (m_content) m_content->resetToDefaultProject();
-            clearProjectLoadReport();
-            m_documentState.startUntitled(autosavePathOrEmpty());
-            reinitAutosaveManager();
-            syncRecordingProjectPath(m_content, m_documentState.canonicalPath());
-            m_lastWindowTitle.clear();
-            updateWindowTitle();
-            Log::info("New project created");
-        });
+        menu->addItem("New Project", [this]() { createNewProject(); });
 
         menu->addItem("Open Project...", [this]() {
-            if (auto* utils = Aestra::Platform::getUtils()) {
-                const std::string filter = std::string("Aestra Project\0*.aes\0All Files\0*.*\0",
-                                                       sizeof("Aestra Project\0*.aes\0All Files\0*.*\0") - 1);
-                const std::string pickedPath = utils->openFileDialog("Open Project", filter);
+            const std::string filter = std::string("Aestra Project\0*.aes\0All Files\0*.*\0",
+                                                   sizeof("Aestra Project\0*.aes\0All Files\0*.*\0") - 1);
+            pickFileAsync(
+                [filter](Aestra::IPlatformUtils& utils) { return utils.openFileDialog("Open Project", filter); },
+                [this](const std::string& pickedPath) {
                 if (!pickedPath.empty() && std::filesystem::exists(pickedPath)) {
-                    // Old session's keeper path: captured BEFORE the load, so
-                    // discarded-take cleanup (run only on a successful switch)
-                    // keeps exactly the previous project's recordings.
-                    const std::string oldKeeperPath = m_documentState.canonicalPath();
-                    auto result = loadProjectFromPath(pickedPath);
-                    if (result.ok) {
-                        // Cleanup runs only after the transition SUCCEEDED: the
-                        // old session's redo history may still require its WAVs
-                        // if the new project failed to load.
-                        cleanupUnreferencedRecordings(oldKeeperPath);
-                    } else {
-                        Log::error("Failed to load project: " + pickedPath + " (" + result.errorMessage + ")");
-                    }
+                    openProjectFromPath(pickedPath);
                 }
-            }
+            });
         });
 
         menu->addSeparator();
@@ -858,12 +910,7 @@ void AestraApp::buildMenuBar() {
         menu->addSeparator();
         menu->addItem("Export Audio...", [this]() { startExport(); });
         menu->addSeparator();
-        menu->addItem("Settings...", [this]() {
-            ensureSettingsAndDialogs();
-            if (m_windowManager->getSettingsDialog()) {
-                m_windowManager->getSettingsDialog()->show();
-            }
-        });
+        menu->addItem("Settings...", [this]() { openSettings(); });
         menu->addSeparator();
         menu->addItem("Exit", [this]() { requestClose(); });
 
@@ -945,18 +992,17 @@ void AestraApp::buildMenuBar() {
             if (m_windowManager) m_windowManager->toggleFullScreen();
         });
         menu->addSeparator();
-        menu->addItem("Show Timeline", [this]() {
-            Log::info("Show Timeline - Not yet fully implemented");
-        });
-        menu->addItem("Show Arsenal", [this]() {
-            Log::info("Show Arsenal - Not yet fully implemented");
-        });
+        menu->addItem("Show Timeline", [this]() { Log::info("Show Timeline - Not yet fully implemented"); });
+        menu->addItem("Show Arsenal", [this]() { Log::info("Show Arsenal - Not yet fully implemented"); });
         menu->addItem("Show History  Ctrl+H", [this]() {
             if (m_content) m_content->toggleHistoryPanel();
         });
         menu->addItem("Show Takes", [this]() {
             if (m_content) m_content->toggleTakesPanel();
         });
+        menu->addSeparator();
+        menu->addItem("Gather Panels", [this]() { if (m_content) m_content->gatherPanels(); });
+        menu->addItem("Reset Panel Positions", [this]() { if (m_content) m_content->resetPanelPositions(); });
 
         m_windowManager->showDropdownMenu(menu, 100.0f);
     });
@@ -1104,16 +1150,35 @@ void AestraApp::loadOrRecoverProject(const std::string& projectPath, bool crashe
 void AestraApp::restoreUIState(const UIState& uiState) {
     if (m_content) {
         m_content->setBrowserVisible(uiState.browserVisible);
-        m_content->setBrowserWidth(uiState.browserWidth);
+        // V8-C14 step 5c: the rail width lives in the surface store (imported
+        // once at startup); live prefs seed from it on first layout, so the
+        // legacy ui_state.json value is no longer applied here.
         m_content->setMixerVisible(uiState.mixerVisible);
         Log::info("[UIState] Applied panel state: browserVisible=" +
                   std::string(uiState.browserVisible ? "true" : "false") +
-                  ", browserWidth=" + std::to_string(uiState.browserWidth) +
                   ", mixerVisible=" + std::string(uiState.mixerVisible ? "true" : "false"));
     }
 
     if (m_content && m_content->getFileBrowser()) {
         auto fileBrowser = m_content->getFileBrowser();
+        // Library state (favorites, places, collections, sort, library root) is
+        // the browser's own file; where it was looking is restored from UIState below.
+        fileBrowser->initLibraryState(resolveAppDataFilePath("Aestra", "browser_library.json"));
+        // "Current Project" lists the audio the project has loaded (clip and
+        // recording sources). Weak: the browser must not keep the model alive.
+        std::weak_ptr<Aestra::Audio::TrackManager> weakTracks = m_content->getTrackManager();
+        fileBrowser->setProjectFilesProvider([weakTracks]() {
+            std::vector<std::string> paths;
+            if (auto tracks = weakTracks.lock()) {
+                const auto& sources = tracks->getSourceManager();
+                for (const auto id : sources.getAllSourceIDs()) {
+                    if (const auto* source = sources.getSource(id); source && !source->getFilePath().empty()) {
+                        paths.push_back(source->getFilePath());
+                    }
+                }
+            }
+            return paths;
+        });
         if (!uiState.lastBrowsedPath.empty() && std::filesystem::exists(uiState.lastBrowsedPath)) {
             fileBrowser->setCurrentPath(uiState.lastBrowsedPath);
             Log::info("[UIState] Restored file browser path: " + uiState.lastBrowsedPath);
@@ -1410,10 +1475,22 @@ void AestraApp::run() {
         }).detach();
     }
 
+
     while (m_running && m_windowManager->processEvents()) {
+        // A logout or `kill` never waits on a dialog nobody will answer; shutdown() autosaves (SPEC 3 §6.7).
+        if ((m_exitSignal = Aestra::TerminationSignal::pending()) != 0) {
+            Log::info("[Close] Signal " + std::to_string(m_exitSignal) + ": exiting without the unsaved-changes prompt");
+            m_running = false;
+            break;
+        }
+
         // Worker → UI hop (native dialogs/decode off the UI thread); pumped
         // before UI update so a completed relink lands this frame.
         drainMainThreadTasks();
+
+        // The title bar's Saved/Unsaved lamp follows the project's modified
+        // flag; the title bar ignores repeats, so this repaints only on a flip.
+        pushProjectStatus();
 
         UnifiedProfiler::getInstance().beginFrame();
         m_windowManager->beginFrame(); // Start timing
@@ -1515,6 +1592,7 @@ void AestraApp::run() {
             m_windowManager->swapBuffers();
             m_lastPresentedFrame = std::chrono::steady_clock::now();
         }
+        AestraUI::PerfProbe::frameWorkEnd(presentThisFrame); // AESTRA_FRAME_STATS report (NUIPerfProbe.h)
         if (sleepTime > 0.0) {
              if (auto fps = m_windowManager->getAdaptiveFPS()) {
                  fps->sleep(sleepTime);
@@ -1524,47 +1602,49 @@ void AestraApp::run() {
          }
 
         UnifiedProfiler::getInstance().endFrame();
+        AestraUI::PerfProbe::frameWorkBegin();
     }
 }
 
 bool AestraApp::shouldRenderThisFrame() {
+    using AestraUI::PerfProbe::presentBecause; // records the reason at AESTRA_FRAME_STATS=2
     // Conservative v1 gate: render unless EVERY skip condition holds
     // (dirty == false && realtime_visuals == false && input_recent == false).
 
     // Pending invalidation — any component's setDirty(true) propagates here.
     auto* root = m_windowManager->getRootComponent();
     if (!root || root->isDirty())
-        return true;
+        return presentBecause("dirty");
 
     // Input recency — the adaptive FPS governor already tracks this (fed by
     // mouse/key callbacks); align with its idle timeout.
     auto* fps = m_windowManager->getAdaptiveFPS();
     if (!fps || fps->getIdleTime() < 2.0)
-        return true;
+        return presentBecause("input");
 
     // Realtime visuals — transport (playhead/meters), record-arm input
     // monitoring, file preview, and Audition playback.
     if (m_audioController && m_audioController->getEngine() && m_audioController->getEngine()->isTransportPlaying()) {
-        return true;
+        return presentBecause("transport");
     }
     if (m_content) {
         if (auto tm = m_content->getTrackManager()) {
             if (tm->isPlaying() || tm->isRecordArmed())
-                return true;
+                return presentBecause("playing or armed");
         }
         if (m_content->hasRealtimePlaybackVisuals())
-            return true;
+            return presentBecause("realtime visuals");
     }
 
     // Overlays that animate or need fresh samples (HUD, dialogs, menus).
     if (m_windowManager->requiresContinuousRender())
-        return true;
+        return presentBecause("overlay");
 
     // Deeply idle: heartbeat only (~3.3 fps) so caret blink, tooltips and any
     // unsignaled change still surface within ~300 ms.
     const auto now = std::chrono::steady_clock::now();
     const double sinceLastPresent = std::chrono::duration<double>(now - m_lastPresentedFrame).count();
-    return sinceLastPresent >= 0.3;
+    return sinceLastPresent >= 0.3 && presentBecause("heartbeat");
 }
 
 void AestraApp::startMuseSocketIfConfigured() {
@@ -1599,7 +1679,7 @@ void AestraApp::startMuseSocketIfConfigured() {
     // false and refuse them with a reason rather than running host code on a
     // thread that does not own the state it touches.
     m_museService->setHostUiThreadAvailable(true);
-    registerMuseHostVerbs(*m_museService, *m_content);
+    registerMuseHostVerbs(*m_museService, *m_content, *this);
 
     m_museSocketServer = std::make_unique<Aestra::Audio::MuseSocketServer>();
     std::string error;
@@ -1668,7 +1748,8 @@ void AestraApp::shutdown() {
     // the autosave is still available for recovery on next launch.
     if (m_content && m_content->getTrackManager() && m_content->getTrackManager()->isModified()) {
         Log::info("[SHUTDOWN] Emergency autosave before shutdown...");
-        m_autoSaveManager.forceAutosave();
+        // A signal exit never asked, so this autosave is the only copy: keep the crash flag (below).
+        m_keepSessionForRecovery = m_autoSaveManager.forceAutosave() && m_exitSignal != 0;
     }
     m_autoSaveManager.shutdown();
 
@@ -1698,15 +1779,22 @@ void AestraApp::shutdown() {
                   std::to_string(windowState.y) + ") maximized=" + (windowState.maximized ? "true" : "false"));
     }
 
+    // V8-C14 step 5c: browserWidth is no longer written back — the surface
+    // store owns the rail width (written at resize-drag end) and ui_state.json
+    // keeps only its last value as a harmless import orphan. The one exception
+    // is a legacy width whose import failed to save: preserve it so the next
+    // launch can retry rather than reading back the default.
+    if (m_unimportedLegacyBrowserWidth) {
+        uiState.browserWidth = *m_unimportedLegacyBrowserWidth;
+    }
+
     // Capture panel states from AestraContent (Issue #120)
     if (m_content) {
         uiState.browserVisible = m_content->isBrowserVisible();
-        uiState.browserWidth = m_content->getBrowserWidth();
         uiState.mixerVisible = m_content->isMixerVisible();
 
         Log::info("[UIState] Captured panel state: browserVisible=" +
                   std::string(uiState.browserVisible ? "true" : "false") +
-                  ", browserWidth=" + std::to_string(uiState.browserWidth) +
                   ", mixerVisible=" + std::string(uiState.mixerVisible ? "true" : "false"));
     }
 
@@ -1767,7 +1855,11 @@ void AestraApp::shutdown() {
     // Clear crash flag LAST — if anything above crashes, the flag persists.
     // Also clear ServiceLocator last so shutdown paths can still resolve services.
     Aestra::ServiceLocator::clear();
-    clearCrashFlag();
+    if (m_keepSessionForRecovery) { // the next launch then offers the emergency autosave (SPEC 3 §6.7)
+        Log::info("[CrashDetection] Kept crash flag: signal exit left unsaved work for recovery");
+    } else {
+        clearCrashFlag();
+    }
     Log::shutdown();
 }
 
@@ -1825,11 +1917,15 @@ void AestraApp::requestClose() {
                  [this](Aestra::DialogResponse response) {
                      switch (response) {
                      case Aestra::DialogResponse::Save:
-                         if (saveCurrentProject()) {
-                             m_running = false;
-                         } else {
-                             m_pendingClose = false;
-                         }
+                         // Save As answers asynchronously; keep the close
+                         // pending until the save has actually landed.
+                         saveCurrentProject([this](bool saved) {
+                             if (saved) {
+                                 m_running = false;
+                             } else {
+                                 m_pendingClose = false;
+                             }
+                         });
                          break;
                      case Aestra::DialogResponse::DontSave: {
                          // User explicitly chose not to save — remove the autosave
@@ -1856,33 +1952,57 @@ void AestraApp::requestClose() {
                  });
 }
 
-bool AestraApp::saveCurrentProject() {
-    return m_documentState.requiresSaveAs() ? saveProjectAs() : saveProject();
+void AestraApp::saveCurrentProject(std::function<void(bool)> onDone) {
+    if (m_documentState.requiresSaveAs()) {
+        saveProjectAs(std::move(onDone));
+        return;
+    }
+    const bool ok = saveProject();
+    if (onDone) onDone(ok);
 }
 
-bool AestraApp::saveProjectAs() {
-    auto* utils = Aestra::Platform::getUtils();
-    if (!utils) {
-        Log::warning("Cannot save project: platform file dialog is unavailable");
-        return false;
-    }
-
+void AestraApp::saveProjectAs(std::function<void(bool)> onDone) {
     Aestra::IPlatformUtils::SaveFileDialogOptions options;
     options.title = "Save Project As";
     options.filter =
         std::string("Aestra Project\0*.aes\0All Files\0*.*\0", sizeof("Aestra Project\0*.aes\0All Files\0*.*\0") - 1);
     options.defaultPath = m_documentState.canonicalPath();
     options.defaultExtension = "aes";
-    const std::string pickedPath = utils->saveFileDialog(options);
-    if (pickedPath.empty()) {
+
+    const bool started = pickFileAsync(
+        [options](Aestra::IPlatformUtils& utils) { return utils.saveFileDialog(options); },
+        [this, onDone](const std::string& pickedPath) {
+            bool ok = false;
+            if (!pickedPath.empty()) {
+                ok = saveProjectToPath(pickedPath, true);
+                if (ok) Log::info("Project saved as: " + pickedPath);
+            }
+            if (onDone) onDone(ok);
+        });
+    if (!started) {
+        Log::warning("Cannot save project: a file picker is already open or the platform layer is unavailable");
+        if (onDone) onDone(false);
+    }
+}
+
+bool AestraApp::pickFileAsync(Aestra::FileDialogCall call, std::function<void(const std::string&)> onPicked) {
+    auto queue = m_mainThreadQueue;
+    if (!queue || queue->fileDialogInFlight.exchange(true)) {
         return false;
     }
-
-    const bool ok = saveProjectToPath(pickedPath, true);
-    if (ok) {
-        Log::info("Project saved as: " + pickedPath);
-    }
-    return ok;
+    // The worker never calls onPicked (which captures `this`): it only queues
+    // it, under the shutdown gate, for drainMainThreadTasks() on the UI thread.
+    const bool started = Aestra::runFileDialogDetached(
+        std::move(call), [queue, onPicked = std::move(onPicked)](std::string picked) mutable {
+            std::lock_guard<std::mutex> lock(queue->mutex);
+            if (queue->shuttingDown) return;
+            queue->tasks.push_back([queue, onPicked = std::move(onPicked), picked = std::move(picked)]() {
+                queue->fileDialogInFlight.store(false);
+                onPicked(picked);
+            });
+        });
+    if (!started) queue->fileDialogInFlight.store(false);
+    return started;
 }
 
 ProjectSerializer::LoadResult AestraApp::loadProjectFromPath(const std::string& path, ProjectLoadSource source,
@@ -1902,6 +2022,10 @@ ProjectSerializer::LoadResult AestraApp::loadProjectFromPath(const std::string& 
     if (!result.ok) {
         Log::error("Failed to load project: " + path + " (" + result.errorMessage + ")");
         return result;
+    }
+    // Keep-length samplers start rendering the loaded notes now, off the audio thread.
+    if (m_content && m_content->getTrackManager()) {
+        m_content->getTrackManager()->prewarmSamplerKeepLength(false);
     }
 
     return applyLoadedProject(path, source, canonicalPath, std::move(result));
@@ -2464,6 +2588,13 @@ void AestraApp::applyUIState(const ProjectSerializer::UIState& state) {
 
 void AestraApp::updateWindowTitle() {
     m_windowManager->setWindowTitle(m_documentState.windowTitle());
+    pushProjectStatus();
+}
+
+void AestraApp::pushProjectStatus() {
+    if (!m_windowManager) return;
+    const bool modified = m_content && m_content->getTrackManager() && m_content->getTrackManager()->isModified();
+    m_windowManager->setProjectStatus(m_documentState.displayName(), modified, m_documentState.statusNote());
 }
 
 void AestraApp::startExport() {

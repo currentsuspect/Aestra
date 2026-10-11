@@ -37,9 +37,10 @@ public:
 
     void setPlatformBridge(AestraUI::NUIPlatformBridge* bridge);
 
-    /// Mixer layout preferences live in ~/.config/aestra/mixer_settings.json —
-    /// application state, deliberately outside the project file so switching
-    /// projects never rearranges the mixer.
+    /// Mixer layout preferences live in the shared UI preference store
+    /// (`panel.mixer.inspectorExpanded` in ui_surface_store.json, app data) —
+    /// deliberately outside the project file so switching projects never
+    /// rearranges the mixer.
     void loadUIPreferences();
     void saveUIPreferences() const;
 

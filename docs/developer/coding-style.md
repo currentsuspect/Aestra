@@ -180,8 +180,8 @@ docs: update architecture overview for plugin system
 Install hooks to enforce style automatically:
 
 ```powershell
-# PowerShell helper
 pwsh -File scripts/install-hooks.ps1
+# Linux/macOS: python3 scripts/install_hooks.py
 ```
 
 The hooks run:
@@ -189,7 +189,7 @@ The hooks run:
 - Gitleaks secret scanning
 - Basic validation checks
 
-There is currently no `scripts/install-hooks.sh` companion in the repo. On Linux, either run the PowerShell helper if available in your environment or point Git at `.githooks/` manually.
+The Python installer works on Linux and macOS; Windows users may alternatively run `pwsh -File scripts/install-hooks.ps1`.
 
 ## Resources
 

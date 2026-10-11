@@ -195,52 +195,73 @@ private:
 // =============================================================================
 // Global Logger Instance
 // =============================================================================
+// The active logger is swapped at runtime (init() at startup, shutdown() at
+// teardown, and tests swap a capture logger in and out) while worker threads
+// log concurrently. A shared_ptr's control block is atomic but the pointer pair
+// itself is not, so an unsynchronised read racing a swap is a torn read, and the
+// resulting refcount operation lands on a freed control block — heap corruption,
+// not just a lost message.
+//
+// Every access therefore goes through std::atomic_load/atomic_store, and each
+// entry point takes ONE snapshot into a local shared_ptr. That local also fixes
+// a second bug: the old `if (logger_) logger_->log(...)` read the member twice,
+// so a swap between check and use dereferenced a pointer that was null or
+// already destroyed. Holding a strong reference for the duration of the call
+// keeps the logger alive even if it is replaced mid-log.
+//
+// A mutex would also work, but these free functions are the right tool in C++17
+// (they are deprecated in C++20 in favour of std::atomic<std::shared_ptr>; move
+// to that if the project's standard ever rises). Note this adds no real-time
+// hazard that is not already there by a wide margin: ConsoleLogger::log already
+// takes a mutex and writes to std::cout, so logging was never RT-safe and
+// AGENTS.md section 10 forbids it on audio paths regardless.
 class Log {
 public:
-    static void init(std::shared_ptr<ILogger> logger) { instance().logger_ = logger; }
+    static void init(std::shared_ptr<ILogger> logger) { std::atomic_store(&instance().logger_, std::move(logger)); }
 
     static void debug(const std::string& message) {
-        if (instance().logger_) {
-            instance().logger_->log(LogLevel::Debug, message);
+        if (auto logger = current()) {
+            logger->log(LogLevel::Debug, message);
         }
     }
 
     static void trace(const std::string& message) {
-        if (instance().logger_) {
-            instance().logger_->log(LogLevel::Trace, message);
+        if (auto logger = current()) {
+            logger->log(LogLevel::Trace, message);
         }
     }
 
     static void info(const std::string& message) {
-        if (instance().logger_) {
-            instance().logger_->log(LogLevel::Info, message);
+        if (auto logger = current()) {
+            logger->log(LogLevel::Info, message);
         }
     }
 
     static void warning(const std::string& message) {
-        if (instance().logger_) {
-            instance().logger_->log(LogLevel::Warning, message);
+        if (auto logger = current()) {
+            logger->log(LogLevel::Warning, message);
         }
     }
 
     static void error(const std::string& message) {
-        if (instance().logger_) {
-            instance().logger_->log(LogLevel::Error, message);
+        if (auto logger = current()) {
+            logger->log(LogLevel::Error, message);
         }
     }
 
     static void setLevel(LogLevel level) {
-        if (instance().logger_) {
-            instance().logger_->setLevel(level);
+        if (auto logger = current()) {
+            logger->setLevel(level);
         }
     }
 
-    static std::shared_ptr<ILogger> getLogger() { return instance().logger_; }
+    static std::shared_ptr<ILogger> getLogger() { return current(); }
 
     static void shutdown() {
         // Reset to basic console logger to allow AsyncLogger to clean up
         // This must be called before static destruction to avoid hangs
-        instance().logger_ = std::make_shared<ConsoleLogger>();
+        std::shared_ptr<ILogger> console = std::make_shared<ConsoleLogger>();
+        std::atomic_store(&instance().logger_, std::move(console));
     }
 
     static LogLevel parseLogLevel(const std::string& str) {
@@ -267,6 +288,8 @@ private:
             defaultLevel = parseLogLevel(env);
         }
 
+        // Plain store: this runs inside the thread-safe initialisation of the
+        // static local in instance(), which happens-before any other access.
         logger_ = std::make_shared<ConsoleLogger>(defaultLevel);
     }
 
@@ -274,6 +297,9 @@ private:
         static Log log;
         return log;
     }
+
+    /** @brief One atomic snapshot of the active logger, kept alive by the caller. */
+    static std::shared_ptr<ILogger> current() { return std::atomic_load(&instance().logger_); }
 
     std::shared_ptr<ILogger> logger_;
 };

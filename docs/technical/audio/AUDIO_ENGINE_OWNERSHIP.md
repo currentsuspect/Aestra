@@ -99,28 +99,28 @@ that the assumption was gone.
 
 ## Known residuals
 
-**RT-misuse accounting is process-wide, not per-engine.**
-`AudioEngine::performNonRealtimeMaintenance()` — an instance member — reads and drains
-file-scope counters (`g_rtMisuseCount`, `g_rtMisuseReportedCount`, `g_rtMisuseLastApi`
-in `AudioEngine.cpp`), and `installRealtimeMisuseHandler()` installs the handler once
-per process behind a function-local static.
+**RT-misuse dispatch is process-wide; accounting is per-engine.**
+`recordRealtimeMisuse` (`AudioEngine.cpp`) forwards into `AudioTelemetry::rtMisuseViolations`
+on the engine that most recently published its telemetry (`g_misuseTelemetry`, cleared by
+that engine's destructor when still current), and `installRealtimeMisuseHandler()` installs
+the handler once per process behind a function-local static. The last-API name
+(`g_rtMisuseLastApi`) feeding the maintenance-time log line is likewise process-wide.
+`get_audio_health` publishes the counter, so recorded violations are no longer discarded
+([#883](https://github.com/currentsuspect/Aestra/issues/883)).
 
-With two live engines this misattributes: a violation committed under engine A is
-logged by whichever engine drains it first, and draining it silences the other. The
-counters survive an engine's destruction, so a fresh engine can report a violation
-that a previous one caused.
+With two live engines dispatch still misattributes: a violation committed under the older
+engine counts toward the newer engine's telemetry, and destroying the newer engine unwires
+counting for the older one until another engine is constructed. Counting no longer
+outlives the engine it belongs to — a fresh engine can no longer report a violation a
+previous one caused.
 
 This is diagnostics only — no audio path depends on it — and it is unreachable in the
 application, which runs a single engine. It is nonetheless a one-engine-per-process
 assumption inside the class whose contract says otherwise, in exactly the
 configuration `AudioEngineOwnershipTest` blesses. The singleton guard does not catch
-it because the state is counters, not an engine instance.
+it because the state is a telemetry pointer, not an engine instance.
 
-Tracked as [#885](https://github.com/currentsuspect/Aestra/issues/885). It shares a
-root with [#883](https://github.com/currentsuspect/Aestra/issues/883) — those same
-counters are never published, so the violations they record are discarded. Moving
-RT-misuse accounting onto `AudioTelemetry` (already a per-engine member) closes both
-in one change. Update this section when it does.
+Tracked as [#885](https://github.com/currentsuspect/Aestra/issues/885).
 
 **Copy and move are deleted implicitly, not explicitly.** The suppression is a
 consequence of member types rather than a stated intent, so a future refactor that

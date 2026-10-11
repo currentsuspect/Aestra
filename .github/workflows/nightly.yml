@@ -58,12 +58,28 @@ jobs:
       - name: Test
         run: ctest --test-dir build-nightly --output-on-failure
 
-      - name: Upload build artifacts
-        if: always()
+      # Triage material only, and only when there is something to triage.
+      #
+      # This used to be `path: build-nightly/` with `if: always()`, which uploaded
+      # the ENTIRE build tree — object files, static libraries, CMake cache — on
+      # every run including successful ones. At ~3.6 GB per nightly against a 7-day
+      # retention that is a standing ~25 GB, and it was 77% of the repository's
+      # total Actions artifact storage when it was found (2026-09-12: 32.95 GB live,
+      # of which 25.4 GB was seven nightly uploads).
+      #
+      # Nothing consumed those object files. What a failing nightly actually needs
+      # is the ctest output, which is what `Testing/` holds — kilobytes, not
+      # gigabytes. A successful nightly needs nothing at all: the run log already
+      # records that it passed.
+      - name: Upload failure diagnostics
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: nightly-linux-${{ github.run_id }}
-          path: build-nightly/
+          path: |
+            build-nightly/Testing/
+            build-nightly/**/*.log
+          if-no-files-found: warn
           retention-days: 7
 
   open-issue-on-failure:

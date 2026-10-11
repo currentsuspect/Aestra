@@ -75,6 +75,9 @@ jobs:
         with:
           lane: linux-gcc
           github-token: ${{ github.token }}
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
       - name: Install Dependencies
         if: steps.scope.outputs.run == 'true'
         run: |
@@ -83,7 +86,7 @@ jobs:
 
       - name: Configure
         if: steps.scope.outputs.run == 'true'
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
         if: steps.scope.outputs.run == 'true'
@@ -93,6 +96,10 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         working-directory: build
         run: ctest --test-dir . --output-on-failure --output-junit ctest-results-linux.xml
+
+      - name: Platform leak check (advisory)
+        continue-on-error: true
+        run: python3 scripts/check_platform_leaks.py
 
       - name: Security contract tests
         if: steps.scope.outputs.run == 'true'
@@ -139,9 +146,9 @@ jobs:
   # Compiles the full desktop app (Source/ + AestraUI) — the one lane that
   # catches UI/app build breakage. Every other lane passes AESTRA_CI=ON, which
   # force-disables the UI, so without this job the app can silently stop
-  # building (it did once for a week, #396). Compile-only by design: tests are
-  # owned by the headless lanes. Do NOT add AESTRA_CI=ON here — it would turn
-  # this lane back into a headless build.
+  # building (it did once for a week, #396). Builds the app target plus the
+  # required UI test set and runs it (V8-G3b). Do NOT add AESTRA_CI=ON here —
+  # it would turn this lane back into a headless build.
   build-linux-app:
     name: Linux (UI/App compile)
     runs-on: ubuntu-latest
@@ -166,6 +173,9 @@ jobs:
         with:
           lane: ui-app
           github-token: ${{ github.token }}
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
       - name: Install Dependencies
         if: steps.scope.outputs.run == 'true'
         run: |
@@ -174,11 +184,61 @@ jobs:
 
       - name: Configure (UI enabled)
         if: steps.scope.outputs.run == 'true'
-        run: cmake -B build-app -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_UI=ON -DAESTRA_ENABLE_TESTS=OFF
+        run: cmake -B build-app -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_UI=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build app target
         if: steps.scope.outputs.run == 'true'
         run: cmake --build build-app --config ${{env.BUILD_TYPE}} --target Aestra --parallel
+
+      # V8-G5 · FD-39 tier 1. AestraHeadless is the offline engine the budget gate
+      # measures; it is tiny next to the app, so building it here costs seconds.
+      - name: Build AestraHeadless (budget gate)
+        if: steps.scope.outputs.run == 'true'
+        run: cmake --build build-app --config ${{env.BUILD_TYPE}} --target AestraHeadless --parallel 2
+
+      # FD-39 tier 1: deterministic budgets block the PR, timing never does (tier 2 is
+      # nightly, tier 3 is the release cut). Self-tests run first, so a broken gate is
+      # reported as a broken gate rather than as a budget violation. The gate fails only
+      # on a >10% regression or a cap breach; see scripts/ci/check-budgets.py.
+      - name: Budget gate self-tests
+        if: steps.scope.outputs.run == 'true'
+        run: python3 scripts/ci/test-check-budgets.py
+
+      - name: Budget gate (V8-G5)
+        if: steps.scope.outputs.run == 'true'
+        run: python3 scripts/ci/check-budgets.py --bin-dir build-app/bin
+
+      - name: Build UI test targets
+        if: steps.scope.outputs.run == 'true'
+        # Bounded parallelism: an unbounded --parallel full build OOM'd the
+        # plugin-host lane's runner (see its comment). --parallel 2 is the
+        # proven bound already used by the TSan/LSan lanes.
+        run: >-
+          cmake --build build-app --config ${{env.BUILD_TYPE}}
+          --target NUIThemeConsistencyTest NUIContextMenuInteractionTest ClipContextMenuReachabilityTest ClipDragReleaseTest TimelineFollowPreferenceTest TimelineGridSelectionTest
+          ModalDialogInteractionTest
+          PianoRollInteractionTest PianoRollPanelPersistenceTest PianoRollStrokeInteractionTest
+          PianoRollExternalEditCommitTest EditorCloseDeferredTest PanelWindowClickSwallowTest
+          MixerViewModelAutomationPresenceTest MixerViewModelDynamicInsertsTest MasterInsertParityTest MixerDropdownKeyboardTest
+          BPMEditorPaintTest TransportClockFormatTest PanelResizeLayoutTest ExportDialogWidgetsTest AutomationClipLayerTest PanelModeBehaviourTest
+          UnitRowStepSelectionTest
+          PluginRackBindingLifecycleTest WindowPanelRaiseTest TakesHistoryPanelTest
+          PluginBrowserSelectionTest UIInsertRoutePickerTest NUITextInputLayoutTest
+          NUITextInputEditingTest NUIDropdownInteractionTest NUIComponentTooltipTest
+          NUIHiddenChildDispatchTest NUIWidgetHiddenInputTest
+          ContractPianoRollOneEntryPerGestureTest ContractPianoRollUndoStaysInPatternTest
+          ContractPianoRollReachesGlobalUndoTest ContractPianoRollPasteTargetsEditingUnitTest
+          FileBrowserLibraryTest
+          PanelWindowKnobDragTest UIScenarioTest TextCentringTest AdaptiveFPSIdleTest
+          --parallel 2
+
+      - name: Run UI tests
+        if: steps.scope.outputs.run == 'true'
+        # --no-tests=error is load-bearing: without it, a renamed test or a
+        # broken selector runs zero tests and ctest still exits 0. A step that
+        # silently runs nothing is worse than no step, because it reports
+        # success (same precedent as the security contract steps).
+        run: ctest --test-dir build-app -C ${{env.BUILD_TYPE}} -R '^(NUIThemeConsistencyTest|NUIContextMenuInteractionTest|ClipContextMenuReachabilityTest|ClipDragReleaseTest|TimelineFollowPreferenceTest|TimelineGridSelectionTest|ModalDialogInteractionTest|PianoRollInteractionTest|PianoRollPanelPersistenceTest|PianoRollStrokeInteractionTest|PianoRollExternalEditCommitTest|EditorCloseDeferredTest|PanelWindowClickSwallowTest|MixerViewModelAutomationPresenceTest|MixerViewModelDynamicInsertsTest|MasterInsertParityTest|MixerDropdownKeyboardTest|BPMEditorPaintTest|TransportClockFormatTest|PanelResizeLayoutTest|ExportDialogWidgetsTest|AutomationClipLayerTest|PanelModeBehaviourTest|UnitRowStepSelectionTest|PluginRackBindingLifecycleTest|WindowPanelRaiseTest|TakesHistoryPanelTest|PluginBrowserSelectionTest|UIInsertRoutePickerTest|NUITextInputLayoutTest|NUITextInputEditingTest|NUIDropdownInteractionTest|NUIComponentTooltipTest|NUIHiddenChildDispatchTest|NUIWidgetHiddenInputTest|ContractPianoRollOneEntryPerGestureTest|ContractPianoRollUndoStaysInPatternTest|ContractPianoRollReachesGlobalUndoTest|ContractPianoRollPasteTargetsEditingUnitTest|FileBrowserLibraryTest|PanelWindowKnobDragTest|UIScenarioTest|TextCentringTest|AdaptiveFPSIdleTest)$' --no-tests=error --output-on-failure
 
       - name: Verify desktop font bundle
         if: steps.scope.outputs.run == 'true'
@@ -223,6 +283,9 @@ jobs:
         with:
           lane: plugin-host
           github-token: ${{ github.token }}
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
 
       # Two levels, because the VST3 SDK keeps its own tree in nested submodules.
       # `--init` on the outer path alone leaves base/, pluginterfaces/ and
@@ -268,7 +331,9 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
             -DAestra_CORE_MODE=ON \
             -DAESTRA_HEADLESS_ONLY=ON \
-            -DAESTRA_ENABLE_TESTS=ON 2>&1 | tee configure.log
+            -DAESTRA_ENABLE_TESTS=ON \
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache 2>&1 | tee configure.log
           grep -q "VST3 SDK: Found" configure.log \
             || { echo "::error::VST3 SDK not detected - this lane would compile nothing"; exit 1; }
           grep -q "CLAP SDK: Found" configure.log \
@@ -360,6 +425,9 @@ jobs:
         with:
           lane: windows-msvc
           github-token: ${{ github.token }}
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
       - name: Cache vcpkg artifacts
         if: steps.scope.outputs.run == 'true'
         uses: actions/cache@v4
@@ -409,17 +477,36 @@ jobs:
           }
           & "$env:VCPKG_ROOT\vcpkg.exe" install libsodium:x64-windows gtest:x64-windows
 
+      # Ninja does not discover MSVC the way the Visual Studio generator
+      # does: without a VsDevCmd environment, CMake falls back to mingw64 g++
+      # from PATH and the build dies in Windows headers (proven: native_handle
+      # as unsigned long long vs HANDLE). This sets INCLUDE/LIB/PATH so Ninja
+      # finds cl.exe and the MSVC toolset.
+      - name: Setup MSVC environment
+        if: steps.scope.outputs.run == 'true'
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+
       - name: Configure
         if: steps.scope.outputs.run == 'true'
         shell: pwsh
         run: |
           $env:VCPKG_ROOT = "$env:RUNNER_TEMP\vcpkg"
+          # Ninja, not the default Visual Studio generator: CMake implements
+          # CMAKE_<LANG>_COMPILER_LAUNCHER only for Makefile and Ninja
+          # generators, so MSBuild compiles would silently bypass sccache
+          # (proven by a 30-minute zero-request Windows run). No VS-specific
+          # properties exist anywhere in the CMake tree, so nothing depends on
+          # MSBuild semantics.
           cmake -B build -S . `
+            -G Ninja `
+            -G Ninja `
             -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} `
             -DAestra_CORE_MODE=ON `
             -DAESTRA_CI=ON `
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
-            -DVCPKG_TARGET_TRIPLET=x64-windows
+            -DVCPKG_TARGET_TRIPLET=x64-windows `
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache `
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
         if: steps.scope.outputs.run == 'true'
@@ -491,6 +578,9 @@ jobs:
         with:
           lane: macos-clang
           github-token: ${{ github.token }}
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
       - name: Install Dependencies
         if: steps.scope.outputs.run == 'true'
         run: |
@@ -499,7 +589,7 @@ jobs:
 
       - name: Configure
         if: steps.scope.outputs.run == 'true'
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON -DCMAKE_PREFIX_PATH="/opt/homebrew;/usr/local"
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON -DCMAKE_PREFIX_PATH="/opt/homebrew;/usr/local" -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
         if: steps.scope.outputs.run == 'true'
@@ -642,16 +732,29 @@ jobs:
             echo "safety ok: workflow-only #618 -> broad"
           fi
 
-          # LIVENESS (phase 2): #596 changed one .cpp under Source/Components and
-          # nothing else. No headless target compiles that file — AESTRA_CI=ON
+          # LIVENESS (phase 2): #906 changed one .cpp under Source/ and nothing
+          # else. No headless target compiles that file — AESTRA_CI=ON
           # force-disables the UI — so only the UI/App lane can observe it. If this
           # stops saying ui-app-only, the phase 2 rule has gone inert.
-          v=$(verdict_for 596) || fail=1
+          #
+          # This probe was #596 (Source/Components/TrackManagerUIToolbar.cpp) until
+          # ClipContextMenuReachabilityTest began compiling the TrackManagerUI set
+          # for V8-W2 coverage. That made #596's file genuinely headless-compiled,
+          # so `broad` became the CORRECT verdict for it and the probe's stated
+          # premise — "no headless target compiles that file" — stopped holding.
+          # Retargeting keeps what this check is for; it does not relax it.
+          #
+          # Note the probe class is fragile by construction: any UI .cpp named in a
+          # CMakeLists retires whichever probe points at it, and the failure reads
+          # as "the rule went inert" when the truth may be "this one file changed
+          # category". A derived probe (pick any merged PR whose files are
+          # currently narrow) would not have this failure mode.
+          v=$(verdict_for 906) || fail=1
           if [ "${v:-}" != "ui-app-only" ]; then
-            echo "::error::LIVENESS: UI-only #596 classified '${v:-<none>}', expected ui-app-only"
+            echo "::error::LIVENESS: UI-only #906 classified '${v:-<none>}', expected ui-app-only"
             fail=1
           else
-            echo "liveness ok: UI-only #596 -> ui-app-only"
+            echo "liveness ok: UI-only #906 -> ui-app-only"
           fi
 
           # SAFETY: #610 touched AestraAudio and a test. Never narrow.
@@ -829,6 +932,9 @@ jobs:
           lane: asan
           github-token: ${{ github.token }}
 
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
       - name: Install Dependencies
         if: steps.scope.outputs.run == 'true'
         run: |
@@ -844,6 +950,8 @@ jobs:
           -DAESTRA_CI=ON
           -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
           -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+          -DCMAKE_C_COMPILER_LAUNCHER=sccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
         if: steps.scope.outputs.run == 'true'
@@ -863,9 +971,24 @@ jobs:
           if-no-files-found: ignore
 
   tsan-linux:
-    name: ThreadSanitizer (TSan, advisory)
+    # Required, and deliberately NOT scope-gated (P6).
+    #
+    # This lane was advisory with a classify-scope step, which made it cheap: a
+    # change the classifier judged irrelevant skipped the build. But a skipped
+    # step still leaves the JOB reporting success, so promoting it to required
+    # unchanged would buy a green tick on exactly the PRs least likely to
+    # contain a race — a no-op gate, which is worse than an advisory one because
+    # people stop reading it. That is the failure mode the contract-coverage
+    # job's comment calls "reportable-sometimes ... false green rather than a
+    # block".
+    #
+    # So the classifier is gone and this lane runs on every PR. The runner cost
+    # is real and was accepted deliberately: the lane was green on 30
+    # consecutive develop runs before promotion, and the two audio-thread
+    # races another project shipped through an equivalent gap are the reason it
+    # is worth having.
+    name: ThreadSanitizer (TSan)
     runs-on: ubuntu-latest
-    continue-on-error: true
     env:
       TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1:suppress_equal_stacks=1
     steps:
@@ -874,38 +997,25 @@ jobs:
           submodules: false
           persist-credentials: false
 
-      # --- Lane selection (#620) ---------------------------------------------
-      # Advisory lanes are not required contexts, but they are 38.8 of the 85
-      # runner-minutes a PR costs. They build with AESTRA_CI=ON, which force-disables
-      # the UI, so a docs-only or UI-only change cannot produce a finding here.
-      - name: Classify change scope
-        id: scope
-        uses: ./.github/actions/classify-scope
-        with:
-          lane: tsan
-          github-token: ${{ github.token }}
-
+      - name: Setup sccache
+        uses: ./.github/actions/setup-sccache
       - name: Install Dependencies
-        if: steps.scope.outputs.run == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev cmake
 
       - name: Configure
-        if: steps.scope.outputs.run == 'true'
-        run: cmake --preset ci-tsan
+        run: cmake --preset ci-tsan -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
-        if: steps.scope.outputs.run == 'true'
         run: cmake --build --preset ci-tsan --parallel 2
 
       - name: Test
-        if: steps.scope.outputs.run == 'true'
         working-directory: build/ci-tsan
         run: ctest --parallel 2 --output-on-failure --output-junit ctest-results-tsan.xml
 
       - name: Upload TSan test report
-        if: always() && steps.scope.outputs.run == 'true'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ctest-results-tsan
@@ -938,6 +1048,9 @@ jobs:
           lane: lsan
           github-token: ${{ github.token }}
 
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
       - name: Install Dependencies
         if: steps.scope.outputs.run == 'true'
         run: |
@@ -946,7 +1059,7 @@ jobs:
 
       - name: Configure
         if: steps.scope.outputs.run == 'true'
-        run: cmake --preset ci-lsan
+        run: cmake --preset ci-lsan -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
         if: steps.scope.outputs.run == 'true'

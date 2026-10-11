@@ -12,10 +12,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Common sources
 set(AESTRA_PLAT_SOURCES
     src/Platform.cpp
+    src/AestraJSONFile.cpp
 )
 
 set(AESTRA_PLAT_HEADERS
     include/AestraPlatform.h
+    include/AestraJSONFile.h
 )
 
 set(AESTRA_PLAT_PRIVATE_DEFINITIONS)
@@ -38,6 +40,7 @@ elseif(UNIX AND NOT APPLE)
         list(APPEND AESTRA_PLAT_SOURCES
             src/Linux/PlatformWindowLinux.cpp
             src/Linux/PlatformUtilsLinux.cpp
+            src/Linux/XdgPortalFileChooser.cpp
             src/Linux/PlatformThreadLinux.cpp
         )
         list(APPEND AESTRA_PLAT_HEADERS
@@ -78,6 +81,7 @@ if(WIN32)
         comdlg32
         ole32
         shell32
+        uuid        # CLSID_FileOpenDialog (IFileOpenDialog folder picker)
     )
 elseif(UNIX AND NOT APPLE)
     find_package(X11 QUIET)

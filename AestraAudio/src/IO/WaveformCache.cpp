@@ -27,7 +27,52 @@ void WaveformCache::buildFromBuffer(const AudioBufferData& buffer, uint32_t base
         return;
     }
 
+    if (buffer.isCompact()) {
+        // Compact PCM: build level 0 a peak at a time (no whole-file float copy), then the same mips.
+        std::vector<WaveformMipLevel> localLevels(numLevels);
+        buildLevelFromBuffer(buffer, baseSamplesPerPeak, localLevels[0]);
+        for (uint32_t i = 1; i < numLevels; ++i) {
+            buildNextLevel(localLevels[i - 1], localLevels[i]);
+        }
+        {
+            std::unique_lock<std::shared_mutex> lock(m_mutex);
+            std::swap(m_levels, localLevels);
+            m_numChannels = buffer.numChannels;
+            m_sourceFrames = static_cast<SampleIndex>(buffer.numFrames);
+            m_ready.store(true, std::memory_order_release);
+        }
+        return;
+    }
+
     buildFromRaw(buffer.interleavedData.data(), buffer.numFrames, buffer.numChannels, baseSamplesPerPeak, numLevels);
+}
+
+void WaveformCache::buildLevelFromBuffer(const AudioBufferData& buffer, uint32_t samplesPerPeak,
+                                         WaveformMipLevel& outLevel) {
+    const SampleIndex numFrames = static_cast<SampleIndex>(buffer.numFrames);
+    const uint32_t numChannels = buffer.numChannels;
+    outLevel.samplesPerPeak = samplesPerPeak;
+    outLevel.numChannels = numChannels;
+    outLevel.numPeaks = (numFrames + samplesPerPeak - 1) / samplesPerPeak;
+    outLevel.peaks.resize(static_cast<size_t>(outLevel.numPeaks * numChannels));
+
+    std::vector<float> scratch(static_cast<size_t>(samplesPerPeak) * numChannels);
+    for (SampleIndex peakIdx = 0; peakIdx < outLevel.numPeaks; ++peakIdx) {
+        const SampleIndex startFrame = peakIdx * samplesPerPeak;
+        const SampleIndex endFrame = std::min(startFrame + samplesPerPeak, numFrames);
+        const uint32_t count = static_cast<uint32_t>(endFrame - startFrame);
+        buffer.copyFloats(static_cast<uint64_t>(startFrame) * numChannels, static_cast<uint64_t>(count) * numChannels,
+                          scratch.data());
+        for (uint32_t ch = 0; ch < numChannels; ++ch) {
+            float minVal, maxVal;
+            double sumSq = 0.0;
+            WaveformSIMD::minMaxRMSChannel(scratch.data(), count, numChannels, ch, 0, count, minVal, maxVal, sumSq);
+            const float rms = (count > 0) ? static_cast<float>(std::sqrt(sumSq / static_cast<double>(count))) : 0.0f;
+            const size_t idx = static_cast<size_t>(peakIdx * numChannels + ch);
+            outLevel.peaks[idx] = WaveformPeak(minVal, maxVal, rms, count);
+            outLevel.peaks[idx].sanitize();
+        }
+    }
 }
 
 void WaveformCache::buildFromRaw(const float* data, SampleIndex numFrames, uint32_t numChannels,

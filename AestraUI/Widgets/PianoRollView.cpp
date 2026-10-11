@@ -4,6 +4,7 @@
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include "PianoRollWidgetShared.h"
+#include "../Helpers/PianoRollInteraction.h"
 #include <algorithm>
 #include <cmath>
 
@@ -11,13 +12,25 @@ namespace AestraUI {
 
 // Gap between the minimap (overview) and the ruler — both the layout and the
 // pitch-header geometry must agree on it so the key lane stays aligned.
+// Chrome band heights, in one place. onRender() and layoutChildren() each used
+// to carry their own copy of all four, so the header's painted geometry and the
+// grid's actual geometry were free to drift apart.
+//
+// Spec 2 §6: the editing canvas is the main object, so every band around it is
+// as small as it can be while its own contents still fit. The toolbar's buttons
+// are 30px, which 42 clears; the ruler and minimap are text and a strip.
+constexpr float kToolbarHeight = 42.0f;
+constexpr float kMinimapHeight = 22.0f;
+constexpr float kRulerHeight = 24.0f;
 constexpr float kMinimapGap = 4.0f;
 
 // =============================================================================
 // PianoRollView (split from NUIPianoRollWidgets.cpp)
 // =============================================================================
 PianoRollView::PianoRollView()
-    : m_keyLaneWidth(76.0f), m_rulerHeight(28.0f), m_pixelsPerBeat(80.0f), m_keyHeight(24.0f),
+    // Spec 2 §6: the pitch lane keeps its key shapes and octave labels at 58px;
+    // the 18px it gives back goes straight to the grid.
+    : m_keyLaneWidth(58.0f), m_rulerHeight(kRulerHeight), m_pixelsPerBeat(80.0f), m_keyHeight(24.0f),
       m_scrollX(0.0f), m_targetScrollX(0.0f)
 {
     // [FIX] Canonical default octave: C3 (MIDI 48).
@@ -37,6 +50,15 @@ PianoRollView::PianoRollView()
     m_keys->setOnHoveredKeyChanged([this](int pitch) {
         if (m_grid) m_grid->setHoveredPitch(pitch);
     });
+    // A note pressed in the grid presses its key (SPEC 3 §5.1).
+    m_notes->setOnKeyPressChanged([this](int pitch, bool down) {
+        if (!m_keys) return;
+        if (down) {
+            m_keys->pressKey(pitch);
+        } else {
+            m_keys->releaseKey(pitch);
+        }
+    });
     
     // Toolbar
     m_toolbar = std::make_shared<PianoRollToolbar>();
@@ -54,17 +76,9 @@ PianoRollView::PianoRollView()
     
     m_vScroll = std::make_shared<NUIScrollbar>(NUIScrollbar::Orientation::Vertical);
     m_vScroll->setOrientation(NUIScrollbar::Orientation::Vertical);
-    {
-        auto& theme = NUIThemeManager::getInstance();
-        m_vScroll->setArrowSize(0.0f);
-        m_vScroll->setBorderWidth(0.0f);
-        m_vScroll->setBorderRadius(8.0f);
-        m_vScroll->setTrackColor(theme.getColor("surfaceRaised").withAlpha(0.55f));
-        m_vScroll->setThumbColor(theme.getColor("textPrimary").withAlpha(0.30f));
-        m_vScroll->setThumbHoverColor(theme.getColor("textPrimary").withAlpha(0.48f));
-        m_vScroll->setThumbPressedColor(theme.getColor("accentPrimary").withAlpha(0.68f));
-        m_vScroll->setMinimumThumbSize(0.06);
-    }
+    // No styling here: drawOverlayScrollbar() owns how every scrollbar looks
+    // (spec 2 §2), and the pixel thumb floor is enforced by the component.
+    m_vScroll->setMinimumThumbSize(0.06);
 
     // Initial default layout config
     m_minimap->setVisible(true);
@@ -72,18 +86,8 @@ PianoRollView::PianoRollView()
 
     m_hScroll = std::make_shared<NUIScrollbar>(NUIScrollbar::Orientation::Horizontal);
     m_hScroll->setOrientation(NUIScrollbar::Orientation::Horizontal);
-    {
-        auto& theme = NUIThemeManager::getInstance();
-        m_hScroll->setArrowSize(0.0f);
-        m_hScroll->setBorderWidth(0.0f);
-        m_hScroll->setBorderRadius(8.0f);
-        m_hScroll->setTrackColor(theme.getColor("surfaceRaised").withAlpha(0.55f));
-        m_hScroll->setThumbColor(theme.getColor("textPrimary").withAlpha(0.30f));
-        m_hScroll->setThumbHoverColor(theme.getColor("textPrimary").withAlpha(0.48f));
-        m_hScroll->setThumbPressedColor(theme.getColor("accentPrimary").withAlpha(0.68f));
-        m_hScroll->setMinimumThumbSize(0.06);
-        m_hScroll->setVisible(true);
-    }
+    m_hScroll->setMinimumThumbSize(0.06);
+    m_hScroll->setVisible(true);
 
     // Ruler Zoom Callback
     m_ruler->onZoomRequested = [this](float delta, float mouseX) {
@@ -98,6 +102,23 @@ PianoRollView::PianoRollView()
             m_onPlayheadScrubbed(clampedBeat, active);
         }
     };
+
+    // Ruler loop zone (SPEC 3 §5.2): snapped to the editor's grid, nearest line.
+    m_ruler->snapBeat = [this](double beat) {
+        const double step = m_notes ? MusicTheory::getSnapDuration(m_notes->getSnap()) : 0.0;
+        return step > 0.0 ? std::round(beat / step) * step : beat;
+    };
+    m_ruler->onLoopZoneDrawn = [this](double start, double end) {
+        // Clamped to the pattern, like the scrub: past its end there is only silence to loop. A
+        // zone entirely past the end becomes empty, and applyLoopZone drops it.
+        const double limit = std::max(0.0, m_totalDurationBeats);
+        applyLoopZone(std::make_pair(std::clamp(start, 0.0, limit), std::clamp(end, 0.0, limit)), true);
+    };
+    m_notes->setOnEmptyGridPress([this]() {
+        if (m_loopZone) {
+            applyLoopZone(std::nullopt, true);
+        }
+    });
 
     m_minimap->onViewChanged = [this](double start, double duration) {
         m_scrollX = static_cast<float>(start * m_pixelsPerBeat);
@@ -144,10 +165,10 @@ void PianoRollView::onRender(NUIRenderer& renderer) {
     const auto bounds = getBounds();
     renderer.fillRect(bounds, theme.getColor("backgroundPrimary"));
 
-    const float toolbarH = 50.0f;
-    const float minimapH = m_showLocalMinimap ? 28.0f : 0.0f;
+    const float toolbarH = m_toolbarHosted ? 0.0f : kToolbarHeight;
+    const float minimapH = m_showLocalMinimap ? kMinimapHeight : 0.0f;
     const float minimapGap = m_showLocalMinimap ? kMinimapGap : 0.0f;
-    const float rulerH = 28.0f;
+    const float rulerH = kRulerHeight;
     const NUIRect pitchHeader(bounds.x,
                               bounds.y + toolbarH,
                               m_keyLaneWidth,
@@ -368,19 +389,40 @@ void PianoRollView::onUpdate(double deltaTime) {
     }
 }
 
+NUIRect PianoRollView::getRulerBounds() const {
+    return m_ruler ? m_ruler->getBounds() : NUIRect{};
+}
+
+NUIRect PianoRollView::getMinimapBounds() const {
+    return m_minimap ? m_minimap->getBounds() : NUIRect{};
+}
+
+NUIRect PianoRollView::getGridBounds() const {
+    return m_grid ? m_grid->getBounds() : NUIRect();
+}
+
+std::shared_ptr<PianoRollToolbar> PianoRollView::detachToolbarForHost() {
+    if (m_toolbar && !m_toolbarHosted) {
+        removeChild(m_toolbar);
+        m_toolbarHosted = true;
+        layoutChildren();
+    }
+    return m_toolbar;
+}
+
 void PianoRollView::layoutChildren() {
     auto b = getBounds();
-    float sbSize = 14.0f; 
+    const float sbSize = kOverlayScrollbarThickness;
     
-    // 0. Toolbar (Standardized Aestra UI Height)
-    float toolbarH = 50.0f;
-    if (m_toolbar) m_toolbar->setBounds(NUIRect(b.x, b.y, b.width, toolbarH));
+    // 0. Toolbar — zero once a host panel has taken it into its title bar.
+    float toolbarH = m_toolbarHosted ? 0.0f : kToolbarHeight;
+    if (m_toolbar && !m_toolbarHosted) m_toolbar->setBounds(NUIRect(b.x, b.y, b.width, toolbarH));
     
     // 1. Scrollbar/Minimap Section (Below Toolbar)
-    float miniMapH = m_showLocalMinimap ? 28.0f : 0.0f;
+    float miniMapH = m_showLocalMinimap ? kMinimapHeight : 0.0f;
 
     // 2. Ruler Section (Below Minimap if present)
-    float rulerH = 28.0f;
+    float rulerH = kRulerHeight;
 
     // Gap between minimap (overview) and ruler to visually separate them
     float minimapGap = m_showLocalMinimap ? kMinimapGap : 0.0f;
@@ -388,7 +430,7 @@ void PianoRollView::layoutChildren() {
     float topTotalH = toolbarH + miniMapH + minimapGap + rulerH;
 
     float keyW = std::max(40.0f, m_keyLaneWidth);
-    const float hScrollH = 12.0f; // Horizontal scrollbar row below the grid
+    const float hScrollH = kOverlayScrollbarThickness; // Horizontal scrollbar row below the grid
     float contentW = std::max(0.0f, b.width - keyW - sbSize);
     float contentH = std::max(0.0f, b.height - topTotalH - m_controlPanelHeight - hScrollH); // Subtract control panel
 
@@ -420,6 +462,7 @@ void PianoRollView::layoutChildren() {
     // 6. Control Panel (Bottom) - Spans Full Width (Keys + Content)
     // Ensures "Control" sidebar aligns with Keys
     m_controls->setBounds(NUIRect(b.x, b.y + topTotalH + contentH + hScrollH, b.width, m_controlPanelHeight));
+    m_controls->setSidebarWidth(m_keyLaneWidth); // its beat 0 must sit under the grid's
     
     updateScrollbars();
     syncChildren();
@@ -530,7 +573,12 @@ void PianoRollView::syncChildren() {
 }
 
 bool PianoRollView::onMouseEvent(const NUIMouseEvent& event) {
-    if (!getBounds().contains(event.position) && !m_isResizingPanel) return false;
+    // A release always reaches the children, wherever the button comes up. A drag that began
+    // inside (the minimap bar, a note, the velocity lane) must end even when released outside
+    // the editor: dropping it left the minimap "still clicked", scrolling the view on every
+    // later move (SPEC 3 §2.4). Every child's release path checks its own drag state, so a
+    // release that is not theirs does nothing.
+    if (!getBounds().contains(event.position) && !m_isResizingPanel && !event.released) return false;
 
     // The shortcut sheet captures the pointer: any click or scroll dismisses it
     // instead of reaching the editors underneath.
@@ -547,7 +595,7 @@ bool PianoRollView::onMouseEvent(const NUIMouseEvent& event) {
             if (menu->onMouseEvent(event)) return true;
 
             if (event.pressed && event.button == NUIMouseButton::Left) {
-                const auto menuBounds = menu->getGlobalBounds();
+                const auto menuBounds = menu->getBounds();
                 const auto toolbarBounds = m_toolbar->getBounds();
                 if (!menuBounds.contains(event.position) &&
                     !toolbarBounds.contains(event.position)) {
@@ -645,8 +693,32 @@ bool PianoRollView::onKeyEvent(const NUIKeyEvent& event) {
         repaint();
         return true;
     }
+    // Esc is the exit: it clears the loop zone, and the note layer still gets it (deselect).
+    if (event.pressed && event.keyCode == NUIKeyCode::Escape && m_loopZone) {
+        applyLoopZone(std::nullopt, true);
+        m_notes->onKeyEvent(event);
+        return true;
+    }
     if (m_notes->onKeyEvent(event)) return true;
     return NUIComponent::onKeyEvent(event);
+}
+
+void PianoRollView::setLoopZone(std::optional<std::pair<double, double>> zone) { applyLoopZone(zone, false); }
+
+void PianoRollView::applyLoopZone(std::optional<std::pair<double, double>> zone, bool notify) {
+    if (zone && zone->second <= zone->first + 1e-6) {
+        zone.reset();
+    }
+    m_loopZone = zone;
+    const bool active = m_loopZone.has_value();
+    const double start = active ? m_loopZone->first : 0.0;
+    const double end = active ? m_loopZone->second : 0.0;
+    if (m_ruler) m_ruler->setLoopZone(active, start, end);
+    if (m_grid) m_grid->setLoopZone(active, start, end);
+    if (notify && m_onLoopZoneChanged) {
+        m_onLoopZoneChanged(m_loopZone);
+    }
+    repaint();
 }
 
 void PianoRollView::setNotes(const std::vector<MidiNote>& notes) {
@@ -798,6 +870,10 @@ void PianoRollView::applyZoom(float factor, float anchorX) {
 
 void PianoRollView::setPlayheadBeat(double beat, bool follow) {
     m_playheadBeat = std::max(0.0, beat);
+    if (m_keys) {
+        m_keys->setPlayingPitches(m_playbackKeysActive && m_notes ? pitchesUnderBeat(m_notes->getNotes(), m_playheadBeat)
+                                                                  : std::array<bool, 128>{});
+    }
 
     if (follow && m_grid) {
         const float visibleW = m_grid->getWidth();
@@ -812,11 +888,19 @@ void PianoRollView::setPlayheadBeat(double beat, bool follow) {
     syncChildren();
 }
 
+bool PianoRollView::isKeyPlaying(int pitch) const { return m_keys && m_keys->isKeyPlaying(pitch); }
+
 void PianoRollView::setTotalDurationBeats(double beats) {
     m_totalDurationBeats = std::max(8.0, beats);
     m_patternLengthBeats = m_totalDurationBeats;
     if (m_toolbar) {
         m_toolbar->setPatternLengthBeats(m_patternLengthBeats);
+    }
+    // A shorter pattern cuts the loop zone to its new end (or ends it, if the zone lay wholly past
+    // it), exactly as drawing the zone clamps. The listener hears the change like any other (#970).
+    if (m_loopZone && m_loopZone->second > m_totalDurationBeats) {
+        const double end = m_totalDurationBeats;
+        applyLoopZone(std::make_pair(std::min(m_loopZone->first, end), end), true);
     }
     updateScrollbars();
     syncChildren();

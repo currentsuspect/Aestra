@@ -16,7 +16,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/aestra-core/cmake/AestraCoreMode.cmake")
 	include(${CMAKE_SOURCE_DIR}/aestra-core/cmake/AestraCoreMode.cmake)
 endif()
 
-project(AESTRA VERSION 0.7.1 LANGUAGES C CXX)
+project(AESTRA VERSION 0.8.0 LANGUAGES C CXX)
 
 # The version, once, where the build can see it.
 #
@@ -203,6 +203,7 @@ add_subdirectory(AestraAudio)
 if(EXISTS "${CMAKE_SOURCE_DIR}/Source/App/HeadlessMain.cpp")
   add_executable(AestraHeadless
     Source/App/HeadlessMain.cpp
+    Source/App/HeadlessCheck.cpp
     Source/Core/AudioSettingsStore.cpp
     Source/Core/ProjectSerializer.cpp
   )

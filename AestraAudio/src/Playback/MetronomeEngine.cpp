@@ -195,7 +195,8 @@ void MetronomeEngine::loadClickSounds(const std::string& downbeatPath, const std
     m_activeClickSamples = &m_clickSamplesDown;
 }
 
-void MetronomeEngine::reset(uint64_t globalSamplePos, uint32_t sampleRate, bool skipCurrentBeat) {
+void MetronomeEngine::reset(uint64_t globalSamplePos, uint32_t sampleRate,
+                            bool skipCurrentBeat) AESTRA_RT_NONBLOCKING {
     if (sampleRate == 0)
         return;
 
@@ -232,7 +233,7 @@ void MetronomeEngine::reset(uint64_t globalSamplePos, uint32_t sampleRate, bool 
 }
 
 void MetronomeEngine::process(float* outputBuffer, uint32_t numFrames, uint32_t numChannels, uint64_t globalSamplePos,
-                              uint32_t sampleRate, bool transportPlaying) {
+                              uint32_t sampleRate, bool transportPlaying) AESTRA_RT_NONBLOCKING {
     if (!m_enabled.load(std::memory_order_relaxed) || !transportPlaying)
         return;
     if (numFrames == 0 || sampleRate == 0)

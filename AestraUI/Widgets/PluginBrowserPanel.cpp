@@ -78,13 +78,6 @@ std::string fitText(NUIRenderer& renderer, const std::string& text, float fontSi
     return out + ellipsis;
 }
 
-static std::filesystem::path getFavoritesPath() {
-    const char* home = getenv("HOME");
-    if (!home) home = "/tmp";
-    auto dir = std::filesystem::path(home) / ".config" / "aestra";
-    std::filesystem::create_directories(dir);
-    return dir / "favorites.json";
-}
 }
 
 // ============================================================================
@@ -94,39 +87,6 @@ static std::filesystem::path getFavoritesPath() {
 PluginBrowserPanel::PluginBrowserPanel() {
     setSize(300, 500);
     loadFavorites();
-}
-
-void PluginBrowserPanel::loadFavorites() {
-    m_favoritesSet.clear();
-    auto path = getFavoritesPath();
-    std::ifstream f(path);
-    if (!f.is_open()) return;
-    std::string content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
-    f.close();
-    if (content.empty()) return;
-    try {
-        Aestra::JSON j = Aestra::JSON::parse(content);
-        if (j.has("favorites") && j["favorites"].isArray()) {
-            auto arr = j["favorites"].asArray();
-            for (size_t i = 0; i < arr.size(); ++i) {
-                if (arr[i].isString()) {
-                    m_favoritesSet.insert(arr[i].asString());
-                }
-            }
-        }
-    } catch (...) {}
-}
-
-void PluginBrowserPanel::saveFavorites() {
-    Aestra::JSON j = Aestra::JSON::object();
-    j.set("version", Aestra::JSON(1.0));
-    Aestra::JSON arr = Aestra::JSON::array();
-    for (const auto& id : m_favoritesSet) {
-        arr.push(Aestra::JSON(id));
-    }
-    j.set("favorites", arr);
-    std::ofstream f(getFavoritesPath());
-    if (f.is_open()) f << j.toString(2);
 }
 
 void PluginBrowserPanel::onRender(NUIRenderer& renderer) {
@@ -165,7 +125,7 @@ void PluginBrowserPanel::renderHeaderBar(NUIRenderer& renderer) {
     if (!m_allPlugins.empty()) {
         float titleW = renderer.measureText("Plugins", 12.0f).width;
         const bool filtered = m_typeFilter != PluginTypeFilter::All || m_formatFilter != PluginFormatFilter::All ||
-                              m_showFavoritesOnly || !m_searchQuery.empty();
+                              m_showFavoritesOnly || m_showRecentOnly || !m_searchQuery.empty();
         std::string count = std::to_string(m_filteredPlugins.size());
         if (filtered) {
             count += " / " + std::to_string(m_allPlugins.size());
@@ -210,8 +170,10 @@ void PluginBrowserPanel::renderFilterBar(NUIRenderer& renderer) {
     const float row1Y = barY + 5.0f;
     const float row2Y = barY + 28.0f;
 
-    auto drawPill = [&](const std::string& label, bool active, FilterPillHit::Type type, int col, float y) {
-        NUIRect rect = {startX + col * (pillW + gap), y, pillW, pillH};
+    auto drawPill = [&](const std::string& label, bool active, FilterPillHit::Type type, int col, float y,
+                        int columns = 3) {
+        const float w = std::max(24.0f, (availW - (columns - 1) * gap) / static_cast<float>(columns));
+        NUIRect rect = {startX + col * (w + gap), y, w, pillH};
         renderer.fillRoundedRect(rect, pillH * 0.5f, active ? Colors::pillActiveBg() : Colors::pillInactiveBg());
 
         NUIColor textColor = active ? Colors::pillActiveText() : Colors::pillInactiveText();
@@ -222,15 +184,16 @@ void PluginBrowserPanel::renderFilterBar(NUIRenderer& renderer) {
     };
 
     // Row 1 — plugin type (primary axis)
-    bool allActive = (m_typeFilter == PluginTypeFilter::All && m_formatFilter == PluginFormatFilter::All && !m_showFavoritesOnly);
+    bool allActive = (m_typeFilter == PluginTypeFilter::All && m_formatFilter == PluginFormatFilter::All && !m_showFavoritesOnly && !m_showRecentOnly);
     drawPill("All", allActive, FilterPillHit::TypeAll, 0, row1Y);
     drawPill("FX", m_typeFilter == PluginTypeFilter::Effects, FilterPillHit::TypeFX, 1, row1Y);
     drawPill("Inst", m_typeFilter == PluginTypeFilter::Instruments, FilterPillHit::TypeInst, 2, row1Y);
 
     // Row 2 — format + favorites (secondary axis)
-    drawPill("VST3", m_formatFilter == PluginFormatFilter::VST3, FilterPillHit::FormatVST3, 0, row2Y);
-    drawPill("CLAP", m_formatFilter == PluginFormatFilter::CLAP, FilterPillHit::FormatCLAP, 1, row2Y);
-    drawPill("Faves", m_showFavoritesOnly, FilterPillHit::Fav, 2, row2Y);
+    drawPill("VST3", m_formatFilter == PluginFormatFilter::VST3, FilterPillHit::FormatVST3, 0, row2Y, 4);
+    drawPill("CLAP", m_formatFilter == PluginFormatFilter::CLAP, FilterPillHit::FormatCLAP, 1, row2Y, 4);
+    drawPill("Faves", m_showFavoritesOnly, FilterPillHit::Fav, 2, row2Y, 4);
+    drawPill("Recent", m_showRecentOnly, FilterPillHit::Recent, 3, row2Y, 4);
 }
 
 void PluginBrowserPanel::renderPluginList(NUIRenderer& renderer) {
@@ -403,6 +366,7 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
                         m_typeFilter = PluginTypeFilter::All;
                         m_formatFilter = PluginFormatFilter::All;
                         m_showFavoritesOnly = false;
+                        m_showRecentOnly = false;
                         break;
                     case FilterPillHit::TypeFX:
                         m_typeFilter = (m_typeFilter == PluginTypeFilter::Effects) ? PluginTypeFilter::All : PluginTypeFilter::Effects;
@@ -419,6 +383,9 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
                     case FilterPillHit::Fav:
                         m_showFavoritesOnly = !m_showFavoritesOnly;
                         break;
+                    case FilterPillHit::Recent:
+                        m_showRecentOnly = !m_showRecentOnly;
+                        break;
                     default:
                         break;
                 }
@@ -433,6 +400,8 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
         if (insideBounds && my >= listTop) {
             int rowIndex = hitTestRow(static_cast<int>(my));
             if (rowIndex >= 0 && rowIndex < static_cast<int>(m_filteredPlugins.size())) {
+                // The list takes keyboard focus so arrows/Enter navigate it.
+                setFocused(true);
                 // Check star hit first
                 if (rowIndex < static_cast<int>(m_starRects.size()) && m_starRects[rowIndex].contains(mx, my)) {
                     toggleFavorite(m_filteredPlugins[rowIndex].id);
@@ -475,9 +444,7 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
 
                 if (m_pressedIndex == m_lastClickIndex && elapsed < 0.3) {
                     // Double-click detected - trigger load
-                    if (m_onPluginLoadRequested) {
-                        m_onPluginLoadRequested(m_filteredPlugins[m_pressedIndex]);
-                    }
+                    requestLoad(m_filteredPlugins[m_pressedIndex]);
                     m_lastClickIndex = -1; // Reset to prevent triple-click triggering
                     m_lastClickTime = 0.0;
                 } else {
@@ -551,9 +518,34 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
 }
 
 bool PluginBrowserPanel::onKeyEvent(const NUIKeyEvent& event) {
-    if (!isVisible() || !m_searchFocused || !event.pressed) return false;
+    if (!isVisible() || !event.pressed) return false;
 
     std::lock_guard<std::recursive_mutex> lock(m_uiMutex);
+
+    // List keyboard navigation (spec item 4): the focused list answers
+    // arrows + Enter through the same selection model as mouse clicks, so
+    // filtering, callbacks, and visuals stay unified. Focus never leaves.
+    if (isFocused()) {
+        if (event.keyCode == NUIKeyCode::Up) {
+            moveSelection(-1);
+            return true;
+        }
+        if (event.keyCode == NUIKeyCode::Down) {
+            moveSelection(1);
+            return true;
+        }
+        if (event.keyCode == NUIKeyCode::Enter) {
+            activateSelected();
+            return true;
+        }
+        if (event.keyCode == NUIKeyCode::Escape) {
+            setFocused(false);
+            repaint();
+            return true;
+        }
+    }
+
+    if (!m_searchFocused) return false;
 
     if (event.keyCode == NUIKeyCode::Escape) {
         m_searchFocused = false;
@@ -662,6 +654,7 @@ void PluginBrowserPanel::applyFilters() {
 
         // Favorites filter
         if (m_showFavoritesOnly && !p.isFavorite) continue;
+        if (m_showRecentOnly && recentRank(p.id) < 0) continue;
 
         // Search filter
         if (!m_searchQuery.empty()) {
@@ -681,6 +674,10 @@ void PluginBrowserPanel::applyFilters() {
         }
 
         m_filteredPlugins.push_back(p);
+    }
+    if (m_showRecentOnly) { // most recently loaded first
+        std::stable_sort(m_filteredPlugins.begin(), m_filteredPlugins.end(),
+                         [this](const PluginListItem& a, const PluginListItem& b) { return recentRank(a.id) < recentRank(b.id); });
     }
 
     m_selectedIndex = -1;
@@ -725,25 +722,52 @@ void PluginBrowserPanel::clearSelection() {
     m_selectedIndex = -1;
 }
 
-void PluginBrowserPanel::toggleFavorite(const std::string& pluginId) {
-    if (m_favoritesSet.count(pluginId)) {
-        m_favoritesSet.erase(pluginId);
-    } else {
-        m_favoritesSet.insert(pluginId);
+void PluginBrowserPanel::moveSelection(int delta) {
+    const int count = static_cast<int>(m_filteredPlugins.size());
+    if (count <= 0) {
+        return;
     }
-    bool isFav = m_favoritesSet.count(pluginId) > 0;
-    auto patch = [&](std::vector<PluginListItem>& list) {
-        for (auto& p : list)
-            if (p.id == pluginId) { p.isFavorite = isFav; break; }
-    };
-    patch(m_allPlugins);
-    patch(m_filteredPlugins);
-    saveFavorites();
-    applyFilters();
+    int next;
+    if (m_selectedIndex < 0) {
+        next = (delta < 0) ? count - 1 : 0;
+    } else {
+        next = std::clamp(m_selectedIndex + delta, 0, count - 1);
+    }
+    if (next == m_selectedIndex) {
+        return;
+    }
+    m_selectedIndex = next;
+    if (m_onPluginSelected) {
+        m_onPluginSelected(m_filteredPlugins[m_selectedIndex]);
+    }
+    ensureSelectionVisible();
+    repaint();
 }
 
-std::vector<std::string> PluginBrowserPanel::getFavorites() const {
-    return std::vector<std::string>(m_favoritesSet.begin(), m_favoritesSet.end());
+void PluginBrowserPanel::activateSelected() {
+    if (m_selectedIndex >= 0 && m_selectedIndex < static_cast<int>(m_filteredPlugins.size())) {
+        requestLoad(m_filteredPlugins[m_selectedIndex]);
+        repaint();
+    }
+}
+
+void PluginBrowserPanel::ensureSelectionVisible() {
+    if (m_selectedIndex < 0) {
+        return;
+    }
+    const auto bounds = getBounds();
+    const float listHeight = bounds.height - CONTENT_TOP_PAD - HEADER_BAR_HEIGHT - FILTER_BAR_HEIGHT - 4.0f;
+    const float contentHeight = static_cast<float>(m_filteredPlugins.size()) * ROW_HEIGHT;
+    const float maxScroll = std::max(0.0f, contentHeight - listHeight);
+    const float rowTop = static_cast<float>(m_selectedIndex) * ROW_HEIGHT;
+    const float rowBottom = rowTop + ROW_HEIGHT;
+    float target = m_targetScrollOffset;
+    if (rowTop < target) {
+        target = rowTop;
+    } else if (rowBottom > target + listHeight) {
+        target = rowBottom - listHeight;
+    }
+    m_targetScrollOffset = std::clamp(target, 0.0f, maxScroll);
 }
 
 void PluginBrowserPanel::setOnPluginSelected(std::function<void(const PluginListItem&)> callback) {
@@ -1295,6 +1319,9 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
 
 void EffectChainRack::setSlot(int index, const EffectSlotInfo& info) {
     if (index >= 0 && index < MAX_SLOTS) {
+        // The mixer inspector re-syncs every slot every frame; an identical slot must not
+        // repaint (SPEC 3 §4). Compared after the bypass override, which is what is drawn.
+        const EffectSlotInfo before = m_slots[index];
         m_slots[index] = info;
 
         // Apply Override Logic
@@ -1308,6 +1335,12 @@ void EffectChainRack::setSlot(int index, const EffectSlotInfo& info) {
                 // Otherwise force UI to keep user choice
                 m_slots[index].bypassed = forcedState;
             }
+        }
+        const EffectSlotInfo& after = m_slots[index];
+        if (after.name == before.name && after.bypassed == before.bypassed && after.isEmpty == before.isEmpty &&
+            after.dryWet == before.dryWet && after.pendingRemoval == before.pendingRemoval &&
+            after.nonFiniteOutputFault == before.nonFiniteOutputFault) {
+            return;
         }
         // Removing a plugin shrinks the drawn row set, which can leave the
         // offset scrolled past the last row that still exists.
@@ -1365,8 +1398,9 @@ int EffectChainRack::lastPopulatedSlot() const {
 
 int EffectChainRack::visibleSlotCount() const {
     // A reorder drag needs every numbered target available as a drop site.
+    // The initial ten, or further if the chain has grown past them: not all 64.
     if (m_isDraggingReorder) {
-        return MAX_SLOTS;
+        return std::min(MAX_SLOTS, std::max(INITIAL_SLOTS, lastPopulatedSlot() + 2));
     }
     // Populated slots, plus exactly one "+ Add insert" row.
     return std::min(MAX_SLOTS, lastPopulatedSlot() + 2);

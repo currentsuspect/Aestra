@@ -42,7 +42,12 @@ void NotificationToast::onUpdate(double deltaTime)
     elapsed_ += deltaTime;
     if (elapsed_ >= duration_)
     {
-        setVisible(false);
+        if (auto next = queue_.next()) { // the next waiting message takes its turn
+            setText(next->text);
+            setDuration(next->seconds);
+        } else {
+            setVisible(false);
+        }
     }
     repaint(); // animate the fade while visible
 }
@@ -56,6 +61,15 @@ void NotificationToast::setText(const std::string& text)
 {
     text_ = text;
     repaint();
+}
+
+void NotificationToast::show(const std::string& text, double seconds)
+{
+    if (auto now = queue_.offer({text, seconds}, isVisible() ? &text_ : nullptr)) {
+        setText(now->text);
+        setDuration(now->seconds);
+        setVisible(true);
+    }
 }
 
 void NotificationToast::setDuration(double duration)

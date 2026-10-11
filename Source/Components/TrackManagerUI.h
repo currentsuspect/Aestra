@@ -22,6 +22,7 @@
 #include "TimelineSummaryCache.h"
 #include "TimelineInteractionPolicy.h"
 #include "TimelineMarquee.h"
+#include "TrackManagerUILayout.h"
 #include "TrackManagerUIMath.h"
 #include "WaveformCache.h"
 
@@ -29,6 +30,7 @@
 #include <memory>
 #include "Events/Connection.h"
 #include <mutex>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -65,6 +67,14 @@ enum class PlaylistTool {
  */
 class TrackManagerUI : public ::AestraUI::NUIComponent, public ::AestraUI::IDropTarget {
 public:
+    /**
+     * @brief Skip drawing while an opaque panel fully covers the timeline (SPEC 3 §4).
+     *
+     * State work in onRender (lazy track refresh, solo propagation) still runs; only the
+     * drawing, which nobody can see, is skipped. Measured: the timeline under an open piano
+     * roll cost 5-7 ms of CPU plus its GPU fill every frame.
+     */
+    void setRenderOccluded(bool occluded) { m_renderOccluded = occluded; }
     TrackManagerUI(std::shared_ptr<TrackManager> trackManager);
     ~TrackManagerUI() override;
     void onThemeChanged(const ::AestraUI::NUIThemeProperties& theme) override {
@@ -130,6 +140,10 @@ public:
     /** @brief True while the timeline ruler row is the interaction (playhead
      *  scrub, loop markers, ruler selection) — grab-hand cursor territory. */
     bool isRulerPointerActive() const;
+    /** @brief Latest pointer position the window saw, including moves a popup
+     *  consumed before they reached the timeline. Hover cursor claims are only
+     *  honoured while it matches the timeline's own last-seen position. */
+    void setWindowPointerPosition(float x, float y);
 
     // View Toggle Callbacks (v3.1)
     void setOnToggleMixer(std::function<void()> cb) { m_onToggleMixer = cb; }
@@ -140,8 +154,12 @@ public:
     void setOnOpenAudioClipEditor(std::function<void(ClipInstanceID)> cb) {
         m_onOpenAudioClipEditor = std::move(cb);
     }
-    void setOnPreviewPatternClip(std::function<void(PatternID)> cb) { m_onPreviewPatternClip = std::move(cb); }
-    void setOnStopPatternClipPreview(std::function<void()> cb) { m_onStopPatternClipPreview = std::move(cb); }
+    /** @brief V8-W5: the owner renders and replaces the clips, and tells the user if it refuses. */
+    void setOnBounceInPlace(std::function<void(const std::vector<ClipInstanceID>&)> cb) {
+        m_onBounceInPlace = std::move(cb);
+    }
+    /** @brief Bounce the selected clips in place (V8-W5). */
+    void bounceSelectedClipsInPlace();
 
     // Loop control callback (preset: 0=Off, 1=1Bar, 2=2Bars, 3=4Bars, 4=8Bars, 5=Selection, 6=Project)
     void setOnLoopPresetChanged(std::function<void(int preset)> cb) { m_onLoopPresetChanged = cb; }
@@ -183,7 +201,13 @@ public:
     bool isTrackSelected(TrackUIComponent* track) const;
 
     // Context Menu Helpers (v4.0)
-    void openTrackContextMenu(const ::AestraUI::NUIPoint& position, std::function<void()> onSendToAudition);
+    /// Open the lane context menu. Only ever opened from a lane's header — the
+    /// grid does not activate lane actions (owner direction 2026-09-19).
+    /// @param target Lane the menu acts on, named explicitly so the menu does
+    ///        not depend on selection having already landed. Null falls back to
+    ///        the current selection.
+    void openTrackContextMenu(const ::AestraUI::NUIPoint& position, std::function<void()> onSendToAudition,
+                              TrackUIComponent* target = nullptr);
     void deleteLane(PlaylistLaneID laneId);
 
     // Snap-to-Grid control
@@ -207,10 +231,35 @@ public:
         Continuous // Smooth scrolling keeping playhead centered
     };
 
-    void setFollowPlayhead(bool enabled) { m_followPlayhead = enabled; }
+    // Follow-playhead (SPEC 3 §3.1). setFollowPlayhead / setFollowMode are the USER's choice
+    // (the toolbar toggle and the right-click mode menu) and notify the app so it can persist
+    // them. Focus changes never touch that choice; they only suspend following. They used to
+    // force it on at every Timeline entry and at startup, so turning it off never stuck.
+    void setFollowPlayhead(bool enabled) {
+        if (m_followPlayhead == enabled) return;
+        m_followPlayhead = enabled;
+        notifyFollowPreference();
+    }
     bool isFollowPlayhead() const { return m_followPlayhead; }
+    /// Arsenal/Audition focus freezes timeline scrolling without changing the user's choice.
+    void setFollowSuspended(bool suspended) { m_followSuspended = suspended; }
+    bool isFollowSuspended() const { return m_followSuspended; }
+    /// What actually drives the viewport: the user's choice, unless focus has suspended it.
+    bool isFollowActive() const { return m_followPlayhead && !m_followSuspended; }
+    /// Apply a stored preference (startup) without echoing it back to the store.
+    void applyFollowPreference(bool enabled, FollowMode mode) {
+        m_followPlayhead = enabled;
+        m_followMode = mode;
+    }
+    void setOnFollowPreferenceChanged(std::function<void(bool enabled, FollowMode mode)> callback) {
+        m_onFollowPreferenceChanged = std::move(callback);
+    }
 
-    void setFollowMode(FollowMode mode) { m_followMode = mode; }
+    void setFollowMode(FollowMode mode) {
+        if (m_followMode == mode) return;
+        m_followMode = mode;
+        notifyFollowPreference();
+    }
     FollowMode getFollowMode() const { return m_followMode; }
 
     // New Snap System
@@ -254,6 +303,20 @@ public:
 
     // Selection query for looping
     std::pair<double, double> getSelectionBeatRange() const;
+
+    /**
+     * @brief A left press on empty grid in the Select tool (SPEC 3 §1.2): the default marquee.
+     *
+     * A plain press is the selection exit: it clears the clip selection and the ruler zone. With
+     * Shift/Ctrl the press keeps them, so the band adds or toggles. Either way a marquee starts;
+     * a release that never travelled is a click and selects nothing (marqueeReleasePlan).
+     * @return True if the press started a marquee (the Select tool, left button, none active).
+     */
+    bool beginGridMarquee(const ::AestraUI::NUIMouseEvent& event);
+    /** @brief Drop the ruler zone. The loop region it set stays. */
+    void clearRulerSelection();
+    bool hasRulerSelection() const { return m_hasRulerSelection; }
+    bool isMarqueeActive() const { return m_marquee.active(); }
 
     // Time Signature Sync
     void setBeatsPerBar(int bpb) {
@@ -329,10 +392,14 @@ private:
     std::shared_ptr<TrackManager> m_trackManager;
     std::vector<std::shared_ptr<TrackUIComponent>> m_trackUIComponents;
     bool m_needsTrackRefresh = true; // Lazy-init: defer refreshTracks() from ctor to first render
+    bool m_renderOccluded = false;   // an opaque panel covers the whole timeline: draw nothing
     ::AestraUI::NUIPlatformBridge* m_window = nullptr;
 
     // UI Layout
-    int m_trackHeight{42};
+    // Spec 2 §8: 42 -> 38. Controls are 24px tall, so this keeps 7px of clear
+    // space above and below them — compact without becoming cramped — and puts
+    // another lane on screen at a typical window height.
+    int m_trackHeight{38};
     // Contiguous rows (2026-08 plane redesign): the grid plane is continuous,
     // so rows carry no seam — a quiet separator line marks each boundary.
     int m_trackSpacing{0};
@@ -362,11 +429,17 @@ private:
     // Timeline minimap state (beats-domain)
     ::AestraUI::TimelineSummaryCache m_timelineSummaryCache;
     ::AestraUI::TimelineSummarySnapshot m_timelineSummarySnapshot;
+    std::vector<::AestraUI::NUIColor> m_minimapLaneColors; // each lane's clip display colour, by lane index
+    std::unordered_map<PlaylistLaneID, TrackUIComponent*> m_minimapRowByLane; // reused per update
     ::AestraUI::TimelineMinimapMode m_minimapMode{::AestraUI::TimelineMinimapMode::Clips};
     ::AestraUI::TimelineMinimapAggregation m_minimapAggregation{::AestraUI::TimelineMinimapAggregation::MaxPresence};
     double m_minimapDomainStartBeat{0.0};
     double m_minimapDomainEndBeat{0.0};
     bool m_minimapNeedsRebuild{true};
+    // Set when a summary rebuild is requested; the lane colours (new lane order) are held back
+    // until the worker publishes that exact rebuild (m_minimapLaneColorsGeneration).
+    bool m_minimapLaneColorsPending{false};
+    uint64_t m_minimapLaneColorsGeneration{0};
     ::AestraUI::TimelineRange m_minimapSelectionBeatRange{};
 
     // Tool icons (toolbar)
@@ -380,6 +453,7 @@ private:
     std::shared_ptr<::AestraUI::NUIIcon> m_trimCursorIcon; // Canonical horizontal stretch cursor (registry SVG)
     std::shared_ptr<::AestraUI::NUIIcon> m_resizeCursorIcon; // Canonical ResizeEW registry glyph (minimap resize)
     std::shared_ptr<::AestraUI::NUIIcon> m_grabCursorIcon; // Canonical hand glyph (ruler/minimap-pan grab)
+    std::shared_ptr<::AestraUI::NUIIcon> m_grabbingCursorIcon; // Closed hand while a ruler/minimap drag is live
 
     std::shared_ptr<::AestraUI::NUIContextMenu> m_activeContextMenu; // Keep track for cleanup
 
@@ -437,6 +511,9 @@ private:
     float m_splitCursorX = 0.0f;
     bool m_showSplitCursor = false;
     ::AestraUI::NUIPoint m_lastMousePos; // Track mouse for split cursor rendering
+    ::AestraUI::NUIPoint m_windowPointerPos; // Every window move, including ones a popup consumed
+    bool m_hasWindowPointerPos = false;
+    bool isHoverPointerCurrent() const; // m_lastMousePos still matches the real pointer
 
     // Playhead dragging state
     bool m_isDraggingPlayhead = false;
@@ -463,6 +540,7 @@ private:
     // endpoint updates); this widget keeps only the screen mapping and the
     // selection application on finalize.
     ::Aestra::Components::TimelineMarqueeDrag m_marquee;
+    ::Aestra::Components::MarqueeOrigin m_marqueeOrigin = ::Aestra::Components::MarqueeOrigin::Tool;
 
     // === SMOOTH ZOOM ANIMATION ===
     float m_targetPixelsPerBeat = 50.0f; // Target zoom level for animation (match initial m_pixelsPerBeat)
@@ -513,8 +591,13 @@ private:
 
     // === SNAP-TO-GRID ===
 
-    bool m_followPlayhead = false;              // Whether timeline automatically scrolls to follow playhead
+    bool m_followPlayhead = false;              // The user's choice: off by default (SPEC 3 §3.1)
     FollowMode m_followMode = FollowMode::Page; // Default logic
+    bool m_followSuspended = false;             // Focus freeze (Arsenal/Audition); never the user's choice
+    std::function<void(bool, FollowMode)> m_onFollowPreferenceChanged;
+    void notifyFollowPreference() {
+        if (m_onFollowPreferenceChanged) m_onFollowPreferenceChanged(m_followPlayhead, m_followMode);
+    }
     std::shared_ptr<::AestraUI::NUIIcon> m_followPlayheadIcon; // Icon for the toggle button
 
     // === CLIPBOARD for copy/paste (v3.0) ===
@@ -550,8 +633,7 @@ private:
     std::function<void()> m_onTogglePlaylist;
     std::function<void(PatternID)> m_onOpenPatternInPianoRoll;
     std::function<void(ClipInstanceID)> m_onOpenAudioClipEditor;
-    std::function<void(PatternID)> m_onPreviewPatternClip;
-    std::function<void()> m_onStopPatternClipPreview;
+    std::function<void(const std::vector<ClipInstanceID>&)> m_onBounceInPlace;
     std::function<void(int)> m_onLoopPresetChanged;        // Called when loop preset dropdown changes
     std::function<void(double, double)> m_onSelectionMade; // Called when ruler selection finalized
     std::function<void(double, double)>
@@ -560,7 +642,6 @@ private:
     ConfirmDialogRequest m_onConfirmDialogRequest;
     std::function<void(double, double)> m_onSendSelectionToAudition;      // Called for "Send Selection to Audition"
     std::function<void()> m_onClipLibraryChanged;
-    bool m_dragPatternPreviewActive = false;
 
     void updateBackgroundCache(::AestraUI::NUIRenderer& renderer);
     void updateControlsCache(::AestraUI::NUIRenderer& renderer);
@@ -568,6 +649,8 @@ private:
 
     void syncViewToggleButtons();
     void layoutTracks();
+    /** V8-X2b: the timeline's regions in Local space, from current bounds and theme (TrackManagerUILayout.h). */
+    TimelineLayout currentTimelineLayout() const;
     void onAddTrackClicked();
     void syncTrackSelectionView();
     void selectClip(ClipInstanceID clipId);

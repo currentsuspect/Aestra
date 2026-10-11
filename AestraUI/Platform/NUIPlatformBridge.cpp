@@ -344,6 +344,12 @@ void NUIPlatformBridge::setupEventBridges() {
 
     // Window focus
     m_window->setFocusCallback([this](bool focused) {
+        if (!focused) {
+            // A button held when focus left may never report its release. Tooltips stay
+            // suppressed while a button is held, so forget it, and drop any tooltip on screen.
+            NUIComponent::resetPointerGestureState();
+            NUIComponent::hideRemoteTooltip();
+        }
         // Focus loss mid-capture: the release event may never arrive and a
         // warp can no longer land. Cancel (unhide in place, drop confinement)
         // BEFORE forwarding, so downstream focus handling sees a sane cursor.
@@ -707,6 +713,9 @@ void NUIPlatformBridge::applyCursorStyle(NUICursorStyle style) {
         case NUICursorStyle::Wait:       cursor = ::LoadCursor(NULL, IDC_WAIT); break;
         case NUICursorStyle::WaitArrow:  cursor = ::LoadCursor(NULL, IDC_APPSTARTING); break;
         case NUICursorStyle::Crosshair:  cursor = ::LoadCursor(NULL, IDC_CROSS); break;
+        // Tool cursors have no system shape; the app's overlay draws the real glyph.
+        case NUICursorStyle::Pencil:     cursor = ::LoadCursor(NULL, IDC_CROSS); break;
+        case NUICursorStyle::Eraser:     cursor = ::LoadCursor(NULL, IDC_CROSS); break;
         case NUICursorStyle::ResizeNS:   cursor = ::LoadCursor(NULL, IDC_SIZENS); break;
         case NUICursorStyle::ResizeEW:   cursor = ::LoadCursor(NULL, IDC_SIZEWE); break;
         case NUICursorStyle::ResizeNESW: cursor = ::LoadCursor(NULL, IDC_SIZENESW); break;

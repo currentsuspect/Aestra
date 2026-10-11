@@ -98,6 +98,7 @@ private:
     AestraUI::NUIRect m_dontSaveButtonRect;
     AestraUI::NUIRect m_cancelButtonRect;
     AestraUI::NUIRect m_dialogRect;
+    float m_messageCentreY = 0.0f; // the message line (and its dot) centre on this
 
     void handleResponse(DialogResponse response);
     void calculateLayout();

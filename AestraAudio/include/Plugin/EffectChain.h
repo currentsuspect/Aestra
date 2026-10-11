@@ -5,6 +5,7 @@
 
 #include <array>
 #include <atomic>
+#include <limits>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -48,6 +49,20 @@ struct EffectSlot {
     // the audio path without a null check.
     std::string missingPluginId;
     std::vector<uint8_t> missingPluginState;
+
+    // Last-good state cache for crash preservation (#931).
+    //
+    // saveState() on a dead helper returns empty, which would cement the crash
+    // into the project on the next save. So every successful non-empty
+    // saveState() refreshes this cache, and a crashed occupant is emitted as a
+    // #647-style record carrying the cached blob instead of the empty one.
+    //
+    // Keyed by instanceId: a replaced occupant mints a fresh id, so a stale
+    // cache can never attach to a new plugin. Non-RT only, like the
+    // missing-plugin record above. saveState() stays logically const — this is
+    // memoization, hence mutable.
+    mutable std::vector<uint8_t> lastGoodPluginState;
+    mutable uint64_t lastGoodInstanceId{0};
 
     /// RT predicate: is there a plugin to process here? Placeholders answer true.
     bool isEmpty() const { return plugin == nullptr; }
@@ -112,23 +127,25 @@ void reserveMintedPluginInstanceId(uint64_t seenId);
 /**
  * @brief Effect chain for insert effects on a mixer channel
  *
- * An EffectChain contains a fixed number of slots that hold plugin instances.
- * Audio flows through each non-empty slot in sequence. Slots can be bypassed
- * individually and have dry/wet mix controls.
+ * An EffectChain holds plugin instances in slots. It has kInitialSlots (ten)
+ * from construction and grows on demand up to kMaxSlots (V8-S3); a slot past the
+ * last occupied one is simply empty. Audio flows through each non-empty slot in
+ * sequence. Slots can be bypassed individually and have dry/wet mix controls.
  *
  * Thread Safety — Mutation Contract:
  * - Slot mutation (insertPlugin, removePlugin, movePlugin, swapPlugins, clear,
- *   reset) is NON-RT only. These must never be called from the audio thread or
- *   any thread marked with ScopedRealtimeAudioThread.
- * - Slot mutation MUST NOT occur concurrently with process(). The audio thread
- *   reads m_slots directly through a raw EffectChain* pointer baked into the
- *   AudioGraph snapshot. There is no internal mutex protecting m_slots during
- *   process().
+ *   reset, and the growth they trigger) is NON-RT only. These must never be
+ *   called from the audio thread or any thread marked with
+ *   ScopedRealtimeAudioThread.
+ * - The audio thread does not read this class. It renders from the immutable
+ *   EffectChainSnapshot published by every mutation (getSnapshot(), carried in
+ *   the AudioGraph). A snapshot's size is the chain's size when it was built, so
+ *   growth never changes a snapshot the render thread already holds.
+ * - Slot storage never moves: slots are allocated once in a fixed array of
+ *   pointers, so a slot address is stable for any thread that holds it and
+ *   growth is "allocate, then publish the larger count".
  * - Worker-created plugin instances must be handed back to the main/control
  *   thread before insertion into the chain.
- * - The future fix is snapshot-based slot publication (Stage B of the
- *   plugin/effect-chain lifetime audit). This class adds debug-time RT-misuse
- *   guards only; it does not implement the snapshot rewrite.
  * - Bypass and dry/wet can be changed from any thread (atomic).
  *
  * Processing Flow:
@@ -147,9 +164,38 @@ void reserveMintedPluginInstanceId(uint64_t seenId);
  *   chain.process(buffer, 2, numFrames);
  * @endcode
  */
+/// What a project load could not fully apply.
+///
+/// Two lists, not one, because the two failures need different diagnoses even
+/// though they recover the same way (#1014):
+///  - missingPlugins: the plugin is not installed on this machine.
+///  - unreadableState: the plugin IS installed but rejected its own state blob.
+///
+/// Neither loses data. In both cases the slot ends up empty and the opaque
+/// record is stored exactly as it came off the wire, so the next save re-emits
+/// it unchanged and the settings survive until the project is loaded again.
+/// They are still separate lists: "install the plugin" and "this plugin could
+/// not read its state" are different messages, and a user who is told to install
+/// a plugin they already have has been told the wrong thing.
+struct LoadReport {
+    std::vector<std::string> missingPlugins;
+    std::vector<std::string> unreadableState;
+};
+
 class EffectChain {
 public:
-    static constexpr size_t MAX_SLOTS = 10;
+    /// Slots every chain has from construction. This is the fixed ten that
+    /// shipped before V8-S3, kept as the floor so a project of ten or fewer
+    /// slots loads, saves and draws exactly as it always did.
+    static constexpr size_t kInitialSlots = 10;
+    /// Safety ceiling, not a design number: a chain grows on demand up to here
+    /// (insertPlugin / movePlugin into the next free index). It bounds the
+    /// per-block cost of a runaway chain and fits the one-byte slot count of the
+    /// saved state.
+    static constexpr size_t kMaxSlots = 64;
+    /// "No such slot": what lookups return when they find nothing (this was
+    /// MAX_SLOTS while the chain had a fixed length).
+    static constexpr size_t kNoSlot = std::numeric_limits<size_t>::max();
 
     // Serialized-state format version (byte 3 of the "NEC" header). Bump when the
     // on-disk layout changes and add a migration branch in loadState() so older
@@ -160,6 +206,12 @@ public:
     // 8-byte instance id after the hasPlugin flag. v1 payloads (no ids) still
     // load and mint (migration rule).
     static constexpr uint8_t kStateFormatVersion = 2;
+    // v3 (V8-S3, dynamic slot count): the v2 layout with a slot count other than
+    // ten. Written ONLY when a chain has grown past kInitialSlots, so every
+    // project of ten or fewer slots is still saved as v2 and stays loadable by
+    // older builds; an older build meeting a v3 payload refuses it cleanly (the
+    // unknown-version path) instead of misreading it.
+    static constexpr uint8_t kStateFormatVersionLong = 3;
 
     EffectChain();
     ~EffectChain();
@@ -175,7 +227,8 @@ public:
     /**
      * @brief Insert plugin into slot
      *
-     * @param slotIndex Slot index (0 to MAX_SLOTS-1)
+     * @param slotIndex Slot index (0 to kMaxSlots-1). An index past the current
+     *        slotCount() grows the chain to hold it.
      * @param plugin Plugin instance to insert
      * @param preservedInstanceId Identity to restore, or 0 to mint a fresh one.
      *
@@ -248,17 +301,28 @@ public:
      * does for channels. Callers must re-resolve rather than cache the index: the
      * whole point is that the index moves and the id does not.
      *
-     * @return The slot index, or MAX_SLOTS if no slot holds that id. Passing 0
-     *         always returns MAX_SLOTS — 0 means "no instance", so it must never
+     * @return The slot index, or kNoSlot if no slot holds that id. Passing 0
+     *         always returns kNoSlot — 0 means "no instance", so it must never
      *         match an unoccupied slot's zeroed id.
      */
     size_t findSlotByInstanceId(uint64_t instanceId) const;
 
     /**
      * @brief Get first empty slot index
-     * @return Slot index, or MAX_SLOTS if all full
+     * @return The first unoccupied slot. If every current slot is occupied, the
+     *         next index (slotCount()), which insertPlugin grows into. kNoSlot
+     *         only when the chain is full at kMaxSlots.
      */
     size_t getFirstEmptySlot() const;
+
+    /**
+     * @brief How many slots the chain currently has (>= kInitialSlots).
+     *
+     * Slots past the last occupied one are empty and cost nothing to process.
+     * The count only grows (a removal empties a slot, it never renumbers the
+     * others), and is trimmed back toward kInitialSlots only by loadState().
+     */
+    size_t slotCount() const noexcept { return m_slotCount.load(std::memory_order_acquire); }
 
     /**
      * @brief Get number of active (non-empty) slots
@@ -376,12 +440,12 @@ public:
      *
      * @param state State data from saveState()
      * @param manager PluginManager for recreating instances
-     * @param outMissingPluginIds Optional; receives the id of every plugin that
-     *        could not be instantiated, in slot order. Not cleared on entry.
+     * @param outReport Optional; receives what the load could not fully apply.
+     *        Not cleared on entry.
      * @return true if the state blob was well-formed
      */
     bool loadState(const std::vector<uint8_t>& state, PluginManager& manager,
-                   std::vector<std::string>* outMissingPluginIds = nullptr);
+                   LoadReport* outReport = nullptr);
 
     /**
      * @brief Number of slots currently holding a missing-plugin placeholder.
@@ -431,7 +495,18 @@ public:
     }
 
 private:
-    std::array<EffectSlot, MAX_SLOTS> m_slots;
+    // Slots are heap-allocated once and never move or free until the chain is
+    // destroyed, in a FIXED array of pointers that is never reallocated. So a
+    // slot's address is stable for any thread that already holds it, and growth
+    // is "allocate the next slot, then publish the larger count" with release
+    // ordering. (Bypass and dry/wet are documented as settable from any thread;
+    // a container that reallocated would break that.)
+    std::array<std::unique_ptr<EffectSlot>, kMaxSlots> m_slots;
+    std::atomic<size_t> m_slotCount{0};
+    EffectSlot& at(size_t i) { return *m_slots[i]; }
+    const EffectSlot& at(size_t i) const { return *m_slots[i]; }
+    /// Grow to at least @p count slots (non-RT). False if @p count > kMaxSlots.
+    bool growTo(size_t count);
     std::atomic<bool> m_chainBypassed{false};
     std::shared_ptr<const EffectChainSnapshot> m_currentSnapshot; // Pass 2: published snapshot
 
@@ -479,54 +554,56 @@ struct EffectChainSnapshotSlot {
  */
 class EffectChainSnapshot {
 public:
-    static constexpr size_t MAX_SLOTS = 10;
-
     EffectChainSnapshot() = default;
 
-    explicit EffectChainSnapshot(const std::array<EffectSlot, MAX_SLOTS>& slots) {
-        for (size_t i = 0; i < MAX_SLOTS; ++i) {
-            m_slots[i].plugin = slots[i].plugin;
-            m_slots[i].bypassed = slots[i].bypassed.load(std::memory_order_acquire);
-            m_slots[i].dryWetMix = slots[i].dryWetMix.load(std::memory_order_acquire);
-            m_slots[i].faultState = slots[i].faultState;
-            m_slots[i].instanceId = slots[i].instanceId;
+    /// Copy the chain's current slots. Runs on the control thread; the vector is
+    /// allocated here, so the audio thread only ever reads it (V8-S3).
+    explicit EffectChainSnapshot(const EffectChain& chain) {
+        const size_t count = chain.slotCount();
+        m_slots.resize(count);
+        for (size_t i = 0; i < count; ++i) {
+            const EffectSlot* slot = chain.getSlot(i);
+            m_slots[i].plugin = slot->plugin;
+            m_slots[i].bypassed = slot->bypassed.load(std::memory_order_acquire);
+            m_slots[i].dryWetMix = slot->dryWetMix.load(std::memory_order_acquire);
+            m_slots[i].faultState = slot->faultState;
+            m_slots[i].instanceId = slot->instanceId;
         }
-        m_slotCount = MAX_SLOTS;
     }
 
     /**
      * @brief Find the snapshot slot holding plugin instance @p instanceId (#667).
      *
-     * RT-safe: a bounded linear scan over MAX_SLOTS with no allocation, the same
-     * shape as ChannelSlotMap::getSlotIndex(). Returns MAX_SLOTS when the id is
+     * RT-safe: a bounded linear scan with no allocation, the same shape as
+     * ChannelSlotMap::getSlotIndex(). Returns EffectChain::kNoSlot when the id is
      * absent, and always for id 0 ("no instance").
      */
     size_t findSlotByInstanceId(uint64_t instanceId) const noexcept {
         if (instanceId == 0) {
-            return MAX_SLOTS;
+            return EffectChain::kNoSlot;
         }
-        for (size_t i = 0; i < MAX_SLOTS; ++i) {
+        for (size_t i = 0; i < m_slots.size(); ++i) {
             if (m_slots[i].instanceId == instanceId) {
                 return i;
             }
         }
-        return MAX_SLOTS;
+        return EffectChain::kNoSlot;
     }
 
-    size_t slotCount() const noexcept { return m_slotCount; }
+    size_t slotCount() const noexcept { return m_slots.size(); }
 
     const EffectChainSnapshotSlot& slot(size_t index) const noexcept {
         return m_slots[index];
     }
 
-    const std::array<EffectChainSnapshotSlot, MAX_SLOTS>& slots() const noexcept {
+    const std::vector<EffectChainSnapshotSlot>& slots() const noexcept {
         return m_slots;
     }
 
     size_t getActiveSlotCount() const noexcept {
         size_t count = 0;
-        for (size_t i = 0; i < MAX_SLOTS; ++i) {
-            if (!m_slots[i].isEmpty()) {
+        for (const auto& slot : m_slots) {
+            if (!slot.isEmpty()) {
                 ++count;
             }
         }
@@ -551,8 +628,7 @@ public:
                  float* dryBuffer) const;
 
 private:
-    std::array<EffectChainSnapshotSlot, MAX_SLOTS> m_slots{};
-    size_t m_slotCount = 0;
+    std::vector<EffectChainSnapshotSlot> m_slots; // immutable after construction
 };
 
 } // namespace Audio

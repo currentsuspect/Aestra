@@ -11,6 +11,7 @@
 
 #pragma once
 
+#include <vector>
 #include "NUIComponent.h"
 #include "NUIButton.h"
 #include "NUIDropdown.h"
@@ -74,7 +75,11 @@ public:
     void setOnTempoChange(std::function<void(float)> callback) { m_onTempoChange = callback; }
     void setOnMetronomeToggle(std::function<void(bool)> callback) { m_onMetronomeToggle = callback; }
     void setOnTimeSignatureChange(std::function<void(int)> callback) { m_onTimeSignatureChange = callback; }
-    void setMetronomeActive(bool active) { m_metronomeActive = active; setDirty(true); }
+    void setMetronomeActive(bool active) {
+        m_metronomeActive = active;
+        updateMetronomePose();
+        setDirty(true);
+    }
     void setTimeSignature(int beatsPerBar) { m_beatsPerBar = beatsPerBar; setDirty(true); }
     int getTimeSignature() const { return m_beatsPerBar; }
     
@@ -102,9 +107,16 @@ public:
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
 
     /** Width at the bar's right edge occupied by overlay siblings (the
-        master meter / waveform visualizers laid out by AestraContent).
-        The KEYS status pill hides instead of rendering underneath them. */
+        output scope / meter laid out by AestraContent). The bar paints the
+        OUTPUT module label and divider over that region and keeps every other
+        module clear of it. */
     void setRightReservedWidth(float width);
+
+    /** Width the module row needs with the given optional modules shown.
+        AestraContent uses it to decide which output visualizers still fit:
+        the scope goes first, then the bar sheds keys, panels, the meter and
+        finally the record aids. Transport, position and tempo never hide. */
+    static float requiredWidth(bool record, bool panels, bool keys);
 
     /** @brief Set the platform bridge for hover cursor styling (hand on buttons). */
     void setPlatformBridge(AestraUI::NUIPlatformBridge* bridge) { m_platformBridge = bridge; }
@@ -138,8 +150,12 @@ private:
     std::shared_ptr<AestraUI::NUIIcon> m_pauseIcon;
     std::shared_ptr<AestraUI::NUIIcon> m_stopIcon;
     std::shared_ptr<AestraUI::NUIIcon> m_recordIcon;
-    std::shared_ptr<AestraUI::NUIIcon> m_metronomeIcon;
-    
+    std::shared_ptr<AestraUI::NUIIcon> m_metronomeIcon; // Current pendulum pose (one of m_metronomePoses)
+    // Pre-built pendulum poses. While the metronome is on and the transport plays,
+    // updateMetronomePose() swings the arm so it reaches a side on every beat.
+    std::vector<std::shared_ptr<AestraUI::NUIIcon>> m_metronomePoses;
+    int m_metronomePose = -1;
+
     // Transport Extras Icons
     std::shared_ptr<AestraUI::NUIIcon> m_countInIcon;
     std::shared_ptr<AestraUI::NUIIcon> m_waitIcon;
@@ -191,10 +207,30 @@ private:
     bool m_loopRecordActive{false};
 
     int m_beatsPerBar{4};  // Time signature numerator (4 for 4/4)
+
+    // Computer-keyboard note input, shown by the KEYS module.
+    bool m_keysEnabled{true};
+    int m_keysOctave{3};
+
+    // Module geometry from the last layout, in bar-local coordinates, so
+    // onRender paints labels and dividers exactly where layout put things.
+    struct ModuleMark { const char* label; float x; float width; };
+    std::vector<ModuleMark> m_moduleMarks;
+    std::vector<float> m_dividers;
+    AestraUI::NUIRect m_keysValueRect;
+    bool m_showKeys{true};
     
     void createIcons();
     void createButtons();
+    /** @brief Pick the pendulum pose for the current beat; repaints only on change. */
+    void updateMetronomePose();
     void updateButtonStates();
+    // One writer for both clock faces: time seconds plus the musical
+    // beats/meter pair, derived from the current position, tempo and meter.
+    // Every path that changes a musical-position input (position, tempo,
+    // meter, stop-reset) funnels through here so a paused clock never shows
+    // one stale face.
+    void syncClockDisplays();
     void layoutComponents();
     void renderButtonIcons(AestraUI::NUIRenderer& renderer);
 };

@@ -390,9 +390,8 @@ void UIMixerInspector::rebuildInsertRack(const Aestra::ChannelViewModel* channel
             info.isEmpty = true;
             info.name = "Empty";
         }
-        m_effectRack->setSlot(static_cast<int>(i), info);
+        m_effectRack->setSlot(static_cast<int>(i), info); // repaints only a slot that changed
     }
-    m_effectRack->repaint();
 }
 
 void UIMixerInspector::rebuildSendWidgets(const Aestra::ChannelViewModel* channel)
@@ -653,7 +652,8 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         m_addFxRect = NUIRect{0,0,0,0};
         m_addSidechainRect = NUIRect{0,0,0,0};
         
-        bool isMaster = (channel && channel->id == 0);
+        // The master's inserts tab is its rack like any channel's; only the I/O tab has nothing to choose.
+        bool isMaster = (channel && channel->id == 0 && m_activeTab == Tab::IO);
         if (isMaster) {
              renderer.drawTextCentered("Master Output is fixed to Hardware Output 1/2", contentRect, 11.0f, m_textSecondary);
         } else if (m_activeTab == Tab::IO) {

@@ -627,7 +627,7 @@ void testV1FixtureMigratesToCurrentVersion() {
     assert(std::abs(patterns[0]->getMidiNotes()[0].velocity - 0.75f) < 1e-6f);
 
     std::string saved = ProjectSerializer::serialize(trackManager, result.tempo, result.playhead, 0).contents;
-    assert(saved.find("\"version\": 3") != std::string::npos || saved.find("\"version\":3") != std::string::npos);
+    assert(saved.find("\"version\": 4") != std::string::npos || saved.find("\"version\":4") != std::string::npos);
 
     const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectLoadRegression"};
     const auto& testDir = testDirScope.path();
@@ -903,7 +903,7 @@ void testV1AutomationCurveMigratesToInstanceId() {
 
     // A v1 chain-state blob: one occupied slot (unknown plugin id -> placeholder
     // with a minted identity on load), no instance ids on the wire.
-    std::vector<uint8_t> blob{'N', 'E', 'C', 1, static_cast<uint8_t>(EffectChain::MAX_SLOTS)};
+    std::vector<uint8_t> blob{'N', 'E', 'C', 1, static_cast<uint8_t>(EffectChain::kInitialSlots)};
     const auto put = [&blob](const void* data, size_t n) {
         const auto* bytes = static_cast<const uint8_t*>(data);
         blob.insert(blob.end(), bytes, bytes + n);
@@ -919,7 +919,7 @@ void testV1AutomationCurveMigratesToInstanceId() {
     put(&dryWet, sizeof(dryWet));
     const uint32_t stateLen = 0;
     put(&stateLen, sizeof(stateLen));
-    for (size_t s = 1; s < EffectChain::MAX_SLOTS; ++s) {
+    for (size_t s = 1; s < EffectChain::kInitialSlots; ++s) {
         blob.push_back(0);
     }
     std::string chainHex;
@@ -1338,10 +1338,10 @@ void testLegacyDemoAutomationCloseNearMissPreserved() {
                         "default": 0.800000011920929,
                         "mixerChannelId": 1,
                         "points": [
-                            {"b": 0, "c": 0.5, "v": 0.5},
-                            {"b": 4, "c": 0.5, "v": 1},
-                            {"b": 8, "c": 0.5, "v": 0.2005},
-                            {"b": 12, "c": 0.5, "v": 0.800000011920929}
+                            {"b": 0, "c": 0.0, "v": 0.5},
+                            {"b": 4, "c": 0.0, "v": 1},
+                            {"b": 8, "c": 0.0, "v": 0.2005},
+                            {"b": 12, "c": 0.0, "v": 0.800000011920929}
                         ]
                     }
                 ]
@@ -1357,6 +1357,7 @@ void testLegacyDemoAutomationCloseNearMissPreserved() {
     auto trackManager = std::make_shared<TrackManager>();
     auto result = ProjectSerializer::load(testProject.string(), trackManager);
     assert(result.ok);
+    // Tension is linear (c=0) so the v3->v4 tension reset stays a no-op here.
     assert(result.migrationOutcome != Aestra::MigrationOutcome::Transformed &&
            "a close near-miss must not trigger the migration");
 

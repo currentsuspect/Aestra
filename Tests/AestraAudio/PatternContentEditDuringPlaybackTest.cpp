@@ -49,6 +49,7 @@ struct MidiEventRecord {
     uint8_t status; // high nibble of the status byte
     uint8_t pitch;
     uint8_t velocity;
+    uint32_t noteId;
 };
 
 class Harness {
@@ -90,7 +91,7 @@ public:
                 const auto& ev = buffer.getEvent(i);
                 const uint8_t status = static_cast<uint8_t>(ev.data[0] & 0xF0);
                 if (eventLog)
-                    eventLog->push_back({f + ev.sampleOffset, status, ev.data[1], ev.data[2]});
+                    eventLog->push_back({f + ev.sampleOffset, status, ev.data[1], ev.data[2], ev.noteId});
                 if (status == 0x90 && ev.data[2] != 0) {
                     ons.push_back({f + ev.sampleOffset, ev.data[1]});
                 }
@@ -231,6 +232,42 @@ int main() {
             return e.status == 0x80 && e.pitch == 60;
         });
         check(offsAfter == 1, "deleting a sounding step delivers exactly one note-off");
+    }
+
+    // --- Note identity (#1001): an edit that moves and resizes a SOUNDING note keeps its note-off
+    // on the voice that is playing. The re-queued off is computed from the edited note (a new
+    // occurrence id), so it must be routed to the id the note-on carried, or the voice never stops.
+    {
+        Harness fx;
+        fx.schedule();
+        std::vector<MidiEventRecord> events;
+        (void)fx.run(0, 30000, &events); // beat 1.25: pitch 61 (beats 1-2) is sounding
+
+        fx.patterns().applyPatch(fx.patternId(), [](PatternSource& p) {
+            if (!p.isMidi())
+                return;
+            for (auto& note : std::get<MidiPayload>(p.payload).notes) {
+                if (note.pitch == 61) {
+                    note.startBeat = 1.1;     // moved, still spanning the playhead
+                    note.durationBeats = 1.4; // now ends at beat 2.5
+                }
+            }
+        });
+        fx.contentEdited();
+        (void)fx.run(30000, 70000, &events);
+
+        std::vector<MidiEventRecord> ons, offs;
+        for (const auto& e : events) {
+            if (e.pitch != 61) continue;
+            if (e.status == 0x90 && e.velocity != 0) ons.push_back(e);
+            if (e.status == 0x80) offs.push_back(e);
+        }
+        check(ons.size() == 1, "editing a sounding note does not re-fire it");
+        check(offs.size() == 1, "the edited note gets exactly one note-off");
+        check(!ons.empty() && !offs.empty() && ons[0].noteId != 0 && offs[0].noteId == ons[0].noteId,
+              "the edited note's note-off carries the id its note-on had (the voice that is playing)");
+        check(!offs.empty() && std::llabs(static_cast<long long>(offs[0].frame) - 60000) < kBlockSize,
+              "the note-off lands at the edited end (beat 2.5)");
     }
 
     if (g_failures == 0) {

@@ -50,9 +50,7 @@ private:
 
     // Vertical-drag knob state: which param is being dragged, and the value
     // at drag start so movement is relative, not absolute.
-    int m_draggingParam = -1;
     float m_dragStartY = 0.0f;
-    float m_dragStartValue = 0.0f;
     bool m_draggingMix = false;
     bool m_bypassHovered = false;
     double m_visualRefreshTimer = 0.0;

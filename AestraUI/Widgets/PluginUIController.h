@@ -6,6 +6,8 @@
 #include "NUIComponent.h"
 #include "NUITypes.h"
 #include "PluginBrowserPanel.h"
+#include "PanelMode.h"
+#include "../Layout/NUIAnchoredPlacement.h"
 
 // Forward declaration
 class NUIPlatformBridge;
@@ -21,6 +23,7 @@ class NUIPlatformBridge;
 #include "Events/Connection.h"
 #include <algorithm>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -93,6 +96,37 @@ public:
      * owns the scanned-plugin → MixerPluginEntry mapping.
      */
     void setMixerCatalogProvider(std::function<std::vector<Aestra::Components::MixerPluginEntry>()> provider);
+
+    /**
+     * @brief Provide editor-anchor persistence (V8-C14 step 5b).
+     *
+     * The controller owns geometry but must not own the store (the store
+     * lives app-side; AestraUI must not include Source/). The app supplies
+     * two callbacks over `editor.<surfaceId>` keys carrying NUIAnchoredRect
+     * records: the getter returns the stored anchor (size ignored — the
+     * record is anchor-only in practice), the saver persists the captured
+     * anchor with the current intrinsic size. Either may be empty, in which
+     * case editors open centred and drags persist nothing.
+     */
+    using EditorAnchorGetter = std::function<std::optional<Layout::NUIAnchoredRect>(const std::string& key)>;
+    using EditorAnchorSaver =
+        std::function<void(const std::string& key, const Layout::NUIAnchoredRect& anchor)>;
+    void setEditorAnchorProvider(EditorAnchorGetter getter, EditorAnchorSaver saver);
+
+    /**
+     * @brief Provide the plugin editors' shared panel mode (SPEC 3 section 1.1).
+     *
+     * One mode for every editor: Floating/Docked and Contextual/Keep Open. Without a provider
+     * editors keep their original behaviour (floating, closing on a press outside).
+     */
+    using EditorModeGetter = std::function<PanelMode()>;
+    using EditorModeSaver = std::function<void(const PanelMode&)>;
+    void setEditorModeProvider(EditorModeGetter getter, EditorModeSaver saver);
+
+    /** @brief Bring every open editor fully inside the popup layer (View > Gather Panels). */
+    void gatherEditors();
+    /** @brief Centre every open editor and forget its stored position (View > Reset Panel Positions). */
+    void resetEditorPositions();
 
     // ==============================
     // Browser Binding
@@ -176,9 +210,13 @@ public:
      * @brief Open plugin editor window
      * @param instance Plugin instance
      * @param parentWindow Native parent window handle
+     * @param surfaceId Stable per-instance identity for position persistence
+     * (e.g. channel/slot/plugin coordinates); the stored key is
+     * `editor.<surfaceId>`. Empty falls back to the plugin type id, which
+     * shares one position across same-type editors.
      */
-    void openPluginEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance,
-                          void* parentWindow = nullptr);
+    void openPluginEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance, void* parentWindow = nullptr,
+                          const std::string& surfaceId = "");
     
     // ==============================
     // Callbacks
@@ -271,6 +309,18 @@ private:
 
     // Catalog source for on-demand popup menus (see setMixerCatalogProvider)
     std::function<std::vector<Aestra::Components::MixerPluginEntry>()> m_mixerCatalogProvider;
+
+    // Editor-anchor persistence (V8-C14 step 5b; provided by the app layer).
+    EditorAnchorGetter m_editorAnchorGetter;
+    EditorAnchorSaver m_editorAnchorSaver;
+    EditorModeGetter m_editorModeGetter;
+    EditorModeSaver m_editorModeSaver;
+    std::vector<std::pair<std::weak_ptr<NUIComponent>, std::string>> m_editorKeys; ///< editor -> its anchor key
+    void applyEditorMode(const std::shared_ptr<AestraPanelWindow>& editor, const std::string& anchorKey);
+    void showEditorMenu(const std::shared_ptr<AestraPanelWindow>& editor, const std::string& anchorKey,
+                        const NUIPoint& at);
+    void placeEditorComp(const std::shared_ptr<NUIComponent>& editorComp, double anchorX, double anchorY);
+    void centreEditor(const std::shared_ptr<NUIComponent>& editorComp, const std::string& anchorKey);
 };
 
 /**

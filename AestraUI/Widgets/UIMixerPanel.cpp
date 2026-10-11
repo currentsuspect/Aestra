@@ -19,6 +19,8 @@
 #include "Commands/SetAudioPatternMixerChannelCommand.h"
 #include "Plugin/EffectChain.h"
 #include "Plugin/AestraDelay.h"
+#include "../Layout/NUILayoutAlgorithms.h"
+#include "../Layout/NUILayoutSpace.h"
 #include <algorithm>
 
 namespace AestraUI {
@@ -246,29 +248,75 @@ void UIMixerPanel::setPlatformBridge(NUIPlatformBridge* bridge)
     if (m_inspector) m_inspector->setPlatformBridge(bridge);
 }
 
+UIMixerPanel::TrailingLayout UIMixerPanel::trailingLayout(Layout::NUILayoutRecorder* recorder) const
+{
+    // stripY/stripHeight are recomputed here rather than threaded through as
+    // parameters: every one of this method's seven call sites already
+    // recomputes them too, and giving trailingLayout() its own bounds-only
+    // signature is what let it replace all seven independently — no caller
+    // needed to change what it already had on hand.
+    //
+    // stripY is inlined from getMinimapRect()'s own arithmetic (y=bounds.y+2,
+    // height=MINIMAP_HEIGHT) rather than calling it directly: getMinimapRect()
+    // needs this method's inspectorRect.x for its own width, and depending on
+    // it here would make the two call each other.
+    const auto bounds = getBounds();
+    const float stripY = bounds.y + 2.0f + MINIMAP_HEIGHT + MINIMAP_GAP;
+    const float stripHeight = std::max(MIXER_MIN_CHANNEL_HEIGHT, bounds.bottom() - stripY - PADDING);
+
+    // Master flush against the trailing edge (edgeMargin 0); inspector one
+    // spacing gap further in. Nearest-to-edge first, matching
+    // arrangeTrailingRow's own convention.
+    const Layout::NUILocalRect container(bounds.x, stripY, bounds.width, stripHeight);
+    const std::vector<float> widths{MASTER_STRIP_WIDTH, inspectorWidth()};
+    if (recorder) {
+        recorder->scope("trailing");
+    }
+    const auto rects = Layout::arrangeTrailingRow(container, widths, stripHeight, STRIP_SPACING, 0.0f, recorder);
+
+    // The row is already computed in this panel's own coordinate space
+    // (bounds.x/bounds.y are folded into `container` above), so there is no
+    // second space to re-enter here — unlike WindowPanel, whose children sit
+    // in a nested content band with its own local origin.
+    TrailingLayout layout;
+    layout.masterRect = rects[0].raw();
+    layout.inspectorRect = rects[1].raw();
+    return layout;
+}
+
 void UIMixerPanel::layoutMeters()
 {
     // Derived state first: the rest of the layout reads inspectorWidth().
     updateInspectorWidthConstraint();
 
     auto bounds = getBounds();
-    const NUIRect minimapRect = getMinimapRect();
-    const float stripY = minimapRect.bottom() + MINIMAP_GAP;
-    const float stripHeight = std::max(MIXER_MIN_CHANNEL_HEIGHT, bounds.bottom() - stripY - PADDING);
+    // AESTRA_LAYOUT_TRACE=mixer (V8-X2b criterion 4). This panel lays out in
+    // window-absolute coordinates already, so its Local origin is the window's.
+    auto* trace = Layout::layoutRecorderFor("mixer");
+    if (trace) {
+        trace->beginPass(Layout::NUIWindowPoint(0.0f, 0.0f));
+    }
+    const TrailingLayout trailing = trailingLayout(trace);
+    const float stripY = trailing.masterRect.y;
+    const float stripHeight = trailing.masterRect.height;
 
     // Layout master strip on the right.
-    const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH; // No padding
     if (m_masterStrip) {
-        m_masterStrip->setBounds(masterX, stripY, MASTER_STRIP_WIDTH, stripHeight);
+        m_masterStrip->setBounds(trailing.masterRect);
         m_masterStrip->setVisible(true);
     }
 
     // Layout inspector just to the left of master.
-    const float inspectorX = masterX - STRIP_SPACING - inspectorWidth();
     if (m_inspector) {
         // Collapsed, the inspector yields its width to the channel strips and
-        // leaves only the re-open rail drawn by the panel.
-        m_inspector->setBounds(inspectorX, stripY, INSPECTOR_WIDTH, stripHeight);
+        // leaves only the re-open rail drawn by the panel. Its rect always
+        // uses inspectorWidth() (the collapsed rail's own width when
+        // collapsed) — INSPECTOR_WIDTH here is deliberately the *expanded*
+        // width passed to onResize, matching what the original always did:
+        // the widget's internal layout is sized for its full expanded
+        // content regardless of the rail's current width, since it becomes
+        // invisible rather than reflowing.
+        m_inspector->setBounds(trailing.inspectorRect.x, stripY, INSPECTOR_WIDTH, stripHeight);
         m_inspector->setVisible(!isInspectorCollapsed());
         if (!isInspectorCollapsed()) {
             m_inspector->onResize(static_cast<int>(INSPECTOR_WIDTH), static_cast<int>(stripHeight));
@@ -277,37 +325,32 @@ void UIMixerPanel::layoutMeters()
 
     // Layout channel strips to the left, keeping them out of the inspector/master area.
     const float left = bounds.x; // Start at 0, no padding
-    const float right = inspectorX - STRIP_SPACING;
-    const float visibleW = getChannelViewportWidth();
-    const float contentW = getChannelContentWidth();
+    const float right = trailing.inspectorRect.x - STRIP_SPACING;
     const float maxScroll = getChannelMaxScroll();
-    (void)visibleW;
-    (void)contentW;
     m_scrollX = safeClampMixerScroll(m_scrollX, maxScroll);
     m_targetScrollX = safeClampMixerScroll(m_targetScrollX, maxScroll);
 
-    float x = left - m_scrollX;
+    const Layout::NUILocalRect viewport(left, stripY, right - left, stripHeight);
+    if (trace) {
+        trace->scope("strips");
+    }
+    const auto items =
+        Layout::arrangeScrollingRow(viewport, STRIP_WIDTH, STRIP_SPACING, m_strips.size(), m_scrollX, trace);
+    Layout::finishLayoutPass(trace);
     for (size_t i = 0; i < m_strips.size(); ++i) {
-        float stripX = x + i * (STRIP_WIDTH + STRIP_SPACING);
-        const bool visible = (stripX + STRIP_WIDTH) >= left && stripX <= right;
-        m_strips[i]->setVisible(visible);
-        m_strips[i]->setBounds(stripX, stripY, STRIP_WIDTH, stripHeight);
+        m_strips[i]->setVisible(items[i].visible);
+        m_strips[i]->setBounds(items[i].rect.raw());
     }
 }
 
 NUIRect UIMixerPanel::getInspectorToggleRect() const
 {
-    const auto bounds = getBounds();
-    const NUIRect minimapRect = getMinimapRect();
-    const float stripY = minimapRect.bottom() + MINIMAP_GAP;
-    const float stripHeight = std::max(MIXER_MIN_CHANNEL_HEIGHT, bounds.bottom() - stripY - PADDING);
-    const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH;
-    const float inspectorX = masterX - STRIP_SPACING - inspectorWidth();
+    const TrailingLayout trailing = trailingLayout();
 
     // Collapsed: the whole thin rail is the target. Expanded: a grip strip down
     // the inspector's leading edge.
     const float railW = isInspectorCollapsed() ? INSPECTOR_COLLAPSED_WIDTH : 10.0f;
-    return NUIRect{inspectorX, stripY, railW, stripHeight};
+    return NUIRect{trailing.inspectorRect.x, trailing.inspectorRect.y, railW, trailing.inspectorRect.height};
 }
 
 void UIMixerPanel::updateInspectorWidthConstraint()
@@ -442,8 +485,8 @@ void UIMixerPanel::renderSeparators(NUIRenderer& renderer)
     float y1 = minimapRect.bottom() + MINIMAP_GAP;
     float y2 = bounds.y + bounds.height;
 
-    const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH;
-    const float inspectorX = masterX - STRIP_SPACING - inspectorWidth();
+    const TrailingLayout trailing = trailingLayout();
+    const float inspectorX = trailing.inspectorRect.x;
     const NUIColor boundaryColor = m_separatorColor.withAlpha(0.62f);
 
     // Draw separator before inspector
@@ -453,6 +496,7 @@ void UIMixerPanel::renderSeparators(NUIRenderer& renderer)
 
     // Draw separator before master strip
     if (m_masterStrip && m_masterStrip->isVisible()) {
+        const float masterX = trailing.masterRect.x;
         renderer.drawLine({masterX - STRIP_SPACING, y1}, {masterX - STRIP_SPACING, y2}, 1.0f, boundaryColor);
     }
 }
@@ -536,9 +580,8 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
     renderSeparators(renderer);
 
     // Render channel strips with a clip so they never draw into the inspector/master area.
-    const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH;
-    const float inspectorX = masterX - STRIP_SPACING - inspectorWidth();
-    const float channelW = std::max(0.0f, (inspectorX - STRIP_SPACING) - bounds.x);
+    const TrailingLayout trailing = trailingLayout();
+    const float channelW = std::max(0.0f, (trailing.inspectorRect.x - STRIP_SPACING) - bounds.x);
     const float channelY = minimapRect.bottom() + MINIMAP_GAP;
     const NUIRect channelClip(bounds.x, channelY, channelW, std::max(0.0f, bounds.bottom() - channelY));
 
@@ -694,11 +737,11 @@ bool UIMixerPanel::onMouseEvent(const NUIMouseEvent& event)
 
     if (event.wheelDelta != 0.0f) {
         auto bounds = getBounds();
-        const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH;
-        const float inspectorX = masterX - STRIP_SPACING - inspectorWidth();
-        const float visibleW = std::max(0.0f, (inspectorX - STRIP_SPACING) - bounds.x);
-        const float contentW = m_strips.empty() ? 0.0f : (m_strips.size() * (STRIP_WIDTH + STRIP_SPACING) - STRIP_SPACING);
-        const float maxScroll = std::max(0.0f, contentW - visibleW);
+        // These three already matched getChannelViewportWidth()/
+        // getChannelContentWidth()/getChannelMaxScroll() exactly — calling
+        // them directly instead of re-deriving the same values by hand.
+        const float visibleW = getChannelViewportWidth();
+        const float maxScroll = getChannelMaxScroll();
         const float channelY = minimapRect.bottom() + MINIMAP_GAP;
 
         const NUIRect channelClip(bounds.x, channelY, visibleW, std::max(0.0f, bounds.bottom() - channelY));
@@ -714,19 +757,17 @@ bool UIMixerPanel::onMouseEvent(const NUIMouseEvent& event)
 
 NUIRect UIMixerPanel::getMinimapRect() const
 {
-    auto bounds = getBounds();
-    const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH;
-    const float inspectorX = masterX - STRIP_SPACING - inspectorWidth();
-    const float width = std::max(0.0f, (inspectorX - STRIP_SPACING) - bounds.x);
+    const auto bounds = getBounds();
+    const TrailingLayout trailing = trailingLayout();
+    const float width = std::max(0.0f, (trailing.inspectorRect.x - STRIP_SPACING) - bounds.x);
     return NUIRect(bounds.x, bounds.y + 2.0f, width, MINIMAP_HEIGHT);
 }
 
 float UIMixerPanel::getChannelViewportWidth() const
 {
-    auto bounds = getBounds();
-    const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH;
-    const float inspectorX = masterX - STRIP_SPACING - inspectorWidth();
-    return std::max(0.0f, (inspectorX - STRIP_SPACING) - bounds.x);
+    const auto bounds = getBounds();
+    const TrailingLayout trailing = trailingLayout();
+    return std::max(0.0f, (trailing.inspectorRect.x - STRIP_SPACING) - bounds.x);
 }
 
 float UIMixerPanel::getChannelContentWidth() const
@@ -784,9 +825,8 @@ void UIMixerPanel::showPluginDropdown(uint32_t channelId)
     auto fxBounds     = triggerStrip->getFXSummaryBounds();
 
     auto panelBounds = getBounds();
-    const float masterX  = panelBounds.x + panelBounds.width - MASTER_STRIP_WIDTH;
-    const float inspectorLeft = masterX - STRIP_SPACING - inspectorWidth();
-    const float viewportRight = inspectorLeft - STRIP_SPACING;
+    const TrailingLayout trailing = trailingLayout();
+    const float viewportRight = trailing.inspectorRect.x - STRIP_SPACING;
 
     constexpr float DROP_W = 240.0f;
     float dropX = triggerBounds.x; // left edge of strip, per design spec
@@ -835,7 +875,7 @@ bool UIMixerPanel::loadPluginToChannel(Aestra::ChannelViewModel* vmChannel, cons
 
     auto& chain = vmChannel->channel->getEffectChain();
     size_t slot = chain.getFirstEmptySlot();
-    if (slot < Aestra::Audio::EffectChain::MAX_SLOTS) {
+    if (slot < Aestra::Audio::EffectChain::kMaxSlots) { // kNoSlot (chain full) is not < kMaxSlots
         m_trackManager->getCommandHistory().pushAndExecute(
             std::make_shared<Aestra::Audio::AddPluginCommand>(*vmChannel->channel, slot, std::move(instance)));
         // The playback graph only picks up chain changes on rebuild (which also
@@ -869,9 +909,8 @@ UIMixerStrip* UIMixerPanel::stripAt(const NUIPoint& position) const {
     }
 
     // Channel strips are clipped to the viewport left of the inspector.
-    auto panelBounds = getBounds();
-    const float masterX = panelBounds.x + panelBounds.width - MASTER_STRIP_WIDTH;
-    const float viewportRight = masterX - STRIP_SPACING - inspectorWidth() - STRIP_SPACING;
+    const TrailingLayout trailing = trailingLayout();
+    const float viewportRight = trailing.inspectorRect.x - STRIP_SPACING;
     if (position.x > viewportRight) {
         return nullptr;
     }

@@ -15,6 +15,8 @@ set(Aestra_SOURCES
     App/MuseHostVerbs.cpp
     App/MuseProjectLoadReport.h
     App/MuseProjectLoadReport.cpp
+    App/ProjectLifecycle.h
+    App/ProjectLifecycle.cpp
 	
 	# Core
 	Core/AestraAudioController.h
@@ -25,6 +27,9 @@ set(Aestra_SOURCES
 	Core/AestraRootComponent.cpp
 	Core/AestraContent.h
 	Core/AestraContent.cpp
+	Core/AestraContentBounce.cpp
+	Core/AestraContentImport.cpp
+	Core/AestraContentPanelMode.cpp
 	Core/WorkspaceFocus.h
 	Core/MusicalTypingController.h
 	Core/MusicalTypingController.cpp
@@ -37,7 +42,10 @@ set(Aestra_SOURCES
 	Core/Preferences.cpp
 	Core/UIState.h
 	Core/UIState.cpp
-	
+	Core/UISurfaceStore.h
+	Core/UISurfaceStore.cpp
+	Core/LegacyMixerSettingsImport.h
+
 	# Panels
 	Panels/TransportBar.h
 	Panels/TransportBar.cpp
@@ -87,14 +95,24 @@ set(Aestra_SOURCES
 	# Components
 	Components/TransportInfoContainer.h
 	Components/TransportInfoContainer.cpp
+	Components/BrowserLibrary.h
+	Components/BrowserLibrary.cpp
+	Components/BrowserLibraryIndex.h
+	Components/BrowserLibraryIndex.cpp
 	Components/FileBrowser.h
 	Components/FileBrowser.cpp
+	Components/FileBrowserNavigation.cpp
+	Components/FileBrowserLibrary.cpp
+	Components/FileBrowserScan.cpp
+	Components/FileBrowserInternal.h
 	Components/FilePreviewPanel.h
 	Components/FilePreviewPanel.cpp
 	Components/AudioVisualizer.h
 	Components/AudioVisualizer.cpp
 	Components/TrackUIComponent.h
 	Components/TrackUIComponent.cpp
+	Components/TrackUIComponentAutomationClips.cpp
+	Components/AutomationClipLayer.cpp
 	Components/TrackManagerUI.h
 	Components/TrackManagerUI.cpp
 	Components/TrackManagerUIInternal.h
@@ -120,6 +138,8 @@ set(Aestra_SOURCES
 	# HUD
 	HUD/PerformanceHUD.h
 	HUD/PerformanceHUD.cpp
+	HUD/TextDiagnosticOverlay.h
+	HUD/TextDiagnosticOverlay.cpp
 	HUD/UnifiedHUD.h
 	HUD/UnifiedHUD.cpp
 	
@@ -295,10 +315,13 @@ set_target_properties(Aestra PROPERTIES
 
 # Deploy the tracked desktop font bundle beside the executable. Main.cpp
 # resolves AestraAssets/fonts relative to the executable, so this keeps the
-# intended Geist/Manrope rendering independent of the process working directory
+# intended Archivo rendering (Geist/Manrope as fallbacks) independent of the process working directory
 # and works for external build trees as well as packaged desktop layouts.
 set(AESTRA_DESKTOP_FONT_SOURCE_DIR "${CMAKE_SOURCE_DIR}/AestraAssets/fonts")
 set(AESTRA_DESKTOP_FONT_FILES
+	Archivo/Archivo-Bold.ttf
+	Archivo/Archivo-Medium.ttf
+	Archivo/Archivo-Regular.ttf
 	Geist/Geist-Bold.ttf
 	Geist/Geist-Medium.ttf
 	Geist/Geist-Regular.ttf

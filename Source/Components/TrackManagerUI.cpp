@@ -31,6 +31,12 @@
 namespace Aestra {
 namespace Audio {
 
+// The timeline reserves its scrollbar gutter through a dependency-free constant;
+// this is where that constant meets the shared one it must match.
+static_assert(kTimelineScrollbarWidth == AestraUI::kOverlayScrollbarThickness,
+              "Timeline scrollbar gutter drifted from the DAW-wide overlay scrollbar width");
+
+
 // =============================================================================
 // SECTION: Construction & Destruction
 // =============================================================================
@@ -68,17 +74,9 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
 
     // Create scrollbar
     m_scrollbar = std::make_shared<AestraUI::NUIScrollbar>(AestraUI::NUIScrollbar::Orientation::Vertical);
-    {
-        auto& theme = AestraUI::NUIThemeManager::getInstance();
-        m_scrollbar->setArrowSize(0.0f);
-        m_scrollbar->setBorderWidth(0.0f);
-        m_scrollbar->setBorderRadius(8.0f);
-        m_scrollbar->setTrackColor(theme.getColor("surfaceRaised").withAlpha(0.55f));
-        m_scrollbar->setThumbColor(theme.getColor("textPrimary").withAlpha(0.30f));
-        m_scrollbar->setThumbHoverColor(theme.getColor("textPrimary").withAlpha(0.48f));
-        m_scrollbar->setThumbPressedColor(theme.getColor("accentPrimary").withAlpha(0.68f));
-        m_scrollbar->setMinimumThumbSize(0.06);
-    }
+    // No styling here: drawOverlayScrollbar() owns how every scrollbar looks
+    // (spec 2 §2), and the pixel thumb floor is enforced by the component.
+    m_scrollbar->setMinimumThumbSize(0.06);
     m_scrollbar->setOnScroll([this](double position) { onScroll(position); });
     addChild(m_scrollbar);
 
@@ -171,7 +169,13 @@ void TrackManagerUI::refreshTracks() {
     // Stable lane IDs own selection. Raw pointers only describe the current
     // widget generation, so discard that view before destroying any rows.
     m_selectedTracks.clear();
+    // V8-A3: a chosen automation target belongs to the lane, not to this row
+    // generation, so it survives the rebuild.
+    std::vector<std::pair<PlaylistLaneID, AutomationTarget>> chosenTargets;
     for (auto& trackUI : m_trackUIComponents) {
+        if (trackUI && trackUI->hasChosenAutomationTarget()) {
+            chosenTargets.emplace_back(trackUI->getLaneId(), trackUI->getEditedAutomationTarget());
+        }
         removeChild(trackUI);
     }
     m_trackUIComponents.clear();
@@ -277,12 +281,6 @@ void TrackManagerUI::refreshTracks() {
                 m_onOpenAudioClipEditor(clipId);
             }
         });
-        trackUI->setOnPatternClipDragStarted([this](PatternID patternId) {
-            if (m_onPreviewPatternClip && patternId.isValid()) {
-                m_onPreviewPatternClip(patternId);
-                m_dragPatternPreviewActive = true;
-            }
-        });
 
         trackUI->setOnTrackSelected([this](TrackUIComponent* trackComp, TrackSelectionIntent intent) {
             this->selectTrack(trackComp, intent);
@@ -304,6 +302,9 @@ void TrackManagerUI::refreshTracks() {
         trackUI->setTimelineScrollOffset(m_timelineScrollOffset);
         trackUI->setSnapSetting(m_snapSetting); // Sync snap setting for resize
         trackUI->setSnapEnabled(m_snapEnabled); // Sync master snap toggle for resize
+        for (const auto& [chosenLane, target] : chosenTargets) {
+            if (chosenLane == trackUI->getLaneId()) trackUI->setEditedAutomationTarget(target);
+        }
 
         // Pass platform bridge for cursor capture (volume knob)
         trackUI->setPlatformBridge(m_window);
@@ -497,58 +498,62 @@ void TrackManagerUI::onAddTrackClicked() {
     addTrack(); // Add track with auto-generated name
 }
 
+TimelineLayout TrackManagerUI::currentTimelineLayout() const {
+    const AestraUI::NUIRect bounds = getBounds();
+    const auto& dims = AestraUI::NUIThemeManager::getInstance().getLayoutDimensions();
+    return resolveTimelineLayout(bounds.width, bounds.height, dims.trackControlsWidth);
+}
+
 void TrackManagerUI::layoutTracks() {
     AestraUI::NUIRect bounds = getBounds();
 
-    // Get layout dimensions from theme
-    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    const auto& layout = themeManager.getLayoutDimensions();
-
-    float scrollbarWidth = kTimelineScrollbarWidth;
-
-    float viewportHeight = std::max(0.0f, bounds.height - kTimelineTimeBandHeight);
+    // V8-X2b: every region and row is resolved in this component's Local space
+    // (TrackManagerUILayout.h). Our bounds are window-absolute, so the single
+    // conversion is localToWindow() against our own origin, here.
+    const AestraUI::Layout::NUIWindowPoint origin(bounds.x, bounds.y);
+    const auto toWindow = [&](const AestraUI::Layout::NUILocalRect& local) {
+        return AestraUI::Layout::localToWindow(local, origin).raw();
+    };
+    // AESTRA_LAYOUT_TRACE=timeline records why each region and row lands where it
+    // does (V8-X2b criterion 4); nullptr, and free, otherwise.
+    auto* trace = AestraUI::Layout::layoutRecorderFor("timeline");
+    if (trace) {
+        trace->beginPass(origin);
+    }
+    const auto& layoutDims = AestraUI::NUIThemeManager::getInstance().getLayoutDimensions();
+    const TimelineLayout layout =
+        resolveTimelineLayout(bounds.width, bounds.height, layoutDims.trackControlsWidth, trace);
 
     // In v3.1, panels are floating overlays and do not affect workspace viewport directly.
     // If we wanted docking, we'd subtract their space here based on external state pointers.
 
-    // Layout timeline minimap (top of the time band, above the ruler).
-    // Cropped to the plane column: starts where the track-controls boundary
-    // ends so the surface never spans the toolbar corner.
+    // Timeline minimap: top of the time band, above the ruler, cropped to the
+    // plane column so the surface never spans the toolbar corner.
     if (m_timelineMinimap) {
-        const float minimapX = layout.trackControlsWidth;
-        float minimapWidth = std::max(0.0f, bounds.width - scrollbarWidth - minimapX);
-        m_timelineMinimap->setBounds(
-            AestraUI::NUIAbsolute(bounds, minimapX, 0.0f, minimapWidth, kTimelineMinimapHeight));
+        m_timelineMinimap->setBounds(toWindow(layout.minimap));
         updateTimelineMinimap(0.0);
     }
 
-    // Layout vertical scrollbar (right side, below the time band)
+    // Vertical scrollbar: right-hand gutter, below the time band.
     if (m_scrollbar) {
-        float scrollbarY = kTimelineTimeBandHeight;
-        float scrollbarX = std::max(0.0f, bounds.width - scrollbarWidth);
-        m_scrollbar->setBounds(AestraUI::NUIAbsolute(bounds, scrollbarX, scrollbarY, scrollbarWidth, viewportHeight));
+        m_scrollbar->setBounds(toWindow(layout.scrollbar));
         updateScrollbar();
     }
 
-    float controlAreaWidth = layout.trackControlsWidth;
-    float gridStartX = bounds.x + std::max(0.0f, controlAreaWidth + kTimelineGridInsetX);
-    float trackAreaTop = bounds.y + std::max(0.0f, kTimelineTimeBandHeight);
-
     // === V3.0 LANE LAYOUT (Two-Rect Model) ===
+    // FD-14 §10: nested rows keep FULL-WIDTH bounds — the timeline grid must
+    // stay globally aligned across lanes (a row-x indent would shift clip
+    // snapping); nesting is expressed in the chrome instead.
+    const auto rows = arrangeTimelineRows(layout, static_cast<float>(m_trackHeight),
+                                          static_cast<float>(m_trackSpacing), m_trackUIComponents.size(),
+                                          m_scrollOffset, trace);
+    AestraUI::Layout::finishLayoutPass(trace);
     for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
         auto trackUI = m_trackUIComponents[i];
         if (!trackUI)
             continue;
 
-        float yPos = trackAreaTop + (i * (m_trackHeight + m_trackSpacing)) - m_scrollOffset;
-
-        // Fix: Use absolute coordinates (bounds.x, yPos).
-        // AestraUI components use absolute screen coordinates.
-        // FD-14 §10: nested rows keep FULL-WIDTH bounds — the timeline grid
-        // must stay globally aligned across lanes (a row-x indent would shift
-        // clip snapping); nesting is expressed in the chrome instead.
-        float trackWidth = std::max(0.0f, bounds.width - scrollbarWidth - 5.0f);
-        trackUI->setBounds(bounds.x, yPos, trackWidth, m_trackHeight);
+        trackUI->setBounds(toWindow(rows[i].rect));
         trackUI->setVisible(m_playlistVisible);
 
         // Zebra Striping: Ensure index is set during layout (critical for refresh persistence)
@@ -732,12 +737,9 @@ void TrackManagerUI::selectAllClips() {
     }
     m_selectedClipId = m_clipSelection.anchor();
 
-    // Owning lanes highlight with their clips (#848 cohesion).
-    m_trackSelection.clear();
-    for (const auto& laneId : ownerLanes) {
-        m_trackSelection.apply(laneId, TrackSelectionIntent::Add);
-    }
-    syncTrackSelectionView();
+    // Owner direction 2026-09-19: clip selection no longer drags lane selection
+    // along with it (reverses #848 cohesion). Selecting every clip says nothing
+    // about which lanes are selected; the lane headers stay as the user left them.
     invalidateCache();
 }
 
@@ -753,14 +755,8 @@ void TrackManagerUI::addToClipSelection(ClipInstanceID clipId) {
             trackUI->setSelectedClips(&m_clipSelection);
         }
     }
-    // Owning lane highlights with the added clip (#848 cohesion).
-    if (m_trackManager) {
-        const PlaylistLaneID laneId = m_trackManager->getPlaylistModel().findClipLane(clipId);
-        if (laneId.isValid() && !m_trackSelection.contains(laneId)) {
-            m_trackSelection.apply(laneId, TrackSelectionIntent::Add);
-            syncTrackSelectionView();
-        }
-    }
+    // No lane propagation: adding a clip to the selection selects that clip, not
+    // the lane under it (owner direction 2026-09-19, reverses #848 cohesion).
     invalidateCache();
 }
 
@@ -797,7 +793,8 @@ std::pair<double, double> TrackManagerUI::getSelectionBeatRange() const {
 }
 
 void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
-                                          std::function<void()> onSendToAudition) {
+                                          std::function<void()> onSendToAudition,
+                                          TrackUIComponent* target) {
     if (m_activeContextMenu) {
         detachContextMenu(m_activeContextMenu);
     }
@@ -805,7 +802,7 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
     m_activeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
     auto menu = m_activeContextMenu;
 
-    TrackUIComponent* selectedTrack = getSelectedTrackUI();
+    TrackUIComponent* selectedTrack = target ? target : getSelectedTrackUI();
     auto* lane = selectedTrack && m_trackManager
                      ? m_trackManager->getPlaylistModel().getLane(selectedTrack->getLaneId())
                      : nullptr;
@@ -835,6 +832,22 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
                 }
             }
         });
+        menu->addSeparator();
+
+        // V8-A3: choose what this lane's automation edits. Choosing shows the
+        // automation view; the curve itself is created by its first point.
+        for (const auto& [label, target] : {std::pair{"Automate Volume", AutomationTarget::Volume},
+                                            std::pair{"Automate Pan", AutomationTarget::Pan}}) {
+            const bool current =
+                m_playlistMode == PlaylistMode::Automation && selectedTrack->getEditedAutomationTarget() == target;
+            menu->addRadioItem(label, "automationTarget", current, [this, laneId, target = target]() {
+                for (const auto& trackUI : m_trackUIComponents) {
+                    if (trackUI && trackUI->getLaneId() == laneId) trackUI->setEditedAutomationTarget(target);
+                }
+                setPlaylistMode(PlaylistMode::Automation);
+                invalidateCache();
+            });
+        }
         menu->addSeparator();
 
         // FD-14 phase-5: take lanes accumulate with no escape hatch. Only the

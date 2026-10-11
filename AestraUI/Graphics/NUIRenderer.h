@@ -7,7 +7,6 @@
 
 // Forward declarations for optimization systems
 namespace AestraUI {
-    class NUIDirtyRegionManager;
     class NUIRenderCache;
 }
 
@@ -17,7 +16,7 @@ namespace AestraUI {
  * Abstract renderer interface for the Aestra UI framework.
  * 
  * This provides a platform-agnostic API for rendering UI elements.
- * Implementations exist for OpenGL and Vulkan.
+ * The only implementation is NUIRendererGL (OpenGL).
  */
 class NUIRenderer {
 public:
@@ -25,6 +24,8 @@ public:
         float ascent = 0.0f;
         float descent = 0.0f;
         float lineHeight = 0.0f;
+        /// Height of a capital above the baseline: what the eye centres caps and digits on.
+        float capHeight = 0.0f;
     };
 
     virtual ~NUIRenderer() = default;
@@ -72,9 +73,19 @@ public:
     // ========================================================================
     
     /**
-     * Push a transform matrix onto the stack.
+     * Push a transform level onto the stack.
+     *
+     * Maps the pushed level's children into the current space as
+     * `p_current = scale * p_child + (tx, ty)`, so a translation pushed inside a
+     * scaled level is scaled by it.
+     *
+     * There is no rotation parameter. One was accepted and stored here for years
+     * and never applied by any backend — the composition ended with a bare
+     * `// Apply rotation` comment. It is removed rather than implemented because
+     * no caller ever passed a non-zero value, and an ignored parameter reads as
+     * a supported feature.
      */
-    virtual void pushTransform(float tx, float ty, float rotation = 0.0f, float scale = 1.0f) = 0;
+    virtual void pushTransform(float tx, float ty, float scale = 1.0f) = 0;
     
     /**
      * Pop the transform matrix from the stack.
@@ -91,6 +102,51 @@ public:
      * below 1.0 thicken strokes (light themes want ~0.86-0.92).
      */
     virtual void setTextContrast(float contrast) { (void)contrast; }
+
+    /**
+     * Read-only introspection of the text pipeline, for diagnostics (V8-C9).
+     *
+     * This exists because the text path's behaviour is decided by values a
+     * caller cannot see: one float set from background luminance resolves into
+     * two shader uniforms, and which atlas serves a given font size is a
+     * threshold table inside the backend. A diagnostic that can only show the
+     * rendered result can say "this looks wrong" but never "this is the
+     * variable that made it wrong" — so the variables themselves are exported.
+     *
+     * Reporting only. Nothing here changes rendering, and a backend that has no
+     * text pipeline to describe returns false rather than inventing values.
+     *
+     * NOT A STABLE SURFACE. These headers are installed, but this struct
+     * describes the internals of whatever the text pipeline happens to be, so
+     * its fields change whenever those internals do — alphaLift became
+     * alphaPreserved the moment the lift was removed, and that is the intended
+     * behaviour rather than a break to be versioned around. Anything consuming
+     * it recompiles against the current header. The libraries are static, so
+     * there is no runtime ABI boundary to cross.
+     */
+    struct TextDiagnostics {
+        struct Tier {
+            const char* name = "";
+            int atlasSize = 0;        //!< Baked atlas pixel size.
+            float maxFontSize = 0.0f; //!< Upper bound this tier serves; <=0 means "everything above".
+            float gamma = 1.0f;       //!< Resolved uTextGamma for this tier.
+            float sharpen = 0.0f;     //!< Resolved uTextSharpen for this tier.
+        };
+
+        bool lcdSubpixel = false;      //!< FreeType rasterised through the LCD filter.
+        bool framebufferSRGB = false;  //!< GL_FRAMEBUFFER_SRGB enabled. Expected false: compositing is gamma-space.
+        float textContrast = 1.0f;     //!< The single input both uniforms below derive from.
+        //!< The renderer multiplies caller alpha and never reshapes it. A backend
+        //!< that reintroduces a lift, curve or floor on text alpha MUST report false
+        //!< here — the diagnostic asserts this, and F7 was exactly this contract
+        //!< being broken silently.
+        bool alphaPreserved = true;
+        Tier tiers[4]{};
+        int tierCount = 0;
+        const char* fontPath = "";
+    };
+
+    virtual bool getTextDiagnostics(TextDiagnostics& out) const { (void)out; return false; }
 
     virtual void setClipRect(const NUIRect& rect) = 0;
     
@@ -199,6 +255,11 @@ public:
     
     /**
      * Draw text at the given position.
+     *
+     * @p position is the TOP-LEFT of the text's line box, not its baseline: the renderer
+     * adds the font's ascent itself. To centre a label in a rect, pass calculateTextY() (the
+     * line box, for mixed-case prose) or calculateOpticalTextY() (the cap height, for labels,
+     * caps and numbers). Hand-rolled `rect.y + N` offsets are how labels drift off-centre.
      */
     virtual void drawText(const std::string& text, const NUIPoint& position, float fontSize, const NUIColor& color) = 0;
     
@@ -223,12 +284,15 @@ public:
         metrics.ascent = fontSize * 0.8f;
         metrics.descent = fontSize * 0.2f;
         metrics.lineHeight = metrics.ascent + metrics.descent;
+        metrics.capHeight = fontSize * 0.7f;
         return metrics;
     }
     
     /**
-     * Calculate baseline-aligned Y position for vertically centered text.
-     * This accounts for the MSDF renderer's baseline coordinate system.
+     * Calculate the BASELINE Y of text vertically centred in @p rect by its line box.
+     *
+     * This is a baseline, not a drawText() position: drawText() takes the top of the line
+     * box and adds the ascent itself, so passing this to it draws the text a full ascent low.
      * 
      * @param rect The rectangle to center text within
      * @param fontSize The font size
@@ -244,7 +308,8 @@ public:
     
     /**
      * Calculate baseline-aligned Y position for vertically centered text using measured size.
-     * This accounts for the MSDF renderer's top-left coordinate system.
+     * Returns a top-left Y rather than a baseline, for the call sites that measure
+     * first and position from the top edge.
      * 
      * @param rect The rectangle to center text within
      * @param fontSize The font size being used
@@ -254,6 +319,28 @@ public:
         const FontMetrics metrics = getFontMetrics(fontSize);
         const float lineHeight = (metrics.lineHeight > 0.0f) ? metrics.lineHeight : fontSize;
         return rect.y + (rect.height - lineHeight) * 0.5f;
+    }
+
+    /**
+     * drawText() Y that centres the CAP HEIGHT on @p centreY (SPEC 3 §3.2).
+     *
+     * calculateTextY() centres the whole line box, which reserves room above the caps for
+     * ascenders and below the baseline for descenders. That is right for mixed-case prose,
+     * but caps and digits have neither, so line-box centring left labels such as
+     * "COUNT IN" and track numbers 1-1.5 px low next to their icons. This puts the band
+     * between the baseline and the cap line on the centre, which is what the eye reads.
+     *
+     * @return The top-left Y to pass to drawText().
+     */
+    float calculateOpticalTextY(float centreY, float fontSize) const {
+        const FontMetrics metrics = getFontMetrics(fontSize);
+        const float ascent = (metrics.ascent > 0.0f) ? metrics.ascent : (fontSize * 0.8f);
+        const float capHeight = (metrics.capHeight > 0.0f) ? metrics.capHeight : (fontSize * 0.7f);
+        return centreY + capHeight * 0.5f - ascent;
+    }
+    /** calculateOpticalTextY() on @p rect's vertical centre. */
+    float calculateOpticalTextY(const NUIRect& rect, float fontSize) const {
+        return calculateOpticalTextY(rect.y + rect.height * 0.5f, fontSize);
     }
     
     // ========================================================================
@@ -342,25 +429,9 @@ public:
     // ========================================================================
     
     /**
-     * Enable/disable dirty region tracking.
-     */
-    virtual void setDirtyRegionTrackingEnabled(bool enabled) = 0;
-    
-    /**
      * Enable/disable render caching.
      */
     virtual void setCachingEnabled(bool enabled) = 0;
-    
-    /**
-     * Get optimization stats.
-     */
-    virtual void getOptimizationStats(size_t& batchedQuads, size_t& dirtyRegions, 
-                                     size_t& cachedWidgets, size_t& cacheMemoryBytes) = 0;
-    
-    /**
-     * Access to dirty region manager.
-     */
-    virtual NUIDirtyRegionManager* getDirtyRegionManager() = 0;
     
     /**
      * Access to render cache.

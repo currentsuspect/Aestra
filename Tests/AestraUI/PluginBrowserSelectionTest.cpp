@@ -4,6 +4,8 @@
 #include "PluginBrowserPanel.h"
 
 #include <iostream>
+#include <optional>
+#include <string>
 #include <vector>
 
 using namespace AestraUI;
@@ -55,11 +57,142 @@ void testSelectionFollowsPluginIdentityWhenIndexChanges() {
     check(selected && selected->id == "fx-c", "selection must follow plugin ID when its filtered index changes");
 }
 
+NUIKeyEvent keyDown(NUIKeyCode code) {
+    NUIKeyEvent e;
+    e.keyCode = code;
+    e.pressed = true;
+    return e;
+}
+
+std::vector<PluginListItem> threePlugins() {
+    return {plugin("fx-a", "Effect A", "Effect", "VST3"), plugin("inst-b", "Instrument B", "Instrument", "VST3"),
+            plugin("fx-c", "Effect C", "Effect", "VST3")};
+}
+
+void testKeyboardRequiresFocus() {
+    PluginBrowserPanel browser;
+    browser.setVisible(true);
+    browser.setPluginList(threePlugins());
+    // No focus: arrows must not move selection (and must not claim the event).
+    check(!browser.onKeyEvent(keyDown(NUIKeyCode::Down)), "unfocused arrows are not consumed");
+    check(browser.getSelectedPlugin() == nullptr, "unfocused arrows move nothing");
+}
+
+void testKeyboardMovesSelection() {
+    PluginBrowserPanel browser;
+    browser.setVisible(true);
+    browser.setBounds(NUIRect(0.0f, 0.0f, 300.0f, 400.0f));
+    browser.setPluginList(threePlugins());
+    browser.setFocused(true);
+    std::vector<std::string> selected;
+    std::vector<std::string> loaded;
+    browser.setOnPluginSelected([&selected](const PluginListItem& item) { selected.push_back(item.id); });
+    browser.setOnPluginLoadRequested([&loaded](const PluginListItem& item) { loaded.push_back(item.id); });
+
+    browser.onKeyEvent(keyDown(NUIKeyCode::Down));
+    check(browser.getSelectedPlugin() && browser.getSelectedPlugin()->id == "fx-a",
+          "Down from empty starts at the top");
+    browser.onKeyEvent(keyDown(NUIKeyCode::Down));
+    check(browser.getSelectedPlugin() && browser.getSelectedPlugin()->id == "inst-b",
+          "Down advances again");
+    browser.onKeyEvent(keyDown(NUIKeyCode::Up));
+    check(browser.getSelectedPlugin() && browser.getSelectedPlugin()->id == "fx-a", "Up retreats");
+    browser.onKeyEvent(keyDown(NUIKeyCode::Up));
+    check(browser.getSelectedPlugin() && browser.getSelectedPlugin()->id == "fx-a",
+          "Up clamps at the top without firing");
+    check(selected.size() == 3, "selection callback fires per move only");
+
+    browser.onKeyEvent(keyDown(NUIKeyCode::Enter));
+    check(loaded.size() == 1 && loaded.back() == "fx-a", "Enter loads the highlighted plugin");
+    check(browser.isFocused(), "Enter keeps focus for continued navigation");
+}
+
+void testKeyboardEnterWithoutSelectionLoadsNothing() {
+    PluginBrowserPanel browser;
+    browser.setVisible(true);
+    browser.setPluginList(threePlugins());
+    browser.setFocused(true);
+    bool loaded = false;
+    browser.setOnPluginLoadRequested([&loaded](const PluginListItem&) { loaded = true; });
+    browser.onKeyEvent(keyDown(NUIKeyCode::Enter));
+    check(!loaded, "Enter with no selection loads nothing");
+}
+
+void testKeyboardScrollsSelectionIntoView() {
+    PluginBrowserPanel browser;
+    browser.setVisible(true);
+    browser.setBounds(NUIRect(0.0f, 0.0f, 300.0f, 200.0f));
+    std::vector<PluginListItem> many;
+    for (int i = 0; i < 20; ++i) {
+        many.push_back(plugin(("fx-" + std::to_string(i)).c_str(), ("Effect " + std::to_string(i)).c_str(), "Effect",
+                              "VST3"));
+    }
+    browser.setPluginList(many);
+    browser.setFocused(true);
+    for (int i = 0; i < 19; ++i) {
+        browser.onKeyEvent(keyDown(NUIKeyCode::Down));
+    }
+    check(browser.getSelectedPlugin() && browser.getSelectedPlugin()->id == "fx-18",
+          "repeated Down reaches the last item");
+    for (int i = 0; i < 120; ++i) {
+        browser.onUpdate(1.0 / 60.0);
+    }
+    check(browser.getTargetScrollOffset() > 0.0f, "the list scrolls to follow keyboard selection");
+}
+
+
+// V8-S5: recents. A load request (Enter or double-click) moves the plugin to the front.
+void testRecentsFollowLoads() {
+    PluginBrowserPanel browser;
+    browser.setVisible(true);
+    browser.setBounds(NUIRect(0.0f, 0.0f, 300.0f, 400.0f));
+    browser.setPluginList(threePlugins());
+    browser.setFocused(true);
+    check(browser.getRecents().empty(), "nothing is recent before anything loads");
+
+    browser.selectPlugin("fx-c");
+    browser.onKeyEvent(keyDown(NUIKeyCode::Enter));
+    browser.selectPlugin("fx-a");
+    browser.onKeyEvent(keyDown(NUIKeyCode::Enter));
+    browser.selectPlugin("fx-c");
+    browser.onKeyEvent(keyDown(NUIKeyCode::Enter));
+    check(browser.getRecents().size() == 2, "a plugin loaded twice appears once");
+    check(browser.getRecents().size() == 2 && browser.getRecents()[0] == "fx-c" && browser.getRecents()[1] == "fx-a",
+          "newest first");
+
+    browser.setShowRecentOnly(true);
+    const auto& shown = browser.getPluginList();
+    check(shown.size() == 2 && shown[0].id == "fx-c" && shown[1].id == "fx-a",
+          "the Recent filter lists only recent plugins, newest first");
+    browser.setShowRecentOnly(false);
+    check(browser.getPluginList().size() == 3, "turning it off restores the full list");
+}
+
+void testRecentsAreCappedAndPersisted() {
+    std::vector<std::string> saved;
+    PluginBrowserPanel browser;
+    browser.setRecentsProvider([] { return std::optional<std::vector<std::string>>{{"stored-1", "stored-2"}}; },
+                               [&saved](const std::vector<std::string>& ids) { saved = ids; });
+    check(browser.getRecents().size() == 2 && browser.getRecents()[0] == "stored-1", "a stored list is restored");
+    for (int i = 0; i < 20; ++i) {
+        browser.recordRecent("p" + std::to_string(i));
+    }
+    check(browser.getRecents().size() == PluginBrowserPanel::kMaxRecents, "recents are capped");
+    check(browser.getRecents()[0] == "p19", "the newest is first");
+    check(saved == browser.getRecents(), "every change is handed to the saver");
+}
+
 } // namespace
 
 int main() {
     testSelectionClearsWhenPluginIsFilteredOut();
     testSelectionFollowsPluginIdentityWhenIndexChanges();
+    testKeyboardRequiresFocus();
+    testKeyboardMovesSelection();
+    testKeyboardEnterWithoutSelectionLoadsNothing();
+    testKeyboardScrollsSelectionIntoView();
+    testRecentsFollowLoads();
+    testRecentsAreCappedAndPersisted();
 
     if (failures != 0) {
         std::cout << failures << " plugin-browser selection check(s) failed\n";

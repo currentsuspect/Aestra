@@ -211,7 +211,9 @@ public:
 
     void execute() override {
         auto& chain = m_channel.getEffectChain();
-        if (m_fromSlot >= EffectChain::MAX_SLOTS || m_toSlot >= EffectChain::MAX_SLOTS) {
+        // The source must exist; the destination may be the next free index, which
+        // grows the chain (V8-S3), up to the ceiling.
+        if (m_fromSlot >= chain.slotCount() || m_toSlot >= EffectChain::kMaxSlots) {
             throw std::runtime_error("MovePlugin: slot out of range");
         }
         if (m_fromSlot == m_toSlot) {

@@ -10,14 +10,13 @@
  * with the rule that a width change must NEVER write to expandedPreference.
  * The transition orderings are the easy thing to get wrong and are invisible in
  * a screenshot, which is why they are asserted directly.
+ *
+ * Persistence of the preference moved to the shared UISurfaceStore in V8-C14
+ * step 3; it is tested there (UISurfaceStoreTest, LegacyMixerSettingsImportTest).
  */
 
 #include "Widgets/InspectorCollapseState.h"
-#include "MixerUIPreferences.h"
 
-#include <cstdio>
-#include <filesystem>
-#include <fstream>
 #include <iostream>
 #include <string>
 
@@ -176,154 +175,6 @@ static void test_reset_restores_default() {
     PASS("reset restores the first-run default");
 }
 
-
-// ---------------------------------------------------------------------------
-// Settings round trip
-//
-// The state machine above is only half the feature: the preference has to
-// survive a restart, and an absent or damaged settings file must leave the
-// default alone rather than collapsing the inspector. Driven through
-// MixerUIPreferences rather than MixerPanel so it needs no panel, TrackManager
-// or renderer.
-// ---------------------------------------------------------------------------
-
-namespace {
-
-// Both helpers report failure rather than swallowing it. The reason is
-// specific: three of the tests below write a settings file and then assert the
-// expanded default is *kept*. If the write silently failed, load() would find
-// no file, return the default, and those assertions would pass — for entirely
-// the wrong reason. A scratch-directory problem would read as a green suite.
-
-std::string scratchSettingsPath(const char* name) {
-    const std::filesystem::path dir =
-        std::filesystem::temp_directory_path() / "aestra-mixer-prefs-test";
-    std::error_code ec;
-    std::filesystem::create_directories(dir, ec);
-    if (ec && !std::filesystem::exists(dir)) {
-        std::cout << "  FAIL: cannot create scratch directory " << dir.string()
-                  << " (" << ec.message() << ")\n";
-        ++testsFailed;
-        return {};
-    }
-    return (dir / name).string();
-}
-
-bool writeFile(const std::string& path, const std::string& contents) {
-    if (path.empty()) {
-        return false;
-    }
-    std::ofstream out(path, std::ios::trunc);
-    if (!out) {
-        return false;
-    }
-    out << contents;
-    out.close();
-    if (!out.good()) {
-        return false;
-    }
-    // Prove the bytes actually landed: an assertion about "the default is kept"
-    // is only meaningful if the file it is reacting to really exists.
-    std::error_code ec;
-    return std::filesystem::exists(path, ec) &&
-           std::filesystem::file_size(path, ec) == contents.size();
-}
-
-} // namespace
-
-static void test_settings_round_trip_both_values() {
-    std::cout << "\n[settings round trip]\n";
-
-    for (bool expanded : {true, false}) {
-        const std::string path = scratchSettingsPath("roundtrip.json");
-        ASSERT(!path.empty(), "scratch path available");
-        std::filesystem::remove(path);
-
-        Aestra::MixerUIPreferences saved;
-        saved.inspectorExpanded = expanded;
-        ASSERT(saved.save(path), "save reports success");
-
-        const Aestra::MixerUIPreferences loaded = Aestra::MixerUIPreferences::load(path);
-        // Parenthesised: '<<' binds tighter than '?:', so an unbracketed
-        // ternary would be parsed as part of the stream expression.
-        ASSERT(loaded.inspectorExpanded == expanded,
-               (expanded ? "expanded=true survives the round trip"
-                         : "expanded=false survives the round trip"));
-    }
-    PASS("both preference values round-trip through the settings file");
-}
-
-static void test_missing_file_keeps_default() {
-    const std::string path = scratchSettingsPath("does-not-exist.json");
-    ASSERT(!path.empty(), "scratch path available");
-    std::filesystem::remove(path);
-
-    const Aestra::MixerUIPreferences loaded = Aestra::MixerUIPreferences::load(path);
-    ASSERT(loaded.inspectorExpanded, "first run leaves the inspector expanded");
-    PASS("absent settings file keeps the expanded default");
-}
-
-static void test_absent_key_keeps_default() {
-    // The trap this guards: reading a missing key as a default-constructed
-    // false, which would collapse the inspector for anyone whose settings file
-    // predates the key.
-    const std::string path = scratchSettingsPath("other-keys.json");
-    ASSERT(writeFile(path, "{\"version\": 1, \"somethingElse\": true}"),
-           "scratch settings file written");
-
-    const Aestra::MixerUIPreferences loaded = Aestra::MixerUIPreferences::load(path);
-    ASSERT(loaded.inspectorExpanded, "absent key does not apply false");
-    PASS("settings file without the key keeps the expanded default");
-}
-
-static void test_wrong_typed_key_keeps_default() {
-    // JSON::asBool() yields its default false for any non-Boolean node, so a
-    // present-but-wrong-typed value slips past a bare has() check and collapses
-    // the inspector. Same failure as the absent-key case, different route.
-    const char* payloads[] = {
-        "{\"inspectorExpanded\": 1}",
-        "{\"inspectorExpanded\": \"true\"}",
-        "{\"inspectorExpanded\": null}",
-        "{\"inspectorExpanded\": []}",
-    };
-    for (const char* payload : payloads) {
-        const std::string path = scratchSettingsPath("wrong-type.json");
-        ASSERT(writeFile(path, payload), "scratch settings file written");
-        const Aestra::MixerUIPreferences loaded = Aestra::MixerUIPreferences::load(path);
-        ASSERT(loaded.inspectorExpanded, "non-Boolean value does not collapse the inspector");
-    }
-    PASS("present-but-wrong-typed key keeps the expanded default");
-}
-
-static void test_corrupt_file_keeps_default() {
-    const std::string path = scratchSettingsPath("corrupt.json");
-    ASSERT(writeFile(path, "{\"inspectorExpanded\": fal"),  // truncated mid-write
-           "scratch settings file written");
-
-    const Aestra::MixerUIPreferences loaded = Aestra::MixerUIPreferences::load(path);
-    ASSERT(loaded.inspectorExpanded, "unparseable settings do not collapse the inspector");
-    PASS("corrupt settings file keeps the expanded default");
-}
-
-static void test_saved_file_does_not_carry_forced_state() {
-    // forcedCollapsed is width-derived and must never reach disk: a session
-    // that happened to end in a narrow window must not rewrite the choice.
-    const std::string path = scratchSettingsPath("no-forced.json");
-    ASSERT(!path.empty(), "scratch path available");
-    Aestra::MixerUIPreferences prefs;
-    prefs.inspectorExpanded = true;
-    ASSERT(prefs.save(path), "save reports success");
-
-    std::ifstream in(path);
-    const std::string contents((std::istreambuf_iterator<char>(in)),
-                               std::istreambuf_iterator<char>());
-    ASSERT(contents.find("forcedCollapsed") == std::string::npos,
-           "no width-derived state is written");
-    ASSERT(contents.find("inspectorExpanded") != std::string::npos,
-           "the explicit preference is written");
-    PASS("only the explicit preference is persisted");
-}
-
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -341,13 +192,6 @@ int main() {
     test_click_while_forced_does_not_toggle_off();
     test_click_toggles_normally_when_unconstrained();
     test_reset_restores_default();
-
-    test_settings_round_trip_both_values();
-    test_missing_file_keeps_default();
-    test_absent_key_keeps_default();
-    test_wrong_typed_key_keeps_default();
-    test_corrupt_file_keeps_default();
-    test_saved_file_does_not_carry_forced_state();
 
     std::cout << "\n============================================\n";
     if (testsFailed == 0) {

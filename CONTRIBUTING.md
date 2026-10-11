@@ -9,7 +9,7 @@ This file is the short entry point. The fuller contributor workflow lives in [do
 ```powershell
 git clone https://github.com/currentsuspect/Aestra.git
 cd Aestra
-pwsh -File scripts/install-hooks.ps1
+pwsh -File scripts/install-hooks.ps1  # Linux/macOS: python3 scripts/install_hooks.py
 cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build build --config RelWithDebInfo --parallel
 ctest --test-dir build --config RelWithDebInfo --output-on-failure
@@ -20,12 +20,13 @@ ctest --test-dir build --config RelWithDebInfo --output-on-failure
 ```bash
 git clone https://github.com/currentsuspect/Aestra.git
 cd Aestra
+python3 scripts/install_hooks.py
 cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ```
 
-If you want Git hooks on Linux, configure Git to use `.githooks/` manually or run the PowerShell helper in an environment that supports it.
+If you want Git hooks on Linux, run `python3 scripts/install_hooks.py` (Windows alternative: `pwsh -File scripts/install-hooks.ps1`).
 
 ## Expectations
 

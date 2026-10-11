@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIContextMenu.h"
+#include "NUIScrollbar.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include <algorithm>
@@ -11,6 +12,18 @@
 #include <iostream>
 
 namespace AestraUI {
+
+namespace {
+/** @brief Narrowest a menu is drawn, so a two-word menu still reads as a menu. */
+constexpr float kMenuMinWidth = 132.0f;
+/** @brief Widest, before long labels would start dominating the window. */
+constexpr float kMenuMaxWidth = 380.0f;
+/** @brief Clear space between a label and its shortcut. */
+constexpr float kMenuShortcutGap = 28.0f;
+constexpr float kMenuIndicatorSize = 14.0f;
+constexpr float kMenuArrowSize = 12.0f;
+} // namespace
+
 
 // ============================================================================
 // NUIContextMenuItem Implementation
@@ -91,7 +104,10 @@ NUIContextMenu::NUIContextMenu()
     backgroundColor_ = themeManager.getColor("elevatedPanel");
     borderColor_ = themeManager.getColor("borderStrong");
     textColor_ = themeManager.getColor("textPrimary");                // #E5E5E8 - Main text
-    hoverColor_ = themeManager.getColor("controlHover");
+    // The row hover is an overlay on the menu's elevated surface: a polarity-correct tint
+    // (light on dark, dark on light). "controlHover" is a button fill meant for darker surfaces;
+    // on this surface it was DARKER than the menu (RGB 23 vs 25), so hover was invisible.
+    hoverColor_ = themeManager.getColor("hover");
     separatorColor_ = themeManager.getColor("borderSubtle");          // #2c2c2f - Subtle dividers
     shortcutColor_ = themeManager.getColor("textSecondary");          // #A6A6AA - Muted shortcuts
 }
@@ -99,6 +115,8 @@ NUIContextMenu::NUIContextMenu()
 void NUIContextMenu::onRender(NUIRenderer& renderer)
 {
     if (!isVisible()) return;
+
+    if (needsMeasure_) measureAndFit(renderer);
 
     drawBackground(renderer);
 
@@ -127,13 +145,16 @@ void NUIContextMenu::onRender(NUIRenderer& renderer)
 
     const float contentHeight = calculateContentHeight();
     if (scrollable_ && contentHeight > bounds.height) {
-        const float trackHeight = std::max(1.0f, bounds.height - 8.0f);
-        const float thumbHeight = std::max(24.0f, trackHeight * (bounds.height / contentHeight));
-        const float travel = std::max(0.0f, trackHeight - thumbHeight);
+        // Same painter as every other scrollbar in the DAW (spec 2 §2).
+        const float sbW = kOverlayScrollbarThickness;
+        const NUIRect gutter(bounds.right() - sbW - 2.0f, bounds.y + 4.0f, sbW,
+                             std::max(1.0f, bounds.height - 8.0f));
+        const float thumbHeight =
+            std::max(kOverlayScrollbarMinThumb, gutter.height * (bounds.height / contentHeight));
+        const float travel = std::max(0.0f, gutter.height - thumbHeight);
         const float progress = maximumScrollOffset() > 0.0f ? scrollOffset_ / maximumScrollOffset() : 0.0f;
-        const NUIRect thumb(bounds.right() - 4.0f, bounds.y + 4.0f + travel * progress, 2.0f, thumbHeight);
-        renderer.fillRoundedRect(thumb, 1.0f,
-                                 NUIThemeManager::getInstance().getColor("textMuted").withAlpha(0.55f));
+        drawOverlayScrollbar(renderer, gutter, NUIRect(gutter.x, gutter.y + travel * progress, sbW, thumbHeight),
+                             ScrollbarPaintState{});
     }
 
     // Render active submenu on top
@@ -149,7 +170,7 @@ void NUIContextMenu::onThemeChanged(const NUIThemeProperties& theme)
         backgroundColor_ = theme.surfaceTertiary;
         borderColor_ = theme.borderStrong;
         textColor_ = theme.textPrimary;
-        hoverColor_ = theme.buttonBgHover;
+        hoverColor_ = theme.hover; // overlay tint, see the constructor
         separatorColor_ = theme.borderSubtle;
         shortcutColor_ = theme.textSecondary;
         borderRadius_ = theme.radiusM;
@@ -309,6 +330,14 @@ void NUIContextMenu::onMouseLeave()
 void NUIContextMenu::addItem(std::shared_ptr<NUIContextMenuItem> item)
 {
     items_.push_back(item);
+    // Every add path (addSubmenu, addRadioItem, addCheckbox, addSeparator)
+    // funnels through here, so a submenu attached after this menu was bound
+    // inherits the owner and the attach order stops mattering.
+    if (ownerBound_ && item) {
+        if (const auto& submenu = item->getSubmenu()) {
+            submenu->setOwner(owner_);
+        }
+    }
     updateLayout();
     setDirty(true);
 }
@@ -384,34 +413,12 @@ void NUIContextMenu::showAt(int x, int y)
 {
     updateLayout();
     scrollOffset_ = 0.0f;
-    float menuWidth = getBounds().width;
-    float menuHeight = getBounds().height;
-    
-    float posX = static_cast<float>(x);
-    float posY = static_cast<float>(y);
-    
-    // Clamp in the same absolute/window coordinate space used by menu bounds.
-    if (NUIComponent* parent = getParent()) {
-        NUIRect parentBounds = parent->getBounds();
-        float parentRight = parentBounds.x + parentBounds.width;
-        float parentBottom = parentBounds.y + parentBounds.height;
-        const float availableHeight = std::max(1.0f, parentBounds.height - 20.0f);
-        if (menuHeight > availableHeight) {
-            menuHeight = availableHeight;
-            setSize(menuWidth, menuHeight);
-            clampScrollOffset();
-        }
-        
-        if (posX + menuWidth > parentRight) {
-            posX = parentRight - menuWidth - 10.0f;
-        }
-        if (posY + menuHeight > parentBottom) {
-            posY = parentBottom - menuHeight - 10.0f;
-        }
-        if (posX < parentBounds.x) posX = parentBounds.x + 10.0f;
-        if (posY < parentBounds.y) posY = parentBounds.y + 10.0f;
-    }
-    
+    requestedPosition_ = NUIPoint(static_cast<float>(x), static_cast<float>(y));
+    // Fit against the provisional size now so the menu is roughly placed even
+    // before a renderer has measured it; measureAndFit() repeats this with real
+    // metrics at the top of the first paint.
+    fitInsideParent(NUISize(getBounds().width, getBounds().height));
+
     if (!isVisible_) {
         previousFocus_.reset();
         if (auto* focused = NUIComponent::getFocusedComponent(); focused && focused != this) {
@@ -423,7 +430,6 @@ void NUIContextMenu::showAt(int x, int y)
         }
     }
 
-    setPosition(posX, posY);
     isVisible_ = true;
     hoveredItemIndex_ = findSelectableItem(0, 1);
     ensureItemVisible(hoveredItemIndex_);
@@ -563,6 +569,34 @@ void NUIContextMenu::setOnShow(std::function<void()> callback)
 void NUIContextMenu::setOnHide(std::function<void()> callback)
 {
     onHideCallback_ = callback;
+}
+
+void NUIContextMenu::setOwner(std::weak_ptr<NUIComponent> owner)
+{
+    owner_ = std::move(owner);
+    // An empty handle (or a component not managed by shared_ptr, whose
+    // weak_from_this() is empty) leaves the menu ungated rather than
+    // permanently dead.
+    ownerBound_ = !owner_.expired();
+
+    // The owner has to reach the whole tree. A submenu is a separate
+    // NUIContextMenu that receives mouse input directly (onMouseEvent forwards
+    // to activeSubmenu_) and consults its OWN gate, so binding only the parent
+    // leaves every submenu ungated while its items capture the same component.
+    // Recursing here covers nesting; addItem() covers submenus attached later.
+    for (const auto& item : items_) {
+        if (!item) {
+            continue;
+        }
+        if (const auto& submenu = item->getSubmenu()) {
+            submenu->setOwner(owner_);
+        }
+    }
+}
+
+bool NUIContextMenu::hasLiveOwner() const
+{
+    return !ownerBound_ || !owner_.expired();
 }
 
 void NUIContextMenu::setOnItemClick(std::function<void(std::shared_ptr<NUIContextMenuItem>)> callback)
@@ -753,8 +787,11 @@ void NUIContextMenu::drawItem(NUIRenderer& renderer, std::shared_ptr<NUIContextM
     // Draw shortcut
     if (!item->getShortcut().empty())
     {
-        float shortcutX = itemRect.x + itemRect.width - itemPadding_ - 60.0f;
         const float shortcutFontSize = props.fontSizeS;
+        // Right-aligned against the measured width rather than a fixed 60px
+        // reservation, which only landed correctly at the old fixed menu width.
+        float shortcutX = itemRect.right() - itemPadding_ -
+                          renderer.measureText(item->getShortcut(), shortcutFontSize).width;
         float shortcutY = std::round(renderer.calculateTextY(itemRect, shortcutFontSize));
         renderer.drawText(item->getShortcut(), NUIPoint(shortcutX, shortcutY), shortcutFontSize, themeManager.getColor("textSecondary"));
     }
@@ -831,7 +868,13 @@ NUIRect NUIContextMenu::getItemRect(int index) const
 float NUIContextMenu::calculateMenuHeight() const
 {
     const float contentHeight = calculateContentHeight();
-    return scrollable_ ? std::min(contentHeight, maxHeight_) : contentHeight;
+    if (!scrollable_ || contentHeight <= maxHeight_) return contentHeight;
+
+    // Clamp to whole rows. A raw min() left the last visible item sliced in half
+    // at the menu's bottom edge, which reads as clipping rather than as "there is
+    // more below".
+    const float rows = std::floor(maxHeight_ / std::max(1.0f, itemHeight_));
+    return std::max(itemHeight_, rows * itemHeight_);
 }
 
 int NUIContextMenu::getItemAtPosition(const NUIPoint& position) const
@@ -918,12 +961,92 @@ void NUIContextMenu::handleItemHover(int index)
     }
 }
 
+// A menu's width is its content's width. Until a renderer has measured the text
+// (measureAndFit, first onRender) this is the provisional estimate that keeps
+// showAt()'s edge clamping roughly right; it is never what gets drawn, because
+// measurement happens before this menu paints anything.
+float NUIContextMenu::estimateItemWidth(const std::shared_ptr<NUIContextMenuItem>& item) const
+{
+    if (!item) return 0.0f;
+    const float em = NUIThemeManager::getInstance().getCurrentTheme().fontSizeM;
+    float w = item->getText().size() * em * 0.55f;
+    if (!item->getShortcut().empty()) w += item->getShortcut().size() * em * 0.46f + kMenuShortcutGap;
+    return w;
+}
+
 void NUIContextMenu::updateSize()
 {
-    float height = calculateMenuHeight();
-    float width = 220.0f; // Clean, compact width
-    
+    float widest = 0.0f;
+    for (const auto& item : items_) {
+        if (!item || !item->isVisible()) continue;
+        widest = std::max(widest, estimateItemWidth(item) + decorationWidthFor(item));
+    }
+    setSize(std::clamp(widest + itemPadding_ * 2.0f + 8.0f, kMenuMinWidth, kMenuMaxWidth),
+            calculateMenuHeight());
+    clampScrollOffset();
+    needsMeasure_ = true;
+}
+
+// Everything on a row that is not the label or the shortcut: icon, check/radio
+// indicator, submenu chevron. Shared by the estimate and the real measurement so
+// the two cannot disagree about what a row has to fit.
+float NUIContextMenu::decorationWidthFor(const std::shared_ptr<NUIContextMenuItem>& item) const
+{
+    if (!item) return 0.0f;
+    float w = 4.0f; // drawItem's leading nudge past the padding
+    if (item->getIconObject()) w += iconSize_ + itemPadding_ * 0.5f;
+    if (item->getType() == NUIContextMenuItem::Type::Checkbox ||
+        item->getType() == NUIContextMenuItem::Type::Radio) {
+        w += kMenuIndicatorSize + itemPadding_;
+    }
+    if (item->getType() == NUIContextMenuItem::Type::Submenu) w += kMenuArrowSize + 4.0f;
+    return w;
+}
+
+void NUIContextMenu::measureAndFit(NUIRenderer& renderer)
+{
+    needsMeasure_ = false;
+
+    const auto& props = NUIThemeManager::getInstance().getCurrentTheme();
+    float widest = 0.0f;
+    for (const auto& item : items_) {
+        if (!item || !item->isVisible()) continue;
+        if (item->getType() == NUIContextMenuItem::Type::Separator) continue;
+
+        float row = renderer.measureText(item->getText(), props.fontSizeM).width;
+        if (!item->getShortcut().empty()) {
+            row += kMenuShortcutGap + renderer.measureText(item->getShortcut(), props.fontSizeS).width;
+        }
+        widest = std::max(widest, row + decorationWidthFor(item));
+    }
+
+    const float width = std::clamp(widest + itemPadding_ * 2.0f + 8.0f, kMenuMinWidth, kMenuMaxWidth);
+    fitInsideParent(NUISize(width, calculateMenuHeight()));
+}
+
+void NUIContextMenu::fitInsideParent(const NUISize& size)
+{
+    float width = size.width;
+    float height = size.height;
+    float posX = requestedPosition_.x;
+    float posY = requestedPosition_.y;
+
+    if (NUIComponent* parent = getParent()) {
+        const NUIRect parentBounds = parent->getBounds();
+        // Width yields before height: a menu that has to shrink horizontally is
+        // still usable, whereas one pushed off-screen is not.
+        width = std::min(width, std::max(kMenuMinWidth, parentBounds.width - 20.0f));
+        const float availableHeight = std::max(1.0f, parentBounds.height - 20.0f);
+        height = std::min(height, availableHeight);
+
+        if (posX + width > parentBounds.right()) posX = parentBounds.right() - width - 10.0f;
+        if (posY + height > parentBounds.bottom()) posY = parentBounds.bottom() - height - 10.0f;
+        posX = std::max(posX, parentBounds.x + 10.0f);
+        posY = std::max(posY, parentBounds.y + 10.0f);
+    }
+
     setSize(width, height);
+    setPosition(posX, posY);
     clampScrollOffset();
 }
 
@@ -984,6 +1107,15 @@ void NUIContextMenu::hideSubmenu()
 
 void NUIContextMenu::triggerItemClick(std::shared_ptr<NUIContextMenuItem> item)
 {
+    // The owner died while this menu was still on screen (it is a child of the
+    // root, so nothing dismissed it). Its callbacks captured that owner, so
+    // invoking them now is a use-after-free. Dismiss instead.
+    if (!hasLiveOwner())
+    {
+        hide();
+        return;
+    }
+
     if (item->getOnClick())
     {
         item->getOnClick()();
@@ -997,6 +1129,11 @@ void NUIContextMenu::triggerItemClick(std::shared_ptr<NUIContextMenuItem> item)
 
 void NUIContextMenu::triggerShow()
 {
+    if (!hasLiveOwner())
+    {
+        return;
+    }
+
     if (onShowCallback_)
     {
         onShowCallback_();
@@ -1005,6 +1142,14 @@ void NUIContextMenu::triggerShow()
 
 void NUIContextMenu::triggerHide()
 {
+    // Deliberately no hide() here: hide() is what calls us. The dead-owner
+    // case is exactly the one that used to touch a freed member, because the
+    // usual on-hide handler detaches the menu through the owner.
+    if (!hasLiveOwner())
+    {
+        return;
+    }
+
     if (onHideCallback_)
     {
         onHideCallback_();

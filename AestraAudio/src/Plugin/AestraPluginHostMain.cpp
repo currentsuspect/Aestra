@@ -32,6 +32,15 @@
 #include <dlfcn.h>
 #endif
 
+#if defined(AESTRA_ENABLE_TEST_HOOKS) && !defined(_WIN32)
+#if defined(__linux__)
+#include <dirent.h>
+#else
+#include <libproc.h>
+#endif
+#include <unistd.h>
+#endif
+
 namespace {
 
 #ifndef _WIN32
@@ -1489,6 +1498,50 @@ int main(int argc, char** argv) {
                 out << ' ' << e.type << ':' << e.time << ':' << e.portIndex << ':' << e.channel << ':'
                     << e.key << ':' << e.velocity << ':' << static_cast<int>(e.midi[0]) << ':'
                     << static_cast<int>(e.midi[1]) << ':' << static_cast<int>(e.midi[2]);
+            }
+            reply(out.str());
+#endif
+#if defined(AESTRA_ENABLE_TEST_HOOKS) && !defined(_WIN32)
+        } else if (command == "TESTFDS") {
+            // Report own open descriptors for the #710 regression test:
+            // "OK <n>" followed by the sorted fd numbers. This runs post-exec
+            // in a normal process, so allocation here is fine (unlike the
+            // fork-child close path, which must stay async-signal-safe).
+            std::vector<int> fds;
+#if defined(__linux__)
+            if (DIR* dir = opendir("/proc/self/fd")) {
+                const int dirFd = dirfd(dir);
+                dirent* entry = nullptr;
+                while ((entry = readdir(dir)) != nullptr) {
+                    if (entry->d_name[0] == '.') {
+                        continue;
+                    }
+                    const int fd = atoi(entry->d_name);
+                    if (fd != dirFd) {
+                        fds.push_back(fd);
+                    }
+                }
+                closedir(dir);
+            }
+#else
+            const int needed =
+                proc_pidinfo(getpid(), PROC_PIDLISTFDS, 0, nullptr, 0);
+            if (needed > 0) {
+                std::vector<char> buffer(static_cast<size_t>(needed));
+                const int got = proc_pidinfo(getpid(), PROC_PIDLISTFDS, 0, buffer.data(),
+                                             static_cast<int>(buffer.size()));
+                const size_t count = got > 0 ? static_cast<size_t>(got) / sizeof(proc_fdinfo) : 0;
+                const auto* infos = reinterpret_cast<const proc_fdinfo*>(buffer.data());
+                for (size_t i = 0; i < count; ++i) {
+                    fds.push_back(static_cast<int>(infos[i].proc_fd));
+                }
+            }
+#endif
+            std::sort(fds.begin(), fds.end());
+            std::ostringstream out;
+            out << "OK " << fds.size();
+            for (int fd : fds) {
+                out << ' ' << fd;
             }
             reply(out.str());
 #endif

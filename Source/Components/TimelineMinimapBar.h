@@ -47,6 +47,9 @@ public:
     bool isViewportPanActive() const {
         return isVisible() && (dragKind_ == DragKind::Viewport || hoverOnViewport_);
     }
+    /** @brief True only while the viewport bar is actually being dragged (not
+     *  hovered) — the closed-hand Grabbing cursor, as opposed to the open Grab. */
+    bool isViewportDragActive() const { return isVisible() && dragKind_ == DragKind::Viewport; }
     /** @brief Enable or disable the top-left mode toggles. */
     void setShowModeToggles(bool show) { showModeToggles_ = show; repaint(); }
     /** @brief Set an additional leading inset applied before the minimap content. */

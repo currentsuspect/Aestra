@@ -322,6 +322,18 @@ if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/MuseC
     set_tests_properties(MuseClipRoundTripTest PROPERTIES LABELS "commands;muse;clip;roundtrip;contract:application")
 endif()
 
+# Append-only: add new targets at the end so parallel branches do not collide.
+if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/MuseVerifyRenderTest.cpp")
+    add_executable(MuseVerifyRenderTest Commands/MuseVerifyRenderTest.cpp)
+    target_link_libraries(MuseVerifyRenderTest PRIVATE AestraAudioCore)
+    target_include_directories(MuseVerifyRenderTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME MuseVerifyRenderTest COMMAND MuseVerifyRenderTest)
+    set_tests_properties(MuseVerifyRenderTest PROPERTIES LABELS "commands;muse;render;verify;contract:application")
+endif()
+
 if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ClipRenderCharacterizationTest.cpp")
     add_executable(ClipRenderCharacterizationTest AestraAudio/ClipRenderCharacterizationTest.cpp)
     target_link_libraries(ClipRenderCharacterizationTest PRIVATE AestraAudioCore)

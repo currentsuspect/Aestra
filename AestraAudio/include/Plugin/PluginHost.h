@@ -181,6 +181,48 @@ public:
      */
     virtual void setParameter(uint32_t id, float value) = 0;
 
+    // ==============================
+    // Render-thread automation contract (V8-A5)
+    // ==============================
+    //
+    // How the engine drives a plugin parameter from an automation curve, with
+    // no knowledge of the plugin's format. The engine asks the plugin, never
+    // the plugin's PluginFormat: a format name says nothing about whether a
+    // write from the render thread is safe, and a VST3/CLAP adapter must be
+    // able to satisfy this without the engine changing.
+    //
+    // Both calls are made ONLY from the render thread, once per block per
+    // automated parameter, before process() runs for that block.
+
+    /**
+     * @brief Can this instance take automation writes from the render thread?
+     *
+     * Default false: a plugin is not automated until it says it can be. The
+     * engine skips (and counts) curves aimed at such a plugin instead of
+     * guessing. Constant for the life of the instance.
+     */
+    virtual bool supportsRealtimeAutomation() const noexcept { return false; }
+
+    /**
+     * @brief Hand the plugin the automated value for this block.
+     *
+     * Render thread, real-time rules: no allocation, no locks, no I/O, no
+     * waiting. Only called when supportsRealtimeAutomation() is true.
+     *
+     * - `id` is the plugin's stable parameter id (the same id getParameters()
+     *   reports). An unknown id is ignored.
+     * - `normalizedValue` is finite and in the parameter's normalized range,
+     *   exactly as setParameter() takes it.
+     * - The plugin owns smoothing. The engine hands over the raw target once
+     *   per block, so automation and a manual edit share one smoother.
+     *
+     * How a plugin satisfies it is its own business. An internal plugin stores
+     * to atomic parameter storage. A hosted-format adapter appends to a
+     * lock-free queue that process() drains into the format's own parameter
+     * change mechanism (VST3 IParameterChanges, CLAP param events).
+     */
+    virtual void applyAutomation(uint32_t /*id*/, float /*normalizedValue*/) noexcept {}
+
     /**
      * @brief Get parameter value as display string
      * @param id Parameter ID
@@ -345,9 +387,13 @@ public:
         uint32_t sampleOffset; ///< Sample offset within buffer
         uint8_t data[4];       ///< MIDI data (3 bytes + padding)
         uint8_t size;          ///< Number of valid bytes (1-3)
+        /// Identity of the note a note-on/off belongs to (0 = unknown, e.g. live MIDI).
+        /// MIDI carries only the pitch; the scheduler knows which note it means, so a
+        /// note-off can end exactly its own note even when notes of one pitch overlap.
+        uint32_t noteId;
     };
 
-    void addEvent(uint32_t sampleOffset, const uint8_t* data, uint8_t size) {
+    void addEvent(uint32_t sampleOffset, const uint8_t* data, uint8_t size, uint32_t noteId = 0) {
         if (size <= 3 && data != nullptr) {
             uint32_t index = m_eventCount.load(std::memory_order_acquire);
             while (index < kMaxEvents) {
@@ -360,6 +406,7 @@ public:
                 Event& e = m_events[index];
                 e.sampleOffset = sampleOffset;
                 e.size = size;
+                e.noteId = noteId;
                 std::memset(e.data, 0, sizeof(e.data));
                 std::memcpy(e.data, data, size);
                 return;

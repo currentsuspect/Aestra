@@ -142,12 +142,15 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                 m_master->automationCurveCount = 0;
                 m_master->automationTargetMask = 0;
             }
-            if (m_master->inserts.size() != Audio::EffectChain::MAX_SLOTS) {
-                m_master->inserts.resize(Audio::EffectChain::MAX_SLOTS);
-            }
             auto& chain = masterChannel->getEffectChain();
+            // The view follows the chain's real slot count (V8-S3): ten until a
+            // chain grows, then however many it holds.
+            const size_t chainSlots = chain.slotCount();
+            if (m_master->inserts.size() != chainSlots) {
+                m_master->inserts.resize(chainSlots);
+            }
             int fxCount = 0;
-            for (size_t i = 0; i < Audio::EffectChain::MAX_SLOTS; ++i) {
+            for (size_t i = 0; i < chainSlots; ++i) {
                 const auto* slot = chain.getSlot(i);
                 auto& vm = m_master->inserts[i];
                 const bool hasPlugin = (slot && !slot->isEmpty() && slot->plugin);
@@ -369,8 +372,9 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                 auto& chain = mc->getEffectChain();
                 
                 // Ensure size matches
-                if (ch->inserts.size() != Audio::EffectChain::MAX_SLOTS) {
-                    ch->inserts.resize(Audio::EffectChain::MAX_SLOTS);
+                const size_t chainSlots = chain.slotCount();
+                if (ch->inserts.size() != chainSlots) {
+                    ch->inserts.resize(chainSlots);
                 }
 
                 // PRESERVE UI STATE (Fix for Delete Persistence)
@@ -381,7 +385,7 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                      oldCh = getChannelById(ch->id);
                 }
 
-                for (size_t i = 0; i < Audio::EffectChain::MAX_SLOTS; ++i) {
+                for (size_t i = 0; i < chainSlots; ++i) {
                     const auto* slot = chain.getSlot(i);
                     auto& vm = ch->inserts[i];
 

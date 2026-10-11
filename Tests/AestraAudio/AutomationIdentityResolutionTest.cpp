@@ -116,6 +116,10 @@ public:
         }
     }
     float getParameter(uint32_t id) const override { return id == 0 ? m_gain : 0.0f; }
+    // V8-A5: this mock stands in for an internal plugin, so it declares the
+    // render-thread automation contract the engine now requires.
+    bool supportsRealtimeAutomation() const noexcept override { return true; }
+    void applyAutomation(uint32_t id, float normalizedValue) noexcept override { setParameter(id, normalizedValue); }
     void process(const float* const* inputs, float** outputs, uint32_t numInputChannels,
                  uint32_t numOutputChannels, uint32_t numFrames, const MidiBuffer* m = nullptr,
                  MidiBuffer* o = nullptr) override {
@@ -165,9 +169,9 @@ struct Fixture {
         curve.deviceInstanceId = gainId;
         curve.paramId = 0;
         curve.setDefaultValue(1.0f);
-        curve.addPoint(0.0, 1.0f, kSpbAt120, 0.5f);
-        curve.addPoint(0.5, 1.0f, kSpbAt120, 0.5f);
-        curve.addPoint(1.0, 0.0f, kSpbAt120, 0.5f);
+        curve.addPoint(0.0, 1.0f, kSpbAt120, 0.0f);
+        curve.addPoint(0.5, 1.0f, kSpbAt120, 0.0f);
+        curve.addPoint(1.0, 0.0f, kSpbAt120, 0.0f);
 
         auto& playlist = tm->getPlaylistModel();
         playlist.setProjectSampleRate(static_cast<double>(kSampleRate));
@@ -301,12 +305,12 @@ void testPlaceholderTargetStaysAttached() {
     // retarget (covered by the remove case at render level).
     EffectChain chain;
     {
-        std::vector<uint8_t> blob{'N', 'E', 'C', 2, static_cast<uint8_t>(EffectChain::MAX_SLOTS)};
+        std::vector<uint8_t> blob{'N', 'E', 'C', 2, static_cast<uint8_t>(EffectChain::kInitialSlots)};
         const auto put = [&blob](const void* data, size_t n) {
             const auto* bytes = static_cast<const uint8_t*>(data);
             blob.insert(blob.end(), bytes, bytes + n);
         };
-        for (size_t slot = 0; slot < EffectChain::MAX_SLOTS; ++slot) {
+        for (size_t slot = 0; slot < EffectChain::kInitialSlots; ++slot) {
             const bool occupied = slot == 1;
             blob.push_back(occupied ? 1 : 0);
             if (!occupied) {
@@ -325,10 +329,10 @@ void testPlaceholderTargetStaysAttached() {
             const uint32_t stateLen = 0;
             put(&stateLen, sizeof(stateLen));
         }
-        std::vector<std::string> missing;
+        LoadReport missing;
         require(chain.loadState(blob, PluginManager::getInstance(), &missing),
                 "placeholder chain loads");
-        require(missing.size() == 1, "one placeholder created");
+        require(missing.missingPlugins.size() == 1, "one placeholder created");
     }
     require(chain.getSlotInstanceId(1) == 424242, "placeholder restored the wire identity");
 
@@ -342,7 +346,7 @@ void testPlaceholderTargetStaysAttached() {
 
     // Save/load keeps the placeholder and its identity; the curve stays attached.
     EffectChain reloaded;
-    std::vector<std::string> missing2;
+    LoadReport missing2;
     require(reloaded.loadState(chain.saveState(), PluginManager::getInstance(), &missing2),
             "resaved placeholder chain loads");
     require(reloaded.getSlotInstanceId(1) == 424242, "placeholder identity survived the round trip");

@@ -9,7 +9,8 @@ title = "Aestra gitleaks config"
     "^CHANGELOG.*$"
   ]
   paths = [
-    '''scripts/pre-commit-checks\.ps1'''
+    '''scripts/pre-commit-checks\.ps1''',
+    '''scripts/pre_commit_checks\.py'''
   ]
 
 # Rely on default gitleaks rules; custom additions below

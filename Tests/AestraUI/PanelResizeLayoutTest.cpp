@@ -16,6 +16,8 @@
 #include "ArsenalPanel.h"
 #include "Models/TrackManager.h"
 #include "Models/UnitManager.h"
+#include "GoldenAudio/GoldenAudioHarness.h"
+#include "NUIButton.h"
 #include "NUIComponent.h"
 #include "NUISlider.h"
 #include "SampleEditorPanel.h"
@@ -25,6 +27,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -160,12 +163,92 @@ void testArsenalRowLabelLayout() {
     expect(rowCount >= 1, "no unit rows created for the Arsenal test");
 }
 
+
+// V8-W1: the fit row offers the five best bar counts for the clip's length,
+// best first, described in varispeed vocabulary; clicking one applies it.
+void testStretchToTargetFitRow() {
+    std::cout << "[PanelResizeLayoutTest] stretch-to-target fit row...\n";
+    using namespace GoldenAudio;
+    SessionConfig cfg;
+    auto tm = std::make_shared<Aestra::Audio::TrackManager>();
+    tm->setOutputSampleRate(static_cast<double>(cfg.sampleRate));
+    tm->getPlaylistModel().setBPM(120.0);
+    // 28 s at 120 BPM = 14 bars.
+    const uint32_t frames = static_cast<uint32_t>(cfg.sampleRate) * 28;
+    std::vector<float> pcm(static_cast<size_t>(frames) * cfg.channels, 0.1f);
+    addAudioTrack(*tm, "FitRow", pcm, frames, cfg);
+
+    auto& model = tm->getPlaylistModel();
+    const auto* lane = model.getLane(model.getLaneId(0));
+    expect(lane && !lane->clips.empty(), "fit row test: no clip on lane 0");
+    if (!lane || lane->clips.empty())
+        return;
+    const ClipInstanceID clipId = lane->clips.front().id;
+
+    AudioClipEditorPanel panel(tm);
+    panel.setBounds({0.0f, 0.0f, 700.0f, 560.0f});
+    expect(panel.openClip(clipId), "fit row test: openClip failed");
+
+    std::vector<NUIButton*> fit;
+    const std::function<void(const std::shared_ptr<NUIComponent>&)> collect =
+        [&](const std::shared_ptr<NUIComponent>& node) {
+            if (auto* b = dynamic_cast<NUIButton*>(node.get())) {
+                const std::string text = b->getText();
+                if (!text.empty() && std::all_of(text.begin(), text.end(), ::isdigit))
+                    fit.push_back(b);
+            }
+            for (const auto& c : node->getChildren())
+                collect(c);
+        };
+    for (const auto& child : panel.getChildren())
+        collect(child);
+    expect(fit.size() == 5, "expected five numeric fit buttons, found " + std::to_string(fit.size()));
+    if (fit.size() != 5)
+        return;
+
+    const char* expected[5] = {"16", "12", "10", "8", "20"};
+    for (size_t i = 0; i < 5; ++i) {
+        expect(fit[i]->getText() == expected[i], std::string("fit button ") + std::to_string(i) + " is " + fit[i]->getText() +
+                                                     ", expected " + expected[i]);
+        expect(fit[i]->isVisible(), "fit button hidden");
+        if (i > 0) {
+            const NUIRect a = fit[i - 1]->getBounds(), b = fit[i]->getBounds();
+            expect(a.right() <= b.x + 0.01f, "fit buttons overlap");
+        }
+    }
+    expect(fit[0]->getTooltip().rfind("Best fit: 16 bars", 0) == 0, "best-fit tooltip: " + fit[0]->getTooltip());
+    expect(fit[0]->getTooltip().find("pitch follows") != std::string::npos, "tooltip lacks varispeed wording");
+    expect(fit[0]->getTooltip().find("tretch") == std::string::npos, "tooltip uses the word stretch");
+
+    const NUIRect r = fit[0]->getBounds();
+    NUIMouseEvent down;
+    down.type = NUIMouseEventType::Down;
+    down.position = {r.x + r.width * 0.5f, r.y + r.height * 0.5f};
+    down.button = NUIMouseButton::Left;
+    down.pressed = true;
+    NUIMouseEvent up = down;
+    up.type = NUIMouseEventType::Up;
+    up.pressed = false;
+    up.released = true;
+    fit[0]->onMouseEvent(down);
+    fit[0]->onMouseEvent(up);
+
+    const auto* clip = model.getClip(clipId);
+    expect(clip != nullptr, "clip vanished after fit");
+    if (clip) {
+        const double beats = clip->durationBeats;
+        expect(std::abs(beats - 64.0) < 1e-6, "fit to 16 bars should span 64 beats, got " + std::to_string(beats));
+        expect(clip->edits.playbackRate < 1.0f, "fit to 16 bars from 14 should slow the clip");
+    }
+}
+
 } // namespace
 
 int main() {
     std::cout << "=== PanelResizeLayoutTest (resize/layout triage 2026-08-14) ===\n";
     testAudioClipEditorLayout();
     testArsenalRowLabelLayout();
+    testStretchToTargetFitRow();
 
     if (g_failures == 0) {
         std::cout << "=== PanelResizeLayoutTest: all checks passed ===\n";
