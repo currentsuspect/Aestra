@@ -1730,6 +1730,18 @@ target_include_directories(BounceInPlaceTest PRIVATE
 add_test(NAME BounceInPlaceTest COMMAND BounceInPlaceTest)
 set_tests_properties(BounceInPlaceTest PROPERTIES LABELS "audio;clips;export;undo;contract:audio" TIMEOUT 180)
 
+# V8-S1: stems -- one file per sounding track, each after its fader, summing to the master.
+add_executable(StemExportTest AestraAudio/StemExportTest.cpp)
+target_link_libraries(StemExportTest PRIVATE AestraAudio)
+target_include_directories(StemExportTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME StemExportTest COMMAND StemExportTest)
+set_tests_properties(StemExportTest PROPERTIES LABELS "audio;export;stems;contract:audio" TIMEOUT 180)
+
 # Playlist Split/Trim Varispeed — split/trim keep source-domain invariants
 # (durationSeconds, sourceOffsetSeconds) under Speed/Pitch varispeed (#746).
 add_executable(PlaylistSplitVarispeedTest AestraAudio/PlaylistSplitVarispeedTest.cpp)
@@ -2572,6 +2584,34 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(PanelResizeLayoutTest PROPERTIES LABELS "ui;layout;regression;contract:application")
 endif()
 
+# V8-S1: the export dialog is NUI widgets: fits, per-state visibility, stems toggle, failure path.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(ExportDialogWidgetsTest AestraUI_Core AestraUI_Platform)
+    add_executable(ExportDialogWidgetsTest
+        AestraUI/ExportDialogWidgetsTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Settings/ExportDialog.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/UISurfaceStore.cpp
+    )
+    target_link_libraries(ExportDialogWidgetsTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio AestraPlat)
+    target_include_directories(ExportDialogWidgetsTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Settings
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraPlat/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ExportDialogWidgetsTest COMMAND ExportDialogWidgetsTest)
+    set_tests_properties(ExportDialogWidgetsTest PROPERTIES LABELS "ui;layout;export;regression;contract:application")
+endif()
+
 # Spec 1 item 4b: mixer insert dropdown keyboard selection (arrows skip
 # category headers, Enter loads) without leaving the search field.
 if(AESTRA_ENABLE_UI)
@@ -3230,6 +3270,7 @@ if(AESTRA_ENABLE_UI)
         BPMEditorPaintTest
         TransportClockFormatTest
         PanelResizeLayoutTest
+        ExportDialogWidgetsTest
         UnitRowStepSelectionTest
         PluginRackBindingLifecycleTest
         WindowPanelRaiseTest

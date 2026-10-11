@@ -5,6 +5,9 @@
 #include "NUIButton.h"
 #include "NUIProgressBar.h"
 #include "NUIDropdown.h"
+#include "NUICheckbox.h"
+#include "NUILabel.h"
+#include "NUITextInput.h"
 #include "AestraFileDialog.h"
 #include <string>
 #include <functional>
@@ -32,6 +35,8 @@ public:
         double peakDb = -96.0;
         /** @brief Failure message when @ref success is false. */
         std::string errorMessage;
+        /** @brief Files written: 1 for a mix, one per track plus the master for stems. */
+        int fileCount = 1;
     };
 
     /**
@@ -97,27 +102,27 @@ public:
     bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override;
 
 private:
+    enum class PanelState { Settings, Progress, Complete };
+
+    void buildControls();
     void layoutDialog();
-    void drawOverlay(AestraUI::NUIRenderer& renderer);
-    void drawDialog(AestraUI::NUIRenderer& renderer);
-    void drawSettingsPanel(AestraUI::NUIRenderer& renderer);
-    void drawProgressPanel(AestraUI::NUIRenderer& renderer);
+    void applyPanelState();
     void startExport();
-    ExportJobResult exportThreadFn(std::string outputPath, int selectedBitDepth, int selectedSampleRate, int selectedScope, double tailSeconds);
-    void handleMouseClick(AestraUI::NUIPoint pos);
-    void updateButtonHover(AestraUI::NUIPoint pos);
+    ExportJobResult exportThreadFn(std::string outputPath, int selectedBitDepth, int selectedSampleRate, int selectedScope, double tailSeconds, bool stems);
+    void openBrowse();
     bool parseTailInput(double& outTailSeconds) const;
     void syncTailInputFromValue();
     void applyExportResult(const ExportJobResult& result);
     void restoreAudioStreamIfNeeded();
+    void failToComplete(const std::string& message);
+    void finish();
 
-    enum class PanelState { Settings, Progress, Complete };
     PanelState m_panelState = PanelState::Settings;
 
     bool m_visible = false;
     AestraUI::NUIRect m_dialogRect;
     static constexpr float DIALOG_WIDTH = 520.0f;
-    static constexpr float DIALOG_HEIGHT = 330.0f;
+    static constexpr float DIALOG_HEIGHT = 400.0f;
 
     // Settings
     std::string m_outputPath;
@@ -125,6 +130,7 @@ private:
     int m_selectedBitDepth = 1;
     int m_selectedSampleRate = 1;
     int m_selectedScope = 0;
+    bool m_stems = false;
     double m_tailSeconds = 2.0;
     std::string m_tailInput;
 
@@ -140,6 +146,7 @@ private:
     // Browse picker: off the UI thread, never waited on (see AestraFileDialog.h).
     Aestra::PendingFileDialog m_fileDialog;
     std::string m_exportResultPath;
+    int m_exportFileCount = 1;
     double m_exportDuration = 0.0;
     double m_exportPeakDb = -96.0;
     std::string m_exportError;
@@ -150,26 +157,17 @@ private:
     Aestra::Audio::AudioEngine* m_engine = nullptr;
     Aestra::Audio::TrackManager* m_trackManager = nullptr;
 
-    // UI state
-    AestraUI::NUIRect m_startButtonRect;
-    AestraUI::NUIRect m_cancelButtonRect;
-    AestraUI::NUIRect m_closeButtonRect;
-    AestraUI::NUIRect m_browseButtonRect;
-    AestraUI::NUIRect m_outputFieldRect;
-    AestraUI::NUIRect m_bitDepthDropdownRect;
-    AestraUI::NUIRect m_sampleRateDropdownRect;
-    AestraUI::NUIRect m_scopeDropdownRect;
-    AestraUI::NUIRect m_tailInputRect;
-
-    int m_hoveredButton = -1;
-    int m_pressedButton = -1;
-    bool m_bitDepthOpen = false;
-    bool m_sampleRateOpen = false;
-    bool m_scopeOpen = false;
-    bool m_tailInputFocused = false;
-    AestraUI::NUIRect m_bitDepthDropdownPopup;
-    AestraUI::NUIRect m_sampleRateDropdownPopup;
-    AestraUI::NUIRect m_scopeDropdownPopup;
+    // Controls. Settings: rows of label + control. Progress and Complete reuse the
+    // status labels and the buttons.
+    std::shared_ptr<AestraUI::NUILabel> m_outputLabel, m_scopeLabel, m_rateLabel, m_depthLabel, m_tailLabel;
+    std::shared_ptr<AestraUI::NUITextInput> m_outputInput, m_tailField;
+    std::shared_ptr<AestraUI::NUIButton> m_browseButton;
+    std::shared_ptr<AestraUI::NUIDropdown> m_scopeDropdown, m_rateDropdown, m_depthDropdown;
+    std::shared_ptr<AestraUI::NUICheckbox> m_stemsCheckbox;
+    std::shared_ptr<AestraUI::NUILabel> m_stemsHint;
+    std::shared_ptr<AestraUI::NUILabel> m_statusLabel, m_detailLabel, m_detailLabel2, m_elapsedLabel;
+    std::shared_ptr<AestraUI::NUIProgressBar> m_progressBar;
+    std::shared_ptr<AestraUI::NUIButton> m_exportButton, m_cancelButton, m_doneButton;
 
     ExportCallback m_onExportComplete;
 };

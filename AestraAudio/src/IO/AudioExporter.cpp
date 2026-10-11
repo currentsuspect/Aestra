@@ -106,8 +106,8 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     }
 
     const bool captureChannel = config.captureMixerChannelId != TrackOutputTap::kNoChannel;
-    if (captureChannel && (!config.blockSink || config.numChannels != 2)) {
-        result.errorMessage = "A track-output render needs a block sink and stereo output";
+    if (captureChannel && config.numChannels != 2) {
+        result.errorMessage = "A track-output render needs stereo output";
         return result;
     }
 
@@ -286,7 +286,7 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     // by engineStateGuard on every exit path.
     m_engine.setOfflineRenderActive(true);
     if (captureChannel) {
-        m_engine.trackOutputTap().arm(config.captureMixerChannelId, RENDER_BLOCK_FRAMES);
+        m_engine.trackOutputTap().arm(config.captureMixerChannelId, RENDER_BLOCK_FRAMES, config.captureAfterFader);
     }
 
     // Zero the render buffer before the first block so stale DSP state from

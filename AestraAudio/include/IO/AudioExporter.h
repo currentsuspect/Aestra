@@ -118,9 +118,11 @@ public:
          * The channel's post-insert, post-fader/pan buffer, read before it is
          * routed anywhere (see TrackOutputTap), through the same engine loop, so
          * inserts, automation, delay compensation and routed-in audio are all in
-         * it and the master stage is not. Requires @ref blockSink and stereo.
+         * it and the master stage is not. Stereo only. Works for a file or a sink.
          */
         uint32_t captureMixerChannelId = TrackOutputTap::kNoChannel;
+        /** @brief With @ref captureMixerChannelId: read after fader/pan (a stem) rather than before (a bounce). */
+        bool captureAfterFader = false;
 
         /** @brief Maximum allowed true peak in dBTP (Spotify spec is -1.0). */
         float truePeakCeilingdBTP = -1.0f;
