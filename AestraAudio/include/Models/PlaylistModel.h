@@ -660,8 +660,9 @@ public:
                             // Phase 4 (F1): prefer the anti-aliased filtered copy when
                             // this clip is DOWNSAMPLED into the session and the copy is
                             // ready; otherwise the original buffer (pre-Phase-4 path).
-                            // The filtered copy keeps the SOURCE sample rate, so all
-                            // timing math below is identical either way.
+                            // The filtered copy has its own sample rate (the source's, or the
+                            // project's when stored decimated), read from the buffer just below,
+                            // so the timing math is identical either way.
                             auto renderBuffer = source->getFilteredBufferFor(
                                 static_cast<uint32_t>(m_projectSampleRate));
                             if (!renderBuffer) {

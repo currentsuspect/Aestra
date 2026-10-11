@@ -43,6 +43,7 @@ public:
         uint64_t sourceId{0};
         uint64_t contentRevision{0};
         uint32_t targetRate{0};
+        uint32_t decimation{1}; // keep every Nth filtered frame (stored at the target rate); 1 = full-rate copy
         std::shared_ptr<const AudioBufferData> source; // owned copy; worker-safe
     };
 
@@ -50,6 +51,7 @@ public:
         uint64_t sourceId{0};
         uint64_t contentRevision{0};
         uint32_t targetRate{0};
+        uint32_t decimation{1};
         uint32_t specVersion{0};
         std::shared_ptr<AudioBufferData> filtered;
         double buildMillis{0.0}; // diagnostic, quoted by the research bench
@@ -72,7 +74,7 @@ public:
 private:
     void workerLoop();
 
-    using Key = std::tuple<uint64_t, uint64_t, uint32_t>;
+    using Key = std::tuple<uint64_t, uint64_t, uint32_t, uint32_t>;
 
     std::function<void()> m_onJobComplete;
 
