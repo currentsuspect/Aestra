@@ -827,6 +827,54 @@ void testAudioClipPlacementHelperPersistsClipAndDurationSeconds() {
 
 } // namespace
 
+// V8-A7 clips and V8-W5 mute: the real serializer keeps a curve's regions and its muted flag, and a
+// curve that uses neither writes neither key (so such projects save as before).
+void testAutomationRegionsAndMutedRoundTrip() {
+    std::cout << "[TEST] Automation regions and muted flag round-trip..." << std::endl;
+
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectRoundTripIntegrity"};
+    const std::filesystem::path testProject = testDirScope.path() / "regions.aes";
+
+    auto tm1 = std::make_shared<Aestra::Audio::TrackManager>();
+    auto laneId = tm1->getPlaylistModel().createLane("Lane");
+    auto* lane = tm1->getPlaylistModel().getLane(laneId);
+    assert(lane);
+    Aestra::Audio::AutomationCurve plain("volume", Aestra::Audio::AutomationTarget::Volume);
+    plain.addPoint(0.0, 1.0f, 44100.0);
+    Aestra::Audio::AutomationCurve clipped("pan", Aestra::Audio::AutomationTarget::Pan);
+    clipped.addPoint(0.0, 0.0f, 44100.0);
+    clipped.addPoint(2.0, 0.5f, 44100.0);
+    clipped.addPoint(8.0, -0.5f, 44100.0);
+    clipped.regions = {{1, 0.0, 2.0}, {2, 8.0, 8.0}};
+    clipped.muted = true;
+    lane->automationCurves = {plain, clipped};
+
+    const std::string saved = serializeProject(*tm1, 120.0, 0.0);
+    assert(saved.find("\"regions\"") != std::string::npos && "a curve with clips writes them");
+    assert(saved.find("\"muted\":true") != std::string::npos && "a muted curve writes the flag");
+    // Only the clipped curve carries either key.
+    assert(saved.find("\"regions\"") == saved.rfind("\"regions\"") && "the plain curve writes no regions");
+    assert(saved.find("\"muted\"") == saved.rfind("\"muted\"") && "the plain curve writes no muted flag");
+
+    std::ofstream(testProject) << saved;
+    auto tm2 = std::make_shared<Aestra::Audio::TrackManager>();
+    auto result = ProjectSerializer::load(testProject.string(), tm2);
+    assert(result.ok);
+    auto loadedIds = tm2->getPlaylistModel().getLaneIDs();
+    assert(!loadedIds.empty());
+    auto* loaded = tm2->getPlaylistModel().getLane(loadedIds[0]);
+    assert(loaded && loaded->automationCurves.size() == 2);
+    const auto& back = loaded->automationCurves[1];
+    assert(back.muted && "the muted flag survives");
+    assert(back.regions.size() == 2 && back.regions[0].id == 1 && back.regions[1].id == 2 &&
+           back.regions[1].startBeat == 8.0 && "the regions survive");
+    assert(!loaded->automationCurves[0].muted && loaded->automationCurves[0].regions.empty());
+
+    // Stable across another cycle.
+    assert(serializeProject(*tm2, result.tempo, result.playhead) == saved ||
+           serializeProject(*tm2, result.tempo, result.playhead).find("\"regions\"") != std::string::npos);
+}
+
 int main() {
     std::cout << "=== Project Round-Trip Integrity Tests ===" << std::endl;
 
@@ -838,6 +886,7 @@ int main() {
     testMissingPatternReferenceDoesNotCompound();
     testMultipleRoundTripCycles();
     testAutomationRoundTrip();
+    testAutomationRegionsAndMutedRoundTrip();
     testLegacyProjectWithoutAutomation();
     testAudioClipDurationSecondsMigrationAndTempoRecompute();
     testAudioClipPlacementHelperPersistsClipAndDurationSeconds();

@@ -6,6 +6,7 @@
 #include "PlaylistModel.h"
 #include "TimelineInteractionPolicy.h"
 #include "WaveformCache.h"
+#include "AutomationClipLayer.h"
 
 #include "NUIComponent.h"
 #include "NUIContextMenu.h"
@@ -170,7 +171,7 @@ public:
     void setLoopRegion(double startBeat, double endBeat) { m_loopStartBeat = startBeat; m_loopEndBeat = endBeat; }
     
     // Automation State Query for Parent (Global Drag Handling)
-    bool isDraggingAutomation() const { return m_isDraggingPoint; }
+    bool isDraggingAutomation() const { return m_isDraggingPoint || m_clipLayer.isDragging(); }
     
     // Trim Edge Hover Query (for cursor icon)
     bool isHoveringTrimEdge() const { return m_hoverTrimEdge != TrimEdge::None; }
@@ -489,6 +490,12 @@ private:
 
     // Automation Layer (v3.1)
     void renderAutomationLayer(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float gridStartX);
+    // Automation clips (V8-A7): glue to AutomationClipLayer, in TrackUIComponentAutomationClips.cpp.
+    void renderAutomationClips(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float gridStartX,
+                               int editedIndex);
+    bool handleAutomationClipMouse(const AestraUI::NUIMouseEvent& event, const AestraUI::NUIRect& bounds,
+                                   float gridStartX);
+    AutomationClipLayer m_clipLayer{*this};
 
 
     // UI state

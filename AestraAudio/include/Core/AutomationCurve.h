@@ -87,6 +87,21 @@ struct AutomationPoint {
     bool selected{false}; // Selection state for UI
 };
 
+/**
+ * @brief A movable, copyable stretch of a curve: an automation "clip" (V8-A7).
+ *
+ * A region is a closed span of beats on one curve, tight to its points: startBeat
+ * is its first point, endBeat its last. The points inside the span ARE the region;
+ * nothing else is stored, so the engine still evaluates the curve exactly as before
+ * and a curve without regions plays and saves as it always has. Points outside every
+ * span are loose, as drawn by hand. Regions of one curve never overlap.
+ */
+struct AutomationRegion {
+    uint64_t id{0}; ///< unique within its curve
+    double startBeat{0.0};
+    double endBeat{0.0};
+};
+
 struct AutomationCurve {
     uint32_t laneId{0};
     /** Stable mixer insert destination. Zero means unassigned, not lane index zero. */
@@ -116,6 +131,9 @@ struct AutomationCurve {
     /** Not evaluated by the engine. Bounce in Place sets it once the curve's effect is baked into audio;
      *  the points stay in the project so undo, or turning it back on, loses nothing. */
     bool muted{false};
+
+    /** Clips on this curve (V8-A7). Empty until the first clip operation; see AutomationRegions.h. */
+    std::vector<AutomationRegion> regions;
 
     AutomationCurve() = default;
     // defaultValue follows the target, so no construction path can produce a
@@ -261,6 +279,16 @@ inline bool automationPointsEqual(const AutomationPoint& a, const AutomationPoin
     return a.beat == b.beat && a.value == b.value && a.curve == b.curve;
 }
 
+inline bool automationRegionsEqual(const std::vector<AutomationRegion>& a, const std::vector<AutomationRegion>& b) noexcept {
+    if (a.size() != b.size())
+        return false;
+    for (size_t i = 0; i < a.size(); ++i) {
+        if (a[i].id != b[i].id || a[i].startBeat != b[i].startBeat || a[i].endBeat != b[i].endBeat)
+            return false;
+    }
+    return true;
+}
+
 /** @brief Compare two curve vectors by undoable content; the V8-A1 no-op guard. */
 inline bool automationCurvesEqual(const std::vector<AutomationCurve>& a,
                                   const std::vector<AutomationCurve>& b) noexcept {
@@ -270,7 +298,7 @@ inline bool automationCurvesEqual(const std::vector<AutomationCurve>& a,
         const AutomationCurve& x = a[i];
         const AutomationCurve& y = b[i];
         if (x.name != y.name || x.target != y.target || x.mixerChannelId != y.mixerChannelId ||
-            x.defaultValue != y.defaultValue || x.muted != y.muted || x.deviceInstanceId != y.deviceInstanceId || x.paramId != y.paramId) {
+            x.defaultValue != y.defaultValue || x.muted != y.muted || !automationRegionsEqual(x.regions, y.regions) || x.deviceInstanceId != y.deviceInstanceId || x.paramId != y.paramId) {
             return false;
         }
         if (x.points.size() != y.points.size())

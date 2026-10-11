@@ -1742,6 +1742,19 @@ target_include_directories(StemExportTest PRIVATE
 add_test(NAME StemExportTest COMMAND StemExportTest)
 set_tests_properties(StemExportTest PROPERTIES LABELS "audio;export;stems;contract:audio" TIMEOUT 180)
 
+# V8-A7: automation clips -- the operations, undo through the lane, and the project format.
+add_executable(AutomationRegionsTest AestraAudio/AutomationRegionsTest.cpp)
+target_link_libraries(AutomationRegionsTest PRIVATE AestraAudio)
+target_include_directories(AutomationRegionsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source/Core
+)
+add_test(NAME AutomationRegionsTest COMMAND AutomationRegionsTest)
+set_tests_properties(AutomationRegionsTest PROPERTIES LABELS "audio;automation;undo;serialization;contract:audio" TIMEOUT 60)
+
 # Playlist Split/Trim Varispeed — split/trim keep source-domain invariants
 # (durationSeconds, sourceOffsetSeconds) under Speed/Pitch varispeed (#746).
 add_executable(PlaylistSplitVarispeedTest AestraAudio/PlaylistSplitVarispeedTest.cpp)
@@ -2631,6 +2644,30 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(ExportDialogWidgetsTest PROPERTIES LABELS "ui;layout;export;regression;contract:application")
 endif()
 
+# V8-A7: automation clip gestures (move, Ctrl-copy, refused drop, one undo step each).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(AutomationClipLayerTest AestraUI_Core AestraUI_Platform)
+    add_executable(AutomationClipLayerTest
+        AestraUI/AutomationClipLayerTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
+    )
+    target_link_libraries(AutomationClipLayerTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(AutomationClipLayerTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME AutomationClipLayerTest COMMAND AutomationClipLayerTest)
+    set_tests_properties(AutomationClipLayerTest PROPERTIES LABELS "ui;automation;undo;regression;contract:application")
+endif()
+
 # Spec 1 item 4b: mixer insert dropdown keyboard selection (arrows skip
 # category headers, Enter loads) without leaving the search field.
 if(AESTRA_ENABLE_UI)
@@ -2931,6 +2968,8 @@ if(AESTRA_ENABLE_UI)
     add_executable(ClipContextMenuReachabilityTest
         AestraUI/ClipContextMenuReachabilityTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
@@ -2986,6 +3025,8 @@ if(AESTRA_ENABLE_UI)
     add_executable(ClipDragReleaseTest
         AestraUI/ClipDragReleaseTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
@@ -3042,6 +3083,8 @@ if(AESTRA_ENABLE_UI)
     add_executable(UIScenarioTest
         AestraUI/UIScenarioTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
@@ -3097,6 +3140,8 @@ if(AESTRA_ENABLE_UI)
     add_executable(TimelineFollowPreferenceTest
         AestraUI/TimelineFollowPreferenceTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
@@ -3150,6 +3195,8 @@ if(AESTRA_ENABLE_UI)
     add_executable(TimelineGridSelectionTest
         AestraUI/TimelineGridSelectionTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
@@ -3291,6 +3338,7 @@ if(AESTRA_ENABLE_UI)
         TransportClockFormatTest
         PanelResizeLayoutTest
         ExportDialogWidgetsTest
+        AutomationClipLayerTest
         UnitRowStepSelectionTest
         PluginRackBindingLifecycleTest
         WindowPanelRaiseTest
