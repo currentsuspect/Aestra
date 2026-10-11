@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AudioRenderer.h"
+#include "Core/ClipRenderKernel.h"
 
 #include "../../AestraCore/include/AestraMath.h"
 #include "ArsenalProcessingContext.h"
@@ -198,6 +199,13 @@ void AudioRenderer::renderClipAudio(double* outputBuffer, TrackRTState& state, u
     const auto cachedInterpQuality = engineRef.getInterpolationQuality();
 
     for (const auto& clip : clips) {
+        if (!clip.audioData && clip.bufferOwner && clip.bufferOwner->isCompact()) {
+            // Compact PCM source: the shared kernel converts its window and mixes it.
+            if (blockEnd > clip.startSample && blockStart < clip.endSample)
+                (void)ClipRenderKernel::renderClipInto(clip, blockStart, blockEnd, dstBase, ctx.sampleRate,
+                                                       cachedInterpQuality);
+            continue;
+        }
         if (!clip.audioData || blockEnd <= clip.startSample || blockStart >= clip.endSample)
             continue;
         const uint64_t start = std::max(blockStart, clip.startSample);

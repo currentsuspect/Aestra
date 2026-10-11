@@ -1255,7 +1255,8 @@ void TrackUIComponent::computeDirectPeaks(const Aestra::Audio::AudioBufferData& 
     if (startFrame >= endFrame) return;
     channel = std::min(channel, buffer.numChannels - 1);
 
-    const float* data = buffer.interleavedData.data();
+    const float* fp = buffer.isCompact() ? nullptr : buffer.interleavedData.data(); // compact PCM: sampleAt
+    const auto at = [&](size_t i) { return fp ? fp[i] : buffer.sampleAt(i); };
     const size_t stride = buffer.numChannels;
     const double framesPerColumn = (endFrame - startFrame) / static_cast<double>(numColumns);
 
@@ -1268,11 +1269,11 @@ void TrackUIComponent::computeDirectPeaks(const Aestra::Audio::AudioBufferData& 
         f0 = std::min(f0, static_cast<size_t>(buffer.numFrames) - 1);
         f1 = std::max(std::min(f1, static_cast<size_t>(buffer.numFrames)), f0 + 1);
 
-        float minVal = data[f0 * stride + channel];
+        float minVal = at(f0 * stride + channel);
         float maxVal = minVal;
         double sumSq = 0.0;
         for (size_t f = f0; f < f1; ++f) {
-            const float s = data[f * stride + channel];
+            const float s = at(f * stride + channel);
             minVal = std::min(minVal, s);
             maxVal = std::max(maxVal, s);
             sumSq += static_cast<double>(s) * s;
@@ -1282,8 +1283,7 @@ void TrackUIComponent::computeDirectPeaks(const Aestra::Audio::AudioBufferData& 
             std::min<size_t>(f1 - f0, std::numeric_limits<uint32_t>::max()));
         const float rms = static_cast<float>(std::sqrt(sumSq / static_cast<double>(count)));
         outPeaks.emplace_back(minVal, maxVal, rms, count);
-        // NaN/Inf scrub happens here once per column — NOT per sample above.
-        // Per-sample isfinite dominated this loop's profile on zoomed-in clips.
+        // NaN/Inf scrub once per column, NOT per sample: per-sample isfinite dominated zoomed-in clips.
         outPeaks.back().sanitize();
     }
 }

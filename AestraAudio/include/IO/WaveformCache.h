@@ -258,6 +258,8 @@ private:
     void buildLevel(const float* data, SampleIndex numFrames, uint32_t numChannels, uint32_t samplesPerPeak,
                     WaveformMipLevel& outLevel);
     void buildNextLevel(const WaveformMipLevel& source, WaveformMipLevel& dest);
+    /// Same as buildLevel for a compact PCM buffer: converts one peak's frames at a time, never the whole file.
+    void buildLevelFromBuffer(const AudioBufferData& buffer, uint32_t samplesPerPeak, WaveformMipLevel& outLevel);
     void mergePixelRange(const WaveformMipLevel& level, uint32_t channel, double startSample, double samplesPerPixel,
                          uint32_t numPixels, std::vector<WaveformPeak>& outPeaks) const;
 };

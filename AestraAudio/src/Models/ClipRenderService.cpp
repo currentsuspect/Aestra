@@ -133,7 +133,7 @@ std::shared_ptr<AudioBufferData> ClipRenderService::extractRegion(const AudioBuf
         !framesToSamples(startFrame, source.numChannels, sampleOffset)) {
         return nullptr;
     }
-    if (sampleOffset + sampleCount > source.interleavedData.size()) {
+    if (sampleOffset + sampleCount > source.storedSamples()) {
         return nullptr;
     }
 
@@ -141,9 +141,8 @@ std::shared_ptr<AudioBufferData> ClipRenderService::extractRegion(const AudioBuf
     out->sampleRate = source.sampleRate;
     out->numChannels = source.numChannels;
     out->numFrames = framesToCopy;
-    out->interleavedData.assign(source.interleavedData.begin() + static_cast<std::ptrdiff_t>(sampleOffset),
-                                source.interleavedData.begin() +
-                                    static_cast<std::ptrdiff_t>(sampleOffset + sampleCount));
+    out->interleavedData.resize(sampleCount); // always float32: the transforms below edit in place
+    source.copyFloats(sampleOffset, sampleCount, out->interleavedData.data());
     return out;
 }
 
@@ -318,6 +317,11 @@ std::string ClipRenderService::uniqueRenderPath(const std::string& directory, co
 }
 
 bool ClipRenderService::writeFloatWav(const std::string& path, const AudioBufferData& buffer) {
+    if (buffer.isCompact()) { // the file is float32: expand a copy for the write
+        AudioBufferData expanded = buffer;
+        expanded.expandToFloat();
+        return writeFloatWav(path, expanded);
+    }
     if (buffer.numChannels == 0 || buffer.numChannels > std::numeric_limits<uint16_t>::max() ||
         buffer.sampleRate == 0 || buffer.numFrames > std::numeric_limits<uint32_t>::max() ||
         buffer.interleavedData.size() > (std::numeric_limits<uint32_t>::max() / sizeof(float))) {

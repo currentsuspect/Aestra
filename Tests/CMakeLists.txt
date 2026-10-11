@@ -1780,6 +1780,18 @@ target_include_directories(TimelineMidiTrimTimingTest PRIVATE
 add_test(NAME TimelineMidiTrimTimingTest COMMAND TimelineMidiTrimTimingTest)
 set_tests_properties(TimelineMidiTrimTimingTest PROPERTIES LABELS "audio;midi;timeline;regression;contract:audio" TIMEOUT 60)
 
+# Compact PCM sources: lossless storage and bit-identical rendering (memory: 16-bit is half of float32).
+add_executable(CompactSourceAudioTest AestraAudio/CompactSourceAudioTest.cpp)
+target_link_libraries(CompactSourceAudioTest PRIVATE AestraAudio)
+target_include_directories(CompactSourceAudioTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME CompactSourceAudioTest COMMAND CompactSourceAudioTest)
+set_tests_properties(CompactSourceAudioTest PROPERTIES LABELS "audio;memory;parity;contract:audio" TIMEOUT 180)
+
 # Playlist Split/Trim Varispeed — split/trim keep source-domain invariants
 # (durationSeconds, sourceOffsetSeconds) under Speed/Pitch varispeed (#746).
 add_executable(PlaylistSplitVarispeedTest AestraAudio/PlaylistSplitVarispeedTest.cpp)

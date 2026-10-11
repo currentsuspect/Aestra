@@ -492,11 +492,7 @@ void AudioClipEditorPanel::rebuildWaveform() {
     }
 
     m_sourceDurationSeconds = buffer->durationSeconds();
-    m_sourcePeak = 0.0f;
-    for (const float sample : buffer->interleavedData) {
-        if (std::isfinite(sample))
-            m_sourcePeak = std::max(m_sourcePeak, std::abs(sample));
-    }
+    m_sourcePeak = buffer->peakAbs();
 
     m_sourceNameLabel->setText(source->getName().empty() ? clip->name : source->getName());
     const char* channelText =
@@ -554,8 +550,8 @@ void AudioClipEditorPanel::rebuildWaveform() {
             const float fraction = static_cast<float>(phase - static_cast<double>(frame));
             float mono = 0.0f;
             for (size_t channel = 0; channel < channels; ++channel) {
-                const float a = buffer->interleavedData[frame * channels + channel];
-                const float b = buffer->interleavedData[nextFrame * channels + channel];
+                const float a = buffer->sampleAt(frame * channels + channel);
+                const float b = buffer->sampleAt(nextFrame * channels + channel);
                 mono += a + (b - a) * fraction;
             }
             mono /= static_cast<float>(channels);
