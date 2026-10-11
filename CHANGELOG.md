@@ -250,6 +250,16 @@ family: the UI told you one thing and the engine did another.
 - **Mixer plugin menus** are populated from a metadata catalog rather than a
   hand-maintained list, and now open where you clicked. (#872, #875)
 
+### Memory and imports (for the 4 GB laptop)
+
+- **Audio files that are 16- or 24-bit PCM stay that size in memory** (half or three quarters of before),
+  and sound bit-for-bit the same. A 12-track, 4-minute-each session fell from 1.2 GB to 0.7 GB of audio
+  memory. MP3, OGG and 32-bit float files are unchanged. (#1070)
+- **Loading a long sample from the browser no longer freezes the app** while it decodes. (#1071)
+- Higher-sample-rate files keep their anti-alias copy only while something plays them, and it is made
+  without a second temporary copy. (#1072)
+- `scripts/aestra-4gb.sh` runs Aestra under a 4 GB, 2-core limit for performance work. (#1069)
+
 ### Trust infrastructure
 
 - **The audio thread is checked at compile time.** `AESTRA_RT_NONBLOCKING`
@@ -281,7 +291,7 @@ family: the UI told you one thing and the engine did another.
 
 ## v0.8.0-alpha — Automation, Clips and Export (2026-10-11)
 
-148 commits since v0.7.1-alpha. Automation is now something you author; a clip can be
+Over 150 commits since v0.7.1-alpha. Automation is now something you author; a clip can be
 bounced, fitted and faded from the clip itself; export can write stems; and the UI half of
 the app can fail a build.
 
@@ -342,8 +352,12 @@ the app can fail a build.
 - VST3 and CLAP plugin-parameter automation still needs a host adapter; only internal plugins are driven.
 - Bounce in Place does not handle instrument tracks and cuts effect tails.
 - Panel menus are reached by right-clicking a title bar; there is no visible button yet.
-- Piano-roll performance on the 4 GB target machine is improved (#989) but not finished: a covered
-  timeline is still drawn under the piano roll.
+- Frame cost on the 4 GB target machine: an idle timeline costs about 12 ms per frame whether or not
+  the transport is playing (the timeline is redrawn every frame; the render cache is off on Linux), and
+  a panel that covers only part of it still leaves it drawn underneath. A retained-geometry replay of the
+  timeline is the next step; the piano roll fully covering it is already skipped (#990).
+- Sources recorded above the project rate (96 kHz in a 48 kHz project) still need a full float32
+  anti-alias copy while they are played, and preparing it keeps one core busy for a couple of minutes.
 - Presets and in-app documentation are deferred to v0.8.1.
 
 ## [Unreleased]
