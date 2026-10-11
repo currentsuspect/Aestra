@@ -92,7 +92,12 @@ private:
     std::shared_ptr<AestraUI::NUISlider> m_speedSlider;
     std::shared_ptr<AestraUI::NUISlider> m_sourceStartSlider;
     std::shared_ptr<AestraUI::NUILabel> m_fitLabel;
-    std::array<std::shared_ptr<AestraUI::NUIButton>, 4> m_fitButtons; // 1 / 2 / 4 / 8 bars
+    // The ranked fit targets for this clip (V8-W1, SPEC-001): the top candidates from the
+    // generator/ranker in Models/StretchTargets.h, best first, replacing the fixed 1/2/4/8 row.
+    static constexpr size_t kFitTargetCount = 5;
+    std::array<std::shared_ptr<AestraUI::NUIButton>, kFitTargetCount> m_fitButtons;
+    std::array<int, kFitTargetCount> m_fitBars{};
+    double m_fitCachedBpm{0.0};
     std::shared_ptr<AestraUI::NUIButton> m_muteButton;
     std::shared_ptr<AestraUI::NUIButton> m_normalizeButton;
     std::shared_ptr<AestraUI::NUIButton> m_resetButton;
@@ -103,6 +108,10 @@ private:
     void buildUI();
     bool resolveClip(ClipInstance*& clip, PatternSource*& pattern) const;
     void applyFitToBars(int bars);
+    /// Region-aware length of the clip's audible content, in source seconds: what the render consumes.
+    bool resolveFitContentSeconds(double& contentSeconds) const;
+    /// Recompute the ranked fit buttons from the clip's length and the project tempo.
+    void refreshFitTargets();
     void rebuildWaveform();
     void rebuildRoutes(bool force);
     uint64_t calculateRouteFingerprint() const;

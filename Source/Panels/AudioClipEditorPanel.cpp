@@ -9,6 +9,7 @@
 #include "Commands/TrimClipCommand.h"
 #include "Commands/CommandTransaction.h"
 #include "Models/ClipFit.h"
+#include "Models/StretchTargets.h"
 #include "Models/ClipRenderService.h"
 #include "NUIButton.h"
 #include "NUILabel.h"
@@ -279,11 +280,13 @@ void AudioClipEditorPanel::buildUI() {
     m_sourceStartSlider = makeSlider("Source start", 0.0, 1.0, 0.0);
     m_fitLabel = makeLabel("Fit");
     for (size_t i = 0; i < m_fitButtons.size(); ++i) {
-        const int bars = static_cast<int>(1 << i); // 1, 2, 4, 8
-        m_fitButtons[i] = std::make_shared<NUIButton>(std::to_string(bars));
+        m_fitButtons[i] = std::make_shared<NUIButton>("");
         styleButton(m_fitButtons[i]);
-        m_fitButtons[i]->setTooltip("Varispeed fit — pitch follows tempo");
-        m_fitButtons[i]->setOnClick([this, bars]() { applyFitToBars(bars); });
+        m_fitButtons[i]->setVisible(false); // shown by refreshFitTargets() once the clip's length is known
+        m_fitButtons[i]->setOnClick([this, i]() {
+            if (m_fitBars[i] > 0)
+                applyFitToBars(m_fitBars[i]);
+        });
     }
     m_muteButton = std::make_shared<NUIButton>("Mute clip");
     m_muteButton->setToggleable(true);
@@ -412,7 +415,7 @@ void AudioClipEditorPanel::buildUI() {
         m_fadeInSlider,       m_fadeOutSlider,         m_pitchSlider,            m_speedSlider,
         m_sourceStartSlider,  m_muteButton,
         m_fitLabel,           m_fitButtons[0],         m_fitButtons[1],
-        m_fitButtons[2],      m_fitButtons[3],
+        m_fitButtons[2],      m_fitButtons[3],      m_fitButtons[4],
         m_normalizeButton,    m_resetButton,           m_makeUniqueButton,
         m_reverseButton,      m_commitButton};
     for (const auto& child : children) {
@@ -641,6 +644,7 @@ void AudioClipEditorPanel::syncControlsFromModel() {
     m_muteButton->setText(m_workingEdits.muted ? "Unmute clip" : "Mute clip");
     m_suppressCallbacks = false;
     updateValueLabels();
+    refreshFitTargets();
 }
 
 void AudioClipEditorPanel::updateValueLabels() {
@@ -695,20 +699,20 @@ void AudioClipEditorPanel::commitEditGesture() {
     }
 }
 
-void AudioClipEditorPanel::applyFitToBars(int bars) {
+bool AudioClipEditorPanel::resolveFitContentSeconds(double& contentSeconds) const {
     if (!m_trackManager || !m_clipId.isValid())
-        return;
+        return false;
     ClipInstance* clip = nullptr;
     PatternSource* pattern = nullptr;
     if (!resolveClip(clip, pattern))
-        return;
+        return false;
     const auto* payload = std::get_if<AudioSlicePayload>(&pattern->payload);
     if (!payload)
-        return;
+        return false;
     const auto* source = m_trackManager->getSourceManager().getSource(payload->audioSourceId);
     const auto* buffer = source ? source->getRawBuffer() : nullptr;
     if (!source || !buffer || !buffer->isValid())
-        return;
+        return false;
 
     // Region-aware content seconds: what the render path actually consumes
     // after trim/offset — same authority rebuildWaveform draws from.
@@ -717,8 +721,44 @@ void AudioClipEditorPanel::applyFitToBars(int bars) {
         ClipRenderService(m_trackManager->getSourceManager(), m_trackManager->getPatternManager())
             .resolveClipRegion(*clip, sampleRate);
     if (!region.isValid())
+        return false;
+    contentSeconds = static_cast<double>(region.frameCount) / static_cast<double>(buffer->sampleRate);
+    return true;
+}
+
+void AudioClipEditorPanel::refreshFitTargets() {
+    double contentSeconds = 0.0;
+    const double bpm = m_trackManager ? m_trackManager->getPlaylistModel().getBPM() : 0.0;
+    m_fitCachedBpm = bpm;
+    Audio::StretchTargetList list;
+    if (bpm > 0.0 && resolveFitContentSeconds(contentSeconds)) {
+        // L, in bars: the clip's audible length at the project tempo (4/4 today, as ClipFit.h).
+        const double lengthBars = contentSeconds * bpm / (60.0 * Audio::FIT_BARS_BEATS_PER_BAR);
+        list = Audio::rankStretchTargets(lengthBars);
+    }
+    for (size_t i = 0; i < m_fitButtons.size(); ++i) {
+        if (i < list.ranked.size()) {
+            const auto& target = list.ranked[i];
+            m_fitBars[i] = target.bars;
+            m_fitButtons[i]->setText(std::to_string(target.bars));
+            // The interface describes what the engine does: varispeed, pitch follows (never "stretch").
+            m_fitButtons[i]->setTooltip((i == 0 ? "Best fit: " : "Fit: ") + Audio::formatStretchTarget(target));
+            m_fitButtons[i]->setVisible(true);
+        } else {
+            m_fitBars[i] = 0;
+            m_fitButtons[i]->setVisible(false);
+        }
+    }
+}
+
+void AudioClipEditorPanel::applyFitToBars(int bars) {
+    double contentSeconds = 0.0;
+    if (!resolveFitContentSeconds(contentSeconds))
         return;
-    const double contentSeconds = static_cast<double>(region.frameCount) / static_cast<double>(buffer->sampleRate);
+    ClipInstance* clip = nullptr;
+    PatternSource* pattern = nullptr;
+    if (!resolveClip(clip, pattern))
+        return;
 
     const auto fit = Audio::computeFitToBars(contentSeconds, m_trackManager->getPlaylistModel().getBPM(), bars,
                                              clip->edits.pitchSemitones);
@@ -860,7 +900,7 @@ void AudioClipEditorPanel::onResize(int width, int height) {
     m_fitLabel->setBounds({right + 9.0f, controlsTop + 221.0f, labelWidth, 16.0f});
     {
         float fitX = right + 9.0f + labelWidth + 8.0f;
-        const float fitW = std::max(0.0f, (columnWidth - labelWidth - 8.0f - 3.0f * buttonGap) / 4.0f);
+        const float fitW = std::max(0.0f, (columnWidth - labelWidth - 8.0f - 4.0f * buttonGap) / 5.0f);
         for (const auto& fitButton : m_fitButtons) {
             fitButton->setBounds({fitX, controlsTop + 216.0f, fitW, 24.0f});
             fitX += fitW + buttonGap;
@@ -879,6 +919,9 @@ void AudioClipEditorPanel::onUpdate(double deltaTime) {
         setVisible(false);
         return;
     }
+    // The fit targets depend on the tempo: a BPM change re-ranks them without touching the clip.
+    if (m_trackManager && std::abs(m_trackManager->getPlaylistModel().getBPM() - m_fitCachedBpm) > 1.0e-6)
+        refreshFitTargets();
     if (pattern->id != m_patternId) {
         m_patternId = pattern->id;
         rebuildWaveform();
