@@ -1075,6 +1075,25 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
 
         // Undo/Redo is handled globally by AestraContent — don't duplicate here
 
+        // Arrow keys nudge the selected clips as one block: Left/Right by the grid step (Shift: a sixteenth),
+        // Up/Down by a lane. Clamped as a whole, one undo step per press.
+        if (!(event.modifiers & (AestraUI::NUIModifiers::Ctrl | AestraUI::NUIModifiers::Alt)) &&
+            (m_selectedClipId.isValid() || !m_clipSelection.empty())) {
+            const bool fine = (event.modifiers & AestraUI::NUIModifiers::Shift) != 0;
+            const double grid = (m_snapEnabled && m_snapSetting != AestraUI::SnapGrid::None)
+                                    ? AestraUI::MusicTheory::getSnapDuration(m_snapSetting)
+                                    : 0.25;
+            const double step = fine ? 0.25 : std::max(0.25, grid);
+            if (event.keyCode == AestraUI::NUIKeyCode::Left)
+                return nudgeSelectedClips(-step, 0);
+            if (event.keyCode == AestraUI::NUIKeyCode::Right)
+                return nudgeSelectedClips(step, 0);
+            if (event.keyCode == AestraUI::NUIKeyCode::Up)
+                return nudgeSelectedClips(0.0, -1);
+            if (event.keyCode == AestraUI::NUIKeyCode::Down)
+                return nudgeSelectedClips(0.0, 1);
+        }
+
         // Clipboard (Ctrl+C/V/X/D)
         if (event.modifiers & AestraUI::NUIModifiers::Ctrl) {
             if (event.keyCode == AestraUI::NUIKeyCode::A) {
@@ -1088,7 +1107,7 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
                 cutSelectedClip();
                 return true;
             }
-            if (event.keyCode == AestraUI::NUIKeyCode::C && m_selectedClipId.isValid()) {
+            if (event.keyCode == AestraUI::NUIKeyCode::C && (m_selectedClipId.isValid() || !m_clipSelection.empty())) {
                 copySelectedClip();
                 return true;
             }

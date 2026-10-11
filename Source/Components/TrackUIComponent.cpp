@@ -2895,13 +2895,14 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             }
             Log::info("Finished trimming clip");
         }
-        
-        // Instant Drag Finish
-        if (m_isDraggingClip) {
+        // Instant Drag Finish; a press that never dragged resolves a pending multi-selection click
+        if (m_isDraggingClip || m_clipDragPotential) {
              if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
-                 parentMgr->finishInstantClipDrag();
-                 if (auto win = parentMgr->getPlatformWindow()) {
-                     win->setMouseCapture(false);
+                 if (m_isDraggingClip) {
+                     parentMgr->finishInstantClipDrag();
+                     if (auto win = parentMgr->getPlatformWindow()) win->setMouseCapture(false);
+                 } else {
+                     parentMgr->resolvePendingGroupClick(m_activeClipId);
                  }
              }
         }
@@ -2911,7 +2912,6 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         m_isTrimming = false;
         m_trimEdge = TrimEdge::None;
         m_activeClipId = ClipInstanceID{};  // Clear active clip
-        
         // Only consume the event if we were doing something
         if (wasActive) {
             return true;

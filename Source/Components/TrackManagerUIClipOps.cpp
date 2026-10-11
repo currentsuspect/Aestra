@@ -65,11 +65,134 @@ void TrackManagerUI::startInstantClipDrag(TrackUIComponent* trackComp, ClipInsta
     double cursorBeat = gridOffsetToBeat(clickPos.x - gridStartX);
     m_clipDragOffsetBeats = cursorBeat - clip->startBeat;
 
+    // Dragging one clip of a multi-selection drags the whole selection: remember where each one started.
+    m_groupDrag.clear();
+    m_pendingGroupCollapse = ClipInstanceID{}; // a drag began, so the press is not a plain click any more
+    if (m_clipSelection.size() > 1 && m_clipSelection.contains(clipId)) {
+        m_clipSelection.forEachClip([&](const ClipInstanceID& id) {
+            if (const auto* member = playlist.getClip(id)) {
+                GroupDragEntry entry;
+                entry.id = id;
+                entry.startBeat = member->startBeat;
+                entry.lane = playlist.findClipLane(id);
+                entry.laneIndex = laneIndexOf(entry.lane);
+                m_groupDrag.push_back(entry);
+            }
+        });
+        if (m_groupDrag.size() < 2) {
+            m_groupDrag.clear();
+        }
+        m_groupDragAnchorStart = clip->startBeat;
+        m_groupDragAnchorLaneIndex = laneIndexOf(m_clipOriginalLaneId);
+    }
+
     if (m_window) {
         m_window->setMouseCapture(true);
     }
 
     Log::info("Started instant clip drag");
+}
+
+int TrackManagerUI::laneIndexOf(const PlaylistLaneID& laneId) const {
+    for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
+        if (m_trackUIComponents[i] && m_trackUIComponents[i]->getLaneId() == laneId) {
+            return static_cast<int>(i);
+        }
+    }
+    return -1;
+}
+
+// Moves the snapshot @p origin by (beatDelta, laneDelta), clamped as ONE block so the clips keep their layout:
+// no clip crosses beat 0 or leaves the first/last lane. The model is moved live (no history); the caller pushes
+// the undo step. Returns whether anything was moved.
+bool TrackManagerUI::applyGroupMove(const std::vector<GroupDragEntry>& origin, double beatDelta, int laneDelta) {
+    if (origin.empty() || !m_trackManager) {
+        return false;
+    }
+    const int laneCount = static_cast<int>(m_trackUIComponents.size());
+    double minStart = origin.front().startBeat;
+    int minLane = origin.front().laneIndex;
+    int maxLane = origin.front().laneIndex;
+    for (const auto& e : origin) {
+        minStart = std::min(minStart, e.startBeat);
+        if (e.laneIndex >= 0) {
+            minLane = (maxLane < 0 || minLane < 0) ? e.laneIndex : std::min(minLane, e.laneIndex);
+            maxLane = std::max(maxLane, e.laneIndex);
+        }
+    }
+    beatDelta = std::max(beatDelta, -minStart);
+    laneDelta = (laneCount > 0 && minLane >= 0) ? std::clamp(laneDelta, -minLane, (laneCount - 1) - maxLane) : 0;
+
+    auto& playlist = m_trackManager->getPlaylistModel();
+    for (const auto& e : origin) {
+        const int li = e.laneIndex + laneDelta;
+        PlaylistLaneID target = e.lane;
+        if (e.laneIndex >= 0 && li >= 0 && li < laneCount && m_trackUIComponents[static_cast<size_t>(li)]) {
+            target = m_trackUIComponents[static_cast<size_t>(li)]->getLaneId();
+        }
+        playlist.moveClip(e.id, e.startBeat + beatDelta, target);
+    }
+    return true;
+}
+
+void TrackManagerUI::resolvePendingGroupClick(ClipInstanceID clickedClip) {
+    if (!m_pendingGroupCollapse.isValid() || m_pendingGroupCollapse != clickedClip) {
+        return;
+    }
+    m_pendingGroupCollapse = ClipInstanceID{};
+    clearClipSelection();
+    selectClip(clickedClip); // a click that never dragged selects just that clip
+}
+
+bool TrackManagerUI::nudgeSelectedClips(double beats, int laneDelta) {
+    if (!m_trackManager) {
+        return false;
+    }
+    auto& playlist = m_trackManager->getPlaylistModel();
+    std::vector<GroupDragEntry> origin;
+    std::vector<ClipInstanceID> targets;
+    m_clipSelection.forEachClip([&](const ClipInstanceID& id) { targets.push_back(id); });
+    if (targets.empty() && m_selectedClipId.isValid()) {
+        targets.push_back(m_selectedClipId);
+    }
+    for (const auto& id : targets) {
+        if (const auto* clip = playlist.getClip(id)) {
+            GroupDragEntry entry;
+            entry.id = id;
+            entry.startBeat = clip->startBeat;
+            entry.lane = playlist.findClipLane(id);
+            entry.laneIndex = laneIndexOf(entry.lane);
+            origin.push_back(entry);
+        }
+    }
+    if (origin.empty() || (beats == 0.0 && laneDelta == 0)) {
+        return false;
+    }
+
+    applyGroupMove(origin, beats, laneDelta);
+
+    // One undo step for the whole nudge; the model is already there, so only clips that actually moved get a command.
+    auto macro = std::make_shared<Aestra::Audio::MacroCommand>("Nudge Clips");
+    for (const auto& e : origin) {
+        const auto* now = playlist.getClip(e.id);
+        if (!now) {
+            continue;
+        }
+        const PlaylistLaneID nowLane = playlist.findClipLane(e.id);
+        if (now->startBeat != e.startBeat || nowLane != e.lane) {
+            macro->addCommand(std::make_shared<MoveClipCommand>(playlist, e.id, e.startBeat, e.lane, now->startBeat,
+                                                                nowLane));
+        }
+    }
+    if (macro->empty()) {
+        return true; // clamped at an edge: the key is consumed, nothing moved
+    }
+    m_trackManager->getCommandHistory().pushAndExecute(macro);
+    m_trackManager->refreshTimelinePatternInstances();
+    refreshTracks();
+    invalidateCache();
+    scheduleTimelineMinimapRebuild();
+    return true;
 }
 
 void TrackManagerUI::updateInstantClipDrag(const AestraUI::NUIPoint& currentPos) {
@@ -101,6 +224,15 @@ void TrackManagerUI::updateInstantClipDrag(const AestraUI::NUIPoint& currentPos)
     // Determine target track from Y position
     int targetTrackIndex = getTrackAtPosition(latchedPos.y);
     int trackCount = static_cast<int>(m_trackUIComponents.size());
+
+    // A group drag moves every selected clip by the anchor's delta (clamped as a block).
+    if (!m_groupDrag.empty()) {
+        const int anchorLane = m_groupDragAnchorLaneIndex;
+        const int clampedTarget = trackCount > 0 ? std::clamp(targetTrackIndex, 0, trackCount - 1) : anchorLane;
+        applyGroupMove(m_groupDrag, newStartBeat - m_groupDragAnchorStart, anchorLane >= 0 ? clampedTarget - anchorLane : 0);
+        invalidateCache();
+        return;
+    }
 
     // Clamp to valid tracks
     if (trackCount > 0) {
@@ -225,7 +357,27 @@ void TrackManagerUI::finishInstantClipDrag() {
     double finalStartBeat = 0.0;
     PlaylistLaneID finalLaneId;
     bool moved = true; // unknown state (clip gone mid-drag) takes the full refresh
-    if (m_trackManager && m_draggedClipId.isValid()) {
+    if (m_trackManager && !m_groupDrag.empty()) {
+        // The whole selection was dragged: one undo step holding a move per clip that actually moved.
+        auto& playlist = m_trackManager->getPlaylistModel();
+        auto macro = std::make_shared<Aestra::Audio::MacroCommand>("Move Clips");
+        for (const auto& e : m_groupDrag) {
+            const auto* now = playlist.getClip(e.id);
+            if (!now) {
+                continue;
+            }
+            const PlaylistLaneID nowLane = playlist.findClipLane(e.id);
+            if (now->startBeat != e.startBeat || nowLane != e.lane) {
+                macro->addCommand(std::make_shared<MoveClipCommand>(playlist, e.id, e.startBeat, e.lane,
+                                                                    now->startBeat, nowLane));
+            }
+        }
+        moved = !macro->empty();
+        if (moved) {
+            m_trackManager->getCommandHistory().pushAndExecute(macro);
+        }
+        m_groupDrag.clear();
+    } else if (m_trackManager && m_draggedClipId.isValid()) {
         auto& playlist = m_trackManager->getPlaylistModel();
         if (const auto* clip = playlist.getClip(m_draggedClipId)) {
             finalStartBeat = clip->startBeat;
@@ -291,7 +443,13 @@ void TrackManagerUI::cancelInstantClipDrag() {
     // The live drag itself never went through the history either
     // (updateInstantClipDrag moves the model directly for smoothness), so there is
     // nothing on the stack to undo here — only a position to restore.
-    if (m_trackManager && m_draggedClipId.isValid()) {
+    if (m_trackManager && !m_groupDrag.empty()) {
+        auto& playlist = m_trackManager->getPlaylistModel();
+        for (const auto& e : m_groupDrag) {
+            playlist.moveClip(e.id, e.startBeat, e.lane);
+        }
+        m_groupDrag.clear();
+    } else if (m_trackManager && m_draggedClipId.isValid()) {
         auto& playlist = m_trackManager->getPlaylistModel();
         auto laneId = playlist.findClipLane(m_draggedClipId);
         if (laneId.isValid() && m_clipOriginalLaneId.isValid()) {
@@ -312,14 +470,68 @@ void TrackManagerUI::cancelInstantClipDrag() {
     invalidateCache();
 }
 void TrackManagerUI::copySelectedClip() {
-    if (!m_selectedClipId.isValid())
+    if (!m_trackManager || (!m_selectedClipId.isValid() && m_clipSelection.empty()))
         return;
 
     auto& playlist = m_trackManager->getPlaylistModel();
-    if (const auto* clip = playlist.getClip(m_selectedClipId)) {
-        m_clipboardClip = *clip;
+    const ClipInstanceID anchor = m_selectedClipId.isValid() ? m_selectedClipId : m_clipSelection.anchor();
+    if (const auto* clip = playlist.getClip(anchor)) {
+        m_clipboardClip = *clip; // the anchor stays the paint tool's stamp source and the single-clip paste
         Log::info("Copied clip: " + m_clipboardClip.name);
     }
+    std::vector<ClipInstanceID> targets;
+    m_clipSelection.forEachClip([&](const ClipInstanceID& id) { targets.push_back(id); });
+    captureClipboardBlock(targets);
+}
+
+// A selection of several clips is copied as a block: every clip with its lane, so a paste keeps their layout.
+void TrackManagerUI::captureClipboardBlock(const std::vector<ClipInstanceID>& targets) {
+    m_clipboardBlock.clear();
+    if (targets.size() < 2 || !m_trackManager)
+        return;
+    auto& playlist = m_trackManager->getPlaylistModel();
+    for (const auto& id : targets) {
+        if (const auto* clip = playlist.getClip(id)) {
+            m_clipboardBlock.push_back({*clip, playlist.findClipLane(id)});
+        }
+    }
+    if (m_clipboardBlock.size() < 2) {
+        m_clipboardBlock.clear();
+    }
+}
+
+// Pastes the clipboard block with its earliest clip at the playhead (snapped), each clip on the lane it came from.
+// One undo step; the pasted clips become the selection.
+void TrackManagerUI::pasteClipboardBlock() {
+    if (!m_trackManager || m_clipboardBlock.empty())
+        return;
+    auto& playlist = m_trackManager->getPlaylistModel();
+    double minStart = m_clipboardBlock.front().clip.startBeat;
+    for (const auto& entry : m_clipboardBlock) {
+        minStart = std::min(minStart, entry.clip.startBeat);
+    }
+    const double shift = snapBeatToGrid(secondsToBeats(m_trackManager->getPosition())) - minStart;
+
+    auto macro = std::make_shared<Aestra::Audio::MacroCommand>("Paste Clips");
+    std::vector<ClipInstanceID> newIds;
+    for (const auto& entry : m_clipboardBlock) {
+        if (laneIndexOf(entry.lane) < 0)
+            continue; // its lane is gone
+        ClipInstance pasted = entry.clip;
+        pasted.id = ClipInstanceID::generate();
+        pasted.startBeat = std::max(0.0, entry.clip.startBeat + shift);
+        macro->addCommand(std::make_shared<Aestra::Audio::AddClipCommand>(playlist, entry.lane, pasted));
+        newIds.push_back(pasted.id);
+    }
+    if (macro->empty())
+        return;
+    m_trackManager->getCommandHistory().pushAndExecute(macro);
+    m_trackManager->refreshTimelinePatternInstances();
+    refreshTracks();
+    selectClips(newIds, TrackSelectionIntent::Replace);
+    invalidateCache();
+    scheduleTimelineMinimapRebuild();
+    Log::info("Pasted " + std::to_string(newIds.size()) + " clips as a block");
 }
 
 void TrackManagerUI::cutSelectedClip() {
@@ -340,6 +552,7 @@ void TrackManagerUI::cutSelectedClip() {
     if (targets.empty()) {
         targets.push_back(m_selectedClipId);
     }
+    captureClipboardBlock(targets); // before the clips go: the block is what a paste brings back
 
     auto macro = std::make_shared<Aestra::Audio::MacroCommand>("Cut Clips");
     for (const auto& id : targets) {
@@ -363,6 +576,10 @@ void TrackManagerUI::cutSelectedClip() {
 void TrackManagerUI::pasteClipboardAtCursor() {
     if (!m_clipboardClip.id.isValid())
         return;
+    if (!m_clipboardBlock.empty()) {
+        pasteClipboardBlock();
+        return;
+    }
 
     // Find target lane (currently selected track)
     TrackUIComponent* targetTrack = nullptr;
