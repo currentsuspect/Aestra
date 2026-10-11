@@ -95,9 +95,16 @@ void ClipPrefilterService::workerLoop() {
             filtered->sampleRate = job.source->sampleRate; // filtering does NOT resample
             filtered->numChannels = job.source->numChannels;
             filtered->numFrames = job.source->numFrames;
-            filtered->interleavedData.resize(job.source->interleavedData.size());
-            ClipPrefilter::apply(job.source->interleavedData.data(), filtered->interleavedData.data(),
-                                 job.source->numFrames, job.source->numChannels, h);
+            // A compact PCM source is expanded for the length of this job (the filtered copy is float32).
+            std::vector<float> expanded;
+            const float* in = job.source->interleavedData.data();
+            if (job.source->isCompact()) {
+                expanded = job.source->toFloat();
+                in = expanded.data();
+            }
+            filtered->interleavedData.resize(static_cast<size_t>(job.source->storedSamples()));
+            ClipPrefilter::apply(in, filtered->interleavedData.data(), job.source->numFrames,
+                                 job.source->numChannels, h);
             result.filtered = std::move(filtered);
         }
         result.buildMillis =

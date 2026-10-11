@@ -1264,8 +1264,8 @@ public:
         if (!m_isPlaying.load(std::memory_order_relaxed) || m_patternMode.load(std::memory_order_relaxed)) {
             return;
         }
-        // Incremental, NOT clear-and-reschedule: a clear dropped every sounding note's gate and queued
-        // note-off and re-queued from the UI's lagging playhead (moving one clip cut every other clip's notes).
+        // Incremental, NOT clear-and-reschedule: a clear dropped every sounding note's gate and queued note-off
+        // and re-queued from the UI's lagging playhead (moving one clip cut other clips' notes).
         // Each clip keeps its slot (held-note tracking is per slot), a slot keeps its
         // frontier, and the content-edit refill re-queues from the engine's real playhead.
         const auto instances = m_playlistModel.collectMidiClipInstances(m_patternManager);
@@ -2174,7 +2174,6 @@ private:
                       " sourceOffset=" + std::to_string(instance.sourceOffsetBeats) +
                       " schedStart=" + std::to_string(instance.patternStartBeat()) + " " + routeSummary);
             m_timelineSlots[instance.clipId] = instanceId;
-            // startBeat is where PATTERN beat 0 falls (clip start minus left trim), not the clip's start.
             m_patternPlaybackEngine.schedulePatternInstance(instance.patternId, instance.patternStartBeat(), instanceId++,
                                                             instance.sourceOffsetBeats, instance.durationBeats);
         }
@@ -2594,6 +2593,7 @@ private:
     }
 
     bool writeRecordedTakeWav(const std::string& path, const AudioBufferData& buffer) const {
+        if (buffer.isCompact()) { AudioBufferData f = buffer; f.expandToFloat(); return writeRecordedTakeWav(path, f); }
         std::ofstream file(path, std::ios::binary | std::ios::trunc);
         if (!file.is_open()) {
             return false;
