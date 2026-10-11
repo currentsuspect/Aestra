@@ -14,6 +14,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 namespace Aestra {
@@ -38,6 +39,15 @@ std::vector<double> design(uint32_t sourceRate, uint32_t targetRate);
 /// `out` may not alias `in`.
 void apply(const float* in, float* out, uint64_t frames, uint32_t channels,
            const std::vector<double>& h);
+
+/// Copies `frames` frames (interleaved, `channels` wide) starting at `firstFrame` into `out`.
+using ReadFrames = std::function<void(uint64_t firstFrame, uint64_t frames, float* out)>;
+
+/// The same result as apply() bit for bit, without the whole input in memory: the input is read in
+/// blocks through `read` (a compact PCM source converts each block as it goes). Peak extra memory is
+/// one block plus the filter's reach, not a float copy of the clip.
+void applyStreaming(const ReadFrames& read, float* out, uint64_t frames, uint32_t channels,
+                    const std::vector<double>& h);
 
 } // namespace ClipPrefilter
 } // namespace Audio

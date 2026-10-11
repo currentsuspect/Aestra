@@ -73,6 +73,40 @@ void apply(const float* in, float* out, uint64_t frames, uint32_t channels, cons
     }
 }
 
+void applyStreaming(const ReadFrames& read, float* out, uint64_t frames, uint32_t channels,
+                    const std::vector<double>& h) {
+    if (!read || out == nullptr || frames == 0 || channels == 0 || h.empty()) {
+        return;
+    }
+    const int taps = static_cast<int>(h.size());
+    const int mid = (taps - 1) / 2;
+    const int64_t n = static_cast<int64_t>(frames);
+    constexpr int64_t kBlock = 16384;
+    std::vector<float> window;
+    for (int64_t i0 = 0; i0 < n; i0 += kBlock) {
+        const int64_t i1 = std::min(n, i0 + kBlock);
+        // Output frame i reads input frames i - mid .. i + mid; frames outside [0, n) contribute nothing.
+        const int64_t w0 = std::max<int64_t>(0, i0 - mid);
+        const int64_t w1 = std::min<int64_t>(n, i1 + mid + 1);
+        window.resize(static_cast<size_t>(w1 - w0) * channels);
+        read(static_cast<uint64_t>(w0), static_cast<uint64_t>(w1 - w0), window.data());
+        for (int64_t i = i0; i < i1; ++i) {
+            for (uint32_t ch = 0; ch < channels; ++ch) {
+                double acc = 0.0;
+                for (int k = 0; k < taps; ++k) {
+                    const int64_t j = i + mid - k; // same delay-compensated read as apply()
+                    if (j < 0 || j >= n) {
+                        continue;
+                    }
+                    acc += h[static_cast<size_t>(k)] *
+                           static_cast<double>(window[static_cast<size_t>(j - w0) * channels + ch]);
+                }
+                out[(static_cast<uint64_t>(i) * channels) + ch] = static_cast<float>(acc);
+            }
+        }
+    }
+}
+
 } // namespace ClipPrefilter
 } // namespace Audio
 } // namespace Aestra

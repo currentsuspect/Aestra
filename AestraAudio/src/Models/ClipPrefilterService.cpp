@@ -95,16 +95,16 @@ void ClipPrefilterService::workerLoop() {
             filtered->sampleRate = job.source->sampleRate; // filtering does NOT resample
             filtered->numChannels = job.source->numChannels;
             filtered->numFrames = job.source->numFrames;
-            // A compact PCM source is expanded for the length of this job (the filtered copy is float32).
-            std::vector<float> expanded;
-            const float* in = job.source->interleavedData.data();
-            if (job.source->isCompact()) {
-                expanded = job.source->toFloat();
-                in = expanded.data();
-            }
+            // Read the source through copyFloats in blocks: a compact PCM source is converted as it is
+            // filtered, never expanded to a whole-clip float copy (the filtered output is float32).
             filtered->interleavedData.resize(static_cast<size_t>(job.source->storedSamples()));
-            ClipPrefilter::apply(in, filtered->interleavedData.data(), job.source->numFrames,
-                                 job.source->numChannels, h);
+            const AudioBufferData& src = *job.source;
+            const uint32_t channels = src.numChannels;
+            ClipPrefilter::applyStreaming(
+                [&src, channels](uint64_t firstFrame, uint64_t frameCount, float* dst) {
+                    src.copyFloats(firstFrame * channels, frameCount * channels, dst);
+                },
+                filtered->interleavedData.data(), job.source->numFrames, channels, h);
             result.filtered = std::move(filtered);
         }
         result.buildMillis =

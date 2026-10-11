@@ -1792,6 +1792,18 @@ target_include_directories(CompactSourceAudioTest PRIVATE
 add_test(NAME CompactSourceAudioTest COMMAND CompactSourceAudioTest)
 set_tests_properties(CompactSourceAudioTest PROPERTIES LABELS "audio;memory;parity;contract:audio" TIMEOUT 180)
 
+# Prefilter memory: streaming filter == bulk filter bit for bit; filtered copies only for played sources.
+add_executable(PrefilterMemoryTest AestraAudio/PrefilterMemoryTest.cpp)
+target_link_libraries(PrefilterMemoryTest PRIVATE AestraAudio)
+target_include_directories(PrefilterMemoryTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME PrefilterMemoryTest COMMAND PrefilterMemoryTest)
+set_tests_properties(PrefilterMemoryTest PROPERTIES LABELS "audio;memory;parity;contract:audio" TIMEOUT 300)
+
 # Playlist Split/Trim Varispeed — split/trim keep source-domain invariants
 # (durationSeconds, sourceOffsetSeconds) under Speed/Pitch varispeed (#746).
 add_executable(PlaylistSplitVarispeedTest AestraAudio/PlaylistSplitVarispeedTest.cpp)
