@@ -5,6 +5,7 @@
 #include "../Models/TrackManager.h"
 #include "IO/AudioExportQuantization.h"
 #include <string>
+#include <vector>
 #include <functional>
 #include <atomic>
 #include <chrono>
@@ -94,6 +95,22 @@ public:
          *        @ref truePeakCeilingdBTP. Default off for backward compatibility.
          */
         bool validateTruePeak = false;
+
+        /**
+         * @brief When set, each finished block is delivered here instead of being
+         *        written to a file (V8-W4, the graph renderer).
+         *
+         * The render itself is the SAME loop either way: the engine is wired,
+         * rate-switched, rewound, silenced past the range, and restored by the
+         * same code, and the blocks are the same blocks the file path quantises.
+         * Only the destination differs, so the memory render cannot drift from
+         * the export (renderToBuffer() below is the convenience wrapper).
+         *
+         * Called on the rendering thread with interleaved float frames. Return
+         * false to abort the render. @ref outputPath is ignored in this mode and
+         * nothing is written, synced or removed.
+         */
+        std::function<bool(const float* interleaved, uint32_t frames, uint32_t channels)> blockSink;
 
         /** @brief Maximum allowed true peak in dBTP (Spotify spec is -1.0). */
         float truePeakCeilingdBTP = -1.0f;
@@ -187,6 +204,31 @@ public:
      * For UI responsiveness, run this on a background thread.
      */
     Result render(const Config& config);
+
+    /**
+     * @brief The audio a memory render produced.
+     */
+    struct RenderedAudio {
+        std::vector<float> interleaved; ///< frames * channels samples, as the engine produced them (no quantisation)
+        uint32_t sampleRate = 0;
+        uint32_t numChannels = 0;
+        uint64_t frames = 0;
+    };
+
+    /**
+     * @brief Render the same range render() would, into memory (V8-W4).
+     *
+     * Master output: the project's mix through the live engine path, master
+     * stage included, exactly what an export of this range would contain before
+     * it is quantised. @p config.blockSink is replaced for the duration of the
+     * call; every other field (scope, range, tail, rate, channels) means what it
+     * means for a file render.
+     *
+     * One loop, two destinations: this is render() with an in-memory sink, not
+     * a second renderer. That is the point: whatever playback/export parity the
+     * tests hold for the file path holds here by construction.
+     */
+    Result renderToBuffer(Config config, RenderedAudio& out);
 
     /**
      * @brief Convenience helper matching AudioEngine::bounceRangeToWav signature.

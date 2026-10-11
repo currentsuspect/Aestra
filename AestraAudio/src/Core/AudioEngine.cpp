@@ -1589,8 +1589,9 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         }
     }
 
-    // Fade envelopes (short ramps prevent clicks on stop/seek)
+    // Fade envelopes (short ramps prevent clicks on stop/seek). An offline render takes no fade-in (V8-W4).
     if (m_fadeState.load(std::memory_order_relaxed) == FadeState::FadingIn) {
+        const bool snapFade = m_offlineRenderActive.load(std::memory_order_relaxed);
         const double fadeTotal = static_cast<double>(FADE_IN_SAMPLES);
         for (uint32_t i = 0; i < numFrames; ++i) {
             if (m_fadeSamplesRemaining == 0) {
@@ -1598,7 +1599,7 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
                 break;
             }
             const double progress = 1.0 - (static_cast<double>(m_fadeSamplesRemaining) / fadeTotal);
-            const double fadeGain = progress * progress * (3.0 - 2.0 * progress); // Smoothstep
+            const double fadeGain = snapFade ? 1.0 : progress * progress * (3.0 - 2.0 * progress); // Smoothstep
             const size_t frameBase = static_cast<size_t>(i) * numOutputChannels;
             for (uint32_t ch = 0; ch < numOutputChannels; ++ch) {
                 outputBuffer[frameBase + ch] *= static_cast<float>(fadeGain);
@@ -3046,12 +3047,11 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
                         track.effectChainSnapshot->findSlotByInstanceId(curve.deviceInstanceId);
                     if (slotIndex != EffectChain::kNoSlot) {
                         const auto& slot = track.effectChainSnapshot->slot(slotIndex);
-                        if (!slot.plugin) {
-                            // empty slot: nothing to drive
-                        } else if (!slot.plugin->supportsRealtimeAutomation()) {
+                        const float value = curve.getValueAtBeat(currentBeat);
+                        if (slot.plugin && !slot.plugin->supportsRealtimeAutomation()) {
                             m_automationUnsupportedSkips.fetch_add(1, std::memory_order_relaxed);
-                        } else if (const float value = curve.getValueAtBeat(currentBeat); std::isfinite(value)) {
-                            slot.plugin->applyAutomation(curve.paramId, value);
+                        } else if (slot.plugin && std::isfinite(value)) {
+                            slot.plugin->applyAutomation(curve.paramId, value); // empty slot: nothing to drive
                         }
                     }
                 }

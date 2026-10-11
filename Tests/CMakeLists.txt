@@ -1697,6 +1697,20 @@ target_include_directories(RealtimeExportParityTest PRIVATE
 add_test(NAME RealtimeExportParityTest COMMAND RealtimeExportParityTest)
 set_tests_properties(RealtimeExportParityTest PROPERTIES LABELS "audio;quality;export;parity;integrity;s-tier;contract:audio" TIMEOUT 180)
 
+# V8-W4 graph renderer: the exporter's own loop with an in-memory block sink. The memory render
+# is bit-identical to the file render, matches live playback, renders sub-ranges, and a stopping
+# sink leaves nothing behind.
+add_executable(GraphRenderBufferTest AestraAudio/GraphRenderBufferTest.cpp)
+target_link_libraries(GraphRenderBufferTest PRIVATE AestraAudio)
+target_include_directories(GraphRenderBufferTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME GraphRenderBufferTest COMMAND GraphRenderBufferTest)
+set_tests_properties(GraphRenderBufferTest PROPERTIES LABELS "audio;quality;export;parity;integrity;contract:audio" TIMEOUT 180)
+
 # Playlist Split/Trim Varispeed — split/trim keep source-domain invariants
 # (durationSeconds, sourceOffsetSeconds) under Speed/Pitch varispeed (#746).
 add_executable(PlaylistSplitVarispeedTest AestraAudio/PlaylistSplitVarispeedTest.cpp)
