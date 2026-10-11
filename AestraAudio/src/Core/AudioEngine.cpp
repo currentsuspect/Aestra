@@ -2646,14 +2646,12 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
     // The ring is prepared off-RT and only for tracks with a nonzero delay, so a
     // null pointer here means "nothing to compensate" rather than an error.
     //
-    // The published unit is a single immutable CompensationRingDescriptor behind
-    // one atomic pointer (PR #730 follow-up): RT acquire-loads it once per block
-    // and reads {buffer, capacity, delay, generation} from that one descriptor,
-    // so control publications can never interleave into a mixed-generation
-    // snapshot. The `delay < capacity` guard is retained verbatim: it is what
-    // previously caused delays at or beyond the old fixed 16384-frame ring to
-    // pass through uncompensated, and changing that would silently alter mix
-    // alignment.
+    // The published unit is one immutable CompensationRingDescriptor behind an
+    // atomic pointer (PR #730 follow-up): RT acquire-loads it once per block and
+    // reads {buffer, capacity, delay, generation} from it, so publications never
+    // interleave into a mixed-generation snapshot. The `delay < capacity` guard
+    // stays verbatim: delays at or beyond the old 16384-frame ring pass through
+    // uncompensated, and changing that would silently alter mix alignment.
     auto* const comp = state.compensation.get();
     const CompensationRingDescriptor* desc = comp ? comp->published.load(std::memory_order_acquire) : nullptr;
     if (desc != nullptr && desc->delaySamples > 0 && desc->buffer != nullptr) {
@@ -2678,12 +2676,10 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
         }
     }
 
-    // RT acknowledgement: once this block is done with the descriptor it
-    // observed, publish that generation to the slot. Control acquire-loads this
-    // before reclaiming retired generations, so no buffer is freed while an
-    // in-flight RT block could still be reading it. Monotonic, and a relaxed
-    // read is enough here because ack only moves forward when the descriptor
-    // generation does (control publishes ascending generations).
+    // RT acknowledgement: once this block is done with the descriptor it observed,
+    // publish that generation. Control acquire-loads it before reclaiming retired
+    // generations, so no buffer is freed while an RT block may still read it.
+    // Monotonic (control publishes ascending generations), so a relaxed read suffices.
     if (comp != nullptr) {
         const uint32_t observed = desc ? desc->generation : 0;
         const uint32_t acked = comp->ackedGeneration.load(std::memory_order_relaxed);
@@ -2694,7 +2690,7 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
 
     // V8-W5: Bounce in Place reads the strip's output here, after the inserts and delay
     // compensation, before fader/pan, which stay live on the bounced clip.
-    if (m_trackOutputTap.wants(track.trackId))
+    if (m_trackOutputTap.wantsAt(track.trackId, false))
         m_trackOutputTap.capture(buffer.data(), numFrames);
 
     // Route post-fader output to the selected main destination and any audible sends.
@@ -2804,6 +2800,9 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
             sumLRTrack += outL * outR;
         }
     }
+
+    if (m_trackOutputTap.wantsAt(track.trackId, true)) // V8-S1: stems are the strip after fader/pan
+        m_trackOutputTap.capture(buffer.data(), numFrames);
 
     // Send processing (Routing Contract I9/V1/V2):
     // - The mute gate applies to the main path and POST-fader sends only.

@@ -9,12 +9,11 @@ namespace Aestra {
 namespace Audio {
 
 /**
- * @brief Copies one mixer channel's output, as it leaves the strip and before
- *        it is routed to the master or a group (V8-W5, Bounce in Place).
+ * @brief Copies one mixer channel's output before it is routed to the master or
+ *        a group (V8-W5 Bounce in Place, V8-S1 stems).
  *
- * "Track output" is the channel's post-insert, post-delay-compensation,
- * post-fader/pan buffer: exactly what the channel contributes to the rest of
- * the graph. The offline renderer arms it for the duration of one render and
+ * The buffer is post-insert and post-delay-compensation, and either before or
+ * after fader/pan (see arm()). The offline renderer arms it for the duration of one render and
  * reads each block back after processBlock() on the same thread, so the audio
  * thread only writes into storage that was reserved up front.
  */
@@ -22,10 +21,15 @@ class TrackOutputTap {
 public:
     static constexpr uint32_t kNoChannel = 0xFFFFFFFFu;
 
-    /** @brief Control thread. Arms the tap with room for @p maxFrames stereo frames. */
-    void arm(uint32_t mixerChannelId, uint32_t maxFrames) {
+    /**
+     * @brief Control thread. Arms the tap with room for @p maxFrames stereo frames.
+     * @param afterFader false: before fader/pan (Bounce in Place; the fader stays live on the bounced clip).
+     *                   true: after them, what the channel contributes to the mix (stems).
+     */
+    void arm(uint32_t mixerChannelId, uint32_t maxFrames, bool afterFader = false) {
         m_block.assign(static_cast<size_t>(maxFrames) * 2u, 0.0f);
         m_frames = 0;
+        m_afterFader = afterFader;
         m_channel.store(mixerChannelId, std::memory_order_release);
     }
     void disarm() { m_channel.store(kNoChannel, std::memory_order_release); }
@@ -33,6 +37,11 @@ public:
     /** @brief True when @p mixerChannelId is the armed channel. */
     bool wants(uint32_t mixerChannelId) const {
         return m_channel.load(std::memory_order_acquire) == mixerChannelId;
+    }
+
+    /** @brief True when the armed channel is @p mixerChannelId and the tap sits at this side of the fader. */
+    bool wantsAt(uint32_t mixerChannelId, bool afterFader) const {
+        return wants(mixerChannelId) && m_afterFader == afterFader;
     }
 
     /** @brief Audio/render thread. Takes interleaved stereo doubles; never allocates. */
@@ -53,6 +62,7 @@ private:
     std::atomic<uint32_t> m_channel{kNoChannel};
     std::vector<float> m_block;
     uint32_t m_frames{0};
+    bool m_afterFader{false};
 };
 
 } // namespace Audio

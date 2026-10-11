@@ -4,12 +4,14 @@
 #include "../AestraUI/Widgets/AestraPanelWindow.h"
 #include "AudioDeviceManager.h"
 #include "AudioExporter.h"
+#include "IO/StemExport.h"
 #include "../App/ServiceLocator.h"
 #include "../Core/ExportDialogPreferences.h"
 #include "../Core/UISurfaceStore.h"
 #include "../../AestraPlat/include/AestraPlatform.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
+#include "../AestraUI/Layout/NUILayoutAlgorithms.h"
 #include "../AestraCore/include/AestraLog.h"
 
 #include <algorithm>
@@ -19,9 +21,25 @@
 #include <cstdio>
 #include <utility>
 
+namespace {
+
+using AestraUI::NUIRect;
+using AestraUI::Layout::NUILocalRect;
+
+NUIRect toRect(const NUILocalRect& r) { return NUIRect(r.x, r.y, r.width, r.height); }
+
+std::string shortenPath(const std::string& path, size_t maxChars) {
+    if (path.size() <= maxChars)
+        return path;
+    return "..." + path.substr(path.size() - (maxChars - 3));
+}
+
+} // namespace
+
 ExportDialog::ExportDialog() {
     setId("exportDialog");
     setVisible(false);
+    buildControls();
 }
 
 ExportDialog::~ExportDialog() {
@@ -37,6 +55,99 @@ ExportDialog::~ExportDialog() {
     restoreAudioStreamIfNeeded();
 }
 
+void ExportDialog::buildControls() {
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
+    const float fontM = theme.getCurrentTheme().fontSizeM;
+    const auto makeLabel = [&](const char* text) {
+        auto label = std::make_shared<AestraUI::NUILabel>();
+        label->setText(text);
+        label->setFontSize(fontM);
+        label->setTextColor(theme.getColor("textSecondary"));
+        addChild(label);
+        return label;
+    };
+    const auto makeDropdown = [&](const std::vector<std::string>& options, std::function<void(int)> onPick) {
+        auto dropdown = std::make_shared<AestraUI::NUIDropdown>();
+        for (size_t i = 0; i < options.size(); ++i)
+            dropdown->addItem(options[i], static_cast<int>(i));
+        dropdown->setOnSelectionChanged(std::move(onPick));
+        addChild(dropdown);
+        return dropdown;
+    };
+
+    m_outputLabel = makeLabel("Output");
+    m_outputInput = std::make_shared<AestraUI::NUITextInput>();
+    m_outputInput->setOnTextChange([this](const std::string& text) { m_outputPath = text; });
+    addChild(m_outputInput);
+    m_browseButton = std::make_shared<AestraUI::NUIButton>("Browse");
+    m_browseButton->setStyle(AestraUI::NUIButton::Style::Secondary);
+    m_browseButton->setOnClick([this]() { openBrowse(); });
+    addChild(m_browseButton);
+
+    m_scopeLabel = makeLabel("Scope");
+    m_scopeDropdown = makeDropdown(m_scopeOptions, [this](int i) { m_selectedScope = i; });
+    m_rateLabel = makeLabel("Sample Rate");
+    m_rateDropdown = makeDropdown(m_sampleRateOptions, [this](int i) { m_selectedSampleRate = i; });
+    m_depthLabel = makeLabel("Bit Depth");
+    m_depthDropdown = makeDropdown(m_bitDepthOptions, [this](int i) { m_selectedBitDepth = i; });
+
+    m_tailLabel = makeLabel("Tail (seconds)");
+    m_tailField = std::make_shared<AestraUI::NUITextInput>();
+    m_tailField->setInputType(AestraUI::NUITextInput::InputType::Number);
+    m_tailField->setOnTextChange([this](const std::string& text) { m_tailInput = text; });
+    m_tailField->setOnReturnKey([this]() {
+        double parsed = 0.0;
+        if (parseTailInput(parsed))
+            m_tailSeconds = parsed;
+        else
+            syncTailInputFromValue();
+        m_tailField->setText(m_tailInput);
+    });
+    addChild(m_tailField);
+
+    m_stemsCheckbox = std::make_shared<AestraUI::NUICheckbox>("One file per track (stems), plus the master");
+    m_stemsCheckbox->setOnCheckedChange([this](bool on) {
+        m_stems = on;
+        applyPanelState();
+    });
+    addChild(m_stemsCheckbox);
+    m_stemsHint = makeLabel("");
+    m_stemsHint->setFontSize(theme.getCurrentTheme().fontSizeS);
+    m_stemsHint->setWordWrap(true);
+
+    m_statusLabel = makeLabel("");
+    m_statusLabel->setTextColor(theme.getColor("textPrimary"));
+    m_detailLabel = makeLabel("");
+    m_detailLabel->setWordWrap(true);
+    m_detailLabel2 = makeLabel("");
+    m_detailLabel2->setFontSize(theme.getCurrentTheme().fontSizeS);
+    m_elapsedLabel = makeLabel("");
+    m_elapsedLabel->setFontSize(theme.getCurrentTheme().fontSizeS);
+    m_progressBar = std::make_shared<AestraUI::NUIProgressBar>();
+    m_progressBar->setTextVisible(true);
+    addChild(m_progressBar);
+
+    m_exportButton = std::make_shared<AestraUI::NUIButton>("Export");
+    m_exportButton->setStyle(AestraUI::NUIButton::Style::Primary);
+    m_exportButton->setOnClick([this]() { startExport(); });
+    addChild(m_exportButton);
+    m_cancelButton = std::make_shared<AestraUI::NUIButton>("Cancel");
+    m_cancelButton->setStyle(AestraUI::NUIButton::Style::Secondary);
+    m_cancelButton->setOnClick([this]() {
+        if (m_panelState == PanelState::Progress)
+            m_cancelRequested = true;
+        else
+            hide();
+    });
+    addChild(m_cancelButton);
+    m_doneButton = std::make_shared<AestraUI::NUIButton>("Done");
+    m_doneButton->setStyle(AestraUI::NUIButton::Style::Primary);
+    m_doneButton->setOnClick([this]() { finish(); });
+    addChild(m_doneButton);
+
+    applyPanelState();
+}
+
 void ExportDialog::show(const std::string& projectPath, Aestra::Audio::AudioEngine& engine, Aestra::Audio::TrackManager& trackManager) {
     m_projectPath = projectPath;
     m_engine = &engine;
@@ -47,7 +158,6 @@ void ExportDialog::show(const std::string& projectPath, Aestra::Audio::AudioEngi
     m_cancelRequested = false;
     m_exportError.clear();
     m_exportElapsed = 0.0;
-    m_pressedButton = -1;
 
     // Defaults from engine
     uint32_t sr = engine.getSampleRate();
@@ -100,16 +210,23 @@ void ExportDialog::show(const std::string& projectPath, Aestra::Audio::AudioEngi
         syncTailInputFromValue();
     }
 
+    m_scopeDropdown->setSelectedIndex(m_selectedScope);
+    m_rateDropdown->setSelectedIndex(m_selectedSampleRate);
+    m_depthDropdown->setSelectedIndex(m_selectedBitDepth);
+    m_outputInput->setText(m_outputPath);
+    m_tailField->setText(m_tailInput);
+    m_stems = false;
+    m_stemsCheckbox->setChecked(false);
+
     m_visible = true;
     setVisible(true);
+    applyPanelState();
     layoutDialog();
 }
 
 void ExportDialog::hide() {
     m_visible = false;
     setVisible(false);
-    m_tailInputFocused = false;
-    m_pressedButton = -1;
     if (m_exporting.load()) {
         m_cancelRequested.store(true);
         // Non-blocking: destructor will join the future when needed
@@ -118,65 +235,130 @@ void ExportDialog::hide() {
     }
 }
 
-void ExportDialog::layoutDialog() {
-    auto parentBounds = getBounds();
-    const auto& theme = AestraUI::NUIThemeManager::getInstance().getCurrentTheme();
-    m_dialogRect.x = parentBounds.x + (parentBounds.width - DIALOG_WIDTH) * 0.5f;
-    m_dialogRect.y = parentBounds.y + (parentBounds.height - DIALOG_HEIGHT) * 0.5f;
-    m_dialogRect.width = DIALOG_WIDTH;
-    m_dialogRect.height = DIALOG_HEIGHT;
+// What each state shows. Controls that do not belong to the state are hidden, so the
+// layout below only places what is visible and no hidden widget can take a click.
+void ExportDialog::applyPanelState() {
+    const bool settings = m_panelState == PanelState::Settings;
+    const bool progress = m_panelState == PanelState::Progress;
+    const bool complete = m_panelState == PanelState::Complete;
+    for (const auto& c : {m_outputLabel, m_scopeLabel, m_rateLabel, m_depthLabel, m_tailLabel})
+        c->setVisible(settings);
+    for (const auto& c : {m_outputInput, m_tailField})
+        c->setVisible(settings);
+    for (const auto& c : {m_scopeDropdown, m_rateDropdown, m_depthDropdown})
+        c->setVisible(settings);
+    m_browseButton->setVisible(settings);
+    m_stemsCheckbox->setVisible(settings);
+    m_stemsHint->setVisible(settings && m_stems);
+    m_exportButton->setVisible(settings);
+    m_cancelButton->setVisible(settings || progress);
+    m_doneButton->setVisible(complete);
+    m_statusLabel->setVisible(progress || complete);
+    m_detailLabel->setVisible(complete);
+    m_detailLabel2->setVisible(complete && m_exportError.empty());
+    m_progressBar->setVisible(progress);
+    m_elapsedLabel->setVisible(progress);
 
-    float pad = theme.spacingL;
-    float contentX = m_dialogRect.x + pad;
-    float contentW = m_dialogRect.width - pad * 2.0f;
-    float rowH = theme.layout.standardControlHeight;
-    float labelW = 110.0f;
-    float gap = theme.spacingS;
-    float y = m_dialogRect.y + 56.0f; // Below title
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
+    if (progress) {
+        m_statusLabel->setText(m_stems ? "Rendering stems..." : "Rendering audio...");
+        m_statusLabel->setTextColor(theme.getColor("textPrimary"));
+        m_cancelButton->setText("Cancel");
+    } else if (settings) {
+        m_cancelButton->setText("Cancel");
+        if (m_stems) {
+            const std::filesystem::path base(m_outputPath);
+            m_stemsHint->setText("Written to " + shortenPath(base.parent_path().string(), 40) + " as \"" +
+                                 base.stem().string() + " - 01 Track.wav\", one per track with sound.");
+        }
+    } else if (complete) {
+        const bool ok = m_exportError.empty();
+        m_statusLabel->setText(ok ? "Export Complete" : "Export Failed");
+        m_statusLabel->setTextColor(theme.getColor(ok ? "success" : "error"));
+        if (ok) {
+            m_detailLabel->setText(m_exportFileCount > 1
+                                       ? std::to_string(m_exportFileCount) + " files in " +
+                                             shortenPath(m_exportResultPath, 46)
+                                       : shortenPath(m_exportResultPath, 50));
+            char stats[128];
+            std::snprintf(stats, sizeof(stats), "Duration: %.1fs  |  Peak: %.1f dB", m_exportDuration, m_exportPeakDb);
+            m_detailLabel2->setText(stats);
+        } else {
+            m_detailLabel->setText(m_exportError);
+        }
+        m_doneButton->setText(ok ? "Done" : "Close");
+    }
+    setDirty(true);
+}
+
+void ExportDialog::layoutDialog() {
+    namespace L = AestraUI::Layout;
+    const auto parentBounds = getBounds();
+    const auto& theme = AestraUI::NUIThemeManager::getInstance().getCurrentTheme();
+    m_dialogRect = NUIRect(parentBounds.x + (parentBounds.width - DIALOG_WIDTH) * 0.5f,
+                           parentBounds.y + (parentBounds.height - DIALOG_HEIGHT) * 0.5f, DIALOG_WIDTH,
+                           DIALOG_HEIGHT);
+
+    const float pad = theme.spacingL;
+    const float rowH = theme.layout.standardControlHeight;
+    const float gap = theme.spacingS;
+    const float labelW = 110.0f;
+    const float btnW = 110.0f;
+    const float btnH = theme.layout.dialogActionHeight;
+
+    // Title bar, then the content column, then the button strip.
+    NUILocalRect column(m_dialogRect.x + pad, m_dialogRect.y + 56.0f, m_dialogRect.width - pad * 2.0f,
+                        m_dialogRect.height - 56.0f - btnH - theme.spacingM * 2.0f);
+    const auto nextRow = [&](float height) {
+        const auto split = L::splitVertical(column, height);
+        column = L::splitVertical(split.trailing, gap).trailing;
+        return split.leading;
+    };
+    const auto place = [&](const std::shared_ptr<AestraUI::NUILabel>& label, const auto& control, float controlW) {
+        const NUILocalRect row = nextRow(rowH);
+        const auto parts = L::splitHorizontal(row, labelW);
+        label->setBounds(toRect(parts.leading));
+        control->setBounds(NUIRect(parts.trailing.x, parts.trailing.y,
+                                   controlW > 0.0f ? controlW : parts.trailing.width, rowH));
+    };
 
     if (m_panelState == PanelState::Settings) {
-        // Output path row
-        m_outputFieldRect = AestraUI::NUIRect(contentX + labelW, y, contentW - labelW - 82.0f, rowH);
-        m_browseButtonRect = AestraUI::NUIRect(m_outputFieldRect.right() + 10.0f, y, 72.0f, rowH);
-        y += rowH + gap;
-
-        // Format section
-        m_scopeDropdownRect = AestraUI::NUIRect(contentX + labelW, y, contentW - labelW, rowH);
-        m_scopeDropdownPopup = m_scopeDropdownRect;
-        y += rowH + gap;
-
-        m_sampleRateDropdownRect = AestraUI::NUIRect(contentX + labelW, y, contentW - labelW, rowH);
-        m_sampleRateDropdownPopup = m_sampleRateDropdownRect;
-        y += rowH + gap;
-
-        m_bitDepthDropdownRect = AestraUI::NUIRect(contentX + labelW, y, contentW - labelW, rowH);
-        m_bitDepthDropdownPopup = m_bitDepthDropdownRect;
-        y += rowH + gap;
-
-        // Tail row
-        m_tailInputRect = AestraUI::NUIRect(contentX + labelW, y, 80.0f, rowH);
-
-        // Buttons at bottom
-        float btnW = 110.0f;
-        float btnH = theme.layout.dialogActionHeight;
-        float btnY = m_dialogRect.bottom() - btnH - theme.spacingM;
-        float totalBtnW = btnW * 2.0f + theme.spacingS;
-        float btnStartX = m_dialogRect.x + (m_dialogRect.width - totalBtnW) * 0.5f;
-        m_startButtonRect = AestraUI::NUIRect(btnStartX, btnY, btnW, btnH);
-        m_closeButtonRect = AestraUI::NUIRect(btnStartX + btnW + theme.spacingS, btnY, btnW, btnH);
-    } else {
-        // Progress/Complete state
-        float btnW = 110.0f;
-        float btnH = theme.layout.dialogActionHeight;
-        float btnY = m_dialogRect.y + m_dialogRect.height - btnH - theme.spacingM;
-        float totalBtnW = btnW;
-        float btnStartX = m_dialogRect.x + (m_dialogRect.width - totalBtnW) * 0.5f;
-        if (m_panelState == PanelState::Progress) {
-            m_cancelButtonRect = AestraUI::NUIRect(btnStartX, btnY, btnW, btnH);
-            m_closeButtonRect = {};
-        } else {
-            m_closeButtonRect = AestraUI::NUIRect(btnStartX, btnY, btnW, btnH);
+        const NUILocalRect outputRow = nextRow(rowH);
+        const auto labelSplit = L::splitHorizontal(outputRow, labelW);
+        const auto browseSplit = L::splitHorizontal(labelSplit.trailing, labelSplit.trailing.width - 82.0f);
+        m_outputLabel->setBounds(toRect(labelSplit.leading));
+        m_outputInput->setBounds(NUIRect(browseSplit.leading.x, browseSplit.leading.y, browseSplit.leading.width - 10.0f, rowH));
+        m_browseButton->setBounds(toRect(browseSplit.trailing));
+        place(m_scopeLabel, m_scopeDropdown, 0.0f);
+        place(m_rateLabel, m_rateDropdown, 0.0f);
+        place(m_depthLabel, m_depthDropdown, 0.0f);
+        place(m_tailLabel, m_tailField, 80.0f);
+        const NUILocalRect stemsRow = nextRow(rowH);
+        m_stemsCheckbox->setBounds(toRect(stemsRow));
+        if (m_stems) {
+            m_stemsHint->setBounds(toRect(nextRow(rowH * 1.4f)));
         }
+    } else if (m_panelState == PanelState::Progress) {
+        m_statusLabel->setBounds(toRect(nextRow(rowH)));
+        m_progressBar->setBounds(toRect(nextRow(20.0f)));
+        m_elapsedLabel->setBounds(toRect(nextRow(rowH)));
+    } else {
+        m_statusLabel->setBounds(toRect(nextRow(rowH)));
+        m_detailLabel->setBounds(toRect(nextRow(rowH * 2.0f)));
+        m_detailLabel2->setBounds(toRect(nextRow(rowH)));
+    }
+
+    // Buttons, centred at the bottom.
+    const float btnY = m_dialogRect.bottom() - btnH - theme.spacingM;
+    if (m_panelState == PanelState::Settings) {
+        const float total = btnW * 2.0f + theme.spacingS;
+        const float x0 = m_dialogRect.x + (m_dialogRect.width - total) * 0.5f;
+        m_exportButton->setBounds(NUIRect(x0, btnY, btnW, btnH));
+        m_cancelButton->setBounds(NUIRect(x0 + btnW + theme.spacingS, btnY, btnW, btnH));
+    } else {
+        const NUIRect centred(m_dialogRect.x + (m_dialogRect.width - btnW) * 0.5f, btnY, btnW, btnH);
+        m_cancelButton->setBounds(centred);
+        m_doneButton->setBounds(centred);
     }
 }
 
@@ -184,6 +366,11 @@ void ExportDialog::onUpdate(double deltaTime) {
     NUIComponent::onUpdate(deltaTime);
     if (m_panelState == PanelState::Progress && m_exporting) {
         m_exportElapsed += deltaTime;
+        m_progressBar->setProgress(std::clamp(static_cast<double>(m_progress.load()), 0.0, 1.0));
+        char timeBuf[32];
+        std::snprintf(timeBuf, sizeof(timeBuf), "Elapsed: %d:%02d", static_cast<int>(m_exportElapsed) / 60,
+                      static_cast<int>(m_exportElapsed) % 60);
+        m_elapsedLabel->setText(timeBuf);
     }
 
     if (m_exportFuture.valid() &&
@@ -194,7 +381,11 @@ void ExportDialog::onUpdate(double deltaTime) {
     if (auto pickedPath = m_fileDialog.takeResult()) {
         if (!pickedPath->empty()) {
             m_outputPath = *pickedPath;
+            m_outputInput->setText(m_outputPath);
+            applyPanelState();
         }
+        m_browseButton->setText("Browse");
+        m_browseButton->setEnabled(true);
         setDirty(true);
     }
 }
@@ -212,6 +403,7 @@ void ExportDialog::applyExportResult(const ExportJobResult& result) {
 
     if (result.success) {
         m_exportResultPath = result.outputPath;
+        m_exportFileCount = result.fileCount;
         m_exportDuration = result.durationSeconds;
         m_exportPeakDb = result.peakDb;
         m_exportError.clear();
@@ -222,8 +414,24 @@ void ExportDialog::applyExportResult(const ExportJobResult& result) {
         m_exportError = result.errorMessage;
     }
 
+    applyPanelState();
     layoutDialog();
-    setDirty(true);
+}
+
+void ExportDialog::failToComplete(const std::string& message) {
+    m_panelState = PanelState::Complete;
+    m_exportError = message;
+    m_exportResultPath.clear();
+    m_exportDuration = 0.0;
+    m_exportPeakDb = -96.0;
+    applyPanelState();
+    layoutDialog();
+}
+
+void ExportDialog::finish() {
+    hide();
+    if (m_onExportComplete)
+        m_onExportComplete(m_exportError.empty(), m_exportResultPath, m_exportDuration, m_exportPeakDb);
 }
 
 void ExportDialog::restoreAudioStreamIfNeeded() {
@@ -271,25 +479,13 @@ void ExportDialog::onResize(int width, int height) {
 
 void ExportDialog::onRender(AestraUI::NUIRenderer& renderer) {
     if (!m_visible) return;
-    drawOverlay(renderer);
-    drawDialog(renderer);
-}
-
-void ExportDialog::drawOverlay(AestraUI::NUIRenderer& renderer) {
-    auto parentBounds = getBounds();
-    renderer.fillRect(parentBounds, AestraUI::NUIThemeManager::getInstance().getColor("overlay"));
-}
-
-void ExportDialog::drawDialog(AestraUI::NUIRenderer& renderer) {
     auto& theme = AestraUI::NUIThemeManager::getInstance();
     const auto& props = theme.getCurrentTheme();
-    // Shadow
+
+    renderer.fillRect(getBounds(), theme.getColor("overlay"));
     renderer.drawShadow(m_dialogRect, 0.0f, props.spacingS, props.spacingL, theme.getColor("shadow"));
 
     // Surface and title bar come from the shared dialog chrome (spec 2 §5).
-    // The title was a 20px heading with its own hand-drawn rule below it; it is
-    // the panel's title now, in the same 12px title-bar style the plugin editors
-    // and Settings use, and the chrome's own hairline replaces the rule.
     AestraUI::DialogChrome chrome;
     chrome.panel = m_dialogRect;
     chrome.title = (m_panelState == PanelState::Settings)   ? "Export Audio"
@@ -298,265 +494,17 @@ void ExportDialog::drawDialog(AestraUI::NUIRenderer& renderer) {
     chrome.showClose = false; // The panel's own Cancel/Close button is the dismissal.
     AestraUI::drawDialogChrome(renderer, chrome);
 
-    if (m_panelState == PanelState::Settings) {
-        drawSettingsPanel(renderer);
-    } else {
-        drawProgressPanel(renderer);
-    }
-}
-
-void ExportDialog::drawSettingsPanel(AestraUI::NUIRenderer& renderer) {
-    auto& theme = AestraUI::NUIThemeManager::getInstance();
-    const auto& props = theme.getCurrentTheme();
-    float pad = props.spacingL;
-    float contentX = m_dialogRect.x + pad;
-    float labelW = 110.0f;
-    float rowH = props.layout.standardControlHeight;
-    float gap = props.spacingS;
-    float y = m_dialogRect.y + 56.0f;
-    const AestraUI::NUIColor fieldBg = theme.getColor("controlBackground");
-    const AestraUI::NUIColor fieldBorder = theme.getColor("borderSubtle");
-    const AestraUI::NUIColor fieldBorderActive = theme.getColor("focusRing");
-
-    auto drawLabel = [&](const std::string& text, float yPos) {
-        renderer.drawText(text, AestraUI::NUIPoint(contentX, yPos + 7.0f), props.fontSizeM,
-                          theme.getColor("textSecondary"));
-    };
-
-    auto drawDropdown = [&](const AestraUI::NUIRect& rect, const std::string& value, bool isOpen) {
-        AestraUI::NUIColor borderCol = isOpen ? fieldBorderActive : fieldBorder;
-        renderer.fillRoundedRect(rect, props.radiusM, fieldBg);
-        renderer.strokeRoundedRect(rect, props.radiusM, isOpen ? 1.5f : props.layout.dividerWidth, borderCol);
-        renderer.drawText(value, AestraUI::NUIPoint(rect.x + props.spacingS, rect.y + 7.0f), props.fontSizeM,
-                          theme.getColor("textPrimary"));
-        renderer.drawText(isOpen ? "^" : "v", AestraUI::NUIPoint(rect.x + rect.width - 16.0f, rect.y + 7.0f),
-                          props.fontSizeXS, theme.getColor("textSecondary"));
-    };
-
-    auto drawDropdownPopup = [&](const AestraUI::NUIRect& popup, const std::vector<std::string>& options, int selected) {
-        float itemH = props.layout.standardMenuRowHeight;
-        float popupH = options.size() * itemH + 4.0f;
-        AestraUI::NUIRect actualPopup = popup;
-        actualPopup.height = popupH;
-        actualPopup.y = popup.y + popup.height + 2.0f;
-
-        renderer.fillRoundedRect(actualPopup, props.radiusM, fieldBg);
-        renderer.strokeRoundedRect(actualPopup, props.radiusM, props.layout.dividerWidth, fieldBorder);
-
-        for (size_t i = 0; i < options.size(); i++) {
-            AestraUI::NUIRect itemRect(actualPopup.x + 2.0f, actualPopup.y + 2.0f + i * itemH, actualPopup.width - 4.0f, itemH);
-            AestraUI::NUIColor itemBg = (static_cast<int>(i) == selected)
-                                             ? theme.getColor("selection")
-                                             : AestraUI::NUIColor::transparent();
-            renderer.fillRoundedRect(itemRect, props.radiusXS, itemBg);
-            renderer.drawText(options[i],
-                              AestraUI::NUIPoint(itemRect.x + props.spacingS, itemRect.y + props.spacingS - 1.0f),
-                              props.fontSizeM, theme.getColor("textPrimary"));
-        }
-    };
-
-    // Output path
-    drawLabel("Output", y);
-    renderer.fillRoundedRect(m_outputFieldRect, props.radiusM, fieldBg);
-    renderer.strokeRoundedRect(m_outputFieldRect, props.radiusM, props.layout.dividerWidth, fieldBorder);
-    std::string displayPath = m_outputPath;
-    if (displayPath.size() > 42) displayPath = "..." + displayPath.substr(displayPath.size() - 39);
-    renderer.drawText(displayPath, AestraUI::NUIPoint(m_outputFieldRect.x + props.spacingS,
-                                                       m_outputFieldRect.y + 7.0f),
-                      props.fontSizeS, theme.getColor("textPrimary"));
-    {
-        bool hovered = !m_fileDialog.isPending() && (m_hoveredButton == 3);
-        AestraUI::NUIColor btnBg = hovered ? theme.getColor("hover") : fieldBg;
-        renderer.fillRoundedRect(m_browseButtonRect, props.radiusM, btnBg);
-        renderer.strokeRoundedRect(m_browseButtonRect, props.radiusM, props.layout.dividerWidth, fieldBorder);
-        renderer.drawTextCentered(m_fileDialog.isPending() ? "Waiting..." : "Browse", m_browseButtonRect, props.fontSizeS,
-                                  theme.getColor(m_fileDialog.isPending() ? "textMuted" : "textPrimary"));
-    }
-    y += rowH + gap;
-
-    // Scope
-    drawLabel("Scope", y);
-    drawDropdown(m_scopeDropdownRect, m_scopeOptions[m_selectedScope], m_scopeOpen);
-    y += rowH + gap;
-
-    // Sample rate
-    drawLabel("Sample Rate", y);
-    drawDropdown(m_sampleRateDropdownRect, m_sampleRateOptions[m_selectedSampleRate], m_sampleRateOpen);
-    y += rowH + gap;
-
-    // Bit depth
-    drawLabel("Bit Depth", y);
-    drawDropdown(m_bitDepthDropdownRect, m_bitDepthOptions[m_selectedBitDepth], m_bitDepthOpen);
-    y += rowH + gap;
-
-    // Tail
-    drawLabel("Tail (seconds)", y);
-    {
-        const AestraUI::NUIColor tailBorder = m_tailInputFocused ? fieldBorderActive : fieldBorder;
-        renderer.fillRoundedRect(m_tailInputRect, props.radiusM, fieldBg);
-        renderer.strokeRoundedRect(m_tailInputRect, props.radiusM,
-                                   m_tailInputFocused ? 1.5f : props.layout.dividerWidth, tailBorder);
-        renderer.drawText(m_tailInput, AestraUI::NUIPoint(m_tailInputRect.x + props.spacingS,
-                                                          m_tailInputRect.y + 7.0f),
-                          props.fontSizeM, theme.getColor("textPrimary"));
-    }
-
-    // Buttons
-    {
-        bool startHovered = (m_hoveredButton == 0);
-        const bool startPressed = m_pressedButton == 0;
-        AestraUI::NUIColor startBg = startPressed ? theme.getColor("primaryPressed")
-                                        : startHovered ? theme.getColor("primaryHover")
-                                                       : theme.getColor("primary");
-        renderer.fillRoundedRect(m_startButtonRect, props.radiusM, startBg);
-        renderer.drawTextCentered("Export", m_startButtonRect, props.fontSizeM, theme.getColor("textOnPrimary"));
-
-        bool closeHovered = (m_hoveredButton == 2);
-        const bool closePressed = m_pressedButton == 2;
-        AestraUI::NUIColor closeBg = closePressed ? theme.getColor("controlPressed")
-                                        : closeHovered ? theme.getColor("controlHover")
-                                                       : fieldBg;
-        renderer.fillRoundedRect(m_closeButtonRect, props.radiusM, closeBg);
-        renderer.strokeRoundedRect(m_closeButtonRect, props.radiusM, props.layout.dividerWidth, fieldBorder);
-        renderer.drawTextCentered("Cancel", m_closeButtonRect, props.fontSizeM, theme.getColor("textPrimary"));
-    }
-
-    if (m_scopeOpen) {
-        drawDropdownPopup(m_scopeDropdownPopup, m_scopeOptions, m_selectedScope);
-    } else if (m_sampleRateOpen) {
-        drawDropdownPopup(m_sampleRateDropdownPopup, m_sampleRateOptions, m_selectedSampleRate);
-    } else if (m_bitDepthOpen) {
-        drawDropdownPopup(m_bitDepthDropdownPopup, m_bitDepthOptions, m_selectedBitDepth);
-    }
-}
-
-void ExportDialog::drawProgressPanel(AestraUI::NUIRenderer& renderer) {
-    auto& theme = AestraUI::NUIThemeManager::getInstance();
-    const auto& props = theme.getCurrentTheme();
-    float pad = props.spacingL;
-    float contentX = m_dialogRect.x + pad;
-    float contentW = m_dialogRect.width - pad * 2.0f;
-    float y = m_dialogRect.y + 52.0f;
-    const AestraUI::NUIColor fieldBg = theme.getColor("controlBackground");
-    const AestraUI::NUIColor fieldBorder = theme.getColor("borderSubtle");
-
-    if (m_panelState == PanelState::Progress) {
-        // Status text
-        std::string status = "Rendering audio...";
-        renderer.drawText(status, AestraUI::NUIPoint(contentX, y), props.fontSizeM,
-                          theme.getColor("textPrimary"));
-        y += 24.0f;
-
-        // Progress bar (manual draw for full control)
-        float barH = 20.0f;
-        AestraUI::NUIRect barRect(contentX, y, contentW, barH);
-        renderer.fillRoundedRect(barRect, props.radiusS, theme.getColor("meterBackground"));
-        renderer.strokeRoundedRect(barRect, props.radiusS, props.layout.dividerWidth, fieldBorder);
-
-        float progress = std::max(0.0f, std::min(1.0f, m_progress.load()));
-        if (progress > 0.0f) {
-            float fillW = std::max(4.0f, contentW * progress);
-            AestraUI::NUIRect fillRect(contentX, y, fillW, barH);
-            renderer.fillRoundedRect(fillRect, props.radiusS, theme.getColor("meterActive"));
-        }
-
-        // Progress text
-        int pct = static_cast<int>(progress * 100.0f);
-        std::string pctText = std::to_string(pct) + "%";
-        auto textSize = renderer.measureText(pctText, props.fontSizeS);
-        float textX = contentX + (contentW - textSize.width) * 0.5f;
-        renderer.drawText(pctText, AestraUI::NUIPoint(textX, y + 4.0f), props.fontSizeS,
-                          theme.getColor("textPrimary"));
-        y += barH + 16.0f;
-
-        // Elapsed time
-        int elapsedMin = static_cast<int>(m_exportElapsed) / 60;
-        int elapsedSec = static_cast<int>(m_exportElapsed) % 60;
-        char timeBuf[32];
-        snprintf(timeBuf, sizeof(timeBuf), "Elapsed: %d:%02d", elapsedMin, elapsedSec);
-        renderer.drawText(timeBuf, AestraUI::NUIPoint(contentX, y), props.fontSizeS,
-                          theme.getColor("textSecondary"));
-
-        // Buttons
-        {
-            bool cancelHovered = (m_hoveredButton == 1);
-            const bool cancelPressed = m_pressedButton == 1;
-            const AestraUI::NUIColor cancelBg = cancelPressed ? theme.getColor("error").darkened(0.16f)
-                                                    : cancelHovered ? theme.getColor("error").lightened(0.08f)
-                                                                    : theme.getColor("error");
-            renderer.fillRoundedRect(m_cancelButtonRect, props.radiusM, cancelBg);
-            renderer.drawTextCentered("Cancel", m_cancelButtonRect, props.fontSizeM, props.onError);
-        }
-    } else if (m_panelState == PanelState::Complete) {
-        // Result
-        if (!m_exportError.empty()) {
-            renderer.drawText("Export Failed", AestraUI::NUIPoint(contentX, y), props.fontSizeL,
-                              theme.getColor("error"));
-            y += 24.0f;
-            renderer.drawText(m_exportError, AestraUI::NUIPoint(contentX, y), props.fontSizeM,
-                              theme.getColor("textSecondary"));
-        } else {
-            renderer.drawText("Export Complete", AestraUI::NUIPoint(contentX, y), props.fontSizeL,
-                              theme.getColor("success"));
-            y += 24.0f;
-
-            // Output path
-            renderer.drawText("Output:", AestraUI::NUIPoint(contentX, y), props.fontSizeS,
-                              theme.getColor("textSecondary"));
-            y += 16.0f;
-            std::string displayPath = m_exportResultPath;
-            if (displayPath.size() > 50) displayPath = "..." + displayPath.substr(displayPath.size() - 47);
-            renderer.drawText(displayPath, AestraUI::NUIPoint(contentX, y), props.fontSizeS,
-                              theme.getColor("textPrimary"));
-            y += 18.0f;
-
-            // Stats
-            char statsBuf[128];
-            snprintf(statsBuf, sizeof(statsBuf), "Duration: %.1fs  |  Peak: %.1f dB", m_exportDuration, m_exportPeakDb);
-            renderer.drawText(statsBuf, AestraUI::NUIPoint(contentX, y), props.fontSizeS,
-                              theme.getColor("textSecondary"));
-        }
-
-        y += 32.0f;
-
-        // Close button
-        bool closeHovered = (m_hoveredButton == 2);
-        const bool closePressed = m_pressedButton == 2;
-        AestraUI::NUIColor closeBg = closePressed ? theme.getColor("primaryPressed")
-                                        : closeHovered ? theme.getColor("primaryHover")
-                                                       : theme.getColor("primary");
-        renderer.fillRoundedRect(m_closeButtonRect, props.radiusM, closeBg);
-        renderer.drawTextCentered(m_exportError.empty() ? "Done" : "Close", m_closeButtonRect,
-                                  props.fontSizeM, theme.getColor("textOnPrimary"));
+    renderChildren(renderer);
+    // An open dropdown's list paints over the controls below it.
+    for (const auto& dropdown : {m_scopeDropdown, m_rateDropdown, m_depthDropdown}) {
+        if (dropdown->isVisible() && dropdown->isOpen())
+            dropdown->renderDropdownList(renderer);
     }
 }
 
 bool ExportDialog::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (!m_visible) return false;
-
-    updateButtonHover(event.position);
-
-    if (event.button == AestraUI::NUIMouseButton::Left) {
-        if (event.pressed) {
-            if (m_hoveredButton >= 0) {
-                m_pressedButton = m_hoveredButton;
-                setDirty(true);
-            } else {
-                handleMouseClick(event.position);
-            }
-            return true;
-        }
-        if (event.released) {
-            const int armedButton = m_pressedButton;
-            m_pressedButton = -1;
-            setDirty(true);
-            if (armedButton >= 0 && armedButton == m_hoveredButton) {
-                handleMouseClick(event.position);
-            }
-            return true;
-        }
-    }
-
+    NUIComponent::onMouseEvent(event);
     return true; // Modal
 }
 
@@ -564,43 +512,25 @@ bool ExportDialog::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     if (!m_visible) return false;
     if (!event.pressed) return true;
 
-    if (m_tailInputFocused) {
+    const bool typing = m_panelState == PanelState::Settings && (m_outputInput->isFocused() || m_tailField->isFocused());
+    if (typing) {
         if (event.keyCode == AestraUI::NUIKeyCode::Escape) {
-            m_tailInputFocused = false;
+            m_outputInput->setFocused(false);
+            m_tailField->setFocused(false);
             syncTailInputFromValue();
-            setDirty(true);
+            m_tailField->setText(m_tailInput);
             return true;
         }
-        if (event.keyCode == AestraUI::NUIKeyCode::Enter) {
-            double parsedTail = 0.0;
-            if (parseTailInput(parsedTail)) {
-                m_tailSeconds = parsedTail;
-            } else {
-                syncTailInputFromValue();
-            }
-            m_tailInputFocused = false;
-            setDirty(true);
-            return true;
-        }
-        if (event.keyCode == AestraUI::NUIKeyCode::Backspace) {
-            if (!m_tailInput.empty()) {
-                m_tailInput.pop_back();
-                setDirty(true);
-            }
-            return true;
-        }
-
-        const char c = event.character;
-        if ((c >= '0' && c <= '9') || (c == '.' && m_tailInput.find('.') == std::string::npos)) {
-            m_tailInput.push_back(c);
-            setDirty(true);
-        }
+        m_outputInput->onKeyEvent(event);
+        m_tailField->onKeyEvent(event);
         return true;
     }
 
     if (event.keyCode == AestraUI::NUIKeyCode::Escape) {
         if (m_panelState == PanelState::Progress && m_exporting) {
             m_cancelRequested = true;
+        } else if (m_panelState == PanelState::Complete) {
+            finish();
         } else {
             hide();
         }
@@ -609,130 +539,21 @@ bool ExportDialog::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     return true; // Modal
 }
 
-void ExportDialog::handleMouseClick(AestraUI::NUIPoint pos) {
-    const float menuItemHeight =
-        AestraUI::NUIThemeManager::getInstance().getLayoutDimension("standardMenuRowHeight");
-    // Check dropdown popups first
-    if (m_scopeOpen) {
-        float itemH = menuItemHeight;
-        float popupH = m_scopeOptions.size() * itemH + 4.0f;
-        AestraUI::NUIRect popup = m_scopeDropdownRect;
-        popup.height = popupH;
-        popup.y = m_scopeDropdownRect.y + m_scopeDropdownRect.height + 2.0f;
-        if (popup.contains(pos)) {
-            int idx = static_cast<int>((pos.y - popup.y - 2.0f) / itemH);
-            if (idx >= 0 && idx < static_cast<int>(m_scopeOptions.size())) {
-                m_selectedScope = idx;
-                layoutDialog();
-            }
-        }
-        m_scopeOpen = false;
+void ExportDialog::openBrowse() {
+    if (m_fileDialog.isPending())
         return;
-    }
-    if (m_sampleRateOpen) {
-        float itemH = menuItemHeight;
-        float popupH = m_sampleRateOptions.size() * itemH + 4.0f;
-        AestraUI::NUIRect popup = m_sampleRateDropdownRect;
-        popup.height = popupH;
-        popup.y = m_sampleRateDropdownRect.y + m_sampleRateDropdownRect.height + 2.0f;
-        if (popup.contains(pos)) {
-            int idx = static_cast<int>((pos.y - popup.y - 2.0f) / itemH);
-            if (idx >= 0 && idx < static_cast<int>(m_sampleRateOptions.size())) {
-                m_selectedSampleRate = idx;
-                layoutDialog();
-            }
-        }
-        m_sampleRateOpen = false;
-        return;
-    }
-    if (m_bitDepthOpen) {
-        float itemH = menuItemHeight;
-        float popupH = m_bitDepthOptions.size() * itemH + 4.0f;
-        AestraUI::NUIRect popup = m_bitDepthDropdownRect;
-        popup.height = popupH;
-        popup.y = m_bitDepthDropdownRect.y + m_bitDepthDropdownRect.height + 2.0f;
-        if (popup.contains(pos)) {
-            int idx = static_cast<int>((pos.y - popup.y - 2.0f) / itemH);
-            if (idx >= 0 && idx < static_cast<int>(m_bitDepthOptions.size())) {
-                m_selectedBitDepth = idx;
-                layoutDialog();
-            }
-        }
-        m_bitDepthOpen = false;
-        return;
-    }
-
-    // Close dropdowns on click outside
-    m_scopeOpen = false;
-    m_sampleRateOpen = false;
-    m_bitDepthOpen = false;
-
-    // Dropdown toggles
-    if (m_scopeDropdownRect.contains(pos)) { m_scopeOpen = !m_scopeOpen; return; }
-    if (m_sampleRateDropdownRect.contains(pos)) { m_sampleRateOpen = !m_sampleRateOpen; return; }
-    if (m_bitDepthDropdownRect.contains(pos)) { m_bitDepthOpen = !m_bitDepthOpen; return; }
-    if (m_tailInputRect.contains(pos)) {
-        m_tailInputFocused = true;
-        setDirty(true);
-        return;
-    }
-    m_tailInputFocused = false;
-
-    // Browse button
-    if (m_browseButtonRect.contains(pos) && !m_fileDialog.isPending()) {
-        Aestra::IPlatformUtils::SaveFileDialogOptions options;
-        options.title = "Export Audio";
-        options.filter = std::string("WAV Files\0*.wav\0All Files\0*.*\0",
-                                     sizeof("WAV Files\0*.wav\0All Files\0*.*\0") - 1);
-        options.defaultPath = m_outputPath;
-        options.defaultExtension = "wav";
-        // Result arrives in onUpdate(); the UI keeps painting meanwhile.
-        m_fileDialog.start([options = std::move(options)](Aestra::IPlatformUtils& utils) {
-            return utils.saveFileDialog(options);
-        });
-        setDirty(true);
-        return;
-    }
-
-    // Start/Export button
-    if (m_startButtonRect.contains(pos) && m_panelState == PanelState::Settings) {
-        startExport();
-        return;
-    }
-
-    // Cancel button
-    if (m_cancelButtonRect.contains(pos) && m_panelState == PanelState::Progress) {
-        m_cancelRequested = true;
-        return;
-    }
-
-    // Close button
-    if (m_closeButtonRect.contains(pos)) {
-        if (m_panelState == PanelState::Complete) {
-            hide();
-            if (m_onExportComplete) m_onExportComplete(m_exportError.empty(), m_exportResultPath, m_exportDuration, m_exportPeakDb);
-        } else if (m_panelState == PanelState::Settings) {
-            hide();
-        }
-        return;
-    }
-}
-
-void ExportDialog::updateButtonHover(AestraUI::NUIPoint pos) {
-    int prev = m_hoveredButton;
-    m_hoveredButton = -1;
-
-    if (m_panelState == PanelState::Settings) {
-        if (m_startButtonRect.contains(pos)) m_hoveredButton = 0;
-        else if (m_closeButtonRect.contains(pos)) m_hoveredButton = 2;
-        else if (!m_fileDialog.isPending() && m_browseButtonRect.contains(pos)) m_hoveredButton = 3;
-    } else if (m_panelState == PanelState::Progress) {
-        if (m_cancelButtonRect.contains(pos)) m_hoveredButton = 1;
-    } else {
-        if (m_closeButtonRect.contains(pos)) m_hoveredButton = 2;
-    }
-
-    if (prev != m_hoveredButton) setDirty(true);
+    Aestra::IPlatformUtils::SaveFileDialogOptions options;
+    options.title = "Export Audio";
+    options.filter = std::string("WAV Files\0*.wav\0All Files\0*.*\0", sizeof("WAV Files\0*.wav\0All Files\0*.*\0") - 1);
+    options.defaultPath = m_outputPath;
+    options.defaultExtension = "wav";
+    // Result arrives in onUpdate(); the UI keeps painting meanwhile.
+    m_fileDialog.start([options = std::move(options)](Aestra::IPlatformUtils& utils) {
+        return utils.saveFileDialog(options);
+    });
+    m_browseButton->setText("Waiting...");
+    m_browseButton->setEnabled(false);
+    setDirty(true);
 }
 
 void ExportDialog::startExport() {
@@ -742,36 +563,23 @@ void ExportDialog::startExport() {
         m_exportFuture.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
         m_exportError = "An export is already in progress.";
         Aestra::Log::warning("[ExportDialog] Export already in progress, ignoring request.");
-        layoutDialog();
-        setDirty(true);
         return;
     }
+
+    m_tailInput = m_tailField->getText();
+    m_outputPath = m_outputInput->getText();
 
     double parsedTail = 0.0;
     if (!parseTailInput(parsedTail)) {
-        m_panelState = PanelState::Complete;
-        m_exportError = "Invalid tail value";
-        m_exportResultPath.clear();
-        m_exportDuration = 0.0;
-        m_exportPeakDb = -96.0;
-        layoutDialog();
-        setDirty(true);
+        failToComplete("Invalid tail value");
         return;
     }
-
     if (m_outputPath.empty()) {
-        m_panelState = PanelState::Complete;
-        m_exportError = "No output path specified";
-        m_exportResultPath.clear();
-        m_exportDuration = 0.0;
-        m_exportPeakDb = -96.0;
-        layoutDialog();
-        setDirty(true);
+        failToComplete("No output path specified");
         return;
     }
 
     m_tailSeconds = parsedTail;
-    m_tailInputFocused = false;
 
     // V8-C14 step 5d: remember what this export actually ran with. One write
     // per export (the store saves write-through) at the commit point rather
@@ -793,6 +601,8 @@ void ExportDialog::startExport() {
     m_cancelRequested = false;
     m_exportError.clear();
     m_exportElapsed = 0.0f;
+    m_progressBar->setProgress(0.0);
+    applyPanelState();
     layoutDialog();
 
     if (auto* deviceManager = Aestra::ServiceLocator::get<Aestra::Audio::AudioDeviceManager>()) {
@@ -807,20 +617,7 @@ void ExportDialog::startExport() {
     try {
         m_exportFuture = std::async(std::launch::async,
             &ExportDialog::exportThreadFn, this,
-            m_outputPath, m_selectedBitDepth, m_selectedSampleRate, m_selectedScope, m_tailSeconds);
-    } catch (const std::system_error& e) {
-        if (m_resumeAudioStreamAfterExport) {
-            if (auto* deviceManager = Aestra::ServiceLocator::get<Aestra::Audio::AudioDeviceManager>()) {
-                deviceManager->startStream();
-            }
-            m_resumeAudioStreamAfterExport = false;
-        }
-        m_exporting = false;
-        m_panelState = PanelState::Complete;
-        m_exportError = std::string("Failed to start export worker: ") + e.what();
-        Aestra::Log::error("[ExportDialog] " + m_exportError);
-        layoutDialog();
-        setDirty(true);
+            m_outputPath, m_selectedBitDepth, m_selectedSampleRate, m_selectedScope, m_tailSeconds, m_stems);
     } catch (const std::exception& e) {
         if (m_resumeAudioStreamAfterExport) {
             if (auto* deviceManager = Aestra::ServiceLocator::get<Aestra::Audio::AudioDeviceManager>()) {
@@ -829,15 +626,12 @@ void ExportDialog::startExport() {
             m_resumeAudioStreamAfterExport = false;
         }
         m_exporting = false;
-        m_panelState = PanelState::Complete;
-        m_exportError = std::string("Failed to start export worker: ") + e.what();
-        Aestra::Log::error("[ExportDialog] " + m_exportError);
-        layoutDialog();
-        setDirty(true);
+        Aestra::Log::error(std::string("[ExportDialog] Failed to start export worker: ") + e.what());
+        failToComplete(std::string("Failed to start export worker: ") + e.what());
     }
 }
 
-ExportDialog::ExportJobResult ExportDialog::exportThreadFn(std::string outputPath, int selectedBitDepth, int selectedSampleRate, int selectedScope, double tailSeconds) {
+ExportDialog::ExportJobResult ExportDialog::exportThreadFn(std::string outputPath, int selectedBitDepth, int selectedSampleRate, int selectedScope, double tailSeconds, bool stems) {
     Aestra::Audio::AudioExporter::Config config;
     config.outputPath = std::move(outputPath);
     config.sampleRate = std::stoi(m_sampleRateOptions[selectedSampleRate]);
@@ -856,6 +650,25 @@ ExportDialog::ExportJobResult ExportDialog::exportThreadFn(std::string outputPat
         case 2: config.scope = Aestra::Audio::AudioExporter::RenderScope::Selection; break;
     }
 
+    if (stems) {
+        // The chosen path names the set: its folder is where the files go, its name is their prefix.
+        const std::filesystem::path chosen(config.outputPath);
+        const auto result = Aestra::Audio::exportStems(
+            *m_engine, *m_trackManager, config, chosen.parent_path().string(), chosen.stem().string(),
+            /*includeMaster=*/true, [this](float pct) { m_progress.store(pct, std::memory_order_relaxed); },
+            [this]() { return m_cancelRequested.load(std::memory_order_relaxed); });
+        ExportJobResult job;
+        job.success = result.ok;
+        job.errorMessage = result.error;
+        job.outputPath = chosen.parent_path().string();
+        job.fileCount = static_cast<int>(result.files.size());
+        for (const auto& file : result.files) {
+            job.durationSeconds = std::max(job.durationSeconds, file.result.durationSeconds);
+            job.peakDb = std::max(job.peakDb, file.result.peakDb);
+        }
+        return job;
+    }
+
     Aestra::Audio::AudioExporter exporter(*m_engine, *m_trackManager);
     exporter.setProgressCallback([this](float pct) {
         m_progress.store(pct, std::memory_order_relaxed);
@@ -865,11 +678,11 @@ ExportDialog::ExportJobResult ExportDialog::exportThreadFn(std::string outputPat
     });
 
     auto result = exporter.render(config);
-    return ExportJobResult{
-        .success = result.success,
-        .outputPath = result.outputPath,
-        .durationSeconds = result.durationSeconds,
-        .peakDb = result.peakDb,
-        .errorMessage = result.errorMessage,
-    };
+    ExportJobResult job;
+    job.success = result.success;
+    job.outputPath = result.outputPath;
+    job.durationSeconds = result.durationSeconds;
+    job.peakDb = result.peakDb;
+    job.errorMessage = result.errorMessage;
+    return job;
 }

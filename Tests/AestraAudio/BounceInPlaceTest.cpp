@@ -195,10 +195,9 @@ int main() {
         AudioExporter::RenderedAudio none;
         check(exporter.renderToBuffer(c, none).success && peak(none.interleaved) == 0.0,
               "a channel that does not exist renders silence, not the master");
-        c.blockSink = nullptr;
         c.captureMixerChannelId = s.channel->getChannelId();
-        c.outputPath = (std::filesystem::temp_directory_path() / "bip_should_not_exist.wav").string();
-        check(!exporter.render(c).success, "a track-output render without a sink is refused");
+        c.numChannels = 1;
+        check(!exporter.render(c).success, "a mono track-output render is refused");
     }
 
     std::cout << "[2] after the bounce the project sounds the same\n";

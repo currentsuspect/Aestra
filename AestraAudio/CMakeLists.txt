@@ -234,6 +234,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     # IO
     src/IO/AudioExporter.cpp
     src/IO/BounceInPlace.cpp
+    src/IO/StemExport.cpp
     src/IO/MiniAudioDecoder.cpp
     src/IO/StreamingDecoder.cpp
     src/IO/WaveformCache.cpp
@@ -376,6 +377,7 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/IO/PathUtils.h
     include/IO/AudioExportQuantization.h
     include/IO/BounceInPlace.h
+    include/IO/StemExport.h
     include/Commands/BounceInPlaceCommand.h
     include/IO/AudioExporter.h
     include/Playback/PreviewEngine.h
