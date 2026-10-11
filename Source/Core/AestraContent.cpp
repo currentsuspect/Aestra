@@ -100,17 +100,12 @@ constexpr float kResizeHitWidth = 6.0f;
 /**
  * One floating panel: the shared geometry plus the panel that owns it.
  *
- * `windowFor` is a pointer-to-member-function, so geometry and panel ownership
- * are described by the SAME row. Before this they were two switches over the
- * same ViewType: adding a panel meant editing both, and missing the second
- * compiled clean and returned nullptr at runtime.
- *
- * The geometry half lives in FloatingPanelDescriptors.h because it needs no UI
- * and PanelDescriptorRegistryTest checks it headlessly. Only the accessor
- * pairing lives here, because taking &AestraContent::mixerWindowFor needs the
- * class complete. The two are cross-checked at build time: the kWindowFor table
- * below is indexed by the same row order, and its size is asserted against
- * kFloatingPanelGeometry.
+ * `windowFor` is a pointer-to-member-function, so geometry and panel ownership are described by
+ * the SAME row (before, two switches over ViewType: missing the second compiled clean and
+ * returned nullptr at runtime). The geometry half lives in FloatingPanelDescriptors.h because it
+ * needs no UI and PanelDescriptorRegistryTest checks it headlessly; the accessor pairing lives
+ * here because &AestraContent::mixerWindowFor needs the class complete. The kWindowFor table below
+ * shares the row order, and its size is asserted against kFloatingPanelGeometry.
  */
 struct FloatingPanelDescriptor {
     Content::FloatingPanelGeometry geometry;
@@ -295,6 +290,7 @@ void AestraContent::wireFloatingPanel(const std::shared_ptr<Audio::WindowPanel>&
     panel->setOnDragMove([this, view](const AestraUI::NUIPoint& pos) { updatePanelDrag(view, pos); });
     panel->setOnDragEnd([this, view]() { endPanelDrag(view); });
     panel->setMinimumPanelSize(static_cast<float>(spec.minWidth), static_cast<float>(spec.minHeight));
+    wirePanelMode(panel, view);
     panel->setOnResizeMove([this, view, weakPanel = std::weak_ptr<Audio::WindowPanel>(panel)](
                                const AestraUI::NUIRect& proposed) {
         // Inbound clamp only: the gesture may saturate at an edge, but what is
@@ -391,6 +387,7 @@ AestraContent::AestraContent()
     m_pluginController->setPluginManager(&PluginManager::getInstance());
     m_pluginController->setPluginScanner(&PluginManager::getInstance().getScanner());
     m_pluginController->setPopupLayer(m_overlayLayer.get());
+    wireEditorMode();
     // The inspector rack's per-click "+ Add Insert" menu is created on demand,
     // so it pulls the catalog here instead of via refreshPluginList().
     m_pluginController->setMixerCatalogProvider([this]() { return buildMixerCatalogEntries(); });
@@ -1723,6 +1720,7 @@ void AestraContent::logModeStateIfChanged() {
 
 void AestraContent::onUpdate(double dt) {
     drainMainThreadTasks();
+    closeContextualPanels();
     updatePendingCountIn();
     logModeStateIfChanged();
 
@@ -2433,6 +2431,7 @@ bool AestraContent::isViewOpen(Audio::ViewType view) const {
 }
 
 void AestraContent::setViewOpen(Audio::ViewType view, bool open) {
+    ++m_viewChangeSerial; // lets a contextual panel tell a toggle from a plain outside press
     bool changed = false;
     switch (view) {
     case Audio::ViewType::Mixer:

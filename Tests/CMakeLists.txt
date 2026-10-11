@@ -1755,6 +1755,20 @@ target_include_directories(AutomationRegionsTest PRIVATE
 add_test(NAME AutomationRegionsTest COMMAND AutomationRegionsTest)
 set_tests_properties(AutomationRegionsTest PROPERTIES LABELS "audio;automation;undo;serialization;contract:audio" TIMEOUT 60)
 
+# SPEC 3 section 1.1: panel mode (Floating/Docked, Contextual/Keep Open) -- defaults and store round trip.
+add_executable(PanelPlacementTest AestraAudio/PanelPlacementTest.cpp ${CMAKE_SOURCE_DIR}/Source/Core/UISurfaceStore.cpp)
+target_link_libraries(PanelPlacementTest PRIVATE AestraPlat)
+target_include_directories(PanelPlacementTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Core
+    ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+    ${CMAKE_SOURCE_DIR}/AestraUI/Base
+    ${CMAKE_SOURCE_DIR}/AestraUI/Core
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/AestraPlat/include
+)
+add_test(NAME PanelPlacementTest COMMAND PanelPlacementTest)
+set_tests_properties(PanelPlacementTest PROPERTIES LABELS "ui;panels;preferences;contract:application" TIMEOUT 60)
+
 # Playlist Split/Trim Varispeed — split/trim keep source-domain invariants
 # (durationSeconds, sourceOffsetSeconds) under Speed/Pitch varispeed (#746).
 add_executable(PlaylistSplitVarispeedTest AestraAudio/PlaylistSplitVarispeedTest.cpp)
@@ -2668,6 +2682,26 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(AutomationClipLayerTest PROPERTIES LABELS "ui;automation;undo;regression;contract:application")
 endif()
 
+# SPEC 3 section 1.1: what Docked and Contextual do to a real panel.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(PanelModeBehaviourTest AestraUI_Core AestraUI_Platform)
+    add_executable(PanelModeBehaviourTest
+        AestraUI/PanelModeBehaviourTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/WindowPanel.cpp
+    )
+    target_link_libraries(PanelModeBehaviourTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(PanelModeBehaviourTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PanelModeBehaviourTest COMMAND PanelModeBehaviourTest)
+    set_tests_properties(PanelModeBehaviourTest PROPERTIES LABELS "ui;panels;regression;contract:application")
+endif()
+
 # Spec 1 item 4b: mixer insert dropdown keyboard selection (arrows skip
 # category headers, Enter loads) without leaving the search field.
 if(AESTRA_ENABLE_UI)
@@ -3339,6 +3373,7 @@ if(AESTRA_ENABLE_UI)
         PanelResizeLayoutTest
         ExportDialogWidgetsTest
         AutomationClipLayerTest
+        PanelModeBehaviourTest
         UnitRowStepSelectionTest
         PluginRackBindingLifecycleTest
         WindowPanelRaiseTest

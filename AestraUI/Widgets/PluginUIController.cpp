@@ -5,6 +5,7 @@
 #include "PluginEditorRegistry.h"
 #include "EditorSurfacePlacement.h"
 #include "AestraPanelWindow.h"
+#include "PanelModeMenu.h"
 #include "../Platform/NUIPlatformBridge.h"
 #include "UIMixerPluginDropdown.h"
 #include "GenericPluginEditor.h"
@@ -75,6 +76,108 @@ void PluginUIController::setMixerCatalogProvider(
 void PluginUIController::setEditorAnchorProvider(EditorAnchorGetter getter, EditorAnchorSaver saver) {
     m_editorAnchorGetter = std::move(getter);
     m_editorAnchorSaver = std::move(saver);
+}
+
+void PluginUIController::setEditorModeProvider(EditorModeGetter getter, EditorModeSaver saver) {
+    m_editorModeGetter = std::move(getter);
+    m_editorModeSaver = std::move(saver);
+    for (const auto& active : m_activeEditors) {
+        const auto it = std::find_if(m_editorKeys.begin(), m_editorKeys.end(),
+                                     [&](const auto& entry) { return entry.first.lock() == active; });
+        if (auto panel = std::dynamic_pointer_cast<AestraPanelWindow>(active))
+            applyEditorMode(panel, it != m_editorKeys.end() ? it->second : std::string());
+    }
+}
+
+// Without a provider an editor behaves as it always did: free to move, closing on a press outside.
+void PluginUIController::applyEditorMode(const std::shared_ptr<AestraPanelWindow>& editor,
+                                         const std::string& anchorKey) {
+    const PanelMode mode = m_editorModeGetter ? m_editorModeGetter() : PanelMode{false, false};
+    editor->setCloseOnOutsideClick(!mode.keepOpen);
+    editor->setLocked(mode.docked);
+    if (!m_editorModeGetter)
+        return;
+    editor->setOnMenuRequested([this, weak = std::weak_ptr<AestraPanelWindow>(editor), anchorKey](const NUIPoint& at) {
+        if (auto live = weak.lock())
+            showEditorMenu(live, anchorKey, at);
+    });
+}
+
+void PluginUIController::showEditorMenu(const std::shared_ptr<AestraPanelWindow>& editor, const std::string& anchorKey,
+                                        const NUIPoint& at) {
+    if (!m_popupLayer || !m_editorModeGetter)
+        return;
+    PanelModeMenuActions actions;
+    actions.setMode = [this](PanelMode next) {
+        if (m_editorModeSaver)
+            m_editorModeSaver(next);
+        for (const auto& active : m_activeEditors) {
+            const auto it = std::find_if(m_editorKeys.begin(), m_editorKeys.end(),
+                                         [&](const auto& entry) { return entry.first.lock() == active; });
+            if (auto panel = std::dynamic_pointer_cast<AestraPanelWindow>(active))
+                applyEditorMode(panel, it != m_editorKeys.end() ? it->second : std::string());
+        }
+    };
+    actions.resetPosition = [this, weak = std::weak_ptr<AestraPanelWindow>(editor), anchorKey]() {
+        if (auto live = weak.lock())
+            centreEditor(live, anchorKey);
+    };
+    auto menu = buildPanelModeMenu(m_editorModeGetter(), std::move(actions));
+    menu->setOnHide([this, weak = std::weak_ptr<NUIContextMenu>(menu)]() {
+        if (auto shown = weak.lock(); shown && m_popupLayer)
+            m_popupLayer->removeChild(shown);
+    });
+    m_popupLayer->addChild(menu);
+    menu->showAt(at);
+}
+
+// Editor bounds are popup-layer-local (see openPluginEditor), and every placement goes through the
+// anchored-placement resolve, never a hand-computed rect (UISurfaceResolutionGuard, R4).
+void PluginUIController::placeEditorComp(const std::shared_ptr<NUIComponent>& editorComp, double anchorX,
+                                         double anchorY) {
+    if (!m_popupLayer || !editorComp)
+        return;
+    const auto layer = m_popupLayer->getBounds();
+    const auto current = editorComp->getBounds();
+    const Layout::NUIWindowRect region(0.0f, 0.0f, layer.width, layer.height);
+    const Layout::NUIAnchoredRect preference{anchorX, anchorY, static_cast<double>(current.width),
+                                             static_cast<double>(current.height)};
+    const auto placement = Layout::resolveAnchoredPlacement(preference, Layout::NUIPlacementMode::Anchored, region,
+                                                            Layout::NUISizeLimits{0.0, 0.0});
+    if (placement.applicable)
+        editorComp->setBounds(placement.resolved.raw());
+}
+
+void PluginUIController::centreEditor(const std::shared_ptr<NUIComponent>& editorComp, const std::string& anchorKey) {
+    placeEditorComp(editorComp, 0.5, 0.5);
+    if (m_editorAnchorSaver && !anchorKey.empty() && editorComp) {
+        const auto b = editorComp->getBounds();
+        m_editorAnchorSaver(anchorKey, Layout::NUIAnchoredRect{0.5, 0.5, static_cast<double>(b.width),
+                                                               static_cast<double>(b.height)});
+    }
+}
+
+// Gather: the position the editor is at, clamped into the layer by the capture, then placed.
+void PluginUIController::gatherEditors() {
+    if (!m_popupLayer)
+        return;
+    const auto layer = m_popupLayer->getBounds();
+    const Layout::NUIWindowRect region(0.0f, 0.0f, layer.width, layer.height);
+    for (const auto& editorComp : m_activeEditors) {
+        const auto b = editorComp->getBounds();
+        const Layout::NUIAnchoredRect prior{0.5, 0.5, static_cast<double>(b.width), static_cast<double>(b.height)};
+        const auto captured = Layout::captureAnchoredPlacement(Layout::NUIWindowRect(b.x, b.y, b.width, b.height),
+                                                               region, prior);
+        placeEditorComp(editorComp, captured.anchorX, captured.anchorY);
+    }
+}
+
+void PluginUIController::resetEditorPositions() {
+    for (const auto& active : m_activeEditors) {
+        const auto it = std::find_if(m_editorKeys.begin(), m_editorKeys.end(),
+                                     [&](const auto& entry) { return entry.first.lock() == active; });
+        centreEditor(active, it != m_editorKeys.end() ? it->second : std::string());
+    }
 }
 
 void PluginUIController::bindBrowser(PluginBrowserPanel* browser) {
@@ -578,6 +681,12 @@ void PluginUIController::openPluginEditor(
 
         m_popupLayer->addChild(editorComp);
         m_activeEditors.push_back(editorComp);
+        m_editorKeys.erase(std::remove_if(m_editorKeys.begin(), m_editorKeys.end(),
+                                          [](const auto& entry) { return entry.first.expired(); }),
+                           m_editorKeys.end());
+        m_editorKeys.emplace_back(editorComp, key);
+        if (auto panelWindow = std::dynamic_pointer_cast<AestraPanelWindow>(editorComp))
+            applyEditorMode(panelWindow, key);
     }
 }
 

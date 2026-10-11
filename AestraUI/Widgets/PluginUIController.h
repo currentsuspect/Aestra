@@ -6,6 +6,7 @@
 #include "NUIComponent.h"
 #include "NUITypes.h"
 #include "PluginBrowserPanel.h"
+#include "PanelMode.h"
 #include "../Layout/NUIAnchoredPlacement.h"
 
 // Forward declaration
@@ -111,6 +112,21 @@ public:
     using EditorAnchorSaver =
         std::function<void(const std::string& key, const Layout::NUIAnchoredRect& anchor)>;
     void setEditorAnchorProvider(EditorAnchorGetter getter, EditorAnchorSaver saver);
+
+    /**
+     * @brief Provide the plugin editors' shared panel mode (SPEC 3 section 1.1).
+     *
+     * One mode for every editor: Floating/Docked and Contextual/Keep Open. Without a provider
+     * editors keep their original behaviour (floating, closing on a press outside).
+     */
+    using EditorModeGetter = std::function<PanelMode()>;
+    using EditorModeSaver = std::function<void(const PanelMode&)>;
+    void setEditorModeProvider(EditorModeGetter getter, EditorModeSaver saver);
+
+    /** @brief Bring every open editor fully inside the popup layer (View > Gather Panels). */
+    void gatherEditors();
+    /** @brief Centre every open editor and forget its stored position (View > Reset Panel Positions). */
+    void resetEditorPositions();
 
     // ==============================
     // Browser Binding
@@ -297,6 +313,14 @@ private:
     // Editor-anchor persistence (V8-C14 step 5b; provided by the app layer).
     EditorAnchorGetter m_editorAnchorGetter;
     EditorAnchorSaver m_editorAnchorSaver;
+    EditorModeGetter m_editorModeGetter;
+    EditorModeSaver m_editorModeSaver;
+    std::vector<std::pair<std::weak_ptr<NUIComponent>, std::string>> m_editorKeys; ///< editor -> its anchor key
+    void applyEditorMode(const std::shared_ptr<AestraPanelWindow>& editor, const std::string& anchorKey);
+    void showEditorMenu(const std::shared_ptr<AestraPanelWindow>& editor, const std::string& anchorKey,
+                        const NUIPoint& at);
+    void placeEditorComp(const std::shared_ptr<NUIComponent>& editorComp, double anchorX, double anchorY);
+    void centreEditor(const std::shared_ptr<NUIComponent>& editorComp, const std::string& anchorKey);
 };
 
 /**

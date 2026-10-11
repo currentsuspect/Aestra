@@ -82,6 +82,16 @@ public:
     void onResize(int width, int height) override;
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
 
+    // SPEC 3 section 1.1: a docked panel is locked in place (no title-bar drag, no edge resize).
+    void setLocked(bool locked) { m_locked = locked; }
+    bool isLocked() const { return m_locked; }
+    // Right-click on the title bar asks for the panel's own menu (Dock/Float, Keep Open/Contextual, Reset).
+    void setOnMenuRequested(std::function<void(const AestraUI::NUIPoint&)> callback) { m_onMenuRequested = callback; }
+    // A contextual panel reports a left press outside its bounds; the owner decides whether to close it.
+    void setContextual(bool contextual) { m_contextual = contextual; }
+    bool isContextual() const { return m_contextual; }
+    void setOnOutsidePress(std::function<void()> callback) { m_onOutsidePress = callback; }
+
     // Callbacks
     void setOnMinimizeToggle(std::function<void(bool)> callback) { m_onMinimizeToggle = callback; }
     void setOnMaximizeToggle(std::function<void(bool)> callback) { m_onMaximizeToggle = callback; }
@@ -150,6 +160,10 @@ private:
     std::chrono::steady_clock::time_point m_lastTitleBarClickTime{};
     
     // Callbacks
+    bool m_locked{false};
+    bool m_contextual{false};
+    std::function<void(const AestraUI::NUIPoint&)> m_onMenuRequested;
+    std::function<void()> m_onOutsidePress;
     std::function<void(bool)> m_onMinimizeToggle;
     std::function<void(bool)> m_onMaximizeToggle;
     std::function<void()> m_onClose;
