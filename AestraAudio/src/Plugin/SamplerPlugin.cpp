@@ -331,6 +331,16 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
             v.ownData.reset(); // refcount drop only: the cache or GarbageCollector owns the buffer
         }
     }
+    // Soft release (pause / stop / loop wrap): every sounding voice goes through its own release
+    // stage. Voices already releasing keep their tail; their gain is not restarted.
+    if (m_releaseVoicesRequested.exchange(false, std::memory_order_acq_rel)) {
+        for (auto& v : m_voices) {
+            if (!v.active || v.stage == EnvStage::Release || v.stage == EnvStage::Off) continue;
+            v.stage = EnvStage::Release;
+            v.stageTime = 0.0;
+            v.releaseGain = v.currentGain;
+        }
+    }
     // Idle voices let go of stretched buffers so evicted ones can be collected.
     for (auto& v : m_voices) {
         if (!v.active && v.ownData) v.ownData.reset();

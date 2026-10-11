@@ -911,15 +911,18 @@ void AudioEngine::reclaimRetiredCompensationWhenStopped() {
     }
 }
 
-void AudioEngine::resetCachedSamplerVoicesRt() noexcept {
+void AudioEngine::resetCachedSamplerVoicesRt(bool soft) noexcept {
     auto* cache = m_samplerCacheRaw.load(std::memory_order_acquire);
     if (!cache)
         return;
     const size_t cachedCount = cache->count;
     for (size_t i = 0; i < cachedCount && i < cache->samplers.size(); ++i) {
-        if (cache->samplers[i]) {
+        if (!cache->samplers[i])
+            continue;
+        if (soft)
+            cache->samplers[i]->requestReleaseAllVoices();
+        else
             cache->samplers[i]->requestHardResetVoices();
-        }
     }
 }
 
@@ -1079,19 +1082,15 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
 
     // State transitions
     bool isPlaying = m_transportPlaying.load(std::memory_order_relaxed);
-    // [CHANGED] Disable global fade-out to allow effects tails to ring out.
-    // if (wasPlaying && !isPlaying &&
-    //     m_fadeState != FadeState::FadingOut && m_fadeState != FadeState::Silent) {
-    //     m_fadeState = FadeState::FadingOut;
-    //     m_fadeSamplesRemaining = FADE_OUT_SAMPLES;
-    // }
+    // No global fade-out on stop: effect tails ring out.
 
-    // Rewind Pattern Engine on Stop to prevent stale events.
-    // NOTE: normal stop does NOT cut one-shots (tails are allowed).
+    // Rewind on stop/pause. The rewind drops the queued note-offs, so release held voices through
+    // their own ADSR (a stop does not cut them, but must not leave them sustaining).
     if (transportStop) {
         auto* pe = m_patternEngine.load(std::memory_order_relaxed);
         if (pe)
             pe->rewindScheduledInstances();
+        resetCachedSamplerVoicesRt(true);
     }
 
     // On transport restart (play start or seek):
@@ -1299,6 +1298,7 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
                 auto* pe = m_patternEngine.load(std::memory_order_relaxed);
                 if (pe)
                     pe->rewindScheduledInstances();
+                resetCachedSamplerVoicesRt(true); // notes held at the wrap must not ring into the loop top
             }
             m_globalSamplePos.store(loopStartSample, std::memory_order_relaxed);
             renderGraph(graph, numFrames - loopSplitFrame, loopSplitFrame, patternFrame(loopStartSample));
