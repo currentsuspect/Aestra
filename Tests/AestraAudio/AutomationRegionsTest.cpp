@@ -43,6 +43,31 @@ bool sameAudio(const AutomationCurve& a, const AutomationCurve& b, double from, 
 } // namespace
 
 int main() {
+    std::cout << "[0] create\n";
+    {
+        AutomationCurve empty("vol", AutomationTarget::Volume);
+        const auto id = R::create(empty, 4.0, 8.0, 0.5f);
+        check(id && empty.regions.size() == 1 && empty.regions[0].startBeat == 4.0 && empty.regions[0].endBeat == 8.0,
+              "a clip is created over the span on an empty curve");
+        check(empty.points.size() == 2 && empty.points[0].beat == 4.0 && empty.points[1].beat == 8.0 &&
+                  empty.points[0].value == 0.5f && empty.points[1].value == 0.5f,
+              "holding two points at the given value (a flat line)");
+        check(sameAudio(empty, empty, 4.0, 8.0) && std::fabs(empty.getValueAtBeat(6.0) - 0.5f) < 1e-6f, "that plays flat");
+
+        check(!R::create(empty, 6.0, 10.0, 0.9f) && empty.regions.size() == 1 && empty.points.size() == 2,
+              "creating on top of another clip is refused and changes nothing");
+        check(!R::create(empty, 8.0, 12.0, 0.9f), "touching another clip's end counts as on top of it (a clip never abuts)");
+        check(!R::create(empty, -1.0, 3.0, 0.5f), "starting before beat 0 is refused");
+        check(!R::create(empty, 2.0, 2.0, 0.5f), "an empty span is refused");
+        check(R::create(empty, 12.5, 16.5, 0.25f).has_value() && empty.regions.size() == 2, "a clear spot takes a second clip");
+
+        // A curve with loose points and no stored clips has one implicit clip over them: it counts.
+        auto loose = makeCurve({{0, 0.2f}, {2, 0.8f}, {4, 0.4f}});
+        check(!R::create(loose, 3.0, 7.0, 0.5f), "an implicit clip over existing points blocks it too");
+        check(loose.points.size() == 3, "and the points are untouched");
+        check(R::create(loose, 6.0, 10.0, 0.5f).has_value() && loose.regions.size() == 2, "beside it is fine (the implicit clip becomes stored)");
+    }
+
     std::cout << "[1] rules\n";
     {
         auto c = makeCurve({{0, 0.2f}, {2, 0.8f}, {4, 0.4f}});
