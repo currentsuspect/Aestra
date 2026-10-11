@@ -25,11 +25,26 @@ v1.0.0                  — initial public release
 | `v0.4.0-alpha`       | Superseded | 2026-05-20 | Hardening milestone: security audit, audio quality session, repo hygiene mega-pass |
 | `v0.5.0-alpha`       | Superseded | 2026-05-23 | Takes system, CLAP parameters, audio quality, CI hardening, 11 PRs merged |
 | `v0.6.0-alpha`       | Superseded | 2026-05-29 | Security & RT hardening, plugin host crash resilience, callback-safety architecture, 26 PRs merged |
-| `v0.7.0-alpha`       | Current   | 2026-08-16 | Routing & automation correctness, Master plugin host, PDC master latency, piano-roll workflow, reliability gates, 338 PRs merged |
+| `v0.7.0-alpha`       | Superseded | 2026-08-16 | Routing & automation correctness, Master plugin host, PDC master latency, piano-roll workflow, reliability gates, 338 PRs merged |
+| `v0.7.1-alpha`       | Current   | 2026-09-12 | Trust Sprint: pattern-edit rescheduling, stop-at-zero, recording latency compensation, missing-asset relink, compile-time RT checking, one feature by design (fit-to-N bars), 162 commits since v0.7.0 |
 
 ---
 
 ## Milestone History
+
+### v0.7.1-alpha — Trust Sprint (Sep 2026)
+
+162 commits since v0.7.0-alpha. Reliability is the feature: the milestone carried exactly one new capability by design (FD-13), and everything else removes a reason a first session ends badly.
+
+**The reported seam** — nine founder-reported bugs the week before the sprint were one family: the UI said one thing and the engine did another. Pattern edits now reach playback (split, delete, mute, solo, undo and drop all reschedule); a single stop lands the playhead at zero; recording is placed with device latency compensated and the capture stamped from the engine frame.
+
+**Losing work is harder** — a project whose audio has moved opens with a relink dialog instead of failing quietly, and recovery no longer returns every track twice.
+
+**The one feature** — fit audio clip to N bars, varispeed tempo-fit riding the existing ratio pipe. No new DSP, no format change.
+
+**Trust infrastructure** — `AESTRA_RT_NONBLOCKING` makes allocation, locks and throws on an annotated real-time path a build error rather than a review note, enforced in CI; `reportRealtimeMisuse` is now the only RT reporting call, replacing a split surface that reported "clean" for thread state it never observed; engine ownership is documented and no singleton accessor survives.
+
+**Known gaps, carried openly** — the intermittent resize failure (P0) has no reliable reproduction and stays open rather than being silently closed. Automation *authoring* remains parked for v0.8.0; the backend machinery exists, the interaction does not.
 
 ### v0.7.0-alpha — Routing, Automation & Hosting Milestone (Aug 2026)
 

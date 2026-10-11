@@ -7,7 +7,7 @@
 
 > A digital audio workstation under active development, built in modern C++ with a custom UI stack and a native audio engine.
 
-![Aestra Interface](docs/images/aestra_daw_interface.png)
+![Aestra: arrangement and mixer](docs/images/readme/hero.png)
 
 ## Current Snapshot
 
@@ -45,6 +45,16 @@ Aestra also exposes a **scriptable control surface** — see [Muse](#muse-the-co
 - [docs/technical/testing_ci.md](docs/technical/testing_ci.md) — CI posture and test lanes
 - [docs/technical/roadmap.md](docs/technical/roadmap.md) — direction and scope (dated March 2026)
 - [meta/CHANGELOGS/](meta/CHANGELOGS/) — quarterly changelogs
+
+## Screenshots
+
+Real captures of the running app at 2560×1440, taken from a 15-track demo session.
+
+| Arrange | Mix |
+| --- | --- |
+| ![Arrangement: audio stems and pattern clips on one timeline](docs/images/readme/arrange.png) | ![Mixer during playback with live meters](docs/images/readme/mix.png) |
+
+![Piano roll with a chord progression](docs/images/readme/write.png)
 
 ## Muse: the control surface
 
