@@ -257,6 +257,14 @@ void TrackManagerUI::refreshTracks() {
             [this](TrackUIComponent* trackComp, double splitTime) { this->onSplitRequested(trackComp, splitTime); });
 
         trackUI->setOnClipSelected([this](TrackUIComponent*, ClipInstanceID clipId) {
+            // Pressing a clip that is part of a multi-selection keeps the selection so it can be dragged as a
+            // group; on release without a drag it collapses to this clip (resolvePendingGroupClick).
+            if (clipId.isValid() && m_clipSelection.size() > 1 && m_clipSelection.contains(clipId)) {
+                m_pendingGroupCollapse = clipId;
+                return;
+            }
+            m_pendingGroupCollapse = ClipInstanceID{};
+            clearClipSelection(); // a plain click replaces the selection set too (it used to linger behind the single view)
             selectClip(clipId);
             if (clipId.isValid()) {
                 Log::info("TrackManagerUI: Clip selected " + clipId.toString());
@@ -327,6 +335,12 @@ void TrackManagerUI::refreshTracks() {
         m_selectedClipId = ClipInstanceID{};
     }
     selectClip(m_selectedClipId);
+    if (m_clipSelection.size() > 1) {
+        // selectClip put every lane in single-select view; a multi-selection must stay visible across a refresh.
+        for (const auto& trackUI : m_trackUIComponents) {
+            if (trackUI) trackUI->setSelectedClips(&m_clipSelection);
+        }
+    }
 
     layoutTracks();
 
