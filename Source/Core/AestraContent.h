@@ -39,6 +39,7 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 // Forward declarations - AestraUI
@@ -591,6 +592,9 @@ private:
     void bounceClipsInPlace(const std::vector<Aestra::Audio::ClipInstanceID>& clipIds);
     void syncSampleEditorToUnit(Aestra::Audio::UnitID unitId);
     void enqueueMainThreadTask(std::function<void()> task);
+    // AestraContentImport.cpp: the sample decodes on a worker thread, the clip is placed on the main one.
+    void placeSampleOnTimeline(Aestra::Audio::ClipSourceID sourceId, const std::string& filePath);
+    std::unordered_set<std::string> m_sampleImportsInFlight; ///< main thread only
     void drainMainThreadTasks();
 
     std::mutex m_mainThreadTasksMutex;

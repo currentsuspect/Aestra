@@ -539,11 +539,23 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                     // Heavy IO/Decoding operation
                     bool success = decodeAudioFile(filePath, decodedData, sampleRate, numChannels, progressCb);
 
+                    // Build (and compact) the buffer here, off the UI thread; it is not published yet.
+                    std::shared_ptr<AudioBufferData> decodedBuffer;
+                    if (success && numChannels > 0) {
+                        decodedBuffer = std::make_shared<AudioBufferData>();
+                        decodedBuffer->interleavedData = std::move(decodedData);
+                        decodedBuffer->sampleRate = sampleRate;
+                        decodedBuffer->numChannels = numChannels;
+                        decodedBuffer->numFrames = decodedBuffer->interleavedData.size() / numChannels;
+                        if (numChannels <= 2)
+                            decodedBuffer->tryCompact();
+                    }
+
                     // Post completion task to main thread
                     if (auto self = std::dynamic_pointer_cast<TrackManagerUI>(weakSelf.lock())) {
                         std::lock_guard<std::mutex> lock(self->m_pendingTasksMutex);
                         self->m_pendingTasks.push_back([weakSelf, tm, sourceId, success,
-                                                        decodedData = std::move(decodedData), sampleRate, numChannels,
+                                                        decodedBuffer = std::move(decodedBuffer),
                                                         displayName, createClipFromSource, filePath]() mutable {
                             auto self = std::dynamic_pointer_cast<TrackManagerUI>(weakSelf.lock());
                             if (!self)
@@ -554,13 +566,8 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                             if (!src)
                                 return;
 
-                            if (success) {
-                                auto buffer = std::make_shared<AudioBufferData>();
-                                buffer->interleavedData = std::move(decodedData);
-                                buffer->sampleRate = sampleRate;
-                                buffer->numChannels = numChannels;
-                                buffer->numFrames = buffer->interleavedData.size() / numChannels;
-                                src->setBuffer(buffer);
+                            if (success && decodedBuffer) {
+                                src->setBuffer(std::move(decodedBuffer));
                                 const uint64_t sourceRevision = src->getContentRevision();
 
                                 Log::info("[TrackManagerUI] Async load complete for: " + filePath);
