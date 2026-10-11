@@ -772,6 +772,18 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerStereoParityTest.cpp")
     set_tests_properties(SamplerStereoParityTest PROPERTIES LABELS "audio;sampler;regression;contract:audio")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerReleaseAllTest.cpp")
+    add_executable(SamplerReleaseAllTest AestraAudio/SamplerReleaseAllTest.cpp)
+    target_link_libraries(SamplerReleaseAllTest PRIVATE AestraAudio)
+    target_include_directories(SamplerReleaseAllTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME SamplerReleaseAllTest COMMAND SamplerReleaseAllTest)
+    set_tests_properties(SamplerReleaseAllTest PROPERTIES LABELS "audio;sampler;regression;contract:audio")
+endif()
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerCutSelfTest.cpp")
     add_executable(SamplerCutSelfTest AestraAudio/SamplerCutSelfTest.cpp)
     target_link_libraries(SamplerCutSelfTest PRIVATE AestraAudio)
@@ -2829,6 +2841,25 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(UnitRowStepSelectionTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
 
+# Arsenal: a loaded one-shot (Sampler / 808 unit) must offer "Open in Piano Roll" on right-click; the
+# grid stays the erase gesture (owner report, 2026-10-11).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(UnitRowContextMenuTest AestraUI_Core)
+    add_executable(UnitRowContextMenuTest AestraUI/UnitRowContextMenuTest.cpp)
+    target_link_libraries(UnitRowContextMenuTest PRIVATE AestraUI_Core AestraAudio)
+    target_include_directories(UnitRowContextMenuTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME UnitRowContextMenuTest COMMAND UnitRowContextMenuTest)
+    set_tests_properties(UnitRowContextMenuTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
 # The pointer is never left invisible: hidden-with-nothing-drawn is rescued (owner reports, 2026-10-11).
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(NUIPointerVisibilityWatchdogTest AestraUI_Core)
@@ -3093,6 +3124,61 @@ if(AESTRA_ENABLE_UI)
     )
     add_test(NAME ClipContextMenuReachabilityTest COMMAND ClipContextMenuReachabilityTest)
     set_tests_properties(ClipContextMenuReachabilityTest PROPERTIES
+        LABELS "ui;menu;interaction;timeline;regression;contract:application")
+endif()
+
+# A selection of several clips copies, pastes, drags and nudges as one block (owner report, 2026-10-11).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(ClipGroupOpsTest AestraUI_Core AestraUI_Platform AestraUI_OpenGL)
+    add_executable(ClipGroupOpsTest
+        AestraUI/ClipGroupOpsTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
+        # compiles in.
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapRenderer.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineSummaryCache.cpp
+    )
+    # TrackManagerUIRender references the FBO render cache. The test never reaches
+    # that path — NullRenderer::getRenderCache() returns nullptr, so the documented
+    # no-cache branch runs — but the symbols are needed at link time. The cache
+    # lives in AestraUI_OpenGL, which also carries the glad and FreeType include
+    # paths its header needs. Note AestraUI_OpenGL deliberately does not link
+    # OpenGL::GL: glad resolves GL entry points dynamically, and this test never
+    # initialises them.
+    target_link_libraries(ClipGroupOpsTest PRIVATE
+        AestraUI_Core AestraUI_Platform AestraUI_OpenGL AestraAudio AestraCore)
+    target_include_directories(ClipGroupOpsTest PRIVATE
+        ${CMAKE_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        # TrackManagerUI.h pulls MixerPanel.h and PianoRollPanel.h transitively
+        # without using either, so these are needed to compile, not to link.
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/Source/Settings
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
+        ${CMAKE_SOURCE_DIR}/AestraUI/Helpers
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ClipGroupOpsTest COMMAND ClipGroupOpsTest)
+    set_tests_properties(ClipGroupOpsTest PROPERTIES
         LABELS "ui;menu;interaction;timeline;regression;contract:application")
 endif()
 
@@ -3421,6 +3507,8 @@ if(AESTRA_ENABLE_UI)
         PanelModeBehaviourTest
         UnitRowStepSelectionTest
         NUIPointerVisibilityWatchdogTest
+        ClipGroupOpsTest
+        UnitRowContextMenuTest
         PluginRackBindingLifecycleTest
         WindowPanelRaiseTest
         TakesHistoryPanelTest

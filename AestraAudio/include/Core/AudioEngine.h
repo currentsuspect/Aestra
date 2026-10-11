@@ -908,7 +908,7 @@ private:
     PreviewDuckRamp computePreviewDuckGain(uint32_t numFrames, uint32_t currentSampleRate, bool isPlaying);
     void mixMetronomeClicks(float* outputBuffer, uint32_t numFrames);
     void updateTruePeakMeters(const float* outputBuffer, uint32_t numFrames, uint32_t numOutputChannels);
-    void resetCachedSamplerVoicesRt() noexcept;
+    void resetCachedSamplerVoicesRt(bool soft = false) noexcept; // soft: ADSR release, not a cut
     void syncCachedSamplerSampleRatesRt(uint32_t sampleRate) noexcept;
     void injectPendingUnitAudition(PatternPlaybackEngine::UnitMidiRoute* routes, size_t routeCount,
                                    uint32_t numFrames) noexcept;
