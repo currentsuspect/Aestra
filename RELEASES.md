@@ -26,11 +26,28 @@ v1.0.0                  — initial public release
 | `v0.5.0-alpha`       | Superseded | 2026-05-23 | Takes system, CLAP parameters, audio quality, CI hardening, 11 PRs merged |
 | `v0.6.0-alpha`       | Superseded | 2026-05-29 | Security & RT hardening, plugin host crash resilience, callback-safety architecture, 26 PRs merged |
 | `v0.7.0-alpha`       | Superseded | 2026-08-16 | Routing & automation correctness, Master plugin host, PDC master latency, piano-roll workflow, reliability gates, 338 PRs merged |
-| `v0.7.1-alpha`       | Current   | 2026-09-12 | Trust Sprint: pattern-edit rescheduling, stop-at-zero, recording latency compensation, missing-asset relink, compile-time RT checking, one feature by design (fit-to-N bars), 162 commits since v0.7.0 |
+| `v0.7.1-alpha`       | Superseded | 2026-09-12 | Trust Sprint: pattern-edit rescheduling, stop-at-zero, recording latency compensation, missing-asset relink, compile-time RT checking, one feature by design (fit-to-N bars), 162 commits since v0.7.0 |
+| `v0.8.0-alpha`       | Current   | 2026-10-11 | Automation clips and an authoring surface, Bounce in Place, stems export, panel Docked/Floating and Contextual/Keep Open, compact PCM sources (-43% audio memory in a 12-track session), UI tests that fail CI, 39 scoped items |
 
 ---
 
 ## Milestone History
+
+### v0.8.0-alpha — Automation, Clips and Export (Oct 2026)
+
+All 39 scoped items landed. The milestone's story is that the parts of the app a producer touches every day are now first-class: automation is authored, undone and saved like a clip, a clip can be bounced, fitted and faded from the clip itself, export writes stems, and the UI half of the app can fail a build.
+
+**Automation** — Any curve (volume, pan, a plugin parameter) is editable, every edit is one undo step, points snap to the grid, tension is audible behind a versioned project-format migration (v4), and automation clips move, copy, split and delete as objects.
+
+**Clips** — Fit-to-bars suggests the five musical lengths and says what each does; Bounce in Place bakes a track's effects into a clip (fader and pan stay live, effect tails are cut, instrument tracks are refused); fades are draggable on the timeline; left-trimmed MIDI clips play where they are drawn.
+
+**Mixing, plugins, export** — Insert slots grow past ten (to 64); plugin-parameter automation has a render-thread contract any plugin format can satisfy; the plugin browser remembers recent plugins; every panel can be Docked or Floating and Contextual or Keep Open; stems export one file per sounding track plus the master; the export window is rebuilt on the app's own controls.
+
+**Memory (the 4 GB laptop)** — 16- and 24-bit PCM sources are kept as PCM (bit-identical output), imports decode off the UI thread, and the anti-alias copy of higher-rate files is streamed and made only for played sources. `scripts/aestra-4gb.sh` runs Aestra under a 4 GB, 2-core cap for performance work.
+
+**Trust infrastructure** — UI scenarios, UI architectural guards and a budget gate fail CI; placeholders were deleted rather than shipped.
+
+**Known gaps, carried openly** — Several features are covered by tests that drive the real code but were not clicked through in the running app (Bounce in Place, automation clips, the export window, the panel menus, the eleventh insert row). VST3/CLAP parameter automation still needs a host adapter. An idle timeline costs about 12 ms per frame on the target laptop. Presets and in-app documentation are deferred to v0.8.1. See `CHANGELOG.md`.
 
 ### v0.7.1-alpha — Trust Sprint (Sep 2026)
 
