@@ -279,6 +279,73 @@ family: the UI told you one thing and the engine did another.
 - Automation *authoring* is still parked for v0.8.0 (FD-13); the backend
   machinery exists, the interaction does not.
 
+## v0.8.0-alpha — Automation, Clips and Export (2026-10-11)
+
+148 commits since v0.7.1-alpha. Automation is now something you author; a clip can be
+bounced, fitted and faded from the clip itself; export can write stems; and the UI half of
+the app can fail a build.
+
+### Automation
+
+- **Edit any curve, undo any edit.** A lane edits the curve you choose (volume, pan, or
+  a plugin parameter), every edit is one undo step, points snap to the timeline grid, and
+  Shift extends a selection. (#1056, #1057)
+- **Automation clips.** A stretch of a curve is an object: drag its grip to move it, Ctrl-drag to
+  copy it, right-click for Duplicate, Split Here and Delete. Cutting a clip never changes how it
+  sounds. Projects that use no clips save exactly as before. (#1065)
+- **Curve tension is audible**, behind a versioned migration (project format v4): projects from
+  before store a tension value that never played, so loading one resets it to linear and the
+  project sounds the same. (#1052)
+- A volume curve with no points is unity, not silence. (#948)
+
+### Clips
+
+- **Fit to bars suggests the musical lengths.** The editor offers the five best bar counts for
+  the clip, best first, and says what each does ("x0.88 speed, pitch follows"). (#1061)
+- **Bounce in Place.** Right-click an audio clip: it becomes a recording of how it sounds
+  through its track's effects. The effects switch off so nothing is doubled, Undo brings
+  everything back, and the track's fader and pan stay live. Effect tails past the clip are cut. (#1062)
+- Draggable fades on the timeline; a clip context menu; consistent undo for clip operations. (#950, #1050)
+- **Left-trimmed MIDI clips play where they are drawn.** They used to play late by the amount trimmed. (#1067)
+
+### Mixing and plugins
+
+- **Insert slots grow** past ten, up to 64. Projects with ten or fewer inserts save as before. (#1059)
+- Plugin-parameter automation has a render-thread contract any plugin format can satisfy; internal
+  plugins use it now. (#1058)
+- The browser remembers recently loaded plugins. (#1064)
+- **Every panel can be Docked** (locked in place) **or Floating**, and **Contextual** (closes when you click
+  away) **or Keep Open**: right-click a panel's title bar. View > Gather Panels and Reset Panel
+  Positions bring everything back. Panels behave as before until you change them. (#1066)
+
+### Export
+
+- **Stems.** One file per track with sound, plus the master, all the same length so they line up in
+  any other program. The export window is rebuilt on the app's own controls. WAV only. (#1063)
+- Loudness and true peak are measured once per file (a shared analysis); the engine's loudness
+  reading was about 1 dB low off 48 kHz and is fixed. (#1053)
+
+### Trust infrastructure
+
+- UI scenarios, UI architectural guards and a budget gate (bundle size, headless RSS) now fail CI.
+  (#921, #1055, #1036)
+- A shared, disk-backed store holds how you arrange the app (panel geometry, modes, favorites, recents),
+  never inside a project. (#1051)
+- Placeholders deleted rather than shipped: glassmorphism, the SDF text renderer, the nine arrangement
+  widget stubs. (#1049)
+
+### Known gaps
+
+- **Not seen on a display.** Several features here are covered by tests that drive the real code but
+  were not clicked through in the running app: Bounce in Place's menu entry, automation clips, the new
+  export window, the panel menus, and the eleventh insert row.
+- VST3 and CLAP plugin-parameter automation still needs a host adapter; only internal plugins are driven.
+- Bounce in Place does not handle instrument tracks and cuts effect tails.
+- Panel menus are reached by right-clicking a title bar; there is no visible button yet.
+- Piano-roll performance on the 4 GB target machine is improved (#989) but not finished: a covered
+  timeline is still drawn under the piano roll.
+- Presets and in-app documentation are deferred to v0.8.1.
+
 ## [Unreleased]
 
 Nothing yet — v0.7.1-alpha was cut on 2026-09-12. v0.8.0 work lands here.
