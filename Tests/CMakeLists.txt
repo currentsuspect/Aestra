@@ -772,6 +772,18 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerStereoParityTest.cpp")
     set_tests_properties(SamplerStereoParityTest PROPERTIES LABELS "audio;sampler;regression;contract:audio")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerReleaseAllTest.cpp")
+    add_executable(SamplerReleaseAllTest AestraAudio/SamplerReleaseAllTest.cpp)
+    target_link_libraries(SamplerReleaseAllTest PRIVATE AestraAudio)
+    target_include_directories(SamplerReleaseAllTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME SamplerReleaseAllTest COMMAND SamplerReleaseAllTest)
+    set_tests_properties(SamplerReleaseAllTest PROPERTIES LABELS "audio;sampler;regression;contract:audio")
+endif()
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerCutSelfTest.cpp")
     add_executable(SamplerCutSelfTest AestraAudio/SamplerCutSelfTest.cpp)
     target_link_libraries(SamplerCutSelfTest PRIVATE AestraAudio)
