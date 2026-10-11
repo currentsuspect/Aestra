@@ -995,6 +995,12 @@ target_include_directories(AestraEffectChainSnapshotTest PRIVATE
 add_test(NAME AestraEffectChainSnapshotTest COMMAND AestraEffectChainSnapshotTest)
 set_tests_properties(AestraEffectChainSnapshotTest PROPERTIES LABELS "audio;plugin;contract:plugins")
 
+# Stretch-to-Target (V8-W1, SPEC-001): the generator and ranker, checked against hand-worked rankings.
+add_executable(StretchTargetsTest AestraAudio/StretchTargetsTest.cpp)
+target_include_directories(StretchTargetsTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
+add_test(NAME StretchTargetsTest COMMAND StretchTargetsTest)
+set_tests_properties(StretchTargetsTest PROPERTIES LABELS "audio;clips;contract:audio")
+
 # Dynamic insert slots (V8-S3): the chain grows past ten without breaking RT-safety,
 # slot-index addressing, automation identity or the project format.
 add_executable(AestraEffectChainDynamicSlotsTest AestraAudio/EffectChainDynamicSlotsTest.cpp)
@@ -2537,6 +2543,7 @@ if(AESTRA_ENABLE_UI)
     )
     target_link_libraries(PanelResizeLayoutTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
     target_include_directories(PanelResizeLayoutTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Tests/AestraAudio
         ${CMAKE_SOURCE_DIR}/AestraUI
         ${CMAKE_SOURCE_DIR}/AestraUI/Core
         ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
