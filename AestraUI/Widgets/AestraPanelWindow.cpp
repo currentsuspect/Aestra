@@ -229,8 +229,15 @@ bool AestraPanelWindow::onMouseEvent(const NUIMouseEvent& event)
         setDirty(true);
     }
 
-    // Window drag from title bar
-    if (event.pressed && event.button == NUIMouseButton::Left && hitTestTitleBar(event.position.x, event.position.y) && !overClose) {
+    if (event.pressed && event.button == NUIMouseButton::Right && m_onMenuRequested && !overClose &&
+        hitTestTitleBar(event.position.x, event.position.y)) {
+        m_onMenuRequested(event.position);
+        return true;
+    }
+
+    // Window drag from title bar (not when docked)
+    if (event.pressed && event.button == NUIMouseButton::Left && !m_locked &&
+        hitTestTitleBar(event.position.x, event.position.y) && !overClose) {
         m_isDraggingWindow = true;
         m_dragStartPos = event.position;
         m_windowStartPos = {b.x, b.y};

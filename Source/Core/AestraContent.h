@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include "../AestraUI/Widgets/PanelMode.h"
 #include "../AestraAudio/include/Commands/CommandParser.h"
 #include "../AestraAudio/include/Commands/CommandResult.h"
 #include "../AestraAudio/include/Commands/SessionLog.h"
@@ -304,6 +305,22 @@ public:
      * visibility, z-order addChild) stays at the call site.
      */
     void wireFloatingPanel(const std::shared_ptr<Aestra::Audio::WindowPanel>& panel, Aestra::Audio::ViewType view);
+
+    // SPEC 3 section 1.1 (AestraContentPanelMode.cpp): Floating/Docked and Contextual/Keep Open per panel.
+    AestraUI::PanelMode panelMode(Aestra::Audio::ViewType view) const;
+    void applyPanelMode(Aestra::Audio::ViewType view);
+    void wireEditorMode();  ///< the plugin editors' shared mode, from the store
+    void wirePanelMode(const std::shared_ptr<Aestra::Audio::WindowPanel>& panel, Aestra::Audio::ViewType view);
+    void showPanelMenu(Aestra::Audio::ViewType view, const AestraUI::NUIPoint& at);
+    void noteOutsidePress(Aestra::Audio::ViewType view);  ///< a contextual panel saw a press outside it
+    void closeContextualPanels();                         ///< runs a frame later, once the press has been handled
+    int m_viewChangeSerial = 0;                           ///< bumped whenever a view is opened or closed
+    int m_outsidePressSerial = -1;
+    std::vector<Aestra::Audio::ViewType> m_outsidePressViews;
+    /** @brief View > Gather Panels: every open panel and editor back fully inside the window. */
+    void gatherPanels();
+    /** @brief View > Reset Panel Positions: default geometry for every panel; editors re-centred. */
+    void resetPanelPositions();
 
     /** @brief Begin dragging an overlay panel. */
     void beginPanelDrag(Aestra::Audio::ViewType view, const AestraUI::NUIPoint& mouseScreen);

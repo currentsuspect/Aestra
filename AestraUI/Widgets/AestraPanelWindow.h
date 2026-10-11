@@ -76,6 +76,11 @@ public:
     void setBadgeText(const std::string& text);   // empty = no badge
     void setOnClose(std::function<void()> callback) { m_onClose = std::move(callback); }
     void setCloseOnOutsideClick(bool close) { m_closeOnOutsideClick = close; }
+    bool closesOnOutsideClick() const { return m_closeOnOutsideClick; }
+    // SPEC 3 section 1.1: a docked panel is locked where it is; a right-click on the title bar asks for its menu.
+    void setLocked(bool locked) { m_locked = locked; }
+    bool isLocked() const { return m_locked; }
+    void setOnMenuRequested(std::function<void(const NUIPoint&)> callback) { m_onMenuRequested = std::move(callback); }
     bool isDraggingWindow() const { return m_isDraggingWindow; }
 
     // Derived classes render here; rect is the global content area (below title bar)
@@ -177,7 +182,10 @@ private:
     std::string m_badgeText;
     std::function<void()> m_onClose;
     std::function<void()> m_onWindowDragEnd;
-    bool m_closeOnOutsideClick = true;    bool m_closeHovered = false;
+    bool m_closeOnOutsideClick = true;
+    bool m_locked = false;
+    std::function<void(const NUIPoint&)> m_onMenuRequested;
+    bool m_closeHovered = false;
     bool m_closePressed = false;
 
     NUIColor m_bg;

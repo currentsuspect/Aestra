@@ -992,18 +992,17 @@ void AestraApp::buildMenuBar() {
             if (m_windowManager) m_windowManager->toggleFullScreen();
         });
         menu->addSeparator();
-        menu->addItem("Show Timeline", [this]() {
-            Log::info("Show Timeline - Not yet fully implemented");
-        });
-        menu->addItem("Show Arsenal", [this]() {
-            Log::info("Show Arsenal - Not yet fully implemented");
-        });
+        menu->addItem("Show Timeline", [this]() { Log::info("Show Timeline - Not yet fully implemented"); });
+        menu->addItem("Show Arsenal", [this]() { Log::info("Show Arsenal - Not yet fully implemented"); });
         menu->addItem("Show History  Ctrl+H", [this]() {
             if (m_content) m_content->toggleHistoryPanel();
         });
         menu->addItem("Show Takes", [this]() {
             if (m_content) m_content->toggleTakesPanel();
         });
+        menu->addSeparator();
+        menu->addItem("Gather Panels", [this]() { if (m_content) m_content->gatherPanels(); });
+        menu->addItem("Reset Panel Positions", [this]() { if (m_content) m_content->resetPanelPositions(); });
 
         m_windowManager->showDropdownMenu(menu, 100.0f);
     });

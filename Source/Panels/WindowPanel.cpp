@@ -270,6 +270,11 @@ void WindowPanel::onResize(int width, int height) {
 bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (!isVisible() || !isEnabled()) return false;
 
+    if (m_contextual && event.pressed && event.button == AestraUI::NUIMouseButton::Left &&
+        !getBounds().contains(event.position) && m_onOutsidePress) {
+        m_onOutsidePress();
+    }
+
     if (event.pressed) {
         // The overlay layer forwards every press to every visible panel so that
         // clicks over empty overlay area pass through to the workspace. Only
@@ -352,7 +357,7 @@ bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 
     if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
         // Edge/corner resize handling (skip when minimized/maximized).
-        if (!m_minimized && !m_maximized) {
+        if (!m_minimized && !m_maximized && !m_locked) {
             const int edges = getResizeEdgesAtPoint(event.position);
             if (edges != ResizeNone) {
                 m_resizing = true;
@@ -395,8 +400,8 @@ bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             }
         }
 
-        // Start dragging when the title bar is clicked (excluding its controls).
-        if (insideTitle) {
+        // Start dragging when the title bar is clicked (excluding its controls). A docked panel stays put.
+        if (insideTitle && !m_locked) {
             if (!onTitleBarControl(event.position)) {
                 m_lastTitleBarClickTime = now;
                 m_userPositioned = true;
@@ -407,6 +412,12 @@ bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 return true;
             }
         }
+    }
+
+    if (event.pressed && event.button == AestraUI::NUIMouseButton::Right && m_onMenuRequested &&
+        m_titleBarBounds.contains(event.position) && !m_closeButton->getBounds().contains(event.position)) {
+        m_onMenuRequested(event.position);
+        return true;
     }
 
     // Let children handle events (buttons, content, etc.)
@@ -541,7 +552,7 @@ void WindowPanel::setMinimumPanelSize(float width, float height) {
 }
 
 AestraUI::NUICursorStyle WindowPanel::getResizeCursorStyleForPoint(const AestraUI::NUIPoint& point) const {
-    if (!isVisible() || !isEnabled() || m_minimized || m_maximized) {
+    if (!isVisible() || !isEnabled() || m_minimized || m_maximized || m_locked) {
         return AestraUI::NUICursorStyle::Arrow;
     }
 
