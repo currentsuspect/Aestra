@@ -2967,6 +2967,22 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(UIMixerKitTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
 
+# The mixer navigator for overflowing sessions: ticks, bracket, group labels (V81-M1, FD-28 point 7).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(UIMixerNavigatorTest AestraUI_Core AestraUI_Platform)
+    add_executable(UIMixerNavigatorTest AestraUI/UIMixerNavigatorTest.cpp)
+    target_link_libraries(UIMixerNavigatorTest PRIVATE AestraUI_Core AestraUI_Platform)
+    target_include_directories(UIMixerNavigatorTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME UIMixerNavigatorTest COMMAND UIMixerNavigatorTest)
+    set_tests_properties(UIMixerNavigatorTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
 # The inspector rack must follow the LAST-bound chain: bindEffectRack() used
 # to append bindings and refreshRackDisplay() read the first match, so a
 # selection switch left the rack bound to a chain that died with its channel
@@ -3610,6 +3626,7 @@ if(AESTRA_ENABLE_UI)
         UIMixerStripContentTest
         MixerGroupingTest
         UIMixerKitTest
+        UIMixerNavigatorTest
         UIMixerPanelGroupingTest
         PluginRackBindingLifecycleTest
         WindowPanelRaiseTest
