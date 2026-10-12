@@ -3029,6 +3029,25 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(UIRoutingMapGraphTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
 
+# Open rows show step lanes fitted to the unit (V81-AR1, FD-27 point 4).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(ArsenalStepLanesTest AestraUI_Core)
+    add_executable(ArsenalStepLanesTest AestraUI/ArsenalStepLanesTest.cpp)
+    target_link_libraries(ArsenalStepLanesTest PRIVATE AestraAudio AestraUI_Core)
+    target_include_directories(ArsenalStepLanesTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ArsenalStepLanesTest COMMAND ArsenalStepLanesTest)
+    set_tests_properties(ArsenalStepLanesTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
 # Patterns are one-click scenes in a strip under the Arsenal header (V81-AR1, FD-27 point 1).
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(ArsenalSceneStripTest AestraUI_Core)
@@ -3711,6 +3730,7 @@ if(AESTRA_ENABLE_UI)
         UIRoutingMapGraphTest
         ArsenalRackLayoutTest
         ArsenalSceneStripTest
+        ArsenalStepLanesTest
         UIMixerPanelGroupingTest
         PluginRackBindingLifecycleTest
         WindowPanelRaiseTest

@@ -79,6 +79,14 @@ int main() {
         check(layout.insertIndexForSlot(6, 6) == 6, "the end inserts at the end");
     }
 
+    std::cout << "[6] an open row pushes the rows under it down by its lanes\n";
+    {
+        const auto open = ArsenalRackLayout::compute(groups, {0, 0, 100.0f, 0, 0, 0}); // Snare (index 2) is open
+        check(open.contentHeight == layout.contentHeight + 100.0f, "content grows by the lanes' height");
+        check(open.rowY(5) == layout.rowY(5) + 100.0f, "a later row in the same group moves down");
+        check(open.rowY(0) == layout.rowY(0), "a row above does not move");
+    }
+
     std::cout << (g_failures == 0 ? "ALL PASS\n" : "FAILURES\n");
     return g_failures == 0 ? 0 : 1;
 }

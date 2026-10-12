@@ -28,26 +28,6 @@ constexpr float kGroupGap = UnitRow::kStepGroupGap;
 // both scroll computations — they used to disagree by this amount.
 constexpr float kArsenalListBottomPadding = 40.0f + 12.0f;
 
-const char* unitTypeDisplayName(UnitType type) {
-    switch (type) {
-    case UnitType::Sampler: return "Sampler";
-    case UnitType::PitchedSampler: return "808";
-    case UnitType::Instrument: return "MIDI";
-    case UnitType::Audio: return "Audio";
-    default: return "Sampler";
-    }
-}
-
-const char* unitTypeDescription(UnitType type) {
-    switch (type) {
-    case UnitType::Sampler: return "Classic step sequencer";
-    case UnitType::PitchedSampler: return "808s, bass, slides";
-    case UnitType::Instrument: return "Notes, chords, instruments";
-    case UnitType::Audio: return "Drop a clip directly";
-    default: return "";
-    }
-}
-
 std::string unitTypeContentLabel(UnitType type, int stepCount, double durationSeconds) {
     switch (type) {
     case UnitType::Sampler:
@@ -677,6 +657,7 @@ void ArsenalPanel::onRender(NUIRenderer& renderer) {
     }
     if (m_listContainer && isVisible()) drawProgressHeader(renderer, m_progressHeaderRect);
     if (m_listContainer && isVisible()) Aestra::drawArsenalRackHeaders(renderer, m_rack, m_listViewportRect, m_progressHeaderRect.bottom() + 8.0f - m_scrollY);
+    if (m_listContainer && isVisible()) m_lanes.draw(renderer, m_rack, m_unitRows, m_trackManager.get(), m_activePatternID, m_listViewportRect);
 
     // Drag-hover ghost draws above the panel surfaces.
     renderDragPreview(renderer);
@@ -787,11 +768,13 @@ void ArsenalPanel::layoutUnits() {
 
     // Units sit under Drums / Synth / Audio headers (FD-27): one layout answers rows, scroll and drops.
     std::vector<Aestra::Audio::UnitGroup> groups;
+    std::vector<float> extras; // an open row adds its lanes' height
     for (auto& row : m_unitRows) {
         const auto* unit = row && m_trackManager ? m_trackManager->getUnitManager().getUnit(row->getUnitId()) : nullptr;
         groups.push_back(unit ? unit->group : Aestra::Audio::UnitGroup::Unknown);
+        extras.push_back(unit ? m_lanes.extraFor(*m_trackManager, row->getUnitId()) : 0.0f);
     }
-    m_rack = Aestra::ArsenalRackLayout::compute(groups);
+    m_rack = Aestra::ArsenalRackLayout::compute(groups, extras);
     for (const auto& item : m_rack.items) {
         if (item.kind != Aestra::ArsenalRackItem::Kind::Row || !m_unitRows[item.rowIndex]) continue;
         m_unitRows[item.rowIndex]->setBounds(NUIRect(startX, rackTop + item.y, width, item.h));
@@ -1271,30 +1254,7 @@ void ArsenalPanel::drawUnitTypePicker(NUIRenderer& renderer) {
                               : m_addUnitButtonRect.x;
     m_unitTypePickerRect = NUIRect(pickerX, m_addUnitButtonRect.bottom() + 8.0f, cardWidth, cardHeight);
 
-    const float pickerRadius = std::max(themeProps.radiusL - 2.0f, 0.0f);
-    renderer.fillRoundedRect(m_unitTypePickerRect, pickerRadius, theme.getColor("backgroundSecondary").withAlpha(0.98f));
-    renderer.strokeRoundedRect(m_unitTypePickerRect, pickerRadius, 1.0f, theme.getColor("borderSubtle").withAlpha(0.6f));
-
-    const float padding = 10.0f;
-    const float gap = 8.0f;
-    const float cellWidth = (cardWidth - padding * 2.0f - gap) * 0.5f;
-    const float cellHeight = (cardHeight - padding * 2.0f - gap) * 0.5f;
-    const UnitType types[4] = {UnitType::Sampler, UnitType::PitchedSampler, UnitType::Instrument, UnitType::Audio};
-    const char* icons[4] = {"▦", "≋", "♫", "◫"};
-
-    for (int i = 0; i < 4; ++i) {
-        const int col = i % 2;
-        const int row = i / 2;
-        const NUIRect cell(m_unitTypePickerRect.x + padding + col * (cellWidth + gap),
-                           m_unitTypePickerRect.y + padding + row * (cellHeight + gap),
-                           cellWidth,
-                           cellHeight);
-        renderer.fillRoundedRect(cell, themeProps.radiusM, theme.getColor("surfaceTertiary").withAlpha(0.8f));
-        renderer.strokeRoundedRect(cell, themeProps.radiusM, 1.0f, theme.getColor("borderSubtle").withAlpha(0.5f));
-        renderer.drawText(icons[i], NUIPoint(cell.x + 10.0f, cell.y + 11.0f), themeProps.fontSizeS - 1.0f, theme.getColor("accentPrimary").withAlpha(0.9f));
-        renderer.drawText(unitTypeDisplayName(types[i]), NUIPoint(cell.x + 32.0f, cell.y + 10.0f), themeProps.fontSizeXS - 1.0f, theme.getColor("textPrimary").withAlpha(0.95f));
-        renderer.drawText(unitTypeDescription(types[i]), NUIPoint(cell.x + 10.0f, cell.y + 28.0f), 8.5f, theme.getColor("textSecondary").withAlpha(0.68f));
-    }
+    Aestra::drawArsenalUnitTypePicker(renderer, m_unitTypePickerRect);
 }
 
 // === Drag-Drop Callbacks ===
@@ -1703,6 +1663,13 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
             adjustPatternSteps(1);
             return true;
         }
+    }
+
+    bool relayout = false;
+    if (m_lanes.onMouse(event, m_rack, m_unitRows, m_trackManager.get(), m_activePatternID, m_listViewportRect, relayout)) {
+        if (relayout) layoutUnits();
+        repaint();
+        return true;
     }
 
     // Handle drag-drop logic for reordering units
