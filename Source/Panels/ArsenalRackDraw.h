@@ -85,7 +85,7 @@ inline void drawArsenalUnitTypePicker(AestraUI::NUIRenderer& renderer, const Aes
         renderer.strokeRoundedRect(cell, tp.radiusM, 1.0f, theme.getColor("borderSubtle").withAlpha(0.5f));
         renderer.drawText(kinds[i].icon, NUIPoint(cell.x + 10.0f, cell.y + 11.0f), tp.fontSizeS - 1.0f, theme.getColor("accentPrimary").withAlpha(0.9f));
         renderer.drawText(kinds[i].name, NUIPoint(cell.x + 32.0f, cell.y + 10.0f), tp.fontSizeXS - 1.0f, theme.getColor("textPrimary").withAlpha(0.95f));
-        renderer.drawText(kinds[i].text, NUIPoint(cell.x + 10.0f, cell.y + 28.0f), 8.5f, theme.getColor("textSecondary").withAlpha(0.68f));
+        renderer.drawText(kinds[i].text, NUIPoint(cell.x + 10.0f, cell.y + 28.0f), tp.fontSizeMicro, theme.getColor("textSecondary").withAlpha(0.68f));
     }
 }
 

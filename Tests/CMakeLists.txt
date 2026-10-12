@@ -1414,7 +1414,7 @@ endif()
 
 # Arsenal bridge-mode terminology contract test (Phase 2B policy-only)
 add_executable(ArsenalBridgeContractTest AestraAudio/ArsenalBridgeContractTest.cpp)
-target_link_libraries(ArsenalBridgeContractTest PRIVATE)
+target_link_libraries(ArsenalBridgeContractTest PRIVATE AestraAudioCore)
 target_include_directories(ArsenalBridgeContractTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraAudio/include
     ${CMAKE_SOURCE_DIR}/AestraCore/include

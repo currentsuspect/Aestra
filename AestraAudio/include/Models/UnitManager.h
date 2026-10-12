@@ -6,6 +6,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include "AestraAtomicSharedPtr.h"
 #include <string>
@@ -298,6 +299,8 @@ public:
                                      double durationSeconds);
     /** @brief Set the UI accent color for a unit. */
     void setUnitColor(UnitID id, uint32_t color);
+    /// Where a new unit's colour comes from (given how many units exist); unset keeps the grey default.
+    void setDefaultColorProvider(std::function<uint32_t(size_t)> provider) { m_defaultColor = std::move(provider); }
     /** @brief Set the unit group classification. */
     void setUnitGroup(UnitID id, UnitGroup group);
     /** @brief Set the unit content type and keep its group classification aligned. */
@@ -345,6 +348,7 @@ private:
     UnitID nextId{1};
     std::unordered_map<UnitID, UnitInfo> m_units;
     std::vector<UnitID> m_unitOrder;
+    std::function<uint32_t(size_t)> m_defaultColor;
     std::atomic<double> m_sampleRate{48000.0};
     std::atomic<uint32_t> m_blockSize{512};
     PatternManager* m_patternManager{nullptr};
