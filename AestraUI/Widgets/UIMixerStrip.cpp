@@ -346,6 +346,7 @@ void UIMixerStrip::setDensity(MixerDensity density)
     if (m_buttons && !master) m_buttons->setCompact(narrow);
     if (m_outputChip && !master) m_outputChip->setCompact(narrow);
     if (m_footer && !master) m_footer->setCompact(narrow);
+    if (m_header && !master) m_header->setCompact(narrow);
     if (m_fader && !master) {
         constexpr float kBar = 11.0f;
         const float meterW = narrow ? 18.0f : 24.0f;

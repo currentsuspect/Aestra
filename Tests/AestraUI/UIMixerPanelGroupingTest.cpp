@@ -188,6 +188,44 @@ int main() {
         }
     }
 
+    std::cout << "[9] the navigator appears only when channels overflow\n";
+    {
+        check(panel.navigator() && !panel.navigator()->isVisible(), "5 channels fit: no navigator");
+        auto big = std::make_shared<Audio::TrackManager>();
+        for (int i = 0; i < 24; ++i)
+            big->addChannel("C" + std::to_string(i));
+        big->buildAndShareSlotMap();
+        auto bigVm = std::make_shared<MixerViewModel>();
+        bigVm->syncFromEngine(*big, *big->getChannelSlotMapShared());
+        AestraUI::UIMixerPanel bigPanel(bigVm, big);
+        bigPanel.setBounds({0, 0, 1700, 600});
+        bigPanel.onResize(1700, 600);
+        bigPanel.onUpdate(0.016);
+        const auto* nav = bigPanel.navigator();
+        check(nav && nav->isVisible(), "24 Normal strips overflow the panel: the navigator shows");
+        check(nav && nav->ticks().size() == 24, "one tick per channel");
+        const float yWith = bigPanel.stripForChannel(bigVm->getChannelByIndex(0)->id)->getBounds().y;
+        bigPanel.setDensity(AestraUI::MixerDensity::Narrow);
+        bigPanel.onUpdate(0.016);
+        check(!bigPanel.navigator()->isVisible(), "Narrow fits them all (24 x 50 px): it goes away");
+        const float yWithout = bigPanel.stripForChannel(bigVm->getChannelByIndex(0)->id)->getBounds().y;
+        check(yWithout < yWith, "and the strips move up into the room it used");
+        bigPanel.setDensity(AestraUI::MixerDensity::Normal);
+        bigPanel.onUpdate(0.016);
+        float scrolled = -1.0f;
+        AestraUI::NUIMouseEvent click;
+        click.type = AestraUI::NUIMouseEventType::Down;
+        click.button = AestraUI::NUIMouseButton::Left;
+        click.pressed = true;
+        const auto tick = bigPanel.navigator()->tickRect(20);
+        click.position = {tick.x + tick.width * 0.5f, tick.y + tick.height * 0.5f};
+        bigPanel.onMouseEvent(click);
+        for (int i = 0; i < 80; ++i)
+            bigPanel.onUpdate(0.016);
+        scrolled = bigPanel.stripForChannel(bigVm->getChannelByIndex(20)->id)->getBounds().x;
+        check(scrolled > 0.0f && scrolled < 1700.0f, "clicking a tick scrolls that channel into view (x=" + std::to_string(scrolled) + ")");
+    }
+
     std::cout << (g_failures == 0 ? "ALL PASS\n" : "FAILURES\n");
     return g_failures == 0 ? 0 : 1;
 }

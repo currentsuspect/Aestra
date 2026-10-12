@@ -134,6 +134,8 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/UIMixerToolbar.h
     Widgets/UIMixerToolbar.cpp
     Widgets/MixerDensity.h
+    Widgets/UIMixerNavigator.h
+    Widgets/UIMixerNavigator.cpp
     Widgets/UIMixerStrip.h
     Widgets/UIMixerStrip.cpp
     Widgets/UIMixerFooter.h
