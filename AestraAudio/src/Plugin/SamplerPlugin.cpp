@@ -14,6 +14,13 @@
 #include <cmath>
 #include <filesystem>
 
+namespace {
+// The garbage collector must be constructed before any worker that releases into it (the keep-length render
+// service), so it is destroyed after them at exit. Retiring swapped-out samples may no longer touch it early, so
+// pin its construction at startup rather than at first use.
+[[maybe_unused]] const bool kGarbageCollectorPinned = (Aestra::Audio::GarbageCollector::instance(), true);
+} // namespace
+
 namespace Aestra {
 namespace Audio {
 namespace Plugins {
