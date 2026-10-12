@@ -123,6 +123,10 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/UIMixerKnob.cpp
     Widgets/UIMixerFXSummary.h
     Widgets/UIMixerFXSummary.cpp
+    Widgets/UIMixerInsertList.h
+    Widgets/UIMixerInsertList.cpp
+    Widgets/UIOutputChip.h
+    Widgets/UIOutputChip.cpp
     Widgets/UIMixerStrip.h
     Widgets/UIMixerStrip.cpp
     Widgets/UIMixerFooter.h

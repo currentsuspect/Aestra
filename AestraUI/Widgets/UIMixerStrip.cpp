@@ -22,7 +22,8 @@ namespace AestraUI {
 namespace {
     constexpr float HEADER_H = 30.0f;
     constexpr float KNOB_H = 32.0f;
-    constexpr float FX_H = 30.0f;
+    constexpr float OUTPUT_CHIP_H = 17.0f;
+    constexpr int INSERT_ROWS = 3;
     constexpr float BUTTONS_H = 26.0f;
     constexpr float FOOTER_H = 22.0f;
     constexpr float PAD = 8.0f;
@@ -247,12 +248,20 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
     };
     addChild(m_trimKnob);
 
-    m_fxSummary = std::make_shared<UIMixerFXSummary>();
-    m_fxSummary->onInvalidateRequested = [this]() { invalidateStaticCache(); };
-    m_fxSummary->onClicked = [this]() {
+    m_insertList = std::make_shared<UIMixerInsertList>();
+    m_insertList->onInvalidateRequested = [this]() { invalidateStaticCache(); };
+    m_insertList->onClicked = [this]() {
         if (onFXClicked) onFXClicked(m_channelId);
     };
-    addChild(m_fxSummary);
+    addChild(m_insertList);
+
+    // Where this channel goes, by name and colour (FD-28). The master has no output to name.
+    m_outputChip = std::make_shared<UIOutputChip>();
+    m_outputChip->setVisible(m_channelId != 0);
+    m_outputChip->onClicked = [this]() {
+        if (onOutputClicked) onOutputClicked(m_channelId);
+    };
+    addChild(m_outputChip);
 
     // Pan Knob (Always visible)
     m_panKnob = std::make_shared<UIMixerKnob>(UIMixerKnobType::Pan);
@@ -442,7 +451,11 @@ void UIMixerStrip::layoutChildren()
         y += HEADER_H + SECTION_GAP;
     }
 
-    // Input Dropdown Removed from Strip Layout
+    // The output, as a named coloured chip right under the name.
+    if (m_outputChip && m_outputChip->isVisible()) {
+        m_outputChip->setBounds(contentX, y, contentW, OUTPUT_CHIP_H);
+        y += OUTPUT_CHIP_H + 4.0f;
+    }
 
     // Three-knob row: Trim + Pan + Width (channel controls grouped together)
     const bool showTrim = (m_trimKnob && m_trimKnob->isVisible());
@@ -474,12 +487,12 @@ void UIMixerStrip::layoutChildren()
     }
 
     // FX Summary (Add Insert) below the channel controls
-    if (m_fxSummary && m_fxSummary->isVisible()) {
+    if (m_insertList && m_insertList->isVisible()) {
         if (m_channelId == 0) {
             y += 10.0f;
         }
-        m_fxSummary->setBounds(contentX, y, contentW, FX_H);
-        y += FX_H + SECTION_GAP;
+        m_insertList->setBounds(contentX, y, contentW, UIMixerInsertList::heightForRows(INSERT_ROWS));
+        y += UIMixerInsertList::heightForRows(INSERT_ROWS) + SECTION_GAP;
     }
 
     const bool hasFooter = (m_footer && m_footer->isVisible());
@@ -724,18 +737,41 @@ void UIMixerStrip::onUpdate(double deltaTime)
         m_widthKnob->setValue(channel->width);
     }
 
-    if (m_fxSummary && m_fxSummary->isVisible()) {
-        if (m_cachedFxCount != channel->fxCount) {
-            m_cachedFxCount = channel->fxCount;
+    if (m_insertList && m_insertList->isVisible()) {
+        std::vector<UIMixerInsertList::Row> rows;
+        std::string sig;
+        for (const auto& insert : channel->inserts) {
+            if (insert.isEmpty || insert.pendingRemoval)
+                continue;
+            rows.push_back({insert.name, insert.bypassed});
+            sig += insert.name + (insert.bypassed ? "~|" : "|");
+        }
+        if (m_cachedInsertSig != sig) {
+            m_cachedInsertSig = sig;
             invalidateStaticCache();
-            m_fxSummary->setFxCount(channel->fxCount);
+            m_insertList->setRows(std::move(rows));
         }
         const std::string fxStatus = buildFxStatus(*channel);
         if (m_cachedFxStatus != fxStatus) {
             m_cachedFxStatus = fxStatus;
             invalidateStaticCache();
-            m_fxSummary->setStatusText(fxStatus);
+            m_insertList->setStatusText(fxStatus);
         }
+    }
+
+    if (m_outputChip && m_outputChip->isVisible()) {
+        const auto* target = m_viewModel->getChannelById(channel->mainOutputId);
+        const int colorIndex = (channel->mainOutputId != 0 && target) ? target->trackColorIndex : -1;
+        if (m_cachedOutputLabel != channel->routeName || m_cachedOutputColorIndex != colorIndex) {
+            m_cachedOutputLabel = channel->routeName;
+            m_cachedOutputColorIndex = colorIndex;
+            m_outputChip->setLabel(channel->routeName);
+            m_outputChip->setColor(colorIndex >= 0 ? trackColorFromIndex(colorIndex)
+                                                    : NUIThemeManager::getInstance().getColor("accentPrimary"));
+            invalidateStaticCache();
+        }
+        // A channel whose main output is off (bus-only elsewhere or muted path) shows its chip dimmed.
+        m_outputChip->setDimmed(channel->mainOutputId == 0 && !channel->masterSendEnabled);
     }
 
     if (m_footer && m_footer->isVisible()) {
@@ -949,8 +985,11 @@ void UIMixerStrip::renderStaticLayer(NUIRenderer& renderer)
     if (m_buttons && m_buttons->isVisible()) {
         m_buttons->onRender(renderer);
     }
-    if (m_fxSummary && m_fxSummary->isVisible()) {
-        m_fxSummary->onRender(renderer);
+    if (m_outputChip && m_outputChip->isVisible()) {
+        m_outputChip->onRender(renderer);
+    }
+    if (m_insertList && m_insertList->isVisible()) {
+        m_insertList->onRender(renderer);
     }
     if (m_fader && m_fader->isVisible()) {
         m_fader->onRender(renderer);
@@ -962,7 +1001,7 @@ void UIMixerStrip::renderStaticLayer(NUIRenderer& renderer)
 
 NUIRect UIMixerStrip::getFXSummaryBounds() const
 {
-    return m_fxSummary ? m_fxSummary->getBounds() : NUIRect{};
+    return m_insertList ? m_insertList->getBounds() : NUIRect{};
 }
 
 void UIMixerStrip::dismissFaderEdit(const NUIPoint& position)

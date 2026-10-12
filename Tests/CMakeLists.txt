@@ -2876,6 +2876,29 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(UIMixerKnobDragReadoutTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
 
+# The mixer strip names its inserts and its output (V81-M1, FD-28 point 3).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(UIMixerStripContentTest AestraUI_Core AestraUI_Platform)
+    add_executable(UIMixerStripContentTest
+        AestraUI/UIMixerStripContentTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/MixerViewModel.cpp
+    )
+    target_link_libraries(UIMixerStripContentTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(UIMixerStripContentTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME UIMixerStripContentTest COMMAND UIMixerStripContentTest)
+    set_tests_properties(UIMixerStripContentTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
 # The inspector rack must follow the LAST-bound chain: bindEffectRack() used
 # to append bindings and refreshRackDisplay() read the first match, so a
 # selection switch left the rack bound to a chain that died with its channel
@@ -3515,6 +3538,7 @@ if(AESTRA_ENABLE_UI)
         ClipGroupOpsTest
         UnitRowContextMenuTest
         UIMixerKnobDragReadoutTest
+        UIMixerStripContentTest
         PluginRackBindingLifecycleTest
         WindowPanelRaiseTest
         TakesHistoryPanelTest
