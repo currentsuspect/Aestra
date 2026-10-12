@@ -18,6 +18,7 @@
 // the caller has to choose between leaving a driver-negotiated setting alone and
 // overwriting it. Most of the assertions below exist to pin that.
 
+#include "AudioDeviceChoice.h"
 #include "AudioSettingsStore.h"
 
 #include <iostream>
@@ -80,7 +81,36 @@ const char* kRealConfig =
 
 } // namespace
 
+namespace {
+// Device names, not list positions, say which device a saved selection means.
+void deviceNameTests() {
+    using Aestra::DeviceChoiceCandidate;
+    // The real failure: input_device=129 was saved when 129 was the laptop's mic; the AmpliTank has since shifted the list.
+    const std::vector<DeviceChoiceCandidate> now{{129, "Built-in Audio", 2, 2}, {130, "fifine Microphone", 2, 2}, {131, "Easy Effects Sink", 2, 2}};
+    expectEq(Aestra::resolveSavedDeviceId(now, "fifine Microphone", 129, true), 130, "a saved name wins over a stale id");
+    expectEq(Aestra::resolveSavedDeviceId(now, "", 129, true), 129, "no saved name keeps the id (a file from before names were saved)");
+    expectEq(Aestra::resolveSavedDeviceId(now, "Gone Mic", 129, true), 129, "a name that is no longer present falls back to the id");
+    const std::vector<DeviceChoiceCandidate> playbackOnly{{7, "HDMI", 0, 8}};
+    expectEq(Aestra::resolveSavedDeviceId(playbackOnly, "HDMI", 3, true), 3, "a name only counts for the side that has channels");
+    expectEq(Aestra::resolveSavedDeviceId(playbackOnly, "HDMI", 3, false), 7, "and does for the side that does");
+    expectEq(Aestra::deviceNameForId(now, 130) == "fifine Microphone" ? 1 : 0, 1, "name lookup by id");
+
+    // They survive the file.
+    std::istringstream in("device=129\ninput_device=129\ndevice_name=Built-in Audio\ninput_device_name=fifine Microphone\n");
+    const AudioSettings s = Aestra::parseAudioSettings(in);
+    expectEq(s.deviceName == "Built-in Audio" ? 1 : 0, 1, "device_name parses");
+    expectEq(s.inputDeviceName == "fifine Microphone" ? 1 : 0, 1, "input_device_name parses (spaces kept)");
+    std::ostringstream out;
+    Aestra::serializeAudioSettings(out, s);
+    std::istringstream again(out.str());
+    const AudioSettings s2 = Aestra::parseAudioSettings(again);
+    expectEq(s2.inputDeviceName == "fifine Microphone" && s2.deviceName == "Built-in Audio" ? 1 : 0, 1, "names round-trip");
+    expectEq(s2.inputDeviceId, 129, "ids still round-trip");
+}
+} // namespace
+
 int main() {
+    deviceNameTests();
     // --- the real file parses completely -------------------------------------
     {
         const AudioSettings s = parseText(kRealConfig);

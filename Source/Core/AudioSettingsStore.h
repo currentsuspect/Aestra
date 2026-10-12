@@ -37,6 +37,9 @@ struct AudioSettings {
     int driver{kUnset};
     int deviceId{kUnset};
     int inputDeviceId{kUnset};
+    /// The devices' names (empty = not saved). Ids shift when devices come and go; the name wins when present.
+    std::string deviceName;
+    std::string inputDeviceName;
     int sampleRate{kUnset};
     int bufferSize{kUnset};
 
