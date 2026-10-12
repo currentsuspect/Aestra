@@ -1,3 +1,4 @@
+#include "AudioDeviceChoice.h"
 #include "AudioSettingsPage.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraCore/include/AestraLog.h"
@@ -761,6 +762,13 @@ bool AudioSettingsPage::saveSettings() {
         file << "driver=" << driverValue << "\n";
         file << "device=" << deviceValue << "\n";
         file << "input_device=" << inputDeviceValue << "\n";
+        // Ids are list positions and shift as devices come and go; the name is what the selection means.
+        const auto nameFor = [](const std::vector<std::pair<std::string, int>>& list, int id) {
+            for (const auto& [name, deviceId] : list) if (deviceId == id) return name;
+            return std::string();
+        };
+        if (const auto n = nameFor(m_cachedDevices.outputDevices, deviceValue); !n.empty()) file << "device_name=" << n << "\n";
+        if (const auto n = nameFor(m_cachedDevices.inputDevices, inputDeviceValue); !n.empty()) file << "input_device_name=" << n << "\n";
         file << "samplerate=" << m_sampleRateDropdown->getSelectedValue() << "\n";
         file << "buffersize=" << m_bufferSizeDropdown->getSelectedValue() << "\n";
         file << "quality_preset=" << m_qualityPresetDropdown->getSelectedValue() << "\n";
@@ -799,6 +807,20 @@ void AudioSettingsPage::loadSettings() {
     // We only need to populate the UI dropdowns to reflect saved values.
     // After init, user interactions via dropdown callbacks will handle audio changes.
     const bool skipAudioCalls = m_isInitializing;
+    // Saved devices are found by name (ids shift as devices come and go); the id is only the fallback.
+    std::string savedDeviceName, savedInputName;
+    {
+        std::ifstream names(configPath);
+        std::string l;
+        while (std::getline(names, l)) {
+            if (l.rfind("device_name=", 0) == 0) savedDeviceName = l.substr(12);
+            else if (l.rfind("input_device_name=", 0) == 0) savedInputName = l.substr(18);
+        }
+    }
+    std::vector<Aestra::DeviceChoiceCandidate> candidates;
+    if (m_audioManager)
+        for (const auto& d : m_audioManager->getDevices())
+            candidates.push_back({static_cast<int>(d.id), d.name, static_cast<int>(d.maxInputChannels), static_cast<int>(d.maxOutputChannels)});
     std::string line;
     while (std::getline(file, line)) {
         auto pos = line.find('=');
@@ -824,11 +846,13 @@ void AudioSettingsPage::loadSettings() {
             m_driverDropdown->setSelectedByValue(val);
         }
         else if (key == "device") {
+            val = Aestra::resolveSavedDeviceId(candidates, savedDeviceName, val, false);
             m_savedDeviceId = val;
             if (m_audioManager && !skipAudioCalls) m_audioManager->switchDevice((uint32_t)val);
             m_deviceDropdown->setSelectedByValue(val);
         }
         else if (key == "input_device") {
+            val = Aestra::resolveSavedDeviceId(candidates, savedInputName, val, true);
             m_savedInputDeviceId = val;
             if (m_audioManager && !skipAudioCalls) m_audioManager->switchInputDevice((uint32_t)val);
             m_inputDeviceDropdown->setSelectedByValue(val);

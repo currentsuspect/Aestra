@@ -8,6 +8,7 @@
 #include "PreviewEngine.h"
 #include "TrackManager.h"
 #include "AestraPlatform.h"
+#include "AudioDeviceChoice.h"
 #include "AudioSettingsStore.h"
 #include "../AestraCore/include/AestraLog.h"
 
@@ -261,7 +262,15 @@ bool AestraAudioController::openDefaultStream(void* userData) {
         // sample rate and buffer size reached nothing.
         const Aestra::AudioSettings saved = Aestra::loadAudioSettings();
 
-        const AudioDeviceInfo* outputDevice = findDeviceById(devices, saved.deviceId);
+        // A saved selection means the device it was saved as, found by name: ids are list positions and shift when
+        // devices come and go (see AudioDeviceChoice.h).
+        std::vector<Aestra::DeviceChoiceCandidate> candidates;
+        for (const auto& d : devices)
+            candidates.push_back({static_cast<int>(d.id), d.name, static_cast<int>(d.maxInputChannels), static_cast<int>(d.maxOutputChannels)});
+        const int savedOutputId = Aestra::resolveSavedDeviceId(candidates, saved.deviceName, saved.deviceId, false);
+        const int savedInputId = Aestra::resolveSavedDeviceId(candidates, saved.inputDeviceName, saved.inputDeviceId, true);
+
+        const AudioDeviceInfo* outputDevice = findDeviceById(devices, savedOutputId);
         if (!outputDevice || outputDevice->maxOutputChannels == 0) {
             AudioDeviceInfo defaultOutput = m_audioManager->getDefaultOutputDevice();
             outputDevice = findDeviceById(devices, static_cast<int>(defaultOutput.id));
@@ -282,7 +291,7 @@ bool AestraAudioController::openDefaultStream(void* userData) {
 
         Log::info("Using audio device: " + outputDevice->name);
 
-        const AudioDeviceInfo* inputDevice = choosePreferredInputDevice(devices, saved.inputDeviceId);
+        const AudioDeviceInfo* inputDevice = choosePreferredInputDevice(devices, savedInputId);
         if (inputDevice) {
             Log::info("Using input device: " + inputDevice->name + " (" +
                       std::to_string(inputDevice->maxInputChannels) + " channels)");

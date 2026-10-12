@@ -63,6 +63,9 @@ AudioSettings parseAudioSettings(std::istream& in) {
             continue;
         }
 
+        if (key == "device_name") { settings.deviceName = value; continue; }
+        if (key == "input_device_name") { settings.inputDeviceName = value; continue; }
+
         for (const auto& binding : kBindings) {
             if (key != binding.key) {
                 continue;
@@ -93,6 +96,8 @@ void serializeAudioSettings(std::ostream& out, const AudioSettings& settings) {
             out << binding.key << '=' << value << '\n';
         }
     }
+    if (!settings.deviceName.empty()) out << "device_name=" << settings.deviceName << '\n';
+    if (!settings.inputDeviceName.empty()) out << "input_device_name=" << settings.inputDeviceName << '\n';
 }
 
 std::string audioSettingsConfigPath() {
