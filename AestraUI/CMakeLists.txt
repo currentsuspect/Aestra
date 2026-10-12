@@ -127,6 +127,10 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/UIMixerInsertList.cpp
     Widgets/UIOutputChip.h
     Widgets/UIOutputChip.cpp
+    Widgets/UIParamBar.h
+    Widgets/UIParamBar.cpp
+    Widgets/UIMixerSendList.h
+    Widgets/UIMixerSendList.cpp
     Widgets/UIMixerStrip.h
     Widgets/UIMixerStrip.cpp
     Widgets/UIMixerFooter.h

@@ -6,7 +6,8 @@
 
 #include "UIMixerFader.h"
 #include "UIMixerHeader.h"
-#include "UIMixerKnob.h"
+#include "UIParamBar.h"
+#include "UIMixerSendList.h"
 #include "UIMixerMeter.h"
 #include "UIMixerButtonRow.h"
 #include "UIMixerInsertList.h"
@@ -49,6 +50,10 @@ public:
     /// What the strip currently shows, for tests and for the panel (it never mutates through these).
     const UIMixerInsertList* insertList() const { return m_insertList.get(); }
     const UIOutputChip* outputChip() const { return m_outputChip.get(); }
+    const UIMixerSendList* sendList() const { return m_sendList.get(); }
+    const UIParamBar* panBar() const { return m_panBar.get(); }
+    /// The meters' own bars (below the clip lamp): the height the shared dB scale is drawn against.
+    NUIRect meterBarsRect() const;
 
     // Platform bridge propagation for cursor warp
     void setPlatformBridge(NUIPlatformBridge* bridge);
@@ -71,8 +76,6 @@ public:
     std::function<void(bool muted)> onMuteChanged;
     std::function<void(bool soloed)> onSoloChanged;
     std::function<void(float pan)> onPanChanged;
-    /** @brief Trim knob moved: (trimDb, slotIndex). Wired to SetTrimCommand. */
-    std::function<void(float db, uint32_t slotIndex)> onTrimChanged;
     std::function<void(bool monitored)> onMonitorToggled;
 
 private:
@@ -83,11 +86,10 @@ private:
     std::shared_ptr<Aestra::Audio::ContinuousParamBuffer> m_continuousParams;
 
     std::shared_ptr<UIMixerHeader> m_header;
-    std::shared_ptr<UIMixerKnob> m_trimKnob;
     std::shared_ptr<UIMixerInsertList> m_insertList;
     std::shared_ptr<UIOutputChip> m_outputChip;
-    std::shared_ptr<UIMixerKnob> m_panKnob;
-    std::shared_ptr<UIMixerKnob> m_widthKnob; 
+    std::shared_ptr<UIParamBar> m_panBar;
+    std::shared_ptr<UIMixerSendList> m_sendList;
     std::shared_ptr<UIMixerButtonRow> m_buttons;
     std::shared_ptr<UIMixerMeter> m_meter;
     std::shared_ptr<UIMixerFader> m_fader;
@@ -115,13 +117,10 @@ private:
     bool m_cachedMonitored{false};
     bool m_cachedStripHovered{false};
     bool m_cachedFaderHovered{false};
-    bool m_cachedTrimHovered{false};
-    bool m_cachedPanHovered{false};
-    bool m_cachedWidthHovered{false}; // New!
     float m_cachedFaderDb{0.0f};
-    float m_cachedTrimDb{0.0f};
     float m_cachedPan{0.0f};
-    float m_cachedWidth{1.0f}; // New!
+    std::string m_cachedSendSig;
+    std::string m_cachedTag;
     int m_cachedFxCount{0};
     std::string m_cachedInsertSig;
     std::string m_cachedOutputLabel;
@@ -130,6 +129,7 @@ private:
 
     /// Master-only readouts, computed in layoutChildren. Split so each number
     /// sits under the column that owns it: observed signal vs applied gain.
+    NUIRect m_panValueRect{};
     NUIRect m_masterMeterReadoutRect{};
     NUIRect m_masterGainReadoutRect{};
 
@@ -137,6 +137,7 @@ private:
     void layoutChildren();
     void invalidateStaticCache();
     void renderStaticLayer(NUIRenderer& renderer);
+    void renderPanValue(NUIRenderer& renderer, const Aestra::ChannelViewModel& channel);
     void renderMasterReadout(NUIRenderer& renderer, const Aestra::ChannelViewModel& channel);
 };
 

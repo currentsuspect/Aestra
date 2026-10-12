@@ -111,6 +111,14 @@ struct ChannelViewModel {
     };
     std::vector<SendViewModel> sends;
 
+    /// What the channel is to the others (V81-M1): a Bus when other channels route their main output into it,
+    /// a Return when other channels send to it, else a plain Track. A bus that also receives sends stays a Bus.
+    enum class Role { Track, Bus, Return };
+    Role role{Role::Track};
+
+    /// Highest peak since the last reset, in dB; the strip footer reads it. Cleared by resetPeaks().
+    float peakSinceResetDb{MixerMath::DB_MIN};
+
     /**
      * @brief Reset meter state to silence.
      */
@@ -242,6 +250,9 @@ public:
     /**
      * @brief Get master channel.
      */
+    /// Forget every channel's peak-since-reset and clip latch (the mixer's "Reset peaks").
+    void resetPeaks();
+
     ChannelViewModel* getMaster() { return m_master.get(); }
     const ChannelViewModel* getMaster() const { return m_master.get(); }
 

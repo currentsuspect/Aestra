@@ -5,6 +5,7 @@
 #include "NUIDropdown.h"
 #include "NUISegmentedControl.h"
 #include "UIRoutingMap.h"
+#include "UIParamBar.h"
 
 #include <cstdint>
 #include <string>
@@ -44,6 +45,11 @@ public:
     void setViewModel(Aestra::MixerViewModel* viewModel) { m_viewModel = viewModel; }
     void setActiveTab(Tab tab);
     Tab getActiveTab() const { return m_activeTab; }
+
+    /// Trim edited (dB): `commit` is false while dragging (apply live) and true once at the end (one undo step).
+    std::function<void(uint32_t channelId, float db, bool commit)> onTrimEdited;
+    /// Stereo width edited (1.0 = unchanged).
+    std::function<void(uint32_t channelId, float width)> onWidthEdited;
 
     std::shared_ptr<EffectChainRack> getEffectRack() const { return m_effectRack; }
     std::shared_ptr<UIRoutingMap> getRoutingMap() const { return m_routingMap; }
@@ -91,6 +97,10 @@ private:
     std::vector<std::shared_ptr<class UIMixerSend>> m_sendWidgets;
     void rebuildSendWidgets(const Aestra::ChannelViewModel* channel);
     void rebuildInsertRack(const Aestra::ChannelViewModel* channel);
+
+    // Channel block: the controls you rarely touch, moved off every strip (V81-R2, FD-28 point 6).
+    std::shared_ptr<UIParamBar> m_trimBar;
+    std::shared_ptr<UIParamBar> m_widthBar;
 
     // Routing map minimap
     std::shared_ptr<UIRoutingMap> m_routingMap;

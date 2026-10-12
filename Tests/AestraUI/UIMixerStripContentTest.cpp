@@ -12,11 +12,14 @@
 #include "UIOutputChip.h"
 
 #include "Core/ChannelSlotMap.h"
+#include "Models/MeterSnapshot.h"
+#include "Core/AudioGraph.h"
 #include "Models/TrackManager.h"
 #include "Plugin/EffectChain.h"
 #include "Plugin/PluginManager.h"
 #include "Plugin/SamplerPlugin.h"
 
+#include <cmath>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -125,6 +128,69 @@ int main() {
         list.onMouseEvent(down);
         list.onMouseEvent(up);
         check(clicked, "a click on the list reports to its owner");
+    }
+
+    std::cout << "[6] a channel's role follows the routing\n";
+    {
+        Audio::TrackManager rt;
+        auto* a = rt.addChannel("A");
+        auto* b = rt.addChannel("Bus");
+        auto* c = rt.addChannel("Reverb");
+        auto* d = rt.addChannel("Plain");
+        a->setMainOutputId(b->getChannelId());
+        Audio::AudioRoute send;
+        send.targetChannelId = c->getChannelId();
+        send.gain = 0.5f;
+        d->addSend(send);
+        rt.buildAndShareSlotMap();
+        MixerViewModel rvm;
+        rvm.syncFromEngine(rt, *rt.getChannelSlotMapShared());
+        using Role = ChannelViewModel::Role;
+        check(rvm.getChannelById(b->getChannelId())->role == Role::Bus, "a channel others route into is a Bus");
+        check(rvm.getChannelById(c->getChannelId())->role == Role::Return, "a channel that receives sends is a Return");
+        check(rvm.getChannelById(a->getChannelId())->role == Role::Track && rvm.getChannelById(d->getChannelId())->role == Role::Track,
+              "the rest are plain tracks");
+    }
+
+    std::cout << "[7] peak since reset keeps the highest peak until it is reset\n";
+    {
+        Audio::MeterSnapshotBuffer snaps;
+        auto* ch = vm.getChannelById(drums->getChannelId());
+        snaps.writeLevels(static_cast<int>(ch->slotIndex), 0.5f, 0.25f, 0.2f, 0.2f, 0.0f, 0.0f, 0.0f);
+        vm.updateMeters(snaps, 0.016);
+        const float first = ch->peakSinceResetDb;
+        check(std::fabs(first - (-6.02f)) < 0.1f, "reads the loudest side (-6 dB)");
+        snaps.writeLevels(static_cast<int>(ch->slotIndex), 0.1f, 0.1f, 0.05f, 0.05f, 0.0f, 0.0f, 0.0f);
+        for (int i = 0; i < 200; ++i)
+            vm.updateMeters(snaps, 0.016);
+        check(std::fabs(ch->peakSinceResetDb - first) < 1e-4f, "stays after the signal falls away");
+        vm.resetPeaks();
+        check(ch->peakSinceResetDb <= MixerMath::DB_MIN + 0.01f, "resetPeaks clears it");
+    }
+
+    std::cout << "[8] the strip lists its sends and shows pan as a bar\n";
+    {
+        Audio::TrackManager st;
+        auto* src = st.addChannel("Src");
+        auto* verb = st.addChannel("Verb");
+        Audio::AudioRoute send;
+        send.targetChannelId = verb->getChannelId();
+        send.gain = 0.5f;
+        src->addSend(send);
+        st.buildAndShareSlotMap();
+        MixerViewModel svm;
+        svm.syncFromEngine(st, *st.getChannelSlotMapShared());
+        st.getContinuousParams()->setPan(svm.getChannelById(src->getChannelId())->slotIndex, -0.4f);
+        svm.syncFromEngine(st, *st.getChannelSlotMapShared());
+        AestraUI::UIMixerStrip strip(src->getChannelId(), 1, &svm, st.getMeterSnapshots(), st.getContinuousParams());
+        strip.setBounds({0, 0, 84, 640});
+        strip.onUpdate(0.016);
+        const auto* sends = strip.sendList();
+        check(sends && sends->rows().size() == 1 && sends->rows()[0].name == "Verb" &&
+                  std::fabs(sends->rows()[0].levelDb - (-6.02f)) < 0.1f && !sends->rows()[0].sidechain,
+              "one send, to Verb, at -6 dB");
+        check(strip.panBar() && std::fabs(strip.panBar()->value() - (-0.4f)) < 1e-4f, "the pan bar follows the channel's pan");
+        check(strip.meterBarsRect().width > 20.0f && strip.meterBarsRect().height > 100.0f, "the meters have room (24 px wide, tall)");
     }
 
     std::cout << (g_failures == 0 ? "ALL PASS\n" : "FAILURES\n");

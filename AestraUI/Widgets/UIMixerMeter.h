@@ -143,7 +143,7 @@ private:
     static constexpr float DB_YELLOW_THRESHOLD = -12.0f;
     static constexpr float DB_RED_THRESHOLD = -3.0f;
     static constexpr float DB_MIN = -60.0f;
-    static constexpr float DB_MAX = 0.0f;
+    static constexpr float DB_MAX = 6.0f;
 
     /**
      * @brief Convert dB to normalized value (0.0 to 1.0) for rendering.
