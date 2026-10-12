@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ArsenalPanel.h"
+#include "ArsenalRackDraw.h"
 
 #include "Commands/AssignUnitToFirstFreeInsertCommand.h"
 #include "Commands/EditPatternNotesCommand.h"
@@ -456,8 +457,7 @@ void ArsenalPanel::refreshUnits() {
     syncRowSelection();
     if (m_onPreferredHeightChanged) {
         const float preferredHeight = getTitleBarHeight() + 136.0f +
-                                      static_cast<float>(m_unitRows.size()) * (56.0f + 8.0f) +
-                                      kArsenalListBottomPadding;
+                                      m_rack.contentHeight + kArsenalListBottomPadding;
         m_onPreferredHeightChanged(preferredHeight);
     }
     if (shouldRestoreDropTargets) {
@@ -672,6 +672,7 @@ void ArsenalPanel::onRender(NUIRenderer& renderer) {
     WindowPanel::onRender(renderer);
     drawCommandHeader(renderer);
     if (m_listContainer && isVisible()) drawProgressHeader(renderer, m_progressHeaderRect);
+    if (m_listContainer && isVisible()) Aestra::drawArsenalRackHeaders(renderer, m_rack, m_listViewportRect, m_progressHeaderRect.bottom() + 8.0f - m_scrollY);
 
     // Drag-hover ghost draws above the panel surfaces.
     renderDragPreview(renderer);
@@ -803,9 +804,7 @@ void ArsenalPanel::layoutUnits() {
     m_scrollModeRect = {m_fitModeRect.right(), m_fitToggleRect.y, fitW * 0.5f, m_fitToggleRect.height};
 
     m_progressHeaderRect = {startX, m_commandHeaderRect.bottom() + 8.0f, width, PROGRESS_HEADER_HEIGHT};
-    float yPos = m_progressHeaderRect.bottom() + 8.0f - m_scrollY;
-    float spacing = 8.0f;
-    float rowHeight = 56.0f;
+    const float rackTop = m_progressHeaderRect.bottom() + 8.0f - m_scrollY;
 
     // Rows may only draw / take clicks between the progress header and the
     // panel bottom; anything scrolled past that is clipped by the row itself.
@@ -813,15 +812,18 @@ void ArsenalPanel::layoutUnits() {
     const float viewportBottom = bounds.bottom() - 6.0f;
     m_listViewportRect = {startX, viewportTop, width, std::max(0.0f, viewportBottom - viewportTop)};
 
-    // Layout unit rows
+    // Units sit under Drums / Synth / Audio headers (FD-27): one layout answers rows, scroll and drops.
+    std::vector<Aestra::Audio::UnitGroup> groups;
     for (auto& row : m_unitRows) {
-        if (row) {
-            row->setBounds(NUIRect(startX, yPos, width, rowHeight));
-            row->setViewport(m_listViewportRect);
-            yPos += rowHeight + spacing;
-        }
+        const auto* unit = row && m_trackManager ? m_trackManager->getUnitManager().getUnit(row->getUnitId()) : nullptr;
+        groups.push_back(unit ? unit->group : Aestra::Audio::UnitGroup::Unknown);
     }
-
+    m_rack = Aestra::ArsenalRackLayout::compute(groups);
+    for (const auto& item : m_rack.items) {
+        if (item.kind != Aestra::ArsenalRackItem::Kind::Row || !m_unitRows[item.rowIndex]) continue;
+        m_unitRows[item.rowIndex]->setBounds(NUIRect(startX, rackTop + item.y, width, item.h));
+        m_unitRows[item.rowIndex]->setViewport(m_listViewportRect);
+    }
 }
 
 void ArsenalPanel::onResize(int width, int height) {
@@ -836,8 +838,7 @@ void ArsenalPanel::onUpdate(double dt) {
     const float reservedHeight = COMMAND_HEADER_HEIGHT + PROGRESS_HEADER_HEIGHT + 32.0f;
     const float viewportHeight = std::max(0.0f,
         (m_listContainer ? m_listContainer->getBounds().height : 0.0f) - reservedHeight);
-    const float contentHeight =
-        static_cast<float>(m_unitRows.size()) * (56.0f + 8.0f) + kArsenalListBottomPadding;
+    const float contentHeight = m_rack.contentHeight + kArsenalListBottomPadding;
     const float maxScroll = std::max(0.0f, contentHeight - viewportHeight);
     m_targetScrollY = safeClampPanelScroll(m_targetScrollY, maxScroll);
     m_scrollY = safeClampPanelScroll(m_scrollY, maxScroll);
@@ -1720,15 +1721,10 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
 
     // Handle drag-drop logic for reordering units
     if (m_isDragging) {
-        auto bounds = m_listContainer->getBounds();
-        float rowHeight = 56.0f;
-        float spacing = 8.0f;
-        
-        // Calculate which drop zone we're over
-        float localY = event.position.y - bounds.y + m_scrollY - 6.0f;
-        int dropIndex = static_cast<int>((localY + (rowHeight + spacing) / 2) / (rowHeight + spacing));
-        dropIndex = std::clamp(dropIndex, 0, static_cast<int>(m_unitRows.size()));
-        
+        // The drop lands before the row under the pointer, in the grouped display order.
+        const float rackTop = m_progressHeaderRect.bottom() + 8.0f - m_scrollY;
+        const int dropIndex = static_cast<int>(m_rack.insertIndexForSlot(m_rack.dropSlotForY(event.position.y - rackTop), m_unitRows.size()));
+
         if (dropIndex != m_dropTargetIndex) {
             m_dropTargetIndex = dropIndex;
             repaint();
@@ -1754,7 +1750,7 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         }
         
         // Fallback: scroll the unit list
-        float contentHeight = (m_unitRows.size() * (56.0f + 8.0f)) + kArsenalListBottomPadding;
+        float contentHeight = m_rack.contentHeight + kArsenalListBottomPadding;
         float viewportHeight = m_listContainer ? m_listContainer->getBounds().height : 100.0f;
         float maxScroll = std::max(0.0f, contentHeight - viewportHeight);
         

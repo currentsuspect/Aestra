@@ -76,10 +76,10 @@ struct Rig {
     }
 };
 
-// Geometry of the 700x56 row: control width 266, separator 266, step grid from x ~280 onwards.
+// Geometry of the 700x56 row: control width 330, separator 330, step grid from x ~345 onwards.
 constexpr float kRowY = 28.0f;
 constexpr float kNameX = 60.0f;   // inside the control area, left of the pills
-constexpr float kGridX = 300.0f;  // on the step grid
+constexpr float kGridX = 450.0f;  // on the step grid (the control block is 330 px wide at this width)
 
 } // namespace
 
@@ -95,6 +95,20 @@ int main() {
             if (auto cb = menu->getItem(idx)->getOnClick()) cb();
             check(r.openedCalled && r.opened == r.patternId, "choosing it opens the unit's own pattern in the piano roll");
         }
+    }
+    {
+        // The output reads by name and colour, not by a channel number (V81-AR1, FD-27 point 2).
+        Rig r(Aestra::Audio::UnitType::Sampler);
+        check(r.row->outputName() == "Master" && r.row->outputColorIndex() == -1, "a unit on the master says Master");
+        auto* bus = r.tm->addChannel("Drum Bus");
+        bus->setTrackColorIndex(3);
+        auto& units = r.tm->getUnitManager();
+        units.setUnitMixerChannel(r.row->getUnitId(), bus->getChannelId());
+        r.row->updateState();
+        check(r.row->outputName() == "Drum Bus", "routed to a channel it names that channel, not its number");
+        check(r.row->outputColorIndex() == 3, "and carries that channel's colour");
+        r.row->setBounds({0, 0, 700, 44});
+        check(r.row->getBounds().height == 44.0f, "the row is 44 px in the grouped rack");
     }
     {
         Rig r(Aestra::Audio::UnitType::PitchedSampler);
