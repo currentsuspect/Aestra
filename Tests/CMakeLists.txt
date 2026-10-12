@@ -2626,6 +2626,25 @@ if(AESTRA_ENABLE_UI)
     add_test(NAME MixerViewModelDynamicInsertsTest COMMAND MixerViewModelDynamicInsertsTest)
     set_tests_properties(MixerViewModelDynamicInsertsTest PROPERTIES
         LABELS "audio;mixer;contract:audio")
+    # V81-M2: the master channel carries short-term loudness and true peak through the view model.
+    aestra_require_ui_targets(MixerViewModelMasterLoudnessTest AestraUI_Core AestraUI_Platform)
+    add_executable(MixerViewModelMasterLoudnessTest
+        AestraAudio/MixerViewModelMasterLoudnessTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/MixerViewModel.cpp
+    )
+    target_link_libraries(MixerViewModelMasterLoudnessTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(MixerViewModelMasterLoudnessTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME MixerViewModelMasterLoudnessTest COMMAND MixerViewModelMasterLoudnessTest)
+    set_tests_properties(MixerViewModelMasterLoudnessTest PROPERTIES LABELS "audio;mixer;metering;contract:audio")
     # V8-S4: the master chain behaves like a channel chain through the view model.
     aestra_require_ui_targets(MasterInsertParityTest AestraUI_Core AestraUI_Platform)
     add_executable(MasterInsertParityTest
@@ -3558,6 +3577,7 @@ if(AESTRA_ENABLE_UI)
         EditorCloseDeferredTest
         PanelWindowClickSwallowTest
         MixerViewModelAutomationPresenceTest
+        MixerViewModelMasterLoudnessTest
         MixerViewModelDynamicInsertsTest
         MasterInsertParityTest
         MixerDropdownKeyboardTest
@@ -3803,6 +3823,26 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/TruePeakMeterTest.cpp")
     add_test(NAME TruePeakMeterTest COMMAND TruePeakMeterTest)
     set_tests_properties(TruePeakMeterTest PROPERTIES LABELS "audio;dsp;metering;contract:audio")
 endif()
+
+# Live momentary and short-term loudness for the master meter (V81-M2)
+add_executable(LoudnessWindowTest AestraAudio/LoudnessWindowTest.cpp)
+target_link_libraries(LoudnessWindowTest PRIVATE AestraAudio)
+target_include_directories(LoudnessWindowTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME LoudnessWindowTest COMMAND LoudnessWindowTest)
+set_tests_properties(LoudnessWindowTest PROPERTIES LABELS "audio;dsp;metering;contract:audio")
+
+add_executable(MasterLoudnessSnapshotTest AestraAudio/MasterLoudnessSnapshotTest.cpp)
+target_link_libraries(MasterLoudnessSnapshotTest PRIVATE AestraAudio)
+target_include_directories(MasterLoudnessSnapshotTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Tests/AestraAudio
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MasterLoudnessSnapshotTest COMMAND MasterLoudnessSnapshotTest)
+set_tests_properties(MasterLoudnessSnapshotTest PROPERTIES LABELS "audio;metering;contract:audio" TIMEOUT 120)
 
 # Piano Roll Edge Case Stress Test
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PianoRollEdgeCaseStressTest.cpp")

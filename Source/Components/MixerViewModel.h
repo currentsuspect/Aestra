@@ -87,6 +87,9 @@ struct ChannelViewModel {
     float correlation{0.0f};                 ///< Phase correlation (-1.0 to 1.0)
     float sidechainPeak{0.0f};               ///< Live sidechain detector input peak (linear 0..1)
     float integratedLufs{-144.0f};           ///< Integrated/Gated LUFS (dB)
+    float momentaryLufs{-144.0f};            ///< Momentary (400 ms) LUFS, master only
+    float shortTermLufs{-144.0f};            ///< Short-term (3 s) LUFS, master only
+    float truePeakDb{-144.0f};               ///< Held true peak in dBTP, master only (-144 = none yet)
     float peakHoldL{MixerMath::DB_MIN};      ///< Peak hold left (dB)
     float peakHoldR{MixerMath::DB_MIN};      ///< Peak hold right (dB)
     double peakHoldTimerL{0.0};              ///< Time since peak hold set (seconds)

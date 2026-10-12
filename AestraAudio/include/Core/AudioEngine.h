@@ -12,6 +12,7 @@
 #include "TrackOutputTap.h"
 #include "ContinuousParamBuffer.h"
 #include "DSP/DCBlocker.h"
+#include "DSP/LoudnessWindow.h"
 #include "DSP/TruePeakMeter.h"
 #include "EngineState.h"
 #include "GarbageCollector.h"
@@ -181,6 +182,7 @@ public:
         m_kWeightPreFilterSlots[inactive] = computeKWeightPreFilter(static_cast<double>(sampleRate));
         m_kWeightRlbSlots[inactive] = computeKWeightRLB(static_cast<double>(sampleRate));
         m_activeKWeightIndex.store(inactive, std::memory_order_release);
+        m_loudnessWindow.prepare(static_cast<double>(sampleRate));
     }
     /** @brief Get the active sample rate used by the engine. */
     uint32_t getSampleRate() const { return m_sampleRate.load(std::memory_order_relaxed); }
@@ -1404,12 +1406,12 @@ private:
 
         // UI Thread (Read Only - Atomic)
         std::atomic<float> integratedLufs{-144.0f}; // Init to silence
-        std::atomic<float> momentaryLufs{-144.0f};  // Short term readout
 
         LoudnessState() { blockHistory.resize(kHistoryCapacity, 0.0); }
     };
 
     LoudnessState m_loudnessState;
+    LoudnessWindow m_loudnessWindow; ///< momentary + short-term, audio thread writes
     std::thread m_loudnessThread;
     std::atomic<bool> m_loudnessThreadRunning{false};
 
@@ -1422,7 +1424,7 @@ public:
     void resetLoudness() {
         // Reset atoms (UI sees it immediately)
         m_loudnessState.integratedLufs.store(-144.0f);
-        m_loudnessState.momentaryLufs.store(-144.0f);
+        m_loudnessWindow.requestReset();
 
         // Request reset in worker (via queue? or just a flag?)
         // Simple flag is enough since exact sample accuracy of reset isn't critical for metering start
