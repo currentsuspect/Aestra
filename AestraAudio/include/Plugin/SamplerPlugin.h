@@ -133,6 +133,14 @@ private:
     // No mutex needed for access anymore!
     AtomicSharedPtr<SampleData> m_data;
 
+    // Gap-free swap: the sample the audio thread last rendered (audio thread only), and the swapped-out buffers that
+    // sounding voices may still be reading (non-RT, under m_retiredMutex).
+    std::shared_ptr<SampleData> m_audioLastData;
+    std::mutex m_retiredMutex;
+    std::vector<std::shared_ptr<SampleData>> m_retired;
+    /// Park a swapped-out sample until no voice reads it, then hand it to the garbage collector. Non-RT only.
+    void retireSample(std::shared_ptr<SampleData> old);
+
     // Parameters
     enum ParamID { kParamAttack = 0, kParamDecay, kParamSustain, kParamRelease, kParamPitch, kParamCount };
     std::array<std::atomic<float>, kParamCount> m_params;
@@ -174,6 +182,10 @@ private:
         uint32_t noteId = 0;      // The scheduler's note identity (0 = none, e.g. live MIDI)
         // Keep-length voices play their own stretched copy; null plays the shared sample.
         std::shared_ptr<const KeepLengthCache::Buffer> ownData;
+        // A sample swapped out while this voice sounded: the voice finishes on the sample it started on. Set by
+        // the audio thread (a refcount copy); the plugin's retired list keeps the buffer alive past the voice, so
+        // dropping this reference is never the last one on the audio thread.
+        std::shared_ptr<SampleData> held;
     };
 
     static constexpr int kMaxVoices = 32;

@@ -265,6 +265,24 @@ if(TARGET AestraAudioCore)
     )
 endif()
 
+# Sampler swap test: a sample swapped while notes sound must not cut or jump them, and the next hit
+# uses the new sample (V81-E3). Core-linked, every CI lane.
+if(TARGET AestraAudioCore)
+    add_executable(SamplerSwapTest
+        SamplerSwapTest.cpp
+    )
+    target_link_libraries(SamplerSwapTest PRIVATE AestraAudioCore)
+    target_include_directories(SamplerSwapTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME SamplerSwapTest COMMAND SamplerSwapTest)
+    set_tests_properties(SamplerSwapTest PROPERTIES
+        LABELS "headless;sampler;audio;regression;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 # Sampler Keep-Length Test: keep-length pitch mode (pitch without the resampling
 # speed change). Exact pitch + source decay, Resample unchanged, render fallback,
 # no stale buffers after a sample swap, save/load. Core-linked, every CI lane.

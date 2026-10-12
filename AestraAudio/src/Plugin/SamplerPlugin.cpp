@@ -183,6 +183,23 @@ void SamplerPlugin::shutdown() {
     auto old = m_data.exchange(std::shared_ptr<SampleData>(nullptr), std::memory_order_acq_rel);
     publishToKeepLength(nullptr);
     GarbageCollector::instance().release(old, "SamplerPlugin::SampleData shutdown");
+    std::lock_guard<std::mutex> lock(m_retiredMutex);
+    for (auto& r : m_retired) GarbageCollector::instance().release(std::move(r), "SamplerPlugin::SampleData retired");
+    m_retired.clear();
+}
+
+void SamplerPlugin::retireSample(std::shared_ptr<SampleData> old) {
+    std::lock_guard<std::mutex> lock(m_retiredMutex);
+    if (old) m_retired.push_back(std::move(old));
+    // Anything only this list still holds is done sounding.
+    for (auto it = m_retired.begin(); it != m_retired.end();) {
+        if (it->use_count() == 1) {
+            GarbageCollector::instance().release(std::move(*it), "SamplerPlugin::SampleData");
+            it = m_retired.erase(it);
+        } else {
+            ++it;
+        }
+    }
 }
 
 void SamplerPlugin::activate() {
@@ -248,8 +265,8 @@ bool SamplerPlugin::loadSampleData(const std::string& path, std::vector<float> d
     auto oldData = m_data.exchange(newData, std::memory_order_acq_rel);
     publishToKeepLength(newData);
 
-    // Safely dispose of old data via Garbage Collector (avoids delete on Audio Thread)
-    GarbageCollector::instance().release(oldData, "SamplerPlugin::SampleData");
+    // Voices still sounding finish on the old sample (gap-free swap); it is collected once none read it.
+    retireSample(std::move(oldData));
 
     return true;
 }
@@ -276,7 +293,7 @@ bool SamplerPlugin::normalizeSample(float targetPeak) {
 
     auto oldData = m_data.exchange(edited, std::memory_order_acq_rel);
     publishToKeepLength(edited);
-    GarbageCollector::instance().release(oldData, "SamplerPlugin::SampleData");
+    retireSample(std::move(oldData));
     return true;
 }
 
@@ -303,7 +320,7 @@ bool SamplerPlugin::reverseSample() {
 
     auto oldData = m_data.exchange(edited, std::memory_order_acq_rel);
     publishToKeepLength(edited);
-    GarbageCollector::instance().release(oldData, "SamplerPlugin::SampleData");
+    retireSample(std::move(oldData));
     return true;
 }
 
@@ -329,6 +346,7 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
             v.currentGain = 0.0f;
             v.releaseGain = 0.0f;
             v.ownData.reset(); // refcount drop only: the cache or GarbageCollector owns the buffer
+            v.held.reset();
         }
     }
     // Soft release (pause / stop / loop wrap): every sounding voice goes through its own release
@@ -344,12 +362,24 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
     // Idle voices let go of stretched buffers so evicted ones can be collected.
     for (auto& v : m_voices) {
         if (!v.active && v.ownData) v.ownData.reset();
+        if (!v.active && v.held) v.held.reset(); // a refcount drop: the retired list owns the buffer
     }
 
     // Thread-safe access to sample data
     auto currentData = m_data.load(std::memory_order_acquire);
     if (!currentData || currentData->data.empty())
         return;
+
+    // A swap since the last block: voices already sounding finish on the sample they started on, so nothing
+    // jumps or cuts; new notes use the new sample. (Refcount copies only; the retired list owns the buffer.)
+    if (m_audioLastData != currentData) {
+        if (m_audioLastData) {
+            for (auto& v : m_voices) {
+                if (v.active && !v.ownData && !v.held) v.held = m_audioLastData;
+            }
+        }
+        m_audioLastData = currentData;
+    }
 
     // Source Rate correction
     double baseRate = (double)currentData->rate / m_sampleRate;
@@ -434,8 +464,10 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
             if (!v.active)
                 continue;
 
-            const Window w = v.ownData ? windowFor(static_cast<double>(v.ownData->frames())) : sharedWindow;
-            const std::vector<float>& voiceSamples = v.ownData ? v.ownData->interleaved : sampleVec;
+            const Window w = v.ownData ? windowFor(static_cast<double>(v.ownData->frames()))
+                             : v.held  ? windowFor(static_cast<double>(v.held->data.size() / 2))
+                                       : sharedWindow;
+            const std::vector<float>& voiceSamples = v.ownData ? v.ownData->interleaved : (v.held ? v.held->data : sampleVec);
             const double voiceFrames = w.total;
             const double startFrame = w.start;
             const double endFrame = w.end;
@@ -662,6 +694,7 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
                 }
             } else {
                 voice.ownData = keepBuffer;
+                voice.held.reset();
                 voice.position = startFrameFor(noteStartFrame);
                 voice.playbackRate = targetRate;
                 voice.targetPlaybackRate = targetRate;
@@ -722,6 +755,7 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
         freeVoice->gainL = noteGainL;
         freeVoice->gainR = noteGainR;
         freeVoice->ownData = keepBuffer;
+        freeVoice->held.reset();
         freeVoice->position = startFrameFor(noteStartFrame);
         freeVoice->playbackRate = targetRate;
         freeVoice->targetPlaybackRate = targetRate;
