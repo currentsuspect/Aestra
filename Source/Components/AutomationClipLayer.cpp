@@ -169,8 +169,14 @@ bool AutomationClipLayer::onMouse(const AestraUI::NUIMouseEvent& event, TrackMan
         return false;
     const bool right = event.button == AestraUI::NUIMouseButton::Right;
     const Hit hit = headerAt(*lane, event.position, g, /*gripOnly=*/!right);
-    if (hit.curve < 0)
+    if (hit.curve < 0) {
+        // A right-click on empty lane space (no point under it, no clip header) offers to create a clip there.
+        if (right && g.bounds.contains(event.position) && !pointNear(*lane, event.position, g)) {
+            showCreateMenu(tm, laneId, beatAt(event.position.x, g), event.position, g, hooks);
+            return true;
+        }
         return false;
+    }
 
     m_selectedCurve = hit.curve;
     m_selectedRegion = hit.region;
@@ -196,6 +202,63 @@ bool AutomationClipLayer::onMouse(const AestraUI::NUIMouseEvent& event, TrackMan
     if (hooks.changed)
         hooks.changed();
     return true;
+}
+
+// One bar (4/4) of automation, flat at the channel's current level so nothing jumps when it is created.
+void AutomationClipLayer::showCreateMenu(TrackManager& tm, PlaylistLaneID laneId, double beat,
+                                         const AestraUI::NUIPoint& at, const Geometry& g, const Hooks& hooks) {
+    closeMenu();
+    m_menu = std::make_shared<AestraUI::NUIContextMenu>();
+    TrackManager* manager = &tm;
+    const AutomationTarget target = g.editedTarget;
+    const double start = hooks.snapBeat ? hooks.snapBeat(std::max(0.0, beat)) : std::max(0.0, beat);
+
+    const uint32_t channelId = [&]() {
+        const uint32_t resolved = tm.resolveLaneChannelId(laneId);
+        return resolved != 0 ? resolved : static_cast<uint32_t>(MASTER_MIXER_CHANNEL_ID);
+    }();
+    const auto* channel = tm.getChannelById(channelId);
+    const float level = target == AutomationTarget::Pan ? (channel ? channel->getPan() : 0.0f)
+                                                         : (channel ? channel->getVolume() : 1.0f);
+    const auto build = [target, channelId, level, start](std::vector<AutomationCurve>& curves) -> bool {
+        int index = automationCurveIndexFor(curves, target);
+        if (index < 0) {
+            AutomationCurve curve = makeAutomationCurve(target);
+            curve.mixerChannelId = channelId;
+            curves.push_back(std::move(curve));
+            index = static_cast<int>(curves.size()) - 1;
+        }
+        return R::create(curves[static_cast<size_t>(index)], start, start + 4.0, level).has_value();
+    };
+
+    // Refused spots (on another clip) show the item disabled instead of doing nothing silently.
+    bool allowed = false;
+    if (const auto* lane = tm.getPlaylistModel().getLane(laneId)) {
+        auto trial = lane->automationCurves;
+        allowed = build(trial);
+    }
+    auto item = std::make_shared<AestraUI::NUIContextMenuItem>("Create Automation Clip");
+    item->setEnabled(allowed);
+    item->setOnClick([manager, laneId, hooks, this, build]() {
+        auto* lane = manager->getPlaylistModel().getLane(laneId);
+        if (!lane)
+            return;
+        auto before = lane->automationCurves;
+        if (!build(lane->automationCurves)) {
+            lane->automationCurves = std::move(before);
+            return;
+        }
+        commit(*manager, laneId, std::move(before), "Create Automation Clip", hooks);
+    });
+    m_menu->addItem(item);
+
+    AestraUI::NUIComponent* root = &m_owner;
+    while (root->getParent())
+        root = root->getParent();
+    root->addChild(m_menu);
+    m_menu->setOwner(m_owner.weak_from_this());
+    m_menu->showAt(at);
+    root->repaint();
 }
 
 void AutomationClipLayer::showMenu(TrackManager& tm, PlaylistLaneID laneId, Hit hit, double beat,

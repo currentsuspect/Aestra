@@ -5,6 +5,7 @@
 
 #include "AutomationClipLayer.h"
 #include "Models/TrackManager.h"
+#include "NUIContextMenu.h"
 
 #include <cmath>
 #include <iostream>
@@ -106,6 +107,75 @@ int main() {
         layer.onMouse(mouse(NUIMouseEventType::Up, 112 + 40 * 9, 30), tm, laneId, g, hooks, edited);
         check(automationCurvesEqual(curves(), two), "nothing changed");
         check(!tm.getCommandHistory().canUndo(), "so there is no undo step");
+    }
+
+    std::cout << "[5] a right-click on empty lane space creates a clip\n";
+    {
+        TrackManager tm2;
+        auto& pm2 = tm2.getPlaylistModel();
+        const auto lane2 = pm2.createLane("B");
+        NUIComponent owner2;
+        AutomationClipLayer layer2(owner2);
+        int edited2 = -1;
+        const auto curves2 = [&]() -> const std::vector<AutomationCurve>& { return pm2.getLane(lane2)->automationCurves; };
+        const auto findMenu = [&]() -> std::shared_ptr<NUIContextMenu> {
+            for (const auto& c : owner2.getChildren())
+                if (auto m = std::dynamic_pointer_cast<NUIContextMenu>(c))
+                    if (m->isVisible())
+                        return m;
+            return nullptr;
+        };
+        const auto itemNamed = [](const std::shared_ptr<NUIContextMenu>& m, const std::string& text) {
+            for (int i = 0; m && i < m->getItemCount(); ++i)
+                if (auto it = m->getItem(i); it && it->getText() == text)
+                    return it;
+            return std::shared_ptr<NUIContextMenuItem>();
+        };
+
+        // Empty lane, Volume edited. Right-click at beat 3 (x = 100 + 3*40 = 220), mid-lane.
+        const bool took = layer2.onMouse(mouse(NUIMouseEventType::Down, 220, 40, NUIMouseButton::Right), tm2, lane2, g, hooks, edited2);
+        auto menu = findMenu();
+        auto create = itemNamed(menu, "Create Automation Clip");
+        check(took && menu && create && create->isEnabled(), "empty space offers 'Create Automation Clip'");
+        check(curves2().empty(), "and opening the menu changes nothing");
+        if (create && create->getOnClick())
+            create->getOnClick()();
+        check(curves2().size() == 1 && curves2()[0].getAutomationTarget() == AutomationTarget::Volume,
+              "the lane gets a Volume curve (it had none)");
+        check(curves2().size() == 1 && curves2()[0].regions.size() == 1 && curves2()[0].regions[0].startBeat == 3.0 &&
+                  curves2()[0].regions[0].endBeat == 7.0,
+              "one stored clip, one bar long, at the snapped beat (3 to 7)");
+        const float level = [&]() {
+            const auto* ch = tm2.getChannelById(tm2.resolveLaneChannelId(lane2) != 0 ? tm2.resolveLaneChannelId(lane2) : MASTER_MIXER_CHANNEL_ID);
+            return ch ? ch->getVolume() : 1.0f;
+        }();
+        check(curves2().size() == 1 && curves2()[0].points.size() == 2 && curves2()[0].points[0].value == level &&
+                  curves2()[0].points[1].value == level,
+              "flat at the channel's current level, so nothing jumps");
+        check(tm2.getCommandHistory().undo() && curves2().empty(), "ONE undo removes the clip (and the curve it created)");
+        tm2.getCommandHistory().redo();
+        check(curves2().size() == 1 && curves2()[0].regions.size() == 1, "redo brings it back");
+
+        // On top of an existing clip the item is offered disabled, not silently dead.
+        layer2.onMouse(mouse(NUIMouseEventType::Down, 240, 40, NUIMouseButton::Right), tm2, lane2, g, hooks, edited2);
+        auto menu2 = findMenu();
+        auto create2 = itemNamed(menu2, "Create Automation Clip");
+        check(create2 && !create2->isEnabled(), "inside an existing clip's span it is disabled");
+
+        // A point under the pointer is point editing's (right-click deletes it), never the layer's.
+        const float px = 100.0f + 3.0f * 40.0f; // the clip's first point, at beat 3
+        const float py = 40.0f;                  // any height: the layer only checks distance, use the real point height
+        (void)py;
+        const float pointY = 0.0f + (1.0f - static_cast<float>(level)) * 80.0f;
+        TrackManager tm3;
+        auto& pm3 = tm3.getPlaylistModel();
+        const auto lane3 = pm3.createLane("C");
+        pm3.getLane(lane3)->automationCurves = curves2();
+        NUIComponent owner3;
+        AutomationClipLayer layer3(owner3);
+        int edited3 = -1;
+        const bool onPoint = layer3.onMouse(mouse(NUIMouseEventType::Down, px, pointY, NUIMouseButton::Right), tm3, lane3, g, hooks, edited3);
+        check(!onPoint, "a right-click on a point is left to point editing");
     }
 
     std::cout << (g_failures == 0 ? "ALL PASS\n" : "FAILURES\n");

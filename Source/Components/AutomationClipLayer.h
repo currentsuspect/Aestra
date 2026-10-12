@@ -23,7 +23,8 @@ class TrackManager;
 
 /**
  * @brief The automation clips of one lane: drawn as headed bands, dragged by their grip to move,
- *        Ctrl-dragged to copy, right-clicked on the header for Duplicate / Split Here / Delete (V8-A7).
+ *        Ctrl-dragged to copy, right-clicked on the header for Duplicate / Split Here / Delete (V8-A7),
+ *        and created with a right-click on empty lane space ("Create Automation Clip").
  *
  * Only the grip (a small tab at the clip's start) and a right-click on the header are the layer's.
  * Every other press, including one on the rest of the header, is point editing's, and a point
@@ -41,6 +42,7 @@ public:
         float gridStartX = 0.0f;
         float pixelsPerBeat = 40.0f;
         float scrollOffset = 0.0f;
+        AutomationTarget editedTarget = AutomationTarget::Volume; ///< what a new clip automates (the lane's edited curve)
     };
     struct Hooks {
         std::function<double(double)> snapBeat;      ///< timeline snap
@@ -72,6 +74,8 @@ private:
     void showMenu(TrackManager& tm, PlaylistLaneID laneId, Hit hit, double beat, const AestraUI::NUIPoint& at,
                   const Hooks& hooks);
     void closeMenu();
+    void showCreateMenu(TrackManager& tm, PlaylistLaneID laneId, double beat, const AestraUI::NUIPoint& at,
+                        const Geometry& g, const Hooks& hooks);
 
     AestraUI::NUIComponent& m_owner;
     int m_selectedCurve = -1;
