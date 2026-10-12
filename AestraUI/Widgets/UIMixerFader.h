@@ -49,6 +49,14 @@ public:
     /// fill, which would make the fader read as a level meter.
     void setAccentColor(const NUIColor& color) { m_accent = color; repaint(); }
 
+    /**
+     * @brief Overlay look (V81-M1): no track, scale or readout. The cap is a line drawn across the meters beside
+     *        this widget (@p lineExtentLeft px to its left) plus a handle, and level and gain share MixerScale.
+     *        The widget's own bounds are just the handle column.
+     */
+    void setOverlay(bool overlay, float lineExtentLeft = 0.0f) { m_overlay = overlay; m_lineExtentLeft = lineExtentLeft; repaint(); }
+    bool isOverlay() const { return m_overlay; }
+
     /// Wider scale/readout treatment for the master strip.
     void setShowScaleLabels(bool show) { m_showScaleLabels = show; repaint(); }
 
@@ -101,6 +109,8 @@ private:
     NUIDoubleClickTracker m_clickTracker;
 
     bool m_showScaleLabels{false};
+    bool m_overlay{false};
+    float m_lineExtentLeft{0.0f};
 
     // Cursor-warp state (infinite drag)
     NUIPlatformBridge* m_platformBridge = nullptr;
@@ -134,6 +144,14 @@ private:
     /// Readout band at the top of the fader — click target for inline entry.
     NUIRect readoutRect() const;
     float dbToY(float db, float trackTop, float trackHeight) const;
+    /// Height fraction of a gain (0 at the bottom): linear in dB normally, MixerScale in overlay.
+    float normFromDb(float db) const;
+    float dbFromNorm(float norm) const;
+    float topPad() const;
+    float bottomPad() const;
+    /// The drawn handle for a given top edge; the drag hit-box.
+    NUIRect handleRectAt(float handleY) const;
+    void renderOverlay(NUIRenderer& renderer);
     void renderScale(NUIRenderer& renderer, float trackX, float trackWidth,
                      float trackTop, float trackHeight, bool showLabels);
 

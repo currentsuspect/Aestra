@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerPanel.h"
 #include "UIMixerStrip.h"
+#include "MixerScale.h"
 #include "TrackColorPalette.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
@@ -53,6 +54,27 @@ UIMixerPanel::UIMixerPanel(std::shared_ptr<Aestra::MixerViewModel> viewModel,
 
     // Inspector (pinned on right, before master).
     m_inspector = std::make_shared<UIMixerInspector>(m_viewModel.get());
+    // Trim and width live in the inspector now (they left the strips): trim drags live and commits one undo step.
+    m_inspector->onTrimEdited = [this](uint32_t channelId, float db, bool commit) {
+        if (!m_trackManager || !m_viewModel) return;
+        auto* vm = m_viewModel->getChannelById(channelId);
+        auto* mixerChannel = m_trackManager->getChannelById(channelId);
+        if (!vm || !mixerChannel) return;
+        if (!commit) {
+            vm->trimDb = db;
+            if (auto params = m_trackManager->getContinuousParams()) params->setTrimDb(vm->slotIndex, db);
+            return;
+        }
+        m_trackManager->getCommandHistory().pushAndExecute(
+            std::make_shared<Aestra::Audio::SetTrimCommand>(*m_trackManager, *mixerChannel, vm->slotIndex, db));
+    };
+    m_inspector->onWidthEdited = [this](uint32_t channelId, float width) {
+        if (!m_viewModel) return;
+        auto* vm = m_viewModel->getChannelById(channelId);
+        if (!vm) return;
+        vm->width = width;
+        if (vm->channel) vm->channel->setWidth(width);
+    };
     addChild(m_inspector);
 
     // Create master strip (pinned on right, does not scroll with channels).
@@ -204,18 +226,6 @@ void UIMixerPanel::refreshChannels()
 
             m_trackManager->getCommandHistory().pushAndExecute(
                 std::make_shared<Aestra::Audio::SetPanCommand>(*m_trackManager, *mixerChannel, pan));
-        };
-
-        // Wire trim to CommandHistory for undo/redo + serialization parity.
-        // The slot index comes from the strip's view model (same buffer the
-        // knob writes for the live RT value).
-        strip->onTrimChanged = [this, chId](float db, uint32_t slotIndex) {
-            if (!m_trackManager) return;
-            auto* mixerChannel = m_trackManager->getChannelById(chId);
-            if (!mixerChannel) return;
-
-            m_trackManager->getCommandHistory().pushAndExecute(
-                std::make_shared<Aestra::Audio::SetTrimCommand>(*m_trackManager, *mixerChannel, slotIndex, db));
         };
 
         // Wire input monitoring to CommandHistory for undo/redo + dirty parity
@@ -390,7 +400,7 @@ void UIMixerPanel::layoutMeters()
     }
 
     // Layout channel strips to the left, keeping them out of the inspector/master area.
-    const float left = bounds.x; // Start at 0, no padding
+    const float left = bounds.x + SCALE_W; // the shared dB scale sits at the far left
     const float right = trailing.inspectorRect.x - STRIP_SPACING;
     const float maxScroll = getChannelMaxScroll();
     m_scrollX = safeClampMixerScroll(m_scrollX, maxScroll);
@@ -428,6 +438,33 @@ void UIMixerPanel::layoutMeters()
             band.master = group.targetId == 0;
             m_groupBands.push_back(std::move(band));
         }
+    }
+}
+
+void UIMixerPanel::renderDbScale(NUIRenderer& renderer)
+{
+    // One scale for every strip (FD-28 point 2), drawn once at the far left against the meters' own height.
+    const UIMixerStrip* ref = nullptr;
+    for (const auto& strip : m_strips) {
+        if (strip && strip->isVisible()) { ref = strip.get(); break; }
+    }
+    if (!ref) return;
+    const NUIRect bars = ref->meterBarsRect();
+    if (bars.isEmpty()) return;
+    auto& theme = NUIThemeManager::getInstance();
+    const auto b = getBounds();
+    const NUIColor label = theme.getColor("textSecondary").withAlpha(0.75f);
+    const NUIColor tick = theme.getColor("border").withAlpha(0.55f);
+    float lastY = 1e9f;
+    for (const float db : MixerScale::kTicks) {
+        const float y = bars.bottom() - MixerScale::norm(db) * bars.height;
+        if (lastY - y < 11.0f && lastY < 1e8f) continue; // never print two labels on top of each other
+        lastY = y;
+        char buf[8];
+        std::snprintf(buf, sizeof(buf), "%s%d", db > 0.0f ? "+" : (db < 0.0f ? "\xE2\x88\x92" : ""), static_cast<int>(std::fabs(db)));
+        const float w = renderer.measureText(buf, 8.5f).width;
+        renderer.drawText(buf, {b.x + SCALE_W - 8.0f - w, y - 5.5f}, 8.5f, label);
+        renderer.fillRect(NUIRect{b.x + SCALE_W - 5.0f, y, 4.0f, 1.0f}, tick);
     }
 }
 
@@ -694,9 +731,12 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
 
     // Render channel strips with a clip so they never draw into the inspector/master area.
     const TrailingLayout trailing = trailingLayout();
-    const float channelW = std::max(0.0f, (trailing.inspectorRect.x - STRIP_SPACING) - bounds.x);
+    const float channelW = std::max(0.0f, (trailing.inspectorRect.x - STRIP_SPACING) - (bounds.x + SCALE_W));
     const float channelY = minimapRect.bottom() + MINIMAP_GAP;
-    const NUIRect channelClip(bounds.x, channelY, channelW, std::max(0.0f, bounds.bottom() - channelY));
+    const NUIRect channelClip(bounds.x + SCALE_W, channelY, channelW, std::max(0.0f, bounds.bottom() - channelY));
+
+    // The scale lives left of the clipped strip area, so it is drawn before the clip is set.
+    renderDbScale(renderer);
 
     bool clipEnabled = false;
     if (!channelClip.isEmpty()) {
@@ -858,7 +898,7 @@ bool UIMixerPanel::onMouseEvent(const NUIMouseEvent& event)
         const float maxScroll = getChannelMaxScroll();
         const float channelY = minimapRect.bottom() + MINIMAP_GAP;
 
-        const NUIRect channelClip(bounds.x, channelY, visibleW, std::max(0.0f, bounds.bottom() - channelY));
+        const NUIRect channelClip(bounds.x + SCALE_W, channelY, visibleW, std::max(0.0f, bounds.bottom() - channelY));
         if (maxScroll > 0.0f && channelClip.contains(event.position)) {
             constexpr float SCROLL_PX = 60.0f;
             m_targetScrollX = std::clamp(m_targetScrollX - static_cast<float>(event.wheelDelta) * SCROLL_PX, 0.0f, maxScroll);
@@ -881,7 +921,7 @@ float UIMixerPanel::getChannelViewportWidth() const
 {
     const auto bounds = getBounds();
     const TrailingLayout trailing = trailingLayout();
-    return std::max(0.0f, (trailing.inspectorRect.x - STRIP_SPACING) - bounds.x);
+    return std::max(0.0f, (trailing.inspectorRect.x - STRIP_SPACING) - (bounds.x + SCALE_W));
 }
 
 float UIMixerPanel::getChannelContentWidth() const

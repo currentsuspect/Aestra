@@ -6,12 +6,14 @@
 
 #include "MixerViewModel.h"
 #include "UIMixerPanel.h"
+#include "UIMixerInspector.h"
 #include "UIMixerStrip.h"
 
 #include "Core/ChannelSlotMap.h"
 #include "Models/TrackManager.h"
 
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -105,6 +107,26 @@ int main() {
         flatPanel.onResize(1700, 600);
         check(flatPanel.groupHeaderLabels().empty(), "no headers and no band");
         check(flatPanel.displayedChannelIds().size() == 2, "both strips shown");
+    }
+
+    std::cout << "[5] trim and width are edited from the inspector now (they left the strips)\n";
+    {
+        auto* inspector = panel.getInspector();
+        check(inspector != nullptr && inspector->onTrimEdited && inspector->onWidthEdited, "the panel wires both edits");
+        if (inspector && inspector->onTrimEdited && inspector->onWidthEdited) {
+            const uint32_t id = kick->getChannelId();
+            check(!tm->getCommandHistory().canUndo(), "nothing to undo yet");
+            inspector->onTrimEdited(id, 6.0f, false);
+            check(!tm->getCommandHistory().canUndo(), "dragging trim is live and records no undo step");
+            check(std::fabs(vm->getChannelById(id)->trimDb - 6.0f) < 1e-4f, "the view model follows the drag");
+            inspector->onTrimEdited(id, 6.0f, true);
+            check(tm->getCommandHistory().canUndo() && std::fabs(kick->getTrimDb() - 6.0f) < 1e-4f,
+                  "release commits one undo step and sets the channel's trim");
+            tm->getCommandHistory().undo();
+            check(std::fabs(kick->getTrimDb()) < 1e-4f, "undo puts the trim back");
+            inspector->onWidthEdited(id, 1.5f);
+            check(std::fabs(kick->getWidth() - 1.5f) < 1e-4f, "width is applied to the channel");
+        }
     }
 
     std::cout << (g_failures == 0 ? "ALL PASS\n" : "FAILURES\n");

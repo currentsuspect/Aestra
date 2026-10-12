@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerFader.h"
+#include "MixerScale.h"
 
 #include "NUIThemeSystem.h"
 #include "NUIRenderer.h"
@@ -24,6 +25,7 @@ namespace {
     constexpr float HANDLE_RADIUS = 4.0f;
     constexpr float HANDLE_HEIGHT = 22.0f;  // taller cap: a real grab target
     constexpr float HANDLE_WIDTH = 30.0f;
+    constexpr float kOverlayHandleH = 18.0f;
     constexpr float TRACK_WIDTH = 6.0f;     // was 4 — thin enough to look like a meter
     constexpr float TOP_PAD = 18.0f;    // room for fixed dB readout at top
     constexpr float BOTTOM_PAD = 6.0f;   // minimal padding below track
@@ -125,6 +127,33 @@ NUIRect UIMixerFader::readoutRect() const
     return NUIRect{bounds.x, bounds.y + 2.0f, bounds.width, TOP_PAD - 4.0f};
 }
 
+float UIMixerFader::normFromDb(float db) const
+{
+    if (m_overlay) return MixerScale::norm(db);
+    return std::clamp((db - m_minDb) / std::max(1e-3f, (m_maxDb - m_minDb)), 0.0f, 1.0f);
+}
+
+float UIMixerFader::dbFromNorm(float norm) const
+{
+    norm = std::clamp(norm, 0.0f, 1.0f);
+    if (m_overlay) return norm <= 0.004f ? m_minDb : MixerScale::db(norm);
+    return m_minDb + norm * (m_maxDb - m_minDb);
+}
+
+float UIMixerFader::topPad() const { return m_overlay ? kOverlayHandleH * 0.5f : TOP_PAD; }
+float UIMixerFader::bottomPad() const { return m_overlay ? kOverlayHandleH * 0.5f : BOTTOM_PAD; }
+
+NUIRect UIMixerFader::handleRectAt(float handleY) const
+{
+    const auto bounds = getBounds();
+    if (m_overlay) {
+        constexpr float w = 12.0f;
+        return NUIRect{bounds.x + (bounds.width - w) * 0.5f, handleY, w, kOverlayHandleH};
+    }
+    const float handleW = handleWidth();
+    return NUIRect{bounds.x + (bounds.width - handleW) * 0.5f, handleY, handleW, HANDLE_HEIGHT};
+}
+
 float UIMixerFader::dbToY(float db, float trackTop, float trackHeight) const
 {
     const float norm = (db - m_minDb) / std::max(1e-3f, (m_maxDb - m_minDb));
@@ -208,11 +237,16 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
     // any NUITextInput callback.
     m_retiredInput.reset();
 
+    if (m_overlay) {
+        renderOverlay(renderer);
+        return;
+    }
+
     auto bounds = getBounds();
 
     // Track area
-    const float trackTop = bounds.y + TOP_PAD;
-    const float trackBottom = bounds.y + bounds.height - BOTTOM_PAD;
+    const float trackTop = bounds.y + topPad();
+    const float trackBottom = bounds.y + bounds.height - bottomPad();
     const float trackHeight = std::max(1.0f, trackBottom - trackTop);
 
     const float trackWidth = TRACK_WIDTH;
@@ -302,6 +336,36 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
         renderer.fillRoundedRect({tipX, tipY, tipW, tipH}, 3.0f, m_tooltipBg);
         renderer.strokeRoundedRect({tipX, tipY, tipW, tipH}, 3.0f, 1.0f, m_accent.withAlpha(0.5f));
         renderer.drawTextCentered(m_cachedText, {tipX, tipY, tipW, tipH}, 10.5f, m_text);
+    }
+}
+
+void UIMixerFader::renderOverlay(NUIRenderer& renderer)
+{
+    const auto bounds = getBounds();
+    const float trackTop = bounds.y + topPad();
+    const float trackBottom = bounds.y + bounds.height - bottomPad();
+    const float trackHeight = std::max(1.0f, trackBottom - trackTop);
+    const float y = trackBottom - normFromDb(m_valueDb) * trackHeight;
+
+    // The cap: one line across the meters, so gain reads against the level behind it.
+    const bool active = isHovered() || m_dragging;
+    const NUIColor cap = active ? m_text : m_text.withAlpha(0.92f);
+    const NUIRect line{bounds.x - m_lineExtentLeft, y - 1.0f, m_lineExtentLeft + bounds.width * 0.5f, 3.0f};
+    renderer.fillRect(line, cap);
+
+    // The handle: a small block on the meters' right edge, the thing you grab.
+    const NUIRect handle = handleRectAt(y - kOverlayHandleH * 0.5f);
+    renderer.fillRoundedRect(handle, 2.0f, cap);
+    renderer.fillRect(NUIRect{handle.x + 3.0f, handle.y + handle.height * 0.5f - 0.5f, handle.width - 6.0f, 1.0f},
+                      m_trackBg.withAlpha(0.7f));
+
+    if (m_dragging) {
+        const float tipW = 38.0f;
+        const float tipH = 18.0f;
+        const NUIRect tip{handle.x - tipW - 6.0f, y - tipH * 0.5f, tipW, tipH};
+        renderer.fillRoundedRect(tip, 3.0f, m_tooltipBg);
+        renderer.strokeRoundedRect(tip, 3.0f, 1.0f, m_accent.withAlpha(0.5f));
+        renderer.drawTextCentered(m_cachedText, tip, 10.5f, m_text);
     }
 }
 
@@ -500,23 +564,18 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
         m_dragging = true;
         m_dragLatched = false;
         m_dragStartPos = event.position;
-        const float trackTop = bounds.y + TOP_PAD;
-        const float trackBottom = bounds.y + bounds.height - BOTTOM_PAD;
+        const float trackTop = bounds.y + topPad();
+        const float trackBottom = bounds.y + bounds.height - bottomPad();
         const float trackHeight = std::max(1.0f, trackBottom - trackTop);
-        const float currentNorm = (m_valueDb - m_minDb) / std::max(1e-3f, (m_maxDb - m_minDb));
-        const float filledH = std::clamp(currentNorm, 0.0f, 1.0f) * trackHeight;
-        const float handleY = std::clamp(trackBottom - filledH - HANDLE_HEIGHT * 0.5f,
-                                         trackTop - HANDLE_HEIGHT * 0.5f,
-                                         trackBottom - HANDLE_HEIGHT * 0.5f);
-        const float handleW = handleWidth();
-        const float handleH = HANDLE_HEIGHT;
-        const float handleX = bounds.x + (bounds.width - handleW) * 0.5f;
-        const NUIRect handleRect{handleX, handleY, handleW, handleH};
+        const float filledH = normFromDb(m_valueDb) * trackHeight;
+        const float handleY = std::clamp(trackBottom - filledH - (m_overlay ? kOverlayHandleH : HANDLE_HEIGHT) * 0.5f,
+                                         trackTop - (m_overlay ? kOverlayHandleH : HANDLE_HEIGHT) * 0.5f,
+                                         trackBottom - (m_overlay ? kOverlayHandleH : HANDLE_HEIGHT) * 0.5f);
+        const NUIRect handleRect = handleRectAt(handleY);
 
         if (!handleRect.contains(event.position)) {
             const float norm = std::clamp(1.0f - (event.position.y - trackTop) / trackHeight, 0.0f, 1.0f);
-            const float clickedDb = m_minDb + norm * (m_maxDb - m_minDb);
-            setValueDb(clickedDb);
+            setValueDb(dbFromNorm(norm));
         }
 
         m_dragStartDb = m_valueDb;
@@ -541,22 +600,21 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
             // Warp cursor to the fader handle position (matches current value),
             // not to the click origin — user expects cursor at the slider thumb.
             auto bounds = getBounds();
-            const float trackTop = bounds.y + TOP_PAD;
-            const float trackBottom = bounds.y + bounds.height - BOTTOM_PAD;
+            const float trackTop = bounds.y + topPad();
+            const float trackBottom = bounds.y + bounds.height - bottomPad();
             const float trackHeight = std::max(1.0f, trackBottom - trackTop);
-            const float norm = (m_valueDb - m_minDb) / std::max(1e-3f, (m_maxDb - m_minDb));
-            const float filledH = std::clamp(norm, 0.0f, 1.0f) * trackHeight;
-            const float handleY = std::clamp(trackBottom - filledH - HANDLE_HEIGHT * 0.5f,
-                                             trackTop - HANDLE_HEIGHT * 0.5f,
-                                             trackBottom - HANDLE_HEIGHT * 0.5f);
-            const float handleW = handleWidth();
-            const float handleX = bounds.x + (bounds.width - handleW) * 0.5f;
+            const float filledH = normFromDb(m_valueDb) * trackHeight;
+            const float hh = m_overlay ? kOverlayHandleH : HANDLE_HEIGHT;
+            const float handleY = std::clamp(trackBottom - filledH - hh * 0.5f, trackTop - hh * 0.5f, trackBottom - hh * 0.5f);
+            const NUIRect handleR = handleRectAt(handleY);
+            const float handleW = handleR.width;
+            const float handleX = handleR.x;
 
             // End capture: service warps to the handle, unhides, releases
             // confinement — in that order.
             m_platformBridge->endCursorCapture(
                 static_cast<int>(handleX + handleW * 0.5f),
-                static_cast<int>(handleY + HANDLE_HEIGHT * 0.5f));
+                static_cast<int>(handleY + hh * 0.5f));
         }
 
         return true;
@@ -571,14 +629,13 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
 
             // Invert Y for fader: up = positive
             const float deltaPx = -dy;
-            const float trackTop = bounds.y + TOP_PAD;
-            const float trackBottom = bounds.y + bounds.height - BOTTOM_PAD;
+            const float trackTop = bounds.y + topPad();
+            const float trackBottom = bounds.y + bounds.height - bottomPad();
             const float trackHeight = std::max(1.0f, trackBottom - trackTop);
-            const float dbPerPixel = (m_maxDb - m_minDb) / trackHeight;
 
             // Reduced sensitivity for cursor-warp mode
             float sensitivity = (event.modifiers & NUIModifiers::Shift) ? 0.1f : 0.5f;
-            float nextDb = m_valueDb + deltaPx * dbPerPixel * sensitivity;
+            float nextDb = dbFromNorm(normFromDb(m_valueDb) + deltaPx / trackHeight * sensitivity);
 
             if ((event.modifiers & NUIModifiers::Ctrl) || (event.modifiers & NUIModifiers::Alt)) {
                 nextDb = std::round(nextDb / SNAP_DB) * SNAP_DB;
@@ -590,10 +647,9 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
 
         // Non-warp mode: use drag start position with latching
         const float deltaPx = m_dragStartPos.y - event.position.y;
-        const float trackTop = bounds.y + TOP_PAD;
-        const float trackBottom = bounds.y + bounds.height - BOTTOM_PAD;
+        const float trackTop = bounds.y + topPad();
+        const float trackBottom = bounds.y + bounds.height - bottomPad();
         const float trackHeight = std::max(1.0f, trackBottom - trackTop);
-        const float dbPerPixel = (m_maxDb - m_minDb) / trackHeight;
         const float absDelta = std::abs(deltaPx);
 
         float sensitivity = 1.0f;
@@ -610,7 +666,7 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
             return true;
         }
 
-        float nextDb = m_dragStartDb + deltaPx * dbPerPixel * sensitivity;
+        float nextDb = dbFromNorm(normFromDb(m_dragStartDb) + deltaPx / trackHeight * sensitivity);
 
         if ((event.modifiers & NUIModifiers::Ctrl) || (event.modifiers & NUIModifiers::Alt)) {
             nextDb = std::round(nextDb / SNAP_DB) * SNAP_DB;

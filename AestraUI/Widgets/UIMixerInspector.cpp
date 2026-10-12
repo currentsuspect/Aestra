@@ -23,6 +23,9 @@ namespace {
     constexpr float TAB_RADIUS = 12.0f;
     constexpr float SECTION_GAP = 10.0f;
     constexpr float HEADER_H = 54.0f;
+    constexpr float CHANNEL_ROW_H = 22.0f;
+    // Two rows (trim, width) under the header, with a little air either side.
+    constexpr float CHANNEL_BLOCK_H = CHANNEL_ROW_H * 2.0f + 10.0f;
     constexpr float INSERT_SUMMARY_H = 28.0f;
     constexpr float ROW_H = 28.0f;
     constexpr float ROW_RADIUS = 12.0f;
@@ -153,6 +156,39 @@ UIMixerInspector::UIMixerInspector(Aestra::MixerViewModel* viewModel)
     });
     addChild(m_mainOutputDropdown);
 
+    // Channel block (trim, width)
+    m_trimBar = std::make_shared<UIParamBar>(UIParamBar::Look::Row);
+    m_trimBar->setLabel("Trim");
+    m_trimBar->setRange(-24.0f, 24.0f, 0.0f);
+    m_trimBar->setFormatter([](float db) {
+        char buf[24];
+        std::snprintf(buf, sizeof(buf), "%+.1f dB", std::fabs(db) < 0.05f ? 0.0f : db);
+        return std::string(buf);
+    });
+    m_trimBar->onValueChanged = [this](float db) {
+        if (!m_viewModel || !onTrimEdited) return;
+        if (auto* ch = m_viewModel->getSelectedChannel()) onTrimEdited(ch->id, db, false);
+    };
+    m_trimBar->onValueCommitted = [this](float db) {
+        if (!m_viewModel || !onTrimEdited) return;
+        if (auto* ch = m_viewModel->getSelectedChannel()) onTrimEdited(ch->id, db, true);
+    };
+    addChild(m_trimBar);
+
+    m_widthBar = std::make_shared<UIParamBar>(UIParamBar::Look::Row);
+    m_widthBar->setLabel("Width");
+    m_widthBar->setRange(0.0f, 3.0f, 1.0f);
+    m_widthBar->setFormatter([](float w) {
+        char buf[24];
+        std::snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(std::lround(w * 100.0f)));
+        return std::string(buf);
+    });
+    m_widthBar->onValueChanged = [this](float width) {
+        if (!m_viewModel || !onWidthEdited) return;
+        if (auto* ch = m_viewModel->getSelectedChannel()) onWidthEdited(ch->id, width);
+    };
+    addChild(m_widthBar);
+
     // Routing map minimap
     m_routingMap = std::make_shared<UIRoutingMap>(UIRoutingMap::Mode::Minimap);
     m_routingMap->setVisible(false);
@@ -234,7 +270,12 @@ void UIMixerInspector::layoutHitRects()
         m_tabControl->setBounds(x, y, w, TAB_H);
     }
 
-    const float contentY = y + TAB_H + SECTION_GAP + HEADER_H + SECTION_GAP;
+    {
+        const float barsY = y + TAB_H + SECTION_GAP + HEADER_H + 6.0f;
+        if (m_trimBar) m_trimBar->setBounds(x + 12.0f, barsY, w - 24.0f, CHANNEL_ROW_H);
+        if (m_widthBar) m_widthBar->setBounds(x + 12.0f, barsY + CHANNEL_ROW_H, w - 24.0f, CHANNEL_ROW_H);
+    }
+    const float contentY = y + TAB_H + SECTION_GAP + HEADER_H + SECTION_GAP + CHANNEL_BLOCK_H;
     if (m_activeTab == Tab::Sends) {
         m_addFxRect = NUIRect{x, contentY + 18.0f, w, ROW_H};
     } else {
@@ -271,7 +312,7 @@ void UIMixerInspector::onResize(int width, int height)
     layoutHitRects();
 
     const auto b = getBounds();
-    const float contentTop = PAD + TAB_H + SECTION_GAP + HEADER_H + SECTION_GAP;
+    const float contentTop = PAD + TAB_H + SECTION_GAP + HEADER_H + SECTION_GAP + CHANNEL_BLOCK_H;
     if (m_effectRack) {
         // The active tab already names the content. Start the rack directly
         // below the channel identity instead of repeating INSERTS + a count +
@@ -488,7 +529,7 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
     // Header
     const float headerY = b.y + PAD + TAB_H + SECTION_GAP;
     const NUIRect headerRect{b.x + PAD, headerY, b.width - PAD * 2.0f, HEADER_H};
-    const float contentTop = b.y + PAD + TAB_H + SECTION_GAP + HEADER_H + SECTION_GAP;
+    const float contentTop = b.y + PAD + TAB_H + SECTION_GAP + HEADER_H + SECTION_GAP + CHANNEL_BLOCK_H;
     const NUIRect contentRect{b.x + PAD, contentTop, b.width - PAD * 2.0f, b.height - (contentTop - b.y) - PAD};
 
     if (!channel) {
@@ -769,7 +810,21 @@ void UIMixerInspector::onUpdate(double deltaTime)
     }
     
     NUIComponent::onUpdate(deltaTime);
-    
+
+    // Channel block: shown for a channel (the master has neither trim nor width), values follow the model.
+    {
+        const auto* ch = m_viewModel ? m_viewModel->getSelectedChannel() : nullptr;
+        const bool show = ch && ch->id != 0;
+        if (m_trimBar) {
+            m_trimBar->setVisible(show);
+            if (show) m_trimBar->setValue(ch->trimDb);
+        }
+        if (m_widthBar) {
+            m_widthBar->setVisible(show);
+            if (show) m_widthBar->setValue(ch->width);
+        }
+    }
+
     // Sync I/O Dropdown
     if (m_activeTab == Tab::IO && m_ioInputDropdown && m_viewModel) {
         auto* ch = m_viewModel->getSelectedChannel();

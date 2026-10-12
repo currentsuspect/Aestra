@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerMeter.h"
+#include "MixerScale.h"
 
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
@@ -151,18 +152,9 @@ void UIMixerMeter::setIntegratedLufs(float lufs)
 }
 float UIMixerMeter::dbToNormalized(float db) const
 {
-    // Map -60 to 0 dB to 0.0 to 1.0 with segmented linear curve
-    if (db <= DB_MIN) return 0.0f;
-    if (db >= DB_MAX) return 1.0f;
-
-    // Segmented linear for predictable behavior:
-    // -60 to -20 dB maps to 0.0 to 0.5
-    // -20 to 0 dB maps to 0.5 to 1.0
-    if (db < -20.0f) {
-        return (db - DB_MIN) / ((-20.0f) - DB_MIN) * 0.5f;
-    } else {
-        return 0.5f + (db - (-20.0f)) / (DB_MAX - (-20.0f)) * 0.5f;
-    }
+    // The mixer's shared scale (MixerScale.h): +6 at the top, -60 at the floor, the same curve the fader cap
+    // and the scale at the panel's edge use, so level and gain read against each other.
+    return MixerScale::norm(db);
 }
 
 NUIColor UIMixerMeter::getColorForLevel(float db) const

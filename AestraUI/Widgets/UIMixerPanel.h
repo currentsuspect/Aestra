@@ -217,6 +217,7 @@ private:
     /// Extra width the gaps between groups add to the strip row.
     float groupGapsWidth() const;
     void renderGroupBands(NUIRenderer& renderer);
+    void renderDbScale(NUIRenderer& renderer);
 
     /// Master strip (pinned on the right)
     std::shared_ptr<UIMixerStrip> m_masterStrip;
@@ -241,10 +242,11 @@ private:
     float m_minimapDragOffsetX{0.0f};
 
     // Layout constants (from design spec)
-    static constexpr float STRIP_WIDTH = 110.0f;
+    static constexpr float STRIP_WIDTH = 84.0f; // Normal density (FD-28 point 4)
     static constexpr float STRIP_SPACING = 6.0f;
     static constexpr float GROUP_HEADER_H = 18.0f;
     static constexpr float GROUP_GAP = 10.0f;
+    static constexpr float SCALE_W = 26.0f; // the shared dB scale at the far left
     static constexpr float HEADER_HEIGHT = 28.0f;
     static constexpr float PADDING = 8.0f;
     static constexpr float MASTER_STRIP_WIDTH = 146.0f;

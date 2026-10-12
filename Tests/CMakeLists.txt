@@ -2951,6 +2951,22 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(UIMixerPanelGroupingTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
 
+# The kit behind the new mixer strip: shared dB scale, parameter bar, footer, send list, overlay fader (V81-K1).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(UIMixerKitTest AestraUI_Core AestraUI_Platform)
+    add_executable(UIMixerKitTest AestraUI/UIMixerKitTest.cpp)
+    target_link_libraries(UIMixerKitTest PRIVATE AestraUI_Core AestraUI_Platform)
+    target_include_directories(UIMixerKitTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME UIMixerKitTest COMMAND UIMixerKitTest)
+    set_tests_properties(UIMixerKitTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
 # The inspector rack must follow the LAST-bound chain: bindEffectRack() used
 # to append bindings and refreshRackDisplay() read the first match, so a
 # selection switch left the rack bound to a chain that died with its channel
@@ -3593,6 +3609,7 @@ if(AESTRA_ENABLE_UI)
         UIMixerKnobDragReadoutTest
         UIMixerStripContentTest
         MixerGroupingTest
+        UIMixerKitTest
         UIMixerPanelGroupingTest
         PluginRackBindingLifecycleTest
         WindowPanelRaiseTest
