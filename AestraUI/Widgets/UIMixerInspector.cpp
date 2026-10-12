@@ -1,5 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerInspector.h"
+#include "MixerScale.h"
+#include "UIMixerSendList.h"
 
 #include "ChannelDisplayName.h"
 #include "NUIThemeSystem.h"
@@ -217,8 +219,14 @@ void UIMixerInspector::onResize(int width, int height)
     layoutHitRects();
 }
 
+bool UIMixerInspector::sendCardVisible(size_t i) const
+{
+    return i < m_sendWidgets.size() && m_sendWidgets[i]->isVisible();
+}
+
 void UIMixerInspector::computeColumn(const Aestra::ChannelViewModel* channel)
 {
+    updateHeaderCache(channel); // sends and inserts follow the selection even before the first paint
     const auto b = getBounds();
     const float x = b.x + PAD;
     const float w = std::max(1.0f, b.width - PAD * 2.0f);
@@ -314,11 +322,20 @@ void UIMixerInspector::computeColumn(const Aestra::ChannelViewModel* channel)
         } else {
             m_warningRect = NUIRect{};
         }
-        constexpr float sendH = 124.0f;
-        for (auto& wdg : m_sendWidgets) {
-            wdg->setBounds({x, y, w, sendH});
-            y += sendH + 8.0f;
+        // One 32 px row per send; the open one unfolds into its full card right below.
+        constexpr float sendRowH = 32.0f;
+        constexpr float sendCardH = 124.0f;
+        m_sendRowRects.clear();
+        if (m_expandedSend >= static_cast<int>(m_sendWidgets.size())) m_expandedSend = -1;
+        for (size_t i = 0; i < m_sendWidgets.size(); ++i) {
+            m_sendRowRects.push_back(NUIRect{x, y, w, sendRowH});
+            y += sendRowH;
+            if (static_cast<int>(i) == m_expandedSend) {
+                m_sendWidgets[i]->setBounds({x, y, w, sendCardH});
+                y += sendCardH + 4.0f;
+            }
         }
+        y += 6.0f;
         const float gap = 6.0f;
         const float half = (w - gap) * 0.5f;
         m_addFxRect = NUIRect{x, y, half, ROW_H};
@@ -346,7 +363,9 @@ void UIMixerInspector::computeColumn(const Aestra::ChannelViewModel* channel)
     if (m_effectRack) m_effectRack->setVisible(inView(m_rackRect));
     if (m_mainOutputDropdown) m_mainOutputDropdown->setVisible(!master && inView(m_outputRowRect));
     if (m_ioInputDropdown) m_ioInputDropdown->setVisible(!master && inView(m_inputRowRect));
-    for (auto& wdg : m_sendWidgets) wdg->setVisible(!master && inView(wdg->getBounds()));
+    for (size_t i = 0; i < m_sendWidgets.size(); ++i) {
+        m_sendWidgets[i]->setVisible(!master && static_cast<int>(i) == m_expandedSend && inView(m_sendWidgets[i]->getBounds()));
+    }
 }
 
 void UIMixerInspector::updateHeaderCache(const Aestra::ChannelViewModel* channel)
@@ -468,6 +487,7 @@ void UIMixerInspector::rebuildSendWidgets(const Aestra::ChannelViewModel* channe
         removeChild(w);
     }
     m_sendWidgets.clear();
+    m_expandedSend = -1;
 
     if (!channel) return;
 
@@ -622,6 +642,48 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
                               {m_warningRect.x, m_warningRect.y + 2.0f}, 10.0f,
                               NUIThemeManager::getInstance().getColor("warning").withAlpha(0.92f));
         }
+        // The sends, one line each: destination, level, and how it is tapped.
+        for (size_t i = 0; i < m_sendRowRects.size() && i < channel->sends.size(); ++i) {
+            const auto& send = channel->sends[i];
+            const auto& r = m_sendRowRects[i];
+            const bool open = static_cast<int>(i) == m_expandedSend;
+            if (open || static_cast<int>(i) == m_hoveredSendRow) renderer.fillRect(r, m_tabBg.withAlpha(open ? 0.55f : 0.35f));
+            if (open) renderer.fillRect(NUIRect{r.x, r.y, 2.0f, r.height}, accent);
+            const float alpha = send.muted ? 0.4f : 1.0f;
+            const float cy = r.y + r.height * 0.5f;
+            const NUIColor amber = NUIThemeManager::getInstance().getColor("warning");
+            if (send.sidechainOnly) {
+                renderer.drawLine({r.x + 12.0f, cy - 4.0f}, {r.x + 16.0f, cy}, 1.4f, amber.withAlpha(alpha));
+                renderer.drawLine({r.x + 16.0f, cy}, {r.x + 12.0f, cy + 4.0f}, 1.4f, amber.withAlpha(alpha));
+                renderer.drawLine({r.x + 12.0f, cy + 4.0f}, {r.x + 8.0f, cy}, 1.4f, amber.withAlpha(alpha));
+                renderer.drawLine({r.x + 8.0f, cy}, {r.x + 12.0f, cy - 4.0f}, 1.4f, amber.withAlpha(alpha));
+            } else {
+                const auto* target = m_viewModel ? m_viewModel->getChannelById(send.targetId) : nullptr;
+                NUIColor swatch = accent;
+                if (target && target->trackColorIndex >= 0) {
+                    const uint32_t argb = paletteIndexToARGB(target->trackColorIndex);
+                    swatch = NUIColor(((argb >> 16) & 0xFF) / 255.0f, ((argb >> 8) & 0xFF) / 255.0f, (argb & 0xFF) / 255.0f, 1.0f);
+                }
+                renderer.fillRect(NUIRect{r.x + 8.0f, cy - 4.0f, 8.0f, 8.0f}, swatch.withAlpha(alpha));
+            }
+            renderer.drawText(fitText(renderer, send.targetName, 11.0f, 64.0f), {r.x + 22.0f, cy - 6.5f}, 11.0f, m_text.withAlpha(0.92f * alpha));
+            const std::string tag = send.sidechainOnly ? "SC" : (send.postFader ? "POST" : "PRE");
+            const float tagW = renderer.measureText(tag, 8.5f).width;
+            const float db = send.gain > 1e-6f ? 20.0f * std::log10(send.gain) : -90.0f;
+            const std::string dbText = send.sidechainOnly ? std::string() : UIMixerSendList::formatLevel(db);
+            const float dbW = renderer.measureText(dbText, 10.0f).width;
+            renderer.drawText(tag, {r.right() - 8.0f - tagW, cy - 4.5f}, 8.5f, m_textSecondary.withAlpha(0.6f * alpha));
+            if (!dbText.empty()) renderer.drawText(dbText, {r.right() - 8.0f - tagW - 6.0f - dbW, cy - 5.5f}, 10.0f, m_textSecondary.withAlpha(0.9f * alpha));
+            const float barL = r.x + 22.0f + 66.0f;
+            const float barR = r.right() - 8.0f - tagW - 6.0f - dbW - 8.0f;
+            if (barR - barL > 10.0f) {
+                const NUIRect bar{barL, cy - 2.0f, barR - barL, 4.0f};
+                renderer.fillRect(bar, m_border.withAlpha(0.4f));
+                const float norm = send.sidechainOnly ? 1.0f : MixerScale::norm(db);
+                renderer.fillRect(NUIRect{bar.x, bar.y, bar.width * norm, bar.height}, (send.sidechainOnly ? amber : m_textSecondary).withAlpha(0.8f * alpha));
+            }
+        }
+
         const NUIColor addBg = m_addPressed ? m_addHover : (m_addHovered ? m_addHover : m_addBg);
         renderer.fillRoundedRect(m_addFxRect, ROW_RADIUS, addBg);
         renderer.strokeRoundedRect(m_addFxRect, ROW_RADIUS, 1.0f, m_border);
@@ -832,6 +894,9 @@ bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
             m_linkHovered = linkHover;
             repaint();
         }
+        int rowHover = -1;
+        for (size_t i = 0; i < m_sendRowRects.size(); ++i) if (m_sendRowRects[i].contains(event.position) && m_viewportRect.contains(event.position)) rowHover = static_cast<int>(i);
+        if (rowHover != m_hoveredSendRow) { m_hoveredSendRow = rowHover; repaint(); }
         const bool addHover = (m_viewModel && m_viewModel->getSelectedChannel()) && m_addFxRect.contains(event.position);
         const bool sidechainHover =
             (m_viewModel && m_viewModel->getSelectedChannel()) && m_addSidechainRect.contains(event.position);
@@ -848,6 +913,13 @@ bool UIMixerInspector::onMouseEvent(const NUIMouseEvent& event)
     }
 
     if (event.pressed && event.button == NUIMouseButton::Left) {
+        for (size_t i = 0; i < m_sendRowRects.size(); ++i) {
+            if (m_sendRowRects[i].contains(event.position) && m_viewportRect.contains(event.position)) {
+                m_expandedSend = (m_expandedSend == static_cast<int>(i)) ? -1 : static_cast<int>(i);
+                repaint();
+                return true;
+            }
+        }
         if (m_linkRect.contains(event.position) && m_viewportRect.contains(event.position) && m_viewModel &&
             m_viewModel->getSelectedChannel() && onShowRoutingGraph) {
             onShowRoutingGraph(m_viewModel->getSelectedChannel()->id);
