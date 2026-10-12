@@ -32,6 +32,15 @@ public:
         return u ? ArsenalStepLanes::heightFor(ArsenalStepLanes::lanesFor(u->type).size()) + soundOffset(u->type) : 0.0f;
     }
 
+    /// True when no unit has a sound yet (the kit card's moment): no sample path, and no loaded instrument.
+    static bool noSounds(Audio::UnitManager& units) {
+        for (const auto id : units.getAllUnitIDs()) {
+            const auto* u = units.getUnit(id);
+            if (u && (!u->audioClipPath.empty() || (u->type == Audio::UnitType::Instrument && u->plugin))) return false;
+        }
+        return true;
+    }
+
     /// Called with (unit, path) when a neighbouring sound is chosen; the panel routes it to the gap-free loader.
     void setOnSwap(std::function<void(Audio::UnitID, const std::string&)> cb) { m_onSwap = std::move(cb); }
 

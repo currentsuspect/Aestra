@@ -89,4 +89,25 @@ inline void drawArsenalUnitTypePicker(AestraUI::NUIRenderer& renderer, const Aes
     }
 }
 
+/// The dashed "a new unit will land here" ghost shown while a sample is dragged over empty space.
+inline void drawArsenalDropGhost(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& ghost, const std::string& label) {
+    using namespace AestraUI;
+    auto& theme = NUIThemeManager::getInstance();
+    const auto outline = theme.getColor("accentPrimary").withAlpha(0.85f);
+    constexpr float kDash = 7.0f, kGap = 5.0f;
+    for (float x = ghost.x; x < ghost.right(); x += kDash + kGap) {
+        const float x1 = std::min(x + kDash, ghost.right());
+        renderer.drawLine(NUIPoint(x, ghost.y), NUIPoint(x1, ghost.y), 1.6f, outline);
+        renderer.drawLine(NUIPoint(x, ghost.bottom()), NUIPoint(x1, ghost.bottom()), 1.6f, outline);
+    }
+    for (float y = ghost.y; y < ghost.bottom(); y += kDash + kGap) {
+        const float y1 = std::min(y + kDash, ghost.bottom());
+        renderer.drawLine(NUIPoint(ghost.x, y), NUIPoint(ghost.x, y1), 1.6f, outline);
+        renderer.drawLine(NUIPoint(ghost.right(), y), NUIPoint(ghost.right(), y1), 1.6f, outline);
+    }
+    const auto textSize = renderer.measureText(label, 10.5f);
+    renderer.drawText(label, NUIPoint(ghost.x + (ghost.width - textSize.width) * 0.5f, ghost.y + (ghost.height - textSize.height) * 0.5f), 10.5f,
+                      theme.getColor("textPrimary").withAlpha(0.9f));
+}
+
 } // namespace Aestra
