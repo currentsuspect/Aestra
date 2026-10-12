@@ -3006,6 +3006,29 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(UIMixerInspectorColumnTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
 
+# The routing graph is the full panel only; the minimap mode is gone (FD-28 point 8).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(UIRoutingMapGraphTest AestraUI_Core AestraUI_Platform)
+    add_executable(UIRoutingMapGraphTest
+        AestraUI/UIRoutingMapGraphTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/MixerViewModel.cpp
+    )
+    target_link_libraries(UIRoutingMapGraphTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(UIRoutingMapGraphTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME UIRoutingMapGraphTest COMMAND UIRoutingMapGraphTest)
+    set_tests_properties(UIRoutingMapGraphTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
 # The inspector rack must follow the LAST-bound chain: bindEffectRack() used
 # to append bindings and refreshRackDisplay() read the first match, so a
 # selection switch left the rack bound to a chain that died with its channel
@@ -3651,6 +3674,7 @@ if(AESTRA_ENABLE_UI)
         UIMixerKitTest
         UIMixerNavigatorTest
         UIMixerInspectorColumnTest
+        UIRoutingMapGraphTest
         UIMixerPanelGroupingTest
         PluginRackBindingLifecycleTest
         WindowPanelRaiseTest

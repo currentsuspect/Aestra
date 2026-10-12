@@ -40,6 +40,10 @@ public:
 
     void setViewModel(Aestra::MixerViewModel* viewModel);
 
+    /// What the graph currently holds (a node per channel and the master, an edge per route), for tests.
+    size_t nodeCount() const { return m_nodes.size(); }
+    size_t edgeCount() const { return m_edges.size(); }
+
     /// Callback fired when a node is clicked (track selection)
     void setOnNodeSelected(std::function<void(uint32_t channelId)> callback) { m_onNodeSelected = std::move(callback); }
 
