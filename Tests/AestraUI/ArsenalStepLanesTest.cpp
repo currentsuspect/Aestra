@@ -25,8 +25,9 @@ bool near(float a, float b) { return std::abs(a - b) < 1e-3f; }
 
 int main() {
     std::cout << "[1] lanes fit the unit\n";
-    check(ArsenalStepLanes::lanesFor(UnitType::Sampler).size() == 1, "a sampler has Velocity only");
-    check(ArsenalStepLanes::lanesFor(UnitType::PitchedSampler).size() == 3, "a pitched sampler has Velocity, Pitch, Length");
+    check(ArsenalStepLanes::lanesFor(UnitType::Sampler).size() == 3, "a sampler has Velocity, Chance, Ratchet");
+    check(ArsenalStepLanes::lanesFor(UnitType::PitchedSampler).size() == 5, "a pitched sampler also gets Pitch and Length");
+    check(ArsenalStepLanes::lanesFor(UnitType::Audio).empty(), "an audio unit has no step lanes");
     check(ArsenalStepLanes::heightFor(0) == 0.0f, "no lanes, no height");
     check(ArsenalStepLanes::heightFor(3) > ArsenalStepLanes::heightFor(1), "more lanes are taller");
 
@@ -51,6 +52,20 @@ int main() {
     check(near(n.gate, 2.0f), "Length clamps to the gate range");
     ArsenalStepLanes::writeValue(n, Lane::Velocity, 0.0f, 60);
     check(n.velocity >= ArsenalStepLanes::kVelMin, "Velocity clamps off silence");
+
+    std::cout << "[3b] chance and ratchet\n";
+    {
+        check(near(ArsenalStepLanes::fromFraction(Lane::Chance, 0.25f), 0.25f), "Chance follows the pointer");
+        check(ArsenalStepLanes::fromFraction(Lane::Ratchet, 0.0f) == 1.0f && ArsenalStepLanes::fromFraction(Lane::Ratchet, 1.0f) == 4.0f, "Ratchet runs 1 to 4");
+        check(ArsenalStepLanes::fromFraction(Lane::Ratchet, 0.5f) == 3.0f || ArsenalStepLanes::fromFraction(Lane::Ratchet, 0.5f) == 2.0f, "Ratchet steps in whole hits");
+        MidiNote r;
+        ArsenalStepLanes::writeValue(r, Lane::Ratchet, 9.0f, 60);
+        check(r.ratchet == 4, "Ratchet clamps to four hits");
+        ArsenalStepLanes::writeValue(r, Lane::Chance, 0.4f, 60);
+        check(near(r.chance, 0.4f) && near(ArsenalStepLanes::readValue(r, Lane::Chance, 60), 0.4f), "Chance writes and reads back");
+        ArsenalStepLanes::writeValue(r, Lane::Chance, -3.0f, 60);
+        check(r.chance == 0.0f, "Chance clamps at never");
+    }
 
     std::cout << "[4] columns line up with the pads\n";
     // 16 steps, 20 px pads, 2 px group gap, strip at x=100.
