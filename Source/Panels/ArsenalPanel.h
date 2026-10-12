@@ -2,6 +2,7 @@
 #pragma once
 
 #include "ArsenalRackLayout.h"
+#include "ArsenalKit.h"
 #include "ArsenalRowLanes.h"
 #include "ArsenalSceneStrip.h"
 #include "WindowPanel.h"
@@ -117,6 +118,7 @@ private:
     // Container for the scrollable list of units
     std::shared_ptr<AestraUI::NUIComponent> m_listContainer;
     std::vector<std::shared_ptr<AestraUI::UnitRow>> m_unitRows;
+    Aestra::ArsenalKitCard m_kitCard; ///< the empty state (FD-27 point 6)
     Aestra::ArsenalRowLanes m_lanes; ///< which rows are open into step lanes (FD-27 point 4)
     Aestra::ArsenalSceneStrip m_scenes; ///< pattern chips under the command header (FD-27 point 1)
     AestraUI::NUIRect m_sceneRect{};
@@ -166,7 +168,8 @@ private:
     int beatsPerBar() const; // Time-signature numerator from the timeline clock
     void adjustPatternBars(int deltaBars);
     void adjustPatternSteps(int deltaBars);
-    void createUnitOfType(UnitType type);
+    void createUnitOfType(UnitType type, const std::string& nameOverride = {});
+    void loadKitFromFolder();      ///< each audio file in a chosen folder becomes a unit
     void drawUnitTypePicker(AestraUI::NUIRenderer& renderer);
 
     // Pattern Management (driven by Pattern Browser)

@@ -6,6 +6,7 @@
 #include "Commands/EditPatternNotesCommand.h"
 #include "Commands/SetPatternLengthCommand.h"
 #include "PatternBrowserPanel.h" // For m_patternBrowser
+#include "AestraPlatform.h"
 #include "../AestraUI/Widgets/PluginBrowserPanel.h"
 #include "NUIButton.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
@@ -450,12 +451,12 @@ void ArsenalPanel::onAddUnit() {
     repaint();
 }
 
-void ArsenalPanel::createUnitOfType(UnitType type) {
+void ArsenalPanel::createUnitOfType(UnitType type, const std::string& nameOverride) {
     if (!m_trackManager) return;
     const auto count = m_trackManager->getUnitManager().getUnitCount() + 1;
-    std::string name = (type == UnitType::Sampler ? "Sampler " :
+    std::string name = !nameOverride.empty() ? nameOverride : ((type == UnitType::Sampler ? "Sampler " :
                         type == UnitType::PitchedSampler ? "808 " :
-                        type == UnitType::Instrument ? "MIDI " : "Audio ") + std::to_string(count);
+                        type == UnitType::Instrument ? "MIDI " : "Audio ") + std::to_string(count));
     m_selectedUnitId = m_trackManager->getUnitManager().createUnit(name, type);
     if (const auto* unit = m_trackManager->getUnitManager().getUnit(m_selectedUnitId)) {
         const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
@@ -643,6 +644,22 @@ void ArsenalPanel::ensureDefaultPattern() {
     }
 }
 
+void ArsenalPanel::loadKitFromFolder() {
+    auto* utils = Aestra::Platform::getUtils();
+    if (!m_trackManager || !utils) return;
+    auto& units = m_trackManager->getUnitManager();
+    const auto ids = units.getAllUnitIDs();
+    const UnitID reuse = ids.size() == 1 ? ids[0] : 0; // the empty starter unit takes the first sound
+    bool first = true;
+    for (const auto& slot : Aestra::ArsenalKit::plan(Aestra::ArsenalKit::filesIn(utils->selectFolderDialog("Choose a folder of sounds")))) {
+        if (first && reuse) { units.setUnitName(reuse, slot.name); m_selectedUnitId = reuse; }
+        else createUnitOfType(UnitType::Sampler, slot.name);
+        first = false;
+        if (m_onSampleDroppedToUnit) m_onSampleDroppedToUnit(m_selectedUnitId, slot.path);
+    }
+    refreshUnits();
+}
+
 void ArsenalPanel::onRender(NUIRenderer& renderer) {
     WindowPanel::onRender(renderer);
     drawCommandHeader(renderer);
@@ -652,6 +669,7 @@ void ArsenalPanel::onRender(NUIRenderer& renderer) {
     }
     if (m_listContainer && isVisible()) drawProgressHeader(renderer, m_progressHeaderRect);
     if (m_listContainer && isVisible()) Aestra::drawArsenalRackHeaders(renderer, m_rack, m_listViewportRect, m_progressHeaderRect.bottom() + 8.0f - m_scrollY);
+    if (m_listContainer && isVisible()) m_kitCard.draw(renderer);
     if (m_listContainer && isVisible()) m_lanes.draw(renderer, m_rack, m_unitRows, m_trackManager.get(), m_activePatternID, m_listViewportRect);
 
     // Drag-hover ghost draws above the panel surfaces.
@@ -770,6 +788,8 @@ void ArsenalPanel::layoutUnits() {
         extras.push_back(unit ? m_lanes.extraFor(*m_trackManager, row->getUnitId()) : 0.0f);
     }
     m_rack = Aestra::ArsenalRackLayout::compute(groups, extras);
+    m_kitCard.place(m_trackManager && Aestra::ArsenalRowLanes::noSounds(m_trackManager->getUnitManager()), {startX, rackTop + m_rack.contentHeight, width, Aestra::ArsenalKitCard::kReserve}); // empty state: a kit card under the rows
+    if (m_kitCard.shown()) m_rack.contentHeight += Aestra::ArsenalKitCard::kReserve;
     for (const auto& item : m_rack.items) {
         if (item.kind != Aestra::ArsenalRackItem::Kind::Row || !m_unitRows[item.rowIndex]) continue;
         m_unitRows[item.rowIndex]->setBounds(NUIRect(startX, rackTop + item.y, width, item.h));
@@ -1296,35 +1316,9 @@ void ArsenalPanel::renderDragPreview(AestraUI::NUIRenderer& renderer) {
         }
     }
 
-    auto& theme = NUIThemeManager::getInstance();
     const float ghostW = std::max(160.0f, getBounds().width - 48.0f);
-    const NUIRect ghost(m_dragPreviewPos.x - 8.0f, m_dragPreviewPos.y - 24.0f, ghostW, 52.0f);
-
-    // Dashed outline reads as "proposed", not existing content.
-    const auto outline = theme.getColor("accentPrimary").withAlpha(0.85f);
-    constexpr float kDash = 7.0f;
-    constexpr float kGap = 5.0f;
-    auto dashedH = [&](float x0, float x1, float y) {
-        for (float x = x0; x < x1; x += kDash + kGap) {
-            renderer.drawLine(NUIPoint(x, y), NUIPoint(std::min(x + kDash, x1), y), 1.6f, outline);
-        }
-    };
-    auto dashedV = [&](float y0, float y1, float x) {
-        for (float y = y0; y < y1; y += kDash + kGap) {
-            renderer.drawLine(NUIPoint(x, y), NUIPoint(x, std::min(y + kDash, y1)), 1.6f, outline);
-        }
-    };
-    dashedH(ghost.x, ghost.right(), ghost.y);
-    dashedH(ghost.x, ghost.right(), ghost.bottom());
-    dashedV(ghost.y, ghost.bottom(), ghost.x);
-    dashedV(ghost.y, ghost.bottom(), ghost.right());
-
-    const std::string label = "+ New Sampler Unit — " + m_dragPreviewName;
-    const auto textSize = renderer.measureText(label, 10.5f);
-    renderer.drawText(label,
-                      NUIPoint(ghost.x + (ghost.width - textSize.width) * 0.5f,
-                               ghost.y + (ghost.height - textSize.height) * 0.5f),
-                      10.5f, theme.getColor("textPrimary").withAlpha(0.9f));
+    Aestra::drawArsenalDropGhost(renderer, NUIRect(m_dragPreviewPos.x - 8.0f, m_dragPreviewPos.y - 24.0f, ghostW, 52.0f),
+                                 "+ New Sampler Unit — " + m_dragPreviewName);
 }
 
 AestraUI::DropResult ArsenalPanel::onDrop(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
@@ -1656,6 +1650,10 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         }
     }
 
+    if (event.pressed && event.button == NUIMouseButton::Left && m_kitCard.hitButton(event.position)) {
+        loadKitFromFolder();
+        return true;
+    }
     bool relayout = false, edited = false;
     if (m_lanes.onMouse(event, m_rack, m_unitRows, m_trackManager.get(), m_activePatternID, m_listViewportRect, relayout, edited)) {
         if (relayout) layoutUnits();
