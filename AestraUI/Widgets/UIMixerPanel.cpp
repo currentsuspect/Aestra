@@ -151,6 +151,12 @@ void UIMixerPanel::refreshChannels()
         strip->onFXClicked = [this](uint32_t channelId) {
             showPluginDropdown(channelId);
         };
+        // The output chip opens the channel's I/O tab, where the destination is chosen.
+        strip->onOutputClicked = [this](uint32_t channelId) {
+            if (!m_viewModel) return;
+            m_viewModel->setSelectedChannelId(static_cast<int32_t>(channelId));
+            if (m_inspector) m_inspector->setActiveTab(UIMixerInspector::Tab::IO);
+        };
 
         // Wire fader to CommandHistory for undo/redo
         uint32_t chId = channel->id;
