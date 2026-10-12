@@ -24,6 +24,7 @@ struct ArsenalRackItem {
     int count{0};       ///< rows in the group (Header only)
     float y{0.0f};      ///< top, relative to the rack's start
     float h{0.0f};
+    float extraH{0.0f}; ///< an open row's lanes, directly under it (Row only)
 };
 
 struct ArsenalRackLayout {
@@ -45,7 +46,8 @@ struct ArsenalRackLayout {
     }
 
     /// @p groups: each row's group, in the order the panel holds them (the units' own order).
-    static ArsenalRackLayout compute(const std::vector<Audio::UnitGroup>& groups) {
+    /// @p extras: height an open row adds under itself (parallel to @p groups; empty or 0 = closed).
+    static ArsenalRackLayout compute(const std::vector<Audio::UnitGroup>& groups, const std::vector<float>& extras = {}) {
         ArsenalRackLayout out;
         static constexpr Audio::UnitGroup order[] = {Audio::UnitGroup::Drums, Audio::UnitGroup::Synth,
                                                      Audio::UnitGroup::Audio, Audio::UnitGroup::Unknown};
@@ -76,9 +78,10 @@ struct ArsenalRackLayout {
                 row.rowIndex = i;
                 row.y = y;
                 row.h = kRowH;
+                row.extraH = i < extras.size() ? extras[i] : 0.0f;
                 out.items.push_back(row);
                 out.displayOrder.push_back(i);
-                y += kRowH + kRowGap;
+                y += kRowH + row.extraH + kRowGap;
             }
         }
         out.contentHeight = y;

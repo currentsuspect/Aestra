@@ -63,4 +63,30 @@ inline void drawArsenalFitToggle(AestraUI::NUIRenderer& renderer, const AestraUI
                       theme.getColor("borderSubtle").withAlpha(0.6f));
 }
 
+/// The "+ ADD UNIT" type picker: a 2x2 card of unit kinds with a one-line description each.
+inline void drawArsenalUnitTypePicker(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& card) {
+    using namespace AestraUI;
+    using Audio::UnitType;
+    auto& theme = NUIThemeManager::getInstance();
+    const auto& tp = theme.getCurrentTheme();
+    const float radius = std::max(tp.radiusL - 2.0f, 0.0f);
+    renderer.fillRoundedRect(card, radius, theme.getColor("backgroundSecondary").withAlpha(0.98f));
+    renderer.strokeRoundedRect(card, radius, 1.0f, theme.getColor("borderSubtle").withAlpha(0.6f));
+    const float padding = 10.0f, gap = 8.0f;
+    const float cellW = (card.width - padding * 2.0f - gap) * 0.5f, cellH = (card.height - padding * 2.0f - gap) * 0.5f;
+    struct Kind { UnitType type; const char* icon; const char* name; const char* text; };
+    static const Kind kinds[4] = {{UnitType::Sampler, "▦", "Sampler", "Classic step sequencer"},
+                                  {UnitType::PitchedSampler, "≋", "808", "808s, bass, slides"},
+                                  {UnitType::Instrument, "♫", "MIDI", "Notes, chords, instruments"},
+                                  {UnitType::Audio, "◫", "Audio", "Drop a clip directly"}};
+    for (int i = 0; i < 4; ++i) {
+        const NUIRect cell(card.x + padding + (i % 2) * (cellW + gap), card.y + padding + (i / 2) * (cellH + gap), cellW, cellH);
+        renderer.fillRoundedRect(cell, tp.radiusM, theme.getColor("surfaceTertiary").withAlpha(0.8f));
+        renderer.strokeRoundedRect(cell, tp.radiusM, 1.0f, theme.getColor("borderSubtle").withAlpha(0.5f));
+        renderer.drawText(kinds[i].icon, NUIPoint(cell.x + 10.0f, cell.y + 11.0f), tp.fontSizeS - 1.0f, theme.getColor("accentPrimary").withAlpha(0.9f));
+        renderer.drawText(kinds[i].name, NUIPoint(cell.x + 32.0f, cell.y + 10.0f), tp.fontSizeXS - 1.0f, theme.getColor("textPrimary").withAlpha(0.95f));
+        renderer.drawText(kinds[i].text, NUIPoint(cell.x + 10.0f, cell.y + 28.0f), 8.5f, theme.getColor("textSecondary").withAlpha(0.68f));
+    }
+}
+
 } // namespace Aestra

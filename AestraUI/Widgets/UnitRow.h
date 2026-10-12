@@ -124,6 +124,15 @@ public:
      * @return Scroll offset in pixels.
      */
     float getScrollX() const { return m_scrollX; }
+    /// Where the step pads sit inside the row (the same inset the pads are drawn and hit-tested with).
+    NUIRect stepStrip() const {
+        const auto b = getBounds();
+        const float sepX = m_controlWidth; // refreshed on every render and pointer event
+        return {b.x + sepX + 14.0f, b.y + 12.0f, std::max(0.0f, b.width - (sepX + 2.0f) - 12.0f), std::max(0.0f, b.height - 24.0f)};
+    }
+    /// Width of one step pad at the current fit/scroll mode, and the 4-step group gap, so lanes line up with the pads.
+    float stepPadWidth() const { return gridStepWidth(stepStrip().width); }
+    static constexpr float stepGroupGap() { return kStepGroupGap; }
     /**
      * @brief Set the callback fired when the user wheel-scrolls the step grid.
      * When set, the panel owns the scroll offset and pushes it back via setScrollX
