@@ -2,10 +2,13 @@
 #pragma once
 
 #include "ArsenalRackLayout.h"
+#include "ArsenalSoundStrip.h"
 #include "ArsenalStepLanes.h"
 #include "../AestraUI/Widgets/UnitRow.h"
 
 #include <memory>
+#include <functional>
+#include <map>
 #include <set>
 #include <vector>
 
@@ -26,8 +29,11 @@ public:
     float extraFor(Audio::TrackManager& tm, Audio::UnitID unit) const {
         if (!m_open.count(unit)) return 0.0f;
         const auto* u = tm.getUnitManager().getUnit(unit);
-        return u ? ArsenalStepLanes::heightFor(ArsenalStepLanes::lanesFor(u->type).size()) : 0.0f;
+        return u ? ArsenalStepLanes::heightFor(ArsenalStepLanes::lanesFor(u->type).size()) + soundOffset(u->type) : 0.0f;
     }
+
+    /// Called with (unit, path) when a neighbouring sound is chosen; the panel routes it to the gap-free loader.
+    void setOnSwap(std::function<void(Audio::UnitID, const std::string&)> cb) { m_onSwap = std::move(cb); }
 
     /// Carets on every visible row and the lanes under the open ones.
     void draw(AestraUI::NUIRenderer& r, const ArsenalRackLayout& rack, const std::vector<RowPtr>& rows, Audio::TrackManager* tm,
@@ -45,7 +51,15 @@ public:
             const float d = open ? -2.5f : 2.5f; // open points up
             r.drawLine({cx - 4.0f, cy - d}, {cx, cy + d}, 1.5f, col);
             r.drawLine({cx, cy + d}, {cx + 4.0f, cy - d}, 1.5f, col);
-            if (open && item.extraH > 0.0f) m_lanes.draw(r, contextFor(*tm, pattern, row, item.extraH));
+            if (open && item.extraH > 0.0f) {
+                const auto ctx = contextFor(*tm, pattern, row, item.extraH);
+                if (hasSound(*tm, row.getUnitId())) {
+                    auto& strip = m_sounds[row.getUnitId()];
+                    strip.follow(tm->getUnitManager().getUnit(row.getUnitId())->audioClipPath);
+                    strip.draw(r, soundRect(row));
+                }
+                m_lanes.draw(r, ctx);
+            }
         }
         r.clearClipRect();
     }
@@ -76,6 +90,13 @@ public:
                 relayout = true;
                 return true;
             }
+            if (item.extraH > 0.0f && m_open.count(row.getUnitId()) && hasSound(*tm, row.getUnitId()) && soundRect(row).contains(e.position)) {
+                auto& strip = m_sounds[row.getUnitId()];
+                const auto hit = strip.hitTest(soundRect(row), e.position);
+                const std::string next = hit == ArsenalSoundStrip::Hit::None ? std::string() : strip.neighbour(hit == ArsenalSoundStrip::Hit::Next ? 1 : -1);
+                if (!next.empty() && m_onSwap) m_onSwap(row.getUnitId(), next);
+                return true;
+            }
             if (item.extraH > 0.0f && m_open.count(row.getUnitId()) &&
                 m_lanes.press(contextFor(*tm, pattern, row, item.extraH), e.position)) {
                 m_dragRow = item.rowIndex;
@@ -87,6 +108,18 @@ public:
     }
 
 private:
+    /// Samplers get a sound strip above their lanes.
+    static float soundOffset(Audio::UnitType t) {
+        return (t == Audio::UnitType::Sampler || t == Audio::UnitType::PitchedSampler) ? ArsenalSoundStrip::kHeight + ArsenalStepLanes::kLaneGap : 0.0f;
+    }
+    static bool hasSound(Audio::TrackManager& tm, Audio::UnitID id) {
+        const auto* u = tm.getUnitManager().getUnit(id);
+        return u && soundOffset(u->type) > 0.0f;
+    }
+    static AestraUI::NUIRect soundRect(const AestraUI::UnitRow& row) {
+        const auto b = row.getBounds();
+        return {b.x, b.bottom() + 2.0f, b.width, ArsenalSoundStrip::kHeight};
+    }
     static AestraUI::NUIRect caretRect(const AestraUI::UnitRow& row) {
         const auto b = row.getBounds();
         return {b.x + 6.0f, b.y + b.height - 16.0f, 22.0f, 14.0f};
@@ -105,7 +138,8 @@ private:
         if (const auto* u = tm.getUnitManager().getUnit(c.unit)) c.type = u->type;
         c.root = tm.getUnitManager().getUnitRootMidiNote(c.unit);
         c.steps = row.getStepCount();
-        c.area = {b.x, b.bottom() + 2.0f, b.width, std::max(0.0f, extraH - 2.0f)};
+        const float off = soundOffset(c.type);
+        c.area = {b.x, b.bottom() + 2.0f + off, b.width, std::max(0.0f, extraH - 2.0f - off)};
         c.strip = row.stepStrip();
         c.stepW = row.stepPadWidth();
         c.groupGap = AestraUI::UnitRow::stepGroupGap();
@@ -115,6 +149,8 @@ private:
     }
 
     std::set<Audio::UnitID> m_open;
+    mutable std::map<Audio::UnitID, ArsenalSoundStrip> m_sounds;
+    std::function<void(Audio::UnitID, const std::string&)> m_onSwap;
     mutable ArsenalStepLanes m_lanes;
     size_t m_dragRow{0};
 };

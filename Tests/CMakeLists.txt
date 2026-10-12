@@ -3041,6 +3041,23 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(UIRoutingMapGraphTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
 
+# The sound strip: step to the neighbouring sound in the folder, gap-free (V81-AR1, FD-27 point 5).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(ArsenalSoundStripTest AestraUI_Core)
+    add_executable(ArsenalSoundStripTest AestraUI/ArsenalSoundStripTest.cpp)
+    target_link_libraries(ArsenalSoundStripTest PRIVATE AestraUI_Core)
+    target_include_directories(ArsenalSoundStripTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ArsenalSoundStripTest COMMAND ArsenalSoundStripTest)
+    set_tests_properties(ArsenalSoundStripTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
 # Open rows show step lanes fitted to the unit (V81-AR1, FD-27 point 4).
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(ArsenalStepLanesTest AestraUI_Core)
@@ -3743,6 +3760,7 @@ if(AESTRA_ENABLE_UI)
         ArsenalRackLayoutTest
         ArsenalSceneStripTest
         ArsenalStepLanesTest
+        ArsenalSoundStripTest
         UIMixerPanelGroupingTest
         PluginRackBindingLifecycleTest
         WindowPanelRaiseTest

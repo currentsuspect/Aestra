@@ -184,7 +184,6 @@ private:
     UnitID m_selectionUnitId = 0; // Unit owning the current step selection (survives row rebuilds)
     std::vector<int> m_selectedSteps; // Selected step indices for m_selectionUnitId
 
-    void createLayout();
     void onAddUnit();
     bool removeSelectedUnit();
     void syncRowSelection();

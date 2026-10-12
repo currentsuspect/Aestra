@@ -150,6 +150,7 @@ ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
     // Create default Unit 1 for immediate playback
     if (m_trackManager) {
         auto& unitMgr = m_trackManager->getUnitManager();
+        m_lanes.setOnSwap([this](UnitID unit, const std::string& path) { if (m_onSampleDroppedToUnit) m_onSampleDroppedToUnit(unit, path); }); // step to a neighbouring sound
         unitMgr.setDefaultColorProvider([](size_t n) { return AestraUI::paletteIndexToARGB(static_cast<int>(n % AestraUI::PALETTE_SIZE)); }); // new units rotate the Ember hues
         if (unitMgr.getUnitCount() == 0) {
             UnitID defaultUnit = unitMgr.createUnit("Sampler 1", UnitType::Sampler);
@@ -181,11 +182,6 @@ ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
 
 ArsenalPanel::~ArsenalPanel() {
     unregisterDropTargets();
-}
-
-void ArsenalPanel::createLayout() {
-    // This method is no longer needed as layout is handled by WindowPanel and setContent
-    // The content of this method has been moved to the constructor or is handled by the base class.
 }
 
 int ArsenalPanel::beatsPerBar() const {
