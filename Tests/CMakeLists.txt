@@ -2983,6 +2983,29 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(UIMixerNavigatorTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
 
+# The mixer inspector is one column: output, inserts, sends, input; "Fed by"; the routing graph link (V81-R2).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(UIMixerInspectorColumnTest AestraUI_Core AestraUI_Platform)
+    add_executable(UIMixerInspectorColumnTest
+        AestraUI/UIMixerInspectorColumnTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/MixerViewModel.cpp
+    )
+    target_link_libraries(UIMixerInspectorColumnTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(UIMixerInspectorColumnTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME UIMixerInspectorColumnTest COMMAND UIMixerInspectorColumnTest)
+    set_tests_properties(UIMixerInspectorColumnTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
 # The inspector rack must follow the LAST-bound chain: bindEffectRack() used
 # to append bindings and refreshRackDisplay() read the first match, so a
 # selection switch left the rack bound to a chain that died with its channel
@@ -3627,6 +3650,7 @@ if(AESTRA_ENABLE_UI)
         MixerGroupingTest
         UIMixerKitTest
         UIMixerNavigatorTest
+        UIMixerInspectorColumnTest
         UIMixerPanelGroupingTest
         PluginRackBindingLifecycleTest
         WindowPanelRaiseTest
