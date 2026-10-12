@@ -62,6 +62,10 @@ void UIMixerFooter::onRender(NUIRenderer& renderer) {
     if (b.isEmpty())
         return;
     const float ty = b.y + (b.height - kFont) * 0.5f - 1.0f;
+    if (m_compact) {
+        renderer.drawTextCentered(m_gainText, b, 9.5f, m_text.withAlpha(0.95f));
+        return;
+    }
     renderer.drawText(m_gainText, {b.x + 2.0f, ty}, kFont, m_text.withAlpha(0.95f));
 
     const float peakW = renderer.measureText(m_peakText, kFont).width;

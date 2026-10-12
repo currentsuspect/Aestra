@@ -25,6 +25,9 @@ public:
     void setColor(const NUIColor& color);
     /// A dimmed chip is a route that exists but is not audible (muted send, bus-only bypass).
     void setDimmed(bool dimmed);
+    /// Narrow density: the colour alone, no name (the strip is too narrow to print one).
+    void setCompact(bool compact);
+    bool isCompact() const { return m_compact; }
 
     const std::string& label() const { return m_label; }
     const NUIColor& color() const { return m_color; }
@@ -36,6 +39,7 @@ private:
     std::string m_label;
     NUIColor m_color{0.5f, 0.5f, 0.5f, 1.0f};
     bool m_dimmed{false};
+    bool m_compact{false};
     bool m_hovered{false};
     bool m_pressed{false};
 };

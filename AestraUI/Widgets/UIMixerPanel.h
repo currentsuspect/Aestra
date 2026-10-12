@@ -2,7 +2,9 @@
 #pragma once
 
 #include "Base/NUISlider.h"
+#include "MixerDensity.h"
 #include "MixerGrouping.h"
+#include "UIMixerToolbar.h"
 #include "NUIComponent.h"
 #include "NUIDragDrop.h"
 #include "NUITypes.h"
@@ -77,6 +79,17 @@ public:
      * Call when tracks are added/removed to rebuild meter widgets.
      */
     void refreshChannels();
+
+    /// Strip density and the Group-by-output switch (FD-28 points 1 and 4). Both persist per user.
+    void setDensity(MixerDensity density);
+    MixerDensity density() const { return m_density; }
+    void setGroupByOutput(bool on);
+    bool groupByOutput() const { return m_groupByOutput; }
+    /// "Reset peaks": every channel's peak-since-reset and clip latch.
+    void resetPeaks();
+    /// Fired when density or grouping changes, so the owner can save the preference.
+    std::function<void()> onViewPreferencesChanged;
+    const UIMixerToolbar* toolbar() const { return m_toolbar.get(); }
 
     /// Channel ids in the order the strips are shown (grouped by output), left to right.
     std::vector<uint32_t> displayedChannelIds() const;
@@ -202,6 +215,9 @@ private:
 
     /// Display order and groups (V81-M1): strips are shown grouped by where they go.
     /// m_stripOrder maps a display slot to an index in m_strips.
+    MixerDensity m_density{MixerDensity::Normal};
+    bool m_groupByOutput{true};
+    std::shared_ptr<UIMixerToolbar> m_toolbar;
     std::vector<size_t> m_stripOrder;
     Aestra::MixerGroupedOrder m_grouping;
     std::string m_groupingSignature;
@@ -242,7 +258,8 @@ private:
     float m_minimapDragOffsetX{0.0f};
 
     // Layout constants (from design spec)
-    static constexpr float STRIP_WIDTH = 84.0f; // Normal density (FD-28 point 4)
+    static constexpr float TOOLBAR_H = 26.0f;
+    float stripWidth() const { return mixerStripWidth(m_density); }
     static constexpr float STRIP_SPACING = 6.0f;
     static constexpr float GROUP_HEADER_H = 18.0f;
     static constexpr float GROUP_GAP = 10.0f;

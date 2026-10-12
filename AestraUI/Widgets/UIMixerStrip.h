@@ -6,6 +6,7 @@
 
 #include "UIMixerFader.h"
 #include "UIMixerHeader.h"
+#include "MixerDensity.h"
 #include "UIParamBar.h"
 #include "UIMixerSendList.h"
 #include "UIMixerMeter.h"
@@ -47,6 +48,9 @@ public:
     void onResize(int width, int height) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     uint32_t getChannelId() const { return m_channelId; }
+    /// How much this strip shows (Wide / Normal / Narrow); the panel sets it with the strip's width.
+    void setDensity(MixerDensity density);
+    MixerDensity density() const { return m_density; }
     /// What the strip currently shows, for tests and for the panel (it never mutates through these).
     const UIMixerInsertList* insertList() const { return m_insertList.get(); }
     const UIOutputChip* outputChip() const { return m_outputChip.get(); }
@@ -80,6 +84,7 @@ public:
 
 private:
     uint32_t m_channelId{0};
+    MixerDensity m_density{MixerDensity::Normal};
     int m_trackNumber{0};
     Aestra::MixerViewModel* m_viewModel{nullptr};
     std::shared_ptr<Aestra::Audio::MeterSnapshotBuffer> m_meterSnapshots;

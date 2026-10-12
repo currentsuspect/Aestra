@@ -35,7 +35,7 @@ public:
 
     /// Height needed to show @p rowCount rows (an empty chain needs one row for the invitation).
     static float heightForRows(int rowCount);
-    static constexpr int kMaxRows = 4;
+    static constexpr int kMaxRows = 8; // Wide shows every name; Normal asks for three
     static constexpr float kRowH = 15.0f;
     static constexpr float kPad = 3.0f;
 

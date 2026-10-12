@@ -24,6 +24,8 @@ public:
     bool onMouseEvent(const NUIMouseEvent& event) override;
     void onMouseLeave() override;
 
+    /// Narrow density: only M and S (the monitor key is dropped, not hidden behind anything).
+    void setCompact(bool compact);
     void setMuted(bool muted);
     void setSoloed(bool soloed);
     void setMonitored(bool monitored);
@@ -42,6 +44,7 @@ public:
 
 private:
     static constexpr int kButtonCount = 3;
+    int m_count{kButtonCount};
 
     bool m_muted{false};
     bool m_soloed{false};

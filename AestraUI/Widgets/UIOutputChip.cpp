@@ -34,12 +34,22 @@ void UIOutputChip::setDimmed(bool dimmed) {
     repaint();
 }
 
+void UIOutputChip::setCompact(bool compact) {
+    if (compact == m_compact) return;
+    m_compact = compact;
+    repaint();
+}
+
 void UIOutputChip::onRender(NUIRenderer& renderer) {
     const auto b = getBounds();
     if (b.isEmpty())
         return;
     auto& theme = NUIThemeManager::getInstance();
     const float alpha = m_dimmed ? 0.45f : 1.0f;
+    if (m_compact) {
+        renderer.fillRoundedRect(NUIRect{b.x, b.y, b.width, b.height}, 2.0f, m_color.withAlpha(0.85f * alpha));
+        return;
+    }
     const NUIRect r{std::floor(b.x) + 0.5f, std::floor(b.y) + 0.5f, std::max(1.0f, std::floor(b.width) - 1.0f),
                     std::max(1.0f, std::floor(b.height) - 1.0f)};
 
