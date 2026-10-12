@@ -671,6 +671,10 @@ void ArsenalPanel::ensureDefaultPattern() {
 void ArsenalPanel::onRender(NUIRenderer& renderer) {
     WindowPanel::onRender(renderer);
     drawCommandHeader(renderer);
+    if (m_trackManager && m_listContainer && isVisible()) {
+        m_scenes.refresh(m_trackManager->getPatternManager(), m_activePatternID.value, m_sceneRect);
+        m_scenes.draw(renderer);
+    }
     if (m_listContainer && isVisible()) drawProgressHeader(renderer, m_progressHeaderRect);
     if (m_listContainer && isVisible()) Aestra::drawArsenalRackHeaders(renderer, m_rack, m_listViewportRect, m_progressHeaderRect.bottom() + 8.0f - m_scrollY);
 
@@ -747,39 +751,7 @@ void ArsenalPanel::drawCommandHeader(NUIRenderer& renderer) {
         renderer.clearClipRect();
     }
 
-    // View toggle: FIT | SCROLL segmented control. The active mode is subtly
-    // highlighted; both modes are two viewport strategies of the same grid.
-    if (m_fitToggleRect.width > 0.0f) {
-        const float radius = themeProps.radiusS;
-        const NUIColor containerFill = theme.getColor("surfaceTertiary").withAlpha(0.85f);
-        const NUIColor containerStroke = theme.getColor("borderSubtle").withAlpha(0.5f);
-        renderer.fillRoundedRect(m_fitToggleRect, radius, containerFill);
-        renderer.strokeRoundedRect(m_fitToggleRect, radius, 1.0f, containerStroke);
-
-        const NUIColor activeFill = theme.getColor("accentPrimary").withAlpha(0.16f);
-        const NUIColor activeText = theme.getColor("accentPrimary").withAlpha(0.95f);
-        const NUIColor idleText = theme.getColor("textSecondary").withAlpha(0.85f);
-
-        if (m_fitModeRect.width > 0.0f) {
-            if (m_fitToWidth) {
-                renderer.fillRoundedRect(m_fitModeRect, themeProps.radiusXS, activeFill);
-            }
-            renderer.drawTextCentered("FIT", m_fitModeRect, themeProps.fontSizeMicro,
-                                      m_fitToWidth ? activeText : idleText);
-        }
-        if (m_scrollModeRect.width > 0.0f) {
-            if (!m_fitToWidth) {
-                renderer.fillRoundedRect(m_scrollModeRect, themeProps.radiusXS, activeFill);
-            }
-            renderer.drawTextCentered("SCROLL", m_scrollModeRect, themeProps.fontSizeMicro,
-                                      m_fitToWidth ? idleText : activeText);
-        }
-
-        const float dividerX = m_fitToggleRect.x + m_fitToggleRect.width * 0.5f;
-        renderer.drawLine(NUIPoint(dividerX, m_fitToggleRect.y + 5.0f),
-                          NUIPoint(dividerX, m_fitToggleRect.bottom() - 5.0f), 1.0f,
-                          theme.getColor("borderSubtle").withAlpha(0.6f));
-    }
+    Aestra::drawArsenalFitToggle(renderer, m_fitToggleRect, m_fitModeRect, m_scrollModeRect, m_fitToWidth);
 }
 
 void ArsenalPanel::layoutUnits() {
@@ -803,7 +775,8 @@ void ArsenalPanel::layoutUnits() {
     m_fitModeRect = {m_fitToggleRect.x, m_fitToggleRect.y, fitW * 0.5f, m_fitToggleRect.height};
     m_scrollModeRect = {m_fitModeRect.right(), m_fitToggleRect.y, fitW * 0.5f, m_fitToggleRect.height};
 
-    m_progressHeaderRect = {startX, m_commandHeaderRect.bottom() + 8.0f, width, PROGRESS_HEADER_HEIGHT};
+    m_sceneRect = {startX + 10.0f, m_commandHeaderRect.bottom() + 2.0f, std::max(0.0f, width - 20.0f), Aestra::ArsenalSceneStrip::kHeight};
+    m_progressHeaderRect = {startX, m_sceneRect.bottom() + 6.0f, width, PROGRESS_HEADER_HEIGHT};
     const float rackTop = m_progressHeaderRect.bottom() + 8.0f - m_scrollY;
 
     // Rows may only draw / take clicks between the progress header and the
@@ -835,7 +808,7 @@ void ArsenalPanel::onResize(int width, int height) {
 
 void ArsenalPanel::onUpdate(double dt) {
     WindowPanel::onUpdate(dt);
-    const float reservedHeight = COMMAND_HEADER_HEIGHT + PROGRESS_HEADER_HEIGHT + 32.0f;
+    const float reservedHeight = COMMAND_HEADER_HEIGHT + PROGRESS_HEADER_HEIGHT + Aestra::ArsenalSceneStrip::kHeight + 38.0f;
     const float viewportHeight = std::max(0.0f,
         (m_listContainer ? m_listContainer->getBounds().height : 0.0f) - reservedHeight);
     const float contentHeight = m_rack.contentHeight + kArsenalListBottomPadding;
@@ -1657,6 +1630,19 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         }
         if (event.button == NUIMouseButton::Left || event.button == NUIMouseButton::None) {
             headerScrubTo(m_progressHeaderRect, event.position.x);
+            repaint();
+            return true;
+        }
+    }
+    if (m_trackManager && m_sceneRect.contains(event.position)) {
+        if (std::abs(event.wheelDelta) > 0.001f) { m_scenes.scrollBy(-event.wheelDelta * 40.0f); repaint(); return true; }
+        if (event.pressed && event.button == NUIMouseButton::Left) {
+            const auto hit = m_scenes.hitTest(event.position);
+            if (hit.kind == Aestra::ArsenalSceneStrip::Hit::Kind::Scene) setActivePattern(PatternID{hit.id});
+            if (hit.kind == Aestra::ArsenalSceneStrip::Hit::Kind::Add) {
+                setActivePattern(m_trackManager->getPatternManager().createMidiPattern(Aestra::ArsenalSceneStrip::nextName(m_scenes.scenes()), 8.0, {}));
+                if (m_patternBrowser) m_patternBrowser->refreshPatterns();
+            }
             repaint();
             return true;
         }

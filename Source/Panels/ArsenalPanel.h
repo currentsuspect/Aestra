@@ -2,6 +2,7 @@
 #pragma once
 
 #include "ArsenalRackLayout.h"
+#include "ArsenalSceneStrip.h"
 #include "WindowPanel.h"
 #include "TrackManager.h"
 #include <chrono>
@@ -115,6 +116,8 @@ private:
     // Container for the scrollable list of units
     std::shared_ptr<AestraUI::NUIComponent> m_listContainer;
     std::vector<std::shared_ptr<AestraUI::UnitRow>> m_unitRows;
+    Aestra::ArsenalSceneStrip m_scenes; ///< pattern chips under the command header (FD-27 point 1)
+    AestraUI::NUIRect m_sceneRect{};
     Aestra::ArsenalRackLayout m_rack; ///< groups, headers and row positions (one answer for layout, scroll and drop)
     
     // Header controls

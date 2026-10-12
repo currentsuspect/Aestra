@@ -38,4 +38,29 @@ inline void drawArsenalRackHeaders(AestraUI::NUIRenderer& renderer, const Arsena
     renderer.clearClipRect();
 }
 
+/// The FIT | SCROLL segmented control in the command header; the active mode is lightly filled.
+inline void drawArsenalFitToggle(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& toggle, const AestraUI::NUIRect& fitRect,
+                                 const AestraUI::NUIRect& scrollRect, bool fitToWidth) {
+    using namespace AestraUI;
+    if (toggle.width <= 0.0f) return;
+    auto& theme = NUIThemeManager::getInstance();
+    const auto& tp = theme.getCurrentTheme();
+    renderer.fillRoundedRect(toggle, tp.radiusS, theme.getColor("surfaceTertiary").withAlpha(0.85f));
+    renderer.strokeRoundedRect(toggle, tp.radiusS, 1.0f, theme.getColor("borderSubtle").withAlpha(0.5f));
+    const NUIColor activeFill = theme.getColor("accentPrimary").withAlpha(0.16f);
+    const NUIColor activeText = theme.getColor("accentPrimary").withAlpha(0.95f);
+    const NUIColor idleText = theme.getColor("textSecondary").withAlpha(0.85f);
+    if (fitRect.width > 0.0f) {
+        if (fitToWidth) renderer.fillRoundedRect(fitRect, tp.radiusXS, activeFill);
+        renderer.drawTextCentered("FIT", fitRect, tp.fontSizeMicro, fitToWidth ? activeText : idleText);
+    }
+    if (scrollRect.width > 0.0f) {
+        if (!fitToWidth) renderer.fillRoundedRect(scrollRect, tp.radiusXS, activeFill);
+        renderer.drawTextCentered("SCROLL", scrollRect, tp.fontSizeMicro, fitToWidth ? idleText : activeText);
+    }
+    const float dividerX = toggle.x + toggle.width * 0.5f;
+    renderer.drawLine(NUIPoint(dividerX, toggle.y + 5.0f), NUIPoint(dividerX, toggle.bottom() - 5.0f), 1.0f,
+                      theme.getColor("borderSubtle").withAlpha(0.6f));
+}
+
 } // namespace Aestra

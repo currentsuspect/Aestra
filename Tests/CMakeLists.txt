@@ -3029,6 +3029,25 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(UIRoutingMapGraphTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
 
+# Patterns are one-click scenes in a strip under the Arsenal header (V81-AR1, FD-27 point 1).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(ArsenalSceneStripTest AestraUI_Core)
+    add_executable(ArsenalSceneStripTest AestraUI/ArsenalSceneStripTest.cpp)
+    target_link_libraries(ArsenalSceneStripTest PRIVATE AestraAudio AestraUI_Core)
+    target_include_directories(ArsenalSceneStripTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ArsenalSceneStripTest COMMAND ArsenalSceneStripTest)
+    set_tests_properties(ArsenalSceneStripTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
 # The Arsenal rack is grouped under headers; one layout answers layout, scroll and drop (V81-AR1, FD-27 point 2).
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(ArsenalRackLayoutTest AestraUI_Core)
@@ -3691,6 +3710,7 @@ if(AESTRA_ENABLE_UI)
         UIMixerInspectorColumnTest
         UIRoutingMapGraphTest
         ArsenalRackLayoutTest
+        ArsenalSceneStripTest
         UIMixerPanelGroupingTest
         PluginRackBindingLifecycleTest
         WindowPanelRaiseTest
