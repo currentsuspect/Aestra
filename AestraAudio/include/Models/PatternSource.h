@@ -42,6 +42,8 @@ struct MidiNote {
     int8_t pitchOffset{0};     // Semitone offset from root for step-based pitched samplers
     float gate{1.0f};          // Note length as a fraction of one step
     bool slide{false};         // Sustain into the next active step for legato slides
+    float chance{1.0f};        // Probability this step plays on a given pass (1 = always)
+    uint8_t ratchet{1};        // Hits the step is split into (1..4; 1 = a single hit)
 };
 
 /**
@@ -95,6 +97,8 @@ public:
     /** True while a pre-source-routing project awaits lane-based migration. */
     bool legacyMixerRoutePending{false};
     std::optional<ScaleContext> scaleOverride;
+    /** Delays every odd 16th step: 0 = straight, 1 = the longest swing (a half step late). */
+    float swing{0.0f};
 
     uint32_t getMixerChannelId() const { return m_mixerChannelId; }
     void setMixerChannelId(uint32_t channelId) { m_mixerChannelId = channelId; }
