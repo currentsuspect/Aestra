@@ -150,6 +150,7 @@ ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
     // Create default Unit 1 for immediate playback
     if (m_trackManager) {
         auto& unitMgr = m_trackManager->getUnitManager();
+        unitMgr.setDefaultColorProvider([](size_t n) { return AestraUI::paletteIndexToARGB(static_cast<int>(n % AestraUI::PALETTE_SIZE)); }); // new units rotate the Ember hues
         if (unitMgr.getUnitCount() == 0) {
             UnitID defaultUnit = unitMgr.createUnit("Sampler 1", UnitType::Sampler);
             unitMgr.setUnitEnabled(defaultUnit, true);
@@ -176,8 +177,6 @@ ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
             refreshUnits();
         }
     });
-    
-    // ScrollView wrapper would go here, for now directly setting content
 }
 
 ArsenalPanel::~ArsenalPanel() {

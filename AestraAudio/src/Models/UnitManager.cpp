@@ -307,6 +307,7 @@ UnitID UnitManager::createUnit(const std::string& name, UnitType type) {
     info.name = name;
     info.type = type;
     info.group = unitGroupForType(type);
+    if (m_defaultColor) info.color = m_defaultColor(m_unitOrder.size());
     info.bridgeMode = bridgeModeFallbackFromRouteId(info.targetMixerRoute);
 
     if (m_patternManager && type != UnitType::Audio) {

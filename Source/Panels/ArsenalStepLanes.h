@@ -119,11 +119,12 @@ public:
         const auto lanes = lanesFor(c.type);
         if (lanes.empty() || !c.tm) return;
         auto& theme = AestraUI::NUIThemeManager::getInstance();
+        const auto& tp = theme.getCurrentTheme();
         const auto notes = notesOf(c);
-        renderer.fillRoundedRect(c.area, theme.getCurrentTheme().radiusS, theme.getColor("backgroundPrimary").withAlpha(0.9f));
+        renderer.fillRoundedRect(c.area, tp.radiusS, theme.getColor("backgroundPrimary").withAlpha(0.9f));
         for (size_t i = 0; i < lanes.size(); ++i) {
             const auto r = laneRect(c, i);
-            renderer.drawText(label(lanes[i]), {c.area.x + 12.0f, r.y + r.height * 0.5f - 5.0f}, 9.5f, theme.getColor("textSecondary").withAlpha(0.8f));
+            renderer.drawText(label(lanes[i]), {c.area.x + 12.0f, r.y + r.height * 0.5f - 5.0f}, tp.fontSizeMicro, theme.getColor("textSecondary").withAlpha(0.8f));
             renderer.setClipRect({c.strip.x, r.y, c.strip.width, r.height});
             renderer.fillRect({c.strip.x, r.y + r.height * 0.5f, c.strip.width, 1.0f}, theme.getColor("border").withAlpha(lanes[i] == Lane::Pitch ? 0.5f : 0.0f));
             for (int s = 0; s < c.steps; ++s) {

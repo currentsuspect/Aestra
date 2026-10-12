@@ -125,7 +125,7 @@ public:
             renderer.fillRoundedRect(r, tp.radiusXS, on ? accent.withAlpha(0.20f) : theme.getColor("surfaceTertiary").withAlpha(0.85f));
             renderer.strokeRoundedRect(r, tp.radiusXS, 1.0f, on ? accent.withAlpha(0.8f) : theme.getColor("borderSubtle").withAlpha(0.5f));
             renderer.setClipRect(AestraUI::intersectRects(view, r));
-            renderer.drawTextCentered(m_scenes[p.index].name, r, tp.fontSizeMicro + 1.0f,
+            renderer.drawTextCentered(m_scenes[p.index].name, r, tp.fontSizeXS,
                                       on ? accent : theme.getColor("textSecondary").withAlpha(0.9f));
             renderer.setClipRect(view);
         }
