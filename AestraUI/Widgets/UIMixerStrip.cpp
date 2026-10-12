@@ -91,7 +91,6 @@ namespace {
             return channel.routeName;
         }
 
-        const bool busOnly = !channel.masterSendEnabled && channel.mainOutputId != 0;
         int audibleSendCount = 0;
         int sidechainSendCount = 0;
         std::string audibleTarget;
@@ -125,9 +124,7 @@ namespace {
             first = false;
         };
 
-        if (busOnly) {
-            appendToken("Bus " + compactRouteName(channel.mainOutputId, channel.routeName));
-        }
+        // The main output is the chip's job now (named, coloured); the header keeps only the sends.
         if (audibleSendCount > 0) {
             if (audibleTargets.size() == 1) {
                 appendToken("Snd " + audibleTarget);

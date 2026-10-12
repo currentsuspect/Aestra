@@ -290,6 +290,62 @@ UIMixerPanel::TrailingLayout UIMixerPanel::trailingLayout(Layout::NUILayoutRecor
     return layout;
 }
 
+std::vector<uint32_t> UIMixerPanel::displayedChannelIds() const
+{
+    std::vector<uint32_t> ids;
+    for (const size_t index : m_stripOrder) {
+        if (index < m_strips.size() && m_strips[index]) ids.push_back(m_strips[index]->getChannelId());
+    }
+    return ids;
+}
+
+std::vector<std::string> UIMixerPanel::groupHeaderLabels() const
+{
+    std::vector<std::string> labels;
+    for (const auto& band : m_groupBands) labels.push_back(band.label);
+    return labels;
+}
+
+const UIMixerStrip* UIMixerPanel::stripForChannel(uint32_t channelId) const
+{
+    for (const auto& strip : m_strips) {
+        if (strip && strip->getChannelId() == channelId) return strip.get();
+    }
+    return nullptr;
+}
+
+bool UIMixerPanel::recomputeGrouping()
+{
+    std::vector<Aestra::MixerGroupInput> inputs;
+    inputs.reserve(m_strips.size());
+    std::string signature;
+    for (const auto& strip : m_strips) {
+        const auto* channel = (m_viewModel && strip) ? m_viewModel->getChannelById(strip->getChannelId()) : nullptr;
+        Aestra::MixerGroupInput in;
+        in.id = strip ? strip->getChannelId() : 0;
+        if (channel) {
+            in.mainOutputId = channel->mainOutputId;
+            in.name = channel->name;
+            in.colorIndex = channel->trackColorIndex;
+        }
+        signature += std::to_string(in.id) + ">" + std::to_string(in.mainOutputId) + ":" +
+                     std::to_string(in.colorIndex) + ":" + in.name + ";";
+        inputs.push_back(std::move(in));
+    }
+    if (signature == m_groupingSignature && m_stripOrder.size() == m_strips.size()) {
+        return false;
+    }
+    m_groupingSignature = std::move(signature);
+    m_grouping = Aestra::groupMixerStripsByOutput(inputs);
+    m_stripOrder = m_grouping.order;
+    return true;
+}
+
+float UIMixerPanel::groupGapsWidth() const
+{
+    return m_grouping.grouped() ? static_cast<float>(m_grouping.groups.size() - 1) * GROUP_GAP : 0.0f;
+}
+
 void UIMixerPanel::layoutMeters()
 {
     // Derived state first: the rest of the layout reads inspectorWidth().
@@ -303,8 +359,12 @@ void UIMixerPanel::layoutMeters()
         trace->beginPass(Layout::NUIWindowPoint(0.0f, 0.0f));
     }
     const TrailingLayout trailing = trailingLayout(trace);
-    const float stripY = trailing.masterRect.y;
-    const float stripHeight = trailing.masterRect.height;
+    recomputeGrouping();
+    // Under group headers the strips start lower, so the headers have a band of their own.
+    const float bandH = m_grouping.grouped() ? GROUP_HEADER_H : 0.0f;
+    const float bandY = trailing.masterRect.y;
+    const float stripY = trailing.masterRect.y + bandH;
+    const float stripHeight = trailing.masterRect.height - bandH;
 
     // Layout master strip on the right.
     if (m_masterStrip) {
@@ -343,9 +403,50 @@ void UIMixerPanel::layoutMeters()
     const auto items =
         Layout::arrangeScrollingRow(viewport, STRIP_WIDTH, STRIP_SPACING, m_strips.size(), m_scrollX, trace);
     Layout::finishLayoutPass(trace);
-    for (size_t i = 0; i < m_strips.size(); ++i) {
-        m_strips[i]->setVisible(items[i].visible);
-        m_strips[i]->setBounds(items[i].rect.raw());
+    m_groupBands.clear();
+    size_t groupIndex = 0;
+    for (size_t slot = 0; slot < m_stripOrder.size() && slot < items.size(); ++slot) {
+        while (groupIndex + 1 < m_grouping.groups.size() &&
+               slot >= m_grouping.groups[groupIndex].first + m_grouping.groups[groupIndex].count) {
+            ++groupIndex;
+        }
+        NUIRect rect = items[slot].rect.raw();
+        rect.x += static_cast<float>(groupIndex) * (m_grouping.grouped() ? GROUP_GAP : 0.0f);
+        const bool visible = rect.right() > viewport.raw().x && rect.x < viewport.raw().right();
+        auto& strip = m_strips[m_stripOrder[slot]];
+        strip->setVisible(visible);
+        strip->setBounds(rect);
+    }
+    if (m_grouping.grouped()) {
+        for (const auto& group : m_grouping.groups) {
+            const auto& first = m_strips[m_stripOrder[group.first]]->getBounds();
+            const auto& last = m_strips[m_stripOrder[group.first + group.count - 1]]->getBounds();
+            GroupBand band;
+            band.rect = NUIRect{first.x, bandY, last.right() - first.x, GROUP_HEADER_H - 3.0f};
+            band.label = group.label;
+            band.colorIndex = group.colorIndex;
+            band.master = group.targetId == 0;
+            m_groupBands.push_back(std::move(band));
+        }
+    }
+}
+
+void UIMixerPanel::renderGroupBands(NUIRenderer& renderer)
+{
+    if (m_groupBands.empty()) return;
+    auto& theme = NUIThemeManager::getInstance();
+    for (const auto& band : m_groupBands) {
+        NUIColor color = theme.getColor("accentPrimary");
+        if (!band.master && band.colorIndex >= 0) {
+            const uint32_t argb = paletteIndexToARGB(band.colorIndex);
+            color = NUIColor(((argb >> 16) & 0xFF) / 255.0f, ((argb >> 8) & 0xFF) / 255.0f, (argb & 0xFF) / 255.0f, 1.0f);
+        } else if (band.master) {
+            color = theme.getColor("textSecondary");
+        }
+        renderer.fillRoundedRect(band.rect, 3.0f, color.withAlpha(band.master ? 0.10f : 0.18f));
+        renderer.fillRect(NUIRect{band.rect.x, band.rect.y, band.rect.width, 2.0f}, color.withAlpha(band.master ? 0.45f : 0.9f));
+        renderer.drawText("\xE2\x86\x92 " + band.label, {band.rect.x + 6.0f, band.rect.y + 3.0f}, 10.0f,
+                          theme.getColor("textPrimary").withAlpha(0.88f));
     }
 }
 
@@ -431,6 +532,11 @@ void UIMixerPanel::onUpdate(double deltaTime)
         layoutMeters();
     } else if (std::abs(delta) > 0.0f) {
         m_scrollX = m_targetScrollX;
+        layoutMeters();
+    }
+
+    // A route or colour change reorders the groups; lay out again only when it did.
+    if (recomputeGrouping()) {
         layoutMeters();
     }
 
@@ -530,7 +636,8 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
         const float perStripW = static_cast<float>(STRIP_WIDTH + STRIP_SPACING) / contentW * laneW;
         const float barW = std::max(2.0f, perStripW - 1.0f);
         float x = minimapRect.x + gap;
-        for (size_t i = 0; i < m_strips.size(); ++i) {
+        for (size_t slot = 0; slot < m_strips.size(); ++slot) {
+            const size_t i = slot < m_stripOrder.size() ? m_stripOrder[slot] : slot;
             const auto* channel = m_viewModel ? m_viewModel->getChannelById(m_strips[i]->getChannelId()) : nullptr;
             const bool selected = m_viewModel && m_viewModel->getSelectedChannelId() == static_cast<int32_t>(m_strips[i]->getChannelId());
             // The overview is navigation infrastructure, not a second rainbow
@@ -597,6 +704,7 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
         clipEnabled = true;
     }
 
+    renderGroupBands(renderer);
     for (const auto& strip : m_strips) {
         if (strip && strip->isVisible()) {
             strip->onRender(renderer);
@@ -778,7 +886,7 @@ float UIMixerPanel::getChannelViewportWidth() const
 
 float UIMixerPanel::getChannelContentWidth() const
 {
-    return m_strips.empty() ? 0.0f : (m_strips.size() * (STRIP_WIDTH + STRIP_SPACING) - STRIP_SPACING);
+    return m_strips.empty() ? 0.0f : (m_strips.size() * (STRIP_WIDTH + STRIP_SPACING) - STRIP_SPACING) + groupGapsWidth();
 }
 
 float UIMixerPanel::getChannelMaxScroll() const
