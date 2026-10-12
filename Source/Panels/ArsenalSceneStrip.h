@@ -25,6 +25,7 @@ public:
     static constexpr float kHeight = 28.0f;
     static constexpr float kGap = 6.0f;
     static constexpr float kAddW = 28.0f;
+    static constexpr float kSwingW = 104.0f; ///< the swing drag zone at the right end
 
     struct Scene {
         uint64_t id{0};
@@ -36,7 +37,12 @@ public:
         float w{0.0f};
     };
     struct Hit {
-        enum class Kind { None, Scene, Add } kind{Kind::None};
+        enum class Kind { None, Scene, Add, Swing } kind{Kind::None};
+        uint64_t id{0};
+    };
+    /// What a pointer event asks the panel to do (the strip changes swing itself).
+    struct Action {
+        enum class Kind { None, Select, PatternAdded, SwingEdited } kind{Kind::None};
         uint64_t id{0};
     };
 
@@ -91,21 +97,28 @@ public:
         }
         m_followActive = m_followActive || activeId != m_lastActive;
         m_lastActive = activeId;
-        m_placed = place(widths, active, rect.width, m_offset, m_followActive, m_offset);
+        m_placed = place(widths, active, rect.width - kSwingW - kGap, m_offset, m_followActive, m_offset);
+        const auto* ap = pm.getPattern(Audio::PatternID{activeId});
+        m_swing = ap ? ap->swing : 0.0f;
         m_followActive = false;
         m_activeId = activeId;
     }
 
     const std::vector<Scene>& scenes() const { return m_scenes; }
     const std::vector<Placed>& placed() const { return m_placed; }
-    AestraUI::NUIRect addRect() const { return {m_rect.right() - kAddW, m_rect.y, kAddW, m_rect.height}; }
+    AestraUI::NUIRect addRect() const { return {m_rect.right() - kSwingW - kGap - kAddW, m_rect.y, kAddW, m_rect.height}; }
+    AestraUI::NUIRect swingRect() const { return {m_rect.right() - kSwingW, m_rect.y, kSwingW, m_rect.height}; }
+    float swing() const { return m_swing; }
+    /// 50% (straight) to 75% (half a step late), the way drum machines say it.
+    static int swingPercent(float swing) { return 50 + static_cast<int>(std::lround(std::clamp(swing, 0.0f, 1.0f) * 25.0f)); }
     AestraUI::NUIRect chipRect(const Placed& p) const { return {m_rect.x + p.x, m_rect.y, p.w, m_rect.height}; }
     void scrollBy(float dx) { m_offset += dx; m_followActive = false; }
 
     Hit hitTest(const AestraUI::NUIPoint& pt) const {
         if (!m_rect.contains(pt)) return {};
+        if (swingRect().contains(pt)) return {Hit::Kind::Swing, 0};
         if (addRect().contains(pt)) return {Hit::Kind::Add, 0};
-        if (pt.x >= m_rect.right() - kAddW - kGap) return {};
+        if (pt.x >= addRect().x - kGap) return {};
         for (const auto& p : m_placed) {
             if (chipRect(p).contains(pt)) return {Hit::Kind::Scene, m_scenes[p.index].id};
         }
@@ -117,7 +130,7 @@ public:
         auto& theme = AestraUI::NUIThemeManager::getInstance();
         const auto& tp = theme.getCurrentTheme();
         const auto accent = theme.getColor("accentPrimary");
-        const AestraUI::NUIRect view{m_rect.x, m_rect.y, std::max(0.0f, m_rect.width - kAddW - kGap), m_rect.height};
+        const AestraUI::NUIRect view{m_rect.x, m_rect.y, std::max(0.0f, m_rect.width - kSwingW - kGap - kAddW - kGap), m_rect.height};
         renderer.setClipRect(view);
         for (const auto& p : m_placed) {
             const auto r = chipRect(p);
@@ -134,12 +147,45 @@ public:
         renderer.fillRoundedRect(add, tp.radiusXS, theme.getColor("surfaceTertiary").withAlpha(0.85f));
         renderer.strokeRoundedRect(add, tp.radiusXS, 1.0f, theme.getColor("borderSubtle").withAlpha(0.5f));
         renderer.drawTextCentered("+", add, tp.fontSizeS, theme.getColor("textPrimary").withAlpha(0.9f));
+        const auto sw = swingRect();
+        renderer.fillRoundedRect(sw, tp.radiusXS, theme.getColor("surfaceTertiary").withAlpha(0.85f));
+        renderer.fillRoundedRect({sw.x, sw.y, sw.width * m_swing, sw.height}, tp.radiusXS, accent.withAlpha(0.22f));
+        renderer.strokeRoundedRect(sw, tp.radiusXS, 1.0f, theme.getColor("borderSubtle").withAlpha(0.5f));
+        renderer.drawTextCentered("SWING " + std::to_string(swingPercent(m_swing)) + "%", sw, tp.fontSizeMicro, theme.getColor("textPrimary").withAlpha(0.9f));
+    }
+
+    /// Pointer routing for the strip: chips select, "+" makes the next pattern, the swing zone drags, the wheel scrolls.
+    /// Returns true when the strip took the event.
+    bool onMouse(const AestraUI::NUIMouseEvent& e, Audio::PatternManager& pm, uint64_t activeId, Action& out) {
+        const bool left = e.button == AestraUI::NUIMouseButton::Left;
+        if (m_swingDrag) {
+            setSwing(pm, activeId, e.position.x);
+            out = {Action::Kind::SwingEdited, activeId};
+            if (!e.pressed && left) m_swingDrag = false;
+            return true;
+        }
+        if (!m_rect.contains(e.position)) return false;
+        if (std::abs(e.wheelDelta) > 0.001f) { scrollBy(-e.wheelDelta * 40.0f); return true; }
+        if (!e.pressed || !left) return true;
+        const Hit hit = hitTest(e.position);
+        if (hit.kind == Hit::Kind::Scene) out = {Action::Kind::Select, hit.id};
+        if (hit.kind == Hit::Kind::Add) out = {Action::Kind::PatternAdded, pm.createMidiPattern(nextName(m_scenes), 8.0, {}).value};
+        if (hit.kind == Hit::Kind::Swing) { m_swingDrag = true; setSwing(pm, activeId, e.position.x); out = {Action::Kind::SwingEdited, activeId}; }
+        return true;
     }
 
 private:
     AestraUI::NUIRect m_rect{};
     std::vector<Scene> m_scenes;
     std::vector<Placed> m_placed;
+    void setSwing(Audio::PatternManager& pm, uint64_t id, float x) {
+        const auto r = swingRect();
+        m_swing = std::clamp((x - r.x) / r.width, 0.0f, 1.0f);
+        m_swing = std::round(m_swing * 100.0f) / 100.0f;
+        pm.applyPatch(Audio::PatternID{id}, [this](Audio::PatternSource& p) { p.swing = m_swing; });
+    }
+    bool m_swingDrag{false};
+    float m_swing{0.0f};
     uint64_t m_activeId{0};
     uint64_t m_lastActive{0};
     float m_offset{0.0f};

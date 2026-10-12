@@ -50,15 +50,16 @@ public:
         r.clearClipRect();
     }
 
-    /// Pointer routing. Returns true when the event was a caret or a lane gesture; sets @p relayout when a row opened or closed.
+    /// Pointer routing. Returns true when the event was a caret or a lane gesture; sets @p relayout when a row opened or closed and @p edited when a lane wrote a value.
     bool onMouse(const AestraUI::NUIMouseEvent& e, const ArsenalRackLayout& rack, const std::vector<RowPtr>& rows,
-                 Audio::TrackManager* tm, Audio::PatternID pattern, const AestraUI::NUIRect& viewport, bool& relayout) {
+                 Audio::TrackManager* tm, Audio::PatternID pattern, const AestraUI::NUIRect& viewport, bool& relayout, bool& edited) {
         if (!tm) return false;
         if (m_lanes.dragging()) {
             if (const auto* item = itemFor(rack, m_dragRow); item && rows[m_dragRow]) {
                 const auto ctx = contextFor(*tm, pattern, *rows[m_dragRow], item->extraH);
                 if (!e.pressed && e.button == AestraUI::NUIMouseButton::Left) m_lanes.release(ctx);
                 else m_lanes.drag(ctx, e.position);
+                edited = m_lanes.takeEdited();
                 return true;
             }
             m_lanes.release({});
@@ -78,6 +79,7 @@ public:
             if (item.extraH > 0.0f && m_open.count(row.getUnitId()) &&
                 m_lanes.press(contextFor(*tm, pattern, row, item.extraH), e.position)) {
                 m_dragRow = item.rowIndex;
+                edited = m_lanes.takeEdited();
                 return true;
             }
         }

@@ -23,7 +23,7 @@ namespace Aestra {
  */
 class ArsenalStepLanes {
 public:
-    enum class Lane { Velocity, Pitch, Length };
+    enum class Lane { Velocity, Pitch, Length, Chance, Ratchet };
 
     static constexpr float kLaneH = 30.0f;
     static constexpr float kLaneGap = 4.0f;
@@ -33,12 +33,23 @@ public:
     static constexpr float kGateMin = 0.1f, kGateMax = 2.0f;
     static constexpr float kVelMin = 0.05f;
 
+    static constexpr int kRatchetMax = 4;
+
     static std::vector<Lane> lanesFor(Audio::UnitType type) {
-        if (type == Audio::UnitType::PitchedSampler) return {Lane::Velocity, Lane::Pitch, Lane::Length};
-        return {Lane::Velocity};
+        if (type == Audio::UnitType::Audio) return {};
+        if (type == Audio::UnitType::PitchedSampler)
+            return {Lane::Velocity, Lane::Pitch, Lane::Length, Lane::Chance, Lane::Ratchet};
+        return {Lane::Velocity, Lane::Chance, Lane::Ratchet};
     }
     static const char* label(Lane l) {
-        return l == Lane::Velocity ? "VEL" : l == Lane::Pitch ? "PITCH" : "LENGTH";
+        switch (l) {
+        case Lane::Velocity: return "VEL";
+        case Lane::Pitch: return "PITCH";
+        case Lane::Length: return "LENGTH";
+        case Lane::Chance: return "CHANCE";
+        case Lane::Ratchet: return "RATCHET";
+        }
+        return "";
     }
     static float heightFor(size_t laneCount) {
         return laneCount == 0 ? 0.0f : kPad * 2.0f + static_cast<float>(laneCount) * kLaneH + static_cast<float>(laneCount - 1) * kLaneGap;
@@ -50,6 +61,8 @@ public:
         case Lane::Velocity: return std::clamp(v, 0.0f, 1.0f);
         case Lane::Pitch: return (std::clamp(v, -static_cast<float>(kPitchRange), static_cast<float>(kPitchRange)) + kPitchRange) / (2.0f * kPitchRange);
         case Lane::Length: return (std::clamp(v, kGateMin, kGateMax) - kGateMin) / (kGateMax - kGateMin);
+        case Lane::Chance: return std::clamp(v, 0.0f, 1.0f);
+        case Lane::Ratchet: return (std::clamp(v, 1.0f, static_cast<float>(kRatchetMax)) - 1.0f) / (kRatchetMax - 1);
         }
         return 0.0f;
     }
@@ -60,6 +73,8 @@ public:
         case Lane::Velocity: return std::max(kVelMin, f);
         case Lane::Pitch: return std::round(f * 2.0f * kPitchRange - kPitchRange);
         case Lane::Length: return kGateMin + f * (kGateMax - kGateMin);
+        case Lane::Chance: return f;
+        case Lane::Ratchet: return std::round(1.0f + f * (kRatchetMax - 1));
         }
         return 0.0f;
     }
@@ -71,6 +86,8 @@ public:
         case Lane::Velocity: return n.velocity;
         case Lane::Pitch: return static_cast<float>(n.pitchOffset == 0 && n.pitch > 0 && n.pitch != rootMidi ? n.pitch - rootMidi : n.pitchOffset);
         case Lane::Length: return n.gate;
+        case Lane::Chance: return n.chance;
+        case Lane::Ratchet: return static_cast<float>(n.ratchet);
         }
         return 0.0f;
     }
@@ -84,6 +101,8 @@ public:
             break;
         }
         case Lane::Length: n.gate = std::clamp(v, kGateMin, kGateMax); break;
+        case Lane::Chance: n.chance = std::clamp(v, 0.0f, 1.0f); break;
+        case Lane::Ratchet: n.ratchet = static_cast<uint8_t>(std::clamp(static_cast<int>(std::lround(v)), 1, kRatchetMax)); break;
         }
     }
 
@@ -159,6 +178,8 @@ public:
         return false;
     }
     bool dragging() const { return m_lane >= 0; }
+    /// True once if a value was written since the last call, so the panel can tell the engine the pattern changed.
+    bool takeEdited() { const bool e = m_edited; m_edited = false; return e; }
     void drag(const Context& c, const AestraUI::NUIPoint& p) { if (m_lane >= 0) paint(c, p); }
     /// Finish the gesture: the whole drag becomes one undo step.
     void release(const Context& c) {
@@ -203,6 +224,7 @@ private:
                 if (n.unitId == c.unit && static_cast<int>(std::floor(n.startBeat / kStepBeats + 0.0001)) == step) {
                     writeValue(n, lane, v, c.root);
                     m_changed = true;
+                    m_edited = true;
                     return;
                 }
             }
@@ -211,6 +233,7 @@ private:
 
     int m_lane{-1};
     bool m_changed{false};
+    bool m_edited{false};
     std::vector<Audio::MidiNote> m_before;
 };
 

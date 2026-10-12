@@ -1593,18 +1593,14 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
             return true;
         }
     }
-    if (m_trackManager && m_sceneRect.contains(event.position)) {
-        if (std::abs(event.wheelDelta) > 0.001f) { m_scenes.scrollBy(-event.wheelDelta * 40.0f); repaint(); return true; }
-        if (event.pressed && event.button == NUIMouseButton::Left) {
-            const auto hit = m_scenes.hitTest(event.position);
-            if (hit.kind == Aestra::ArsenalSceneStrip::Hit::Kind::Scene) setActivePattern(PatternID{hit.id});
-            if (hit.kind == Aestra::ArsenalSceneStrip::Hit::Kind::Add) {
-                setActivePattern(m_trackManager->getPatternManager().createMidiPattern(Aestra::ArsenalSceneStrip::nextName(m_scenes.scenes()), 8.0, {}));
-                if (m_patternBrowser) m_patternBrowser->refreshPatterns();
-            }
-            repaint();
-            return true;
-        }
+    Aestra::ArsenalSceneStrip::Action scene;
+    if (m_trackManager && m_scenes.onMouse(event, m_trackManager->getPatternManager(), m_activePatternID.value, scene)) {
+        using Kind = Aestra::ArsenalSceneStrip::Action::Kind;
+        if (scene.kind == Kind::Select || scene.kind == Kind::PatternAdded) setActivePattern(PatternID{scene.id});
+        if (scene.kind == Kind::PatternAdded && m_patternBrowser) m_patternBrowser->refreshPatterns();
+        if (scene.kind == Kind::SwingEdited && m_onPatternEdited) m_onPatternEdited(m_activePatternID);
+        repaint();
+        return true;
     }
     if (event.pressed && event.button == NUIMouseButton::Left && m_progressHeaderRect.contains(event.position)) {
         const float controlWidth = std::clamp(m_progressHeaderRect.width * 0.38f, 220.0f, 312.0f);
@@ -1664,9 +1660,10 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         }
     }
 
-    bool relayout = false;
-    if (m_lanes.onMouse(event, m_rack, m_unitRows, m_trackManager.get(), m_activePatternID, m_listViewportRect, relayout)) {
+    bool relayout = false, edited = false;
+    if (m_lanes.onMouse(event, m_rack, m_unitRows, m_trackManager.get(), m_activePatternID, m_listViewportRect, relayout, edited)) {
         if (relayout) layoutUnits();
+        if (edited && m_onPatternEdited) m_onPatternEdited(m_activePatternID);
         repaint();
         return true;
     }
