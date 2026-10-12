@@ -126,9 +126,9 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
 
     // Text area (below the top bar)
     NUIRect textRect{
-        bounds.x + PAD_X,
+        bounds.x + (m_compact ? 1.0f : PAD_X),
         bounds.y + TOP_BAR_H + 3.0f,
-        bounds.width - (PAD_X * 2),
+        bounds.width - ((m_compact ? 1.0f : PAD_X) * 2),
         bounds.height - (TOP_BAR_H + 3.0f)
     };
 
@@ -154,6 +154,34 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
                               textRect.width, MASTER_ROUTE_H};
             renderer.drawTextCentered(m_route, routeRect, routeFont,
                                       m_textSecondary.withAlpha(0.62f));
+        }
+        return;
+    }
+
+    if (m_compact) {
+        // Narrow strip (44 px): a short name in a small face, split over two lines when it has a space, each
+        // line cut with an ellipsis only as a last resort. "Channel 12" reads "Ch 12".
+        std::string name = m_name;
+        if (name.rfind("Channel ", 0) == 0) name = "Ch " + name.substr(8);
+        constexpr float font = 9.0f;
+        std::string first = name, second;
+        if (renderer.measureText(first, font).width > textRect.width) {
+            const size_t split = name.find_last_of(' ');
+            if (split != std::string::npos && split > 0) {
+                first = name.substr(0, split);
+                second = name.substr(split + 1);
+            }
+        }
+        const float lineH = 11.0f;
+        const float tagH = (second.empty() && !m_route.empty()) ? 9.0f : 0.0f;
+        const float stack = lineH * (second.empty() ? 1.0f : 2.0f) + tagH;
+        float y = textRect.y + std::max(0.0f, (textRect.height - stack) * 0.5f);
+        renderer.drawTextCentered(fitText(renderer, first, font, textRect.width), {textRect.x, y, textRect.width, lineH}, font, m_text);
+        y += lineH;
+        if (!second.empty()) {
+            renderer.drawTextCentered(fitText(renderer, second, font, textRect.width), {textRect.x, y, textRect.width, lineH}, font, m_text);
+        } else if (!m_route.empty()) {
+            renderer.drawTextCentered(m_route, {textRect.x, y, textRect.width, 9.0f}, 8.0f, m_textSecondary.withAlpha(0.64f));
         }
         return;
     }

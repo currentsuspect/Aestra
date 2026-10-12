@@ -4,6 +4,7 @@
 #include "Base/NUISlider.h"
 #include "MixerDensity.h"
 #include "MixerGrouping.h"
+#include "UIMixerNavigator.h"
 #include "UIMixerToolbar.h"
 #include "NUIComponent.h"
 #include "NUIDragDrop.h"
@@ -90,6 +91,7 @@ public:
     /// Fired when density or grouping changes, so the owner can save the preference.
     std::function<void()> onViewPreferencesChanged;
     const UIMixerToolbar* toolbar() const { return m_toolbar.get(); }
+    const UIMixerNavigator* navigator() const { return m_navigator.get(); }
 
     /// Channel ids in the order the strips are shown (grouped by output), left to right.
     std::vector<uint32_t> displayedChannelIds() const;
@@ -189,7 +191,10 @@ private:
     float getChannelViewportWidth() const;
     float getChannelContentWidth() const;
     float getChannelMaxScroll() const;
-    void updateScrollFromMinimapX(float x);
+    void updateNavigator();
+    /// The navigator shows only when the strips overflow the panel.
+    bool navigatorShown() const;
+    float navigatorBlock() const;
 
     void showPluginDropdown(uint32_t channelId);
     void loadPluginToSelectedChannel(const std::string& pluginId);
@@ -254,8 +259,7 @@ private:
     // Horizontal scroll offset for channel strips (pixels).
     float m_scrollX{0.0f};
     float m_targetScrollX{0.0f};
-    bool m_isDraggingMinimap{false};
-    float m_minimapDragOffsetX{0.0f};
+    std::shared_ptr<UIMixerNavigator> m_navigator;
 
     // Layout constants (from design spec)
     static constexpr float TOOLBAR_H = 26.0f;

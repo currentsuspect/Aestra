@@ -51,6 +51,7 @@ public:
     /// Where the strip row is scrolled to and how much of it shows.
     void setViewport(float scrollX, float viewWidth);
 
+    bool isDragging() const { return m_draggingBracket; }
     const std::vector<Tick>& ticks() const { return m_ticks; }
     const std::vector<Group>& groups() const { return m_groups; }
 
