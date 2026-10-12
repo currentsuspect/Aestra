@@ -69,11 +69,11 @@ NUIMouseEvent rightPress(float x, float y) {
     return event;
 }
 
-// Geometry mirror for a 700x56 row (m_controlWidth = 700*0.38 = 266,
-// separator at 266, context inset 8, lane padding 6, group gap 2, 16 steps):
+// Geometry mirror for a 700x56 row (m_controlWidth = the Full floor, 330 px, since the output pill
+// reads by name; separator at 330, context inset 8, lane padding 6, group gap 2, 16 steps):
 // cell centers must match resolveGridStep's drawn-pad containment exactly.
 float cellCenterX(int step) {
-    const float controlWidth = 700.0f * 0.38f;
+    const float controlWidth = 330.0f; // UnitRow::controlFloorForDensity(Full)
     const float gridX = controlWidth + 8.0f + 6.0f;
     const float avail = 700.0f - (controlWidth + 2.0f) - 8.0f - 12.0f;
     const float stepWidth = (avail - ((16 + 3) / 4) * 2.0f) / 16.0f;

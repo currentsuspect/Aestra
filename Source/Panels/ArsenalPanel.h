@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include "ArsenalRackLayout.h"
 #include "WindowPanel.h"
 #include "TrackManager.h"
 #include <chrono>
@@ -114,6 +115,7 @@ private:
     // Container for the scrollable list of units
     std::shared_ptr<AestraUI::NUIComponent> m_listContainer;
     std::vector<std::shared_ptr<AestraUI::UnitRow>> m_unitRows;
+    Aestra::ArsenalRackLayout m_rack; ///< groups, headers and row positions (one answer for layout, scroll and drop)
     
     // Header controls
     std::shared_ptr<AestraUI::NUIButton> m_addUnitBtn;

@@ -143,6 +143,9 @@ public:
      * @return Backing unit identifier.
      */
     Aestra::Audio::UnitID getUnitId() const { return m_unitId; }
+    /** @brief The output by name ("Master", "Drum Bus"), as the row's pill reads it. */
+    const std::string& outputName() const { return m_mixerRouteName; }
+    int outputColorIndex() const { return m_mixerRouteColorIndex; }
     /**
      * @brief Update the row's selected-state styling.
      * @param selected True when the row is currently selected.
@@ -198,6 +201,8 @@ private:
     std::vector<float> m_audioPreviewWaveform;
     uint32_t m_mixerChannelId = Aestra::Audio::MASTER_MIXER_CHANNEL_ID;
     std::string m_mixerRouteShortLabel{"M"};
+    std::string m_mixerRouteName{"Master"}; ///< the output by name (FD-27), shown in the pill
+    int m_mixerRouteColorIndex{-1};        ///< that channel's track colour, -1 for the master
 
     // === Internal State ===
     void layoutNameLabel();
@@ -317,11 +322,8 @@ private:
     void selectAllNotes();                     // Ctrl+A: select every step that has a note
 
     // Icon drawing helpers
-    void drawPowerIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active);
-    void drawArmIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active);
     void drawMuteIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active, bool engaged = true);
     void drawSoloIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active, bool engaged = true);
-    void drawGearIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active); // [NEW]
 
     // Internal components
     std::shared_ptr<UnitNameLabel> m_nameLabel;

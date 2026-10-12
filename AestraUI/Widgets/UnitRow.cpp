@@ -9,6 +9,7 @@
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include "PluginBrowserPanel.h"
+#include "TrackColorPalette.h"
 #include "TrackManager.h"
 
 #include <algorithm>
@@ -87,18 +88,23 @@ void UnitRow::updateState() {
         m_pluginId = unit->pluginId;
         m_mixerChannelId = unit->targetMixerChannelId;
         m_mixerRouteShortLabel = "M";
+        m_mixerRouteName = "Master";
+        m_mixerRouteColorIndex = -1;
         if (m_mixerChannelId != Aestra::Audio::MASTER_MIXER_CHANNEL_ID && m_trackManager) {
             bool resolved = false;
             for (size_t i = 0; i < m_trackManager->getChannelCount(); ++i) {
                 const auto* channel = m_trackManager->getChannel(i);
                 if (channel && channel->getChannelId() == m_mixerChannelId) {
                     m_mixerRouteShortLabel = std::to_string(i + 1);
+                    m_mixerRouteName = channel->getName().empty() ? "Channel " + std::to_string(i + 1) : channel->getName();
+                    m_mixerRouteColorIndex = channel->getTrackColorIndex();
                     resolved = true;
                     break;
                 }
             }
             if (!resolved) {
                 m_mixerRouteShortLabel = "!";
+                m_mixerRouteName = "Missing channel";
             }
         }
         m_audioDurationSeconds = unit->audioDurationSeconds;
@@ -208,8 +214,7 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
     auto bounds = getBounds();
     auto& theme = NUIThemeManager::getInstance();
 
-    NUIRect cardBounds = bounds;
-    cardBounds.height = 56.0f;
+    NUIRect cardBounds = bounds; // the panel sizes the row (44 px in the grouped rack)
 
     // Clip all painting to the card, further trimmed to the panel's list
     // viewport so rows scrolled past the panel edge don't spill over it.
@@ -247,7 +252,7 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
 
     // Density-derived control floor (responsive contract): narrow rows give
     // the grid the width back instead of clipping it against a fixed 220.
-    m_controlWidth = std::clamp(cardBounds.width * 0.38f, controlFloorForDensity(cardBounds.width), 312.0f);
+    m_controlWidth = std::clamp(cardBounds.width * 0.38f, controlFloorForDensity(cardBounds.width), 380.0f);
 
     NUIRect dragRect(cardBounds.x + 6.0f, cardBounds.y + 6.0f, 32.0f, cardBounds.height - 12.0f);
     drawDragHandle(renderer, dragRect);
@@ -276,42 +281,6 @@ void UnitRow::drawDragHandle(NUIRenderer& renderer, const NUIRect& bounds) {
             renderer.fillCircle({clusterX + static_cast<float>(col) * 6.0f, clusterY + static_cast<float>(row) * 6.0f},
                                 1.35f, gripColor);
         }
-    }
-}
-
-void UnitRow::drawPowerIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active) {
-    auto& theme = NUIThemeManager::getInstance();
-    float cx = bounds.x + bounds.width / 2.0f;
-    float cy = bounds.y + bounds.height / 2.0f;
-    float radius = bounds.width / 2.0f - 2.0f;
-
-    NUIColor color = active ? theme.getColor("accentPrimary") : theme.getColor("textDisabled");
-
-    // Outer circle
-    renderer.strokeCircle(NUIPoint(cx, cy), radius, 1.5f, color);
-
-    // Inner dot when active
-    if (active) {
-        renderer.fillCircle(NUIPoint(cx, cy), radius * 0.4f, color);
-        // Glow
-        renderer.strokeCircle(NUIPoint(cx, cy), radius + 2.0f, 1.5f, color.withAlpha(0.3f));
-    }
-}
-
-void UnitRow::drawArmIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active) {
-    auto& theme = NUIThemeManager::getInstance();
-    float cx = bounds.x + bounds.width / 2.0f;
-    float cy = bounds.y + bounds.height / 2.0f;
-    float radius = bounds.width / 2.0f - 2.0f;
-
-    NUIColor color = active ? theme.getColor("accentRed") : theme.getColor("textSecondary");
-
-    // Outer circle (record button style)
-    renderer.strokeCircle(NUIPoint(cx, cy), radius, 1.5f, color);
-
-    // Inner filled circle when armed
-    if (active) {
-        renderer.fillCircle(NUIPoint(cx, cy), radius * 0.6f, color);
     }
 }
 
@@ -367,29 +336,10 @@ void UnitRow::drawSoloIcon(NUIRenderer& renderer, const NUIRect& bounds, bool ac
     renderer.drawTextCentered("S", bounds, 10.0f, textColor);
 }
 
-void UnitRow::drawGearIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active) {
-    auto& theme = NUIThemeManager::getInstance();
-
-    NUIColor color = active ? theme.getColor("accentPrimary") : theme.getColor("textSecondary");
-    if (!m_isHovered && !active)
-        color = theme.getColor("textDisabled");
-
-    float cx = bounds.x + bounds.width / 2.0f;
-    float cy = bounds.y + bounds.height / 2.0f;
-    float r = 6.0f;
-
-    // Simple "Settings" cog visual
-    renderer.strokeCircle(NUIPoint(cx, cy), r, 1.5f, color);
-    renderer.fillCircle(NUIPoint(cx, cy), 2.0f, color);
-
-    // Teeth (Cardinals)
-    renderer.drawLine(NUIPoint(cx, cy - r - 2), NUIPoint(cx, cy + r + 2), 2.0f, color);
-    renderer.drawLine(NUIPoint(cx - r - 2, cy), NUIPoint(cx + r + 2, cy), 2.0f, color);
-}
-
 std::array<NUIRect, 3> UnitRow::controlPillRects(const NUIRect& controlBounds) const {
     const bool showBars = (m_density == Density::Full);
-    const float routeW = (m_density == Density::Minimal) ? 24.0f : (m_density == Density::Compact) ? 34.0f : 42.0f;
+    // The output reads by name ("Drum Bus"), not by a channel number, when there is room (FD-27 point 2).
+    const float routeW = (m_density == Density::Minimal) ? 24.0f : (m_density == Density::Compact) ? 64.0f : 96.0f;
     const float muteW = (m_density == Density::Minimal) ? 16.0f : (m_density == Density::Compact) ? 20.0f : 24.0f;
     const float soloW = (m_density == Density::Minimal) ? 16.0f : (m_density == Density::Compact) ? 20.0f : 24.0f;
     const float pillY = controlBounds.y + controlBounds.height * 0.5f - 10.0f;
@@ -429,8 +379,21 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                                       : unitAccent.withAlpha(engaged ? 0.42f : 0.20f);
     renderer.fillRoundedRect(routeRect, 4.0f, routeFill);
     renderer.strokeRoundedRect(routeRect, 4.0f, 1.0f, routeStroke);
-    renderer.drawTextCentered(m_mixerRouteShortLabel, routeRect, m_density == Density::Minimal ? 7.5f : 9.0f,
-                              theme.getColor("textPrimary").withAlpha(engaged ? 0.9f : 0.45f));
+    const NUIColor routeText = theme.getColor("textPrimary").withAlpha(engaged ? 0.9f : 0.6f);
+    if (m_density == Density::Minimal) {
+        renderer.drawTextCentered(m_mixerRouteShortLabel, routeRect, 7.5f, routeText);
+    } else {
+        // A colour dot for the destination, then its name, cut with an ellipsis to fit.
+        NUIColor dot = theme.getColor("accentPrimary");
+        if (m_mixerRouteColorIndex >= 0) dot = colorFromUnitValue(paletteIndexToARGB(m_mixerRouteColorIndex));
+        renderer.fillRoundedRect(NUIRect{routeRect.x + 6.0f, routeRect.y + routeRect.height * 0.5f - 3.0f, 6.0f, 6.0f}, 1.0f, dot);
+        std::string label = m_mixerRouteName;
+        const float room = routeRect.width - 22.0f;
+        bool cut = false;
+        while (label.size() > 1 && renderer.measureText(label, 9.5f).width > room) { label.pop_back(); cut = true; }
+        if (cut) label += "\xE2\x80\xA6";
+        renderer.drawText(label, {routeRect.x + 16.0f, routeRect.y + routeRect.height * 0.5f - 6.0f}, 9.5f, routeText);
+    }
     drawMuteIcon(renderer, muteRect, m_isMuted, engaged);
     drawSoloIcon(renderer, soloRect, m_isSolo, engaged);
 
@@ -809,11 +772,12 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
     }
 
     auto bounds = getBounds();
-    const NUIRect localDragRect(6.0f, 6.0f, 32.0f, 44.0f);
-    m_controlWidth = std::clamp(bounds.width * 0.38f, controlFloorForDensity(bounds.width), 312.0f);
-    const NUIRect localControlRect(42.0f, 0.0f, std::max(0.0f, m_controlWidth - 48.0f), 56.0f);
+    const float rowH = bounds.height; // the panel sizes the row (44 px in the grouped rack)
+    const NUIRect localDragRect(6.0f, 6.0f, 32.0f, rowH - 12.0f);
+    m_controlWidth = std::clamp(bounds.width * 0.38f, controlFloorForDensity(bounds.width), 380.0f);
+    const NUIRect localControlRect(42.0f, 0.0f, std::max(0.0f, m_controlWidth - 48.0f), rowH);
     const float separatorX = m_controlWidth;
-    const NUIRect localContextRect(separatorX + 8.0f, 6.0f, std::max(0.0f, bounds.width - (separatorX + 2.0f)), 44.0f);
+    const NUIRect localContextRect(separatorX + 8.0f, 6.0f, std::max(0.0f, bounds.width - (separatorX + 2.0f)), rowH - 12.0f);
     // Step math must use the same geometry the pads are DRAWN with:
     // drawContextBlock insets the context rect by 6px lane padding before
     // laying out steps. Resolving against the un-inset rect skewed the step
@@ -1777,14 +1741,14 @@ void UnitRow::layoutNameLabel() {
     // Minimal below. The control block floor follows the tier so narrow rows
     // give the step grid the width back instead of clipping it.
     m_density = densityForWidth(bounds.width);
-    float controlWidth = std::clamp(bounds.width * 0.38f, controlFloorForDensity(bounds.width), 312.0f);
+    float controlWidth = std::clamp(bounds.width * 0.38f, controlFloorForDensity(bounds.width), 380.0f);
     float labelX = 54.0f; // 42 (control block) + 12 (name indent)
     // The label ends before the pill band; the band width follows the tier.
-    const float pillBand = (m_density == Density::Full)     ? 142.0f
-                           : (m_density == Density::Compact) ? 110.0f
+    const float pillBand = (m_density == Density::Full)     ? 196.0f
+                           : (m_density == Density::Compact) ? 140.0f
                                                              : 74.0f;
     float labelWidth = std::max(16.0f, (controlWidth - 48.0f) - pillBand - 6.0f);
-    m_nameLabel->setBounds(NUIRect(labelX, 8.0f, labelWidth, 30.0f));
+    m_nameLabel->setBounds(NUIRect(labelX, 7.0f, labelWidth, 30.0f));
     m_nameLabel->setCompact(m_density != Density::Full);
 }
 
@@ -1797,8 +1761,8 @@ UnitRow::Density UnitRow::densityForWidth(float width) {
 float UnitRow::controlFloorForDensity(float width) {
     const Density d = densityForWidth(width);
     return (d == Density::Minimal)   ? 150.0f
-           : (d == Density::Compact) ? 180.0f
-                                     : 220.0f;
+           : (d == Density::Compact) ? 300.0f
+                                     : 330.0f;
 }
 
 void UnitRow::routeToMixerChannel(uint32_t channelId) {

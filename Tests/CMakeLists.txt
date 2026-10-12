@@ -3029,6 +3029,21 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(UIRoutingMapGraphTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
 
+# The Arsenal rack is grouped under headers; one layout answers layout, scroll and drop (V81-AR1, FD-27 point 2).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(ArsenalRackLayoutTest AestraUI_Core)
+    add_executable(ArsenalRackLayoutTest AestraUI/ArsenalRackLayoutTest.cpp)
+    target_link_libraries(ArsenalRackLayoutTest PRIVATE AestraAudio)
+    target_include_directories(ArsenalRackLayoutTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ArsenalRackLayoutTest COMMAND ArsenalRackLayoutTest)
+    set_tests_properties(ArsenalRackLayoutTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
 # The inspector rack must follow the LAST-bound chain: bindEffectRack() used
 # to append bindings and refreshRackDisplay() read the first match, so a
 # selection switch left the rack bound to a chain that died with its channel
@@ -3675,6 +3690,7 @@ if(AESTRA_ENABLE_UI)
         UIMixerNavigatorTest
         UIMixerInspectorColumnTest
         UIRoutingMapGraphTest
+        ArsenalRackLayoutTest
         UIMixerPanelGroupingTest
         PluginRackBindingLifecycleTest
         WindowPanelRaiseTest
