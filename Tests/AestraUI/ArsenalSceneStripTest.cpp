@@ -60,6 +60,29 @@ int main() {
     hit = strip.hitTest({0, 0});
     check(hit.kind == ArsenalSceneStrip::Hit::Kind::None, "outside the strip is nothing");
 
+    std::cout << "[5] swing is a drag zone at the right end\n";
+    {
+        check(ArsenalSceneStrip::swingPercent(0.0f) == 50 && ArsenalSceneStrip::swingPercent(1.0f) == 75, "swing reads 50% to 75%");
+        const auto sw = strip.swingRect();
+        check(sw.right() == rect.right() && strip.addRect().right() < sw.x, "the swing zone sits right of the + chip");
+        AestraUI::NUIMouseEvent e;
+        e.position = {sw.x + sw.width * 0.5f, sw.y + 4};
+        e.pressed = true;
+        e.button = AestraUI::NUIMouseButton::Left;
+        ArsenalSceneStrip::Action act;
+        check(strip.onMouse(e, pm, b.value, act) && act.kind == ArsenalSceneStrip::Action::Kind::SwingEdited, "pressing the zone edits swing");
+        check(std::abs(pm.getPattern(b)->swing - 0.5f) < 0.02f, "halfway across is about half swing");
+        e.position.x = sw.right() + 400;
+        e.pressed = true;
+        strip.onMouse(e, pm, b.value, act);
+        check(pm.getPattern(b)->swing == 1.0f, "dragging past the end holds full swing");
+        e.pressed = false;
+        strip.onMouse(e, pm, b.value, act);
+        e.position = {0, 0};
+        check(!strip.onMouse(e, pm, b.value, act), "after release the strip leaves pointer events outside it alone");
+        check(pm.getPattern(a)->swing == 0.0f, "other patterns keep their own swing");
+    }
+
     std::cout << (g_failures == 0 ? "ALL PASSED\n" : "FAILURES\n");
     return g_failures == 0 ? 0 : 1;
 }
