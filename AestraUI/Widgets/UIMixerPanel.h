@@ -2,6 +2,7 @@
 #pragma once
 
 #include "Base/NUISlider.h"
+#include "MixerGrouping.h"
 #include "NUIComponent.h"
 #include "NUIDragDrop.h"
 #include "NUITypes.h"
@@ -76,6 +77,13 @@ public:
      * Call when tracks are added/removed to rebuild meter widgets.
      */
     void refreshChannels();
+
+    /// Channel ids in the order the strips are shown (grouped by output), left to right.
+    std::vector<uint32_t> displayedChannelIds() const;
+    /// The group headers above the strips, left to right; empty when the project has a single group.
+    std::vector<std::string> groupHeaderLabels() const;
+    /// Where a channel's strip is laid out, or nullptr when there is none.
+    const UIMixerStrip* stripForChannel(uint32_t channelId) const;
 
     /**
      * @brief Replace the plugin dropdown's catalog.
@@ -192,6 +200,24 @@ private:
     /// Channel strips (header + meter + fader)
     std::vector<std::shared_ptr<UIMixerStrip>> m_strips;
 
+    /// Display order and groups (V81-M1): strips are shown grouped by where they go.
+    /// m_stripOrder maps a display slot to an index in m_strips.
+    std::vector<size_t> m_stripOrder;
+    Aestra::MixerGroupedOrder m_grouping;
+    std::string m_groupingSignature;
+    struct GroupBand {
+        NUIRect rect;
+        std::string label;
+        int colorIndex{-1};
+        bool master{false};
+    };
+    std::vector<GroupBand> m_groupBands;
+    /// Rebuilds the grouping from the view model; true when it changed.
+    bool recomputeGrouping();
+    /// Extra width the gaps between groups add to the strip row.
+    float groupGapsWidth() const;
+    void renderGroupBands(NUIRenderer& renderer);
+
     /// Master strip (pinned on the right)
     std::shared_ptr<UIMixerStrip> m_masterStrip;
 
@@ -217,6 +243,8 @@ private:
     // Layout constants (from design spec)
     static constexpr float STRIP_WIDTH = 110.0f;
     static constexpr float STRIP_SPACING = 6.0f;
+    static constexpr float GROUP_HEADER_H = 18.0f;
+    static constexpr float GROUP_GAP = 10.0f;
     static constexpr float HEADER_HEIGHT = 28.0f;
     static constexpr float PADDING = 8.0f;
     static constexpr float MASTER_STRIP_WIDTH = 146.0f;

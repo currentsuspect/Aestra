@@ -2899,6 +2899,39 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(UIMixerStripContentTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
 
+# The mixer groups strips by where they go (V81-M1, FD-28 point 1).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(MixerGroupingTest AestraUI_Core)
+    add_executable(MixerGroupingTest AestraUI/MixerGroupingTest.cpp)
+    target_link_libraries(MixerGroupingTest PRIVATE AestraUI_Core)
+    target_include_directories(MixerGroupingTest PRIVATE ${CMAKE_SOURCE_DIR}/Source/Components)
+    add_test(NAME MixerGroupingTest COMMAND MixerGroupingTest)
+    set_tests_properties(MixerGroupingTest PROPERTIES LABELS "ui;mixer;regression;contract:application")
+endif()
+
+# The real mixer panel lays strips out grouped by output, under headers (V81-M1, FD-28 point 1).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(UIMixerPanelGroupingTest AestraUI_Core AestraUI_Platform)
+    add_executable(UIMixerPanelGroupingTest
+        AestraUI/UIMixerPanelGroupingTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/MixerViewModel.cpp
+    )
+    target_link_libraries(UIMixerPanelGroupingTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(UIMixerPanelGroupingTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME UIMixerPanelGroupingTest COMMAND UIMixerPanelGroupingTest)
+    set_tests_properties(UIMixerPanelGroupingTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
 # The inspector rack must follow the LAST-bound chain: bindEffectRack() used
 # to append bindings and refreshRackDisplay() read the first match, so a
 # selection switch left the rack bound to a chain that died with its channel
@@ -3539,6 +3572,8 @@ if(AESTRA_ENABLE_UI)
         UnitRowContextMenuTest
         UIMixerKnobDragReadoutTest
         UIMixerStripContentTest
+        MixerGroupingTest
+        UIMixerPanelGroupingTest
         PluginRackBindingLifecycleTest
         WindowPanelRaiseTest
         TakesHistoryPanelTest
