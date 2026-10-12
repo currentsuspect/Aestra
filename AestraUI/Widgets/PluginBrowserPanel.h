@@ -389,6 +389,10 @@ public:
      */
     float getScrollOffset() const { return m_scrollOffset; }
 
+    /// Rows the rack draws (populated slots plus the add row) and each row's height, so a host can size it to fit.
+    int visibleRowCount() const { return visibleSlotCount(); }
+    static constexpr float rowHeight() { return SLOT_HEIGHT; }
+
 private:
     void renderSlot(NUIRenderer& renderer, int index, float slotY);
     int hitTestSlot(float y) const;

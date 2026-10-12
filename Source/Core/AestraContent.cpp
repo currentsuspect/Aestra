@@ -1111,16 +1111,15 @@ void AestraContent::setupMixerPanels() {
     });
     m_overlayLayer->addChild(m_routingMapPanel);
 
-    // Wire inspector minimap double-click to open full routing map
+    // The inspector's "Show in routing graph" link opens the full routing map (the minimap that used to do this is gone).
     if (m_mixerPanel) {
         if (auto mixerUI = m_mixerPanel->getMixerUI()) {
             if (auto* inspector = mixerUI->getInspector()) {
-                if (auto minimap = inspector->getRoutingMap()) {
-                    minimap->setOnDoubleClick([this]() {
-                        m_previousViewFocus = m_viewFocus;
-                        setViewFocus(ViewFocus::RoutingMap);
-                    });
-                }
+                inspector->onShowRoutingGraph = [this](uint32_t channelId) {
+                    if (auto vm = m_mixerPanel ? m_mixerPanel->getViewModel() : nullptr) vm->setSelectedChannelId(static_cast<int32_t>(channelId));
+                    m_previousViewFocus = m_viewFocus;
+                    setViewFocus(ViewFocus::RoutingMap);
+                };
             }
         }
     }
