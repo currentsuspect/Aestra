@@ -3,6 +3,7 @@
 
 #include "RealtimeThreadGuard.h"
 #include "../../AestraCore/include/AestraLog.h"
+#include "Playback/NoteExpression.h"
 #include "Plugin/SamplerPlugin.h"
 
 #include <algorithm>
@@ -309,7 +310,13 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
             // note sounds) can re-emit nothing, so its held note is released below or it hangs.
             auto* pattern = instPtr ? m_patternManager->getPattern(instPtr->patternId) : nullptr;
             if (!instPtr || !pattern || !pattern->isMidi()) return;
-            for (const auto& note : std::get<MidiPayload>(pattern->payload).notes) {
+            const auto& patternNotes = std::get<MidiPayload>(pattern->payload).notes;
+            const bool expressive = needsExpression(patternNotes, pattern->swing);
+            const std::vector<MidiNote> expandedNotes =
+                expressive ? expandForPlayback(patternNotes, pattern->swing, pattern->id.value, instPtr->instanceId,
+                                               loopLengthSamples > 0 ? currentFrame / loopLengthSamples : 0)
+                           : std::vector<MidiNote>{};
+            for (const auto& note : (expressive ? expandedNotes : patternNotes)) {
                 if (note.unitId != gated.unitId)
                     continue;
                 const UnitInfo* unit = m_unitManager->getUnit(note.unitId);
@@ -436,7 +443,10 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
 
         for (uint64_t loopIter = iterBegin; loopIter <= iterEnd; ++loopIter) {
         const uint64_t loopBase = loopIter * loopLengthSamples;
-        for (const auto& note : midi.notes) {
+        std::vector<MidiNote> expandedNotes;
+        const bool expressive = needsExpression(midi.notes, pattern->swing);
+        if (expressive) expandedNotes = expandForPlayback(midi.notes, pattern->swing, pattern->id.value, inst.instanceId, loopIter);
+        for (const auto& note : (expressive ? expandedNotes : midi.notes)) {
             const double noteStartInSource = note.startBeat;
             const double noteEndInSource = note.startBeat + note.durationBeats;
             if (noteEndInSource <= inst.sourceStartBeat || noteStartInSource >= inst.sourceEndBeat) {

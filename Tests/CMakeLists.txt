@@ -845,6 +845,18 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternContentEditDuringPlayb
         PROPERTIES LABELS "audio;playback;regression;contract:audio")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/NoteExpressionTest.cpp")
+    add_executable(NoteExpressionTest AestraAudio/NoteExpressionTest.cpp)
+    target_link_libraries(NoteExpressionTest PRIVATE AestraAudio)
+    target_include_directories(NoteExpressionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME NoteExpressionTest COMMAND NoteExpressionTest)
+    set_tests_properties(NoteExpressionTest PROPERTIES LABELS "audio;playback;regression;contract:audio")
+endif()
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerLoopModeTest.cpp")
     add_executable(SamplerLoopModeTest AestraAudio/SamplerLoopModeTest.cpp)
     target_link_libraries(SamplerLoopModeTest PRIVATE AestraAudio)
