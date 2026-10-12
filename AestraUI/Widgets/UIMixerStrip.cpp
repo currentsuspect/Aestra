@@ -333,6 +333,30 @@ void UIMixerStrip::cacheThemeColors()
     m_masterBorder = theme.getColor("border").withAlpha(0.36f);
 }
 
+void UIMixerStrip::setDensity(MixerDensity density)
+{
+    if (density == m_density) return;
+    m_density = density;
+    const bool narrow = density == MixerDensity::Narrow;
+    const bool master = m_channelId == 0;
+    // Narrow keeps the name, the meters, the fader, M S and the output's colour; the rest waits for room.
+    if (m_insertList) m_insertList->setVisible(master || !narrow);
+    if (m_sendList) m_sendList->setVisible(!master && !narrow);
+    if (m_panBar) m_panBar->setVisible(!master && !narrow);
+    if (m_buttons && !master) m_buttons->setCompact(narrow);
+    if (m_outputChip && !master) m_outputChip->setCompact(narrow);
+    if (m_footer && !master) m_footer->setCompact(narrow);
+    if (m_fader && !master) {
+        constexpr float kBar = 11.0f;
+        const float meterW = narrow ? 18.0f : 24.0f;
+        (void)kBar;
+        m_fader->setOverlay(true, meterW + 2.0f);
+    }
+    layoutChildren();
+    invalidateStaticCache();
+    repaint();
+}
+
 void UIMixerStrip::layoutChildren()
 {
     auto bounds = getBounds();
@@ -340,6 +364,7 @@ void UIMixerStrip::layoutChildren()
     const float contentX = bounds.x + SIDE_INSET;
     const float contentW = std::max(1.0f, bounds.width - SIDE_INSET * 2.0f);
     const bool isMaster = (m_channelId == 0);
+    const bool narrow = !isMaster && (m_density == MixerDensity::Narrow);
     float y = bounds.y + PAD * 0.75f;
 
     if (m_header) {
@@ -349,8 +374,9 @@ void UIMixerStrip::layoutChildren()
 
     // The output, as a named coloured chip right under the name.
     if (m_outputChip && m_outputChip->isVisible()) {
-        m_outputChip->setBounds(contentX, y, contentW, OUTPUT_CHIP_H);
-        y += OUTPUT_CHIP_H + 4.0f;
+        const float chipH = (m_density == MixerDensity::Narrow) ? 5.0f : OUTPUT_CHIP_H;
+        m_outputChip->setBounds(contentX, y, contentW, chipH);
+        y += chipH + 4.0f;
     }
 
     const bool hasFooter = (m_footer && m_footer->isVisible());
@@ -366,12 +392,12 @@ void UIMixerStrip::layoutChildren()
     const bool hasPan = (m_panBar && m_panBar->isVisible());
     const float keysH = hasButtons ? BUTTONS_H + 6.0f : 0.0f;
     const float panH = hasPan ? PAN_H + PAN_VALUE_H + 6.0f : 0.0f;
-    const int wantedSends = m_sendList ? std::min(static_cast<int>(m_sendList->rows().size()), UIMixerSendList::kMaxRows) : 0;
-    const bool hasInserts = (m_insertList && m_insertList->isVisible());
+    const int wantedSends = (m_sendList && m_sendList->isVisible()) ? std::min(static_cast<int>(m_sendList->rows().size()), UIMixerSendList::kMaxRows) : 0;
+    const bool hasInserts = (m_insertList && m_insertList->isVisible() && !narrow);
     const float masterGap = (isMaster && hasInserts) ? 10.0f : 0.0f;
     const float readoutH = isMaster ? MASTER_READOUT_H : 0.0f;
 
-    int insertRows = INSERT_ROWS;
+    int insertRows = m_density == MixerDensity::Wide ? INSERT_ROWS * 2 : INSERT_ROWS;
     int sendRows = wantedSends;
     const auto meterHeightFor = [&](int inserts, int sends) {
         const float insertsH = hasInserts ? UIMixerInsertList::heightForRows(inserts) + SECTION_GAP : 0.0f;
@@ -429,14 +455,16 @@ void UIMixerStrip::layoutChildren()
 
     // Channel strips: the meters sit centred with the fader's handle column on their right edge, and the cap
     // line drawn by the fader runs back across both bars.
-    const float groupW = meterW + 2.0f + FADER_COL_W;
+    const float chMeterW = narrow ? 18.0f : meterW;
+    const float chFaderCol = narrow ? 12.0f : FADER_COL_W;
+    const float groupW = chMeterW + 2.0f + chFaderCol;
     const float meterX = std::floor(contentX + (contentW - groupW) * 0.5f);
-    if (m_meter) m_meter->setBounds(meterX, meterY, meterW, meterH);
+    if (m_meter) m_meter->setBounds(meterX, meterY, chMeterW, meterH);
     if (m_fader) {
         // The meter reserves its clip lamp at the top; the fader's track starts where the bars do.
         constexpr float kClipLamp = 6.0f;
         constexpr float kHandleHalf = 9.0f;
-        m_fader->setBounds(meterX + meterW + 1.0f, meterY + kClipLamp - kHandleHalf, FADER_COL_W,
+        m_fader->setBounds(meterX + chMeterW + 1.0f, meterY + kClipLamp - kHandleHalf, chFaderCol,
                            meterH - kClipLamp + kHandleHalf * 2.0f);
     }
     m_masterMeterReadoutRect = NUIRect{};

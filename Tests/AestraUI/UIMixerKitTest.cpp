@@ -4,6 +4,7 @@
 // parameter bar (the strip's pan, the inspector's trim and width), the footer's gain and peak, the send list's
 // level text, and the fader's overlay mode (cap across the meters, on the same scale as the meters).
 
+#include "MixerDensity.h"
 #include "MixerScale.h"
 #include "UIMixerFader.h"
 #include "UIMixerFooter.h"
@@ -173,6 +174,20 @@ int main() {
         check(fader.getValueDb() <= -60.0f, "the very bottom is minus infinity");
         fader.onMouseEvent(up(107, trackBottom + 8.0f));
         (void)seen;
+    }
+
+    std::cout << "[6] density widths and the saved name\n";
+    {
+        check(mixerStripWidth(MixerDensity::Wide) == 120.0f && mixerStripWidth(MixerDensity::Normal) == 84.0f &&
+                  mixerStripWidth(MixerDensity::Narrow) == 44.0f,
+              "Wide 120, Normal 84, Narrow 44 px");
+        bool roundTrip = true;
+        for (const auto d : {MixerDensity::Wide, MixerDensity::Normal, MixerDensity::Narrow})
+            roundTrip = roundTrip && mixerDensityFromName(mixerDensityName(d)) == d;
+        check(roundTrip, "each density survives being saved and read back");
+        check(mixerDensityFromName("") == MixerDensity::Normal && mixerDensityFromName("huge") == MixerDensity::Normal &&
+                  mixerDensityFromName(nullptr) == MixerDensity::Normal,
+              "a missing or damaged preference means Normal");
     }
 
     std::cout << (g_failures == 0 ? "ALL PASS\n" : "FAILURES\n");

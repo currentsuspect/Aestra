@@ -20,6 +20,8 @@ public:
     bool onMouseEvent(const NUIMouseEvent& event) override;
     void onThemeChanged(const NUIThemeProperties& theme) override { cacheThemeColors(); NUIComponent::onThemeChanged(theme); }
 
+    /// Narrow density: the gain only.
+    void setCompact(bool compact) { if (compact != m_compact) { m_compact = compact; repaint(); } }
     void setGainDb(float db);
     void setPeakDb(float db, bool clipped);
 
@@ -38,6 +40,7 @@ private:
     std::string m_gainText{"0.0"};
     std::string m_peakText{"\xE2\x88\x92\xE2\x88\x9E"};
     bool m_clipped{false};
+    bool m_compact{false};
 
     NUIColor m_text;
     NUIColor m_textSecondary;

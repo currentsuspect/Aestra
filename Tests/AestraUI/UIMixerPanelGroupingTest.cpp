@@ -129,6 +129,65 @@ int main() {
         }
     }
 
+    std::cout << "[6] density sets the strip width and how much a strip shows\n";
+    {
+        int prefSaves = 0;
+        panel.onViewPreferencesChanged = [&] { ++prefSaves; };
+        const uint32_t id = kick->getChannelId();
+        check(panel.density() == AestraUI::MixerDensity::Normal, "Normal is the default");
+        const auto* strip = panel.stripForChannel(id);
+        check(strip && std::fabs(strip->getBounds().width - 84.0f) < 0.5f, "a Normal strip is 84 px wide");
+        panel.setDensity(AestraUI::MixerDensity::Wide);
+        check(std::fabs(panel.stripForChannel(id)->getBounds().width - 120.0f) < 0.5f, "Wide is 120 px");
+        panel.setDensity(AestraUI::MixerDensity::Narrow);
+        const auto* narrow = panel.stripForChannel(id);
+        check(std::fabs(narrow->getBounds().width - 44.0f) < 0.5f, "Narrow is 44 px");
+        check(!narrow->insertList()->isVisible() && !narrow->panBar()->isVisible() && !narrow->sendList()->isVisible(),
+              "Narrow drops the inserts, sends and pan");
+        check(narrow->outputChip()->isCompact(), "and the output shrinks to its colour");
+        check(narrow->meterBarsRect().height > 100.0f, "the meters keep their height");
+        check(prefSaves == 2, "each change asks for the preference to be saved");
+        panel.setDensity(AestraUI::MixerDensity::Normal);
+        check(panel.stripForChannel(id)->insertList()->isVisible(), "going back to Normal brings them back");
+        panel.onViewPreferencesChanged = nullptr; // it captured this block's counter
+    }
+
+    std::cout << "[7] Group by output can be switched off\n";
+    {
+        panel.setGroupByOutput(false);
+        check(panel.groupHeaderLabels().empty(), "no headers when flat");
+        const auto flat = panel.displayedChannelIds();
+        const std::vector<uint32_t> projectOrder{pad->getChannelId(), kick->getChannelId(), snare->getChannelId(),
+                                                 drumBus->getChannelId(), lead->getChannelId()};
+        check(flat == projectOrder, "strips follow the project's own channel order");
+        panel.setGroupByOutput(true);
+        check(!panel.groupHeaderLabels().empty(), "switching it back regroups");
+    }
+
+    std::cout << "[8] the toolbar's buttons reach the panel\n";
+    {
+        const auto* tb = panel.toolbar();
+        check(tb != nullptr, "the panel has a toolbar");
+        if (tb) {
+            const AestraUI::NUIRect narrowRect = tb->densityRect(AestraUI::MixerDensity::Narrow);
+            AestraUI::NUIMouseEvent click;
+            click.type = AestraUI::NUIMouseEventType::Down;
+            click.button = AestraUI::NUIMouseButton::Left;
+            click.pressed = true;
+            click.position = {narrowRect.x + narrowRect.width * 0.5f, narrowRect.y + narrowRect.height * 0.5f};
+            panel.onMouseEvent(click);
+            check(panel.density() == AestraUI::MixerDensity::Narrow, "clicking Narrow switches the density");
+            panel.setDensity(AestraUI::MixerDensity::Normal);
+
+            vm->getChannelById(kick->getChannelId())->peakSinceResetDb = -3.0f;
+            const AestraUI::NUIRect resetRect = tb->resetRect();
+            click.position = {resetRect.x + resetRect.width * 0.5f, resetRect.y + resetRect.height * 0.5f};
+            panel.onMouseEvent(click);
+            check(vm->getChannelById(kick->getChannelId())->peakSinceResetDb <= MixerMath::DB_MIN + 0.01f,
+                  "Reset peaks clears every channel's peak");
+        }
+    }
+
     std::cout << (g_failures == 0 ? "ALL PASS\n" : "FAILURES\n");
     return g_failures == 0 ? 0 : 1;
 }

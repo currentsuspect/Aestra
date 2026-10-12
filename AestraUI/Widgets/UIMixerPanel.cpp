@@ -77,6 +77,12 @@ UIMixerPanel::UIMixerPanel(std::shared_ptr<Aestra::MixerViewModel> viewModel,
     };
     addChild(m_inspector);
 
+    m_toolbar = std::make_shared<UIMixerToolbar>();
+    m_toolbar->onDensityChanged = [this](MixerDensity d) { setDensity(d); };
+    m_toolbar->onGroupToggled = [this](bool on) { setGroupByOutput(on); };
+    m_toolbar->onResetPeaks = [this]() { resetPeaks(); };
+    addChild(m_toolbar);
+
     // Create master strip (pinned on right, does not scroll with channels).
     // Create master strip (pinned on right, does not scroll with channels).
     m_masterStrip = std::make_shared<UIMixerStrip>(0, 0, m_viewModel.get(), 
@@ -238,6 +244,7 @@ void UIMixerPanel::refreshChannels()
                 std::make_shared<Aestra::Audio::SetMonitoringCommand>(*m_trackManager, *mixerChannel, monitored));
         };
 
+        strip->setDensity(m_density);
         m_strips.push_back(strip);
         addChild(strip);
     }
@@ -277,7 +284,7 @@ UIMixerPanel::TrailingLayout UIMixerPanel::trailingLayout(Layout::NUILayoutRecor
     // needs this method's inspectorRect.x for its own width, and depending on
     // it here would make the two call each other.
     const auto bounds = getBounds();
-    const float stripY = bounds.y + 2.0f + MINIMAP_HEIGHT + MINIMAP_GAP;
+    const float stripY = bounds.y + 2.0f + TOOLBAR_H + MINIMAP_HEIGHT + MINIMAP_GAP;
     const float stripHeight = std::max(MIXER_MIN_CHANNEL_HEIGHT, bounds.bottom() - stripY - PADDING);
 
     // Master flush against the trailing edge (edgeMargin 0); inspector one
@@ -324,6 +331,45 @@ const UIMixerStrip* UIMixerPanel::stripForChannel(uint32_t channelId) const
     return nullptr;
 }
 
+void UIMixerPanel::setDensity(MixerDensity density)
+{
+    if (density == m_density) return;
+    m_density = density;
+    for (auto& strip : m_strips) {
+        if (strip) strip->setDensity(density);
+    }
+    if (m_toolbar) m_toolbar->setDensity(density);
+    layoutMeters();
+    repaint();
+    if (onViewPreferencesChanged) onViewPreferencesChanged();
+}
+
+void UIMixerPanel::setGroupByOutput(bool on)
+{
+    if (on == m_groupByOutput) return;
+    m_groupByOutput = on;
+    if (m_toolbar) m_toolbar->setGroupByOutput(on);
+    recomputeGrouping();
+    layoutMeters();
+    repaint();
+    if (onViewPreferencesChanged) onViewPreferencesChanged();
+}
+
+void UIMixerPanel::resetPeaks()
+{
+    if (!m_viewModel) return;
+    m_viewModel->resetPeaks();
+    if (m_trackManager) {
+        if (auto snaps = m_trackManager->getMeterSnapshots()) {
+            for (size_t i = 0; i < m_viewModel->getChannelCount(); ++i) {
+                if (const auto* ch = m_viewModel->getChannelByIndex(i)) snaps->clearClip(static_cast<int>(ch->slotIndex));
+            }
+            if (const auto* master = m_viewModel->getMaster()) snaps->clearClip(static_cast<int>(master->slotIndex));
+        }
+    }
+    repaint();
+}
+
 bool UIMixerPanel::recomputeGrouping()
 {
     std::vector<Aestra::MixerGroupInput> inputs;
@@ -342,11 +388,22 @@ bool UIMixerPanel::recomputeGrouping()
                      std::to_string(in.colorIndex) + ":" + in.name + ";";
         inputs.push_back(std::move(in));
     }
+    signature += m_groupByOutput ? "|g" : "|f";
     if (signature == m_groupingSignature && m_stripOrder.size() == m_strips.size()) {
         return false;
     }
     m_groupingSignature = std::move(signature);
-    m_grouping = Aestra::groupMixerStripsByOutput(inputs);
+    if (m_groupByOutput) {
+        m_grouping = Aestra::groupMixerStripsByOutput(inputs);
+    } else {
+        // Flat: the project's own channel order, one group, no headers.
+        m_grouping = Aestra::MixerGroupedOrder{};
+        Aestra::MixerStripGroup all;
+        all.label = "Master";
+        all.count = inputs.size();
+        for (size_t i = 0; i < inputs.size(); ++i) m_grouping.order.push_back(i);
+        if (!inputs.empty()) m_grouping.groups.push_back(all);
+    }
     m_stripOrder = m_grouping.order;
     return true;
 }
@@ -375,6 +432,12 @@ void UIMixerPanel::layoutMeters()
     const float bandY = trailing.masterRect.y;
     const float stripY = trailing.masterRect.y + bandH;
     const float stripHeight = trailing.masterRect.height - bandH;
+
+    if (m_toolbar) {
+        const float toolbarW = std::max(0.0f, trailing.inspectorRect.x - STRIP_SPACING - bounds.x);
+        m_toolbar->setBounds(bounds.x, bounds.y + 2.0f, toolbarW, TOOLBAR_H);
+        m_toolbar->setSummary(static_cast<int>(m_strips.size()), m_grouping.grouped());
+    }
 
     // Layout master strip on the right.
     if (m_masterStrip) {
@@ -411,7 +474,7 @@ void UIMixerPanel::layoutMeters()
         trace->scope("strips");
     }
     const auto items =
-        Layout::arrangeScrollingRow(viewport, STRIP_WIDTH, STRIP_SPACING, m_strips.size(), m_scrollX, trace);
+        Layout::arrangeScrollingRow(viewport, stripWidth(), STRIP_SPACING, m_strips.size(), m_scrollX, trace);
     Layout::finishLayoutPass(trace);
     m_groupBands.clear();
     size_t groupIndex = 0;
@@ -507,7 +570,7 @@ void UIMixerPanel::updateInspectorWidthConstraint()
     // The inspector only earns its width if the strips it sits beside are still
     // usable. Below that, collapse is imposed regardless of preference.
     const float needed = MASTER_STRIP_WIDTH + STRIP_SPACING + INSPECTOR_WIDTH + STRIP_SPACING
-                       + MIN_STRIPS_BESIDE_INSPECTOR * (STRIP_WIDTH + STRIP_SPACING);
+                       + MIN_STRIPS_BESIDE_INSPECTOR * (stripWidth() + STRIP_SPACING);
 
     const bool wasForced = m_inspectorCollapse.forcedCollapsed;
     m_inspectorCollapse.setForcedCollapsed(available < needed);
@@ -658,6 +721,8 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
     // Background
     renderer.fillRect(bounds, m_backgroundColor);
 
+    if (m_toolbar) m_toolbar->onRender(renderer);
+
     const NUIRect minimapRect = getMinimapRect();
     const NUIColor minimapFill = m_backgroundColor.withAlpha(0.72f);
     const NUIColor minimapBorder = m_separatorColor.withAlpha(0.70f);
@@ -670,7 +735,7 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
         const float gap = 2.0f;
         const float laneW = std::max(1.0f, minimapRect.width - gap * 2.0f);
         const float laneH = std::max(1.0f, minimapRect.height - gap * 2.0f);
-        const float perStripW = static_cast<float>(STRIP_WIDTH + STRIP_SPACING) / contentW * laneW;
+        const float perStripW = (stripWidth() + STRIP_SPACING) / contentW * laneW;
         const float barW = std::max(2.0f, perStripW - 1.0f);
         float x = minimapRect.x + gap;
         for (size_t slot = 0; slot < m_strips.size(); ++slot) {
@@ -914,7 +979,7 @@ NUIRect UIMixerPanel::getMinimapRect() const
     const auto bounds = getBounds();
     const TrailingLayout trailing = trailingLayout();
     const float width = std::max(0.0f, (trailing.inspectorRect.x - STRIP_SPACING) - bounds.x);
-    return NUIRect(bounds.x, bounds.y + 2.0f, width, MINIMAP_HEIGHT);
+    return NUIRect(bounds.x, bounds.y + 2.0f + TOOLBAR_H, width, MINIMAP_HEIGHT);
 }
 
 float UIMixerPanel::getChannelViewportWidth() const
@@ -926,7 +991,7 @@ float UIMixerPanel::getChannelViewportWidth() const
 
 float UIMixerPanel::getChannelContentWidth() const
 {
-    return m_strips.empty() ? 0.0f : (m_strips.size() * (STRIP_WIDTH + STRIP_SPACING) - STRIP_SPACING) + groupGapsWidth();
+    return m_strips.empty() ? 0.0f : (m_strips.size() * (stripWidth() + STRIP_SPACING) - STRIP_SPACING) + groupGapsWidth();
 }
 
 float UIMixerPanel::getChannelMaxScroll() const

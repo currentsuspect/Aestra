@@ -80,6 +80,20 @@ void UIMixerHeader::setIsMaster(bool isMaster)
     repaint();
 }
 
+namespace {
+// A name that does not fit ends in an ellipsis instead of running into its neighbours (Narrow strips are 44 px).
+std::string fitText(NUIRenderer& renderer, const std::string& text, float fontSize, float maxWidth)
+{
+    if (text.empty() || renderer.measureText(text, fontSize).width <= maxWidth) return text;
+    std::string cut = text;
+    while (cut.size() > 1 && renderer.measureText(cut + "\xE2\x80\xA6", fontSize).width > maxWidth) {
+        cut.pop_back();
+        while (!cut.empty() && (static_cast<unsigned char>(cut.back()) & 0xC0) == 0x80) cut.pop_back(); // keep UTF-8 whole
+    }
+    return cut + "\xE2\x80\xA6";
+}
+} // namespace
+
 void UIMixerHeader::onRender(NUIRenderer& renderer)
 {
     auto bounds = getBounds();
@@ -153,7 +167,7 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
     const float stackY = textRect.y + std::max(0.0f, (textRect.height - stackH) * 0.5f) - 0.5f;
 
     NUIRect nameRect{textRect.x, stackY, textRect.width, TRACK_NAME_H};
-    renderer.drawTextCentered(m_name, nameRect, nameFont, m_text);
+    renderer.drawTextCentered(fitText(renderer, m_name, nameFont, nameRect.width), nameRect, nameFont, m_text);
 
     if (!m_route.empty()) {
         NUIRect routeRect{textRect.x, stackY + TRACK_NAME_H + TRACK_GAP, textRect.width, TRACK_ROUTE_H};
