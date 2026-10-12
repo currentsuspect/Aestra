@@ -1039,7 +1039,7 @@ void AestraContent::setupMixerPanels() {
     }
 
     // Create routing map full-panel overlay (launched from mixer inspector minimap)
-    m_routingMapPanel = std::make_shared<AestraUI::UIRoutingMap>(AestraUI::UIRoutingMap::Mode::FullPanel);
+    m_routingMapPanel = std::make_shared<AestraUI::UIRoutingMap>();
     m_routingMapPanel->setVisible(false);
     if (m_mixerPanel && m_mixerPanel->getViewModel()) {
         m_routingMapPanel->setViewModel(m_mixerPanel->getViewModel().get());
@@ -1056,10 +1056,6 @@ void AestraContent::setupMixerPanels() {
                 }
             }
         }
-    });
-    m_routingMapPanel->setOnDoubleClick([this]() {
-        m_previousViewFocus = m_viewFocus;
-        setViewFocus(ViewFocus::RoutingMap);
     });
     m_routingMapPanel->setOnCollapse([this]() {
         setViewFocus(m_previousViewFocus);

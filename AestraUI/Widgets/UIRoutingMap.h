@@ -18,7 +18,8 @@ struct ChannelViewModel;
 namespace AestraUI {
 
 /**
- * @brief Routing map visualizer — minimap and full panel modes.
+ * @brief The routing graph (full panel). The minimap mode was removed by FD-28; the mixer inspector's
+ * "Show in routing graph" link opens this instead.
  *
  * Interactive graph of the mixer routing state: drag-to-reroute main paths,
  * drag-to-add sends (audio or sidechain), node repositioning, edge selection
@@ -28,9 +29,7 @@ namespace AestraUI {
  */
 class UIRoutingMap : public NUIComponent {
 public:
-    enum class Mode { Minimap, FullPanel };
-
-    explicit UIRoutingMap(Mode mode = Mode::Minimap);
+    UIRoutingMap();
 
     void onRender(NUIRenderer& renderer) override;
     void onThemeChanged(const NUIThemeProperties& theme) override { cacheThemeColors(); NUIComponent::onThemeChanged(theme); }
@@ -40,12 +39,6 @@ public:
     bool onKeyEvent(const NUIKeyEvent& event) override;
 
     void setViewModel(Aestra::MixerViewModel* viewModel);
-
-    Mode getMode() const { return m_mode; }
-    void setMode(Mode mode);
-
-    /// Callback fired on double-click (minimap → full panel transition)
-    void setOnDoubleClick(std::function<void()> callback) { m_onDoubleClick = std::move(callback); }
 
     /// Callback fired when a node is clicked (track selection)
     void setOnNodeSelected(std::function<void(uint32_t channelId)> callback) { m_onNodeSelected = std::move(callback); }
@@ -77,7 +70,6 @@ public:
     void refreshLiveState();
 
 private:
-    Mode m_mode;
     Aestra::MixerViewModel* m_viewModel{nullptr};
 
     struct Node {
@@ -148,12 +140,6 @@ private:
     NUIPoint m_zoomAnchorScreen{0, 0};
     bool m_zoomAnchorActive{false};
 
-    // Minimap last-rendered transform (for accurate hit-testing)
-    float m_minimapScale{1.0f};
-    float m_minimapOffsetX{0.0f};
-    float m_minimapOffsetY{0.0f};
-    float m_minimapCenterX{0.0f};
-    float m_minimapCenterY{0.0f};
 
     // World-space bounds of laid-out graph (for fit-to-view)
     float m_worldMinX{0}, m_worldMinY{0}, m_worldMaxX{0}, m_worldMaxY{0};
@@ -161,7 +147,6 @@ private:
     // Hover / interaction
     int m_hoveredNodeIdx{-1};
     int m_hoveredEdgeIdx{-1};
-    long long m_lastClickTimeMs{0};
     long long m_lastNodeClickTimeMs{0};
     int m_lastNodeClickIdx{-1};
 
@@ -258,14 +243,12 @@ private:
 
     void cacheThemeColors();
     void rebuildGraph();
-    void rebuildFocusedGraph(const Aestra::ChannelViewModel* selected);
     void autoLayout();
     void updateEdgeAttachments();
     float edgeTargetY(const Edge& edge, const Node& dst) const;
     void computeWorldBounds();
     void fitToView();
     void clampCamera();
-    void renderMinimap(NUIRenderer& renderer);
     void renderFullPanel(NUIRenderer& renderer);
 
     int hitTestNode(const NUIPoint& p) const;
@@ -286,7 +269,6 @@ private:
     void renderInspector(NUIRenderer& renderer);
     void recomputeSearchMatches();
 
-    std::function<void()> m_onDoubleClick;
     std::function<void(uint32_t)> m_onNodeSelected;
     std::function<void()> m_onCollapse;
     std::function<void(uint32_t, uint32_t)> m_onRerouteMain;

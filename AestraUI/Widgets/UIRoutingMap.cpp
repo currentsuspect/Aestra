@@ -23,14 +23,9 @@ namespace {
     constexpr float kTrackNodeH = 52.0f;
     constexpr float kMasterNodeW = 140.0f;
     constexpr float kMasterNodeH = 96.0f;
-    constexpr float kMinimapTrackW = 96.0f;
-    constexpr float kMinimapTrackH = 28.0f;
-    constexpr float kMinimapMasterW = 72.0f;
-    constexpr float kMinimapMasterH = 28.0f;
     constexpr float kTrackSpacing = 72.0f;
     constexpr float kMasterGap = 320.0f;
     constexpr float kPortRadius = 5.0f;
-    constexpr float kMinimapPortRadius = 3.0f;
     constexpr float kMinSplitHeight = 32.0f;
 
     std::string fitLabel(NUIRenderer& renderer, const std::string& text, float fontSize, float maxWidth)
@@ -51,20 +46,8 @@ namespace {
     }
 }
 
-UIRoutingMap::UIRoutingMap(Mode mode) : m_mode(mode) {
+UIRoutingMap::UIRoutingMap() {
     cacheThemeColors();
-}
-
-void UIRoutingMap::setMode(Mode mode) {
-    if (m_mode != mode) {
-        m_mode = mode;
-        m_graphDirty = true;
-        m_zoom = 1.0f;
-        m_targetZoom = 1.0f;
-        m_cameraX = 0.0f;
-        m_cameraY = 0.0f;
-        repaint();
-    }
 }
 
 void UIRoutingMap::setViewModel(Aestra::MixerViewModel* viewModel) {
@@ -101,19 +84,6 @@ void UIRoutingMap::rebuildGraph() {
     m_edges.clear();
 
     if (!m_viewModel) return;
-
-    // Minimap: focused view (selected track + its destinations only)
-    if (m_mode == Mode::Minimap) {
-        int32_t selId = m_viewModel->getSelectedChannelId();
-        const Aestra::ChannelViewModel* selected = nullptr;
-        if (selId >= 0) {
-            selected = m_viewModel->getChannelById(static_cast<uint32_t>(selId));
-        }
-        rebuildFocusedGraph(selected);
-        autoLayout();
-        computeWorldBounds();
-        return;
-    }
 
     size_t channelCount = m_viewModel->getChannelCount();
     const Aestra::ChannelViewModel* master = m_viewModel->getMaster();
@@ -199,100 +169,8 @@ void UIRoutingMap::rebuildGraph() {
     }
 
     computeWorldBounds();
-    if (m_mode == Mode::FullPanel && hasNewNodes) {
+    if (hasNewNodes) {
         m_fitPending = true;
-    }
-}
-
-void UIRoutingMap::rebuildFocusedGraph(const Aestra::ChannelViewModel* selected) {
-    // Show only the selected track + master + send destinations.
-    // No selection → just show master.
-    const Aestra::ChannelViewModel* master = m_viewModel->getMaster();
-    if (master) {
-        Node masterNode;
-        masterNode.id = 0;
-        masterNode.type = Node::Master;
-        masterNode.label = "MASTER";
-        masterNode.color = 0xFF808080;
-        m_nodes.push_back(masterNode);
-    }
-
-    if (!selected || selected->id == 0) {
-        return;
-    }
-
-    Node node;
-    node.id = selected->id;
-    node.type = Node::Track;
-    node.label = channelDisplayName(selected->id, selected->name);
-    node.color = paletteIndexToARGB(selected->trackColorIndex);
-    node.insertCount = selected->fxCount;
-    node.muted = selected->muted;
-    node.soloed = selected->soloed;
-    node.peakDb = std::max(selected->smoothedPeakL, selected->smoothedPeakR);
-    if (m_viewModel) {
-        node.hasRoutingWarning = !m_viewModel->getRoutingWarning(selected->id).empty();
-    }
-    for (size_t in = 0; in < selected->inserts.size() && node.insertNames.size() < 4; ++in) {
-        if (!selected->inserts[in].isEmpty && !selected->inserts[in].name.empty()) {
-            node.insertNames.push_back(selected->inserts[in].name);
-        }
-    }
-    m_nodes.push_back(node);
-
-    // Main output edge
-    uint32_t destId = selected->mainOutputId;
-    if (destId == 0xFFFFFFFFu) destId = 0;
-    if (selected->masterSendEnabled || destId != 0) {
-        Edge edge;
-        edge.sourceNodeId = selected->id;
-        edge.targetNodeId = destId;
-        edge.type = Edge::MainPath;
-        m_edges.push_back(edge);
-    }
-
-    // Send destinations — pull the target nodes too so they're visible
-    for (const auto& send : selected->sends) {
-        uint32_t targetId = send.targetId;
-        if (targetId == 0xFFFFFFFFu) targetId = 0;
-
-        // Add target node if not already present
-        bool exists = false;
-        for (const auto& n : m_nodes)
-            if (n.id == targetId) { exists = true; break; }
-
-        if (!exists) {
-            const auto* target = m_viewModel->getChannelById(targetId);
-            if (target) {
-                Node tn;
-                tn.id = targetId;
-                tn.type = (targetId == 0) ? Node::Master : Node::Track;
-                tn.label = (targetId == 0)
-                                ? std::string("MASTER")
-                                : (target->name.empty() ? std::string("Bus") : target->name);
-                tn.color = paletteIndexToARGB(target->trackColorIndex);
-                tn.insertCount = target->fxCount;
-                tn.muted = target->muted;
-                tn.soloed = target->soloed;
-                tn.peakDb = std::max(target->smoothedPeakL, target->smoothedPeakR);
-                if (m_viewModel && targetId != 0) {
-                    tn.hasRoutingWarning = !m_viewModel->getRoutingWarning(targetId).empty();
-                }
-                for (size_t in = 0; in < target->inserts.size() && tn.insertNames.size() < 4; ++in) {
-                    if (!target->inserts[in].isEmpty && !target->inserts[in].name.empty()) {
-                        tn.insertNames.push_back(target->inserts[in].name);
-                    }
-                }
-                m_nodes.push_back(tn);
-            }
-        }
-
-        Edge edge;
-        edge.sourceNodeId = selected->id;
-        edge.targetNodeId = targetId;
-        edge.type = send.sidechainOnly ? Edge::SidechainPath : Edge::SendPath;
-        edge.sendLevelDb = gainToDb(send.gain);
-        m_edges.push_back(edge);
     }
 }
 
@@ -362,49 +240,7 @@ void UIRoutingMap::clampCamera() {
 }
 
 void UIRoutingMap::autoLayout() {
-    if (m_mode == Mode::Minimap) {
-        // Compact representation: tracks left column, master right, square-ish layout
-        // Adapts node spacing to track count so 20+ tracks remain readable.
-        std::vector<Node*> tracks;
-        Node* masterNode = nullptr;
-        for (auto& n : m_nodes) {
-            if (n.type == Node::Master) masterNode = &n;
-            else tracks.push_back(&n);
-        }
-
-        // Use small uniform spacing; renderMinimap() rescales to fit bounds.
-        float trackW = kMinimapTrackW;
-        float trackH = kMinimapTrackH;
-        float masterW = kMinimapMasterW;
-        float masterH = kMinimapMasterH;
-        float gap = 100.0f;
-        float spacing = 6.0f;
-
-        for (size_t i = 0; i < tracks.size(); ++i) {
-            tracks[i]->x = 0.0f;
-            tracks[i]->y = static_cast<float>(i) * (trackH + spacing);
-            tracks[i]->w = trackW;
-            tracks[i]->h = trackH;
-            tracks[i]->outputX = trackW;
-            tracks[i]->outputY = trackH * 0.5f;
-            tracks[i]->inputX = 0.0f;
-            tracks[i]->inputY = trackH * 0.5f;
-        }
-
-        if (masterNode) {
-            masterNode->x = trackW + gap;
-            // Center master vertically against track column
-            float colHeight = tracks.empty() ? masterH
-                                              : tracks.size() * trackH + (tracks.size() - 1) * spacing;
-            masterNode->y = colHeight * 0.5f - masterH * 0.5f;
-            masterNode->w = masterW;
-            masterNode->h = masterH;
-            masterNode->inputX = 0.0f;
-            masterNode->inputY = masterH * 0.5f;
-            masterNode->outputX = masterW;
-            masterNode->outputY = masterH * 0.5f;
-        }
-    } else {
+    {
         // Full panel: flow-ordered columns instead of a rigid index grid.
         // Tracks that other tracks feed (send/bus targets) gravitate toward the
         // column nearest the master — horizontal position follows signal flow.
@@ -570,7 +406,7 @@ void UIRoutingMap::onUpdate(double deltaTime) {
     }
 
     // Auto-fit on first show or after resize
-    if (m_mode == Mode::FullPanel && m_fitPending && !m_nodes.empty()) {
+    if (m_fitPending && !m_nodes.empty()) {
         fitToView();
         repaint();
     }
@@ -600,130 +436,8 @@ void UIRoutingMap::onRender(NUIRenderer& renderer) {
     // Recompute per frame: attachment order depends on node positions, which
     // change during drags. O(E log E) on ≤ a few hundred edges — negligible.
     updateEdgeAttachments();
-    if (m_mode == Mode::Minimap) {
-        renderMinimap(renderer);
-    } else {
-        renderFullPanel(renderer);
-    }
-}
-
-void UIRoutingMap::renderMinimap(NUIRenderer& renderer) {
-    NUIRect bounds = getBounds();
-    bool widgetHovered = isHovered();
-
-    // Card background — slightly brighter on hover to signal interactivity
-    NUIColor cardBg = m_bgSecondary.withAlpha(widgetHovered ? 1.0f : 0.85f);
-    renderer.fillRoundedRect(bounds, 8.0f, cardBg);
-    renderer.strokeRoundedRect(bounds, 8.0f, widgetHovered ? 1.0f : 0.5f,
-                                widgetHovered ? m_accent.withAlpha(0.55f)
-                                              : m_border.withAlpha(0.35f));
-
-    // Reserve a small header strip for label + expand hint
-    constexpr float kHeaderH = 20.0f;
-    NUIRect canvasArea{bounds.x + 6.0f, bounds.y + kHeaderH,
-                        bounds.width - 12.0f, bounds.height - kHeaderH - 6.0f};
-
-    // Header label (left)
-    renderer.drawText("ROUTING", {bounds.x + 10.0f, bounds.y + 5.0f}, 9.0f,
-                      m_textSecondary.withAlpha(0.7f));
-
-    // Expand hint (right) — pulses subtly on hover
     {
-        std::string hint = widgetHovered ? "Expand" : "Open map";
-        float hintW = renderer.measureText(hint, 9.0f).width;
-        float alpha = widgetHovered ? 0.95f : 0.55f;
-        const float labelRight = bounds.x + 10.0f + renderer.measureText("ROUTING", 9.0f).width + 12.0f;
-        const float hintX = bounds.right() - hintW - 28.0f;
-        if (hintX > labelRight) {
-            renderer.drawText(hint, {hintX, bounds.y + 5.0f},
-                              9.0f, m_accent.withAlpha(alpha));
-        }
-    }
-
-    float scale = 1.0f;
-    float centerX = 0.0f;
-    float centerY = 0.0f;
-    if (!m_nodes.empty()) {
-        float minX = m_nodes[0].x, maxX = m_nodes[0].x + m_nodes[0].w;
-        float minY = m_nodes[0].y, maxY = m_nodes[0].y + m_nodes[0].h;
-        for (const auto& n : m_nodes) {
-            minX = std::min(minX, n.x);
-            maxX = std::max(maxX, n.x + n.w);
-            minY = std::min(minY, n.y);
-            maxY = std::max(maxY, n.y + n.h);
-        }
-        float contentW = std::max(1.0f, maxX - minX);
-        float contentH = std::max(1.0f, maxY - minY);
-        constexpr float kPad = 4.0f;
-        float scaleX = (canvasArea.width - kPad * 2.0f) / contentW;
-        float scaleY = (canvasArea.height - kPad * 2.0f) / contentH;
-        scale = std::max(0.05f, std::min(scaleX, scaleY));
-        centerX = (minX + maxX) * 0.5f;
-        centerY = (minY + maxY) * 0.5f;
-    }
-    float offsetX = canvasArea.x + canvasArea.width * 0.5f;
-    float offsetY = canvasArea.y + canvasArea.height * 0.5f;
-
-    // Cache transform for hit-testing
-    m_minimapScale = scale;
-    m_minimapOffsetX = offsetX;
-    m_minimapOffsetY = offsetY;
-    m_minimapCenterX = centerX;
-    m_minimapCenterY = centerY;
-
-    auto worldToScreen = [&](float x, float y) -> NUIPoint {
-        return {offsetX + (x - centerX) * scale, offsetY + (y - centerY) * scale};
-    };
-
-    // Edges
-    for (const auto& edge : m_edges) {
-        const Node* src = nullptr;
-        const Node* dst = nullptr;
-        for (const auto& n : m_nodes) {
-            if (n.id == edge.sourceNodeId) src = &n;
-            if (n.id == edge.targetNodeId) dst = &n;
-        }
-        if (!src || !dst) continue;
-
-        NUIPoint a = worldToScreen(src->x + src->outputX, src->y + src->outputY);
-        NUIPoint b = worldToScreen(dst->x + dst->inputX, edgeTargetY(edge, *dst));
-
-        NUIColor color = m_textSecondary.withAlpha(0.5f);
-        if (edge.type == Edge::SendPath) color = m_textInfo.withAlpha(0.5f);
-        if (edge.type == Edge::SidechainPath) color = m_warning.withAlpha(0.55f);
-
-        drawBezier(renderer, a, b, 1.0f, color, edge.type != Edge::MainPath);
-    }
-
-    // Nodes
-    for (const auto& node : m_nodes) {
-        NUIPoint topLeft = worldToScreen(node.x, node.y);
-        float nx = topLeft.x;
-        float ny = topLeft.y;
-        float nw = node.w * scale;
-        float nh = node.h * scale;
-
-        NUIRect nodeRect(nx, ny, nw, nh);
-        renderer.fillRoundedRect(nodeRect, 4.0f, m_bg.withAlpha(node.hovered ? 0.8f : 0.6f));
-        renderer.strokeRoundedRect(nodeRect, 4.0f, 0.5f,
-            node.hovered ? m_accent.withAlpha(0.8f) : m_border.withAlpha(0.3f));
-
-        // Color strip
-        NUIColor stripColor(((node.color >> 16) & 0xFF) / 255.0f,
-                            ((node.color >> 8) & 0xFF) / 255.0f,
-                            (node.color & 0xFF) / 255.0f,
-                            ((node.color >> 24) & 0xFF) / 255.0f);
-        renderer.fillRect({nx, ny, 3.0f, nh}, stripColor);
-
-        // Label
-        float fontSize = std::min(10.0f, nh * 0.45f);
-        std::string label = fitLabel(renderer, node.label, fontSize, nw - 12.0f);
-        renderer.drawTextCentered(label, {nx + 5.0f, ny, nw - 10.0f, nh},
-                                  fontSize, m_text.withAlpha(0.92f));
-
-        // Output port
-        renderer.strokeCircle({nx + nw, ny + nh * 0.5f}, kMinimapPortRadius, 1.0f,
-                              m_borderSecondary.withAlpha(0.6f));
+        renderFullPanel(renderer);
     }
 }
 
@@ -1032,7 +746,7 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
     }
 
     // Highlight node being dragged
-    if (m_mode == Mode::FullPanel && m_draggingNode && m_dragNodeIdx >= 0) {
+    if (m_draggingNode && m_dragNodeIdx >= 0) {
         const Node& node = m_nodes[m_dragNodeIdx];
         float nx = bounds.x + node.x * m_zoom + m_cameraX;
         float ny = canvasY + node.y * m_zoom + m_cameraY;
@@ -1148,7 +862,7 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
 void UIRoutingMap::drawNode(NUIRenderer& renderer, const Node& node, float scale) {
     NUIRect bounds = getBounds();
     constexpr float kFullTitleBarH = 44.0f;
-    float canvasY = bounds.y + ((m_mode == Mode::FullPanel) ? kFullTitleBarH : 0.0f);
+    float canvasY = bounds.y + kFullTitleBarH;
     float nx = bounds.x + node.x * scale + m_cameraX;
     float ny = canvasY + node.y * scale + m_cameraY;
     float nw = node.w * scale;
@@ -1160,14 +874,14 @@ void UIRoutingMap::drawNode(NUIRenderer& renderer, const Node& node, float scale
     }
 
     NUIRect nodeRect(nx, ny, nw, nh);
-    float radius = (m_mode == Mode::Minimap) ? 4.0f : 10.0f;
+    float radius = 10.0f;
 
     NUIColor stripColor(((node.color >> 16) & 0xFF) / 255.0f,
                         ((node.color >> 8) & 0xFF) / 255.0f,
                         (node.color & 0xFF) / 255.0f,
                         ((node.color >> 24) & 0xFF) / 255.0f);
 
-    if (m_mode == Mode::FullPanel) {
+    {
         // Flat node fill — no shadow, gradient, or inner highlight. Hover reads
         // as a single lighter fill; the master keeps its accent-tinted tone so
         // the destination stays visually distinct.
@@ -1334,57 +1048,10 @@ void UIRoutingMap::drawNode(NUIRenderer& renderer, const Node& node, float scale
             renderer.fillCircle({nx + nw, ny + nh * 0.5f}, portR, portFill);
             renderer.strokeCircle({nx + nw, ny + nh * 0.5f}, portR, 1.5f, outHovered ? m_accent.withAlpha(0.98f) : portStroke);
         }
-    } else {
-        // === Minimap mode ===
-        // Brighter overlay so nodes contrast against the dark card.
-        NUIColor nodeFill = m_text.withAlpha(node.hovered ? 0.18f : 0.12f);
-        renderer.fillRoundedRect(nodeRect, radius, nodeFill);
-
-        // Border picks up solo/selection state too
-        bool isSelected = (m_viewModel &&
-                           static_cast<int32_t>(node.id) == m_viewModel->getSelectedChannelId());
-        NUIColor strokeColor = m_text.withAlpha(0.22f);
-        if (node.soloed) strokeColor = m_warning.withAlpha(0.95f);
-        else if (isSelected) strokeColor = m_accent.withAlpha(0.85f);
-        else if (node.hovered) strokeColor = m_accent.withAlpha(0.7f);
-        renderer.strokeRoundedRect(nodeRect, radius, 1.0f, strokeColor);
-
-        if (node.muted) {
-            renderer.fillRoundedRect(nodeRect, radius,
-                                      NUIColor(0.0f, 0.0f, 0.0f, 0.55f));
-        }
-
-        // Color strip (left edge) — skip for master so it's visually distinct
-        if (node.type != Node::Master) {
-            renderer.fillRect({nx, ny, 3.0f, nh}, stripColor);
-        }
-
-        // Label — auto-shrink font so master fits even in tight space
-        if (nw > 18.0f) {
-            float fontSize = std::min(10.0f, nh * 0.55f);
-            // Shrink further if the label is wider than the node
-            float labelW = renderer.measureText(node.label, fontSize).width;
-            while (fontSize > 7.0f && labelW > nw - 10.0f) {
-                fontSize -= 0.5f;
-                labelW = renderer.measureText(node.label, fontSize).width;
-            }
-            if (fontSize >= 7.0f) {
-                std::string label = fitLabel(renderer, node.label, fontSize, nw - 8.0f);
-                float labelAlpha = node.muted ? 0.55f : 0.95f;
-                if (node.type == Node::Master) {
-                    // Master label is centered (no strip taking space)
-                    renderer.drawTextCentered(label, nodeRect, fontSize,
-                                              m_text.withAlpha(labelAlpha));
-                } else {
-                    renderer.drawText(label, {nx + 5.0f, ny + nh * 0.5f - fontSize * 0.4f},
-                                      fontSize, m_text.withAlpha(labelAlpha));
-                }
-            }
-        }
     }
 }
 
-// Note: edge rendering is handled inline in renderMinimap / renderFullPanel.
+// Note: edge rendering is handled inline in renderFullPanel.
 // The old drawEdge() stub has been removed.
 
 void UIRoutingMap::drawBezier(NUIRenderer& renderer, const NUIPoint& a, const NUIPoint& b,
@@ -1478,18 +1145,13 @@ int UIRoutingMap::hitTestNode(const NUIPoint& p) const {
     for (size_t i = 0; i < m_nodes.size(); ++i) {
         const auto& node = m_nodes[i];
         float nx, ny, nw, nh;
-        if (m_mode == Mode::FullPanel) {
+        {
             NUIRect bounds = getBounds();
             float canvasY = bounds.y + 44.0f;
             nx = bounds.x + node.x * m_zoom + m_cameraX;
             ny = canvasY + node.y * m_zoom + m_cameraY;
             nw = node.w * m_zoom;
             nh = node.h * m_zoom;
-        } else {
-            nx = m_minimapOffsetX + (node.x - m_minimapCenterX) * m_minimapScale;
-            ny = m_minimapOffsetY + (node.y - m_minimapCenterY) * m_minimapScale;
-            nw = node.w * m_minimapScale;
-            nh = node.h * m_minimapScale;
         }
         if (p.x >= nx && p.x <= nx + nw && p.y >= ny && p.y <= ny + nh) {
             return static_cast<int>(i);
@@ -1514,18 +1176,13 @@ int UIRoutingMap::hitTestEdge(const NUIPoint& p) const {
         if (!src || !dst) continue;
 
         float ax, ay, bx, by;
-        if (m_mode == Mode::FullPanel) {
+        {
             NUIRect bounds = getBounds();
             float canvasY = bounds.y + 44.0f;
             ax = bounds.x + (src->x + src->outputX) * m_zoom + m_cameraX;
             ay = canvasY + (src->y + src->outputY) * m_zoom + m_cameraY;
             bx = bounds.x + (dst->x + dst->inputX) * m_zoom + m_cameraX;
             by = canvasY + edgeTargetY(edge, *dst) * m_zoom + m_cameraY;
-        } else {
-            ax = m_minimapOffsetX + (src->x + src->outputX - m_minimapCenterX) * m_minimapScale;
-            ay = m_minimapOffsetY + (src->y + src->outputY - m_minimapCenterY) * m_minimapScale;
-            bx = m_minimapOffsetX + (dst->x + dst->inputX - m_minimapCenterX) * m_minimapScale;
-            by = m_minimapOffsetY + (edgeTargetY(edge, *dst) - m_minimapCenterY) * m_minimapScale;
         }
 
         float dx = std::abs(bx - ax);
@@ -1574,7 +1231,7 @@ int UIRoutingMap::hitTestOutputPort(const NUIPoint& p) const {
         if (node.type == Node::Master) continue; // master has no output port
         float nx, ny, nw, nh;
         float scale;
-        if (m_mode == Mode::FullPanel) {
+        {
             NUIRect bounds = getBounds();
             float canvasY = bounds.y + 44.0f;
             nx = bounds.x + node.x * m_zoom + m_cameraX;
@@ -1582,12 +1239,6 @@ int UIRoutingMap::hitTestOutputPort(const NUIPoint& p) const {
             nw = node.w * m_zoom;
             nh = node.h * m_zoom;
             scale = m_zoom;
-        } else {
-            nx = m_minimapOffsetX + (node.x - m_minimapCenterX) * m_minimapScale;
-            ny = m_minimapOffsetY + (node.y - m_minimapCenterY) * m_minimapScale;
-            nw = node.w * m_minimapScale;
-            nh = node.h * m_minimapScale;
-            scale = m_minimapScale;
         }
         float portCx = nx + nw;
         float portCy = ny + nh * 0.5f;
@@ -1605,18 +1256,15 @@ void UIRoutingMap::onResize(int width, int height) {
     (void)width;
     (void)height;
     m_graphDirty = true;
-    if (m_mode == Mode::FullPanel) m_fitPending = true;
+    m_fitPending = true;
 }
 
 bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
     const NUIPoint& mouse = event.position;
 
-    // In full-panel mode the bounds span the entire content area, so an early
-    // bounds check prevents us from swallowing clicks meant for the title bar
-    // or transport bar.  The minimap is already tightly clipped by its parent
-    // layout, so we skip the guard there to avoid rejecting valid events when
-    // bounds are briefly stale (e.g. before the first onRender).
-    if (m_mode == Mode::FullPanel && !getBounds().contains(mouse)) {
+    // The bounds span the entire content area, so an early bounds check prevents us from swallowing
+    // clicks meant for the title bar or transport bar.
+    if (!getBounds().contains(mouse)) {
         return false;
     }
 
@@ -1626,16 +1274,16 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
         int prevEdge = m_hoveredEdgeIdx;
         m_hoveredNodeIdx = hitTestNode(mouse);
         m_hoveredEdgeIdx = (m_hoveredNodeIdx < 0) ? hitTestEdge(mouse) : -1;
-        m_collapseHovered = (m_mode == Mode::FullPanel) && m_collapseButtonRect.contains(mouse);
-        m_fitHovered = (m_mode == Mode::FullPanel) && m_fitButtonRect.contains(mouse);
-        m_resetHovered = (m_mode == Mode::FullPanel) && m_resetButtonRect.contains(mouse);
-        m_searchHovered = (m_mode == Mode::FullPanel) && m_searchRect.contains(mouse);
+        m_collapseHovered = m_collapseButtonRect.contains(mouse);
+        m_fitHovered = m_fitButtonRect.contains(mouse);
+        m_resetHovered = m_resetButtonRect.contains(mouse);
+        m_searchHovered = m_searchRect.contains(mouse);
         bool overInspectorPanel = m_inspectorVisible && m_inspectorPanelRect.contains(mouse);
         m_inspectorCloseHovered = m_inspectorVisible && m_inspectorCloseRect.contains(mouse);
         // Port hover tracking (full panel only) — skip when over inspector or search
         m_hoveredPortType = NoPort;
         m_hoveredPortNodeIdx = -1;
-        if (m_mode == Mode::FullPanel && m_hoveredNodeIdx < 0 && m_hoveredEdgeIdx < 0 &&
+        if (m_hoveredNodeIdx < 0 && m_hoveredEdgeIdx < 0 &&
             !m_inspectorCloseHovered && !overInspectorPanel && !m_searchHovered) {
             int outPort = hitTestOutputPort(mouse);
             if (outPort >= 0) {
@@ -1691,7 +1339,7 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
         }
     }
 
-    if (m_mode == Mode::FullPanel) {
+    {
         // Search bar hit test
         if (event.pressed && event.button == NUIMouseButton::Left && m_searchRect.contains(mouse)) {
             m_searchFocused = true;
@@ -1898,7 +1546,7 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
             if (moveDist < 8.0f && m_dragNodeIdx >= 0) {
                 if (m_onNodeSelected) m_onNodeSelected(m_nodes[m_dragNodeIdx].id);
                 // Inspector opens on double-click in full panel mode
-                if (m_mode == Mode::FullPanel) {
+                {
                     auto now = std::chrono::steady_clock::now();
                     long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
                         now.time_since_epoch()).count();
@@ -2140,31 +1788,6 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
         }
     }
 
-    // Click / double-click (minimap only — full-panel clicks handled via drag-release above)
-    if (event.pressed && event.button == NUIMouseButton::Left && !m_draggingConnection && !m_draggingNode) {
-        auto now = std::chrono::steady_clock::now();
-        long long nowMs =
-            std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-        bool isDouble = event.doubleClick || (nowMs - m_lastClickTimeMs < 400);
-        m_lastClickTimeMs = nowMs;
-
-        if (isDouble && m_mode == Mode::Minimap) {
-            if (m_onDoubleClick) m_onDoubleClick();
-            return true;
-        }
-
-        if (m_hoveredNodeIdx >= 0 && m_mode == Mode::Minimap) {
-            uint32_t channelId = m_nodes[m_hoveredNodeIdx].id;
-            if (m_onNodeSelected) m_onNodeSelected(channelId);
-            return true;
-        }
-    }
-
-    if (event.type == NUIMouseEventType::DoubleClick && m_mode == Mode::Minimap) {
-        if (m_onDoubleClick) m_onDoubleClick();
-        return true;
-    }
-
     return false;
 }
 
@@ -2194,7 +1817,7 @@ bool UIRoutingMap::onKeyEvent(const NUIKeyEvent& event) {
     if (!event.pressed) return false;
 
     // Search bar text input (when focused)
-    if (m_searchFocused && m_mode == Mode::FullPanel) {
+    if (m_searchFocused) {
         if (event.keyCode == NUIKeyCode::Escape) {
             m_searchQuery.clear();
             m_searchFocused = false;
@@ -2317,7 +1940,7 @@ bool UIRoutingMap::onKeyEvent(const NUIKeyEvent& event) {
             repaint();
             return true;
         }
-        if (m_mode == Mode::FullPanel && m_onCollapse) {
+        if (m_onCollapse) {
             m_onCollapse();
             return true;
         }
@@ -2422,18 +2045,13 @@ int UIRoutingMap::hitTestInputPort(const NUIPoint& p) const {
         const auto& node = m_nodes[i];
         float nx, ny, nh;
         float scale;
-        if (m_mode == Mode::FullPanel) {
+        {
             NUIRect bounds = getBounds();
             float canvasY = bounds.y + 44.0f;
             nx = bounds.x + node.x * m_zoom + m_cameraX;
             ny = canvasY + node.y * m_zoom + m_cameraY;
             nh = node.h * m_zoom;
             scale = m_zoom;
-        } else {
-            nx = m_minimapOffsetX + (node.x - m_minimapCenterX) * m_minimapScale;
-            ny = m_minimapOffsetY + (node.y - m_minimapCenterY) * m_minimapScale;
-            nh = node.h * m_minimapScale;
-            scale = m_minimapScale;
         }
         float portCx = nx;
         float portCy = ny + nh * 0.5f;
@@ -2448,7 +2066,6 @@ int UIRoutingMap::hitTestInputPort(const NUIPoint& p) const {
 }
 
 void UIRoutingMap::renderMiniOverview(NUIRenderer& renderer) {
-    if (m_mode != Mode::FullPanel) return;
     if (m_worldMaxX <= m_worldMinX || m_worldMaxY <= m_worldMinY) return;
 
     NUIRect bounds = getBounds();
@@ -2518,7 +2135,6 @@ void UIRoutingMap::renderMiniOverview(NUIRenderer& renderer) {
 }
 
 void UIRoutingMap::renderInspector(NUIRenderer& renderer) {
-    if (m_mode != Mode::FullPanel) return;
     if (!m_inspectorVisible || m_inspectorNodeIdx < 0 || m_inspectorNodeIdx >= static_cast<int>(m_nodes.size())) return;
     if (!m_viewModel) return;
 
