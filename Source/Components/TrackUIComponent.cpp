@@ -383,7 +383,7 @@ void TrackUIComponent::showClipRoutingMenu(const ClipInstanceID& clipId, const A
         addAction("Cut", "Ctrl+X", [parentManager]() { parentManager->cutSelectedClip(); });
         addAction("Copy", "Ctrl+C", [parentManager]() { parentManager->copySelectedClip(); });
         addAction("Duplicate", "Ctrl+D", [parentManager]() { parentManager->duplicateSelectedClip(); });
-        if (pattern && pattern->isAudio())
+        if (pattern)
             addAction("Bounce in Place", "", [parentManager]() { parentManager->bounceSelectedClipsInPlace(); });
         if (pattern && m_trackManager) {
             // Break shared pattern identity for this clip only (duplicate → make unique).
