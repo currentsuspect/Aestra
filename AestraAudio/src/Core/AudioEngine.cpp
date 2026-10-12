@@ -1486,6 +1486,7 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
 
         // Accumulate Energy
         m_loudnessState.blockEnergySum += (f2L * f2L) + (f2R * f2R);
+        m_loudnessWindow.add((f2L * f2L) + (f2R * f2R));
         // -----------------------------------
 
         // Track output-boundary clips without mutating the limiter-disabled float path.
@@ -1565,6 +1566,8 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
 
         snaps->writeLevels(ChannelSlotMap::MASTER_SLOT_INDEX, masterPeakL, masterPeakR, masterRmsL, masterRmsR,
                            masterLowL, masterLowR, masterCorr, integratedLufs);
+        snaps->writeLoudness(ChannelSlotMap::MASTER_SLOT_INDEX, m_loudnessWindow.momentaryLufs(),
+                             m_loudnessWindow.shortTermLufs(), getTruePeakL(), getTruePeakR());
 
         if (masterPeakL >= 1.0f || masterPeakR >= 1.0f) {
             snaps->setClip(ChannelSlotMap::MASTER_SLOT_INDEX, masterPeakL >= 1.0f, masterPeakR >= 1.0f);
@@ -1579,14 +1582,6 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         m_loudnessState.energyQueue.try_push(avgBlockEnergy);
         m_loudnessState.blockEnergySum = 0.0;
         m_loudnessState.blockSamples = 0;
-
-        // Momentary (Short-term) readout for UI feedback
-        if (avgBlockEnergy > 1e-14) {
-            float m = -0.691f + 10.0f * std::log10(static_cast<float>(avgBlockEnergy));
-            m_loudnessState.momentaryLufs.store(m, std::memory_order_relaxed);
-        } else {
-            m_loudnessState.momentaryLufs.store(-144.0f, std::memory_order_relaxed);
-        }
     }
 
     // Fade envelopes (short ramps prevent clicks on stop/seek). An offline render takes no fade-in (V8-W4).
@@ -2078,7 +2073,6 @@ AudioEngine::AudioEngine() {
     m_activeKWeightIndex.store(0, std::memory_order_relaxed);
 
     m_loudnessState.integratedLufs.store(-144.0f); // Force silence init
-    m_loudnessState.momentaryLufs.store(-144.0f);
 
     // Metronome sounds generated in MetronomeEngine constructor
     startLoudnessWorker();

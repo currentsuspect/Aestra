@@ -599,6 +599,11 @@ void MixerViewModel::smoothMeterChannel(ChannelViewModel& channel,
     channel.integratedLufs = std::isfinite(snapshot.integratedLufs)
                                  ? std::clamp(snapshot.integratedLufs, -144.0f, 12.0f)
                                  : -144.0f;
+    const auto clampLufs = [](float v) { return std::isfinite(v) ? std::clamp(v, -144.0f, 12.0f) : -144.0f; };
+    channel.momentaryLufs = clampLufs(snapshot.momentaryLufs);
+    channel.shortTermLufs = clampLufs(snapshot.shortTermLufs);
+    const float truePeakLinear = std::max(sanitizeLinear(snapshot.truePeakL), sanitizeLinear(snapshot.truePeakR));
+    channel.truePeakDb = truePeakLinear > 1e-7f ? 20.0f * std::log10(truePeakLinear) : -144.0f;
     
     channel.smoothedPeakR = smoothDb(channel.smoothedPeakR, channel.envPeakR, DISPLAY_ATTACK_MS, DISPLAY_RELEASE_MS);
 

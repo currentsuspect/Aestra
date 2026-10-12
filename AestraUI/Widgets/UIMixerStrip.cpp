@@ -42,7 +42,9 @@ namespace {
     // strip (its footer is hidden, so the space is otherwise dead). Two stacked
     // blocks plus bottom slack: with only 4px of slack the second value landed
     // on the strip's bottom edge and was not drawn at all.
-    constexpr float MASTER_READOUT_H = MASTER_BLOCK_H * 2.0f + 14.0f;
+    constexpr float MASTER_ROW_H = 15.0f;
+    // Integrated, short-term, true peak, correlation (with its bar), gain: one line each.
+    constexpr float MASTER_READOUT_H = MASTER_ROW_H * 6.0f + 8.0f;
 
     constexpr float SELECT_TOP_H = 3.0f;
     constexpr float MIXER_MIN_CHANNEL_HEIGHT = 220.0f;
@@ -529,10 +531,8 @@ void UIMixerStrip::layoutChildren()
     // table to interpret state, and blurred which side owns which number.
     if (isMaster) {
         const float readoutY = footerY - MASTER_READOUT_H;
-        m_masterMeterReadoutRect = NUIRect{meterX, readoutY, meterW + GAP, MASTER_READOUT_H};
-        const float gainX = meterX + meterW + GAP;
-        m_masterGainReadoutRect =
-            NUIRect{gainX, readoutY, std::max(16.0f, (contentX + contentW) - gainX), MASTER_READOUT_H};
+        m_masterMeterReadoutRect = NUIRect{contentX, readoutY, contentW, MASTER_READOUT_H};
+        m_masterGainReadoutRect = NUIRect{};
     } else {
         m_masterMeterReadoutRect = NUIRect{};
         m_masterGainReadoutRect = NUIRect{};
@@ -542,69 +542,72 @@ void UIMixerStrip::layoutChildren()
 void UIMixerStrip::renderMasterReadout(NUIRenderer& renderer,
                                        const Aestra::ChannelViewModel& channel)
 {
-    const NUIRect& meterArea = m_masterMeterReadoutRect;
-    const NUIRect& gainArea = m_masterGainReadoutRect;
-    if (meterArea.width <= 0.0f || meterArea.height <= 0.0f) return;
+    const NUIRect& card = m_masterMeterReadoutRect;
+    if (card.width <= 0.0f || card.height <= 0.0f) return;
 
     auto& theme = NUIThemeManager::getInstance();
     const NUIColor labelColor = theme.getColor("textSecondary").withAlpha(0.864f);
     const NUIColor valueColor = theme.getColor("textPrimary").withAlpha(0.978f);
+    const NUIColor warnColor = theme.getColor("meterWarn");
     const NUIColor clipColor = theme.getColor("meterCrit");
 
-    const bool clipped = channel.clipLatchL || channel.clipLatchR;
+    renderer.fillRoundedRect(card, 5.0f, theme.getColor("buttonBgDefault").withAlpha(0.55f));
 
-    // Peak: prefer the held value, which is what the meter's hold line shows.
-    float peakDb = std::max(channel.smoothedPeakL, channel.smoothedPeakR);
-    if (channel.peakHoldL > Aestra::MixerMath::DB_MIN ||
-        channel.peakHoldR > Aestra::MixerMath::DB_MIN) {
-        peakDb = std::max(channel.peakHoldL, channel.peakHoldR);
-    }
-
+    constexpr const char* kSilence = "\xE2\x88\x92\xE2\x88\x9E"; // minus infinity
     char buf[32];
-    // Stacked label-over-value: the master columns are too narrow for a
-    // side-by-side label and a signed value.
-    auto block = [&](const NUIRect& area, int index, const char* label,
-                     const std::string& value, const NUIColor& color) {
-        const float y = area.y + static_cast<float>(index) * MASTER_BLOCK_H;
-        const NUIRect labelRect{area.x, y, area.width, MASTER_LABEL_H};
-        const NUIRect valueRect{area.x, y + MASTER_LABEL_H, area.width, MASTER_VALUE_H};
-        renderer.drawTextCentered(label, labelRect, 8.5f, labelColor);
-        renderer.drawTextCentered(value, valueRect, 10.0f, color);
+    int row = 0;
+    // One line per reading: the label on the left, the value (sign always kept) on the right, in LU or dB.
+    auto line = [&](const char* label, const std::string& value, const char* unit, const NUIColor& color) {
+        const float y = card.y + 4.0f + static_cast<float>(row++) * MASTER_ROW_H;
+        const NUIRect labelRect{card.x + 7.0f, y, card.width * 0.5f, MASTER_ROW_H};
+        const NUIRect valueRect{card.x + card.width * 0.38f, y, card.width * 0.62f - 7.0f, MASTER_ROW_H};
+        renderer.drawText(label, {labelRect.x, y + (MASTER_ROW_H - 8.5f) * 0.5f - 1.0f}, 8.5f, labelColor);
+        const std::string text = value + (unit[0] ? std::string(" ") + unit : std::string());
+        const float w = renderer.measureText(text, 10.0f).width;
+        renderer.drawText(text, {valueRect.right() - w, y + (MASTER_ROW_H - 10.0f) * 0.5f - 1.0f}, 10.0f, color);
+    };
+    auto lufsText = [&](float lufs) {
+        if (lufs <= -100.0f) return std::string(kSilence);
+        std::snprintf(buf, sizeof(buf), "%.1f", lufs);
+        return std::string(buf);
     };
 
-    // --- Observed signal, under the meter ---
-    // PEAK — dBFS, explicitly. Doubles as the clip/over indicator.
-    std::string peakText;
-    if (peakDb <= Aestra::MixerMath::DB_MIN) {
-        peakText = "\xE2\x88\x92\xE2\x88\x9E";
-    } else {
-        std::snprintf(buf, sizeof(buf), "%.1f", peakDb);
-        peakText = buf;
-    }
-    block(meterArea, 0, clipped ? "OVER" : "PEAK dBFS", peakText, clipped ? clipColor : valueColor);
+    // Integrated is undefined until the gate has material; short-term ramps in over the first three seconds.
+    line("INTEGRATED", lufsText(channel.integratedLufs), "LUFS", valueColor);
+    line("SHORT-TERM", lufsText(channel.shortTermLufs), "LUFS", valueColor);
 
-    // LUFS — integrated, and the sign always survives (see UIMixerMeter).
-    // Integrated LUFS is undefined until the gate has material; show the same
-    // silence marker the peak readout uses rather than an ambiguous dash.
-    std::string lufsText = "\xE2\x88\x92\xE2\x88\x9E";
-    if (channel.integratedLufs > -100.0f) {
-        std::snprintf(buf, sizeof(buf), "%.1f", channel.integratedLufs);
-        lufsText = buf;
+    // True peak, held. Red once it passes 0 dBTP or the output has clipped, amber within 1 dB of it.
+    const bool clipped = channel.clipLatchL || channel.clipLatchR;
+    const float tp = channel.truePeakDb;
+    std::string tpText = kSilence;
+    if (tp > -100.0f) {
+        std::snprintf(buf, sizeof(buf), "%.1f", tp);
+        tpText = buf;
     }
-    block(meterArea, 1, "LUFS INT", lufsText, valueColor);
+    line(clipped ? "OVER" : "TRUE PEAK", tpText, "dBTP", (clipped || tp > 0.0f) ? clipColor : (tp > -1.0f ? warnColor : valueColor));
 
-    // --- User-controlled gain, under the fader ---
-    if (gainArea.width > 0.0f) {
-        // Same silence floor as UIMixerFader::updateCachedText. Without it the
-        // fader reads "−∞" while the readout right under it reads "-90.0",
-        // which looks like two different values for one control.
-        std::string gainText = "\xE2\x88\x92\xE2\x88\x9E";
-        if (channel.faderGainDb > UIMixerFader::FADER_FLOOR_THRESHOLD) {
-            std::snprintf(buf, sizeof(buf), "%.1f", channel.faderGainDb);
-            gainText = buf;
-        }
-        block(gainArea, 0, "GAIN dB", gainText, valueColor);
+    // Phase correlation: a value and a bar from -1 (out of phase) through 0 to +1 (mono).
+    std::snprintf(buf, sizeof(buf), "%+.2f", channel.correlation);
+    line("CORRELATION", buf, "", channel.correlation < 0.0f ? warnColor : valueColor);
+    {
+        const NUIRect bar{card.x + 7.0f, card.y + 4.0f + static_cast<float>(row) * MASTER_ROW_H - 1.0f,
+                          card.width - 14.0f, 3.0f};
+        renderer.fillRoundedRect(bar, 1.5f, theme.getColor("border").withAlpha(0.35f));
+        const float mid = bar.x + bar.width * 0.5f;
+        const float pos = mid + std::clamp(channel.correlation, -1.0f, 1.0f) * bar.width * 0.5f;
+        renderer.fillRect(NUIRect{std::min(mid, pos), bar.y, std::max(1.5f, std::abs(pos - mid)), bar.height},
+                          (channel.correlation < 0.0f ? warnColor : theme.getColor("accentPrimary")).withAlpha(0.9f));
+        renderer.fillRect(NUIRect{mid - 0.5f, bar.y - 1.0f, 1.0f, bar.height + 2.0f}, labelColor.withAlpha(0.6f));
     }
+
+    // The fader's gain: the one user-controlled number, kept with the readings it governs.
+    std::string gainText = kSilence;
+    if (channel.faderGainDb > UIMixerFader::FADER_FLOOR_THRESHOLD) {
+        std::snprintf(buf, sizeof(buf), "%.1f", channel.faderGainDb);
+        gainText = buf;
+    }
+    ++row; // room under the correlation bar
+    line("GAIN", gainText, "dB", valueColor);
 }
 
 void UIMixerStrip::onResize(int width, int height)
