@@ -19,5 +19,5 @@
 3632 Source/Components/TrackUIComponent.cpp
 4823 Source/Core/AestraContent.cpp
 2827 Source/Core/ProjectSerializer.cpp
-1820 Source/Panels/ArsenalPanel.cpp
+1806 Source/Panels/ArsenalPanel.cpp
 1537 Source/Panels/AuditionPanel.cpp
