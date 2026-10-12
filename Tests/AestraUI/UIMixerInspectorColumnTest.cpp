@@ -7,6 +7,7 @@
 #include "MixerViewModel.h"
 #include "UIMixerInspector.h"
 
+#include "Core/AudioGraph.h"
 #include "Core/ChannelSlotMap.h"
 #include "Models/TrackManager.h"
 #include "Plugin/PluginManager.h"
@@ -42,8 +43,13 @@ int main() {
     auto* kick = tm.addChannel("Kick");
     auto* snare = tm.addChannel("Snare");
     auto* bus = tm.addChannel("Drum Bus");
+    auto* verb = tm.addChannel("Reverb");
     kick->setMainOutputId(bus->getChannelId());
     snare->setMainOutputId(bus->getChannelId());
+    Audio::AudioRoute send;
+    send.targetChannelId = verb->getChannelId();
+    send.gain = 0.5f;
+    kick->addSend(send);
     tm.buildAndShareSlotMap();
     MixerViewModel vm;
     vm.syncFromEngine(tm, *tm.getChannelSlotMapShared());
@@ -112,6 +118,23 @@ int main() {
         check(inspector.scrollOffset() > 0.0f, "asking for the Sends section scrolls to it");
         inspector.setBounds({1000, 100, 236, 700});
         inspector.onResize(236, 700);
+    }
+
+    std::cout << "[6] sends are one line each and open in place\n";
+    {
+        select(kick->getChannelId());
+        check(inspector.sendRowCount() == 1, "one send, one row");
+        check(inspector.expandedSend() == -1 && !inspector.sendCardVisible(0), "closed: no card");
+        const auto row = inspector.sendRowRect(0);
+        check(row.height > 20.0f && row.height < 40.0f, "a row is one line high (" + std::to_string(row.height) + ")");
+        inspector.onMouseEvent(press(row));
+        check(inspector.expandedSend() == 0, "clicking the row opens it");
+        inspector.onResize(236, 700);
+        check(inspector.sendCardVisible(0), "and its full card shows right below");
+        inspector.onMouseEvent(press(inspector.sendRowRect(0)));
+        check(inspector.expandedSend() == -1, "clicking again closes it");
+        select(snare->getChannelId());
+        check(inspector.sendRowCount() == 0, "a channel with no sends has no rows");
     }
 
     std::cout << (g_failures == 0 ? "ALL PASS\n" : "FAILURES\n");

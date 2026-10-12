@@ -67,6 +67,10 @@ public:
         return names;
     }
     bool trimBarVisible() const { return m_trimBar && m_trimBar->isVisible(); }
+    size_t sendRowCount() const { return m_sendRowRects.size(); }
+    NUIRect sendRowRect(size_t i) const { return i < m_sendRowRects.size() ? m_sendRowRects[i] : NUIRect{}; }
+    int expandedSend() const { return m_expandedSend; }
+    bool sendCardVisible(size_t i) const;
 
 private:
     Aestra::MixerViewModel* m_viewModel{nullptr};
@@ -152,6 +156,10 @@ private:
     NUIRect m_inputMeterRect{};
     float m_sectionOffset[3]{0.0f, 0.0f, 0.0f}; ///< column offsets of Inserts / Sends / Output (for scrolling to)
     bool m_linkHovered{false};
+    // Sends as one-line rows; the open one unfolds into the full send card in place (board 8, "Editing a send").
+    std::vector<NUIRect> m_sendRowRects;
+    int m_expandedSend{-1};
+    int m_hoveredSendRow{-1};
     void computeColumn(const Aestra::ChannelViewModel* channel);
 
     void cacheThemeColors();
