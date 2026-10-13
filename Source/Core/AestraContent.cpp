@@ -7,6 +7,7 @@
 // Include panel headers FIRST to define complete types before AestraContent.h forward declarations
 #include "../Components/TransportModuleStyle.h"
 #include "AestraContent.h"
+#include "UnitSignalColor.h"
 #include "FloatingPanelDescriptors.h"
 
 namespace {
@@ -4171,6 +4172,7 @@ void AestraContent::syncSampleEditorToUnit(UnitID unitId) {
         return;
     }
 
+    m_sampleEditorPanel->setWaveformColor(unitSignalColor(*m_trackManager, unitId)); // its channel's colour, else bone
     SampleEditorPanel::ADSRParams adsr;
     adsr.attack = sampler->getAttack();
     adsr.decay = sampler->getDecay();
@@ -4178,9 +4180,7 @@ void AestraContent::syncSampleEditorToUnit(UnitID unitId) {
     adsr.release = sampler->getRelease();
     m_sampleEditorPanel->setADSR(adsr);
 
-    SampleEditorPanel::LoopPoints loop;
-    loop.start = sampler->getLoopStartNorm();
-    loop.end = sampler->getLoopEndNorm();
+    SampleEditorPanel::LoopPoints loop; loop.start = sampler->getLoopStartNorm(); loop.end = sampler->getLoopEndNorm();
     switch (sampler->getLoopMode()) {
     case Aestra::Audio::Plugins::SamplerPlugin::LoopMode::PingPong:
         loop.mode = SampleEditorPanel::LoopMode::PingPong;
@@ -4202,8 +4202,7 @@ void AestraContent::syncSampleEditorToUnit(UnitID unitId) {
     m_sampleEditorPanel->setVoiceCount(sampler->getMaxVoices());
     m_sampleEditorPanel->setMonoMode(sampler->isMonoMode());
     m_sampleEditorPanel->setCutSelfMode(sampler->isCutSelfMode());
-    m_sampleEditorPanel->setKeepLengthPitch(sampler->getPitchMode() ==
-                                            Aestra::Audio::Plugins::SamplerPlugin::PitchMode::KeepLength);
+    m_sampleEditorPanel->setKeepLengthPitch(sampler->getPitchMode() == Aestra::Audio::Plugins::SamplerPlugin::PitchMode::KeepLength);
 }
 
 void AestraContent::openSampleEditorForUnit(UnitID unitId, const std::string& samplePath) {

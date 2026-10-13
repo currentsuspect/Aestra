@@ -234,40 +234,35 @@ void UIMixerRoutePicker::onRender(NUIRenderer& renderer) {
                                        : theme.getColor("surfaceRaised").withAlpha(0.94f);
     const auto accent = m_compactChipStyle ? theme.getColor("accentPrimary") : theme.getColor("secondary");
 
-    renderer.fillRoundedRect(m_triggerBounds, m_compactChipStyle ? 9.0f : 6.0f,
-                             isHovered() ? triggerBackground.lightened(0.05f) : triggerBackground);
-    renderer.strokeRoundedRect(m_triggerBounds, m_compactChipStyle ? 9.0f : 6.0f,
-                               m_open ? 1.5f : 1.0f, m_open ? accent.withAlpha(0.9f) : border);
+    // Sharp: a flat fill, no outline until it is open (then an accent edge says so).
+    renderer.fillRect(m_triggerBounds, isHovered() ? triggerBackground.lightened(0.05f) : triggerBackground);
+    if (m_open) renderer.strokeRect(m_triggerBounds, 1.0f, accent.withAlpha(0.9f));
 
     const Route* selected = selectedRoute();
     const std::string number = selected ? routeNumberLabel(*selected) : "M";
     const std::string name = selected ? selected->name : "Master";
     if (m_compactChipStyle) {
-        const NUIRect badge{m_triggerBounds.x + 8.0f, m_triggerBounds.y + 8.0f, 22.0f, 22.0f};
-        renderer.fillRoundedRect(badge, 6.0f, accent.withAlpha(0.16f));
-        renderer.drawTextCentered(number, badge, 11.0f, accent.lightened(0.20f));
-        renderer.drawText("OUTPUT", {m_triggerBounds.x + 39.0f, m_triggerBounds.y + 5.0f}, 9.5f,
-                          textSecondary.withAlpha(0.78f));
-        // Long explicit route names must not collide with the chevron: ellipsize
-        // against the space between the name and the arrow.
-        const float nameX = m_triggerBounds.x + 39.0f;
-        const float maxNameWidth = std::max(0.0f, (m_triggerBounds.right() - 17.0f - 8.0f) - nameX);
+        // A small chip: the route's colour swatch, its name, a chevron. The same idea as the route chips in the
+        // Arsenal rows. The caption ("OUT") belongs to whoever places the chip.
+        const float cy = m_triggerBounds.y + m_triggerBounds.height * 0.5f;
+        const NUIColor swatch = (selected && selected->colorArgb != 0) ? colorFromArgb(selected->colorArgb) : textSecondary;
+        renderer.fillRect({m_triggerBounds.x + 8.0f, cy - 7.0f, 4.0f, 14.0f}, swatch);
+        const float nameX = m_triggerBounds.x + 20.0f;
+        const float maxNameWidth = std::max(0.0f, (m_triggerBounds.right() - 22.0f - 6.0f) - nameX);
         std::string displayName = name;
-        if (maxNameWidth > 0.0f && renderer.measureText(displayName, 12.5f).width > maxNameWidth) {
+        if (maxNameWidth > 0.0f && renderer.measureText(displayName, 12.0f).width > maxNameWidth) {
             constexpr const char* kEllipsis = "...";
-            const float ellipsisW = renderer.measureText(kEllipsis, 12.5f).width;
-            while (!displayName.empty() &&
-                   renderer.measureText(displayName + kEllipsis, 12.5f).width > maxNameWidth) {
+            while (!displayName.empty() && renderer.measureText(displayName + kEllipsis, 12.0f).width > maxNameWidth)
                 displayName.pop_back();
-            }
             displayName += kEllipsis;
         }
-        renderer.drawText(displayName, {nameX, m_triggerBounds.y + 18.0f}, 12.5f, textPrimary);
-        renderer.drawText(">", {m_triggerBounds.right() - 17.0f, m_triggerBounds.y + 11.0f}, 14.0f,
-                          textSecondary);
+        renderer.drawText(displayName, {nameX, std::round(renderer.calculateTextY(m_triggerBounds, 12.0f))}, 12.0f, textPrimary);
+        const float ax = m_triggerBounds.right() - 14.0f;
+        renderer.drawLine({ax - 3.5f, cy - 1.5f}, {ax, cy + 2.0f}, 1.4f, textSecondary);
+        renderer.drawLine({ax, cy + 2.0f}, {ax + 3.5f, cy - 1.5f}, 1.4f, textSecondary);
     } else {
         const NUIRect badge{m_triggerBounds.x + 7.0f, m_triggerBounds.y + 5.0f, 29.0f, m_triggerBounds.height - 10.0f};
-        renderer.fillRoundedRect(badge, 4.0f, accent.withAlpha(0.17f));
+        renderer.fillRect(badge, accent.withAlpha(0.17f));
         renderer.drawTextCentered(number, badge, 10.0f, accent.lightened(0.20f));
         renderer.drawText(name, {m_triggerBounds.x + 44.0f, m_triggerBounds.y + 8.0f}, 12.0f, textPrimary);
         renderer.drawText("FIND", {m_triggerBounds.right() - 39.0f, m_triggerBounds.y + 9.0f}, 9.0f, textSecondary);
@@ -280,8 +275,8 @@ void UIMixerRoutePicker::onRender(NUIRenderer& renderer) {
 
     const auto popupBackground = theme.getColor("backgroundPrimary");
     const auto rowHover = theme.getColor("buttonBgHover").withAlpha(0.86f);
-    renderer.fillRoundedRect(m_popupBounds, 8.0f, popupBackground);
-    renderer.strokeRoundedRect(m_popupBounds, 8.0f, 1.0f, border.withAlpha(0.85f));
+    renderer.fillRect(m_popupBounds, popupBackground);
+    renderer.strokeRect(m_popupBounds, 1.0f, border.withAlpha(0.85f));
 
     renderer.fillRect({m_popupBounds.x + 1.0f, m_popupBounds.y + kSearchHeight, m_popupBounds.width - 2.0f, 1.0f},
                       border.withAlpha(0.55f));
@@ -300,13 +295,12 @@ void UIMixerRoutePicker::onRender(NUIRenderer& renderer) {
             renderer.fillRect(rowBounds, isSelected ? accent.withAlpha(0.13f) : rowHover);
 
         const NUIRect numberBounds{rowBounds.x + 9.0f, rowBounds.y + 7.0f, 31.0f, rowBounds.height - 14.0f};
-        renderer.fillRoundedRect(numberBounds, 4.0f, accent.withAlpha(isSelected ? 0.24f : 0.10f));
+        renderer.fillRect(numberBounds, accent.withAlpha(isSelected ? 0.24f : 0.10f));
         renderer.drawTextCentered(routeNumberLabel(route), numberBounds, 10.0f,
                                   isSelected ? accent.lightened(0.22f) : textSecondary);
 
         if (route.colorArgb != 0) {
-            renderer.fillRoundedRect({rowBounds.x + 49.0f, rowBounds.y + 14.0f, 8.0f, 8.0f}, 2.0f,
-                                     colorFromArgb(route.colorArgb));
+            renderer.fillRect({rowBounds.x + 49.0f, rowBounds.y + 14.0f, 8.0f, 8.0f}, colorFromArgb(route.colorArgb));
         }
         renderer.drawText(route.name, {rowBounds.x + 65.0f, rowBounds.y + 10.0f}, 12.0f, textPrimary);
         if (isSelected)

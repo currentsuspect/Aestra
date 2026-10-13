@@ -80,7 +80,7 @@ void testAudioClipEditorLayout() {
         AudioClipEditorPanel panel(tm);
         panel.setBounds({0.0f, 0.0f, 700.0f, 430.0f});
         const NUIRect surf = surfaceBounds(panel);
-        const float controlsCardTop = surf.bottom() - 242.0f - 8.0f;
+        const float controlsCardTop = surf.bottom() - 188.0f; // the controls region (columns under titled rules)
         const NUIRect wf = waveformBounds(panel);
         const bool hiddenOrAbove = wf.isEmpty() || wf.bottom() <= controlsCardTop;
         expect(hiddenOrAbove, "waveform overlaps the controls card at 430px height");
