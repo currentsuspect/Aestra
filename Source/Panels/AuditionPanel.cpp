@@ -176,7 +176,7 @@ void AuditionPanel::setupComponents() {
     addChild(m_nextButton);
     
     // 3. DSP Buttons
-    m_dspPresetButton = std::make_shared<AestraUI::NUIButton>("Studio Reference");
+    m_dspPresetButton = std::make_shared<AestraUI::NUIButton>("Studio");
     m_dspPresetButton->setStyle(AestraUI::NUIButton::Style::Secondary);
     m_dspPresetButton->setHoverColor(theme.getColor("accentPrimary").withAlpha(0.22f));
     m_dspPresetButton->setPressedColor(theme.getColor("accentPrimary").withAlpha(0.34f));
@@ -186,12 +186,12 @@ void AuditionPanel::setupComponents() {
         // Define cycling order
         static const std::vector<Aestra::Audio::AuditionDSPPreset> presets = {
             Aestra::Audio::AuditionDSPPreset::Bypass(),
-            Aestra::Audio::AuditionDSPPreset::Spotify(),
-            Aestra::Audio::AuditionDSPPreset::AppleMusic(),
-            Aestra::Audio::AuditionDSPPreset::YouTube(),
-            Aestra::Audio::AuditionDSPPreset::SoundCloud(),
-            Aestra::Audio::AuditionDSPPreset::CarSpeakers(),
-            Aestra::Audio::AuditionDSPPreset::AirPods()
+            Aestra::Audio::AuditionDSPPreset::Streaming(),
+            Aestra::Audio::AuditionDSPPreset::Lossless(),
+            Aestra::Audio::AuditionDSPPreset::VideoPlatform(),
+            Aestra::Audio::AuditionDSPPreset::CompressedStream(),
+            Aestra::Audio::AuditionDSPPreset::Car(),
+            Aestra::Audio::AuditionDSPPreset::Earbuds()
         };
         
         // Find current and set next

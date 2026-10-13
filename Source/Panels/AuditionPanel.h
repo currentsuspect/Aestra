@@ -3,7 +3,7 @@
 
 /**
  * @file AuditionPanel.h
- * @brief Main UI panel for Audition Mode - the "Spotify for musicians" experience
+ * @brief Main UI panel for Audition Mode - the streaming-style listening experience
  * 
  * ARCHITECTURE OVERVIEW:
  * ----------------------
@@ -47,7 +47,7 @@ namespace Aestra {
  * 
  * Design goals:
  * - "Psychologically out of the DAW" - no mixer, no meters
- * - Spotify-like aesthetic with dark theme
+ * - Streaming-style aesthetic with dark theme
  * - Drag files from browser → queue
  * - Quick A/B comparison with DSP presets
  */

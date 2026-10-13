@@ -57,7 +57,7 @@ struct AuditionQueueItem {
  * @brief DSP simulation preset for audition playback
  */
 struct AuditionDSPPreset {
-    std::string name;          // "Spotify", "Apple Music", etc.
+    std::string name;          // "Streaming", "Car", etc. (descriptive names, never a real service: FD-26)
     float targetLufs{-14.0f};  // Loudness normalization target
     float highCutHz{20000.0f}; // High frequency cutoff
     float lowCutHz{20.0f};     // Low frequency cutoff
@@ -68,7 +68,7 @@ struct AuditionDSPPreset {
 
     // Dynamics
     float compressionRatio{1.0f};   // 1.0 = no compression
-    float limiterCeilingDb{-1.0f};  // True peak ceiling (Spotify = -1dB)
+    float limiterCeilingDb{-1.0f};  // True peak ceiling (a common streaming ceiling is -1dB)
     float limiterAttackMs{5.0f};    // Limiter attack time
     float limiterReleaseMs{100.0f}; // Limiter release time
 
@@ -78,42 +78,42 @@ struct AuditionDSPPreset {
 
     // Research-based Presets
 
-    static AuditionDSPPreset Spotify() {
-        // -14 LUFS, -1dB True Peak, Limiter on "Loud" setting (simulated here with slight compression)
+    static AuditionDSPPreset Streaming() {
+        // Streaming: -14 LUFS, -1dB True Peak, Limiter on a "loud" setting (simulated here with slight compression)
         // 5ms attack, 100ms release limiter
-        return {"Spotify", -14.0f, 20000.0f, 20.0f, 0.0f, 0.0f, 2.0f, -1.0f, 5.0f, 100.0f, 0.0f, true};
+        return {"Streaming", -14.0f, 20000.0f, 20.0f, 0.0f, 0.0f, 2.0f, -1.0f, 5.0f, 100.0f, 0.0f, true};
     }
 
-    static AuditionDSPPreset AppleMusic() {
-        // -16 LUFS (Sound Check), cleaner signal path, ALAC (lossless)
-        return {"Apple Music", -16.0f, 20000.0f, 20.0f, 0.0f, 0.0f, 1.0f, -0.1f, 10.0f, 100.0f, 0.0f, true};
+    static AuditionDSPPreset Lossless() {
+        // Lossless: -16 LUFS, cleaner signal path
+        return {"Lossless", -16.0f, 20000.0f, 20.0f, 0.0f, 0.0f, 1.0f, -0.1f, 10.0f, 100.0f, 0.0f, true};
     }
 
-    static AuditionDSPPreset YouTube() {
-        // -14 LUFS, Opus compression artifacts (simulated via slight lofi/treble cut)
+    static AuditionDSPPreset VideoPlatform() {
+        // Video platform: -14 LUFS, Opus compression artifacts (simulated via slight lofi/treble cut)
         // Often slightly compressed dynamics
-        return {"YouTube", -14.0f, 16000.0f, 30.0f, 0.0f, -0.5f, 1.5f, -1.0f, 10.0f, 200.0f, 0.05f, true};
+        return {"Video platform", -14.0f, 16000.0f, 30.0f, 0.0f, -0.5f, 1.5f, -1.0f, 10.0f, 200.0f, 0.05f, true};
     }
 
-    static AuditionDSPPreset SoundCloud() {
-        // -14 LUFS, often 128kbps MP3 legacy / 64kbps Opus (more artifacts)
+    static AuditionDSPPreset CompressedStream() {
+        // Compressed stream: -14 LUFS, low-bitrate artifacts
         // Lofi set to 0.12 to give mild bit reduction (approx 14.8 bits) without decimating sample rate
-        return {"SoundCloud", -14.0f, 15000.0f, 40.0f, 1.0f, -1.0f, 2.0f, -1.0f, 10.0f, 100.0f, 0.12f, true};
+        return {"Compressed stream", -14.0f, 15000.0f, 40.0f, 1.0f, -1.0f, 2.0f, -1.0f, 10.0f, 100.0f, 0.12f, true};
     }
 
-    static AuditionDSPPreset CarSpeakers() {
+    static AuditionDSPPreset Car() {
         // Harman curve-ish: Bass boost (+4dB), treble roll-off (-3dB), high noise floor (compression)
         // Bass boost centered around 50-60Hz (simulated with shelf for now)
-        return {"Car Speakers", -12.0f, 14000.0f, 45.0f, 4.0f, -3.0f, 3.0f, -6.0f, 20.0f, 300.0f, 0.0f, true};
+        return {"Car", -12.0f, 14000.0f, 45.0f, 4.0f, -3.0f, 3.0f, -6.0f, 20.0f, 300.0f, 0.0f, true};
     }
 
-    static AuditionDSPPreset AirPods() {
-        // Adaptive EQ simulation: Mild bass lift (+2dB), mild treble roll-off (-1dB), clean dynamics
-        return {"AirPods Pro", -16.0f, 18000.0f, 20.0f, 2.0f, -1.5f, 1.2f, -0.5f, 10.0f, 50.0f, 0.0f, true};
+    static AuditionDSPPreset Earbuds() {
+        // Earbuds: mild bass lift (+2dB), mild treble roll-off (-1dB), clean dynamics
+        return {"Earbuds", -16.0f, 18000.0f, 20.0f, 2.0f, -1.5f, 1.2f, -0.5f, 10.0f, 50.0f, 0.0f, true};
     }
 
     static AuditionDSPPreset Bypass() {
-        return {"Studio Reference", 0.0f, 20000.0f, 20.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, false};
+        return {"Studio", 0.0f, 20000.0f, 20.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, false};
     }
 };
 
