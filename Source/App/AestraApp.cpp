@@ -890,16 +890,16 @@ void AestraApp::buildMenuBar() {
 
         menu->addSeparator();
 
-        menu->addItem("Save", [this]() { saveCurrentProject(); });
+        auto saveItem = std::make_shared<AestraUI::NUIContextMenuItem>("Save");
+        saveItem->setShortcut("Ctrl+S"); saveItem->setOnClick([this]() { saveCurrentProject(); }); menu->addItem(saveItem);
 
         menu->addItem("Save As...", [this]() { saveProjectAs(); });
 
         menu->addSeparator();
 
         // Versions = every saved state of the song and the steps inside it (Takes and History, merged: V81-V1).
-        menu->addItem("Versions  Ctrl+H", [this]() {
-            if (m_content) m_content->toggleTakesPanel();
-        });
+        auto versionsItem = std::make_shared<AestraUI::NUIContextMenuItem>("Versions");
+        versionsItem->setShortcut("Ctrl+H"); versionsItem->setOnClick([this]() { if (m_content) m_content->toggleTakesPanel(); }); menu->addItem(versionsItem);
 
         menu->addSeparator();
         menu->addItem("Export Audio...", [this]() { startExport(); });
@@ -988,9 +988,8 @@ void AestraApp::buildMenuBar() {
         menu->addSeparator();
         menu->addItem("Show Timeline", [this]() { Log::info("Show Timeline - Not yet fully implemented"); });
         menu->addItem("Show Arsenal", [this]() { Log::info("Show Arsenal - Not yet fully implemented"); });
-        menu->addItem("Show Versions  Ctrl+H", [this]() {
-            if (m_content) m_content->toggleTakesPanel();
-        });
+        auto showVersions = std::make_shared<AestraUI::NUIContextMenuItem>("Show Versions");
+        showVersions->setShortcut("Ctrl+H"); showVersions->setOnClick([this]() { if (m_content) m_content->toggleTakesPanel(); }); menu->addItem(showVersions);
         menu->addItem("Show Steps", [this]() {
             if (m_content) m_content->toggleHistoryPanel();
         });
