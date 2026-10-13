@@ -4627,8 +4627,8 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
         return true;
     }
 
-    // Takes panel inline rename captures typing while active — it must win
-    // over global shortcuts so Ctrl+Z etc. don't fire mid-edit.
+    if (m_sequencerPanel && m_sequencerPanel->isVisible() && m_sequencerPanel->handleDrawerKey(event)) return true; // sound drawer typing
+    // Takes panel inline rename captures typing while active: it wins over global shortcuts (Ctrl+Z mid-edit).
     if (m_takesPanel && m_takesPanel->isVisible() && m_takesPanel->handleKeyEvent(event))
         return true;
 

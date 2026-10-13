@@ -3109,6 +3109,23 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(ArsenalSoundStripTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
 
+# The sound drawer: search, audition by arrows, Enter keeps, Esc reverts (V81-AR1, FD-27 point 4).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(ArsenalSoundDrawerTest AestraUI_Core)
+    add_executable(ArsenalSoundDrawerTest AestraUI/ArsenalSoundDrawerTest.cpp)
+    target_link_libraries(ArsenalSoundDrawerTest PRIVATE AestraUI_Core)
+    target_include_directories(ArsenalSoundDrawerTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ArsenalSoundDrawerTest COMMAND ArsenalSoundDrawerTest)
+    set_tests_properties(ArsenalSoundDrawerTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
 # Kits and the empty state: a folder of sounds becomes a row of units (V81-AR1, FD-27 point 6).
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(ArsenalKitTest AestraUI_Core)
@@ -3829,6 +3846,7 @@ if(AESTRA_ENABLE_UI)
         ArsenalSceneStripTest
         ArsenalStepLanesTest
         ArsenalSoundStripTest
+        ArsenalSoundDrawerTest
         ArsenalKitTest
         UIMixerPanelGroupingTest
         PluginRackBindingLifecycleTest
