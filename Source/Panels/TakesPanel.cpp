@@ -137,6 +137,16 @@ TakesPanel::Layout TakesPanel::computeLayout() const {
         layout.actionBar = NUIRect(x, bottom, w, ACTION_BAR_HEIGHT);
     }
 
+    if (m_selectedTake >= 0 && m_selectedTake < static_cast<int>(m_takeRows.size()) &&
+        !m_takeRows[static_cast<size_t>(m_selectedTake)].take.steps.empty()) {
+        const size_t rows = std::min(MAX_STEP_ROWS, m_takeRows[static_cast<size_t>(m_selectedTake)].take.steps.size());
+        const float listH = static_cast<float>(rows) * STEP_ROW_HEIGHT;
+        bottom -= listH;
+        layout.stepsList = NUIRect(x, bottom, w, listH);
+        bottom -= SECTION_HEADER_HEIGHT;
+        layout.stepsHeader = NUIRect(x, bottom, w, SECTION_HEADER_HEIGHT);
+    }
+
     layout.toolbar = NUIRect(x, top, w, TOOLBAR_HEIGHT);
     const float buttonY = top + (TOOLBAR_HEIGHT - TOOLBAR_BUTTON_HEIGHT) * 0.5f;
     const float buttonW = (w - LEFT_PAD * 3.0f) * 0.5f;
@@ -534,6 +544,21 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
                               NUIPoint(rects[i].x + (rects[i].width - textSize.width) * 0.5f,
                                        rects[i].y + (rects[i].height - textSize.height) * 0.5f),
                               10.0f, theme.getColor("textPrimary").withAlpha(0.92f));
+        }
+    }
+
+    // The dock: the selected version's steps, newest first. A log, not undo: only the open version's live steps can be undone.
+    if (layout.stepsList.height > 0.0f) {
+        const auto& take = m_takeRows[static_cast<size_t>(m_selectedTake)].take;
+        renderer.fillRect(layout.stepsHeader, theme.getColor("backgroundSecondary").withAlpha(0.4f));
+        renderer.drawText("STEPS · " + std::to_string(take.steps.size()), NUIPoint(bounds.x + LEFT_PAD, layout.stepsHeader.y + 5.0f), 9.0f,
+                          theme.getColor("textSecondary").withAlpha(0.8f));
+        const size_t rows = static_cast<size_t>(layout.stepsList.height / STEP_ROW_HEIGHT);
+        for (size_t i = 0; i < rows && i < take.steps.size(); ++i) {
+            const auto& step = take.steps[take.steps.size() - 1 - i];
+            const float rowY = layout.stepsList.y + static_cast<float>(i) * STEP_ROW_HEIGHT;
+            renderer.drawText(step.label, NUIPoint(bounds.x + LEFT_PAD, rowY + 4.0f), 11.0f,
+                              theme.getColor("textPrimary").withAlpha(0.82f));
         }
     }
 

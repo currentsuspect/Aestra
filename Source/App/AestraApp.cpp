@@ -30,6 +30,7 @@
 #include "PluginManager.h"
 #include "AudioGraphBuilder.h"
 #include "TakeManager.h"
+#include "VersionSteps.h"
 #include "../Panels/TakesPanel.h"
 #include "../../AestraAudio/include/Core/PlaybackGraphController.h"
 #include "../../AestraAudio/include/IO/AudioExporter.h"
@@ -2285,6 +2286,7 @@ bool AestraApp::saveActiveTakeSnapshot(const ProjectSerializer::UIState* uiState
         Log::warning("[Takes] Could not save active Take: " + result.errorMessage);
         return false;
     }
+    TakeManager::setVersionSteps(m_documentState.canonicalPath(), result.take.id, collectVersionSteps(m_content->getTrackManager()->getCommandHistory()));
     return true;
 }
 
@@ -2305,15 +2307,11 @@ bool AestraApp::createTakeFromCurrentProject() {
     }
 
     const auto manifest = TakeManager::loadManifest(m_documentState.canonicalPath());
-    const std::string takeName = "Take " + std::to_string(manifest.ok ? manifest.takes.size() + 1 : 2);
-    auto result = TakeManager::createTake(m_documentState.canonicalPath(), ser.contents, takeName);
-    if (!result.ok) {
-        Log::warning("[Takes] Could not create Take: " + result.errorMessage);
-        return false;
-    }
+    const std::string takeName = "Version " + std::to_string(manifest.ok ? manifest.takes.size() + 1 : 2);
+    auto result = TakeManager::createVersion(m_documentState.canonicalPath(), ser.contents, takeName, "", "", TakeManager::TakeEntry::Kind::Saved, collectVersionSteps(m_content->getTrackManager()->getCommandHistory()));
+    if (!result.ok) { Log::warning("[Takes] Could not create version: " + result.errorMessage); return false; }
 
-    Log::info("[Takes] Active Take: " + result.take.name);
-    return true;
+    Log::info("[Takes] Active version: " + result.take.name); return true;
 }
 
 ProjectSerializer::LoadResult AestraApp::switchToTake(const std::string& takeId) {

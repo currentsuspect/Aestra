@@ -127,6 +127,7 @@ public:
 
 private:
     static constexpr float ROW_HEIGHT = 26.0f;
+    static constexpr float STEP_ROW_HEIGHT = 20.0f;
     static constexpr float HEADER_HEIGHT = 36.0f;   // WindowPanel title bar area
     static constexpr float TOOLBAR_HEIGHT = 30.0f;
     static constexpr float ACTION_BAR_HEIGHT = 28.0f;
@@ -136,6 +137,7 @@ private:
     static constexpr float TEXT_LEFT_PAD = 28.0f;
     static constexpr float DEPTH_INDENT = 12.0f;
     static constexpr size_t MAX_SNAPSHOT_ROWS = 4;
+    static constexpr size_t MAX_STEP_ROWS = 6;
 
     struct TakeRow {
         TakeManager::TakeEntry take;
@@ -148,6 +150,8 @@ private:
         AestraUI::NUIRect saveActiveButton;
         AestraUI::NUIRect takesList;
         AestraUI::NUIRect actionBar;
+        AestraUI::NUIRect stepsHeader; ///< The dock: the selected version's steps (read-only log).
+        AestraUI::NUIRect stepsList;
         AestraUI::NUIRect snapshotHeader;
         AestraUI::NUIRect snapshotList;
         AestraUI::NUIRect statusLine;
