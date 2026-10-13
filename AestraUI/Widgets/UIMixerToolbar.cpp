@@ -12,7 +12,7 @@ namespace {
 constexpr float kFont = 10.0f;
 constexpr float kSegW = 52.0f;
 constexpr float kGap = 10.0f;
-constexpr float kToggleW = 112.0f;
+constexpr float kToggleW = 128.0f;
 constexpr float kResetW = 78.0f;
 constexpr float kH = 20.0f;
 } // namespace

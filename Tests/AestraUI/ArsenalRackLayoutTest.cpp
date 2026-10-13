@@ -87,6 +87,16 @@ int main() {
         check(open.rowY(0) == layout.rowY(0), "a row above does not move");
     }
 
+    std::cout << "[7] moving a unit lands where the drop says (no off-by-one)\n";
+    {
+        const std::vector<Audio::UnitID> order{10, 20, 30, 40};
+        // Drop unit 10 "before unit 30" (slot index 2): after it leaves the front it must sit between 20 and 30, at index 1.
+        check(ArsenalRackLayout::finalIndexAfterMove(order, 10, 2) == 1, "dragged down: one earlier than the slot index (it left its old place first)");
+        check(ArsenalRackLayout::finalIndexAfterMove(order, 40, 1) == 1, "dragged up: the slot index as it is");
+        check(ArsenalRackLayout::finalIndexAfterMove(order, 20, 4) == 3, "dragged to the very end: the last place");
+        check(ArsenalRackLayout::finalIndexAfterMove(order, 30, 2) == 2 && ArsenalRackLayout::finalIndexAfterMove(order, 30, 3) == 2, "dropped on or just after itself: it stays");
+    }
+
     std::cout << (g_failures == 0 ? "ALL PASS\n" : "FAILURES\n");
     return g_failures == 0 ? 0 : 1;
 }

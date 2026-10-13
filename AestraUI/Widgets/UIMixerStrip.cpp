@@ -501,13 +501,15 @@ void UIMixerStrip::renderMasterReadout(NUIRenderer& renderer,
     char buf[32];
     int row = 0;
     // One line per reading: the label on the left, the value (sign always kept) on the right, in LU or dB.
-    auto line = [&](const char* label, const std::string& value, const char* unit, const NUIColor& color) {
+    auto line = [&](const char* label, const char* shortLabel, const std::string& value, const char* unit, const NUIColor& color) {
         const float y = card.y + 4.0f + static_cast<float>(row++) * MASTER_ROW_H;
         const NUIRect labelRect{card.x + 7.0f, y, card.width * 0.5f, MASTER_ROW_H};
         const NUIRect valueRect{card.x + card.width * 0.38f, y, card.width * 0.62f - 7.0f, MASTER_ROW_H};
-        renderer.drawText(label, {labelRect.x, y + (MASTER_ROW_H - 8.5f) * 0.5f - 1.0f}, 8.5f, labelColor);
         const std::string text = value + (unit[0] ? std::string(" ") + unit : std::string());
         const float w = renderer.measureText(text, 10.0f).width;
+        // The full label while it clears the value; the short one (INT, ST, PEAK, CORR) when the strip is narrow.
+        const bool fits = labelRect.x + renderer.measureText(label, 8.5f).width + 8.0f <= valueRect.right() - w;
+        renderer.drawText(fits ? label : shortLabel, {labelRect.x, y + (MASTER_ROW_H - 8.5f) * 0.5f - 1.0f}, 8.5f, labelColor);
         renderer.drawText(text, {valueRect.right() - w, y + (MASTER_ROW_H - 10.0f) * 0.5f - 1.0f}, 10.0f, color);
     };
     auto lufsText = [&](float lufs) {
@@ -517,8 +519,8 @@ void UIMixerStrip::renderMasterReadout(NUIRenderer& renderer,
     };
 
     // Integrated is undefined until the gate has material; short-term ramps in over the first three seconds.
-    line("INTEGRATED", lufsText(channel.integratedLufs), "LUFS", valueColor);
-    line("SHORT-TERM", lufsText(channel.shortTermLufs), "LUFS", valueColor);
+    line("INTEGRATED", "INT", lufsText(channel.integratedLufs), "LUFS", valueColor);
+    line("SHORT-TERM", "SHORT", lufsText(channel.shortTermLufs), "LUFS", valueColor);
 
     // True peak, held. Red once it passes 0 dBTP or the output has clipped, amber within 1 dB of it.
     const bool clipped = channel.clipLatchL || channel.clipLatchR;
@@ -528,11 +530,11 @@ void UIMixerStrip::renderMasterReadout(NUIRenderer& renderer,
         std::snprintf(buf, sizeof(buf), "%.1f", tp);
         tpText = buf;
     }
-    line(clipped ? "OVER" : "TRUE PEAK", tpText, "dBTP", (clipped || tp > 0.0f) ? clipColor : (tp > -1.0f ? warnColor : valueColor));
+    line(clipped ? "OVER" : "TRUE PEAK", clipped ? "OVER" : "PEAK", tpText, "dBTP", (clipped || tp > 0.0f) ? clipColor : (tp > -1.0f ? warnColor : valueColor));
 
     // Phase correlation: a value and a bar from -1 (out of phase) through 0 to +1 (mono).
     std::snprintf(buf, sizeof(buf), "%+.2f", channel.correlation);
-    line("CORRELATION", buf, "", channel.correlation < 0.0f ? warnColor : valueColor);
+    line("CORRELATION", "CORR", buf, "", channel.correlation < 0.0f ? warnColor : valueColor);
     {
         const NUIRect bar{card.x + 7.0f, card.y + 4.0f + static_cast<float>(row) * MASTER_ROW_H - 1.0f,
                           card.width - 14.0f, 3.0f};
@@ -551,7 +553,7 @@ void UIMixerStrip::renderMasterReadout(NUIRenderer& renderer,
         gainText = buf;
     }
     ++row; // room under the correlation bar
-    line("GAIN", gainText, "dB", valueColor);
+    line("GAIN", "GAIN", gainText, "dB", valueColor);
 }
 
 void UIMixerStrip::onResize(int width, int height)

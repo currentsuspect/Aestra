@@ -108,6 +108,15 @@ struct ArsenalRackLayout {
         return slot;
     }
 
+    /// The index a moved unit ends at, for a drop that lands "before the unit now at @p insertBefore". The unit
+    /// leaves its old place first, so a drop below it lands one earlier than the slot says (the off-by-one that
+    /// put a unit dropped at position 2 at position 3).
+    static size_t finalIndexAfterMove(const std::vector<Audio::UnitID>& order, Audio::UnitID unit, size_t insertBefore) {
+        const auto it = std::find(order.begin(), order.end(), unit);
+        const size_t old = it == order.end() ? insertBefore : static_cast<size_t>(it - order.begin());
+        return insertBefore > old ? insertBefore - 1 : insertBefore;
+    }
+
     /// The unit-order index a drop at display slot @p slot inserts before (the row count when it is the end).
     size_t insertIndexForSlot(size_t slot, size_t rowCount) const {
         return slot < displayOrder.size() ? displayOrder[slot] : rowCount;

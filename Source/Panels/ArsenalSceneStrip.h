@@ -148,6 +148,13 @@ public:
         return {};
     }
 
+    /// A name that fits its card, cut with an ellipsis instead of mid-letter.
+    static std::string fitName(AestraUI::NUIRenderer& renderer, std::string name, float font, float room) {
+        if (renderer.measureText(name, font).width <= room) return name;
+        while (name.size() > 1 && renderer.measureText(name + "\xE2\x80\xA6", font).width > room) name.pop_back();
+        return name + "\xE2\x80\xA6";
+    }
+
     void draw(AestraUI::NUIRenderer& renderer) const {
         if (m_rect.width <= 0.0f) return;
         auto& theme = AestraUI::NUIThemeManager::getInstance();
@@ -161,7 +168,7 @@ public:
             renderer.fillRoundedRect(r, tp.radiusXS, on ? theme.getColor("surfaceRaised") : theme.getColor("backgroundSecondary"));
             renderer.strokeRoundedRect(r, tp.radiusXS, 1.0f, on ? theme.getColor("textPrimary").withAlpha(0.9f) : theme.getColor("borderSubtle").withAlpha(0.7f));
             renderer.setClipRect(AestraUI::intersectRects(view, r));
-            renderer.drawText(scene.name, {r.x + 12.0f, r.y + 8.0f}, tp.fontSizeXS + 1.0f, theme.getColor("textPrimary").withAlpha(on ? 1.0f : 0.9f));
+            renderer.drawText(fitName(renderer, scene.name, tp.fontSizeXS + 1.0f, r.width - 24.0f), {r.x + 12.0f, r.y + 8.0f}, tp.fontSizeXS + 1.0f, theme.getColor("textPrimary").withAlpha(on ? 1.0f : 0.9f));
             const float tw = r.width - 24.0f, bw = tw / static_cast<float>(kThumbBars), maxH = 8.0f;
             for (size_t i = 0; i < scene.thumb.size(); ++i) {
                 const float h = scene.thumb[i] > 0.0f ? std::max(1.0f, maxH * scene.thumb[i]) : 1.0f;
