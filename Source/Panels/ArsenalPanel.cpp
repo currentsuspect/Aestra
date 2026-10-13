@@ -1388,7 +1388,7 @@ void ArsenalPanel::onUnitDragStart(UnitID unitId) {
 void ArsenalPanel::onUnitDrop(UnitID unitId, int dropIndex) {
     if (!m_trackManager) return;
     
-    m_trackManager->getUnitManager().reorderUnit(unitId, static_cast<size_t>(dropIndex));
+    m_trackManager->getUnitManager().reorderUnit(unitId, Aestra::ArsenalRackLayout::finalIndexAfterMove(m_trackManager->getUnitManager().getAllUnitIDs(), unitId, static_cast<size_t>(dropIndex)));
     m_isDragging = false;
     m_draggedUnitId = 0;
     m_dropTargetIndex = -1;
