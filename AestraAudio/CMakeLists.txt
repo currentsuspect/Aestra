@@ -294,6 +294,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
 
     # Analysis service (V8-S8): R128 loudness, true peak, band energy, correlation
     src/Analysis/AudioAnalysis.cpp
+    src/Analysis/ReferenceAnalysis.cpp
     
     # Plugin hosting system
     src/Plugin/PluginScanner.cpp

@@ -1141,6 +1141,17 @@ target_include_directories(AudioAnalysisTest PRIVATE
 add_test(NAME AudioAnalysisTest COMMAND AudioAnalysisTest)
 set_tests_properties(AudioAnalysisTest PROPERTIES LABELS "audio;analysis;headless;contract:audio")
 
+# Reference measurements for Audition's tools (FD-26, V81-AU2): PLR, stereo width and mono
+# problems, section detection, level matching, tonal balance.
+add_executable(ReferenceAnalysisTest AestraAudio/ReferenceAnalysisTest.cpp)
+target_link_libraries(ReferenceAnalysisTest PRIVATE AestraAudio)
+target_include_directories(ReferenceAnalysisTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME ReferenceAnalysisTest COMMAND ReferenceAnalysisTest)
+set_tests_properties(ReferenceAnalysisTest PROPERTIES LABELS "audio;analysis;headless;contract:audio")
+
 # #845 regression: recording in a session with existing clips + patterns
 add_executable(RecordingSessionContentTest AestraAudio/RecordingSessionContentTest.cpp)
 target_link_libraries(RecordingSessionContentTest PRIVATE AestraAudio)
