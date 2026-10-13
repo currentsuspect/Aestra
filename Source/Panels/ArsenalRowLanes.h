@@ -3,6 +3,7 @@
 
 #include "ArsenalRackLayout.h"
 #include "ArsenalSoundDrawer.h"
+#include "ArsenalSoundSet.h"
 #include "ArsenalSoundStrip.h"
 #include "ArsenalStepLanes.h"
 #include "../AestraUI/Widgets/UnitRow.h"
@@ -45,6 +46,12 @@ public:
     /// Called with (unit, path) when a neighbouring sound is chosen; the panel routes it to the gap-free loader.
     void setOnSwap(std::function<void(Audio::UnitID, const std::string&)> cb) { m_onSwap = std::move(cb); }
 
+    /// Sound sets (V81-AR2): the library's collection names, a collection's members, and the choice of a set for a unit.
+    void setSoundSetProviders(std::function<std::vector<std::string>()> names, std::function<std::vector<std::string>(const std::string&)> members,
+                              std::function<void(Audio::UnitID, const std::string&)> chosen) {
+        m_setNames = std::move(names); m_setMembers = std::move(members); m_onSetChosen = std::move(chosen);
+    }
+
     /// Carets on every visible row and the lanes under the open ones.
     void draw(AestraUI::NUIRenderer& r, const ArsenalRackLayout& rack, const std::vector<RowPtr>& rows, Audio::TrackManager* tm,
               Audio::PatternID pattern, const AestraUI::NUIRect& viewport) const {
@@ -65,12 +72,11 @@ public:
             if (open && item.extraH > 0.0f) {
                 const auto ctx = contextFor(*tm, pattern, row, item.extraH);
                 if (hasSound(*tm, row.getUnitId())) {
-                    auto& strip = m_sounds[row.getUnitId()];
-                    strip.follow(tm->getUnitManager().getUnit(row.getUnitId())->audioClipPath);
+                    auto& strip = syncStrip(*tm, row.getUnitId());
                     strip.draw(r, soundRect(row));
                     if (m_drawerUnit == row.getUnitId())
-                        ArsenalSoundDrawer::draw(r, drawerRect(row), m_drawer, strip.list(),
-                                                 tm->getUnitManager().getUnit(row.getUnitId())->audioClipPath, row.channelColor());
+                        ArsenalSoundDrawer::draw(r, drawerRect(row), m_drawer, strip.list(), tm->getUnitManager().getUnit(row.getUnitId())->audioClipPath,
+                                                 row.channelColor(), strip.setName(), m_missing[row.getUnitId()]);
                 }
                 m_lanes.draw(r, ctx);
             }
@@ -122,6 +128,18 @@ public:
             if (m_drawerUnit == row.getUnitId() && item.extraH > 0.0f && drawerRect(row).contains(e.position)) {
                 auto& strip = m_sounds[m_drawerUnit];
                 const auto idx = ArsenalSoundDrawer::filtered(strip.list(), m_drawer.filter);
+                if (ArsenalSoundDrawer::chipRect(drawerRect(row)).contains(e.position)) { // the chip moves to the next sound set (Folder, then each set)
+                    std::vector<std::string> choices{std::string()};
+                    if (m_setNames) for (const auto& n : m_setNames()) choices.push_back(n);
+                    const auto* unit = tm->getUnitManager().getUnit(m_drawerUnit);
+                    const auto at = unit ? std::find(choices.begin(), choices.end(), unit->soundSet) : choices.end();
+                    const std::string next = choices[(static_cast<size_t>(at == choices.end() ? 0 : at - choices.begin()) + 1) % choices.size()];
+                    if (m_onSetChosen) m_onSetChosen(m_drawerUnit, next);
+                    m_stale.insert(m_drawerUnit);
+                    auto& fresh = syncStrip(*tm, m_drawerUnit);
+                    m_drawer = ArsenalSoundDrawer::open(fresh.list(), unit ? unit->audioClipPath : std::string());
+                    return true;
+                }
                 const int hit = ArsenalSoundDrawer::rowAt(m_drawer, idx.size(), drawerRect(row), e.position);
                 if (hit >= 0) {
                     m_drawer.selected = hit;
@@ -134,7 +152,11 @@ public:
                 const auto hit = strip.hitTest(soundRect(row), e.position);
                 if (hit == ArsenalSoundStrip::Hit::None) { // the name opens (or, again, closes keeping) the drawer
                     if (m_drawerUnit == row.getUnitId()) m_drawerUnit = 0;
-                    else if (const auto* unit = tm->getUnitManager().getUnit(row.getUnitId())) { m_drawerUnit = row.getUnitId(); m_drawer = ArsenalSoundDrawer::open(strip.list(), unit->audioClipPath); }
+                    else if (const auto* unit = tm->getUnitManager().getUnit(row.getUnitId())) {
+                        m_stale.insert(row.getUnitId()); // pick up changes made to the library since the row was last drawn
+                        m_drawerUnit = row.getUnitId();
+                        m_drawer = ArsenalSoundDrawer::open(syncStrip(*tm, row.getUnitId()).list(), unit->audioClipPath);
+                    }
                     relayout = true;
                     return true;
                 }
@@ -168,6 +190,28 @@ public:
     bool drawerOpen() const { return m_drawerUnit != 0; }
 
 private:
+    /// The unit's strip, listing its sound set when it has one and its folder otherwise.
+    ArsenalSoundStrip& syncStrip(Audio::TrackManager& tm, Audio::UnitID id) const {
+        auto& strip = m_sounds[id];
+        const auto* unit = tm.getUnitManager().getUnit(id);
+        if (!unit) return strip;
+        if (!unit->soundSet.empty() && m_setMembers) {
+            if (strip.setName() != unit->soundSet || !strip.isSet() || m_stale.count(id)) {
+                const auto resolved = ArsenalSoundSet::resolve(m_setMembers(unit->soundSet));
+                strip.useFolder();
+                strip.follow(unit->audioClipPath);
+                strip.useList(unit->soundSet, resolved.files);
+                m_missing[id] = resolved.missing.size();
+                m_stale.erase(id);
+            }
+        } else if (strip.isSet() || m_stale.count(id)) {
+            strip.useFolder();
+            m_missing[id] = 0;
+            m_stale.erase(id);
+        }
+        strip.follow(unit->audioClipPath);
+        return strip;
+    }
     float drawerExtra(Audio::UnitID unit) const { return m_drawerUnit == unit ? ArsenalSoundDrawer::kHeight + ArsenalStepLanes::kLaneGap : 0.0f; }
     static AestraUI::NUIRect drawerRect(const AestraUI::UnitRow& row) {
         const auto s = soundRect(row);
@@ -218,6 +262,11 @@ private:
     Audio::UnitID m_drawerUnit{0};            ///< The unit whose sound drawer is open (one at a time).
     ArsenalSoundDrawer::State m_drawer;
     mutable std::map<Audio::UnitID, ArsenalSoundStrip> m_sounds;
+    mutable std::map<Audio::UnitID, size_t> m_missing;
+    mutable std::set<Audio::UnitID> m_stale;
+    std::function<std::vector<std::string>()> m_setNames;
+    std::function<std::vector<std::string>(const std::string&)> m_setMembers;
+    std::function<void(Audio::UnitID, const std::string&)> m_onSetChosen;
     std::function<void(Audio::UnitID, const std::string&)> m_onSwap;
     mutable ArsenalStepLanes m_lanes;
     size_t m_dragRow{0};

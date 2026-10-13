@@ -95,6 +95,9 @@ public:
     /** @brief Set the callback used when an audio sample is dropped onto a unit. */
     /// While a sound drawer is open the app routes typing here first, before global shortcuts and musical typing.
     bool handleDrawerKey(const AestraUI::NUIKeyEvent& event) { return m_lanes.drawerOpen() && onKeyEvent(event); }
+    /// Sound sets (V81-AR2): the collections a row's drawer can walk, a collection's members, and a unit's choice.
+    void setSoundSetProviders(std::function<std::vector<std::string>()> names, std::function<std::vector<std::string>(const std::string&)> members,
+                              std::function<void(UnitID, const std::string&)> chosen) { m_lanes.setSoundSetProviders(std::move(names), std::move(members), std::move(chosen)); }
     void setOnSampleDroppedToUnit(std::function<void(UnitID, const std::string&)> cb) { m_onSampleDroppedToUnit = cb; }
     /** @brief Set the callback fired when unit selection changes. */
     void setOnSelectedUnitChanged(std::function<void(UnitID)> cb) { m_onSelectedUnitChanged = std::move(cb); }

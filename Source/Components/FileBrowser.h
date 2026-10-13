@@ -203,6 +203,8 @@ public:
 
     // User collections: the named tags pinned to the navigation pane, in order.
     const std::vector<std::string>& getCollections() const { return collections_; }
+    /// The files and folders in a collection, wherever they live (a sound set's members).
+    std::vector<std::string> getCollectionMembers(const std::string& name) const { return pathsWithTag(name); }
     bool createCollection(const std::string& name);                        ///< false if empty or taken
     bool renameCollection(const std::string& from, const std::string& to); ///< retags every member
     void deleteCollection(const std::string& name);                        ///< untags members; files untouched

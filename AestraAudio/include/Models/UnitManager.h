@@ -128,6 +128,11 @@ struct UnitInfo {
     bool isEnabled{false};
     /** @brief Associated audio clip path for clip-based units. */
     std::string audioClipPath;
+    /**
+     * @brief Name of the sound set (a library collection) this unit's sound arrows and drawer walk; empty walks the
+     * sound's own folder. A reference by name: the set lives in the user's library, not in the project (V81-AR2).
+     */
+    std::string soundSet;
     /** @brief Cached clip duration for audio-style units. */
     double audioDurationSeconds{0.0};
     /** @brief Lightweight preview waveform bins for Arsenal rendering. */
@@ -291,6 +296,8 @@ public:
     int getUnitTimelineLane(UnitID id) const;
     /** @brief Attach an audio clip path to a unit. */
     void setUnitAudioClip(UnitID id, const std::string& path);
+    /** @brief Point a unit's sound arrows and drawer at a sound set (empty: its own folder). */
+    void setUnitSoundSet(UnitID id, const std::string& setName);
     /** @brief Set the unit's linear output gain (published to the audio snapshot). */
     void setUnitGain(UnitID id, float gain);
     /** @brief Publish a pre-decoded audio clip to a unit without doing file I/O on the caller. */
