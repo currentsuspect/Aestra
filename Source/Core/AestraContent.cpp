@@ -1404,7 +1404,7 @@ void AestraContent::setupArsenalPanels() {
         setDirty(true);
     });
     m_audioClipEditorPanel->setOnDragEnd([this]() { m_sampleEditorDragging = false; });
-    m_audioClipEditorPanel->setMinimumPanelSize(660.0f, 490.0f);
+    m_audioClipEditorPanel->setMinimumPanelSize(660.0f, 520.0f);
     m_audioClipEditorPanel->setOnResizeMove([this](const AestraUI::NUIRect& proposed) {
         m_sampleEditorRect = clampRectToAllowed(proposed, computePlacementRegion());
         if (m_audioClipEditorPanel)
