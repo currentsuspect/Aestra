@@ -2434,8 +2434,7 @@ void AestraContent::setViewOpen(Audio::ViewType view, bool open) {
             m_viewState.mixerOpen = open;
             if (m_mixerPanel) {
                 m_mixerPanel->setVisible(open);
-                if (open)
-                    m_mixerPanel->refreshChannels();
+                if (open) { m_mixerPanel->refreshChannels(); m_mixerPanel->bringToFrontPriority(); }
             }
             changed = true;
         }
@@ -2446,7 +2445,7 @@ void AestraContent::setViewOpen(Audio::ViewType view, bool open) {
             if (m_pianoRollPanel) {
                 m_pianoRollPanel->setVisible(open);
                 if (open)
-                    m_pianoRollPanel->bringToFront();
+                    m_pianoRollPanel->bringToFrontPriority();
             }
             changed = true;
         }
@@ -2458,7 +2457,7 @@ void AestraContent::setViewOpen(Audio::ViewType view, bool open) {
                 m_sequencerPanel->setVisible(open);
                 if (open) {
                     m_sequencerPanel->registerDropTargets(true);
-                    m_sequencerPanel->bringToFront();
+                    m_sequencerPanel->bringToFrontPriority();
                 } else {
                     m_sequencerPanel->unregisterDropTargets();
                 }
@@ -2877,7 +2876,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
                 AestraUI::NUIRect allowed = computePlacementRegion();
                 m_routingMapPanel->setBounds(allowed);
                 m_routingMapPanel->setVisible(true);
-                m_routingMapPanel->bringToFront();
+                m_routingMapPanel->bringToFrontPriority();
                 m_routingMapPanel->setDirty(true);
             }
             // Keep mixer visible so user still sees context. The centralized
@@ -4577,7 +4576,7 @@ void AestraContent::toggleHistoryPanel() {
     m_historyPanel->setVisible(show);
     if (show) {
         applyPanelPreference(Audio::ViewType::History);
-        m_historyPanel->bringToFront();
+        m_historyPanel->bringToFrontPriority();
         m_historyPanel->refreshHistory();
     }
     onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
@@ -4590,7 +4589,7 @@ void AestraContent::toggleTakesPanel() {
     m_takesPanel->setVisible(show);
     if (show) {
         applyPanelPreference(Audio::ViewType::Takes);
-        m_takesPanel->bringToFront();
+        m_takesPanel->bringToFrontPriority();
         m_takesPanel->refreshTakes();
     }
     onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
