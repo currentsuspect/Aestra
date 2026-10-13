@@ -26,7 +26,9 @@ public:
     static constexpr float kCardW = 132.0f;
     static constexpr float kGap = 8.0f;
     static constexpr float kAddW = 44.0f;
-    static constexpr float kSwingW = 96.0f; ///< the "Swing 12%" drag zone at the right end
+    static constexpr float kSwingW = 96.0f; ///< the "Swing 12%" drag zone
+    static constexpr float kPlaceW = 156.0f; ///< the "Place in timeline" button at the right end
+    static constexpr float kRightW = kSwingW + kGap + kPlaceW;
     static constexpr size_t kThumbBars = 16;
 
     struct Scene {
@@ -40,12 +42,12 @@ public:
         float w{0.0f};
     };
     struct Hit {
-        enum class Kind { None, Scene, Add, Swing } kind{Kind::None};
+        enum class Kind { None, Scene, Add, Swing, Place } kind{Kind::None};
         uint64_t id{0};
     };
     /// What a pointer event asks the panel to do (the strip changes swing itself).
     struct Action {
-        enum class Kind { None, Select, PatternAdded, SwingEdited } kind{Kind::None};
+        enum class Kind { None, Select, PatternAdded, SwingEdited, PlaceInTimeline } kind{Kind::None};
         uint64_t id{0};
     };
 
@@ -111,7 +113,7 @@ public:
         }
         m_followActive = m_followActive || activeId != m_lastActive;
         m_lastActive = activeId;
-        m_placed = place(widths, active, rect.width - kSwingW - kGap, m_offset, m_followActive, m_offset);
+        m_placed = place(widths, active, rect.width - kRightW - kGap, m_offset, m_followActive, m_offset);
         const auto* ap = pm.getPattern(Audio::PatternID{activeId});
         m_swing = ap ? ap->swing : 0.0f;
         m_followActive = false;
@@ -122,11 +124,12 @@ public:
     const std::vector<Placed>& placed() const { return m_placed; }
     /// The "+" slot follows the last card (the mock), and stops at the swing zone when the cards run out of room.
     AestraUI::NUIRect addRect() const {
-        const float limit = m_rect.right() - kSwingW - kGap - kAddW;
+        const float limit = m_rect.right() - kRightW - kGap - kAddW;
         const float after = m_placed.empty() ? m_rect.x : m_rect.x + m_placed.back().x + m_placed.back().w + kGap;
         return {std::min(limit, after), m_rect.y, kAddW, m_rect.height};
     }
-    AestraUI::NUIRect swingRect() const { return {m_rect.right() - kSwingW, m_rect.y, kSwingW, m_rect.height}; }
+    AestraUI::NUIRect swingRect() const { return {m_rect.right() - kRightW, m_rect.y, kSwingW, m_rect.height}; }
+    AestraUI::NUIRect placeRect() const { return {m_rect.right() - kPlaceW, m_rect.y + (m_rect.height - 34.0f) * 0.5f, kPlaceW, 34.0f}; }
     float swing() const { return m_swing; }
     /// How much swing, 0 to 100% (100% = every odd sixteenth half a step late), as the mock shows it.
     static int swingPercent(float swing) { return static_cast<int>(std::lround(std::clamp(swing, 0.0f, 1.0f) * 100.0f)); }
@@ -135,6 +138,7 @@ public:
 
     Hit hitTest(const AestraUI::NUIPoint& pt) const {
         if (!m_rect.contains(pt)) return {};
+        if (placeRect().contains(pt)) return {Hit::Kind::Place, 0};
         if (swingRect().contains(pt)) return {Hit::Kind::Swing, 0};
         if (addRect().contains(pt)) return {Hit::Kind::Add, 0};
         if (pt.x >= addRect().x - kGap) return {};
@@ -178,6 +182,9 @@ public:
         renderer.drawText(pct, {sw.x + renderer.measureText("Swing ", tp.fontSizeXS + 1.0f).width, ty}, tp.fontSizeXS + 1.0f, theme.getColor("textPrimary"));
         renderer.fillRect({sw.x, sw.bottom() - 10.0f, sw.width, 1.0f}, theme.getColor("borderSubtle").withAlpha(0.7f));
         renderer.fillRect({sw.x, sw.bottom() - 10.0f, sw.width * m_swing, 1.0f}, theme.getColor("textSecondary"));
+        const auto pl = placeRect(); // the one primary action of the header (the mock's purple button)
+        renderer.fillRoundedRect(pl, tp.radiusXS, theme.getColor("accentPrimary"));
+        renderer.drawTextCentered("Place in timeline", pl, tp.fontSizeXS + 1.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
     }
 
     /// Pointer routing for the strip: chips select, "+" makes the next pattern, the swing zone drags, the wheel scrolls.
@@ -196,6 +203,7 @@ public:
         const Hit hit = hitTest(e.position);
         if (hit.kind == Hit::Kind::Scene) out = {Action::Kind::Select, hit.id};
         if (hit.kind == Hit::Kind::Add) out = {Action::Kind::PatternAdded, pm.createMidiPattern(nextName(m_scenes), 8.0, {}).value};
+        if (hit.kind == Hit::Kind::Place) out = {Action::Kind::PlaceInTimeline, activeId};
         if (hit.kind == Hit::Kind::Swing) { m_swingDrag = true; setSwing(pm, activeId, e.position.x); out = {Action::Kind::SwingEdited, activeId}; }
         return true;
     }

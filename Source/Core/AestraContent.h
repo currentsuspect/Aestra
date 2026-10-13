@@ -313,6 +313,7 @@ public:
     void wireEditorMode();  ///< the plugin editors' shared mode, from the store
     void wirePanelMode(const std::shared_ptr<Aestra::Audio::WindowPanel>& panel, Aestra::Audio::ViewType view);
     void showPanelMenu(Aestra::Audio::ViewType view, const AestraUI::NUIPoint& at);
+    void placePatternInTimeline(Aestra::Audio::PatternID pattern); ///< AestraContentPlacement.cpp: the Arsenal's "Place in timeline"
     void noteOutsidePress(Aestra::Audio::ViewType view);  ///< a contextual panel saw a press outside it
     void closeContextualPanels();                         ///< runs a frame later, once the press has been handled
     int m_viewChangeSerial = 0;                           ///< bumped whenever a view is opened or closed

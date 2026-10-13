@@ -70,7 +70,7 @@ int main() {
     {
         check(ArsenalSceneStrip::swingPercent(0.0f) == 0 && ArsenalSceneStrip::swingPercent(1.0f) == 100, "swing reads 0% to 100%");
         const auto sw = strip.swingRect();
-        check(sw.right() == rect.right() && strip.addRect().right() < sw.x, "the swing zone sits right of the + chip");
+        check(sw.right() < strip.placeRect().x && strip.placeRect().right() == rect.right() && strip.addRect().right() < sw.x, "the swing zone sits right of the + chip, and the place button ends the strip");
         AestraUI::NUIMouseEvent e;
         e.position = {sw.x + sw.width * 0.5f, sw.y + 4};
         e.pressed = true;
@@ -87,6 +87,17 @@ int main() {
         e.position = {0, 0};
         check(!strip.onMouse(e, pm, b.value, act), "after release the strip leaves pointer events outside it alone");
         check(pm.getPattern(a)->swing == 0.0f, "other patterns keep their own swing");
+    }
+
+    std::cout << "[6] the place button asks the panel to place the pattern\n";
+    {
+        AestraUI::NUIMouseEvent e;
+        const auto pl = strip.placeRect();
+        e.position = {pl.x + 10, pl.y + 10};
+        e.pressed = true;
+        e.button = AestraUI::NUIMouseButton::Left;
+        ArsenalSceneStrip::Action act;
+        check(strip.onMouse(e, pm, b.value, act) && act.kind == ArsenalSceneStrip::Action::Kind::PlaceInTimeline && act.id == b.value, "pressing it asks to place the active pattern");
     }
 
     std::cout << (g_failures == 0 ? "ALL PASSED\n" : "FAILURES\n");
