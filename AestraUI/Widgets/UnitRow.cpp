@@ -1744,22 +1744,21 @@ void UnitRow::showMixerRoutingMenu(const NUIPoint& pos) {
 
     m_mixerRoutingMenu = std::make_shared<NUIContextMenu>();
     m_mixerRoutingMenu->setOnHide([this]() { detachContextMenu(m_mixerRoutingMenu); });
+    m_mixerRoutingMenu->setMaxHeight(7.0f * m_mixerRoutingMenu->getItemHeight() + 12.0f); // seven rows, then scroll
 
     const auto addRouteItem = [this](uint32_t channelId, const std::string& label) {
         const bool selected = channelId == m_mixerChannelId;
-        m_mixerRoutingMenu->addItem((selected ? "✓ " : "  ") + label,
-                                    [this, channelId]() { routeToMixerChannel(channelId); });
+        auto item = std::make_shared<NUIContextMenuItem>(label, NUIContextMenuItem::Type::Checkbox); // tick in the shared slot
+        item->setChecked(selected); item->setOnClick([this, channelId]() { routeToMixerChannel(channelId); });
+        m_mixerRoutingMenu->addItem(item);
     };
 
     addRouteItem(Aestra::Audio::MASTER_MIXER_CHANNEL_ID, "Master");
-    if (m_trackManager->getChannelCount() > 0) {
-        m_mixerRoutingMenu->addSeparator();
-    }
+    if (m_trackManager->getChannelCount() > 0) m_mixerRoutingMenu->addSeparator();
     for (size_t i = 0; i < m_trackManager->getChannelCount(); ++i) {
         const auto* channel = m_trackManager->getChannel(i);
-        if (!channel)
-            continue;
-        addRouteItem(channel->getChannelId(), std::to_string(i + 1) + "  " + channel->getName());
+        if (!channel) continue;
+        addRouteItem(channel->getChannelId(), std::to_string(i + 1) + " · " + channel->getName());
     }
 
     m_mixerRoutingMenu->addSeparator();
