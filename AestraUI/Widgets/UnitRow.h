@@ -293,6 +293,7 @@ private:
     int m_lastClipClickStep = -1;        // Step of the last grid press; -1 = miss / non-grid
 
     // === Helpers ===
+    NUIColor identityColor() const; // the output channel's colour, else the unit's own
     void drawContent(NUIRenderer& renderer); // Main drawing logic (cached)
     void drawDragHandle(NUIRenderer& renderer, const NUIRect& bounds);
     void drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds);

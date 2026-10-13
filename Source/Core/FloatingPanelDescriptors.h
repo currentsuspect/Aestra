@@ -48,6 +48,7 @@ struct FloatingPanelGeometry {
     double defaultAnchorY;
     double minWidth;
     double minHeight;
+    bool defaultMaximized{false}; ///< first open fills the workspace (the Arsenal is a view of its own, not a card)
 };
 
 /**
@@ -64,7 +65,7 @@ struct FloatingPanelGeometry {
  */
 inline constexpr std::array<FloatingPanelGeometry, 5> kFloatingPanelGeometry{{
     {Audio::ViewType::Mixer, UISurfaceKeys::kPanelMixer, 800.0, 400.0, 0.0, 0.0, 560.0, 300.0},
-    {Audio::ViewType::Sequencer, UISurfaceKeys::kPanelSequencer, 600.0, 300.0, 0.0, 0.0, 520.0, 220.0},
+    {Audio::ViewType::Sequencer, UISurfaceKeys::kPanelSequencer, 600.0, 300.0, 0.0, 0.0, 520.0, 220.0, true},
     {Audio::ViewType::PianoRoll, UISurfaceKeys::kPanelPianoRoll, 800.0, 450.0, 0.0, 0.0, 560.0, 280.0},
     {Audio::ViewType::History, UISurfaceKeys::kPanelHistory, 280.0, 460.0, 0.5, 0.0, 240.0, 220.0},
     {Audio::ViewType::Takes, UISurfaceKeys::kPanelTakes, 320.0, 480.0, 0.5, 0.0, 280.0, 180.0},

@@ -341,7 +341,7 @@ Aestra::UISurfaceGeometry AestraContent::panelPreference(Audio::ViewType view) c
             return *stored;
         }
     }
-    return defaultSurfacePreference(spec.defaultWidth, spec.defaultHeight, spec.defaultAnchorX, spec.defaultAnchorY);
+    return defaultSurfacePreference(spec.defaultWidth, spec.defaultHeight, spec.defaultAnchorX, spec.defaultAnchorY, spec.defaultMaximized);
 }
 
 void AestraContent::savePanelPreference(Audio::ViewType view, const Aestra::UISurfaceGeometry& preference) {
