@@ -672,11 +672,6 @@ void ArsenalPanel::onRender(NUIRenderer& renderer) {
     if (m_listContainer && isVisible()) Aestra::drawArsenalRackHeaders(renderer, m_rack, m_listViewportRect, m_progressHeaderRect.bottom() + 8.0f - m_scrollY);
     if (m_listContainer && isVisible()) m_kitCard.draw(renderer);
     if (m_listContainer && isVisible()) m_lanes.draw(renderer, m_rack, m_unitRows, m_trackManager.get(), m_activePatternID, m_listViewportRect);
-    if (m_listContainer && isVisible() && m_playheadX >= gridSpan().first && m_playheadX <= gridSpan().first + gridSpan().second) { // the playhead runs down through the rows, as in the piano roll
-        renderer.setClipRect(m_listViewportRect);
-        renderer.fillRect({m_playheadX - 0.75f, m_listViewportRect.y, 1.5f, m_listViewportRect.height}, NUIThemeManager::getInstance().getColor("accentPrimary").withAlpha(0.85f));
-        renderer.clearClipRect();
-    }
 
     // Drag-hover ghost draws above the panel surfaces.
     renderDragPreview(renderer);
@@ -1105,7 +1100,6 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
         m_ruler->setBeatsPerBar(beatsPerBar());
         const double playheadBeat = calculatePlayheadBeat();
         m_ruler->setPlayheadBeat(playheadBeat);
-        m_playheadX = playheadBeat >= 0.0 ? gridStartX + static_cast<float>(playheadBeat) * (4.0f * stepWidth + kGroupGap) - m_gridScrollX : -1.0f;
         m_ruler->onRender(renderer);
     }
 

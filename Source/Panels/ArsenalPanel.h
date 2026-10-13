@@ -159,7 +159,6 @@ private:
     // Pattern Progress Visualization
     static constexpr float COMMAND_HEADER_HEIGHT = 64.0f;
     static constexpr float PROGRESS_HEADER_HEIGHT = 34.0f;
-    float m_playheadX = -1.0f;   // Where the playhead is on screen (-1 = not playing)
     void drawProgressHeader(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds);
     void drawCommandHeader(AestraUI::NUIRenderer& renderer);
     int calculateCurrentStep(); // Calculate step from TrackManager clock
