@@ -4,6 +4,8 @@
 #include "../../Source/Core/TakeManager.h"
 
 #include "../../Source/Core/ProjectSerializer.h"
+#include "../../Source/Core/VersionSteps.h"
+#include "Commands/CommandHistory.h"
 #include "../Support/TestTempDirectory.h"
 
 #include <cstdlib>
@@ -21,9 +23,31 @@ void require(bool cond, const char* msg) {
     }
 }
 
+struct NamedCommand : Aestra::Audio::ICommand {
+    explicit NamedCommand(std::string n) : name(std::move(n)) {}
+    void execute() override {}
+    void undo() override {}
+    void redo() override {}
+    std::string getName() const override { return name; }
+    std::string name;
+};
+
 } // namespace
 
 int main() {
+    {   // The step log is the undo stack, oldest first; an unnamed command still gets a row.
+        Aestra::Audio::CommandHistory history;
+        history.pushAndExecute(std::make_shared<NamedCommand>("Add unit · Kick"));
+        history.pushAndExecute(std::make_shared<NamedCommand>(""));
+        history.pushAndExecute(std::make_shared<NamedCommand>("Set swing 18%"));
+        const auto steps = Aestra::collectVersionSteps(history);
+        require(steps.size() == 3, "one step per command on the undo stack");
+        require(steps[0].label == "Add unit · Kick" && steps[2].label == "Set swing 18%", "oldest first");
+        require(steps[1].label == "(unnamed)", "an unnamed command still gets a row");
+        history.undo();
+        require(Aestra::collectVersionSteps(history).size() == 2, "an undone step is not part of the version");
+    }
+
     const Aestra::Tests::ScopedTempDirectory scope{"TakeManagerVersions"};
     const auto project = (scope.path() / "song.aes").string();
     const std::string contents = "{}";
