@@ -509,6 +509,33 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/TakeManagerTest.cpp")
     set_tests_properties(TakeManagerTest PROPERTIES LABELS "integration;takes;project;contract:durability")
 endif()
 
+# Versions data model (SPEC-017): branches, kinds, step logs, take migration
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/TakeManagerVersionsTest.cpp")
+    add_executable(TakeManagerVersionsTest
+        Integration/TakeManagerVersionsTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/TakeManager.cpp
+    )
+    target_link_libraries(TakeManagerVersionsTest PRIVATE AestraAudio)
+    target_include_directories(TakeManagerVersionsTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Core
+    )
+    add_test(NAME TakeManagerVersionsTest COMMAND TakeManagerVersionsTest)
+    set_tests_properties(TakeManagerVersionsTest PROPERTIES LABELS "integration;takes;versions;project;contract:durability")
+endif()
+
 # Plugin Scanner Test
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/PluginScanTest.cpp")
     add_executable(AestraPluginScanTest Integration/PluginScanTest.cpp)
