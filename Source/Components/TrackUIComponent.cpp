@@ -2047,9 +2047,7 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
 
         if (lane->muted) {
             renderer.fillRect(controlAreaBounds, themeManager.getColor("backgroundSecondary").withAlpha(0.62f));
-        } else if (lane->solo) {
-            renderer.fillRect(controlAreaBounds, themeManager.getColor("accentCyan").withAlpha(0.10f));
-        } else if (soloSuppressed) {
+        } else if (soloSuppressed) { // a soloed lane shows it on its S key, not as a tint over the whole header
             renderer.fillRect(controlAreaBounds, themeManager.getColor("backgroundSecondary").withAlpha(0.44f));
         }
 
@@ -2290,7 +2288,7 @@ void TrackUIComponent::onResize(int width, int height) {
     // Every lane owns M/S; the record arm button is track-owned and renders
     // without a channel too. No volume slot in the header: volume lives in
     // the mixer only.
-    const int numButtons = 3;
+    const int numButtons = m_isNestedLane ? 2 : 3; // a nested lane has M/S only, so its name gets the freed width
     const float buttonsTotalW = numButtons * buttonW + (numButtons - 1) * spacing;
 
     // Spec 2 §8: the row's footprint shrinks by taking it out of padding and the
