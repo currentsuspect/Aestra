@@ -1,5 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "SampleEditorPanel.h"
+#include <array>
+#include <cstdio>
 #include "Widgets/FlatSlider.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
@@ -24,14 +26,15 @@ constexpr float kADSRMinDecay = 0.001f;
 constexpr float kADSRMaxDecay = 2.0f;
 constexpr float kADSRMinRelease = 0.001f;
 constexpr float kADSRMaxRelease = 5.0f;
-constexpr float kSampleEditorMinPanelW = 500.0f;
-constexpr float kSampleEditorMinContentH = 480.0f;
+constexpr float kSampleEditorMinPanelW = 700.0f;
+constexpr float kSampleEditorMinContentH = 440.0f;
 constexpr float kSampleEditorMinPanelH = kSampleEditorMinContentH + 28.0f;
 constexpr float kSampleEditorModeRowH = 36.0f;
 constexpr float kSampleEditorPitchRowH = 92.0f;
 constexpr float kSampleEditorADSRH = 140.0f;
 constexpr float kSampleEditorButtonRowH = 36.0f;
-constexpr float kSampleEditorWaveformMinH = 120.0f;
+constexpr float kSampleEditorWaveformMinH = 130.0f;
+constexpr float kSampleEditorColumnsH = 196.0f; // the three columns under the waveform: Play, Pitch, Envelope
 constexpr float kADSRHandleHitRadius = 11.0f; // Generous grab area — handles were hard to pick up
 constexpr float kTwoPi = 6.28318530718f;
 
@@ -111,6 +114,10 @@ ADSRGeometry calculateADSRGeometry(const NUIRect& b, float attack, float decay, 
     return g;
 }
 
+std::string signedLabel(int value, const char* unit) {
+    return (value >= 0 ? "+" : "") + std::to_string(value) + unit;
+}
+
 float distanceTo(const NUIPoint& a, const NUIPoint& b) {
     const float dx = a.x - b.x;
     const float dy = a.y - b.y;
@@ -124,27 +131,20 @@ public:
         auto b = getBounds();
         auto& theme = NUIThemeManager::getInstance();
 
-        renderer.fillRect(b, theme.getColor("workspaceBackground"));
-
-        const float pad = 8.0f;
-        const float gutter = 6.0f;
-        const float labelH = 14.0f;
-        const float layoutW = std::max(b.width, kSampleEditorMinPanelW);
-        const float layoutH = std::max(b.height, kSampleEditorMinContentH);
-        const float contentW = layoutW - pad * 2.0f;
-        const float fixedStackH = labelH + gutter + kSampleEditorModeRowH + gutter + kSampleEditorPitchRowH +
-                                  gutter + labelH + kSampleEditorADSRH + gutter + kSampleEditorButtonRowH + pad * 2.0f;
-        const float waveformH = std::max(kSampleEditorWaveformMinH, layoutH - fixedStackH);
-        const float controlY = b.y + pad + waveformH + 3.0f + labelH + gutter - 4.0f;
-        const float controlH = kSampleEditorModeRowH + gutter + kSampleEditorPitchRowH + 8.0f;
-        const float adsrY = controlY + controlH + gutter + 2.0f;
-        const float adsrH = labelH + kSampleEditorADSRH + 8.0f;
-
-        const auto cardFill = theme.getColor("surfaceTertiary").withAlpha(0.42f);
-        const auto cardStroke = theme.getColor("secondary").withAlpha(0.10f);
-        renderer.fillRoundedRect(NUIRect(b.x + pad, controlY, contentW, controlH), 2.0f, cardFill); // flat 2 px cards, no outline
-        renderer.fillRoundedRect(NUIRect(b.x + pad, adsrY, contentW, adsrH), 2.0f, cardFill.withAlpha(0.34f));
-        (void)cardStroke;
+        // One panel colour, then rules: a line above the three columns, one between each, and one under each title.
+        // No cards inside the panel; the waveform and the envelope sit on the darker bed they draw themselves.
+        renderer.fillRect(b, theme.getColor("backgroundSecondary"));
+        const NUIColor rule = theme.getColor("borderSubtle");
+        const float top = b.bottom() - kSampleEditorColumnsH;
+        renderer.fillRect({b.x, top, b.width, 1.0f}, rule);
+        const float pad = 16.0f;
+        const float c1 = b.x + b.width * 0.297f, c2 = b.x + b.width * 0.648f;
+        renderer.fillRect({c1, top, 1.0f, kSampleEditorColumnsH}, rule);
+        renderer.fillRect({c2, top, 1.0f, kSampleEditorColumnsH}, rule);
+        const float titleRule = top + 30.0f;
+        renderer.fillRect({b.x + pad, titleRule, c1 - b.x - pad * 2.0f, 1.0f}, rule);
+        renderer.fillRect({c1 + pad, titleRule, c2 - c1 - pad * 2.0f, 1.0f}, rule);
+        renderer.fillRect({c2 + pad, titleRule, b.right() - c2 - pad * 2.0f, 1.0f}, rule);
 
         renderChildren(renderer);
         setDirty(false);
@@ -426,12 +426,33 @@ void WaveformDisplayComponent::onRender(NUIRenderer& renderer) {
     renderer.setClipRect(b);
 
     // Background
-    renderer.fillRect(b, theme.getColor("recessedPanel")); // sharp: no radius, no outline
+    renderer.fillRect(b, theme.getColor("backgroundPrimary")); // the dark bed, sharp: no radius, no outline
+
+    // Time ruler along the top, when the length is known: five labels over the visible range.
+    const float rulerH = m_durationSeconds > 0.0 ? 16.0f : 0.0f;
+    if (rulerH > 0.0f) {
+        const float vs = m_scrollOffset, ve = std::min(1.0f, m_scrollOffset + 1.0f / m_zoom);
+        const NUIColor tick = theme.getColor("textSecondary").withAlpha(0.45f);
+        for (int i = 0; i <= 4; ++i) {
+            const float f = static_cast<float>(i) / 4.0f;
+            const float x = b.x + f * b.width;
+            const double sec = (vs + f * (ve - vs)) * m_durationSeconds;
+            char text[24];
+            if (sec >= 60.0) std::snprintf(text, sizeof text, "%d:%02d", static_cast<int>(sec) / 60, static_cast<int>(sec) % 60);
+            else std::snprintf(text, sizeof text, sec < 10.0 ? "%.2f" : "%.1f", sec);
+            renderer.fillRect({std::min(x, b.right() - 1.0f), b.y + rulerH - 4.0f, 1.0f, 4.0f}, tick);
+            const float tw = renderer.measureText(text, 10.0f).width;
+            const float tx = i == 0 ? b.x + 12.0f : (i == 4 ? b.right() - tw - 12.0f : x - tw * 0.5f);
+            renderer.drawText(text, {tx, b.y + 1.0f}, 10.0f, theme.getColor("textSecondary").withAlpha(0.75f));
+        }
+    }
 
     // Center line
-    float centerY = b.y + b.height * 0.5f;
+    const float areaTop = b.y + rulerH;
+    const float areaH = b.height - rulerH;
+    float centerY = areaTop + areaH * 0.5f;
     renderer.drawLine(NUIPoint(b.x, centerY), NUIPoint(b.x + b.width, centerY),
-                      0.5f, theme.getColor("waveformLine").withAlpha(0.18f));
+                      0.5f, m_color.a > 0.0f ? m_color.withAlpha(0.28f) : theme.getColor("textSecondary").withAlpha(0.28f));
 
     if (m_waveformData.empty()) {
         renderer.clearClipRect();
@@ -451,8 +472,9 @@ void WaveformDisplayComponent::onRender(NUIRenderer& renderer) {
     // One crisp column per pixel: the extreme min and max of every data pair that lands in it, drawn as a filled
     // bar, so the shape reads the same at any zoom (hairlines per data pair shimmered and left gaps). A silent
     // column still shows a 1 px line so the file never looks empty. The signal keeps the audio hue.
-    const NUIColor waveCol = theme.getColor("waveformLine").withAlpha(0.92f);
-    const float halfHeight = b.height * 0.46f;
+    const NUIColor signal = m_color.a > 0.0f ? m_color : NUIColor::fromHex(0xffd8d0c2); // channel colour, else bone
+    const NUIColor waveCol = signal.withAlpha(0.92f);
+    const float halfHeight = areaH * 0.46f;
     const int columns = static_cast<int>(std::ceil(b.width));
     for (int px = 0; px < columns; ++px) {
         const float n0 = viewStart + (static_cast<float>(px) / b.width) * (viewEnd - viewStart);
@@ -475,8 +497,10 @@ void WaveformDisplayComponent::onRender(NUIRenderer& renderer) {
     if (m_loopEnd > m_loopStart) {
         float loopX0 = b.x + (m_loopStart - viewStart) * pixelsPerSample;
         float loopX1 = b.x + (m_loopEnd - viewStart) * pixelsPerSample;
-        NUIColor loopCol = theme.getColor("secondary").withAlpha(0.10f);
-        renderer.fillRect(NUIRect(loopX0, b.y, loopX1 - loopX0, b.height), loopCol);
+        // The part outside the loop is dimmed; a loop that covers everything leaves the bed untouched.
+        const NUIColor dim = theme.getColor("backgroundPrimary").withAlpha(0.62f);
+        if (loopX0 > b.x) renderer.fillRect(NUIRect(b.x, areaTop, std::min(loopX0, b.right()) - b.x, areaH), dim);
+        if (loopX1 < b.right()) renderer.fillRect(NUIRect(std::max(loopX1, b.x), areaTop, b.right() - std::max(loopX1, b.x), areaH), dim);
 
         // Loop start handle
         renderer.fillRect(NUIRect(loopX0, b.y, 2.0f, b.height), theme.getColor("secondary").withAlpha(0.80f));
@@ -697,19 +721,23 @@ void SampleEditorPanel::buildUI() {
     styleModeButton(m_polyModeBtn);
     styleModeButton(m_cutSelfModeBtn);
     styleModeButton(m_keepLengthBtn);
-    m_waveformHintLabel = makeLabel("Scroll to zoom  |  Drag handles to trim");
+    m_waveformHintLabel = makeLabel("Scroll to zoom  |  drag the tabs to trim");
     m_waveformHintLabel->setTextColor(theme.getColor("textSecondary").withAlpha(0.56f));
-    m_waveformHintLabel->setAlignment(NUILabel::Alignment::Right);
-    m_modeLabel = makeLabel("PLAYBACK / VOICES");
+    m_waveformHintLabel->setAlignment(NUILabel::Alignment::Left);
+    m_modeLabel = makeLabel("PLAY");
     m_voiceCountLabel = makeLabel("Voices");
     m_voiceCountValueLabel = makeLabel("4");
     m_voiceCountValueLabel->setAlignment(NUILabel::Alignment::Right);
-    m_pitchLabel = makeLabel("PITCH / ROOT");
+    m_pitchLabel = makeLabel("PITCH");
     m_pitchRootLabel = makeLabel("Root");
     m_pitchRootValueLabel = makeLabel(midiNoteName(60));
     m_pitchRootValueLabel->setAlignment(NUILabel::Alignment::Right);
     m_pitchCoarseLabel = makeLabel("Coarse");
     m_pitchFineLabel = makeLabel("Fine");
+    m_pitchCoarseValueLabel = makeLabel("+0 st");
+    m_pitchFineValueLabel = makeLabel("+0 ct");
+    m_pitchCoarseValueLabel->setAlignment(NUILabel::Alignment::Right);
+    m_pitchFineValueLabel->setAlignment(NUILabel::Alignment::Right);
     m_adsrLabel = makeLabel("ENVELOPE");
 
     // Wire callbacks
@@ -755,6 +783,8 @@ void SampleEditorPanel::buildUI() {
     m_contentContainer->addChild(m_pitchLabel);
     m_contentContainer->addChild(m_pitchRootLabel);
     m_contentContainer->addChild(m_pitchRootValueLabel);
+    m_contentContainer->addChild(m_pitchCoarseValueLabel);
+    m_contentContainer->addChild(m_pitchFineValueLabel);
     m_contentContainer->addChild(m_pitchCoarseLabel);
     m_contentContainer->addChild(m_pitchFineLabel);
     m_contentContainer->addChild(m_adsrLabel);
@@ -828,6 +858,7 @@ void SampleEditorPanel::loadSample(const std::string& path) {
     }
 
     m_waveformDisplay->setWaveformData(m_waveformData);
+    m_waveformDisplay->setDurationSeconds(m_sampleRate > 0.0 ? static_cast<double>(m_sampleLength) / m_sampleRate : 0.0);
     m_waveformDisplay->repaint();
     m_adsrDisplay->repaint();
 }
@@ -852,8 +883,13 @@ void SampleEditorPanel::loadPreparedSample(const std::string& path, double sampl
     }
 
     m_waveformDisplay->setWaveformData(m_waveformData);
+    m_waveformDisplay->setDurationSeconds(m_sampleRate > 0.0 ? static_cast<double>(m_sampleLength) / m_sampleRate : 0.0);
     m_waveformDisplay->repaint();
     m_adsrDisplay->repaint();
+}
+
+void SampleEditorPanel::setWaveformColor(const AestraUI::NUIColor& color) {
+    if (m_waveformDisplay) m_waveformDisplay->setColor(color);
 }
 
 void SampleEditorPanel::setADSR(const ADSRParams& params) {
@@ -875,6 +911,8 @@ void SampleEditorPanel::setPitchTune(const PitchTune& pt) {
     m_pitchFineSlider->setValue(pt.fine);
     m_suppressControlCallbacks = false;
     m_pitchRootValueLabel->setText(midiNoteName(pt.rootMidiNote));
+    m_pitchCoarseValueLabel->setText(signedLabel(pt.coarse, " st"));
+    m_pitchFineValueLabel->setText(signedLabel(static_cast<int>(std::lround(pt.fine)), " ct"));
 }
 
 void SampleEditorPanel::setVoiceCount(int voices) {
@@ -912,92 +950,64 @@ void SampleEditorPanel::onResize(int width, int height) {
     }
 
     const auto cb = m_contentContainer->getBounds();
-    const float pad = 8.0f;
-    const float gutter = 6.0f;
-    const float labelH = 14.0f;
-    const float rowH = 22.0f;
+    const float pad = 16.0f;
     const float layoutW = std::max(cb.width, kSampleEditorMinPanelW);
     const float layoutH = std::max(cb.height, kSampleEditorMinContentH);
-    const float halfW = std::max(80.0f, (layoutW - (pad * 2.0f) - gutter) * 0.5f);
     const float contentW = layoutW - pad * 2.0f;
-    const float fixedStackH = labelH + gutter + kSampleEditorModeRowH + gutter + kSampleEditorPitchRowH +
-                              gutter + labelH + kSampleEditorADSRH + gutter + kSampleEditorButtonRowH + pad * 2.0f;
-    const float waveformH = std::max(kSampleEditorWaveformMinH, layoutH - fixedStackH);
 
-    float y = cb.y + pad;
-    m_waveformDisplay->setBounds(NUIRect(cb.x + pad, y, contentW, waveformH));
-    y += waveformH + 3.0f;
-    m_waveformHintLabel->setBounds(NUIRect(cb.x + pad, y, contentW, labelH));
-    y += labelH + gutter;
+    // The sound first: the waveform takes everything the three columns do not need.
+    const float hintH = 28.0f;
+    const float waveformH = std::max(kSampleEditorWaveformMinH, layoutH - kSampleEditorColumnsH - hintH - 12.0f);
+    m_waveformDisplay->setBounds(NUIRect(cb.x + pad, cb.y + 12.0f, contentW, waveformH));
+    const float hintY = cb.y + 12.0f + waveformH + 6.0f;
+    m_waveformHintLabel->setBounds(NUIRect(cb.x + pad, hintY + 4.0f, contentW * 0.5f, 14.0f));
+    // Normalize and Reverse are one-off actions: small flat keys at the right of the hint line.
+    const float keyH = 22.0f;
+    m_reverseBtn->setBounds(NUIRect(cb.x + layoutW - pad - 74.0f, hintY, 74.0f, keyH));
+    m_normalizeBtn->setBounds(NUIRect(cb.x + layoutW - pad - 74.0f - 6.0f - 84.0f, hintY, 84.0f, keyH));
 
-    const float modeRowY = y;
-    m_modeLabel->setBounds(NUIRect(cb.x + pad, modeRowY, contentW, labelH));
-    y = modeRowY + labelH;
-    const float monoBtnW = 52.0f;
-    // Real gaps between the three mono buttons (2px each), not the old
-    // overlapping -1px segments — keeps modeAvailableW honest so the
-    // ping-pong button cannot drift over the voice group at min width.
-    const float monoGroupW = monoBtnW * 3.0f + 2.0f * 2.0f;
-    const float voiceValueW = 24.0f;
-    const float voiceSliderW = std::min(132.0f, std::max(84.0f, contentW * 0.20f));
-    const float voiceLabelW = 42.0f;
-    const float voiceGroupW = voiceLabelW + 4.0f + voiceSliderW + 4.0f + voiceValueW;
-    const float modeAvailableW = std::max(168.0f, contentW - monoGroupW - voiceGroupW - gutter * 3.0f);
-    const float modeBtnW = std::max(56.0f, std::min(82.0f, modeAvailableW / 3.0f));
-    float x = cb.x + pad;
-    // Real gaps between buttons: the previous -1px overlap faked a segment
-    // container with colliding borders (DESIGN.md: dividers explain structure,
-    // they do not decorate).
-    m_monoModeBtn->setBounds(NUIRect(x, y, monoBtnW, rowH));
-    x += monoBtnW + 2.0f;
-    m_polyModeBtn->setBounds(NUIRect(x, y, monoBtnW, rowH));
-    x += monoBtnW + 2.0f;
-    m_cutSelfModeBtn->setBounds(NUIRect(x, y, monoBtnW, rowH));
-    x += monoBtnW + gutter;
-    m_oneShotModeBtn->setBounds(NUIRect(x, y, modeBtnW, rowH));
-    x += modeBtnW + 2.0f;
-    m_loopModeBtn->setBounds(NUIRect(x, y, modeBtnW, rowH));
-    x += modeBtnW + 2.0f;
-    m_pingPongModeBtn->setBounds(NUIRect(x, y, modeBtnW, rowH));
-    const float voiceX = cb.x + layoutW - pad - voiceGroupW;
-    m_voiceCountLabel->setBounds(NUIRect(voiceX, y + 4.0f, voiceLabelW, labelH));
-    m_voiceCountSlider->setBounds(NUIRect(voiceX + voiceLabelW + 4.0f, y, voiceSliderW, rowH));
-    m_voiceCountValueLabel->setBounds(NUIRect(voiceX + voiceLabelW + 4.0f + voiceSliderW + 4.0f, y + 4.0f, voiceValueW, labelH));
-    y = modeRowY + kSampleEditorModeRowH + gutter;
+    // Three columns, 0.297 : 0.351 : 0.351 of the width, each under a titled rule.
+    const float top = cb.y + layoutH - kSampleEditorColumnsH;
+    const float c1 = cb.x + layoutW * 0.297f, c2 = cb.x + layoutW * 0.648f;
+    const float labelH = 14.0f;
+    const float rowH = 24.0f;
+    const float rowTop = top + 42.0f;
+    const float rowStep = 32.0f;
 
-    const float pitchRowY = y;
-    m_pitchLabel->setBounds(NUIRect(cb.x + pad, pitchRowY, contentW, labelH));
-    // Pitch mode lives with pitch: a toggle on the section's header row, centred on it.
-    const float keepLengthW = 92.0f;
-    const float keepLengthH = 20.0f;
-    m_keepLengthBtn->setBounds(NUIRect(cb.x + layoutW - pad - keepLengthW,
-                                       pitchRowY + (labelH - keepLengthH) * 0.5f, keepLengthW, keepLengthH));
-    y = pitchRowY + labelH;
-    const float pitchLabelW = 56.0f;
-    const float pitchValueW = 64.0f;
-    m_pitchRootLabel->setBounds(NUIRect(cb.x + pad, y + 4.0f, pitchLabelW, labelH));
-    m_pitchRootSlider->setBounds(
-        NUIRect(cb.x + pad + pitchLabelW + gutter, y,
-                contentW - pitchLabelW - pitchValueW - gutter * 2.0f, rowH));
-    m_pitchRootValueLabel->setBounds(
-        NUIRect(cb.x + layoutW - pad - pitchValueW, y + 4.0f, pitchValueW, labelH));
-    y += rowH + gutter;
-    m_pitchCoarseLabel->setBounds(NUIRect(cb.x + pad, y + 4.0f, pitchLabelW, labelH));
-    m_pitchCoarseSlider->setBounds(NUIRect(cb.x + pad + pitchLabelW + gutter, y, contentW - pitchLabelW - gutter, rowH));
-    y += rowH + gutter;
-    m_pitchFineLabel->setBounds(NUIRect(cb.x + pad, y + 4.0f, pitchLabelW, labelH));
-    m_pitchFineSlider->setBounds(NUIRect(cb.x + pad + pitchLabelW + gutter, y, contentW - pitchLabelW - gutter, rowH));
-    y = pitchRowY + kSampleEditorPitchRowH + gutter;
+    // Play
+    const float playX = cb.x + pad, playW = c1 - cb.x - pad * 2.0f;
+    m_modeLabel->setBounds(NUIRect(playX, top + 10.0f, playW, labelH));
+    const float segW = (playW - 2.0f) / 3.0f;
+    const std::array<std::shared_ptr<NUIButton>, 3> modeRow1{m_polyModeBtn, m_monoModeBtn, m_cutSelfModeBtn};
+    const std::array<std::shared_ptr<NUIButton>, 3> modeRow2{m_oneShotModeBtn, m_loopModeBtn, m_pingPongModeBtn};
+    for (size_t i = 0; i < 3; ++i) {
+        modeRow1[i]->setBounds(NUIRect(playX + static_cast<float>(i) * (segW + 1.0f), rowTop, segW, rowH));
+        modeRow2[i]->setBounds(NUIRect(playX + static_cast<float>(i) * (segW + 1.0f), rowTop + 30.0f, segW, rowH));
+    }
+    const float voiceY = rowTop + 68.0f;
+    const float voiceValueW = 24.0f, voiceLabelW = 46.0f;
+    m_voiceCountLabel->setBounds(NUIRect(playX, voiceY + 4.0f, voiceLabelW, labelH));
+    m_voiceCountSlider->setBounds(NUIRect(playX + voiceLabelW, voiceY, playW - voiceLabelW - voiceValueW - 8.0f, rowH));
+    m_voiceCountValueLabel->setBounds(NUIRect(playX + playW - voiceValueW, voiceY + 4.0f, voiceValueW, labelH));
 
-    m_adsrLabel->setBounds(NUIRect(cb.x + pad, y, contentW, labelH));
-    y += labelH;
-    m_adsrDisplay->setBounds(NUIRect(cb.x + pad, y, contentW, kSampleEditorADSRH));
-    y += kSampleEditorADSRH + gutter;
+    // Pitch
+    const float pitchX = c1 + pad, pitchW = c2 - c1 - pad * 2.0f;
+    m_pitchLabel->setBounds(NUIRect(pitchX, top + 10.0f, pitchW * 0.4f, labelH));
+    m_keepLengthBtn->setBounds(NUIRect(pitchX + pitchW - 84.0f, top + 5.0f, 84.0f, 20.0f));
+    const float pitchLabelW = 52.0f, pitchValueW = 56.0f;
+    const auto pitchRow = [&](float y, const auto& label, const auto& slider, const auto& value) {
+        label->setBounds(NUIRect(pitchX, y + 4.0f, pitchLabelW, labelH));
+        slider->setBounds(NUIRect(pitchX + pitchLabelW, y, pitchW - pitchLabelW - pitchValueW - 8.0f, rowH));
+        value->setBounds(NUIRect(pitchX + pitchW - pitchValueW, y + 4.0f, pitchValueW, labelH));
+    };
+    pitchRow(rowTop, m_pitchRootLabel, m_pitchRootSlider, m_pitchRootValueLabel);
+    pitchRow(rowTop + rowStep, m_pitchCoarseLabel, m_pitchCoarseSlider, m_pitchCoarseValueLabel);
+    pitchRow(rowTop + rowStep * 2.0f, m_pitchFineLabel, m_pitchFineSlider, m_pitchFineValueLabel);
 
-    const float buttonH = 32.0f;
-    const float buttonY = y + (kSampleEditorButtonRowH - buttonH) * 0.5f;
-    m_normalizeBtn->setBounds(NUIRect(cb.x + pad, buttonY, halfW, buttonH));
-    m_reverseBtn->setBounds(NUIRect(cb.x + pad + halfW + gutter, buttonY, halfW, buttonH));
+    // Envelope
+    const float envX = c2 + pad, envW = cb.x + layoutW - c2 - pad * 2.0f;
+    m_adsrLabel->setBounds(NUIRect(envX, top + 10.0f, envW, labelH));
+    m_adsrDisplay->setBounds(NUIRect(envX, top + 40.0f, envW, kSampleEditorColumnsH - 40.0f - 14.0f));
 }
 
 AestraUI::NUICursorStyle SampleEditorPanel::getResizeCursorStyleForPoint(const AestraUI::NUIPoint& point) const {
@@ -1079,11 +1089,11 @@ void SampleEditorPanel::updateModeButtons() {
     auto& theme = NUIThemeManager::getInstance();
     // Active interaction intent is the Aestra accent (DESIGN.md color
     // semantics); the previous secondary (electric blue) token violated it.
-    const auto activeBg = theme.getColor("accentPrimary").withAlpha(0.22f);
+    const auto activeBg = theme.getColor("accentPrimary"); // the active choice is solid violet
     const auto inactiveBg = theme.getColor("surfaceTertiary"); // a flat fill, so an off choice still reads as a key
     const auto hoverBg = theme.getColor("accentPrimary").withAlpha(0.10f);
     const auto borderCol = theme.getColor("borderSubtle").withAlpha(0.40f);
-    const auto activeText = theme.getColor("accentPrimary").lightened(0.25f);
+    const auto activeText = NUIColor::white();
     const auto inactiveText = theme.getColor("textSecondary").withAlpha(0.72f);
 
     auto styleButton = [&](const std::shared_ptr<NUIButton>& button, LoopMode mode) {
@@ -1156,10 +1166,10 @@ void SampleEditorPanel::setKeepLengthPitch(bool keepLength) {
 
 void SampleEditorPanel::updateMonoPolyControls() {
     auto& theme = NUIThemeManager::getInstance();
-    const auto activeBg = theme.getColor("accentPrimary").withAlpha(0.22f);
+    const auto activeBg = theme.getColor("accentPrimary"); // the active choice is solid violet
     const auto inactiveBg = theme.getColor("surfaceTertiary"); // a flat fill, so an off choice still reads as a key
     const auto hoverBg = theme.getColor("accentPrimary").withAlpha(0.10f);
-    const auto activeText = theme.getColor("accentPrimary").lightened(0.25f);
+    const auto activeText = NUIColor::white();
     const auto inactiveText = theme.getColor("textSecondary").withAlpha(0.72f);
     const auto inactiveBorder = theme.getColor("borderSubtle").withAlpha(0.40f);
 
@@ -1203,6 +1213,11 @@ void SampleEditorPanel::updateMonoPolyControls() {
     }
 }
 
+void SampleEditorPanel::updatePitchValueLabels() {
+    m_pitchCoarseValueLabel->setText(signedLabel(static_cast<int>(m_pitchCoarseSlider->getValue()), " st"));
+    m_pitchFineValueLabel->setText(signedLabel(static_cast<int>(std::lround(m_pitchFineSlider->getValue())), " ct"));
+}
+
 void SampleEditorPanel::onPitchControlChanged() {
     if (m_suppressControlCallbacks) {
         return;
@@ -1211,6 +1226,7 @@ void SampleEditorPanel::onPitchControlChanged() {
     m_pitchTune.coarse = static_cast<int>(m_pitchCoarseSlider->getValue());
     m_pitchTune.fine = static_cast<float>(m_pitchFineSlider->getValue());
     m_pitchRootValueLabel->setText(midiNoteName(m_pitchTune.rootMidiNote));
+    updatePitchValueLabels();
 
     if (onPitchTuneChanged) onPitchTuneChanged(m_pitchTune);
 }

@@ -18,6 +18,16 @@ class FlatSlider : public NUISlider {
 public:
     explicit FlatSlider(bool bipolar = false) : NUISlider(), m_bipolar(bipolar) {}
 
+    /// The wheel steps the value: 1% of the range per notch, 0.1% with Shift held (the same fine ratio as dragging).
+    bool onMouseEvent(const NUIMouseEvent& event) override {
+        if (event.wheelDelta != 0.0f && isEnabled() && getBounds().contains(event.position)) {
+            const double step = (getMaxValue() - getMinValue()) * ((event.modifiers & NUIModifiers::Shift) ? 0.001 : 0.01);
+            setValue(getValue() + (event.wheelDelta > 0.0f ? step : -step));
+            return true;
+        }
+        return NUISlider::onMouseEvent(event);
+    }
+
 protected:
     NUIRect trackRect() const {
         const auto bounds = getBounds();
