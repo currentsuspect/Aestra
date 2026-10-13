@@ -87,6 +87,7 @@ private:
         bool isMidi;
         double lengthBeats;
         bool isPlacedOnTimeline = false;
+        uint32_t colorArgb = 0; ///< The owning channel's colour (0: none, the strip keeps the accent).
     };
     std::vector<PatternEntry> m_patterns;
     

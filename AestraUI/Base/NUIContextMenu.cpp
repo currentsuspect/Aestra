@@ -749,6 +749,12 @@ void NUIContextMenu::drawItem(NUIRenderer& renderer, std::shared_ptr<NUIContextM
     if (hasState || (!item->getIconObject() && hasLeadingSlot()))
         x += iconSize_ + itemPadding_ * 0.5f;
 
+    // A colour swatch (a channel's own colour), before the label.
+    if (item->hasSwatch()) {
+        renderer.fillRect(NUIRect(x, itemRect.y + (itemRect.height - 14.0f) * 0.5f, 4.0f, 14.0f), item->getSwatch());
+        x += 4.0f + itemPadding_ * 0.8f;
+    }
+
     // Draw text
     NUIColor textColor = !item->isEnabled() ? themeManager.getColor("textDisabled")
                        : item->isDestructive() ? themeManager.getColor("error")
@@ -976,6 +982,7 @@ float NUIContextMenu::decorationWidthFor(const std::shared_ptr<NUIContextMenuIte
     if (!item) return 0.0f;
     float w = 4.0f; // drawItem's leading nudge past the padding
     if (hasLeadingSlot()) w += iconSize_ + itemPadding_ * 0.5f; // every row reserves the same slot
+    if (item->hasSwatch()) w += 4.0f + itemPadding_ * 0.8f;
     if (item->getType() == NUIContextMenuItem::Type::Submenu) w += kMenuArrowSize + 4.0f;
     return w;
 }
