@@ -1495,7 +1495,7 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
     }
     bool relayout = false, edited = false;
     if (m_lanes.onMouse(event, m_rack, m_unitRows, m_trackManager.get(), m_activePatternID, m_listViewportRect, relayout, edited)) {
-        if (relayout) layoutUnits();
+        if (relayout) { layoutUnits(); if (m_lanes.drawerOpen()) setFocused(true); } // typed characters reach the focused component
         if (edited && m_onPatternEdited) m_onPatternEdited(m_activePatternID);
         repaint();
         return true;
@@ -1563,8 +1563,8 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
 
 bool ArsenalPanel::onKeyEvent(const NUIKeyEvent& event) {
     if (!event.pressed) return false;
-    
-    // Check for Ctrl modifier
+    if (bool relayout = false; m_lanes.onKey(event, m_trackManager.get(), relayout)) { if (relayout) layoutUnits(); repaint(); return true; } // the sound drawer owns the keyboard while open
+
     bool isCtrl = (event.modifiers & NUIModifiers::Ctrl);
     
     // Ctrl+C: Copy

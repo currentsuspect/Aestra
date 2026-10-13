@@ -93,6 +93,8 @@ public:
     /** @brief Set the callback used for plugin drops onto a specific unit. */
     void setOnPluginDroppedToUnit(std::function<void(UnitID, const std::string&)> cb) { m_onPluginDroppedToUnit = cb; }
     /** @brief Set the callback used when an audio sample is dropped onto a unit. */
+    /// While a sound drawer is open the app routes typing here first, before global shortcuts and musical typing.
+    bool handleDrawerKey(const AestraUI::NUIKeyEvent& event) { return m_lanes.drawerOpen() && onKeyEvent(event); }
     void setOnSampleDroppedToUnit(std::function<void(UnitID, const std::string&)> cb) { m_onSampleDroppedToUnit = cb; }
     /** @brief Set the callback fired when unit selection changes. */
     void setOnSelectedUnitChanged(std::function<void(UnitID)> cb) { m_onSelectedUnitChanged = std::move(cb); }
