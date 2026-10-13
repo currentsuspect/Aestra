@@ -52,6 +52,11 @@ public:
     const std::string& getShortcut() const { return shortcut_; }
 
     /** @brief A verb that destroys something (Delete…): drawn in the error colour, listed last behind a divider. */
+    /** @brief A 4 px colour swatch before the label (a channel's colour in the route list). */
+    void setSwatch(const NUIColor& color) { swatch_ = color; hasSwatch_ = true; }
+    bool hasSwatch() const { return hasSwatch_; }
+    const NUIColor& getSwatch() const { return swatch_; }
+
     void setDestructive(bool destructive) { destructive_ = destructive; }
     bool isDestructive() const { return destructive_; }
 
@@ -80,6 +85,8 @@ private:
     bool visible_ = true;
     bool checked_ = false;
     bool destructive_ = false;
+    bool hasSwatch_ = false;
+    NUIColor swatch_{};
     std::string shortcut_;
     std::string iconPath_;
     std::shared_ptr<NUIIcon> icon_;
