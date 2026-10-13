@@ -659,7 +659,7 @@ TakeManager::Result TakeManager::renameTake(const std::string& projectPath, cons
 }
 
 TakeManager::Result TakeManager::duplicateTake(const std::string& projectPath, const std::string& takeId,
-                                               const std::string& newName) {
+                                               const std::string& newName, const std::string& branch) {
     namespace fs = std::filesystem;
 
     Manifest manifest = loadManifest(projectPath);
@@ -690,6 +690,8 @@ TakeManager::Result TakeManager::duplicateTake(const std::string& projectPath, c
     copy.createdAtMs = nowMs();
     copy.updatedAtMs = copy.createdAtMs;
     copy.active = false;
+    copy.branch = branch.empty() ? source->branch : branch.substr(0, TAKE_MAX_STRING_BYTES);
+    copy.steps = source->steps; // the copy is the same state, so it carries the same steps
 
     const std::string copySnapshot = resolveSnapshotPath(projectPath, copy);
     if (copySnapshot.empty()) {

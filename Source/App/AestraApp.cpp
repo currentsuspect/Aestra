@@ -2390,10 +2390,10 @@ bool AestraApp::branchFromTake(const std::string& takeId) {
     }
 
     const auto manifest = TakeManager::loadManifest(m_documentState.canonicalPath());
-    const auto* source = manifest.ok ? manifest.findTake(takeId) : nullptr;
-    const std::string branchName = source ? (source->name + " Branch") : "";
+    const auto* source = manifest.ok ? manifest.findTake(takeId) : nullptr; const std::string branchName = source ? (source->name + " Branch") : "";
+    const std::string newBranch = "Branch " + std::to_string(manifest.ok ? manifest.branches().size() + 1 : 2); // a branch of its own (SPEC-017)
 
-    auto dup = TakeManager::duplicateTake(m_documentState.canonicalPath(), takeId, branchName);
+    auto dup = TakeManager::duplicateTake(m_documentState.canonicalPath(), takeId, branchName, newBranch);
     if (!dup.ok) {
         Log::warning("[Takes] Could not branch from Take: " + dup.errorMessage);
         return false;
