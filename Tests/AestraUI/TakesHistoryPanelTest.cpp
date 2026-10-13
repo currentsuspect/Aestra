@@ -252,9 +252,16 @@ void testTakesPanel() {
 
     // Mouse selection: click on the first take row.
     panel.selectTake(-1);
-    const float rowCenterY = 36.0f + 30.0f + 13.0f; // header + toolbar + half row
+    const float rowCenterY = 36.0f + 30.0f + 28.0f + 13.0f; // header + toolbar + one-lane timeline + half row
     require(panel.onMouseEvent(leftPress(160.0f, rowCenterY)), "Row click should be consumed");
     require(panel.getSelectedTake() == 0, "Click should select the first take row");
+
+    // The timeline: every version is a node, and clicking one selects it like its row does.
+    panel.selectTake(-1);
+    AestraUI::NUIPoint node;
+    require(panel.getTimelineNodeCenter(2, node), "A version should have a node on the timeline");
+    require(panel.onMouseEvent(leftPress(node.x, node.y)), "A node click should be consumed");
+    require(panel.getSelectedTake() == 2, "Clicking a node should select that version");
 
     // Inline rename: keyboard-driven edit, committed through the callback.
     panel.setOnRenameTake([&](const std::string& takeId, const std::string& name) {
