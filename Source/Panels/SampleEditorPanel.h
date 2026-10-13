@@ -2,10 +2,12 @@
 #pragma once
 
 #include "WindowPanel.h"
+#include "NUITextInput.h"
 #include "NUIComponent.h"
 #include "NUIButton.h"
 #include "NUISlider.h"
 #include <vector>
+#include <array>
 #include <string>
 #include <memory>
 #include <functional>
@@ -156,6 +158,9 @@ private:
     std::shared_ptr<AestraUI::NUILabel> m_pitchCoarseLabel;
     std::shared_ptr<AestraUI::NUILabel> m_pitchFineLabel;
     std::shared_ptr<AestraUI::NUILabel> m_adsrLabel;
+    // A, D, S and R as typed fields under the graph (ms, ms, %, ms). Return or leaving the field applies it.
+    std::array<std::shared_ptr<AestraUI::NUITextInput>, 4> m_adsrFields;
+    std::array<std::shared_ptr<AestraUI::NUILabel>, 4> m_adsrFieldCaptions;
 
     // Layout container
     std::shared_ptr<AestraUI::NUIComponent> m_contentContainer;
@@ -168,6 +173,8 @@ private:
     void onLoopControlChanged();
     void onPitchControlChanged();
     void updatePitchValueLabels();
+    void refreshADSRFields();
+    void commitADSRField(int index);
     void onVoiceCountControlChanged();
     void setMonoModeInternal(bool mono, bool notify);
     void setCutSelfModeInternal(bool cutSelf, bool notify);

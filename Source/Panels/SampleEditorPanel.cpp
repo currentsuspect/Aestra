@@ -6,6 +6,7 @@
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include "NUILabel.h"
+#include "NUITextInput.h"
 #include "../AestraUI/Platform/NUIPlatformBridge.h"
 #include "MiniAudioDecoder.h"
 #include "../AestraCore/include/AestraLog.h"
@@ -238,12 +239,6 @@ void ADSRDisplayComponent::onRender(NUIRenderer& renderer) {
     drawHandle(Handle::Sustain, g.sustain);
     drawHandle(Handle::Release, g.releaseStart);
 
-    // Labels
-    std::string label = "A:" + std::to_string(static_cast<int>(m_attack * 1000)) + "ms "
-                       + "D:" + std::to_string(static_cast<int>(m_decay * 1000)) + "ms "
-                       + "S:" + std::to_string(static_cast<int>(m_sustain * 100)) + "% "
-                       + "R:" + std::to_string(static_cast<int>(m_release * 1000)) + "ms";
-    renderer.drawText(label, NUIPoint(g.baseX, g.baseY + g.graphH + 6), 10.0f, theme.getColor("textSecondary").withAlpha(0.82f));
 }
 
 void ADSRDisplayComponent::onUpdate(double deltaTime) {
@@ -739,6 +734,25 @@ void SampleEditorPanel::buildUI() {
     m_pitchCoarseValueLabel->setAlignment(NUILabel::Alignment::Right);
     m_pitchFineValueLabel->setAlignment(NUILabel::Alignment::Right);
     m_adsrLabel = makeLabel("ENVELOPE");
+    for (int i = 0; i < 4; ++i) {
+        static const char* captions[4] = {"A", "D", "S", "R"};
+        m_adsrFieldCaptions[static_cast<size_t>(i)] = makeLabel(captions[i]);
+        m_adsrFieldCaptions[static_cast<size_t>(i)]->setFontSize(9.5f);
+        auto field = std::make_shared<NUITextInput>();
+        field->setBorderRadius(0.0f);
+        field->setBorderWidth(0.0f);
+        field->setBackgroundVisible(true);
+        field->setBackgroundColor(theme.getColor("backgroundPrimary"));
+        field->setTextColor(theme.getColor("textPrimary"));
+        field->setCaretColor(theme.getColor("textPrimary"));
+        field->setSelectionColor(theme.getColor("accentPrimary").withAlpha(0.45f));
+        field->setFocusedBorderColor(theme.getColor("accentPrimary"));
+        field->setPadding(6.0f);
+        field->setMaxLength(10);
+        field->setOnReturnKey([this, i]() { commitADSRField(i); });
+        field->setOnFocusLost([this, i]() { commitADSRField(i); });
+        m_adsrFields[static_cast<size_t>(i)] = field;
+    }
 
     // Wire callbacks
     m_oneShotModeBtn->setOnClick([this]() { setLoopMode(LoopMode::OneShot); });
@@ -788,6 +802,8 @@ void SampleEditorPanel::buildUI() {
     m_contentContainer->addChild(m_pitchCoarseLabel);
     m_contentContainer->addChild(m_pitchFineLabel);
     m_contentContainer->addChild(m_adsrLabel);
+    for (int i = 0; i < 4; ++i) { m_contentContainer->addChild(m_adsrFieldCaptions[static_cast<size_t>(i)]); m_contentContainer->addChild(m_adsrFields[static_cast<size_t>(i)]); }
+    refreshADSRFields();
     m_contentContainer->addChild(m_oneShotModeBtn);
     m_contentContainer->addChild(m_loopModeBtn);
     m_contentContainer->addChild(m_pingPongModeBtn);
@@ -892,9 +908,60 @@ void SampleEditorPanel::setWaveformColor(const AestraUI::NUIColor& color) {
     if (m_waveformDisplay) m_waveformDisplay->setColor(color);
 }
 
+namespace {
+// "10 ms", "1.20 s", "100 %": the typed envelope fields show times in ms below a second, and read ms, s or % back.
+std::string formatEnvelopeTime(float seconds) {
+    char buf[24];
+    if (seconds >= 1.0f) std::snprintf(buf, sizeof buf, "%.2f s", seconds);
+    else std::snprintf(buf, sizeof buf, "%d ms", static_cast<int>(std::lround(seconds * 1000.0f)));
+    return buf;
+}
+bool parseEnvelopeValue(const std::string& text, bool percent, float& out) {
+    char* end = nullptr;
+    const float number = std::strtof(text.c_str(), &end);
+    if (end == text.c_str() || !std::isfinite(number)) return false;
+    std::string unit(end);
+    unit.erase(std::remove_if(unit.begin(), unit.end(), [](unsigned char c) { return std::isspace(c); }), unit.end());
+    std::transform(unit.begin(), unit.end(), unit.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    if (percent) { out = number / 100.0f; return true; }
+    out = (unit == "s") ? number : number / 1000.0f; // a bare number or "ms" is milliseconds
+    return true;
+}
+} // namespace
+
+void SampleEditorPanel::refreshADSRFields() {
+    const std::array<std::string, 4> texts{formatEnvelopeTime(m_adsr.attack), formatEnvelopeTime(m_adsr.decay),
+                                           std::to_string(static_cast<int>(std::lround(m_adsr.sustain * 100.0f))) + " %",
+                                           formatEnvelopeTime(m_adsr.release)};
+    for (size_t i = 0; i < m_adsrFields.size(); ++i)
+        if (m_adsrFields[i] && !m_adsrFields[i]->isFocused()) m_adsrFields[i]->setText(texts[i]);
+}
+
+void SampleEditorPanel::commitADSRField(int index) {
+    if (index < 0 || index > 3 || !m_adsrFields[static_cast<size_t>(index)]) return;
+    float value = 0.0f;
+    if (parseEnvelopeValue(m_adsrFields[static_cast<size_t>(index)]->getText(), index == 2, value)) {
+        ADSRParams next = m_adsr;
+        switch (index) {
+            case 0: next.attack = std::clamp(value, kADSRMinAttack, kADSRMaxAttack); break;
+            case 1: next.decay = std::clamp(value, kADSRMinDecay, kADSRMaxDecay); break;
+            case 2: next.sustain = std::clamp(value, 0.0f, 1.0f); break;
+            default: next.release = std::clamp(value, kADSRMinRelease, kADSRMaxRelease); break;
+        }
+        m_adsr = next;
+        m_adsrDisplay->setADSR(next.attack, next.decay, next.sustain, next.release);
+        if (onADSRChanged) onADSRChanged(m_adsr);
+        requestControlCommit();
+    }
+    // Whatever was typed, show the value that is in force (a bad entry snaps back).
+    m_adsrFields[static_cast<size_t>(index)]->setFocused(false);
+    refreshADSRFields();
+}
+
 void SampleEditorPanel::setADSR(const ADSRParams& params) {
     m_adsr = params;
     m_adsrDisplay->setADSR(params.attack, params.decay, params.sustain, params.release);
+    refreshADSRFields();
 }
 
 void SampleEditorPanel::setLoopPoints(const LoopPoints& lp) {
@@ -1007,7 +1074,15 @@ void SampleEditorPanel::onResize(int width, int height) {
     // Envelope
     const float envX = c2 + pad, envW = cb.x + layoutW - c2 - pad * 2.0f;
     m_adsrLabel->setBounds(NUIRect(envX, top + 10.0f, envW, labelH));
-    m_adsrDisplay->setBounds(NUIRect(envX, top + 40.0f, envW, kSampleEditorColumnsH - 40.0f - 14.0f));
+    const float fieldsH = 24.0f, captionH = 12.0f;
+    const float fieldsY = top + kSampleEditorColumnsH - 14.0f - fieldsH;
+    m_adsrDisplay->setBounds(NUIRect(envX, top + 40.0f, envW, fieldsY - captionH - 4.0f - (top + 40.0f)));
+    const float fieldW = (envW - 3.0f) / 4.0f;
+    for (size_t i = 0; i < 4; ++i) {
+        const float fx = envX + static_cast<float>(i) * (fieldW + 1.0f);
+        m_adsrFieldCaptions[i]->setBounds(NUIRect(fx + 2.0f, fieldsY - captionH, fieldW, captionH));
+        m_adsrFields[i]->setBounds(NUIRect(fx, fieldsY, fieldW, fieldsH));
+    }
 }
 
 AestraUI::NUICursorStyle SampleEditorPanel::getResizeCursorStyleForPoint(const AestraUI::NUIPoint& point) const {
@@ -1063,6 +1138,7 @@ void SampleEditorPanel::onADSRDisplayChanged(const ADSRParams& params) {
         return;
     }
     m_adsr = params;
+    refreshADSRFields();
     if (onADSRChanged) onADSRChanged(m_adsr);
 }
 
