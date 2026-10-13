@@ -14,7 +14,7 @@
 2349 AestraUI/Widgets/UIRoutingMap.cpp
 1861 AestraUI/Widgets/UnitRow.cpp
 2616 Source/App/AestraApp.cpp
-3954 Source/Components/FileBrowser.cpp
+3948 Source/Components/FileBrowser.cpp
 1510 Source/Components/TrackManagerUIRender.cpp
 3630 Source/Components/TrackUIComponent.cpp
 4822 Source/Core/AestraContent.cpp
