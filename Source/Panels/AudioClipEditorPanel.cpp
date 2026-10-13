@@ -131,8 +131,7 @@ public:
         const NUIRect sourceCard{bounds.x + 8.0f, bounds.y + 8.0f, bounds.width - 16.0f, kSourceCardHeight};
         const NUIRect controlsCard{bounds.x + 8.0f, bounds.bottom() - kControlsCardHeight - 8.0f, bounds.width - 16.0f,
                                    kControlsCardHeight};
-        renderer.fillRoundedRect(sourceCard, 9.0f, card);
-        renderer.strokeRoundedRect(sourceCard, 10.0f, 1.0f, stroke);
+        renderer.fillRoundedRect(sourceCard, 2.0f, card); // flat 2 px cards, no outline
         renderer.fillRoundedRect({sourceCard.x, sourceCard.y + 13.0f, 3.0f, sourceCard.height - 26.0f}, 1.5f,
                                  clipAccent());
 
@@ -140,8 +139,7 @@ public:
         // card. Keep its eyebrow marker in the canvas gap above the card.
         renderer.fillRoundedRect({bounds.x + 16.0f, bounds.y + 110.0f, 2.0f, 10.0f}, 1.0f, clipAccent());
 
-        renderer.fillRoundedRect(controlsCard, 9.0f, card.withAlpha(0.92f));
-        renderer.strokeRoundedRect(controlsCard, 10.0f, 1.0f, stroke);
+        renderer.fillRoundedRect(controlsCard, 2.0f, card.withAlpha(0.92f));
 
         const float innerPad = 10.0f;
         const float sectionGap = 10.0f;
@@ -150,10 +148,8 @@ public:
         const float sectionWidth = (controlsCard.width - innerPad * 2.0f - sectionGap) * 0.5f;
         const NUIRect toneCard{controlsCard.x + innerPad, sectionTop, sectionWidth, sectionHeight};
         const NUIRect timingCard{toneCard.right() + sectionGap, sectionTop, sectionWidth, sectionHeight};
-        renderer.fillRoundedRect(toneCard, 8.0f, surface2Color());
-        renderer.strokeRoundedRect(toneCard, 8.0f, 1.0f, borderColor());
-        renderer.fillRoundedRect(timingCard, 8.0f, surface2Color());
-        renderer.strokeRoundedRect(timingCard, 8.0f, 1.0f, borderColor());
+        renderer.fillRoundedRect(toneCard, 2.0f, surface2Color());
+        renderer.fillRoundedRect(timingCard, 2.0f, surface2Color());
         renderer.fillRoundedRect({toneCard.x + 10.0f, toneCard.y + 29.0f, 2.0f, 10.0f}, 1.0f, clipAccent());
         renderer.fillRoundedRect({timingCard.x + 10.0f, timingCard.y + 29.0f, 2.0f, 10.0f}, 1.0f, clipAccent());
         renderChildren(renderer);
@@ -218,7 +214,7 @@ void AudioClipEditorPanel::buildUI() {
     const auto styleButton = [](const std::shared_ptr<NUIButton>& button) {
         button->setStyle(NUIButton::Style::Text);
         button->setFontSize(12.0f);
-        button->setCornerRadius(6.0f);
+        button->setCornerRadius(2.0f);
         button->setGlowEnabled(false);
         button->setBackgroundColor(surface2Color());
         button->setHoverColor(surface3Color());
