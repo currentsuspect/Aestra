@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "SampleEditorPanel.h"
+#include "Widgets/FlatSlider.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include "NUILabel.h"
@@ -425,8 +426,7 @@ void WaveformDisplayComponent::onRender(NUIRenderer& renderer) {
     renderer.setClipRect(b);
 
     // Background
-    const float radius = std::min(theme.getRadius("s"), 2.0f);
-    renderer.fillRoundedRect(NUIRect(b.x, b.y, b.width, b.height), radius, theme.getColor("recessedPanel"));
+    renderer.fillRect(b, theme.getColor("recessedPanel")); // sharp: no radius, no outline
 
     // Center line
     float centerY = b.y + b.height * 0.5f;
@@ -445,30 +445,30 @@ void WaveformDisplayComponent::onRender(NUIRenderer& renderer) {
     float viewEnd = m_scrollOffset + 1.0f / m_zoom;
     viewEnd = std::min(viewEnd, 1.0f);
 
-    size_t totalPairs = m_waveformData.size() / 2;
-    float pixelsPerSample = b.width / (viewEnd - viewStart);
+    const size_t totalPairs = m_waveformData.size() / 2;
+    const float pixelsPerSample = b.width / (viewEnd - viewStart);
 
-    // Draw waveform. The signal renders in the audio hue (same language as
-    // the transport scope and the meters); loop handles below stay accent
-    // because they are interactive controls, not signal.
-    NUIColor waveCol = theme.getColor("waveformLine").withAlpha(0.86f);
-    NUIColor waveColNeg = theme.getColor("waveformLine").withAlpha(0.58f);
-
-    for (size_t i = 0; i < totalPairs; ++i) {
-        float normX = static_cast<float>(i) / static_cast<float>(totalPairs);
-        if (normX < viewStart || normX > viewEnd) continue;
-
-        float screenX = b.x + (normX - viewStart) * pixelsPerSample;
-        float maxVal = m_waveformData[i * 2];
-        float minVal = m_waveformData[i * 2 + 1];
-
-        float yMax = centerY - maxVal * b.height * 0.45f;
-        float yMin = centerY - minVal * b.height * 0.45f;
-
-        // Positive (louder)
-        renderer.drawLine(NUIPoint(screenX, centerY), NUIPoint(screenX, yMax), 1.0f, waveCol);
-        // Negative (dimmer)
-        renderer.drawLine(NUIPoint(screenX, centerY), NUIPoint(screenX, yMin), 1.0f, waveColNeg);
+    // One crisp column per pixel: the extreme min and max of every data pair that lands in it, drawn as a filled
+    // bar, so the shape reads the same at any zoom (hairlines per data pair shimmered and left gaps). A silent
+    // column still shows a 1 px line so the file never looks empty. The signal keeps the audio hue.
+    const NUIColor waveCol = theme.getColor("waveformLine").withAlpha(0.92f);
+    const float halfHeight = b.height * 0.46f;
+    const int columns = static_cast<int>(std::ceil(b.width));
+    for (int px = 0; px < columns; ++px) {
+        const float n0 = viewStart + (static_cast<float>(px) / b.width) * (viewEnd - viewStart);
+        const float n1 = viewStart + (static_cast<float>(px + 1) / b.width) * (viewEnd - viewStart);
+        size_t i0 = static_cast<size_t>(std::max(0.0f, n0) * static_cast<float>(totalPairs));
+        size_t i1 = static_cast<size_t>(std::max(0.0f, n1) * static_cast<float>(totalPairs));
+        i0 = std::min(i0, totalPairs - 1);
+        i1 = std::clamp(i1, i0 + 1, totalPairs);
+        float hi = 0.0f, lo = 0.0f;
+        for (size_t i = i0; i < i1; ++i) {
+            hi = std::max(hi, m_waveformData[i * 2]);
+            lo = std::min(lo, m_waveformData[i * 2 + 1]);
+        }
+        const float yTop = centerY - hi * halfHeight;
+        const float yBottom = centerY - lo * halfHeight;
+        renderer.fillRect(NUIRect(b.x + static_cast<float>(px), yTop, 1.0f, std::max(1.0f, yBottom - yTop)), waveCol);
     }
 
     // Draw loop region overlay
@@ -479,14 +479,12 @@ void WaveformDisplayComponent::onRender(NUIRenderer& renderer) {
         renderer.fillRect(NUIRect(loopX0, b.y, loopX1 - loopX0, b.height), loopCol);
 
         // Loop start handle
-        renderer.drawLine(NUIPoint(loopX0, b.y), NUIPoint(loopX0, b.y + b.height),
-                          2.0f, theme.getColor("secondary").withAlpha(0.80f));
-        renderer.fillCircle(NUIPoint(loopX0, centerY), 5.0f, theme.getColor("secondary").withAlpha(0.94f));
+        renderer.fillRect(NUIRect(loopX0, b.y, 2.0f, b.height), theme.getColor("secondary").withAlpha(0.80f));
+        renderer.fillRect(NUIRect(loopX0 - 1.0f, b.y, 8.0f, 14.0f), theme.getColor("secondary").withAlpha(0.94f)); // a square tab
 
         // Loop end handle
-        renderer.drawLine(NUIPoint(loopX1, b.y), NUIPoint(loopX1, b.y + b.height),
-                          2.0f, theme.getColor("secondary").withAlpha(0.80f));
-        renderer.fillCircle(NUIPoint(loopX1, centerY), 5.0f, theme.getColor("secondary").withAlpha(0.94f));
+        renderer.fillRect(NUIRect(loopX1 - 2.0f, b.y, 2.0f, b.height), theme.getColor("secondary").withAlpha(0.80f));
+        renderer.fillRect(NUIRect(loopX1 - 7.0f, b.y, 8.0f, 14.0f), theme.getColor("secondary").withAlpha(0.94f));
     }
 
     renderer.clearClipRect();
@@ -630,14 +628,16 @@ void SampleEditorPanel::buildUI() {
         requestControlCommit();
     };
 
-    auto makeSlider = [](const std::string& label, double min, double max, double initial) {
-        auto slider = std::make_shared<NUISlider>(label);
+    auto makeSlider = [](const std::string& label, double min, double max, double initial, bool bipolar = false) {
+        auto slider = std::make_shared<FlatSlider>(bipolar);
         slider->setOrientation(NUISlider::Orientation::Horizontal);
         slider->setTextBoxVisible(false);
-        slider->setSliderRadius(7.0f);
-        slider->setSliderThickness(5.0f);
+        slider->setSliderRadius(3.0f);
+        slider->setSliderThickness(3.0f);
         slider->setRange(min, max);
         slider->setValue(initial);
+        slider->setDefaultValue(initial);
+        slider->setDoubleClickReturnValue(true, initial); // double-click returns to where it started
         return slider;
     };
     auto makeLabel = [&theme](const std::string& text) {
@@ -668,14 +668,14 @@ void SampleEditorPanel::buildUI() {
 
     // Pitch/Tune controls
     m_pitchRootSlider = makeSlider("Root", 0.0, 127.0, 60.0);
-    m_pitchCoarseSlider = makeSlider("Coarse", -24.0, 24.0, 0.0);
-    m_pitchFineSlider = makeSlider("Fine", -100.0, 100.0, 0.0);
+    m_pitchCoarseSlider = makeSlider("Coarse", -24.0, 24.0, 0.0, true);
+    m_pitchFineSlider = makeSlider("Fine", -100.0, 100.0, 0.0, true);
     m_voiceCountSlider = makeSlider("Voices", 1.0, 8.0, 4.0);
     m_pitchRootSlider->setSnapValue(1.0);
-    m_pitchRootSlider->setSliderThickness(4.0f);
-    m_pitchCoarseSlider->setSliderThickness(8.0f);
-    m_pitchFineSlider->setSliderThickness(4.0f);
-    m_voiceCountSlider->setSliderThickness(4.0f);
+    m_pitchRootSlider->setSliderThickness(3.0f); // one track weight on every slider
+    m_pitchCoarseSlider->setSliderThickness(3.0f);
+    m_pitchFineSlider->setSliderThickness(3.0f);
+    m_voiceCountSlider->setSliderThickness(3.0f);
 
     // Action buttons
     m_normalizeBtn = std::make_shared<NUIButton>("Normalize");

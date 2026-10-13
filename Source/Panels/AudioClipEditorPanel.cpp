@@ -15,6 +15,7 @@
 #include "NUILabel.h"
 #include "NUIRenderer.h"
 #include "NUISlider.h"
+#include "Widgets/FlatSlider.h"
 #include "NUIThemeSystem.h"
 #include "SampleEditorPanel.h"
 #include "TrackColorPalette.h"
@@ -37,12 +38,12 @@ constexpr float kMinPanelWidth = 660.0f;
 // the surface (panel height minus the 28px WindowPanel title bar); the
 // controls card starts at surfaceBottom - kControlsCardHeight - 8 - 14 and
 // the waveform top is at surfaceY + 130, so a 64px waveform needs a surface
-// of 458px, i.e. a panel of 486px. 490 leaves ~96px of waveform and
+// of 458px, i.e. a panel of 486px. The card has since grown 14px: the minimum is 520, which leaves ~96px of waveform and
 // guarantees the card can never overlap the waveform (triage 2026-08-14).
-constexpr float kMinPanelHeight = 490.0f;
+constexpr float kMinPanelHeight = 520.0f;
 constexpr size_t kWaveformBuckets = 768;
 constexpr float kNormalizeTargetLinear = 0.89125094f; // -1 dBFS peak
-constexpr float kControlsCardHeight = 242.0f;
+constexpr float kControlsCardHeight = 256.0f;
 constexpr float kSourceCardHeight = 88.0f;
 
 // All editor colors come from the theme system. The editor uses the standard
@@ -88,35 +89,7 @@ NUIColor accentStrongColor() {
     return NUIThemeManager::getInstance().getColor("primaryHover");
 }
 
-class ClipRangeSlider final : public NUISlider {
-public:
-    explicit ClipRangeSlider(bool bipolar) : NUISlider(), m_bipolar(bipolar) {}
-
-protected:
-    void drawSliderTrack(NUIRenderer& renderer) override {
-        const auto bounds = getBounds();
-        const float trackY = bounds.y + (bounds.height - getSliderThickness()) * 0.5f;
-        const float inset = std::min(getSliderRadius(), bounds.width * 0.5f);
-        const NUIRect track{bounds.x + inset, trackY,
-                            std::max(0.0f, bounds.width - inset * 2.0f), getSliderThickness()};
-        const float radius = getSliderThickness() * 0.5f;
-        renderer.fillRoundedRect(track, radius, getTrackColor());
-
-        const float valueX = track.x + track.width * static_cast<float>(valueToProportionOfLength(getValue()));
-        if (m_bipolar) {
-            const float centerX = track.x + track.width * static_cast<float>(valueToProportionOfLength(0.0));
-            const float left = std::min(centerX, valueX);
-            const float right = std::max(centerX, valueX);
-            if (right > left)
-                renderer.fillRoundedRect({left, track.y, right - left, track.height}, radius, getFillColor());
-        } else if (valueX > track.x) {
-            renderer.fillRoundedRect({track.x, track.y, valueX - track.x, track.height}, radius, getFillColor());
-        }
-    }
-
-private:
-    bool m_bipolar{false};
-};
+using ClipRangeSlider = FlatSlider; // the shared sharp slider; a bipolar one fills from zero
 
 class AudioClipEditorSurface final : public NUIComponent {
 public:
@@ -199,7 +172,7 @@ void AudioClipEditorPanel::buildUI() {
         slider->setId(name);
         slider->setOrientation(NUISlider::Orientation::Horizontal);
         slider->setTextBoxVisible(false);
-        slider->setSliderRadius(6.5f);
+        slider->setSliderRadius(3.0f);
         slider->setSliderThickness(3.0f);
         slider->setRange(minimum, maximum);
         slider->setValue(initial);
@@ -892,7 +865,7 @@ void AudioClipEditorPanel::onResize(int width, int height) {
     m_fitLabel->setBounds({right + 9.0f, controlsTop + 221.0f, labelWidth, 16.0f});
     {
         float fitX = right + 9.0f + labelWidth + 8.0f;
-        const float fitW = std::max(0.0f, (columnWidth - labelWidth - 8.0f - 4.0f * buttonGap) / 5.0f);
+        const float fitW = std::max(0.0f, (columnWidth - labelWidth - 8.0f - 28.0f - 4.0f * buttonGap) / 5.0f); // ends inside the card, not past it
         for (const auto& fitButton : m_fitButtons) {
             fitButton->setBounds({fitX, controlsTop + 216.0f, fitW, 24.0f});
             fitX += fitW + buttonGap;
