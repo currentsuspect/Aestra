@@ -101,12 +101,13 @@ inline AestraUI::Layout::NUIPlacementResult resolveSurfacePlacement(
  * user actually moves, resizes or maximizes the surface.
  */
 [[nodiscard]] inline UISurfaceGeometry defaultSurfacePreference(double width, double height, double anchorX,
-                                                                double anchorY) noexcept {
+                                                                double anchorY, bool maximized = false) noexcept {
     UISurfaceGeometry preference;
     preference.width = width;
     preference.height = height;
     preference.anchorX = anchorX;
     preference.anchorY = anchorY;
+    preference.maximized = maximized;
     return preference;
 }
 

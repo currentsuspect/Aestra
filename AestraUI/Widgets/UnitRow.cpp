@@ -210,6 +210,11 @@ void UnitRow::onRender(NUIRenderer& renderer) {
         renderer.clearClipRect();
 }
 
+// A unit reads as its output channel's colour (chip, pads and stripe agree); its own colour is the unrouted fallback.
+NUIColor UnitRow::identityColor() const {
+    return m_mixerRouteColorIndex >= 0 ? colorFromUnitValue(paletteIndexToARGB(m_mixerRouteColorIndex)) : colorFromUnitValue(m_color);
+}
+
 void UnitRow::drawContent(NUIRenderer& renderer) {
     auto bounds = getBounds();
     auto& theme = NUIThemeManager::getInstance();
@@ -231,7 +236,7 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
 
     const auto& themeProps = theme.getCurrentTheme();
     const float radius = std::max(0.0f, themeProps.radiusM - 1.0f);
-    const NUIColor unitAccent = colorFromUnitValue(m_color);
+    const NUIColor unitAccent = identityColor();
     NUIColor cardBg = theme.getColor("backgroundSecondary");
     NUIColor border = theme.getColor("border").withAlpha(0.08f);
     if (m_isDropHighlighted) {
@@ -354,7 +359,7 @@ std::array<NUIRect, 3> UnitRow::controlPillRects(const NUIRect& controlBounds) c
 void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     auto& theme = NUIThemeManager::getInstance();
     const float nameX = bounds.x + 12.0f;
-    const NUIColor unitAccent = colorFromUnitValue(m_color);
+    const NUIColor unitAccent = identityColor();
     const bool engaged = m_isHovered || m_isSelected;
 
     // Center the status dot on the primary name line ("Sampler 2"), using the
@@ -476,12 +481,20 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     const int playStep = (playBeat >= 0.0) ? static_cast<int>(std::floor(playBeat / 0.25)) : -1;
     const NUIColor playheadAccent = theme.getColor("accentPrimary");
 
+    const NUIColor inactiveFill = theme.getColor("surfaceTertiary").lightened(0.05f);
+    const NUIColor inactiveStroke = theme.getColor("border").withAlpha(0.14f);
+    // The beat-group seam after every fourth pad.
+    const auto drawSeam = [&](int step, const NUIRect& cellRect, float cellGap) {
+        if ((step + 1) % 4 != 0 || step + 1 >= m_stepCount) return;
+        const float seamX = cellRect.right() + (cellGap + kStepGroupGap) * 0.5f;
+        renderer.drawLine(NUIPoint(seamX, timelineStrip.y + 2.0f), NUIPoint(seamX, timelineStrip.bottom() - 2.0f), 1.0f,
+                          theme.getColor("border").withAlpha(0.18f));
+    };
+
     if (m_type == Aestra::Audio::UnitType::Sampler && !noteRollMode) {
-        const NUIColor inactiveFill = theme.getColor("surfaceTertiary").lightened(0.05f);
-        const NUIColor inactiveStroke = theme.getColor("border").withAlpha(0.14f);
-        const NUIColor activeFill = theme.getColor("primary");
+        const NUIColor activeFill = identityColor();
         const float cellGap = 3.0f;
-        const float cellRadius = 3.0f;
+        const float cellRadius = 2.0f; // flat pads (the Arsenal mock: sharp, opaque)
         const float cellHeight = std::max(10.0f, timelineStrip.height - 6.0f);
         const float cellY = timelineStrip.y + (timelineStrip.height - cellHeight) * 0.5f;
 
@@ -535,22 +548,14 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                 renderer.strokeRoundedRect(haloRect, cellRadius + 1.5f, 1.5f,
                                            theme.getColor("textPrimary").withAlpha(0.9f));
             }
-            if ((step + 1) % 4 == 0 && step + 1 < m_stepCount) {
-                const float seamX = cellRect.right() + (cellGap + kStepGroupGap) * 0.5f;
-                renderer.drawLine(NUIPoint(seamX, timelineStrip.y + 2.0f),
-                                  NUIPoint(seamX, timelineStrip.bottom() - 2.0f), 1.0f,
-                                  theme.getColor("border").withAlpha(0.18f));
-            }
+            drawSeam(step, cellRect, cellGap);
             if (isPlayhead) {
                 renderer.strokeRoundedRect(cellRect, cellRadius, 1.5f,
                                            playheadAccent.withAlpha(isActive ? 0.95f : 0.45f));
             }
-
         }
     } else if (m_type == Aestra::Audio::UnitType::PitchedSampler) {
-        const NUIColor inactiveFill = theme.getColor("surfaceTertiary").lightened(0.05f);
-        const NUIColor inactiveStroke = theme.getColor("border").withAlpha(0.14f);
-        const NUIColor activeFill = theme.getColor("primary");
+        const NUIColor activeFill = identityColor();
         const NUIColor pitchText = theme.getColor("textSecondary").withAlpha(0.72f);
         const float cellGap = 3.0f;
         const float topHeight = std::max(8.0f, timelineStrip.height * 0.58f);
@@ -591,12 +596,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                 renderer.strokeRoundedRect(haloRect, 4.5f, 1.5f,
                                            theme.getColor("textPrimary").withAlpha(0.9f));
             }
-            if ((step + 1) % 4 == 0 && step + 1 < m_stepCount) {
-                const float seamX = cellRect.right() + (cellGap + kStepGroupGap) * 0.5f;
-                renderer.drawLine(NUIPoint(seamX, timelineStrip.y + 2.0f),
-                                  NUIPoint(seamX, timelineStrip.bottom() - 2.0f), 1.0f,
-                                  theme.getColor("border").withAlpha(0.18f));
-            }
+            drawSeam(step, cellRect, cellGap);
             if (isPlayhead) {
                 renderer.strokeRoundedRect(cellRect, 3.0f, 1.5f, playheadAccent.withAlpha(isActive ? 0.95f : 0.45f));
             }
@@ -648,7 +648,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         minPitch = std::max(0, minPitch - 2);
         maxPitch = std::min(127, maxPitch + 2);
         const int pitchRange = std::max(12, maxPitch - minPitch);
-        const NUIColor noteFill = theme.getColor("primary").withAlpha(0.88f);
+        const NUIColor noteFill = identityColor().withAlpha(0.95f);
         const NUIColor noteStroke = theme.getColor("border").withAlpha(0.10f);
         const float noteHeight = 4.0f;
 

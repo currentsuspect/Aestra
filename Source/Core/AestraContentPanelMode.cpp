@@ -62,7 +62,7 @@ void AestraContent::showPanelMenu(Audio::ViewType view, const AestraUI::NUIPoint
     };
     actions.resetPosition = [this, view, spec]() {
         savePanelPreference(view, defaultSurfacePreference(spec->defaultWidth, spec->defaultHeight,
-                                                           spec->defaultAnchorX, spec->defaultAnchorY));
+                                                           spec->defaultAnchorX, spec->defaultAnchorY, spec->defaultMaximized));
         applyPanelPreference(view);
         setDirty(true);
     };
@@ -112,7 +112,7 @@ void AestraContent::gatherPanels() {
 void AestraContent::resetPanelPositions() {
     for (const auto& g : Content::kFloatingPanelGeometry) {
         savePanelPreference(g.view, defaultSurfacePreference(g.defaultWidth, g.defaultHeight, g.defaultAnchorX,
-                                                             g.defaultAnchorY));
+                                                             g.defaultAnchorY, g.defaultMaximized));
         if (auto panel = panelForView(g.view); panel && panel->isVisible())
             applyPanelPreference(g.view);
     }
