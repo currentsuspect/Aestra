@@ -1,5 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "TakesPanel.h"
+#include <algorithm>
+#include <cmath>
 
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
@@ -154,8 +156,43 @@ TakesPanel::Layout TakesPanel::computeLayout() const {
     layout.saveActiveButton = NUIRect(x + LEFT_PAD * 2.0f + buttonW, buttonY, buttonW, TOOLBAR_BUTTON_HEIGHT);
 
     top += TOOLBAR_HEIGHT;
+    if (m_takeRows.size() > 1) {
+        std::vector<std::string> lanes;
+        for (const auto& r : m_takeRows) if (std::find(lanes.begin(), lanes.end(), r.take.branch) == lanes.end()) lanes.push_back(r.take.branch);
+        const float h = static_cast<float>(std::min(lanes.size(), TIMELINE_MAX_LANES)) * TIMELINE_LANE_HEIGHT + 10.0f;
+        layout.timeline = NUIRect(x, top, w, h);
+        top += h;
+    }
     layout.takesList = NUIRect(x, top, w, std::max(0.0f, bottom - top));
     return layout;
+}
+
+bool TakesPanel::timelineNode(int row, const Layout& layout, NUIPoint& out) const {
+    if (layout.timeline.height <= 0.0f || row < 0 || row >= static_cast<int>(m_takeRows.size())) return false;
+    std::vector<std::string> lanes;
+    for (const auto& r : m_takeRows) if (std::find(lanes.begin(), lanes.end(), r.take.branch) == lanes.end()) lanes.push_back(r.take.branch);
+    const auto it = std::find(lanes.begin(), lanes.end(), m_takeRows[static_cast<size_t>(row)].take.branch);
+    const size_t lane = static_cast<size_t>(it - lanes.begin());
+    if (lane >= TIMELINE_MAX_LANES) return false;
+    // Time runs left to right: nodes are spread by their creation order across the width.
+    std::vector<int> order(m_takeRows.size());
+    for (size_t i = 0; i < order.size(); ++i) order[i] = static_cast<int>(i);
+    std::stable_sort(order.begin(), order.end(), [&](int a, int b) { return m_takeRows[static_cast<size_t>(a)].take.createdAtMs < m_takeRows[static_cast<size_t>(b)].take.createdAtMs; });
+    const size_t rank = static_cast<size_t>(std::find(order.begin(), order.end(), row) - order.begin());
+    const float usable = std::max(1.0f, layout.timeline.width - LEFT_PAD * 2.0f - 12.0f);
+    const float step = order.size() > 1 ? usable / static_cast<float>(order.size() - 1) : 0.0f;
+    out = NUIPoint(layout.timeline.x + LEFT_PAD + 6.0f + step * static_cast<float>(rank),
+                   layout.timeline.y + 5.0f + (static_cast<float>(lane) + 0.5f) * TIMELINE_LANE_HEIGHT);
+    return true;
+}
+
+int TakesPanel::timelineRowAt(const NUIPoint& point, const Layout& layout) const {
+    if (!layout.timeline.contains(point)) return -1;
+    for (int i = 0; i < static_cast<int>(m_takeRows.size()); ++i) {
+        NUIPoint c;
+        if (timelineNode(i, layout, c) && std::abs(c.x - point.x) <= 7.0f && std::abs(c.y - point.y) <= 8.0f) return i;
+    }
+    return -1;
 }
 
 int TakesPanel::takeRowAt(const NUIPoint& point, const Layout& layout) const {
@@ -472,6 +509,34 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
                       NUIPoint(bounds.x + bounds.width, layout.toolbar.y + layout.toolbar.height), 0.5f,
                       theme.getColor("divider").withAlpha(0.86f));
 
+    // Branch timeline: lanes by branch, time left to right. Saved versions are rings, autosaves small dots, the open
+    // version is filled, a version with a bounce has a heavier ring. Lines run from a version to its parent.
+    if (layout.timeline.height > 0.0f) {
+        renderer.fillRect(layout.timeline, theme.getColor("backgroundSecondary").withAlpha(0.35f));
+        for (int i = 0; i < static_cast<int>(m_takeRows.size()); ++i) {
+            NUIPoint c;
+            if (!timelineNode(i, layout, c)) continue;
+            const auto& take = m_takeRows[static_cast<size_t>(i)].take;
+            for (int j = 0; j < static_cast<int>(m_takeRows.size()); ++j) {
+                if (m_takeRows[static_cast<size_t>(j)].take.id != take.parentId) continue;
+                NUIPoint pc;
+                if (timelineNode(j, layout, pc)) renderer.drawLine(pc, c, 1.0f, theme.getColor("borderSubtle").withAlpha(0.9f));
+            }
+        }
+        for (int i = 0; i < static_cast<int>(m_takeRows.size()); ++i) {
+            NUIPoint c;
+            if (!timelineNode(i, layout, c)) continue;
+            const auto& take = m_takeRows[static_cast<size_t>(i)].take;
+            const NUIColor accent = theme.getColor("accentPrimary");
+            if (take.kind == TakeManager::TakeEntry::Kind::Autosave) {
+                renderer.fillCircle(c, 2.0f, theme.getColor("textDisabled").withAlpha(0.8f));
+            } else {
+                renderer.strokeCircle(c, 5.0f, take.bounce.empty() ? 1.0f : 2.0f, i == m_selectedTake ? theme.getColor("textPrimary") : accent.withAlpha(0.85f));
+                if (take.active) renderer.fillCircle(c, 3.0f, accent);
+            }
+        }
+    }
+
     // Takes list
     if (m_takeRows.empty()) {
         const std::string hint = !m_manifestError.empty()
@@ -640,6 +705,10 @@ bool TakesPanel::onMouseEvent(const NUIMouseEvent& event) {
             }
         }
 
+        if (const int nodeRow = timelineRowAt(event.position, layout); nodeRow >= 0) {
+            selectTake(nodeRow);
+            return true;
+        }
         const int takeRow = takeRowAt(event.position, layout);
         if (takeRow >= 0) {
             if (event.type == NUIMouseEventType::DoubleClick) {

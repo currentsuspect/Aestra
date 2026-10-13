@@ -99,6 +99,9 @@ public:
     /** @brief Current rename edit buffer. */
     const std::string& getRenameBuffer() const { return m_renameBuffer; }
 
+    /** @brief Window-space centre of a version's node on the timeline; false when it is not drawn. */
+    bool getTimelineNodeCenter(int row, AestraUI::NUIPoint& out) const { return timelineNode(row, computeLayout(), out); }
+
     /** @brief Select a take row (clears any snapshot selection). -1 clears. */
     void selectTake(int index);
     /** @brief Select a snapshot row (clears any take selection). -1 clears. */
@@ -128,6 +131,8 @@ public:
 private:
     static constexpr float ROW_HEIGHT = 26.0f;
     static constexpr float STEP_ROW_HEIGHT = 20.0f;
+    static constexpr float TIMELINE_LANE_HEIGHT = 18.0f;
+    static constexpr size_t TIMELINE_MAX_LANES = 5;
     static constexpr float HEADER_HEIGHT = 36.0f;   // WindowPanel title bar area
     static constexpr float TOOLBAR_HEIGHT = 30.0f;
     static constexpr float ACTION_BAR_HEIGHT = 28.0f;
@@ -148,6 +153,7 @@ private:
         AestraUI::NUIRect toolbar;
         AestraUI::NUIRect newTakeButton;
         AestraUI::NUIRect saveActiveButton;
+        AestraUI::NUIRect timeline; ///< Branch lanes: one row per branch, versions as nodes in time order.
         AestraUI::NUIRect takesList;
         AestraUI::NUIRect actionBar;
         AestraUI::NUIRect stepsHeader; ///< The dock: the selected version's steps (read-only log).
@@ -161,6 +167,9 @@ private:
     Layout computeLayout() const;
     void rebuildRows();
     int takeRowAt(const AestraUI::NUIPoint& point, const Layout& layout) const;
+    /** @brief Centre of version row `row` on the timeline, or false if it is not drawn (more than the lane cap). */
+    bool timelineNode(int row, const Layout& layout, AestraUI::NUIPoint& out) const;
+    int timelineRowAt(const AestraUI::NUIPoint& point, const Layout& layout) const;
     int snapshotRowAt(const AestraUI::NUIPoint& point, const Layout& layout) const;
     std::vector<AestraUI::NUIRect> actionButtonRects(const Layout& layout) const;
     std::vector<std::string> actionButtonLabels() const;
