@@ -22,14 +22,17 @@ namespace Aestra {
  */
 class ArsenalSceneStrip {
 public:
-    static constexpr float kHeight = 28.0f;
-    static constexpr float kGap = 6.0f;
-    static constexpr float kAddW = 28.0f;
-    static constexpr float kSwingW = 104.0f; ///< the swing drag zone at the right end
+    static constexpr float kHeight = 44.0f;  ///< a scene card (the mock: 132 x 44)
+    static constexpr float kCardW = 132.0f;
+    static constexpr float kGap = 8.0f;
+    static constexpr float kAddW = 44.0f;
+    static constexpr float kSwingW = 96.0f; ///< the "Swing 12%" drag zone at the right end
+    static constexpr size_t kThumbBars = 16;
 
     struct Scene {
         uint64_t id{0};
         std::string name;
+        std::vector<float> thumb; ///< kThumbBars bars, 0..1: how busy each sixteenth of the pattern is
     };
     struct Placed {
         size_t index{0};
@@ -46,9 +49,20 @@ public:
         uint64_t id{0};
     };
 
-    /// A chip is as wide as its name needs, within sane bounds (no renderer needed, so it is testable).
-    static float chipWidth(const std::string& name) {
-        return std::clamp(24.0f + 6.4f * static_cast<float>(name.size()), 56.0f, 140.0f);
+    /// Every scene card is the same width, so a row of scenes reads as a row of cards, whatever they are called.
+    static float chipWidth(const std::string&) { return kCardW; }
+
+    /// How busy each sixteenth of a pattern is: note starts per bucket, scaled so the busiest bucket is full height.
+    static std::vector<float> thumbnail(const std::vector<Audio::MidiNote>& notes, double lengthBeats) {
+        std::vector<float> bars(kThumbBars, 0.0f);
+        if (lengthBeats <= 0.0) return bars;
+        for (const auto& n : notes) {
+            const size_t b = std::min(kThumbBars - 1, static_cast<size_t>(std::max(0.0, n.startBeat) / lengthBeats * kThumbBars));
+            bars[b] += 1.0f;
+        }
+        const float most = *std::max_element(bars.begin(), bars.end());
+        if (most > 0.0f) for (auto& v : bars) if (v > 0.0f) v = std::max(0.2f, v / most);
+        return bars;
     }
 
     /// Chip positions along the strip, scrolled by `offset` (clamped into `outOffset`), the active chip in view.
@@ -86,7 +100,7 @@ public:
         m_rect = rect;
         m_scenes.clear();
         for (const auto& p : pm.getAllPatterns()) {
-            if (p && p->isMidi()) m_scenes.push_back({p->id.value, p->name.empty() ? "Pattern" : p->name});
+            if (p && p->isMidi()) m_scenes.push_back({p->id.value, p->name.empty() ? "Pattern" : p->name, thumbnail(std::get<Audio::MidiPayload>(p->payload).notes, p->lengthBeats)});
         }
         std::sort(m_scenes.begin(), m_scenes.end(), [](const Scene& a, const Scene& b) { return a.id < b.id; });
         std::vector<float> widths;
@@ -106,11 +120,16 @@ public:
 
     const std::vector<Scene>& scenes() const { return m_scenes; }
     const std::vector<Placed>& placed() const { return m_placed; }
-    AestraUI::NUIRect addRect() const { return {m_rect.right() - kSwingW - kGap - kAddW, m_rect.y, kAddW, m_rect.height}; }
+    /// The "+" slot follows the last card (the mock), and stops at the swing zone when the cards run out of room.
+    AestraUI::NUIRect addRect() const {
+        const float limit = m_rect.right() - kSwingW - kGap - kAddW;
+        const float after = m_placed.empty() ? m_rect.x : m_rect.x + m_placed.back().x + m_placed.back().w + kGap;
+        return {std::min(limit, after), m_rect.y, kAddW, m_rect.height};
+    }
     AestraUI::NUIRect swingRect() const { return {m_rect.right() - kSwingW, m_rect.y, kSwingW, m_rect.height}; }
     float swing() const { return m_swing; }
-    /// 50% (straight) to 75% (half a step late), the way drum machines say it.
-    static int swingPercent(float swing) { return 50 + static_cast<int>(std::lround(std::clamp(swing, 0.0f, 1.0f) * 25.0f)); }
+    /// How much swing, 0 to 100% (100% = every odd sixteenth half a step late), as the mock shows it.
+    static int swingPercent(float swing) { return static_cast<int>(std::lround(std::clamp(swing, 0.0f, 1.0f) * 100.0f)); }
     AestraUI::NUIRect chipRect(const Placed& p) const { return {m_rect.x + p.x, m_rect.y, p.w, m_rect.height}; }
     void scrollBy(float dx) { m_offset += dx; m_followActive = false; }
 
@@ -129,29 +148,36 @@ public:
         if (m_rect.width <= 0.0f) return;
         auto& theme = AestraUI::NUIThemeManager::getInstance();
         const auto& tp = theme.getCurrentTheme();
-        const auto accent = theme.getColor("accentPrimary");
-        const AestraUI::NUIRect view{m_rect.x, m_rect.y, std::max(0.0f, m_rect.width - kSwingW - kGap - kAddW - kGap), m_rect.height};
+        const AestraUI::NUIRect view{m_rect.x, m_rect.y, std::max(0.0f, addRect().x - kGap - m_rect.x), m_rect.height};
         renderer.setClipRect(view);
         for (const auto& p : m_placed) {
             const auto r = chipRect(p);
-            const bool on = m_scenes[p.index].id == m_activeId;
-            renderer.fillRoundedRect(r, tp.radiusXS, on ? accent.withAlpha(0.20f) : theme.getColor("surfaceTertiary").withAlpha(0.85f));
-            renderer.strokeRoundedRect(r, tp.radiusXS, 1.0f, on ? accent.withAlpha(0.8f) : theme.getColor("borderSubtle").withAlpha(0.5f));
+            const auto& scene = m_scenes[p.index];
+            const bool on = scene.id == m_activeId;
+            renderer.fillRoundedRect(r, tp.radiusXS, on ? theme.getColor("surfaceRaised") : theme.getColor("backgroundSecondary"));
+            renderer.strokeRoundedRect(r, tp.radiusXS, 1.0f, on ? theme.getColor("textPrimary").withAlpha(0.9f) : theme.getColor("borderSubtle").withAlpha(0.7f));
             renderer.setClipRect(AestraUI::intersectRects(view, r));
-            renderer.drawTextCentered(m_scenes[p.index].name, r, tp.fontSizeXS,
-                                      on ? accent : theme.getColor("textSecondary").withAlpha(0.9f));
+            renderer.drawText(scene.name, {r.x + 12.0f, r.y + 8.0f}, tp.fontSizeXS + 1.0f, theme.getColor("textPrimary").withAlpha(on ? 1.0f : 0.9f));
+            const float tw = r.width - 24.0f, bw = tw / static_cast<float>(kThumbBars), maxH = 8.0f;
+            for (size_t i = 0; i < scene.thumb.size(); ++i) {
+                const float h = scene.thumb[i] > 0.0f ? std::max(1.0f, maxH * scene.thumb[i]) : 1.0f;
+                renderer.fillRect({r.x + 12.0f + static_cast<float>(i) * bw, r.bottom() - 9.0f - h, std::max(1.0f, bw - 1.0f), h},
+                                  theme.getColor(on ? "textSecondary" : "textDisabled").withAlpha(scene.thumb[i] > 0.0f ? 0.9f : 0.35f));
+            }
             renderer.setClipRect(view);
         }
         renderer.clearClipRect();
         const auto add = addRect();
-        renderer.fillRoundedRect(add, tp.radiusXS, theme.getColor("surfaceTertiary").withAlpha(0.85f));
-        renderer.strokeRoundedRect(add, tp.radiusXS, 1.0f, theme.getColor("borderSubtle").withAlpha(0.5f));
-        renderer.drawTextCentered("+", add, tp.fontSizeS, theme.getColor("textPrimary").withAlpha(0.9f));
+        renderer.fillRoundedRect(add, tp.radiusXS, theme.getColor("backgroundPrimary"));
+        renderer.strokeRoundedRect(add, tp.radiusXS, 1.0f, theme.getColor("borderSubtle").withAlpha(0.7f));
+        renderer.drawTextCentered("+", add, tp.fontSizeM, theme.getColor("textSecondary").withAlpha(0.9f));
         const auto sw = swingRect();
-        renderer.fillRoundedRect(sw, tp.radiusXS, theme.getColor("surfaceTertiary").withAlpha(0.85f));
-        renderer.fillRoundedRect({sw.x, sw.y, sw.width * m_swing, sw.height}, tp.radiusXS, accent.withAlpha(0.22f));
-        renderer.strokeRoundedRect(sw, tp.radiusXS, 1.0f, theme.getColor("borderSubtle").withAlpha(0.5f));
-        renderer.drawTextCentered("SWING " + std::to_string(swingPercent(m_swing)) + "%", sw, tp.fontSizeMicro, theme.getColor("textPrimary").withAlpha(0.9f));
+        const float ty = sw.y + (sw.height - tp.fontSizeXS) * 0.5f - 2.0f;
+        renderer.drawText("Swing", {sw.x, ty}, tp.fontSizeXS + 1.0f, theme.getColor("textSecondary").withAlpha(0.9f));
+        const std::string pct = std::to_string(swingPercent(m_swing)) + "%";
+        renderer.drawText(pct, {sw.x + renderer.measureText("Swing ", tp.fontSizeXS + 1.0f).width, ty}, tp.fontSizeXS + 1.0f, theme.getColor("textPrimary"));
+        renderer.fillRect({sw.x, sw.bottom() - 10.0f, sw.width, 1.0f}, theme.getColor("borderSubtle").withAlpha(0.7f));
+        renderer.fillRect({sw.x, sw.bottom() - 10.0f, sw.width * m_swing, 1.0f}, theme.getColor("textSecondary"));
     }
 
     /// Pointer routing for the strip: chips select, "+" makes the next pattern, the swing zone drags, the wheel scrolls.

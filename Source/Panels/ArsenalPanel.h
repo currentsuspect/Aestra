@@ -153,7 +153,7 @@ private:
     void followGridPlayhead(); // Keep the playing bar in view unless the user scrolled away
     
     // Pattern Progress Visualization
-    static constexpr float COMMAND_HEADER_HEIGHT = 52.0f;
+    static constexpr float COMMAND_HEADER_HEIGHT = 64.0f;
     static constexpr float PROGRESS_HEADER_HEIGHT = 34.0f;
     int m_currentPlayStep = -1;  // Current step for visualization (-1 = not playing)
     void drawProgressHeader(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds);

@@ -38,8 +38,14 @@ int main() {
     check(off == 0.0f, "never scrolls below zero");
 
     std::cout << "[3] widths and names\n";
-    check(ArsenalSceneStrip::chipWidth("A") == 56.0f, "short name hits the minimum width");
-    check(ArsenalSceneStrip::chipWidth(std::string(60, 'x')) == 140.0f, "long name is capped");
+    check(ArsenalSceneStrip::chipWidth("A") == ArsenalSceneStrip::kCardW && ArsenalSceneStrip::chipWidth(std::string(60, 'x')) == ArsenalSceneStrip::kCardW, "every scene is one card width, whatever its name");
+    {
+        std::vector<Audio::MidiNote> notes(5);
+        for (int i = 0; i < 5; ++i) notes[i].startBeat = (i < 4 ? 0.0 : 3.9);
+        const auto thumb = ArsenalSceneStrip::thumbnail(notes, 4.0);
+        check(thumb.size() == ArsenalSceneStrip::kThumbBars && thumb[0] == 1.0f && thumb[15] >= 0.2f && thumb[15] < 1.0f && thumb[7] == 0.0f, "the thumbnail is the busiest bucket full, a lone note shorter, silence empty");
+        check(ArsenalSceneStrip::thumbnail({}, 4.0)[0] == 0.0f, "an empty pattern has an empty thumbnail");
+    }
     check(ArsenalSceneStrip::nextName({{1, "Pattern 1"}, {2, "Pattern 2"}}) == "Pattern 3", "next name counts on");
     check(ArsenalSceneStrip::nextName({{1, "Pattern 2"}}) == "Pattern 3", "next name skips one that is taken");
 
@@ -48,7 +54,7 @@ int main() {
     const auto a = pm.createMidiPattern("Verse", 8.0, MidiPayload{});
     const auto b = pm.createMidiPattern("Chorus", 8.0, MidiPayload{});
     ArsenalSceneStrip strip;
-    const AestraUI::NUIRect rect{10, 20, 400, ArsenalSceneStrip::kHeight};
+    const AestraUI::NUIRect rect{10, 20, 700, ArsenalSceneStrip::kHeight};
     strip.refresh(pm, b.value, rect);
     check(strip.scenes().size() == 2, "two scenes");
     check(strip.scenes()[0].name == "Verse" && strip.scenes()[1].name == "Chorus", "in creation order");
@@ -62,7 +68,7 @@ int main() {
 
     std::cout << "[5] swing is a drag zone at the right end\n";
     {
-        check(ArsenalSceneStrip::swingPercent(0.0f) == 50 && ArsenalSceneStrip::swingPercent(1.0f) == 75, "swing reads 50% to 75%");
+        check(ArsenalSceneStrip::swingPercent(0.0f) == 0 && ArsenalSceneStrip::swingPercent(1.0f) == 100, "swing reads 0% to 100%");
         const auto sw = strip.swingRect();
         check(sw.right() == rect.right() && strip.addRect().right() < sw.x, "the swing zone sits right of the + chip");
         AestraUI::NUIMouseEvent e;
