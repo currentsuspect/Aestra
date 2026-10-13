@@ -141,10 +141,9 @@ public:
 
         const auto cardFill = theme.getColor("surfaceTertiary").withAlpha(0.42f);
         const auto cardStroke = theme.getColor("secondary").withAlpha(0.10f);
-        renderer.fillRoundedRect(NUIRect(b.x + pad, controlY, contentW, controlH), 6.0f, cardFill);
-        renderer.strokeRoundedRect(NUIRect(b.x + pad, controlY, contentW, controlH), 6.0f, 1.0f, cardStroke);
-        renderer.fillRoundedRect(NUIRect(b.x + pad, adsrY, contentW, adsrH), 6.0f, cardFill.withAlpha(0.34f));
-        renderer.strokeRoundedRect(NUIRect(b.x + pad, adsrY, contentW, adsrH), 6.0f, 1.0f, cardStroke);
+        renderer.fillRoundedRect(NUIRect(b.x + pad, controlY, contentW, controlH), 2.0f, cardFill); // flat 2 px cards, no outline
+        renderer.fillRoundedRect(NUIRect(b.x + pad, adsrY, contentW, adsrH), 2.0f, cardFill.withAlpha(0.34f));
+        (void)cardStroke;
 
         renderChildren(renderer);
         setDirty(false);
@@ -172,9 +171,8 @@ void ADSRDisplayComponent::onRender(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
 
     // Background
-    const float radius = theme.getRadius("s");
+    const float radius = std::min(theme.getRadius("s"), 2.0f);
     renderer.fillRoundedRect(NUIRect(b.x, b.y, b.width, b.height), radius, theme.getColor("recessedPanel"));
-    renderer.strokeRoundedRect(b, radius, 1.0f, theme.getColor("borderSubtle"));
 
     const auto g = calculateADSRGeometry(b, m_attack, m_decay, m_sustain, m_release);
     const std::vector<NUIPoint> pts{g.start, g.attack, g.decay, g.releaseStart, g.end};
@@ -427,9 +425,8 @@ void WaveformDisplayComponent::onRender(NUIRenderer& renderer) {
     renderer.setClipRect(b);
 
     // Background
-    const float radius = theme.getRadius("s");
+    const float radius = std::min(theme.getRadius("s"), 2.0f);
     renderer.fillRoundedRect(NUIRect(b.x, b.y, b.width, b.height), radius, theme.getColor("recessedPanel"));
-    renderer.strokeRoundedRect(b, radius, 1.0f, theme.getColor("borderSubtle"));
 
     // Center line
     float centerY = b.y + b.height * 0.5f;
@@ -652,13 +649,13 @@ void SampleEditorPanel::buildUI() {
     auto styleModeButton = [&theme](const std::shared_ptr<NUIButton>& button) {
         button->setStyle(NUIButton::Style::Text);
         button->setFontSize(11.0f);
-        button->setCornerRadius(5.0f);
+        button->setCornerRadius(2.0f);
         button->setGlowEnabled(false);
     };
     auto styleActionButton = [&theme](const std::shared_ptr<NUIButton>& button) {
         button->setStyle(NUIButton::Style::Text);
         button->setFontSize(11.0f);
-        button->setCornerRadius(5.0f);
+        button->setCornerRadius(2.0f);
         button->setGlowEnabled(false);
         button->setBackgroundColor(theme.getColor("surfaceRaised").withAlpha(0.72f));
         button->setHoverColor(theme.getColor("secondary").withAlpha(0.18f));
@@ -1083,7 +1080,7 @@ void SampleEditorPanel::updateModeButtons() {
     // Active interaction intent is the Aestra accent (DESIGN.md color
     // semantics); the previous secondary (electric blue) token violated it.
     const auto activeBg = theme.getColor("accentPrimary").withAlpha(0.22f);
-    const auto inactiveBg = NUIColor::transparent();
+    const auto inactiveBg = theme.getColor("surfaceTertiary"); // a flat fill, so an off choice still reads as a key
     const auto hoverBg = theme.getColor("accentPrimary").withAlpha(0.10f);
     const auto borderCol = theme.getColor("borderSubtle").withAlpha(0.40f);
     const auto activeText = theme.getColor("accentPrimary").lightened(0.25f);
@@ -1098,9 +1095,8 @@ void SampleEditorPanel::updateModeButtons() {
         button->setHoverColor(active ? activeBg : hoverBg);
         button->setPressedColor(theme.getColor("accentPrimary").withAlpha(0.32f));
         button->setTextColor(active ? activeText : inactiveText);
-        button->setCornerRadius(4.0f);
-        button->setBorderEnabled(true);
-        button->setBorderWidth(1.0f);
+        button->setCornerRadius(2.0f);
+        button->setBorderEnabled(false);
         button->setBorderColor(active ? theme.getColor("accentPrimary").withAlpha(0.55f) : borderCol);
     };
 
@@ -1161,7 +1157,7 @@ void SampleEditorPanel::setKeepLengthPitch(bool keepLength) {
 void SampleEditorPanel::updateMonoPolyControls() {
     auto& theme = NUIThemeManager::getInstance();
     const auto activeBg = theme.getColor("accentPrimary").withAlpha(0.22f);
-    const auto inactiveBg = NUIColor::transparent();
+    const auto inactiveBg = theme.getColor("surfaceTertiary"); // a flat fill, so an off choice still reads as a key
     const auto hoverBg = theme.getColor("accentPrimary").withAlpha(0.10f);
     const auto activeText = theme.getColor("accentPrimary").lightened(0.25f);
     const auto inactiveText = theme.getColor("textSecondary").withAlpha(0.72f);
@@ -1173,9 +1169,8 @@ void SampleEditorPanel::updateMonoPolyControls() {
         button->setHoverColor(active ? activeBg : hoverBg);
         button->setPressedColor(theme.getColor("accentPrimary").withAlpha(0.32f));
         button->setTextColor(active ? activeText : inactiveText);
-        button->setCornerRadius(4.0f);
-        button->setBorderEnabled(true);
-        button->setBorderWidth(1.0f);
+        button->setCornerRadius(2.0f);
+        button->setBorderEnabled(false);
         button->setBorderColor(active ? theme.getColor("accentPrimary").withAlpha(0.55f) : inactiveBorder);
     };
 
