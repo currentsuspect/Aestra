@@ -211,8 +211,7 @@ float ArsenalPanel::computeGridMaxScrollX() const {
     // the real content.
     const float width = m_progressHeaderRect.width;
     if (width <= 0.0f) return 0.0f;
-    const float controlWidth = std::clamp(width * 0.38f, 220.0f, 312.0f);
-    const float availWidth = std::max(1.0f, width - controlWidth - 14.0f);
+    const float availWidth = std::max(1.0f, gridSpan().second);
     const float groupTotal = static_cast<float>((m_stepCount + 3) / 4) * kGroupGap;
     const float stepWidth = std::max(std::max(0.0f, availWidth - groupTotal) /
                                          static_cast<float>(std::max(1, m_stepCount)),
@@ -243,8 +242,7 @@ void ArsenalPanel::followGridPlayhead() {
     }
     const float width = m_progressHeaderRect.width;
     if (width <= 0.0f) return;
-    const float controlWidth = std::clamp(width * 0.38f, 220.0f, 312.0f);
-    const float availWidth = std::max(1.0f, width - controlWidth - 14.0f);
+    const float availWidth = std::max(1.0f, gridSpan().second);
     const float groupTotal = static_cast<float>((m_stepCount + 3) / 4) * kGroupGap;
     const float stepWidth = std::max(std::max(0.0f, availWidth - groupTotal) /
                                          static_cast<float>(std::max(1, m_stepCount)),
@@ -708,8 +706,7 @@ void ArsenalPanel::layoutUnits() {
     constexpr float buttonH = 30.0f, fitW = 84.0f;
     const float buttonY = m_commandHeaderRect.y + (m_commandHeaderRect.height - buttonH) * 0.5f;
     m_fitToggleRect = {m_commandHeaderRect.right() - 16.0f - fitW, buttonY, fitW, buttonH};
-    m_fitModeRect = {m_fitToggleRect.x, m_fitToggleRect.y, fitW * 0.5f, m_fitToggleRect.height};
-    m_scrollModeRect = {m_fitModeRect.right(), m_fitToggleRect.y, fitW * 0.5f, m_fitToggleRect.height};
+    m_fitModeRect = {m_fitToggleRect.x, m_fitToggleRect.y, fitW * 0.5f, m_fitToggleRect.height}; m_scrollModeRect = {m_fitModeRect.right(), m_fitToggleRect.y, fitW * 0.5f, m_fitToggleRect.height};
     m_sceneRect = {startX + 16.0f, m_commandHeaderRect.y + 10.0f, std::max(0.0f, m_fitToggleRect.x - 12.0f - (startX + 16.0f)), Aestra::ArsenalSceneStrip::kHeight};
     m_progressHeaderRect = {startX, m_commandHeaderRect.bottom() + 6.0f, width, PROGRESS_HEADER_HEIGHT};
     const float rackTop = m_progressHeaderRect.bottom() + 8.0f - m_scrollY;
@@ -729,10 +726,8 @@ void ArsenalPanel::layoutUnits() {
         extras.push_back(unit ? m_lanes.extraFor(*m_trackManager, row->getUnitId()) : 0.0f);
     }
     m_rack = Aestra::ArsenalRackLayout::compute(groups, extras);
-    m_kitCard.place(m_trackManager && Aestra::ArsenalRowLanes::noSounds(m_trackManager->getUnitManager()), {startX, rackTop + m_rack.contentHeight, width, Aestra::ArsenalKitCard::kReserve}); // empty state: a kit card under the rows
-    if (m_kitCard.shown()) m_rack.contentHeight += Aestra::ArsenalKitCard::kReserve;
-    m_addUnitButtonRect = {startX + 16.0f, rackTop + m_rack.contentHeight + 8.0f, 112.0f, 32.0f}; // "Add unit" ends the rack (the mock)
-    m_rack.contentHeight += 48.0f;
+    m_kitCard.place(m_trackManager && Aestra::ArsenalRowLanes::noSounds(m_trackManager->getUnitManager()), {startX, rackTop + m_rack.contentHeight, width, Aestra::ArsenalKitCard::kReserve}); if (m_kitCard.shown()) m_rack.contentHeight += Aestra::ArsenalKitCard::kReserve; // empty state: a kit card under the rows
+    m_addUnitButtonRect = {startX + 16.0f, rackTop + m_rack.contentHeight + 8.0f, 112.0f, 32.0f}; m_rack.contentHeight += 48.0f; // "Add unit" ends the rack (the mock)
     if (m_addUnitBtn) { m_addUnitBtn->setBounds(m_addUnitButtonRect); m_addUnitBtn->setVisible(m_addUnitButtonRect.y >= m_progressHeaderRect.bottom() && m_addUnitButtonRect.bottom() <= bounds.bottom()); }
     for (const auto& item : m_rack.items) {
         if (item.kind != Aestra::ArsenalRackItem::Kind::Row || !m_unitRows[item.rowIndex]) continue;
@@ -846,10 +841,16 @@ double ArsenalPanel::headerLengthBeats() const {
     return lengthBeats;
 }
 
+// Where the step pads sit, taken from the rows themselves so the ruler, the playhead and the scrub line up with them.
+std::pair<float, float> ArsenalPanel::gridSpan() const {
+    const NUIRect s = !m_unitRows.empty() && m_unitRows.front() ? m_unitRows.front()->stepStrip() : NUIRect{};
+    const float cw = std::clamp(m_progressHeaderRect.width * 0.38f, 220.0f, 312.0f); // before any row exists
+    return s.width > 0.0f ? std::pair{s.x, s.width} : std::pair{m_progressHeaderRect.x + cw + 14.0f, std::max(1.0f, m_progressHeaderRect.width - cw - 14.0f)};
+}
+
 double ArsenalPanel::headerBeatAtX(const NUIRect& bounds, float x) const {
-    const float controlWidth = std::clamp(bounds.width * 0.38f, 220.0f, 312.0f);
-    const float gridStartX = bounds.x + controlWidth + 14.0f;
-    const float availWidth = std::max(1.0f, bounds.width - controlWidth - 14.0f);
+    const float gridStartX = gridSpan().first;
+    const float availWidth = std::max(1.0f, gridSpan().second);
 
     // Inverse of drawProgressHeader's step layout: same step-width branch
     // (fit vs 20px scroll minimum), the shared scroll offset, and per-group
@@ -999,9 +1000,9 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
     
     // Step layout (matches UnitRow grid layout: control block + 8px context
     // inset + 6px lane padding, so header pads line up with row pads exactly)
-    const float controlWidth = std::clamp(bounds.width * 0.38f, 220.0f, 312.0f);
-    const float gridStartX = bounds.x + controlWidth + 14.0f;
-    const float availWidth = std::max(0.0f, bounds.width - controlWidth - 14.0f);
+    const float gridStartX = gridSpan().first;
+    const float availWidth = gridSpan().second;
+    const float controlWidth = gridStartX - bounds.x - 14.0f; // the head's width
 
     double lengthBeats = static_cast<double>(m_stepCount) * 0.25;
     UnitType selectedType = UnitType::Sampler;
@@ -1537,8 +1538,7 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         return true;
     }
     if (event.pressed && event.button == NUIMouseButton::Left && m_progressHeaderRect.contains(event.position)) {
-        const float controlWidth = std::clamp(m_progressHeaderRect.width * 0.38f, 220.0f, 312.0f);
-        if (event.position.x >= m_progressHeaderRect.x + controlWidth + 14.0f) {
+        if (event.position.x >= gridSpan().first) {
             m_headerScrubbing = true;
             headerScrubTo(m_progressHeaderRect, event.position.x);
             repaint();

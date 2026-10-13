@@ -13,6 +13,7 @@
 #include "NUIComponent.h"
 #include "../AestraUI/Core/NUIDragDrop.h"
 #include <optional>
+#include <utility>
 
 namespace Aestra {
 namespace Audio {
@@ -162,6 +163,7 @@ private:
 
     // Progress-header scrubbing helpers (#831).
     double headerLengthBeats() const;
+    std::pair<float, float> gridSpan() const; ///< the pads' left edge and width, from the rows
     double headerBeatAtX(const AestraUI::NUIRect& bounds, float x) const;
     void headerScrubTo(const AestraUI::NUIRect& bounds, float x);
     int computeLoopStepCount() const; // Steps spanning the full active-pattern loop (4/beat)

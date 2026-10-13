@@ -53,13 +53,13 @@ void UnitNameLabel::onRender(NUIRenderer& renderer) {
     auto bounds = getBounds();
 
     const std::string displayName = fitText(renderer, m_unitName.empty() ? "Unit" : m_unitName,
-                                            12.0f, std::max(0.0f, bounds.width - 20.0f));
+                                            13.0f, std::max(0.0f, bounds.width - 20.0f));
 
     renderer.setClipRect(bounds);
 
     renderer.drawText(displayName,
                       NUIPoint(bounds.x + 10.0f, bounds.y + 3.0f),
-                      12.0f,
+                      13.0f,
                       theme.getColor("textPrimary").withAlpha(0.92f));
 
     if (m_compact) {
@@ -91,7 +91,7 @@ void UnitNameLabel::onRender(NUIRenderer& renderer) {
 
     renderer.drawText(typeLabel,
                       NUIPoint(bounds.x + 10.0f, bounds.y + 19.0f),
-                      9.0f,
+                      10.0f,
                       theme.getColor("textSecondary").withAlpha(0.5f));
     renderer.clearClipRect();
 }
