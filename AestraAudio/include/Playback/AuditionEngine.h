@@ -12,6 +12,7 @@
  */
 
 #include <atomic>
+#include <cmath>
 #include <condition_variable>
 #include <cstdint>
 #include <functional>
@@ -29,6 +30,7 @@ namespace Aestra {
 namespace Audio {
 
 class ClipSource;
+struct AudioBufferData;
 
 /**
  * @brief Represents a single item in the audition queue
@@ -250,6 +252,35 @@ public:
     /// Set output sample rate
     void setSampleRate(double sampleRate) { m_sampleRate.store(sampleRate); }
 
+    // === Synchronised dual playback (V81-E2, FD-26) ===
+    //
+    // A reference (side B) runs in lockstep with the mix (side A) once one is set: both are read every block at
+    // the same position (plus an optional offset), so a switch is a short gain ramp between two live signals, never
+    // a seek, and anything applied after the sum (the DSP chain) hears both alike. With no reference set, playback
+    // is exactly what it was.
+
+    enum class ListenSide { Mix, Reference };
+
+    /// Play an in-memory source as the mix (a bounce, a render). Main thread; the audio thread picks it up atomically.
+    void setMixSource(std::shared_ptr<ClipSource> source);
+    /// Set the reference that runs alongside the mix. `offsetSeconds` is where the reference is when the mix is at 0
+    /// (positive: the reference is ahead), so a switch can land in the matching section.
+    void setReferenceSource(std::shared_ptr<ClipSource> source, double offsetSeconds = 0.0);
+    void clearReferenceSource();
+    bool hasReference() const { return m_referenceSource.load(std::memory_order_acquire) != nullptr; }
+    void setReferenceOffsetSeconds(double seconds) { m_referenceOffsetSeconds.store(seconds); }
+    double getReferenceOffsetSeconds() const { return m_referenceOffsetSeconds.load(); }
+
+    /// Which side is heard. Takes effect as a ramp of getSwitchRampMs(), not a cut.
+    void setListenSide(ListenSide side) { m_listenSide.store(side == ListenSide::Reference ? 1 : 0); }
+    ListenSide getListenSide() const { return m_listenSide.load() == 1 ? ListenSide::Reference : ListenSide::Mix; }
+    void setSwitchRampMs(float ms) { m_switchRampMs.store(ms < 1.0f ? 1.0f : ms); }
+    float getSwitchRampMs() const { return m_switchRampMs.load(); }
+
+    /// Level match: gain on each side in dB (reference minus mix from the analysis layer).
+    void setMixGainDb(float db) { m_mixGain.store(dbToGain(db)); }
+    void setReferenceGainDb(float db) { m_referenceGain.store(dbToGain(db)); }
+
 private:
     void loadCurrentTrack(bool startPlayback);
     /// Internal: queue decode and publish track. Caller must NOT hold m_queueMutex.
@@ -342,6 +373,22 @@ private:
     std::function<void(double)> m_onPositionChanged;
     std::function<void()> m_onQueueUpdated;
     mutable std::mutex m_callbackMutex;
+
+    // Dual playback (RT thread state is only touched in processBlock)
+    static float dbToGain(float db) { return std::pow(10.0f, db / 20.0f); }
+    AtomicSharedPtr<ClipSource> m_referenceSource;
+    std::atomic<double> m_referenceOffsetSeconds{0.0};
+    std::atomic<int> m_listenSide{0};
+    std::atomic<float> m_switchRampMs{10.0f};
+    std::atomic<float> m_mixGain{1.0f};
+    std::atomic<float> m_referenceGain{1.0f};
+    float m_sideGainMix{1.0f};       // smoothed, audio thread only
+    float m_sideGainReference{0.0f}; // smoothed, audio thread only
+    std::vector<float> m_referenceScratch; // sized once; processBlock never allocates
+
+    /// Read `numFrames` of one source starting at `startSeconds` into `out` (interleaved, `numChannels`).
+    void renderSource(const AudioBufferData* buffer, double startSeconds, float* out, uint32_t numFrames,
+                      uint32_t numChannels);
 
     // Internal helpers
     void loadCurrentTrack();

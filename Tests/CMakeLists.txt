@@ -1283,6 +1283,12 @@ target_link_libraries(AestraAuditionEngineLifecycleTest PRIVATE AestraAudio)
 add_test(NAME AestraAuditionEngineLifecycleTest COMMAND AestraAuditionEngineLifecycleTest)
 set_tests_properties(AestraAuditionEngineLifecycleTest PROPERTIES LABELS "contract:application")
 
+# Synchronised dual playback in the Audition engine (V81-E2, FD-26).
+add_executable(AuditionDualPlaybackTest AestraAudio/AuditionDualPlaybackTest.cpp)
+target_link_libraries(AuditionDualPlaybackTest PRIVATE AestraAudio)
+add_test(NAME AuditionDualPlaybackTest COMMAND AuditionDualPlaybackTest)
+set_tests_properties(AuditionDualPlaybackTest PROPERTIES LABELS "audio;audition;contract:audio")
+
 add_executable(PreviewAuditionGainParityTest AestraAudio/PreviewAuditionGainParityTest.cpp)
 target_link_libraries(PreviewAuditionGainParityTest PRIVATE AestraAudio)
 add_test(NAME PreviewAuditionGainParityTest COMMAND PreviewAuditionGainParityTest)
