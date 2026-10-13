@@ -30,6 +30,7 @@ set(Aestra_SOURCES
 	Core/AestraContentBounce.cpp
 	Core/AestraContentImport.cpp
 	Core/AestraContentPanelMode.cpp
+	Core/AestraContentPlacement.cpp
 	Core/WorkspaceFocus.h
 	Core/MusicalTypingController.h
 	Core/MusicalTypingController.cpp

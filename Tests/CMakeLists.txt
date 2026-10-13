@@ -845,6 +845,13 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternContentEditDuringPlayb
         PROPERTIES LABELS "audio;playback;regression;contract:audio")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternPlacementTest.cpp")
+    add_executable(PatternPlacementTest AestraAudio/PatternPlacementTest.cpp)
+    target_include_directories(PatternPlacementTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
+    add_test(NAME PatternPlacementTest COMMAND PatternPlacementTest)
+    set_tests_properties(PatternPlacementTest PROPERTIES LABELS "audio;playback;regression;contract:audio")
+endif()
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/NoteExpressionTest.cpp")
     add_executable(NoteExpressionTest AestraAudio/NoteExpressionTest.cpp)
     target_link_libraries(NoteExpressionTest PRIVATE AestraAudio)

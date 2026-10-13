@@ -8,6 +8,7 @@
 #include "FloatingPanelDescriptors.h"
 #include "PanelPlacement.h"
 #include "UISurfaceResolution.h"
+#include "Panels/ArsenalPanel.h"
 #include "Panels/WindowPanel.h"
 
 #include <algorithm>
@@ -49,6 +50,9 @@ void AestraContent::wirePanelMode(const std::shared_ptr<Audio::WindowPanel>& pan
     panel->setOnMenuRequested([this, view](const AestraUI::NUIPoint& at) { showPanelMenu(view, at); });
     panel->setOnOutsidePress([this, view]() { noteOutsidePress(view); });
     applyPanelMode(view);
+    if (view == Audio::ViewType::Sequencer)
+        if (auto arsenal = std::dynamic_pointer_cast<Audio::ArsenalPanel>(panel))
+            arsenal->setOnPlaceInTimeline([this](Audio::PatternID id) { placePatternInTimeline(id); });
 }
 
 void AestraContent::showPanelMenu(Audio::ViewType view, const AestraUI::NUIPoint& at) {

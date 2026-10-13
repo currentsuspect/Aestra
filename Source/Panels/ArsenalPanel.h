@@ -105,6 +105,8 @@ public:
     /** @brief Set the callback fired when the active pattern is edited. */
     void setOnPatternEdited(std::function<void(PatternID)> cb) { m_onPatternEdited = std::move(cb); }
     /** @brief Set the callback fired when the active pattern changes. */
+    /// Set the callback fired by the header's "Place in timeline" button (the pattern to place).
+    void setOnPlaceInTimeline(std::function<void(PatternID)> cb) { m_onPlaceInTimeline = std::move(cb); }
     void setOnActivePatternChanged(std::function<void(PatternID)> cb) { m_onActivePatternChanged = std::move(cb); }
     /** @brief Get the currently selected unit identifier. */
     UnitID getSelectedUnitId() const { return m_selectedUnitId; }
@@ -216,6 +218,7 @@ private:
     std::function<void()> m_onRequestPlaybackActivation;
     std::function<void(PatternID)> m_onPatternEdited;
     std::function<void(PatternID)> m_onActivePatternChanged;
+    std::function<void(PatternID)> m_onPlaceInTimeline;
     bool m_dropTargetRegistered = false;
     bool m_showUnitTypePicker = false;
     AestraUI::NUIRect m_addUnitButtonRect{};

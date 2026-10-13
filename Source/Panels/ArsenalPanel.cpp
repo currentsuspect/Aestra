@@ -1528,12 +1528,12 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
             return true;
         }
     }
+    using SceneKind = Aestra::ArsenalSceneStrip::Action::Kind;
     Aestra::ArsenalSceneStrip::Action scene;
     if (m_trackManager && m_scenes.onMouse(event, m_trackManager->getPatternManager(), m_activePatternID.value, scene)) {
-        using Kind = Aestra::ArsenalSceneStrip::Action::Kind;
-        if (scene.kind == Kind::Select || scene.kind == Kind::PatternAdded) setActivePattern(PatternID{scene.id});
-        if (scene.kind == Kind::PatternAdded && m_patternBrowser) m_patternBrowser->refreshPatterns();
-        if (scene.kind == Kind::SwingEdited && m_onPatternEdited) m_onPatternEdited(m_activePatternID);
+        if (scene.kind == SceneKind::Select || scene.kind == SceneKind::PatternAdded) { setActivePattern(PatternID{scene.id}); if (scene.kind == SceneKind::PatternAdded && m_patternBrowser) m_patternBrowser->refreshPatterns(); }
+        if (scene.kind == SceneKind::SwingEdited && m_onPatternEdited) m_onPatternEdited(m_activePatternID);
+        if (scene.kind == SceneKind::PlaceInTimeline && m_onPlaceInTimeline) m_onPlaceInTimeline(m_activePatternID);
         repaint();
         return true;
     }
