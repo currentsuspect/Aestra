@@ -246,9 +246,29 @@ void testSubmenuOwnerPropagation() {
     NUIComponent::clearFocusedComponent();
 }
 
+void testDeleteVerbsAreDestructiveAndChecksShareOneLeadingSlot() {
+    auto menu = std::make_shared<NUIContextMenu>();
+    menu->addItem("Rename", nullptr);
+    menu->addItem("Delete Unit", nullptr);
+    menu->addItem("Deleted items", nullptr); // starts with Delete: same rule, the verb is what counts
+    const auto items = menu->getItems();
+    check(!items[0]->isDestructive(), "an ordinary verb is not destructive");
+    check(items[1]->isDestructive(), "a Delete verb is destructive in every menu");
+
+    // A menu with a check row reserves the same leading slot for every row, so labels keep one left edge:
+    // it is wider than the same labels with no check row.
+    auto plain = std::make_shared<NUIContextMenu>();
+    plain->addItem("Show grid", nullptr);
+    auto withCheck = std::make_shared<NUIContextMenu>();
+    withCheck->addCheckbox("Show grid", true, nullptr);
+    check(withCheck->getBounds().width >= plain->getBounds().width,
+          "a menu with a check column is never narrower than one without");
+}
+
 } // namespace
 
 int main() {
+    testDeleteVerbsAreDestructiveAndChecksShareOneLeadingSlot();
     testKeyboardNavigationAndFocusRestoration();
     testSubmenuKeyboardLifecycle();
     testTallMenuScrollingAndViewportContainment();

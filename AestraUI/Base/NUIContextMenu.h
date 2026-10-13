@@ -51,6 +51,10 @@ public:
     void setShortcut(const std::string& shortcut);
     const std::string& getShortcut() const { return shortcut_; }
 
+    /** @brief A verb that destroys something (Delete…): drawn in the error colour, listed last behind a divider. */
+    void setDestructive(bool destructive) { destructive_ = destructive; }
+    bool isDestructive() const { return destructive_; }
+
     void setIcon(const std::string& iconPath);
     const std::string& getIcon() const { return iconPath_; }
     
@@ -75,6 +79,7 @@ private:
     bool enabled_ = true;
     bool visible_ = true;
     bool checked_ = false;
+    bool destructive_ = false;
     std::string shortcut_;
     std::string iconPath_;
     std::shared_ptr<NUIIcon> icon_;
@@ -225,6 +230,8 @@ protected:
     void fitInsideParent(const NUISize& size);
 
     /** @brief Width of everything on a row that is not the label or the shortcut. */
+    /** @brief True when any visible row has an icon or a check column, so every row reserves the same leading slot. */
+    bool hasLeadingSlot() const;
     float decorationWidthFor(const std::shared_ptr<NUIContextMenuItem>& item) const;
 
     /** @brief Renderer-free width guess, used only until measureAndFit() runs. */
@@ -256,6 +263,7 @@ private:
     std::vector<std::shared_ptr<NUIContextMenuItem>> items_;
 
     // Visual properties
+    bool exactPlacement_ = false; // a submenu is placed against its parent row; a top-level menu is nudged clear of the pointer
     NUIColor backgroundColor_ = NUIColor::fromHex(0xff2a2d32);
     NUIColor borderColor_ = NUIColor::fromHex(0xff666666);
     NUIColor textColor_ = NUIColor::fromHex(0xffffffff);

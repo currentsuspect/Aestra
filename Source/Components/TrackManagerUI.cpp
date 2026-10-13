@@ -815,6 +815,7 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
 
     m_activeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
     auto menu = m_activeContextMenu;
+    std::shared_ptr<AestraUI::NUIContextMenuItem> deleteLaneItem; // listed last, behind a divider (P1)
 
     TrackUIComponent* selectedTrack = target ? target : getSelectedTrackUI();
     auto* lane = selectedTrack && m_trackManager
@@ -870,10 +871,10 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
         const uint64_t owningTrackId = lane->trackId;
         const auto* owningTrack = owningTrackId != 0 ? m_trackManager->getTrack(owningTrackId) : nullptr;
         const bool deletable = owningTrack == nullptr || owningTrack->laneIds.size() > 1;
-        auto deleteLaneItem = std::make_shared<AestraUI::NUIContextMenuItem>("Delete Lane");
+        deleteLaneItem = std::make_shared<AestraUI::NUIContextMenuItem>("Delete Lane");
+        deleteLaneItem->setDestructive(true);
         deleteLaneItem->setEnabled(deletable);
         deleteLaneItem->setOnClick([this, laneId]() { deleteLane(laneId); });
-        menu->addItem(deleteLaneItem);
     }
 
     menu->addItem("Send Track to Audition", [onSendToAudition]() {
@@ -887,6 +888,10 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
     // the track-row fallback applying on an empty timeline.
     selectAllItem->setOnClick([this]() { selectAllClips(); });
     menu->addItem(selectAllItem);
+    if (deleteLaneItem) {
+        menu->addSeparator();
+        menu->addItem(deleteLaneItem);
+    }
 
     attachAndShowContextMenu(this, menu, position);
 }
