@@ -78,6 +78,13 @@ int main() {
                 reloaded->steps[1].commandType == "SetSwingCommand" && reloaded->steps[1].atMs == 2000,
             "the step log survives a reload");
 
+    // Duplicating keeps the source's branch; branching starts a named one, and either carries the steps.
+    auto dup = TakeManager::duplicateTake(project, v2.take.id);
+    require(dup.ok && dup.take.branch == "Main" && dup.take.steps.size() == 2, "a duplicate stays on the branch with its steps");
+    auto fork = TakeManager::duplicateTake(project, v2.take.id, "", "Branch 3");
+    require(fork.ok && fork.take.branch == "Branch 3" && fork.take.parentId == v2.take.id, "branching starts a named branch at the source");
+    require(TakeManager::loadManifest(project).branches().size() == 3, "Main, Idea and Branch 3");
+
     // Autosaves are versions of their own kind.
     auto autosave = TakeManager::createVersion(project, contents, "Autosave", v2.take.id, "", TakeManager::TakeEntry::Kind::Autosave, {});
     require(autosave.ok, "autosave version");

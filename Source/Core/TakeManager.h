@@ -143,9 +143,10 @@ public:
      * @param projectPath  Path to the project directory.
      * @param takeId       ID of the take to duplicate.
      * @param newName      Name for the duplicate (empty derives "<source> Copy").
+     * @param branch       Branch the copy starts; empty keeps the source's branch.
      */
     static Result duplicateTake(const std::string& projectPath, const std::string& takeId,
-                                const std::string& newName = "");
+                                const std::string& newName = "", const std::string& branch = "");
 
     /**
      * @brief Deletes a take from the manifest and removes its snapshot.
