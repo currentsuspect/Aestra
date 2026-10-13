@@ -55,7 +55,7 @@ constexpr float BROWSER_TOP_PAD = 7.0f;
 constexpr float BROWSER_CONTENT_GAP = 8.0f;
 constexpr float BROWSER_NAV_ROW_H = 30.0f;
 constexpr float BROWSER_LIST_HEADER_H = 34.0f;
-constexpr float BROWSER_LIST_ROW_H = 30.0f;
+constexpr float BROWSER_LIST_ROW_H = 28.0f;
 
 // Where builds before the v3 library file kept browser settings. Read once, to
 // import places dropped onto the nav pane; never written again.

@@ -2441,11 +2441,9 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
 
     renderer.setClipRect(listClip);
 
-    const NUIColor oddRow = themeManager.getColor("backgroundSecondary").withAlpha(0.04f);
-    const NUIColor evenRow = themeManager.getColor("backgroundPrimary");
-    const NUIColor selectedRow = themeManager.getColor("accentPrimary").withAlpha(previewPanelVisible_ ? 0.0f
-                                                                                                       : 0.065f);
-    const NUIColor secondarySelectedRow = themeManager.getColor("accentPrimary").withAlpha(0.035f);
+    const NUIColor evenRow = themeManager.getColor("backgroundPrimary"); // flat rows: no zebra
+    const NUIColor selectedRow = themeManager.getColor("surfaceRaised"); // selection is a fill, never an edge
+    const NUIColor secondarySelectedRow = themeManager.getColor("surfaceTertiary");
     const NUIColor text = themeManager.getColor("textPrimary").withAlpha(0.82f);
     const NUIColor folderText = themeManager.getColor("textPrimary").withAlpha(0.92f);
     const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.56f);
@@ -2462,12 +2460,8 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         const bool primarySelected = i == selectedIndex_;
         const bool selected = primarySelected ||
                               std::find(selectedIndices_.begin(), selectedIndices_.end(), i) != selectedIndices_.end();
-        renderer.fillRect(itemRect, (i % 2 == 0) ? evenRow : oddRow);
-        if (selected) {
-            renderer.fillRect(itemRect, primarySelected ? selectedRow : secondarySelectedRow);
-            renderer.fillRect({itemRect.x, itemRect.y + 3.0f, 2.0f, itemRect.height - 6.0f},
-                              themeManager.getColor("accentPrimary").withAlpha(primarySelected ? 0.85f : 0.44f));
-        }
+        renderer.fillRect(itemRect, evenRow);
+        if (selected) renderer.fillRect(itemRect, primarySelected ? selectedRow : secondarySelectedRow);
         // Hover wash is drawn by renderHoverOverlays() OUTSIDE the FBO cache —
         // hover must never invalidate the cache (rebuilding the whole list per
         // row crossing cost ~11 ms/frame of the mouse-active render budget).
@@ -2508,7 +2502,7 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             NUIRect iconRect(contentX, std::round(itemRect.y + (itemRect.height - ROW_ICON_SIZE) * 0.5f), ROW_ICON_SIZE,
                              ROW_ICON_SIZE);
             icon->setBounds(iconRect);
-            icon->setColor(item->isDirectory ? folderText.withAlpha(0.78f) : muted);
+            icon->setColor(item->isDirectory ? NUIColor::fromHex(0xffc9a46a) : themeManager.getColor("secondary")); // folders sand, audio violet
             icon->onRender(renderer);
         }
         contentX += 20.0f;
