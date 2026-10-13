@@ -56,7 +56,8 @@ public:
             const bool open = m_open.count(row.getUnitId()) > 0;
             const auto c = caretRect(row);
             const float cx = c.x + c.width * 0.5f, cy = c.y + c.height * 0.5f;
-            const auto col = theme.getColor("textSecondary").withAlpha(open ? 0.95f : 0.55f);
+            const auto col = theme.getColor("textSecondary").withAlpha(open ? 1.0f : 0.8f);
+            r.strokeRoundedRect(c, theme.getRadius("xs"), 1.0f, theme.getColor("border").withAlpha(open ? 0.9f : 0.6f));
             const float d = open ? -2.5f : 2.5f; // open points up
             r.drawLine({cx - 4.0f, cy - d}, {cx, cy + d}, 1.5f, col);
             r.drawLine({cx, cy + d}, {cx + 4.0f, cy - d}, 1.5f, col);
@@ -129,9 +130,10 @@ private:
         const auto b = row.getBounds();
         return {b.x, b.bottom() + 2.0f, b.width, ArsenalSoundStrip::kHeight};
     }
+    /// The open-lanes key: a 20 px key after S at the end of the row's head, centred on the row.
     static AestraUI::NUIRect caretRect(const AestraUI::UnitRow& row) {
         const auto b = row.getBounds();
-        return {b.x + 6.0f, b.y + b.height - 16.0f, 22.0f, 14.0f};
+        return {b.x + row.headRight() - 8.0f - 20.0f, b.y + (b.height - 20.0f) * 0.5f, 20.0f, 20.0f};
     }
     static const ArsenalRackItem* itemFor(const ArsenalRackLayout& rack, size_t rowIndex) {
         for (const auto& i : rack.items)
@@ -153,7 +155,7 @@ private:
         c.stepW = row.stepPadWidth();
         c.groupGap = AestraUI::UnitRow::stepGroupGap();
         c.scrollX = row.getScrollX();
-        c.accent = AestraUI::NUIThemeManager::getInstance().getColor("accentPrimary");
+        c.accent = row.channelColor();
         return c;
     }
 

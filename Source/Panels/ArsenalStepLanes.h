@@ -158,7 +158,14 @@ public:
                 const float top = r.y + r.height * (1.0f - f);
                 const float base = centred ? r.y + r.height * 0.5f : r.bottom();
                 const AestraUI::NUIRect bar{cell.x, std::min(top, base), bw, std::max(2.0f, std::abs(base - top))};
-                renderer.fillRect(bar, c.accent.withAlpha(0.9f));
+                renderer.fillRect(bar, c.accent);
+                // The value, when it is not the default and the column is wide enough to read it (the mock's +3, 50%, x3).
+                const float v = readValue(*n, lanes[i], c.root);
+                const bool shown = lanes[i] == Lane::Pitch ? v != 0.0f : lanes[i] == Lane::Length ? std::abs(v - 1.0f) > 0.01f : lanes[i] == Lane::Chance ? v < 0.995f : v > 1.0f;
+                if (shown && bw >= 18.0f) {
+                    const std::string txt = lanes[i] == Lane::Pitch ? (v > 0 ? "+" : "") + std::to_string(static_cast<int>(v)) : lanes[i] == Lane::Ratchet ? "x" + std::to_string(static_cast<int>(v)) : std::to_string(static_cast<int>(std::lround(v * 100.0f))) + "%";
+                    renderer.drawTextCentered(txt, {cell.x, std::max(r.y, bar.y - 12.0f), bw, 11.0f}, tp.fontSizeMicro, theme.getColor("textSecondary"));
+                }
             }
             renderer.clearClipRect();
         }
