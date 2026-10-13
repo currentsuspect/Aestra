@@ -4684,7 +4684,7 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
                 performed = m_trackManager->getCommandHistory().redo();
                 AESTRA_LOG_DEBUG("[AestraContent] Ctrl+Shift+Z/Y pressed, redo=" + std::to_string(performed));
             } else if (event.keyCode == AestraUI::NUIKeyCode::H) {
-                toggleHistoryPanel();
+                toggleTakesPanel(); // Versions (Takes and History merged); the step list is View > Show Steps
                 return true;
             } else if (event.keyCode == AestraUI::NUIKeyCode::Z) {
                 performed = m_trackManager->getCommandHistory().undo();

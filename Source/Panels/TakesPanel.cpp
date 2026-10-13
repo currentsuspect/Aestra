@@ -18,7 +18,7 @@ constexpr float ACTION_BUTTON_PAD = 8.0f;
 constexpr float TOOLBAR_BUTTON_HEIGHT = 22.0f;
 } // namespace
 
-TakesPanel::TakesPanel() : WindowPanel("TAKES") {
+TakesPanel::TakesPanel() : WindowPanel("VERSIONS") {
     setMinimumPanelSize(280.0f, 260.0f);
 }
 
@@ -44,6 +44,7 @@ void TakesPanel::rebuildRows() {
     if (m_takesProvider) {
         TakeManager::Manifest manifest = m_takesProvider();
         if (manifest.ok) {
+            m_multipleBranches = manifest.branches().size() > 1;
             // Depth = length of the parent chain; guards against cycles/orphans.
             std::unordered_map<std::string, std::string> parentOf;
             for (const auto& take : manifest.takes) {
@@ -252,12 +253,12 @@ bool TakesPanel::invokeAction(const std::function<bool()>& action, const char* f
 }
 
 bool TakesPanel::requestCreateTake() {
-    return invokeAction([this]() { return m_onCreateTake && m_onCreateTake(); }, "Could not create take");
+    return invokeAction([this]() { return m_onCreateTake && m_onCreateTake(); }, "Could not save the version");
 }
 
 bool TakesPanel::requestSaveActiveTake() {
     return invokeAction([this]() { return m_onSaveActiveTake && m_onSaveActiveTake(); },
-                        "Could not save the active take");
+                        "Could not save the open version");
 }
 
 bool TakesPanel::requestOpenSelected() {
@@ -265,7 +266,7 @@ bool TakesPanel::requestOpenSelected() {
         return false;
     }
     const std::string takeId = m_takeRows[static_cast<size_t>(m_selectedTake)].take.id;
-    return invokeAction([this, takeId]() { return m_onOpenTake && m_onOpenTake(takeId); }, "Could not open take");
+    return invokeAction([this, takeId]() { return m_onOpenTake && m_onOpenTake(takeId); }, "Could not open the version");
 }
 
 bool TakesPanel::requestDuplicateSelected() {
@@ -274,7 +275,7 @@ bool TakesPanel::requestDuplicateSelected() {
     }
     const std::string takeId = m_takeRows[static_cast<size_t>(m_selectedTake)].take.id;
     return invokeAction([this, takeId]() { return m_onDuplicateTake && m_onDuplicateTake(takeId); },
-                        "Could not duplicate take");
+                        "Could not duplicate the version");
 }
 
 bool TakesPanel::requestBranchSelected() {
@@ -283,7 +284,7 @@ bool TakesPanel::requestBranchSelected() {
     }
     const std::string takeId = m_takeRows[static_cast<size_t>(m_selectedTake)].take.id;
     return invokeAction([this, takeId]() { return m_onBranchTake && m_onBranchTake(takeId); },
-                        "Could not branch from take");
+                        "Could not branch from the version");
 }
 
 bool TakesPanel::requestDeleteSelected() {
@@ -292,12 +293,12 @@ bool TakesPanel::requestDeleteSelected() {
     }
     const auto& take = m_takeRows[static_cast<size_t>(m_selectedTake)].take;
     if (take.active) {
-        setStatus("Switch to another take before deleting this one");
+        setStatus("Open another version before deleting this one");
         return false;
     }
     const std::string takeId = take.id;
     return invokeAction([this, takeId]() { return m_onDeleteTake && m_onDeleteTake(takeId); },
-                        "Could not delete take");
+                        "Could not delete the version");
 }
 
 bool TakesPanel::requestRestoreSelectedSnapshot() {
@@ -335,11 +336,11 @@ bool TakesPanel::commitRename() {
     m_renameBuffer.clear();
     setFocused(false);
     if (name.empty()) {
-        setStatus("Take name cannot be empty");
+        setStatus("A version needs a name");
         return false;
     }
     return invokeAction([this, takeId, name]() { return m_onRenameTake && m_onRenameTake(takeId, name); },
-                        "Could not rename take");
+                        "Could not rename the version");
 }
 
 void TakesPanel::cancelRename() {
@@ -455,8 +456,8 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
                                    rect.y + (rect.height - textSize.height) * 0.5f),
                           11.0f, theme.getColor(accent ? "textPrimary" : "textSecondary"));
     };
-    drawButton(layout.newTakeButton, "+ NEW TAKE", true);
-    drawButton(layout.saveActiveButton, "SAVE ACTIVE", false);
+    drawButton(layout.newTakeButton, "+ NEW VERSION", true);
+    drawButton(layout.saveActiveButton, "SAVE", false);
     renderer.drawLine(NUIPoint(bounds.x, layout.toolbar.y + layout.toolbar.height),
                       NUIPoint(bounds.x + bounds.width, layout.toolbar.y + layout.toolbar.height), 0.5f,
                       theme.getColor("divider").withAlpha(0.86f));
@@ -464,8 +465,8 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
     // Takes list
     if (m_takeRows.empty()) {
         const std::string hint = !m_manifestError.empty()
-                                     ? ("Takes unavailable: " + m_manifestError)
-                                     : "No takes yet — save a version with + NEW TAKE";
+                                     ? ("Versions unavailable: " + m_manifestError)
+                                     : "No versions yet — save one with + NEW VERSION";
         renderer.drawText(hint, NUIPoint(bounds.x + LEFT_PAD, layout.takesList.y + ROW_HEIGHT * 0.6f), 12.0f,
                           theme.getColor("textSecondary").withAlpha(0.72f));
     }
@@ -501,7 +502,9 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
                                                        : theme.getColor("textPrimary").withAlpha(0.82f);
             renderer.drawText(row.take.name, NUIPoint(bounds.x + TEXT_LEFT_PAD + indent, rowY + 7.0f), 12.0f,
                               textColor);
-            const std::string timeLabel = relativeTimeLabel(row.take.updatedAtMs);
+            std::string timeLabel = relativeTimeLabel(row.take.updatedAtMs);
+            if (!row.take.steps.empty()) timeLabel = std::to_string(row.take.steps.size()) + (row.take.steps.size() == 1 ? " step · " : " steps · ") + timeLabel;
+            if (m_multipleBranches && !row.take.branch.empty()) timeLabel = row.take.branch + " · " + timeLabel;
             if (!timeLabel.empty()) {
                 const NUISize timeSize = renderer.measureText(timeLabel, 10.0f);
                 renderer.drawText(timeLabel,

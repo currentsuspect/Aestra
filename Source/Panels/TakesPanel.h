@@ -180,6 +180,7 @@ private:
     std::vector<TakeRow> m_takeRows;
     std::vector<SnapshotEntry> m_snapshotRows;
     std::string m_manifestError;
+    bool m_multipleBranches{false}; ///< Show each row's branch only once there is more than one.
 
     int m_selectedTake{-1};
     int m_selectedSnapshot{-1};
