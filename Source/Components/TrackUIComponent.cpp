@@ -272,7 +272,7 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     addChild(m_laneCountIcon);
 
     m_laneCountLabel = std::make_shared<AestraUI::NUILabel>();
-    m_laneCountLabel->setFontSize(11.0f);
+    m_laneCountLabel->setFontSize(10.0f);
     m_laneCountLabel->setEllipsize(false);
     m_laneCountLabel->setVisible(false);
     addChild(m_laneCountLabel);
@@ -815,11 +815,10 @@ void TrackUIComponent::updateUI() {
             // row — what the stack glyph depicts and what the chevron reveals.
             // A 3-take track reads "≡ 3", not "≡ 4" (laneIds includes the
             // primary row itself, which is never "inside" the chevron).
-            m_laneCountLabel->setText(std::to_string(track->laneIds.size() - 1));
+            const size_t nested = track->laneIds.size() - 1; m_laneCountLabel->setText(std::to_string(nested) + (nested == 1 ? " LANE" : " LANES"));
             m_laneCountLabel->setTextColor(themeManager.getColor("textSecondary").withAlpha(0.864f));
             m_laneCountLabel->setVisible(true);
-            m_laneCountIcon->setColor(themeManager.getColor("textSecondary").withAlpha(0.864f));
-            m_laneCountIcon->setVisible(true);
+            m_laneCountIcon->setVisible(false); // the word replaces the stack glyph
         } else {
             m_laneCountLabel->setVisible(false);
             m_laneCountIcon->setVisible(false);
@@ -2041,6 +2040,7 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
 
     const auto* lane = m_trackManager ? m_trackManager->getPlaylistModel().getLane(m_laneId) : nullptr;
 
+    if (m_isNestedLane) renderer.fillRect(controlAreaBounds, AestraUI::NUIColor::white().withAlpha(0.03f)); // one step lighter than its track
     // Apply highlight overlay (Selection / Solo / Mute)
     if (lane) {
         const bool soloSuppressed = m_anyPlaylistLaneSoloed && !lane->solo;
@@ -2309,7 +2309,7 @@ void TrackUIComponent::onResize(int width, int height) {
 
     // Lane-count indicator (FD-14 scope §10) sits just left of the buttons on
     // the track's primary row; the name label flexes around it.
-    const float laneIndicatorWidth = 54.0f;
+    const float laneIndicatorWidth = 62.0f;
     const float laneIndicatorGap = 6.0f;
     const float laneIndicatorX = localButtonsXStart - laneIndicatorGap - laneIndicatorWidth;
 
@@ -2332,7 +2332,7 @@ void TrackUIComponent::onResize(int width, int height) {
         if (m_expandButton && m_expandButton->isVisible()) {
             return expandButtonX;
         }
-        if (m_laneCountIcon && m_laneCountIcon->isVisible()) {
+        if (m_laneCountLabel && m_laneCountLabel->isVisible()) {
             return laneIndicatorX;
         }
         return localButtonsXStart;
@@ -2352,7 +2352,7 @@ void TrackUIComponent::onResize(int width, int height) {
         m_laneCountIcon->setBounds(
             AestraUI::NUIRect(bounds.x + laneIndicatorX, bounds.y + laneIconY, 13.0f, 13.0f));
         m_laneCountLabel->setBounds(AestraUI::NUIRect(
-            bounds.x + laneIndicatorX + 15.0f, bounds.y + localNameY, laneIndicatorWidth - 17.0f, localNameHeight));
+            bounds.x + laneIndicatorX, bounds.y + localNameY, laneIndicatorWidth, localNameHeight));
     }
 
     float xCursor = localButtonsXStart;
