@@ -419,7 +419,7 @@ void ArsenalPanel::refreshUnits() {
     }
     
     // Add "Add Unit" button
-    m_addUnitBtn = std::make_shared<NUIButton>("+ ADD UNIT");
+    m_addUnitBtn = std::make_shared<NUIButton>("+ Add unit");
     m_addUnitBtn->setStyle(NUIButton::Style::Secondary);
     m_addUnitBtn->setBackgroundColor(theme.getColor("surfaceTertiary").withAlpha(0.88f));
     m_addUnitBtn->setHoverColor(theme.getColor("accentPrimary").withAlpha(0.20f));
@@ -432,7 +432,7 @@ void ArsenalPanel::refreshUnits() {
     scrollGridBy(0.0f); // Re-clamp the shared scroll for the (possibly new) loop length
     syncRowSelection();
     if (m_onPreferredHeightChanged) {
-        const float preferredHeight = getTitleBarHeight() + 136.0f +
+        const float preferredHeight = getTitleBarHeight() + 112.0f +
                                       m_rack.contentHeight + kArsenalListBottomPadding;
         m_onPreferredHeightChanged(preferredHeight);
     }
@@ -447,7 +447,7 @@ void ArsenalPanel::refreshUnits() {
 
 void ArsenalPanel::onAddUnit() {
     m_showUnitTypePicker = !m_showUnitTypePicker;
-    if (m_addUnitBtn) m_addUnitBtn->setText(m_showUnitTypePicker ? "CLOSE" : "+ ADD UNIT");
+    if (m_addUnitBtn) m_addUnitBtn->setText(m_showUnitTypePicker ? "CLOSE" : "+ Add unit");
     repaint();
 }
 
@@ -466,7 +466,7 @@ void ArsenalPanel::createUnitOfType(UnitType type, const std::string& nameOverri
         m_onSelectedUnitChanged(m_selectedUnitId);
     }
     m_showUnitTypePicker = false;
-    if (m_addUnitBtn) m_addUnitBtn->setText("+ ADD UNIT");
+    if (m_addUnitBtn) m_addUnitBtn->setText("+ Add unit");
     refreshUnits();
 }
 
@@ -690,61 +690,10 @@ void ArsenalPanel::onRender(NUIRenderer& renderer) {
 
 void ArsenalPanel::drawCommandHeader(NUIRenderer& renderer) {
     if (!m_listContainer || m_commandHeaderRect.width <= 0.0f) return;
-
     auto& theme = NUIThemeManager::getInstance();
-    const auto& themeProps = theme.getCurrentTheme();
-
-    // Pattern zone: command header and progress ruler share one parent card so
-    // the pattern reads as a single unit above the child unit rows.
-    const float zoneBottom = m_progressHeaderRect.height > 0.0f ? m_progressHeaderRect.bottom() + 8.0f
-                                                                : m_commandHeaderRect.bottom();
-    const NUIRect parentZone(m_commandHeaderRect.x, m_commandHeaderRect.y, m_commandHeaderRect.width,
-                             std::max(0.0f, zoneBottom - m_commandHeaderRect.y));
-    renderer.fillRoundedRect(parentZone, themeProps.radiusM,
-                             theme.getColor("backgroundSecondary").withAlpha(0.97f));
-    renderer.strokeRoundedRect(parentZone, themeProps.radiusM, 1.0f,
-                               theme.getColor("borderSubtle").withAlpha(0.42f));
-
-    const float iconX = m_commandHeaderRect.x + 15.0f;
-    const float iconY = m_commandHeaderRect.y + 13.0f;
-    const auto accent = theme.getColor("accentPrimary");
-    for (int row = 0; row < 3; ++row) {
-        const float width = 18.0f - static_cast<float>(row) * 3.0f;
-        renderer.fillRoundedRect({iconX, iconY + static_cast<float>(row) * 8.0f, width, 4.0f}, 2.0f,
-                                 accent.withAlpha(0.95f - static_cast<float>(row) * 0.18f));
-    }
-
-    std::string patternName = "Pattern";
-    std::string selectedName;
-    if (m_trackManager) {
-        if (m_activePatternID.isValid()) {
-            if (const auto* pattern = m_trackManager->getPatternManager().getPattern(m_activePatternID);
-                pattern && !pattern->name.empty()) {
-                patternName = pattern->name;
-            }
-        }
-        if (m_selectedUnitId != 0) {
-            if (const auto* unit = m_trackManager->getUnitManager().getUnit(m_selectedUnitId)) {
-                selectedName = unit->name.empty() ? "Untitled unit" : unit->name;
-            }
-        }
-    }
-
-    const float textX = iconX + 28.0f;
-    // Clip the name band at the FIT/ADD controls so long names cannot bleed
-    // underneath them when the panel is narrow (triage 2026-08-14).
-    const float textMaxX = m_fitToggleRect.width > 0.0f ? m_fitToggleRect.x - 8.0f : m_commandHeaderRect.right() - 8.0f;
-    if (textMaxX > textX) {
-        renderer.setClipRect({textX, m_commandHeaderRect.y + 8.0f, textMaxX - textX, 36.0f});
-        renderer.drawText(patternName, {textX, m_commandHeaderRect.y + 10.0f}, themeProps.fontSizeS + 2.0f,
-                          theme.getColor("textPrimary").withAlpha(0.96f));
-        if (!selectedName.empty()) {
-            renderer.drawText(selectedName, {textX, m_commandHeaderRect.y + 28.0f}, 8.5f,
-                              theme.getColor("textSecondary").withAlpha(0.70f));
-        }
-        renderer.clearClipRect();
-    }
-
+    // One flat band: the scenes on the left, the view toggle on the right (the Arsenal mock).
+    renderer.fillRect(m_commandHeaderRect, theme.getColor("backgroundPrimary"));
+    renderer.fillRect({m_commandHeaderRect.x, m_commandHeaderRect.bottom() - 1.0f, m_commandHeaderRect.width, 1.0f}, theme.getColor("border").withAlpha(0.6f));
     Aestra::drawArsenalFitToggle(renderer, m_fitToggleRect, m_fitModeRect, m_scrollModeRect, m_fitToWidth);
 }
 
@@ -755,22 +704,14 @@ void ArsenalPanel::layoutUnits() {
     const float horizontalPadding = 8.0f;
     const float width = std::max(0.0f, bounds.width - horizontalPadding * 2.0f);
     const float startX = bounds.x + horizontalPadding;
-    m_commandHeaderRect = {startX, bounds.y + 8.0f, width, COMMAND_HEADER_HEIGHT};
-
-    constexpr float buttonH = 30.0f;
-    constexpr float addW = 112.0f;
+    m_commandHeaderRect = {startX, bounds.y, width, COMMAND_HEADER_HEIGHT};
+    constexpr float buttonH = 30.0f, fitW = 84.0f;
     const float buttonY = m_commandHeaderRect.y + (m_commandHeaderRect.height - buttonH) * 0.5f;
-    m_addUnitButtonRect = {m_commandHeaderRect.right() - 10.0f - addW, buttonY, addW, buttonH};
-    if (m_addUnitBtn) m_addUnitBtn->setBounds(m_addUnitButtonRect);
-
-    // View toggle (Fit whole loop <-> readable + scroll) sits just left of Add.
-    constexpr float fitW = 84.0f;
-    m_fitToggleRect = {m_addUnitButtonRect.x - 8.0f - fitW, buttonY, fitW, buttonH};
+    m_fitToggleRect = {m_commandHeaderRect.right() - 16.0f - fitW, buttonY, fitW, buttonH};
     m_fitModeRect = {m_fitToggleRect.x, m_fitToggleRect.y, fitW * 0.5f, m_fitToggleRect.height};
     m_scrollModeRect = {m_fitModeRect.right(), m_fitToggleRect.y, fitW * 0.5f, m_fitToggleRect.height};
-
-    m_sceneRect = {startX + 10.0f, m_commandHeaderRect.bottom() + 2.0f, std::max(0.0f, width - 20.0f), Aestra::ArsenalSceneStrip::kHeight};
-    m_progressHeaderRect = {startX, m_sceneRect.bottom() + 6.0f, width, PROGRESS_HEADER_HEIGHT};
+    m_sceneRect = {startX + 16.0f, m_commandHeaderRect.y + 10.0f, std::max(0.0f, m_fitToggleRect.x - 12.0f - (startX + 16.0f)), Aestra::ArsenalSceneStrip::kHeight};
+    m_progressHeaderRect = {startX, m_commandHeaderRect.bottom() + 6.0f, width, PROGRESS_HEADER_HEIGHT};
     const float rackTop = m_progressHeaderRect.bottom() + 8.0f - m_scrollY;
 
     // Rows may only draw / take clicks between the progress header and the
@@ -790,6 +731,9 @@ void ArsenalPanel::layoutUnits() {
     m_rack = Aestra::ArsenalRackLayout::compute(groups, extras);
     m_kitCard.place(m_trackManager && Aestra::ArsenalRowLanes::noSounds(m_trackManager->getUnitManager()), {startX, rackTop + m_rack.contentHeight, width, Aestra::ArsenalKitCard::kReserve}); // empty state: a kit card under the rows
     if (m_kitCard.shown()) m_rack.contentHeight += Aestra::ArsenalKitCard::kReserve;
+    m_addUnitButtonRect = {startX + 16.0f, rackTop + m_rack.contentHeight + 8.0f, 112.0f, 32.0f}; // "Add unit" ends the rack (the mock)
+    m_rack.contentHeight += 48.0f;
+    if (m_addUnitBtn) { m_addUnitBtn->setBounds(m_addUnitButtonRect); m_addUnitBtn->setVisible(m_addUnitButtonRect.y >= m_progressHeaderRect.bottom() && m_addUnitButtonRect.bottom() <= bounds.bottom()); }
     for (const auto& item : m_rack.items) {
         if (item.kind != Aestra::ArsenalRackItem::Kind::Row || !m_unitRows[item.rowIndex]) continue;
         m_unitRows[item.rowIndex]->setBounds(NUIRect(startX, rackTop + item.y, width, item.h));
@@ -806,7 +750,7 @@ void ArsenalPanel::onResize(int width, int height) {
 
 void ArsenalPanel::onUpdate(double dt) {
     WindowPanel::onUpdate(dt);
-    const float reservedHeight = COMMAND_HEADER_HEIGHT + PROGRESS_HEADER_HEIGHT + Aestra::ArsenalSceneStrip::kHeight + 38.0f;
+    const float reservedHeight = COMMAND_HEADER_HEIGHT + PROGRESS_HEADER_HEIGHT + 24.0f;
     const float viewportHeight = std::max(0.0f,
         (m_listContainer ? m_listContainer->getBounds().height : 0.0f) - reservedHeight);
     const float contentHeight = m_rack.contentHeight + kArsenalListBottomPadding;
@@ -1267,7 +1211,7 @@ void ArsenalPanel::drawUnitTypePicker(NUIRenderer& renderer) {
                               ? std::max(m_listContainer->getBounds().x + 8.0f,
                                          m_addUnitButtonRect.right() - cardWidth)
                               : m_addUnitButtonRect.x;
-    m_unitTypePickerRect = NUIRect(pickerX, m_addUnitButtonRect.bottom() + 8.0f, cardWidth, cardHeight);
+    m_unitTypePickerRect = NUIRect(pickerX, m_addUnitButtonRect.y - cardHeight - 8.0f, cardWidth, cardHeight);
 
     Aestra::drawArsenalUnitTypePicker(renderer, m_unitTypePickerRect);
 }
@@ -1560,7 +1504,7 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
             }
         } else if (!m_addUnitButtonRect.contains(event.position)) {
             m_showUnitTypePicker = false;
-            if (m_addUnitBtn) m_addUnitBtn->setText("+ ADD UNIT");
+            if (m_addUnitBtn) m_addUnitBtn->setText("+ Add unit");
             repaint();
             return true;
         }
