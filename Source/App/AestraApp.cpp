@@ -895,16 +895,9 @@ void AestraApp::buildMenuBar() {
 
         menu->addSeparator();
 
-        // Takes = "which version of the work do I want?" — opens the Takes
-        // workspace panel (create/name/open/duplicate/branch project versions).
-        menu->addItem("Takes", [this]() {
+        // Versions = every saved state of the song and the steps inside it (Takes and History, merged: V81-V1).
+        menu->addItem("Versions  Ctrl+H", [this]() {
             if (m_content) m_content->toggleTakesPanel();
-        });
-
-        // History = "what actions did I perform?" — opens the command-timeline
-        // panel wired to the undo/redo system.
-        menu->addItem("History  Ctrl+H", [this]() {
-            if (m_content) m_content->toggleHistoryPanel();
         });
 
         menu->addSeparator();
@@ -994,11 +987,11 @@ void AestraApp::buildMenuBar() {
         menu->addSeparator();
         menu->addItem("Show Timeline", [this]() { Log::info("Show Timeline - Not yet fully implemented"); });
         menu->addItem("Show Arsenal", [this]() { Log::info("Show Arsenal - Not yet fully implemented"); });
-        menu->addItem("Show History  Ctrl+H", [this]() {
-            if (m_content) m_content->toggleHistoryPanel();
-        });
-        menu->addItem("Show Takes", [this]() {
+        menu->addItem("Show Versions  Ctrl+H", [this]() {
             if (m_content) m_content->toggleTakesPanel();
+        });
+        menu->addItem("Show Steps", [this]() {
+            if (m_content) m_content->toggleHistoryPanel();
         });
         menu->addSeparator();
         menu->addItem("Gather Panels", [this]() { if (m_content) m_content->gatherPanels(); });
