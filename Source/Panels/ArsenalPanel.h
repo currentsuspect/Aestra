@@ -3,6 +3,7 @@
 
 #include "ArsenalRackLayout.h"
 #include "ArsenalKit.h"
+#include "../AestraUI/Widgets/NUIPianoRollWidgets.h"
 #include "ArsenalRowLanes.h"
 #include "ArsenalSceneStrip.h"
 #include "WindowPanel.h"
@@ -158,7 +159,7 @@ private:
     // Pattern Progress Visualization
     static constexpr float COMMAND_HEADER_HEIGHT = 64.0f;
     static constexpr float PROGRESS_HEADER_HEIGHT = 34.0f;
-    int m_currentPlayStep = -1;  // Current step for visualization (-1 = not playing)
+    float m_playheadX = -1.0f;   // Where the playhead is on screen (-1 = not playing)
     void drawProgressHeader(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds);
     void drawCommandHeader(AestraUI::NUIRenderer& renderer);
     int calculateCurrentStep(); // Calculate step from TrackManager clock
@@ -166,8 +167,7 @@ private:
     // Progress-header scrubbing helpers (#831).
     double headerLengthBeats() const;
     std::pair<float, float> gridSpan() const; ///< the pads' left edge and width, from the rows
-    double headerBeatAtX(const AestraUI::NUIRect& bounds, float x) const;
-    void headerScrubTo(const AestraUI::NUIRect& bounds, float x);
+    double calculatePlayheadBeat(); ///< the playhead in grid beats (steps at 0.25), looping over the pattern; -1 outside pattern mode
     int computeLoopStepCount() const; // Steps spanning the full active-pattern loop (4/beat)
     int beatsPerBar() const; // Time-signature numerator from the timeline clock
     void adjustPatternBars(int deltaBars);
@@ -212,8 +212,7 @@ private:
     std::function<void(UnitID, const std::string&)> m_onSampleDroppedToUnit;
     std::function<void(UnitID)> m_onSelectedUnitChanged;
     std::function<void(double beat, bool active)> m_onPositionScrubbed;
-    bool m_headerScrubbing{false};
-    double m_headerScrubBeat{0.0};
+    std::shared_ptr<AestraUI::PianoRollRuler> m_ruler; ///< the bar ruler the piano roll uses (numbers, ticks, playhead marker, scrub)
     std::function<void(float)> m_onPreferredHeightChanged;
     std::function<void()> m_onRequestPlaybackActivation;
     std::function<void(PatternID)> m_onPatternEdited;

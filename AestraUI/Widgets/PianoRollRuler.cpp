@@ -48,7 +48,7 @@ bool PianoRollRuler::onMouseEvent(const NUIMouseEvent& event) {
     const bool zonePress = event.pressed && (event.button == NUIMouseButton::Right ||
                                              (event.button == NUIMouseButton::Left &&
                                               (event.modifiers & NUIModifiers::Ctrl)));
-    if (zonePress && !isScrubbing_ && !isDrawingZone_) {
+    if (zonePress && allowLoopZone_ && !isScrubbing_ && !isDrawingZone_) {
         isDrawingZone_ = true;
         zoneButton_ = event.button;
         zoneAnchorBeat_ = zoneBeatAtPointer();

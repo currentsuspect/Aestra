@@ -172,6 +172,9 @@ ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
     setContent(m_listContainer);
 
     // Create color picker (initially hidden)
+    m_ruler = std::make_shared<AestraUI::PianoRollRuler>();
+    m_ruler->setLoopZoneEnabled(false); // the Arsenal's ruler numbers the bars and cues the playhead; loop zones live in the piano roll
+    m_ruler->onPlayheadScrubbed = [this](double beat, bool active) { if (m_onPositionScrubbed) m_onPositionScrubbed(std::min(beat, headerLengthBeats()), active); };
     m_colorPicker = std::make_shared<UnitColorPicker>();
     m_colorPicker->setOnColorSelected([this](uint32_t color) {
         if (m_colorPickerTargetUnit > 0) {
@@ -669,6 +672,11 @@ void ArsenalPanel::onRender(NUIRenderer& renderer) {
     if (m_listContainer && isVisible()) Aestra::drawArsenalRackHeaders(renderer, m_rack, m_listViewportRect, m_progressHeaderRect.bottom() + 8.0f - m_scrollY);
     if (m_listContainer && isVisible()) m_kitCard.draw(renderer);
     if (m_listContainer && isVisible()) m_lanes.draw(renderer, m_rack, m_unitRows, m_trackManager.get(), m_activePatternID, m_listViewportRect);
+    if (m_listContainer && isVisible() && m_playheadX >= gridSpan().first && m_playheadX <= gridSpan().first + gridSpan().second) { // the playhead runs down through the rows, as in the piano roll
+        renderer.setClipRect(m_listViewportRect);
+        renderer.fillRect({m_playheadX - 0.75f, m_listViewportRect.y, 1.5f, m_listViewportRect.height}, NUIThemeManager::getInstance().getColor("accentPrimary").withAlpha(0.85f));
+        renderer.clearClipRect();
+    }
 
     // Drag-hover ghost draws above the panel surfaces.
     renderDragPreview(renderer);
@@ -848,38 +856,11 @@ std::pair<float, float> ArsenalPanel::gridSpan() const {
     return s.width > 0.0f ? std::pair{s.x, s.width} : std::pair{m_progressHeaderRect.x + cw + 14.0f, std::max(1.0f, m_progressHeaderRect.width - cw - 14.0f)};
 }
 
-double ArsenalPanel::headerBeatAtX(const NUIRect& bounds, float x) const {
-    const float gridStartX = gridSpan().first;
-    const float availWidth = std::max(1.0f, gridSpan().second);
-
-    // Inverse of drawProgressHeader's step layout: same step-width branch
-    // (fit vs 20px scroll minimum), the shared scroll offset, and per-group
-    // gaps — so a clicked pixel lands on the exact step the header highlights.
-    const float groupTotal = static_cast<float>((m_stepCount + 3) / 4) * kGroupGap;
-    const float fitStepWidth =
-        std::max(0.0f, availWidth - groupTotal) / static_cast<float>(std::max(1, m_stepCount));
-    float stepWidth = m_fitToWidth ? std::max(fitStepWidth, 4.0f) : std::max(fitStepWidth, 20.0f);
-
-    const float contentX = std::clamp(x - gridStartX + m_gridScrollX, 0.0f,
-                                      stepWidth * static_cast<float>(m_stepCount) + groupTotal);
-    const int groups = (m_stepCount + 3) / 4;
-    const float groupW = 4.0f * stepWidth + kGroupGap;
-    const int group = std::clamp(static_cast<int>(contentX / std::max(1.0f, groupW)), 0, std::max(0, groups - 1));
-    const float withinGroup = std::min(contentX - static_cast<float>(group) * groupW, 4.0f * stepWidth);
-    const double stepFloat =
-        std::min<double>(static_cast<double>(group) * 4.0 + static_cast<double>(withinGroup / stepWidth),
-                         static_cast<double>(m_stepCount));
-
-    // Steps map back through calculateCurrentStep's beats-per-visual-step so
-    // cueing and highlighting share one definition of position.
-    const double beatsPerVisualStep = headerLengthBeats() / static_cast<double>(std::max(1, m_stepCount));
-    return stepFloat * beatsPerVisualStep;
-}
-
-void ArsenalPanel::headerScrubTo(const NUIRect& bounds, float x) {
-    m_headerScrubBeat = headerBeatAtX(bounds, x);
-    if (m_onPositionScrubbed)
-        m_onPositionScrubbed(m_headerScrubBeat, true);
+double ArsenalPanel::calculatePlayheadBeat() {
+    if (!m_trackManager || !m_trackManager->isPatternMode()) return -1.0;
+    const double len = std::max(0.25, headerLengthBeats());
+    const double pb = std::fmod(m_trackManager->getPosition() * m_trackManager->getTimelineClock().getCurrentTempo() / 60.0, len);
+    return pb < 0.0 ? pb + len : pb;
 }
 
 int ArsenalPanel::calculateCurrentStep() {
@@ -996,7 +977,6 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
     auto& theme = NUIThemeManager::getInstance();
     
     // Calculate current step from clock
-    m_currentPlayStep = calculateCurrentStep();
     
     // Step layout (matches UnitRow grid layout: control block + 8px context
     // inset + 6px lane padding, so header pads line up with row pads exactly)
@@ -1027,7 +1007,6 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
         }
     }
 
-    const int stepsPerBar = beatsPerBar() * 4;
     const int bars = std::clamp(static_cast<int>(std::round(lengthBeats / static_cast<double>(beatsPerBar()))),
                                 kArsenalMinPatternBars, kArsenalMaxPatternBars);
     const bool decEnabled = bars > kArsenalMinPatternBars;
@@ -1114,73 +1093,20 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
     const float totalWidth = stepWidth * static_cast<float>(m_stepCount) + groupTotal;
     const float maxScrollX = std::max(0.0f, totalWidth - availWidth);
     m_gridScrollX = std::clamp(m_gridScrollX, 0.0f, maxScrollX);
-    float indicatorHeight = PROGRESS_HEADER_HEIGHT - 10.0f;
-    float indicatorY = bounds.y + 5.0f;
-    const float indicatorRadius = themeProps.radiusXS;
 
     // Clip to the grid card so scrolled steps never paint over the bars pills.
     renderer.setClipRect(gridCard);
 
-    // Draw step indicators
-    for (int i = 0; i < m_stepCount; ++i) {
-        const float stepOriginX = gridStartX + (i * stepWidth) + static_cast<float>(i / 4) * kGroupGap - m_gridScrollX;
-        const float cellGap = 3.0f;
-        const float stepX = stepOriginX + cellGap * 0.5f;
-        const float indicatorWidth = std::max(1.0f, stepWidth - cellGap);
-        if (stepX > gridCard.right()) break;
-        if (stepX + stepWidth < gridCard.x) continue;
-
-        NUIRect indicatorRect(stepX, indicatorY, indicatorWidth, indicatorHeight);
-
-        // Base color: more visible background
-        NUIColor bgColor = theme.getColor("surfaceTertiary").withAlpha(0.66f);
-
-        // Bar/beat markers (4 steps = 1 beat at 1/16 resolution)
-        const bool isBeatStart = (i % 4 == 0);
-        const bool isBarStart = (i % stepsPerBar == 0);
-        if (isBarStart) {
-            bgColor = bgColor.lightened(0.16f);
-        } else if (isBeatStart) {
-            bgColor = bgColor.lightened(0.08f);
-        }
-        if (((i / 4) & 1) != 0) {
-            bgColor = NUIColor::lerp(bgColor, theme.getColor("accentPrimary"), 0.10f);
-        }
-
-        renderer.fillRoundedRect(indicatorRect, indicatorRadius, bgColor);
-
-        // Highlight current playing step
-        if (i == m_currentPlayStep) {
-            NUIColor playColor = theme.getColor("accentPrimary");
-            renderer.fillRoundedRect(indicatorRect, indicatorRadius, playColor);
-
-            // Glow effect
-            NUIRect glowRect(indicatorRect.x - 1, indicatorRect.y - 1,
-                           indicatorRect.width + 2, indicatorRect.height + 2);
-            renderer.strokeRoundedRect(glowRect, themeProps.radiusXS + 1.0f, 1.0f, playColor.withAlpha(0.6f));
-        }
-        // Show progress for steps already played in current loop
-        else if (m_currentPlayStep >= 0 && i < m_currentPlayStep) {
-            NUIColor playedColor = theme.getColor("accentPrimary").withAlpha(0.5f);
-            renderer.fillRoundedRect(indicatorRect, indicatorRadius, playedColor);
-        }
-
-        // Subtle border
-        renderer.strokeRoundedRect(indicatorRect, indicatorRadius, 0.5f,
-                                   theme.getColor("borderSubtle").withAlpha(0.6f));
-
-        // Subtle structural landmark at each group boundary (4/8/12/...).
-        if ((i + 1) % 4 == 0 && i + 1 < m_stepCount) {
-            const float seamX = stepOriginX + stepWidth + kGroupGap * 0.5f;
-            renderer.drawLine(NUIPoint(seamX, gridCard.y + 4.0f),
-                              NUIPoint(seamX, gridCard.bottom() - 4.0f), 1.0f,
-                              theme.getColor("border").withAlpha(0.18f));
-        }
-
-        if (isBarStart) {
-            renderer.drawTextCentered(std::to_string((i / stepsPerBar) + 1), indicatorRect, 7.5f,
-                                      theme.getColor("textSecondary").withAlpha(0.88f));
-        }
+    // The bar ruler the piano roll uses, over the pads' columns: a beat is four steps and one group gap wide.
+    if (m_ruler) {
+        m_ruler->setBounds(NUIRect(gridStartX, bounds.y + 1.0f, availWidth, bounds.height - 2.0f));
+        m_ruler->setPixelsPerBeat(4.0f * stepWidth + kGroupGap);
+        m_ruler->setScrollX(m_gridScrollX);
+        m_ruler->setBeatsPerBar(beatsPerBar());
+        const double playheadBeat = calculatePlayheadBeat();
+        m_ruler->setPlayheadBeat(playheadBeat);
+        m_playheadX = playheadBeat >= 0.0 ? gridStartX + static_cast<float>(playheadBeat) * (4.0f * stepWidth + kGroupGap) - m_gridScrollX : -1.0f;
+        m_ruler->onRender(renderer);
     }
 
     // Interaction-only scroll position affordance. No rail, no scroll-specific
@@ -1511,23 +1437,7 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         }
     }
 
-    // Progress-header scrubbing (#831): click/drag right of the control block
-    // cues the playhead; release ends the scrub. Continues outside the header
-    // bounds while held so quick drags don't drop the gesture.
-    if (m_headerScrubbing) {
-        if (event.released || event.type == NUIMouseEventType::Up) {
-            m_headerScrubbing = false;
-            if (m_onPositionScrubbed)
-                m_onPositionScrubbed(m_headerScrubBeat, false);
-            repaint();
-            return true;
-        }
-        if (event.button == NUIMouseButton::Left || event.button == NUIMouseButton::None) {
-            headerScrubTo(m_progressHeaderRect, event.position.x);
-            repaint();
-            return true;
-        }
-    }
+    if (m_ruler && m_ruler->onMouseEvent(event)) { repaint(); return true; } // click or drag on the bar ruler cues the playhead
     using SceneKind = Aestra::ArsenalSceneStrip::Action::Kind;
     Aestra::ArsenalSceneStrip::Action scene;
     if (m_trackManager && m_scenes.onMouse(event, m_trackManager->getPatternManager(), m_activePatternID.value, scene)) {
@@ -1537,15 +1447,6 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         repaint();
         return true;
     }
-    if (event.pressed && event.button == NUIMouseButton::Left && m_progressHeaderRect.contains(event.position)) {
-        if (event.position.x >= gridSpan().first) {
-            m_headerScrubbing = true;
-            headerScrubTo(m_progressHeaderRect, event.position.x);
-            repaint();
-            return true;
-        }
-    }
-
     if (event.pressed && event.button == NUIMouseButton::Left && m_fitToggleRect.contains(event.position)) {
         const bool wantFit = m_fitModeRect.contains(event.position);
         m_fitToWidth = wantFit;        m_gridScrollX = 0.0f;
