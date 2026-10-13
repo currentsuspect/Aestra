@@ -126,6 +126,8 @@ public:
     float getScrollX() const { return m_scrollX; }
     /// Where the step pads sit inside the row (the same inset the pads are drawn and hit-tested with).
     /// The output chip's column at the row's right end (the chip, its 16 px margin, a gap): the grid stops before it.
+    /// Where the head (stripe, name, M S and the open-lanes key) ends, from the row's left edge.
+    float headRight() const { return m_controlWidth; }
     float routeColumn() const { return (m_density == Density::Minimal ? 24.0f : m_density == Density::Compact ? 64.0f : 96.0f) + 24.0f; }
     NUIRect stepStrip() const {
         const auto b = getBounds();
@@ -133,6 +135,8 @@ public:
         return {b.x + sepX + 14.0f, b.y + 12.0f, std::max(0.0f, b.width - (sepX + 2.0f) - routeColumn() - 12.0f), std::max(0.0f, b.height - 24.0f)};
     }
     /// Width of one step pad at the current fit/scroll mode, and the 4-step group gap, so lanes line up with the pads.
+    /// The colour this row reads as (its output channel's), for the lanes and strips drawn under it.
+    NUIColor channelColor() const { return identityColor(); }
     float stepPadWidth() const { return gridStepWidth(stepStrip().width); }
     static constexpr float stepGroupGap() { return kStepGroupGap; }
     /**

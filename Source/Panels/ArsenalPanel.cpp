@@ -1211,7 +1211,7 @@ void ArsenalPanel::drawUnitTypePicker(NUIRenderer& renderer) {
                               ? std::max(m_listContainer->getBounds().x + 8.0f,
                                          m_addUnitButtonRect.right() - cardWidth)
                               : m_addUnitButtonRect.x;
-    m_unitTypePickerRect = NUIRect(pickerX, m_addUnitButtonRect.y - cardHeight - 8.0f, cardWidth, cardHeight);
+    m_unitTypePickerRect = NUIRect(pickerX, m_addUnitButtonRect.bottom() + 8.0f + cardHeight <= getBounds().bottom() ? m_addUnitButtonRect.bottom() + 8.0f : m_addUnitButtonRect.y - cardHeight - 8.0f, cardWidth, cardHeight); // below the button, above when there is no room
 
     Aestra::drawArsenalUnitTypePicker(renderer, m_unitTypePickerRect);
 }

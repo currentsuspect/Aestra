@@ -310,7 +310,7 @@ std::array<NUIRect, 3> UnitRow::controlPillRects(const NUIRect& controlBounds) c
     const float routeW = minimal ? 24.0f : (m_density == Density::Compact) ? 64.0f : 96.0f;
     const float keyW = minimal ? 16.0f : 20.0f;
     const float pillY = controlBounds.y + controlBounds.height * 0.5f - 10.0f;
-    const float bandRight = controlBounds.right() - 8.0f;
+    const float bandRight = controlBounds.right() - 8.0f - (minimal ? 19.0f : 23.0f); // the open-lanes key sits after S
     const float rowRight = controlBounds.x - 42.0f + getBounds().width;
     return {
         NUIRect(rowRight - 16.0f - routeW, pillY, routeW, 20.0f), // output chip, row's right end
@@ -469,9 +469,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             const bool isSelected = isStepSelected(step);
             NUIRect cellRect(cellX, cellY, cellWidth, cellHeight);
             NUIColor cellFill = isActive ? activeFill : inactiveFill;
-            if (((step / 4) & 1) != 0) {
-                cellFill = NUIColor::lerp(cellFill, theme.getColor("accentPrimary"), 0.10f);
-            }
+            if (((step / 4) & 1) != 0 && !isActive) cellFill = cellFill.lightened(0.06f); // neutral beat-group tint
             if (isPlayhead && isActive) {
                 cellFill = activeFill.lightened(0.35f); // note lights up under the playhead
             }
@@ -536,9 +534,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             const bool isSelected = isStepSelected(step);
             NUIRect cellRect(cellX, topY, cellWidth, topHeight);
             NUIColor cellFill = isActive ? activeFill : inactiveFill;
-            if (((step / 4) & 1) != 0) {
-                cellFill = NUIColor::lerp(cellFill, theme.getColor("accentPrimary"), 0.10f);
-            }
+            if (((step / 4) & 1) != 0 && !isActive) cellFill = cellFill.lightened(0.06f); // neutral beat-group tint
             if (isPlayhead && isActive) {
                 cellFill = activeFill.lightened(0.35f);
             }
@@ -1701,7 +1697,7 @@ void UnitRow::layoutNameLabel() {
     float controlWidth = controlFloorForDensity(bounds.width);
     float labelX = 54.0f; // 42 (control block) + 12 (name indent)
     // The label ends before the pill band; the band width follows the tier.
-    const float pillBand = (m_density == Density::Minimal) ? 38.0f : 48.0f; // the M and S keys
+    const float pillBand = (m_density == Density::Minimal) ? 57.0f : 71.0f; // the M, S and open-lanes keys
     float labelWidth = std::max(16.0f, (controlWidth - 48.0f) - pillBand - 6.0f);
     m_nameLabel->setBounds(NUIRect(labelX, 7.0f, labelWidth, 30.0f));
     m_nameLabel->setCompact(m_density != Density::Full);
@@ -1715,9 +1711,9 @@ UnitRow::Density UnitRow::densityForWidth(float width) {
 
 float UnitRow::controlFloorForDensity(float width) {
     const Density d = densityForWidth(width);
-    return (d == Density::Minimal)   ? 150.0f
-           : (d == Density::Compact) ? 238.0f
-                                     : 270.0f;
+    return (d == Density::Minimal)   ? 169.0f
+           : (d == Density::Compact) ? 262.0f
+                                     : 294.0f;
 }
 
 void UnitRow::routeToMixerChannel(uint32_t channelId) {
