@@ -3126,6 +3126,23 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(ArsenalSoundDrawerTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
 
+# Sound sets: a library collection a row can walk (V81-AR2, FD-46).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(ArsenalSoundSetTest AestraUI_Core)
+    add_executable(ArsenalSoundSetTest AestraUI/ArsenalSoundSetTest.cpp)
+    target_link_libraries(ArsenalSoundSetTest PRIVATE AestraUI_Core)
+    target_include_directories(ArsenalSoundSetTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ArsenalSoundSetTest COMMAND ArsenalSoundSetTest)
+    set_tests_properties(ArsenalSoundSetTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
 # Kits and the empty state: a folder of sounds becomes a row of units (V81-AR1, FD-27 point 6).
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(ArsenalKitTest AestraUI_Core)
@@ -3847,6 +3864,7 @@ if(AESTRA_ENABLE_UI)
         ArsenalStepLanesTest
         ArsenalSoundStripTest
         ArsenalSoundDrawerTest
+        ArsenalSoundSetTest
         ArsenalKitTest
         UIMixerPanelGroupingTest
         PluginRackBindingLifecycleTest

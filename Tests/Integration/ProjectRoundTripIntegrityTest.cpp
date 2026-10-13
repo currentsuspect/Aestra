@@ -326,6 +326,32 @@ void testArsenalDefaultPatternRebindsAfterLoad() {
     assert(payload.notes[0].unitId == 7);
 }
 
+void testSoundSetNameRoundTrips() {
+    std::cout << "[TEST] A unit's sound set name survives save and load, and an old project has none..." << std::endl;
+
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectRoundTripIntegrity"};
+    const auto project = testDirScope.path() / "project.aes";
+    const auto resaved = testDirScope.path() / "resaved.aes";
+    std::ofstream(project) << R"({
+        "version": 1, "tempo": 120.0, "playhead": 0.0, "sources": [], "patterns": [], "lanes": [],
+        "arsenal": {"units": [
+          {"id": 3, "name": "Hat", "enabled": true, "targetMixerRoute": -1, "color": "4286611584", "soundSet": "Trap hats",
+           "audioClipPath": "", "defaultPatternId": 0, "group": {"id": 2, "name": "Drums"}, "type": {"id": 1, "name": "Sampler"}},
+          {"id": 4, "name": "Kick", "enabled": true, "targetMixerRoute": -1, "color": "4286611584",
+           "audioClipPath": "", "defaultPatternId": 0, "group": {"id": 2, "name": "Drums"}, "type": {"id": 1, "name": "Sampler"}}]}
+    })";
+    auto tm = std::make_shared<Aestra::Audio::TrackManager>();
+    assert(ProjectSerializer::load(project.string(), tm).ok);
+    assert(tm->getUnitManager().getUnit(3) && tm->getUnitManager().getUnit(3)->soundSet == "Trap hats");
+    assert(tm->getUnitManager().getUnit(4) && tm->getUnitManager().getUnit(4)->soundSet.empty()); // a project without the field has no set
+
+    assert(ProjectSerializer::save(resaved.string(), tm, 120.0, 0.0));
+    auto tm2 = std::make_shared<Aestra::Audio::TrackManager>();
+    assert(ProjectSerializer::load(resaved.string(), tm2).ok);
+    assert(tm2->getUnitManager().getUnit(3) && tm2->getUnitManager().getUnit(3)->soundSet == "Trap hats");
+    assert(tm2->getUnitManager().getUnit(4) && tm2->getUnitManager().getUnit(4)->soundSet.empty());
+}
+
 void testNoteExpressionRoundTrips() {
     std::cout << "[TEST] Swing, chance, ratchet and long gates survive save and load..." << std::endl;
 
@@ -921,6 +947,7 @@ int main() {
     testSourcesLanesClipsPatternsRoundTrip();
     testArsenalUnitsRoundTrip();
     testArsenalDefaultPatternRebindsAfterLoad();
+    testSoundSetNameRoundTrips();
     testNoteExpressionRoundTrips();
     testArsenalSamplerAudioClipPathRehydratesPluginAfterLoad();
     testMissingPatternReferenceDoesNotCompound();

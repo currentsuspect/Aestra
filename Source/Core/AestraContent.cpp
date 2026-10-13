@@ -8,6 +8,7 @@
 #include "../Components/TransportModuleStyle.h"
 #include "AestraContent.h"
 #include "UnitSignalColor.h"
+#include "ArsenalSoundSetWiring.h"
 #include "FloatingPanelDescriptors.h"
 
 namespace {
@@ -1502,10 +1503,9 @@ void AestraContent::setupArsenalPanels() {
             openSampleEditorForUnit(id, unit->audioClipPath);
     });
     m_sequencerPanel->setOnPluginDropped([this](const std::string& pluginId) { loadInstrumentToArsenal(pluginId); });
-    m_sequencerPanel->setOnPluginDroppedToUnit(
-        [this](UnitID unitId, const std::string& pluginId) { loadInstrumentIntoArsenalUnit(unitId, pluginId); });
-    m_sequencerPanel->setOnSampleDroppedToUnit(
-        [this](UnitID unitId, const std::string& samplePath) { loadSampleIntoUnitAsync(unitId, samplePath, false); });
+    m_sequencerPanel->setOnPluginDroppedToUnit([this](UnitID unitId, const std::string& pluginId) { loadInstrumentIntoArsenalUnit(unitId, pluginId); });
+    m_sequencerPanel->setOnSampleDroppedToUnit([this](UnitID unitId, const std::string& samplePath) { loadSampleIntoUnitAsync(unitId, samplePath, false); });
+    wireArsenalSoundSets(*m_sequencerPanel, m_fileBrowser, m_trackManager, [this]() { setDirty(true); });
     m_sequencerPanel->setOnSelectedUnitChanged([this](UnitID unitId) {
         if (m_pianoRollPanel) {
             m_pianoRollPanel->setEditingUnit(unitId);

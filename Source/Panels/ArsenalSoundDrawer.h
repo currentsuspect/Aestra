@@ -131,8 +131,12 @@ public:
         return (row >= 0 && row < static_cast<int>(count) && row < s.scroll + kVisibleRows) ? row : -1;
     }
 
+    /// The set chip at the right of the search line: "Folder" or the set's name; a click moves to the next set.
+    static AestraUI::NUIRect chipRect(const AestraUI::NUIRect& r) { return {r.right() - 12.0f - 112.0f, r.y + 4.0f, 112.0f, kSearchH - 8.0f}; }
+
     static void draw(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& r, const State& s,
-                     const std::vector<std::string>& list, const std::string& current, const AestraUI::NUIColor& accent) {
+                     const std::vector<std::string>& list, const std::string& current, const AestraUI::NUIColor& accent,
+                     const std::string& setLabel = {}, size_t missing = 0) {
         auto& theme = AestraUI::NUIThemeManager::getInstance();
         const auto& tp = theme.getCurrentTheme();
         renderer.fillRect(r, theme.getColor("backgroundPrimary"));
@@ -141,12 +145,28 @@ public:
         const auto idx = filtered(list, s.filter);
         const AestraUI::NUIRect search{r.x, r.y, r.width, kSearchH};
         renderer.fillRect({r.x, search.bottom() - 1.0f, r.width, 1.0f}, theme.getColor("borderSubtle"));
-        const std::string shown = s.filter.empty() ? "Type to search this folder" : s.filter + "|";
+        const std::string shown = s.filter.empty() ? (setLabel.empty() ? "Type to search this folder" : "Type to search this set") : s.filter + "|";
         renderer.drawText(shown, {r.x + 12.0f, std::round(renderer.calculateTextY(search, tp.fontSizeS))}, tp.fontSizeS,
                           s.filter.empty() ? theme.getColor("textSecondary").withAlpha(0.6f) : theme.getColor("textPrimary"));
-        const std::string count = std::to_string(idx.size()) + (idx.size() == 1 ? " sound" : " sounds");
+        const auto chip = chipRect(r);
+        renderer.fillRect(chip, theme.getColor("surfaceTertiary"));
+        const std::string label = setLabel.empty() ? "Folder" : setLabel;
+        renderer.setClipRect({chip.x, chip.y, chip.width - 16.0f, chip.height});
+        renderer.drawText(label, {chip.x + 8.0f, std::round(renderer.calculateTextY(chip, tp.fontSizeXS))}, tp.fontSizeXS,
+                          setLabel.empty() ? theme.getColor("textSecondary") : theme.getColor("textPrimary"));
+        renderer.clearClipRect();
+        renderer.drawLine({chip.right() - 13.0f, chip.y + chip.height * 0.5f - 1.5f}, {chip.right() - 10.0f, chip.y + chip.height * 0.5f + 1.5f}, 1.2f, theme.getColor("textSecondary"));
+        renderer.drawLine({chip.right() - 10.0f, chip.y + chip.height * 0.5f + 1.5f}, {chip.right() - 7.0f, chip.y + chip.height * 0.5f - 1.5f}, 1.2f, theme.getColor("textSecondary"));
+        std::string count = std::to_string(idx.size()) + (idx.size() == 1 ? " sound" : " sounds");
+        float right = chip.x - 12.0f;
+        if (missing > 0) { // a member that is gone is said so, in amber
+            const std::string gone = std::to_string(missing) + " missing";
+            const float gw = renderer.measureText(gone, tp.fontSizeXS).width;
+            renderer.drawText(gone, {right - gw, std::round(renderer.calculateTextY(search, tp.fontSizeXS))}, tp.fontSizeXS, theme.getColor("warning"));
+            right -= gw + 12.0f;
+        }
         const float cw = renderer.measureText(count, tp.fontSizeXS).width;
-        renderer.drawText(count, {r.right() - cw - 12.0f, std::round(renderer.calculateTextY(search, tp.fontSizeXS))}, tp.fontSizeXS,
+        renderer.drawText(count, {right - cw, std::round(renderer.calculateTextY(search, tp.fontSizeXS))}, tp.fontSizeXS,
                           theme.getColor("textSecondary").withAlpha(0.8f));
 
         if (idx.empty()) {

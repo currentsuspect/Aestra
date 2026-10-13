@@ -60,8 +60,12 @@ public:
     }
 
     /// The entry @p delta places from @p index, wrapping; empty when there is nothing to step to.
-    static std::string stepped(const std::vector<std::string>& list, int index, int delta) {
-        if (list.size() < 2 || index < 0) return {};
+    /// In a sound set the current sound may sit outside the list (the set was chosen after the sound): @p enterFromOutside
+    /// then steps into the set from its start (Next) or its end (Prev) instead of nowhere.
+    static std::string stepped(const std::vector<std::string>& list, int index, int delta, bool enterFromOutside = false) {
+        if (list.empty()) return {};
+        if (index < 0) return enterFromOutside ? list[delta > 0 ? 0 : list.size() - 1] : std::string();
+        if (list.size() < 2) return {};
         const int n = static_cast<int>(list.size());
         return list[static_cast<size_t>(((index + delta) % n + n) % n)];
     }
@@ -81,21 +85,28 @@ public:
 
     /// Refresh the folder listing when the unit's sound changes (a scan only on a new path).
     void follow(const std::string& path) {
+        if (m_custom) { m_path = path; m_index = indexOf(m_list, path); return; } // a set: the list is the set's, not the folder's
         if (path == m_path) return;
         m_path = path;
         m_list = path.empty() ? std::vector<std::string>{} : siblings(path);
         m_index = indexOf(m_list, path);
     }
+    /// Walk @p files (a sound set) instead of the sound's own folder, until useFolder().
+    void useList(const std::string& setName, std::vector<std::string> files) { m_setName = setName; m_list = std::move(files); m_custom = true; m_index = indexOf(m_list, m_path); }
+    /// Back to the sound's own folder.
+    void useFolder() { m_custom = false; m_setName.clear(); m_path.clear(); m_list.clear(); m_index = -1; }
+    const std::string& setName() const { return m_setName; }
+    bool isSet() const { return m_custom; }
     const std::vector<std::string>& list() const { return m_list; }
     int index() const { return m_index; }
-    std::string neighbour(int delta) const { return stepped(m_list, m_index, delta); }
+    std::string neighbour(int delta) const { return stepped(m_list, m_index, delta, m_custom); }
 
     void draw(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& r) const {
         auto& theme = AestraUI::NUIThemeManager::getInstance();
         const auto& tp = theme.getCurrentTheme();
         renderer.fillRoundedRect(r, tp.radiusS, theme.getColor("backgroundPrimary").withAlpha(0.9f));
-        renderer.drawText("SOUND", {r.x + 12.0f, r.y + r.height * 0.5f - 5.0f}, tp.fontSizeMicro, theme.getColor("textSecondary").withAlpha(0.8f));
-        const bool canStep = m_list.size() > 1 && m_index >= 0;
+        renderer.drawText(m_custom ? "SET" : "SOUND", {r.x + 12.0f, r.y + r.height * 0.5f - 5.0f}, tp.fontSizeMicro, theme.getColor("textSecondary").withAlpha(0.8f));
+        const bool canStep = m_list.size() > 1 || (m_custom && !m_list.empty() && m_index < 0);
         const auto btnFill = theme.getColor("surfaceTertiary").withAlpha(canStep ? 0.9f : 0.4f);
         const auto txt = theme.getColor("textPrimary").withAlpha(canStep ? 0.95f : 0.35f);
         for (const auto& [rect, glyph] : {std::pair{prevRect(r), "<"}, std::pair{nextRect(r), ">"}}) {
@@ -106,7 +117,7 @@ public:
         const AestraUI::NUIRect nameRect{prevRect(r).right() + 8.0f, r.y, nextRect(r).x - prevRect(r).right() - 16.0f, r.height};
         renderer.setClipRect(nameRect);
         const std::string name = m_path.empty() ? "No sound loaded" : displayName(m_path);
-        renderer.drawTextCentered(name + (canStep ? "   " + std::to_string(m_index + 1) + "/" + std::to_string(m_list.size()) : ""), nameRect, tp.fontSizeXS,
+        renderer.drawTextCentered(name + ((m_custom ? "   [" + m_setName + "]" : std::string()) + (canStep && m_index >= 0 ? "   " + std::to_string(m_index + 1) + "/" + std::to_string(m_list.size()) : std::string())), nameRect, tp.fontSizeXS,
                                   theme.getColor("textPrimary").withAlpha(0.92f));
         renderer.clearClipRect();
     }
@@ -119,6 +130,8 @@ private:
     std::string m_path;
     std::vector<std::string> m_list;
     int m_index{-1};
+    bool m_custom{false};
+    std::string m_setName;
 };
 
 } // namespace Aestra
