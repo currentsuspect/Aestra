@@ -276,6 +276,31 @@ void testTakesPanel() {
     panel.selectTake(-1);
     require(panel.getDockVersion() == openRow, "With nothing selected the dock shows the open version");
 
+    // A bounce: the card appears for the version in view, its play button toggles through the callback,
+    // and the bounce action runs only after the status has had frames to show.
+    require(panel.getDockBounce() == nullptr, "A version with no bounce shows no card");
+    const std::string openId = panel.getTakeAt(openRow).id;
+    panel.setBounceProvider([&](const TakeManager::TakeEntry& t) -> std::optional<TakesPanel::BounceCard> {
+        if (t.id != openId) return std::nullopt;
+        TakesPanel::BounceCard card;
+        card.path = "/tmp/x.bounce.wav";
+        card.info.seconds = 161.0;
+        card.info.lufs = -9.8;
+        card.info.peaks = {0.5f, 1.0f};
+        return card;
+    });
+    std::string toggled;
+    panel.setOnToggleBounce([&](const std::string& path) { toggled = path; return true; });
+    panel.setBouncePlayingProvider([](const std::string&) { return false; });
+    panel.refreshTakes();
+    require(panel.getDockBounce() != nullptr, "The open version shows its bounce card");
+    AestraUI::NUIPoint play;
+    require(panel.getBouncePlayCenter(play), "The card has a play button");
+    require(panel.onMouseEvent(leftPress(play.x, play.y)) && toggled == "/tmp/x.bounce.wav", "Play routes the bounce path to the preview");
+    std::string bounced;
+    panel.setOnBounce([&](const std::string& id) { bounced = id; return true; });
+    require(panel.requestBounce() && bounced == openId, "Bounce renders the version in view");
+
     // Inline rename: keyboard-driven edit, committed through the callback.
     panel.setOnRenameTake([&](const std::string& takeId, const std::string& name) {
         return TakeManager::renameTake(projectPath, takeId, name).ok;

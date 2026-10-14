@@ -4,10 +4,12 @@
 #include "../Panels/TakesPanel.h"
 #include "TakeManager.h"
 
+#include "Analysis/AudioAnalysis.h"
 #include "Commands/CommandHistory.h"
 
 #include <algorithm>
 #include <functional>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -54,6 +56,29 @@ inline void wireVersionsDock(Audio::TakesPanel& panel, std::function<Audio::Comm
         const std::string path = projectPath();
         return path.empty() ? 0 : unsavedStepCount(history(), TakeManager::loadManifest(path));
     });
+}
+
+/// Bounce a just-saved version with the real loudness measure (EBU R128 integrated loudness, the analysis service).
+inline bool bounceSavedVersion(const std::string& projectPath, const std::string& takeId, const VersionBounce::Render& render) {
+    return VersionBounce::bounceVersion(projectPath, takeId, render, [](const std::vector<float>& audio, uint32_t channels, uint32_t rate) {
+        return Audio::analyzeAudio(audio, channels, rate).integratedLufs;
+    });
+}
+
+/// Lets the dock show and play bounces: the card info read from the sidecar, and play/stop through the preview engine.
+inline void wireVersionBounces(Audio::TakesPanel& panel, std::function<std::string()> projectPath,
+                               std::function<bool(const std::string&)> togglePreview, std::function<bool(const std::string&)> isPlaying,
+                               std::function<bool(const std::string&)> bounce) {
+    panel.setBounceProvider([projectPath](const TakeManager::TakeEntry& take) -> std::optional<Audio::TakesPanel::BounceCard> {
+        const std::string wav = TakeManager::resolveBouncePath(projectPath(), take);
+        Audio::TakesPanel::BounceCard card;
+        if (wav.empty() || !VersionBounce::readInfo(wav, card.info)) return std::nullopt;
+        card.path = wav;
+        return card;
+    });
+    panel.setOnToggleBounce(std::move(togglePreview));
+    panel.setBouncePlayingProvider(std::move(isPlaying));
+    panel.setOnBounce(std::move(bounce));
 }
 
 } // namespace Aestra

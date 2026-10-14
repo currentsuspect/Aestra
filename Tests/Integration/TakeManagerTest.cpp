@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "../../Source/Core/TakeManager.h"
+#include "../../Source/Core/VersionBounce.h"
 
 #include "../../Source/Core/ProjectSerializer.h"
 #include "../Support/TestTempDirectory.h"
@@ -221,5 +222,34 @@ int main() {
     require(afterDelete.activeTakeId == branch.take.id, "Deletion must not change the active take");
 
     std::cout << "[PASS] TakeManagerTest\n";
+    // A bounce: the render is written beside the snapshot, its card info is kept, and the version points at it.
+    {
+        namespace VB = Aestra::VersionBounce;
+        std::vector<float> tone;
+        for (int f = 0; f < 8000; ++f) { const float a = f < 4000 ? 0.25f : 0.5f; tone.push_back(a); tone.push_back(-a); }
+        const auto bars = VB::peaks(tone, 2, 8);
+        require(bars.size() == 8 && bars.back() == 1.0f && bars.front() == 0.5f, "Peaks are scaled so the loudest bar is 1");
+        require(VB::peaks({}, 2, 4) == std::vector<float>(4, 0.0f), "An empty render has flat peaks");
+        require(VB::lengthLabel(161.4) == "2:41", "Length reads minutes and seconds");
+
+        const std::string id = TakeManager::createVersion(projectPath.string(), mainContents, "Bounced", "", "", TakeManager::TakeEntry::Kind::Saved, {}).take.id;
+        require(!id.empty(), "A version to bounce exists");
+        const bool ok = VB::bounceVersion(projectPath.string(), id,
+            [&](std::vector<float>& a, uint32_t& c, uint32_t& r) { a = tone; c = 2; r = 8000; return true; },
+            [](const std::vector<float>&, uint32_t, uint32_t) { return -9.8; });
+        require(ok, "A bounce is written");
+        const auto manifest = TakeManager::loadManifest(projectPath.string());
+        const auto* v = manifest.findTake(id);
+        require(v && v->bounce == VB::fileNameFor(id), "The version records its bounce");
+        const std::string wav = TakeManager::resolveBouncePath(projectPath.string(), *v);
+        require(!wav.empty() && std::filesystem::file_size(wav) == 44 + tone.size() * 2, "The WAV is 16-bit PCM of the whole render");
+        Aestra::VersionBounceInfo info;
+        require(VB::readInfo(wav, info) && info.peaks.size() == VB::kBars && std::fabs(info.lufs + 9.8) < 0.01 && std::fabs(info.seconds - 1.0) < 1e-6, "The card info round-trips");
+        require(!VB::bounceVersion(projectPath.string(), id, [](std::vector<float>&, uint32_t&, uint32_t&) { return false; }, nullptr), "An empty render makes no bounce");
+        TakeManager::TakeEntry escape = *v;
+        escape.bounce = "../outside.wav";
+        require(TakeManager::resolveBouncePath(projectPath.string(), escape).empty(), "A bounce path cannot leave the takes folder");
+    }
+
     return 0;
 }

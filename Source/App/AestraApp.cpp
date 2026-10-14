@@ -2443,8 +2443,9 @@ void AestraApp::wireTakesPanel() {
 
     takesPanel->setOnCreateTake([this]() { return createTakeFromCurrentProject(); });
     takesPanel->setOnSaveToNewBranch([this]() { return createTakeFromCurrentProject(true); });
-    wireVersionsDock(*takesPanel, [this]() -> Audio::CommandHistory& { return m_content->getTrackManager()->getCommandHistory(); },
-                     [this]() { return m_documentState.canonicalPath(); }, [this]() { return m_documentState.displayName(); });
+    wireVersionsDock(*takesPanel, [this]() -> Audio::CommandHistory& { return m_content->getTrackManager()->getCommandHistory(); }, [this]() { return m_documentState.canonicalPath(); }, [this]() { return m_documentState.displayName(); });
+    wireVersionBounces(*takesPanel, [this]() { return m_documentState.canonicalPath(); }, [this](const std::string& p) { return m_content->togglePreviewFile(p); }, [this](const std::string& p) { return m_content->isPreviewFilePlaying(p); },
+                       [this](const std::string& id) { return bounceSavedVersion(m_documentState.canonicalPath(), id, [this](std::vector<float>& a, uint32_t& c, uint32_t& r) { return m_content->renderMixToBuffer(a, c, r); }); });
     takesPanel->setOnSaveActiveTake([this]() { return saveProject(); });
 
     takesPanel->setOnOpenTake([this](const std::string& takeId) {
@@ -2477,7 +2478,6 @@ void AestraApp::wireTakesPanel() {
     });
 
     takesPanel->setOnBranchTake([this](const std::string& takeId) { return branchFromTake(takeId); });
-
     takesPanel->setOnRestoreSnapshot([this](const std::string& path) {
         // Save the current take first so a snapshot restore never silently
         // destroys the working state.

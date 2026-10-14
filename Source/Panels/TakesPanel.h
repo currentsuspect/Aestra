@@ -3,12 +3,15 @@
 
 #include "WindowPanel.h"
 #include "../Core/TakeManager.h"
+#include "../Core/VersionBounce.h"
 #include "VersionsTimeline.h"
 
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace Aestra {
@@ -86,6 +89,23 @@ public:
     void setOnStepActivated(std::function<void(const StepEntry&)> cb) { m_onStepActivated = std::move(cb); }
     /// How many steps have been made since the open version was saved (the timeline's dashed tail).
     void setUnsavedProvider(std::function<int()> provider) { m_unsavedProvider = std::move(provider); }
+    /// A version's bounce, when it has one: its file and what the card shows. Read once per refresh, not per frame.
+    struct BounceCard {
+        std::string path;
+        VersionBounceInfo info;
+    };
+    void setBounceProvider(std::function<std::optional<BounceCard>(const TakeManager::TakeEntry&)> provider) { m_bounceProvider = std::move(provider); }
+    /// Play the bounce, or stop it when it is the one playing; returns whether it is playing afterwards.
+    void setOnToggleBounce(std::function<bool(const std::string&)> cb) { m_onToggleBounce = std::move(cb); }
+    /// Render the open version's mix to its bounce. Slow (a few seconds per minute of music), so the panel says so first.
+    void setOnBounce(std::function<bool(const std::string&)> cb) { m_onBounce = std::move(cb); }
+    bool requestBounce();
+    void setBouncePlayingProvider(std::function<bool(const std::string&)> provider) { m_bouncePlaying = std::move(provider); }
+    /// The bounce card shown in the dock for the version in view, when it has one.
+    const BounceCard* getDockBounce() const;
+    /// Where the card's play button is, for the version in view (false when it has no bounce).
+    bool getBouncePlayCenter(AestraUI::NUIPoint& out) const;
+
     /// The project's name, shown beside the branch chip.
     void setProjectNameProvider(std::function<std::string()> provider) { m_projectNameProvider = std::move(provider); }
 
@@ -179,6 +199,8 @@ private:
         AestraUI::NUIRect timeline;
         AestraUI::NUIRect legend;
         AestraUI::NUIRect dock;
+        AestraUI::NUIRect bounceCard;     ///< the version's bounce, at the top of the dock (empty when it has none)
+        AestraUI::NUIRect bouncePlay;
         AestraUI::NUIRect stepsList;      ///< the open version's steps, inside the dock
         AestraUI::NUIRect snapshotHeader;
         AestraUI::NUIRect snapshotList;
@@ -199,6 +221,12 @@ private:
     TakesProvider m_takesProvider;
     SnapshotsProvider m_snapshotsProvider;
     StepsProvider m_stepsProvider;
+    std::function<std::optional<BounceCard>(const TakeManager::TakeEntry&)> m_bounceProvider;
+    std::function<bool(const std::string&)> m_onToggleBounce;
+    std::function<bool(const std::string&)> m_onBounce;
+    int m_bouncePending{0};  ///< frames to draw the "bouncing" status before the render blocks the UI
+    std::function<bool(const std::string&)> m_bouncePlaying;
+    std::unordered_map<std::string, BounceCard> m_bounces;  ///< by version id, rebuilt with the rows
     std::function<int()> m_unsavedProvider;
     std::function<std::string()> m_projectNameProvider;
 
