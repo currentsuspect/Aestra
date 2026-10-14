@@ -2308,7 +2308,7 @@ bool AestraApp::createTakeFromCurrentProject(bool newBranch) {
 
     const auto manifest = TakeManager::loadManifest(m_documentState.canonicalPath());
     const std::string takeName = "Version " + std::to_string(manifest.ok ? manifest.takes.size() + 1 : 2);
-    const std::string branchName = newBranch ? "Branch " + std::to_string(manifest.ok ? manifest.branches().size() + 1 : 2) : ""; // empty continues the open branch
+    const std::string branchName = newBranch ? "Alt " + std::to_string(manifest.ok ? manifest.branches().size() : 1) : ""; // empty continues the open branch
     auto result = TakeManager::createVersion(m_documentState.canonicalPath(), ser.contents, takeName, "", branchName, TakeManager::TakeEntry::Kind::Saved, collectVersionSteps(m_content->getTrackManager()->getCommandHistory()));
     if (!result.ok) { Log::warning("[Takes] Could not create version: " + result.errorMessage); return false; }
 
@@ -2391,8 +2391,8 @@ bool AestraApp::branchFromTake(const std::string& takeId) {
     }
 
     const auto manifest = TakeManager::loadManifest(m_documentState.canonicalPath());
-    const auto* source = manifest.ok ? manifest.findTake(takeId) : nullptr; const std::string branchName = source ? (source->name + " Branch") : "";
-    const std::string newBranch = "Branch " + std::to_string(manifest.ok ? manifest.branches().size() + 1 : 2); // a branch of its own (SPEC-017)
+    const auto* source = manifest.ok ? manifest.findTake(takeId) : nullptr; const std::string branchName = source ? (source->name + " alt") : "";
+    const std::string newBranch = "Alt " + std::to_string(manifest.ok ? manifest.branches().size() : 1); // a branch of its own (SPEC-017)
 
     auto dup = TakeManager::duplicateTake(m_documentState.canonicalPath(), takeId, branchName, newBranch);
     if (!dup.ok) {

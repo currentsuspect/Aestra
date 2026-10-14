@@ -16,6 +16,8 @@ namespace Aestra {
 namespace Audio {
 
 namespace {
+/// The lane's name as shown: the first lane is stored as "Main" and reads as the main mix.
+std::string laneLabel(const std::string& branch) { return branch.empty() || branch == "Main" ? "Main mix" : branch; }
 constexpr float kPad = 24.0f;
 
 uint64_t nowMs() {
@@ -177,9 +179,9 @@ TakesPanel::Layout TakesPanel::computeLayout() const {
         defs = {{"restore", {"Recover this snapshot", 1}}};
     } else if (shown >= 0) {
         if (m_takeRows[static_cast<size_t>(shown)].take.active) {
-            defs = {{"save", {"Save version", 1}}, {"newbranch", {"Save to new branch", 0}}};
+            defs = {{"save", {"Save version", 1}}, {"newbranch", {"Save as an alt", 0}}};
         } else {
-            defs = {{"open", {"Open this version", 1}}, {"branch", {"Branch from here", 0}}, {"rename", {"Rename", 0}}, {"delete", {"Delete", 2}}};
+            defs = {{"open", {"Open this version", 1}}, {"branch", {"Try an alt from here", 0}}, {"rename", {"Rename", 0}}, {"delete", {"Delete", 2}}};
         }
     }
     // Buttons wrap onto more rows when the dock is narrow; the last row sits at the bottom.
@@ -258,7 +260,7 @@ bool TakesPanel::requestCreateTake() {
 }
 
 bool TakesPanel::requestSaveToNewBranch() {
-    return invokeAction([this]() { return m_onSaveToNewBranch && m_onSaveToNewBranch(); }, "Could not save to a new branch");
+    return invokeAction([this]() { return m_onSaveToNewBranch && m_onSaveToNewBranch(); }, "Could not save as an alt");
 }
 
 bool TakesPanel::requestSaveActiveTake() {
@@ -283,7 +285,7 @@ bool TakesPanel::requestBranchSelected() {
     const int row = getDockVersion();
     if (row < 0) return false;
     const std::string takeId = m_takeRows[static_cast<size_t>(row)].take.id;
-    return invokeAction([this, takeId]() { return m_onBranchTake && m_onBranchTake(takeId); }, "Could not branch from the version");
+    return invokeAction([this, takeId]() { return m_onBranchTake && m_onBranchTake(takeId); }, "Could not start an alt from the version");
 }
 
 bool TakesPanel::requestDeleteSelected() {
@@ -402,12 +404,12 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
     if (openRow >= 0) {
         const auto& open = m_takeRows[static_cast<size_t>(openRow)].take;
         const std::string branch = open.branch.empty() ? "Main" : open.branch;
-        const float bw = renderer.measureText(branch, 11.0f).width + 34.0f;
+        const float bw = renderer.measureText(laneLabel(branch), 11.0f).width + 34.0f;
         const NUIRect chip{cx, layout.bar.y + 14.0f, bw, 24.0f};
         renderer.fillRect(chip, theme.getColor("surfaceTertiary"));
         const int lane = static_cast<int>(std::find(layout.nodes.lanes.begin(), layout.nodes.lanes.end(), branch) - layout.nodes.lanes.begin());
         renderer.fillCircle({chip.x + 12.0f, chip.y + 12.0f}, 3.5f, laneColor(lane));
-        renderer.drawText(branch, {chip.x + 24.0f, chip.y + 7.0f}, 11.0f, text);
+        renderer.drawText(laneLabel(branch), {chip.x + 24.0f, chip.y + 7.0f}, 11.0f, text);
     }
     const auto drawButton = [&](const NUIRect& r, const std::string& label, bool primary, bool danger, bool hot) {
         NUIColor fill = primary ? theme.getColor("accentPrimary") : theme.getColor("surfaceTertiary");
@@ -417,7 +419,7 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
         renderer.drawText(label, {r.x + (r.width - tw) * 0.5f, std::round(renderer.calculateTextY(r, 12.0f))}, 12.0f,
                           primary ? NUIColor::white() : danger ? theme.getColor("error") : text);
     };
-    drawButton(layout.branchButton, "Branch from here", false, false, m_hoveredButton == "bar-branch");
+    drawButton(layout.branchButton, "Try an alt from here", false, false, m_hoveredButton == "bar-branch");
     drawButton(layout.saveButton, "Save version", true, false, m_hoveredButton == "bar-save");
     renderer.fillRect({bounds.x, layout.bar.bottom() - 1.0f, bounds.width, 1.0f}, rule);
 
@@ -426,7 +428,7 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
     for (size_t i = 0; i < layout.nodes.lanes.size(); ++i) {
         const float y = layout.nodes.laneY[i];
         renderer.fillCircle({layout.timeline.x + 30.0f, y}, 3.5f, laneColor(static_cast<int>(i)));
-        renderer.drawText(layout.nodes.lanes[i], {layout.timeline.x + 42.0f, y - 6.0f}, 11.0f, text.withAlpha(0.9f));
+        renderer.drawText(laneLabel(layout.nodes.lanes[i]), {layout.timeline.x + 42.0f, y - 6.0f}, 11.0f, text.withAlpha(0.9f));
     }
     // Each lane runs from its first version to its last, in the lane's colour; forks join it to its parent.
     for (size_t l = 0; l < layout.nodes.lanes.size(); ++l) {
@@ -535,7 +537,7 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
         const std::string title = renaming ? m_renameBuffer + "|" : (v.name.empty() ? v.id : v.name);
         renderer.drawText(title, {dx + 22.0f, titleY}, 18.0f, text);
         const float tw = renderer.measureText(title, 18.0f).width;
-        renderer.drawText(std::string(v.branch.empty() ? "Main" : v.branch) + (v.active ? "  \xc2\xb7  open" : ""), {dx + 30.0f + tw, titleY + 4.0f}, 11.0f, muted);
+        renderer.drawText(laneLabel(v.branch) + (v.active ? "  \xc2\xb7  open" : ""), {dx + 30.0f + tw, titleY + 4.0f}, 11.0f, muted);
         const std::string when = VersionsTimeline::timeLabel(v.updatedAtMs ? v.updatedAtMs : v.createdAtMs, now);
         const float ww = renderer.measureText(when, 10.5f).width;
         renderer.drawText(when, {layout.dock.right() - kPad - ww, titleY + 5.0f}, 10.5f, muted.withAlpha(0.8f));
@@ -591,7 +593,7 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
             std::string forks;
             for (const auto& c : m_takeRows) // branches that started from this version
                 if (c.take.parentId == v.id && c.take.branch != v.branch) forks += (forks.empty() ? "" : ", ") + (c.take.branch.empty() ? c.take.name : c.take.branch);
-            if (!forks.empty()) renderer.drawText("Branched from here: " + forks + ". Open this version to work inside it.", {dx, y}, 11.0f, muted.withAlpha(0.75f));
+            if (!forks.empty()) renderer.drawText("Alts from here: " + forks + ". Open this version to work inside it.", {dx, y}, 11.0f, muted.withAlpha(0.75f));
         }
     }
     for (const auto& b : layout.buttons) drawButton(b.rect, b.label, b.primary, b.danger, m_hoveredButton == b.id);
@@ -599,7 +601,7 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
     // Recovery snapshots (the app's automatic saves), when there are any.
     if (!m_snapshotRows.empty()) {
         renderer.fillRect({layout.dock.x + 1.0f, layout.snapshotHeader.y - 1.0f, layout.dock.width - 1.0f, 1.0f}, rule);
-        renderer.drawText("RECOVERY SNAPSHOTS", {dx, layout.snapshotHeader.y + 6.0f}, 9.5f, muted.withAlpha(0.8f));
+        renderer.drawText("RESCUED SESSIONS", {dx, layout.snapshotHeader.y + 6.0f}, 9.5f, muted.withAlpha(0.8f));
         for (int i = 0; i < static_cast<int>(m_snapshotRows.size()); ++i) {
             const NUIRect row{layout.dock.x + 1.0f, layout.snapshotList.y + static_cast<float>(i) * SNAPSHOT_ROW_HEIGHT, layout.dock.width - 1.0f, SNAPSHOT_ROW_HEIGHT};
             if (i == m_selectedSnapshot) renderer.fillRect(row, theme.getColor("surfaceRaised"));
