@@ -2,6 +2,7 @@
 
 #include "../../Source/Core/TakeManager.h"
 #include "../../Source/Core/VersionBounce.h"
+#include "../../Source/Core/VersionBringOver.h"
 
 #include "../../Source/Core/ProjectSerializer.h"
 #include "../Support/TestTempDirectory.h"
@@ -249,6 +250,59 @@ int main() {
         TakeManager::TakeEntry escape = *v;
         escape.bounce = "../outside.wav";
         require(TakeManager::resolveBouncePath(projectPath.string(), escape).empty(), "A bounce path cannot leave the takes folder");
+    }
+
+    // Bring over: choose tracks and patterns from another version; one undo takes them back out.
+    {
+        namespace BO = Aestra::BringOver;
+        auto current = makeProject("Drums");
+        auto other = makeProject("Drums");
+        auto& op = other->getPatternManager();
+        Aestra::Audio::MidiPayload hook;
+        hook.notes.push_back({60, 0.0, 1.0, 0.8f});
+        hook.notes.push_back({64, 1.0, 1.0, 0.8f});
+        const auto hookId = op.createMidiPattern("Hook B", 4.0, hook);
+        Aestra::Audio::MidiPayload lonely = hook;
+        lonely.notes[0].unitId = 99;  // plays an instrument the open version does not have
+        const auto lonelyId = op.createMidiPattern("Lonely", 4.0, lonely);
+        auto& playlist = other->getPlaylistModel();
+        const auto lane = playlist.createLane("Hook vox");
+        other->createTrack(lane, "Hook vox");
+        Aestra::Audio::ClipInstance clip;
+        clip.patternId = hookId;
+        clip.startBeat = 8.0;
+        clip.durationBeats = 4.0;
+        playlist.addClip(lane, clip);
+
+        const auto plan = BO::plan(*other, *current, "Alt hook");
+        require(plan.tracks.size() == 1 && plan.tracks[0].name == "Hook vox" && plan.tracks[0].status == BO::Status::New, "A track the open version lacks is listed as new");
+        bool sawHook = false, sawLonely = false;
+        for (const auto& it : plan.patterns) {
+            if (it.name == "Hook B") sawHook = it.status == BO::Status::New && BO::defaultChecked(it);
+            if (it.name == "Lonely") sawLonely = it.status == BO::Status::Blocked && !BO::defaultChecked(it);
+        }
+        require(sawHook && sawLonely, "New patterns start checked; ones needing a missing instrument are blocked");
+
+        const size_t lanesBefore = current->getPlaylistModel().getLaneCount();
+        auto cmd = std::make_shared<BO::Command>(*current, *other, std::vector<uint64_t>{plan.tracks[0].id}, std::vector<uint64_t>{});
+        require(cmd->trackCount() == 1 && cmd->patternCount() == 1, "The command takes the track and the pattern its clip plays");
+        cmd->execute();
+        require(current->getPlaylistModel().getLaneCount() == lanesBefore + 1, "The track arrives as a lane");
+        bool found = false;
+        for (auto* t : current->getTracks()) found = found || t->name == "Hook vox";
+        require(found, "...with its track");
+        require(BO::plan(*other, *current, "Alt hook").tracks[0].status == BO::Status::Same, "Once brought over, the track reads as the same as current");
+        cmd->undo();
+        require(current->getPlaylistModel().getLaneCount() == lanesBefore, "One undo removes the lane");
+        found = false;
+        for (auto* t : current->getTracks()) found = found || t->name == "Hook vox";
+        require(!found, "...and the track");
+        bool patternGone = true;
+        current->getPatternManager().forEachPattern([&](const Aestra::Audio::PatternSource& p) { patternGone = patternGone && p.name != "Hook B"; });
+        require(patternGone, "...and the pattern it brought");
+        cmd->redo();
+        require(current->getPlaylistModel().getLaneCount() == lanesBefore + 1, "Redo brings it back");
+        (void)lonelyId;
     }
 
     return 0;

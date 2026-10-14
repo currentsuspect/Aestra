@@ -4,6 +4,7 @@
 #include "WindowPanel.h"
 #include "../Core/TakeManager.h"
 #include "../Core/VersionBounce.h"
+#include "BringOverCard.h"
 #include "VersionsTimeline.h"
 
 #include <chrono>
@@ -105,6 +106,19 @@ public:
     const BounceCard* getDockBounce() const;
     /// Where the card's play button is, for the version in view (false when it has no bounce).
     bool getBouncePlayCenter(AestraUI::NUIPoint& out) const;
+
+    /// Bring over: the card for an older version (what it has that could come across), or nothing when it cannot be read.
+    void setBringOverProvider(std::function<std::optional<BringOverCard>(const std::string& takeId)> provider) { m_bringProvider = std::move(provider); }
+    /// The chosen rows were confirmed: bring them into the open version (one undo step).
+    void setOnBringOver(std::function<bool(const std::string& takeId, const std::vector<BringOverCard::Row>& chosen)> cb) { m_onBringOver = std::move(cb); }
+    bool requestBringOver();       ///< open the card for the version in view
+    bool confirmBringOver();       ///< bring over what is checked
+    void closeBringOver() { m_bring.reset(); setDirty(true); }
+    bool isBringOverOpen() const { return m_bring.has_value(); }
+    BringOverCard* getBringOver() { return m_bring ? &*m_bring : nullptr; }
+    /// Where a row's check box and a card button are, for tests and hit-testing (false when the card is closed).
+    bool getBringOverRowCenter(int row, AestraUI::NUIPoint& out) const;
+    bool getBringOverButtonCenter(const std::string& id, AestraUI::NUIPoint& out) const;
 
     /// The project's name, shown beside the branch chip.
     void setProjectNameProvider(std::function<std::string()> provider) { m_projectNameProvider = std::move(provider); }
@@ -224,6 +238,11 @@ private:
     std::function<std::optional<BounceCard>(const TakeManager::TakeEntry&)> m_bounceProvider;
     std::function<bool(const std::string&)> m_onToggleBounce;
     std::function<bool(const std::string&)> m_onBounce;
+    std::function<std::optional<BringOverCard>(const std::string&)> m_bringProvider;
+    std::function<bool(const std::string&, const std::vector<BringOverCard::Row>&)> m_onBringOver;
+    std::optional<BringOverCard> m_bring;
+    std::string m_bringTakeId;
+    AestraUI::NUIRect bringArea() const;
     int m_bouncePending{0};  ///< frames to draw the "bouncing" status before the render blocks the UI
     std::function<bool(const std::string&)> m_bouncePlaying;
     std::unordered_map<std::string, BounceCard> m_bounces;  ///< by version id, rebuilt with the rows

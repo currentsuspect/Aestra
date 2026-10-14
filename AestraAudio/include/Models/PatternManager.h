@@ -177,6 +177,23 @@ public:
         }
     }
 
+    /// Visit every pattern (read-only), in no particular order.
+    template <class Fn> void forEachPattern(Fn&& fn) const {
+        for (const auto& [key, pattern] : m_patterns) {
+            (void)key;
+            if (pattern) fn(*pattern);
+        }
+    }
+
+    /// Add a copy of a pattern from another project under a fresh id, which is returned.
+    PatternID adoptPattern(const PatternSource& source) {
+        PatternID id{nextId++};
+        auto pattern = std::make_unique<PatternSource>(source);
+        pattern->id = id;
+        m_patterns[id.value] = std::move(pattern);
+        return id;
+    }
+
     /**
      * @brief Remove a pattern by ID
      * @param id Pattern identifier to erase.

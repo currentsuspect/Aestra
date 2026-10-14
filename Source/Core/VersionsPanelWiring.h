@@ -5,9 +5,12 @@
 #include "TakeManager.h"
 
 #include "Analysis/AudioAnalysis.h"
+#include "ProjectSerializer.h"
+#include "VersionBringOver.h"
 #include "Commands/CommandHistory.h"
 
 #include <algorithm>
+#include <filesystem>
 #include <functional>
 #include <optional>
 #include <string>
@@ -48,10 +51,11 @@ inline int unsavedStepCount(const Audio::CommandHistory& history, const TakeMana
 
 /// Hands the dock its live data: the project's name, the open version's steps, the unsaved count, and step jumps.
 inline void wireVersionsDock(Audio::TakesPanel& panel, std::function<Audio::CommandHistory&()> history,
-                             std::function<std::string()> projectPath, std::function<std::string()> projectName) {
+                             std::function<std::string()> projectPath, std::function<std::string()> projectName,
+                             std::function<void()> afterStep = nullptr) {
     panel.setProjectNameProvider(std::move(projectName));
     panel.setStepsProvider([history]() { return versionStepEntries(history()); });
-    panel.setOnStepActivated([history](const Audio::TakesPanel::StepEntry& e) { goToVersionStep(history(), e); });
+    panel.setOnStepActivated([history, afterStep](const Audio::TakesPanel::StepEntry& e) { goToVersionStep(history(), e); if (afterStep) afterStep(); });
     panel.setUnsavedProvider([history, projectPath]() {
         const std::string path = projectPath();
         return path.empty() ? 0 : unsavedStepCount(history(), TakeManager::loadManifest(path));
@@ -79,6 +83,59 @@ inline void wireVersionBounces(Audio::TakesPanel& panel, std::function<std::stri
     panel.setOnToggleBounce(std::move(togglePreview));
     panel.setBouncePlayingProvider(std::move(isPlaying));
     panel.setOnBounce(std::move(bounce));
+}
+
+/// Bring over: read another version's snapshot into a scratch project and offer what it has; confirming adds the
+/// chosen tracks and patterns to the open project as one undo step. The scratch project lives only while the card
+/// is open. Returns the number of items brought over in `brought` for the caller's toast.
+inline void wireBringOver(Audio::TakesPanel& panel, std::function<std::string()> projectPath,
+                          std::function<Audio::TrackManager*()> currentProject, std::function<bool(const std::string&)> afterBringOver) {
+    struct Session { std::shared_ptr<Audio::TrackManager> other; };
+    auto session = std::make_shared<Session>();
+    panel.setBringOverProvider([=](const std::string& takeId) -> std::optional<BringOverCard> {
+        const std::string path = projectPath();
+        Audio::TrackManager* current = currentProject();
+        const auto manifest = TakeManager::loadManifest(path);
+        const auto* take = manifest.ok ? manifest.findTake(takeId) : nullptr;
+        const auto* open = manifest.ok ? manifest.activeTake() : nullptr;
+        if (!take || !open || !current) return std::nullopt;
+        const std::string snapshot = TakeManager::resolveSnapshotPath(path, *take);
+        auto scratch = std::make_shared<Audio::TrackManager>();
+        scratch->getPlaylistModel().setPatternManager(&scratch->getPatternManager());
+        if (snapshot.empty() || !ProjectSerializer::load(snapshot, scratch, path).ok) return std::nullopt;
+        const std::string from = take->name.empty() ? take->id : take->name;
+        BringOverCard card;
+        card.from = from;
+        card.into = open->name.empty() ? open->id : open->name;
+        const std::string bounce = TakeManager::resolveBouncePath(path, *take);
+        card.canListen = !bounce.empty() && std::filesystem::exists(bounce);
+        card.listenPath = bounce;
+        const auto plan = BringOver::plan(*scratch, *current, from);
+        const auto add = [&](const BringOver::Item& item, bool pattern) {
+            BringOverCard::Row row;
+            row.name = item.name;
+            row.detail = item.detail;
+            row.status = static_cast<BringOverCard::Status>(item.status);
+            row.checked = BringOver::defaultChecked(item);
+            row.pattern = pattern;
+            row.id = item.id;
+            card.rows.push_back(std::move(row));
+        };
+        for (const auto& item : plan.tracks) add(item, false);
+        for (const auto& item : plan.patterns) add(item, true);
+        session->other = std::move(scratch);
+        return card;
+    });
+    panel.setOnBringOver([=](const std::string&, const std::vector<BringOverCard::Row>& chosen) {
+        Audio::TrackManager* current = currentProject();
+        if (!session->other || !current) return false;
+        std::vector<uint64_t> tracks, patterns;
+        for (const auto& row : chosen) (row.pattern ? patterns : tracks).push_back(row.id);
+        auto command = std::make_shared<BringOver::Command>(*current, *session->other, tracks, patterns);
+        current->getCommandHistory().pushAndExecute(command);
+        session->other.reset();
+        return afterBringOver ? afterBringOver("") : true;
+    });
 }
 
 } // namespace Aestra
