@@ -573,6 +573,27 @@ TakeManager::Result TakeManager::setVersionSteps(const std::string& projectPath,
     return makeResult(false, "Version not found: " + takeId, manifest);
 }
 
+TakeManager::Result TakeManager::setVersionBounce(const std::string& projectPath, const std::string& takeId,
+                                                  const std::string& relativePath) {
+    Manifest manifest = loadManifest(projectPath);
+    if (!manifest.ok) return makeResult(false, manifest.errorMessage, manifest);
+    if (resolveManifestSnapshotPath(projectPath, relativePath).empty()) return makeResult(false, "Bounce path is not inside the takes folder", manifest);
+    const std::string id = sanitizeIdPart(takeId);
+    for (auto& take : manifest.takes) {
+        if (take.id != id) continue;
+        take.bounce = relativePath;
+        std::string error;
+        if (!saveManifest(manifest, error)) return makeResult(false, error, manifest, take);
+        return makeResult(true, "", manifest, take);
+    }
+    return makeResult(false, "Version not found: " + takeId, manifest);
+}
+
+std::string TakeManager::resolveBouncePath(const std::string& projectPath, const TakeEntry& take) {
+    if (projectPath.empty() || take.bounce.empty()) return {};
+    return resolveManifestSnapshotPath(projectPath, take.bounce).string();
+}
+
 TakeManager::Result TakeManager::addVersionNote(const std::string& projectPath, const std::string& takeId,
                                                 const std::string& text) {
     Manifest manifest = loadManifest(projectPath);

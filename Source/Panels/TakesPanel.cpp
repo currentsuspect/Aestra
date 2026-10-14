@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cctype>
+#include <cstdio>
 #include <cmath>
 #include <unordered_map>
 
@@ -111,6 +112,10 @@ void TakesPanel::rebuildRows() {
         m_snapshotRows = std::move(snapshots);
     }
     m_steps = m_stepsProvider ? m_stepsProvider() : std::vector<StepEntry>{};
+    m_bounces.clear();
+    if (m_bounceProvider)
+        for (const auto& row : m_takeRows)
+            if (auto card = m_bounceProvider(row.take)) m_bounces[row.take.id] = std::move(*card);
 
     // Selection follows the version's identity, not its row index.
     m_selectedTake = -1;
@@ -135,6 +140,21 @@ int TakesPanel::getDockVersion() const {
     for (int i = 0; i < static_cast<int>(m_takeRows.size()); ++i)
         if (m_takeRows[static_cast<size_t>(i)].take.active) return i;
     return m_takeRows.empty() ? -1 : 0;
+}
+
+const TakesPanel::BounceCard* TakesPanel::getDockBounce() const {
+    if (m_selectedSnapshot >= 0) return nullptr;
+    const int shown = getDockVersion();
+    if (shown < 0) return nullptr;
+    const auto it = m_bounces.find(m_takeRows[static_cast<size_t>(shown)].take.id);
+    return it == m_bounces.end() ? nullptr : &it->second;
+}
+
+bool TakesPanel::getBouncePlayCenter(NUIPoint& out) const {
+    const Layout layout = computeLayout();
+    if (layout.bounceCard.width <= 0.0f) return false;
+    out = {layout.bouncePlay.x + layout.bouncePlay.width * 0.5f, layout.bouncePlay.y + layout.bouncePlay.height * 0.5f};
+    return true;
 }
 
 TakesPanel::Layout TakesPanel::computeLayout() const {
@@ -179,7 +199,7 @@ TakesPanel::Layout TakesPanel::computeLayout() const {
         defs = {{"restore", {"Recover this snapshot", 1}}};
     } else if (shown >= 0) {
         if (m_takeRows[static_cast<size_t>(shown)].take.active) {
-            defs = {{"save", {"Save version", 1}}, {"newbranch", {"Save as an alt", 0}}};
+            defs = {{"save", {"Save version", 1}}, {"newbranch", {"Save as an alt", 0}}, {"bounce", {m_bounces.count(m_takeRows[static_cast<size_t>(shown)].take.id) ? "Re-bounce" : "Bounce", 0}}};
         } else {
             defs = {{"open", {"Open this version", 1}}, {"branch", {"Try an alt from here", 0}}, {"rename", {"Rename", 0}}, {"delete", {"Delete", 2}}};
         }
@@ -200,7 +220,12 @@ TakesPanel::Layout TakesPanel::computeLayout() const {
     const float by = buttonsBottom - 30.0f - static_cast<float>(row) * 36.0f;
     for (size_t i = 0; i < btns.size(); ++i) btns[i].rect.y = by + static_cast<float>(rowOf[i]) * 36.0f;
     layout.buttons = std::move(btns);
-    const float listTop = layout.dock.y + 100.0f;
+    const bool hasBounce = getDockBounce() != nullptr;
+    if (hasBounce) {
+        layout.bounceCard = NUIRect(dx, layout.dock.y + 64.0f, dw, 112.0f);
+        layout.bouncePlay = NUIRect(layout.bounceCard.x + 16.0f, layout.bounceCard.y + 12.0f, 34.0f, 34.0f);
+    }
+    const float listTop = layout.dock.y + 100.0f + (hasBounce ? 124.0f : 0.0f);
     layout.stepsList = NUIRect(dx, listTop, dw, std::max(0.0f, by - 16.0f - listTop - 22.0f));
     return layout;
 }
@@ -261,6 +286,15 @@ bool TakesPanel::requestCreateTake() {
 
 bool TakesPanel::requestSaveToNewBranch() {
     return invokeAction([this]() { return m_onSaveToNewBranch && m_onSaveToNewBranch(); }, "Could not save as an alt");
+}
+
+bool TakesPanel::requestBounce() {
+    const int row = getDockVersion();
+    if (row < 0 || !m_onBounce) return false;
+    const std::string takeId = m_takeRows[static_cast<size_t>(row)].take.id;
+    const bool ok = invokeAction([this, takeId]() { return m_onBounce(takeId); }, "Nothing to bounce: the timeline is empty");
+    if (ok) setStatus("");
+    return ok;
 }
 
 bool TakesPanel::requestSaveActiveTake() {
@@ -365,6 +399,7 @@ bool TakesPanel::handleKeyEvent(const NUIKeyEvent& event) {
 bool TakesPanel::runDockAction(const std::string& id) {
     if (id == "save") return requestSaveActiveTake();
     if (id == "newbranch") return requestSaveToNewBranch();
+    if (id == "bounce") { m_bouncePending = 3; setStatus("Bouncing the mix. This takes a moment."); return true; }
     if (id == "open") return requestOpenSelected();
     if (id == "branch") return requestBranchSelected();
     if (id == "delete") return requestDeleteSelected();
@@ -380,6 +415,10 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
     const auto bounds = getBounds();
     if (bounds.width <= 0 || bounds.height <= 0 || isMinimized()) return;
 
+    if (m_bouncePending > 0) {  // let the status reach the screen, then run the render that blocks the UI
+        setDirty(true);
+        if (--m_bouncePending == 0) requestBounce();
+    }
     const Layout layout = computeLayout();
     const NUIColor rule = theme.getColor("borderSubtle");
     const NUIColor text = theme.getColor("textPrimary");
@@ -542,8 +581,38 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
         const float ww = renderer.measureText(when, 10.5f).width;
         renderer.drawText(when, {layout.dock.right() - kPad - ww, titleY + 5.0f}, 10.5f, muted.withAlpha(0.8f));
 
+        if (const auto* bounce = getDockBounce()) {  // the bounce: play it, see its shape and loudness
+            const NUIRect& c = layout.bounceCard;
+            renderer.fillRect(c, bed);
+            renderer.strokeRect(c, 1.0f, rule);
+            const bool playing = m_bouncePlaying && m_bouncePlaying(bounce->path);
+            const NUIRect& pb = layout.bouncePlay;
+            renderer.fillCircle({pb.x + pb.width * 0.5f, pb.y + pb.height * 0.5f}, pb.width * 0.5f, m_hoveredButton == "bounce-play" ? theme.getColor("accentPrimary").lightened(0.1f) : theme.getColor("accentPrimary"));
+            const NUIPoint pc{pb.x + pb.width * 0.5f, pb.y + pb.height * 0.5f};
+            if (playing) {
+                renderer.fillRect({pc.x - 6.0f, pc.y - 6.0f, 4.0f, 12.0f}, NUIColor::white());
+                renderer.fillRect({pc.x + 2.0f, pc.y - 6.0f, 4.0f, 12.0f}, NUIColor::white());
+            } else {
+                for (int col = 0; col < 11; ++col) {  // a play triangle, one column at a time
+                    const float half = 7.0f * (1.0f - static_cast<float>(col) / 11.0f);
+                    renderer.fillRect({pc.x - 4.0f + static_cast<float>(col), pc.y - half, 1.0f, half * 2.0f}, NUIColor::white());
+                }
+            }
+            renderer.drawText("Bounce  \xc2\xb7  " + VersionBounce::lengthLabel(bounce->info.seconds), {pb.right() + 12.0f, pb.y + 9.0f}, 12.0f, text);
+            char lufs[24];
+            std::snprintf(lufs, sizeof lufs, "%.1f LUFS", bounce->info.lufs);
+            const float lw = renderer.measureText(lufs, 11.0f).width;
+            renderer.drawText(lufs, {c.right() - 16.0f - lw, pb.y + 10.0f}, 11.0f, theme.getColor("accentCyan"));
+            const float barsX = c.x + 16.0f, barsW = c.width - 32.0f, mid = c.y + 82.0f;
+            const size_t n = bounce->info.peaks.size();
+            const float slot = barsW / static_cast<float>(std::max<size_t>(n, 1));
+            for (size_t i = 0; i < n; ++i) {
+                const float h = std::max(2.0f, bounce->info.peaks[i] * 44.0f);
+                renderer.fillRect({barsX + slot * static_cast<float>(i), mid - h * 0.5f, std::max(1.0f, slot - 2.0f), h}, theme.getColor("accentCyan").withAlpha(0.75f));
+            }
+        }
         if (v.active) {
-            renderer.drawText("STEPS IN THIS VERSION  \xc2\xb7  CLICK TO GO BACK", {dx, layout.dock.y + 74.0f}, 9.5f, muted.withAlpha(0.8f));
+            renderer.drawText("STEPS IN THIS VERSION  \xc2\xb7  CLICK TO GO BACK", {dx, layout.stepsList.y - 26.0f}, 9.5f, muted.withAlpha(0.8f));
             renderer.setClipRect(layout.stepsList);
             renderer.fillRect(layout.stepsList, bed);
             for (int i = 0; i < static_cast<int>(m_steps.size()); ++i) {
@@ -566,7 +635,7 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
             renderer.drawText("Recording a take is a step too", {dx + 18.0f, layout.stepsList.bottom() + 10.0f}, 11.0f, muted.withAlpha(0.8f));
         } else {
             // An older version: its notes and its read-only log. Going back into it means opening it.
-            float y = layout.dock.y + 74.0f;
+            float y = layout.stepsList.y - 26.0f;
             if (!v.notes.empty()) {
                 renderer.drawText("NOTES ON THIS VERSION", {dx, y}, 9.5f, muted.withAlpha(0.8f));
                 y += 20.0f;
@@ -630,6 +699,7 @@ bool TakesPanel::onMouseEvent(const NUIMouseEvent& event) {
         if (layout.branchButton.contains(event.position)) m_hoveredButton = "bar-branch";
         if (layout.saveButton.contains(event.position)) m_hoveredButton = "bar-save";
         for (const auto& b : layout.buttons) if (b.rect.contains(event.position)) m_hoveredButton = b.id;
+        if (layout.bounceCard.width > 0.0f && layout.bouncePlay.contains(event.position)) m_hoveredButton = "bounce-play";
     }
 
     if (event.type == NUIMouseEventType::Scroll && layout.stepsList.contains(event.position)) {
@@ -648,6 +718,11 @@ bool TakesPanel::onMouseEvent(const NUIMouseEvent& event) {
         }
         for (const auto& b : layout.buttons)
             if (b.rect.contains(event.position)) { runDockAction(b.id); return true; }
+        if (layout.bounceCard.width > 0.0f && layout.bouncePlay.contains(event.position)) {
+            if (const auto* bounce = getDockBounce(); bounce && m_onToggleBounce) m_onToggleBounce(bounce->path);
+            setDirty(true);
+            return true;
+        }
 
         const int node = VersionsTimeline::nodeAt(layout.nodes, event.position);
         if (node >= 0) {

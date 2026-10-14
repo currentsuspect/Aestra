@@ -257,6 +257,11 @@ public:
     void toggleHistoryPanel();
     /** @brief Toggle the Takes panel visibility. */
     void toggleTakesPanel();
+    /// The whole project's mix, rendered offline into memory (a version's bounce). False when there is nothing to render.
+    bool renderMixToBuffer(std::vector<float>& interleaved, uint32_t& channels, uint32_t& sampleRate);
+    /// Play a file through the preview engine, or stop it if it is the file already playing. True when it is playing after.
+    bool togglePreviewFile(const std::string& path);
+    bool isPreviewFilePlaying(const std::string& path) const;
     /** @brief Get the Takes panel (for app-level action wiring). */
     std::shared_ptr<Aestra::Audio::TakesPanel> getTakesPanel() const { return m_takesPanel; }
 

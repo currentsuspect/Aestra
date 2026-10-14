@@ -117,6 +117,11 @@ public:
     static Result setVersionSteps(const std::string& projectPath, const std::string& takeId,
                                   const std::vector<TakeEntry::Step>& steps);
 
+    /** @brief Records the bounce file (relative to the takes folder) on a version. */
+    static Result setVersionBounce(const std::string& projectPath, const std::string& takeId, const std::string& relativePath);
+    /** @brief Absolute path of a version's bounce, or empty when it has none or the path leaves the takes folder. */
+    static std::string resolveBouncePath(const std::string& projectPath, const TakeEntry& take);
+
     /** @brief Appends a note to a version. */
     static Result addVersionNote(const std::string& projectPath, const std::string& takeId, const std::string& text);
 
