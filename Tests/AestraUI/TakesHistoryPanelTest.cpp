@@ -301,6 +301,34 @@ void testTakesPanel() {
     panel.setOnBounce([&](const std::string& id) { bounced = id; return true; });
     require(panel.requestBounce() && bounced == openId, "Bounce renders the version in view");
 
+    // Bring over: the card opens for an older version, checks toggle, blocked rows refuse, and confirming hands back what is checked.
+    int olderRow = -1;
+    for (int i = 0; i < panel.getTakeCount(); ++i) if (!panel.getTakeAt(i).active) olderRow = i;
+    require(olderRow >= 0, "There is an older version to bring from");
+    panel.selectTake(olderRow);
+    panel.setBringOverProvider([&](const std::string&) -> std::optional<Aestra::BringOverCard> {
+        Aestra::BringOverCard card;
+        card.from = "Alt hook v2";
+        card.into = "Mix pass 1";
+        card.rows = {{"Hook vox", "take 4 kept", Aestra::BringOverCard::Status::New, true, false, 11},
+                     {"Pad", "same as current", Aestra::BringOverCard::Status::Same, false, false, 12},
+                     {"Lonely", "needs an instrument", Aestra::BringOverCard::Status::Blocked, false, true, 13},
+                     {"Hook B", "new in Alt hook v2", Aestra::BringOverCard::Status::New, true, true, 14}};
+        return card;
+    });
+    std::vector<Aestra::BringOverCard::Row> handed;
+    panel.setOnBringOver([&](const std::string&, const std::vector<Aestra::BringOverCard::Row>& rows) { handed = rows; return true; });
+    require(panel.requestBringOver() && panel.isBringOverOpen(), "Bring over opens its card for an older version");
+    require(panel.getBringOver()->checkedCount() == 2 && panel.getBringOver()->bringLabel() == "Bring over 2 items", "New things start checked");
+    AestraUI::NUIPoint at;
+    require(panel.getBringOverRowCenter(1, at) && panel.onMouseEvent(leftPress(at.x, at.y)), "A row click is taken by the card");
+    require(panel.getBringOver()->rows[1].checked, "...and checks the row");
+    require(panel.getBringOverRowCenter(2, at) && panel.onMouseEvent(leftPress(at.x, at.y)) && !panel.getBringOver()->rows[2].checked, "A blocked row cannot be checked");
+    require(panel.getBringOverButtonCenter("bring", at) && panel.onMouseEvent(leftPress(at.x, at.y)), "Bring over confirms");
+    require(!panel.isBringOverOpen() && handed.size() == 3 && handed[0].id == 11 && handed[2].pattern, "The checked rows are handed back, tracks and patterns");
+    panel.selectTake(olderRow);
+    require(panel.requestBringOver() && panel.handleKeyEvent(keyPress(AestraUI::NUIKeyCode::Escape)) && !panel.isBringOverOpen(), "Escape closes the card");
+
     // Inline rename: keyboard-driven edit, committed through the callback.
     panel.setOnRenameTake([&](const std::string& takeId, const std::string& name) {
         return TakeManager::renameTake(projectPath, takeId, name).ok;

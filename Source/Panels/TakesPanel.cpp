@@ -201,7 +201,7 @@ TakesPanel::Layout TakesPanel::computeLayout() const {
         if (m_takeRows[static_cast<size_t>(shown)].take.active) {
             defs = {{"save", {"Save version", 1}}, {"newbranch", {"Save as an alt", 0}}, {"bounce", {m_bounces.count(m_takeRows[static_cast<size_t>(shown)].take.id) ? "Re-bounce" : "Bounce", 0}}};
         } else {
-            defs = {{"open", {"Open this version", 1}}, {"branch", {"Try an alt from here", 0}}, {"rename", {"Rename", 0}}, {"delete", {"Delete", 2}}};
+            defs = {{"open", {"Open this version", 1}}, {"branch", {"Try an alt from here", 0}}, {"bringover", {"Bring over...", 0}}, {"rename", {"Rename", 0}}, {"delete", {"Delete", 2}}};
         }
     }
     // Buttons wrap onto more rows when the dock is narrow; the last row sits at the bottom.
@@ -286,6 +286,54 @@ bool TakesPanel::requestCreateTake() {
 
 bool TakesPanel::requestSaveToNewBranch() {
     return invokeAction([this]() { return m_onSaveToNewBranch && m_onSaveToNewBranch(); }, "Could not save as an alt");
+}
+
+NUIRect TakesPanel::bringArea() const {
+    const auto b = getBounds();
+    return NUIRect(b.x, b.y + getTitleBarHeight(), b.width, b.height - getTitleBarHeight());
+}
+
+bool TakesPanel::requestBringOver() {
+    const int row = getDockVersion();
+    if (row < 0 || !m_bringProvider) return false;
+    const auto& take = m_takeRows[static_cast<size_t>(row)].take;
+    if (take.active) { setStatus("Open another version to bring things over from it"); return false; }
+    auto card = m_bringProvider(take.id);
+    if (!card) { setStatus("Could not read that version"); return false; }
+    if (card->rows.empty()) { setStatus("That version has no tracks or patterns to bring over"); return false; }
+    setStatus("");
+    m_bringTakeId = take.id;
+    m_bring = std::move(*card);
+    setDirty(true);
+    return true;
+}
+
+bool TakesPanel::confirmBringOver() {
+    if (!m_bring || m_bring->checkedCount() == 0 || !m_onBringOver) return false;
+    std::vector<BringOverCard::Row> chosen;
+    for (const auto& r : m_bring->rows) if (r.checked) chosen.push_back(r);
+    const std::string takeId = m_bringTakeId;
+    const int count = static_cast<int>(chosen.size());
+    m_bring.reset();
+    const bool ok = invokeAction([&]() { return m_onBringOver(takeId, chosen); }, "Could not bring that over");
+    if (ok) setStatus("Brought over " + std::to_string(count) + (count == 1 ? " item. Undo takes it back out." : " items. Undo takes them back out."));
+    return ok;
+}
+
+bool TakesPanel::getBringOverRowCenter(int row, NUIPoint& out) const {
+    if (!m_bring) return false;
+    for (const auto& e : m_bring->layout(bringArea()).entries)
+        if (!e.header && e.row == row) { out = {e.rect.x + 40.0f, e.rect.y + e.rect.height * 0.5f}; return true; }
+    return false;
+}
+
+bool TakesPanel::getBringOverButtonCenter(const std::string& id, NUIPoint& out) const {
+    if (!m_bring) return false;
+    const auto l = m_bring->layout(bringArea());
+    const NUIRect& r = id == "bring" ? l.bringButton : id == "listen" ? l.listenButton : l.cancelButton;
+    if (r.width <= 0.0f) return false;
+    out = {r.x + r.width * 0.5f, r.y + r.height * 0.5f};
+    return true;
 }
 
 bool TakesPanel::requestBounce() {
@@ -382,6 +430,10 @@ bool TakesPanel::onKeyEvent(const NUIKeyEvent& event) {
 }
 
 bool TakesPanel::handleKeyEvent(const NUIKeyEvent& event) {
+    if (m_bring && isVisible() && event.pressed) {
+        if (event.keyCode == NUIKeyCode::Escape) closeBringOver();
+        return true;  // the card owns the keyboard while it is open
+    }
     if (!m_renameActive || !isVisible() || !event.pressed) return false;
     if (event.keyCode == NUIKeyCode::Enter) { commitRename(); return true; }
     if (event.keyCode == NUIKeyCode::Escape) { cancelRename(); return true; }
@@ -399,6 +451,7 @@ bool TakesPanel::handleKeyEvent(const NUIKeyEvent& event) {
 bool TakesPanel::runDockAction(const std::string& id) {
     if (id == "save") return requestSaveActiveTake();
     if (id == "newbranch") return requestSaveToNewBranch();
+    if (id == "bringover") return requestBringOver();
     if (id == "bounce") { m_bouncePending = 3; setStatus("Bouncing the mix. This takes a moment."); return true; }
     if (id == "open") return requestOpenSelected();
     if (id == "branch") return requestBranchSelected();
@@ -684,11 +737,33 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
         renderer.fillRect(layout.statusLine, theme.getColor("warning").withAlpha(0.14f));
         renderer.drawText(m_statusText, {bounds.x + 16.0f, layout.statusLine.y + 3.0f}, 10.0f, theme.getColor("warning"));
     }
+    if (m_bring) m_bring->draw(renderer, bringArea(), m_hoveredButton);
 }
 
 bool TakesPanel::onMouseEvent(const NUIMouseEvent& event) {
     if (!isVisible()) return false;
     if (isMinimized()) return WindowPanel::onMouseEvent(event);
+
+    if (m_bring) {  // the card is modal over the panel: it takes every mouse event
+        const auto l = m_bring->layout(bringArea());
+        if (event.type == NUIMouseEventType::Move) {
+            m_hoveredButton.clear();
+            if (l.bringButton.contains(event.position)) m_hoveredButton = "bring";
+            if (l.listenButton.width > 0.0f && l.listenButton.contains(event.position)) m_hoveredButton = "listen";
+            if (l.cancelButton.contains(event.position)) m_hoveredButton = "cancel";
+            setDirty(true);
+        } else if (event.type == NUIMouseEventType::Scroll && l.list.contains(event.position)) {
+            m_bring->scrollBy(bringArea(), -event.wheelDelta * 40.0f);
+            setDirty(true);
+        } else if (event.pressed && event.button == NUIMouseButton::Left) {
+            if (l.cancelButton.contains(event.position)) closeBringOver();
+            else if (l.bringButton.contains(event.position)) confirmBringOver();
+            else if (l.listenButton.width > 0.0f && l.listenButton.contains(event.position)) { if (m_onToggleBounce && !m_bring->listenPath.empty()) m_onToggleBounce(m_bring->listenPath); setDirty(true); }
+            else if (const int row = m_bring->rowAt(l, event.position); row >= 0) { m_bring->toggle(row); setDirty(true); }
+            else if (!l.card.contains(event.position)) closeBringOver();
+        }
+        return bringArea().contains(event.position) || WindowPanel::onMouseEvent(event);
+    }
 
     const Layout layout = computeLayout();
 
