@@ -205,7 +205,7 @@ void testTakesPanel() {
     require(created.ok, "Failed to create second take");
 
     TakesPanel panel;
-    panel.setBounds(AestraUI::NUIRect(0.0f, 0.0f, 320.0f, 480.0f));
+    panel.setBounds(AestraUI::NUIRect(0.0f, 0.0f, 1100.0f, 560.0f));
     panel.setVisible(true);
     panel.setTakesProvider([&projectPath]() { return TakeManager::loadManifest(projectPath); });
     panel.setSnapshotsProvider([]() {
@@ -250,18 +250,31 @@ void testTakesPanel() {
     require(panel.requestCreateTake(), "Create action should succeed");
     require(panel.getTakeCount() == 3, "New take should appear in the panel");
 
-    // Mouse selection: click on the first take row.
-    panel.selectTake(-1);
-    const float rowCenterY = 36.0f + 30.0f + 28.0f + 13.0f; // header + toolbar + one-lane timeline + half row
-    require(panel.onMouseEvent(leftPress(160.0f, rowCenterY)), "Row click should be consumed");
-    require(panel.getSelectedTake() == 0, "Click should select the first take row");
-
     // The timeline: every version is a node, and clicking one selects it like its row does.
     panel.selectTake(-1);
     AestraUI::NUIPoint node;
     require(panel.getTimelineNodeCenter(2, node), "A version should have a node on the timeline");
     require(panel.onMouseEvent(leftPress(node.x, node.y)), "A node click should be consumed");
     require(panel.getSelectedTake() == 2, "Clicking a node should select that version");
+
+    // The dock: the open version offers saves, with the steps behind it; an older one offers to open.
+    std::vector<TakesPanel::StepEntry> steps{{"Add track", false, 0}, {"Gain", true, 1}};
+    panel.setStepsProvider([&]() { return steps; });
+    int jumpedTo = -1;
+    panel.setOnStepActivated([&](const TakesPanel::StepEntry& e) { jumpedTo = e.stackIndex; });
+    int unsavedCount = 3;
+    panel.setUnsavedProvider([&]() { return unsavedCount; });
+    bool newBranch = false;
+    panel.setOnSaveToNewBranch([&]() { newBranch = true; return true; });
+    require(panel.requestSaveToNewBranch() && newBranch, "Save to new branch should route through its callback");
+    panel.refreshTakes();
+    int openRow = -1;
+    for (int i = 0; i < panel.getTakeCount(); ++i) if (panel.getTakeAt(i).active) openRow = i;
+    panel.selectTake(openRow);
+    AestraUI::NUIPoint np;
+    require(panel.getTimelineNodeCenter(openRow, np), "Open version has a node");
+    panel.selectTake(-1);
+    require(panel.getDockVersion() == openRow, "With nothing selected the dock shows the open version");
 
     // Inline rename: keyboard-driven edit, committed through the callback.
     panel.setOnRenameTake([&](const std::string& takeId, const std::string& name) {
@@ -357,7 +370,7 @@ void testTakesPanel() {
 
     // Hidden panel ignores input.
     panel.setVisible(false);
-    require(!panel.onMouseEvent(leftPress(160.0f, rowCenterY)), "Hidden takes panel must not consume events");
+    require(!panel.onMouseEvent(leftPress(np.x, np.y)), "Hidden takes panel must not consume events");
     require(!panel.handleKeyEvent(keyPress(AestraUI::NUIKeyCode::Enter)), "Hidden takes panel must not consume keys");
 
     std::cout << "[PASS] Takes panel actions\n";

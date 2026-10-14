@@ -3143,6 +3143,24 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(ArsenalSoundSetTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
 
+# The History timeline layout (V81-V1, SPEC-017).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(VersionsTimelineTest AestraUI_Core)
+    add_executable(VersionsTimelineTest AestraUI/VersionsTimelineTest.cpp)
+    target_link_libraries(VersionsTimelineTest PRIVATE AestraUI_Core)
+    target_include_directories(VersionsTimelineTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME VersionsTimelineTest COMMAND VersionsTimelineTest)
+    set_tests_properties(VersionsTimelineTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
 # Kits and the empty state: a folder of sounds becomes a row of units (V81-AR1, FD-27 point 6).
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(ArsenalKitTest AestraUI_Core)
@@ -3865,6 +3883,7 @@ if(AESTRA_ENABLE_UI)
         ArsenalSoundStripTest
         ArsenalSoundDrawerTest
         ArsenalSoundSetTest
+        VersionsTimelineTest
         ArsenalKitTest
         UIMixerPanelGroupingTest
         PluginRackBindingLifecycleTest

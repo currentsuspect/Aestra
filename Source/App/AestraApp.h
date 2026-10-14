@@ -170,7 +170,7 @@ private:
     ProjectSerializer::SerializeResult
     serializeCurrentProject(int indentSpaces, const ProjectSerializer::UIState* uiState = nullptr) const;
     bool saveActiveTakeSnapshot(const ProjectSerializer::UIState* uiState = nullptr);
-    bool createTakeFromCurrentProject();
+    bool createTakeFromCurrentProject(bool newBranch = false);
     ProjectSerializer::LoadResult switchToTake(const std::string& takeId);
     bool branchFromTake(const std::string& takeId);
     void wireTakesPanel();
