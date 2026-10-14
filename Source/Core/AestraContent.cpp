@@ -2117,21 +2117,21 @@ void AestraContent::onResize(int width, int height) {
     const float maxPatternWidth =
         patternRailVisible ? std::max(minPatternWidth, std::min(width * 0.24f, 280.0f)) : 0.0f;
     const float maxFileByTrack = std::max(kMinFileBrowserWidth, width - kMinTrackAreaWidth - minPatternWidth);
-    const float fileBrowserWidth =
-        std::clamp(*activeBrowserWidthPref, kMinFileBrowserWidth, std::min(maxFileBrowserWidth, maxFileByTrack));
+    const float fileBrowserWidth = isAuditionMode ? 0.0f  // Audition holds the file browser itself
+        : std::clamp(*activeBrowserWidthPref, kMinFileBrowserWidth, std::min(maxFileBrowserWidth, maxFileByTrack));
     const float maxPatternByTrack = std::max(minPatternWidth, width - kMinTrackAreaWidth - fileBrowserWidth);
     const float patternBrowserWidth = patternRailVisible ? std::clamp(m_patternBrowserWidthPref, minPatternWidth,
                                                                       std::min(maxPatternWidth, maxPatternByTrack))
                                                          : 0.0f;
 
-    *activeBrowserWidthPref = fileBrowserWidth;
+    if (!isAuditionMode) *activeBrowserWidthPref = fileBrowserWidth;  // the stored width is the user's, not Audition's 0
     if (patternRailVisible) {
         m_patternBrowserWidthPref = patternBrowserWidth;
     }
 
     const bool filesTabActive = browserTab == 0 && !browserPatternTabActive;
     const bool pluginBrowserVisible = m_pluginBrowser && m_pluginBrowser->isVisible();
-    const bool showPreviewDock = m_previewPanel && filesTabActive && m_fileBrowser && m_fileBrowser->isVisible() &&
+    const bool showPreviewDock = !isAuditionMode && m_previewPanel && filesTabActive && m_fileBrowser && m_fileBrowser->isVisible() &&
                                  !pluginBrowserVisible && m_previewPanel->hasFileSelection();
     if (m_previewPanel) {
         m_previewPanel->setVisible(showPreviewDock);
@@ -2153,7 +2153,7 @@ void AestraContent::onResize(int width, int height) {
     const NUILocalRect trackArea = splitHorizontal(body.trailing, patternBrowserWidth, trace).trailing;
 
     if (m_fileBrowser) {
-        m_fileBrowser->setBounds(toWindow(sidebar.leading));
+        if (!isAuditionMode) m_fileBrowser->setBounds(toWindow(sidebar.leading));  // in Audition the hub places it
         m_fileBrowser->setContentViewsEnabled(!isAuditionMode && m_fileBrowser->isVisible());
 
         if (showPreviewDock && m_previewPanel) {
@@ -2890,8 +2890,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
         bool isAudition = (focus == ViewFocus::Audition);
         bool isRoutingMap = (focus == ViewFocus::RoutingMap);
 
-        if (m_auditionPanel)
-            m_auditionPanel->setVisible(isAudition);
+        setAuditionActive(isAudition);
 
         if (m_routingMapPanel) {
             if (isRoutingMap) {

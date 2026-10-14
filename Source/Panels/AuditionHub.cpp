@@ -41,7 +41,7 @@ const char* pageName(AuditionHubLayout::Page p) {
         case AuditionHubLayout::Page::Home: return "Home";
         case AuditionHubLayout::Page::Project: return "This project";
         case AuditionHubLayout::Page::References: return "References";
-        case AuditionHubLayout::Page::Queue: return "Queue";
+        case AuditionHubLayout::Page::Queue: return "Files & queue";
         case AuditionHubLayout::Page::Search: return "Search";
     }
     return "";
@@ -95,6 +95,33 @@ void AuditionHub::addFileToQueue(const std::string& filePath, bool isReference) 
 void AuditionHub::addTimelineTrack(uint32_t trackId, const std::string& trackName) {
     m_queuePage->addTimelineTrack(trackId, trackName);
     setPage(Page::Queue);  // "Send to Audition" lands where the thing it sent is
+}
+
+void AuditionHub::setBrowser(std::shared_ptr<NUIComponent> browser) {
+    releaseBrowser();
+    m_browser = std::move(browser);
+    if (!m_browser) return;
+    addChild(m_browser);
+    layoutQueuePage();
+}
+
+std::shared_ptr<NUIComponent> AuditionHub::releaseBrowser() {
+    auto browser = std::move(m_browser);
+    m_browser.reset();
+    if (browser) removeChild(browser);
+    return browser;
+}
+
+/// The Queue page: the file browser at the left, the queue it feeds beside it.
+void AuditionHub::layoutQueuePage() {
+    const NUIRect area = pageArea();
+    constexpr float kBrowserW = 340.0f;
+    const float browserW = m_browser ? std::min(kBrowserW, area.width * 0.45f) : 0.0f;
+    if (m_browser) {
+        m_browser->setBounds({area.x, area.y, browserW, area.height});
+        m_browser->setVisible(m_page == Page::Queue);
+    }
+    m_queuePage->setBounds({area.x + browserW, area.y, area.width - browserW, area.height});
 }
 
 void AuditionHub::setLibraryFile(std::string file) {
@@ -157,6 +184,7 @@ void AuditionHub::setPage(Page page) {
     m_page = page;
     m_scroll = 0.0f;
     m_queuePage->setVisible(page == Page::Queue);
+    if (m_browser) m_browser->setVisible(page == Page::Queue);
     setFocused(page == Page::Search);
     if (page != Page::Search) m_search.clear();
     setDirty(true);
@@ -266,7 +294,7 @@ bool AuditionHub::getTileCenter(size_t shelf, size_t tile, NUIPoint& out) const 
 
 void AuditionHub::onResize(int width, int height) {
     NUIComponent::onResize(width, height);
-    m_queuePage->setBounds(pageArea());
+    layoutQueuePage();
 }
 
 void AuditionHub::onUpdate(double deltaTime) {
@@ -275,7 +303,7 @@ void AuditionHub::onUpdate(double deltaTime) {
     applyPendingReferences();
     if (++m_tick % 180 == 0) refresh();
     if (m_engine && m_engine->isPlaying()) setDirty(true);  // the position moves
-    m_queuePage->setBounds(pageArea());
+    layoutQueuePage();
 }
 
 void AuditionHub::onRender(NUIRenderer& r) {

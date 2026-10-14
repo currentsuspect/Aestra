@@ -33,6 +33,15 @@ int main() {
     for (size_t i = 1; i < shelves[0].tiles.size(); ++i)
         if (shelves[0].tiles[i].y == shelves[0].tiles[i - 1].y) check(shelves[0].tiles[i].x >= shelves[0].tiles[i - 1].right() + AuditionHubLayout::kGap - 0.01f, "tiles in a row keep their gap");
     check(AuditionHubLayout::contentHeight(shelves, 100.0f) > 300.0f, "the page is as tall as its shelves");
+    // The item page: with a reference there is a rail, and the page keeps clear of it.
+    const NUIRect pageArea{0.0f, 0.0f, 1168.0f, 700.0f};
+    const auto plain = AuditionHubLayout::itemFrame(pageArea, false);
+    const auto railed = AuditionHubLayout::itemFrame(pageArea, true);
+    check(plain.hero.width == pageArea.width && railed.hero.width == pageArea.width - AuditionHubLayout::kRailW, "a rail takes its width from the page, not the screen");
+    check(railed.rail.x == railed.hero.right() && railed.rail.height == pageArea.height, "the rail runs the page's height beside the hero");
+    check(railed.wave.right() <= railed.table.x && railed.table.right() <= railed.body.right(), "the waveform and the numbers sit side by side, inside the body");
+    check(railed.play.right() <= railed.compare.x && railed.compare.right() <= railed.hero.right(), "play and the compare control fit in the hero");
+    check(railed.cover.right() < railed.play.x && railed.sections.y >= railed.wave.bottom() && railed.actions.y >= railed.sections.bottom(), "the cover, the waveform, its sections and its actions run in order");
     std::cout << "[PASS] AuditionHubLayoutTest\n";
     return 0;
 }

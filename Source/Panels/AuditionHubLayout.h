@@ -16,8 +16,8 @@ namespace Aestra {
  * without a window.
  */
 struct AuditionHubLayout {
-    enum class Page { Home, Project, References, Queue, Search };
-    static constexpr int kPages = 5;
+    enum class Page { Home, Project, References, Queue, Search, Item };  // Item is a page of one thing, reached from a tile; it has no nav entry
+    static constexpr int kPages = 5;  ///< pages in the navigation
 
     static constexpr float kNavW = 232.0f;
     static constexpr float kPlayerH = 88.0f;
@@ -52,6 +52,31 @@ struct AuditionHubLayout {
         f.listenOn = {f.loudness.x - 12.0f - 112.0f, f.player.y + 28.0f, 112.0f, 32.0f};
         f.toggleB = {f.listenOn.x - 12.0f - 70.0f, f.player.y + 28.0f, 70.0f, 32.0f};
         f.toggleA = {f.toggleB.x - 82.0f, f.player.y + 28.0f, 82.0f, 32.0f};
+        return f;
+    }
+
+    /// The page of one mix or reference: a hero with its cover and the compare control, the waveform of both sides, the
+    /// numbers beside it, and (with a reference chosen) a rail at the right for the level match.
+    struct ItemFrame {
+        AestraUI::NUIRect hero, cover, play, compare, rail, body, wave, sections, actions, table;
+    };
+    static constexpr float kRailW = 282.0f;
+    static ItemFrame itemFrame(const AestraUI::NUIRect& content, bool withRail) {
+        ItemFrame f;
+        const float railW = withRail ? kRailW : 0.0f;
+        const float mainW = content.width - railW;
+        f.hero = {content.x, content.y, mainW, 232.0f};
+        f.cover = {content.x + kPad, content.y + 32.0f, 168.0f, 168.0f};
+        const float tx = f.cover.right() + 32.0f;
+        f.play = {tx, f.hero.bottom() - 76.0f, 56.0f, 56.0f};
+        f.compare = {f.play.right() + 14.0f, f.hero.bottom() - 70.0f, 280.0f, 44.0f};
+        f.rail = {content.right() - railW, content.y, railW, content.height};
+        f.body = {content.x, f.hero.bottom(), mainW, std::max(0.0f, content.height - f.hero.height)};
+        const float waveW = std::max(240.0f, (f.body.width - kPad * 2.0f) * 0.58f);
+        f.wave = {content.x + kPad, f.body.y + 56.0f, waveW, 140.0f};
+        f.sections = {f.wave.x, f.wave.bottom() + 6.0f, waveW, 22.0f};
+        f.actions = {f.wave.x, f.sections.bottom() + 20.0f, waveW, 32.0f};
+        f.table = {f.wave.right() + 36.0f, f.body.y + 40.0f, std::max(120.0f, f.body.right() - kPad - (f.wave.right() + 36.0f)), 280.0f};
         return f;
     }
 

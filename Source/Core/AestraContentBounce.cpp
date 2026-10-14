@@ -7,6 +7,7 @@
 #include <tuple>
 #include "AuditionEngine.h"
 #include "../Panels/AuditionHub.h"
+#include "FileBrowser.h"
 #include "IO/AudioExporter.h"
 #include "IO/BounceInPlace.h"
 
@@ -104,4 +105,18 @@ void AestraContent::applyAuditionHooks() {
 
 void AestraContent::addAuditionReference(const std::string& path) {
     if (m_auditionPanel) m_auditionPanel->addReference(path);
+}
+
+void AestraContent::setAuditionActive(bool active) {
+    if (!m_auditionPanel) return;
+    m_auditionPanel->setVisible(active);
+    if (!m_fileBrowser) return;
+    if (active && !m_auditionPanel->hasBrowser()) {
+        if (m_workspaceLayer) m_workspaceLayer->removeChild(m_fileBrowser);
+        m_auditionPanel->setBrowser(m_fileBrowser);
+    } else if (!active && m_auditionPanel->hasBrowser()) {
+        m_auditionPanel->releaseBrowser();
+        if (m_workspaceLayer) m_workspaceLayer->addChild(m_fileBrowser);
+        m_fileBrowser->setVisible(true);
+    }
 }

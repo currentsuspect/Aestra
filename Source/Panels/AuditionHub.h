@@ -63,6 +63,12 @@ public:
     const std::vector<AuditionLibrary::Item>& references() const { return m_references; }
     void play(const AuditionLibrary::Item& item);
 
+    /// The file browser lives inside Audition, on the Queue page beside the queue it feeds. The app hands it over when
+    /// Audition is shown and takes it back when it is not.
+    void setBrowser(std::shared_ptr<AestraUI::NUIComponent> browser);
+    std::shared_ptr<AestraUI::NUIComponent> releaseBrowser();
+    bool hasBrowser() const { return m_browser != nullptr; }
+
     // For tests and hit-testing.
     bool getNavCenter(Page page, AestraUI::NUIPoint& out) const;
     bool getTileCenter(size_t shelf, size_t tile, AestraUI::NUIPoint& out) const;
@@ -92,6 +98,8 @@ private:
 
     std::shared_ptr<Audio::AuditionEngine> m_engine;
     std::shared_ptr<AuditionPanel> m_queuePage;
+    std::shared_ptr<AestraUI::NUIComponent> m_browser;
+    void layoutQueuePage();
     Page m_page{Page::Home};
     std::string m_search;
     float m_scroll{0.0f};

@@ -265,6 +265,8 @@ public:
     /// What the Audition hub needs from the app (the open project, the reference list, import and bounce); applied when it is shown.
     void setAuditionHooks(Aestra::AuditionHooks hooks) { m_auditionHooks = std::move(hooks); applyAuditionHooks(); }
     void applyAuditionHooks();
+    /// Audition shown or hidden: the hub appears, and takes the file browser inside itself (and gives it back).
+    void setAuditionActive(bool active);
     void addAuditionReference(const std::string& path);
     bool isPreviewFilePlaying(const std::string& path) const;
     /** @brief Get the Takes panel (for app-level action wiring). */

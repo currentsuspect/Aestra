@@ -6,6 +6,7 @@
 #include "../../Source/Core/VersionPicker.h"
 #include "../../Source/Core/RecoveryInfo.h"
 #include "../../Source/Core/AuditionLibrary.h"
+#include "../../Source/Core/AuditionCompare.h"
 
 #include "../../Source/Core/ProjectSerializer.h"
 #include "../Support/TestTempDirectory.h"
@@ -365,6 +366,27 @@ int main() {
         require(back.size() == 2 && back[0].title == "Glass Coast" && back[0].hasLufs && std::fabs(back[0].lufs + 8.6) < 1e-3 && !back[1].hasLufs, "...and read back, loudness or not");
         require(AL::itemOf(back[0]).badge == "REF" && AL::itemOf(back[0]).subtitle.find("LUFS") != std::string::npos, "A reference reads as REF with its loudness");
         require(Aestra::VersionTime::ago(1'000'000'000'000ull, 1'000'000'000'000ull + 86'400'000ull * 2 + 3'600'000ull) == "2 days ago", "A bounce from two days ago says so");
+    }
+
+    // Comparing a mix with a reference: the reference is turned to the mix's level, and both are drawn on one scale.
+    {
+        namespace AC = Aestra::AuditionCompare;
+        const auto tone = [](float amp, int seconds) {
+            std::vector<float> v;
+            for (int i = 0; i < 44100 * seconds; ++i) { const float s = amp * std::sin(2.0f * 3.14159265f * 220.0f * static_cast<float>(i) / 44100.0f); v.push_back(s); v.push_back(s); }
+            return v;
+        };
+        const auto quiet = AC::measure("mix.wav", tone(0.1f, 6), 2, 44100);
+        const auto loud = AC::measure("ref.wav", tone(0.2f, 6), 2, 44100);  // 6 dB louder
+        const auto result = AC::compare(quiet, loud);
+        require(result.ok, "Two real signals can be compared");
+        require(std::fabs(result.referenceGainDb + 6.02) < 0.3, "A reference 6 dB louder is turned down by about 6 dB");
+        require(result.mix.peaks.size() == AC::kWaveColumns && result.mix.peaks[10] > 0.0f, "Each side has a waveform");
+        require(std::fabs(result.ref.peaks[10] - result.mix.peaks[10]) < 0.02f, "After the match the two waveforms are the same size");
+        const auto flipped = AC::compare(loud, quiet);
+        require(flipped.referenceGainDb > 5.0, "A quieter reference is turned up");
+        std::vector<float> silence(44100 * 6 * 2, 0.0f);
+        require(!AC::compare(quiet, AC::measure("s.wav", silence, 2, 44100)).ok, "Silence cannot be compared");
     }
 
     return 0;
