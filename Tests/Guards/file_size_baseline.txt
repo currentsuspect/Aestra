@@ -20,4 +20,3 @@
 4819 Source/Core/AestraContent.cpp
 2833 Source/Core/ProjectSerializer.cpp
 1602 Source/Panels/ArsenalPanel.cpp
-1537 Source/Panels/AuditionPanel.cpp

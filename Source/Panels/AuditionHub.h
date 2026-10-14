@@ -4,8 +4,8 @@
 /**
  * @file AuditionHub.h
  * @brief The Audition mode's shell (FD-26, V81-A): navigation at the left, a player bar along the bottom, and pages
- * of tiles between them: the project's bounces and the reference tracks. The queue that used to be the whole of
- * Audition is one page of the hub (AuditionPanel), with everything it did.
+ * of tiles between them: the project's bounces and the reference tracks. The queue is one page of the hub; the bar
+ * along the bottom is the one player, on every page.
  */
 
 #include "../AestraUI/Core/NUIComponent.h"
@@ -14,7 +14,7 @@
 #include "AuditionEngine.h"
 #include "AuditionFilesPage.h"
 #include "AuditionHubLayout.h"
-#include "AuditionPanel.h"
+#include "AuditionQueuePage.h"
 #include "NUIContextMenu.h"
 
 #include <atomic>
@@ -106,7 +106,9 @@ private:
     void layoutPlayerTexts();
 
     std::shared_ptr<Audio::AuditionEngine> m_engine;
-    std::shared_ptr<AuditionPanel> m_queuePage;
+    std::shared_ptr<AuditionQueuePage> m_queuePage;
+    std::function<void(const std::string&)> m_onActiveTrackPathChanged;
+    std::string m_lastEnginePath;
     std::shared_ptr<AuditionFilesPage> m_files;
     void layoutQueuePage();
 

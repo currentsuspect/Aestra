@@ -63,8 +63,8 @@ set(Aestra_SOURCES
 	# Panels/StepSequencerPanel removed
 	Panels/PatternBrowserPanel.h
 	Panels/PatternBrowserPanel.cpp
-	Panels/AuditionPanel.h
-	Panels/AuditionPanel.cpp
+	Panels/AuditionQueuePage.h
+	Panels/AuditionQueuePage.cpp
 	Panels/AuditionHub.h
 	Panels/AuditionHub.cpp
 	Panels/AuditionHubItem.cpp

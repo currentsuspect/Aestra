@@ -52,7 +52,8 @@ const char* pageName(AuditionHubLayout::Page p) {
 } // namespace
 
 AuditionHub::AuditionHub(std::shared_ptr<Audio::AuditionEngine> engine) : m_engine(std::move(engine)) {
-    m_queuePage = std::make_shared<AuditionPanel>(m_engine);
+    m_queuePage = std::make_shared<AuditionQueuePage>(m_engine);
+    m_queuePage->setOnPlayIndex([this](size_t) { m_hasNow = false; if (m_onPlayRequest) m_onPlayRequest(); setDirty(true); });
     m_queuePage->setVisible(false);
     addChild(m_queuePage);
     m_files = std::make_shared<AuditionFilesPage>();
@@ -76,14 +77,11 @@ AuditionHub::~AuditionHub() {
     }
 }
 
-void AuditionHub::setOnPlayRequest(std::function<void()> cb) {
-    m_onPlayRequest = cb;
-    m_queuePage->setOnPlayRequest(std::move(cb));
-}
-void AuditionHub::setOnActiveTrackPathChanged(std::function<void(const std::string&)> cb) { m_queuePage->setOnActiveTrackPathChanged(std::move(cb)); }
-void AuditionHub::addFileToQueue(const std::string& filePath, bool isReference) { m_queuePage->addFileToQueue(filePath, isReference); }
+void AuditionHub::setOnPlayRequest(std::function<void()> cb) { m_onPlayRequest = std::move(cb); }
+void AuditionHub::setOnActiveTrackPathChanged(std::function<void(const std::string&)> cb) { m_onActiveTrackPathChanged = std::move(cb); }
+void AuditionHub::addFileToQueue(const std::string& filePath, bool isReference) { if (m_engine) m_engine->addToQueue(filePath, isReference); }
 void AuditionHub::addTimelineTrack(uint32_t trackId, const std::string& trackName) {
-    m_queuePage->addTimelineTrack(trackId, trackName);
+    if (m_engine) m_engine->addTimelineTrack(trackId, trackName);
     setPage(Page::Queue);  // "Send to Audition" lands where the thing it sent is
 }
 
@@ -275,6 +273,11 @@ void AuditionHub::onUpdate(double deltaTime) {
     if (!isVisible()) return;
     applyPendingReferences();
     applySides();
+    if (m_onActiveTrackPathChanged && m_engine) {  // tell whoever lists files which one is playing
+        const auto current = m_engine->getCurrentItem();
+        const std::string path = current && m_engine->isPlaying() ? current->filePath : std::string();
+        if (path != m_lastEnginePath) { m_lastEnginePath = path; m_onActiveTrackPathChanged(path); }
+    }
     if (++m_tick % 180 == 0) refresh();
     if (m_engine && m_engine->isPlaying()) setDirty(true);  // the position moves
     layoutQueuePage();
@@ -608,7 +611,10 @@ bool AuditionHub::onMouseEvent(const NUIMouseEvent& event) {
 
 bool AuditionHub::onKeyEvent(const NUIKeyEvent& event) {
     if (!isVisible()) return false;
-    if (m_page == Page::Queue) return m_queuePage->onKeyEvent(event);
+    if (m_page != Page::Search && event.pressed && m_engine) {  // the arrows move through the queue on every page
+        if (event.keyCode == NUIKeyCode::Left) { m_engine->previousTrack(); return true; }
+        if (event.keyCode == NUIKeyCode::Right) { m_engine->nextTrack(); return true; }
+    }
     if (m_page == Page::Search && event.pressed) {
         if (event.keyCode == NUIKeyCode::Escape) { m_search.clear(); setPage(Page::Home); return true; }
         if (event.keyCode == NUIKeyCode::Backspace) { if (!m_search.empty()) m_search.pop_back(); setDirty(true); return true; }
