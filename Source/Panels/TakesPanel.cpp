@@ -20,6 +20,7 @@ namespace {
 /// The lane's name as shown: the first lane is stored as "Main" and reads as the main mix.
 std::string laneLabel(const std::string& branch) { return branch.empty() || branch == "Main" ? "Main mix" : branch; }
 constexpr float kPad = 24.0f;
+constexpr float kLaneColumn = 120.0f;  ///< the fixed column of branch names at the left of the timeline
 
 uint64_t nowMs() {
     return static_cast<uint64_t>(
@@ -112,6 +113,8 @@ void TakesPanel::rebuildRows() {
         m_snapshotRows = std::move(snapshots);
     }
     m_steps = m_stepsProvider ? m_stepsProvider() : std::vector<StepEntry>{};
+    updateUnsaved();
+    m_timelineScrollPlaced = false;
     m_bounces.clear();
     if (m_bounceProvider)
         for (const auto& row : m_takeRows)
@@ -157,6 +160,14 @@ bool TakesPanel::getBouncePlayCenter(NUIPoint& out) const {
     return true;
 }
 
+/// Steps made since the open version was saved: the undo side of the history beyond what the version recorded.
+void TakesPanel::updateUnsaved() {
+    int done = 0, recorded = 0;
+    for (const auto& step : m_steps) if (!step.undone) ++done;
+    for (const auto& row : m_takeRows) if (row.take.active) recorded = static_cast<int>(row.take.steps.size());
+    m_unsaved = std::max(0, done - recorded);
+}
+
 TakesPanel::Layout TakesPanel::computeLayout() const {
     Layout layout;
     const auto bounds = getBounds();
@@ -182,7 +193,7 @@ TakesPanel::Layout TakesPanel::computeLayout() const {
     std::vector<TakeManager::TakeEntry> versions;
     versions.reserve(m_takeRows.size());
     for (const auto& r : m_takeRows) versions.push_back(r.take);
-    layout.nodes = VersionsTimeline::layout(versions, layout.timeline);
+    layout.nodes = VersionsTimeline::layout(versions, layout.timeline, m_timelineScroll);
 
     // The dock: the version's header, then its steps (the open version) or its notes and log, then the actions.
     const int shown = getDockVersion();
@@ -468,9 +479,18 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
     const auto bounds = getBounds();
     if (bounds.width <= 0 || bounds.height <= 0 || isMinimized()) return;
 
+    if (m_stepsProvider && ++m_stepTick % 15 == 0) {  // the history changes while the panel is open; reading it is cheap
+        auto fresh = m_stepsProvider();
+        if (fresh.size() != m_steps.size() || (!fresh.empty() && !m_steps.empty() && fresh[0].label != m_steps[0].label)) { m_steps = std::move(fresh); updateUnsaved(); }
+    }
     if (m_bouncePending > 0) {  // let the status reach the screen, then run the render that blocks the UI
         setDirty(true);
         if (--m_bouncePending == 0) requestBounce();
+    }
+    if (!m_timelineScrollPlaced) {  // open on the right-hand end, where the open version is
+        m_timelineScroll = 1.0e9f;
+        m_timelineScroll = computeLayout().nodes.maxScroll;
+        m_timelineScrollPlaced = true;
     }
     const Layout layout = computeLayout();
     const NUIColor rule = theme.getColor("borderSubtle");
@@ -516,12 +536,7 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
     renderer.fillRect({bounds.x, layout.bar.bottom() - 1.0f, bounds.width, 1.0f}, rule);
 
     // --- Timeline: lanes, links, nodes.
-    renderer.setClipRect(layout.timeline);
-    for (size_t i = 0; i < layout.nodes.lanes.size(); ++i) {
-        const float y = layout.nodes.laneY[i];
-        renderer.fillCircle({layout.timeline.x + 30.0f, y}, 3.5f, laneColor(static_cast<int>(i)));
-        renderer.drawText(laneLabel(layout.nodes.lanes[i]), {layout.timeline.x + 42.0f, y - 6.0f}, 11.0f, text.withAlpha(0.9f));
-    }
+    renderer.setClipRect({layout.timeline.x + kLaneColumn, layout.timeline.y, std::max(0.0f, layout.timeline.width - kLaneColumn), layout.timeline.height});
     // Each lane runs from its first version to its last, in the lane's colour; forks join it to its parent.
     for (size_t l = 0; l < layout.nodes.lanes.size(); ++l) {
         float lo = 1e9f, hi = -1e9f;
@@ -533,7 +548,7 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
         const auto& to = layout.nodes.nodes[static_cast<size_t>(link.to)];
         if (from.lane != to.lane) forkCurve(renderer, {from.x, from.y}, {to.x, to.y}, laneColor(to.lane));
     }
-    const int unsaved = m_unsavedProvider ? m_unsavedProvider() : 0;
+    const int unsaved = m_unsaved;
     for (size_t i = 0; i < layout.nodes.nodes.size(); ++i) {
         const auto& n = layout.nodes.nodes[i];
         const auto& v = m_takeRows[i].take;
@@ -595,6 +610,13 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
         renderer.drawTextCentered(hint, layout.timeline, 12.0f, muted.withAlpha(0.7f));
     }
     renderer.clearClipRect();
+    // The branch names stay put while the versions pan under them.
+    renderer.fillRect({layout.timeline.x, layout.timeline.y, kLaneColumn, layout.timeline.height}, bed);
+    for (size_t i = 0; i < layout.nodes.lanes.size(); ++i) {
+        const float y = layout.nodes.laneY[i];
+        renderer.fillCircle({layout.timeline.x + 30.0f, y}, 3.5f, laneColor(static_cast<int>(i)));
+        renderer.drawText(laneLabel(layout.nodes.lanes[i]), {layout.timeline.x + 42.0f, y - 6.0f}, 11.0f, text.withAlpha(0.9f));
+    }
 
     // --- Legend.
     renderer.fillRect({layout.legend.x, layout.legend.y, layout.legend.width, 1.0f}, rule);
@@ -777,6 +799,11 @@ bool TakesPanel::onMouseEvent(const NUIMouseEvent& event) {
         if (layout.bounceCard.width > 0.0f && layout.bouncePlay.contains(event.position)) m_hoveredButton = "bounce-play";
     }
 
+    if (event.type == NUIMouseEventType::Scroll && layout.timeline.contains(event.position) && layout.nodes.maxScroll > 0.0f) {
+        m_timelineScroll = std::clamp(m_timelineScroll - event.wheelDelta * 60.0f, 0.0f, layout.nodes.maxScroll);
+        setDirty(true);
+        return true;
+    }
     if (event.type == NUIMouseEventType::Scroll && layout.stepsList.contains(event.position)) {
         const float contentH = static_cast<float>(m_steps.size()) * STEP_ROW_HEIGHT;
         m_stepScroll = std::clamp(m_stepScroll - event.wheelDelta * 30.0f, 0.0f, std::max(0.0f, contentH - layout.stepsList.height));
@@ -799,7 +826,7 @@ bool TakesPanel::onMouseEvent(const NUIMouseEvent& event) {
             return true;
         }
 
-        const int node = VersionsTimeline::nodeAt(layout.nodes, event.position);
+        const int node = event.position.x < layout.timeline.x + kLaneColumn ? -1 : VersionsTimeline::nodeAt(layout.nodes, event.position);
         if (node >= 0) {
             selectTake(node);
             if (event.type == NUIMouseEventType::DoubleClick && !m_takeRows[static_cast<size_t>(node)].take.active) requestOpenSelected();

@@ -20,6 +20,7 @@ namespace Aestra {
 struct VersionsTimeline {
     static constexpr float kLabelColumn = 130.0f;  ///< room at the left for the branch names
     static constexpr float kTailRoom = 180.0f;     ///< room at the right for the dashed tail and its chip
+    static constexpr float kMinStep = 96.0f;       ///< the least room one saved version gets along the axis, so labels never touch
 
     struct Node {
         int version = -1;       ///< index into the versions passed in
@@ -34,9 +35,10 @@ struct VersionsTimeline {
         std::vector<float> laneY;
         std::vector<Node> nodes;              ///< same order as the versions given
         std::vector<Link> links;
+        float maxScroll = 0.0f;               ///< how far the timeline can pan: versions need room, and a narrow panel scrolls
     };
 
-    static Result layout(const std::vector<TakeManager::TakeEntry>& versions, const AestraUI::NUIRect& area) {
+    static Result layout(const std::vector<TakeManager::TakeEntry>& versions, const AestraUI::NUIRect& area, float scrollX = 0.0f) {
         Result r;
         for (const auto& v : versions) {
             const std::string lane = v.branch.empty() ? "Main" : v.branch;
@@ -61,7 +63,9 @@ struct VersionsTimeline {
             total += versions[static_cast<size_t>(order[rank])].kind == TakeManager::TakeEntry::Kind::Autosave ? 0.5f : 1.0f;
         }
         const float lastSlot = order.empty() ? 0.0f : slotAt.back();
-        const float stepX = lastSlot > 0.0f ? (right - left) / lastSlot : 0.0f;
+        const float stepX = lastSlot > 0.0f ? std::max(kMinStep, (right - left) / lastSlot) : 0.0f;
+        r.maxScroll = std::max(0.0f, stepX * lastSlot - (right - left));
+        scrollX = std::clamp(scrollX, 0.0f, r.maxScroll);
 
         r.nodes.resize(versions.size());
         for (size_t rank = 0; rank < order.size(); ++rank) {
@@ -71,7 +75,7 @@ struct VersionsTimeline {
             n.version = i;
             const std::string lane = v.branch.empty() ? "Main" : v.branch;
             n.lane = static_cast<int>(std::find(r.lanes.begin(), r.lanes.end(), lane) - r.lanes.begin());
-            n.x = left + stepX * slotAt[rank];
+            n.x = left + stepX * slotAt[rank] - scrollX;
             n.y = r.laneY[static_cast<size_t>(n.lane)];
             n.autosave = v.kind == TakeManager::TakeEntry::Kind::Autosave;
             n.open = v.active;

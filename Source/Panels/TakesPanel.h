@@ -263,6 +263,11 @@ private:
     std::vector<TakeRow> m_takeRows;
     std::vector<SnapshotEntry> m_snapshotRows;
     std::vector<StepEntry> m_steps;
+    int m_unsaved{0};
+    float m_timelineScroll{0.0f};
+    bool m_timelineScrollPlaced{false};  ///< the first layout scrolls so the open version is in view
+    unsigned m_stepTick{0};
+    void updateUnsaved();
     std::string m_manifestError;
     bool m_multipleBranches{false};
 
