@@ -27,6 +27,10 @@ public:
     /** @brief The open project and whether its changes are saved. @p note, when set,
         replaces Saved/Unsaved (e.g. "Recovered"). */
     void setProjectStatus(const std::string& name, bool modified, const std::string& note = {});
+    /** @brief The open branch and version, shown as a chip beside the project name (empty branch hides it).
+        Clicking it calls the handler set with setOnVersionChip, with the chip's left edge. */
+    void setVersionChip(const std::string& branch, const NUIColor& branchColor, const std::string& version);
+    void setOnVersionChip(std::function<void(float)> callback) { onVersionChip_ = std::move(callback); }
     
     void setHeight(float height);
     float getHeight() const { return height_; }
@@ -79,6 +83,11 @@ private:
     std::string projectName_;
     std::string projectNote_;
     bool projectModified_ = false;
+    std::string chipBranch_, chipVersion_;
+    NUIColor chipColor_;
+    NUIRect versionChipRect_;
+    bool chipHovered_ = false;
+    std::function<void(float)> onVersionChip_;
     float height_;
     
     // Window controls

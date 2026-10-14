@@ -18,7 +18,7 @@ namespace Audio {
 
 namespace {
 /// The lane's name as shown: the first lane is stored as "Main" and reads as the main mix.
-std::string laneLabel(const std::string& branch) { return branch.empty() || branch == "Main" ? "Main mix" : branch; }
+std::string laneLabel(const std::string& branch) { return VersionsTimeline::laneLabel(branch); }
 constexpr float kPad = 24.0f;
 constexpr float kLaneColumn = 120.0f;  ///< the fixed column of branch names at the left of the timeline
 
@@ -60,14 +60,12 @@ TakesPanel::TakesPanel() : WindowPanel("VERSIONS") {
     setMinimumPanelSize(760.0f, 400.0f);
 }
 
-NUIColor TakesPanel::laneColor(int lane) {
-    static const uint32_t palette[] = {0xff7c3aed, 0xff67e8f9, 0xfff5a83a, 0xfff472b6, 0xff8bc34a, 0xff60a5fa};
-    return NUIColor::fromHex(palette[static_cast<size_t>(std::max(0, lane)) % (sizeof(palette) / sizeof(palette[0]))]);
-}
+NUIColor TakesPanel::laneColor(int lane) { return NUIColor::fromHex(VersionsTimeline::laneHex(lane)); }
 
 void TakesPanel::refreshTakes() {
     rebuildRows();
     setDirty(true);
+    if (m_onRefreshed) m_onRefreshed();
 }
 
 void TakesPanel::rebuildRows() {

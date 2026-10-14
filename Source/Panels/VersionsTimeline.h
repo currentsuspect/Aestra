@@ -2,6 +2,7 @@
 #pragma once
 
 #include "../Core/TakeManager.h"
+#include "../Core/VersionLanes.h"
 #include "NUITypes.h"
 
 #include <algorithm>
@@ -37,6 +38,10 @@ struct VersionsTimeline {
         std::vector<Link> links;
         float maxScroll = 0.0f;               ///< how far the timeline can pan: versions need room, and a narrow panel scrolls
     };
+
+    static std::vector<std::string> laneNames(const std::vector<TakeManager::TakeEntry>& versions) { return VersionLanes::names(versions); }
+    static std::string laneLabel(const std::string& branch) { return VersionLanes::label(branch); }
+    static uint32_t laneHex(int lane) { return VersionLanes::hex(lane); }
 
     static Result layout(const std::vector<TakeManager::TakeEntry>& versions, const AestraUI::NUIRect& area, float scrollX = 0.0f) {
         Result r;
