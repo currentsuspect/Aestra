@@ -11,6 +11,7 @@
  */
 
 #pragma once
+#include "SamplerEditHistory.h"
 
 #include "../AestraUI/Widgets/PanelMode.h"
 #include "../AestraAudio/include/Commands/CommandParser.h"
@@ -592,6 +593,7 @@ private:
     /** V8-W5: render the clips' track output, replace them with it, tell the user the outcome. */
     void bounceClipsInPlace(const std::vector<Aestra::Audio::ClipInstanceID>& clipIds);
     void syncSampleEditorToUnit(Aestra::Audio::UnitID unitId);
+    Aestra::SamplerEditHistory m_samplerEdits; ///< undo for the Sample Editor's controls
     void enqueueMainThreadTask(std::function<void()> task);
     // AestraContentImport.cpp: the sample decodes on a worker thread, the clip is placed on the main one.
     void placeSampleOnTimeline(Aestra::Audio::ClipSourceID sourceId, const std::string& filePath);

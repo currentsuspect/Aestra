@@ -687,7 +687,7 @@ void SampleEditorPanel::buildUI() {
 
     // Pitch/Tune controls
     m_pitchRootSlider = makeSlider("Root", 0.0, 127.0, 60.0);
-    m_pitchCoarseSlider = makeSlider("Coarse", -24.0, 24.0, 0.0, true);
+    m_pitchCoarseSlider = makeSlider("Coarse", -12.0, 12.0, 0.0, true);
     m_pitchFineSlider = makeSlider("Fine", -100.0, 100.0, 0.0, true);
     m_voiceCountSlider = makeSlider("Voices", 1.0, 8.0, 4.0);
     m_pitchRootSlider->setSnapValue(1.0);

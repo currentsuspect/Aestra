@@ -8,6 +8,7 @@
 #include "../Components/TransportModuleStyle.h"
 #include "AestraContent.h"
 #include "UnitSignalColor.h"
+#include "SamplerEditHistory.h"
 #include "ArsenalSoundSetWiring.h"
 #include "FloatingPanelDescriptors.h"
 
@@ -1366,11 +1367,9 @@ void AestraContent::setupArsenalPanels() {
         sampler->reverseSample();
     };
     m_sampleEditorPanel->onControlCommitRequested = [this]() {
-        if (!m_trackManager || !m_sampleEditorUnitId) {
-            return;
-        }
-        m_trackManager->getUnitManager().captureUnitPluginState(m_sampleEditorUnitId);
-        m_trackManager->markModified();
+        if (!m_trackManager || !m_sampleEditorUnitId) return;
+        const auto unit = m_sampleEditorUnitId; // an undo or redo shows the restored values in the editor, if it is still on this unit
+        m_samplerEdits.commit(*m_trackManager, [this, unit]() { if (m_sampleEditorUnitId == unit) syncSampleEditorToUnit(unit); });
     };
     m_overlayLayer->addChild(m_sampleEditorPanel);
 
@@ -4172,6 +4171,7 @@ void AestraContent::syncSampleEditorToUnit(UnitID unitId) {
         return;
     }
 
+    m_samplerEdits.begin(*m_trackManager, unitId); // the sampler as it is now is the baseline for the next undo step
     m_sampleEditorPanel->setWaveformColor(unitSignalColor(*m_trackManager, unitId)); // its channel's colour, else bone
     SampleEditorPanel::ADSRParams adsr;
     adsr.attack = sampler->getAttack();

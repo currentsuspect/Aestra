@@ -71,7 +71,7 @@ public:
     // Pitch/tune
     struct PitchTune {
         int rootMidiNote{60}; // C3 default
-        int coarse{0};        // ±24 semitones
+        int coarse{0};        // ±12 semitones: all the sampler can store (it keeps coarse as a 0..1 value over 24 st centred on 0.5)
         float fine{0.0f}; // ±100 cents
     };
 
