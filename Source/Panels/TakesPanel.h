@@ -3,6 +3,7 @@
 
 #include "WindowPanel.h"
 #include "../Core/TakeManager.h"
+#include "VersionsTimeline.h"
 
 #include <chrono>
 #include <functional>
@@ -69,6 +70,25 @@ public:
     void setOnDeleteTake(std::function<bool(const std::string& takeId)> cb) { m_onDeleteTake = std::move(cb); }
     /** @brief Branch: duplicate a take and continue working on the branch. */
     void setOnBranchTake(std::function<bool(const std::string& takeId)> cb) { m_onBranchTake = std::move(cb); }
+    /** @brief Save the current state to a new branch (a branch of its own, starting at the open version). */
+    void setOnSaveToNewBranch(std::function<bool()> cb) { m_onSaveToNewBranch = std::move(cb); }
+
+    /// One step of the open version, newest first: what the dock lists, and what a click goes back to.
+    struct StepEntry {
+        std::string label;
+        bool undone{false};   ///< Sits on the redo side: the version has been taken back past it.
+        int stackIndex{0};    ///< Index in the command history's undo or redo stack.
+    };
+    using StepsProvider = std::function<std::vector<StepEntry>()>;
+    /// The open version's live steps (the command history), for the dock.
+    void setStepsProvider(StepsProvider provider) { m_stepsProvider = std::move(provider); }
+    /// A step in the dock was clicked: go back (or forward) to it.
+    void setOnStepActivated(std::function<void(const StepEntry&)> cb) { m_onStepActivated = std::move(cb); }
+    /// How many steps have been made since the open version was saved (the timeline's dashed tail).
+    void setUnsavedProvider(std::function<int()> provider) { m_unsavedProvider = std::move(provider); }
+    /// The project's name, shown beside the branch chip.
+    void setProjectNameProvider(std::function<std::string()> provider) { m_projectNameProvider = std::move(provider); }
+
     /** @brief Restore a recovery snapshot after safely saving the current take. */
     void setOnRestoreSnapshot(std::function<bool(const std::string& path)> cb) {
         m_onRestoreSnapshot = std::move(cb);
@@ -80,48 +100,51 @@ public:
     // --- Introspection + programmatic actions -------------------------------
     // The mouse handlers route through these; tests drive them directly.
 
-    /** @brief Number of take rows currently displayed. */
+    /** @brief Number of version rows currently held (manifest order). */
     int getTakeCount() const { return static_cast<int>(m_takeRows.size()); }
-    /** @brief Take entry for a displayed row (row order = manifest order). */
+    /** @brief Version entry for a row (row order = manifest order). */
     const TakeManager::TakeEntry& getTakeAt(int index) const { return m_takeRows[static_cast<size_t>(index)].take; }
-    /** @brief Lineage depth used for row indentation. */
+    /** @brief Lineage depth of a version. */
     int getTakeDepthAt(int index) const { return m_takeRows[static_cast<size_t>(index)].depth; }
-    /** @brief Number of recovery snapshot rows currently displayed. */
+    /** @brief Number of recovery snapshot rows currently held. */
     int getSnapshotCount() const { return static_cast<int>(m_snapshotRows.size()); }
-    /** @brief Selected take row index, or -1. */
+    /** @brief Selected version row index, or -1. */
     int getSelectedTake() const { return m_selectedTake; }
     /** @brief Selected snapshot row index, or -1. */
     int getSelectedSnapshot() const { return m_selectedSnapshot; }
+    /** @brief The version the dock shows: the selected one, else the open one, or -1. */
+    int getDockVersion() const;
     /** @brief Status line shown at the bottom of the panel (empty when clear). */
     const std::string& getStatusText() const { return m_statusText; }
     /** @brief True while an inline rename edit is active. */
     bool isRenameActive() const { return m_renameActive; }
     /** @brief Current rename edit buffer. */
     const std::string& getRenameBuffer() const { return m_renameBuffer; }
+    /** @brief Window-space centre of a version's node on the timeline; false when it is not laid out. */
+    bool getTimelineNodeCenter(int row, AestraUI::NUIPoint& out) const;
 
-    /** @brief Window-space centre of a version's node on the timeline; false when it is not drawn. */
-    bool getTimelineNodeCenter(int row, AestraUI::NUIPoint& out) const { return timelineNode(row, computeLayout(), out); }
-
-    /** @brief Select a take row (clears any snapshot selection). -1 clears. */
+    /** @brief Select a version (clears any snapshot selection). -1 clears. */
     void selectTake(int index);
-    /** @brief Select a snapshot row (clears any take selection). -1 clears. */
+    /** @brief Select a snapshot row (clears any version selection). -1 clears. */
     void selectSnapshot(int index);
 
-    /** @brief Create a new take from the current state. */
+    /** @brief Create a new version from the current state. */
     bool requestCreateTake();
-    /** @brief Save the current state into the active take. */
+    /** @brief Save the current state to a new branch. */
+    bool requestSaveToNewBranch();
+    /** @brief Save the current state into the open version. */
     bool requestSaveActiveTake();
-    /** @brief Open the selected take. */
+    /** @brief Open the selected version. */
     bool requestOpenSelected();
-    /** @brief Duplicate the selected take (stays on the current take). */
+    /** @brief Duplicate the selected version (stays on the current one). */
     bool requestDuplicateSelected();
-    /** @brief Branch from the selected take and switch to the branch. */
+    /** @brief Branch from the selected version and switch to the branch. */
     bool requestBranchSelected();
-    /** @brief Delete the selected take (refused for the active take). */
+    /** @brief Delete the selected version (refused for the open one). */
     bool requestDeleteSelected();
     /** @brief Restore the selected recovery snapshot. */
     bool requestRestoreSelectedSnapshot();
-    /** @brief Start inline rename for the selected take. */
+    /** @brief Start inline rename for the selected version. */
     void beginRenameSelected();
     /** @brief Commit the inline rename buffer. */
     bool commitRename();
@@ -129,59 +152,58 @@ public:
     void cancelRename();
 
 private:
-    static constexpr float ROW_HEIGHT = 26.0f;
-    static constexpr float STEP_ROW_HEIGHT = 20.0f;
-    static constexpr float TIMELINE_LANE_HEIGHT = 18.0f;
-    static constexpr size_t TIMELINE_MAX_LANES = 5;
-    static constexpr float HEADER_HEIGHT = 36.0f;   // WindowPanel title bar area
-    static constexpr float TOOLBAR_HEIGHT = 30.0f;
-    static constexpr float ACTION_BAR_HEIGHT = 28.0f;
-    static constexpr float SECTION_HEADER_HEIGHT = 22.0f;
+    static constexpr float BAR_HEIGHT = 52.0f;
+    static constexpr float LEGEND_HEIGHT = 34.0f;
     static constexpr float STATUS_HEIGHT = 18.0f;
-    static constexpr float LEFT_PAD = 12.0f;
-    static constexpr float TEXT_LEFT_PAD = 28.0f;
-    static constexpr float DEPTH_INDENT = 12.0f;
+    static constexpr float STEP_ROW_HEIGHT = 30.0f;
+    static constexpr float SNAPSHOT_ROW_HEIGHT = 24.0f;
     static constexpr size_t MAX_SNAPSHOT_ROWS = 4;
-    static constexpr size_t MAX_STEP_ROWS = 6;
 
     struct TakeRow {
         TakeManager::TakeEntry take;
         int depth{0};
     };
 
+    struct DockButton {
+        std::string id;
+        std::string label;
+        AestraUI::NUIRect rect;
+        bool primary{false};
+        bool danger{false};
+    };
+
     struct Layout {
-        AestraUI::NUIRect toolbar;
-        AestraUI::NUIRect newTakeButton;
-        AestraUI::NUIRect saveActiveButton;
-        AestraUI::NUIRect timeline; ///< Branch lanes: one row per branch, versions as nodes in time order.
-        AestraUI::NUIRect takesList;
-        AestraUI::NUIRect actionBar;
-        AestraUI::NUIRect stepsHeader; ///< The dock: the selected version's steps (read-only log).
-        AestraUI::NUIRect stepsList;
+        AestraUI::NUIRect bar;
+        AestraUI::NUIRect branchButton;
+        AestraUI::NUIRect saveButton;
+        AestraUI::NUIRect timeline;
+        AestraUI::NUIRect legend;
+        AestraUI::NUIRect dock;
+        AestraUI::NUIRect stepsList;      ///< the open version's steps, inside the dock
         AestraUI::NUIRect snapshotHeader;
         AestraUI::NUIRect snapshotList;
         AestraUI::NUIRect statusLine;
-        bool actionBarVisible{false};
+        std::vector<DockButton> buttons;
+        VersionsTimeline::Result nodes;
     };
 
     Layout computeLayout() const;
     void rebuildRows();
-    int takeRowAt(const AestraUI::NUIPoint& point, const Layout& layout) const;
-    /** @brief Centre of version row `row` on the timeline, or false if it is not drawn (more than the lane cap). */
-    bool timelineNode(int row, const Layout& layout, AestraUI::NUIPoint& out) const;
-    int timelineRowAt(const AestraUI::NUIPoint& point, const Layout& layout) const;
     int snapshotRowAt(const AestraUI::NUIPoint& point, const Layout& layout) const;
-    std::vector<AestraUI::NUIRect> actionButtonRects(const Layout& layout) const;
-    std::vector<std::string> actionButtonLabels() const;
-    bool runRowAction(int actionIndex);
+    int stepRowAt(const AestraUI::NUIPoint& point, const Layout& layout) const;
+    bool runDockAction(const std::string& id);
     void setStatus(const std::string& text);
     bool invokeAction(const std::function<bool()>& action, const char* failureMessage);
-    static std::string relativeTimeLabel(uint64_t epochMs);
+    static AestraUI::NUIColor laneColor(int lane);
 
     TakesProvider m_takesProvider;
     SnapshotsProvider m_snapshotsProvider;
+    StepsProvider m_stepsProvider;
+    std::function<int()> m_unsavedProvider;
+    std::function<std::string()> m_projectNameProvider;
 
     std::function<bool()> m_onCreateTake;
+    std::function<bool()> m_onSaveToNewBranch;
     std::function<bool()> m_onSaveActiveTake;
     std::function<bool(const std::string&)> m_onOpenTake;
     std::function<bool(const std::string&, const std::string&)> m_onRenameTake;
@@ -189,18 +211,20 @@ private:
     std::function<bool(const std::string&)> m_onDeleteTake;
     std::function<bool(const std::string&)> m_onBranchTake;
     std::function<bool(const std::string&)> m_onRestoreSnapshot;
+    std::function<void(const StepEntry&)> m_onStepActivated;
 
     std::vector<TakeRow> m_takeRows;
     std::vector<SnapshotEntry> m_snapshotRows;
+    std::vector<StepEntry> m_steps;
     std::string m_manifestError;
-    bool m_multipleBranches{false}; ///< Show each row's branch only once there is more than one.
+    bool m_multipleBranches{false};
 
     int m_selectedTake{-1};
     int m_selectedSnapshot{-1};
-    int m_hoveredTake{-1};
+    int m_hoveredStep{-1};
     int m_hoveredSnapshot{-1};
-    int m_hoveredAction{-1};
-    float m_scrollY{0.0f};
+    std::string m_hoveredButton;
+    float m_stepScroll{0.0f};
     std::string m_statusText;
 
     bool m_renameActive{false};

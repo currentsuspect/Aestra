@@ -31,6 +31,7 @@
 #include "AudioGraphBuilder.h"
 #include "TakeManager.h"
 #include "VersionSteps.h"
+#include "VersionsPanelWiring.h"
 #include "../Panels/TakesPanel.h"
 #include "../../AestraAudio/include/Core/PlaybackGraphController.h"
 #include "../../AestraAudio/include/IO/AudioExporter.h"
@@ -2289,7 +2290,7 @@ bool AestraApp::saveActiveTakeSnapshot(const ProjectSerializer::UIState* uiState
     return true;
 }
 
-bool AestraApp::createTakeFromCurrentProject() {
+bool AestraApp::createTakeFromCurrentProject(bool newBranch) {
     if (m_documentState.canonicalPath().empty() || !m_content || !m_content->getTrackManager()) {
         return false;
     }
@@ -2307,7 +2308,8 @@ bool AestraApp::createTakeFromCurrentProject() {
 
     const auto manifest = TakeManager::loadManifest(m_documentState.canonicalPath());
     const std::string takeName = "Version " + std::to_string(manifest.ok ? manifest.takes.size() + 1 : 2);
-    auto result = TakeManager::createVersion(m_documentState.canonicalPath(), ser.contents, takeName, "", "", TakeManager::TakeEntry::Kind::Saved, collectVersionSteps(m_content->getTrackManager()->getCommandHistory()));
+    const std::string branchName = newBranch ? "Branch " + std::to_string(manifest.ok ? manifest.branches().size() + 1 : 2) : ""; // empty continues the open branch
+    auto result = TakeManager::createVersion(m_documentState.canonicalPath(), ser.contents, takeName, "", branchName, TakeManager::TakeEntry::Kind::Saved, collectVersionSteps(m_content->getTrackManager()->getCommandHistory()));
     if (!result.ok) { Log::warning("[Takes] Could not create version: " + result.errorMessage); return false; }
 
     Log::info("[Takes] Active version: " + result.take.name); return true;
@@ -2440,6 +2442,9 @@ void AestraApp::wireTakesPanel() {
     });
 
     takesPanel->setOnCreateTake([this]() { return createTakeFromCurrentProject(); });
+    takesPanel->setOnSaveToNewBranch([this]() { return createTakeFromCurrentProject(true); });
+    wireVersionsDock(*takesPanel, [this]() -> Audio::CommandHistory& { return m_content->getTrackManager()->getCommandHistory(); },
+                     [this]() { return m_documentState.canonicalPath(); }, [this]() { return m_documentState.displayName(); });
     takesPanel->setOnSaveActiveTake([this]() { return saveProject(); });
 
     takesPanel->setOnOpenTake([this](const std::string& takeId) {
@@ -2451,35 +2456,23 @@ void AestraApp::wireTakesPanel() {
     });
 
     takesPanel->setOnRenameTake([this](const std::string& takeId, const std::string& name) {
-        if (m_documentState.canonicalPath().empty()) {
-            return false;
-        }
+        if (m_documentState.canonicalPath().empty()) return false;
         auto result = TakeManager::renameTake(m_documentState.canonicalPath(), takeId, name);
-        if (!result.ok) {
-            Log::warning("[Takes] Could not rename Take: " + result.errorMessage);
-        }
+        if (!result.ok) Log::warning("[Takes] Could not rename Take: " + result.errorMessage);
         return result.ok;
     });
 
     takesPanel->setOnDuplicateTake([this](const std::string& takeId) {
-        if (m_documentState.canonicalPath().empty()) {
-            return false;
-        }
+        if (m_documentState.canonicalPath().empty()) return false;
         auto result = TakeManager::duplicateTake(m_documentState.canonicalPath(), takeId);
-        if (!result.ok) {
-            Log::warning("[Takes] Could not duplicate Take: " + result.errorMessage);
-        }
+        if (!result.ok) Log::warning("[Takes] Could not duplicate Take: " + result.errorMessage);
         return result.ok;
     });
 
     takesPanel->setOnDeleteTake([this](const std::string& takeId) {
-        if (m_documentState.canonicalPath().empty()) {
-            return false;
-        }
+        if (m_documentState.canonicalPath().empty()) return false;
         auto result = TakeManager::deleteTake(m_documentState.canonicalPath(), takeId);
-        if (!result.ok) {
-            Log::warning("[Takes] Could not delete Take: " + result.errorMessage);
-        }
+        if (!result.ok) Log::warning("[Takes] Could not delete Take: " + result.errorMessage);
         return result.ok;
     });
 
