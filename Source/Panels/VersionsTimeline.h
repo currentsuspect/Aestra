@@ -18,8 +18,8 @@ namespace Aestra {
  * manifest's versions and a rectangle and returns positions, so the layout is testable without a window.
  */
 struct VersionsTimeline {
-    static constexpr float kLabelColumn = 150.0f;  ///< room at the left for the branch names
-    static constexpr float kTailRoom = 200.0f;     ///< room at the right for the dashed tail and its chip
+    static constexpr float kLabelColumn = 130.0f;  ///< room at the left for the branch names
+    static constexpr float kTailRoom = 180.0f;     ///< room at the right for the dashed tail and its chip
 
     struct Node {
         int version = -1;       ///< index into the versions passed in
@@ -53,7 +53,15 @@ struct VersionsTimeline {
         for (size_t i = 0; i < order.size(); ++i) order[i] = static_cast<int>(i);
         std::stable_sort(order.begin(), order.end(), [&](int a, int b) { return versions[static_cast<size_t>(a)].createdAtMs < versions[static_cast<size_t>(b)].createdAtMs; });
         const float left = area.x + kLabelColumn + 40.0f, right = std::max(left + 1.0f, area.right() - kTailRoom);
-        const float stepX = versions.size() > 1 ? (right - left) / static_cast<float>(versions.size() - 1) : 0.0f;
+        // A saved version takes a full slot along the axis; an autosave takes half, so the labels stay readable.
+        float total = 0.0f;
+        std::vector<float> slotAt(order.size(), 0.0f);
+        for (size_t rank = 0; rank < order.size(); ++rank) {
+            slotAt[rank] = total;
+            total += versions[static_cast<size_t>(order[rank])].kind == TakeManager::TakeEntry::Kind::Autosave ? 0.5f : 1.0f;
+        }
+        const float lastSlot = order.empty() ? 0.0f : slotAt.back();
+        const float stepX = lastSlot > 0.0f ? (right - left) / lastSlot : 0.0f;
 
         r.nodes.resize(versions.size());
         for (size_t rank = 0; rank < order.size(); ++rank) {
@@ -63,7 +71,7 @@ struct VersionsTimeline {
             n.version = i;
             const std::string lane = v.branch.empty() ? "Main" : v.branch;
             n.lane = static_cast<int>(std::find(r.lanes.begin(), r.lanes.end(), lane) - r.lanes.begin());
-            n.x = left + stepX * static_cast<float>(rank);
+            n.x = left + stepX * slotAt[rank];
             n.y = r.laneY[static_cast<size_t>(n.lane)];
             n.autosave = v.kind == TakeManager::TakeEntry::Kind::Autosave;
             n.open = v.active;
