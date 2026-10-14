@@ -790,6 +790,14 @@ void AestraWindowManager::setProjectStatus(const std::string& name, bool modifie
     }
 }
 
+void AestraWindowManager::setVersionChip(const std::string& branch, const AestraUI::NUIColor& color, const std::string& version) {
+    if (m_customWindow && m_customWindow->getTitleBar()) m_customWindow->getTitleBar()->setVersionChip(branch, color, version);
+}
+
+void AestraWindowManager::setOnVersionChip(std::function<void(float)> onClick) {
+    if (m_customWindow && m_customWindow->getTitleBar()) m_customWindow->getTitleBar()->setOnVersionChip(std::move(onClick));
+}
+
 void AestraWindowManager::setWindowTitle(const std::string& title) {
     if (m_customWindow) m_customWindow->setTitle(title);
 }

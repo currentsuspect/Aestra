@@ -120,6 +120,9 @@ public:
     bool getBringOverRowCenter(int row, AestraUI::NUIPoint& out) const;
     bool getBringOverButtonCenter(const std::string& id, AestraUI::NUIPoint& out) const;
 
+    /// Called after every refresh of the rows, so things that mirror the versions (the title-bar chip) stay current.
+    void setOnRefreshed(std::function<void()> cb) { m_onRefreshed = std::move(cb); }
+
     /// The project's name, shown beside the branch chip.
     void setProjectNameProvider(std::function<std::string()> provider) { m_projectNameProvider = std::move(provider); }
 
@@ -238,6 +241,7 @@ private:
     std::function<std::optional<BounceCard>(const TakeManager::TakeEntry&)> m_bounceProvider;
     std::function<bool(const std::string&)> m_onToggleBounce;
     std::function<bool(const std::string&)> m_onBounce;
+    std::function<void()> m_onRefreshed;
     std::function<std::optional<BringOverCard>(const std::string&)> m_bringProvider;
     std::function<bool(const std::string&, const std::vector<BringOverCard::Row>&)> m_onBringOver;
     std::optional<BringOverCard> m_bring;

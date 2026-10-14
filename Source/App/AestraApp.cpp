@@ -2443,10 +2443,7 @@ void AestraApp::wireTakesPanel() {
 
     takesPanel->setOnCreateTake([this]() { return createTakeFromCurrentProject(); });
     takesPanel->setOnSaveToNewBranch([this]() { return createTakeFromCurrentProject(true); });
-    wireVersionsDock(*takesPanel, [this]() -> Audio::CommandHistory& { return m_content->getTrackManager()->getCommandHistory(); }, [this]() { return m_documentState.canonicalPath(); }, [this]() { return m_documentState.displayName(); }, [this]() { m_content->refreshAfterHistoryChange(); });
-    wireVersionBounces(*takesPanel, [this]() { return m_documentState.canonicalPath(); }, [this](const std::string& p) { return m_content->togglePreviewFile(p); }, [this](const std::string& p) { return m_content->isPreviewFilePlaying(p); },
-                       [this](const std::string& id) { return bounceSavedVersion(m_documentState.canonicalPath(), id, [this](std::vector<float>& a, uint32_t& c, uint32_t& r) { return m_content->renderMixToBuffer(a, c, r); }); });
-    wireBringOver(*takesPanel, [this]() { return m_documentState.canonicalPath(); }, [this]() { return m_content->getTrackManager().get(); }, [this](const std::string&) { m_content->refreshAfterHistoryChange(); return true; });
+    wireVersionsPanel(*takesPanel);
     takesPanel->setOnSaveActiveTake([this]() { return saveProject(); });
     takesPanel->setOnOpenTake([this](const std::string& takeId) {
         auto result = switchToTake(takeId);
@@ -2571,13 +2568,8 @@ void AestraApp::applyUIState(const ProjectSerializer::UIState& state) {
 
 void AestraApp::updateWindowTitle() {
     m_windowManager->setWindowTitle(m_documentState.windowTitle());
+    refreshVersionChip();
     pushProjectStatus();
-}
-
-void AestraApp::pushProjectStatus() {
-    if (!m_windowManager) return;
-    const bool modified = m_content && m_content->getTrackManager() && m_content->getTrackManager()->isModified();
-    m_windowManager->setProjectStatus(m_documentState.displayName(), modified, m_documentState.statusNote());
 }
 
 void AestraApp::startExport() {

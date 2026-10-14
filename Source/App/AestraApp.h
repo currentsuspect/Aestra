@@ -31,6 +31,8 @@
  * Manages the lifecycle of all AESTRA subsystems and the main event loop.
  * Refactored to delegate to AestraWindowManager and AestraAudioController.
  */
+namespace Aestra { namespace Audio { class TakesPanel; } }
+
 class AestraApp {
 public:
     AestraApp();
@@ -190,6 +192,10 @@ private:
     void cleanupUnreferencedRecordings(const std::string& keeperProjectPath = "");
     /** @brief Push the project name and saved state to the title bar. */
     void pushProjectStatus();
+    void wireVersionsPanel(Aestra::Audio::TakesPanel& panel);
+    void refreshVersionChip();
+    void showVersionPicker(float x);
+    int m_recordedSteps = 0;  ///< steps the open version recorded when saved, for the "N unsaved" count
     static std::string getRecoveryMarkerPath(const std::string& autosavePath);
     static std::string readCrashFlagToken();
     static std::string readRecoveryOriginalProjectPath(const std::string& recoveryMarkerPath,

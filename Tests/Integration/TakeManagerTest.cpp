@@ -3,6 +3,7 @@
 #include "../../Source/Core/TakeManager.h"
 #include "../../Source/Core/VersionBounce.h"
 #include "../../Source/Core/VersionBringOver.h"
+#include "../../Source/Core/VersionPicker.h"
 
 #include "../../Source/Core/ProjectSerializer.h"
 #include "../Support/TestTempDirectory.h"
@@ -303,6 +304,29 @@ int main() {
         cmd->redo();
         require(current->getPlaylistModel().getLaneCount() == lanesBefore + 1, "Redo brings it back");
         (void)lonelyId;
+    }
+
+    // The title-bar chip and picker read from the manifest alone.
+    {
+        namespace VP = Aestra::VersionPicker;
+        TakeManager::Manifest m;
+        m.ok = true;
+        const auto mk = [](const char* id, const char* name, const char* branch, uint64_t t, bool autosave = false, bool active = false) {
+            TakeManager::TakeEntry v;
+            v.id = id; v.name = name; v.branch = branch; v.createdAtMs = t; v.active = active;
+            v.kind = autosave ? TakeManager::TakeEntry::Kind::Autosave : TakeManager::TakeEntry::Kind::Saved;
+            return v;
+        };
+        m.takes = {mk("a", "Start", "Main", 1), mk("s", "", "Main", 2, true), mk("b", "Mix pass 1", "Main", 3, false, true), mk("c", "Alt hook v2", "Alt hook", 4)};
+        m.activeTakeId = "b";
+        const auto chip = VP::chip(m);
+        require(chip.branch == "Main mix" && chip.version == "Mix pass 1" && chip.lane == 0, "The chip reads the open branch as the main mix, and the open version");
+        const auto entries = VP::entries(m);
+        require(entries.size() == 2 && entries[0].branch == "Main mix" && entries[0].current && entries[0].versionId == "b", "Each branch lands on its newest saved version");
+        require(entries[1].branch == "Alt hook" && !entries[1].current && entries[1].versionName == "Alt hook v2", "...and the other branch is not the current one");
+        m.takes[2].kind = TakeManager::TakeEntry::Kind::Autosave;
+        require(VP::entries(m)[0].versionId == "a", "An autosave is never where a branch opens");
+        require(VP::chip(TakeManager::Manifest{}).branch.empty(), "No manifest, no chip");
     }
 
     return 0;
