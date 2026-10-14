@@ -3161,6 +3161,23 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(VersionsTimelineTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
 
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(AuditionHubLayoutTest AestraUI_Core)
+    add_executable(AuditionHubLayoutTest AestraUI/AuditionHubLayoutTest.cpp)
+    target_link_libraries(AuditionHubLayoutTest PRIVATE AestraUI_Core)
+    target_include_directories(AuditionHubLayoutTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME AuditionHubLayoutTest COMMAND AuditionHubLayoutTest)
+    set_tests_properties(AuditionHubLayoutTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
 # Kits and the empty state: a folder of sounds becomes a row of units (V81-AR1, FD-27 point 6).
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(ArsenalKitTest AestraUI_Core)
@@ -3884,6 +3901,7 @@ if(AESTRA_ENABLE_UI)
         ArsenalSoundDrawerTest
         ArsenalSoundSetTest
         VersionsTimelineTest
+        AuditionHubLayoutTest
         ArsenalKitTest
         UIMixerPanelGroupingTest
         PluginRackBindingLifecycleTest

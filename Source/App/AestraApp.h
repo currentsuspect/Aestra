@@ -195,6 +195,7 @@ private:
     void pushProjectStatus();
     void wireVersionsPanel(Aestra::Audio::TakesPanel& panel);
     void refreshVersionChip();
+    void wireAudition();
     Aestra::RecoveryInfo::Info recoveryInfoFor(const std::string& originalProjectPath, const std::vector<std::string>& candidates);
     void onRecoveryResponse(Aestra::RecoveryResponse response, const std::string& autosavePath, const std::string& projectPath,
                             bool hasRequestedProject, const std::string& originalProjectPath, const std::vector<std::string>& candidates);

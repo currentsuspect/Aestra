@@ -5,6 +5,7 @@
 #include "../../Source/Core/VersionBringOver.h"
 #include "../../Source/Core/VersionPicker.h"
 #include "../../Source/Core/RecoveryInfo.h"
+#include "../../Source/Core/AuditionLibrary.h"
 
 #include "../../Source/Core/ProjectSerializer.h"
 #include "../Support/TestTempDirectory.h"
@@ -347,6 +348,23 @@ int main() {
         require(RI::gapWords(0, 30'000) == "1 minute" && RI::gapWords(0, 10'000) == "moments" && RI::gapWords(0, 3 * 3'600'000) == "3 hours", "Gaps read as minutes, hours, or moments");
         require(RI::build(m, {1'000'000 - minute}).autosaveMs.empty() && RI::build(m, {1'000'000 - minute}).detail == "Nothing newer than your last saved version was autosaved.", "An autosave older than the version is not lit");
         require(!RI::build(TakeManager::Manifest{}, {5}).hasVersion && RI::build(TakeManager::Manifest{}, {5}).autosaveMs.size() == 1, "A project with no versions still shows its autosaves");
+    }
+
+    // What Audition lists: the project's bounces newest first, and imported references that survive a restart.
+    {
+        namespace AL = Aestra::AuditionLibrary;
+        const auto manifest = TakeManager::loadManifest(projectPath.string());
+        const auto items = AL::versionItems("Night Drive", projectPath.string(), manifest, 2'000'000'000'000ull);
+        require(!items.empty() && items[0].kind == AL::Item::Kind::Version && items[0].title == "Night Drive", "A bounced version is listed under the project's name");
+        require(items[0].hasLufs && std::fabs(items[0].lufs + 9.8) < 0.01 && items[0].badge[0] == 'v', "...with its loudness and a version number");
+        require(AL::seedOf("Night Drive") == AL::seedOf("Night Drive") && AL::seedOf("Night Drive") != AL::seedOf("Glass Coast"), "A name always gets the same cover seed");
+        const auto file = (tempDir / "audition_library.txt").string();
+        std::vector<AL::Reference> refs{{"/music/Glass Coast.flac", "Glass Coast", 242.0, -8.6, true, 5}, {"/music/Low Orbit.flac", "Low Orbit", 211.0, 0.0, false, 6}};
+        require(AL::save(file, refs), "The reference list is written");
+        const auto back = AL::load(file);
+        require(back.size() == 2 && back[0].title == "Glass Coast" && back[0].hasLufs && std::fabs(back[0].lufs + 8.6) < 1e-3 && !back[1].hasLufs, "...and read back, loudness or not");
+        require(AL::itemOf(back[0]).badge == "REF" && AL::itemOf(back[0]).subtitle.find("LUFS") != std::string::npos, "A reference reads as REF with its loudness");
+        require(Aestra::VersionTime::ago(1'000'000'000'000ull, 1'000'000'000'000ull + 86'400'000ull * 2 + 3'600'000ull) == "2 days ago", "A bounce from two days ago says so");
     }
 
     return 0;

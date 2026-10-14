@@ -2392,7 +2392,7 @@ void AestraApp::wireTakesPanel() {
 
     takesPanel->setOnCreateTake([this]() { return createTakeFromCurrentProject(); });
     takesPanel->setOnSaveToNewBranch([this]() { return createTakeFromCurrentProject(true); });
-    wireVersionsPanel(*takesPanel);
+    wireVersionsPanel(*takesPanel); wireAudition();
     takesPanel->setOnSaveActiveTake([this]() { return saveProject(); });
     takesPanel->setOnOpenTake([this](const std::string& takeId) {
         auto result = switchToTake(takeId);

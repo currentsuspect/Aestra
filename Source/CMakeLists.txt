@@ -65,6 +65,8 @@ set(Aestra_SOURCES
 	Panels/PatternBrowserPanel.cpp
 	Panels/AuditionPanel.h
 	Panels/AuditionPanel.cpp
+	Panels/AuditionHub.h
+	Panels/AuditionHub.cpp
 	Panels/AestraHistoryPanel.h
 	Panels/AestraHistoryPanel.cpp
 	Panels/TakesPanel.h

@@ -9,6 +9,9 @@
 #include "../Panels/TakesPanel.h"
 #include "../Core/AestraWindowManager.h"
 #include "../AestraUI/Base/NUIContextMenu.h"
+#include "../Core/AuditionHooks.h"
+#include "AestraFileDialog.h"
+#include <filesystem>
 
 using namespace Aestra;
 
@@ -75,4 +78,24 @@ void AestraApp::showVersionPicker(float x) {
     menu->addItem("Open History...", [this]() { m_content->setViewOpen(Audio::ViewType::Takes, true); });
     menu->addItem("Save as an alt...", [this]() { if (createTakeFromCurrentProject(true)) refreshVersionChip(); });
     m_windowManager->showDropdownMenu(menu, x);
+}
+
+/// What the Audition hub gets from the app: the open project, a place to keep references, and the two requests.
+void AestraApp::wireAudition() {
+    if (!m_content) return;
+    AuditionHooks hooks;
+    hooks.project = [this]() { return std::make_pair(m_documentState.displayName(), m_documentState.canonicalPath()); };
+    const std::string autosave = autosavePathOrEmpty();
+    if (!autosave.empty()) hooks.libraryFile = (std::filesystem::path(autosave).parent_path() / "audition_references.txt").string();
+    hooks.importReference = [this]() {
+        const std::string filter("Audio\0*.wav;*.flac;*.mp3;*.ogg;*.aiff;*.aif;*.m4a\0All Files\0*.*\0", sizeof("Audio\0*.wav;*.flac;*.mp3;*.ogg;*.aiff;*.aif;*.m4a\0All Files\0*.*\0") - 1);
+        pickFileAsync([filter](Aestra::IPlatformUtils& utils) { return utils.openFileDialog("Import a reference", filter); },
+                      [this](const std::string& picked) { if (!picked.empty() && m_content) m_content->addAuditionReference(picked); });
+    };
+    hooks.bounceNow = [this]() {
+        const auto manifest = TakeManager::loadManifest(m_documentState.canonicalPath());
+        const auto* open = manifest.ok ? manifest.activeTake() : nullptr;
+        return open && bounceSavedVersion(m_documentState.canonicalPath(), open->id, [this](std::vector<float>& a, uint32_t& c, uint32_t& r) { return m_content->renderMixToBuffer(a, c, r); });
+    };
+    m_content->setAuditionHooks(std::move(hooks));
 }

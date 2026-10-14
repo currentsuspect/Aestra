@@ -28,7 +28,7 @@ constexpr int kCountInStartupFrameLimit = 60;
 #include "ArsenalPanel.h"
 #include "AudioGraphBuilder.h"
 #include "AuditionEngine.h" // Audition Mode backend
-#include "AuditionPanel.h"  // Audition Mode UI
+#include "AuditionHub.h"  // Audition Mode UI
 #include "Commands/ClipPlacement.h"
 #include "Commands/PluginCommands.h"
 #include "MidiInputService.h"
@@ -2827,7 +2827,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             m_playbackContext->enterAudition();
 
             if (!m_auditionPanel) {
-                m_auditionPanel = std::make_shared<AuditionPanel>(m_auditionEngine);
+                m_auditionPanel = std::make_shared<AuditionHub>(m_auditionEngine);
                 m_auditionPanel->setOnPlayRequest([this]() { stopSoundPreview(); });
                 m_auditionPanel->setOnActiveTrackPathChanged([this](const std::string& path) {
                     if (m_fileBrowser) {
@@ -2851,8 +2851,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
                 }
             }
 
-            // Show the Audition panel, hide DAW panels
-            m_auditionPanel->setVisible(true);
+            m_auditionPanel->setVisible(true); applyAuditionHooks();  // the hub, with what it needs from the app
             if (m_trackManagerUI)
                 m_trackManagerUI->setVisible(false);
             applyOverlayPanelVisibility(focus);
