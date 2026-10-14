@@ -68,7 +68,7 @@ inline constexpr std::array<FloatingPanelGeometry, 5> kFloatingPanelGeometry{{
     {Audio::ViewType::Sequencer, UISurfaceKeys::kPanelSequencer, 600.0, 300.0, 0.0, 0.0, 520.0, 220.0, true},
     {Audio::ViewType::PianoRoll, UISurfaceKeys::kPanelPianoRoll, 800.0, 450.0, 0.0, 0.0, 560.0, 280.0},
     {Audio::ViewType::History, UISurfaceKeys::kPanelHistory, 280.0, 460.0, 0.5, 0.0, 240.0, 220.0},
-    {Audio::ViewType::Takes, UISurfaceKeys::kPanelTakes, 1500.0, 620.0, 0.5, 0.0, 760.0, 400.0},
+    {Audio::ViewType::Takes, UISurfaceKeys::kPanelTakes, 960.0, 520.0, 0.5, 0.0, 760.0, 400.0},
 }};
 
 /// Every ViewType, in enum order. Written out by hand, so the static_assert
