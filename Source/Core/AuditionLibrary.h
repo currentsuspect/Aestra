@@ -85,6 +85,13 @@ struct Reference {
     uint64_t addedMs = 0;
 };
 
+/// What an item is called when it stands beside another: a reference by its title, a version by its number and name.
+inline std::string displayName(const Item& item) {
+    if (item.kind == Item::Kind::Reference) return item.title;
+    const size_t dot = item.subtitle.find(" \xc2\xb7 ");
+    return item.badge + " " + (dot == std::string::npos ? item.subtitle : item.subtitle.substr(0, dot));
+}
+
 inline Item itemOf(const Reference& r) {
     Item item;
     item.kind = Item::Kind::Reference;

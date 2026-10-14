@@ -67,6 +67,9 @@ set(Aestra_SOURCES
 	Panels/AuditionPanel.cpp
 	Panels/AuditionHub.h
 	Panels/AuditionHub.cpp
+	Panels/AuditionHubItem.cpp
+	Panels/AuditionFilesPage.h
+	Panels/AuditionFilesPage.cpp
 	Panels/AestraHistoryPanel.h
 	Panels/AestraHistoryPanel.cpp
 	Panels/TakesPanel.h

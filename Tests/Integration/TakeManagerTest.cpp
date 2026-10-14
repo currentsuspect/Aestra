@@ -7,6 +7,7 @@
 #include "../../Source/Core/RecoveryInfo.h"
 #include "../../Source/Core/AuditionLibrary.h"
 #include "../../Source/Core/AuditionCompare.h"
+#include "../../Source/Core/AuditionFiles.h"
 
 #include "../../Source/Core/ProjectSerializer.h"
 #include "../Support/TestTempDirectory.h"
@@ -15,6 +16,7 @@
 #include <atomic>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <thread>
@@ -387,6 +389,24 @@ int main() {
         require(flipped.referenceGainDb > 5.0, "A quieter reference is turned up");
         std::vector<float> silence(44100 * 6 * 2, 0.0f);
         require(!AC::compare(quiet, AC::measure("s.wav", silence, 2, 44100)).ok, "Silence cannot be compared");
+    }
+
+    // The files Audition shows: folders and audio, nothing else, folders first.
+    {
+        namespace AF = Aestra::AuditionFiles;
+        const auto dir = tempDir / "audition_files";
+        std::filesystem::create_directories(dir / "Zed folder");
+        std::filesystem::create_directories(dir / ".hidden");
+        const auto touch = [&](const char* name) { std::ofstream(dir / name) << "x"; };
+        touch("b track.WAV"); touch("a track.flac"); touch("plugin.vst3"); touch("project.aes"); touch("notes.txt"); touch(".secret.wav");
+        const auto entries = AF::list(dir.string());
+        require(entries.size() == 3, "Only folders and audio are listed: not plugins, projects or text, and not hidden things");
+        require(entries[0].folder && entries[0].name == "Zed folder", "Folders come first");
+        require(entries[1].name == "a track.flac" && entries[2].name == "b track.WAV", "Audio follows in name order, any case of extension");
+        require(AF::list((dir / "nope").string()).empty(), "A folder that is not there lists as empty");
+        const auto places = AF::places(dir.string(), "/definitely/not/home");
+        require(places.size() == 1 && places[0].name == "Project", "Places that do not exist are left out");
+        require(AF::sizeLabel(512) == "1 KB" && AF::sizeLabel(3 * 1024 * 1024) == "3.0 MB", "Sizes read in KB and MB");
     }
 
     return 0;

@@ -1,5 +1,6 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AuditionHub.h"
+#include "AuditionCover.h"
 
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
@@ -43,33 +44,9 @@ const char* pageName(AuditionHubLayout::Page p) {
         case AuditionHubLayout::Page::References: return "References";
         case AuditionHubLayout::Page::Queue: return "Files & queue";
         case AuditionHubLayout::Page::Search: return "Search";
+        case AuditionHubLayout::Page::Item: return "";
     }
     return "";
-}
-
-/// The generated cover: a quiet background with two or three flat shapes, always the same for the same seed.
-void drawCover(NUIRenderer& r, const NUIRect& rc, uint32_t seed) {
-    struct Palette { uint32_t bg, a, b; };
-    static const Palette palettes[] = {{0xff083d1d, 0xff3ec46d, 0xff18b8a6}, {0xff1d1536, 0xff14b8c9, 0xff7a6bd6}, {0xff0a2036, 0xfff08a00, 0xffb08a00},
-                                       {0xff2a1230, 0xffe86bb9, 0xffb2506f}, {0xff301020, 0xfff0a0a0, 0xffc9a100}, {0xff5b1b1b, 0xffc9a100, 0xff6c87c9}};
-    const Palette& p = palettes[seed % (sizeof(palettes) / sizeof(palettes[0]))];
-    const NUIColor bg = NUIColor::fromHex(p.bg), a = NUIColor::fromHex(p.a), b = NUIColor::fromHex(p.b);
-    r.fillRect(rc, bg);
-    const float s = rc.width;
-    switch ((seed >> 8) % 3) {
-        case 0:  // a circle and a square overlapping
-            r.fillCircle({rc.x + s * 0.40f, rc.y + s * 0.42f}, s * 0.26f, a);
-            r.fillRect({rc.x + s * 0.50f, rc.y + s * 0.46f, s * 0.30f, s * 0.30f}, b.withAlpha(0.85f));
-            break;
-        case 1:  // two bars across
-            r.fillRect({rc.x, rc.y + s * 0.62f, s, s * 0.13f}, a);
-            r.fillRect({rc.x, rc.y + s * 0.75f, s, s * 0.06f}, b.withAlpha(0.8f));
-            break;
-        default:  // a tall bar and a ring
-            r.fillRect({rc.x + s * 0.30f, rc.y, s * 0.10f, s}, a);
-            r.strokeCircle({rc.x + s * 0.68f, rc.y + s * 0.42f}, s * 0.17f, 2.0f, b);
-            break;
-    }
 }
 
 } // namespace
@@ -78,6 +55,19 @@ AuditionHub::AuditionHub(std::shared_ptr<Audio::AuditionEngine> engine) : m_engi
     m_queuePage = std::make_shared<AuditionPanel>(m_engine);
     m_queuePage->setVisible(false);
     addChild(m_queuePage);
+    m_files = std::make_shared<AuditionFilesPage>();
+    m_files->setVisible(false);
+    addChild(m_files);
+    m_files->setOnPlay([this](const std::string& path) {
+        AuditionLibrary::Item item;
+        item.kind = AuditionLibrary::Item::Kind::Stem;
+        item.id = "f:" + path;
+        item.title = std::filesystem::path(path).stem().string();
+        item.path = path;
+        item.seed = AuditionLibrary::seedOf(item.title);
+        play(item);
+    });
+    m_files->setOnAddReference([this](const std::string& path) { addReference(path); setPage(Page::References); });
 }
 
 AuditionHub::~AuditionHub() {
@@ -97,31 +87,13 @@ void AuditionHub::addTimelineTrack(uint32_t trackId, const std::string& trackNam
     setPage(Page::Queue);  // "Send to Audition" lands where the thing it sent is
 }
 
-void AuditionHub::setBrowser(std::shared_ptr<NUIComponent> browser) {
-    releaseBrowser();
-    m_browser = std::move(browser);
-    if (!m_browser) return;
-    addChild(m_browser);
-    layoutQueuePage();
-}
-
-std::shared_ptr<NUIComponent> AuditionHub::releaseBrowser() {
-    auto browser = std::move(m_browser);
-    m_browser.reset();
-    if (browser) removeChild(browser);
-    return browser;
-}
-
-/// The Queue page: the file browser at the left, the queue it feeds beside it.
+/// The Queue page: the files column at the left, the queue it feeds beside it.
 void AuditionHub::layoutQueuePage() {
     const NUIRect area = pageArea();
-    constexpr float kBrowserW = 340.0f;
-    const float browserW = m_browser ? std::min(kBrowserW, area.width * 0.45f) : 0.0f;
-    if (m_browser) {
-        m_browser->setBounds({area.x, area.y, browserW, area.height});
-        m_browser->setVisible(m_page == Page::Queue);
-    }
-    m_queuePage->setBounds({area.x + browserW, area.y, area.width - browserW, area.height});
+    const float filesW = std::min(380.0f, area.width * 0.42f);
+    m_files->setBounds({area.x, area.y, filesW, area.height});
+    m_files->setVisible(m_page == Page::Queue);
+    m_queuePage->setBounds({area.x + filesW, area.y, area.width - filesW, area.height});
 }
 
 void AuditionHub::setLibraryFile(std::string file) {
@@ -133,6 +105,7 @@ void AuditionHub::setLibraryFile(std::string file) {
 void AuditionHub::refresh() {
     const Project project = m_projectProvider ? m_projectProvider() : Project{};
     m_projectName = project.name;
+    m_files->setProjectDir(project.path.empty() ? std::string() : std::filesystem::path(project.path).parent_path().string());
     m_versions = project.path.empty() ? std::vector<AuditionLibrary::Item>{}
                                       : AuditionLibrary::versionItems(project.name, project.path, TakeManager::loadManifest(project.path), nowMs());
     m_references.clear();
@@ -184,7 +157,7 @@ void AuditionHub::setPage(Page page) {
     m_page = page;
     m_scroll = 0.0f;
     m_queuePage->setVisible(page == Page::Queue);
-    if (m_browser) m_browser->setVisible(page == Page::Queue);
+    m_files->setVisible(page == Page::Queue);
     setFocused(page == Page::Search);
     if (page != Page::Search) m_search.clear();
     setDirty(true);
@@ -256,7 +229,7 @@ std::vector<AuditionHub::ShelfModel> AuditionHub::shelfModels() const {
             out = {found};
             break;
         }
-        case Page::Queue: break;
+        case Page::Queue: case Page::Item: break;
     }
     return out;
 }
@@ -301,6 +274,7 @@ void AuditionHub::onUpdate(double deltaTime) {
     NUIComponent::onUpdate(deltaTime);
     if (!isVisible()) return;
     applyPendingReferences();
+    applySides();
     if (++m_tick % 180 == 0) refresh();
     if (m_engine && m_engine->isPlaying()) setDirty(true);  // the position moves
     layoutQueuePage();
@@ -313,6 +287,7 @@ void AuditionHub::onRender(NUIRenderer& r) {
     r.fillRect(getBounds(), theme.getColor("backgroundPrimary"));
     renderNav(r, f);
     if (m_page == Page::Queue) renderChildren(r);
+    else if (m_page == Page::Item) renderItemPage(r, f);
     else renderPage(r, f);
     renderPlayer(r, f);
     if (m_menu) m_menu->onRender(r);
@@ -486,15 +461,17 @@ void AuditionHub::renderPlayer(NUIRenderer& r, const AuditionHubLayout::Frame& f
     r.fillRect({f.seek.x, barY - 1.5f, f.seek.width * frac, 3.0f}, NUIColor(0.93f, 0.91f, 0.87f, 1.0f));
 
     // A (the mix) and B (the reference), the preset it is heard through, and how loud it is.
-    const auto segment = [&](const NUIRect& b, const std::string& a, const std::string& label, bool on, bool enabled) {
-        r.fillRect(b, on ? theme.getColor("accentPrimary") : theme.getColor("surfaceTertiary"));
+    const auto segment = [&](const NUIRect& b, const std::string& a, const std::string& label, bool on, bool enabled, bool amber = false) {
+        r.fillRect(b, on ? (amber ? theme.getColor("warning") : theme.getColor("accentPrimary")) : theme.getColor("surfaceTertiary"));
         const std::string full = a + " \xc2\xb7 " + label;
         const float tw = r.measureText(full, 11.5f).width;
         r.drawText(full, {b.x + (b.width - tw) * 0.5f, std::round(r.calculateTextY(b, 11.5f))}, 11.5f,
-                   on ? NUIColor::white() : (enabled ? muted : muted.withAlpha(0.45f)));
+                   on ? (amber ? NUIColor(0.1f, 0.07f, 0.02f, 1.0f) : NUIColor::white()) : (enabled ? muted : muted.withAlpha(0.45f)));
     };
-    segment(f.toggleA, "A", "Mix", true, true);
-    segment(f.toggleB, "B", "Ref", false, false);
+    const bool hasRef = m_engine && m_engine->hasReference();
+    const bool onRef = hasRef && m_engine->getListenSide() == Audio::AuditionEngine::ListenSide::Reference;
+    segment(f.toggleA, "A", "Mix", !onRef, true);
+    segment(f.toggleB, "B", "Ref", onRef, hasRef, true);
     r.fillRect(f.listenOn, m_hoverControl == "listen" ? theme.getColor("surfaceRaised") : theme.getColor("surfaceTertiary"));
     const std::string preset = m_engine ? m_engine->getDSPPreset().name : "Studio";
     r.drawText(preset, {f.listenOn.x + 14.0f, std::round(r.calculateTextY(f.listenOn, 12.0f))}, 12.0f, text);
@@ -541,6 +518,7 @@ void AuditionHub::openListenOnMenu(const NUIPoint& at) {
 
 bool AuditionHub::onMouseEvent(const NUIMouseEvent& event) {
     if (!isVisible()) return false;
+    if (m_files->dragActive()) return m_files->onMouseEvent(event);  // a file being dragged to the queue
 
     if (m_menu) {  // a menu that is open gets the first word
         if (m_menu->onMouseEvent(event)) return true;
@@ -579,7 +557,9 @@ bool AuditionHub::onMouseEvent(const NUIMouseEvent& event) {
             if (f.navItems[static_cast<size_t>(i)].contains(p)) { setPage(static_cast<Page>(i)); return true; }
         if (f.player.contains(p)) {
             if (!m_engine) return true;
-            if (f.transportPlay.contains(p)) { m_engine->togglePlayPause(); setDirty(true); }
+            if (f.toggleA.contains(p)) m_engine->setListenSide(Audio::AuditionEngine::ListenSide::Mix);
+            else if (f.toggleB.contains(p)) { if (m_engine->hasReference()) m_engine->setListenSide(Audio::AuditionEngine::ListenSide::Reference); }
+            else if (f.transportPlay.contains(p)) { m_engine->togglePlayPause(); setDirty(true); }
             else if (f.transportPrev.contains(p)) m_engine->previousTrack();
             else if (f.transportNext.contains(p)) m_engine->nextTrack();
             else if (f.listenOn.contains(p)) openListenOnMenu({f.listenOn.x, f.listenOn.y - 8.0f - 7.0f * 28.0f});
@@ -590,6 +570,7 @@ bool AuditionHub::onMouseEvent(const NUIMouseEvent& event) {
     }
 
     if (m_page == Page::Queue) return NUIComponent::onMouseEvent(event);
+    if (m_page == Page::Item) { itemPageMouse(event, f); return true; }
 
     if (event.type == NUIMouseEventType::Scroll && f.content.contains(p)) {
         const float top = f.content.y + shelvesTop();
@@ -615,7 +596,7 @@ bool AuditionHub::onMouseEvent(const NUIMouseEvent& event) {
             for (size_t t = 0; t < shelves[s].tiles.size() && t < models[s].tiles.size(); ++t) {
                 if (!shelves[s].tiles[t].contains(p)) continue;
                 const Tile& tile = models[s].tiles[t];
-                if (tile.kind == Tile::Kind::Item) play(tile.item);
+                if (tile.kind == Tile::Kind::Item) openItem(tile.item);
                 else if (tile.kind == Tile::Kind::BounceNow) { if (m_onBounceNow && m_onBounceNow()) refresh(); }
                 else if (m_onImportReference) m_onImportReference();
                 return true;

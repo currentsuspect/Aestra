@@ -110,13 +110,8 @@ void AestraContent::addAuditionReference(const std::string& path) {
 void AestraContent::setAuditionActive(bool active) {
     if (!m_auditionPanel) return;
     m_auditionPanel->setVisible(active);
+    // Audition has its own way of showing files; the browser steps aside while it is shown and comes back as it was.
     if (!m_fileBrowser) return;
-    if (active && !m_auditionPanel->hasBrowser()) {
-        if (m_workspaceLayer) m_workspaceLayer->removeChild(m_fileBrowser);
-        m_auditionPanel->setBrowser(m_fileBrowser);
-    } else if (!active && m_auditionPanel->hasBrowser()) {
-        m_auditionPanel->releaseBrowser();
-        if (m_workspaceLayer) m_workspaceLayer->addChild(m_fileBrowser);
-        m_fileBrowser->setVisible(true);
-    }
+    if (active && !m_browserHiddenByAudition) { m_browserWasVisible = m_fileBrowser->isVisible(); m_browserHiddenByAudition = true; m_fileBrowser->setVisible(false); }
+    else if (!active && m_browserHiddenByAudition) { m_browserHiddenByAudition = false; m_fileBrowser->setVisible(m_browserWasVisible); }
 }

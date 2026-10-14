@@ -9,14 +9,18 @@
  */
 
 #include "../AestraUI/Core/NUIComponent.h"
+#include "../Core/AuditionCompare.h"
 #include "../Core/AuditionLibrary.h"
 #include "AuditionEngine.h"
+#include "AuditionFilesPage.h"
 #include "AuditionHubLayout.h"
 #include "AuditionPanel.h"
 #include "NUIContextMenu.h"
 
 #include <atomic>
 #include <functional>
+#include <map>
+#include <optional>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -62,12 +66,17 @@ public:
     const std::vector<AuditionLibrary::Item>& versions() const { return m_versions; }
     const std::vector<AuditionLibrary::Item>& references() const { return m_references; }
     void play(const AuditionLibrary::Item& item);
+    /// The page of one mix or reference: starts it playing and measures it.
+    void openItem(const AuditionLibrary::Item& item);
+    /// Set a reference beside the open item: both are measured, the reference is turned to the mix's level, and A/B works.
+    void chooseReference(const AuditionLibrary::Item& reference);
+    void clearReference();
+    bool hasResult() const { return m_result != nullptr; }
+    const AuditionCompare::Result* result() const { return m_result.get(); }
+    double referenceNudgeDb() const { return m_nudgeDb; }
+    void nudgeReference(double db);
 
-    /// The file browser lives inside Audition, on the Queue page beside the queue it feeds. The app hands it over when
-    /// Audition is shown and takes it back when it is not.
-    void setBrowser(std::shared_ptr<AestraUI::NUIComponent> browser);
-    std::shared_ptr<AestraUI::NUIComponent> releaseBrowser();
-    bool hasBrowser() const { return m_browser != nullptr; }
+    bool filesDragActive() const { return m_files && m_files->dragActive(); }
 
     // For tests and hit-testing.
     bool getNavCenter(Page page, AestraUI::NUIPoint& out) const;
@@ -98,8 +107,32 @@ private:
 
     std::shared_ptr<Audio::AuditionEngine> m_engine;
     std::shared_ptr<AuditionPanel> m_queuePage;
-    std::shared_ptr<AestraUI::NUIComponent> m_browser;
+    std::shared_ptr<AuditionFilesPage> m_files;
     void layoutQueuePage();
+
+    // The item page and the comparison.
+    void renderItemPage(AestraUI::NUIRenderer& r, const AuditionHubLayout::Frame& f);
+    bool itemPageMouse(const AestraUI::NUIMouseEvent& event, const AuditionHubLayout::Frame& f);
+    void openReferenceMenu(const AestraUI::NUIPoint& at);
+    void ensureSide(const std::string& path);
+    void applySides();       ///< fold finished measurements in, and (re)build the comparison
+    void rebuildResult();
+    void applyToEngine();
+    bool compareActive() const { return m_ref.has_value(); }
+    AuditionLibrary::Item m_item;
+    bool m_hasItem{false};
+    std::optional<AuditionLibrary::Item> m_ref;
+    std::shared_ptr<const AuditionCompare::Result> m_result;
+    std::map<std::string, std::shared_ptr<const AuditionCompare::Side>> m_sides;
+    struct SideShared {
+        std::mutex mutex;
+        std::vector<std::shared_ptr<const AuditionCompare::Side>> done;
+        std::vector<std::string> failed;
+        std::atomic<int> working{0};
+    };
+    std::shared_ptr<SideShared> m_sideShared = std::make_shared<SideShared>();
+    std::vector<std::string> m_requested;
+    double m_nudgeDb{0.0};
     Page m_page{Page::Home};
     std::string m_search;
     float m_scroll{0.0f};
