@@ -82,6 +82,7 @@ public:
         std::string label;
         bool undone{false};   ///< Sits on the redo side: the version has been taken back past it.
         int stackIndex{0};    ///< Index in the command history's undo or redo stack.
+        uint64_t atMs{0};     ///< When the step was made (epoch ms); 0 when unknown.
     };
     using StepsProvider = std::function<std::vector<StepEntry>()>;
     /// The open version's live steps (the command history), for the dock.

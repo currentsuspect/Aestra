@@ -699,6 +699,10 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
                 renderer.fillCircle({row.x + 14.0f, row.y + row.height * 0.5f}, 3.5f, dot);
                 renderer.drawText(m_steps[static_cast<size_t>(i)].label, {row.x + 28.0f, std::round(renderer.calculateTextY(row, 12.0f))}, 12.0f,
                                   m_steps[static_cast<size_t>(i)].undone ? muted.withAlpha(0.5f) : text);
+                if (const std::string clock = VersionsTimeline::clockLabel(m_steps[static_cast<size_t>(i)].atMs); !clock.empty()) {
+                    const float cw = renderer.measureText(clock, 10.5f).width;
+                    renderer.drawText(clock, {row.right() - 12.0f - cw, std::round(renderer.calculateTextY(row, 10.5f))}, 10.5f, muted.withAlpha(0.7f));
+                }
                 renderer.fillRect({row.x, row.bottom() - 1.0f, row.width, 1.0f}, rule.withAlpha(0.6f));
             }
             renderer.strokeRect(layout.stepsList, 1.0f, rule);

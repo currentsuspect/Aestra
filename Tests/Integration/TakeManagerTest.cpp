@@ -4,6 +4,7 @@
 #include "../../Source/Core/VersionBounce.h"
 #include "../../Source/Core/VersionBringOver.h"
 #include "../../Source/Core/VersionPicker.h"
+#include "../../Source/Core/RecoveryInfo.h"
 
 #include "../../Source/Core/ProjectSerializer.h"
 #include "../Support/TestTempDirectory.h"
@@ -327,6 +328,25 @@ int main() {
         m.takes[2].kind = TakeManager::TakeEntry::Kind::Autosave;
         require(VP::entries(m)[0].versionId == "a", "An autosave is never where a branch opens");
         require(VP::chip(TakeManager::Manifest{}).branch.empty(), "No manifest, no chip");
+    }
+
+    // The recovery card compares the autosaves with the last saved version, in plain words.
+    {
+        namespace RI = Aestra::RecoveryInfo;
+        TakeManager::Manifest m;
+        m.ok = true;
+        TakeManager::TakeEntry v;
+        v.id = "b"; v.name = "Mix pass 1"; v.branch = "Main"; v.active = true; v.createdAtMs = 1'000'000; v.updatedAtMs = 1'000'000;
+        m.takes = {v};
+        m.activeTakeId = "b";
+        const uint64_t minute = 60'000;
+        auto info = RI::build(m, {1'000'000 + 2 * minute, 1'000'000 - 5 * minute, 1'000'000 + 15 * minute, 1'000'000 + 28 * minute, 1'000'000 + 30 * minute});
+        require(info.hasVersion && info.lastSavedName == "Mix pass 1" && info.branch == "Main mix", "The card names the last saved version and its branch");
+        require(info.autosaveMs.size() == RI::kMaxDots && info.autosaveMs.back() == 1'000'000 + 30 * minute, "Only the newest autosaves after it are lit, newest last");
+        require(info.detail == "The newest autosave is 30 minutes after your last saved version.", "The gap is said in minutes");
+        require(RI::gapWords(0, 30'000) == "1 minute" && RI::gapWords(0, 10'000) == "moments" && RI::gapWords(0, 3 * 3'600'000) == "3 hours", "Gaps read as minutes, hours, or moments");
+        require(RI::build(m, {1'000'000 - minute}).autosaveMs.empty() && RI::build(m, {1'000'000 - minute}).detail == "Nothing newer than your last saved version was autosaved.", "An autosave older than the version is not lit");
+        require(!RI::build(TakeManager::Manifest{}, {5}).hasVersion && RI::build(TakeManager::Manifest{}, {5}).autosaveMs.size() == 1, "A project with no versions still shows its autosaves");
     }
 
     return 0;
