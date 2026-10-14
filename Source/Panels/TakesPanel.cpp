@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cctype>
 #include <cmath>
 #include <unordered_map>
 
@@ -181,16 +182,21 @@ TakesPanel::Layout TakesPanel::computeLayout() const {
             defs = {{"open", {"Open this version", 1}}, {"branch", {"Branch from here", 0}}, {"rename", {"Rename", 0}}, {"delete", {"Delete", 2}}};
         }
     }
-    // Buttons wrap onto a second row when the dock is narrow.
-    float bx = dx, by = buttonsBottom - 30.0f;
+    // Buttons wrap onto more rows when the dock is narrow; the last row sits at the bottom.
     const float charW = 7.0f;
     std::vector<DockButton> btns;
+    std::vector<int> rowOf;
+    int row = 0;
+    float bx = dx;
     for (const auto& d : defs) {
         const float bw = d.second.first.size() * charW + 28.0f;
-        if (bx + bw > dx + dw && bx > dx) { bx = dx; by -= 36.0f; }
-        btns.push_back({d.first, d.second.first, NUIRect(bx, by, bw, 30.0f), (d.second.second & 1) != 0, (d.second.second & 2) != 0});
+        if (bx + bw > dx + dw && bx > dx) { bx = dx; ++row; }
+        btns.push_back({d.first, d.second.first, NUIRect(bx, 0.0f, bw, 30.0f), (d.second.second & 1) != 0, (d.second.second & 2) != 0});
+        rowOf.push_back(row);
         bx += bw + 8.0f;
     }
+    const float by = buttonsBottom - 30.0f - static_cast<float>(row) * 36.0f;
+    for (size_t i = 0; i < btns.size(); ++i) btns[i].rect.y = by + static_cast<float>(rowOf[i]) * 36.0f;
     layout.buttons = std::move(btns);
     const float listTop = layout.dock.y + 100.0f;
     layout.stepsList = NUIRect(dx, listTop, dw, std::max(0.0f, by - 16.0f - listTop - 22.0f));
@@ -474,6 +480,21 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
             }
         }
     }
+    {   // The time axis: a rule near the bottom with the first version of each day under it.
+        const float axisY = layout.timeline.bottom() - 34.0f;
+        renderer.fillRect({layout.timeline.x + 24.0f, axisY, layout.timeline.width - 48.0f, 1.0f}, rule);
+        std::string lastDay;
+        for (size_t i = 0; i < layout.nodes.nodes.size(); ++i) {
+            const auto& v = m_takeRows[i].take;
+            const std::string when = VersionsTimeline::timeLabel(v.createdAtMs, now);
+            const std::string day = when.substr(0, when.find(" \xc2\xb7"));
+            if (day.empty() || day == lastDay || layout.nodes.nodes[i].autosave) continue;
+            lastDay = day;
+            std::string up;
+            for (char c : day) up.push_back(static_cast<char>(std::toupper(static_cast<unsigned char>(c))));
+            renderer.drawText(up, {layout.nodes.nodes[i].x - 12.0f, axisY + 10.0f}, 9.5f, muted.withAlpha(0.7f));
+        }
+    }
     if (m_takeRows.empty()) {
         const std::string hint = !m_manifestError.empty() ? ("Versions unavailable: " + m_manifestError)
                                                           : "No versions yet. Save one to start the timeline.";
@@ -536,8 +557,11 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
                                   m_steps[static_cast<size_t>(i)].undone ? muted.withAlpha(0.5f) : text);
                 renderer.fillRect({row.x, row.bottom() - 1.0f, row.width, 1.0f}, rule.withAlpha(0.6f));
             }
+            renderer.strokeRect(layout.stepsList, 1.0f, rule);
             if (m_steps.empty()) renderer.drawTextCentered("Nothing done in this version yet", layout.stepsList, 12.0f, muted.withAlpha(0.6f));
             renderer.clearClipRect();
+            renderer.fillCircle({dx + 4.0f, layout.stepsList.bottom() + 16.0f}, 3.5f, theme.getColor("accentCyan"));
+            renderer.drawText("Recording a take is a step too", {dx + 18.0f, layout.stepsList.bottom() + 10.0f}, 11.0f, muted.withAlpha(0.8f));
         } else {
             // An older version: its notes and its read-only log. Going back into it means opening it.
             float y = layout.dock.y + 74.0f;
@@ -563,7 +587,11 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
                 if (lineW + ww2 > dw && !cur.empty()) { renderer.drawText(cur, {dx, y}, 12.0f, muted); y += 20.0f; cur.clear(); lineW = 0.0f; }
                 cur += word; lineW += ww2; pos = end + 1;
             }
-            if (!cur.empty()) renderer.drawText(cur, {dx, y}, 12.0f, muted);
+            if (!cur.empty()) { renderer.drawText(cur, {dx, y}, 12.0f, muted); y += 28.0f; }
+            std::string forks;
+            for (const auto& c : m_takeRows) // branches that started from this version
+                if (c.take.parentId == v.id && c.take.branch != v.branch) forks += (forks.empty() ? "" : ", ") + (c.take.branch.empty() ? c.take.name : c.take.branch);
+            if (!forks.empty()) renderer.drawText("Branched from here: " + forks + ". Open this version to work inside it.", {dx, y}, 11.0f, muted.withAlpha(0.75f));
         }
     }
     for (const auto& b : layout.buttons) drawButton(b.rect, b.label, b.primary, b.danger, m_hoveredButton == b.id);
