@@ -11,6 +11,7 @@
  */
 
 #pragma once
+#include "AuditionHooks.h"
 #include "SamplerEditHistory.h"
 
 #include "../AestraUI/Widgets/PanelMode.h"
@@ -79,7 +80,7 @@ namespace Aestra::Audio {
 }
 
 namespace Aestra {
-    class AuditionPanel;   // For Audition Mode UI
+    class AuditionHub;     // For Audition Mode UI
 }
 
 namespace AestraUI {
@@ -261,6 +262,12 @@ public:
     bool renderMixToBuffer(std::vector<float>& interleaved, uint32_t& channels, uint32_t& sampleRate);
     /// Play a file through the preview engine, or stop it if it is the file already playing. True when it is playing after.
     bool togglePreviewFile(const std::string& path);
+    /// What the Audition hub needs from the app (the open project, the reference list, import and bounce); applied when it is shown.
+    void setAuditionHooks(Aestra::AuditionHooks hooks) { m_auditionHooks = std::move(hooks); applyAuditionHooks(); }
+    void applyAuditionHooks();
+    /// Audition shown or hidden: the hub appears, and the file browser steps aside (and comes back as it was).
+    void setAuditionActive(bool active);
+    void addAuditionReference(const std::string& path);
     bool isPreviewFilePlaying(const std::string& path) const;
     /** @brief Get the Takes panel (for app-level action wiring). */
     std::shared_ptr<Aestra::Audio::TakesPanel> getTakesPanel() const { return m_takesPanel; }
@@ -542,7 +549,10 @@ private:
 
     // Audition Mode
     std::shared_ptr<Aestra::Audio::AuditionEngine> m_auditionEngine;
-    std::shared_ptr<Aestra::AuditionPanel> m_auditionPanel;
+    std::shared_ptr<Aestra::AuditionHub> m_auditionPanel;
+    Aestra::AuditionHooks m_auditionHooks;
+    bool m_browserHiddenByAudition{false};
+    bool m_browserWasVisible{true};
 
     std::unique_ptr<Aestra::Audio::PreviewEngine> m_previewEngine;
     Aestra::MusicalTypingController m_musicalTyping;

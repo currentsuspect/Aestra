@@ -5,6 +5,9 @@
 #include "../../Source/Core/VersionBringOver.h"
 #include "../../Source/Core/VersionPicker.h"
 #include "../../Source/Core/RecoveryInfo.h"
+#include "../../Source/Core/AuditionLibrary.h"
+#include "../../Source/Core/AuditionCompare.h"
+#include "../../Source/Core/AuditionFiles.h"
 
 #include "../../Source/Core/ProjectSerializer.h"
 #include "../Support/TestTempDirectory.h"
@@ -13,6 +16,7 @@
 #include <atomic>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <thread>
@@ -347,6 +351,62 @@ int main() {
         require(RI::gapWords(0, 30'000) == "1 minute" && RI::gapWords(0, 10'000) == "moments" && RI::gapWords(0, 3 * 3'600'000) == "3 hours", "Gaps read as minutes, hours, or moments");
         require(RI::build(m, {1'000'000 - minute}).autosaveMs.empty() && RI::build(m, {1'000'000 - minute}).detail == "Nothing newer than your last saved version was autosaved.", "An autosave older than the version is not lit");
         require(!RI::build(TakeManager::Manifest{}, {5}).hasVersion && RI::build(TakeManager::Manifest{}, {5}).autosaveMs.size() == 1, "A project with no versions still shows its autosaves");
+    }
+
+    // What Audition lists: the project's bounces newest first, and imported references that survive a restart.
+    {
+        namespace AL = Aestra::AuditionLibrary;
+        const auto manifest = TakeManager::loadManifest(projectPath.string());
+        const auto items = AL::versionItems("Night Drive", projectPath.string(), manifest, 2'000'000'000'000ull);
+        require(!items.empty() && items[0].kind == AL::Item::Kind::Version && items[0].title == "Night Drive", "A bounced version is listed under the project's name");
+        require(items[0].hasLufs && std::fabs(items[0].lufs + 9.8) < 0.01 && items[0].badge[0] == 'v', "...with its loudness and a version number");
+        require(AL::seedOf("Night Drive") == AL::seedOf("Night Drive") && AL::seedOf("Night Drive") != AL::seedOf("Glass Coast"), "A name always gets the same cover seed");
+        const auto file = (tempDir / "audition_library.txt").string();
+        std::vector<AL::Reference> refs{{"/music/Glass Coast.flac", "Glass Coast", 242.0, -8.6, true, 5}, {"/music/Low Orbit.flac", "Low Orbit", 211.0, 0.0, false, 6}};
+        require(AL::save(file, refs), "The reference list is written");
+        const auto back = AL::load(file);
+        require(back.size() == 2 && back[0].title == "Glass Coast" && back[0].hasLufs && std::fabs(back[0].lufs + 8.6) < 1e-3 && !back[1].hasLufs, "...and read back, loudness or not");
+        require(AL::itemOf(back[0]).badge == "REF" && AL::itemOf(back[0]).subtitle.find("LUFS") != std::string::npos, "A reference reads as REF with its loudness");
+        require(Aestra::VersionTime::ago(1'000'000'000'000ull, 1'000'000'000'000ull + 86'400'000ull * 2 + 3'600'000ull) == "2 days ago", "A bounce from two days ago says so");
+    }
+
+    // Comparing a mix with a reference: the reference is turned to the mix's level, and both are drawn on one scale.
+    {
+        namespace AC = Aestra::AuditionCompare;
+        const auto tone = [](float amp, int seconds) {
+            std::vector<float> v;
+            for (int i = 0; i < 44100 * seconds; ++i) { const float s = amp * std::sin(2.0f * 3.14159265f * 220.0f * static_cast<float>(i) / 44100.0f); v.push_back(s); v.push_back(s); }
+            return v;
+        };
+        const auto quiet = AC::measure("mix.wav", tone(0.1f, 6), 2, 44100);
+        const auto loud = AC::measure("ref.wav", tone(0.2f, 6), 2, 44100);  // 6 dB louder
+        const auto result = AC::compare(quiet, loud);
+        require(result.ok, "Two real signals can be compared");
+        require(std::fabs(result.referenceGainDb + 6.02) < 0.3, "A reference 6 dB louder is turned down by about 6 dB");
+        require(result.mix.peaks.size() == AC::kWaveColumns && result.mix.peaks[10] > 0.0f, "Each side has a waveform");
+        require(std::fabs(result.ref.peaks[10] - result.mix.peaks[10]) < 0.02f, "After the match the two waveforms are the same size");
+        const auto flipped = AC::compare(loud, quiet);
+        require(flipped.referenceGainDb > 5.0, "A quieter reference is turned up");
+        std::vector<float> silence(44100 * 6 * 2, 0.0f);
+        require(!AC::compare(quiet, AC::measure("s.wav", silence, 2, 44100)).ok, "Silence cannot be compared");
+    }
+
+    // The files Audition shows: folders and audio, nothing else, folders first.
+    {
+        namespace AF = Aestra::AuditionFiles;
+        const auto dir = tempDir / "audition_files";
+        std::filesystem::create_directories(dir / "Zed folder");
+        std::filesystem::create_directories(dir / ".hidden");
+        const auto touch = [&](const char* name) { std::ofstream(dir / name) << "x"; };
+        touch("b track.WAV"); touch("a track.flac"); touch("plugin.vst3"); touch("project.aes"); touch("notes.txt"); touch(".secret.wav");
+        const auto entries = AF::list(dir.string());
+        require(entries.size() == 3, "Only folders and audio are listed: not plugins, projects or text, and not hidden things");
+        require(entries[0].folder && entries[0].name == "Zed folder", "Folders come first");
+        require(entries[1].name == "a track.flac" && entries[2].name == "b track.WAV", "Audio follows in name order, any case of extension");
+        require(AF::list((dir / "nope").string()).empty(), "A folder that is not there lists as empty");
+        const auto places = AF::places(dir.string(), "/definitely/not/home");
+        require(places.size() == 1 && places[0].name == "Project", "Places that do not exist are left out");
+        require(AF::sizeLabel(512) == "1 KB" && AF::sizeLabel(3 * 1024 * 1024) == "3.0 MB", "Sizes read in KB and MB");
     }
 
     return 0;

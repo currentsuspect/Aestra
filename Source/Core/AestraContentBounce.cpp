@@ -4,7 +4,10 @@
 
 #include "../App/ServiceLocator.h"
 #include "AudioDeviceManager.h"
+#include <tuple>
 #include "AuditionEngine.h"
+#include "../Panels/AuditionHub.h"
+#include "FileBrowser.h"
 #include "IO/AudioExporter.h"
 #include "IO/BounceInPlace.h"
 
@@ -85,4 +88,30 @@ bool AestraContent::togglePreviewFile(const std::string& path) {
     m_auditionEngine->jumpToTrack(m_auditionEngine->getQueue().size() - 1);
     m_auditionEngine->play();
     return true;
+}
+
+void AestraContent::applyAuditionHooks() {
+    if (!m_auditionPanel) return;
+    m_auditionPanel->setProjectProvider([this]() {
+        Aestra::AuditionHub::Project project;
+        if (m_auditionHooks.project) std::tie(project.name, project.path) = m_auditionHooks.project();
+        return project;
+    });
+    m_auditionPanel->setLibraryFile(m_auditionHooks.libraryFile);
+    m_auditionPanel->setOnImportReference(m_auditionHooks.importReference);
+    m_auditionPanel->setOnBounceNow(m_auditionHooks.bounceNow);
+    m_auditionPanel->refresh();
+}
+
+void AestraContent::addAuditionReference(const std::string& path) {
+    if (m_auditionPanel) m_auditionPanel->addReference(path);
+}
+
+void AestraContent::setAuditionActive(bool active) {
+    if (!m_auditionPanel) return;
+    m_auditionPanel->setVisible(active);
+    // Audition has its own way of showing files; the browser steps aside while it is shown and comes back as it was.
+    if (!m_fileBrowser) return;
+    if (active && !m_browserHiddenByAudition) { m_browserWasVisible = m_fileBrowser->isVisible(); m_browserHiddenByAudition = true; m_fileBrowser->setVisible(false); }
+    else if (!active && m_browserHiddenByAudition) { m_browserHiddenByAudition = false; m_fileBrowser->setVisible(m_browserWasVisible); }
 }
