@@ -3,6 +3,7 @@
 
 #include "../AestraUI/Core/NUIComponent.h"
 #include "../AestraUI/Widgets/NUICoreWidgets.h"
+#include "../Core/RecoveryInfo.h"
 #include <functional>
 #include <string>
 #include <filesystem>
@@ -14,9 +15,11 @@ namespace Aestra {
  */
 enum class RecoveryResponse {
     None,       // Dialog not yet answered
-    Recover,    // User chose to recover autosave
-    Discard,    // User chose to discard autosave and start fresh
-    Cancel      // User cancelled (continue with autosave loaded silently)
+    Recover,        // User chose to recover the newest autosave
+    RecoverAsAlt,   // Recover it and keep it as an alt, leaving the saved branch as it was
+    OpenLastSaved,  // Open the last saved version; the autosave is kept as a rescued session, not thrown away
+    Discard,        // Delete the autosave and start fresh (no longer offered by the card; kept for callers)
+    Cancel          // User cancelled (continue with autosave loaded silently)
 };
 
 /**
@@ -43,7 +46,7 @@ public:
      * @param autosavePath Path to the detected autosave file
      * @param callback Function called with user's response
      */
-    void show(const std::string& autosavePath, ResponseCallback callback);
+    void show(const std::string& autosavePath, ResponseCallback callback, const RecoveryInfo::Info& info = {});
     
     /**
      * @brief Hide the dialog
@@ -81,11 +84,14 @@ private:
     // Button hover states
     bool m_recoverHovered;
     bool m_discardHovered;
+    bool m_altHovered{false};
+    RecoveryInfo::Info m_info;
     RecoveryResponse m_pressedResponse{RecoveryResponse::None};
     
     // Button rectangles (calculated during render)
     AestraUI::NUIRect m_recoverButtonRect;
-    AestraUI::NUIRect m_discardButtonRect;
+    AestraUI::NUIRect m_discardButtonRect;  // "Open last saved version"
+    AestraUI::NUIRect m_altButtonRect;
     AestraUI::NUIRect m_dialogRect;
     
     void handleResponse(RecoveryResponse response);

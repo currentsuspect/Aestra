@@ -102,6 +102,21 @@ struct VersionsTimeline {
         return -1;
     }
 
+    /// "14:30" in local time; empty for a time that was never set.
+    static std::string clockLabel(uint64_t epochMs) {
+        if (epochMs == 0) return {};
+        std::time_t t = static_cast<std::time_t>(epochMs / 1000);
+        std::tm tm{};
+#ifdef _WIN32
+        localtime_s(&tm, &t);
+#else
+        localtime_r(&t, &tm);
+#endif
+        char buf[16];
+        std::snprintf(buf, sizeof buf, "%02d:%02d", tm.tm_hour, tm.tm_min);
+        return buf;
+    }
+
     /// "Today · 14:30", or "Oct 2 · 19:15" for earlier days; empty for a time that was never set.
     static std::string timeLabel(uint64_t epochMs, uint64_t nowMs) {
         if (epochMs == 0) return {};

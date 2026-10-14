@@ -31,8 +31,8 @@ inline std::vector<Audio::TakesPanel::StepEntry> versionStepEntries(const Audio:
     };
     const auto& redo = history.getRedoStack();
     const auto& undo = history.getUndoStack();
-    for (int i = 0; i < static_cast<int>(redo.size()); ++i) out.push_back({name(redo[static_cast<size_t>(i)]), true, i});
-    for (int i = static_cast<int>(undo.size()) - 1; i >= 0; --i) out.push_back({name(undo[static_cast<size_t>(i)]), false, i});
+    for (int i = 0; i < static_cast<int>(redo.size()); ++i) out.push_back({name(redo[static_cast<size_t>(i)]), true, i, redo[static_cast<size_t>(i)]->createdAtMs()});
+    for (int i = static_cast<int>(undo.size()) - 1; i >= 0; --i) out.push_back({name(undo[static_cast<size_t>(i)]), false, i, undo[static_cast<size_t>(i)]->createdAtMs()});
     return out;
 }
 

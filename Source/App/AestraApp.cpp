@@ -1063,59 +1063,8 @@ void AestraApp::loadOrRecoverProject(const std::string& projectPath, bool crashe
             recoveryDialog->show(recoveryDisplayPath,
                                  [this, alive, autosavePath, projectPath, hasRequestedProject, originalProjectPath,
                                   recoveryCandidates](Aestra::RecoveryResponse response) {
-                if (!*alive)
-                    return;
-                m_recoveryHandled = true;
-                m_pendingAutosavePath.clear();
-                if (response == Aestra::RecoveryResponse::Recover) {
-                    beginProjectLoadAttempt();
-                    auto selected = ProjectSerializer::loadFirstValid(
-                        recoveryCandidates, m_content ? m_content->getTrackManager() : nullptr, originalProjectPath);
-                    auto result = std::move(selected.result);
-                    recordProjectLoadAttempt(result, ProjectLoadSource::Recovery);
-                    if (result.ok) {
-                        result = applyLoadedProject(selected.loadedPath, ProjectLoadSource::Recovery,
-                                                    originalProjectPath, std::move(result));
-                        if (m_content && m_content->getTrackManager()) {
-                            m_content->getTrackManager()->markModified();
-                        }
-                        m_autoSaveManager.markDirty();
-                        updateWindowTitle();
-                        Log::info("[Recovery] Autosave recovered successfully from: " + selected.loadedPath);
-                    } else {
-                        Log::error("[Recovery] Failed to load autosave");
-                        if (m_content)
-                            m_content->resetToDefaultProject();
-                        clearProjectLoadReport();
-                        m_documentState.startUntitled(autosavePathOrEmpty());
-                        reinitAutosaveManager();
-                        syncRecordingProjectPath(m_content, m_documentState.canonicalPath());
-                    }
-                } else if (response == Aestra::RecoveryResponse::Discard) {
-                    std::error_code ec;
-                    std::filesystem::remove(autosavePath, ec);
-                    std::filesystem::remove(getRecoveryMarkerPath(autosavePath), ec);
-                    if (ec) {
-                        Log::warning("[Recovery] Failed to remove autosave: " + ec.message());
-                    } else {
-                        Log::info("[Recovery] Autosave discarded");
-                    }
-                    if (hasRequestedProject) {
-                        auto result = loadProjectFromPath(projectPath);
-                        if (!result.ok) {
-                            Log::error("Failed to load requested project after discarding recovery: " + projectPath);
-                        }
-                    } else {
-                        if (m_content)
-                            m_content->resetToDefaultProject();
-                        clearProjectLoadReport();
-                        m_documentState.startUntitled(autosavePathOrEmpty());
-                        reinitAutosaveManager();
-                        syncRecordingProjectPath(m_content, m_documentState.canonicalPath());
-                        updateWindowTitle();
-                    }
-                }
-            });
+                if (*alive) onRecoveryResponse(response, autosavePath, projectPath, hasRequestedProject, originalProjectPath, recoveryCandidates);
+            }, recoveryInfoFor(originalProjectPath, recoveryCandidates));
             Log::info("[Recovery] Showing recovery dialog for autosave");
         } else {
             Log::warning("[Recovery] RecoveryDialog not available — discarding autosave");

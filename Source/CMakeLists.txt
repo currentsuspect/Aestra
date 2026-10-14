@@ -13,6 +13,7 @@ set(Aestra_SOURCES
 	App/AestraApp.h
 	App/AestraApp.cpp
 	App/AestraAppVersions.cpp
+	App/AestraAppRecovery.cpp
     App/MuseHostVerbs.cpp
     App/MuseProjectLoadReport.h
     App/MuseProjectLoadReport.cpp

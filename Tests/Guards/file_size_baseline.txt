@@ -13,7 +13,7 @@
 2023 AestraUI/Widgets/PianoRollNoteLayer.cpp
 2349 AestraUI/Widgets/UIRoutingMap.cpp
 1861 AestraUI/Widgets/UnitRow.cpp
-2591 Source/App/AestraApp.cpp
+2540 Source/App/AestraApp.cpp
 3948 Source/Components/FileBrowser.cpp
 1510 Source/Components/TrackManagerUIRender.cpp
 3630 Source/Components/TrackUIComponent.cpp
