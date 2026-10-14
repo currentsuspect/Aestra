@@ -42,21 +42,22 @@ void testRecoveryRequiresMatchingPressAndRelease() {
     });
 
     const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
-    const float dialogX = (800.0f - 450.0f) * 0.5f;
-    // These mirror RecoveryDialog::calculateLayout(). The title-bar term is the
-    // shared chrome's (spec 2 §5) rather than a second copy of 32, so the two
-    // cannot drift if the chrome's bar height is retuned.
-    const float dialogH = 180.0f + AestraUI::AestraPanelWindow::TITLE_BAR_H;
+    // These mirror RecoveryDialog::calculateLayout(). The title-bar term is the shared chrome's rather than a second
+    // copy of 32, so the two cannot drift if the chrome's bar height is retuned. The card is 900 wide where it can
+    // be, and three buttons sit in a row from 32 px inside its left edge.
+    const float dialogW = 800.0f - 40.0f;
+    const float dialogX = (800.0f - dialogW) * 0.5f;
+    const float dialogH = 392.0f + AestraUI::AestraPanelWindow::TITLE_BAR_H;
     const float dialogY = (600.0f - dialogH) * 0.5f;
-    const float startX = dialogX + (450.0f - (240.0f + theme.spacingM)) * 0.5f;
-    const float discardX = startX + 120.0f + theme.spacingM + 20.0f;
-    const float buttonY = dialogY + dialogH - theme.layout.dialogActionHeight - theme.spacingM + 10.0f;
+    const float lastSavedX = dialogX + 32.0f + 204.0f + theme.spacingM + 176.0f + theme.spacingM + 188.0f * 0.5f;
+    const float buttonY = dialogY + dialogH - 38.0f - 28.0f + 19.0f;
+    const float discardX = lastSavedX;
 
     check(dialog.onMouseEvent(leftButton(discardX, buttonY, true)), "recovery consumes the button press");
     check(dialog.isDialogVisible() && callbacks == 0, "recovery waits for the matching release");
     check(dialog.onMouseEvent(leftButton(discardX, buttonY, false)), "recovery consumes the button release");
-    check(!dialog.isDialogVisible() && response == RecoveryResponse::Discard && callbacks == 1,
-          "one recovery click activates Discard exactly once");
+    check(!dialog.isDialogVisible() && response == RecoveryResponse::OpenLastSaved && callbacks == 1,
+          "one recovery click activates Open last saved version exactly once");
 }
 
 void testConfirmationReleaseCannotEscapeModal() {
