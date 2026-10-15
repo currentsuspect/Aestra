@@ -224,5 +224,77 @@ std::array<double, AudioAnalysis::kBandCount> tonalBalanceDeltaDb(const AudioAna
     return out;
 }
 
+const std::array<double, Spectrum::kBands>& Spectrum::centersHz() {
+    static const std::array<double, kBands> c{25, 31.5, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500,
+                                              630, 800, 1000, 1250, 1600, 2000, 2500, 3150, 4000, 5000, 6300, 8000, 10000, 12500};
+    return c;
+}
+
+namespace {
+// In-place iterative radix-2 FFT of n (a power of two) complex values.
+void fft(std::vector<double>& re, std::vector<double>& im) {
+    const size_t n = re.size();
+    for (size_t i = 1, j = 0; i < n; ++i) {
+        size_t bit = n >> 1;
+        for (; j & bit; bit >>= 1) j ^= bit;
+        j ^= bit;
+        if (i < j) { std::swap(re[i], re[j]); std::swap(im[i], im[j]); }
+    }
+    for (size_t len = 2; len <= n; len <<= 1) {
+        const double ang = -2.0 * kPi / static_cast<double>(len);
+        const double wr = std::cos(ang), wi = std::sin(ang);
+        for (size_t i = 0; i < n; i += len) {
+            double cr = 1.0, ci = 0.0;
+            for (size_t k = 0; k < len / 2; ++k) {
+                const size_t a = i + k, b = i + k + len / 2;
+                const double tr = re[b] * cr - im[b] * ci, ti = re[b] * ci + im[b] * cr;
+                re[b] = re[a] - tr; im[b] = im[a] - ti;
+                re[a] += tr; im[a] += ti;
+                const double nr = cr * wr - ci * wi;
+                ci = cr * wi + ci * wr;
+                cr = nr;
+            }
+        }
+    }
+}
+} // namespace
+
+Spectrum analyzeSpectrum(const float* x, uint64_t frames, uint32_t channels, uint32_t rate) {
+    Spectrum out;
+    out.levelDb.fill(AudioAnalysis::kSilenceDb);
+    constexpr size_t N = 8192;
+    if (!x || channels == 0 || rate == 0 || frames < N) return out;
+    std::vector<double> window(N);
+    for (size_t i = 0; i < N; ++i) window[i] = 0.5 - 0.5 * std::cos(2.0 * kPi * static_cast<double>(i) / (N - 1));
+    // Windows are spread evenly, at most about 300, so a long song costs the same as a short one.
+    const uint64_t maxStart = frames - N;
+    const size_t windows = static_cast<size_t>(std::min<uint64_t>(300, maxStart / (N / 2) + 1));
+    std::vector<double> power(N / 2 + 1, 0.0), re(N), im(N);
+    for (size_t w = 0; w < windows; ++w) {
+        const uint64_t start = windows > 1 ? maxStart * w / (windows - 1) : 0;
+        for (size_t i = 0; i < N; ++i) {
+            double mono = 0.0;
+            for (uint32_t c = 0; c < channels; ++c) mono += sanitize(x[(start + i) * channels + c]);
+            re[i] = mono / channels * window[i];
+            im[i] = 0.0;
+        }
+        fft(re, im);
+        for (size_t k = 0; k <= N / 2; ++k) power[k] += re[k] * re[k] + im[k] * im[k];
+    }
+    // Each band is the power in its third-octave range (edges a sixth of an octave either side of the centre),
+    // as a level per Hz so wide bands do not read louder than narrow ones.
+    const double binHz = static_cast<double>(rate) / N;
+    const auto& centers = Spectrum::centersHz();
+    for (size_t b = 0; b < centers.size(); ++b) {
+        const double lo = centers[b] / std::pow(2.0, 1.0 / 6.0), hi = centers[b] * std::pow(2.0, 1.0 / 6.0);
+        if (hi >= rate * 0.5) continue;
+        double sum = 0.0;
+        size_t n = 0;
+        for (size_t k = static_cast<size_t>(std::ceil(lo / binHz)); k < N / 2 && static_cast<double>(k) * binHz < hi; ++k) { sum += power[k]; ++n; }
+        if (n > 0 && sum > 0.0) out.levelDb[b] = 10.0 * std::log10(sum / static_cast<double>(n) / static_cast<double>(windows));
+    }
+    return out;
+}
+
 } // namespace Audio
 } // namespace Aestra

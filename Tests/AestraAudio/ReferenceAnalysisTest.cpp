@@ -108,6 +108,27 @@ int main() {
         checkNear(delta[AudioAnalysis::High], -3.01, 0.05, "half the share is -3 dB");
     }
 
+    // Spectrum: a 1 kHz tone peaks in the 1 kHz band; a low tone added on lifts the low bands, not the high ones.
+    {
+        const auto t = tone(1000.0, 3.0, 0.3, 0.3);
+        const auto sp = analyzeSpectrum(t.data(), t.size() / 2, 2, kRate);
+        const auto& c = Spectrum::centersHz();
+        size_t loudest = 0;
+        for (size_t b = 1; b < Spectrum::kBands; ++b) if (sp.levelDb[b] > sp.levelDb[loudest]) loudest = b;
+        checkNear(c[loudest], 1000.0, 1e-9, "a 1 kHz tone is loudest in the 1 kHz band");
+        check(sp.levelDb[loudest] > sp.levelDb[loudest + 4] + 30.0, "and far louder than a band an octave and a third above");
+
+        auto both = tone(1000.0, 3.0, 0.3, 0.3);
+        const auto low = tone(63.0, 3.0, 0.3, 0.3);
+        for (size_t i = 0; i < both.size(); ++i) both[i] += low[i];
+        const auto bs = analyzeSpectrum(both.data(), both.size() / 2, 2, kRate);
+        check(bs.levelDb[4] > sp.levelDb[4] + 20.0, "adding a 63 Hz tone lifts the 63 Hz band");
+        checkNear(bs.levelDb[loudest], sp.levelDb[loudest], 0.5, "and leaves the 1 kHz band where it was");
+
+        const std::vector<float> shortSig(4000, 0.1f);
+        check(analyzeSpectrum(shortSig.data(), 2000, 2, kRate).levelDb[10] == AudioAnalysis::kSilenceDb, "a signal shorter than one window has no spectrum");
+    }
+
     if (g_failures) { std::printf("%d failed\n", g_failures); return 1; }
     std::printf("ReferenceAnalysisTest passed\n");
     return 0;

@@ -29,6 +29,7 @@ struct Side {
     Audio::AudioAnalysis analysis;
     Audio::StereoDetail stereo;
     std::vector<Audio::Section> sections;
+    Audio::Spectrum spectrum;  ///< third-octave balance, for the Tonal tab's curve
     std::vector<float> peaks;  ///< loudest sample per column, 0..1, on the same scale for both sides
     double seconds = 0.0;
 };
@@ -61,6 +62,7 @@ inline Side measure(const std::string& path, std::vector<float> samples, uint32_
     const uint64_t frames = channels ? samples.size() / channels : 0;
     s.stereo = Audio::analyzeStereoDetail(samples.data(), frames, channels, rate);
     s.sections = Audio::detectSections(samples.data(), frames, channels, rate);
+    s.spectrum = Audio::analyzeSpectrum(samples.data(), frames, channels, rate);
     s.seconds = rate ? static_cast<double>(frames) / rate : 0.0;
     auto buffer = std::make_shared<Audio::AudioBufferData>();
     buffer->sampleRate = rate;

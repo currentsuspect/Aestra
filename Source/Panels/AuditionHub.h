@@ -76,6 +76,11 @@ public:
     double referenceNudgeDb() const { return m_nudgeDb; }
     void nudgeReference(double db);
 
+    /// Which tab of the item page is showing (Overview, Tonal, Dynamics, Stereo, Sections).
+    using ItemTab = AuditionHubLayout::Tab;
+    void setItemTab(ItemTab tab) { m_tab = tab; m_tabScroll = 0.0f; setDirty(true); }
+    ItemTab itemTab() const { return m_tab; }
+
     bool filesDragActive() const { return m_files && m_files->dragActive(); }
 
     // For tests and hit-testing.
@@ -116,6 +121,12 @@ private:
     void renderItemPage(AestraUI::NUIRenderer& r, const AuditionHubLayout::Frame& f);
     bool itemPageMouse(const AestraUI::NUIMouseEvent& event, const AuditionHubLayout::Frame& f);
     void openReferenceMenu(const AestraUI::NUIPoint& at);
+    // The tabs other than Overview (AuditionHubTabs.cpp).
+    void renderItemTab(AestraUI::NUIRenderer& r, const AuditionHubLayout::ItemFrame& p, const AuditionCompare::Side* mix);
+    bool itemTabMouse(const AestraUI::NUIMouseEvent& event, const AuditionHubLayout::ItemFrame& p);
+    ItemTab m_tab{ItemTab::Overview};
+    float m_tabScroll{0.0f};    ///< how far the open tab is scrolled
+    float m_tabContentH{0.0f};  ///< how tall the open tab drew, for the scroll limit
     void ensureSide(const std::string& path);
     void applySides();       ///< fold finished measurements in, and (re)build the comparison
     void rebuildResult();
