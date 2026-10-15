@@ -8,6 +8,7 @@
 #include "Commands/MuseService.h"
 #include "Core/AestraContent.h"
 #include "Core/ProjectSerializer.h"
+#include "Models/ProjectReset.h"
 #include "MuseProjectLoadReport.h"
 
 #include "AestraLog.h"
@@ -59,6 +60,30 @@ void AestraApp::createNewProject() {
     cleanupUnreferencedRecordings();
     if (m_content) m_content->resetToDefaultProject();
     clearProjectLoadReport();
+    // The tempo lives in four places (engine, playlist, the clock notes are
+    // scheduled by, the transport field); a new project resets all of them, the
+    // way applyLoadedProject() sets them from a file. The playhead goes home.
+    constexpr double tempo = Aestra::Audio::kNewProjectTempo;
+    if (m_audioController && m_audioController->getEngine()) {
+        m_audioController->getEngine()->setBPM(static_cast<float>(tempo));
+        m_audioController->getEngine()->setGlobalSamplePos(0);
+    }
+    if (m_content) {
+        m_content->setPluginTempo(static_cast<float>(tempo));
+        if (auto trackManager = m_content->getTrackManager()) {
+            trackManager->getPlaylistModel().setBPM(tempo);
+            trackManager->getTimelineClock().setTempo(tempo);
+            trackManager->getPatternPlaybackEngine().rewindScheduledInstances();
+            trackManager->setPosition(0.0);
+            trackManager->setPlayStartPosition(0.0);
+            trackManager->setModified(false);
+        }
+        if (auto transportBar = m_content->getTransportBar()) {
+            transportBar->setTempo(static_cast<float>(tempo));
+            transportBar->setPosition(0.0);
+        }
+        m_content->refreshProjectViews(); // mixer, pattern browser and Arsenal show the empty project
+    }
     m_documentState.startUntitled(autosavePathOrEmpty());
     reinitAutosaveManager();
     syncRecordingProjectPath(m_content, m_documentState.canonicalPath());

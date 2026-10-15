@@ -3,6 +3,7 @@
 
 #include "ArsenalRackLayout.h"
 #include "ArsenalKit.h"
+#include "AestraFileDialog.h"
 #include "../AestraUI/Widgets/NUIPianoRollWidgets.h"
 #include "ArsenalRowLanes.h"
 #include "ArsenalSceneStrip.h"
@@ -58,6 +59,14 @@ public:
 
     /** @brief Rebuild the UI rows from the current UnitManager state. */
     void refreshUnits();
+    /// File > New Project: the project was emptied; recreate Pattern 1 and Sampler 1 and drop selections.
+    void resetToDefault() {
+        m_selectedUnitId = m_selectionUnitId = 0;
+        m_selectedSteps.clear();
+        ensureDefaultPattern();
+        if (m_trackManager) ensureDefaultUnit();
+        refreshUnits();
+    }
     
     /** @brief Bind the pattern browser used for bidirectional pattern sync. */
     void setPatternBrowser(class PatternBrowserPanel* browser) { m_patternBrowser = browser; }
@@ -177,13 +186,15 @@ private:
     void adjustPatternBars(int deltaBars);
     void adjustPatternSteps(int deltaBars);
     void createUnitOfType(UnitType type, const std::string& nameOverride = {});
-    void loadKitFromFolder();      ///< each audio file in a chosen folder becomes a unit
+    void loadKitFromFolder(const std::string& folder); ///< each audio file in the folder becomes a unit
+    Aestra::PendingFileDialog m_kitPicker; ///< "Choose a folder" runs off the UI thread, so the app never stops responding
     void drawUnitTypePicker(AestraUI::NUIRenderer& renderer);
 
     // Pattern Management (driven by Pattern Browser)
     PatternID m_activePatternID{}; // The pattern being edited
     class PatternBrowserPanel* m_patternBrowser = nullptr; // For refresh
     void ensureDefaultPattern(); // Auto-create Pattern 1 if needed
+    void ensureDefaultUnit();    // Sampler 1 when the rack is empty (needs m_trackManager)
     
     // Copy/paste clipboard
     struct PatternClipboard {
