@@ -97,11 +97,35 @@ public:
         }
     }
 
+    /// Every unit is born with its own pattern ("Kick Pattern"). Until it holds notes or sits in the timeline it
+    /// is plumbing, not an idea, so the strip leaves it out (FD-27: patterns are the person's scenes). A kit of eight
+    /// sounds would otherwise bring eight empty cards. Templated on the track manager to keep this header light.
+    template <class TrackManagerT>
+    static std::vector<uint64_t> quietDefaults(const TrackManagerT& tm) {
+        std::vector<uint64_t> placed, quiet;
+        tm.getPlaylistModel().withLanes([&](const auto& lanes) {
+            for (const auto& lane : lanes)
+                for (const auto& c : lane.clips) placed.push_back(c.patternId.value);
+            return 0;
+        });
+        const auto& units = tm.getUnitManager();
+        for (const auto id : units.getAllUnitIDs()) {
+            const auto* u = units.getUnit(id);
+            if (!u || !u->defaultPatternId.isValid()) continue;
+            const auto* p = tm.getPatternManager().getPattern(u->defaultPatternId);
+            if (!p || !p->isMidi() || !std::get<Audio::MidiPayload>(p->payload).notes.empty()) continue;
+            if (std::find(placed.begin(), placed.end(), p->id.value) == placed.end()) quiet.push_back(p->id.value);
+        }
+        return quiet;
+    }
+
     /// Re-read the patterns (cheap; called per frame so renames, adds and deletes in the browser just show up).
-    void refresh(const Audio::PatternManager& pm, uint64_t activeId, const AestraUI::NUIRect& rect) {
+    /// @p hidden: patterns to leave out (see quietDefaults); the active pattern always shows.
+    void refresh(const Audio::PatternManager& pm, uint64_t activeId, const AestraUI::NUIRect& rect, const std::vector<uint64_t>& hidden = {}) {
         m_rect = rect;
         m_scenes.clear();
         for (const auto& p : pm.getAllPatterns()) {
+            if (p && p->isMidi() && p->id.value != activeId && std::find(hidden.begin(), hidden.end(), p->id.value) != hidden.end()) continue;
             if (p && p->isMidi()) m_scenes.push_back({p->id.value, p->name.empty() ? "Pattern" : p->name, thumbnail(std::get<Audio::MidiPayload>(p->payload).notes, p->lengthBeats)});
         }
         std::sort(m_scenes.begin(), m_scenes.end(), [](const Scene& a, const Scene& b) { return a.id < b.id; });

@@ -43,12 +43,21 @@ int main() {
     check(t.startBeat == 8.0 && t.lane == 1, "another pattern in the way: the first free lane instead");
     t = planPlacement(mixed, 1, A, 8.0, 0.0, 4.0);
     check(t.lane == -1 && t.startBeat == 8.0, "no free lane: a new one, at the same beat");
-    std::vector<PlacedClip> other{{0, 0.0, 4.0, B}};
-    t = planPlacement(other, 2, A, 8.0, 2.0, 4.0);
-    check(t.startBeat == 0.0 && t.lane == 1, "the cursor's bar is taken on lane 0, so lane 1 is used");
     std::vector<PlacedClip> touching{{0, 0.0, 4.0, B}};
     t = planPlacement(touching, 1, A, 4.0, 4.0, 4.0);
     check(t.lane == 0 && t.startBeat == 4.0, "a clip that only touches the edge does not overlap");
+
+    std::cout << "[4] a new pattern follows the song so far (build, place, try a variation, place)\n";
+    std::vector<PlacedClip> song{{0, 0.0, 8.0, B}};
+    t = planPlacement(song, 1, A, 8.0, 0.0, 4.0);
+    check(t.startBeat == 8.0 && t.lane == 0, "the variation goes after the first idea, on the same lane");
+    std::vector<PlacedClip> ragged{{0, 0.0, 6.0, B}, {1, 0.0, 9.0, B}};
+    t = planPlacement(ragged, 2, A, 4.0, 0.0, 4.0);
+    check(t.startBeat == 12.0 && t.lane == 0, "the song's end is rounded up to the next bar (9 -> 12)");
+    t = planPlacement(song, 1, A, 8.0, 21.0, 4.0);
+    check(t.startBeat == 20.0, "a cursor parked past the end wins: its bar (beat 20)");
+    t = planPlacement(song, 1, A, 8.0, 2.0, 4.0);
+    check(t.startBeat == 8.0, "a cursor inside the song does not pull the new pattern under the old one");
 
     std::cout << (g_failures == 0 ? "ALL PASSED\n" : "FAILURES\n");
     return g_failures == 0 ? 0 : 1;
