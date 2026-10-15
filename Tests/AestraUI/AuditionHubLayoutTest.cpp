@@ -42,6 +42,12 @@ int main() {
     check(railed.wave.right() <= railed.table.x && railed.table.right() <= railed.body.right(), "the waveform and the numbers sit side by side, inside the body");
     check(railed.play.right() <= railed.compare.x && railed.compare.right() <= railed.hero.right(), "play and the compare control fit in the hero");
     check(railed.cover.right() < railed.play.x && railed.sections.y >= railed.wave.bottom() && railed.actions.y >= railed.sections.bottom(), "the cover, the waveform, its sections and its actions run in order");
+    // The tabs sit in one row between the hero and the body, left to right, and the tab panel lies inside the body.
+    check(railed.tabStrip.y == railed.hero.bottom() && railed.body.y == railed.tabStrip.bottom(), "hero, tabs, body stack without gaps");
+    for (int i = 1; i < AuditionHubLayout::kTabs; ++i)
+        check(railed.tabs[i].x >= railed.tabs[i - 1].right() && railed.tabs[i].y == railed.tabs[0].y, "tabs run left to right in one row");
+    check(railed.tabs[AuditionHubLayout::kTabs - 1].right() <= railed.tabStrip.right(), "the last tab fits beside the rail");
+    check(railed.panel.x >= railed.body.x && railed.panel.right() <= railed.body.right() && railed.panel.bottom() <= railed.body.bottom(), "a tab panel stays inside the body");
     std::cout << "[PASS] AuditionHubLayoutTest\n";
     return 0;
 }

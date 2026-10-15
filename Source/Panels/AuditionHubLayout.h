@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <string>
 #include <vector>
 
 namespace Aestra {
@@ -57,8 +58,17 @@ struct AuditionHubLayout {
 
     /// The page of one mix or reference: a hero with its cover and the compare control, the waveform of both sides, the
     /// numbers beside it, and (with a reference chosen) a rail at the right for the level match.
+    /// The item page's tabs: Overview is the waveform and the numbers; the others look at one side of the comparison.
+    enum class Tab { Overview, Tonal, Dynamics, Stereo, Sections };
+    static constexpr int kTabs = 5;
+    static constexpr std::array<const char*, kTabs> kTabNames{"Overview", "Tonal", "Dynamics", "Stereo", "Sections"};
+    static constexpr float kTabsH = 44.0f;
+
     struct ItemFrame {
         AestraUI::NUIRect hero, cover, play, compare, rail, body, wave, sections, actions, table;
+        AestraUI::NUIRect tabStrip;                   ///< the row of tabs between the hero and the body
+        std::array<AestraUI::NUIRect, kTabs> tabs;   ///< each tab's hit area
+        AestraUI::NUIRect panel;                      ///< where a tab other than Overview draws (the body, inside the padding)
     };
     static constexpr float kRailW = 282.0f;
     static ItemFrame itemFrame(const AestraUI::NUIRect& content, bool withRail) {
@@ -71,7 +81,15 @@ struct AuditionHubLayout {
         f.play = {tx, f.hero.bottom() - 76.0f, 56.0f, 56.0f};
         f.compare = {f.play.right() + 14.0f, f.hero.bottom() - 70.0f, 280.0f, 44.0f};
         f.rail = {content.right() - railW, content.y, railW, content.height};
-        f.body = {content.x, f.hero.bottom(), mainW, std::max(0.0f, content.height - f.hero.height)};
+        f.tabStrip = {content.x, f.hero.bottom(), mainW, kTabsH};
+        float tabX = content.x + kPad;
+        for (int i = 0; i < kTabs; ++i) {
+            const float w = 22.0f + 7.2f * static_cast<float>(std::char_traits<char>::length(kTabNames[static_cast<size_t>(i)]));
+            f.tabs[static_cast<size_t>(i)] = {tabX, f.tabStrip.y, w, kTabsH};
+            tabX += w + 8.0f;
+        }
+        f.body = {content.x, f.tabStrip.bottom(), mainW, std::max(0.0f, content.height - f.hero.height - kTabsH)};
+        f.panel = {content.x + kPad, f.body.y + 28.0f, std::max(0.0f, mainW - kPad * 2.0f), std::max(0.0f, f.body.height - 56.0f)};
         const float waveW = std::max(240.0f, (f.body.width - kPad * 2.0f) * 0.58f);
         f.wave = {content.x + kPad, f.body.y + 56.0f, waveW, 140.0f};
         f.sections = {f.wave.x, f.wave.bottom() + 6.0f, waveW, 22.0f};

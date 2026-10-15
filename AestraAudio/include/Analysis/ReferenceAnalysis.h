@@ -57,5 +57,18 @@ double levelMatchGainDbForRange(const float* mix, uint64_t mixFrames, uint32_t m
 /// Band-by-band difference between a mix and a reference, dB (positive: the mix has more energy there).
 std::array<double, AudioAnalysis::kBandCount> tonalBalanceDeltaDb(const AudioAnalysis& mix, const AudioAnalysis& reference);
 
+/// The spectrum of a signal in third-octave bands, for the tonal-balance curve (FD-26, V81-A).
+struct Spectrum {
+    static constexpr size_t kBands = 28;
+    /// Band centres, Hz: 25 Hz up to 16 kHz in third-octave steps (nominal values).
+    static const std::array<double, kBands>& centersHz();
+    /// Average level of each band, dB (relative: only differences between two spectra are meaningful). A band with no
+    /// energy reads AudioAnalysis::kSilenceDb.
+    std::array<double, kBands> levelDb{};
+};
+/// Welch-averaged power spectrum of the mono mix (Hann, 8192 points, at most ~300 windows spread over the signal).
+/// Empty (all silent) for a signal shorter than one window.
+Spectrum analyzeSpectrum(const float* interleaved, uint64_t frames, uint32_t channels, uint32_t sampleRate);
+
 } // namespace Audio
 } // namespace Aestra

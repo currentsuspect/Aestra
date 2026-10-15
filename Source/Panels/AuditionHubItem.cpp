@@ -220,19 +220,33 @@ void AuditionHub::renderItemPage(NUIRenderer& r, const AuditionHubLayout::Frame&
         r.drawText("Compare with a reference...", {p.compare.x + 16.0f, std::round(r.calculateTextY(p.compare, 12.0f))}, 12.0f, text);
     }
 
+    // The tabs: Overview is the waveform and the numbers below; the others are drawn by renderItemTab.
+    r.fillRect({p.tabStrip.x, p.tabStrip.bottom() - 1.0f, p.tabStrip.width, 1.0f}, rule);
+    for (int i = 0; i < AuditionHubLayout::kTabs; ++i) {
+        const auto& t = p.tabs[static_cast<size_t>(i)];
+        const bool on = static_cast<int>(m_tab) == i, hover = m_hoverControl == std::string("tab") + std::to_string(i);
+        const std::string name = AuditionHubLayout::kTabNames[static_cast<size_t>(i)];
+        const float tw = r.measureText(name, 12.0f).width;
+        r.drawText(name, {t.x + (t.width - tw) * 0.5f, std::round(r.calculateTextY(t, 12.0f))}, 12.0f, on ? text : (hover ? text.withAlpha(0.85f) : muted));
+        if (on) r.fillRect({t.x + 8.0f, t.bottom() - 2.0f, t.width - 16.0f, 2.0f}, theme.getColor("accentPrimary"));
+    }
+    const auto sideIt = m_sides.find(m_item.path);
+    const auto* mixSide = sideIt != m_sides.end() ? sideIt->second.get() : nullptr;
+    if (m_tab != ItemTab::Overview) {
+        renderItemTab(r, p, mixSide);
+        r.setClipRect(f.content);
+    } else {
     // The waveform: the mix, filled; the reference over it, as an outline, drawn at the level it is heard at.
     r.drawText("WAVEFORM", {p.wave.x, p.wave.y - 24.0f}, 9.5f, muted.withAlpha(0.8f));
     float lx = p.wave.x + 78.0f;
     r.fillRect({lx, p.wave.y - 21.0f, 8.0f, 8.0f}, theme.getColor("accentPrimary"));
-    r.drawText(m_item.badge.empty() ? "Mix" : "Mix " + m_item.badge, {lx + 14.0f, p.wave.y - 24.0f}, 10.5f, violet);
+    r.drawText(ref ? m_item.title : (m_item.badge.empty() ? "Mix" : "Mix " + m_item.badge), {lx + 14.0f, p.wave.y - 24.0f}, 10.5f, violet);
     if (m_ref && m_result) {
         lx += 90.0f;
         r.fillRect({lx, p.wave.y - 18.0f, 14.0f, 2.0f}, kRef);
         r.drawText(AuditionLibrary::displayName(*m_ref) + ", level-matched " + signedDb(m_result->referenceGainDb + m_nudgeDb), {lx + 20.0f, p.wave.y - 24.0f}, 10.5f, kRef);
     }
     r.fillRect(p.wave, theme.getColor("backgroundSecondary"));
-    const auto sideIt = m_sides.find(m_item.path);
-    const auto* mixSide = sideIt != m_sides.end() ? sideIt->second.get() : nullptr;
     if (!mixSide) {
         r.drawTextCentered(m_sideShared->working.load() > 0 ? "Measuring..." : "Could not read this file", p.wave, 12.0f, muted.withAlpha(0.7f));
     } else {
@@ -271,7 +285,7 @@ void AuditionHub::renderItemPage(NUIRenderer& r, const AuditionHubLayout::Frame&
     // The numbers, side by side.
     r.drawText("COMPARE", {p.table.x, p.table.y}, 9.5f, muted.withAlpha(0.8f));
     if (mixSide) {
-        const std::string mixHead = m_item.badge.empty() ? "Mix" : "Mix " + m_item.badge;
+        const std::string mixHead = ref ? m_item.title : (m_item.badge.empty() ? "Mix" : "Mix " + m_item.badge);
         const float col1 = p.table.x + p.table.width * 0.46f, col2 = p.table.x + p.table.width * 0.68f;
         r.drawText(mixHead, {col1, p.table.y + 24.0f}, 10.0f, violet.withAlpha(0.85f));
         if (m_result) r.drawText("Ref", {col2, p.table.y + 24.0f}, 10.0f, kRef.withAlpha(0.85f));
@@ -305,6 +319,7 @@ void AuditionHub::renderItemPage(NUIRenderer& r, const AuditionHubLayout::Frame&
         }
     }
     if (m_ref && !m_result) r.drawText(m_sideShared->working.load() > 0 ? "Measuring both..." : "Could not compare these two", {p.table.x, p.table.bottom() + 8.0f}, 11.5f, muted);
+    } // Overview
 
     // The rail: how the reference is matched to the mix.
     if (withRail) {
@@ -337,9 +352,17 @@ bool AuditionHub::itemPageMouse(const NUIMouseEvent& event, const AuditionHubLay
     const NUIPoint pos = event.position;
     if (event.type == NUIMouseEventType::Move) {
         const std::string before = m_hoverControl;
+        int tab = -1;
+        for (int i = 0; i < AuditionHubLayout::kTabs; ++i) if (p.tabs[static_cast<size_t>(i)].contains(pos)) tab = i;
         if (p.compare.contains(pos)) m_hoverControl = "compare";
-        else if (m_hoverControl == "compare") m_hoverControl.clear();
+        else if (tab >= 0) m_hoverControl = "tab" + std::to_string(tab);
+        else if (m_hoverControl == "compare" || m_hoverControl.rfind("tab", 0) == 0) m_hoverControl.clear();
         if (before != m_hoverControl) setDirty(true);
+    }
+    if (event.wheelDelta != 0.0f && m_tab != ItemTab::Overview && p.body.contains(pos)) {
+        m_tabScroll = std::clamp(m_tabScroll - event.wheelDelta * 48.0f, 0.0f, std::max(0.0f, m_tabContentH - p.panel.height));
+        setDirty(true);
+        return true;
     }
     if (!(event.pressed && event.button == NUIMouseButton::Left) || !f.content.contains(pos)) return false;
     if (p.play.contains(pos)) {
@@ -349,7 +372,10 @@ bool AuditionHub::itemPageMouse(const NUIMouseEvent& event, const AuditionHubLay
         return true;
     }
     if (p.compare.contains(pos)) { openReferenceMenu({p.compare.x, p.compare.bottom() + 4.0f}); return true; }
-    if (p.wave.contains(pos) && m_engine && m_hasNow && m_now.path == m_item.path) {
+    for (int i = 0; i < AuditionHubLayout::kTabs; ++i)
+        if (p.tabs[static_cast<size_t>(i)].contains(pos)) { setItemTab(static_cast<ItemTab>(i)); return true; }
+    if (m_tab != ItemTab::Overview && itemTabMouse(event, p)) return true;
+    if (m_tab == ItemTab::Overview && p.wave.contains(pos) && m_engine && m_hasNow && m_now.path == m_item.path) {
         m_engine->seekNormalized(std::clamp((pos.x - p.wave.x) / p.wave.width, 0.0f, 1.0f));
         return true;
     }
