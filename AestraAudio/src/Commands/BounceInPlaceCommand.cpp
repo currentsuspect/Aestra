@@ -104,6 +104,8 @@ void BounceInPlaceCommand::undo() {
 
 void BounceInPlaceCommand::bypassInserts() {
     m_bypassedByUs.clear();
+    if (m_mixerChannelId == MASTER_MIXER_CHANNEL_ID)
+        return; // a bounce onto Master was rendered after every track's effects and no longer passes through them
     MixerChannel* channel = m_manager.getChannelById(m_mixerChannelId);
     if (!channel)
         return;
@@ -130,6 +132,8 @@ void BounceInPlaceCommand::restoreInserts() {
 
 void BounceInPlaceCommand::muteInsertAutomation() {
     m_mutedLanes.clear();
+    if (m_mixerChannelId == MASTER_MIXER_CHANNEL_ID)
+        return; // nothing was baked in that would play twice; the Master's own automation is not ours to mute
     auto& playlist = m_manager.getPlaylistModel();
     for (size_t i = 0; i < playlist.getLaneCount(); ++i) {
         auto* lane = playlist.getLane(playlist.getLaneId(i));
