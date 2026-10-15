@@ -2463,6 +2463,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
     // soloable owner (mixerChannelId 0 = Master, which is never soloed), so any
     // active solo silences them. Isolated-track bounce excludes the master
     // stage entirely by design — this gate is live-path only.
+    const bool tapDirect = m_trackOutputTap.wants(TrackOutputTap::kMasterDirect); // multi-track pattern bounce: what direct sources add
+    if (tapDirect) m_trackOutputTap.beginDelta(masterBuf, numFrames);
     if (!ctx.anySolo) {
         renderClips(graph.masterClips, masterBuf, ctx, srcActiveThisBlock);
     }
@@ -2496,6 +2498,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             }
         }
     }
+    if (tapDirect) m_trackOutputTap.endDelta(masterBuf);
 
     if (srcActiveThisBlock) {
         m_telemetry.incrementSrcActiveBlocks();
@@ -2513,7 +2516,6 @@ void AudioEngine::renderClips(const std::vector<ClipRenderState>& clips, double*
     const Interpolators::InterpolationQuality cachedInterpQuality = ctx.cachedInterpQuality;
     const bool cachedPatternMode = ctx.cachedPatternMode;
 
-    // Check isPlaying inside loop to avoid brace wrapping issues
     // [FIX] Suppress timeline clips if in Pattern Mode (Audio Isolation)
     bool patternMode = cachedPatternMode;
 
@@ -2544,7 +2546,6 @@ void AudioEngine::renderTrackUnits(uint32_t mixerChannelId, std::vector<double>&
         for (const auto& unit : unitSnapshot->units) {
             if (unit.mixerChannelId == mixerChannelId && unit.enabled && unit.plugin && !unit.isMuted &&
                 (!ctx.anyUnitSolo || unit.isSolo)) {
-                // Found unit for this track
                 MidiBuffer* midiBuf = nullptr;
                 for (size_t r = 0; r < unitMidiRouteCount; ++r) {
                     if (unitMidiRoutes[r].unitId == static_cast<UnitID>(unit.id)) {
@@ -2553,7 +2554,6 @@ void AudioEngine::renderTrackUnits(uint32_t mixerChannelId, std::vector<double>&
                     }
                 }
 
-                // Render to scratch
                 // Note: Inputs are nullptr (Generator)
                 if (m_scratchL.size() < numFrames || m_scratchR.size() < numFrames) {
                     // Should not happen (pre-sized in setBufferConfig); fail-safe
