@@ -147,22 +147,11 @@ ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
 {
     // setId("ArsenalPanel"); // Handled by WindowPanel title
     ensureDefaultPattern(); // Auto-create Pattern 1
-    
-    // Create default Unit 1 for immediate playback
     if (m_trackManager) {
-        auto& unitMgr = m_trackManager->getUnitManager();
         m_lanes.setOnSwap([this](UnitID unit, const std::string& path) { if (m_onSampleDroppedToUnit) m_onSampleDroppedToUnit(unit, path); }); // step to a neighbouring sound
-        unitMgr.setDefaultColorProvider([](size_t n) { return AestraUI::paletteIndexToARGB(static_cast<int>(n % AestraUI::PALETTE_SIZE)); }); // new units rotate the Ember hues
-        if (unitMgr.getUnitCount() == 0) {
-            UnitID defaultUnit = unitMgr.createUnit("Sampler 1", UnitType::Sampler);
-            unitMgr.setUnitEnabled(defaultUnit, true);
-            if (const auto* unit = unitMgr.getUnit(defaultUnit)) {
-                const std::string destinationName = unit->name.empty() ? "Mixer Channel" : unit->name;
-                // Bootstrap routing belongs to the pristine default project, not to user edit history.
-                routeUnitToFirstFreeMixerChannel(*m_trackManager, defaultUnit, destinationName, unit->color, true);
-            }
-        }
+        m_trackManager->getUnitManager().setDefaultColorProvider([](size_t n) { return AestraUI::paletteIndexToARGB(static_cast<int>(n % AestraUI::PALETTE_SIZE)); }); // new units rotate the Ember hues
     }
+    ensureDefaultUnit(); // Sampler 1, so a fresh project plays straight away
 
     // Modern list container
     m_listContainer = std::make_shared<AestraUI::NUIComponent>();
@@ -607,6 +596,15 @@ void ArsenalPanel::setStepCount(int count) {
     repaint();
 }
 
+void ArsenalPanel::ensureDefaultUnit() {
+    auto& unitMgr = m_trackManager->getUnitManager();
+    if (unitMgr.getUnitCount() != 0) return;
+    const UnitID defaultUnit = unitMgr.createUnit("Sampler 1", UnitType::Sampler);
+    unitMgr.setUnitEnabled(defaultUnit, true);
+    if (const auto* unit = unitMgr.getUnit(defaultUnit)) // bootstrap routing belongs to the pristine project, not to edit history
+        routeUnitToFirstFreeMixerChannel(*m_trackManager, defaultUnit, unit->name.empty() ? "Mixer Channel" : unit->name, unit->color, true);
+}
+
 void ArsenalPanel::ensureDefaultPattern() {
     if (!m_trackManager) return;
     auto& pm = m_trackManager->getPatternManager();
@@ -645,14 +643,13 @@ void ArsenalPanel::ensureDefaultPattern() {
     }
 }
 
-void ArsenalPanel::loadKitFromFolder() {
-    auto* utils = Aestra::Platform::getUtils();
-    if (!m_trackManager || !utils) return;
+void ArsenalPanel::loadKitFromFolder(const std::string& folder) {
+    if (!m_trackManager || folder.empty()) return; // empty = the picker was cancelled
     auto& units = m_trackManager->getUnitManager();
     const auto ids = units.getAllUnitIDs();
     const UnitID reuse = ids.size() == 1 ? ids[0] : 0; // the empty starter unit takes the first sound
     bool first = true;
-    for (const auto& slot : Aestra::ArsenalKit::plan(Aestra::ArsenalKit::filesIn(utils->selectFolderDialog("Choose a folder of sounds")))) {
+    for (const auto& slot : Aestra::ArsenalKit::plan(Aestra::ArsenalKit::filesIn(folder))) {
         if (first && reuse) { units.setUnitName(reuse, slot.name); m_selectedUnitId = reuse; }
         else createUnitOfType(UnitType::Sampler, slot.name);
         first = false;
@@ -748,6 +745,7 @@ void ArsenalPanel::onResize(int width, int height) {
 
 void ArsenalPanel::onUpdate(double dt) {
     WindowPanel::onUpdate(dt);
+    if (auto folder = m_kitPicker.takeResult()) loadKitFromFolder(*folder); // the kit picker closed
     const float reservedHeight = COMMAND_HEADER_HEIGHT + PROGRESS_HEADER_HEIGHT + 24.0f;
     const float viewportHeight = std::max(0.0f,
         (m_listContainer ? m_listContainer->getBounds().height : 0.0f) - reservedHeight);
@@ -1490,7 +1488,7 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
     }
 
     if (event.pressed && event.button == NUIMouseButton::Left && m_kitCard.hitButton(event.position)) {
-        loadKitFromFolder();
+        m_kitPicker.start([](Aestra::IPlatformUtils& u) { return u.selectFolderDialog("Choose a folder of sounds"); }); // off the UI thread
         return true;
     }
     bool relayout = false, edited = false;

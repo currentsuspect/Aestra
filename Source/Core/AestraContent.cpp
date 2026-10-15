@@ -26,6 +26,7 @@ constexpr int kCountInStartupFrameLimit = 60;
 #include "AestraHistoryPanel.h"
 #include "TakesPanel.h"
 #include "ArsenalPanel.h"
+#include "Models/ProjectReset.h"
 #include "AudioGraphBuilder.h"
 #include "AuditionEngine.h" // Audition Mode backend
 #include "AuditionHub.h"  // Audition Mode UI
@@ -496,9 +497,13 @@ AestraContent::AestraContent()
         ViewFocus newFocus = WorkspaceFocusModel::focusForSegmentIndex(index);
         setViewFocus(newFocus);
 
-        // Auto-open Arsenal panel when switching TO Arsenal mode
+        // The Arsenal tab opens the Arsenal panel; the Timeline tab takes a
+        // full-width one away again, or it covers the timeline and the tab
+        // looks like it did nothing. A floating Arsenal stays where it is.
         if (newFocus == ViewFocus::Arsenal) {
             setArsenalPanelVisible(true);
+        } else if (newFocus == ViewFocus::Timeline && panelPreference(Audio::ViewType::Sequencer).maximized) {
+            setArsenalPanelVisible(false);
         }
     });
 
@@ -1723,6 +1728,9 @@ void AestraContent::onUpdate(double dt) {
     // channel), converges when a queue flood ends (#913).
     if (m_trackManager) {
         m_trackManager->resyncDirtyChannels();
+        // The tempo also changes without the field (Muse set_bpm): keep the field showing the song's tempo.
+        const double bpm = m_trackManager->getPlaylistModel().getBPM();
+        if (m_transportBar && std::abs(m_transportBar->getTempo() - bpm) > 0.005) m_transportBar->showTempo(static_cast<float>(bpm));
     }
 
     // PluginManager may start an initial asynchronous scan when no valid cache
@@ -3821,28 +3829,15 @@ void AestraContent::resetToDefaultProject() {
     if (!m_trackManager)
         return;
 
-    // Clear existing state
-    auto& playlist = m_trackManager->getPlaylistModel();
-    auto& sourceManager = m_trackManager->getSourceManager();
+    // Every caller replaces the project wholesale, so nothing of the old one
+    // survives: clips, patterns, Arsenal units, tracks and the undo history
+    // (which must go before the channels it refers to, #611).
+    Aestra::Audio::clearProjectContent(*m_trackManager);
 
-    // Suppress UI refresh during clear to avoid flicker
-    playlist.clear();
-    sourceManager.clear();
-
-    // Drop the undo history BEFORE destroying what it refers to (#611).
-    // clearAllChannels() destroys every MixerChannel outright, and commands in
-    // the history hold `MixerChannel&` to them — SetVolume, SetPan, SetMute,
-    // SetSolo and the effect/plugin commands all do. Without this, File > New
-    // Project followed by Ctrl+Z undoes an edit through freed memory.
-    //
-    // Project *load* already clears the history (AestraApp::loadProjectFromPath);
-    // the reset path did not, and every caller of this function is replacing the
-    // project wholesale, so the old history is meaningless here as well as unsafe.
-    m_trackManager->getCommandHistory().clear();
-    m_trackManager->clearAllChannels();
-
-    // Recreate default tracks
+    // Recreate the defaults a fresh launch has: fifty tracks, then the Arsenal's
+    // Pattern 1 and empty Sampler 1.
     addDemoTracks();
+    if (m_sequencerPanel) m_sequencerPanel->resetToDefault();
 
     // Reset modified flag
     m_trackManager->setModified(false);

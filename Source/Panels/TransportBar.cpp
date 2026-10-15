@@ -553,6 +553,13 @@ void TransportBar::togglePlayPause() {
 }
 
 void TransportBar::setTempo(float bpm) {
+    showTempo(bpm);
+    if (m_onTempoChange) {
+        m_onTempoChange(m_tempo);
+    }
+}
+
+void TransportBar::showTempo(float bpm) {
     m_tempo = std::max(20.0f, std::min(999.0f, bpm));
     updateMetronomePose();
     if (m_infoContainer) {
@@ -560,9 +567,6 @@ void TransportBar::setTempo(float bpm) {
     }
     // Beats derive from the tempo: refresh the musical face while paused.
     syncClockDisplays();
-    if (m_onTempoChange) {
-        m_onTempoChange(m_tempo);
-    }
 }
 
 void TransportBar::setPosition(double seconds) {
