@@ -7,20 +7,30 @@ namespace Aestra {
 namespace Audio {
 
 // === SetBpmCommand ===
-SetBpmCommand::SetBpmCommand(AudioEngine& engine, float bpm) : m_engine(engine), m_bpm(bpm) {}
+SetBpmCommand::SetBpmCommand(AudioEngine& engine, float bpm, TrackManager* trackManager)
+    : m_engine(engine), m_bpm(bpm), m_trackManager(trackManager) {}
+
+void SetBpmCommand::apply(float bpm) {
+    m_engine.setBPM(bpm);
+    if (!m_trackManager)
+        return;
+    m_trackManager->getPlaylistModel().setBPM(bpm);
+    m_trackManager->getTimelineClock().setTempo(bpm);
+    m_trackManager->getPatternPlaybackEngine().rewindScheduledInstances();
+}
 
 void SetBpmCommand::execute() {
     if (m_executed)
         return;
     m_previousBpm = m_engine.getBPM();
-    m_engine.setBPM(m_bpm);
+    apply(m_bpm);
     m_executed = true;
 }
 
 void SetBpmCommand::undo() {
     if (!m_executed)
         return;
-    m_engine.setBPM(m_previousBpm);
+    apply(m_previousBpm);
     m_executed = false;
 }
 
@@ -28,7 +38,7 @@ void SetBpmCommand::redo() {
     if (m_executed)
         return;
     m_previousBpm = m_engine.getBPM();
-    m_engine.setBPM(m_bpm);
+    apply(m_bpm);
     m_executed = true;
 }
 
