@@ -1580,8 +1580,8 @@ void AestraContent::setupArsenalPanels() {
             m_pianoRollPanel->setEditingUnit(editingUnit);
             m_pianoRollPanel->loadPattern(patternId);
         }
-        // Update audio engine loop length to match actual pattern length
-        updatePatternLoopLength(patternId);
+        if (m_playbackContext) m_playbackContext->switchArsenalPattern(patternId, getActivePatternLengthBeats()); // playing: takes over at the same beat
+        updatePatternLoopLength(patternId); // then the loop follows its length
     });
     m_sequencerPanel->setOnRequestPlaybackActivation([this]() {
         if (m_viewFocus != ViewFocus::Arsenal) {
