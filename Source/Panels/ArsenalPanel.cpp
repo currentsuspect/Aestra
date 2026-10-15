@@ -665,7 +665,8 @@ void ArsenalPanel::onRender(NUIRenderer& renderer) {
     WindowPanel::onRender(renderer);
     drawCommandHeader(renderer);
     if (m_trackManager && m_listContainer && isVisible()) {
-        m_scenes.refresh(m_trackManager->getPatternManager(), m_activePatternID.value, m_sceneRect);
+        if (m_trackManager->getUnitManager().getAllUnitIDs().size() != m_unitRows.size()) refreshUnits(); // units added or removed elsewhere (Muse, undo)
+        m_scenes.refresh(m_trackManager->getPatternManager(), m_activePatternID.value, m_sceneRect, ArsenalSceneStrip::quietDefaults(*m_trackManager));
         m_scenes.draw(renderer);
     }
     if (m_listContainer && isVisible()) drawProgressHeader(renderer, m_progressHeaderRect);
@@ -673,8 +674,7 @@ void ArsenalPanel::onRender(NUIRenderer& renderer) {
     if (m_listContainer && isVisible()) m_kitCard.draw(renderer);
     if (m_listContainer && isVisible()) m_lanes.draw(renderer, m_rack, m_unitRows, m_trackManager.get(), m_activePatternID, m_listViewportRect);
 
-    // Drag-hover ghost draws above the panel surfaces.
-    renderDragPreview(renderer);
+    renderDragPreview(renderer); // the drag-hover ghost draws above the panel surfaces
 
     // The custom header surfaces are drawn after WindowPanel's child pass.
     if (m_addUnitBtn) m_addUnitBtn->onRender(renderer);

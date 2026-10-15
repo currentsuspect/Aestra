@@ -12,6 +12,28 @@ using namespace Aestra;
 using Audio::MidiPayload;
 
 namespace {
+// A stand-in for the track manager: just what quietDefaults reads.
+struct FakeClip { Audio::PatternID patternId; };
+struct FakeLane { std::vector<FakeClip> clips; };
+struct FakePlaylist {
+    std::vector<FakeLane> lanes;
+    template <class Fn> auto withLanes(Fn&& fn) const { return fn(lanes); }
+};
+struct FakeUnit { Audio::PatternID defaultPatternId; };
+struct FakeUnits {
+    std::vector<FakeUnit> units;
+    std::vector<int> getAllUnitIDs() const { std::vector<int> ids; for (size_t i = 0; i < units.size(); ++i) ids.push_back(static_cast<int>(i)); return ids; }
+    const FakeUnit* getUnit(int id) const { return id >= 0 && id < static_cast<int>(units.size()) ? &units[id] : nullptr; }
+};
+struct FakeTracks {
+    Audio::PatternManager pm;
+    FakePlaylist playlist;
+    FakeUnits unitList;
+    const FakePlaylist& getPlaylistModel() const { return playlist; }
+    const FakeUnits& getUnitManager() const { return unitList; }
+    const Audio::PatternManager& getPatternManager() const { return pm; }
+};
+
 int g_failures = 0;
 void check(bool ok, const std::string& what) {
     std::cout << "  " << (ok ? "PASS " : "FAIL ") << what << "\n";
@@ -98,6 +120,29 @@ int main() {
         e.button = AestraUI::NUIMouseButton::Left;
         ArsenalSceneStrip::Action act;
         check(strip.onMouse(e, pm, b.value, act) && act.kind == ArsenalSceneStrip::Action::Kind::PlaceInTimeline && act.id == b.value, "pressing it asks to place the active pattern");
+    }
+
+    std::cout << "[7] a unit's own empty pattern is plumbing, not a scene (a kit must not bring a card per sound)\n";
+    {
+        FakeTracks tm;
+        const auto song = tm.pm.createMidiPattern("Pattern 1", 8.0, MidiPayload{});
+        const auto kick = tm.pm.createMidiPattern("Kick Pattern", 8.0, MidiPayload{});
+        const auto snare = tm.pm.createMidiPattern("Snare Pattern", 8.0, MidiPayload{});
+        MidiPayload withNote;
+        withNote.notes.resize(1);
+        const auto hats = tm.pm.createMidiPattern("Hats Pattern", 8.0, withNote);
+        const auto bass = tm.pm.createMidiPattern("Bass Pattern", 8.0, MidiPayload{});
+        tm.unitList.units = {{kick}, {snare}, {hats}, {bass}, {Audio::PatternID{}}};
+        tm.playlist.lanes = {{{{bass}}}};
+        const auto quiet = ArsenalSceneStrip::quietDefaults(tm);
+        check(quiet.size() == 2 && quiet[0] == kick.value && quiet[1] == snare.value, "only the empty, unplaced unit patterns are quiet");
+        ArsenalSceneStrip s;
+        s.refresh(tm.pm, song.value, rect, quiet);
+        check(s.scenes().size() == 3 && s.scenes()[0].name == "Pattern 1", "the strip shows Pattern 1, the one with notes and the placed one");
+        s.refresh(tm.pm, kick.value, rect, quiet);
+        check(s.scenes().size() == 4, "the pattern being edited always shows, even when quiet");
+        s.refresh(tm.pm, song.value, rect);
+        check(s.scenes().size() == 5, "without a hidden list everything shows, as before");
     }
 
     std::cout << (g_failures == 0 ? "ALL PASSED\n" : "FAILURES\n");
