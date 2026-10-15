@@ -137,6 +137,10 @@ int main() {
             service.handleRequest("{\"id\": 900, \"verb\": \"get_session_state\"}"));
         check(state["result"]["transport"]["bpm"].asNumber() == 142.0,
               "bpm actually set in the session");
+        // The tempo the notes are scheduled by, not only the metronome's: a pattern render at
+        // 142 used to play at 120 and was cut short by the 142-beat length (founder's beat).
+        check(trackManager->getTimelineClock().getTempoAtBeat(0.0) == 142.0, "the timeline clock follows set_bpm");
+        check(trackManager->getPlaylistModel().getBPM() == 142.0, "the playlist tempo follows set_bpm");
         check(state["result"]["tracks"].size() == 1, "track actually added");
 
         // The provider received real tools built from the wire manifest.

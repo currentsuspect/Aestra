@@ -174,7 +174,7 @@ void CommandRegistry::initialize() {
         if (!valueRaw) return nullptr;
         auto valueOpt = safeStof(*valueRaw);
         if (!valueOpt) return nullptr;
-        return std::make_unique<SetBpmCommand>(*engine, *valueOpt);
+        return std::make_unique<SetBpmCommand>(*engine, *valueOpt, ctx.trackManager);
     });
 
     reg.registerCommand("play", [](const auto&, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
