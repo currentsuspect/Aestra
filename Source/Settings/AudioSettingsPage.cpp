@@ -379,18 +379,11 @@ void AudioSettingsPage::createUI() {
         updateLatencyEstimate();
     });
     
-    m_qualityPresetDropdown = createDropdown([this](int idx) { 
-        m_dirty = true; 
-        if (idx == 0) { // Eco
-             m_resamplingDropdown->setSelectedByValue(0); // Fast
-             m_ditheringDropdown->setSelectedByValue((int)DitheringMode::None);
-        } else if (idx == 1) { // Normal
-             m_resamplingDropdown->setSelectedByValue(2); // Cubic
-             m_ditheringDropdown->setSelectedByValue((int)DitheringMode::Triangular);
-        } else if (idx == 2) { // High
-             m_resamplingDropdown->setSelectedByValue(3); // Sinc64
-             m_ditheringDropdown->setSelectedByValue((int)DitheringMode::Triangular);
-        }
+    // The preset's item VALUE says which it is (Eco = 0, High Quality = 2); the list has two entries, so the
+    // index is not the preset.
+    m_qualityPresetDropdown = createDropdown([this](int) {
+        m_dirty = true;
+        applyQualityPreset(m_qualityPresetDropdown->getSelectedValue());
     });
     m_qualityPresetDropdown->addItem("Eco", 0);
     m_qualityPresetDropdown->addItem("High Quality", 2);
@@ -420,8 +413,10 @@ void AudioSettingsPage::createUI() {
     m_previewDuckingDropdown->addItem("-9 dB", 9);
     m_previewDuckingDropdown->setSelectedByValue(6);
     
-    // Now safe to set quality preset which triggers callback
-    m_qualityPresetDropdown->setSelectedIndex(1);
+    // The preset's callback is muted while the page is built, so fill its dependents directly: before this the
+    // Resampling and Dithering boxes opened on "Select an option...".
+    m_qualityPresetDropdown->setSelectedByValue(2);
+    applyQualityPreset(2);
     
     m_threadCountInput = std::make_shared<ThreadCountDisplay>();
     int maxThreads = (int)std::thread::hardware_concurrency();
@@ -661,10 +656,23 @@ void AudioSettingsPage::layoutComponents() {
     layRow(m_previewDuckingLabel, m_previewDuckingDropdown, x2); y += rowHeight + gap;
     layRow(m_multiThreadingLabel, m_multiThreadingToggle, x2); y += rowHeight + gap;
     
-    // Conditionally show thread count if multithreading is enabled
+    // Conditionally show thread count if multithreading is enabled. Hidden, not just left unplaced: an unplaced
+    // row still drew at the window's corner, over the File menu.
+    m_threadCountLabel->setVisible(m_multiThreadingToggle->isOn());
+    m_threadCountInput->setVisible(m_multiThreadingToggle->isOn());
     if (m_multiThreadingToggle->isOn()) {
          layRow(m_threadCountLabel, m_threadCountInput, x2);
          y += rowHeight + gap; // Fix: Increment Y so subsequent elements (if any) don't overlap
+    }
+}
+
+void AudioSettingsPage::applyQualityPreset(int preset) {
+    if (preset == 0) { // Eco
+        m_resamplingDropdown->setSelectedByValue(0); // Fast
+        m_ditheringDropdown->setSelectedByValue((int)DitheringMode::None);
+    } else { // High Quality
+        m_resamplingDropdown->setSelectedByValue(3); // Sinc64
+        m_ditheringDropdown->setSelectedByValue((int)DitheringMode::Triangular);
     }
 }
 

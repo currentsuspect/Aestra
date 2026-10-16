@@ -86,6 +86,7 @@ public:
 
 private:
     void createUI();
+    void applyQualityPreset(int preset); ///< Eco = 0, High Quality = 2: sets Resampling and Dithering
     void layoutComponents();
     void updateSampleRateList();
     void updateBufferSizeList();
