@@ -40,6 +40,11 @@ public:
     NUIRect resetRect() const;
 
 private:
+    bool compact() const;
+    float segW() const;
+    float toggleW() const;
+    float resetW() const;
+
     MixerDensity m_density{MixerDensity::Normal};
     bool m_group{true};
     std::string m_summary;

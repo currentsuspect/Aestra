@@ -10,27 +10,31 @@ namespace AestraUI {
 
 namespace {
 constexpr float kFont = 10.0f;
-constexpr float kSegW = 52.0f;
 constexpr float kGap = 10.0f;
-constexpr float kToggleW = 128.0f;
-constexpr float kResetW = 78.0f;
 constexpr float kH = 20.0f;
+// Below this width (a laptop mixer with the inspector open) the controls take their short forms.
+constexpr float kCompactBelow = 470.0f;
 } // namespace
+
+bool UIMixerToolbar::compact() const { return getBounds().width < kCompactBelow; }
+float UIMixerToolbar::segW() const { return compact() ? 46.0f : 52.0f; }
+float UIMixerToolbar::toggleW() const { return compact() ? 74.0f : 128.0f; }
+float UIMixerToolbar::resetW() const { return compact() ? 52.0f : 78.0f; }
 
 NUIRect UIMixerToolbar::resetRect() const {
     const auto b = getBounds();
-    return NUIRect{b.right() - kResetW - 6.0f, b.y + (b.height - kH) * 0.5f, kResetW, kH};
+    return NUIRect{b.right() - resetW() - 6.0f, b.y + (b.height - kH) * 0.5f, resetW(), kH};
 }
 
 NUIRect UIMixerToolbar::groupRect() const {
     const auto r = resetRect();
-    return NUIRect{r.x - kGap - kToggleW, r.y, kToggleW, kH};
+    return NUIRect{r.x - kGap - toggleW(), r.y, toggleW(), kH};
 }
 
 NUIRect UIMixerToolbar::densityRect(MixerDensity d) const {
     const auto g = groupRect();
-    const float left = g.x - kGap - kSegW * 3.0f;
-    return NUIRect{left + kSegW * static_cast<float>(d), g.y, kSegW, kH};
+    const float left = g.x - kGap - segW() * 3.0f;
+    return NUIRect{left + segW() * static_cast<float>(d), g.y, segW(), kH};
 }
 
 void UIMixerToolbar::setDensity(MixerDensity density) {
@@ -62,11 +66,19 @@ void UIMixerToolbar::onRender(NUIRenderer& renderer) {
     const NUIColor border = theme.getColor("border").withAlpha(0.45f);
     const NUIColor accent = theme.getColor("accentPrimary");
 
-    renderer.drawText("Mixer", {b.x + 8.0f, b.y + (b.height - 11.0f) * 0.5f - 1.0f}, 11.0f, text.withAlpha(0.95f));
-    renderer.drawText(m_summary, {b.x + 52.0f, b.y + (b.height - kFont) * 0.5f - 1.0f}, kFont, muted.withAlpha(0.8f));
+    // The title and summary take only the room the controls leave: the summary shortens, then goes, then the title.
+    const float room = densityRect(MixerDensity::Wide).x - 8.0f;
+    const float titleW = renderer.measureText("Mixer", 11.0f).width;
+    if (b.x + 8.0f + titleW <= room)
+        renderer.drawText("Mixer", {b.x + 8.0f, b.y + (b.height - 11.0f) * 0.5f - 1.0f}, 11.0f, text.withAlpha(0.95f));
+    const float sx = b.x + 8.0f + titleW + 10.0f;
+    std::string summary = m_summary;
+    if (sx + renderer.measureText(summary, kFont).width > room) summary = m_summary.substr(0, m_summary.find(" \xC2\xB7"));
+    if (sx + renderer.measureText(summary, kFont).width <= room)
+        renderer.drawText(summary, {sx, b.y + (b.height - kFont) * 0.5f - 1.0f}, kFont, muted.withAlpha(0.8f));
 
     static constexpr const char* names[3] = {"Wide", "Normal", "Narrow"};
-    const auto seg = NUIRect{densityRect(MixerDensity::Wide).x, densityRect(MixerDensity::Wide).y, kSegW * 3.0f, kH};
+    const auto seg = NUIRect{densityRect(MixerDensity::Wide).x, densityRect(MixerDensity::Wide).y, segW() * 3.0f, kH};
     renderer.strokeRoundedRect(seg, 3.0f, 1.0f, border);
     for (int i = 0; i < 3; ++i) {
         const auto r = densityRect(static_cast<MixerDensity>(i));
@@ -82,13 +94,13 @@ void UIMixerToolbar::onRender(NUIRenderer& renderer) {
     const NUIRect track{g.x + 8.0f, g.y + (g.height - 10.0f) * 0.5f, 22.0f, 10.0f};
     renderer.fillRoundedRect(track, 5.0f, m_group ? accent.withAlpha(0.85f) : border);
     renderer.fillRoundedRect(NUIRect{m_group ? track.right() - 9.0f : track.x + 1.0f, track.y + 1.0f, 8.0f, 8.0f}, 4.0f, text);
-    renderer.drawText("Group by output", {track.right() + 6.0f, g.y + (g.height - 9.0f) * 0.5f - 1.0f}, 9.0f,
+    renderer.drawText(compact() ? "Group" : "Group by output", {track.right() + 6.0f, g.y + (g.height - 9.0f) * 0.5f - 1.0f}, 9.0f,
                       m_hover == 3 ? text : muted);
 
     const auto r = resetRect();
     if (m_hover == 4) renderer.fillRoundedRect(r, 3.0f, border.withAlpha(0.35f));
     renderer.strokeRoundedRect(r, 3.0f, 1.0f, border);
-    renderer.drawTextCentered("Reset peaks", r, kFont, m_hover == 4 ? text : muted);
+    renderer.drawTextCentered(compact() ? "Reset" : "Reset peaks", r, kFont, m_hover == 4 ? text : muted);
 }
 
 void UIMixerToolbar::onMouseLeave() {

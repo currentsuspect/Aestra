@@ -8,6 +8,7 @@
 #include "UIMixerPanel.h"
 #include "UIMixerInspector.h"
 #include "UIMixerStrip.h"
+#include "UIMixerToolbar.h"
 
 #include "Core/ChannelSlotMap.h"
 #include "Models/TrackManager.h"
@@ -224,6 +225,22 @@ int main() {
             bigPanel.onUpdate(0.016);
         scrolled = bigPanel.stripForChannel(bigVm->getChannelByIndex(20)->id)->getBounds().x;
         check(scrolled > 0.0f && scrolled < 1700.0f, "clicking a tick scrolls that channel into view (x=" + std::to_string(scrolled) + ")");
+    }
+
+    std::cout << "[10] a laptop-width toolbar keeps its controls apart and inside it\n";
+    {
+        AestraUI::UIMixerToolbar tb;
+        tb.setBounds({0, 0, 400, 28});
+        const auto wide = tb.densityRect(AestraUI::MixerDensity::Wide);
+        const auto narrow = tb.densityRect(AestraUI::MixerDensity::Narrow);
+        const auto group = tb.groupRect();
+        const auto reset = tb.resetRect();
+        check(narrow.right() <= group.x && group.right() <= reset.x && reset.right() <= 400.0f,
+              "density, Group and Reset sit side by side without overlapping");
+        check(wide.x >= 8.0f + 30.0f, "the density segment still leaves room for the Mixer title (x=" +
+                                          std::to_string(wide.x) + ")");
+        tb.setBounds({0, 0, 900, 28});
+        check(tb.groupRect().width > group.width, "with room, the controls take their full labels again");
     }
 
     std::cout << (g_failures == 0 ? "ALL PASS\n" : "FAILURES\n");
