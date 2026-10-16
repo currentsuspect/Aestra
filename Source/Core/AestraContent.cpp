@@ -4552,9 +4552,9 @@ void AestraContent::refreshAfterHistoryChange() {
     if (m_sequencerPanel)
         m_sequencerPanel->refreshUnits();
     m_trackManager->markModified();
-    // Undo/redo of clip ops (split, delete, duplicate, paint) changes the
-    // timeline under a running transport: reschedule the pattern scheduler
-    // set, which was snapshotted at play() time. No-op when stopped.
+    // Undo/redo of clip ops changes the timeline: audio clips play from the
+    // graph snapshot, pattern clips from the scheduler set taken at play().
+    m_trackManager->requestAudioGraphRebuild(Aestra::Audio::GraphDirtyReason::TimelineChanged);
     m_trackManager->refreshTimelinePatternInstances();
 }
 

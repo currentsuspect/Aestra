@@ -2885,9 +2885,9 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                         m_trimOriginalSourceOffsetSeconds, m_trimOriginalDurationSeconds, newStart,
                         newEnd);
                     m_trackManager->getCommandHistory().pushAndExecute(command);
-                    // The trim was live in the model throughout the drag;
-                    // reschedule once at release so the new bounds take
-                    // effect while playing (same staleness split refreshes).
+                    // Live in the model during the drag; audio clips play from the graph snapshot
+                    // (rebuild, as fades do), pattern clips from the scheduler set.
+                    m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
                     m_trackManager->refreshTimelinePatternInstances();
                 }
             }
