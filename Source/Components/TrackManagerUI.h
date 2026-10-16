@@ -183,6 +183,8 @@ public:
         std::function<void(const std::string& title, const std::string& message, const std::string& confirmLabel,
                            std::function<void(bool confirmed)> onResult)>;
     void setOnConfirmDialogRequest(ConfirmDialogRequest cb) { m_onConfirmDialogRequest = std::move(cb); }
+    /// "Show in Routing Graph" from a track header's menu; the argument is the track's mixer channel.
+    void setOnShowRoutingGraph(std::function<void(uint32_t channelId)> cb) { m_onShowRoutingGraph = std::move(cb); }
     void setOnSendSelectionToAudition(std::function<void(double startBeat, double endBeat)> cb) {
         m_onSendSelectionToAudition = cb;
     }
@@ -506,6 +508,7 @@ private:
     PlaylistTool m_currentTool = PlaylistTool::Select;
     bool m_cursorHidden = false; // Track cursor visibility state
     std::function<void(bool)> m_onCursorVisibilityChanged;
+    std::function<void(uint32_t)> m_onShowRoutingGraph;
 
     // Multi-selection
     TimelineTrackSelection m_trackSelection;

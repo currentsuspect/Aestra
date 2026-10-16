@@ -816,6 +816,7 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
     m_activeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
     auto menu = m_activeContextMenu;
     std::shared_ptr<AestraUI::NUIContextMenuItem> deleteLaneItem; // listed last, behind a divider (P1)
+    uint32_t routingChannel = 0; // the track's mixer channel, for "Show in Routing Graph"
 
     TrackUIComponent* selectedTrack = target ? target : getSelectedTrackUI();
     auto* lane = selectedTrack && m_trackManager
@@ -871,6 +872,7 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
         const uint64_t owningTrackId = lane->trackId;
         const auto* owningTrack = owningTrackId != 0 ? m_trackManager->getTrack(owningTrackId) : nullptr;
         const bool deletable = owningTrack == nullptr || owningTrack->laneIds.size() > 1;
+        if (owningTrack) routingChannel = owningTrack->channelId;
         deleteLaneItem = std::make_shared<AestraUI::NUIContextMenuItem>("Delete Lane");
         deleteLaneItem->setDestructive(true);
         deleteLaneItem->setEnabled(deletable);
@@ -881,6 +883,8 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
         if (onSendToAudition)
             onSendToAudition();
     });
+    if (routingChannel != 0 && m_onShowRoutingGraph)
+        menu->addItem("Show in Routing Graph", [this, routingChannel]() { m_onShowRoutingGraph(routingChannel); });
     menu->addSeparator();
     auto selectAllItem = std::make_shared<AestraUI::NUIContextMenuItem>("Select All Clips");
     selectAllItem->setShortcut("Ctrl+A");

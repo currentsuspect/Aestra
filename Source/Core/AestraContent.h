@@ -236,6 +236,8 @@ public:
     void setMixerVisible(bool visible);
     /** @brief Set the active workspace mode. */
     void setViewFocus(ViewFocus focus);
+    /// Open the routing graph (V81-R1), selecting `channelId` first when it is not 0. Remembers where to go back.
+    void showRoutingGraph(uint32_t channelId);
     /** @brief Get the active workspace mode. */
     ViewFocus getViewFocus() const { return m_viewFocus; }
     /** @brief Whether the piano-roll overlay is remembered-open (for persistence). */

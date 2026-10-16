@@ -991,9 +991,8 @@ void AestraApp::buildMenuBar() {
         menu->addItem("Show Arsenal", [this]() { Log::info("Show Arsenal - Not yet fully implemented"); });
         auto showVersions = std::make_shared<AestraUI::NUIContextMenuItem>("Show Versions");
         showVersions->setShortcut("Ctrl+H"); showVersions->setOnClick([this]() { if (m_content) m_content->toggleTakesPanel(); }); menu->addItem(showVersions);
-        menu->addItem("Show Steps", [this]() {
-            if (m_content) m_content->toggleHistoryPanel();
-        });
+        menu->addItem("Show Steps", [this]() { if (m_content) m_content->toggleHistoryPanel(); });
+        menu->addItem("Show Routing Graph", [this]() { if (m_content) m_content->showRoutingGraph(0); });
         menu->addSeparator();
         menu->addItem("Gather Panels", [this]() { if (m_content) m_content->gatherPanels(); });
         menu->addItem("Reset Panel Positions", [this]() { if (m_content) m_content->resetPanelPositions(); });
