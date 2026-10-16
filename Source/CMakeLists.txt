@@ -72,8 +72,6 @@ set(Aestra_SOURCES
 	Panels/AuditionHubTabs.cpp
 	Panels/AuditionFilesPage.h
 	Panels/AuditionFilesPage.cpp
-	Panels/AestraHistoryPanel.h
-	Panels/AestraHistoryPanel.cpp
 	Panels/TakesPanel.h
 	Panels/TakesPanel.cpp
 	Panels/SampleEditorPanel.h

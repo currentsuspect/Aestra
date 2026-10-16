@@ -52,7 +52,6 @@ const char* nameOf(ViewType v) {
     case ViewType::Sequencer: return "Sequencer";
     case ViewType::PianoRoll: return "PianoRoll";
     case ViewType::Playlist: return "Playlist";
-    case ViewType::History: return "History";
     case ViewType::Takes: return "Takes";
     }
     return "?";
@@ -132,12 +131,12 @@ int main() {
     }
 
     // ---------------------------------------------------------------------
-    // The five panels this registry actually covers, named explicitly. The
-    // derived checks above say "some set of five"; this says which five, so a
+    // The four panels this registry actually covers, named explicitly. The
+    // derived checks above say "some set of four"; this says which four, so a
     // refactor that quietly drops one cannot pass.
     // ---------------------------------------------------------------------
     for (const ViewType expected : {ViewType::Mixer, ViewType::Sequencer, ViewType::PianoRoll,
-                                    ViewType::History, ViewType::Takes}) {
+                                    ViewType::Takes}) {
         check(isFloatingView(expected),
               std::string(nameOf(expected)) + " is still a registered floating panel");
     }
