@@ -145,6 +145,9 @@ private:
     // menu items and the project.* Muse verbs both call these, so there is one
     // implementation. Defined in ProjectLifecycle.cpp.
     void createNewProject();
+    /** @brief Ask "Save <name> before <what>?" when the project has unsaved changes, then run
+        @p proceed after a save that landed or after Don't Save; Cancel runs nothing (FD-50). */
+    void confirmLeaveProject(const std::string& what, std::function<void()> proceed);
     ProjectSerializer::LoadResult openProjectFromPath(const std::string& path);
     void requestClose();
     /// Save, or Save As when the document has no path yet. Save As shows a
