@@ -624,6 +624,7 @@ void AestraContent::setupTrackManagerUI() {
         }
     }));
 
+    m_trackManagerUI->setOnShowRoutingGraph([this](uint32_t channelId) { showRoutingGraph(channelId); });
     // Audition Mode integration - sends track to Audition queue and switches mode
     m_trackManagerUI->setOnSendToAudition([this](uint32_t trackId, const std::string& trackName) {
         // 1. Ensure Audition engine exists
@@ -1119,11 +1120,7 @@ void AestraContent::setupMixerPanels() {
     if (m_mixerPanel) {
         if (auto mixerUI = m_mixerPanel->getMixerUI()) {
             if (auto* inspector = mixerUI->getInspector()) {
-                inspector->onShowRoutingGraph = [this](uint32_t channelId) {
-                    if (auto vm = m_mixerPanel ? m_mixerPanel->getViewModel() : nullptr) vm->setSelectedChannelId(static_cast<int32_t>(channelId));
-                    m_previousViewFocus = m_viewFocus;
-                    setViewFocus(ViewFocus::RoutingMap);
-                };
+                inspector->onShowRoutingGraph = [this](uint32_t channelId) { showRoutingGraph(channelId); };
             }
         }
     }

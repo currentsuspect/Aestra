@@ -148,6 +148,8 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/UIInsertRoutePicker.cpp
     Widgets/UIRoutingMap.h
     Widgets/UIRoutingMap.cpp
+    Widgets/UIRoutingMapDraw.cpp
+    Widgets/RoutingGraphLayout.h
     Widgets/UnitRow.h
     Widgets/UnitRow.cpp
     Widgets/UnitNameLabel.h
