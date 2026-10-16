@@ -213,18 +213,8 @@ AudioSettingsPage::AudioSettingsPage(AudioDeviceManager* audioManager, AudioEngi
     m_loadingLabel->setVisible(false);
     addChild(m_loadingLabel);
     
-    m_testSoundButton = std::make_shared<AestraUI::NUIButton>();
-    m_testSoundButton->setText("Test Sound");
-    m_testSoundButton->setOnClick([this]() {
-        bool playing = m_audioEngine->isTestToneEnabled();
-        playing = !playing;
-        m_audioEngine->setTestToneEnabled(playing);
-        
-        m_testSoundButton->setText(playing ? "Stop Test Sound" : "Test Sound");
-        
-        // NOTE: No stream restore needed - test tone uses existing audio callback
-    });
-    addChild(m_testSoundButton);
+    // (Test Sound is created once, in createUI(). A second copy made here used to replace the member, so the
+    // first was never placed and drew at the window corner.)
     
     // Start async device enumeration (non-blocking)
     startAsyncDeviceLoad();
