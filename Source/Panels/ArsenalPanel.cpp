@@ -703,10 +703,10 @@ void ArsenalPanel::layoutUnits() {
     const float width = std::max(0.0f, bounds.width - horizontalPadding * 2.0f);
     const float startX = bounds.x + horizontalPadding;
     m_commandHeaderRect = {startX, bounds.y, width, COMMAND_HEADER_HEIGHT};
-    constexpr float buttonH = 30.0f, fitW = 84.0f;
+    constexpr float buttonH = 30.0f, fitW = 108.0f, fitHalfW = 46.0f; // SCROLL is the wider word
     const float buttonY = m_commandHeaderRect.y + (m_commandHeaderRect.height - buttonH) * 0.5f;
     m_fitToggleRect = {m_commandHeaderRect.right() - 16.0f - fitW, buttonY, fitW, buttonH};
-    m_fitModeRect = {m_fitToggleRect.x, m_fitToggleRect.y, fitW * 0.5f, m_fitToggleRect.height}; m_scrollModeRect = {m_fitModeRect.right(), m_fitToggleRect.y, fitW * 0.5f, m_fitToggleRect.height};
+    m_fitModeRect = {m_fitToggleRect.x, m_fitToggleRect.y, fitHalfW, m_fitToggleRect.height}; m_scrollModeRect = {m_fitModeRect.right(), m_fitToggleRect.y, fitW - fitHalfW, m_fitToggleRect.height};
     m_sceneRect = {startX + 16.0f, m_commandHeaderRect.y + 10.0f, std::max(0.0f, m_fitToggleRect.x - 12.0f - (startX + 16.0f)), Aestra::ArsenalSceneStrip::kHeight};
     m_progressHeaderRect = {startX, m_commandHeaderRect.bottom() + 6.0f, width, PROGRESS_HEADER_HEIGHT};
     const float rackTop = m_progressHeaderRect.bottom() + 8.0f - m_scrollY;
@@ -1007,8 +1007,6 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
 
     const auto& themeProps = theme.getCurrentTheme();
     const float cardRadius = themeProps.radiusM;
-    const float pillRadius = themeProps.radiusS;
-    const auto disabledText = theme.getColor("textDisabled");
 
     const NUIRect leftCard(bounds.x + 4.0f, bounds.y + 1.0f, std::max(272.0f, controlWidth - 10.0f), bounds.height - 2.0f);
     renderer.fillRoundedRect(leftCard, cardRadius, theme.getColor("backgroundSecondary").withAlpha(0.92f));
@@ -1019,20 +1017,8 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
     m_barsValueRect = NUIRect(m_barsDecrementRect.right() + 4.0f, leftCard.y + 4.0f, 56.0f, leftCard.height - 8.0f);
     m_barsIncrementRect = NUIRect(m_barsValueRect.right() + 4.0f, leftCard.y + 4.0f, compactHitArea, leftCard.height - 8.0f);
 
-    const auto pillFill = theme.getColor("surfaceTertiary").withAlpha(0.78f);
-    const auto pillStroke = theme.getColor("borderSubtle").withAlpha(0.5f);
-    const auto pillText = theme.getColor("textSecondary").withAlpha(0.9f);
-    renderer.fillRoundedRect(m_barsDecrementRect, pillRadius, pillFill);
-    renderer.strokeRoundedRect(m_barsDecrementRect, pillRadius, 1.0f, pillStroke);
-    renderer.drawTextCentered("-", m_barsDecrementRect, themeProps.fontSizeXS, decEnabled ? pillText : disabledText);
-
-    renderer.fillRoundedRect(m_barsValueRect, pillRadius, pillFill);
-    renderer.strokeRoundedRect(m_barsValueRect, pillRadius, 1.0f, pillStroke);
-    renderer.drawTextCentered(std::to_string(bars) + " Bars", m_barsValueRect, themeProps.fontSizeMicro, pillText);
-
-    renderer.fillRoundedRect(m_barsIncrementRect, pillRadius, pillFill);
-    renderer.strokeRoundedRect(m_barsIncrementRect, pillRadius, 1.0f, pillStroke);
-    renderer.drawTextCentered("+", m_barsIncrementRect, themeProps.fontSizeXS, incEnabled ? pillText : disabledText);
+    Aestra::drawArsenalStepper(renderer, m_barsDecrementRect, m_barsValueRect, m_barsIncrementRect,
+                               std::to_string(bars) + (bars == 1 ? " bar" : " bars"), decEnabled, incEnabled);
 
     const bool stepType = selectedType == UnitType::Sampler || selectedType == UnitType::PitchedSampler;
     if (stepType) {
@@ -1042,20 +1028,9 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
                                    leftCard.height - 8.0f);
         m_stepsIncrementRect = NUIRect(m_stepsValueRect.right() + 4.0f, leftCard.y + 4.0f, compactHitArea,
                                        leftCard.height - 8.0f);
-        const bool stepsDecEnabled = m_stepCount > kArsenalMinPatternSteps;
-        const bool stepsIncEnabled = m_stepCount < kArsenalMaxPatternSteps;
-        renderer.fillRoundedRect(m_stepsDecrementRect, pillRadius, pillFill);
-        renderer.strokeRoundedRect(m_stepsDecrementRect, pillRadius, 1.0f, pillStroke);
-        renderer.drawTextCentered("-", m_stepsDecrementRect, themeProps.fontSizeXS,
-                                  stepsDecEnabled ? pillText : disabledText);
-        renderer.fillRoundedRect(m_stepsValueRect, pillRadius, pillFill);
-        renderer.strokeRoundedRect(m_stepsValueRect, pillRadius, 1.0f, pillStroke);
-        renderer.drawTextCentered(std::to_string(m_stepCount) + " Steps", m_stepsValueRect, themeProps.fontSizeMicro,
-                                  pillText);
-        renderer.fillRoundedRect(m_stepsIncrementRect, pillRadius, pillFill);
-        renderer.strokeRoundedRect(m_stepsIncrementRect, pillRadius, 1.0f, pillStroke);
-        renderer.drawTextCentered("+", m_stepsIncrementRect, themeProps.fontSizeXS,
-                                  stepsIncEnabled ? pillText : disabledText);
+        Aestra::drawArsenalStepper(renderer, m_stepsDecrementRect, m_stepsValueRect, m_stepsIncrementRect,
+                                   std::to_string(m_stepCount) + " steps", m_stepCount > kArsenalMinPatternSteps,
+                                   m_stepCount < kArsenalMaxPatternSteps);
     } else {
         // Clear the step hit rects: the mouse handler gates on width > 0, so
         // stale rects from a previously selected step unit would stay

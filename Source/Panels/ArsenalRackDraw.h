@@ -58,9 +58,23 @@ inline void drawArsenalFitToggle(AestraUI::NUIRenderer& renderer, const AestraUI
         if (!fitToWidth) renderer.fillRoundedRect(scrollRect, tp.radiusXS, activeFill);
         renderer.drawTextCentered("SCROLL", scrollRect, tp.fontSizeMicro, fitToWidth ? idleText : activeText);
     }
-    const float dividerX = toggle.x + toggle.width * 0.5f;
+    const float dividerX = fitRect.width > 0.0f ? fitRect.right() : toggle.x + toggle.width * 0.5f;
     renderer.drawLine(NUIPoint(dividerX, toggle.y + 5.0f), NUIPoint(dividerX, toggle.bottom() - 5.0f), 1.0f,
                       theme.getColor("borderSubtle").withAlpha(0.6f));
+}
+
+/// A length control as plain text (FD-27: the header reads like a sentence, not a row of boxes): the value in
+/// the middle and a quiet minus and plus either side, dimmed when that way is at its limit.
+inline void drawArsenalStepper(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& dec, const AestraUI::NUIRect& value,
+                               const AestraUI::NUIRect& inc, const std::string& text, bool decEnabled, bool incEnabled) {
+    using namespace AestraUI;
+    auto& theme = NUIThemeManager::getInstance();
+    const auto& tp = theme.getCurrentTheme();
+    const NUIColor glyph = theme.getColor("textSecondary").withAlpha(0.85f);
+    const NUIColor off = theme.getColor("textDisabled");
+    renderer.drawTextCentered("\xE2\x88\x92", dec, tp.fontSizeS, decEnabled ? glyph : off);
+    renderer.drawTextCentered(text, value, tp.fontSizeXS, theme.getColor("textPrimary").withAlpha(0.92f));
+    renderer.drawTextCentered("+", inc, tp.fontSizeS, incEnabled ? glyph : off);
 }
 
 /// The "+ ADD UNIT" type picker: a 2x2 card of unit kinds with a one-line description each.
