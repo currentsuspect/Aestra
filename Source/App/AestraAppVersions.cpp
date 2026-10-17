@@ -75,7 +75,7 @@ void AestraApp::showVersionPicker(float x) {
         menu->addItem(item);
     }
     menu->addSeparator();
-    menu->addItem("Open History...", [this]() { m_content->setViewOpen(Audio::ViewType::Takes, true); });
+    menu->addItem("Open Versions...", [this]() { m_content->setViewOpen(Audio::ViewType::Takes, true); });
     menu->addItem("Save as an alt...", [this]() { if (createTakeFromCurrentProject(true)) refreshVersionChip(); });
     m_windowManager->showDropdownMenu(menu, x);
 }

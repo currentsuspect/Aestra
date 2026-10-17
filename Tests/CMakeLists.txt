@@ -3290,14 +3290,12 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(WindowPanelRaiseTest PROPERTIES LABELS "ui;input;regression;contract:application")
 endif()
 
-# Takes/History workspace panels: command-timeline presentation + navigation,
-# takes manifest listing, actions, inline rename, non-destructive branching.
+# Versions panel (class TakesPanel): takes manifest listing, actions, inline rename, non-destructive branching.
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(TakesHistoryPanelTest AestraUI_Core)
     add_executable(TakesHistoryPanelTest
         AestraUI/TakesHistoryPanelTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/WindowPanel.cpp
-        ${CMAKE_SOURCE_DIR}/Source/Panels/AestraHistoryPanel.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/TakesPanel.cpp
         ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Core/TakeManager.cpp
@@ -3325,7 +3323,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Panels
     )
     add_test(NAME TakesHistoryPanelTest COMMAND TakesHistoryPanelTest)
-    set_tests_properties(TakesHistoryPanelTest PROPERTIES LABELS "ui;takes;history;regression;contract:application")
+    set_tests_properties(TakesHistoryPanelTest PROPERTIES LABELS "ui;takes;versions;regression;contract:application")
 endif()
 
 # Plugin-browser filtering must preserve selection by stable plugin ID rather

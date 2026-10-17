@@ -12,7 +12,6 @@ enum class ViewType {
     Sequencer,
     PianoRoll,
     Playlist,
-    History,
     Takes,
     /// Not a view. The number of views, so kAllViewTypes (FloatingPanelDescriptors.h)
     /// can static_assert that it lists every one. Keep it last.

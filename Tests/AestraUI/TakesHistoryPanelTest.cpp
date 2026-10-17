@@ -1,21 +1,16 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 //
-// Takes/History workspace panel behavior:
-//   * History panel presents the session command timeline (undo + redo stacks),
-//     refreshes on state change, and navigates safely through activateEntry.
-//   * Takes panel lists the takes manifest with lineage depth, routes every
+// Versions panel (class TakesPanel) behavior:
+//   * The panel lists the takes manifest with lineage depth, routes every
 //     action through app-layer callbacks, supports inline rename via key
 //     events, and never mutates project state itself.
 //   * Panel opening: hidden panels ignore input; showing + refresh presents
 //     current data.
 
-#include "../../Source/Panels/AestraHistoryPanel.h"
 #include "../../Source/Panels/TakesPanel.h"
 
 #include "../../Source/Core/TakeManager.h"
 #include "../Support/TestTempDirectory.h"
-#include "Commands/ICommand.h"
-#include "Models/TrackManager.h"
 
 #include <cstdlib>
 #include <filesystem>
@@ -26,9 +21,7 @@
 #include <string>
 #include <utility>
 
-using Aestra::Audio::AestraHistoryPanel;
 using Aestra::Audio::TakesPanel;
-using Aestra::Audio::TrackManager;
 
 namespace {
 
@@ -38,20 +31,6 @@ void require(bool cond, const char* msg) {
         std::exit(1);
     }
 }
-
-/** Minimal named command so the history panel has real timeline entries. */
-class NamedTestCommand : public Aestra::Audio::ICommand {
-public:
-    NamedTestCommand(std::string name, int& counter) : m_name(std::move(name)), m_counter(counter) {}
-    void execute() override { ++m_counter; }
-    void undo() override { --m_counter; }
-    void redo() override { ++m_counter; }
-    std::string getName() const override { return m_name; }
-
-private:
-    std::string m_name;
-    int& m_counter;
-};
 
 std::string readFileContents(const std::string& path) {
     std::ifstream in(path, std::ios::binary);
@@ -73,122 +52,6 @@ AestraUI::NUIMouseEvent leftPress(float x, float y) {
     e.button = AestraUI::NUIMouseButton::Left;
     e.position = {x, y};
     return e;
-}
-
-AestraUI::NUIMouseEvent scrollBy(float x, float y, float wheelDelta) {
-    AestraUI::NUIMouseEvent e;
-    e.type = AestraUI::NUIMouseEventType::Scroll;
-    e.wheelDelta = wheelDelta;
-    e.position = {x, y};
-    return e;
-}
-
-// =============================================================================
-// History panel — command timeline presentation and navigation
-// =============================================================================
-
-void testHistoryPanel() {
-    auto trackManager = std::make_shared<TrackManager>();
-    auto& history = trackManager->getCommandHistory();
-
-    AestraHistoryPanel panel(trackManager);
-    panel.setBounds(AestraUI::NUIRect(0.0f, 0.0f, 280.0f, 460.0f));
-    panel.setVisible(true);
-
-    require(panel.getEntryCount() == 0, "History panel should start empty");
-
-    int counter = 0;
-    history.pushAndExecute(std::make_shared<NamedTestCommand>("Move Clip", counter));
-    history.pushAndExecute(std::make_shared<NamedTestCommand>("Add Track", counter));
-    history.pushAndExecute(std::make_shared<NamedTestCommand>("Change Volume", counter));
-    require(counter == 3, "Commands should have executed");
-
-    panel.refreshHistory();
-    require(panel.getEntryCount() == 3, "Panel should present all executed commands");
-    for (int i = 0; i < 3; ++i) {
-        require(!panel.isEntryRedo(i), "No redo entries expected before undo");
-    }
-    bool sawMove = false, sawAdd = false, sawVolume = false;
-    for (int i = 0; i < 3; ++i) {
-        const auto& name = panel.getEntryName(i);
-        sawMove = sawMove || name == "Move Clip";
-        sawAdd = sawAdd || name == "Add Track";
-        sawVolume = sawVolume || name == "Change Volume";
-    }
-    require(sawMove && sawAdd && sawVolume, "Panel entries should carry command names");
-
-    // Undo → most recent command moves to the redo (greyed) region.
-    require(history.undo(), "Undo should succeed");
-    panel.refreshHistory();
-    require(panel.getEntryCount() == 3, "Undone commands stay visible in the timeline");
-    int redoCount = 0;
-    for (int i = 0; i < panel.getEntryCount(); ++i) {
-        if (panel.isEntryRedo(i)) {
-            ++redoCount;
-            require(panel.getEntryName(i) == "Change Volume", "Undone command should appear as redo entry");
-        }
-    }
-    require(redoCount == 1, "Exactly one redo entry expected after a single undo");
-    require(counter == 2, "Undo should have reverted the command");
-
-    // Navigate by clicking the redo entry — redoes it and fires the callback.
-    int historyChangedCalls = 0;
-    panel.setOnHistoryChanged([&historyChangedCalls]() { ++historyChangedCalls; });
-    int redoIndex = -1;
-    for (int i = 0; i < panel.getEntryCount(); ++i) {
-        if (panel.isEntryRedo(i)) {
-            redoIndex = i;
-            break;
-        }
-    }
-    require(redoIndex >= 0, "Redo entry should exist");
-    panel.activateEntry(redoIndex);
-    require(counter == 3, "Activating a redo entry should re-apply the command");
-    require(!history.canRedo(), "Redo stack should be drained");
-    require(historyChangedCalls == 1, "History navigation should notify listeners");
-
-    // Jump back to the beginning of the session through the timeline.
-    panel.activateEntry(panel.getEntryCount() - 1); // deepest undo row keeps that stackIndex
-    require(history.canRedo(), "Timeline jump should produce redoable commands");
-    require(counter < 3, "Timeline jump should have undone commands");
-
-    // Hidden panel must ignore input entirely.
-    panel.setVisible(false);
-    require(!panel.onMouseEvent(leftPress(10.0f, 50.0f)), "Hidden history panel must not consume events");
-
-    std::cout << "[PASS] History panel timeline\n";
-}
-
-// Clicking rows after scrolling must hit the visually shifted entries —
-// regression for the scroll offset being tracked but never applied.
-void testHistoryPanelScrolledClick() {
-    auto trackManager = std::make_shared<TrackManager>();
-    auto& history = trackManager->getCommandHistory();
-
-    AestraHistoryPanel panel(trackManager);
-    // 36px header + room for ~3 of the 26px rows: most entries start clipped.
-    panel.setBounds(AestraUI::NUIRect(0.0f, 0.0f, 280.0f, 114.0f));
-    panel.setVisible(true);
-
-    int counter = 0;
-    for (int i = 0; i < 10; ++i) {
-        history.pushAndExecute(std::make_shared<NamedTestCommand>("Cmd " + std::to_string(i), counter));
-    }
-    panel.refreshHistory();
-    require(panel.getEntryCount() == 10, "All commands should be listed");
-    require(counter == 10, "All commands should have executed");
-
-    // Two wheel notches = 60px of scroll (30px per notch).
-    require(panel.onMouseEvent(scrollBy(100.0f, 60.0f, -1.0f)), "Scroll should be consumed");
-    require(panel.onMouseEvent(scrollBy(100.0f, 60.0f, -1.0f)), "Scroll should be consumed");
-
-    // With scrollY=60, row i spans y = [36 + 26*i - 60, +26) → y=40 hits row 2.
-    // Entry 2 = undoStack[2], so undoTo(2) keeps exactly 2 commands applied.
-    require(panel.onMouseEvent(leftPress(100.0f, 40.0f)), "Row click should be consumed");
-    require(counter == 2, "Scrolled click should activate the visually shifted entry");
-    require(history.canRedo(), "Timeline jump should leave redoable commands");
-
-    std::cout << "[PASS] History panel scrolled click\n";
 }
 
 // =============================================================================
@@ -432,8 +295,6 @@ void testTakesPanel() {
 } // namespace
 
 int main() {
-    testHistoryPanel();
-    testHistoryPanelScrolledClick();
     testTakesPanel();
     std::cout << "[PASS] TakesHistoryPanelTest\n";
     return 0;
