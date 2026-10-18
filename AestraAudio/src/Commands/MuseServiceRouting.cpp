@@ -70,6 +70,10 @@ std::optional<std::string> handleRoutingVerbs(const RequestContext& ctx, const R
         const uint64_t clippedSamples = m_engine->getClipCount();
         const bool recoveryActive = telemetry.isInRecoveryMode();
         const int32_t linuxPriorityErrno = telemetry.getLinuxRtPriorityErrno();
+        // Arsenal / timeline-MIDI hits skipped because a main-loop refill came after the playhead
+        // had passed them: a stutter with no xrun, so it gets its own counters.
+        PatternPlaybackEngine::SchedulingStats scheduling;
+        if (m_trackManager) scheduling = m_trackManager->getPatternPlaybackEngine().getSchedulingStats();
 
         JSON issues = JSON::array();
         const auto addIssue = [&](bool present, const char* code) {
@@ -87,6 +91,7 @@ std::optional<std::string> handleRoutingVerbs(const RequestContext& ctx, const R
         addIssue(timedCallbacks > 0 && !telemetry.isThreadPriorityOptimal(),
                  "realtime_priority_incomplete");
         addIssue(linuxPriorityErrno != 0, "realtime_priority_error");
+        addIssue(scheduling.missedNoteOns > 0, "pattern_hits_missed");
 
         const bool observed = blocks > 0 || timedCallbacks > 0;
         const bool degraded = issues.size() > 0;
@@ -141,6 +146,13 @@ std::optional<std::string> handleRoutingVerbs(const RequestContext& ctx, const R
         signal.set("nanSamplesSanitized", JSON(static_cast<double>(nanSamples)));
         signal.set("hardClippedSamples", JSON(static_cast<double>(clippedSamples)));
 
+        const double sampleRate = static_cast<double>(telemetry.getLastSampleRate());
+        JSON patternScheduling = JSON::object();
+        patternScheduling.set("lateRefills", JSON(static_cast<double>(scheduling.lateRefills)));
+        patternScheduling.set("missedHits", JSON(static_cast<double>(scheduling.missedNoteOns)));
+        patternScheduling.set("maxLateMs",
+                              JSON(sampleRate > 0 ? 1000.0 * static_cast<double>(scheduling.maxLateFrames) / sampleRate : 0.0));
+
         JSON result = JSON::object();
         result.set("status", JSON(degraded ? "degraded" : observed ? "healthy" : "unobserved"));
         result.set("observed", JSON(observed));
@@ -151,6 +163,7 @@ std::optional<std::string> handleRoutingVerbs(const RequestContext& ctx, const R
         result.set("commandQueue", commandQueue);
         result.set("resampling", resampling);
         result.set("signal", signal);
+        result.set("patternScheduling", patternScheduling);
 
         JSON response = makeOk();
         response.set("result", result);

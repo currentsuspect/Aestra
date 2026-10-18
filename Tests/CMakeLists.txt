@@ -872,6 +872,19 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternContentEditDuringPlayb
         PROPERTIES LABELS "audio;playback;regression;contract:audio")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternLateRefillTest.cpp")
+    add_executable(PatternLateRefillTest AestraAudio/PatternLateRefillTest.cpp)
+    target_link_libraries(PatternLateRefillTest PRIVATE AestraAudio)
+    target_include_directories(PatternLateRefillTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PatternLateRefillTest COMMAND PatternLateRefillTest)
+    set_tests_properties(PatternLateRefillTest
+        PROPERTIES LABELS "audio;playback;regression;contract:audio")
+endif()
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternPlacementTest.cpp")
     add_executable(PatternPlacementTest AestraAudio/PatternPlacementTest.cpp)
     target_include_directories(PatternPlacementTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)

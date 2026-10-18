@@ -777,9 +777,9 @@ void AudioEngine::performNonRealtimeMaintenance() {
     // Pattern engine lookahead refill (non-RT, runs every main loop iteration)
     auto* patEng = m_patternEngine.load(std::memory_order_acquire);
     if (patEng && m_transportPlaying.load(std::memory_order_relaxed)) {
-        constexpr int LOOKAHEAD_SAMPLES = 4096; // ~85ms at 48kHz — covers main loop jitter
         uint64_t currentFrame = m_globalSamplePos.load(std::memory_order_relaxed);
         uint32_t sr = m_sampleRate.load(std::memory_order_relaxed);
+        const int LOOKAHEAD_SAMPLES = std::max(4096, static_cast<int>(sr / 4)); // 250 ms: see refillWindow() docs
         if (sr > 0) {
             uint64_t loopLenSamples = 0;
             bool deferRefill = false;

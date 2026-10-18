@@ -199,6 +199,13 @@ public:
     /**
      * Refill lookahead window with events (non-RT thread)
      * Called periodically by scheduler
+     *
+     * The live caller (AudioEngine::performNonRealtimeMaintenance) runs on the main loop and asks
+     * for a quarter second. Any UI stall longer than the lookahead lets the playhead pass the last
+     * queued hit, and the hits in between are skipped with no xrun (getSchedulingStats counts
+     * them). 4096 samples (~85 ms) was overtaken by ordinary slow frames, and the playhead the
+     * audio thread publishes trails by up to a buffer, so at 2048 the real lead was ~43 ms.
+     * Edits are not delayed by the longer window: any pattern change re-queues from the playhead.
      * @param currentFrame Current transport frame. In looped pattern mode this
      *        is MONOTONIC (iteration * loopLengthSamples + wrapped position) so
      *        the window can pre-schedule the next iteration's events before the
@@ -259,6 +266,24 @@ public:
      */
     size_t getActiveInstanceCount() const;
 
+    /**
+     * @brief How often refills came too late to queue every hit (control thread or any).
+     *
+     * Refills run on the main loop. When the UI thread stalls past the lookahead, the
+     * playhead overtakes the last queued frame and the hits in between are never queued:
+     * the beat skips with no xrun anywhere. These counters make that visible
+     * (get_audio_health → patternScheduling).
+     */
+    struct SchedulingStats {
+        uint64_t lateRefills = 0;    //!< refills that found the playhead past the queued frontier
+        uint64_t missedNoteOns = 0;  //!< hits that fell in such a gap and never sounded
+        uint64_t maxLateFrames = 0;  //!< the worst gap, in frames
+    };
+    SchedulingStats getSchedulingStats() const;
+
+    /** @brief Order-sensitive hash of everything about a pattern that changes what plays. */
+    static uint64_t contentFingerprint(const PatternSource& pattern);
+
     /** @brief What one scheduled instance plays: pattern beat 0 lands at startBeat; only
      *  pattern beats in [sourceStartBeat, sourceEndBeat) sound. */
     struct InstanceSnapshot {
@@ -291,6 +316,9 @@ private:
         double sourceStartBeat;
         double sourceEndBeat;
         uint64_t scheduledThroughFrame;
+        // Fingerprint of the pattern's notes when this instance was last scheduled; a change
+        // re-queues from the playhead (see refillWindow). 0 = not seen yet.
+        uint64_t contentFingerprint{0};
     };
 
     TimelineClock* m_clock;
@@ -320,6 +348,11 @@ private:
     // scheduling frontier back to the playhead and re-queues from live data, without
     // arming the entry catch-up.
     std::atomic<bool> m_contentEditRequested{false};
+
+    // Late-refill diagnostics (see getSchedulingStats)
+    std::atomic<uint64_t> m_lateRefills{0};
+    std::atomic<uint64_t> m_missedNoteOns{0};
+    std::atomic<uint64_t> m_maxLateFrames{0};
 
     // Pre-allocated scratch buffer for refillWindow (reserved at init, never reallocates)
     std::vector<ScheduledEvent> m_scratchEvents;
