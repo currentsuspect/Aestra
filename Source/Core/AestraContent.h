@@ -72,7 +72,6 @@ namespace Aestra::Audio {
     class AudioClipEditorPanel;
     class PatternBrowserPanel;
     class WindowPanel;
-    class AestraHistoryPanel;
     class TakesPanel;
     class AuditionEngine;  // For Audition Mode
     class PlaybackGraphController;
@@ -257,7 +256,6 @@ public:
     /** @brief Toggle the Arsenal panel regardless of active mode. */
     void toggleArsenalPanel();
     /** @brief Toggle the History panel visibility. */
-    void toggleHistoryPanel();
     /** @brief Toggle the Takes panel visibility. */
     void toggleTakesPanel();
     /// The whole project's mix, rendered offline into memory (a version's bounce). False when there is nothing to render.
@@ -351,15 +349,13 @@ public:
 
     // One accessor per floating panel, existing so the descriptor table can name
     // a panel without friendship or type erasure. The five members are distinct
-    // derived types (MixerPanel, PianoRollPanel, ArsenalPanel, AestraHistoryPanel,
-    // TakesPanel), so they cannot share a member pointer; a pointer-to-member-
+    // derived types (MixerPanel, PianoRollPanel, ArsenalPanel, TakesPanel), so they cannot share a member pointer; a pointer-to-member-
     // function is compile-checked, allocates nothing and carries no std::any or
     // std::function through the frame loop. Each is the upcast panelForView()
     // already performed inside its switch arm.
     std::shared_ptr<Aestra::Audio::WindowPanel> mixerWindowFor() const;
     std::shared_ptr<Aestra::Audio::WindowPanel> pianoRollWindowFor() const;
     std::shared_ptr<Aestra::Audio::WindowPanel> sequencerWindowFor() const;
-    std::shared_ptr<Aestra::Audio::WindowPanel> historyWindowFor() const;
     std::shared_ptr<Aestra::Audio::WindowPanel> takesWindowFor() const;
     /** @brief The app-owned surface store, or nullptr before AestraApp provides it. */
     Aestra::UISurfaceStoreFile* surfaceStore() const;
@@ -541,7 +537,6 @@ private:
     // Musical typing: QWERTY plays the piano roll's editing unit live.
     Aestra::KeyboardNoteInput m_keyboardNoteInput;
     std::shared_ptr<Aestra::Audio::ArsenalPanel> m_sequencerPanel;
-    std::shared_ptr<Aestra::Audio::AestraHistoryPanel> m_historyPanel;
     std::shared_ptr<Aestra::Audio::TakesPanel> m_takesPanel;
     std::shared_ptr<AestraUI::PluginUIController> m_pluginController;
     std::shared_ptr<AestraUI::UIRoutingMap> m_routingMapPanel;

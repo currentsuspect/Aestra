@@ -23,7 +23,6 @@ constexpr int kCountInStartupFrameLimit = 60;
 #include "../AestraUI/Widgets/PluginUIController.h"
 #include "../AestraUI/Widgets/UIMixerInspector.h"
 #include "../AestraUI/Widgets/UIMixerPanel.h"
-#include "AestraHistoryPanel.h"
 #include "TakesPanel.h"
 #include "ArsenalPanel.h"
 #include "Models/ProjectReset.h"
@@ -125,7 +124,6 @@ floatingPanelWindowAccessors() {
         &AestraContent::mixerWindowFor,
         &AestraContent::sequencerWindowFor,
         &AestraContent::pianoRollWindowFor,
-        &AestraContent::historyWindowFor,
         &AestraContent::takesWindowFor,
     }};
     static_assert(kWindowFor.size() == Content::kFloatingPanelGeometry.size(),
@@ -140,7 +138,6 @@ floatingPanelDescriptors() {
         {Content::kFloatingPanelGeometry[1], floatingPanelWindowAccessors()[1]},
         {Content::kFloatingPanelGeometry[2], floatingPanelWindowAccessors()[2]},
         {Content::kFloatingPanelGeometry[3], floatingPanelWindowAccessors()[3]},
-        {Content::kFloatingPanelGeometry[4], floatingPanelWindowAccessors()[4]},
     }};
     return kDescriptors;
 }
@@ -323,7 +320,6 @@ std::shared_ptr<Audio::WindowPanel> AestraContent::panelForView(Audio::ViewType 
 std::shared_ptr<Audio::WindowPanel> AestraContent::mixerWindowFor() const { return m_mixerPanel; }
 std::shared_ptr<Audio::WindowPanel> AestraContent::pianoRollWindowFor() const { return m_pianoRollPanel; }
 std::shared_ptr<Audio::WindowPanel> AestraContent::sequencerWindowFor() const { return m_sequencerPanel; }
-std::shared_ptr<Audio::WindowPanel> AestraContent::historyWindowFor() const { return m_historyPanel; }
 std::shared_ptr<Audio::WindowPanel> AestraContent::takesWindowFor() const { return m_takesPanel; }
 
 Aestra::UISurfaceStoreFile* AestraContent::surfaceStore() const {
@@ -525,9 +521,8 @@ AestraContent::AestraContent()
     m_audioVisualizer->setShowStereo(true);
     m_overlayLayer->addChild(m_audioVisualizer);
 
-    // Add Takes + History panels LAST to overlay so they're on top and receive mouse events first
+    // Add the Versions panel LAST to overlay so it is on top and receives mouse events first
     m_overlayLayer->addChild(m_takesPanel);
-    m_overlayLayer->addChild(m_historyPanel);
 
     // Status toast: topmost but mouse-transparent (no handlers), so it never
     // steals clicks from the panels beneath it.
@@ -1610,14 +1605,8 @@ void AestraContent::setupArsenalPanels() {
 }
 
 void AestraContent::setupHistoryAndTakesPanels() {
-    // Create History panel
-    m_historyPanel = std::make_shared<Aestra::Audio::AestraHistoryPanel>(m_trackManager);
-    m_historyPanel->setVisible(false);
-    m_historyPanel->setOnClose([this]() { toggleHistoryPanel(); });
-    wireFloatingPanel(m_historyPanel, ViewType::History);
-    m_historyPanel->setMaximized(false);
-    m_historyPanel->setOnHistoryChanged([this]() { refreshAfterHistoryChange(); });
-    // Create Takes panel — data providers and action callbacks are wired by the
+    // The Versions panel (class TakesPanel; the separate History panel was
+    // removed by FD-47, the Versions dock lists a version's steps) — data providers and action callbacks are wired by the
     // app layer (AestraApp) because take operations need the project path and
     // the save/load safety rules that live there.
     m_takesPanel = std::make_shared<Aestra::Audio::TakesPanel>();
@@ -1626,17 +1615,11 @@ void AestraContent::setupHistoryAndTakesPanels() {
     wireFloatingPanel(m_takesPanel, ViewType::Takes);
     m_takesPanel->setMaximized(false);
 
-    // NOTE: History panel is added LAST so it's on top and receives mouse events first.
-
-    // Wire CommandHistory state-changed callback to refresh the history panel
+    // Refresh the mixer on any command state change
     if (m_trackManager) {
         m_trackManager->getCommandHistory().addOnStateChanged([this]() {
-            // Refresh all panels on any command state change
             if (m_mixerPanel)
                 m_mixerPanel->refreshChannels();
-            if (m_historyPanel) {
-                m_historyPanel->refreshHistory();
-            }
         });
     }
 
@@ -2257,10 +2240,6 @@ void AestraContent::onResize(int width, int height) {
         applyPanelPreference(ViewType::Sequencer);
     }
 
-    if (m_historyPanel && m_historyPanel->isVisible()) {
-        applyPanelPreference(ViewType::History);
-    }
-
     if (m_takesPanel && m_takesPanel->isVisible()) {
         applyPanelPreference(ViewType::Takes);
     }
@@ -2407,16 +2386,10 @@ AestraContent::ViewOpenState AestraContent::getViewOpenState(Audio::ViewType vie
         state.requestedOpen = m_viewState.playlistActive;
         state.visible = m_viewState.playlistActive;
         break;
-    case Audio::ViewType::History:
-        // History and Takes carry no separate restore state, because nothing
-        // hides them behind the user's back — setViewFocus() only touches the
-        // mixer, piano roll and Arsenal panels. The panel is therefore the
-        // authority for both halves. If a future mode does hide these, they need
-        // their own intent field rather than this equivalence.
-        state.visible = m_historyPanel && m_historyPanel->isVisible();
-        state.requestedOpen = state.visible;
-        break;
     case Audio::ViewType::Takes:
+        // Versions carries no separate restore state, because nothing hides it
+        // behind the user's back — setViewFocus() only touches the mixer, piano
+        // roll and Arsenal panels. The panel is the authority for both halves.
         state.visible = m_takesPanel && m_takesPanel->isVisible();
         state.requestedOpen = state.visible;
         break;
@@ -3133,10 +3106,6 @@ AestraUI::NUICursorStyle AestraContent::getPanelResizeCursorStyle(const AestraUI
         }
         return panel->getResizeCursorStyleForPoint(mouseScreen);
     };
-
-    const auto historyStyle = resolveStyle(m_historyPanel);
-    if (historyStyle != AestraUI::NUICursorStyle::Arrow)
-        return historyStyle;
 
     const auto sequencerStyle = resolveStyle(m_sequencerPanel);
     if (sequencerStyle != AestraUI::NUICursorStyle::Arrow)
@@ -4556,19 +4525,6 @@ void AestraContent::refreshAfterHistoryChange() {
     // graph snapshot, pattern clips from the scheduler set taken at play().
     m_trackManager->requestAudioGraphRebuild(Aestra::Audio::GraphDirtyReason::TimelineChanged);
     m_trackManager->refreshTimelinePatternInstances();
-}
-
-void AestraContent::toggleHistoryPanel() {
-    if (!m_historyPanel)
-        return;
-    bool show = !m_historyPanel->isVisible();
-    m_historyPanel->setVisible(show);
-    if (show) {
-        applyPanelPreference(Audio::ViewType::History);
-        m_historyPanel->bringToFrontPriority();
-        m_historyPanel->refreshHistory();
-    }
-    onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
 }
 
 void AestraContent::toggleTakesPanel() {

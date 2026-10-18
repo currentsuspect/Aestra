@@ -39,7 +39,7 @@ constexpr std::array<NamedView, 6> kViews{{
     {"arsenal", ViewType::Sequencer},   // "Sequencer" internally; Arsenal in the product
     {"pianoRoll", ViewType::PianoRoll},
     {"timeline", ViewType::Playlist},   // "Playlist" internally; Timeline in the product
-    {"history", ViewType::History},
+    {"versions", ViewType::Takes},
     {"takes", ViewType::Takes},
 }};
 
