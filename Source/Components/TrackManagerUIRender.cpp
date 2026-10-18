@@ -2,6 +2,7 @@
 // TrackManagerUI — rendering: main render entry, ruler, loop markers, playhead, caches.
 // Split out of the former monolithic TrackManagerUI.cpp — bodies moved verbatim.
 #include "TrackManagerUI.h"
+#include "../../AestraUI/Widgets/PlayheadMarker.h"
 
 #include "../AestraCore/include/AestraLog.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
@@ -1165,52 +1166,10 @@ void TrackManagerUI::renderPlayhead(AestraUI::NUIRenderer& renderer) {
     // Draw if playhead center is within the visible timeline bounds
     // Allow triangle to extend outside as long as center line is visible
     if (playheadX >= gridStartX && playheadX <= playheadEndX) {
-        // Playhead color - Aestra Purple for consistency
-        auto& themeManager = AestraUI::NUIThemeManager::getInstance(); // ensure themeManager is available (it was
-                                                                       // declared above but check scope)
-        // Redefine/Reuse themeManager? It's declared at line 2731 in the function scope (based on previous view).
-        // Let's use the one from outside if available, or just get it.
-        // The visible snippet starts at 2761, check context.
-        // In the previous view_code_item, text was "auto& themeManager = AestraUI::NUIThemeManager::getInstance();" at
-        // line 2731.
-        AestraUI::NUIColor playheadColor = themeManager.getColor("accentPrimary");
-
-        // GLOW EFFECT (BG) - Only when playing
-        if (m_trackManager->isPlaying()) {
-            // Manual Gradient Glow for smoother look
-            float glowWidth = 4.0f; // Width of glow on each side
-            float lineH = playheadEndY - playheadStartY;
-
-            AestraUI::NUIColor glowColorCenter = playheadColor.withAlpha(0.14f); // Soft center
-            AestraUI::NUIColor glowColorEdge = playheadColor.withAlpha(0.0f);    // Transparent edge
-
-            // Left side glow (Transparent -> Color)
-            renderer.fillRectGradient(AestraUI::NUIRect(playheadX - glowWidth, playheadStartY, glowWidth, lineH),
-                                      glowColorEdge, glowColorCenter, false // false = horizontal
-            );
-
-            // Right side glow (Color -> Transparent)
-            renderer.fillRectGradient(AestraUI::NUIRect(playheadX, playheadStartY, glowWidth, lineH), glowColorCenter,
-                                      glowColorEdge, false // false = horizontal
-            );
-        }
-
-        // Draw playhead line (thin, crisp, pixel-aligned)
-        renderer.drawLine(AestraUI::NUIPoint(playheadX, playheadStartY), AestraUI::NUIPoint(playheadX, playheadEndY),
-                          1.0f, playheadColor.withAlpha(0.72f));
-
-        // Small downward pointer in the ruler: unlike loop handles it has a
-        // single point, and unlike the old circle it does not collide with the
-        // loop handle at beat zero.
-        constexpr float markerHalfW = 4.0f;
-        constexpr float markerH = 5.0f;
-        const float markerTop = playheadStartY - markerH;
-        const AestraUI::NUIPoint tip(playheadX, playheadStartY);
-        const AestraUI::NUIPoint left(playheadX - markerHalfW, markerTop);
-        const AestraUI::NUIPoint right(playheadX + markerHalfW, markerTop);
-        renderer.drawLine(left, right, 1.2f, playheadColor.withAlpha(0.92f));
-        renderer.drawLine(left, tip, 1.2f, playheadColor.withAlpha(0.92f));
-        renderer.drawLine(right, tip, 1.2f, playheadColor.withAlpha(0.92f));
+        // Flat and filled: a solid 2 px line and a filled head (PlayheadMarker.h).
+        const AestraUI::NUIColor playheadColor = themeManager.getColor("accentPrimary");
+        AestraUI::Playhead::drawLine(renderer, playheadX, playheadStartY, playheadEndY, playheadColor);
+        AestraUI::Playhead::drawHead(renderer, playheadX, playheadStartY, playheadColor);
     }
 }
 

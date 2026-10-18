@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "NUIPianoRollWidgets.h"
+#include "PlayheadMarker.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include "PianoRollWidgetShared.h"
@@ -171,19 +172,8 @@ void PianoRollRuler::onRender(NUIRenderer& renderer) {
     if (playheadX >= bounds.x && playheadX <= bounds.right()) {
         // Same marker language as the Track Manager playhead: a small downward
         // triangle at the ruler's bottom edge, tip pointing down at the grid line.
-        const auto accent = theme.getColor("accentPrimary");
-        constexpr float markerHalfW = 4.0f;
-        constexpr float markerH = 5.0f;
-        const float scale = isScrubbing_ ? 1.25f : 1.0f;
-        const float halfW = markerHalfW * scale;
-        const float height = markerH * scale;
-        const float markerTop = bounds.bottom() - 2.0f - height;
-        const NUIPoint tip(playheadX, bounds.bottom() - 0.5f);
-        const NUIPoint left(playheadX - halfW, markerTop);
-        const NUIPoint right(playheadX + halfW, markerTop);
-        renderer.drawLine(left, right, 1.2f, accent.withAlpha(0.92f));
-        renderer.drawLine(left, tip, 1.2f, accent.withAlpha(0.92f));
-        renderer.drawLine(right, tip, 1.2f, accent.withAlpha(0.92f));
+        Playhead::drawHead(renderer, playheadX, bounds.bottom(), theme.getColor("accentPrimary"),
+                           isScrubbing_ ? 1.25f : 1.0f);
     }
 
     renderer.clearClipRect();
