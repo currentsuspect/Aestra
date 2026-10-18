@@ -12,6 +12,9 @@
 #include "MuseProjectLoadReport.h"
 
 #include "AestraLog.h"
+#include "Settings/ConfirmationDialog.h"
+#include "Core/AestraWindowManager.h"
+#include "AestraRootComponent.h"
 
 #include <filesystem>
 #include <string>
@@ -53,6 +56,39 @@ void syncRecordingProjectPath(const std::shared_ptr<AestraContent>& content,
 //
 // Extracted from the File menu's inline lambdas verbatim. The menu items now
 // call these, so the agent and the human run the same sequence.
+
+// New and Open used to replace the session without asking, while Quit asked
+// (FD-50). The same dialog now guards all three. Don't Save keeps the autosave:
+// unlike Quit, the work is only being left, and Versions can still reach it.
+void AestraApp::confirmLeaveProject(const std::string& what, std::function<void()> proceed) {
+    auto trackManager = m_content ? m_content->getTrackManager() : nullptr;
+    if (!trackManager || !trackManager->isModified() || !m_windowManager) {
+        proceed();
+        return;
+    }
+    m_autoSaveManager.forceAutosave(); // recoverable even if the app dies with the dialog open
+    auto dialog = m_windowManager->getConfirmationDialog();
+    if (!dialog) {
+        dialog = std::make_shared<Aestra::ConfirmationDialog>();
+        m_windowManager->setConfirmationDialog(dialog);
+    }
+    if (auto* root = m_windowManager->getRootComponent()) {
+        dialog->setBounds(root->getBounds());
+        root->removeChild(dialog);
+        root->addChild(dialog);
+    }
+    const std::string name = m_documentState.displayName();
+    dialog->show("Unsaved Changes", "Save \"" + name + "\" before " + what + "?",
+                 [this, proceed = std::move(proceed)](Aestra::DialogResponse response) {
+                     if (response == Aestra::DialogResponse::Save) {
+                         saveCurrentProject([proceed](bool saved) {
+                             if (saved) proceed();
+                         });
+                     } else if (response == Aestra::DialogResponse::DontSave) {
+                         proceed();
+                     }
+                 });
+}
 
 void AestraApp::createNewProject() {
     if (m_content && m_content->getTrackManager()) m_content->getTrackManager()->stop();

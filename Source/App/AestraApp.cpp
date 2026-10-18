@@ -875,9 +875,9 @@ void AestraApp::buildMenuBar() {
     menuBar->addItem("File", [this]() {
         auto menu = std::make_shared<AestraUI::NUIContextMenu>();
 
-        menu->addItem("New Project", [this]() { createNewProject(); });
+        menu->addItem("New Project", [this]() { confirmLeaveProject("starting a new project", [this]() { createNewProject(); }); });
 
-        menu->addItem("Open Project...", [this]() {
+        menu->addItem("Open Project...", [this]() { confirmLeaveProject("opening another project", [this]() {
             const std::string filter = std::string("Aestra Project\0*.aes\0All Files\0*.*\0",
                                                    sizeof("Aestra Project\0*.aes\0All Files\0*.*\0") - 1);
             pickFileAsync(
@@ -887,7 +887,7 @@ void AestraApp::buildMenuBar() {
                     openProjectFromPath(pickedPath);
                 }
             });
-        });
+        }); });
 
         menu->addSeparator();
 
