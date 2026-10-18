@@ -421,7 +421,7 @@ listen and compare, and Versions replaces the history list.
 ### Fixes
 
 - **The startup log names the real version.** It said "Aestra v0.1.0" on every release, so a crash report could not
-  say which build it came from. (#PRNUM)
+  say which build it came from. (#1167)
 - **Panel buttons bring a covered panel forward** instead of closing it, and Arsenal steps and lanes no longer
   spill over the rack when you scroll. (#1166)
 - **Opening Aestra with a project plays at that project's tempo.** It used to play at 120 while showing
