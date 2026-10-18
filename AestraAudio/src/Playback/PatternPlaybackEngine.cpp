@@ -266,7 +266,21 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
     // the loop below stays dormant — a full rewind here re-fired every
     // currently-sounding note (flam on each grid edit) and made fresh
     // placements sound before the playhead reached them (#823).
-    if (m_contentEditRequested.exchange(false, std::memory_order_acq_rel)) {
+    // Edits announce themselves through patternContentEdited() from the Arsenal grid, but the
+    // Piano Roll, Muse note verbs, undo and a dozen direct note writes do not. With the longer
+    // lookahead (performNonRealtimeMaintenance) an unannounced edit would wait up to a quarter
+    // second to be heard, so every active pattern is fingerprinted on each pass and any change is
+    // treated exactly like an announced edit. First sight of an instance only records its print.
+    bool contentEdited = m_contentEditRequested.exchange(false, std::memory_order_acq_rel);
+    for (auto& inst : m_activeInstances) {
+        const PatternSource* pattern = m_patternManager ? m_patternManager->getPattern(inst.patternId) : nullptr;
+        const uint64_t print = pattern ? contentFingerprint(*pattern) : 0;
+        if (inst.contentFingerprint != 0 && print != inst.contentFingerprint) {
+            contentEdited = true;
+        }
+        inst.contentFingerprint = print;
+    }
+    if (contentEdited) {
         // A note deleted while still inside its gate leaves a hung voice: its
         // ON already fired but its queued OFF dies with the drain below, and
         // the note is gone from the pattern so the refill loop cannot re-emit
@@ -408,6 +422,9 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
 
     m_scratchEvents.clear();
 
+    bool anyLate = false;
+    uint64_t maxLate = 0;
+    uint64_t missed = 0;
     for (auto& inst : m_activeInstances) {
         // Skip cancelled instances
         if (m_instanceCancelled[inst.instanceId].load(std::memory_order_acquire)) {
@@ -427,6 +444,13 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
 
         const uint64_t previousScheduledThroughFrame = inst.scheduledThroughFrame;
         const uint64_t scheduleFromFrame = std::max(currentFrame, previousScheduledThroughFrame);
+        // The playhead passed the last queued frame: this refill came later than the lookahead
+        // (a main-loop stall). Hits in [frontier, playhead) are gone; count them below.
+        const bool lateRefill = previousScheduledThroughFrame > 0 && currentFrame > previousScheduledThroughFrame;
+        if (lateRefill) {
+            anyLate = true;
+            maxLate = std::max(maxLate, currentFrame - previousScheduledThroughFrame);
+        }
         if (scheduleFromFrame >= windowEnd) {
             continue;
         }
@@ -517,6 +541,9 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                     m_gatedNotes.push_back({inst.instanceId, note.unitId,
                                             static_cast<uint8_t>(resolvedMidiNote), channelIdx, offFrame, noteId, noteId});
                 }
+            } else if (lateRefill && noteFrame >= previousScheduledThroughFrame && noteFrame < scheduleFromFrame &&
+                       offFrame <= scheduleFromFrame) {
+                ++missed; // fell in the gap and already over (the branch below restarts the rest): never sounded
             } else if (noteFrame < scheduleFromFrame && offFrame > scheduleFromFrame &&
                        noteFrame >= previousScheduledThroughFrame) {
                 // Playback entered while this note was already active; start it immediately at the buffer edge once.
@@ -574,6 +601,13 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
         } // loopIter
 
         inst.scheduledThroughFrame = windowEnd;
+    }
+    if (anyLate) {
+        m_lateRefills.fetch_add(1, std::memory_order_relaxed);
+        m_missedNoteOns.fetch_add(missed, std::memory_order_relaxed);
+        uint64_t prev = m_maxLateFrames.load(std::memory_order_relaxed);
+        while (maxLate > prev && !m_maxLateFrames.compare_exchange_weak(prev, maxLate, std::memory_order_relaxed)) {
+        }
     }
 
     std::sort(m_scratchEvents.begin(), m_scratchEvents.end(), eventComesBefore);
@@ -660,6 +694,44 @@ void PatternPlaybackEngine::clearScheduledInstances() {
     // A pending rewind is moot once the instances are gone.
     m_flushRequested.store(false, std::memory_order_release);
     m_rtQueue.forceDrain();
+}
+
+PatternPlaybackEngine::SchedulingStats PatternPlaybackEngine::getSchedulingStats() const {
+    SchedulingStats stats;
+    stats.lateRefills = m_lateRefills.load(std::memory_order_relaxed);
+    stats.missedNoteOns = m_missedNoteOns.load(std::memory_order_relaxed);
+    stats.maxLateFrames = m_maxLateFrames.load(std::memory_order_relaxed);
+    return stats;
+}
+
+uint64_t PatternPlaybackEngine::contentFingerprint(const PatternSource& pattern) {
+    // FNV-1a over the fields that change what plays. Never returns 0 (0 = "not seen yet").
+    uint64_t h = 1469598103934665603ull;
+    const auto mix = [&h](const void* data, size_t size) {
+        const auto* bytes = static_cast<const unsigned char*>(data);
+        for (size_t i = 0; i < size; ++i) {
+            h ^= bytes[i];
+            h *= 1099511628211ull;
+        }
+    };
+    mix(&pattern.lengthBeats, sizeof(pattern.lengthBeats));
+    mix(&pattern.swing, sizeof(pattern.swing));
+    if (pattern.isMidi()) {
+        for (const auto& n : std::get<MidiPayload>(pattern.payload).notes) {
+            mix(&n.pitch, sizeof(n.pitch));
+            mix(&n.startBeat, sizeof(n.startBeat));
+            mix(&n.durationBeats, sizeof(n.durationBeats));
+            mix(&n.velocity, sizeof(n.velocity));
+            mix(&n.pan, sizeof(n.pan));
+            mix(&n.unitId, sizeof(n.unitId));
+            mix(&n.pitchOffset, sizeof(n.pitchOffset));
+            mix(&n.gate, sizeof(n.gate));
+            mix(&n.slide, sizeof(n.slide));
+            mix(&n.chance, sizeof(n.chance));
+            mix(&n.ratchet, sizeof(n.ratchet));
+        }
+    }
+    return h == 0 ? 1 : h;
 }
 
 size_t PatternPlaybackEngine::getActiveInstanceCount() const {
