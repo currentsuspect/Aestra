@@ -27,11 +27,26 @@ v1.0.0                  — initial public release
 | `v0.6.0-alpha`       | Superseded | 2026-05-29 | Security & RT hardening, plugin host crash resilience, callback-safety architecture, 26 PRs merged |
 | `v0.7.0-alpha`       | Superseded | 2026-08-16 | Routing & automation correctness, Master plugin host, PDC master latency, piano-roll workflow, reliability gates, 338 PRs merged |
 | `v0.7.1-alpha`       | Superseded | 2026-09-12 | Trust Sprint: pattern-edit rescheduling, stop-at-zero, recording latency compensation, missing-asset relink, compile-time RT checking, one feature by design (fit-to-N bars), 162 commits since v0.7.0 |
-| `v0.8.0-alpha`       | Current   | 2026-10-11 | Automation clips and an authoring surface, Bounce in Place, stems export, panel Docked/Floating and Contextual/Keep Open, compact PCM sources (-43% audio memory in a 12-track session), UI tests that fail CI, 39 scoped items |
+| `v0.8.0-alpha`       | Superseded | 2026-10-11 | Automation clips and an authoring surface, Bounce in Place, stems export, panel Docked/Floating and Contextual/Keep Open, compact PCM sources (-43% audio memory in a 12-track session), UI tests that fail CI, 39 scoped items |
+| `v0.8.1-alpha`       | Current   | 2026-10-19 | The revamp: the Arsenal as a rack you play, a meters-first mixer, the routing graph, Audition, Versions, the v0.8.1 look, 88 PRs merged |
 
 ---
 
 ## Milestone History
+
+### v0.8.1-alpha — The revamp (Oct 2026)
+
+88 PRs since v0.8.0-alpha. The surfaces a producer spends the most time in are rebuilt rather than extended. Scope was closed by FD-51: what was built ships, and the rest moved to v0.8.2 by name.
+
+**Arsenal** — A rack you play: grouped unit rows with output pills, patterns as one-click scenes, step lanes with swing, chance and ratchets. An empty Arsenal loads a kit from a folder; a row steps through its folder's sounds without stopping playback. Place in timeline puts the pattern in the song. Hits are scheduled a quarter second ahead, so a slow frame no longer drops them.
+
+**Mixer and routing** — Meters first: strips grouped by output, three densities, a navigator, and a master that reads integrated and short-term loudness, true peak and correlation. The routing graph draws only custom routes, traces a selected channel's chain, patches by drag and refuses loops.
+
+**Audition and Versions** — Audition is a hub for listening: a mix and a reference play together, level-matched, with tonal, dynamics, stereo and section views. Versions replaces the History and Takes lists with a branch timeline, version bounces, bringing tracks over from another version, and a crash-recovery card.
+
+**Fixes worth naming** — A project opens at its own tempo (it played at 120). Panel buttons bring a covered panel forward. New and Open ask about unsaved work. The startup log names the real version (it said v0.1.0 on every release).
+
+**Known gaps, carried openly** — Moved to v0.8.2 by FD-51: presets, in-app documentation, the piano roll, Settings/Export and timeline looks, Audition part 2 and Versions compare. Bouncing a version blocks the window while it renders. The real-screen pass on the 1366x768 laptop covered the Arsenal and the panels; the rest was seen on a virtual display and in tests. A 4 GB / 2-core stress run held memory (12 four-minute tracks peaked at 1171 MB, down from 1783) with no xruns or missed hits. See `CHANGELOG.md`.
 
 ### v0.8.0-alpha — Automation, Clips and Export (Oct 2026)
 
