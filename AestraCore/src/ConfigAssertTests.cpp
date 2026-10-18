@@ -79,9 +79,9 @@ bool testConfig() {
 
     // Test version
     std::cout << "  Version: " << AESTRA_VERSION_STRING << std::endl;
-    TEST_ASSERT(AESTRA_VERSION_MAJOR == 0, "Major version should be 0");
-    TEST_ASSERT(AESTRA_VERSION_MINOR == 1, "Minor version should be 1");
-    TEST_ASSERT(AESTRA_VERSION_PATCH == 0, "Patch version should be 0");
+    // Built in the tree, the version is the project's, not a header's fallback (it said 0.1.0 through v0.8.0).
+    TEST_ASSERT(std::string(AESTRA_VERSION_STRING) != "unknown", "Version should come from the build");
+    TEST_ASSERT(std::string(AESTRA_VERSION_STRING) != "0.1.0", "Version should not be the old hard-coded 0.1.0");
 
     // Test utility macros
     const char* test = AESTRA_STRINGIFY(AESTRA);
