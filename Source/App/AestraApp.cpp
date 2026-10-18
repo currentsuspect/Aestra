@@ -1229,7 +1229,7 @@ void AestraApp::connectAudioToUI() {
                 "AestraAudio/assets/Aestra_metronome.wav",
                 "AestraAudio/assets/Aestra_metronome_up.wav"
             );
-            engine->setBPM(120.0f);
+            if (engine->getBPM() <= 0.0f) engine->setBPM(120.0f); // reruns after a launch-time load: a fixed 120 here split engine/metronome from the screen
         }
     }
 }
