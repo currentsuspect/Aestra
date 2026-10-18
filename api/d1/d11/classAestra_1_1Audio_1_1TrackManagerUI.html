@@ -70,7 +70,7 @@ $(function() {
 
 <div id="nav-path" class="navpath">
   <ul>
-<li class="navelem"><b>Aestra</b></li><li class="navelem"><b>Audio</b></li><li class="navelem"><a class="el" href="../../d1/d11/classAestra_1_1Audio_1_1TrackManagerUI.html">TrackManagerUI</a></li>  </ul>
+<li class="navelem"><a class="el" href="../../d8/d94/namespaceAestra.html">Aestra</a></li><li class="navelem"><b>Audio</b></li><li class="navelem"><a class="el" href="../../d1/d11/classAestra_1_1Audio_1_1TrackManagerUI.html">TrackManagerUI</a></li>  </ul>
 </div>
 </div><!-- top -->
 <div class="header">
@@ -221,6 +221,9 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:ad7111e3aec34ce7d0ba4629b06b7577f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1d38ebe0e50de16f42f855449b02804e" id="r_a1d38ebe0e50de16f42f855449b02804e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d11/classAestra_1_1Audio_1_1TrackManagerUI.html#a1d38ebe0e50de16f42f855449b02804e">setOnConfirmDialogRequest</a> (ConfirmDialogRequest cb)</td></tr>
 <tr class="separator:a1d38ebe0e50de16f42f855449b02804e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6808e0d67cad4e46010d81380a5947bf" id="r_a6808e0d67cad4e46010d81380a5947bf"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d11/classAestra_1_1Audio_1_1TrackManagerUI.html#a6808e0d67cad4e46010d81380a5947bf">setOnShowRoutingGraph</a> (std::function&lt; void(uint32_t channelId)&gt; cb)</td></tr>
+<tr class="memdesc:a6808e0d67cad4e46010d81380a5947bf"><td class="mdescLeft">&#160;</td><td class="mdescRight">"Show in Routing Graph" from a track header's menu; the argument is the track's mixer channel.  <br /></td></tr>
+<tr class="separator:a6808e0d67cad4e46010d81380a5947bf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1ba8dd628d94aab88d12953727cc2efb" id="r_a1ba8dd628d94aab88d12953727cc2efb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d11/classAestra_1_1Audio_1_1TrackManagerUI.html#a1ba8dd628d94aab88d12953727cc2efb">setOnSendSelectionToAudition</a> (std::function&lt; void(double startBeat, double endBeat)&gt; cb)</td></tr>
 <tr class="separator:a1ba8dd628d94aab88d12953727cc2efb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a01deb7b97c4aafdde219145119db0062" id="r_a01deb7b97c4aafdde219145119db0062"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d11/classAestra_1_1Audio_1_1TrackManagerUI.html#a01deb7b97c4aafdde219145119db0062">setOnClipLibraryChanged</a> (std::function&lt; void()&gt; cb)</td></tr>
@@ -297,6 +300,17 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a0ee290386ce675f9753ede6134d36f79"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a47e895c8d758ab9cbb5a69e0468f9f5b" id="r_a47e895c8d758ab9cbb5a69e0468f9f5b"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d11/classAestra_1_1Audio_1_1TrackManagerUI.html#a47e895c8d758ab9cbb5a69e0468f9f5b">isInstantClipDragActive</a> () const</td></tr>
 <tr class="separator:a47e895c8d758ab9cbb5a69e0468f9f5b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a19aac9842b50267ce1fabac28757d748" id="r_a19aac9842b50267ce1fabac28757d748"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d11/classAestra_1_1Audio_1_1TrackManagerUI.html#a19aac9842b50267ce1fabac28757d748">selectClips</a> (const std::vector&lt; <a class="el" href="../../dd/da9/structAestra_1_1Audio_1_1ClipInstanceID.html">ClipInstanceID</a> &gt; &amp;clipIds, TrackSelectionIntent intent)</td></tr>
+<tr class="memdesc:a19aac9842b50267ce1fabac28757d748"><td class="mdescLeft">&#160;</td><td class="mdescRight">Apply an intent to a batch of clips and push the set to rows (#848).  <br /></td></tr>
+<tr class="separator:a19aac9842b50267ce1fabac28757d748"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a56ecd1a78ac9356f3225aa3ce5925b95" id="r_a56ecd1a78ac9356f3225aa3ce5925b95"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="../../d6/dc9/classAestra_1_1Audio_1_1TimelineClipSelection.html">TimelineClipSelection</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d11/classAestra_1_1Audio_1_1TrackManagerUI.html#a56ecd1a78ac9356f3225aa3ce5925b95">clipSelection</a> () const</td></tr>
+<tr class="separator:a56ecd1a78ac9356f3225aa3ce5925b95"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa5ebdcd955daa5bd3928d1d4acc307cf" id="r_aa5ebdcd955daa5bd3928d1d4acc307cf"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d11/classAestra_1_1Audio_1_1TrackManagerUI.html#aa5ebdcd955daa5bd3928d1d4acc307cf">resolvePendingGroupClick</a> (<a class="el" href="../../dd/da9/structAestra_1_1Audio_1_1ClipInstanceID.html">ClipInstanceID</a> clickedClip)</td></tr>
+<tr class="memdesc:aa5ebdcd955daa5bd3928d1d4acc307cf"><td class="mdescLeft">&#160;</td><td class="mdescRight">A press on a clip that belongs to a multi-selection keeps the selection, so it can be dragged as a group; a click that did not drag collapses the selection to that clip.  <br /></td></tr>
+<tr class="separator:aa5ebdcd955daa5bd3928d1d4acc307cf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a521cd5a92f24d52db71eff33cad8f0c1" id="r_a521cd5a92f24d52db71eff33cad8f0c1"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d11/classAestra_1_1Audio_1_1TrackManagerUI.html#a521cd5a92f24d52db71eff33cad8f0c1">nudgeSelectedClips</a> (double beats, int laneDelta)</td></tr>
+<tr class="memdesc:a521cd5a92f24d52db71eff33cad8f0c1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move every selected clip by <code>beats</code> and <code>laneDelta</code> lanes as ONE undo step (arrow-key nudge).  <br /></td></tr>
+<tr class="separator:a521cd5a92f24d52db71eff33cad8f0c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa29b999a54896f690c45a7a4aecf093f" id="r_aa29b999a54896f690c45a7a4aecf093f"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d11/classAestra_1_1Audio_1_1TrackManagerUI.html#aa29b999a54896f690c45a7a4aecf093f">clampInstantClipDragPosition</a> (<a class="el" href="../../dd/d25/structAestraUI_1_1NUIPoint.html">::AestraUI::NUIPoint</a> &amp;position) const</td></tr>
 <tr class="separator:aa29b999a54896f690c45a7a4aecf093f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a23189c438bec6fb64d60e1c5cd7c43f8" id="r_a23189c438bec6fb64d60e1c5cd7c43f8"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d11/classAestra_1_1Audio_1_1TrackManagerUI.html#a23189c438bec6fb64d60e1c5cd7c43f8">placeFileOnTimeline</a> (const std::string &amp;filePath, const std::string &amp;displayName=&quot;&quot;)</td></tr>
@@ -403,6 +417,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a2b3f7ebc1d4af1d46fcb206080bf7cf3 inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a2b3f7ebc1d4af1d46fcb206080bf7cf3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a2b3f7ebc1d4af1d46fcb206080bf7cf3">bringToFront</a> ()</td></tr>
 <tr class="memdesc:a2b3f7ebc1d4af1d46fcb206080bf7cf3 inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="mdescLeft">&#160;</td><td class="mdescRight">Moves this component to the top of its parent's children list (rendered last, receives events first)  <br /></td></tr>
 <tr class="separator:a2b3f7ebc1d4af1d46fcb206080bf7cf3 inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a71e85694284576b3f396979b144878de inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a71e85694284576b3f396979b144878de"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a71e85694284576b3f396979b144878de">bringToFrontPriority</a> ()</td></tr>
+<tr class="memdesc:a71e85694284576b3f396979b144878de inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a2b3f7ebc1d4af1d46fcb206080bf7cf3" title="Moves this component to the top of its parent&#39;s children list (rendered last, receives events first)">bringToFront()</a> for a deliberate open.  <br /></td></tr>
+<tr class="separator:a71e85694284576b3f396979b144878de inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a16788f874b25327365e0e57c1bcfe73b inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a16788f874b25327365e0e57c1bcfe73b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">NUIComponent</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a16788f874b25327365e0e57c1bcfe73b">getParent</a> () const</td></tr>
 <tr class="separator:a16788f874b25327365e0e57c1bcfe73b inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3a07e69f6d5bee5fa05f044b6b1f599e inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a3a07e69f6d5bee5fa05f044b6b1f599e"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; std::shared_ptr&lt; <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">NUIComponent</a> &gt; &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a3a07e69f6d5bee5fa05f044b6b1f599e">getChildren</a> () const</td></tr>
@@ -614,7 +631,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00229">229</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00231">231</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -723,7 +740,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Apply a stored preference (startup) without echoing it back to the store. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00250">250</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00252">252</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -776,7 +793,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Bounce the selected clips in place (V8-W5). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00446">446</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00663">663</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/d11/TimelineInteractionPolicy_8h_source.html#l00117">Aestra::Audio::TimelineClipSelection::forEachClip()</a>.</p>
 <div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -804,7 +821,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html#l01342">1342</a> of file <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html">TrackManagerUIRender.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html#l01301">1301</a> of file <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html">TrackManagerUIRender.cpp</a>.</p>
 
 </div>
 </div>
@@ -823,7 +840,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00276">276</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00428">428</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
 
 </div>
 </div>
@@ -843,7 +860,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00125">125</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00257">257</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
 
 </div>
 </div>
@@ -893,7 +910,34 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00632">632</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00646">646</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a56ecd1a78ac9356f3225aa3ce5925b95" name="a56ecd1a78ac9356f3225aa3ce5925b95"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a56ecd1a78ac9356f3225aa3ce5925b95">&#9670;&#160;</a></span>clipSelection()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const <a class="el" href="../../d6/dc9/classAestra_1_1Audio_1_1TimelineClipSelection.html">TimelineClipSelection</a> &amp; Aestra::Audio::TrackManagerUI::clipSelection </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00289">289</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -912,7 +956,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00314">314</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00472">472</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
 
 </div>
 </div>
@@ -931,7 +975,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00325">325</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00537">537</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
 
 </div>
 </div>
@@ -951,7 +995,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00880">880</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00903">903</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
 
 </div>
 </div>
@@ -970,7 +1014,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00611">611</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00828">828</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
 
 </div>
 </div>
@@ -990,7 +1034,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00620">620</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00634">634</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
 
 </div>
 </div>
@@ -1009,7 +1053,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00462">462</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00679">679</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
 
 </div>
 </div>
@@ -1037,7 +1081,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00371">371</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00382">382</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -1056,7 +1100,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00218">218</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00350">350</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
 
 </div>
 </div>
@@ -1168,7 +1212,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d3/d88/classAestraUI_1_1IDropTarget.html#a96f1742ef992a1c5c8d2514c4dd26657">AestraUI::IDropTarget</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00296">296</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00307">307</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d36/NUIComponent_8h_source.html#l00071">AestraUI::NUIComponent::getBounds()</a>.</p>
 <div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -1204,7 +1248,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00263">263</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00265">265</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -1231,7 +1275,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00351">351</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00362">362</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -1258,7 +1302,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00341">341</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00352">352</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -1366,7 +1410,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00200">200</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00202">202</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -1385,7 +1429,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00567">567</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00784">784</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
 
 </div>
 </div>
@@ -1404,7 +1448,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00773">773</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00787">787</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
 
 </div>
 </div>
@@ -1431,7 +1475,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00226">226</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00228">228</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -1458,7 +1502,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00267">267</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00269">269</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -1512,7 +1556,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00360">360</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00371">371</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -1566,7 +1610,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00318">318</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00329">329</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -1585,7 +1629,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html#l01323">1323</a> of file <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html">TrackManagerUIRender.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html#l01282">1282</a> of file <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html">TrackManagerUIRender.cpp</a>.</p>
 
 </div>
 </div>
@@ -1604,7 +1648,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html#l01331">1331</a> of file <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html">TrackManagerUIRender.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html#l01290">1290</a> of file <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html">TrackManagerUIRender.cpp</a>.</p>
 
 </div>
 </div>
@@ -1652,7 +1696,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>What actually drives the viewport: the user's choice, unless focus has suspended it. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00248">248</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00250">250</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -1679,7 +1723,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00243">243</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00245">245</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -1706,7 +1750,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00246">246</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00248">248</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -1733,7 +1777,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00284">284</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00286">286</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -1760,7 +1804,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00319">319</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00330">330</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -1890,7 +1934,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00224">224</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00226">226</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -1918,7 +1962,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00369">369</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00380">380</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -1938,7 +1982,49 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00640">640</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00654">654</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a521cd5a92f24d52db71eff33cad8f0c1" name="a521cd5a92f24d52db71eff33cad8f0c1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a521cd5a92f24d52db71eff33cad8f0c1">&#9670;&#160;</a></span>nudgeSelectedClips()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::TrackManagerUI::nudgeSelectedClips </td>
+          <td>(</td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>beats</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>laneDelta</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Move every selected clip by <code>beats</code> and <code>laneDelta</code> lanes as ONE undo step (arrow-key nudge). </p>
+<p>The block is clamped as a whole: it never crosses beat 0 or the first/last lane. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00147">147</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
+
+<p class="reference">References <a class="el" href="../../dd/d11/TimelineInteractionPolicy_8h_source.html#l00117">Aestra::Audio::TimelineClipSelection::forEachClip()</a>.</p>
+<div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-7-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-7-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d1/d11/classAestra_1_1Audio_1_1TrackManagerUI_a521cd5a92f24d52db71eff33cad8f0c1_cgraph.svg" width="466" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 
 </div>
 </div>
@@ -1974,7 +2060,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00413">413</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00427">427</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
 
 </div>
 </div>
@@ -2205,7 +2291,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00541">541</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00758">758</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
 
 </div>
 </div>
@@ -2233,7 +2319,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html#l00043">43</a> of file <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html">TrackManagerUIRender.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html#l00044">44</a> of file <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html">TrackManagerUIRender.cpp</a>.</p>
 
 </div>
 </div>
@@ -2273,7 +2359,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html#l00853">853</a> of file <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html">TrackManagerUIRender.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html#l00854">854</a> of file <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html">TrackManagerUIRender.cpp</a>.</p>
 
 </div>
 </div>
@@ -2303,7 +2389,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00458">458</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00472">472</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
 
 </div>
 </div>
@@ -2351,7 +2437,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00398">398</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00412">412</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
 
 </div>
 </div>
@@ -2381,7 +2467,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html#l00546">546</a> of file <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html">TrackManagerUIRender.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html#l00547">547</a> of file <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html">TrackManagerUIRender.cpp</a>.</p>
 
 </div>
 </div>
@@ -2425,7 +2511,7 @@ Additional Inherited Members</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00795">795</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00809">809</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
 
 </div>
 </div>
@@ -2444,7 +2530,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00363">363</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00576">576</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
 
 </div>
 </div>
@@ -2463,7 +2549,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00390">390</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00607">607</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
 
 </div>
 </div>
@@ -2493,7 +2579,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00146">146</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00278">278</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
 
 </div>
 </div>
@@ -2513,7 +2599,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00181">181</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00313">313</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
 
 </div>
 </div>
@@ -2560,7 +2646,30 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html#l00484">484</a> of file <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html">TrackManagerUIRender.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html#l00485">485</a> of file <a class="el" href="../../d3/d2d/TrackManagerUIRender_8cpp_source.html">TrackManagerUIRender.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aa5ebdcd955daa5bd3928d1d4acc307cf" name="aa5ebdcd955daa5bd3928d1d4acc307cf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa5ebdcd955daa5bd3928d1d4acc307cf">&#9670;&#160;</a></span>resolvePendingGroupClick()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::TrackManagerUI::resolvePendingGroupClick </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../dd/da9/structAestra_1_1Audio_1_1ClipInstanceID.html">ClipInstanceID</a>&#160;</td>
+          <td class="paramname"><em>clickedClip</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>A press on a clip that belongs to a multi-selection keeps the selection, so it can be dragged as a group; a click that did not drag collapses the selection to that clip. </p>
+<p>Called on release. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00138">138</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
 
 </div>
 </div>
@@ -2582,7 +2691,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Expand the lane's owning track, rebuild rows, and scroll it into view. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00382">382</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00396">396</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
 
 </div>
 </div>
@@ -2601,7 +2710,39 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00644">644</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00658">658</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a19aac9842b50267ce1fabac28757d748" name="a19aac9842b50267ce1fabac28757d748"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a19aac9842b50267ce1fabac28757d748">&#9670;&#160;</a></span>selectClips()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::TrackManagerUI::selectClips </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="../../dd/da9/structAestra_1_1Audio_1_1ClipInstanceID.html">ClipInstanceID</a> &gt; &amp;&#160;</td>
+          <td class="paramname"><em>clipIds</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">TrackSelectionIntent&#160;</td>
+          <td class="paramname"><em>intent</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Apply an intent to a batch of clips and push the set to rows (#848). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00698">698</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
 
 </div>
 </div>
@@ -2631,7 +2772,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00601">601</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00615">615</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
 
 </div>
 </div>
@@ -2661,7 +2802,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00605">605</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00619">619</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
 
 </div>
 </div>
@@ -2717,7 +2858,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00322">322</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00333">333</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -2765,7 +2906,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00381">381</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00392">392</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -2793,7 +2934,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00258">258</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00260">260</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -2821,7 +2962,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00238">238</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00240">240</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -2851,7 +2992,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Arsenal/Audition focus freezes timeline scrolling without changing the user's choice. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00245">245</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00247">247</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -2879,7 +3020,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00352">352</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00363">363</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -2907,7 +3048,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00342">342</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00353">353</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -3001,7 +3142,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00189">189</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00191">191</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -3085,7 +3226,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00254">254</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00256">256</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -3253,7 +3394,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00186">186</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00188">188</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -3282,6 +3423,36 @@ Additional Inherited Members</h2></td></tr>
 </div><div class="memdoc">
 
 <p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00176">176</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+
+</div>
+</div>
+<a id="a6808e0d67cad4e46010d81380a5947bf" name="a6808e0d67cad4e46010d81380a5947bf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6808e0d67cad4e46010d81380a5947bf">&#9670;&#160;</a></span>setOnShowRoutingGraph()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::TrackManagerUI::setOnShowRoutingGraph </td>
+          <td>(</td>
+          <td class="paramtype">std::function&lt; void(uint32_t channelId)&gt;&#160;</td>
+          <td class="paramname"><em>cb</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>"Show in Routing Graph" from a track header's menu; the argument is the track's mixer channel. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00187">187</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -3413,7 +3584,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00589">589</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00603">603</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
 
 </div>
 </div>
@@ -3453,7 +3624,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00570">570</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00584">584</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
 
 </div>
 </div>
@@ -3473,7 +3644,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00491">491</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00505">505</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
 
 </div>
 </div>
@@ -3532,7 +3703,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00225">225</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00227">227</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -3560,7 +3731,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00216">216</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00218">218</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -3608,7 +3779,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00361">361</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00372">372</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -3660,7 +3831,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00576">576</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00793">793</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
 
 </div>
 </div>
@@ -3743,7 +3914,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00373">373</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html#l00387">387</a> of file <a class="el" href="../../d2/df5/TrackManagerUI_8cpp_source.html">TrackManagerUI.cpp</a>.</p>
 
 </div>
 </div>
@@ -3763,7 +3934,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00075">75</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html#l00198">198</a> of file <a class="el" href="../../d8/d84/TrackManagerUIClipOps_8cpp_source.html">TrackManagerUIClipOps.cpp</a>.</p>
 
 </div>
 </div>
@@ -3782,7 +3953,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Signal emitted when the audio graph needs rebuilding (e.g., after plugin insert/remove). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00192">192</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00194">194</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>
@@ -3806,7 +3977,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00338">338</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html#l00349">349</a> of file <a class="el" href="../../d0/d50/TrackManagerUI_8h_source.html">TrackManagerUI.h</a>.</p>
 
 </div>
 </div>

@@ -1,0 +1,13 @@
+<map id="Aestra::Audio::Spectrum" name="Aestra::Audio::Spectrum">
+<area shape="rect" id="Node000001" title="The spectrum of a signal in third&#45;octave bands, for the tonal&#45;balance curve (FD&#45;26,..." alt="" coords="5,284,184,309"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="23,189,83,214"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="65,226,78,259,90,283,86,285,74,261,60,228"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="108,181,255,221"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="157,233,131,262,108,286,104,282,127,258,154,230"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="95,93,161,119"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="134,131,142,156,161,179,157,183,138,159,129,133"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="185,93,308,119"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="233,132,197,183,192,180,228,128"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="227,5,266,31"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="249,45,249,93,244,93,244,45"/>
+</map>

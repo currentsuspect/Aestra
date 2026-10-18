@@ -1,0 +1,13 @@
+<map id="Aestra::Audio::SamplerEditState" name="Aestra::Audio::SamplerEditState">
+<area shape="rect" id="Node000001" title="Everything the Sample Editor&#39;s controls set on a sampler: envelope, trim and loop,..." alt="" coords="145,196,341,236"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,56,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="29,44,27,73,29,107,37,141,55,170,69,179,90,188,145,200,144,205,88,193,66,184,51,174,33,143,24,108,22,73,24,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="98,5,187,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="143,44,146,105,155,139,170,170,182,183,197,194,193,198,178,187,166,174,150,141,141,106,138,44"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="223,5,262,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="245,45,245,196,240,196,240,45"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="309,5,360,31"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="338,45,333,106,323,141,307,174,282,198,279,194,303,170,318,139,327,105,333,44"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="384,5,475,31"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="433,44,431,74,425,108,412,143,391,174,368,192,342,204,340,199,365,187,387,170,407,141,420,107,425,73,427,44"/>
+</map>

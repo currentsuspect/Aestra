@@ -76,14 +76,13 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
-<a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="../../db/d5d/classAestraUI_1_1UIRoutingMap-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">AestraUI::UIRoutingMap Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
 
-<p>Routing map visualizer — minimap and full panel modes.  
+<p>The routing graph (V81-R1, FD-25): opt-in, exceptions only.  
  <a href="../../d4/dd4/classAestraUI_1_1UIRoutingMap.html#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>&gt;</code></p>
@@ -102,17 +101,8 @@ $(function() {
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../df/dbf/classAestraUI_1_1UIRoutingMap__coll__graph.svg" width="100%" height="445"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 <center><span class="legend">[<a href="../../graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
-Public Types</h2></td></tr>
-<tr class="memitem:a3014cce7b22fef1b2509e9008e920aad" id="r_a3014cce7b22fef1b2509e9008e920aad"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><b>Mode</b> { <b>Minimap</b>
-, <b>FullPanel</b>
- }</td></tr>
-<tr class="separator:a3014cce7b22fef1b2509e9008e920aad"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:aac5187ead9f8a7df7227939d281cf48f" id="r_aac5187ead9f8a7df7227939d281cf48f"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/dd4/classAestraUI_1_1UIRoutingMap.html#aac5187ead9f8a7df7227939d281cf48f">UIRoutingMap</a> (Mode mode=Mode::Minimap)</td></tr>
-<tr class="separator:aac5187ead9f8a7df7227939d281cf48f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abb0e8bae58184c3a70ebbfb5d106f9da" id="r_abb0e8bae58184c3a70ebbfb5d106f9da"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/dd4/classAestraUI_1_1UIRoutingMap.html#abb0e8bae58184c3a70ebbfb5d106f9da">onRender</a> (<a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">NUIRenderer</a> &amp;renderer) override</td></tr>
 <tr class="separator:abb0e8bae58184c3a70ebbfb5d106f9da"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4df0ab9cd8833651a27217652f33d261" id="r_a4df0ab9cd8833651a27217652f33d261"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/dd4/classAestraUI_1_1UIRoutingMap.html#a4df0ab9cd8833651a27217652f33d261">onThemeChanged</a> (const <a class="el" href="../../d1/d57/structAestraUI_1_1NUIThemeProperties.html">NUIThemeProperties</a> &amp;theme) override</td></tr>
@@ -128,36 +118,45 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:aaad2f6297be5d5217864f1ee7c72119c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a516bf2677839b5d996a158f1b3eb713f" id="r_a516bf2677839b5d996a158f1b3eb713f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/dd4/classAestraUI_1_1UIRoutingMap.html#a516bf2677839b5d996a158f1b3eb713f">setViewModel</a> (<a class="el" href="../../d3/d51/classAestra_1_1MixerViewModel.html">Aestra::MixerViewModel</a> *viewModel)</td></tr>
 <tr class="separator:a516bf2677839b5d996a158f1b3eb713f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae59a5dc9c57a71f4417cd876a1d96abe" id="r_ae59a5dc9c57a71f4417cd876a1d96abe"><td class="memItemLeft" align="right" valign="top">Mode&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/dd4/classAestraUI_1_1UIRoutingMap.html#ae59a5dc9c57a71f4417cd876a1d96abe">getMode</a> () const</td></tr>
-<tr class="separator:ae59a5dc9c57a71f4417cd876a1d96abe"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af5076095a15ce567d0d5bce54776bafc" id="r_af5076095a15ce567d0d5bce54776bafc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/dd4/classAestraUI_1_1UIRoutingMap.html#af5076095a15ce567d0d5bce54776bafc">setMode</a> (Mode mode)</td></tr>
-<tr class="separator:af5076095a15ce567d0d5bce54776bafc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad2922d7bbcd1706f79720130d0530f50" id="r_ad2922d7bbcd1706f79720130d0530f50"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/dd4/classAestraUI_1_1UIRoutingMap.html#ad2922d7bbcd1706f79720130d0530f50">setOnDoubleClick</a> (std::function&lt; void()&gt; callback)</td></tr>
-<tr class="memdesc:ad2922d7bbcd1706f79720130d0530f50"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback fired on double-click (minimap → full panel transition)  <br /></td></tr>
-<tr class="separator:ad2922d7bbcd1706f79720130d0530f50"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa8fb337db510ea48f365e695e6579301" id="r_aa8fb337db510ea48f365e695e6579301"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/dd4/classAestraUI_1_1UIRoutingMap.html#aa8fb337db510ea48f365e695e6579301">nodeCount</a> () const</td></tr>
+<tr class="memdesc:aa8fb337db510ea48f365e695e6579301"><td class="mdescLeft">&#160;</td><td class="mdescRight">What the graph currently holds, for tests: drawn channel nodes (Master is the rail, not a node) and drawn wires (outputs, sends, sidechains; an output to Master is a wire to the rail).  <br /></td></tr>
+<tr class="separator:aa8fb337db510ea48f365e695e6579301"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad16e6627903d7762f4badb6d959b235f" id="r_ad16e6627903d7762f4badb6d959b235f"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/dd4/classAestraUI_1_1UIRoutingMap.html#ad16e6627903d7762f4badb6d959b235f">edgeCount</a> () const</td></tr>
+<tr class="separator:ad16e6627903d7762f4badb6d959b235f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a77f69129fc3fdfbcf1e219812cc1c443" id="r_a77f69129fc3fdfbcf1e219812cc1c443"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/dd4/classAestraUI_1_1UIRoutingMap.html#a77f69129fc3fdfbcf1e219812cc1c443">directCount</a> () const</td></tr>
+<tr class="memdesc:a77f69129fc3fdfbcf1e219812cc1c443"><td class="mdescLeft">&#160;</td><td class="mdescRight">Channels listed as "Direct to Master" instead of drawn.  <br /></td></tr>
+<tr class="separator:a77f69129fc3fdfbcf1e219812cc1c443"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a53518d7ed7119d7a8176041ee4d83d3f" id="r_a53518d7ed7119d7a8176041ee4d83d3f"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/dd4/classAestraUI_1_1UIRoutingMap.html#a53518d7ed7119d7a8176041ee4d83d3f">columnOf</a> (uint32_t channelId) const</td></tr>
+<tr class="memdesc:a53518d7ed7119d7a8176041ee4d83d3f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Column of a drawn channel, -1 when it is listed or unknown.  <br /></td></tr>
+<tr class="separator:a53518d7ed7119d7a8176041ee4d83d3f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a023331c1e9dd6392fee9f157cd8e9978" id="r_a023331c1e9dd6392fee9f157cd8e9978"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/dd4/classAestraUI_1_1UIRoutingMap.html#a023331c1e9dd6392fee9f157cd8e9978">setShowAllTracks</a> (bool all)</td></tr>
+<tr class="memdesc:a023331c1e9dd6392fee9f157cd8e9978"><td class="mdescLeft">&#160;</td><td class="mdescRight">Draw every channel ("All tracks") instead of custom routes only.  <br /></td></tr>
+<tr class="separator:a023331c1e9dd6392fee9f157cd8e9978"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a01de4cd04e2a3bb0ee7d584a840455d4" id="r_a01de4cd04e2a3bb0ee7d584a840455d4"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/dd4/classAestraUI_1_1UIRoutingMap.html#a01de4cd04e2a3bb0ee7d584a840455d4">showsAllTracks</a> () const</td></tr>
+<tr class="separator:a01de4cd04e2a3bb0ee7d584a840455d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7c3c30568ba953b6c4b51ffa75f4dc4b" id="r_a7c3c30568ba953b6c4b51ffa75f4dc4b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/dd4/classAestraUI_1_1UIRoutingMap.html#a7c3c30568ba953b6c4b51ffa75f4dc4b">setOnNodeSelected</a> (std::function&lt; void(uint32_t channelId)&gt; callback)</td></tr>
 <tr class="memdesc:a7c3c30568ba953b6c4b51ffa75f4dc4b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback fired when a node is clicked (track selection)  <br /></td></tr>
 <tr class="separator:a7c3c30568ba953b6c4b51ffa75f4dc4b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adf71105040d21a6b0d18b604f51a611b" id="r_adf71105040d21a6b0d18b604f51a611b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/dd4/classAestraUI_1_1UIRoutingMap.html#adf71105040d21a6b0d18b604f51a611b">setOnCollapse</a> (std::function&lt; void()&gt; callback)</td></tr>
-<tr class="memdesc:adf71105040d21a6b0d18b604f51a611b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback fired from full panel collapse button.  <br /></td></tr>
+<tr class="memdesc:adf71105040d21a6b0d18b604f51a611b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback fired by the close button and Escape.  <br /></td></tr>
 <tr class="separator:adf71105040d21a6b0d18b604f51a611b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3620ddde5cec80a40176060acce939c1" id="r_a3620ddde5cec80a40176060acce939c1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/dd4/classAestraUI_1_1UIRoutingMap.html#a3620ddde5cec80a40176060acce939c1">setOnRerouteMain</a> (std::function&lt; void(uint32_t, uint32_t)&gt; cb)</td></tr>
-<tr class="memdesc:a3620ddde5cec80a40176060acce939c1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback fired when user drags from a track output port and drops on another node to reroute that track's main output.  <br /></td></tr>
+<tr class="memdesc:a3620ddde5cec80a40176060acce939c1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback fired when an output is dropped on another channel or the Master rail. Args: (source, target)  <br /></td></tr>
 <tr class="separator:a3620ddde5cec80a40176060acce939c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4fe717cb745bb4a95a65a41c20eb46fe" id="r_a4fe717cb745bb4a95a65a41c20eb46fe"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/dd4/classAestraUI_1_1UIRoutingMap.html#a4fe717cb745bb4a95a65a41c20eb46fe">setOnAddSend</a> (std::function&lt; void(uint32_t, uint32_t, bool)&gt; cb)</td></tr>
-<tr class="memdesc:a4fe717cb745bb4a95a65a41c20eb46fe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback fired when user drags from a track input port and drops on another node to create a new send.  <br /></td></tr>
+<tr class="memdesc:a4fe717cb745bb4a95a65a41c20eb46fe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback fired when an output is dropped with Alt (send) or Shift (sidechain). Args: (source, target, sidechain)  <br /></td></tr>
 <tr class="separator:a4fe717cb745bb4a95a65a41c20eb46fe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3971876ccb5d2919f6c13f67777da06f" id="r_a3971876ccb5d2919f6c13f67777da06f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/dd4/classAestraUI_1_1UIRoutingMap.html#a3971876ccb5d2919f6c13f67777da06f">setOnNodeMuteToggle</a> (std::function&lt; void(uint32_t)&gt; cb)</td></tr>
-<tr class="memdesc:a3971876ccb5d2919f6c13f67777da06f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback fired on right-click of a node to toggle mute.  <br /></td></tr>
+<tr class="memdesc:a3971876ccb5d2919f6c13f67777da06f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback fired from a node's menu to toggle mute.  <br /></td></tr>
 <tr class="separator:a3971876ccb5d2919f6c13f67777da06f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3606204e2d7931532caa9041d5642f3c" id="r_a3606204e2d7931532caa9041d5642f3c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/dd4/classAestraUI_1_1UIRoutingMap.html#a3606204e2d7931532caa9041d5642f3c">setOnNodeSoloToggle</a> (std::function&lt; void(uint32_t)&gt; cb)</td></tr>
 <tr class="memdesc:a3606204e2d7931532caa9041d5642f3c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback fired on shift-click of a node to toggle solo.  <br /></td></tr>
 <tr class="separator:a3606204e2d7931532caa9041d5642f3c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af19c260c895d66328cb26fd335c7ba26" id="r_af19c260c895d66328cb26fd335c7ba26"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/dd4/classAestraUI_1_1UIRoutingMap.html#af19c260c895d66328cb26fd335c7ba26">setOnRemoveSend</a> (std::function&lt; void(uint32_t channelId, uint64_t sendId)&gt; cb)</td></tr>
-<tr class="memdesc:af19c260c895d66328cb26fd335c7ba26"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback fired when a selected send edge is deleted (e.g. via Delete key).  <br /></td></tr>
+<tr class="memdesc:af19c260c895d66328cb26fd335c7ba26"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback fired when a send is deleted (wire or send-row menu).  <br /></td></tr>
 <tr class="separator:af19c260c895d66328cb26fd335c7ba26"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adf98c079ac0fabc83398ae326520dd87" id="r_adf98c079ac0fabc83398ae326520dd87"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/dd4/classAestraUI_1_1UIRoutingMap.html#adf98c079ac0fabc83398ae326520dd87">setOnEditSendLevel</a> (std::function&lt; void(uint32_t channelId, uint64_t sendId, float newDb)&gt; cb)</td></tr>
-<tr class="memdesc:adf98c079ac0fabc83398ae326520dd87"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback fired when user edits a send level directly (e.g. right-click edge).  <br /></td></tr>
+<tr class="memdesc:adf98c079ac0fabc83398ae326520dd87"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback fired when a send level is set from a menu.  <br /></td></tr>
 <tr class="separator:adf98c079ac0fabc83398ae326520dd87"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a926cb07e78dce4d49bb13c07e054a564" id="r_a926cb07e78dce4d49bb13c07e054a564"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/dd4/classAestraUI_1_1UIRoutingMap.html#a926cb07e78dce4d49bb13c07e054a564">refreshLiveState</a> ()</td></tr>
 <tr class="memdesc:a926cb07e78dce4d49bb13c07e054a564"><td class="mdescLeft">&#160;</td><td class="mdescRight">Refresh live state (mute/solo/levels) from the bound view model. Cheap; call per frame.  <br /></td></tr>
@@ -203,6 +202,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a2b3f7ebc1d4af1d46fcb206080bf7cf3 inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a2b3f7ebc1d4af1d46fcb206080bf7cf3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a2b3f7ebc1d4af1d46fcb206080bf7cf3">bringToFront</a> ()</td></tr>
 <tr class="memdesc:a2b3f7ebc1d4af1d46fcb206080bf7cf3 inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="mdescLeft">&#160;</td><td class="mdescRight">Moves this component to the top of its parent's children list (rendered last, receives events first)  <br /></td></tr>
 <tr class="separator:a2b3f7ebc1d4af1d46fcb206080bf7cf3 inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a71e85694284576b3f396979b144878de inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a71e85694284576b3f396979b144878de"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a71e85694284576b3f396979b144878de">bringToFrontPriority</a> ()</td></tr>
+<tr class="memdesc:a71e85694284576b3f396979b144878de inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a2b3f7ebc1d4af1d46fcb206080bf7cf3" title="Moves this component to the top of its parent&#39;s children list (rendered last, receives events first)">bringToFront()</a> for a deliberate open.  <br /></td></tr>
+<tr class="separator:a71e85694284576b3f396979b144878de inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a16788f874b25327365e0e57c1bcfe73b inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a16788f874b25327365e0e57c1bcfe73b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">NUIComponent</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a16788f874b25327365e0e57c1bcfe73b">getParent</a> () const</td></tr>
 <tr class="separator:a16788f874b25327365e0e57c1bcfe73b inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3a07e69f6d5bee5fa05f044b6b1f599e inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a3a07e69f6d5bee5fa05f044b6b1f599e"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; std::shared_ptr&lt; <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">NUIComponent</a> &gt; &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a3a07e69f6d5bee5fa05f044b6b1f599e">getChildren</a> () const</td></tr>
@@ -330,67 +332,55 @@ Additional Inherited Members</h2></td></tr>
 <tr class="separator:abf059afa666d75cf18a368f713fea011 inherit pro_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Routing map visualizer — minimap and full panel modes. </p>
-<p>Interactive graph of the mixer routing state: drag-to-reroute main paths, drag-to-add sends (audio or sidechain), node repositioning, edge selection and send-level editing, hover-to-trace, search, live signal pulses. Automation presence per channel is indicated read-only (FD-16); curve authoring stays out of this widget. </p>
+<div class="textblock"><p>The routing graph (V81-R1, FD-25): opt-in, exceptions only. </p>
+<p>Opened from the mixer inspector's "Show in routing graph", it draws only what a producer could not assume: custom outputs, sends and sidechains. Channels that simply go to Master are listed on the left, not drawn. Columns follow signal depth and Master is a rail on the right. The graph is still when idle; ports light with level, and wires move only when "Signal flow" is on. Selecting a channel traces its chain and opens a detail strip (output, sends, inserts). Dragging an output patches it: drop to route, Alt to send, Shift to sidechain; channels that would loop refuse the drop and say why. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00029">29</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
-</div><h2 class="groupheader">Member Enumeration Documentation</h2>
-<a id="a3014cce7b22fef1b2509e9008e920aad" name="a3014cce7b22fef1b2509e9008e920aad"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3014cce7b22fef1b2509e9008e920aad">&#9670;&#160;</a></span>Mode</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">enum class AestraUI::UIRoutingMap::Mode</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00031">31</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
-
-</div>
-</div>
-<h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="aac5187ead9f8a7df7227939d281cf48f" name="aac5187ead9f8a7df7227939d281cf48f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aac5187ead9f8a7df7227939d281cf48f">&#9670;&#160;</a></span>UIRoutingMap()</h2>
+<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00032">32</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
+</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="adb38fcc125ef1144c0e681828c73ca5e" name="adb38fcc125ef1144c0e681828c73ca5e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adb38fcc125ef1144c0e681828c73ca5e">&#9670;&#160;</a></span>UIRoutingMap()</h2>
 
 <div class="memitem">
 <div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">AestraUI::UIRoutingMap::UIRoutingMap </td>
           <td>(</td>
-          <td class="paramtype">Mode&#160;</td>
-          <td class="paramname"><em>mode</em> = <code>Mode::Minimap</code></td><td>)</td>
+          <td class="paramname"></td><td>)</td>
           <td></td>
         </tr>
       </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">explicit</span></span>  </td>
-  </tr>
-</table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html#l00054">54</a> of file <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html">UIRoutingMap.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html#l00057">57</a> of file <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html">UIRoutingMap.cpp</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="ae59a5dc9c57a71f4417cd876a1d96abe" name="ae59a5dc9c57a71f4417cd876a1d96abe"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae59a5dc9c57a71f4417cd876a1d96abe">&#9670;&#160;</a></span>getMode()</h2>
+<a id="a53518d7ed7119d7a8176041ee4d83d3f" name="a53518d7ed7119d7a8176041ee4d83d3f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a53518d7ed7119d7a8176041ee4d83d3f">&#9670;&#160;</a></span>columnOf()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int AestraUI::UIRoutingMap::columnOf </td>
+          <td>(</td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname"><em>channelId</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Column of a drawn channel, -1 when it is listed or unknown. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html#l00076">76</a> of file <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html">UIRoutingMap.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a77f69129fc3fdfbcf1e219812cc1c443" name="a77f69129fc3fdfbcf1e219812cc1c443"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a77f69129fc3fdfbcf1e219812cc1c443">&#9670;&#160;</a></span>directCount()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -399,7 +389,7 @@ Additional Inherited Members</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">Mode AestraUI::UIRoutingMap::getMode </td>
+          <td class="memname">size_t AestraUI::UIRoutingMap::directCount </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td> const</td>
@@ -412,7 +402,65 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00044">44</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
+<p>Channels listed as "Direct to Master" instead of drawn. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00053">53</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
+
+</div>
+</div>
+<a id="ad16e6627903d7762f4badb6d959b235f" name="ad16e6627903d7762f4badb6d959b235f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad16e6627903d7762f4badb6d959b235f">&#9670;&#160;</a></span>edgeCount()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t AestraUI::UIRoutingMap::edgeCount </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00051">51</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
+
+</div>
+</div>
+<a id="aa8fb337db510ea48f365e695e6579301" name="aa8fb337db510ea48f365e695e6579301"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa8fb337db510ea48f365e695e6579301">&#9670;&#160;</a></span>nodeCount()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t AestraUI::UIRoutingMap::nodeCount </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>What the graph currently holds, for tests: drawn channel nodes (Master is the rail, not a node) and drawn wires (outputs, sends, sidechains; an output to Master is a wire to the rail). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00050">50</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
 
 </div>
 </div>
@@ -442,7 +490,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html#l02193">2193</a> of file <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html">UIRoutingMap.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html#l00700">700</a> of file <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html">UIRoutingMap.cpp</a>.</p>
 
 </div>
 </div>
@@ -472,7 +520,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html#l01611">1611</a> of file <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html">UIRoutingMap.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html#l00524">524</a> of file <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html">UIRoutingMap.cpp</a>.</p>
 
 </div>
 </div>
@@ -502,7 +550,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html#l00599">599</a> of file <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html">UIRoutingMap.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/dc3/UIRoutingMapDraw_8cpp_source.html#l00094">94</a> of file <a class="el" href="../../d8/dc3/UIRoutingMapDraw_8cpp_source.html">UIRoutingMapDraw.cpp</a>.</p>
 
 </div>
 </div>
@@ -542,7 +590,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html#l01604">1604</a> of file <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html">UIRoutingMap.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html#l00297">297</a> of file <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html">UIRoutingMap.cpp</a>.</p>
 
 </div>
 </div>
@@ -574,9 +622,9 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a4685e1bd30fd0f50650effa1ac46b41c">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00036">36</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00037">37</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/dbb/NUIComponent_8cpp_source.html#l00556">AestraUI::NUIComponent::onThemeChanged()</a>.</p>
+<p class="reference">References <a class="el" href="../../d6/dbb/NUIComponent_8cpp_source.html#l00569">AestraUI::NUIComponent::onThemeChanged()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">
@@ -613,7 +661,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html#l00527">527</a> of file <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html">UIRoutingMap.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html#l00193">193</a> of file <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html">UIRoutingMap.cpp</a>.</p>
 
 </div>
 </div>
@@ -634,27 +682,16 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Refresh live state (mute/solo/levels) from the bound view model. Cheap; call per frame. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html#l00579">579</a> of file <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html">UIRoutingMap.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html#l00223">223</a> of file <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html">UIRoutingMap.cpp</a>.</p>
 
+<p class="reference">References <a class="el" href="../../d5/d10/MixerViewModel_8cpp_source.html#l00505">Aestra::MixerViewModel::getChannelById()</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00051">Aestra::ChannelViewModel::muted</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00083">Aestra::ChannelViewModel::smoothedPeakL</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00084">Aestra::ChannelViewModel::smoothedPeakR</a>, and <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00052">Aestra::ChannelViewModel::soloed</a>.</p>
+<div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-3-summary" class="dynsummary" style="display:block;">
 </div>
+<div id="dynsection-3-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d4/dd4/classAestraUI_1_1UIRoutingMap_a926cb07e78dce4d49bb13c07e054a564_cgraph.svg" width="418" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
-<a id="af5076095a15ce567d0d5bce54776bafc" name="af5076095a15ce567d0d5bce54776bafc"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af5076095a15ce567d0d5bce54776bafc">&#9670;&#160;</a></span>setMode()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void AestraUI::UIRoutingMap::setMode </td>
-          <td>(</td>
-          <td class="paramtype">Mode&#160;</td>
-          <td class="paramname"><em>mode</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html#l00058">58</a> of file <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html">UIRoutingMap.cpp</a>.</p>
 
 </div>
 </div>
@@ -682,10 +719,9 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Callback fired when user drags from a track input port and drops on another node to create a new send. </p>
-<p>Args: (sourceChannelId, targetId, sidechainOnly) </p>
+<p>Callback fired when an output is dropped with Alt (send) or Shift (sidechain). Args: (source, target, sidechain) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00062">62</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00070">70</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
 
 </div>
 </div>
@@ -713,39 +749,9 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Callback fired from full panel collapse button. </p>
+<p>Callback fired by the close button and Escape. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00054">54</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
-
-</div>
-</div>
-<a id="ad2922d7bbcd1706f79720130d0530f50" name="ad2922d7bbcd1706f79720130d0530f50"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad2922d7bbcd1706f79720130d0530f50">&#9670;&#160;</a></span>setOnDoubleClick()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">void AestraUI::UIRoutingMap::setOnDoubleClick </td>
-          <td>(</td>
-          <td class="paramtype">std::function&lt; void()&gt;&#160;</td>
-          <td class="paramname"><em>callback</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Callback fired on double-click (minimap → full panel transition) </p>
-
-<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00048">48</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00064">64</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
 
 </div>
 </div>
@@ -773,9 +779,9 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Callback fired when user edits a send level directly (e.g. right-click edge). </p>
+<p>Callback fired when a send level is set from a menu. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00074">74</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00082">82</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
 
 </div>
 </div>
@@ -803,9 +809,9 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Callback fired on right-click of a node to toggle mute. </p>
+<p>Callback fired from a node's menu to toggle mute. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00065">65</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00073">73</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
 
 </div>
 </div>
@@ -835,7 +841,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Callback fired when a node is clicked (track selection) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00051">51</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00061">61</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
 
 </div>
 </div>
@@ -865,7 +871,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Callback fired on shift-click of a node to toggle solo. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00068">68</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00076">76</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
 
 </div>
 </div>
@@ -893,9 +899,9 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Callback fired when a selected send edge is deleted (e.g. via Delete key). </p>
+<p>Callback fired when a send is deleted (wire or send-row menu). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00071">71</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00079">79</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
 
 </div>
 </div>
@@ -923,10 +929,31 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Callback fired when user drags from a track output port and drops on another node to reroute that track's main output. </p>
-<p>Args: (sourceChannelId, newTargetId) </p>
+<p>Callback fired when an output is dropped on another channel or the Master rail. Args: (source, target) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00058">58</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00067">67</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
+
+</div>
+</div>
+<a id="a023331c1e9dd6392fee9f157cd8e9978" name="a023331c1e9dd6392fee9f157cd8e9978"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a023331c1e9dd6392fee9f157cd8e9978">&#9670;&#160;</a></span>setShowAllTracks()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::UIRoutingMap::setShowAllTracks </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>all</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Draw every channel ("All tracks") instead of custom routes only. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html#l00067">67</a> of file <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html">UIRoutingMap.cpp</a>.</p>
 
 </div>
 </div>
@@ -946,13 +973,41 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html#l00070">70</a> of file <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html">UIRoutingMap.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html#l00059">59</a> of file <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html">UIRoutingMap.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a01de4cd04e2a3bb0ee7d584a840455d4" name="a01de4cd04e2a3bb0ee7d584a840455d4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a01de4cd04e2a3bb0ee7d584a840455d4">&#9670;&#160;</a></span>showsAllTracks()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool AestraUI::UIRoutingMap::showsAllTracks </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html#l00058">58</a> of file <a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a>.</p>
 
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>AestraUI/Widgets/<a class="el" href="../../db/dfb/UIRoutingMap_8h_source.html">UIRoutingMap.h</a></li>
 <li>AestraUI/Widgets/<a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html">UIRoutingMap.cpp</a></li>
+<li>AestraUI/Widgets/<a class="el" href="../../d8/dc3/UIRoutingMapDraw_8cpp_source.html">UIRoutingMapDraw.cpp</a></li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->

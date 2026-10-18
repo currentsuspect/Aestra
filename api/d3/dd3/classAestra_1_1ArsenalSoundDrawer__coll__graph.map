@@ -1,0 +1,7 @@
+<map id="Aestra::ArsenalSoundDrawer" name="Aestra::ArsenalSoundDrawer">
+<area shape="rect" id="Node000001" title="The sound drawer under an open sampler row&#39;s sound strip (V81&#45;AR1, FD&#45;27 point 4): the sounds beside ..." alt="" coords="5,137,213,163"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="37,5,88,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="60,45,58,78,61,96,66,112,76,125,89,135,86,139,72,129,62,115,55,97,53,78,55,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="137,5,175,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="152,45,129,114,118,138,113,136,124,112,147,43"/>
+</map>

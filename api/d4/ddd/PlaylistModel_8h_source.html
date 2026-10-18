@@ -102,7 +102,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="preprocessor">#include &lt;unordered_map&gt;</span></div>
 <div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="preprocessor">#include &lt;vector&gt;</span></div>
 <div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span> </div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span><span class="keyword">namespace </span>Aestra {</div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d8/d94/namespaceAestra.html">Aestra</a> {</div>
 <div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span><span class="keyword">namespace </span>Audio {</div>
 <div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span> </div>
 <div class="foldopen" id="foldopen00027" data-start="{" data-end="};">
@@ -637,414 +637,416 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00660" name="l00660"></a><span class="lineno">  660</span>                            <span class="comment">// Phase 4 (F1): prefer the anti-aliased filtered copy when</span></div>
 <div class="line"><a id="l00661" name="l00661"></a><span class="lineno">  661</span>                            <span class="comment">// this clip is DOWNSAMPLED into the session and the copy is</span></div>
 <div class="line"><a id="l00662" name="l00662"></a><span class="lineno">  662</span>                            <span class="comment">// ready; otherwise the original buffer (pre-Phase-4 path).</span></div>
-<div class="line"><a id="l00663" name="l00663"></a><span class="lineno">  663</span>                            <span class="comment">// The filtered copy keeps the SOURCE sample rate, so all</span></div>
-<div class="line"><a id="l00664" name="l00664"></a><span class="lineno">  664</span>                            <span class="comment">// timing math below is identical either way.</span></div>
-<div class="line"><a id="l00665" name="l00665"></a><span class="lineno">  665</span>                            <span class="keyword">auto</span> renderBuffer = source-&gt;getFilteredBufferFor(</div>
-<div class="line"><a id="l00666" name="l00666"></a><span class="lineno">  666</span>                                <span class="keyword">static_cast&lt;</span>uint32_t<span class="keyword">&gt;</span>(m_projectSampleRate));</div>
-<div class="line"><a id="l00667" name="l00667"></a><span class="lineno">  667</span>                            <span class="keywordflow">if</span> (!renderBuffer) {</div>
-<div class="line"><a id="l00668" name="l00668"></a><span class="lineno">  668</span>                                renderBuffer = source-&gt;getSharedBuffer();</div>
-<div class="line"><a id="l00669" name="l00669"></a><span class="lineno">  669</span>                            }</div>
-<div class="line"><a id="l00670" name="l00670"></a><span class="lineno">  670</span>                            clipInfo.audioData = <span class="keyword">const_cast&lt;</span><a class="code hl_struct" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html">AudioBufferData</a>*<span class="keyword">&gt;</span>(renderBuffer.get());</div>
-<div class="line"><a id="l00671" name="l00671"></a><span class="lineno">  671</span>                            clipInfo.sharedAudioData = renderBuffer;</div>
-<div class="line"><a id="l00672" name="l00672"></a><span class="lineno">  672</span>                            <span class="keywordflow">if</span> (clipInfo.audioData) {</div>
-<div class="line"><a id="l00673" name="l00673"></a><span class="lineno">  673</span>                                clipInfo.sourceSampleRate = clipInfo.audioData-&gt;sampleRate;</div>
-<div class="line"><a id="l00674" name="l00674"></a><span class="lineno">  674</span>                                clipInfo.sourceChannels = clipInfo.audioData-&gt;numChannels;</div>
-<div class="line"><a id="l00675" name="l00675"></a><span class="lineno">  675</span>                            }</div>
-<div class="line"><a id="l00676" name="l00676"></a><span class="lineno">  676</span>                        }</div>
-<div class="line"><a id="l00677" name="l00677"></a><span class="lineno">  677</span>                    } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (pattern &amp;&amp; pattern-&gt;isMidi()) {</div>
-<div class="line"><a id="l00678" name="l00678"></a><span class="lineno">  678</span>                        clipInfo.isAudioClip = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00679" name="l00679"></a><span class="lineno">  679</span>                    }</div>
-<div class="line"><a id="l00680" name="l00680"></a><span class="lineno">  680</span>                }</div>
-<div class="line"><a id="l00681" name="l00681"></a><span class="lineno">  681</span> </div>
-<div class="line"><a id="l00682" name="l00682"></a><span class="lineno">  682</span>                laneInfo.clips.push_back(clipInfo);</div>
-<div class="line"><a id="l00683" name="l00683"></a><span class="lineno">  683</span>            }</div>
-<div class="line"><a id="l00684" name="l00684"></a><span class="lineno">  684</span> </div>
-<div class="line"><a id="l00685" name="l00685"></a><span class="lineno">  685</span>            <span class="comment">// Automation rides the same snapshot as clips — this copy is what</span></div>
-<div class="line"><a id="l00686" name="l00686"></a><span class="lineno">  686</span>            <span class="comment">// connects drawn/loaded curves to the render graph. It was missing</span></div>
-<div class="line"><a id="l00687" name="l00687"></a><span class="lineno">  687</span>            <span class="comment">// entirely, so automation persisted and displayed but never played.</span></div>
-<div class="line"><a id="l00688" name="l00688"></a><span class="lineno">  688</span>            laneInfo.automationCurves = lane.<a class="code hl_variable" href="../../d0/d83/structAestra_1_1Audio_1_1PlaylistLane.html#a503dc66967776c7d656757cd8e824fc4">automationCurves</a>;</div>
-<div class="line"><a id="l00689" name="l00689"></a><span class="lineno">  689</span> </div>
-<div class="line"><a id="l00690" name="l00690"></a><span class="lineno">  690</span>            snapshot-&gt;lanes.push_back(std::move(laneInfo));</div>
-<div class="line"><a id="l00691" name="l00691"></a><span class="lineno">  691</span>        }</div>
-<div class="line"><a id="l00692" name="l00692"></a><span class="lineno">  692</span> </div>
-<div class="line"><a id="l00693" name="l00693"></a><span class="lineno">  693</span>        <span class="keywordflow">return</span> snapshot;</div>
-<div class="line"><a id="l00694" name="l00694"></a><span class="lineno">  694</span>    }</div>
+<div class="line"><a id="l00663" name="l00663"></a><span class="lineno">  663</span>                            <span class="comment">// The filtered copy has its own sample rate (the source&#39;s, or the</span></div>
+<div class="line"><a id="l00664" name="l00664"></a><span class="lineno">  664</span>                            <span class="comment">// project&#39;s when stored decimated), read from the buffer just below,</span></div>
+<div class="line"><a id="l00665" name="l00665"></a><span class="lineno">  665</span>                            <span class="comment">// so the timing math is identical either way.</span></div>
+<div class="line"><a id="l00666" name="l00666"></a><span class="lineno">  666</span>                            <span class="keyword">auto</span> renderBuffer = source-&gt;getFilteredBufferFor(</div>
+<div class="line"><a id="l00667" name="l00667"></a><span class="lineno">  667</span>                                <span class="keyword">static_cast&lt;</span>uint32_t<span class="keyword">&gt;</span>(m_projectSampleRate));</div>
+<div class="line"><a id="l00668" name="l00668"></a><span class="lineno">  668</span>                            <span class="keywordflow">if</span> (!renderBuffer) {</div>
+<div class="line"><a id="l00669" name="l00669"></a><span class="lineno">  669</span>                                renderBuffer = source-&gt;getSharedBuffer();</div>
+<div class="line"><a id="l00670" name="l00670"></a><span class="lineno">  670</span>                            }</div>
+<div class="line"><a id="l00671" name="l00671"></a><span class="lineno">  671</span>                            clipInfo.audioData = <span class="keyword">const_cast&lt;</span><a class="code hl_struct" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html">AudioBufferData</a>*<span class="keyword">&gt;</span>(renderBuffer.get());</div>
+<div class="line"><a id="l00672" name="l00672"></a><span class="lineno">  672</span>                            clipInfo.sharedAudioData = renderBuffer;</div>
+<div class="line"><a id="l00673" name="l00673"></a><span class="lineno">  673</span>                            <span class="keywordflow">if</span> (clipInfo.audioData) {</div>
+<div class="line"><a id="l00674" name="l00674"></a><span class="lineno">  674</span>                                clipInfo.sourceSampleRate = clipInfo.audioData-&gt;sampleRate;</div>
+<div class="line"><a id="l00675" name="l00675"></a><span class="lineno">  675</span>                                clipInfo.sourceChannels = clipInfo.audioData-&gt;numChannels;</div>
+<div class="line"><a id="l00676" name="l00676"></a><span class="lineno">  676</span>                            }</div>
+<div class="line"><a id="l00677" name="l00677"></a><span class="lineno">  677</span>                        }</div>
+<div class="line"><a id="l00678" name="l00678"></a><span class="lineno">  678</span>                    } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (pattern &amp;&amp; pattern-&gt;isMidi()) {</div>
+<div class="line"><a id="l00679" name="l00679"></a><span class="lineno">  679</span>                        clipInfo.isAudioClip = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00680" name="l00680"></a><span class="lineno">  680</span>                    }</div>
+<div class="line"><a id="l00681" name="l00681"></a><span class="lineno">  681</span>                }</div>
+<div class="line"><a id="l00682" name="l00682"></a><span class="lineno">  682</span> </div>
+<div class="line"><a id="l00683" name="l00683"></a><span class="lineno">  683</span>                laneInfo.clips.push_back(clipInfo);</div>
+<div class="line"><a id="l00684" name="l00684"></a><span class="lineno">  684</span>            }</div>
+<div class="line"><a id="l00685" name="l00685"></a><span class="lineno">  685</span> </div>
+<div class="line"><a id="l00686" name="l00686"></a><span class="lineno">  686</span>            <span class="comment">// Automation rides the same snapshot as clips — this copy is what</span></div>
+<div class="line"><a id="l00687" name="l00687"></a><span class="lineno">  687</span>            <span class="comment">// connects drawn/loaded curves to the render graph. It was missing</span></div>
+<div class="line"><a id="l00688" name="l00688"></a><span class="lineno">  688</span>            <span class="comment">// entirely, so automation persisted and displayed but never played.</span></div>
+<div class="line"><a id="l00689" name="l00689"></a><span class="lineno">  689</span>            laneInfo.automationCurves = lane.<a class="code hl_variable" href="../../d0/d83/structAestra_1_1Audio_1_1PlaylistLane.html#a503dc66967776c7d656757cd8e824fc4">automationCurves</a>;</div>
+<div class="line"><a id="l00690" name="l00690"></a><span class="lineno">  690</span> </div>
+<div class="line"><a id="l00691" name="l00691"></a><span class="lineno">  691</span>            snapshot-&gt;lanes.push_back(std::move(laneInfo));</div>
+<div class="line"><a id="l00692" name="l00692"></a><span class="lineno">  692</span>        }</div>
+<div class="line"><a id="l00693" name="l00693"></a><span class="lineno">  693</span> </div>
+<div class="line"><a id="l00694" name="l00694"></a><span class="lineno">  694</span>        <span class="keywordflow">return</span> snapshot;</div>
+<div class="line"><a id="l00695" name="l00695"></a><span class="lineno">  695</span>    }</div>
 </div>
-<div class="line"><a id="l00695" name="l00695"></a><span class="lineno">  695</span> </div>
-<div class="foldopen" id="foldopen00699" data-start="{" data-end="}">
-<div class="line"><a id="l00699" name="l00699"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a9ff176b37e38e80db51e298f112c9fa3">  699</a></span>    <span class="keywordtype">double</span> <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a9ff176b37e38e80db51e298f112c9fa3">getProjectSampleRate</a>()<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00700" name="l00700"></a><span class="lineno">  700</span>        <span class="keywordflow">return</span> m_projectSampleRate;</div>
-<div class="line"><a id="l00701" name="l00701"></a><span class="lineno">  701</span>    }</div>
+<div class="line"><a id="l00696" name="l00696"></a><span class="lineno">  696</span> </div>
+<div class="foldopen" id="foldopen00700" data-start="{" data-end="}">
+<div class="line"><a id="l00700" name="l00700"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a9ff176b37e38e80db51e298f112c9fa3">  700</a></span>    <span class="keywordtype">double</span> <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a9ff176b37e38e80db51e298f112c9fa3">getProjectSampleRate</a>()<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00701" name="l00701"></a><span class="lineno">  701</span>        <span class="keywordflow">return</span> m_projectSampleRate;</div>
+<div class="line"><a id="l00702" name="l00702"></a><span class="lineno">  702</span>    }</div>
 </div>
-<div class="line"><a id="l00702" name="l00702"></a><span class="lineno">  702</span> </div>
-<div class="foldopen" id="foldopen00711" data-start="{" data-end="}">
-<div class="line"><a id="l00711" name="l00711"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ae55ce24458c23ebaf4808c0f551eacd4">  711</a></span>    uint64_t <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ae55ce24458c23ebaf4808c0f551eacd4">getClipSourceStartSamples</a>(<span class="keyword">const</span> <a class="code hl_struct" href="../../d2/d23/structAestra_1_1Audio_1_1ClipInstance.html">ClipInstance</a>&amp; clip)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00712" name="l00712"></a><span class="lineno">  712</span>        <span class="keyword">constexpr</span> uint64_t kMaxSampleOffset = std::numeric_limits&lt;uint64_t&gt;::max();</div>
-<div class="line"><a id="l00713" name="l00713"></a><span class="lineno">  713</span>        <span class="keyword">const</span> <span class="keyword">auto</span> toSampleOffset = [kMaxSampleOffset](<span class="keywordtype">double</span> offset, <span class="keywordtype">double</span> scale) -&gt; uint64_t {</div>
-<div class="line"><a id="l00714" name="l00714"></a><span class="lineno">  714</span>            <span class="keywordflow">if</span> (!std::isfinite(offset) || offset &lt;= 0.0 || !std::isfinite(scale) || scale &lt;= 0.0) {</div>
-<div class="line"><a id="l00715" name="l00715"></a><span class="lineno">  715</span>                <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a id="l00716" name="l00716"></a><span class="lineno">  716</span>            }</div>
-<div class="line"><a id="l00717" name="l00717"></a><span class="lineno">  717</span> </div>
-<div class="line"><a id="l00718" name="l00718"></a><span class="lineno">  718</span>            <span class="keyword">const</span> <span class="keywordtype">long</span> <span class="keywordtype">double</span> scaled = <span class="keyword">static_cast&lt;</span><span class="keywordtype">long</span> <span class="keywordtype">double</span><span class="keyword">&gt;</span>(offset) * <span class="keyword">static_cast&lt;</span><span class="keywordtype">long</span> <span class="keywordtype">double</span><span class="keyword">&gt;</span>(scale);</div>
-<div class="line"><a id="l00719" name="l00719"></a><span class="lineno">  719</span>            <span class="keywordflow">if</span> (scaled &gt;= <span class="keyword">static_cast&lt;</span><span class="keywordtype">long</span> <span class="keywordtype">double</span><span class="keyword">&gt;</span>(kMaxSampleOffset)) {</div>
-<div class="line"><a id="l00720" name="l00720"></a><span class="lineno">  720</span>                <span class="keywordflow">return</span> kMaxSampleOffset;</div>
-<div class="line"><a id="l00721" name="l00721"></a><span class="lineno">  721</span>            }</div>
-<div class="line"><a id="l00722" name="l00722"></a><span class="lineno">  722</span>            <span class="keywordflow">return</span> <span class="keyword">static_cast&lt;</span>uint64_t<span class="keyword">&gt;</span>(scaled);</div>
-<div class="line"><a id="l00723" name="l00723"></a><span class="lineno">  723</span>        };</div>
-<div class="line"><a id="l00724" name="l00724"></a><span class="lineno">  724</span> </div>
-<div class="line"><a id="l00725" name="l00725"></a><span class="lineno">  725</span>        <span class="keyword">const</span> <span class="keywordtype">double</span> bpm = std::max(m_bpm, 1.0);</div>
-<div class="line"><a id="l00726" name="l00726"></a><span class="lineno">  726</span>        <span class="keyword">const</span> <span class="keywordtype">double</span> samplesPerBeat = (m_projectSampleRate * 60.0) / bpm;</div>
-<div class="line"><a id="l00727" name="l00727"></a><span class="lineno">  727</span>        <span class="keyword">const</span> uint64_t canonicalSourceStart =</div>
-<div class="line"><a id="l00728" name="l00728"></a><span class="lineno">  728</span>            clip.durationSeconds &gt; 0.0 ? toSampleOffset(clip.sourceOffsetSeconds, m_projectSampleRate)</div>
-<div class="line"><a id="l00729" name="l00729"></a><span class="lineno">  729</span>                                       : toSampleOffset(clip.sourceOffset, samplesPerBeat);</div>
-<div class="line"><a id="l00730" name="l00730"></a><span class="lineno">  730</span>        <span class="keyword">const</span> uint64_t instanceSourceStart = toSampleOffset(clip.edits.sourceStart, 1.0);</div>
-<div class="line"><a id="l00731" name="l00731"></a><span class="lineno">  731</span>        <span class="keywordflow">return</span> instanceSourceStart &gt; kMaxSampleOffset - canonicalSourceStart</div>
-<div class="line"><a id="l00732" name="l00732"></a><span class="lineno">  732</span>                   ? kMaxSampleOffset</div>
-<div class="line"><a id="l00733" name="l00733"></a><span class="lineno">  733</span>                   : canonicalSourceStart + instanceSourceStart;</div>
-<div class="line"><a id="l00734" name="l00734"></a><span class="lineno">  734</span>    }</div>
+<div class="line"><a id="l00703" name="l00703"></a><span class="lineno">  703</span> </div>
+<div class="foldopen" id="foldopen00712" data-start="{" data-end="}">
+<div class="line"><a id="l00712" name="l00712"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ae55ce24458c23ebaf4808c0f551eacd4">  712</a></span>    uint64_t <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ae55ce24458c23ebaf4808c0f551eacd4">getClipSourceStartSamples</a>(<span class="keyword">const</span> <a class="code hl_struct" href="../../d2/d23/structAestra_1_1Audio_1_1ClipInstance.html">ClipInstance</a>&amp; clip)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00713" name="l00713"></a><span class="lineno">  713</span>        <span class="keyword">constexpr</span> uint64_t kMaxSampleOffset = std::numeric_limits&lt;uint64_t&gt;::max();</div>
+<div class="line"><a id="l00714" name="l00714"></a><span class="lineno">  714</span>        <span class="keyword">const</span> <span class="keyword">auto</span> toSampleOffset = [kMaxSampleOffset](<span class="keywordtype">double</span> offset, <span class="keywordtype">double</span> scale) -&gt; uint64_t {</div>
+<div class="line"><a id="l00715" name="l00715"></a><span class="lineno">  715</span>            <span class="keywordflow">if</span> (!std::isfinite(offset) || offset &lt;= 0.0 || !std::isfinite(scale) || scale &lt;= 0.0) {</div>
+<div class="line"><a id="l00716" name="l00716"></a><span class="lineno">  716</span>                <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l00717" name="l00717"></a><span class="lineno">  717</span>            }</div>
+<div class="line"><a id="l00718" name="l00718"></a><span class="lineno">  718</span> </div>
+<div class="line"><a id="l00719" name="l00719"></a><span class="lineno">  719</span>            <span class="keyword">const</span> <span class="keywordtype">long</span> <span class="keywordtype">double</span> scaled = <span class="keyword">static_cast&lt;</span><span class="keywordtype">long</span> <span class="keywordtype">double</span><span class="keyword">&gt;</span>(offset) * <span class="keyword">static_cast&lt;</span><span class="keywordtype">long</span> <span class="keywordtype">double</span><span class="keyword">&gt;</span>(scale);</div>
+<div class="line"><a id="l00720" name="l00720"></a><span class="lineno">  720</span>            <span class="keywordflow">if</span> (scaled &gt;= <span class="keyword">static_cast&lt;</span><span class="keywordtype">long</span> <span class="keywordtype">double</span><span class="keyword">&gt;</span>(kMaxSampleOffset)) {</div>
+<div class="line"><a id="l00721" name="l00721"></a><span class="lineno">  721</span>                <span class="keywordflow">return</span> kMaxSampleOffset;</div>
+<div class="line"><a id="l00722" name="l00722"></a><span class="lineno">  722</span>            }</div>
+<div class="line"><a id="l00723" name="l00723"></a><span class="lineno">  723</span>            <span class="keywordflow">return</span> <span class="keyword">static_cast&lt;</span>uint64_t<span class="keyword">&gt;</span>(scaled);</div>
+<div class="line"><a id="l00724" name="l00724"></a><span class="lineno">  724</span>        };</div>
+<div class="line"><a id="l00725" name="l00725"></a><span class="lineno">  725</span> </div>
+<div class="line"><a id="l00726" name="l00726"></a><span class="lineno">  726</span>        <span class="keyword">const</span> <span class="keywordtype">double</span> bpm = std::max(m_bpm, 1.0);</div>
+<div class="line"><a id="l00727" name="l00727"></a><span class="lineno">  727</span>        <span class="keyword">const</span> <span class="keywordtype">double</span> samplesPerBeat = (m_projectSampleRate * 60.0) / bpm;</div>
+<div class="line"><a id="l00728" name="l00728"></a><span class="lineno">  728</span>        <span class="keyword">const</span> uint64_t canonicalSourceStart =</div>
+<div class="line"><a id="l00729" name="l00729"></a><span class="lineno">  729</span>            clip.durationSeconds &gt; 0.0 ? toSampleOffset(clip.sourceOffsetSeconds, m_projectSampleRate)</div>
+<div class="line"><a id="l00730" name="l00730"></a><span class="lineno">  730</span>                                       : toSampleOffset(clip.sourceOffset, samplesPerBeat);</div>
+<div class="line"><a id="l00731" name="l00731"></a><span class="lineno">  731</span>        <span class="keyword">const</span> uint64_t instanceSourceStart = toSampleOffset(clip.edits.sourceStart, 1.0);</div>
+<div class="line"><a id="l00732" name="l00732"></a><span class="lineno">  732</span>        <span class="keywordflow">return</span> instanceSourceStart &gt; kMaxSampleOffset - canonicalSourceStart</div>
+<div class="line"><a id="l00733" name="l00733"></a><span class="lineno">  733</span>                   ? kMaxSampleOffset</div>
+<div class="line"><a id="l00734" name="l00734"></a><span class="lineno">  734</span>                   : canonicalSourceStart + instanceSourceStart;</div>
+<div class="line"><a id="l00735" name="l00735"></a><span class="lineno">  735</span>    }</div>
 </div>
-<div class="line"><a id="l00735" name="l00735"></a><span class="lineno">  735</span> </div>
-<div class="foldopen" id="foldopen00739" data-start="{" data-end="}">
-<div class="line"><a id="l00739" name="l00739"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ade6021686aeb8e7ea94e2517219a2338">  739</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ade6021686aeb8e7ea94e2517219a2338">setProjectSampleRate</a>(<span class="keywordtype">double</span> rate) {</div>
-<div class="line"><a id="l00740" name="l00740"></a><span class="lineno">  740</span>        <span class="keywordflow">if</span> (rate &gt; 0) m_projectSampleRate = rate;</div>
-<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span>    }</div>
+<div class="line"><a id="l00736" name="l00736"></a><span class="lineno">  736</span> </div>
+<div class="foldopen" id="foldopen00740" data-start="{" data-end="}">
+<div class="line"><a id="l00740" name="l00740"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ade6021686aeb8e7ea94e2517219a2338">  740</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ade6021686aeb8e7ea94e2517219a2338">setProjectSampleRate</a>(<span class="keywordtype">double</span> rate) {</div>
+<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span>        <span class="keywordflow">if</span> (rate &gt; 0) m_projectSampleRate = rate;</div>
+<div class="line"><a id="l00742" name="l00742"></a><span class="lineno">  742</span>    }</div>
 </div>
-<div class="line"><a id="l00742" name="l00742"></a><span class="lineno">  742</span> </div>
-<div class="foldopen" id="foldopen00746" data-start="{" data-end="}">
-<div class="line"><a id="l00746" name="l00746"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a0726d714213cdfdf2e5c18a73339a049">  746</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a0726d714213cdfdf2e5c18a73339a049">setBPM</a>(<span class="keywordtype">double</span> bpm) {</div>
-<div class="line"><a id="l00747" name="l00747"></a><span class="lineno">  747</span>        <span class="keywordflow">if</span> (!std::isfinite(bpm) || bpm &lt;= 0.0) {</div>
-<div class="line"><a id="l00748" name="l00748"></a><span class="lineno">  748</span>            <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00749" name="l00749"></a><span class="lineno">  749</span>        }</div>
-<div class="line"><a id="l00750" name="l00750"></a><span class="lineno">  750</span> </div>
-<div class="line"><a id="l00751" name="l00751"></a><span class="lineno">  751</span>        std::vector&lt;ClipInstanceID&gt; changedClips;</div>
-<div class="line"><a id="l00752" name="l00752"></a><span class="lineno">  752</span>        {</div>
-<div class="line"><a id="l00753" name="l00753"></a><span class="lineno">  753</span>            std::unique_lock&lt;std::shared_mutex&gt; lock(m_mutex);</div>
-<div class="line"><a id="l00754" name="l00754"></a><span class="lineno">  754</span>            m_bpm = bpm;</div>
-<div class="line"><a id="l00755" name="l00755"></a><span class="lineno">  755</span>            <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; lane : m_lanes) {</div>
-<div class="line"><a id="l00756" name="l00756"></a><span class="lineno">  756</span>                <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; clip : lane.clips) {</div>
-<div class="line"><a id="l00757" name="l00757"></a><span class="lineno">  757</span>                    <span class="keywordflow">if</span> (!isAudioClipUnlocked(clip) || clip.durationSeconds &lt;= 0.0) {</div>
-<div class="line"><a id="l00758" name="l00758"></a><span class="lineno">  758</span>                        <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l00759" name="l00759"></a><span class="lineno">  759</span>                    }</div>
-<div class="line"><a id="l00760" name="l00760"></a><span class="lineno">  760</span>                    <span class="keyword">const</span> <span class="keywordtype">double</span> newDurationBeats = secondsToBeatsUnlocked(clip.durationSeconds);</div>
-<div class="line"><a id="l00761" name="l00761"></a><span class="lineno">  761</span>                    <span class="keyword">const</span> <span class="keywordtype">double</span> newSourceOffsetBeats = secondsToBeatsUnlocked(clip.sourceOffsetSeconds);</div>
-<div class="line"><a id="l00762" name="l00762"></a><span class="lineno">  762</span>                    <span class="keywordflow">if</span> (std::abs(newDurationBeats - clip.durationBeats) &gt; 1.0e-9 ||</div>
-<div class="line"><a id="l00763" name="l00763"></a><span class="lineno">  763</span>                        std::abs(newSourceOffsetBeats - clip.sourceOffset) &gt; 1.0e-9) {</div>
-<div class="line"><a id="l00764" name="l00764"></a><span class="lineno">  764</span>                        clip.durationBeats = newDurationBeats;</div>
-<div class="line"><a id="l00765" name="l00765"></a><span class="lineno">  765</span>                        clip.sourceOffset = newSourceOffsetBeats;</div>
-<div class="line"><a id="l00766" name="l00766"></a><span class="lineno">  766</span>                        changedClips.push_back(clip.id);</div>
-<div class="line"><a id="l00767" name="l00767"></a><span class="lineno">  767</span>                    }</div>
-<div class="line"><a id="l00768" name="l00768"></a><span class="lineno">  768</span>                }</div>
-<div class="line"><a id="l00769" name="l00769"></a><span class="lineno">  769</span>            }</div>
-<div class="line"><a id="l00770" name="l00770"></a><span class="lineno">  770</span>        }</div>
-<div class="line"><a id="l00771" name="l00771"></a><span class="lineno">  771</span> </div>
-<div class="line"><a id="l00772" name="l00772"></a><span class="lineno">  772</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; clipId : changedClips) {</div>
-<div class="line"><a id="l00773" name="l00773"></a><span class="lineno">  773</span>            notifyClipChanged(clipId);</div>
-<div class="line"><a id="l00774" name="l00774"></a><span class="lineno">  774</span>        }</div>
-<div class="line"><a id="l00775" name="l00775"></a><span class="lineno">  775</span>    }</div>
+<div class="line"><a id="l00743" name="l00743"></a><span class="lineno">  743</span> </div>
+<div class="foldopen" id="foldopen00747" data-start="{" data-end="}">
+<div class="line"><a id="l00747" name="l00747"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a0726d714213cdfdf2e5c18a73339a049">  747</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a0726d714213cdfdf2e5c18a73339a049">setBPM</a>(<span class="keywordtype">double</span> bpm) {</div>
+<div class="line"><a id="l00748" name="l00748"></a><span class="lineno">  748</span>        <span class="keywordflow">if</span> (!std::isfinite(bpm) || bpm &lt;= 0.0) {</div>
+<div class="line"><a id="l00749" name="l00749"></a><span class="lineno">  749</span>            <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00750" name="l00750"></a><span class="lineno">  750</span>        }</div>
+<div class="line"><a id="l00751" name="l00751"></a><span class="lineno">  751</span> </div>
+<div class="line"><a id="l00752" name="l00752"></a><span class="lineno">  752</span>        std::vector&lt;ClipInstanceID&gt; changedClips;</div>
+<div class="line"><a id="l00753" name="l00753"></a><span class="lineno">  753</span>        {</div>
+<div class="line"><a id="l00754" name="l00754"></a><span class="lineno">  754</span>            std::unique_lock&lt;std::shared_mutex&gt; lock(m_mutex);</div>
+<div class="line"><a id="l00755" name="l00755"></a><span class="lineno">  755</span>            m_bpm = bpm;</div>
+<div class="line"><a id="l00756" name="l00756"></a><span class="lineno">  756</span>            <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; lane : m_lanes) {</div>
+<div class="line"><a id="l00757" name="l00757"></a><span class="lineno">  757</span>                <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; clip : lane.clips) {</div>
+<div class="line"><a id="l00758" name="l00758"></a><span class="lineno">  758</span>                    <span class="keywordflow">if</span> (!isAudioClipUnlocked(clip) || clip.durationSeconds &lt;= 0.0) {</div>
+<div class="line"><a id="l00759" name="l00759"></a><span class="lineno">  759</span>                        <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00760" name="l00760"></a><span class="lineno">  760</span>                    }</div>
+<div class="line"><a id="l00761" name="l00761"></a><span class="lineno">  761</span>                    <span class="keyword">const</span> <span class="keywordtype">double</span> newDurationBeats = secondsToBeatsUnlocked(clip.durationSeconds);</div>
+<div class="line"><a id="l00762" name="l00762"></a><span class="lineno">  762</span>                    <span class="keyword">const</span> <span class="keywordtype">double</span> newSourceOffsetBeats = secondsToBeatsUnlocked(clip.sourceOffsetSeconds);</div>
+<div class="line"><a id="l00763" name="l00763"></a><span class="lineno">  763</span>                    <span class="keywordflow">if</span> (std::abs(newDurationBeats - clip.durationBeats) &gt; 1.0e-9 ||</div>
+<div class="line"><a id="l00764" name="l00764"></a><span class="lineno">  764</span>                        std::abs(newSourceOffsetBeats - clip.sourceOffset) &gt; 1.0e-9) {</div>
+<div class="line"><a id="l00765" name="l00765"></a><span class="lineno">  765</span>                        clip.durationBeats = newDurationBeats;</div>
+<div class="line"><a id="l00766" name="l00766"></a><span class="lineno">  766</span>                        clip.sourceOffset = newSourceOffsetBeats;</div>
+<div class="line"><a id="l00767" name="l00767"></a><span class="lineno">  767</span>                        changedClips.push_back(clip.id);</div>
+<div class="line"><a id="l00768" name="l00768"></a><span class="lineno">  768</span>                    }</div>
+<div class="line"><a id="l00769" name="l00769"></a><span class="lineno">  769</span>                }</div>
+<div class="line"><a id="l00770" name="l00770"></a><span class="lineno">  770</span>            }</div>
+<div class="line"><a id="l00771" name="l00771"></a><span class="lineno">  771</span>        }</div>
+<div class="line"><a id="l00772" name="l00772"></a><span class="lineno">  772</span> </div>
+<div class="line"><a id="l00773" name="l00773"></a><span class="lineno">  773</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; clipId : changedClips) {</div>
+<div class="line"><a id="l00774" name="l00774"></a><span class="lineno">  774</span>            notifyClipChanged(clipId);</div>
+<div class="line"><a id="l00775" name="l00775"></a><span class="lineno">  775</span>        }</div>
+<div class="line"><a id="l00776" name="l00776"></a><span class="lineno">  776</span>    }</div>
 </div>
-<div class="line"><a id="l00776" name="l00776"></a><span class="lineno">  776</span> </div>
-<div class="line"><a id="l00780" name="l00780"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a2615e7b498918ebcdbe90ed82f900670">  780</a></span>    <span class="keywordtype">double</span> <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a2615e7b498918ebcdbe90ed82f900670">getBPM</a>()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> m_bpm; }</div>
-<div class="line"><a id="l00781" name="l00781"></a><span class="lineno">  781</span> </div>
-<div class="line"><a id="l00782" name="l00782"></a><span class="lineno">  782</span>    <span class="keywordtype">double</span> beatToSeconds(<span class="keywordtype">double</span> beats)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00783" name="l00783"></a><span class="lineno">  783</span>        <span class="keywordflow">if</span> (m_bpm &lt;= 0.0) {</div>
-<div class="line"><a id="l00784" name="l00784"></a><span class="lineno">  784</span>            <span class="keywordflow">return</span> 0.0;</div>
-<div class="line"><a id="l00785" name="l00785"></a><span class="lineno">  785</span>        }</div>
-<div class="line"><a id="l00786" name="l00786"></a><span class="lineno">  786</span>        <span class="keywordflow">return</span> beats * 60.0 / m_bpm;</div>
-<div class="line"><a id="l00787" name="l00787"></a><span class="lineno">  787</span>    }</div>
-<div class="line"><a id="l00788" name="l00788"></a><span class="lineno">  788</span> </div>
-<div class="line"><a id="l00789" name="l00789"></a><span class="lineno">  789</span>    <span class="keywordtype">double</span> secondsToBeats(<span class="keywordtype">double</span> seconds)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00790" name="l00790"></a><span class="lineno">  790</span>        <span class="keywordflow">return</span> seconds * m_bpm / 60.0;</div>
-<div class="line"><a id="l00791" name="l00791"></a><span class="lineno">  791</span>    }</div>
-<div class="line"><a id="l00792" name="l00792"></a><span class="lineno">  792</span> </div>
-<div class="line"><a id="l00793" name="l00793"></a><span class="lineno">  793</span>    <span class="keywordtype">bool</span> isAudioClip(<span class="keyword">const</span> ClipInstance&amp; clip)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00794" name="l00794"></a><span class="lineno">  794</span>        std::shared_lock&lt;std::shared_mutex&gt; lock(m_mutex);</div>
-<div class="line"><a id="l00795" name="l00795"></a><span class="lineno">  795</span>        <span class="keywordflow">return</span> isAudioClipUnlocked(clip);</div>
-<div class="line"><a id="l00796" name="l00796"></a><span class="lineno">  796</span>    }</div>
-<div class="line"><a id="l00797" name="l00797"></a><span class="lineno">  797</span> </div>
-<div class="line"><a id="l00798" name="l00798"></a><span class="lineno">  798</span>    <span class="keywordtype">double</span> getTotalDurationBeats()<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00799" name="l00799"></a><span class="lineno">  799</span>        std::shared_lock&lt;std::shared_mutex&gt; lock(m_mutex);</div>
-<div class="line"><a id="l00800" name="l00800"></a><span class="lineno">  800</span>        <span class="keywordtype">double</span> maxBeat = 0.0;</div>
-<div class="line"><a id="l00801" name="l00801"></a><span class="lineno">  801</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; lane : m_lanes) {</div>
-<div class="line"><a id="l00802" name="l00802"></a><span class="lineno">  802</span>            <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; clip : lane.clips) {</div>
-<div class="line"><a id="l00803" name="l00803"></a><span class="lineno">  803</span>                maxBeat = std::max(maxBeat, clip.endBeat());</div>
-<div class="line"><a id="l00804" name="l00804"></a><span class="lineno">  804</span>            }</div>
-<div class="line"><a id="l00805" name="l00805"></a><span class="lineno">  805</span>        }</div>
-<div class="line"><a id="l00806" name="l00806"></a><span class="lineno">  806</span>        <span class="keywordflow">return</span> maxBeat;</div>
-<div class="line"><a id="l00807" name="l00807"></a><span class="lineno">  807</span>    }</div>
-<div class="line"><a id="l00808" name="l00808"></a><span class="lineno">  808</span> </div>
-<div class="line"><a id="l00812" name="l00812"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a8865c79ae9a55ae70d588e1f9f220b8c">  812</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a8865c79ae9a55ae70d588e1f9f220b8c">setPatternManager</a>(<a class="code hl_class" href="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager.html">PatternManager</a>* pm) { m_patternManager = pm; }</div>
-<div class="line"><a id="l00813" name="l00813"></a><span class="lineno">  813</span> </div>
-<div class="foldopen" id="foldopen00817" data-start="{" data-end="}">
-<div class="line"><a id="l00817" name="l00817"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ae281a5a791e75389bf62885d939f1866">  817</a></span>    <a class="code hl_struct" href="../../d4/d9c/structAestra_1_1Audio_1_1PlaylistLaneID.html">PlaylistLaneID</a> <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ae281a5a791e75389bf62885d939f1866">getLaneId</a>(<span class="keywordtype">size_t</span> index)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00818" name="l00818"></a><span class="lineno">  818</span>        std::unique_lock&lt;std::shared_mutex&gt; lock(m_mutex);</div>
-<div class="line"><a id="l00819" name="l00819"></a><span class="lineno">  819</span>        <span class="keywordflow">if</span> (index &lt; m_lanes.size()) {</div>
-<div class="line"><a id="l00820" name="l00820"></a><span class="lineno">  820</span>            <span class="keywordflow">return</span> m_lanes[index].id;</div>
-<div class="line"><a id="l00821" name="l00821"></a><span class="lineno">  821</span>        }</div>
-<div class="line"><a id="l00822" name="l00822"></a><span class="lineno">  822</span>        <span class="keywordflow">return</span> <a class="code hl_struct" href="../../d4/d9c/structAestra_1_1Audio_1_1PlaylistLaneID.html">PlaylistLaneID</a>();</div>
-<div class="line"><a id="l00823" name="l00823"></a><span class="lineno">  823</span>    }</div>
+<div class="line"><a id="l00777" name="l00777"></a><span class="lineno">  777</span> </div>
+<div class="line"><a id="l00781" name="l00781"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a2615e7b498918ebcdbe90ed82f900670">  781</a></span>    <span class="keywordtype">double</span> <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a2615e7b498918ebcdbe90ed82f900670">getBPM</a>()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> m_bpm; }</div>
+<div class="line"><a id="l00782" name="l00782"></a><span class="lineno">  782</span> </div>
+<div class="line"><a id="l00783" name="l00783"></a><span class="lineno">  783</span>    <span class="keywordtype">double</span> beatToSeconds(<span class="keywordtype">double</span> beats)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00784" name="l00784"></a><span class="lineno">  784</span>        <span class="keywordflow">if</span> (m_bpm &lt;= 0.0) {</div>
+<div class="line"><a id="l00785" name="l00785"></a><span class="lineno">  785</span>            <span class="keywordflow">return</span> 0.0;</div>
+<div class="line"><a id="l00786" name="l00786"></a><span class="lineno">  786</span>        }</div>
+<div class="line"><a id="l00787" name="l00787"></a><span class="lineno">  787</span>        <span class="keywordflow">return</span> beats * 60.0 / m_bpm;</div>
+<div class="line"><a id="l00788" name="l00788"></a><span class="lineno">  788</span>    }</div>
+<div class="line"><a id="l00789" name="l00789"></a><span class="lineno">  789</span> </div>
+<div class="line"><a id="l00790" name="l00790"></a><span class="lineno">  790</span>    <span class="keywordtype">double</span> secondsToBeats(<span class="keywordtype">double</span> seconds)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00791" name="l00791"></a><span class="lineno">  791</span>        <span class="keywordflow">return</span> seconds * m_bpm / 60.0;</div>
+<div class="line"><a id="l00792" name="l00792"></a><span class="lineno">  792</span>    }</div>
+<div class="line"><a id="l00793" name="l00793"></a><span class="lineno">  793</span> </div>
+<div class="line"><a id="l00794" name="l00794"></a><span class="lineno">  794</span>    <span class="keywordtype">bool</span> isAudioClip(<span class="keyword">const</span> ClipInstance&amp; clip)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00795" name="l00795"></a><span class="lineno">  795</span>        std::shared_lock&lt;std::shared_mutex&gt; lock(m_mutex);</div>
+<div class="line"><a id="l00796" name="l00796"></a><span class="lineno">  796</span>        <span class="keywordflow">return</span> isAudioClipUnlocked(clip);</div>
+<div class="line"><a id="l00797" name="l00797"></a><span class="lineno">  797</span>    }</div>
+<div class="line"><a id="l00798" name="l00798"></a><span class="lineno">  798</span> </div>
+<div class="line"><a id="l00799" name="l00799"></a><span class="lineno">  799</span>    <span class="keywordtype">double</span> getTotalDurationBeats()<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00800" name="l00800"></a><span class="lineno">  800</span>        std::shared_lock&lt;std::shared_mutex&gt; lock(m_mutex);</div>
+<div class="line"><a id="l00801" name="l00801"></a><span class="lineno">  801</span>        <span class="keywordtype">double</span> maxBeat = 0.0;</div>
+<div class="line"><a id="l00802" name="l00802"></a><span class="lineno">  802</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; lane : m_lanes) {</div>
+<div class="line"><a id="l00803" name="l00803"></a><span class="lineno">  803</span>            <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; clip : lane.clips) {</div>
+<div class="line"><a id="l00804" name="l00804"></a><span class="lineno">  804</span>                maxBeat = std::max(maxBeat, clip.endBeat());</div>
+<div class="line"><a id="l00805" name="l00805"></a><span class="lineno">  805</span>            }</div>
+<div class="line"><a id="l00806" name="l00806"></a><span class="lineno">  806</span>        }</div>
+<div class="line"><a id="l00807" name="l00807"></a><span class="lineno">  807</span>        <span class="keywordflow">return</span> maxBeat;</div>
+<div class="line"><a id="l00808" name="l00808"></a><span class="lineno">  808</span>    }</div>
+<div class="line"><a id="l00809" name="l00809"></a><span class="lineno">  809</span> </div>
+<div class="line"><a id="l00813" name="l00813"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a8865c79ae9a55ae70d588e1f9f220b8c">  813</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a8865c79ae9a55ae70d588e1f9f220b8c">setPatternManager</a>(<a class="code hl_class" href="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager.html">PatternManager</a>* pm) { m_patternManager = pm; }</div>
+<div class="line"><a id="l00814" name="l00814"></a><span class="lineno">  814</span> </div>
+<div class="foldopen" id="foldopen00818" data-start="{" data-end="}">
+<div class="line"><a id="l00818" name="l00818"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ae281a5a791e75389bf62885d939f1866">  818</a></span>    <a class="code hl_struct" href="../../d4/d9c/structAestra_1_1Audio_1_1PlaylistLaneID.html">PlaylistLaneID</a> <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ae281a5a791e75389bf62885d939f1866">getLaneId</a>(<span class="keywordtype">size_t</span> index)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00819" name="l00819"></a><span class="lineno">  819</span>        std::unique_lock&lt;std::shared_mutex&gt; lock(m_mutex);</div>
+<div class="line"><a id="l00820" name="l00820"></a><span class="lineno">  820</span>        <span class="keywordflow">if</span> (index &lt; m_lanes.size()) {</div>
+<div class="line"><a id="l00821" name="l00821"></a><span class="lineno">  821</span>            <span class="keywordflow">return</span> m_lanes[index].id;</div>
+<div class="line"><a id="l00822" name="l00822"></a><span class="lineno">  822</span>        }</div>
+<div class="line"><a id="l00823" name="l00823"></a><span class="lineno">  823</span>        <span class="keywordflow">return</span> <a class="code hl_struct" href="../../d4/d9c/structAestra_1_1Audio_1_1PlaylistLaneID.html">PlaylistLaneID</a>();</div>
+<div class="line"><a id="l00824" name="l00824"></a><span class="lineno">  824</span>    }</div>
 </div>
-<div class="line"><a id="l00824" name="l00824"></a><span class="lineno">  824</span> </div>
-<div class="foldopen" id="foldopen00828" data-start="{" data-end="}">
-<div class="line"><a id="l00828" name="l00828"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a1c8f0ef3616ea06db71244b90724e019">  828</a></span>    <a class="code hl_struct" href="../../dd/da9/structAestra_1_1Audio_1_1ClipInstanceID.html">ClipInstanceID</a> <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a1c8f0ef3616ea06db71244b90724e019">addClipFromPattern</a>(<span class="keyword">const</span> <a class="code hl_struct" href="../../d4/d9c/structAestra_1_1Audio_1_1PlaylistLaneID.html">PlaylistLaneID</a>&amp; laneId, <a class="code hl_struct" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">PatternID</a> patternId, <span class="keywordtype">double</span> startBeat,</div>
-<div class="line"><a id="l00829" name="l00829"></a><span class="lineno">  829</span>                                      <span class="keywordtype">double</span> durationBeats) {</div>
-<div class="line"><a id="l00830" name="l00830"></a><span class="lineno">  830</span>        std::unique_lock&lt;std::shared_mutex&gt; lock(m_mutex);</div>
-<div class="line"><a id="l00831" name="l00831"></a><span class="lineno">  831</span> </div>
-<div class="line"><a id="l00832" name="l00832"></a><span class="lineno">  832</span>        <span class="keyword">auto</span> it = m_laneMap.find(laneId);</div>
-<div class="line"><a id="l00833" name="l00833"></a><span class="lineno">  833</span>        <span class="keywordflow">if</span> (it == m_laneMap.end())</div>
-<div class="line"><a id="l00834" name="l00834"></a><span class="lineno">  834</span>            <span class="keywordflow">return</span> <a class="code hl_struct" href="../../dd/da9/structAestra_1_1Audio_1_1ClipInstanceID.html">ClipInstanceID</a>();</div>
-<div class="line"><a id="l00835" name="l00835"></a><span class="lineno">  835</span> </div>
-<div class="line"><a id="l00836" name="l00836"></a><span class="lineno">  836</span>        <a class="code hl_struct" href="../../d2/d23/structAestra_1_1Audio_1_1ClipInstance.html">ClipInstance</a> clip;</div>
-<div class="line"><a id="l00837" name="l00837"></a><span class="lineno">  837</span>        clip.id = ClipInstanceID::generate();</div>
-<div class="line"><a id="l00838" name="l00838"></a><span class="lineno">  838</span>        clip.startBeat = startBeat;</div>
-<div class="line"><a id="l00839" name="l00839"></a><span class="lineno">  839</span>        clip.durationBeats = durationBeats;</div>
-<div class="line"><a id="l00840" name="l00840"></a><span class="lineno">  840</span>        clip.patternId = patternId;</div>
-<div class="line"><a id="l00841" name="l00841"></a><span class="lineno">  841</span>        clip.sourceId = patternId.value; <span class="comment">// Store pattern ID in sourceId for now</span></div>
-<div class="line"><a id="l00842" name="l00842"></a><span class="lineno">  842</span>        <span class="keywordflow">if</span> (m_patternManager) {</div>
-<div class="line"><a id="l00843" name="l00843"></a><span class="lineno">  843</span>            <span class="keyword">const</span> <span class="keyword">auto</span>* pattern = m_patternManager-&gt;<a class="code hl_function" href="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a">getPattern</a>(patternId);</div>
-<div class="line"><a id="l00844" name="l00844"></a><span class="lineno">  844</span>            <span class="keywordflow">if</span> (pattern &amp;&amp; pattern-&gt;isAudio()) {</div>
-<div class="line"><a id="l00845" name="l00845"></a><span class="lineno">  845</span>                clip.edits = <a class="code hl_function" href="../../d7/d56/structAestra_1_1Audio_1_1ClipEdits.html#a75714600a82dab3bed3d9d497cc6ec89">ClipEdits::forNewAudioClip</a>();</div>
-<div class="line"><a id="l00846" name="l00846"></a><span class="lineno">  846</span>                <span class="keyword">const</span> <span class="keyword">auto</span>&amp; payload = std::get&lt;AudioSlicePayload&gt;(pattern-&gt;payload);</div>
-<div class="line"><a id="l00847" name="l00847"></a><span class="lineno">  847</span>                <span class="keywordflow">if</span> (payload.durationSeconds &gt; 0.0) {</div>
-<div class="line"><a id="l00848" name="l00848"></a><span class="lineno">  848</span>                    clip.durationSeconds = payload.durationSeconds;</div>
-<div class="line"><a id="l00849" name="l00849"></a><span class="lineno">  849</span>                } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00850" name="l00850"></a><span class="lineno">  850</span>                    clip.durationSeconds = beatToSeconds(durationBeats);</div>
-<div class="line"><a id="l00851" name="l00851"></a><span class="lineno">  851</span>                }</div>
-<div class="line"><a id="l00852" name="l00852"></a><span class="lineno">  852</span>            }</div>
-<div class="line"><a id="l00853" name="l00853"></a><span class="lineno">  853</span>        }</div>
-<div class="line"><a id="l00854" name="l00854"></a><span class="lineno">  854</span> </div>
-<div class="line"><a id="l00855" name="l00855"></a><span class="lineno">  855</span>        m_lanes[it-&gt;second].clips.push_back(clip);</div>
-<div class="line"><a id="l00856" name="l00856"></a><span class="lineno">  856</span>        m_clipLaneMap[clip.id] = laneId;</div>
-<div class="line"><a id="l00857" name="l00857"></a><span class="lineno">  857</span> </div>
-<div class="line"><a id="l00858" name="l00858"></a><span class="lineno">  858</span>        notifyClipChanged(clip.id);</div>
-<div class="line"><a id="l00859" name="l00859"></a><span class="lineno">  859</span>        <span class="keywordflow">return</span> clip.id;</div>
-<div class="line"><a id="l00860" name="l00860"></a><span class="lineno">  860</span>    }</div>
+<div class="line"><a id="l00825" name="l00825"></a><span class="lineno">  825</span> </div>
+<div class="foldopen" id="foldopen00829" data-start="{" data-end="}">
+<div class="line"><a id="l00829" name="l00829"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a1c8f0ef3616ea06db71244b90724e019">  829</a></span>    <a class="code hl_struct" href="../../dd/da9/structAestra_1_1Audio_1_1ClipInstanceID.html">ClipInstanceID</a> <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a1c8f0ef3616ea06db71244b90724e019">addClipFromPattern</a>(<span class="keyword">const</span> <a class="code hl_struct" href="../../d4/d9c/structAestra_1_1Audio_1_1PlaylistLaneID.html">PlaylistLaneID</a>&amp; laneId, <a class="code hl_struct" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">PatternID</a> patternId, <span class="keywordtype">double</span> startBeat,</div>
+<div class="line"><a id="l00830" name="l00830"></a><span class="lineno">  830</span>                                      <span class="keywordtype">double</span> durationBeats) {</div>
+<div class="line"><a id="l00831" name="l00831"></a><span class="lineno">  831</span>        std::unique_lock&lt;std::shared_mutex&gt; lock(m_mutex);</div>
+<div class="line"><a id="l00832" name="l00832"></a><span class="lineno">  832</span> </div>
+<div class="line"><a id="l00833" name="l00833"></a><span class="lineno">  833</span>        <span class="keyword">auto</span> it = m_laneMap.find(laneId);</div>
+<div class="line"><a id="l00834" name="l00834"></a><span class="lineno">  834</span>        <span class="keywordflow">if</span> (it == m_laneMap.end())</div>
+<div class="line"><a id="l00835" name="l00835"></a><span class="lineno">  835</span>            <span class="keywordflow">return</span> <a class="code hl_struct" href="../../dd/da9/structAestra_1_1Audio_1_1ClipInstanceID.html">ClipInstanceID</a>();</div>
+<div class="line"><a id="l00836" name="l00836"></a><span class="lineno">  836</span> </div>
+<div class="line"><a id="l00837" name="l00837"></a><span class="lineno">  837</span>        <a class="code hl_struct" href="../../d2/d23/structAestra_1_1Audio_1_1ClipInstance.html">ClipInstance</a> clip;</div>
+<div class="line"><a id="l00838" name="l00838"></a><span class="lineno">  838</span>        clip.id = ClipInstanceID::generate();</div>
+<div class="line"><a id="l00839" name="l00839"></a><span class="lineno">  839</span>        clip.startBeat = startBeat;</div>
+<div class="line"><a id="l00840" name="l00840"></a><span class="lineno">  840</span>        clip.durationBeats = durationBeats;</div>
+<div class="line"><a id="l00841" name="l00841"></a><span class="lineno">  841</span>        clip.patternId = patternId;</div>
+<div class="line"><a id="l00842" name="l00842"></a><span class="lineno">  842</span>        clip.sourceId = patternId.value; <span class="comment">// Store pattern ID in sourceId for now</span></div>
+<div class="line"><a id="l00843" name="l00843"></a><span class="lineno">  843</span>        <span class="keywordflow">if</span> (m_patternManager) {</div>
+<div class="line"><a id="l00844" name="l00844"></a><span class="lineno">  844</span>            <span class="keyword">const</span> <span class="keyword">auto</span>* pattern = m_patternManager-&gt;<a class="code hl_function" href="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a">getPattern</a>(patternId);</div>
+<div class="line"><a id="l00845" name="l00845"></a><span class="lineno">  845</span>            <span class="keywordflow">if</span> (pattern &amp;&amp; pattern-&gt;isAudio()) {</div>
+<div class="line"><a id="l00846" name="l00846"></a><span class="lineno">  846</span>                clip.edits = <a class="code hl_function" href="../../d7/d56/structAestra_1_1Audio_1_1ClipEdits.html#a75714600a82dab3bed3d9d497cc6ec89">ClipEdits::forNewAudioClip</a>();</div>
+<div class="line"><a id="l00847" name="l00847"></a><span class="lineno">  847</span>                <span class="keyword">const</span> <span class="keyword">auto</span>&amp; payload = std::get&lt;AudioSlicePayload&gt;(pattern-&gt;payload);</div>
+<div class="line"><a id="l00848" name="l00848"></a><span class="lineno">  848</span>                <span class="keywordflow">if</span> (payload.durationSeconds &gt; 0.0) {</div>
+<div class="line"><a id="l00849" name="l00849"></a><span class="lineno">  849</span>                    clip.durationSeconds = payload.durationSeconds;</div>
+<div class="line"><a id="l00850" name="l00850"></a><span class="lineno">  850</span>                } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00851" name="l00851"></a><span class="lineno">  851</span>                    clip.durationSeconds = beatToSeconds(durationBeats);</div>
+<div class="line"><a id="l00852" name="l00852"></a><span class="lineno">  852</span>                }</div>
+<div class="line"><a id="l00853" name="l00853"></a><span class="lineno">  853</span>            }</div>
+<div class="line"><a id="l00854" name="l00854"></a><span class="lineno">  854</span>        }</div>
+<div class="line"><a id="l00855" name="l00855"></a><span class="lineno">  855</span> </div>
+<div class="line"><a id="l00856" name="l00856"></a><span class="lineno">  856</span>        m_lanes[it-&gt;second].clips.push_back(clip);</div>
+<div class="line"><a id="l00857" name="l00857"></a><span class="lineno">  857</span>        m_clipLaneMap[clip.id] = laneId;</div>
+<div class="line"><a id="l00858" name="l00858"></a><span class="lineno">  858</span> </div>
+<div class="line"><a id="l00859" name="l00859"></a><span class="lineno">  859</span>        notifyClipChanged(clip.id);</div>
+<div class="line"><a id="l00860" name="l00860"></a><span class="lineno">  860</span>        <span class="keywordflow">return</span> clip.id;</div>
+<div class="line"><a id="l00861" name="l00861"></a><span class="lineno">  861</span>    }</div>
 </div>
-<div class="line"><a id="l00861" name="l00861"></a><span class="lineno">  861</span> </div>
-<div class="foldopen" id="foldopen00865" data-start="{" data-end="}">
-<div class="line"><a id="l00865" name="l00865"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ad451ffaf2efec932219ab13a6d886961">  865</a></span>    std::vector&lt;PlaylistLaneID&gt; <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ad451ffaf2efec932219ab13a6d886961">getLaneIDs</a>()<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00866" name="l00866"></a><span class="lineno">  866</span>        std::unique_lock&lt;std::shared_mutex&gt; lock(m_mutex);</div>
-<div class="line"><a id="l00867" name="l00867"></a><span class="lineno">  867</span>        std::vector&lt;PlaylistLaneID&gt; ids;</div>
-<div class="line"><a id="l00868" name="l00868"></a><span class="lineno">  868</span>        ids.reserve(m_lanes.size());</div>
-<div class="line"><a id="l00869" name="l00869"></a><span class="lineno">  869</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; lane : m_lanes) {</div>
-<div class="line"><a id="l00870" name="l00870"></a><span class="lineno">  870</span>            ids.push_back(lane.id);</div>
-<div class="line"><a id="l00871" name="l00871"></a><span class="lineno">  871</span>        }</div>
-<div class="line"><a id="l00872" name="l00872"></a><span class="lineno">  872</span>        <span class="keywordflow">return</span> ids;</div>
-<div class="line"><a id="l00873" name="l00873"></a><span class="lineno">  873</span>    }</div>
+<div class="line"><a id="l00862" name="l00862"></a><span class="lineno">  862</span> </div>
+<div class="foldopen" id="foldopen00866" data-start="{" data-end="}">
+<div class="line"><a id="l00866" name="l00866"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ad451ffaf2efec932219ab13a6d886961">  866</a></span>    std::vector&lt;PlaylistLaneID&gt; <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ad451ffaf2efec932219ab13a6d886961">getLaneIDs</a>()<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00867" name="l00867"></a><span class="lineno">  867</span>        std::unique_lock&lt;std::shared_mutex&gt; lock(m_mutex);</div>
+<div class="line"><a id="l00868" name="l00868"></a><span class="lineno">  868</span>        std::vector&lt;PlaylistLaneID&gt; ids;</div>
+<div class="line"><a id="l00869" name="l00869"></a><span class="lineno">  869</span>        ids.reserve(m_lanes.size());</div>
+<div class="line"><a id="l00870" name="l00870"></a><span class="lineno">  870</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; lane : m_lanes) {</div>
+<div class="line"><a id="l00871" name="l00871"></a><span class="lineno">  871</span>            ids.push_back(lane.id);</div>
+<div class="line"><a id="l00872" name="l00872"></a><span class="lineno">  872</span>        }</div>
+<div class="line"><a id="l00873" name="l00873"></a><span class="lineno">  873</span>        <span class="keywordflow">return</span> ids;</div>
+<div class="line"><a id="l00874" name="l00874"></a><span class="lineno">  874</span>    }</div>
 </div>
-<div class="line"><a id="l00874" name="l00874"></a><span class="lineno">  874</span> </div>
-<div class="line"><a id="l00875" name="l00875"></a><span class="lineno">  875</span>    std::vector&lt;MidiClipPlaybackInstance&gt; collectMidiClipInstances(<span class="keyword">const</span> <a class="code hl_class" href="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager.html">PatternManager</a>&amp; patterns)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00876" name="l00876"></a><span class="lineno">  876</span>        std::shared_lock&lt;std::shared_mutex&gt; lock(m_mutex);</div>
-<div class="line"><a id="l00877" name="l00877"></a><span class="lineno">  877</span>        std::vector&lt;MidiClipPlaybackInstance&gt; instances;</div>
-<div class="line"><a id="l00878" name="l00878"></a><span class="lineno">  878</span>        <span class="keyword">const</span> <span class="keywordtype">bool</span> anyLaneSolo = std::any_of(m_lanes.begin(), m_lanes.end(),</div>
-<div class="line"><a id="l00879" name="l00879"></a><span class="lineno">  879</span>                                             [](<span class="keyword">const</span> <a class="code hl_struct" href="../../d0/d83/structAestra_1_1Audio_1_1PlaylistLane.html">PlaylistLane</a>&amp; lane) { return lane.solo &amp;&amp; !lane.muted; });</div>
-<div class="line"><a id="l00880" name="l00880"></a><span class="lineno">  880</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; lane : m_lanes) {</div>
-<div class="line"><a id="l00881" name="l00881"></a><span class="lineno">  881</span>            <span class="keywordflow">if</span> (lane.muted || (anyLaneSolo &amp;&amp; !lane.solo)) {</div>
-<div class="line"><a id="l00882" name="l00882"></a><span class="lineno">  882</span>                <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l00883" name="l00883"></a><span class="lineno">  883</span>            }</div>
-<div class="line"><a id="l00884" name="l00884"></a><span class="lineno">  884</span>            <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; clip : lane.clips) {</div>
-<div class="line"><a id="l00885" name="l00885"></a><span class="lineno">  885</span>                <span class="keywordflow">if</span> (clip.edits.muted) {</div>
-<div class="line"><a id="l00886" name="l00886"></a><span class="lineno">  886</span>                    <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l00887" name="l00887"></a><span class="lineno">  887</span>                }</div>
-<div class="line"><a id="l00888" name="l00888"></a><span class="lineno">  888</span>                <span class="keywordflow">if</span> (!clip.patternId.isValid()) {</div>
-<div class="line"><a id="l00889" name="l00889"></a><span class="lineno">  889</span>                    <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l00890" name="l00890"></a><span class="lineno">  890</span>                }</div>
-<div class="line"><a id="l00891" name="l00891"></a><span class="lineno">  891</span>                <span class="keyword">const</span> <span class="keyword">auto</span>* pattern = patterns.<a class="code hl_function" href="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a">getPattern</a>(clip.patternId);</div>
-<div class="line"><a id="l00892" name="l00892"></a><span class="lineno">  892</span>                <span class="keywordflow">if</span> (!pattern || !pattern-&gt;isMidi()) {</div>
-<div class="line"><a id="l00893" name="l00893"></a><span class="lineno">  893</span>                    <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l00894" name="l00894"></a><span class="lineno">  894</span>                }</div>
-<div class="line"><a id="l00895" name="l00895"></a><span class="lineno">  895</span> </div>
-<div class="line"><a id="l00896" name="l00896"></a><span class="lineno">  896</span>                MidiClipPlaybackInstance instance;</div>
-<div class="line"><a id="l00897" name="l00897"></a><span class="lineno">  897</span>                instance.clipId = clip.id;</div>
-<div class="line"><a id="l00898" name="l00898"></a><span class="lineno">  898</span>                instance.patternId = clip.patternId;</div>
-<div class="line"><a id="l00899" name="l00899"></a><span class="lineno">  899</span>                instance.startBeat = clip.startBeat;</div>
-<div class="line"><a id="l00900" name="l00900"></a><span class="lineno">  900</span>                instance.sourceOffsetBeats = clip.sourceOffset;</div>
-<div class="line"><a id="l00901" name="l00901"></a><span class="lineno">  901</span>                instance.durationBeats = clip.durationBeats;</div>
-<div class="line"><a id="l00902" name="l00902"></a><span class="lineno">  902</span>                <span class="keywordflow">if</span> (instance.isValid()) {</div>
-<div class="line"><a id="l00903" name="l00903"></a><span class="lineno">  903</span>                    instances.push_back(instance);</div>
-<div class="line"><a id="l00904" name="l00904"></a><span class="lineno">  904</span>                }</div>
-<div class="line"><a id="l00905" name="l00905"></a><span class="lineno">  905</span>            }</div>
-<div class="line"><a id="l00906" name="l00906"></a><span class="lineno">  906</span>        }</div>
-<div class="line"><a id="l00907" name="l00907"></a><span class="lineno">  907</span>        <span class="keywordflow">return</span> instances;</div>
-<div class="line"><a id="l00908" name="l00908"></a><span class="lineno">  908</span>    }</div>
-<div class="line"><a id="l00909" name="l00909"></a><span class="lineno">  909</span> </div>
-<div class="foldopen" id="foldopen00913" data-start="{" data-end="};">
-<div class="line"><a id="l00913" name="l00913"></a><span class="lineno"><a class="line" href="../../df/dd2/structAestra_1_1Audio_1_1PlaylistModel_1_1BatchUpdateScope.html">  913</a></span>    <span class="keyword">struct </span><a class="code hl_struct" href="../../df/dd2/structAestra_1_1Audio_1_1PlaylistModel_1_1BatchUpdateScope.html">BatchUpdateScope</a> {</div>
-<div class="line"><a id="l00914" name="l00914"></a><span class="lineno">  914</span>        <a class="code hl_struct" href="../../df/dd2/structAestra_1_1Audio_1_1PlaylistModel_1_1BatchUpdateScope.html">~BatchUpdateScope</a>() {}</div>
-<div class="line"><a id="l00915" name="l00915"></a><span class="lineno">  915</span>    };</div>
+<div class="line"><a id="l00875" name="l00875"></a><span class="lineno">  875</span> </div>
+<div class="line"><a id="l00876" name="l00876"></a><span class="lineno">  876</span>    std::vector&lt;MidiClipPlaybackInstance&gt; collectMidiClipInstances(<span class="keyword">const</span> <a class="code hl_class" href="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager.html">PatternManager</a>&amp; patterns)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00877" name="l00877"></a><span class="lineno">  877</span>        std::shared_lock&lt;std::shared_mutex&gt; lock(m_mutex);</div>
+<div class="line"><a id="l00878" name="l00878"></a><span class="lineno">  878</span>        std::vector&lt;MidiClipPlaybackInstance&gt; instances;</div>
+<div class="line"><a id="l00879" name="l00879"></a><span class="lineno">  879</span>        <span class="keyword">const</span> <span class="keywordtype">bool</span> anyLaneSolo = std::any_of(m_lanes.begin(), m_lanes.end(),</div>
+<div class="line"><a id="l00880" name="l00880"></a><span class="lineno">  880</span>                                             [](<span class="keyword">const</span> <a class="code hl_struct" href="../../d0/d83/structAestra_1_1Audio_1_1PlaylistLane.html">PlaylistLane</a>&amp; lane) { return lane.solo &amp;&amp; !lane.muted; });</div>
+<div class="line"><a id="l00881" name="l00881"></a><span class="lineno">  881</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; lane : m_lanes) {</div>
+<div class="line"><a id="l00882" name="l00882"></a><span class="lineno">  882</span>            <span class="keywordflow">if</span> (lane.muted || (anyLaneSolo &amp;&amp; !lane.solo)) {</div>
+<div class="line"><a id="l00883" name="l00883"></a><span class="lineno">  883</span>                <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00884" name="l00884"></a><span class="lineno">  884</span>            }</div>
+<div class="line"><a id="l00885" name="l00885"></a><span class="lineno">  885</span>            <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; clip : lane.clips) {</div>
+<div class="line"><a id="l00886" name="l00886"></a><span class="lineno">  886</span>                <span class="keywordflow">if</span> (clip.edits.muted) {</div>
+<div class="line"><a id="l00887" name="l00887"></a><span class="lineno">  887</span>                    <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00888" name="l00888"></a><span class="lineno">  888</span>                }</div>
+<div class="line"><a id="l00889" name="l00889"></a><span class="lineno">  889</span>                <span class="keywordflow">if</span> (!clip.patternId.isValid()) {</div>
+<div class="line"><a id="l00890" name="l00890"></a><span class="lineno">  890</span>                    <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00891" name="l00891"></a><span class="lineno">  891</span>                }</div>
+<div class="line"><a id="l00892" name="l00892"></a><span class="lineno">  892</span>                <span class="keyword">const</span> <span class="keyword">auto</span>* pattern = patterns.<a class="code hl_function" href="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a">getPattern</a>(clip.patternId);</div>
+<div class="line"><a id="l00893" name="l00893"></a><span class="lineno">  893</span>                <span class="keywordflow">if</span> (!pattern || !pattern-&gt;isMidi()) {</div>
+<div class="line"><a id="l00894" name="l00894"></a><span class="lineno">  894</span>                    <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00895" name="l00895"></a><span class="lineno">  895</span>                }</div>
+<div class="line"><a id="l00896" name="l00896"></a><span class="lineno">  896</span> </div>
+<div class="line"><a id="l00897" name="l00897"></a><span class="lineno">  897</span>                MidiClipPlaybackInstance instance;</div>
+<div class="line"><a id="l00898" name="l00898"></a><span class="lineno">  898</span>                instance.clipId = clip.id;</div>
+<div class="line"><a id="l00899" name="l00899"></a><span class="lineno">  899</span>                instance.patternId = clip.patternId;</div>
+<div class="line"><a id="l00900" name="l00900"></a><span class="lineno">  900</span>                instance.startBeat = clip.startBeat;</div>
+<div class="line"><a id="l00901" name="l00901"></a><span class="lineno">  901</span>                instance.sourceOffsetBeats = clip.sourceOffset;</div>
+<div class="line"><a id="l00902" name="l00902"></a><span class="lineno">  902</span>                instance.durationBeats = clip.durationBeats;</div>
+<div class="line"><a id="l00903" name="l00903"></a><span class="lineno">  903</span>                <span class="keywordflow">if</span> (instance.isValid()) {</div>
+<div class="line"><a id="l00904" name="l00904"></a><span class="lineno">  904</span>                    instances.push_back(instance);</div>
+<div class="line"><a id="l00905" name="l00905"></a><span class="lineno">  905</span>                }</div>
+<div class="line"><a id="l00906" name="l00906"></a><span class="lineno">  906</span>            }</div>
+<div class="line"><a id="l00907" name="l00907"></a><span class="lineno">  907</span>        }</div>
+<div class="line"><a id="l00908" name="l00908"></a><span class="lineno">  908</span>        <span class="keywordflow">return</span> instances;</div>
+<div class="line"><a id="l00909" name="l00909"></a><span class="lineno">  909</span>    }</div>
+<div class="line"><a id="l00910" name="l00910"></a><span class="lineno">  910</span> </div>
+<div class="foldopen" id="foldopen00914" data-start="{" data-end="};">
+<div class="line"><a id="l00914" name="l00914"></a><span class="lineno"><a class="line" href="../../df/dd2/structAestra_1_1Audio_1_1PlaylistModel_1_1BatchUpdateScope.html">  914</a></span>    <span class="keyword">struct </span><a class="code hl_struct" href="../../df/dd2/structAestra_1_1Audio_1_1PlaylistModel_1_1BatchUpdateScope.html">BatchUpdateScope</a> {</div>
+<div class="line"><a id="l00915" name="l00915"></a><span class="lineno">  915</span>        <a class="code hl_struct" href="../../df/dd2/structAestra_1_1Audio_1_1PlaylistModel_1_1BatchUpdateScope.html">~BatchUpdateScope</a>() {}</div>
+<div class="line"><a id="l00916" name="l00916"></a><span class="lineno">  916</span>    };</div>
 </div>
-<div class="line"><a id="l00916" name="l00916"></a><span class="lineno">  916</span> </div>
-<div class="line"><a id="l00917" name="l00917"></a><span class="lineno">  917</span>    <a class="code hl_struct" href="../../df/dd2/structAestra_1_1Audio_1_1PlaylistModel_1_1BatchUpdateScope.html">BatchUpdateScope</a> scopedBatchUpdate() { <span class="keywordflow">return</span> <a class="code hl_struct" href="../../df/dd2/structAestra_1_1Audio_1_1PlaylistModel_1_1BatchUpdateScope.html">BatchUpdateScope</a>{}; }</div>
-<div class="line"><a id="l00918" name="l00918"></a><span class="lineno">  918</span> </div>
-<div class="foldopen" id="foldopen00924" data-start="{" data-end="}">
-<div class="line"><a id="l00924" name="l00924"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a0b8f8f8ad7f9daaf83c218b6c611dfb8">  924</a></span>    <span class="keywordtype">bool</span> <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a0b8f8f8ad7f9daaf83c218b6c611dfb8">removeLane</a>(<span class="keyword">const</span> <a class="code hl_struct" href="../../d4/d9c/structAestra_1_1Audio_1_1PlaylistLaneID.html">PlaylistLaneID</a>&amp; laneId) {</div>
-<div class="line"><a id="l00925" name="l00925"></a><span class="lineno">  925</span>        std::unique_lock&lt;std::shared_mutex&gt; lock(m_mutex);</div>
-<div class="line"><a id="l00926" name="l00926"></a><span class="lineno">  926</span> </div>
-<div class="line"><a id="l00927" name="l00927"></a><span class="lineno">  927</span>        <span class="keyword">auto</span> it = m_laneMap.find(laneId);</div>
-<div class="line"><a id="l00928" name="l00928"></a><span class="lineno">  928</span>        <span class="keywordflow">if</span> (it == m_laneMap.end())</div>
-<div class="line"><a id="l00929" name="l00929"></a><span class="lineno">  929</span>            <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00930" name="l00930"></a><span class="lineno">  930</span> </div>
-<div class="line"><a id="l00931" name="l00931"></a><span class="lineno">  931</span>        <span class="keywordtype">size_t</span> laneIdx = it-&gt;second;</div>
-<div class="line"><a id="l00932" name="l00932"></a><span class="lineno">  932</span> </div>
-<div class="line"><a id="l00933" name="l00933"></a><span class="lineno">  933</span>        <span class="comment">// Remove all clips in this lane from the clip lane map</span></div>
-<div class="line"><a id="l00934" name="l00934"></a><span class="lineno">  934</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; clip : m_lanes[laneIdx].clips) {</div>
-<div class="line"><a id="l00935" name="l00935"></a><span class="lineno">  935</span>            m_clipLaneMap.erase(clip.id);</div>
-<div class="line"><a id="l00936" name="l00936"></a><span class="lineno">  936</span>        }</div>
-<div class="line"><a id="l00937" name="l00937"></a><span class="lineno">  937</span> </div>
-<div class="line"><a id="l00938" name="l00938"></a><span class="lineno">  938</span>        <span class="comment">// Remove the lane</span></div>
-<div class="line"><a id="l00939" name="l00939"></a><span class="lineno">  939</span>        m_lanes.erase(m_lanes.begin() + laneIdx);</div>
-<div class="line"><a id="l00940" name="l00940"></a><span class="lineno">  940</span> </div>
-<div class="line"><a id="l00941" name="l00941"></a><span class="lineno">  941</span>        <span class="comment">// Rebuild lane map with correct indices. PlaylistLane::index is</span></div>
-<div class="line"><a id="l00942" name="l00942"></a><span class="lineno">  942</span>        <span class="comment">// display metadata consumed by the track-number marker and the</span></div>
-<div class="line"><a id="l00943" name="l00943"></a><span class="lineno">  943</span>        <span class="comment">// automation-curve default channel pairing; after an erasure it must</span></div>
-<div class="line"><a id="l00944" name="l00944"></a><span class="lineno">  944</span>        <span class="comment">// stay positional or a later lane reads a stale index (wrong channel,</span></div>
-<div class="line"><a id="l00945" name="l00945"></a><span class="lineno">  945</span>        <span class="comment">// colliding numbers — #816 follow-up).</span></div>
-<div class="line"><a id="l00946" name="l00946"></a><span class="lineno">  946</span>        m_laneMap.clear();</div>
-<div class="line"><a id="l00947" name="l00947"></a><span class="lineno">  947</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; m_lanes.size(); ++i) {</div>
-<div class="line"><a id="l00948" name="l00948"></a><span class="lineno">  948</span>            m_lanes[i].index = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(i);</div>
-<div class="line"><a id="l00949" name="l00949"></a><span class="lineno">  949</span>            m_laneMap[m_lanes[i].id] = i;</div>
-<div class="line"><a id="l00950" name="l00950"></a><span class="lineno">  950</span>        }</div>
-<div class="line"><a id="l00951" name="l00951"></a><span class="lineno">  951</span> </div>
-<div class="line"><a id="l00952" name="l00952"></a><span class="lineno">  952</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00953" name="l00953"></a><span class="lineno">  953</span>    }</div>
+<div class="line"><a id="l00917" name="l00917"></a><span class="lineno">  917</span> </div>
+<div class="line"><a id="l00918" name="l00918"></a><span class="lineno">  918</span>    <a class="code hl_struct" href="../../df/dd2/structAestra_1_1Audio_1_1PlaylistModel_1_1BatchUpdateScope.html">BatchUpdateScope</a> scopedBatchUpdate() { <span class="keywordflow">return</span> <a class="code hl_struct" href="../../df/dd2/structAestra_1_1Audio_1_1PlaylistModel_1_1BatchUpdateScope.html">BatchUpdateScope</a>{}; }</div>
+<div class="line"><a id="l00919" name="l00919"></a><span class="lineno">  919</span> </div>
+<div class="foldopen" id="foldopen00925" data-start="{" data-end="}">
+<div class="line"><a id="l00925" name="l00925"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a0b8f8f8ad7f9daaf83c218b6c611dfb8">  925</a></span>    <span class="keywordtype">bool</span> <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a0b8f8f8ad7f9daaf83c218b6c611dfb8">removeLane</a>(<span class="keyword">const</span> <a class="code hl_struct" href="../../d4/d9c/structAestra_1_1Audio_1_1PlaylistLaneID.html">PlaylistLaneID</a>&amp; laneId) {</div>
+<div class="line"><a id="l00926" name="l00926"></a><span class="lineno">  926</span>        std::unique_lock&lt;std::shared_mutex&gt; lock(m_mutex);</div>
+<div class="line"><a id="l00927" name="l00927"></a><span class="lineno">  927</span> </div>
+<div class="line"><a id="l00928" name="l00928"></a><span class="lineno">  928</span>        <span class="keyword">auto</span> it = m_laneMap.find(laneId);</div>
+<div class="line"><a id="l00929" name="l00929"></a><span class="lineno">  929</span>        <span class="keywordflow">if</span> (it == m_laneMap.end())</div>
+<div class="line"><a id="l00930" name="l00930"></a><span class="lineno">  930</span>            <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00931" name="l00931"></a><span class="lineno">  931</span> </div>
+<div class="line"><a id="l00932" name="l00932"></a><span class="lineno">  932</span>        <span class="keywordtype">size_t</span> laneIdx = it-&gt;second;</div>
+<div class="line"><a id="l00933" name="l00933"></a><span class="lineno">  933</span> </div>
+<div class="line"><a id="l00934" name="l00934"></a><span class="lineno">  934</span>        <span class="comment">// Remove all clips in this lane from the clip lane map</span></div>
+<div class="line"><a id="l00935" name="l00935"></a><span class="lineno">  935</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; clip : m_lanes[laneIdx].clips) {</div>
+<div class="line"><a id="l00936" name="l00936"></a><span class="lineno">  936</span>            m_clipLaneMap.erase(clip.id);</div>
+<div class="line"><a id="l00937" name="l00937"></a><span class="lineno">  937</span>        }</div>
+<div class="line"><a id="l00938" name="l00938"></a><span class="lineno">  938</span> </div>
+<div class="line"><a id="l00939" name="l00939"></a><span class="lineno">  939</span>        <span class="comment">// Remove the lane</span></div>
+<div class="line"><a id="l00940" name="l00940"></a><span class="lineno">  940</span>        m_lanes.erase(m_lanes.begin() + laneIdx);</div>
+<div class="line"><a id="l00941" name="l00941"></a><span class="lineno">  941</span> </div>
+<div class="line"><a id="l00942" name="l00942"></a><span class="lineno">  942</span>        <span class="comment">// Rebuild lane map with correct indices. PlaylistLane::index is</span></div>
+<div class="line"><a id="l00943" name="l00943"></a><span class="lineno">  943</span>        <span class="comment">// display metadata consumed by the track-number marker and the</span></div>
+<div class="line"><a id="l00944" name="l00944"></a><span class="lineno">  944</span>        <span class="comment">// automation-curve default channel pairing; after an erasure it must</span></div>
+<div class="line"><a id="l00945" name="l00945"></a><span class="lineno">  945</span>        <span class="comment">// stay positional or a later lane reads a stale index (wrong channel,</span></div>
+<div class="line"><a id="l00946" name="l00946"></a><span class="lineno">  946</span>        <span class="comment">// colliding numbers — #816 follow-up).</span></div>
+<div class="line"><a id="l00947" name="l00947"></a><span class="lineno">  947</span>        m_laneMap.clear();</div>
+<div class="line"><a id="l00948" name="l00948"></a><span class="lineno">  948</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; m_lanes.size(); ++i) {</div>
+<div class="line"><a id="l00949" name="l00949"></a><span class="lineno">  949</span>            m_lanes[i].index = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(i);</div>
+<div class="line"><a id="l00950" name="l00950"></a><span class="lineno">  950</span>            m_laneMap[m_lanes[i].id] = i;</div>
+<div class="line"><a id="l00951" name="l00951"></a><span class="lineno">  951</span>        }</div>
+<div class="line"><a id="l00952" name="l00952"></a><span class="lineno">  952</span> </div>
+<div class="line"><a id="l00953" name="l00953"></a><span class="lineno">  953</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00954" name="l00954"></a><span class="lineno">  954</span>    }</div>
 </div>
-<div class="line"><a id="l00954" name="l00954"></a><span class="lineno">  954</span> </div>
-<div class="foldopen" id="foldopen00958" data-start="{" data-end="}">
-<div class="line"><a id="l00958" name="l00958"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a9f7d349735e9b9f95dfc593bde24d7b9">  958</a></span>    <span class="keywordtype">int</span> <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a9f7d349735e9b9f95dfc593bde24d7b9">getLaneIndex</a>(<span class="keyword">const</span> <a class="code hl_struct" href="../../d4/d9c/structAestra_1_1Audio_1_1PlaylistLaneID.html">PlaylistLaneID</a>&amp; laneId)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00959" name="l00959"></a><span class="lineno">  959</span>        std::shared_lock&lt;std::shared_mutex&gt; lock(m_mutex);</div>
-<div class="line"><a id="l00960" name="l00960"></a><span class="lineno">  960</span>        <span class="keyword">auto</span> it = m_laneMap.find(laneId);</div>
-<div class="line"><a id="l00961" name="l00961"></a><span class="lineno">  961</span>        <span class="keywordflow">return</span> it == m_laneMap.end() ? -1 : <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(it-&gt;second);</div>
-<div class="line"><a id="l00962" name="l00962"></a><span class="lineno">  962</span>    }</div>
+<div class="line"><a id="l00955" name="l00955"></a><span class="lineno">  955</span> </div>
+<div class="foldopen" id="foldopen00959" data-start="{" data-end="}">
+<div class="line"><a id="l00959" name="l00959"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a9f7d349735e9b9f95dfc593bde24d7b9">  959</a></span>    <span class="keywordtype">int</span> <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a9f7d349735e9b9f95dfc593bde24d7b9">getLaneIndex</a>(<span class="keyword">const</span> <a class="code hl_struct" href="../../d4/d9c/structAestra_1_1Audio_1_1PlaylistLaneID.html">PlaylistLaneID</a>&amp; laneId)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00960" name="l00960"></a><span class="lineno">  960</span>        std::shared_lock&lt;std::shared_mutex&gt; lock(m_mutex);</div>
+<div class="line"><a id="l00961" name="l00961"></a><span class="lineno">  961</span>        <span class="keyword">auto</span> it = m_laneMap.find(laneId);</div>
+<div class="line"><a id="l00962" name="l00962"></a><span class="lineno">  962</span>        <span class="keywordflow">return</span> it == m_laneMap.end() ? -1 : <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(it-&gt;second);</div>
+<div class="line"><a id="l00963" name="l00963"></a><span class="lineno">  963</span>    }</div>
 </div>
-<div class="line"><a id="l00963" name="l00963"></a><span class="lineno">  963</span> </div>
-<div class="foldopen" id="foldopen00973" data-start="{" data-end="}">
-<div class="line"><a id="l00973" name="l00973"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a87c0ad97654648b90e8cb6dd4c7a8de1">  973</a></span>    <span class="keywordtype">bool</span> <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a87c0ad97654648b90e8cb6dd4c7a8de1">moveLaneToIndex</a>(<span class="keyword">const</span> <a class="code hl_struct" href="../../d4/d9c/structAestra_1_1Audio_1_1PlaylistLaneID.html">PlaylistLaneID</a>&amp; laneId, <span class="keywordtype">size_t</span> targetIndex) {</div>
-<div class="line"><a id="l00974" name="l00974"></a><span class="lineno">  974</span>        std::unique_lock&lt;std::shared_mutex&gt; lock(m_mutex);</div>
-<div class="line"><a id="l00975" name="l00975"></a><span class="lineno">  975</span>        <span class="keyword">auto</span> it = m_laneMap.find(laneId);</div>
-<div class="line"><a id="l00976" name="l00976"></a><span class="lineno">  976</span>        <span class="keywordflow">if</span> (it == m_laneMap.end() || m_lanes.empty()) {</div>
-<div class="line"><a id="l00977" name="l00977"></a><span class="lineno">  977</span>            <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00978" name="l00978"></a><span class="lineno">  978</span>        }</div>
-<div class="line"><a id="l00979" name="l00979"></a><span class="lineno">  979</span>        <span class="keyword">const</span> <span class="keywordtype">size_t</span> from = it-&gt;second;</div>
-<div class="line"><a id="l00980" name="l00980"></a><span class="lineno">  980</span>        targetIndex = std::min(targetIndex, m_lanes.size() - 1);</div>
-<div class="line"><a id="l00981" name="l00981"></a><span class="lineno">  981</span>        <span class="keywordflow">if</span> (from == targetIndex) {</div>
-<div class="line"><a id="l00982" name="l00982"></a><span class="lineno">  982</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00983" name="l00983"></a><span class="lineno">  983</span>        }</div>
-<div class="line"><a id="l00984" name="l00984"></a><span class="lineno">  984</span> </div>
-<div class="line"><a id="l00985" name="l00985"></a><span class="lineno">  985</span>        <a class="code hl_struct" href="../../d0/d83/structAestra_1_1Audio_1_1PlaylistLane.html">PlaylistLane</a> lane = std::move(m_lanes[from]);</div>
-<div class="line"><a id="l00986" name="l00986"></a><span class="lineno">  986</span>        m_lanes.erase(m_lanes.begin() + from);</div>
-<div class="line"><a id="l00987" name="l00987"></a><span class="lineno">  987</span>        m_lanes.insert(m_lanes.begin() + targetIndex, std::move(lane));</div>
-<div class="line"><a id="l00988" name="l00988"></a><span class="lineno">  988</span> </div>
-<div class="line"><a id="l00989" name="l00989"></a><span class="lineno">  989</span>        <span class="comment">// Keep .index truthful across the span the lane traveled.</span></div>
-<div class="line"><a id="l00990" name="l00990"></a><span class="lineno">  990</span>        <span class="keyword">const</span> <span class="keywordtype">size_t</span> lo = std::min(from, targetIndex);</div>
-<div class="line"><a id="l00991" name="l00991"></a><span class="lineno">  991</span>        <span class="keyword">const</span> <span class="keywordtype">size_t</span> hi = std::max(from, targetIndex);</div>
-<div class="line"><a id="l00992" name="l00992"></a><span class="lineno">  992</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = lo; i &lt;= hi; ++i) {</div>
-<div class="line"><a id="l00993" name="l00993"></a><span class="lineno">  993</span>            m_lanes[i].index = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(i);</div>
-<div class="line"><a id="l00994" name="l00994"></a><span class="lineno">  994</span>        }</div>
-<div class="line"><a id="l00995" name="l00995"></a><span class="lineno">  995</span> </div>
-<div class="line"><a id="l00996" name="l00996"></a><span class="lineno">  996</span>        m_laneMap.clear();</div>
-<div class="line"><a id="l00997" name="l00997"></a><span class="lineno">  997</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; m_lanes.size(); ++i) {</div>
-<div class="line"><a id="l00998" name="l00998"></a><span class="lineno">  998</span>            m_laneMap[m_lanes[i].id] = i;</div>
-<div class="line"><a id="l00999" name="l00999"></a><span class="lineno">  999</span>        }</div>
-<div class="line"><a id="l01000" name="l01000"></a><span class="lineno"> 1000</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l01001" name="l01001"></a><span class="lineno"> 1001</span>    }</div>
+<div class="line"><a id="l00964" name="l00964"></a><span class="lineno">  964</span> </div>
+<div class="foldopen" id="foldopen00974" data-start="{" data-end="}">
+<div class="line"><a id="l00974" name="l00974"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a87c0ad97654648b90e8cb6dd4c7a8de1">  974</a></span>    <span class="keywordtype">bool</span> <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a87c0ad97654648b90e8cb6dd4c7a8de1">moveLaneToIndex</a>(<span class="keyword">const</span> <a class="code hl_struct" href="../../d4/d9c/structAestra_1_1Audio_1_1PlaylistLaneID.html">PlaylistLaneID</a>&amp; laneId, <span class="keywordtype">size_t</span> targetIndex) {</div>
+<div class="line"><a id="l00975" name="l00975"></a><span class="lineno">  975</span>        std::unique_lock&lt;std::shared_mutex&gt; lock(m_mutex);</div>
+<div class="line"><a id="l00976" name="l00976"></a><span class="lineno">  976</span>        <span class="keyword">auto</span> it = m_laneMap.find(laneId);</div>
+<div class="line"><a id="l00977" name="l00977"></a><span class="lineno">  977</span>        <span class="keywordflow">if</span> (it == m_laneMap.end() || m_lanes.empty()) {</div>
+<div class="line"><a id="l00978" name="l00978"></a><span class="lineno">  978</span>            <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00979" name="l00979"></a><span class="lineno">  979</span>        }</div>
+<div class="line"><a id="l00980" name="l00980"></a><span class="lineno">  980</span>        <span class="keyword">const</span> <span class="keywordtype">size_t</span> from = it-&gt;second;</div>
+<div class="line"><a id="l00981" name="l00981"></a><span class="lineno">  981</span>        targetIndex = std::min(targetIndex, m_lanes.size() - 1);</div>
+<div class="line"><a id="l00982" name="l00982"></a><span class="lineno">  982</span>        <span class="keywordflow">if</span> (from == targetIndex) {</div>
+<div class="line"><a id="l00983" name="l00983"></a><span class="lineno">  983</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00984" name="l00984"></a><span class="lineno">  984</span>        }</div>
+<div class="line"><a id="l00985" name="l00985"></a><span class="lineno">  985</span> </div>
+<div class="line"><a id="l00986" name="l00986"></a><span class="lineno">  986</span>        <a class="code hl_struct" href="../../d0/d83/structAestra_1_1Audio_1_1PlaylistLane.html">PlaylistLane</a> lane = std::move(m_lanes[from]);</div>
+<div class="line"><a id="l00987" name="l00987"></a><span class="lineno">  987</span>        m_lanes.erase(m_lanes.begin() + from);</div>
+<div class="line"><a id="l00988" name="l00988"></a><span class="lineno">  988</span>        m_lanes.insert(m_lanes.begin() + targetIndex, std::move(lane));</div>
+<div class="line"><a id="l00989" name="l00989"></a><span class="lineno">  989</span> </div>
+<div class="line"><a id="l00990" name="l00990"></a><span class="lineno">  990</span>        <span class="comment">// Keep .index truthful across the span the lane traveled.</span></div>
+<div class="line"><a id="l00991" name="l00991"></a><span class="lineno">  991</span>        <span class="keyword">const</span> <span class="keywordtype">size_t</span> lo = std::min(from, targetIndex);</div>
+<div class="line"><a id="l00992" name="l00992"></a><span class="lineno">  992</span>        <span class="keyword">const</span> <span class="keywordtype">size_t</span> hi = std::max(from, targetIndex);</div>
+<div class="line"><a id="l00993" name="l00993"></a><span class="lineno">  993</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = lo; i &lt;= hi; ++i) {</div>
+<div class="line"><a id="l00994" name="l00994"></a><span class="lineno">  994</span>            m_lanes[i].index = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(i);</div>
+<div class="line"><a id="l00995" name="l00995"></a><span class="lineno">  995</span>        }</div>
+<div class="line"><a id="l00996" name="l00996"></a><span class="lineno">  996</span> </div>
+<div class="line"><a id="l00997" name="l00997"></a><span class="lineno">  997</span>        m_laneMap.clear();</div>
+<div class="line"><a id="l00998" name="l00998"></a><span class="lineno">  998</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; m_lanes.size(); ++i) {</div>
+<div class="line"><a id="l00999" name="l00999"></a><span class="lineno">  999</span>            m_laneMap[m_lanes[i].id] = i;</div>
+<div class="line"><a id="l01000" name="l01000"></a><span class="lineno"> 1000</span>        }</div>
+<div class="line"><a id="l01001" name="l01001"></a><span class="lineno"> 1001</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l01002" name="l01002"></a><span class="lineno"> 1002</span>    }</div>
 </div>
-<div class="line"><a id="l01002" name="l01002"></a><span class="lineno"> 1002</span> </div>
-<div class="foldopen" id="foldopen01006" data-start="{" data-end="}">
-<div class="line"><a id="l01006" name="l01006"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a9037b4b8e6dce5a4c17672a5452e4aca"> 1006</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a9037b4b8e6dce5a4c17672a5452e4aca">clear</a>() {</div>
-<div class="line"><a id="l01007" name="l01007"></a><span class="lineno"> 1007</span>        std::unique_lock&lt;std::shared_mutex&gt; lock(m_mutex);</div>
-<div class="line"><a id="l01008" name="l01008"></a><span class="lineno"> 1008</span>        m_lanes.clear();</div>
-<div class="line"><a id="l01009" name="l01009"></a><span class="lineno"> 1009</span>        m_laneMap.clear();</div>
-<div class="line"><a id="l01010" name="l01010"></a><span class="lineno"> 1010</span>        m_clipLaneMap.clear();</div>
-<div class="line"><a id="l01011" name="l01011"></a><span class="lineno"> 1011</span>    }</div>
+<div class="line"><a id="l01003" name="l01003"></a><span class="lineno"> 1003</span> </div>
+<div class="foldopen" id="foldopen01007" data-start="{" data-end="}">
+<div class="line"><a id="l01007" name="l01007"></a><span class="lineno"><a class="line" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a9037b4b8e6dce5a4c17672a5452e4aca"> 1007</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a9037b4b8e6dce5a4c17672a5452e4aca">clear</a>() {</div>
+<div class="line"><a id="l01008" name="l01008"></a><span class="lineno"> 1008</span>        std::unique_lock&lt;std::shared_mutex&gt; lock(m_mutex);</div>
+<div class="line"><a id="l01009" name="l01009"></a><span class="lineno"> 1009</span>        m_lanes.clear();</div>
+<div class="line"><a id="l01010" name="l01010"></a><span class="lineno"> 1010</span>        m_laneMap.clear();</div>
+<div class="line"><a id="l01011" name="l01011"></a><span class="lineno"> 1011</span>        m_clipLaneMap.clear();</div>
+<div class="line"><a id="l01012" name="l01012"></a><span class="lineno"> 1012</span>    }</div>
 </div>
-<div class="line"><a id="l01012" name="l01012"></a><span class="lineno"> 1012</span> </div>
-<div class="line"><a id="l01013" name="l01013"></a><span class="lineno"> 1013</span><span class="keyword">private</span>:</div>
-<div class="line"><a id="l01014" name="l01014"></a><span class="lineno"> 1014</span>    std::vector&lt;PlaylistLane&gt; m_lanes;</div>
-<div class="line"><a id="l01015" name="l01015"></a><span class="lineno"> 1015</span>    std::unordered_map&lt;PlaylistLaneID, size_t&gt; m_laneMap;</div>
-<div class="line"><a id="l01016" name="l01016"></a><span class="lineno"> 1016</span>    std::unordered_map&lt;ClipInstanceID, PlaylistLaneID&gt; m_clipLaneMap;</div>
-<div class="line"><a id="l01017" name="l01017"></a><span class="lineno"> 1017</span>    <span class="keyword">mutable</span> std::shared_mutex m_mutex;</div>
-<div class="line"><a id="l01018" name="l01018"></a><span class="lineno"> 1018</span>    <a class="code hl_typedef" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ae49966ac5500dbfcfd43ce69e79fa249">ClipChangedCallback</a> m_clipChangedCallback;</div>
-<div class="line"><a id="l01019" name="l01019"></a><span class="lineno"> 1019</span>    <span class="keywordtype">double</span> m_bpm{120.0};</div>
-<div class="line"><a id="l01020" name="l01020"></a><span class="lineno"> 1020</span>    <span class="keywordtype">double</span> m_projectSampleRate{48000.0}; <span class="comment">// Default, configurable</span></div>
-<div class="line"><a id="l01021" name="l01021"></a><span class="lineno"> 1021</span>    PatternManager* m_patternManager{<span class="keyword">nullptr</span>};</div>
-<div class="line"><a id="l01022" name="l01022"></a><span class="lineno"> 1022</span> </div>
-<div class="line"><a id="l01023" name="l01023"></a><span class="lineno"> 1023</span>    <span class="keywordtype">bool</span> isAudioClipUnlocked(<span class="keyword">const</span> ClipInstance&amp; clip)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l01024" name="l01024"></a><span class="lineno"> 1024</span>        <span class="keywordflow">if</span> (!m_patternManager || !clip.patternId.isValid()) {</div>
-<div class="line"><a id="l01025" name="l01025"></a><span class="lineno"> 1025</span>            <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l01026" name="l01026"></a><span class="lineno"> 1026</span>        }</div>
-<div class="line"><a id="l01027" name="l01027"></a><span class="lineno"> 1027</span>        <span class="keyword">const</span> <span class="keyword">auto</span>* pattern = m_patternManager-&gt;<a class="code hl_function" href="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a">getPattern</a>(clip.patternId);</div>
-<div class="line"><a id="l01028" name="l01028"></a><span class="lineno"> 1028</span>        <span class="keywordflow">return</span> pattern &amp;&amp; pattern-&gt;isAudio();</div>
-<div class="line"><a id="l01029" name="l01029"></a><span class="lineno"> 1029</span>    }</div>
-<div class="line"><a id="l01030" name="l01030"></a><span class="lineno"> 1030</span> </div>
-<div class="line"><a id="l01031" name="l01031"></a><span class="lineno"> 1031</span>    <span class="keywordtype">double</span> secondsToBeatsUnlocked(<span class="keywordtype">double</span> seconds)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l01032" name="l01032"></a><span class="lineno"> 1032</span>        <span class="keywordflow">return</span> seconds * m_bpm / 60.0;</div>
-<div class="line"><a id="l01033" name="l01033"></a><span class="lineno"> 1033</span>    }</div>
-<div class="line"><a id="l01034" name="l01034"></a><span class="lineno"> 1034</span> </div>
-<div class="line"><a id="l01035" name="l01035"></a><span class="lineno"> 1035</span>    ClipInstance* getClipInternal(<span class="keyword">const</span> ClipInstanceID&amp; clipId) {</div>
-<div class="line"><a id="l01036" name="l01036"></a><span class="lineno"> 1036</span>        <span class="keyword">auto</span> laneIt = m_clipLaneMap.find(clipId);</div>
-<div class="line"><a id="l01037" name="l01037"></a><span class="lineno"> 1037</span>        <span class="keywordflow">if</span> (laneIt == m_clipLaneMap.end())</div>
-<div class="line"><a id="l01038" name="l01038"></a><span class="lineno"> 1038</span>            <span class="keywordflow">return</span> <span class="keyword">nullptr</span>;</div>
-<div class="line"><a id="l01039" name="l01039"></a><span class="lineno"> 1039</span> </div>
-<div class="line"><a id="l01040" name="l01040"></a><span class="lineno"> 1040</span>        <span class="keyword">auto</span> laneIdxIt = m_laneMap.find(laneIt-&gt;second);</div>
-<div class="line"><a id="l01041" name="l01041"></a><span class="lineno"> 1041</span>        <span class="keywordflow">if</span> (laneIdxIt == m_laneMap.end())</div>
-<div class="line"><a id="l01042" name="l01042"></a><span class="lineno"> 1042</span>            <span class="keywordflow">return</span> <span class="keyword">nullptr</span>;</div>
-<div class="line"><a id="l01043" name="l01043"></a><span class="lineno"> 1043</span> </div>
-<div class="line"><a id="l01044" name="l01044"></a><span class="lineno"> 1044</span>        <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; clip : m_lanes[laneIdxIt-&gt;second].clips) {</div>
-<div class="line"><a id="l01045" name="l01045"></a><span class="lineno"> 1045</span>            <span class="keywordflow">if</span> (clip.id == clipId)</div>
-<div class="line"><a id="l01046" name="l01046"></a><span class="lineno"> 1046</span>                <span class="keywordflow">return</span> &amp;clip;</div>
-<div class="line"><a id="l01047" name="l01047"></a><span class="lineno"> 1047</span>        }</div>
-<div class="line"><a id="l01048" name="l01048"></a><span class="lineno"> 1048</span> </div>
-<div class="line"><a id="l01049" name="l01049"></a><span class="lineno"> 1049</span>        <span class="keywordflow">return</span> <span class="keyword">nullptr</span>;</div>
-<div class="line"><a id="l01050" name="l01050"></a><span class="lineno"> 1050</span>    }</div>
-<div class="line"><a id="l01051" name="l01051"></a><span class="lineno"> 1051</span> </div>
-<div class="line"><a id="l01052" name="l01052"></a><span class="lineno"> 1052</span>    <span class="keywordtype">void</span> notifyClipChanged(<span class="keyword">const</span> ClipInstanceID&amp; clipId) {</div>
-<div class="line"><a id="l01053" name="l01053"></a><span class="lineno"> 1053</span>        <span class="keywordflow">if</span> (m_clipChangedCallback) {</div>
-<div class="line"><a id="l01054" name="l01054"></a><span class="lineno"> 1054</span>            m_clipChangedCallback(clipId);</div>
-<div class="line"><a id="l01055" name="l01055"></a><span class="lineno"> 1055</span>        }</div>
-<div class="line"><a id="l01056" name="l01056"></a><span class="lineno"> 1056</span>    }</div>
-<div class="line"><a id="l01057" name="l01057"></a><span class="lineno"> 1057</span>};</div>
+<div class="line"><a id="l01013" name="l01013"></a><span class="lineno"> 1013</span> </div>
+<div class="line"><a id="l01014" name="l01014"></a><span class="lineno"> 1014</span><span class="keyword">private</span>:</div>
+<div class="line"><a id="l01015" name="l01015"></a><span class="lineno"> 1015</span>    std::vector&lt;PlaylistLane&gt; m_lanes;</div>
+<div class="line"><a id="l01016" name="l01016"></a><span class="lineno"> 1016</span>    std::unordered_map&lt;PlaylistLaneID, size_t&gt; m_laneMap;</div>
+<div class="line"><a id="l01017" name="l01017"></a><span class="lineno"> 1017</span>    std::unordered_map&lt;ClipInstanceID, PlaylistLaneID&gt; m_clipLaneMap;</div>
+<div class="line"><a id="l01018" name="l01018"></a><span class="lineno"> 1018</span>    <span class="keyword">mutable</span> std::shared_mutex m_mutex;</div>
+<div class="line"><a id="l01019" name="l01019"></a><span class="lineno"> 1019</span>    <a class="code hl_typedef" href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ae49966ac5500dbfcfd43ce69e79fa249">ClipChangedCallback</a> m_clipChangedCallback;</div>
+<div class="line"><a id="l01020" name="l01020"></a><span class="lineno"> 1020</span>    <span class="keywordtype">double</span> m_bpm{120.0};</div>
+<div class="line"><a id="l01021" name="l01021"></a><span class="lineno"> 1021</span>    <span class="keywordtype">double</span> m_projectSampleRate{48000.0}; <span class="comment">// Default, configurable</span></div>
+<div class="line"><a id="l01022" name="l01022"></a><span class="lineno"> 1022</span>    PatternManager* m_patternManager{<span class="keyword">nullptr</span>};</div>
+<div class="line"><a id="l01023" name="l01023"></a><span class="lineno"> 1023</span> </div>
+<div class="line"><a id="l01024" name="l01024"></a><span class="lineno"> 1024</span>    <span class="keywordtype">bool</span> isAudioClipUnlocked(<span class="keyword">const</span> ClipInstance&amp; clip)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l01025" name="l01025"></a><span class="lineno"> 1025</span>        <span class="keywordflow">if</span> (!m_patternManager || !clip.patternId.isValid()) {</div>
+<div class="line"><a id="l01026" name="l01026"></a><span class="lineno"> 1026</span>            <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l01027" name="l01027"></a><span class="lineno"> 1027</span>        }</div>
+<div class="line"><a id="l01028" name="l01028"></a><span class="lineno"> 1028</span>        <span class="keyword">const</span> <span class="keyword">auto</span>* pattern = m_patternManager-&gt;<a class="code hl_function" href="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a">getPattern</a>(clip.patternId);</div>
+<div class="line"><a id="l01029" name="l01029"></a><span class="lineno"> 1029</span>        <span class="keywordflow">return</span> pattern &amp;&amp; pattern-&gt;isAudio();</div>
+<div class="line"><a id="l01030" name="l01030"></a><span class="lineno"> 1030</span>    }</div>
+<div class="line"><a id="l01031" name="l01031"></a><span class="lineno"> 1031</span> </div>
+<div class="line"><a id="l01032" name="l01032"></a><span class="lineno"> 1032</span>    <span class="keywordtype">double</span> secondsToBeatsUnlocked(<span class="keywordtype">double</span> seconds)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l01033" name="l01033"></a><span class="lineno"> 1033</span>        <span class="keywordflow">return</span> seconds * m_bpm / 60.0;</div>
+<div class="line"><a id="l01034" name="l01034"></a><span class="lineno"> 1034</span>    }</div>
+<div class="line"><a id="l01035" name="l01035"></a><span class="lineno"> 1035</span> </div>
+<div class="line"><a id="l01036" name="l01036"></a><span class="lineno"> 1036</span>    ClipInstance* getClipInternal(<span class="keyword">const</span> ClipInstanceID&amp; clipId) {</div>
+<div class="line"><a id="l01037" name="l01037"></a><span class="lineno"> 1037</span>        <span class="keyword">auto</span> laneIt = m_clipLaneMap.find(clipId);</div>
+<div class="line"><a id="l01038" name="l01038"></a><span class="lineno"> 1038</span>        <span class="keywordflow">if</span> (laneIt == m_clipLaneMap.end())</div>
+<div class="line"><a id="l01039" name="l01039"></a><span class="lineno"> 1039</span>            <span class="keywordflow">return</span> <span class="keyword">nullptr</span>;</div>
+<div class="line"><a id="l01040" name="l01040"></a><span class="lineno"> 1040</span> </div>
+<div class="line"><a id="l01041" name="l01041"></a><span class="lineno"> 1041</span>        <span class="keyword">auto</span> laneIdxIt = m_laneMap.find(laneIt-&gt;second);</div>
+<div class="line"><a id="l01042" name="l01042"></a><span class="lineno"> 1042</span>        <span class="keywordflow">if</span> (laneIdxIt == m_laneMap.end())</div>
+<div class="line"><a id="l01043" name="l01043"></a><span class="lineno"> 1043</span>            <span class="keywordflow">return</span> <span class="keyword">nullptr</span>;</div>
+<div class="line"><a id="l01044" name="l01044"></a><span class="lineno"> 1044</span> </div>
+<div class="line"><a id="l01045" name="l01045"></a><span class="lineno"> 1045</span>        <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; clip : m_lanes[laneIdxIt-&gt;second].clips) {</div>
+<div class="line"><a id="l01046" name="l01046"></a><span class="lineno"> 1046</span>            <span class="keywordflow">if</span> (clip.id == clipId)</div>
+<div class="line"><a id="l01047" name="l01047"></a><span class="lineno"> 1047</span>                <span class="keywordflow">return</span> &amp;clip;</div>
+<div class="line"><a id="l01048" name="l01048"></a><span class="lineno"> 1048</span>        }</div>
+<div class="line"><a id="l01049" name="l01049"></a><span class="lineno"> 1049</span> </div>
+<div class="line"><a id="l01050" name="l01050"></a><span class="lineno"> 1050</span>        <span class="keywordflow">return</span> <span class="keyword">nullptr</span>;</div>
+<div class="line"><a id="l01051" name="l01051"></a><span class="lineno"> 1051</span>    }</div>
+<div class="line"><a id="l01052" name="l01052"></a><span class="lineno"> 1052</span> </div>
+<div class="line"><a id="l01053" name="l01053"></a><span class="lineno"> 1053</span>    <span class="keywordtype">void</span> notifyClipChanged(<span class="keyword">const</span> ClipInstanceID&amp; clipId) {</div>
+<div class="line"><a id="l01054" name="l01054"></a><span class="lineno"> 1054</span>        <span class="keywordflow">if</span> (m_clipChangedCallback) {</div>
+<div class="line"><a id="l01055" name="l01055"></a><span class="lineno"> 1055</span>            m_clipChangedCallback(clipId);</div>
+<div class="line"><a id="l01056" name="l01056"></a><span class="lineno"> 1056</span>        }</div>
+<div class="line"><a id="l01057" name="l01057"></a><span class="lineno"> 1057</span>    }</div>
+<div class="line"><a id="l01058" name="l01058"></a><span class="lineno"> 1058</span>};</div>
 </div>
-<div class="line"><a id="l01058" name="l01058"></a><span class="lineno"> 1058</span> </div>
-<div class="line"><a id="l01059" name="l01059"></a><span class="lineno"> 1059</span>} <span class="comment">// namespace Audio</span></div>
-<div class="line"><a id="l01060" name="l01060"></a><span class="lineno"> 1060</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="line"><a id="l01059" name="l01059"></a><span class="lineno"> 1059</span> </div>
+<div class="line"><a id="l01060" name="l01060"></a><span class="lineno"> 1060</span>} <span class="comment">// namespace Audio</span></div>
+<div class="line"><a id="l01061" name="l01061"></a><span class="lineno"> 1061</span>} <span class="comment">// namespace Aestra</span></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PatternManager_html"><div class="ttname"><a href="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager.html">Aestra::Audio::PatternManager</a></div><div class="ttdoc">Simple in-memory pattern manager.</div><div class="ttdef"><b>Definition</b> <a href="../../db/d17/PatternManager_8h_source.html#l00016">PatternManager.h:16</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PatternManager_html_a77910950ec791176dd209ba9c83e219a"><div class="ttname"><a href="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a">Aestra::Audio::PatternManager::getPattern</a></div><div class="ttdeci">PatternSource * getPattern(PatternID id)</div><div class="ttdoc">Get a pattern by ID (returns nullptr if not found)</div><div class="ttdef"><b>Definition</b> <a href="../../db/d17/PatternManager_8h_source.html#l00026">PatternManager.h:26</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PatternManager_html_af099c463dfaefc7d884bb200b597b537"><div class="ttname"><a href="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#af099c463dfaefc7d884bb200b597b537">Aestra::Audio::PatternManager::clonePattern</a></div><div class="ttdeci">PatternID clonePattern(PatternID sourceId)</div><div class="ttdoc">Clone an existing pattern and return the new ID.</div><div class="ttdef"><b>Definition</b> <a href="../../db/d17/PatternManager_8h_source.html#l00128">PatternManager.h:128</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html">Aestra::Audio::PlaylistModel</a></div><div class="ttdoc">Multi-lane playlist model with undo/redo support.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00178">PlaylistModel.h:178</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a0726d714213cdfdf2e5c18a73339a049"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a0726d714213cdfdf2e5c18a73339a049">Aestra::Audio::PlaylistModel::setBPM</a></div><div class="ttdeci">void setBPM(double bpm)</div><div class="ttdoc">Set BPM.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00746">PlaylistModel.h:746</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a0b8f8f8ad7f9daaf83c218b6c611dfb8"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a0b8f8f8ad7f9daaf83c218b6c611dfb8">Aestra::Audio::PlaylistModel::removeLane</a></div><div class="ttdeci">bool removeLane(const PlaylistLaneID &amp;laneId)</div><div class="ttdoc">Remove a lane by ID.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00924">PlaylistModel.h:924</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a0726d714213cdfdf2e5c18a73339a049"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a0726d714213cdfdf2e5c18a73339a049">Aestra::Audio::PlaylistModel::setBPM</a></div><div class="ttdeci">void setBPM(double bpm)</div><div class="ttdoc">Set BPM.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00747">PlaylistModel.h:747</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a0b8f8f8ad7f9daaf83c218b6c611dfb8"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a0b8f8f8ad7f9daaf83c218b6c611dfb8">Aestra::Audio::PlaylistModel::removeLane</a></div><div class="ttdeci">bool removeLane(const PlaylistLaneID &amp;laneId)</div><div class="ttdoc">Remove a lane by ID.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00925">PlaylistModel.h:925</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a13fea5fc5ad7ffd58d3abdc5da43eb4d"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a13fea5fc5ad7ffd58d3abdc5da43eb4d">Aestra::Audio::PlaylistModel::createLane</a></div><div class="ttdeci">PlaylistLaneID createLane(const std::string &amp;name=&quot;&quot;)</div><div class="ttdoc">Create a new playlist lane.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00191">PlaylistModel.h:191</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a17983ade5aa7a81a8f2d11fba2db2ad6"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a17983ade5aa7a81a8f2d11fba2db2ad6">Aestra::Audio::PlaylistModel::setClipEdits</a></div><div class="ttdeci">bool setClipEdits(const ClipInstanceID &amp;clipId, const ClipEdits &amp;edits)</div><div class="ttdoc">Replace the editable playback properties for one clip instance.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00341">PlaylistModel.h:341</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a1c8f0ef3616ea06db71244b90724e019"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a1c8f0ef3616ea06db71244b90724e019">Aestra::Audio::PlaylistModel::addClipFromPattern</a></div><div class="ttdeci">ClipInstanceID addClipFromPattern(const PlaylistLaneID &amp;laneId, PatternID patternId, double startBeat, double durationBeats)</div><div class="ttdoc">Add a clip from a pattern.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00828">PlaylistModel.h:828</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a2615e7b498918ebcdbe90ed82f900670"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a2615e7b498918ebcdbe90ed82f900670">Aestra::Audio::PlaylistModel::getBPM</a></div><div class="ttdeci">double getBPM() const</div><div class="ttdoc">Get BPM.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00780">PlaylistModel.h:780</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a1c8f0ef3616ea06db71244b90724e019"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a1c8f0ef3616ea06db71244b90724e019">Aestra::Audio::PlaylistModel::addClipFromPattern</a></div><div class="ttdeci">ClipInstanceID addClipFromPattern(const PlaylistLaneID &amp;laneId, PatternID patternId, double startBeat, double durationBeats)</div><div class="ttdoc">Add a clip from a pattern.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00829">PlaylistModel.h:829</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a2615e7b498918ebcdbe90ed82f900670"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a2615e7b498918ebcdbe90ed82f900670">Aestra::Audio::PlaylistModel::getBPM</a></div><div class="ttdeci">double getBPM() const</div><div class="ttdoc">Get BPM.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00781">PlaylistModel.h:781</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a31a39e35b4f4272ed91f28dd9ad38233"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a31a39e35b4f4272ed91f28dd9ad38233">Aestra::Audio::PlaylistModel::PlaylistModel</a></div><div class="ttdeci">PlaylistModel()=default</div><div class="ttdoc">Construct an empty playlist model.</div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a336f4425c8210367a25c7b3659202ffb"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a336f4425c8210367a25c7b3659202ffb">Aestra::Audio::PlaylistModel::createLaneWithId</a></div><div class="ttdeci">PlaylistLaneID createLaneWithId(const PlaylistLaneID &amp;requestedId, const std::string &amp;name=&quot;&quot;)</div><div class="ttdoc">Create a lane restoring a serialized identity (#446).</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00204">PlaylistModel.h:204</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a3af23c38fbaefe1a2580f6b9a769dcfc"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a3af23c38fbaefe1a2580f6b9a769dcfc">Aestra::Audio::PlaylistModel::setClipDuration</a></div><div class="ttdeci">void setClipDuration(const ClipInstanceID &amp;clipId, double duration)</div><div class="ttdoc">Set the duration of a clip.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00416">PlaylistModel.h:416</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a451289f1d5433a3c8793fb18b649b8fb"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a451289f1d5433a3c8793fb18b649b8fb">Aestra::Audio::PlaylistModel::getClip</a></div><div class="ttdeci">ClipInstance * getClip(const ClipInstanceID &amp;clipId)</div><div class="ttdoc">Get a clip by ID.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00316">PlaylistModel.h:316</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a4d98e6682744afcce2ab892f2acdfe6a"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a4d98e6682744afcce2ab892f2acdfe6a">Aestra::Audio::PlaylistModel::splitClip</a></div><div class="ttdeci">ClipInstanceID splitClip(const ClipInstanceID &amp;clipId, double splitBeat)</div><div class="ttdoc">Split a clip at the given beat position.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00504">PlaylistModel.h:504</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a87c0ad97654648b90e8cb6dd4c7a8de1"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a87c0ad97654648b90e8cb6dd4c7a8de1">Aestra::Audio::PlaylistModel::moveLaneToIndex</a></div><div class="ttdeci">bool moveLaneToIndex(const PlaylistLaneID &amp;laneId, size_t targetIndex)</div><div class="ttdoc">Move an existing lane to a playlist position.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00973">PlaylistModel.h:973</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a8865c79ae9a55ae70d588e1f9f220b8c"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a8865c79ae9a55ae70d588e1f9f220b8c">Aestra::Audio::PlaylistModel::setPatternManager</a></div><div class="ttdeci">void setPatternManager(PatternManager *pm)</div><div class="ttdoc">Set pattern manager reference.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00812">PlaylistModel.h:812</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a87c0ad97654648b90e8cb6dd4c7a8de1"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a87c0ad97654648b90e8cb6dd4c7a8de1">Aestra::Audio::PlaylistModel::moveLaneToIndex</a></div><div class="ttdeci">bool moveLaneToIndex(const PlaylistLaneID &amp;laneId, size_t targetIndex)</div><div class="ttdoc">Move an existing lane to a playlist position.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00974">PlaylistModel.h:974</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a8865c79ae9a55ae70d588e1f9f220b8c"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a8865c79ae9a55ae70d588e1f9f220b8c">Aestra::Audio::PlaylistModel::setPatternManager</a></div><div class="ttdeci">void setPatternManager(PatternManager *pm)</div><div class="ttdoc">Set pattern manager reference.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00813">PlaylistModel.h:813</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a8899913f7656d95490a6ba003cb81295"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a8899913f7656d95490a6ba003cb81295">Aestra::Audio::PlaylistModel::addClip</a></div><div class="ttdeci">ClipInstanceID addClip(const PlaylistLaneID &amp;laneId, const ClipInstance &amp;clip)</div><div class="ttdoc">Add a clip to a lane.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00269">PlaylistModel.h:269</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a9037b4b8e6dce5a4c17672a5452e4aca"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a9037b4b8e6dce5a4c17672a5452e4aca">Aestra::Audio::PlaylistModel::clear</a></div><div class="ttdeci">void clear()</div><div class="ttdoc">Clear all lanes and clips.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l01006">PlaylistModel.h:1006</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a9f7d349735e9b9f95dfc593bde24d7b9"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a9f7d349735e9b9f95dfc593bde24d7b9">Aestra::Audio::PlaylistModel::getLaneIndex</a></div><div class="ttdeci">int getLaneIndex(const PlaylistLaneID &amp;laneId) const</div><div class="ttdoc">Playlist row position of a lane (-1 when missing).</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00958">PlaylistModel.h:958</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a9ff176b37e38e80db51e298f112c9fa3"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a9ff176b37e38e80db51e298f112c9fa3">Aestra::Audio::PlaylistModel::getProjectSampleRate</a></div><div class="ttdeci">double getProjectSampleRate() const</div><div class="ttdoc">Get the project sample rate.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00699">PlaylistModel.h:699</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a9037b4b8e6dce5a4c17672a5452e4aca"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a9037b4b8e6dce5a4c17672a5452e4aca">Aestra::Audio::PlaylistModel::clear</a></div><div class="ttdeci">void clear()</div><div class="ttdoc">Clear all lanes and clips.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l01007">PlaylistModel.h:1007</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a9f7d349735e9b9f95dfc593bde24d7b9"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a9f7d349735e9b9f95dfc593bde24d7b9">Aestra::Audio::PlaylistModel::getLaneIndex</a></div><div class="ttdeci">int getLaneIndex(const PlaylistLaneID &amp;laneId) const</div><div class="ttdoc">Playlist row position of a lane (-1 when missing).</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00959">PlaylistModel.h:959</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_a9ff176b37e38e80db51e298f112c9fa3"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a9ff176b37e38e80db51e298f112c9fa3">Aestra::Audio::PlaylistModel::getProjectSampleRate</a></div><div class="ttdeci">double getProjectSampleRate() const</div><div class="ttdoc">Get the project sample rate.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00700">PlaylistModel.h:700</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_aa49c28cd47a0b61b3839a90c57d9ae18"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#aa49c28cd47a0b61b3839a90c57d9ae18">Aestra::Audio::PlaylistModel::withLanes</a></div><div class="ttdeci">auto withLanes(Fn &amp;&amp;fn) const</div><div class="ttdoc">Run a read-only visitor over all lanes under the lane lock.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00240">PlaylistModel.h:240</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_ab1aa3e02093843cdf71d966a0d0ec2a6"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ab1aa3e02093843cdf71d966a0d0ec2a6">Aestra::Audio::PlaylistModel::buildRuntimeSnapshot</a></div><div class="ttdeci">std::unique_ptr&lt; PlaylistRuntimeSnapshot &gt; buildRuntimeSnapshot(const PatternManager &amp;patterns, const SourceManager &amp;sources) const</div><div class="ttdoc">Build a runtime snapshot for audio rendering.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00598">PlaylistModel.h:598</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_ac43fba7fdd869090f01e2271ebd4717b"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ac43fba7fdd869090f01e2271ebd4717b">Aestra::Audio::PlaylistModel::getLane</a></div><div class="ttdeci">PlaylistLane * getLane(const PlaylistLaneID &amp;id)</div><div class="ttdoc">Get a mutable lane by identifier.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00225">PlaylistModel.h:225</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_ac7bf8357c38fed0864cb609623bed1bb"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ac7bf8357c38fed0864cb609623bed1bb">Aestra::Audio::PlaylistModel::getLaneCount</a></div><div class="ttdeci">size_t getLaneCount() const</div><div class="ttdoc">Get the number of playlist lanes.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00249">PlaylistModel.h:249</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_ace21f4fe2384a4185668dfd8068ad9df"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ace21f4fe2384a4185668dfd8068ad9df">Aestra::Audio::PlaylistModel::isPatternUsed</a></div><div class="ttdeci">bool isPatternUsed(PatternID patternId) const</div><div class="ttdoc">Check if a pattern ID is referenced by any clip in the playlist.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00400">PlaylistModel.h:400</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_ad090028fdcb1af2f03a73e870e04ac91"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ad090028fdcb1af2f03a73e870e04ac91">Aestra::Audio::PlaylistModel::hasAudibleSoloLane</a></div><div class="ttdeci">bool hasAudibleSoloLane() const</div><div class="ttdoc">Return whether any unmuted Playlist lane is currently soloed.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00255">PlaylistModel.h:255</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_ad451ffaf2efec932219ab13a6d886961"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ad451ffaf2efec932219ab13a6d886961">Aestra::Audio::PlaylistModel::getLaneIDs</a></div><div class="ttdeci">std::vector&lt; PlaylistLaneID &gt; getLaneIDs() const</div><div class="ttdoc">Get all lane IDs.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00865">PlaylistModel.h:865</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_ade6021686aeb8e7ea94e2517219a2338"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ade6021686aeb8e7ea94e2517219a2338">Aestra::Audio::PlaylistModel::setProjectSampleRate</a></div><div class="ttdeci">void setProjectSampleRate(double rate)</div><div class="ttdoc">Set the project sample rate.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00739">PlaylistModel.h:739</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_ae281a5a791e75389bf62885d939f1866"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ae281a5a791e75389bf62885d939f1866">Aestra::Audio::PlaylistModel::getLaneId</a></div><div class="ttdeci">PlaylistLaneID getLaneId(size_t index) const</div><div class="ttdoc">Get lane ID by index.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00817">PlaylistModel.h:817</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_ad451ffaf2efec932219ab13a6d886961"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ad451ffaf2efec932219ab13a6d886961">Aestra::Audio::PlaylistModel::getLaneIDs</a></div><div class="ttdeci">std::vector&lt; PlaylistLaneID &gt; getLaneIDs() const</div><div class="ttdoc">Get all lane IDs.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00866">PlaylistModel.h:866</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_ade6021686aeb8e7ea94e2517219a2338"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ade6021686aeb8e7ea94e2517219a2338">Aestra::Audio::PlaylistModel::setProjectSampleRate</a></div><div class="ttdeci">void setProjectSampleRate(double rate)</div><div class="ttdoc">Set the project sample rate.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00740">PlaylistModel.h:740</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_ae281a5a791e75389bf62885d939f1866"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ae281a5a791e75389bf62885d939f1866">Aestra::Audio::PlaylistModel::getLaneId</a></div><div class="ttdeci">PlaylistLaneID getLaneId(size_t index) const</div><div class="ttdoc">Get lane ID by index.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00818">PlaylistModel.h:818</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_ae35de040bc40450f4e6447a663be5a23"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ae35de040bc40450f4e6447a663be5a23">Aestra::Audio::PlaylistModel::findClipLane</a></div><div class="ttdeci">PlaylistLaneID findClipLane(const ClipInstanceID &amp;clipId) const</div><div class="ttdoc">Find which lane a clip belongs to.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00386">PlaylistModel.h:386</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_ae49966ac5500dbfcfd43ce69e79fa249"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ae49966ac5500dbfcfd43ce69e79fa249">Aestra::Audio::PlaylistModel::ClipChangedCallback</a></div><div class="ttdeci">std::function&lt; void(const ClipInstanceID &amp;)&gt; ClipChangedCallback</div><div class="ttdoc">Callback type fired whenever a clip changes.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00181">PlaylistModel.h:181</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_ae55ce24458c23ebaf4808c0f551eacd4"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ae55ce24458c23ebaf4808c0f551eacd4">Aestra::Audio::PlaylistModel::getClipSourceStartSamples</a></div><div class="ttdeci">uint64_t getClipSourceStartSamples(const ClipInstance &amp;clip) const</div><div class="ttdoc">Resolve a clip's source start in project-rate samples.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00711">PlaylistModel.h:711</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_ae55ce24458c23ebaf4808c0f551eacd4"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ae55ce24458c23ebaf4808c0f551eacd4">Aestra::Audio::PlaylistModel::getClipSourceStartSamples</a></div><div class="ttdeci">uint64_t getClipSourceStartSamples(const ClipInstance &amp;clip) const</div><div class="ttdoc">Resolve a clip's source start in project-rate samples.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00712">PlaylistModel.h:712</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_ae79b3ac4edb3fcde6109d26c664490e1"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ae79b3ac4edb3fcde6109d26c664490e1">Aestra::Audio::PlaylistModel::moveClip</a></div><div class="ttdeci">void moveClip(const ClipInstanceID &amp;clipId, double newStartBeat, const PlaylistLaneID &amp;newLaneId=PlaylistLaneID())</div><div class="ttdoc">Move a clip to a new position (and optionally new lane)</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00456">PlaylistModel.h:456</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_af44a50346cebfd76b853283bacc24818"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#af44a50346cebfd76b853283bacc24818">Aestra::Audio::PlaylistModel::removeClip</a></div><div class="ttdeci">void removeClip(const ClipInstanceID &amp;clipId)</div><div class="ttdoc">Remove a clip by ID.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00292">PlaylistModel.h:292</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_af9eb4578ad6274e4d68543b9d3716473"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#af9eb4578ad6274e4d68543b9d3716473">Aestra::Audio::PlaylistModel::setClipStartBeat</a></div><div class="ttdeci">void setClipStartBeat(const ClipInstanceID &amp;clipId, double startBeat)</div><div class="ttdoc">Set the start beat of a clip.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00442">PlaylistModel.h:442</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PlaylistModel_html_afef7f68c8b1a5e22fb9b0ddfb21731ed"><div class="ttname"><a href="../../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#afef7f68c8b1a5e22fb9b0ddfb21731ed">Aestra::Audio::PlaylistModel::setClipPattern</a></div><div class="ttdeci">bool setClipPattern(const ClipInstanceID &amp;clipId, PatternID patternId)</div><div class="ttdoc">Replace the source pattern referenced by one clip instance.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00364">PlaylistModel.h:364</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1SourceManager_html"><div class="ttname"><a href="../../d6/d0f/classAestra_1_1Audio_1_1SourceManager.html">Aestra::Audio::SourceManager</a></div><div class="ttdoc">Manages audio sources (clip sources) for the project.</div><div class="ttdef"><b>Definition</b> <a href="../../dc/d22/SourceManager_8h_source.html#l00017">SourceManager.h:17</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1SourceManager_html_a9df135788c4b7117579dc103b01d9f94"><div class="ttname"><a href="../../d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a9df135788c4b7117579dc103b01d9f94">Aestra::Audio::SourceManager::getSource</a></div><div class="ttdeci">ClipSource * getSource(ClipSourceID id)</div><div class="ttdoc">Get a source by ID.</div><div class="ttdef"><b>Definition</b> <a href="../../dc/d22/SourceManager_8h_source.html#l00156">SourceManager.h:156</a></div></div>
+<div class="ttc" id="anamespaceAestra_html"><div class="ttname"><a href="../../d8/d94/namespaceAestra.html">Aestra</a></div><div class="ttdoc">Main application class.</div><div class="ttdef"><b>Definition</b> <a href="../../d7/d7b/AestraAssert_8h_source.html#l00009">AestraAssert.h:9</a></div></div>
 <div class="ttc" id="astructAestra_1_1Audio_1_1AudioBufferData_html"><div class="ttname"><a href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html">Aestra::Audio::AudioBufferData</a></div><div class="ttdoc">Audio buffer data for clip sources.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d7d/ClipSource_8h_source.html#l00041">ClipSource.h:41</a></div></div>
 <div class="ttc" id="astructAestra_1_1Audio_1_1ClipEdits_html"><div class="ttname"><a href="../../d7/d56/structAestra_1_1Audio_1_1ClipEdits.html">Aestra::Audio::ClipEdits</a></div><div class="ttdoc">Clip edits (user modifications to clip content)</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d91/ClipInstance_8h_source.html#l00062">ClipInstance.h:62</a></div></div>
 <div class="ttc" id="astructAestra_1_1Audio_1_1ClipEdits_html_a11adbc682b20b39cdbbdba80ac21e840"><div class="ttname"><a href="../../d7/d56/structAestra_1_1Audio_1_1ClipEdits.html#a11adbc682b20b39cdbbdba80ac21e840">Aestra::Audio::ClipEdits::effectiveVarispeed</a></div><div class="ttdeci">float effectiveVarispeed() const noexcept</div><div class="ttdoc">Combined varispeed factor (Speed x 2^(Pitch/12)), clamped to the render envelope.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d91/ClipInstance_8h_source.html#l00102">ClipInstance.h:102</a></div></div>
@@ -1072,7 +1074,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="ttc" id="astructAestra_1_1Audio_1_1PlaylistLane_html_aea0c21e1f7815e6425e45a27e2fe27e6"><div class="ttname"><a href="../../d0/d83/structAestra_1_1Audio_1_1PlaylistLane.html#aea0c21e1f7815e6425e45a27e2fe27e6">Aestra::Audio::PlaylistLane::volume</a></div><div class="ttdeci">float volume</div><div class="ttdoc">Lane volume multiplier.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00041">PlaylistModel.h:41</a></div></div>
 <div class="ttc" id="astructAestra_1_1Audio_1_1PlaylistLane_html_aef1b09294d60d430c22b885418642fbc"><div class="ttname"><a href="../../d0/d83/structAestra_1_1Audio_1_1PlaylistLane.html#aef1b09294d60d430c22b885418642fbc">Aestra::Audio::PlaylistLane::clips</a></div><div class="ttdeci">std::vector&lt; ClipInstance &gt; clips</div><div class="ttdoc">Clips currently placed on the lane.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00035">PlaylistModel.h:35</a></div></div>
 <div class="ttc" id="astructAestra_1_1Audio_1_1PlaylistLane_html_afd1672da37e42e9dbb408b62e9766653"><div class="ttname"><a href="../../d0/d83/structAestra_1_1Audio_1_1PlaylistLane.html#afd1672da37e42e9dbb408b62e9766653">Aestra::Audio::PlaylistLane::index</a></div><div class="ttdeci">int index</div><div class="ttdoc">Zero-based lane index.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00033">PlaylistModel.h:33</a></div></div>
-<div class="ttc" id="astructAestra_1_1Audio_1_1PlaylistModel_1_1BatchUpdateScope_html"><div class="ttname"><a href="../../df/dd2/structAestra_1_1Audio_1_1PlaylistModel_1_1BatchUpdateScope.html">Aestra::Audio::PlaylistModel::BatchUpdateScope</a></div><div class="ttdoc">Scoped batch update (no-op for now)</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00913">PlaylistModel.h:913</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1PlaylistModel_1_1BatchUpdateScope_html"><div class="ttname"><a href="../../df/dd2/structAestra_1_1Audio_1_1PlaylistModel_1_1BatchUpdateScope.html">Aestra::Audio::PlaylistModel::BatchUpdateScope</a></div><div class="ttdoc">Scoped batch update (no-op for now)</div><div class="ttdef"><b>Definition</b> <a href="../../d4/ddd/PlaylistModel_8h_source.html#l00914">PlaylistModel.h:914</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

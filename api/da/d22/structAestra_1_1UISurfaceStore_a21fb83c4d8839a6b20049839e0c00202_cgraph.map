@@ -1,0 +1,5 @@
+<map id="Aestra::UISurfaceStore::save" name="Aestra::UISurfaceStore::save">
+<area shape="rect" id="Node000001" title="Write the store to path via the shared atomic&#45;write helper." alt="" coords="5,5,175,45"/>
+<area shape="rect" id="Node000002" href="$d8/d94/namespaceAestra.html#a91dc79620775d24f4d0c47759593731b" title="Write root to path via the house crash&#45;safe pattern: write to a &quot;&lt;path&gt;.tmp&quot; sibling,..." alt="" coords="223,13,405,38"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="175,23,209,23,209,28,175,28"/>
+</map>

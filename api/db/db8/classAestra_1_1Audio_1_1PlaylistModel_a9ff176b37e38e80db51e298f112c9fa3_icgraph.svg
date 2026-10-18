@@ -83,51 +83,32 @@ var sectionId = 'dynsection-12';
 </a>
 </g>
 </g>
-<!-- Node9 -->
-<g id="Node000009" class="node">
-<title>Node9</title>
-<g id="a_Node000009"><a xlink:href="../../db/dd1/classAestra_1_1Audio_1_1RenderAudioClipCommand.html#a02798abf02b4c53a3f28a7bd35521041" target="_top" xlink:title="Execute the command (first time)">
+<!-- Node10 -->
+<g id="Node000010" class="node">
+<title>Node10</title>
+<g id="a_Node000010"><a xlink:href="../../db/dd1/classAestra_1_1Audio_1_1RenderAudioClipCommand.html#a02798abf02b4c53a3f28a7bd35521041" target="_top" xlink:title="Execute the command (first time)">
 <polygon fill="white" stroke="#666666" points="944,-126 794,-126 794,-96 944,-96 944,-126"/>
 <text text-anchor="start" x="802" y="-114" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::RenderAudio</text>
 <text text-anchor="middle" x="869" y="-103" font-family="Helvetica,sans-Serif" font-size="10.00">ClipCommand::execute</text>
 </a>
 </g>
 </g>
-<!-- Node1&#45;&gt;Node9 -->
-<g id="edge9_Node000001_Node000009" class="edge">
-<title>Node1&#45;&gt;Node9</title>
-<g id="a_edge9_Node000001_Node000009"><a xlink:title=" ">
+<!-- Node1&#45;&gt;Node10 -->
+<g id="edge10_Node000001_Node000010" class="edge">
+<title>Node1&#45;&gt;Node10</title>
+<g id="a_edge10_Node000001_Node000010"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M982.68,-97.41C969.82,-98.96 956.65,-100.55 944.07,-102.07"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="983.41,-100.85 992.91,-96.18 982.57,-93.9 983.41,-100.85"/>
-</a>
-</g>
-</g>
-<!-- Node11 -->
-<g id="Node000011" class="node">
-<title>Node11</title>
-<g id="a_Node000011"><a xlink:href="../../d0/d62/classAestra_1_1Audio_1_1ReverseAudioClipCommand.html#a96c8a9f625eea70ef256c3f46ead14fc" target="_top" xlink:title="Produce the replacement audio for this clip.">
-<polygon fill="white" stroke="#666666" points="946.5,-78 791.5,-78 791.5,-48 946.5,-48 946.5,-78"/>
-<text text-anchor="start" x="799.5" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::ReverseAudio</text>
-<text text-anchor="middle" x="869" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">ClipCommand::renderBuffer</text>
-</a>
-</g>
-</g>
-<!-- Node1&#45;&gt;Node11 -->
-<g id="edge11_Node000001_Node000011" class="edge">
-<title>Node1&#45;&gt;Node11</title>
-<g id="a_edge11_Node000001_Node000011"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M982.88,-76.61C970.85,-75.16 958.55,-73.68 946.7,-72.25"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="982.57,-80.1 992.91,-77.82 983.41,-73.15 982.57,-80.1"/>
 </a>
 </g>
 </g>
 <!-- Node12 -->
 <g id="Node000012" class="node">
 <title>Node12</title>
-<g id="a_Node000012"><a xlink:href="../../dd/dde/classAestra_1_1Audio_1_1CommitAudioClipEditsCommand.html#a3e074459ab4eaf54e0750ecad0c25aa8" target="_top" xlink:title="Produce the replacement audio for this clip.">
-<polygon fill="white" stroke="#666666" points="957,-30 781,-30 781,0 957,0 957,-30"/>
-<text text-anchor="start" x="789" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::CommitAudio</text>
-<text text-anchor="middle" x="869" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">ClipEditsCommand::renderBuffer</text>
+<g id="a_Node000012"><a xlink:href="../../d0/d62/classAestra_1_1Audio_1_1ReverseAudioClipCommand.html#a96c8a9f625eea70ef256c3f46ead14fc" target="_top" xlink:title="Produce the replacement audio for this clip.">
+<polygon fill="white" stroke="#666666" points="946.5,-78 791.5,-78 791.5,-48 946.5,-48 946.5,-78"/>
+<text text-anchor="start" x="799.5" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::ReverseAudio</text>
+<text text-anchor="middle" x="869" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">ClipCommand::renderBuffer</text>
 </a>
 </g>
 </g>
@@ -135,6 +116,25 @@ var sectionId = 'dynsection-12';
 <g id="edge12_Node000001_Node000012" class="edge">
 <title>Node1&#45;&gt;Node12</title>
 <g id="a_edge12_Node000001_Node000012"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M982.88,-76.61C970.85,-75.16 958.55,-73.68 946.7,-72.25"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="982.57,-80.1 992.91,-77.82 983.41,-73.15 982.57,-80.1"/>
+</a>
+</g>
+</g>
+<!-- Node13 -->
+<g id="Node000013" class="node">
+<title>Node13</title>
+<g id="a_Node000013"><a xlink:href="../../dd/dde/classAestra_1_1Audio_1_1CommitAudioClipEditsCommand.html#a3e074459ab4eaf54e0750ecad0c25aa8" target="_top" xlink:title="Produce the replacement audio for this clip.">
+<polygon fill="white" stroke="#666666" points="957,-30 781,-30 781,0 957,0 957,-30"/>
+<text text-anchor="start" x="789" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::CommitAudio</text>
+<text text-anchor="middle" x="869" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">ClipEditsCommand::renderBuffer</text>
+</a>
+</g>
+</g>
+<!-- Node1&#45;&gt;Node13 -->
+<g id="edge13_Node000001_Node000013" class="edge">
+<title>Node1&#45;&gt;Node13</title>
+<g id="a_edge13_Node000001_Node000013"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M1027.87,-67.78C1006.92,-58.41 980.89,-47.37 957,-39 947.98,-35.84 938.32,-32.82 928.83,-30.06"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="1026.56,-71.03 1037.11,-71.96 1029.44,-64.65 1026.56,-71.03"/>
 </a>
@@ -159,20 +159,20 @@ var sectionId = 'dynsection-12';
 </a>
 </g>
 </g>
-<!-- Node8 -->
-<g id="Node000008" class="node">
-<title>Node8</title>
-<g id="a_Node000008"><a xlink:href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a053a4811d93fb0e055bb0e745126e404" target="_top" xlink:title="Block the calling NON&#45;AUDIO thread until all queued prefilter jobs are done, then apply them.">
+<!-- Node9 -->
+<g id="Node000009" class="node">
+<title>Node9</title>
+<g id="a_Node000009"><a xlink:href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a053a4811d93fb0e055bb0e745126e404" target="_top" xlink:title="Block the calling NON&#45;AUDIO thread until all queued prefilter jobs are done, then apply them.">
 <polygon fill="white" stroke="#666666" points="736,-174 580,-174 580,-144 736,-144 736,-174"/>
 <text text-anchor="start" x="588" y="-162" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackManager</text>
 <text text-anchor="middle" x="658" y="-151" font-family="Helvetica,sans-Serif" font-size="10.00">::waitForClipPrefilters</text>
 </a>
 </g>
 </g>
-<!-- Node2&#45;&gt;Node8 -->
-<g id="edge8_Node000002_Node000008" class="edge">
-<title>Node2&#45;&gt;Node8</title>
-<g id="a_edge8_Node000002_Node000008"><a xlink:title=" ">
+<!-- Node2&#45;&gt;Node9 -->
+<g id="edge9_Node000002_Node000009" class="edge">
+<title>Node2&#45;&gt;Node9</title>
+<g id="a_edge9_Node000002_Node000009"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M780.66,-159C765.92,-159 750.72,-159 736.26,-159"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="780.77,-162.5 790.77,-159 780.77,-155.5 780.77,-162.5"/>
 </a>
@@ -263,20 +263,39 @@ var sectionId = 'dynsection-12';
 </a>
 </g>
 </g>
-<!-- Node10 -->
-<g id="Node000010" class="node">
-<title>Node10</title>
-<g id="a_Node000010"><a xlink:href="../../db/dd1/classAestra_1_1Audio_1_1RenderAudioClipCommand.html#ac9aa69760b9cd441d6a6d15af5aa19d5" target="_top" xlink:title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe...">
+<!-- Node8 -->
+<g id="Node000008" class="node">
+<title>Node8</title>
+<g id="a_Node000008"><a xlink:href="../../db/d60/classAestraContent.html#a540998ede72de460fd746a8f6d4f4d60" target="_top" xlink:title="The whole project&#39;s mix, rendered offline into memory (a version&#39;s bounce). False when there is nothi...">
+<polygon fill="white" stroke="#666666" points="145.5,-198 3.5,-198 3.5,-168 145.5,-168 145.5,-198"/>
+<text text-anchor="start" x="11.5" y="-186" font-family="Helvetica,sans-Serif" font-size="10.00">AestraContent::renderMix</text>
+<text text-anchor="middle" x="74.5" y="-175" font-family="Helvetica,sans-Serif" font-size="10.00">ToBuffer</text>
+</a>
+</g>
+</g>
+<!-- Node7&#45;&gt;Node8 -->
+<g id="edge8_Node000007_Node000008" class="edge">
+<title>Node7&#45;&gt;Node8</title>
+<g id="a_edge8_Node000007_Node000008"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M174.74,-183C165.03,-183 155.23,-183 145.77,-183"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="174.82,-186.5 184.82,-183 174.82,-179.5 174.82,-186.5"/>
+</a>
+</g>
+</g>
+<!-- Node11 -->
+<g id="Node000011" class="node">
+<title>Node11</title>
+<g id="a_Node000011"><a xlink:href="../../db/dd1/classAestra_1_1Audio_1_1RenderAudioClipCommand.html#ac9aa69760b9cd441d6a6d15af5aa19d5" target="_top" xlink:title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe...">
 <polygon fill="white" stroke="#666666" points="733,-126 583,-126 583,-96 733,-96 733,-126"/>
 <text text-anchor="start" x="591" y="-114" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::RenderAudio</text>
 <text text-anchor="middle" x="658" y="-103" font-family="Helvetica,sans-Serif" font-size="10.00">ClipCommand::redo</text>
 </a>
 </g>
 </g>
-<!-- Node9&#45;&gt;Node10 -->
-<g id="edge10_Node000009_Node000010" class="edge">
-<title>Node9&#45;&gt;Node10</title>
-<g id="a_edge10_Node000009_Node000010"><a xlink:title=" ">
+<!-- Node10&#45;&gt;Node11 -->
+<g id="edge11_Node000010_Node000011" class="edge">
+<title>Node10&#45;&gt;Node11</title>
+<g id="a_edge11_Node000010_Node000011"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M783.44,-111C766.75,-111 749.35,-111 733.03,-111"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="783.73,-114.5 793.73,-111 783.73,-107.5 783.73,-114.5"/>
 </a>

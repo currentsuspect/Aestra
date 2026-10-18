@@ -1,7 +1,7 @@
 <map id="AestraUI::UIMixerStrip" name="AestraUI::UIMixerStrip">
-<area shape="rect" id="Node000001" title="Minimal mixer channel strip: header + meter + fader." alt="" coords="729,309,896,334"/>
+<area shape="rect" id="Node000001" title="Minimal mixer channel strip: header + meter + fader." alt="" coords="729,277,896,302"/>
 <area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="375,91,560,117"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="575,113,642,132,676,146,707,165,744,199,774,239,795,278,809,308,804,310,791,280,769,242,740,202,704,169,674,151,641,137,573,118"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="574,107,642,122,675,135,707,151,742,180,771,215,808,275,803,278,767,218,738,184,704,156,673,140,640,127,573,113"/>
 <area shape="rect" id="Node000003" title=" " alt="" coords="5,5,225,45"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="240,23,296,29,351,41,406,64,449,89,446,94,403,69,350,47,295,35,239,29"/>
 <area shape="rect" id="Node000004" title=" " alt="" coords="35,84,195,124"/>
@@ -9,17 +9,15 @@
 <area shape="rect" id="Node000005" title=" " alt="" coords="36,148,195,188"/>
 <area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="208,159,278,150,350,136,374,127,416,114,417,119,376,132,351,141,279,156,209,164"/>
 <area shape="rect" id="Node000006" title=" " alt="" coords="385,141,549,181"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="563,177,635,199,707,230,735,248,762,269,801,307,798,310,758,273,732,252,704,234,633,204,562,183"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="564,180,635,200,706,226,755,250,794,274,791,279,752,255,704,230,633,205,562,185"/>
 <area shape="rect" id="Node000007" title=" " alt="" coords="391,205,543,245"/>
-<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="558,241,706,279,782,306,780,311,705,284,556,246"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="558,239,706,267,745,274,744,279,705,272,557,244"/>
 <area shape="rect" id="Node000008" title=" " alt="" coords="392,269,543,309"/>
-<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="557,295,730,311,729,316,556,300"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="557,287,729,287,729,292,557,292"/>
 <area shape="rect" id="Node000009" title=" " alt="" coords="392,333,543,373"/>
-<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="556,343,705,329,729,327,729,332,706,335,557,348"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="556,334,705,307,744,299,745,305,706,312,557,340"/>
 <area shape="rect" id="Node000010" title=" " alt="" coords="391,397,543,437"/>
-<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="557,398,629,382,705,361,782,332,784,337,706,367,631,387,558,404"/>
-<area shape="rect" id="Node000011" title=" " alt="" coords="376,461,559,501"/>
-<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="571,460,638,441,704,412,733,394,759,372,798,332,802,336,763,376,736,398,707,417,640,446,573,465"/>
-<area shape="rect" id="Node000012" title=" " alt="" coords="392,525,543,565"/>
-<area shape="poly" id="edge11_Node000001_Node000012" title=" " alt="" coords="555,534,631,514,669,499,704,478,740,443,769,402,791,363,804,333,809,335,795,366,774,405,744,447,707,482,672,503,633,519,557,539"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="556,396,629,376,704,350,752,325,792,300,794,304,755,329,706,354,631,382,557,402"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="392,461,543,501"/>
+<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="556,465,631,444,669,429,704,410,736,384,764,354,802,301,806,304,768,357,740,388,707,414,671,434,633,450,557,471"/>
 </map>

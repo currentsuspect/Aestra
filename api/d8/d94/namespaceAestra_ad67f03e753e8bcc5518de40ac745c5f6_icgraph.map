@@ -1,0 +1,6 @@
+<map id="Aestra::legacyMixerSettingsPath" name="Aestra::legacyMixerSettingsPath">
+<area shape="rect" id="Node000001" title="The legacy path for this user: HOME, then USERPROFILE and HOMEDRIVE+HOMEPATH on Windows (HOME alone i..." alt="" coords="207,29,439,55"/>
+<area shape="poly" id="edge2_Node000001_Node000001" title=" " alt="" coords="366,20,354,11,323,8,297,10,283,15,281,20,288,27,284,31,275,21,280,11,296,5,323,3,356,7,369,16"/>
+<area shape="rect" id="Node000002" href="$d6/d43/classAestraApp.html#a12653cc93e99665a6fe3e795f6724058" title="Initialize all subsystems." alt="" coords="5,29,159,55"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="193,45,159,45,159,39,193,39"/>
+</map>

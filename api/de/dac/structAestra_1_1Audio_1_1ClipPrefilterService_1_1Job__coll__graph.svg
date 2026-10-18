@@ -120,7 +120,8 @@ var sectionId = 'dynsection-0';
 <polygon fill="#9a32cd" stroke="#9a32cd" points="112.22,-231.75 115.33,-241.88 119.21,-232.02 112.22,-231.75"/>
 </a>
 </g>
-<text text-anchor="middle" x="147.5" y="-133.5" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey"> targetRate</text>
+<text text-anchor="middle" x="149" y="-139" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey"> decimation</text>
+<text text-anchor="middle" x="149" y="-128" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">targetRate</text>
 </g>
 <!-- Node3&#45;&gt;Node5 -->
 <g id="edge16_Node000005_Node000003" class="edge">

@@ -1,0 +1,7 @@
+<map id="Aestra::versionStepEntries" name="Aestra::versionStepEntries">
+<area shape="rect" id="Node000001" title="What the Versions dock reads from the command history (SPEC&#45;017): the open version&#39;s steps,..." alt="" coords="5,45,200,70"/>
+<area shape="rect" id="Node000002" href="$df/d31/classAestra_1_1Audio_1_1CommandHistory.html#a0588da718c56f2b9e9a1f84f9597f85d" title="Get the redo stack (most recent first)." alt="" coords="248,5,479,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="200,43,234,39,235,44,200,48"/>
+<area shape="rect" id="Node000003" href="$df/d31/classAestra_1_1Audio_1_1CommandHistory.html#ad0016c8f0d963296b0b2c157632c5d0e" title="Get the undo stack (most recent first)." alt="" coords="248,69,479,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="200,67,235,71,234,76,200,72"/>
+</map>

@@ -1,7 +1,9 @@
 <map id="Aestra::Audio::TrackManager::playPatternInArsenal" name="Aestra::Audio::TrackManager::playPatternInArsenal">
-<area shape="rect" id="Node000001" title="Start Arsenal playback for the supplied pattern." alt="" coords="285,37,493,77"/>
+<area shape="rect" id="Node000001" title="Start Arsenal playback for the supplied pattern." alt="" coords="285,69,493,109"/>
 <area shape="rect" id="Node000002" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#aacf1d628dbee0767beabeebf50da6148" title="Play pressed in Arsenal." alt="" coords="5,5,237,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="271,46,237,42,238,37,272,41"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="291,69,205,48,206,43,292,63"/>
 <area shape="rect" id="Node000003" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a03084991ebcfdc0bd7a61b86b0839191" title="A pattern clip previews from the Timeline: pattern playback without an Arsenal focus." alt="" coords="8,69,235,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="272,74,235,78,234,73,271,69"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="271,92,235,92,235,87,271,87"/>
+<area shape="rect" id="Node000004" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a70f15085c9ec7f1d44e14728dbe98e5e" title="The Arsenal&#39;s active pattern changed (a scene chip, the pattern browser)." alt="" coords="6,133,237,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="292,115,206,136,205,131,291,110"/>
 </map>

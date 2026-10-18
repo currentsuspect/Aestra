@@ -1,0 +1,5 @@
+<map id="Aestra::bindPluginBrowserStore" name="Aestra::bindPluginBrowserStore">
+<area shape="rect" id="Node000001" title="Binds the plugin browser&#39;s favorites and recents to the UI&#45;state store (V8&#45;C14, V8&#45;S5)." alt="" coords="5,5,199,45"/>
+<area shape="rect" id="Node000002" href="$d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#af320540336117b5f51b2b44aa4770433" title="Same arrangement as favorites: a stored list wins; without a provider recents last for the session." alt="" coords="247,5,461,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="199,23,233,23,233,28,199,28"/>
+</map>

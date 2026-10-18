@@ -91,7 +91,7 @@ $(function() {
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-0-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d4/d10/structTakeManager_1_1Manifest__coll__graph.svg" width="571" height="478"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d4/d10/structTakeManager_1_1Manifest__coll__graph.svg" width="100%" height="600"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 <center><span class="legend">[<a href="../../graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
@@ -102,6 +102,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ace9f7d3a0cb864d5d140d266f9e1af52" id="r_ace9f7d3a0cb864d5d140d266f9e1af52"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="../../d6/d74/structTakeManager_1_1TakeEntry.html">TakeEntry</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d15/structTakeManager_1_1Manifest.html#ace9f7d3a0cb864d5d140d266f9e1af52">activeTake</a> () const</td></tr>
 <tr class="memdesc:ace9f7d3a0cb864d5d140d266f9e1af52"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the currently active take, or nullptr if none.  <br /></td></tr>
 <tr class="separator:ace9f7d3a0cb864d5d140d266f9e1af52"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a78d99827ce20aa29f99430ca9832e8b8" id="r_a78d99827ce20aa29f99430ca9832e8b8"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d15/structTakeManager_1_1Manifest.html#a78d99827ce20aa29f99430ca9832e8b8">branches</a> () const</td></tr>
+<tr class="memdesc:a78d99827ce20aa29f99430ca9832e8b8"><td class="mdescLeft">&#160;</td><td class="mdescRight">The distinct branch names, in the order their first version appears.  <br /></td></tr>
+<tr class="separator:a78d99827ce20aa29f99430ca9832e8b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
@@ -124,7 +127,7 @@ Public Attributes</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>The on-disk manifest listing all takes and the active selection. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00029">29</a> of file <a class="el" href="../../d8/d4b/TakeManager_8h_source.html">TakeManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00049">49</a> of file <a class="el" href="../../d8/d4b/TakeManager_8h_source.html">TakeManager.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="ace9f7d3a0cb864d5d140d266f9e1af52" name="ace9f7d3a0cb864d5d140d266f9e1af52"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ace9f7d3a0cb864d5d140d266f9e1af52">&#9670;&#160;</a></span>activeTake()</h2>
@@ -143,16 +146,39 @@ Public Attributes</h2></td></tr>
 
 <p>Returns the currently active take, or nullptr if none. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00225">225</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00250">250</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00346">TakeManager::ensureManifest()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00415">TakeManager::ensureManifest()</a>, <a class="el" href="../../dd/d16/VersionPicker_8h_source.html#l00049">Aestra::VersionPicker::entries()</a>, and <a class="el" href="../../d2/db3/VersionsPanelWiring_8h_source.html#l00046">Aestra::unsavedStepCount()</a>.</p>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-1-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-1-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../da/d15/structTakeManager_1_1Manifest_ace9f7d3a0cb864d5d140d266f9e1af52_icgraph.svg" width="100%" height="364"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../da/d15/structTakeManager_1_1Manifest_ace9f7d3a0cb864d5d140d266f9e1af52_icgraph.svg" width="100%" height="449"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
+
+</div>
+</div>
+<a id="a78d99827ce20aa29f99430ca9832e8b8" name="a78d99827ce20aa29f99430ca9832e8b8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a78d99827ce20aa29f99430ca9832e8b8">&#9670;&#160;</a></span>branches()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; std::string &gt; TakeManager::Manifest::branches </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>The distinct branch names, in the order their first version appears. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00254">254</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00041">TakeManager::TakeEntry::branch</a>.</p>
 
 </div>
 </div>
@@ -175,17 +201,17 @@ Public Attributes</h2></td></tr>
 <p>Look up a take by its unique ID. </p>
 <p>Returns nullptr if not found. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00216">216</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00241">241</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00019">TakeManager::TakeEntry::id</a>, and <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00034">takes</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00019">TakeManager::TakeEntry::id</a>, and <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00054">takes</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00597">TakeManager::deleteTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00543">TakeManager::duplicateTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00346">TakeManager::ensureManifest()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00254">TakeManager::loadManifest()</a>, and <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00475">TakeManager::setActiveTake()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00508">TakeManager::createVersion()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00738">TakeManager::deleteTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00682">TakeManager::duplicateTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00415">TakeManager::ensureManifest()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00288">TakeManager::loadManifest()</a>, and <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00614">TakeManager::setActiveTake()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-2-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../da/d15/structTakeManager_1_1Manifest_ac9df3e5450e4f9aee685e9814437d01f_icgraph.svg" width="100%" height="477"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../da/d15/structTakeManager_1_1Manifest_ac9df3e5450e4f9aee685e9814437d01f_icgraph.svg" width="100%" height="600"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -205,9 +231,9 @@ Public Attributes</h2></td></tr>
 
 <p>ID of the currently active take. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00033">33</a> of file <a class="el" href="../../d8/d4b/TakeManager_8h_source.html">TakeManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00053">53</a> of file <a class="el" href="../../d8/d4b/TakeManager_8h_source.html">TakeManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00434">TakeManager::createTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00597">TakeManager::deleteTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00346">TakeManager::ensureManifest()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00254">TakeManager::loadManifest()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00402">TakeManager::saveActiveTake()</a>, and <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00475">TakeManager::setActiveTake()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00508">TakeManager::createVersion()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00738">TakeManager::deleteTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00415">TakeManager::ensureManifest()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00288">TakeManager::loadManifest()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00471">TakeManager::saveActiveTake()</a>, and <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00614">TakeManager::setActiveTake()</a>.</p>
 
 </div>
 </div>
@@ -225,9 +251,9 @@ Public Attributes</h2></td></tr>
 
 <p>Error description when ok is false. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00031">31</a> of file <a class="el" href="../../d8/d4b/TakeManager_8h_source.html">TakeManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00051">51</a> of file <a class="el" href="../../d8/d4b/TakeManager_8h_source.html">TakeManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00597">TakeManager::deleteTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00543">TakeManager::duplicateTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00346">TakeManager::ensureManifest()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00504">TakeManager::renameTake()</a>, and <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00475">TakeManager::setActiveTake()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00597">TakeManager::addVersionNote()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00738">TakeManager::deleteTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00682">TakeManager::duplicateTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00415">TakeManager::ensureManifest()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00643">TakeManager::renameTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00614">TakeManager::setActiveTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00576">TakeManager::setVersionBounce()</a>, and <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00560">TakeManager::setVersionSteps()</a>.</p>
 
 </div>
 </div>
@@ -245,9 +271,9 @@ Public Attributes</h2></td></tr>
 
 <p>True if the manifest loaded successfully. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00030">30</a> of file <a class="el" href="../../d8/d4b/TakeManager_8h_source.html">TakeManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00050">50</a> of file <a class="el" href="../../d8/d4b/TakeManager_8h_source.html">TakeManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00597">TakeManager::deleteTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00543">TakeManager::duplicateTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00346">TakeManager::ensureManifest()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00254">TakeManager::loadManifest()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00504">TakeManager::renameTake()</a>, and <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00475">TakeManager::setActiveTake()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00597">TakeManager::addVersionNote()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00738">TakeManager::deleteTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00682">TakeManager::duplicateTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00415">TakeManager::ensureManifest()</a>, <a class="el" href="../../dd/d16/VersionPicker_8h_source.html#l00049">Aestra::VersionPicker::entries()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00288">TakeManager::loadManifest()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00643">TakeManager::renameTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00614">TakeManager::setActiveTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00576">TakeManager::setVersionBounce()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00560">TakeManager::setVersionSteps()</a>, <a class="el" href="../../d2/db3/VersionsPanelWiring_8h_source.html#l00046">Aestra::unsavedStepCount()</a>, and <a class="el" href="../../dc/d69/AuditionLibrary_8h_source.html#l00046">Aestra::AuditionLibrary::versionItems()</a>.</p>
 
 </div>
 </div>
@@ -265,9 +291,9 @@ Public Attributes</h2></td></tr>
 
 <p>Absolute path to the project directory. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00032">32</a> of file <a class="el" href="../../d8/d4b/TakeManager_8h_source.html">TakeManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00052">52</a> of file <a class="el" href="../../d8/d4b/TakeManager_8h_source.html">TakeManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00346">TakeManager::ensureManifest()</a>, and <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00254">TakeManager::loadManifest()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00415">TakeManager::ensureManifest()</a>, and <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00288">TakeManager::loadManifest()</a>.</p>
 
 </div>
 </div>
@@ -285,9 +311,9 @@ Public Attributes</h2></td></tr>
 
 <p>All takes in this project. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00034">34</a> of file <a class="el" href="../../d8/d4b/TakeManager_8h_source.html">TakeManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00054">54</a> of file <a class="el" href="../../d8/d4b/TakeManager_8h_source.html">TakeManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00434">TakeManager::createTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00597">TakeManager::deleteTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00543">TakeManager::duplicateTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00346">TakeManager::ensureManifest()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00216">findTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00254">TakeManager::loadManifest()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00504">TakeManager::renameTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00402">TakeManager::saveActiveTake()</a>, and <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00475">TakeManager::setActiveTake()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00597">TakeManager::addVersionNote()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00508">TakeManager::createVersion()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00738">TakeManager::deleteTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00682">TakeManager::duplicateTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00415">TakeManager::ensureManifest()</a>, <a class="el" href="../../dd/d16/VersionPicker_8h_source.html#l00049">Aestra::VersionPicker::entries()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00241">findTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00288">TakeManager::loadManifest()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00643">TakeManager::renameTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00471">TakeManager::saveActiveTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00614">TakeManager::setActiveTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00576">TakeManager::setVersionBounce()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00560">TakeManager::setVersionSteps()</a>, and <a class="el" href="../../dc/d69/AuditionLibrary_8h_source.html#l00046">Aestra::AuditionLibrary::versionItems()</a>.</p>
 
 </div>
 </div>

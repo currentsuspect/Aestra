@@ -92,7 +92,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="preprocessor">#include &lt;cstdio&gt;</span></div>
 <div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="preprocessor">#include &lt;cstring&gt;</span></div>
 <div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span> </div>
-<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="keyword">namespace </span>Aestra {</div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d8/d94/namespaceAestra.html">Aestra</a> {</div>
 <div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="keyword">namespace </span>Audio {</div>
 <div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span> </div>
 <div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="keyword">namespace </span>{</div>
@@ -249,11 +249,11 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>}</div>
 <div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span> </div>
 <div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span><span class="keywordtype">bool</span> hashFromHex(<span class="keyword">const</span> std::string&amp; hex, uint64_t&amp; out) {</div>
-<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>    <span class="keywordflow">if</span> (hex.size() != 16) {</div>
+<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>    <span class="keywordflow">if</span> (<a class="code hl_function" href="../../d3/d6c/namespaceAestra_1_1VersionLanes.html#a1fbf5c6c0e167e46b4fcc46c886e772e">hex</a>.size() != 16) {</div>
 <div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
 <div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>    }</div>
 <div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span>    uint64_t v = 0;</div>
-<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keywordtype">char</span> ch : hex) {</div>
+<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keywordtype">char</span> ch : <a class="code hl_function" href="../../d3/d6c/namespaceAestra_1_1VersionLanes.html#a1fbf5c6c0e167e46b4fcc46c886e772e">hex</a>) {</div>
 <div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>        v &lt;&lt;= 4;</div>
 <div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>        <span class="keywordflow">if</span> (ch &gt;= <span class="charliteral">&#39;0&#39;</span> &amp;&amp; ch &lt;= <span class="charliteral">&#39;9&#39;</span>) {</div>
 <div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>            v |= <span class="keyword">static_cast&lt;</span>uint64_t<span class="keyword">&gt;</span>(ch - <span class="charliteral">&#39;0&#39;</span>);</div>
@@ -269,6 +269,8 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span> </div>
 <div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>} <span class="comment">// namespace Audio</span></div>
 <div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="ttc" id="anamespaceAestra_1_1VersionLanes_html_a1fbf5c6c0e167e46b4fcc46c886e772e"><div class="ttname"><a href="../../d3/d6c/namespaceAestra_1_1VersionLanes.html#a1fbf5c6c0e167e46b4fcc46c886e772e">Aestra::VersionLanes::hex</a></div><div class="ttdeci">uint32_t hex(int lane)</div><div class="ttdoc">A lane's colour as 0xAARRGGBB: violet for the main mix, then cyan, amber, pink, lime,...</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d43/VersionLanes_8h_source.html#l00030">VersionLanes.h:30</a></div></div>
+<div class="ttc" id="anamespaceAestra_html"><div class="ttname"><a href="../../d8/d94/namespaceAestra.html">Aestra</a></div><div class="ttdoc">Main application class.</div><div class="ttdef"><b>Definition</b> <a href="../../d7/d7b/AestraAssert_8h_source.html#l00009">AestraAssert.h:9</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

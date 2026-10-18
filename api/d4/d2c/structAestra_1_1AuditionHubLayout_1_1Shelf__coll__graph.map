@@ -1,0 +1,14 @@
+<map id="Aestra::AuditionHubLayout::Shelf" name="Aestra::AuditionHubLayout::Shelf">
+<area shape="rect" id="Node000001" title=" " alt="" coords="176,328,372,368"/>
+<area shape="rect" id="Node000002" href="$da/d4e/structAestraUI_1_1NUIRect.html" title=" " alt="" coords="226,137,365,163"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="316,173,322,186,322,202,305,273,285,329,280,327,300,271,317,201,317,187,311,175"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="127,225,290,265"/>
+<area shape="poly" id="edge4_Node000004_Node000002" title=" " alt="" coords="272,173,256,188,224,227,220,223,252,185,268,169"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="270,5,321,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="298,44,298,137,293,137,293,44"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="231,275,264,326,260,329,226,278"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="5,137,135,163"/>
+<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="75,176,79,189,87,200,106,215,128,226,126,231,103,219,83,203,75,191,70,177"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="51,5,89,31"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="73,44,73,137,67,137,67,44"/>
+</map>

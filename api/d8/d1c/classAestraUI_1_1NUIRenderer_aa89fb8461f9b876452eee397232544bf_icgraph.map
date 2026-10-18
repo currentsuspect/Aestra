@@ -1,5 +1,9 @@
 <map id="AestraUI::NUIRenderer::drawTextCentered" name="AestraUI::NUIRenderer::drawTextCentered">
-<area shape="rect" id="Node000001" title="Draw text centered within a rectangle." alt="" coords="196,5,365,45"/>
-<area shape="rect" id="Node000002" href="$d8/d10/namespaceAestraUI_1_1EditorKit.html#a2b98b886407d052270f1a636f14f3e70" title="The standard rotary knob: inset disc, track arc, value arc, needle, centre well, then the label and t..." alt="" coords="5,5,148,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="182,28,148,28,148,23,182,23"/>
+<area shape="rect" id="Node000001" title="Draw text centered within a rectangle." alt="" coords="264,47,433,87"/>
+<area shape="rect" id="Node000002" href="$d8/d94/namespaceAestra.html#aa45d0bc74271e0e911e25da707a86b72" title="The FIT | SCROLL segmented control in the command header; the active mode is lightly filled." alt="" coords="5,5,216,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="250,50,172,33,173,28,251,44"/>
+<area shape="rect" id="Node000003" href="$d8/d94/namespaceAestra.html#aba911e105738a6bf5a4ab5bb9f8a7a2f" title="A length control as plain text (FD&#45;27: the header reads like a sentence, not a row of boxes): the val..." alt="" coords="9,55,212,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="250,70,212,70,212,65,250,65"/>
+<area shape="rect" id="Node000004" href="$d8/d10/namespaceAestraUI_1_1EditorKit.html#a2b98b886407d052270f1a636f14f3e70" title="The standard rotary knob: inset disc, track arc, value arc, needle, centre well, then the label and t..." alt="" coords="39,105,182,145"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="252,93,183,110,182,105,251,88"/>
 </map>

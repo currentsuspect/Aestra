@@ -1,0 +1,9 @@
+<map id="TakeManager::TakeEntry::Note" name="TakeManager::TakeEntry::Note">
+<area shape="rect" id="Node000001" title="A timestamped note on a version." alt="" coords="5,183,184,223"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="24,95,99,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="73,132,90,182,85,183,67,134"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="123,95,210,120"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="152,133,111,184,107,181,147,129"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="97,5,236,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="169,59,169,94,164,94,164,59"/>
+</map>

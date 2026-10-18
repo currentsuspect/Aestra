@@ -102,32 +102,13 @@ var sectionId = 'dynsection-44';
 </a>
 </g>
 </g>
-<!-- Node7 -->
-<g id="Node000007" class="node">
-<title>Node7</title>
-<g id="a_Node000007"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a4ad10b6d3c3d40e7490eca3f02a6c676" target="_top" xlink:title="Set the playhead position in beats.">
-<polygon fill="white" stroke="#666666" points="563.5,-126 414.5,-126 414.5,-96 563.5,-96 563.5,-126"/>
-<text text-anchor="start" x="422.5" y="-114" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
-<text text-anchor="middle" x="489" y="-103" font-family="Helvetica,sans-Serif" font-size="10.00">::setPlayhead</text>
-</a>
-</g>
-</g>
-<!-- Node1&#45;&gt;Node7 -->
-<g id="edge7_Node000001_Node000007" class="edge">
-<title>Node1&#45;&gt;Node7</title>
-<g id="a_edge7_Node000001_Node000007"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M601.77,-111C589.06,-111 576.03,-111 563.57,-111"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="601.87,-114.5 611.87,-111 601.87,-107.5 601.87,-114.5"/>
-</a>
-</g>
-</g>
 <!-- Node8 -->
 <g id="Node000008" class="node">
 <title>Node8</title>
-<g id="a_Node000008"><a xlink:href="../../db/d60/classAestraContent.html#ab90c78e0fe24a2ff739817b3c4a4440d" target="_top" xlink:title="Create the Arsenal and sample&#45;editor overlays.">
-<polygon fill="white" stroke="#666666" points="567,-78 411,-78 411,-48 567,-48 567,-78"/>
-<text text-anchor="start" x="419" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">AestraContent::setupArsenal</text>
-<text text-anchor="middle" x="489" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">Panels</text>
+<g id="a_Node000008"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a4ad10b6d3c3d40e7490eca3f02a6c676" target="_top" xlink:title="Set the playhead position in beats.">
+<polygon fill="white" stroke="#666666" points="563.5,-126 414.5,-126 414.5,-96 563.5,-96 563.5,-126"/>
+<text text-anchor="start" x="422.5" y="-114" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
+<text text-anchor="middle" x="489" y="-103" font-family="Helvetica,sans-Serif" font-size="10.00">::setPlayhead</text>
 </a>
 </g>
 </g>
@@ -135,18 +116,18 @@ var sectionId = 'dynsection-44';
 <g id="edge8_Node000001_Node000008" class="edge">
 <title>Node1&#45;&gt;Node8</title>
 <g id="a_edge8_Node000001_Node000008"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M614.46,-93.56C593.7,-88.46 571.19,-82.93 551.1,-78"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="613.63,-96.96 624.18,-95.94 615.3,-90.16 613.63,-96.96"/>
+<path fill="none" stroke="#63b8ff" d="M601.77,-111C589.06,-111 576.03,-111 563.57,-111"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="601.87,-114.5 611.87,-111 601.87,-107.5 601.87,-114.5"/>
 </a>
 </g>
 </g>
 <!-- Node9 -->
 <g id="Node000009" class="node">
 <title>Node9</title>
-<g id="a_Node000009"><a xlink:href="../../db/d60/classAestraContent.html#a3f46086b14acbf0007e9c0235a2f7c49" target="_top" xlink:title="Stop playback based on the current focus mode.">
-<polygon fill="white" stroke="#666666" points="576,-30 402,-30 402,0 576,0 576,-30"/>
-<text text-anchor="start" x="410" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">AestraContent::stopFromCurrent</text>
-<text text-anchor="middle" x="489" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Focus</text>
+<g id="a_Node000009"><a xlink:href="../../db/d60/classAestraContent.html#ab90c78e0fe24a2ff739817b3c4a4440d" target="_top" xlink:title="Create the Arsenal and sample&#45;editor overlays.">
+<polygon fill="white" stroke="#666666" points="567,-78 411,-78 411,-48 567,-48 567,-78"/>
+<text text-anchor="start" x="419" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">AestraContent::setupArsenal</text>
+<text text-anchor="middle" x="489" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">Panels</text>
 </a>
 </g>
 </g>
@@ -154,6 +135,25 @@ var sectionId = 'dynsection-44';
 <g id="edge9_Node000001_Node000009" class="edge">
 <title>Node1&#45;&gt;Node9</title>
 <g id="a_edge9_Node000001_Node000009"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M614.46,-93.56C593.7,-88.46 571.19,-82.93 551.1,-78"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="613.63,-96.96 624.18,-95.94 615.3,-90.16 613.63,-96.96"/>
+</a>
+</g>
+</g>
+<!-- Node10 -->
+<g id="Node000010" class="node">
+<title>Node10</title>
+<g id="a_Node000010"><a xlink:href="../../db/d60/classAestraContent.html#a3f46086b14acbf0007e9c0235a2f7c49" target="_top" xlink:title="Stop playback based on the current focus mode.">
+<polygon fill="white" stroke="#666666" points="576,-30 402,-30 402,0 576,0 576,-30"/>
+<text text-anchor="start" x="410" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">AestraContent::stopFromCurrent</text>
+<text text-anchor="middle" x="489" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Focus</text>
+</a>
+</g>
+</g>
+<!-- Node1&#45;&gt;Node10 -->
+<g id="edge10_Node000001_Node000010" class="edge">
+<title>Node1&#45;&gt;Node10</title>
+<g id="a_edge10_Node000001_Node000010"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M658.15,-89.55C636.8,-73.69 605.85,-52.58 576,-39 568.66,-35.66 560.76,-32.69 552.82,-30.07"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="656.31,-92.55 666.4,-95.77 660.52,-86.96 656.31,-92.55"/>
 </a>
@@ -225,19 +225,38 @@ var sectionId = 'dynsection-44';
 </a>
 </g>
 </g>
-<!-- Node10 -->
-<g id="Node000010" class="node">
-<title>Node10</title>
-<g id="a_Node000010"><a xlink:href="../../db/d60/classAestraContent.html#aa2d67aab8ab85aa5c68d72369b31278f" target="_top" xlink:title="Create the transport bar and wire it to the audio engine.">
+<!-- Node7 -->
+<g id="Node000007" class="node">
+<title>Node7</title>
+<g id="a_Node000007"><a xlink:href="../../db/d60/classAestraContent.html#a540998ede72de460fd746a8f6d4f4d60" target="_top" xlink:title="The whole project&#39;s mix, rendered offline into memory (a version&#39;s bounce). False when there is nothi...">
+<polygon fill="white" stroke="#666666" points="145.5,-150 3.5,-150 3.5,-120 145.5,-120 145.5,-150"/>
+<text text-anchor="start" x="11.5" y="-138" font-family="Helvetica,sans-Serif" font-size="10.00">AestraContent::renderMix</text>
+<text text-anchor="middle" x="74.5" y="-127" font-family="Helvetica,sans-Serif" font-size="10.00">ToBuffer</text>
+</a>
+</g>
+</g>
+<!-- Node6&#45;&gt;Node7 -->
+<g id="edge7_Node000006_Node000007" class="edge">
+<title>Node6&#45;&gt;Node7</title>
+<g id="a_edge7_Node000006_Node000007"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M186.59,-135C172.89,-135 158.89,-135 145.66,-135"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="186.99,-138.5 196.99,-135 186.99,-131.5 186.99,-138.5"/>
+</a>
+</g>
+</g>
+<!-- Node11 -->
+<g id="Node000011" class="node">
+<title>Node11</title>
+<g id="a_Node000011"><a xlink:href="../../db/d60/classAestraContent.html#aa2d67aab8ab85aa5c68d72369b31278f" target="_top" xlink:title="Create the transport bar and wire it to the audio engine.">
 <polygon fill="white" stroke="#666666" points="366,-24.5 185,-24.5 185,-5.5 366,-5.5 366,-24.5"/>
 <text text-anchor="middle" x="275.5" y="-12.5" font-family="Helvetica,sans-Serif" font-size="10.00">AestraContent::setupTransportBar</text>
 </a>
 </g>
 </g>
-<!-- Node9&#45;&gt;Node10 -->
-<g id="edge10_Node000009_Node000010" class="edge">
-<title>Node9&#45;&gt;Node10</title>
-<g id="a_edge10_Node000009_Node000010"><a xlink:title=" ">
+<!-- Node10&#45;&gt;Node11 -->
+<g id="edge11_Node000010_Node000011" class="edge">
+<title>Node10&#45;&gt;Node11</title>
+<g id="a_edge11_Node000010_Node000011"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M391.97,-15C383.4,-15 374.75,-15 366.23,-15"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="391.97,-18.5 401.97,-15 391.97,-11.5 391.97,-18.5"/>
 </a>

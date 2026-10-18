@@ -1,0 +1,7 @@
+<map id="AestraUI::PluginBrowserPanel::setRecentsProvider" name="AestraUI::PluginBrowserPanel::setRecentsProvider">
+<area shape="rect" id="Node000001" title="Same arrangement as favorites: a stored list wins; without a provider recents last for the session." alt="" coords="507,5,721,45"/>
+<area shape="rect" id="Node000002" href="$d8/d94/namespaceAestra.html#a45eb3908467dc73fc04211983acb882d" title="Binds the plugin browser&#39;s favorites and recents to the UI&#45;state store (V8&#45;C14, V8&#45;S5)." alt="" coords="265,5,459,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="493,28,459,28,459,23,493,23"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#af214284a167c0d4485e8c7849733eee2" title="Create the file/plugin/preview/pattern browser panels." alt="" coords="5,5,217,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="252,28,218,28,218,23,252,23"/>
+</map>

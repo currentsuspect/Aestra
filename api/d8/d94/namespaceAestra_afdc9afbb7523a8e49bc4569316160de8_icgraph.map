@@ -1,0 +1,7 @@
+<map id="Aestra::unsavedStepCount" name="Aestra::unsavedStepCount">
+<area shape="rect" id="Node000001" title="Steps made since the open version was saved: the history&#39;s depth beyond the steps the version recorde..." alt="" coords="241,29,436,55"/>
+<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="381,20,370,11,339,8,313,10,300,15,297,20,304,27,300,31,292,21,296,11,312,5,339,3,372,7,385,16"/>
+<area shape="rect" id="Node000002" href="$d8/d94/namespaceAestra.html#a8a9ece62269ea3c905b91fd46e29cc1c" title="Hands the dock its live data: the project&#39;s name, the open version&#39;s steps, the unsaved count,..." alt="" coords="5,29,193,55"/>
+<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="228,45,193,45,193,39,228,39"/>
+<area shape="poly" id="edge3_Node000002_Node000002" title=" " alt="" coords="142,20,131,11,99,8,74,10,60,15,58,20,65,27,61,31,52,21,57,11,73,5,99,3,133,7,145,16"/>
+</map>

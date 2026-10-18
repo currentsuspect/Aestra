@@ -11,9 +11,9 @@
 <!-- Node0 -->
 <g id="Node000000" class="node">
 <title>Node0</title>
-<g id="a_Node000000"><a xlink:href="d3/da8/classAestra_1_1Audio_1_1AudioExporter.html" target="_top" xlink:title="Offline audio export/render engine (v2.0)">
+<g id="a_Node000000"><a xlink:href="d0/d6d/structAestra_1_1Audio_1_1AudioAnalysis.html" target="_top" xlink:title="What a piece of audio measures as: loudness, peaks, stereo image, spectrum balance.">
 <polygon fill="white" stroke="#666666" points="157,-19 0,-19 0,0 157,0 157,-19"/>
-<text text-anchor="middle" x="78.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioExporter</text>
+<text text-anchor="middle" x="78.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioAnalysis</text>
 </a>
 </g>
 </g>

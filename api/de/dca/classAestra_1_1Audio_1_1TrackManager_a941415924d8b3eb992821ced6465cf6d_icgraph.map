@@ -1,15 +1,19 @@
 <map id="Aestra::Audio::TrackManager::getTrack" name="Aestra::Audio::TrackManager::getTrack">
-<area shape="rect" id="Node000001" title="Find a Track by stable ID." alt="" coords="517,133,725,173"/>
+<area shape="rect" id="Node000001" title="Find a Track by stable ID." alt="" coords="517,165,725,205"/>
 <area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a262ce40712294e22aa79f9d9119c2f6d" title="Attach an existing lane to a Track (lane created after the track, e.g." alt="" coords="261,5,469,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="580,127,528,93,468,60,438,48,440,43,470,55,531,88,583,123"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="590,157,536,107,503,82,468,60,442,48,444,43,471,55,506,77,540,103,594,153"/>
 <area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a50d14f8477298a3c5d0bbdd3ac8fe26f" title="Detach a lane from its Track (undo of attachLaneToTrack)." alt="" coords="261,69,469,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="527,133,445,112,446,107,528,127"/>
-<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a6792df40ce4390062fb4838be36167ec" title="Resolve the Track owning a lane, or nullptr when unowned." alt="" coords="261,133,469,173"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="504,156,469,156,469,151,504,151"/>
-<area shape="rect" id="Node000006" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a28fa80a6f35d02a1eeaa7276c6f26b4c" title="Move an owned lane to a position within its track&#39;s lane order (undo position fidelity for DeleteLane..." alt="" coords="261,197,469,237"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="528,179,446,200,445,195,527,174"/>
-<area shape="rect" id="Node000007" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a8389a65a33f96b667ff09212d0148fac" title="Set the Track&#39;s recording arm state (FD&#45;14 #6: the authoritative recording arm lives on the Track)." alt="" coords="261,261,469,301"/>
-<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="583,184,531,219,470,252,440,264,438,259,468,247,528,214,580,179"/>
-<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a6871faaa658f9f26cd3ad5745173df5d" title="Stable routing channel for a lane&#39;s automation defaults: lane → owning Track → track channelId (FD&#45;14..." alt="" coords="5,133,213,173"/>
-<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="248,156,213,156,213,151,248,151"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="562,162,468,124,434,112,435,107,470,119,564,157"/>
+<area shape="rect" id="Node000004" href="$dc/d40/classAestra_1_1BringOver_1_1Command.html#a092ee52fb950b624c4e1dcc0e9d8b72c" title="Execute the command (first time)" alt="" coords="291,133,439,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="503,173,439,165,440,160,504,168"/>
+<area shape="rect" id="Node000006" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a6792df40ce4390062fb4838be36167ec" title="Resolve the Track owning a lane, or nullptr when unowned." alt="" coords="261,197,469,237"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="504,203,470,207,469,202,504,197"/>
+<area shape="rect" id="Node000008" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a28fa80a6f35d02a1eeaa7276c6f26b4c" title="Move an owned lane to a position within its track&#39;s lane order (undo position fidelity for DeleteLane..." alt="" coords="261,261,469,301"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="564,213,470,252,435,264,434,259,468,247,562,209"/>
+<area shape="rect" id="Node000009" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a8389a65a33f96b667ff09212d0148fac" title="Set the Track&#39;s recording arm state (FD&#45;14 #6: the authoritative recording arm lives on the Track)." alt="" coords="261,325,469,365"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="594,217,540,267,506,293,471,316,444,328,442,323,468,311,503,289,536,263,590,213"/>
+<area shape="rect" id="Node000005" href="$dc/d40/classAestra_1_1BringOver_1_1Command.html#a87e2508620e847e662b7327d0591c9d0" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="37,133,182,173"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="278,156,182,156,182,151,278,151"/>
+<area shape="rect" id="Node000007" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a6871faaa658f9f26cd3ad5745173df5d" title="Stable routing channel for a lane&#39;s automation defaults: lane → owning Track → track channelId (FD&#45;14..." alt="" coords="5,197,213,237"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="248,220,213,220,213,215,248,215"/>
 </map>

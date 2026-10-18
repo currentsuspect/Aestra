@@ -131,7 +131,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>        NUIRect swatchRect(x, y, SWATCH_SIZE, SWATCH_SIZE);</div>
 <div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>        </div>
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>        <span class="comment">// Extract color components</span></div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>        uint32_t color = PRESET_COLORS[i];</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>        uint32_t color = TRACK_PALETTE[i];</div>
 <div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>        <span class="keywordtype">float</span> r = ((color &gt;&gt; 16) &amp; 0xFF) / 255.0f;</div>
 <div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>        <span class="keywordtype">float</span> g = ((color &gt;&gt; 8) &amp; 0xFF) / 255.0f;</div>
 <div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>        <span class="keywordtype">float</span> b = (color &amp; 0xFF) / 255.0f;</div>
@@ -194,7 +194,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>    </div>
 <div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>    <span class="comment">// Handle click on swatch</span></div>
 <div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>    <span class="keywordflow">if</span> (event.pressed &amp;&amp; event.button == NUIMouseButton::Left &amp;&amp; m_hoveredIndex &gt;= 0) {</div>
-<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>        uint32_t selectedColor = PRESET_COLORS[m_hoveredIndex];</div>
+<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>        uint32_t selectedColor = TRACK_PALETTE[m_hoveredIndex];</div>
 <div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>        <span class="keywordflow">if</span> (m_onColorSelected) {</div>
 <div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>            m_onColorSelected(selectedColor);</div>
 <div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>        }</div>

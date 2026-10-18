@@ -1,0 +1,11 @@
+<map id="Aestra::readJSONStrict" name="Aestra::readJSONStrict">
+<area shape="rect" id="Node000001" title="Read and strictly parse the JSON object at path." alt="" coords="707,45,873,70"/>
+<area shape="rect" id="Node000002" href="$da/d22/structAestra_1_1UISurfaceStore.html#aba9c31a87cacbbb6715a4434eeb440e3" title="Read the store from path." alt="" coords="471,5,640,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="693,47,640,39,640,34,693,41"/>
+<area shape="rect" id="Node000003" href="$d8/d94/namespaceAestra.html#a115b1a9b1330e562655d7d072324828a" title="The legacy file&#39;s inspector preference, if it holds a usable one." alt="" coords="452,69,659,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="693,73,659,78,658,73,692,68"/>
+<area shape="rect" id="Node000004" href="$d8/d94/namespaceAestra.html#acd5ab3e31d622aa85d7c833838211a38" title="Runs once at startup, before any surface reads the store." alt="" coords="207,69,404,109"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="439,92,404,92,404,87,439,87"/>
+<area shape="rect" id="Node000005" href="$d6/d43/classAestraApp.html#a12653cc93e99665a6fe3e795f6724058" title="Initialize all subsystems." alt="" coords="5,77,159,102"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="193,92,159,92,159,87,193,87"/>
+</map>

@@ -1,34 +1,39 @@
 <map id="AestraApp::initialize" name="AestraApp::initialize">
-<area shape="rect" id="Node000001" title="Initialize all subsystems." alt="" coords="5,253,159,278"/>
+<area shape="rect" id="Node000001" title="Initialize all subsystems." alt="" coords="5,205,159,230"/>
 <area shape="rect" id="Node000002" href="$d6/d43/classAestraApp.html#a8e396bac7a726c61bb454624bd97c397" title="The autosave path, or an empty string when it cannot be resolved." alt="" coords="223,5,423,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="85,251,99,213,123,160,158,104,180,78,205,55,213,50,216,54,208,59,184,81,162,107,128,162,103,215,90,253"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="87,203,104,173,130,133,164,91,205,55,215,49,218,54,208,59,168,95,134,136,108,175,92,206"/>
 <area shape="rect" id="Node000003" href="$da/d22/structAestra_1_1UISurfaceStore.html#a71997190dc1b3947459aa78efc8de388" title="Full path to the store&#39;s file in app data, or empty when there is nowhere to put it." alt="" coords="238,69,407,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="89,251,132,188,166,151,205,119,224,109,226,114,208,124,169,155,136,191,93,254"/>
-<area shape="rect" id="Node000004" href="$d2/d95/DockedRailWidths_8h.html#a397ffe445ffa6ea7f7c96e18d9e7ed80" title="One&#45;time, one&#45;way import of the pre&#45;V8&#45;C14 ui_state.json rail width." alt="" coords="215,157,430,197"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="107,250,206,207,229,199,231,204,208,212,109,255"/>
-<area shape="rect" id="Node000008" href="$d2/d39/LegacyMixerSettingsImport_8h.html#acd5ab3e31d622aa85d7c833838211a38" title="Runs once at startup, before any surface reads the store." alt="" coords="224,245,421,285"/>
-<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="159,263,210,263,210,268,159,268"/>
-<area shape="rect" id="Node000012" href="$d0/dcd/classAestra_1_1TerminationSignal.html#a5afc43310b4167a187991e8e00ca9231" title="Route SIGTERM and SIGINT to the flag." alt="" coords="228,309,417,349"/>
-<area shape="poly" id="edge15_Node000001_Node000012" title=" " alt="" coords="132,276,234,303,233,308,130,281"/>
-<area shape="rect" id="Node000013" href="$d2/d39/LegacyMixerSettingsImport_8h.html#a47b568b4f4e3d61796ad0e174b986141" title="&lt;homeDir&gt;/.config/aestra/mixer_settings.json, or empty for an empty home." alt="" coords="207,398,439,423"/>
-<area shape="poly" id="edge16_Node000001_Node000013" title=" " alt="" coords="99,276,146,316,208,359,274,391,272,395,205,364,143,320,96,280"/>
-<area shape="rect" id="Node000014" href="$d3/dc8/classAestra_1_1CrashFlagPath.html#a8e6a0c126e2a4ecc5b6ca6c0fbd72a88" title="Record the resolved path." alt="" coords="240,448,405,488"/>
-<area shape="poly" id="edge18_Node000001_Node000014" title=" " alt="" coords="91,277,107,309,133,352,166,396,208,434,229,445,226,450,205,438,163,400,128,355,103,312,87,280"/>
-<area shape="poly" id="edge4_Node000004_Node000004" title=" " alt="" coords="278,158,275,148,282,138,298,133,323,131,351,134,366,141,364,146,349,139,323,136,299,138,286,143,280,149,283,156"/>
-<area shape="rect" id="Node000005" href="$dc/d45/classAestra_1_1UISurfaceStoreFile.html#a2c92395c23c00f10222c669f336d6d6f" title="Sets and saves." alt="" coords="494,93,686,133"/>
-<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="406,155,492,134,493,139,408,160"/>
-<area shape="rect" id="Node000007" href="$dc/d45/classAestra_1_1UISurfaceStoreFile.html#affd30314ae584a54e4b396b41d9ff8af" title="The stored geometry, or nullopt when the user has never moved, resized or maximized this surface." alt="" coords="494,157,686,197"/>
-<area shape="poly" id="edge7_Node000004_Node000007" title=" " alt="" coords="430,175,480,175,480,180,430,180"/>
-<area shape="rect" id="Node000006" href="$da/d22/structAestra_1_1UISurfaceStore.html#a21fb83c4d8839a6b20049839e0c00202" title="Write the store to path via the shared atomic&#45;write helper." alt="" coords="741,233,911,273"/>
-<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="668,131,695,143,751,181,797,221,793,225,748,185,692,148,666,136"/>
-<area shape="poly" id="edge10_Node000008_Node000008" title=" " alt="" coords="278,246,275,236,282,226,298,221,323,219,351,222,366,229,364,234,349,227,323,224,299,226,286,231,280,237,283,244"/>
-<area shape="rect" id="Node000009" href="$dc/d45/classAestra_1_1UISurfaceStoreFile.html#aa35af609557ba38282dafde93eaed2a3" title="The stored value, or nullopt when the user has never set this preference." alt="" coords="494,221,686,261"/>
-<area shape="poly" id="edge9_Node000008_Node000009" title=" " alt="" coords="421,254,480,249,481,254,422,259"/>
-<area shape="rect" id="Node000010" href="$d2/d39/LegacyMixerSettingsImport_8h.html#a115b1a9b1330e562655d7d072324828a" title="The legacy file&#39;s inspector preference, if it holds a usable one." alt="" coords="487,309,693,349"/>
-<area shape="poly" id="edge11_Node000008_Node000010" title=" " alt="" coords="408,283,493,304,492,309,406,288"/>
-<area shape="rect" id="Node000011" href="$dc/d45/classAestra_1_1UISurfaceStoreFile.html#a958d1a018c67184dd775e5406d9d2ceb" title="Sets and saves." alt="" coords="494,373,686,413"/>
-<area shape="poly" id="edge13_Node000008_Node000011" title=" " alt="" coords="418,283,440,295,457,311,465,328,473,344,488,359,497,365,494,369,485,363,469,347,460,330,452,314,437,299,416,288"/>
-<area shape="poly" id="edge12_Node000010_Node000010" title=" " alt="" coords="546,310,544,300,551,290,566,285,590,283,617,286,632,293,630,298,616,291,590,288,567,290,554,295,549,301,551,308"/>
-<area shape="poly" id="edge14_Node000011_Node000006" title=" " alt="" coords="666,371,692,359,748,321,793,281,797,285,751,326,695,364,668,376"/>
-<area shape="poly" id="edge17_Node000013_Node000013" title=" " alt="" coords="284,400,275,390,280,380,296,374,323,371,356,375,369,385,366,389,354,380,323,377,297,379,283,384,281,389,288,396"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="94,202,141,162,172,139,205,119,224,111,226,116,208,124,175,143,144,166,98,206"/>
+<area shape="rect" id="Node000006" href="$d8/d94/namespaceAestra.html#a397ffe445ffa6ea7f7c96e18d9e7ed80" title="One&#45;time, one&#45;way import of the pre&#45;V8&#45;C14 ui_state.json rail width." alt="" coords="215,133,430,173"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="130,202,233,174,234,180,132,207"/>
+<area shape="rect" id="Node000011" href="$d8/d94/namespaceAestra.html#acd5ab3e31d622aa85d7c833838211a38" title="Runs once at startup, before any surface reads the store." alt="" coords="224,197,421,237"/>
+<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="159,215,210,215,210,220,159,220"/>
+<area shape="rect" id="Node000016" href="$d0/dcd/classAestra_1_1TerminationSignal.html#a5afc43310b4167a187991e8e00ca9231" title="Route SIGTERM and SIGINT to the flag." alt="" coords="228,261,417,301"/>
+<area shape="poly" id="edge16_Node000001_Node000016" title=" " alt="" coords="132,228,234,255,233,260,130,233"/>
+<area shape="rect" id="Node000017" href="$d8/d94/namespaceAestra.html#ad67f03e753e8bcc5518de40ac745c5f6" title="The legacy path for this user: HOME, then USERPROFILE and HOMEDRIVE+HOMEPATH on Windows (HOME alone i..." alt="" coords="207,350,439,375"/>
+<area shape="poly" id="edge17_Node000001_Node000017" title=" " alt="" coords="99,228,146,268,208,311,274,343,272,347,205,316,143,272,96,232"/>
+<area shape="rect" id="Node000018" href="$d3/dc8/classAestra_1_1CrashFlagPath.html#a8e6a0c126e2a4ecc5b6ca6c0fbd72a88" title="Record the resolved path." alt="" coords="240,400,405,440"/>
+<area shape="poly" id="edge19_Node000001_Node000018" title=" " alt="" coords="91,229,107,261,133,304,166,348,208,386,229,397,226,402,205,390,163,352,128,307,103,264,87,232"/>
+<area shape="rect" id="Node000004" href="$d8/d94/namespaceAestra.html#a1bc1510aba24f9eea92a74aec2bbb93d" title="Shared, crash&#45;safe JSON&#45;file I/O for per&#45;user config files." alt="" coords="487,19,713,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="407,69,524,45,525,50,408,75"/>
+<area shape="rect" id="Node000005" href="$d5/d9d/classAestra_1_1IPlatformUtils.html#a93945f74d88f6ff480566a3b6e6e972c" title="Get the platform&#45;specific application data directory for an app name." alt="" coords="765,12,927,52"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="713,29,751,29,751,35,713,35"/>
+<area shape="rect" id="Node000007" href="$dc/d45/classAestra_1_1UISurfaceStoreFile.html#a2c92395c23c00f10222c669f336d6d6f" title="Sets and saves." alt="" coords="504,69,696,109"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="410,131,499,110,500,115,411,136"/>
+<area shape="rect" id="Node000010" href="$dc/d45/classAestra_1_1UISurfaceStoreFile.html#affd30314ae584a54e4b396b41d9ff8af" title="The stored geometry, or nullopt when the user has never moved, resized or maximized this surface." alt="" coords="504,133,696,173"/>
+<area shape="poly" id="edge9_Node000006_Node000010" title=" " alt="" coords="430,151,490,151,490,156,430,156"/>
+<area shape="rect" id="Node000008" href="$da/d22/structAestra_1_1UISurfaceStore.html#a21fb83c4d8839a6b20049839e0c00202" title="Write the store to path via the shared atomic&#45;write helper." alt="" coords="761,169,931,209"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="680,107,714,119,800,160,797,165,712,124,678,112"/>
+<area shape="rect" id="Node000009" href="$d8/d94/namespaceAestra.html#a91dc79620775d24f4d0c47759593731b" title="Write root to path via the house crash&#45;safe pattern: write to a &quot;&lt;path&gt;.tmp&quot; sibling,..." alt="" coords="979,177,1161,202"/>
+<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="931,187,965,187,965,192,931,192"/>
+<area shape="rect" id="Node000012" href="$dc/d45/classAestra_1_1UISurfaceStoreFile.html#aa35af609557ba38282dafde93eaed2a3" title="The stored value, or nullopt when the user has never set this preference." alt="" coords="504,197,696,237"/>
+<area shape="poly" id="edge11_Node000011_Node000012" title=" " alt="" coords="422,215,490,215,490,220,422,220"/>
+<area shape="rect" id="Node000013" href="$d8/d94/namespaceAestra.html#a115b1a9b1330e562655d7d072324828a" title="The legacy file&#39;s inspector preference, if it holds a usable one." alt="" coords="497,325,703,365"/>
+<area shape="poly" id="edge12_Node000011_Node000013" title=" " alt="" coords="418,235,440,247,457,263,465,280,473,296,488,311,497,317,495,321,485,315,469,299,460,283,452,267,437,251,416,240"/>
+<area shape="rect" id="Node000015" href="$dc/d45/classAestra_1_1UISurfaceStoreFile.html#a958d1a018c67184dd775e5406d9d2ceb" title="Sets and saves." alt="" coords="504,261,696,301"/>
+<area shape="poly" id="edge14_Node000011_Node000015" title=" " alt="" coords="411,235,500,256,499,261,410,240"/>
+<area shape="rect" id="Node000014" href="$d8/d94/namespaceAestra.html#a9b2615179273aeda892d3ed81a104e0f" title="Read and strictly parse the JSON object at path." alt="" coords="763,333,929,358"/>
+<area shape="poly" id="edge13_Node000013_Node000014" title=" " alt="" coords="703,343,749,343,749,348,703,348"/>
+<area shape="poly" id="edge15_Node000015_Node000008" title=" " alt="" coords="677,259,712,247,791,213,793,218,714,252,679,264"/>
+<area shape="poly" id="edge18_Node000017_Node000017" title=" " alt="" coords="284,352,275,342,280,332,296,326,323,323,356,327,369,337,366,341,354,332,323,329,297,331,283,336,281,341,288,348"/>
 </map>

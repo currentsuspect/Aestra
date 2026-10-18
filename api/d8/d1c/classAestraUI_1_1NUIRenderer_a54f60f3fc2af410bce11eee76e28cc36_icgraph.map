@@ -1,5 +1,12 @@
 <map id="AestraUI::NUIRenderer::clearClipRect" name="AestraUI::NUIRenderer::clearClipRect">
-<area shape="rect" id="Node000001" title="Clear the clip rectangle." alt="" coords="223,5,392,45"/>
-<area shape="rect" id="Node000002" href="$d5/d99/classAestraUI_1_1FileBrowser.html#ab3728bdebc18bd1dcfc38413229e7a68" title="Hover washes drawn per&#45;frame OUTSIDE the FBO cache, so hover changes never force a cache rebuild (see..." alt="" coords="5,5,175,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="209,28,175,28,175,23,209,23"/>
+<area shape="rect" id="Node000001" title="Clear the clip rectangle." alt="" coords="541,63,711,103"/>
+<area shape="rect" id="Node000002" href="$d9/d85/classAestra_1_1ArsenalRowLanes.html#a2f226b956800346047bd9d95dbd52b4c" title="Carets on every visible row and the lanes under the open ones." alt="" coords="281,5,467,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="527,63,462,48,463,43,529,58"/>
+<area shape="rect" id="Node000004" href="$d8/d94/namespaceAestra.html#a103218390db144881bc171e3e1bcf874" title="Every header of the rack that is in view, clipped to the list viewport." alt="" coords="255,70,493,95"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="528,85,494,85,494,80,528,80"/>
+<area shape="rect" id="Node000005" href="$d5/d99/classAestraUI_1_1FileBrowser.html#ab3728bdebc18bd1dcfc38413229e7a68" title="Hover washes drawn per&#45;frame OUTSIDE the FBO cache, so hover changes never force a cache rebuild (see..." alt="" coords="289,120,459,160"/>
+<area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="529,107,460,123,458,118,527,102"/>
+<area shape="rect" id="Node000003" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#ad0272af2020e23cd94658d1e4beacfe5" title="Render the Arsenal panel and unit rows." alt="" coords="5,35,207,75"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="267,40,207,46,207,41,267,34"/>
+<area shape="poly" id="edge4_Node000004_Node000003" title=" " alt="" coords="241,71,206,68,207,63,241,66"/>
 </map>

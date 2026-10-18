@@ -1,0 +1,9 @@
+<map id="Aestra::drawCover" name="Aestra::drawCover">
+<area shape="rect" id="Node000001" title="The generated cover: a quiet background with two or three flat shapes, always the same for the same s..." alt="" coords="5,77,148,102"/>
+<area shape="rect" id="Node000002" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#a6ac3309ac29927b53f81c6150fc44d6e" title="Draw a filled circle." alt="" coords="196,5,365,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="117,74,202,47,204,52,119,79"/>
+<area shape="rect" id="Node000003" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4" title="Draw a filled rectangle." alt="" coords="196,69,365,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="148,87,182,87,182,92,148,92"/>
+<area shape="rect" id="Node000004" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#ac82c677cff0d5838d3312af1b65ed84b" title="Draw a circle outline." alt="" coords="196,133,365,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="119,100,204,127,202,132,117,105"/>
+</map>

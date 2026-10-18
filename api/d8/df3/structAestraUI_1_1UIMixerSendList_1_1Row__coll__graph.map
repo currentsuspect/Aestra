@@ -1,0 +1,14 @@
+<map id="AestraUI::UIMixerSendList::Row" name="AestraUI::UIMixerSendList::Row">
+<area shape="rect" id="Node000001" title=" " alt="" coords="101,255,328,280"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="31,152,118,177"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="84,189,94,210,108,229,129,242,153,252,151,257,127,247,105,233,89,213,79,192"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,144,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="77,59,77,152,72,152,72,59"/>
+<area shape="rect" id="Node000004" href="$d2/d25/structAestraUI_1_1NUIColor.html" title=" " alt="" coords="245,152,389,177"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="297,189,228,257,224,253,294,185"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="204,13,255,38"/>
+<area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="219,51,198,97,181,152,181,181,188,209,209,253,204,255,183,211,175,182,176,152,193,95,214,49"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="246,48,312,150,308,153,242,51"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="413,152,464,177"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="410,187,321,233,255,257,253,252,319,228,407,182"/>
+</map>

@@ -1,0 +1,8 @@
+<map id="Aestra::unsavedStepCount" name="Aestra::unsavedStepCount">
+<area shape="rect" id="Node000001" title="Steps made since the open version was saved: the history&#39;s depth beyond the steps the version recorde..." alt="" coords="5,45,200,70"/>
+<area shape="poly" id="edge3_Node000001_Node000001" title=" " alt="" coords="61,46,52,36,56,26,74,20,103,18,139,22,149,27,153,32,149,35,146,31,138,27,103,23,75,25,60,30,57,36,65,43"/>
+<area shape="rect" id="Node000002" href="$da/d15/structTakeManager_1_1Manifest.html#ace9f7d3a0cb864d5d140d266f9e1af52" title="Returns the currently active take, or nullptr if none." alt="" coords="277,5,450,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="200,43,263,35,263,40,200,48"/>
+<area shape="rect" id="Node000003" href="$df/d31/classAestra_1_1Audio_1_1CommandHistory.html#ad0016c8f0d963296b0b2c157632c5d0e" title="Get the undo stack (most recent first)." alt="" coords="248,69,479,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="200,67,235,71,234,76,200,72"/>
+</map>

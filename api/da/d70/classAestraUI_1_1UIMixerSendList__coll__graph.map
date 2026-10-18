@@ -1,0 +1,17 @@
+<map id="AestraUI::UIMixerSendList" name="AestraUI::UIMixerSendList">
+<area shape="rect" id="Node000001" title="The strip&#39;s sends by destination and level (V81&#45;M1, FD&#45;28 point 3): &quot;■ Reverb &#160;−18&quot;." alt="" coords="684,166,875,191"/>
+<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="375,91,560,117"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="550,117,661,141,739,163,737,169,659,147,549,122"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,225,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="240,23,296,29,351,41,406,64,449,89,446,94,403,69,350,47,295,35,239,29"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="35,84,195,124"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="209,101,374,101,374,107,209,107"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="36,148,195,188"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="208,160,278,151,350,136,374,126,411,114,412,119,376,130,351,141,279,157,209,165"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="442,141,493,166"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="507,154,684,168,684,174,506,159"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="448,190,487,215"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="501,200,574,200,660,195,707,189,707,194,660,200,574,205,501,206"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="398,239,537,265"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="550,241,659,220,706,205,748,189,750,194,708,210,661,225,551,246"/>
+</map>

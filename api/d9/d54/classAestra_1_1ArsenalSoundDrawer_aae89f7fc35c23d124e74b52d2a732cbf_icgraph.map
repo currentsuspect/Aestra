@@ -1,0 +1,14 @@
+<map id="Aestra::ArsenalSoundDrawer::filtered" name="Aestra::ArsenalSoundDrawer::filtered">
+<area shape="rect" id="Node000001" title="Indices into list whose file name contains every word of filter. An empty filter keeps everything." alt="" coords="745,63,953,103"/>
+<area shape="rect" id="Node000002" href="$d9/d54/classAestra_1_1ArsenalSoundDrawer.html#a36b43a74dd2471e317c440568c6acb7a" title="What a key press does." alt="" coords="489,5,697,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="745,62,683,48,684,43,746,57"/>
+<area shape="rect" id="Node000004" href="$d9/d85/classAestra_1_1ArsenalRowLanes.html#ae1591bc133c77563892a230244c37a50" title="Pointer routing. Returns true when the event was a caret or a lane gesture; sets relayout when a row ..." alt="" coords="255,95,441,135"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="732,93,442,111,441,106,732,87"/>
+<area shape="rect" id="Node000006" href="$d9/d54/classAestra_1_1ArsenalSoundDrawer.html#a6499dcb96e33f3e3582bc930030ca758" title="Open on current: nothing typed, the current sound selected and in view." alt="" coords="489,120,697,160"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="746,108,684,123,683,117,745,103"/>
+<area shape="rect" id="Node000003" href="$d9/d85/classAestra_1_1ArsenalRowLanes.html#a4dd7ff5499335f4750efcb638f2ae2de" title="Keyboard for the open drawer: typing searches, Up/Down audition, Enter keeps, Esc puts the old sound ..." alt="" coords="255,5,441,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="476,28,442,28,442,23,476,23"/>
+<area shape="rect" id="Node000005" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a5c9ac77599f4bd13c12f7b9dd2bbc805" title="Handle mouse input routed to the Arsenal panel." alt="" coords="5,95,207,135"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="241,117,207,117,207,112,241,112"/>
+<area shape="poly" id="edge6_Node000006_Node000004" title=" " alt="" coords="475,131,441,127,442,122,476,125"/>
+</map>

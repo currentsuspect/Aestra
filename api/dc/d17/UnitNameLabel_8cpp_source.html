@@ -136,14 +136,14 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    <span class="keyword">auto</span>&amp; theme = NUIThemeManager::getInstance();</div>
 <div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    <span class="keyword">auto</span> bounds = getBounds();</div>
 <div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span> </div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    <span class="keyword">const</span> std::string displayName = fitText(renderer, m_unitName.empty() ? <span class="stringliteral">&quot;Unit&quot;</span> : m_unitName,</div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>                                            12.0f, <a class="code hl_namespace" href="../../d8/dcc/namespacestd.html">std</a>::max(0.0f, bounds.width - 20.0f));</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    <span class="keyword">const</span> std::string <a class="code hl_function" href="../../df/dae/namespaceAestra_1_1AuditionLibrary.html#a301a0ea6f08e6bbea0600712641691d6">displayName</a> = fitText(renderer, m_unitName.empty() ? <span class="stringliteral">&quot;Unit&quot;</span> : m_unitName,</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>                                            13.0f, <a class="code hl_namespace" href="../../d8/dcc/namespacestd.html">std</a>::max(0.0f, bounds.width - 20.0f));</div>
 <div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span> </div>
 <div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    renderer.setClipRect(bounds);</div>
 <div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span> </div>
 <div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>    renderer.drawText(displayName,</div>
 <div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>                      NUIPoint(bounds.x + 10.0f, bounds.y + 3.0f),</div>
-<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>                      12.0f,</div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>                      13.0f,</div>
 <div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>                      theme.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>).withAlpha(0.92f));</div>
 <div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span> </div>
 <div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    <span class="keywordflow">if</span> (m_compact) {</div>
@@ -175,7 +175,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span> </div>
 <div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>    renderer.drawText(typeLabel,</div>
 <div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>                      NUIPoint(bounds.x + 10.0f, bounds.y + 19.0f),</div>
-<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>                      9.0f,</div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>                      10.0f,</div>
 <div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>                      theme.getColor(<span class="stringliteral">&quot;textSecondary&quot;</span>).withAlpha(0.5f));</div>
 <div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    renderer.clearClipRect();</div>
 <div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>}</div>
@@ -276,6 +276,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>}</div>
 <div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span> </div>
 <div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>} <span class="comment">// namespace AestraUI</span></div>
+<div class="ttc" id="anamespaceAestra_1_1AuditionLibrary_html_a301a0ea6f08e6bbea0600712641691d6"><div class="ttname"><a href="../../df/dae/namespaceAestra_1_1AuditionLibrary.html#a301a0ea6f08e6bbea0600712641691d6">Aestra::AuditionLibrary::displayName</a></div><div class="ttdeci">std::string displayName(const Item &amp;item)</div><div class="ttdoc">What an item is called when it stands beside another: a reference by its title, a version by its numb...</div><div class="ttdef"><b>Definition</b> <a href="../../dc/d69/AuditionLibrary_8h_source.html#l00089">AuditionLibrary.h:89</a></div></div>
 <div class="ttc" id="anamespacestd_html"><div class="ttname"><a href="../../d8/dcc/namespacestd.html">std</a></div><div class="ttdoc">STL namespace.</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

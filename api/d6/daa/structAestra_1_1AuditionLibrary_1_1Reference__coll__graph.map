@@ -1,0 +1,13 @@
+<map id="Aestra::AuditionLibrary::Reference" name="Aestra::AuditionLibrary::Reference">
+<area shape="rect" id="Node000001" title=" " alt="" coords="132,197,303,237"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="31,95,118,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="94,129,112,151,135,171,174,195,171,199,132,175,109,155,90,133"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,144,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="77,59,77,94,72,94,72,59"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="143,95,209,120"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="175,134,175,153,180,172,196,195,192,199,175,174,170,154,170,134"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="235,95,285,120"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="253,134,227,198,222,196,248,132"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="309,95,384,120"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="337,134,324,155,306,175,268,199,265,195,302,171,320,152,333,131"/>
+</map>

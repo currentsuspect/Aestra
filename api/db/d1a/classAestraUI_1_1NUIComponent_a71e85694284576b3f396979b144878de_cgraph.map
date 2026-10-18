@@ -1,0 +1,5 @@
+<map id="AestraUI::NUIComponent::bringToFrontPriority" name="AestraUI::NUIComponent::bringToFrontPriority">
+<area shape="rect" id="Node000001" title="bringToFront() for a deliberate open." alt="" coords="5,5,191,45"/>
+<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html#a2b3f7ebc1d4af1d46fcb206080bf7cf3" title="Moves this component to the top of its parent&#39;s children list (rendered last, receives events first)" alt="" coords="239,5,424,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="191,23,225,23,225,28,191,28"/>
+</map>

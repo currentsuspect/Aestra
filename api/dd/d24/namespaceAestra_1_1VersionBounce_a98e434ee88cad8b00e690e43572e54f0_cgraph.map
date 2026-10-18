@@ -1,0 +1,18 @@
+<map id="Aestra::VersionBounce::bounceVersion" name="Aestra::VersionBounce::bounceVersion">
+<area shape="rect" id="Node000001" title="Bounce a saved version: render, write the WAV and its card info, and record the file on the version." alt="" coords="5,88,173,128"/>
+<area shape="rect" id="Node000002" href="$df/db6/classTakeManager.html#acfe0e3332867ecd9c0c1ea8817706e57" title="Returns the takes/ directory path for a given project." alt="" coords="1021,66,1255,91"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="122,85,167,62,221,44,333,22,429,9,515,3,595,4,762,20,974,44,1072,60,1072,65,973,49,761,25,595,10,515,9,430,14,334,27,222,49,170,67,124,90"/>
+<area shape="rect" id="Node000003" href="$dd/d24/namespaceAestra_1_1VersionBounce.html#aa0a26d7ca91a6a1e23b5494cd8a1156d" title="Loudest sample per bar, scaled so the loudest bar is 1. Silence is all zeros." alt="" coords="253,58,421,98"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="173,95,239,87,240,93,174,101"/>
+<area shape="rect" id="Node000004" href="$df/db6/classTakeManager.html#aa410a7a053bf6c125fe8961161391f77" title="Records the bounce file (relative to the takes folder) on a version." alt="" coords="221,123,453,148"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="174,115,212,119,211,124,173,120"/>
+<area shape="rect" id="Node000008" href="$dd/d24/namespaceAestra_1_1VersionBounce.html#a1bb0afb0bf5ff01a9be57190c2959004" title="16&#45;bit PCM WAV, little&#45;endian, clipped at full scale. False when the file cannot be written." alt="" coords="253,173,421,213"/>
+<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="137,125,222,159,247,167,245,172,220,164,135,130"/>
+<area shape="rect" id="Node000005" href="$df/db6/classTakeManager.html#a80febfa550c9e4c5f35cdb15bd6ea6cc" title="Loads the manifest from disk." alt="" coords="501,123,703,148"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="454,133,487,133,487,138,454,138"/>
+<area shape="rect" id="Node000006" href="$da/d15/structTakeManager_1_1Manifest.html#ac9df3e5450e4f9aee685e9814437d01f" title="Look up a take by its unique ID." alt="" coords="775,58,949,98"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="660,120,761,98,762,103,661,126"/>
+<area shape="rect" id="Node000007" href="$df/db6/classTakeManager.html#acb75e1e71f374b7b3c85690629eaf607" title="Returns the manifest.json path for a given project." alt="" coords="751,123,973,148"/>
+<area shape="poly" id="edge6_Node000005_Node000007" title=" " alt="" coords="703,133,737,133,737,138,703,138"/>
+<area shape="poly" id="edge7_Node000007_Node000002" title=" " alt="" coords="923,120,1062,91,1064,96,925,126"/>
+</map>

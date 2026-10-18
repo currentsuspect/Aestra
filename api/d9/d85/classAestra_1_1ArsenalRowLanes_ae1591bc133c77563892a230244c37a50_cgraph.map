@@ -1,0 +1,24 @@
+<map id="Aestra::ArsenalRowLanes::onMouse" name="Aestra::ArsenalRowLanes::onMouse">
+<area shape="rect" id="Node000001" title="Pointer routing. Returns true when the event was a caret or a lane gesture; sets relayout when a row ..." alt="" coords="5,248,192,288"/>
+<area shape="rect" id="Node000002" href="$d9/d54/classAestra_1_1ArsenalSoundDrawer.html#a07ce972ddb305529c9c1e9405345cfdc" title="The set chip at the right of the search line: &quot;Folder&quot; or the set&#39;s name; a click moves to the next s..." alt="" coords="240,5,448,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="106,246,126,208,154,158,192,107,238,62,258,49,261,54,242,66,196,111,159,161,130,210,111,249"/>
+<area shape="rect" id="Node000003" href="$d9/d54/classAestra_1_1ArsenalSoundDrawer.html#aae89f7fc35c23d124e74b52d2a732cbf" title="Indices into list whose file name contains every word of filter. An empty filter keeps everything." alt="" coords="496,124,704,164"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="108,247,127,213,156,174,194,135,239,106,277,92,316,85,357,83,397,85,473,98,537,117,536,122,472,103,396,90,357,88,317,90,278,97,241,110,197,139,160,177,132,216,112,249"/>
+<area shape="rect" id="Node000004" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="243,120,445,160"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="123,246,175,208,239,170,255,163,257,167,241,174,177,212,126,250"/>
+<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae644fa1ba9f25586fd7d597ed08d651f" title="Get the unit manager (Arsenal)" alt="" coords="240,184,448,224"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="175,245,253,225,254,230,177,251"/>
+<area shape="rect" id="Node000006" href="$d9/d54/classAestra_1_1ArsenalSoundDrawer.html#a6499dcb96e33f3e3582bc930030ca758" title="Open on current: nothing typed, the current sound selected and in view." alt="" coords="240,248,448,288"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="192,265,226,265,226,271,192,271"/>
+<area shape="rect" id="Node000008" href="$de/dc6/classAestra_1_1ArsenalStepLanes.html#a6028f44184f54d60e8b2f459bb17350b" title="Start (or continue) painting a lane value; returns true if the pointer is in a lane." alt="" coords="250,312,438,352"/>
+<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="177,285,254,306,253,311,175,291"/>
+<area shape="rect" id="Node000009" href="$de/dc6/classAestra_1_1ArsenalStepLanes.html#a21f23f521780272e951b081b073a85e2" title="Finish the gesture: the whole drag becomes one undo step." alt="" coords="250,376,438,416"/>
+<area shape="poly" id="edge9_Node000001_Node000009" title=" " alt="" coords="126,286,177,324,241,362,257,369,255,373,239,366,175,328,123,290"/>
+<area shape="rect" id="Node000010" href="$d9/d54/classAestra_1_1ArsenalSoundDrawer.html#ad3c8d3b004c78f613d9a38d5b37383d8" title="Row under p in a drawer drawn into r: an index into the filtered list, or &#45;1." alt="" coords="240,440,448,480"/>
+<area shape="poly" id="edge10_Node000001_Node000010" title=" " alt="" coords="115,287,165,355,201,393,242,426,252,432,249,437,238,430,197,397,161,359,110,290"/>
+<area shape="rect" id="Node000011" href="$de/dc6/classAestra_1_1ArsenalStepLanes.html#add675de45e9acdc4ef18755af2131c1d" title="True once if a value was written since the last call, so the panel can tell the engine the pattern ch..." alt="" coords="250,504,438,544"/>
+<area shape="poly" id="edge11_Node000001_Node000011" title=" " alt="" coords="109,287,127,329,155,384,193,441,216,467,242,490,249,495,246,499,238,494,212,471,189,444,150,387,122,332,105,289"/>
+<area shape="poly" id="edge6_Node000006_Node000003" title=" " alt="" coords="417,245,447,234,506,202,558,169,561,174,509,207,449,238,419,250"/>
+<area shape="rect" id="Node000007" href="$d9/d54/classAestra_1_1ArsenalSoundDrawer.html#a7df02bb33fb613b23f9a696785102808" title="Scroll just enough that the selected row is inside the window." alt="" coords="496,248,704,288"/>
+<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="448,265,482,265,482,271,448,271"/>
+</map>

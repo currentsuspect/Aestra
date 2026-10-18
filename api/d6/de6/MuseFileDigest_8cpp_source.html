@@ -90,7 +90,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#include &lt;exception&gt;</span></div>
 <div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &lt;fstream&gt;</span></div>
 <div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span> </div>
-<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="keyword">namespace </span>Aestra {</div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d8/d94/namespaceAestra.html">Aestra</a> {</div>
 <div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="keyword">namespace </span>Audio {</div>
 <div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span> </div>
 <div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span>std::string fnv1aFileDigest(<span class="keyword">const</span> std::string&amp; path) {</div>
@@ -117,13 +117,15 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    <span class="comment">// compare equal to another truncated prefix. Report that as no digest.</span></div>
 <div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    <span class="keywordflow">if</span> (file.bad()) <span class="keywordflow">return</span> {};</div>
 <div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span> </div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    <span class="keywordtype">char</span> hex[17];</div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    <span class="keywordtype">char</span> <a class="code hl_function" href="../../d3/d6c/namespaceAestra_1_1VersionLanes.html#a1fbf5c6c0e167e46b4fcc46c886e772e">hex</a>[17];</div>
 <div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    std::snprintf(hex, <span class="keyword">sizeof</span>(hex), <span class="stringliteral">&quot;%016llx&quot;</span>, <span class="keyword">static_cast&lt;</span><span class="keywordtype">unsigned</span> <span class="keywordtype">long</span> <span class="keywordtype">long</span><span class="keyword">&gt;</span>(hash));</div>
 <div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    <span class="keywordflow">return</span> std::string(hex);</div>
 <div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>}</div>
 <div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span> </div>
 <div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>} <span class="comment">// namespace Audio</span></div>
 <div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="ttc" id="anamespaceAestra_1_1VersionLanes_html_a1fbf5c6c0e167e46b4fcc46c886e772e"><div class="ttname"><a href="../../d3/d6c/namespaceAestra_1_1VersionLanes.html#a1fbf5c6c0e167e46b4fcc46c886e772e">Aestra::VersionLanes::hex</a></div><div class="ttdeci">uint32_t hex(int lane)</div><div class="ttdoc">A lane's colour as 0xAARRGGBB: violet for the main mix, then cyan, amber, pink, lime,...</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d43/VersionLanes_8h_source.html#l00030">VersionLanes.h:30</a></div></div>
+<div class="ttc" id="anamespaceAestra_html"><div class="ttname"><a href="../../d8/d94/namespaceAestra.html">Aestra</a></div><div class="ttdoc">Main application class.</div><div class="ttdef"><b>Definition</b> <a href="../../d7/d7b/AestraAssert_8h_source.html#l00009">AestraAssert.h:9</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

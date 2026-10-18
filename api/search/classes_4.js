@@ -16,13 +16,14 @@ var searchData=
   ['effectslotinfo_13',['EffectSlotInfo',['../d4/da3/structAestraUI_1_1EffectChainRack_1_1EffectSlotInfo.html',1,'AestraUI::EffectChainRack']]],
   ['enginestate_14',['EngineState',['../d7/da4/classAestra_1_1Audio_1_1EngineState.html',1,'Aestra::Audio']]],
   ['enginesupervisor_15',['EngineSupervisor',['../de/dd7/classAestra_1_1Audio_1_1EngineSupervisor.html',1,'Aestra::Audio']]],
-  ['eqband_16',['EQBand',['../dc/df2/structAestra_1_1Audio_1_1Plugins_1_1EQBand.html',1,'Aestra::Audio::Plugins']]],
-  ['eqdynamicbandstate_17',['EQDynamicBandState',['../d4/d02/structAestra_1_1Audio_1_1Plugins_1_1EQDynamicBandState.html',1,'Aestra::Audio::Plugins']]],
-  ['eqkeyedparam_18',['EQKeyedParam',['../d7/d15/structAestra_1_1Audio_1_1Plugins_1_1EQKeyedParam.html',1,'Aestra::Audio::Plugins']]],
-  ['eqstateblob_19',['EQStateBlob',['../dd/db8/structAestra_1_1Audio_1_1Plugins_1_1EQStateBlob.html',1,'Aestra::Audio::Plugins']]],
-  ['event_20',['event',['../d5/dfd/structAestra_1_1Audio_1_1LiveMidiQueue_1_1Event.html',1,'Aestra::Audio::LiveMidiQueue::Event'],['../dc/d7e/structAestra_1_1Audio_1_1MidiBuffer_1_1Event.html',1,'Aestra::Audio::MidiBuffer::Event']]],
-  ['exportdialog_21',['ExportDialog',['../da/d6d/classExportDialog.html',1,'']]],
-  ['exportdialogvalues_22',['ExportDialogValues',['../d6/d6d/structAestra_1_1ExportDialogValues.html',1,'Aestra']]],
-  ['exportjobresult_23',['ExportJobResult',['../d2/d13/structExportDialog_1_1ExportJobResult.html',1,'ExportDialog']]],
-  ['exportoptioncounts_24',['ExportOptionCounts',['../d7/d22/structAestra_1_1ExportOptionCounts.html',1,'Aestra']]]
+  ['entry_16',['entry',['../d8/df6/structAestra_1_1AuditionFiles_1_1Entry.html',1,'Aestra::AuditionFiles::Entry'],['../d7/d14/structAestra_1_1BringOverCard_1_1Layout_1_1Entry.html',1,'Aestra::BringOverCard::Layout::Entry'],['../d5/db0/structAestra_1_1VersionPicker_1_1Entry.html',1,'Aestra::VersionPicker::Entry']]],
+  ['eqband_17',['EQBand',['../dc/df2/structAestra_1_1Audio_1_1Plugins_1_1EQBand.html',1,'Aestra::Audio::Plugins']]],
+  ['eqdynamicbandstate_18',['EQDynamicBandState',['../d4/d02/structAestra_1_1Audio_1_1Plugins_1_1EQDynamicBandState.html',1,'Aestra::Audio::Plugins']]],
+  ['eqkeyedparam_19',['EQKeyedParam',['../d7/d15/structAestra_1_1Audio_1_1Plugins_1_1EQKeyedParam.html',1,'Aestra::Audio::Plugins']]],
+  ['eqstateblob_20',['EQStateBlob',['../dd/db8/structAestra_1_1Audio_1_1Plugins_1_1EQStateBlob.html',1,'Aestra::Audio::Plugins']]],
+  ['event_21',['event',['../d5/dfd/structAestra_1_1Audio_1_1LiveMidiQueue_1_1Event.html',1,'Aestra::Audio::LiveMidiQueue::Event'],['../dc/d7e/structAestra_1_1Audio_1_1MidiBuffer_1_1Event.html',1,'Aestra::Audio::MidiBuffer::Event']]],
+  ['exportdialog_22',['ExportDialog',['../da/d6d/classExportDialog.html',1,'']]],
+  ['exportdialogvalues_23',['ExportDialogValues',['../d6/d6d/structAestra_1_1ExportDialogValues.html',1,'Aestra']]],
+  ['exportjobresult_24',['ExportJobResult',['../d2/d13/structExportDialog_1_1ExportJobResult.html',1,'ExportDialog']]],
+  ['exportoptioncounts_25',['ExportOptionCounts',['../d7/d22/structAestra_1_1ExportOptionCounts.html',1,'Aestra']]]
 ];

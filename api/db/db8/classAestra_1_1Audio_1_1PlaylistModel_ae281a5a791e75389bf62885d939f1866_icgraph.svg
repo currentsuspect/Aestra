@@ -83,20 +83,20 @@ var sectionId = 'dynsection-11';
 </a>
 </g>
 </g>
-<!-- Node9 -->
-<g id="Node000009" class="node">
-<title>Node9</title>
-<g id="a_Node000009"><a xlink:href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#a98f09f72ec0a8d2493880dc6f7b4d081" target="_top" xlink:title="Register every Muse command factory once.">
+<!-- Node10 -->
+<g id="Node000010" class="node">
+<title>Node10</title>
+<g id="a_Node000010"><a xlink:href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#a98f09f72ec0a8d2493880dc6f7b4d081" target="_top" xlink:title="Register every Muse command factory once.">
 <polygon fill="white" stroke="#666666" points="960,-30 781,-30 781,0 960,0 960,-30"/>
 <text text-anchor="start" x="789" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::CommandRegistry</text>
 <text text-anchor="middle" x="870.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::initialize</text>
 </a>
 </g>
 </g>
-<!-- Node1&#45;&gt;Node9 -->
-<g id="edge9_Node000001_Node000009" class="edge">
-<title>Node1&#45;&gt;Node9</title>
-<g id="a_edge9_Node000001_Node000009"><a xlink:title=" ">
+<!-- Node1&#45;&gt;Node10 -->
+<g id="edge10_Node000001_Node000010" class="edge">
+<title>Node1&#45;&gt;Node10</title>
+<g id="a_edge10_Node000001_Node000010"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M986,-33.85C977.5,-32.45 968.85,-31.02 960.31,-29.62"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="985.48,-37.31 995.91,-35.48 986.61,-30.4 985.48,-37.31"/>
 </a>
@@ -121,20 +121,20 @@ var sectionId = 'dynsection-11';
 </a>
 </g>
 </g>
-<!-- Node8 -->
-<g id="Node000008" class="node">
-<title>Node8</title>
-<g id="a_Node000008"><a xlink:href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a053a4811d93fb0e055bb0e745126e404" target="_top" xlink:title="Block the calling NON&#45;AUDIO thread until all queued prefilter jobs are done, then apply them.">
+<!-- Node9 -->
+<g id="Node000009" class="node">
+<title>Node9</title>
+<g id="a_Node000009"><a xlink:href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a053a4811d93fb0e055bb0e745126e404" target="_top" xlink:title="Block the calling NON&#45;AUDIO thread until all queued prefilter jobs are done, then apply them.">
 <polygon fill="white" stroke="#666666" points="736,-72 580,-72 580,-42 736,-42 736,-72"/>
 <text text-anchor="start" x="588" y="-60" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackManager</text>
 <text text-anchor="middle" x="658" y="-49" font-family="Helvetica,sans-Serif" font-size="10.00">::waitForClipPrefilters</text>
 </a>
 </g>
 </g>
-<!-- Node2&#45;&gt;Node8 -->
-<g id="edge8_Node000002_Node000008" class="edge">
-<title>Node2&#45;&gt;Node8</title>
-<g id="a_edge8_Node000002_Node000008"><a xlink:title=" ">
+<!-- Node2&#45;&gt;Node9 -->
+<g id="edge9_Node000002_Node000009" class="edge">
+<title>Node2&#45;&gt;Node9</title>
+<g id="a_edge9_Node000002_Node000009"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M782.34,-71.06C767.03,-69.32 751.19,-67.51 736.18,-65.8"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="781.98,-74.54 792.31,-72.2 782.77,-67.59 781.98,-74.54"/>
 </a>
@@ -225,10 +225,29 @@ var sectionId = 'dynsection-11';
 </a>
 </g>
 </g>
-<!-- Node9&#45;&gt;Node9 -->
-<g id="edge10_Node000009_Node000009" class="edge">
-<title>Node9&#45;&gt;Node9</title>
-<g id="a_edge10_Node000009_Node000009"><a xlink:title=" ">
+<!-- Node8 -->
+<g id="Node000008" class="node">
+<title>Node8</title>
+<g id="a_Node000008"><a xlink:href="../../db/d60/classAestraContent.html#a540998ede72de460fd746a8f6d4f4d60" target="_top" xlink:title="The whole project&#39;s mix, rendered offline into memory (a version&#39;s bounce). False when there is nothi...">
+<polygon fill="white" stroke="#666666" points="145.5,-96 3.5,-96 3.5,-66 145.5,-66 145.5,-96"/>
+<text text-anchor="start" x="11.5" y="-84" font-family="Helvetica,sans-Serif" font-size="10.00">AestraContent::renderMix</text>
+<text text-anchor="middle" x="74.5" y="-73" font-family="Helvetica,sans-Serif" font-size="10.00">ToBuffer</text>
+</a>
+</g>
+</g>
+<!-- Node7&#45;&gt;Node8 -->
+<g id="edge8_Node000007_Node000008" class="edge">
+<title>Node7&#45;&gt;Node8</title>
+<g id="a_edge8_Node000007_Node000008"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M174.74,-81C165.03,-81 155.23,-81 145.77,-81"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="174.82,-84.5 184.82,-81 174.82,-77.5 174.82,-84.5"/>
+</a>
+</g>
+</g>
+<!-- Node10&#45;&gt;Node10 -->
+<g id="edge11_Node000010_Node000010" class="edge">
+<title>Node10&#45;&gt;Node10</title>
+<g id="a_edge11_Node000010_Node000010"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M905.86,-40.6C901.03,-44.97 889.24,-48 870.5,-48 838.94,-48 827.1,-39.41 834.99,-30.28"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="909.36,-40.33 906.01,-30.28 902.36,-40.22 909.36,-40.33"/>
 </a>

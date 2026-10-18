@@ -1,8 +1,7 @@
 <map id="AestraContent::panelPreference" name="AestraContent::panelPreference">
-<area shape="rect" id="Node000001" title="The stored preference for a floating panel, or its per&#45;panel default when the user never moved,..." alt="" coords="5,55,235,80"/>
-<area shape="rect" id="Node000002" href="$dc/d81/UISurfaceResolution_8h.html#aa9d79ef377bd570002f8646bed567f35" title="The preference a surface uses when the store has no entry for it." alt="" coords="283,29,520,55"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="234,54,269,51,269,57,235,60"/>
-<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#afbf0a48523732326319bb02e131fbd24" title="The app&#45;owned surface store, or nullptr before AestraApp provides it." alt="" coords="299,79,504,104"/>
-<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="235,74,285,79,284,84,234,80"/>
-<area shape="poly" id="edge2_Node000002_Node000002" title=" " alt="" coords="356,31,346,21,352,11,370,5,401,3,442,7,453,12,456,18,451,21,449,16,441,12,401,8,371,10,355,15,352,20,360,27"/>
+<area shape="rect" id="Node000001" title="The stored preference for a floating panel, or its per&#45;panel default when the user never moved,..." alt="" coords="5,31,235,56"/>
+<area shape="rect" id="Node000002" href="$d8/d94/namespaceAestra.html#a064d827bf5123cd0035d8888490f8681" title="The preference a surface uses when the store has no entry for it." alt="" coords="283,5,520,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="234,30,269,27,269,33,235,36"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#afbf0a48523732326319bb02e131fbd24" title="The app&#45;owned surface store, or nullptr before AestraApp provides it." alt="" coords="299,55,504,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="235,50,285,55,284,60,234,56"/>
 </map>

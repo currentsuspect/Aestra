@@ -1,0 +1,17 @@
+<map id="Aestra::ArsenalSceneStrip::Scene" name="Aestra::ArsenalSceneStrip::Scene">
+<area shape="rect" id="Node000001" title=" " alt="" coords="53,284,243,324"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,196,80,221"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="68,228,128,282,125,286,64,232"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="105,196,191,221"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="151,235,151,284,145,284,145,235"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="79,93,217,133"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="151,147,151,196,145,196,145,147"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="215,196,366,221"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="263,231,178,286,176,282,260,227"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="253,101,304,126"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="285,139,292,196,287,196,279,140"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="329,101,458,126"/>
+<area shape="poly" id="edge6_Node000005_Node000007" title=" " alt="" coords="383,140,356,174,319,198,317,194,353,170,379,137"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="374,5,413,31"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="396,44,396,101,391,101,391,44"/>
+</map>

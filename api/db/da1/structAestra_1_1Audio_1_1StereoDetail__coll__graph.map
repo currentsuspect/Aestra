@@ -1,0 +1,23 @@
+<map id="Aestra::Audio::StereoDetail" name="Aestra::Audio::StereoDetail">
+<area shape="rect" id="Node000001" title="Width and phase of a stereo signal over time and per band." alt="" coords="924,110,1123,135"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="189,93,255,118"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="269,104,924,118,924,123,269,109"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="499,12,719,52"/>
+<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="268,94,502,49,503,55,269,99"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="526,154,691,179"/>
+<area shape="poly" id="edge11_Node000009_Node000002" title=" " alt="" coords="265,121,311,136,423,154,526,162,526,168,422,160,310,141,263,126"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="733,50,901,84,983,107,982,113,899,89,732,55"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="161,23,283,49"/>
+<area shape="poly" id="edge4_Node000003_Node000004" title=" " alt="" coords="297,33,499,30,499,36,297,38"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="5,98,44,123"/>
+<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="56,96,186,46,188,51,58,101"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="157,173,287,198"/>
+<area shape="poly" id="edge9_Node000008_Node000005" title=" " alt="" coords="58,120,188,170,186,175,56,125"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="533,218,684,243"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="697,216,795,198,899,172,951,153,995,133,998,138,953,158,901,177,796,204,698,221"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="197,263,247,289"/>
+<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="261,277,358,280,416,278,474,272,529,258,577,241,579,246,531,263,475,277,417,284,358,286,261,282"/>
+<area shape="poly" id="edge8_Node000006_Node000008" title=" " alt="" coords="280,199,311,205,428,219,533,226,533,231,427,225,310,211,278,204"/>
+<area shape="poly" id="edge12_Node000009_Node000008" title=" " alt="" coords="301,185,384,185,474,181,525,176,526,182,475,187,384,190,301,190"/>
+<area shape="poly" id="edge10_Node000001_Node000009" title=" " alt="" coords="705,156,900,136,927,133,928,138,900,141,706,161"/>
+</map>

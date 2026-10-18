@@ -1,0 +1,16 @@
+<map id="AestraContent::setAuditionActive" name="AestraContent::setAuditionActive">
+<area shape="rect" id="Node000001" title="Audition shown or hidden: the hub appears, and the file browser steps aside (and comes back as it was..." alt="" coords="796,119,993,159"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#acd45e0922aede06c12894ca10bb42bac" title="Set the active workspace mode." alt="" coords="536,127,748,152"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="782,142,748,142,748,137,782,137"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#a93c11d72cedc0fa43592a62e6d2c23a0" title="Handle global keyboard shortcuts for the workspace." alt="" coords="268,5,468,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="612,121,556,82,487,46,448,33,449,28,489,41,559,78,615,116"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#aa69bf8fb97b3308a6460aff47cc01536" title="Restore persisted workspace state (project load)." alt="" coords="248,55,488,95"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="572,126,454,98,455,93,574,121"/>
+<area shape="rect" id="Node000005" href="$db/d60/classAestraContent.html#ab90c78e0fe24a2ff739817b3c4a4440d" title="Create the Arsenal and sample&#45;editor overlays." alt="" coords="264,119,472,159"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="522,142,472,142,472,137,522,137"/>
+<area shape="rect" id="Node000006" href="$db/d60/classAestraContent.html#a59842dc639e11b43359a064651907ae6" title="Create the mixer overlay and the routing&#45;map full panel." alt="" coords="5,206,200,246"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="572,158,488,174,201,217,200,211,488,169,571,152"/>
+<area shape="rect" id="Node000007" href="$db/d60/classAestraContent.html#aa98ab25b4192e937de3de3309131ca69" title="Open the routing graph (V81&#45;R1), selecting channelId first when it is not 0. Remembers where to go ba..." alt="" coords="265,234,471,274"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="607,161,552,189,489,218,438,236,436,231,487,213,550,184,605,156"/>
+<area shape="poly" id="edge7_Node000007_Node000006" title=" " alt="" coords="251,244,200,239,200,234,251,239"/>
+</map>

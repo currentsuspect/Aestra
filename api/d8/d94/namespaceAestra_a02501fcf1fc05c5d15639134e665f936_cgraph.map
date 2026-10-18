@@ -1,0 +1,7 @@
+<map id="Aestra::loadAudioSettings" name="Aestra::loadAudioSettings">
+<area shape="rect" id="Node000001" title="Convenience: parse the file at audioSettingsConfigPath(). All&#45;unset if absent." alt="" coords="5,31,196,56"/>
+<area shape="rect" id="Node000002" href="$d8/d94/namespaceAestra.html#ab9ae7a36f7315d42af31e6bdf65f8f78" title="Resolved path to audio_settings.conf (app&#45;data, with the legacy cwd fallback)." alt="" coords="244,5,475,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="196,31,230,28,231,33,196,37"/>
+<area shape="rect" id="Node000003" href="$d8/d94/namespaceAestra.html#ac58b2b63cc85c44bc6a85a7f03181746" title="Parse key=value lines." alt="" coords="260,55,459,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="196,50,247,54,246,60,196,55"/>
+</map>

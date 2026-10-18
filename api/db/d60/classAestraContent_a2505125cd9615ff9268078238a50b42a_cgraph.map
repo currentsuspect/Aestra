@@ -1,0 +1,5 @@
+<map id="AestraContent::raiseIfCovered" name="AestraContent::raiseIfCovered">
+<area shape="rect" id="Node000001" title="Bring an open panel forward when another panel overlaps it from above; false if it was already in fro..." alt="" coords="5,5,224,31"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a5fe05d59abf371680c7ec9a3bbf12b2a" title="The panel owned for a floating view, or nullptr for other views." alt="" coords="272,5,483,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="224,15,258,15,258,21,224,21"/>
+</map>

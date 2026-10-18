@@ -1,5 +1,9 @@
 <map id="AestraContent::loadSampleIntoUnitAsync" name="AestraContent::loadSampleIntoUnitAsync">
-<area shape="rect" id="Node000001" title="Decode and publish a sample to an Arsenal unit off the UI/drop path." alt="" coords="261,5,461,45"/>
-<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#ab90c78e0fe24a2ff739817b3c4a4440d" title="Create the Arsenal and sample&#45;editor overlays." alt="" coords="5,5,213,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="247,28,214,28,214,23,247,23"/>
+<area shape="rect" id="Node000001" title="Decode and publish a sample to an Arsenal unit off the UI/drop path." alt="" coords="521,37,721,77"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a538fac57bdf982341160f19157474d61" title="A new Arsenal sampler row playing filePath (the preview dock&#39;s Add to Arsenal)." alt="" coords="271,5,467,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="507,46,467,40,468,35,508,40"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#ab90c78e0fe24a2ff739817b3c4a4440d" title="Create the Arsenal and sample&#45;editor overlays." alt="" coords="265,69,473,109"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="508,74,474,79,473,73,507,69"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#af214284a167c0d4485e8c7849733eee2" title="Create the file/plugin/preview/pattern browser panels." alt="" coords="5,5,217,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="257,28,218,28,218,23,257,23"/>
 </map>

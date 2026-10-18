@@ -48,7 +48,7 @@
 <script type="application/ecmascript">
 var viewWidth = 735;
 var viewHeight = 86;
-var sectionId = 'dynsection-79';
+var sectionId = 'dynsection-85';
 </script>
 <script type="application/ecmascript" xlink:href="../../svg.min.js"/>
 <svg id="graph" class="graph">
@@ -146,6 +146,25 @@ var sectionId = 'dynsection-79';
 <g id="a_edge4_Node000004_Node000003"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M159.04,-69.72C167.62,-69.77 176.31,-69.76 184.82,-69.66"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="159.08,-66.22 149.04,-69.61 159,-73.22 159.08,-66.22"/>
+</a>
+</g>
+</g>
+<!-- Node6 -->
+<g id="Node000006" class="node">
+<title>Node6</title>
+<g id="a_Node000006"><a xlink:href="../../db/d60/classAestraContent.html#a540998ede72de460fd746a8f6d4f4d60" target="_top" xlink:title="The whole project&#39;s mix, rendered offline into memory (a version&#39;s bounce). False when there is nothi...">
+<polygon fill="white" stroke="#666666" points="145.5,-30 3.5,-30 3.5,0 145.5,0 145.5,-30"/>
+<text text-anchor="start" x="11.5" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">AestraContent::renderMix</text>
+<text text-anchor="middle" x="74.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">ToBuffer</text>
+</a>
+</g>
+</g>
+<!-- Node5&#45;&gt;Node6 -->
+<g id="edge6_Node000005_Node000006" class="edge">
+<title>Node5&#45;&gt;Node6</title>
+<g id="a_edge6_Node000005_Node000006"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M174.74,-15C165.03,-15 155.23,-15 145.77,-15"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="174.82,-18.5 184.82,-15 174.82,-11.5 174.82,-18.5"/>
 </a>
 </g>
 </g>

@@ -70,7 +70,7 @@ $(function() {
 
 <div id="nav-path" class="navpath">
   <ul>
-<li class="navelem"><b>Aestra</b></li><li class="navelem"><b>Audio</b></li><li class="navelem"><a class="el" href="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager.html">PatternManager</a></li>  </ul>
+<li class="navelem"><a class="el" href="../../d8/d94/namespaceAestra.html">Aestra</a></li><li class="navelem"><b>Audio</b></li><li class="navelem"><a class="el" href="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager.html">PatternManager</a></li>  </ul>
 </div>
 </div><!-- top -->
 <div class="header">
@@ -124,6 +124,13 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a0a3034855460c1b4bcbecf814b696b05" id="r_a0a3034855460c1b4bcbecf814b696b05"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a0a3034855460c1b4bcbecf814b696b05">validateMixerChannels</a> (const std::vector&lt; uint32_t &gt; &amp;mixerChannelIds)</td></tr>
 <tr class="memdesc:a0a3034855460c1b4bcbecf814b696b05"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolve missing/invalid audio-pattern destinations after project channels load.  <br /></td></tr>
 <tr class="separator:a0a3034855460c1b4bcbecf814b696b05"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab7952e458feafdb9709f3d4ed9f215b3" id="r_ab7952e458feafdb9709f3d4ed9f215b3"><td class="memTemplParams" colspan="2">template&lt;class Fn &gt; </td></tr>
+<tr class="memitem:ab7952e458feafdb9709f3d4ed9f215b3"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#ab7952e458feafdb9709f3d4ed9f215b3">forEachPattern</a> (Fn &amp;&amp;fn) const</td></tr>
+<tr class="memdesc:ab7952e458feafdb9709f3d4ed9f215b3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Visit every pattern (read-only), in no particular order.  <br /></td></tr>
+<tr class="separator:ab7952e458feafdb9709f3d4ed9f215b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:add9ec9aeba87d59c6840e95e6400b953" id="r_add9ec9aeba87d59c6840e95e6400b953"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">PatternID</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#add9ec9aeba87d59c6840e95e6400b953">adoptPattern</a> (const <a class="el" href="../../dc/d45/classAestra_1_1Audio_1_1PatternSource.html">PatternSource</a> &amp;source)</td></tr>
+<tr class="memdesc:add9ec9aeba87d59c6840e95e6400b953"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a copy of a pattern from another project under a fresh id, which is returned.  <br /></td></tr>
+<tr class="separator:add9ec9aeba87d59c6840e95e6400b953"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3a1d672ebf49406d5632092445c14d7d" id="r_a3a1d672ebf49406d5632092445c14d7d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a3a1d672ebf49406d5632092445c14d7d">removePattern</a> (<a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">PatternID</a> id)</td></tr>
 <tr class="memdesc:a3a1d672ebf49406d5632092445c14d7d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove a pattern by ID.  <br /></td></tr>
 <tr class="separator:a3a1d672ebf49406d5632092445c14d7d"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -152,6 +159,36 @@ Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00016">16</a> of file <a class="el" href="../../db/d17/PatternManager_8h_source.html">PatternManager.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
+<a id="add9ec9aeba87d59c6840e95e6400b953" name="add9ec9aeba87d59c6840e95e6400b953"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#add9ec9aeba87d59c6840e95e6400b953">&#9670;&#160;</a></span>adoptPattern()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">PatternID</a> Aestra::Audio::PatternManager::adoptPattern </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="../../dc/d45/classAestra_1_1Audio_1_1PatternSource.html">PatternSource</a> &amp;&#160;</td>
+          <td class="paramname"><em>source</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Add a copy of a pattern from another project under a fresh id, which is returned. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00189">189</a> of file <a class="el" href="../../db/d17/PatternManager_8h_source.html">PatternManager.h</a>.</p>
+
+</div>
+</div>
 <a id="abee9e6cbed1f10357d030516169e842d" name="abee9e6cbed1f10357d030516169e842d"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#abee9e6cbed1f10357d030516169e842d">&#9670;&#160;</a></span>applyPatch()</h2>
 
@@ -203,9 +240,9 @@ template&lt;typename PatchFn &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00252">252</a> of file <a class="el" href="../../db/d17/PatternManager_8h_source.html">PatternManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00269">269</a> of file <a class="el" href="../../db/d17/PatternManager_8h_source.html">PatternManager.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00223">getOrCreatePattern()</a>.</p>
+<p class="reference">References <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00240">getOrCreatePattern()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../db/d3b/QuantizePatternCommand_8h_source.html#l00031">Aestra::Audio::QuantizePatternCommand::execute()</a>, <a class="el" href="../../dd/d38/SetPatternLengthCommand_8h_source.html#l00023">Aestra::Audio::SetPatternLengthCommand::execute()</a>, <a class="el" href="../../d8/ddb/SetStepsCommand_8h_source.html#l00036">Aestra::Audio::SetStepsCommand::execute()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l02017">Aestra::Audio::TrackManager::playPatternInArsenal()</a>, <a class="el" href="../../db/d3b/QuantizePatternCommand_8h_source.html#l00053">Aestra::Audio::QuantizePatternCommand::undo()</a>, <a class="el" href="../../dd/d38/SetPatternLengthCommand_8h_source.html#l00032">Aestra::Audio::SetPatternLengthCommand::undo()</a>, and <a class="el" href="../../d8/ddb/SetStepsCommand_8h_source.html#l00069">Aestra::Audio::SetStepsCommand::undo()</a>.</p>
 <div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -250,7 +287,7 @@ template&lt;typename PatchFn &gt; </div>
 
 <p>Clear all stored patterns and reset ID allocation. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00261">261</a> of file <a class="el" href="../../db/d17/PatternManager_8h_source.html">PatternManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00278">278</a> of file <a class="el" href="../../db/d17/PatternManager_8h_source.html">PatternManager.h</a>.</p>
 
 </div>
 </div>
@@ -291,7 +328,7 @@ template&lt;typename PatchFn &gt; </div>
 
 <p class="reference">References <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00026">getPattern()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00328">Aestra::Audio::UnitManager::duplicateUnit()</a>, <a class="el" href="../../d1/df5/ClonePatternCommand_8h_source.html#l00024">Aestra::Audio::ClonePatternCommand::execute()</a>, <a class="el" href="../../d1/d79/MakeAudioClipUniqueCommand_8h_source.html#l00018">Aestra::Audio::MakeAudioClipUniqueCommand::execute()</a>, <a class="el" href="../../d4/dae/MakeClipPatternUniqueCommand_8h_source.html#l00025">Aestra::Audio::MakeClipPatternUniqueCommand::execute()</a>, and <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00504">Aestra::Audio::PlaylistModel::splitClip()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00329">Aestra::Audio::UnitManager::duplicateUnit()</a>, <a class="el" href="../../d1/df5/ClonePatternCommand_8h_source.html#l00024">Aestra::Audio::ClonePatternCommand::execute()</a>, <a class="el" href="../../d1/d79/MakeAudioClipUniqueCommand_8h_source.html#l00018">Aestra::Audio::MakeAudioClipUniqueCommand::execute()</a>, <a class="el" href="../../d4/dae/MakeClipPatternUniqueCommand_8h_source.html#l00025">Aestra::Audio::MakeClipPatternUniqueCommand::execute()</a>, and <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00504">Aestra::Audio::PlaylistModel::splitClip()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">
@@ -507,12 +544,21 @@ template&lt;typename PatchFn &gt; </div>
 <p class="definition">Definition at line <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00095">95</a> of file <a class="el" href="../../db/d17/PatternManager_8h_source.html">PatternManager.h</a>.</p>
 
 <p class="reference">References <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00110">createMidiPatternWithId()</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../db/d03/ArsenalSceneStrip_8h_source.html#l00223">Aestra::ArsenalSceneStrip::onMouse()</a>.</p>
 <div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-7-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-7-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager_af17c4e7693841ef1bc5821a6b4cbba8c_cgraph.svg" width="499" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+<div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-8-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-8-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager_af17c4e7693841ef1bc5821a6b4cbba8c_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -578,12 +624,12 @@ template&lt;typename PatchFn &gt; </div>
 <p class="definition">Definition at line <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00110">110</a> of file <a class="el" href="../../db/d17/PatternManager_8h_source.html">PatternManager.h</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00095">createMidiPattern()</a>.</p>
-<div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-8-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-9" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-9-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-9-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-8-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager_ac8e1d96a07695282b8eb255ad01a6b9a_icgraph.svg" width="499" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div id="dynsection-9-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager_ac8e1d96a07695282b8eb255ad01a6b9a_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -651,15 +697,56 @@ template&lt;typename PatchFn &gt; </div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Ownership of the pattern, or nullptr when it was not found. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00193">193</a> of file <a class="el" href="../../db/d17/PatternManager_8h_source.html">PatternManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00210">210</a> of file <a class="el" href="../../db/d17/PatternManager_8h_source.html">PatternManager.h</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d1/d79/MakeAudioClipUniqueCommand_8h_source.html#l00018">Aestra::Audio::MakeAudioClipUniqueCommand::execute()</a>, <a class="el" href="../../d4/dae/MakeClipPatternUniqueCommand_8h_source.html#l00025">Aestra::Audio::MakeClipPatternUniqueCommand::execute()</a>, <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00014">Aestra::Audio::RenderAudioClipCommand::execute()</a>, <a class="el" href="../../db/dde/ImportAudioClipCommand_8cpp_source.html#l00123">Aestra::Audio::ImportAudioClipCommand::undo()</a>, <a class="el" href="../../d1/d79/MakeAudioClipUniqueCommand_8h_source.html#l00046">Aestra::Audio::MakeAudioClipUniqueCommand::undo()</a>, <a class="el" href="../../d4/dae/MakeClipPatternUniqueCommand_8h_source.html#l00066">Aestra::Audio::MakeClipPatternUniqueCommand::undo()</a>, and <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00084">Aestra::Audio::RenderAudioClipCommand::undo()</a>.</p>
-<div id="dynsection-9" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-9-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-9-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-10" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-10-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-10-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-9-content" class="dyncontent" style="display:none;">
+<div id="dynsection-10-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager_a672117a00d363d60ddee6c70af61c431_icgraph.svg" width="100%" height="600"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+
+</div>
+</div>
+<a id="ab7952e458feafdb9709f3d4ed9f215b3" name="ab7952e458feafdb9709f3d4ed9f215b3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab7952e458feafdb9709f3d4ed9f215b3">&#9670;&#160;</a></span>forEachPattern()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class Fn &gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::PatternManager::forEachPattern </td>
+          <td>(</td>
+          <td class="paramtype">Fn &amp;&amp;&#160;</td>
+          <td class="paramname"><em>fn</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Visit every pattern (read-only), in no particular order. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00181">181</a> of file <a class="el" href="../../db/d17/PatternManager_8h_source.html">PatternManager.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../db/dc5/VersionBringOver_8h_source.html#l00080">Aestra::BringOver::plan()</a>.</p>
+<div id="dynsection-11" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-11-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-11-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-11-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager_ab7952e458feafdb9709f3d4ed9f215b3_icgraph.svg" width="452" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -690,14 +777,14 @@ template&lt;typename PatchFn &gt; </div>
 <p>Get all patterns. </p>
 <dl class="section return"><dt>Returns</dt><dd>Shared-pointer view of all stored patterns. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00236">236</a> of file <a class="el" href="../../db/d17/PatternManager_8h_source.html">PatternManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00253">253</a> of file <a class="el" href="../../db/d17/PatternManager_8h_source.html">PatternManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00101">Aestra::Audio::DeleteTrackCommand::execute()</a>, and <a class="el" href="../../d1/d5a/TrackManager_8cpp_source.html#l00116">Aestra::Audio::TrackManager::prewarmSamplerKeepLength()</a>.</p>
-<div id="dynsection-10" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-10-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-10-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00111">Aestra::Audio::DeleteTrackCommand::execute()</a>, and <a class="el" href="../../d1/d5a/TrackManager_8cpp_source.html#l00133">Aestra::Audio::TrackManager::prewarmSamplerKeepLength()</a>.</p>
+<div id="dynsection-12" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-12-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-12-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-10-content" class="dyncontent" style="display:none;">
+<div id="dynsection-12-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager_a2f38f4b25a7aa61512084f6470e90829_icgraph.svg" width="100%" height="410"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -736,14 +823,14 @@ template&lt;typename PatchFn &gt; </div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to the requested pattern. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00223">223</a> of file <a class="el" href="../../db/d17/PatternManager_8h_source.html">PatternManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00240">240</a> of file <a class="el" href="../../db/d17/PatternManager_8h_source.html">PatternManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00252">applyPatch()</a>.</p>
-<div id="dynsection-11" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-11-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-11-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00269">applyPatch()</a>.</p>
+<div id="dynsection-13" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-13-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-13-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-11-content" class="dyncontent" style="display:none;">
+<div id="dynsection-13-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager_a14e806e03276c9b4ea16c838fab092d8_icgraph.svg" width="100%" height="600"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -777,12 +864,12 @@ template&lt;typename PatchFn &gt; </div>
 
 <p class="definition">Definition at line <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00026">26</a> of file <a class="el" href="../../db/d17/PatternManager_8h_source.html">PatternManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00828">Aestra::Audio::PlaylistModel::addClipFromPattern()</a>, <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00598">Aestra::Audio::PlaylistModel::buildRuntimeSnapshot()</a>, <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00128">clonePattern()</a>, <a class="el" href="../../d1/d5a/TrackManager_8cpp_source.html#l00025">Aestra::Audio::TrackManager::ensureClipPrefilters()</a>, <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html#l00032">Aestra::Audio::ArrangePatternCommand::execute()</a>, <a class="el" href="../../d1/d79/MakeAudioClipUniqueCommand_8h_source.html#l00018">Aestra::Audio::MakeAudioClipUniqueCommand::execute()</a>, <a class="el" href="../../d4/dae/MakeClipPatternUniqueCommand_8h_source.html#l00025">Aestra::Audio::MakeClipPatternUniqueCommand::execute()</a>, <a class="el" href="../../d0/dbe/SetAudioPatternMixerChannelCommand_8h_source.html#l00016">Aestra::Audio::SetAudioPatternMixerChannelCommand::execute()</a>, <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00166">Aestra::Audio::CommandRegistry::initialize()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l02017">Aestra::Audio::TrackManager::playPatternInArsenal()</a>, <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00222">Aestra::Audio::PatternPlaybackEngine::refillWindow()</a>, <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00208">reinsertPattern()</a>, <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html#l00039">Aestra::Audio::ClipRenderService::resolveClipRegion()</a>, and <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00139">setPatternMixerChannel()</a>.</p>
-<div id="dynsection-12" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-12-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-12-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00829">Aestra::Audio::PlaylistModel::addClipFromPattern()</a>, <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00598">Aestra::Audio::PlaylistModel::buildRuntimeSnapshot()</a>, <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00128">clonePattern()</a>, <a class="el" href="../../d1/d5a/TrackManager_8cpp_source.html#l00026">Aestra::Audio::TrackManager::ensureClipPrefilters()</a>, <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html#l00032">Aestra::Audio::ArrangePatternCommand::execute()</a>, <a class="el" href="../../d1/d79/MakeAudioClipUniqueCommand_8h_source.html#l00018">Aestra::Audio::MakeAudioClipUniqueCommand::execute()</a>, <a class="el" href="../../d4/dae/MakeClipPatternUniqueCommand_8h_source.html#l00025">Aestra::Audio::MakeClipPatternUniqueCommand::execute()</a>, <a class="el" href="../../d0/dbe/SetAudioPatternMixerChannelCommand_8h_source.html#l00016">Aestra::Audio::SetAudioPatternMixerChannelCommand::execute()</a>, <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00166">Aestra::Audio::CommandRegistry::initialize()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l02017">Aestra::Audio::TrackManager::playPatternInArsenal()</a>, <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00223">Aestra::Audio::PatternPlaybackEngine::refillWindow()</a>, <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00225">reinsertPattern()</a>, <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html#l00039">Aestra::Audio::ClipRenderService::resolveClipRegion()</a>, and <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00139">setPatternMixerChannel()</a>.</p>
+<div id="dynsection-14" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-14-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-14-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-12-content" class="dyncontent" style="display:none;">
+<div id="dynsection-14-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager_a77910950ec791176dd209ba9c83e219a_icgraph.svg" width="100%" height="600"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -849,23 +936,23 @@ template&lt;typename PatchFn &gt; </div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True when the pattern was restored. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00208">208</a> of file <a class="el" href="../../db/d17/PatternManager_8h_source.html">PatternManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00225">225</a> of file <a class="el" href="../../db/d17/PatternManager_8h_source.html">PatternManager.h</a>.</p>
 
 <p class="reference">References <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00026">getPattern()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d1/d79/MakeAudioClipUniqueCommand_8h_source.html#l00018">Aestra::Audio::MakeAudioClipUniqueCommand::execute()</a>, <a class="el" href="../../d4/dae/MakeClipPatternUniqueCommand_8h_source.html#l00025">Aestra::Audio::MakeClipPatternUniqueCommand::execute()</a>, and <a class="el" href="../../d9/dec/RenderAudioClipCommand_8cpp_source.html#l00014">Aestra::Audio::RenderAudioClipCommand::execute()</a>.</p>
-<div id="dynsection-13" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-13-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-13-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-15" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-15-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-15-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-13-content" class="dyncontent" style="display:none;">
+<div id="dynsection-15-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager_a72a2dd4a0e71f33f0303d44664ccbf14_cgraph.svg" width="499" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
-<div id="dynsection-14" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-14-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-14-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-16" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-16-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-16-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-14-content" class="dyncontent" style="display:none;">
+<div id="dynsection-16-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager_a72a2dd4a0e71f33f0303d44664ccbf14_icgraph.svg" width="100%" height="434"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -903,15 +990,15 @@ template&lt;typename PatchFn &gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00184">184</a> of file <a class="el" href="../../db/d17/PatternManager_8h_source.html">PatternManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00201">201</a> of file <a class="el" href="../../db/d17/PatternManager_8h_source.html">PatternManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d1/df5/ClonePatternCommand_8h_source.html#l00036">Aestra::Audio::ClonePatternCommand::undo()</a>.</p>
-<div id="dynsection-15" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-15-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-15-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d1/df5/ClonePatternCommand_8h_source.html#l00036">Aestra::Audio::ClonePatternCommand::undo()</a>, and <a class="el" href="../../db/dc5/VersionBringOver_8h_source.html#l00240">Aestra::BringOver::Command::undo()</a>.</p>
+<div id="dynsection-17" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-17-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-17-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-15-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager_a3a1d672ebf49406d5632092445c14d7d_icgraph.svg" width="479" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div id="dynsection-17-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager_a3a1d672ebf49406d5632092445c14d7d_icgraph.svg" width="479" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -944,12 +1031,12 @@ template&lt;typename PatchFn &gt; </div>
 
 <p class="definition">Definition at line <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00150">150</a> of file <a class="el" href="../../db/d17/PatternManager_8h_source.html">PatternManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00101">Aestra::Audio::DeleteTrackCommand::execute()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00174">Aestra::Audio::DeleteTrackCommand::redo()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00201">Aestra::Audio::TrackManager::removeLastChannel()</a>.</p>
-<div id="dynsection-16" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-16-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-16-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00111">Aestra::Audio::DeleteTrackCommand::execute()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00184">Aestra::Audio::DeleteTrackCommand::redo()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00201">Aestra::Audio::TrackManager::removeLastChannel()</a>.</p>
+<div id="dynsection-18" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-18-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-18-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-16-content" class="dyncontent" style="display:none;">
+<div id="dynsection-18-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager_a23822b02fba150635b0753a21e27491b_icgraph.svg" width="487" height="179"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -995,19 +1082,19 @@ template&lt;typename PatchFn &gt; </div>
 
 <p class="reference">References <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00026">getPattern()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html#l00375">Aestra::Audio::ClipRenderService::commit()</a>, <a class="el" href="../../d4/dae/MakeClipPatternUniqueCommand_8h_source.html#l00025">Aestra::Audio::MakeClipPatternUniqueCommand::execute()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00617">Aestra::Audio::TrackManager::setAudioPatternMixerChannel()</a>, and <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00152">Aestra::Audio::DeleteTrackCommand::undo()</a>.</p>
-<div id="dynsection-17" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-17-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-17-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d7/d05/ClipRenderService_8cpp_source.html#l00375">Aestra::Audio::ClipRenderService::commit()</a>, <a class="el" href="../../d4/dae/MakeClipPatternUniqueCommand_8h_source.html#l00025">Aestra::Audio::MakeClipPatternUniqueCommand::execute()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00617">Aestra::Audio::TrackManager::setAudioPatternMixerChannel()</a>, and <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00162">Aestra::Audio::DeleteTrackCommand::undo()</a>.</p>
+<div id="dynsection-19" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-19-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-19-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-17-content" class="dyncontent" style="display:none;">
+<div id="dynsection-19-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager_a054ad8e9a176915d83d883854fa19d5c_cgraph.svg" width="499" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
-<div id="dynsection-18" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-18-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-18-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-20" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-20-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-20-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-18-content" class="dyncontent" style="display:none;">
+<div id="dynsection-20-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager_a054ad8e9a176915d83d883854fa19d5c_icgraph.svg" width="100%" height="578"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 

@@ -1,0 +1,83 @@
+<map id="Aestra::resolveSurfacePlacement" name="Aestra::resolveSurfacePlacement">
+<area shape="rect" id="Node000001" title="The on&#45;screen rect for a stored preference in the current placement region." alt="" coords="1628,845,1867,870"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a1e0d0671846c7430d1d4c113656dd140" title="Show a panel from its preference: setBounds from resolveSurfacePlacement against the current region,..." alt="" coords="1385,837,1580,877"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="1614,860,1580,860,1580,855,1614,855"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#a8dec12a7a994d934087f9d92cc3f4503" title="View &gt; Gather Panels: every open panel and editor back fully inside the window." alt="" coords="1117,134,1323,159"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="1476,824,1462,684,1435,491,1416,393,1393,303,1366,230,1351,202,1335,181,1308,162,1311,157,1339,177,1356,199,1371,228,1399,302,1422,391,1441,490,1468,684,1481,823"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#ad0290fd113d01c4f8cfcc66a6ac47794" title="Relayout the workspace after a host resize." alt="" coords="1129,769,1311,794"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="1399,836,1264,797,1266,792,1401,831"/>
+<area shape="rect" id="Node000005" href="$db/d60/classAestraContent.html#ae6930f4ad43aea5913222619cb6924b3" title="Explicitly show or hide the Arsenal panel." alt="" coords="853,171,1045,211"/>
+<area shape="poly" id="edge41_Node000002_Node000005" title=" " alt="" coords="1476,824,1462,692,1436,512,1417,422,1394,340,1367,274,1352,250,1336,231,1316,219,1287,210,1213,197,1127,191,1045,191,1045,185,1127,186,1213,192,1289,205,1318,214,1339,227,1356,246,1372,272,1399,338,1422,421,1441,512,1468,692,1481,823"/>
+<area shape="rect" id="Node000006" href="$db/d60/classAestraContent.html#ab90c78e0fe24a2ff739817b3c4a4440d" title="Create the Arsenal and sample&#45;editor overlays." alt="" coords="297,444,505,484"/>
+<area shape="poly" id="edge42_Node000002_Node000006" title=" " alt="" coords="1458,828,1368,709,1301,631,1220,548,1127,467,1024,393,969,360,912,332,854,308,794,291,725,271,668,258,641,257,615,261,587,271,556,290,541,305,534,321,531,357,529,395,523,414,509,433,490,446,487,442,505,429,518,411,524,394,526,356,528,319,537,302,553,286,584,267,613,256,641,251,669,253,726,266,795,285,856,303,915,327,972,356,1027,388,1130,463,1223,545,1305,628,1373,706,1462,824"/>
+<area shape="rect" id="Node000019" href="$db/d60/classAestraContent.html#aa076399851deccb029cfbea3642d1725" title="Open or close a specific workspace overlay." alt="" coords="844,883,1053,909"/>
+<area shape="poly" id="edge43_Node000002_Node000019" title=" " alt="" coords="1372,867,1103,887,1054,890,1053,885,1102,881,1372,862"/>
+<area shape="rect" id="Node000026" href="$db/d60/classAestraContent.html#a29cc63245169cefe2237cb56bab66570" title="Toggle the History panel visibility." alt="" coords="849,1163,1049,1203"/>
+<area shape="poly" id="edge44_Node000002_Node000026" title=" " alt="" coords="1457,889,1405,938,1373,963,1339,984,1304,997,1272,1003,1215,1003,1188,1003,1161,1007,1134,1017,1104,1037,1093,1049,1086,1062,1080,1089,1075,1117,1068,1132,1056,1146,1028,1165,1025,1160,1053,1142,1064,1129,1070,1116,1075,1088,1081,1060,1088,1046,1101,1033,1131,1012,1160,1002,1188,998,1215,998,1272,998,1302,992,1336,979,1370,959,1402,934,1453,885"/>
+<area shape="rect" id="Node000028" href="$db/d60/classAestraContent.html#af10a2012402159e071496c9c57f61d57" title="View &gt; Reset Panel Positions: default geometry for every panel; editors re&#45;centred." alt="" coords="1125,1047,1315,1087"/>
+<area shape="poly" id="edge40_Node000002_Node000028" title=" " alt="" coords="1464,891,1413,961,1378,998,1339,1030,1303,1049,1300,1044,1336,1026,1375,994,1409,957,1460,888"/>
+<area shape="rect" id="Node000029" href="$db/d60/classAestraContent.html#abf75859f00b70e490c26fdad50391fc0" title="Update the active overlay&#45;panel drag." alt="" coords="1103,895,1337,921"/>
+<area shape="poly" id="edge45_Node000002_Node000029" title=" " alt="" coords="1373,881,1287,898,1286,893,1372,876"/>
+<area shape="rect" id="Node000030" href="$db/d60/classAestraContent.html#a589ca44aee5e7aab4b6ead3f635adda5" title="Wire the floating&#45;panel behaviors shared by every overlay panel." alt="" coords="847,965,1051,1005"/>
+<area shape="poly" id="edge51_Node000002_Node000030" title=" " alt="" coords="1440,887,1392,913,1338,936,1265,955,1189,969,1051,984,1051,979,1188,964,1263,950,1336,931,1390,909,1438,882"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="1213,756,1198,671,1168,549,1147,481,1121,412,1090,345,1053,282,1018,243,980,213,984,209,1022,239,1057,278,1094,342,1126,410,1152,479,1174,548,1203,670,1218,755"/>
+<area shape="poly" id="edge14_Node000004_Node000006" title=" " alt="" coords="1204,758,1152,669,1111,609,1063,545,1006,480,942,420,871,367,794,326,727,301,671,290,644,290,617,296,588,308,556,326,544,337,537,349,531,375,527,404,520,419,508,433,489,446,486,442,505,429,516,416,522,403,526,374,532,347,540,334,553,322,585,303,615,291,644,285,672,284,729,296,796,322,874,362,945,416,1010,477,1067,541,1116,606,1156,666,1208,755"/>
+<area shape="rect" id="Node000012" href="$db/d60/classAestraContent.html#ade74bf893f76f1edafe2c809b6393b64" title="Show or hide the left browser area." alt="" coords="851,5,1047,45"/>
+<area shape="poly" id="edge11_Node000004_Node000012" title=" " alt="" coords="1212,755,1184,603,1142,384,1094,178,1072,105,1053,66,1029,48,1032,43,1057,62,1077,103,1099,177,1147,383,1190,602,1217,754"/>
+<area shape="rect" id="Node000013" href="$db/d60/classAestraContent.html#af214284a167c0d4485e8c7849733eee2" title="Create the file/plugin/preview/pattern browser panels." alt="" coords="295,63,507,103"/>
+<area shape="poly" id="edge15_Node000004_Node000013" title=" " alt="" coords="1213,755,1195,628,1161,448,1139,356,1113,273,1085,205,1069,180,1053,161,1015,137,959,118,890,104,813,95,651,85,507,83,507,78,651,79,814,89,891,99,960,113,1017,132,1056,157,1073,177,1089,203,1118,271,1144,355,1166,447,1200,627,1218,754"/>
+<area shape="rect" id="Node000014" href="$db/d60/classAestraContent.html#a6503567ed7bf583acd7e7d9769c1f96e" title="Set the active browser column width." alt="" coords="851,819,1047,859"/>
+<area shape="poly" id="edge13_Node000004_Node000014" title=" " alt="" coords="1146,799,1044,821,1043,816,1145,794"/>
+<area shape="rect" id="Node000015" href="$db/d60/classAestraContent.html#a59842dc639e11b43359a064651907ae6" title="Create the mixer overlay and the routing&#45;map full panel." alt="" coords="303,775,498,815"/>
+<area shape="poly" id="edge16_Node000004_Node000015" title=" " alt="" coords="1115,786,498,796,498,790,1115,780"/>
+<area shape="rect" id="Node000016" href="$db/d60/classAestraContent.html#acd45e0922aede06c12894ca10bb42bac" title="Set the active workspace mode." alt="" coords="843,594,1055,619"/>
+<area shape="poly" id="edge17_Node000004_Node000016" title=" " alt="" coords="1186,763,968,622,971,617,1189,759"/>
+<area shape="poly" id="edge24_Node000004_Node000019" title=" " alt="" coords="1179,802,1104,841,1081,858,1056,873,1018,886,1017,881,1054,868,1078,853,1101,836,1177,798"/>
+<area shape="rect" id="Node000025" href="$db/d60/classAestraContent.html#a91ceedc014ed28d754f6d20d19e2cfee" title="Toggle visibility of the left browser area." alt="" coords="307,1048,494,1088"/>
+<area shape="poly" id="edge35_Node000004_Node000025" title=" " alt="" coords="1189,804,1146,839,1105,886,1095,904,1089,921,1085,955,1079,987,1071,1003,1057,1019,1025,1045,990,1066,954,1083,916,1097,837,1115,755,1122,675,1121,599,1114,475,1091,476,1085,600,1108,675,1116,755,1117,836,1110,915,1092,952,1079,988,1061,1022,1040,1053,1015,1066,1000,1074,985,1080,954,1084,920,1090,902,1100,882,1142,836,1186,800"/>
+<area shape="poly" id="edge37_Node000004_Node000026" title=" " alt="" coords="1187,804,1143,838,1122,861,1105,885,1090,922,1084,955,1085,987,1088,1018,1091,1049,1089,1080,1078,1112,1057,1146,1033,1165,1030,1160,1053,1142,1074,1110,1083,1079,1085,1049,1083,1019,1079,988,1079,955,1085,920,1100,883,1118,857,1140,834,1184,799"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="839,190,758,192,675,198,603,210,576,220,556,231,538,254,529,277,528,302,531,327,534,353,533,380,526,406,509,432,492,446,489,442,505,429,521,404,528,379,528,353,525,328,523,302,524,276,533,251,553,227,573,215,602,205,674,192,758,186,839,185"/>
+<area shape="rect" id="Node000007" href="$db/d60/classAestraContent.html#a4feb8815fae20c321c2abde07f12879a" title="Toggle the Arsenal panel regardless of active mode." alt="" coords="568,120,781,160"/>
+<area shape="poly" id="edge6_Node000005_Node000007" title=" " alt="" coords="838,173,781,162,782,157,839,168"/>
+<area shape="rect" id="Node000008" href="$db/d60/classAestraContent.html#a64124c9937df91c649b1101e8fb4ab8b" title="Toggle visibility for a specific workspace overlay." alt="" coords="303,394,499,419"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="577,168,556,181,528,206,502,234,459,296,428,353,410,395,405,393,423,351,454,293,498,231,524,202,553,177,574,164"/>
+<area shape="rect" id="Node000009" href="$db/d60/classAestraContent.html#a93c11d72cedc0fa43592a62e6d2c23a0" title="Handle global keyboard shortcuts for the workspace." alt="" coords="26,810,226,835"/>
+<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="305,428,297,434,269,489,220,602,135,811,130,809,215,600,264,486,293,430,301,424"/>
+<area shape="rect" id="Node000010" href="$db/d60/classAestraContent.html#adde34f69a39cdca3682dc5fbcb183c98" title="Create TrackManagerUI and wire its toggles, loop and audition callbacks." alt="" coords="29,472,223,512"/>
+<area shape="poly" id="edge9_Node000008_Node000010" title=" " alt="" coords="329,425,295,435,180,474,178,469,294,429,328,420"/>
+<area shape="rect" id="Node000011" href="$db/d60/classAestraContent.html#aa2d67aab8ab85aa5c68d72369b31278f" title="Create the transport bar and wire it to the audio engine." alt="" coords="5,394,247,419"/>
+<area shape="poly" id="edge10_Node000008_Node000011" title=" " alt="" coords="289,409,247,409,247,404,289,404"/>
+<area shape="poly" id="edge12_Node000012_Node000013" title=" " alt="" coords="837,38,555,67,507,72,506,67,554,61,837,33"/>
+<area shape="poly" id="edge20_Node000016_Node000006" title=" " alt="" coords="925,586,869,536,833,511,794,492,721,471,645,460,571,456,505,457,505,452,572,451,646,455,722,466,796,487,836,506,872,532,928,582"/>
+<area shape="poly" id="edge18_Node000016_Node000009" title=" " alt="" coords="844,595,779,590,706,589,630,594,555,607,491,626,427,650,307,710,210,769,146,812,143,808,207,764,305,705,425,646,489,621,554,601,629,589,706,584,779,585,845,590"/>
+<area shape="poly" id="edge21_Node000016_Node000015" title=" " alt="" coords="905,627,796,671,620,730,470,777,468,772,618,725,794,665,903,622"/>
+<area shape="rect" id="Node000017" href="$db/d60/classAestraContent.html#aa69bf8fb97b3308a6460aff47cc01536" title="Restore persisted workspace state (project load)." alt="" coords="555,336,795,376"/>
+<area shape="poly" id="edge19_Node000016_Node000017" title=" " alt="" coords="933,583,912,542,881,492,841,441,793,397,759,378,762,374,796,392,845,437,885,489,917,539,938,580"/>
+<area shape="rect" id="Node000018" href="$db/d60/classAestraContent.html#aa98ab25b4192e937de3de3309131ca69" title="Open the routing graph (V81&#45;R1), selecting channelId first when it is not 0. Remembers where to go ba..." alt="" coords="571,616,778,656"/>
+<area shape="poly" id="edge22_Node000016_Node000018" title=" " alt="" coords="829,622,779,628,778,622,829,617"/>
+<area shape="poly" id="edge23_Node000018_Node000015" title=" " alt="" coords="587,663,556,677,517,701,481,727,424,777,421,773,478,723,514,696,553,672,585,658"/>
+<area shape="poly" id="edge34_Node000019_Node000008" title=" " alt="" coords="845,877,841,872,822,848,810,824,803,799,801,775,805,727,817,679,828,631,832,584,830,561,823,538,811,514,793,491,763,464,729,443,691,427,652,415,573,403,499,401,499,395,573,397,653,410,693,422,731,438,766,460,797,488,815,511,828,536,835,560,838,584,833,632,822,680,811,728,806,775,809,798,815,822,827,845,845,869,849,873"/>
+<area shape="poly" id="edge32_Node000019_Node000015" title=" " alt="" coords="865,883,498,815,499,810,866,878"/>
+<area shape="rect" id="Node000020" href="$db/d60/classAestraContent.html#aa6777cac5178b47ce7e1f165cc3f85e8" title="runs a frame later, once the press has been handled" alt="" coords="561,933,789,973"/>
+<area shape="poly" id="edge25_Node000019_Node000020" title=" " alt="" coords="874,914,771,936,770,931,873,909"/>
+<area shape="rect" id="Node000022" href="$db/d60/classAestraContent.html#abc3ee4861acd0c5986598b967bb00e79" title="Open a pattern in the piano&#45;roll editor." alt="" coords="574,501,775,541"/>
+<area shape="poly" id="edge27_Node000019_Node000022" title=" " alt="" coords="846,877,841,872,817,839,807,807,806,774,809,742,814,710,815,676,809,642,792,605,777,586,759,570,719,544,722,539,762,565,781,583,797,603,815,640,821,676,819,710,815,743,811,775,812,806,822,837,845,869,850,874"/>
+<area shape="rect" id="Node000023" href="$db/d60/classAestraContent.html#aa898dcc2a0431e3b72849883c2d72712" title="Show or hide the mixer panel." alt="" coords="563,883,786,909"/>
+<area shape="poly" id="edge31_Node000019_Node000023" title=" " alt="" coords="831,899,786,899,786,893,831,893"/>
+<area shape="rect" id="Node000024" href="$db/d60/classAestraContent.html#af64a8d147bdef97ae8aa8a7e48dc6bf8" title="Create the piano&#45;roll overlay and musical&#45;typing wiring." alt="" coords="577,997,772,1037"/>
+<area shape="poly" id="edge33_Node000019_Node000024" title=" " alt="" coords="912,917,844,956,821,973,796,988,764,1000,762,995,793,983,818,968,841,951,909,913"/>
+<area shape="rect" id="Node000021" href="$db/d60/classAestraContent.html#a9cd2ff0a44640c8c7c68543fc33f56d1" title="Advance workspace state and child&#45;panel updates." alt="" coords="307,941,494,966"/>
+<area shape="poly" id="edge26_Node000020_Node000021" title=" " alt="" coords="547,956,494,956,494,951,547,951"/>
+<area shape="poly" id="edge28_Node000022_Node000006" title=" " alt="" coords="565,501,496,487,497,481,566,496"/>
+<area shape="poly" id="edge30_Node000022_Node000010" title=" " alt="" coords="560,518,223,500,223,494,560,513"/>
+<area shape="poly" id="edge29_Node000022_Node000013" title=" " alt="" coords="641,493,597,446,552,390,504,310,462,228,408,104,412,102,467,226,509,307,557,386,601,443,645,490"/>
+<area shape="poly" id="edge36_Node000025_Node000009" title=" " alt="" coords="362,1041,293,981,139,837,142,833,296,977,366,1037"/>
+<area shape="poly" id="edge38_Node000026_Node000009" title=" " alt="" coords="854,1208,795,1217,645,1231,582,1231,523,1225,467,1211,412,1187,354,1151,293,1102,260,1069,231,1033,183,955,149,885,129,837,134,835,154,883,187,953,235,1030,264,1066,296,1098,358,1147,414,1182,469,1206,524,1220,582,1226,645,1225,794,1212,853,1203"/>
+<area shape="rect" id="Node000027" href="$db/d60/classAestraContent.html#a82a35ff5bbf8d6f1445e1016d19679c6" title="Create the History and Takes overlays." alt="" coords="571,1163,778,1203"/>
+<area shape="poly" id="edge39_Node000026_Node000027" title=" " alt="" coords="835,1185,778,1185,778,1180,835,1180"/>
+<area shape="poly" id="edge46_Node000029_Node000030" title=" " alt="" coords="1159,927,1103,943,1017,968,1016,963,1102,937,1158,922"/>
+<area shape="poly" id="edge47_Node000030_Node000006" title=" " alt="" coords="896,961,841,923,816,899,793,874,726,816,671,775,616,731,553,670,510,620,470,569,413,486,417,483,474,566,514,617,557,666,620,727,674,770,729,812,797,870,820,895,844,919,899,956"/>
+<area shape="poly" id="edge49_Node000030_Node000015" title=" " alt="" coords="903,1014,831,1048,787,1064,740,1076,691,1083,643,1083,596,1073,553,1052,538,1039,529,1025,521,996,517,965,504,931,461,867,419,817,423,813,465,863,509,928,522,964,526,995,534,1023,542,1035,556,1047,598,1068,644,1077,691,1078,739,1071,785,1059,829,1043,901,1010"/>
+<area shape="poly" id="edge50_Node000030_Node000024" title=" " alt="" coords="833,1002,772,1009,772,1003,832,996"/>
+<area shape="poly" id="edge48_Node000030_Node000027" title=" " alt="" coords="910,1016,705,1165,702,1160,907,1011"/>
+</map>

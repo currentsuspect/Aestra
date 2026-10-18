@@ -1,0 +1,20 @@
+<map id="Aestra::wireBringOver" name="Aestra::wireBringOver">
+<area shape="rect" id="Node000001" title="Bring over: read another version&#39;s snapshot into a scratch project and offer what it has; confirming ..." alt="" coords="5,127,171,153"/>
+<area shape="poly" id="edge9_Node000001_Node000001" title=" " alt="" coords="47,129,38,119,42,109,59,103,88,101,124,105,134,109,138,115,134,118,131,113,123,110,88,106,60,108,46,113,43,118,50,125"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a808c8483bd77c4fe3f392f38479985f0" title="Access the undo/redo command history." alt="" coords="241,5,449,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="104,125,154,91,218,56,241,47,243,52,220,61,156,96,107,129"/>
+<area shape="rect" id="Node000003" href="$df/db6/classTakeManager.html#a80febfa550c9e4c5f35cdb15bd6ea6cc" title="Loads the manifest from disk." alt="" coords="244,70,445,95"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="138,125,218,105,264,96,265,101,219,111,140,130"/>
+<area shape="rect" id="Node000007" href="$df/d31/classAestra_1_1Audio_1_1CommandHistory.html#a0494915f3f25d5561f652ef5fb4067e5" title="Execute a command and push it to the undo stack Clears the redo stack." alt="" coords="229,120,460,160"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="171,137,216,137,216,143,171,143"/>
+<area shape="rect" id="Node000008" href="$df/db6/classTakeManager.html#ac7274d0ea1832734156d20e2ac205def" title="Absolute path of a version&#39;s bounce, or empty when it has none or the path leaves the takes folder." alt="" coords="225,185,465,210"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="140,150,219,169,265,179,264,184,218,175,138,155"/>
+<area shape="rect" id="Node000009" href="$df/db6/classTakeManager.html#a44969c9d8f0d20574fc90765e0b7a98d" title="Returns the full snapshot file path for a specific take." alt="" coords="219,234,471,259"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="107,151,155,186,187,204,220,220,242,228,241,233,218,225,184,209,152,190,103,155"/>
+<area shape="rect" id="Node000004" href="$da/d15/structTakeManager_1_1Manifest.html#ac9df3e5450e4f9aee685e9814437d01f" title="Look up a take by its unique ID." alt="" coords="543,35,717,75"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="445,70,529,62,530,67,446,75"/>
+<area shape="rect" id="Node000005" href="$df/db6/classTakeManager.html#acb75e1e71f374b7b3c85690629eaf607" title="Returns the manifest.json path for a given project." alt="" coords="519,99,741,125"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="446,90,505,96,504,102,445,96"/>
+<area shape="rect" id="Node000006" href="$df/db6/classTakeManager.html#acfe0e3332867ecd9c0c1ea8817706e57" title="Returns the takes/ directory path for a given project." alt="" coords="789,99,1023,125"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="742,109,775,109,775,115,742,115"/>
+</map>

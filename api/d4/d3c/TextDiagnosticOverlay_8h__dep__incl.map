@@ -1,13 +1,19 @@
 <map id="Source/HUD/TextDiagnosticOverlay.h" name="Source/HUD/TextDiagnosticOverlay.h">
-<area shape="rect" id="Node000001" title="F11&#45;toggleable text pipeline diagnostic (V8&#45;C9, governed by FD&#45;21)" alt="" coords="390,5,590,45"/>
-<area shape="rect" id="Node000002" href="$de/d28/AestraRootComponent_8h_source.html" title=" " alt="" coords="231,101,493,126"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="452,55,381,103,378,98,449,51"/>
-<area shape="rect" id="Node000006" href="$d5/df8/TextDiagnosticOverlay_8cpp_source.html" title=" " alt="" coords="518,93,718,133"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="531,51,591,91,588,95,528,56"/>
+<area shape="rect" id="Node000001" title="F11&#45;toggleable text pipeline diagnostic (V8&#45;C9, governed by FD&#45;21)" alt="" coords="782,5,982,45"/>
+<area shape="rect" id="Node000002" href="$de/d28/AestraRootComponent_8h_source.html" title=" " alt="" coords="623,101,885,126"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="844,55,773,103,770,98,841,51"/>
+<area shape="rect" id="Node000009" href="$d5/df8/TextDiagnosticOverlay_8cpp_source.html" title=" " alt="" coords="910,93,1110,133"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="923,51,983,91,980,95,920,56"/>
 <area shape="rect" id="Node000003" href="$db/d11/AestraApp_8cpp_source.html" title=" " alt="" coords="5,189,199,214"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="315,133,138,191,136,186,313,128"/>
-<area shape="rect" id="Node000004" href="$df/d3b/AestraRootComponent_8cpp_source.html" title=" " alt="" coords="223,189,501,214"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="365,140,365,188,359,188,359,140"/>
-<area shape="rect" id="Node000005" href="$d8/d0b/AestraWindowManager_8cpp_source.html" title=" " alt="" coords="525,181,724,221"/>
-<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="411,128,568,179,566,184,410,133"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="635,130,436,154,210,184,165,191,164,186,210,179,436,148,635,125"/>
+<area shape="rect" id="Node000004" href="$d8/d71/AestraAppRecovery_8cpp_source.html" title=" " alt="" coords="223,189,475,214"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="687,131,403,191,402,186,686,126"/>
+<area shape="rect" id="Node000005" href="$dc/d5c/AestraAppVersions_8cpp_source.html" title=" " alt="" coords="499,189,747,214"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="727,136,643,191,640,186,724,131"/>
+<area shape="rect" id="Node000006" href="$dd/da3/ProjectLifecycle_8cpp_source.html" title=" " alt="" coords="771,189,1001,214"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="785,131,870,186,867,191,782,136"/>
+<area shape="rect" id="Node000007" href="$df/d3b/AestraRootComponent_8cpp_source.html" title=" " alt="" coords="1025,189,1304,214"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="823,126,1111,186,1109,191,822,131"/>
+<area shape="rect" id="Node000008" href="$d8/d0b/AestraWindowManager_8cpp_source.html" title=" " alt="" coords="1328,181,1527,221"/>
+<area shape="poly" id="edge7_Node000002_Node000008" title=" " alt="" coords="854,125,898,131,1108,153,1317,179,1328,180,1327,186,1316,184,1107,159,898,136,853,130"/>
 </map>

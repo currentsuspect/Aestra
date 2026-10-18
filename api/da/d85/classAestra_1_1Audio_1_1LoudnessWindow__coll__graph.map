@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::LoudnessWindow" name="Aestra::Audio::LoudnessWindow">
+<area shape="rect" id="Node000001" title="Live momentary (400 ms) and short&#45;term (3 s) loudness (EBU R128 / ITU&#45;R BS.1770, V81&#45;M2)." alt="" coords="5,108,236,133"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="50,5,101,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="74,45,74,64,79,83,88,96,101,106,97,110,85,99,74,85,69,65,68,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="136,5,196,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="157,45,128,109,123,107,153,42"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="Aestra::ArsenalSoundDrawer::open" name="Aestra::ArsenalSoundDrawer::open">
+<area shape="rect" id="Node000001" title="Open on current: nothing typed, the current sound selected and in view." alt="" coords="5,37,213,77"/>
+<area shape="rect" id="Node000002" href="$d9/d54/classAestra_1_1ArsenalSoundDrawer.html#aae89f7fc35c23d124e74b52d2a732cbf" title="Indices into list whose file name contains every word of filter. An empty filter keeps everything." alt="" coords="261,5,469,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="213,42,247,37,248,43,214,47"/>
+<area shape="rect" id="Node000003" href="$d9/d54/classAestra_1_1ArsenalSoundDrawer.html#a7df02bb33fb613b23f9a696785102808" title="Scroll just enough that the selected row is inside the window." alt="" coords="261,69,469,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="214,68,248,72,247,77,213,73"/>
+</map>

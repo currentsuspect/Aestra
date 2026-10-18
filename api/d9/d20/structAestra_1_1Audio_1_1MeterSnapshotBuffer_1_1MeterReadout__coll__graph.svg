@@ -32,8 +32,8 @@
 <g id="Node000002" class="node">
 <title>Node2</title>
 <g id="a_Node000002"><a xlink:title=" ">
-<polygon fill="white" stroke="#bfbfbf" points="52.5,-206 14.5,-206 14.5,-187 52.5,-187 52.5,-206"/>
-<text text-anchor="middle" x="33.5" y="-194" font-family="Helvetica,sans-Serif" font-size="10.00">float</text>
+<polygon fill="white" stroke="#bfbfbf" points="49.5,-206 11.5,-206 11.5,-187 49.5,-187 49.5,-206"/>
+<text text-anchor="middle" x="30.5" y="-194" font-family="Helvetica,sans-Serif" font-size="10.00">float</text>
 </a>
 </g>
 </g>
@@ -41,28 +41,28 @@
 <g id="edge1_Node000001_Node000002" class="edge">
 <title>Node2&#45;&gt;Node1</title>
 <g id="a_edge1_Node000001_Node000002"><a xlink:title=" ">
-<path fill="none" stroke="#9a32cd" stroke-dasharray="5,2" d="M28.44,-176.77C21.59,-147.41 12.58,-89.6 34.5,-48 38.31,-40.77 44.57,-34.84 51.27,-30.13"/>
-<polygon fill="#9a32cd" stroke="#9a32cd" points="25.14,-178.01 30.97,-186.86 31.93,-176.31 25.14,-178.01"/>
+<path fill="none" stroke="#9a32cd" stroke-dasharray="5,2" d="M25.39,-177.09C18.33,-147.74 8.88,-89.46 31.5,-48 35.49,-40.69 41.95,-34.78 48.89,-30.12"/>
+<polygon fill="#9a32cd" stroke="#9a32cd" points="22.01,-178.01 27.9,-186.82 28.79,-176.26 22.01,-178.01"/>
 </a>
 </g>
-<text text-anchor="middle" x="70" y="-161" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey"> correlation</text>
-<text text-anchor="middle" x="70" y="-150" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">integratedLufs</text>
-<text text-anchor="middle" x="70" y="-139" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">lowL</text>
-<text text-anchor="middle" x="70" y="-128" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">lowR</text>
-<text text-anchor="middle" x="70" y="-117" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">lufs</text>
-<text text-anchor="middle" x="70" y="-106" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">peakL</text>
-<text text-anchor="middle" x="70" y="-95" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">peakR</text>
-<text text-anchor="middle" x="70" y="-84" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">rmsL</text>
-<text text-anchor="middle" x="70" y="-73" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">rmsR</text>
-<text text-anchor="middle" x="70" y="-62" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">sidechainPeak</text>
-<text text-anchor="middle" x="70" y="-51" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">...</text>
+<text text-anchor="middle" x="70.5" y="-161" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey"> correlation</text>
+<text text-anchor="middle" x="70.5" y="-150" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">integratedLufs</text>
+<text text-anchor="middle" x="70.5" y="-139" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">lowL</text>
+<text text-anchor="middle" x="70.5" y="-128" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">lowR</text>
+<text text-anchor="middle" x="70.5" y="-117" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">lufs</text>
+<text text-anchor="middle" x="70.5" y="-106" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">momentaryLufs</text>
+<text text-anchor="middle" x="70.5" y="-95" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">peakL</text>
+<text text-anchor="middle" x="70.5" y="-84" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">peakR</text>
+<text text-anchor="middle" x="70.5" y="-73" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">rmsL</text>
+<text text-anchor="middle" x="70.5" y="-62" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">rmsR</text>
+<text text-anchor="middle" x="70.5" y="-51" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">...</text>
 </g>
 <!-- Node3 -->
 <g id="Node000003" class="node">
 <title>Node3</title>
 <g id="a_Node000003"><a xlink:title=" ">
-<polygon fill="white" stroke="#bfbfbf" points="146.5,-206 108.5,-206 108.5,-187 146.5,-187 146.5,-206"/>
-<text text-anchor="middle" x="127.5" y="-194" font-family="Helvetica,sans-Serif" font-size="10.00">bool</text>
+<polygon fill="white" stroke="#bfbfbf" points="150.5,-206 112.5,-206 112.5,-187 150.5,-187 150.5,-206"/>
+<text text-anchor="middle" x="131.5" y="-194" font-family="Helvetica,sans-Serif" font-size="10.00">bool</text>
 </a>
 </g>
 </g>
@@ -70,12 +70,12 @@
 <g id="edge2_Node000001_Node000003" class="edge">
 <title>Node3&#45;&gt;Node1</title>
 <g id="a_edge2_Node000001_Node000003"><a xlink:title=" ">
-<path fill="none" stroke="#9a32cd" stroke-dasharray="5,2" d="M127.71,-176.47C127.37,-147.54 124.09,-91.28 105.5,-48 102.77,-41.65 98.47,-35.47 94.2,-30.27"/>
-<polygon fill="#9a32cd" stroke="#9a32cd" points="124.21,-176.77 127.71,-186.77 131.21,-176.77 124.21,-176.77"/>
+<path fill="none" stroke="#9a32cd" stroke-dasharray="5,2" d="M132.1,-176.68C132.3,-147.64 129.75,-90.76 109.5,-48 106.42,-41.49 101.57,-35.37 96.72,-30.25"/>
+<polygon fill="#9a32cd" stroke="#9a32cd" points="128.6,-176.62 131.91,-186.68 135.6,-176.75 128.6,-176.62"/>
 </a>
 </g>
-<text text-anchor="middle" x="140.5" y="-111.5" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey"> clipL</text>
-<text text-anchor="middle" x="140.5" y="-100.5" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">clipR</text>
+<text text-anchor="middle" x="144.5" y="-111.5" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey"> clipL</text>
+<text text-anchor="middle" x="144.5" y="-100.5" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">clipR</text>
 </g>
 </g>
 </svg>

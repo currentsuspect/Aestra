@@ -1,0 +1,12 @@
+<map id="AestraUI::UIMixerNavigator::Tick" name="AestraUI::UIMixerNavigator::Tick">
+<area shape="rect" id="Node000001" title=" " alt="" coords="75,273,275,313"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,147,80,172"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="39,186,36,218,39,234,46,248,59,261,76,272,73,277,56,266,42,251,34,235,31,218,33,185"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="149,5,200,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="167,44,149,106,144,144,145,181,156,231,170,272,165,274,151,232,140,182,139,143,144,105,162,43"/>
+<area shape="rect" id="Node000004" href="$d2/d25/structAestraUI_1_1NUIColor.html" title=" " alt="" coords="192,147,336,172"/>
+<area shape="poly" id="edge4_Node000004_Node000003" title=" " alt="" coords="192,41,259,145,254,148,187,43"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="251,185,190,275,185,272,246,182"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="360,147,411,172"/>
+<area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="365,183,326,217,277,252,228,276,226,271,275,247,323,213,362,179"/>
+</map>

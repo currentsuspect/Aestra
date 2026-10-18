@@ -243,6 +243,25 @@ var sectionId = 'dynsection-27';
 </a>
 </g>
 </g>
+<!-- Node11 -->
+<g id="Node000011" class="node">
+<title>Node11</title>
+<g id="a_Node000011"><a xlink:href="../../db/d60/classAestraContent.html#a540998ede72de460fd746a8f6d4f4d60" target="_top" xlink:title="The whole project&#39;s mix, rendered offline into memory (a version&#39;s bounce). False when there is nothi...">
+<polygon fill="white" stroke="#666666" points="145.5,-30 3.5,-30 3.5,0 145.5,0 145.5,-30"/>
+<text text-anchor="start" x="11.5" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">AestraContent::renderMix</text>
+<text text-anchor="middle" x="74.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">ToBuffer</text>
+</a>
+</g>
+</g>
+<!-- Node10&#45;&gt;Node11 -->
+<g id="edge11_Node000010_Node000011" class="edge">
+<title>Node10&#45;&gt;Node11</title>
+<g id="a_edge11_Node000010_Node000011"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M174.74,-15C165.03,-15 155.23,-15 145.77,-15"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="174.82,-18.5 184.82,-15 174.82,-11.5 174.82,-18.5"/>
+</a>
+</g>
+</g>
 </g>
 </svg>
 

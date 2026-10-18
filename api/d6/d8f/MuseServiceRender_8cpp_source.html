@@ -109,7 +109,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span><span class="preprocessor">#include &lt;string&gt;</span></div>
 <div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span><span class="preprocessor">#include &lt;vector&gt;</span></div>
 <div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span> </div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span><span class="keyword">namespace </span>Aestra {</div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d8/d94/namespaceAestra.html">Aestra</a> {</div>
 <div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span><span class="keyword">namespace </span>Audio {</div>
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span> </div>
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span><span class="comment">// Inside Aestra::Audio, as it was in MuseService.cpp: JSON is Aestra::JSON, so</span></div>
@@ -625,7 +625,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00541" name="l00541"></a><span class="lineno">  541</span>            checks.push(check);</div>
 <div class="line"><a id="l00542" name="l00542"></a><span class="lineno">  542</span>            <span class="keywordflow">if</span> (!passed) allPassed = <span class="keyword">false</span>;</div>
 <div class="line"><a id="l00543" name="l00543"></a><span class="lineno">  543</span>        };</div>
-<div class="line"><a id="l00544" name="l00544"></a><span class="lineno">  544</span>        <span class="keyword">const</span> <span class="keyword">auto</span> fmt = [](<span class="keywordtype">double</span> value, <span class="keywordtype">int</span> places) {</div>
+<div class="line"><a id="l00544" name="l00544"></a><span class="lineno">  544</span>        <span class="keyword">const</span> <span class="keyword">auto</span> fmt = [](<span class="keywordtype">double</span> value, <span class="keywordtype">int</span> <a class="code hl_function" href="../../d5/d7a/namespaceAestra_1_1AuditionFiles.html#aebc3282b36f33a9d2818571a42f913c7">places</a>) {</div>
 <div class="line"><a id="l00545" name="l00545"></a><span class="lineno">  545</span>            <span class="keywordtype">char</span> buf[48];</div>
 <div class="line"><a id="l00546" name="l00546"></a><span class="lineno">  546</span>            std::snprintf(buf, <span class="keyword">sizeof</span>(buf), <span class="stringliteral">&quot;%.*f&quot;</span>, places, value);</div>
 <div class="line"><a id="l00547" name="l00547"></a><span class="lineno">  547</span>            <span class="keywordflow">return</span> std::string(buf);</div>
@@ -699,6 +699,8 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00615" name="l00615"></a><span class="lineno">  615</span>} <span class="comment">// namespace MuseInternal</span></div>
 <div class="line"><a id="l00616" name="l00616"></a><span class="lineno">  616</span>} <span class="comment">// namespace Audio</span></div>
 <div class="line"><a id="l00617" name="l00617"></a><span class="lineno">  617</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="ttc" id="anamespaceAestra_1_1AuditionFiles_html_aebc3282b36f33a9d2818571a42f913c7"><div class="ttname"><a href="../../d5/d7a/namespaceAestra_1_1AuditionFiles.html#aebc3282b36f33a9d2818571a42f913c7">Aestra::AuditionFiles::places</a></div><div class="ttdeci">std::vector&lt; Place &gt; places(const std::string &amp;projectDir, const std::string &amp;home)</div><div class="ttdoc">The folders worth jumping to, the ones that exist: the project's own, then the usual places for music...</div><div class="ttdef"><b>Definition</b> <a href="../../d6/db9/AuditionFiles_8h_source.html#l00064">AuditionFiles.h:64</a></div></div>
+<div class="ttc" id="anamespaceAestra_html"><div class="ttname"><a href="../../d8/d94/namespaceAestra.html">Aestra</a></div><div class="ttdoc">Main application class.</div><div class="ttdef"><b>Definition</b> <a href="../../d7/d7b/AestraAssert_8h_source.html#l00009">AestraAssert.h:9</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

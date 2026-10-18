@@ -111,7 +111,7 @@ Classes</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>F11-toggleable text pipeline diagnostic (V8-C9, governed by FD-21) </p>
 <p>WHAT THIS IS FOR</p>
-<p>Aestra's text has looked wrong on light themes for a long time, and the reason tuning never converged is that the pipeline has four independent causes and one shared knob. Screenshots could show that text looked wrong; they could not say which mechanism made it wrong, because every variable moves at once — theme luminance sets textContrast_, which resolves into two shader uniforms, while the atlas tier is chosen by a threshold table and the blend colour space depends on whether the widget happened to be cached.</p>
+<p><a class="el" href="../../d8/d94/namespaceAestra.html" title="Main application class.">Aestra</a>'s text has looked wrong on light themes for a long time, and the reason tuning never converged is that the pipeline has four independent causes and one shared knob. Screenshots could show that text looked wrong; they could not say which mechanism made it wrong, because every variable moves at once — theme luminance sets textContrast_, which resolves into two shader uniforms, while the atlas tier is chosen by a threshold table and the blend colour space depends on whether the widget happened to be cached.</p>
 <p>So this overlay is not a screenshot of the result. It does two things a screenshot cannot:</p>
 <ol type="1">
 <li>Reports the pipeline's own state — the actual variable values and the uniforms they resolve to, read from the renderer rather than restated here. If the panel disagrees with the rendering, the panel is right about what the code intends and the rendering is the bug.</li>

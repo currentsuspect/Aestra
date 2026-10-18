@@ -1,0 +1,5 @@
+<map id="AestraContent::showRoutingGraph" name="AestraContent::showRoutingGraph">
+<area shape="rect" id="Node000001" title="Open the routing graph (V81&#45;R1), selecting channelId first when it is not 0. Remembers where to go ba..." alt="" coords="248,5,455,45"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a59842dc639e11b43359a064651907ae6" title="Create the mixer overlay and the routing&#45;map full panel." alt="" coords="5,5,200,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="234,28,200,28,200,23,234,23"/>
+</map>

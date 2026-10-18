@@ -1,5 +1,12 @@
 <map id="AestraUI::FileBrowserLocalLayout" name="AestraUI::FileBrowserLocalLayout">
-<area shape="rect" id="Node000001" title=" " alt="" coords="5,240,201,280"/>
-<area shape="rect" id="Node000002" title=" " alt="" coords="49,5,158,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="106,44,106,240,101,240,101,44"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,405,201,445"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="43,93,153,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="100,133,98,181,96,262,98,343,104,405,98,406,93,343,91,262,93,181,94,132"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="179,242,327,282"/>
+<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="121,126,235,240,231,243,117,130"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="228,294,123,407,119,403,224,290"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="191,93,314,119"/>
+<area shape="poly" id="edge4_Node000003_Node000004" title=" " alt="" coords="255,132,255,242,250,242,250,132"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="233,5,272,31"/>
+<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="255,45,255,93,250,93,250,45"/>
 </map>

@@ -111,7 +111,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span><span class="preprocessor">#include &lt;string&gt;</span></div>
 <div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span><span class="preprocessor">#include &lt;vector&gt;</span></div>
 <div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span> </div>
-<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span><span class="keyword">namespace </span>Aestra {</div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d8/d94/namespaceAestra.html">Aestra</a> {</div>
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span><span class="keyword">namespace </span>Audio {</div>
 <div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span> </div>
 <div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span><span class="keyword">enum class</span> StretchTargetClass : uint8_t {</div>
@@ -220,22 +220,22 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span>                                            StretchEngine engine = StretchEngine::Varispeed,</div>
 <div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span>                                            <span class="keywordtype">size_t</span> maxRanked = 5) {</div>
 <div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span>    <span class="keyword">using namespace </span>stretch_detail;</div>
-<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>    StretchTargetList list;</div>
-<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>    list.<a class="code hl_variable" href="../../da/da4/structAestra_1_1Audio_1_1StretchTargetList.html#a352b3553afb7d7bbec05655c982c78b0">ranked</a> = generateStretchTargets(lengthBars);</div>
-<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>    <span class="keywordflow">if</span> (list.ranked.empty()) {</div>
-<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>        <span class="keywordflow">return</span> list;</div>
+<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>    StretchTargetList <a class="code hl_function" href="../../d5/d7a/namespaceAestra_1_1AuditionFiles.html#a9bc5465bc247aac916885e2c54891f45">list</a>;</div>
+<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>    <a class="code hl_function" href="../../d5/d7a/namespaceAestra_1_1AuditionFiles.html#a9bc5465bc247aac916885e2c54891f45">list</a>.ranked = generateStretchTargets(lengthBars);</div>
+<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>    <span class="keywordflow">if</span> (<a class="code hl_function" href="../../d5/d7a/namespaceAestra_1_1AuditionFiles.html#a9bc5465bc247aac916885e2c54891f45">list</a>.ranked.empty()) {</div>
+<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>        <span class="keywordflow">return</span> <a class="code hl_function" href="../../d5/d7a/namespaceAestra_1_1AuditionFiles.html#a9bc5465bc247aac916885e2c54891f45">list</a>;</div>
 <div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>    }</div>
-<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; t : list.ranked) {</div>
+<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; t : <a class="code hl_function" href="../../d5/d7a/namespaceAestra_1_1AuditionFiles.html#a9bc5465bc247aac916885e2c54891f45">list</a>.ranked) {</div>
 <div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>        t.score = distanceCost(engine, lengthBars - <span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(t.bars)) - bonus(t.cls);</div>
 <div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>    }</div>
-<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>    std::sort(list.ranked.begin(), list.ranked.end(), [&amp;](<span class="keyword">const</span> StretchTarget&amp; a, <span class="keyword">const</span> StretchTarget&amp; b) {</div>
+<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>    std::sort(<a class="code hl_function" href="../../d5/d7a/namespaceAestra_1_1AuditionFiles.html#a9bc5465bc247aac916885e2c54891f45">list</a>.ranked.begin(), <a class="code hl_function" href="../../d5/d7a/namespaceAestra_1_1AuditionFiles.html#a9bc5465bc247aac916885e2c54891f45">list</a>.ranked.end(), [&amp;](<span class="keyword">const</span> StretchTarget&amp; a, <span class="keyword">const</span> StretchTarget&amp; b) {</div>
 <div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>        if (a.score != b.score) return a.score &lt; b.score;</div>
 <div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>        const double da = std::fabs(lengthBars - a.bars), db = std::fabs(lengthBars - b.bars);</div>
 <div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>        if (da != db) return da &lt; db;</div>
 <div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>        return a.bars &lt; b.bars;</div>
 <div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>    });</div>
-<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>    <span class="keywordflow">if</span> (list.ranked.size() &gt; maxRanked) {</div>
-<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>        list.ranked.resize(maxRanked);</div>
+<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>    <span class="keywordflow">if</span> (<a class="code hl_function" href="../../d5/d7a/namespaceAestra_1_1AuditionFiles.html#a9bc5465bc247aac916885e2c54891f45">list</a>.ranked.size() &gt; maxRanked) {</div>
+<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>        <a class="code hl_function" href="../../d5/d7a/namespaceAestra_1_1AuditionFiles.html#a9bc5465bc247aac916885e2c54891f45">list</a>.ranked.resize(maxRanked);</div>
 <div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>    }</div>
 <div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span> </div>
 <div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>    std::vector&lt;int&gt; echoes;</div>
@@ -258,9 +258,9 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>        t.score = distanceCost(engine, lengthBars - e) - bonus(StretchTargetClass::Echo);</div>
 <div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>        <span class="keyword">const</span> <span class="keywordtype">double</span> ratio = <span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(e) / lengthBars;</div>
 <div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>        t.approximate = ratio &lt; kMinRatio - 1e-9 || ratio &gt; kMaxRatio + 1e-9;</div>
-<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>        list.arrangement.push_back(t);</div>
+<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>        <a class="code hl_function" href="../../d5/d7a/namespaceAestra_1_1AuditionFiles.html#a9bc5465bc247aac916885e2c54891f45">list</a>.arrangement.push_back(t);</div>
 <div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>    }</div>
-<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>    <span class="keywordflow">return</span> list;</div>
+<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>    <span class="keywordflow">return</span> <a class="code hl_function" href="../../d5/d7a/namespaceAestra_1_1AuditionFiles.html#a9bc5465bc247aac916885e2c54891f45">list</a>;</div>
 <div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>}</div>
 <div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span> </div>
 <div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span><span class="keyword">inline</span> std::string formatStretchTarget(<span class="keyword">const</span> StretchTarget&amp; t, StretchEngine engine = StretchEngine::Varispeed) {</div>
@@ -277,6 +277,8 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span> </div>
 <div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>} <span class="comment">// namespace Audio</span></div>
 <div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="ttc" id="anamespaceAestra_1_1AuditionFiles_html_a9bc5465bc247aac916885e2c54891f45"><div class="ttname"><a href="../../d5/d7a/namespaceAestra_1_1AuditionFiles.html#a9bc5465bc247aac916885e2c54891f45">Aestra::AuditionFiles::list</a></div><div class="ttdeci">std::vector&lt; Entry &gt; list(const std::string &amp;dir)</div><div class="ttdoc">Folders first, then audio files, each in name order (case-insensitive).</div><div class="ttdef"><b>Definition</b> <a href="../../d6/db9/AuditionFiles_8h_source.html#l00045">AuditionFiles.h:45</a></div></div>
+<div class="ttc" id="anamespaceAestra_html"><div class="ttname"><a href="../../d8/d94/namespaceAestra.html">Aestra</a></div><div class="ttdoc">Main application class.</div><div class="ttdef"><b>Definition</b> <a href="../../d7/d7b/AestraAssert_8h_source.html#l00009">AestraAssert.h:9</a></div></div>
 <div class="ttc" id="astructAestra_1_1Audio_1_1StretchTargetList_html"><div class="ttname"><a href="../../da/da4/structAestra_1_1Audio_1_1StretchTargetList.html">Aestra::Audio::StretchTargetList</a></div><div class="ttdef"><b>Definition</b> <a href="../../d4/d7a/StretchTargets_8h_source.html#l00055">StretchTargets.h:55</a></div></div>
 <div class="ttc" id="astructAestra_1_1Audio_1_1StretchTargetList_html_a352b3553afb7d7bbec05655c982c78b0"><div class="ttname"><a href="../../da/da4/structAestra_1_1Audio_1_1StretchTargetList.html#a352b3553afb7d7bbec05655c982c78b0">Aestra::Audio::StretchTargetList::ranked</a></div><div class="ttdeci">std::vector&lt; StretchTarget &gt; ranked</div><div class="ttdoc">best first, at most maxRanked</div><div class="ttdef"><b>Definition</b> <a href="../../d4/d7a/StretchTargets_8h_source.html#l00056">StretchTargets.h:56</a></div></div>
 <div class="ttc" id="astructAestra_1_1Audio_1_1StretchTargetList_html_ac315bfd6734f3daac73b54650897213e"><div class="ttname"><a href="../../da/da4/structAestra_1_1Audio_1_1StretchTargetList.html#ac315bfd6734f3daac73b54650897213e">Aestra::Audio::StretchTargetList::arrangement</a></div><div class="ttdeci">std::vector&lt; StretchTarget &gt; arrangement</div><div class="ttdoc">the &quot;match arrangement&quot; row: context, never auto-ranked</div><div class="ttdef"><b>Definition</b> <a href="../../d4/d7a/StretchTargets_8h_source.html#l00057">StretchTargets.h:57</a></div></div>

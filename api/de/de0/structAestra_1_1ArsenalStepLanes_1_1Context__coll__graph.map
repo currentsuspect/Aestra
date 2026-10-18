@@ -1,0 +1,23 @@
+<map id="Aestra::ArsenalStepLanes::Context" name="Aestra::ArsenalStepLanes::Context">
+<area shape="rect" id="Node000001" title="What one row&#39;s lanes need to know; rebuilt by the panel for each draw and pointer event." alt="" coords="611,179,799,219"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html" title="Track/Channel manager for the audio engine." alt="" coords="303,58,511,83"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="486,84,512,92,558,111,602,133,675,176,672,181,600,138,556,116,510,97,485,89"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,58,80,83"/>
+<area shape="poly" id="edge5_Node000001_Node000003" title=" " alt="" coords="89,51,103,48,218,28,308,17,352,17,399,20,511,43,541,53,569,67,620,104,661,143,690,177,686,180,657,147,617,108,566,72,539,58,510,48,398,26,352,22,309,22,218,33,105,53,90,56"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="94,68,302,68,302,73,94,73"/>
+<area shape="rect" id="Node000004" href="$d0/dd3/structAestra_1_1Audio_1_1PatternID.html" title="Type&#45;safe identifier for patterns." alt="" coords="318,107,495,133"/>
+<area shape="poly" id="edge4_Node000004_Node000003" title=" " alt="" coords="92,85,105,88,215,105,318,114,317,119,214,111,103,93,90,90"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="477,133,511,141,587,160,641,176,640,181,586,165,510,147,476,138"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="367,157,446,182"/>
+<area shape="poly" id="edge6_Node000001_Node000005" title=" " alt="" coords="460,172,611,187,610,192,459,177"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="387,206,426,231"/>
+<area shape="poly" id="edge7_Node000001_Node000006" title=" " alt="" coords="440,221,507,226,586,224,631,216,632,221,587,229,507,232,439,226"/>
+<area shape="rect" id="Node000007" href="$da/d4e/structAestraUI_1_1NUIRect.html" title=" " alt="" coords="337,362,476,387"/>
+<area shape="poly" id="edge8_Node000001_Node000007" title=" " alt="" coords="490,381,539,377,563,370,585,360,624,330,655,291,678,251,693,218,698,220,683,253,660,294,628,333,588,365,565,375,540,382,490,386"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="17,366,68,391"/>
+<area shape="poly" id="edge10_Node000001_Node000008" title=" " alt="" coords="59,353,78,333,103,316,161,295,212,285,259,285,304,289,396,298,449,295,510,284,554,270,597,252,668,216,670,221,599,257,556,275,511,289,450,301,396,303,303,294,259,290,213,291,162,300,105,321,82,337,63,357"/>
+<area shape="poly" id="edge9_Node000007_Node000008" title=" " alt="" coords="82,376,279,375,337,374,337,379,279,380,82,381"/>
+<area shape="rect" id="Node000009" href="$d2/d25/structAestraUI_1_1NUIColor.html" title=" " alt="" coords="335,431,479,457"/>
+<area shape="poly" id="edge12_Node000009_Node000008" title=" " alt="" coords="62,401,81,422,105,439,166,457,230,463,292,461,345,454,346,459,292,466,230,468,165,462,103,444,77,426,58,404"/>
+<area shape="poly" id="edge11_Node000001_Node000009" title=" " alt="" coords="492,434,540,420,585,396,607,377,626,355,658,305,681,257,695,218,700,220,686,259,663,308,631,358,611,381,588,401,542,425,493,439"/>
+</map>

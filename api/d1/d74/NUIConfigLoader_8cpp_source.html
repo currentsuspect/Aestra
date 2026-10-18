@@ -418,13 +418,13 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>}</div>
 <div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span> </div>
 <div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span>NUIColor NUIConfigLoader::parseColor(<span class="keyword">const</span> std::string&amp; colorStr) {</div>
-<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span>    std::string hex = colorStr;</div>
-<div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span>    <span class="keywordflow">if</span> (hex[0] == <span class="charliteral">&#39;#&#39;</span>) hex = hex.substr(1);</div>
+<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span>    std::string <a class="code hl_function" href="../../d3/d6c/namespaceAestra_1_1VersionLanes.html#a1fbf5c6c0e167e46b4fcc46c886e772e">hex</a> = colorStr;</div>
+<div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span>    <span class="keywordflow">if</span> (hex[0] == <span class="charliteral">&#39;#&#39;</span>) <a class="code hl_function" href="../../d3/d6c/namespaceAestra_1_1VersionLanes.html#a1fbf5c6c0e167e46b4fcc46c886e772e">hex</a> = <a class="code hl_function" href="../../d3/d6c/namespaceAestra_1_1VersionLanes.html#a1fbf5c6c0e167e46b4fcc46c886e772e">hex</a>.substr(1);</div>
 <div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span> </div>
-<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span>    <span class="keywordflow">if</span> (hex.length() == 6) {</div>
+<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span>    <span class="keywordflow">if</span> (<a class="code hl_function" href="../../d3/d6c/namespaceAestra_1_1VersionLanes.html#a1fbf5c6c0e167e46b4fcc46c886e772e">hex</a>.length() == 6) {</div>
 <div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>        uint32_t color = std::stoul(hex, <span class="keyword">nullptr</span>, 16);</div>
 <div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span>        <span class="keywordflow">return</span> NUIColor::fromHex(color);</div>
-<div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span>    } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (hex.length() == 8) {</div>
+<div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span>    } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (<a class="code hl_function" href="../../d3/d6c/namespaceAestra_1_1VersionLanes.html#a1fbf5c6c0e167e46b4fcc46c886e772e">hex</a>.length() == 8) {</div>
 <div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span>        <span class="comment">// Handle 8-character hex (AARRGGBB)</span></div>
 <div class="line"><a id="l00337" name="l00337"></a><span class="lineno">  337</span>        uint32_t color = std::stoul(hex, <span class="keyword">nullptr</span>, 16);</div>
 <div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>        <span class="keywordtype">float</span> a = ((color &gt;&gt; 24) &amp; 0xFF) / 255.0f;</div>
@@ -458,14 +458,14 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>}</div>
 <div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span> </div>
 <div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span>std::string NUIConfigLoader::colorToHex(<span class="keyword">const</span> NUIColor&amp; color) {</div>
-<div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span>    uint32_t hex = color.toHex();</div>
+<div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span>    uint32_t <a class="code hl_function" href="../../d3/d6c/namespaceAestra_1_1VersionLanes.html#a1fbf5c6c0e167e46b4fcc46c886e772e">hex</a> = color.toHex();</div>
 <div class="line"><a id="l00370" name="l00370"></a><span class="lineno">  370</span>    std::stringstream ss;</div>
 <div class="line"><a id="l00371" name="l00371"></a><span class="lineno">  371</span>    <span class="keywordflow">if</span> (color.a &lt; 0.999f) {</div>
 <div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span>        <span class="comment">// 8-character hex (AARRGGBB)</span></div>
-<div class="line"><a id="l00373" name="l00373"></a><span class="lineno">  373</span>        ss &lt;&lt; std::hex &lt;&lt; std::setw(8) &lt;&lt; std::setfill(<span class="charliteral">&#39;0&#39;</span>) &lt;&lt; hex;</div>
+<div class="line"><a id="l00373" name="l00373"></a><span class="lineno">  373</span>        ss &lt;&lt; std::hex &lt;&lt; std::setw(8) &lt;&lt; std::setfill(<span class="charliteral">&#39;0&#39;</span>) &lt;&lt; <a class="code hl_function" href="../../d3/d6c/namespaceAestra_1_1VersionLanes.html#a1fbf5c6c0e167e46b4fcc46c886e772e">hex</a>;</div>
 <div class="line"><a id="l00374" name="l00374"></a><span class="lineno">  374</span>    } <span class="keywordflow">else</span> {</div>
 <div class="line"><a id="l00375" name="l00375"></a><span class="lineno">  375</span>        <span class="comment">// 6-character hex (RRGGBB) - exclude alpha channel</span></div>
-<div class="line"><a id="l00376" name="l00376"></a><span class="lineno">  376</span>        ss &lt;&lt; std::hex &lt;&lt; std::setw(6) &lt;&lt; std::setfill(<span class="charliteral">&#39;0&#39;</span>) &lt;&lt; (hex &amp; 0xFFFFFF);</div>
+<div class="line"><a id="l00376" name="l00376"></a><span class="lineno">  376</span>        ss &lt;&lt; std::hex &lt;&lt; std::setw(6) &lt;&lt; std::setfill(<span class="charliteral">&#39;0&#39;</span>) &lt;&lt; (<a class="code hl_function" href="../../d3/d6c/namespaceAestra_1_1VersionLanes.html#a1fbf5c6c0e167e46b4fcc46c886e772e">hex</a> &amp; 0xFFFFFF);</div>
 <div class="line"><a id="l00377" name="l00377"></a><span class="lineno">  377</span>    }</div>
 <div class="line"><a id="l00378" name="l00378"></a><span class="lineno">  378</span>    <span class="keywordflow">return</span> ss.str();</div>
 <div class="line"><a id="l00379" name="l00379"></a><span class="lineno">  379</span>}</div>
@@ -476,6 +476,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="ttc" id="aclassAestraUI_1_1NUIConfigLoader_html_a90fc0f5048bf755c42ed8b0d20a60df2"><div class="ttname"><a href="../../d1/d32/classAestraUI_1_1NUIConfigLoader.html#a90fc0f5048bf755c42ed8b0d20a60df2">AestraUI::NUIConfigLoader::saveConfig</a></div><div class="ttdeci">void saveConfig(const std::string &amp;filePath)</div><div class="ttdoc">Save current theme configuration to YAML file.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d74/NUIConfigLoader_8cpp_source.html#l00091">NUIConfigLoader.cpp:91</a></div></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIConfigLoader_html_ad2ac78b8a6b899d9f255fd06fa3fc7ef"><div class="ttname"><a href="../../d1/d32/classAestraUI_1_1NUIConfigLoader.html#ad2ac78b8a6b899d9f255fd06fa3fc7ef">AestraUI::NUIConfigLoader::applyConfig</a></div><div class="ttdeci">void applyConfig()</div><div class="ttdoc">Apply loaded configuration to current theme.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d74/NUIConfigLoader_8cpp_source.html#l00064">NUIConfigLoader.cpp:64</a></div></div>
 <div class="ttc" id="aclassAestra_1_1JSON_html"><div class="ttname"><a href="../../df/dee/classAestra_1_1JSON.html">Aestra::JSON</a></div><div class="ttdef"><b>Definition</b> <a href="../../d5/d49/AestraJSON_8h_source.html#l00069">AestraJSON.h:69</a></div></div>
+<div class="ttc" id="anamespaceAestra_1_1VersionLanes_html_a1fbf5c6c0e167e46b4fcc46c886e772e"><div class="ttname"><a href="../../d3/d6c/namespaceAestra_1_1VersionLanes.html#a1fbf5c6c0e167e46b4fcc46c886e772e">Aestra::VersionLanes::hex</a></div><div class="ttdeci">uint32_t hex(int lane)</div><div class="ttdoc">A lane's colour as 0xAARRGGBB: violet for the main mix, then cyan, amber, pink, lime,...</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d43/VersionLanes_8h_source.html#l00030">VersionLanes.h:30</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

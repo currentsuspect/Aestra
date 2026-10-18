@@ -1,5 +1,7 @@
 <map id="Aestra::PendingFileDialog::takeResult" name="Aestra::PendingFileDialog::takeResult">
-<area shape="rect" id="Node000001" title="On the UI thread: the picker&#39;s result once it has closed (exactly once), std::nullopt while it is sti..." alt="" coords="231,5,420,45"/>
-<area shape="rect" id="Node000002" href="$da/d6d/classExportDialog.html#a6d0a1af725c1a5dac1f6db058682bf41" title="Poll background export state and update the active panel." alt="" coords="5,13,183,38"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="217,28,183,28,183,23,217,23"/>
+<area shape="rect" id="Node000001" title="On the UI thread: the picker&#39;s result once it has closed (exactly once), std::nullopt while it is sti..." alt="" coords="255,27,444,67"/>
+<area shape="rect" id="Node000002" href="$da/d6d/classExportDialog.html#a6d0a1af725c1a5dac1f6db058682bf41" title="Poll background export state and update the active panel." alt="" coords="17,5,195,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="241,37,194,31,195,26,241,32"/>
+<area shape="rect" id="Node000003" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#ac56717dac7db62d01ac48aa6b235e78e" title="Advance Arsenal playback state and UI sync." alt="" coords="5,55,207,95"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="242,62,207,66,207,61,241,57"/>
 </map>

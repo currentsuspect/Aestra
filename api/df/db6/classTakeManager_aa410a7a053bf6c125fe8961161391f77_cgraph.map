@@ -1,0 +1,11 @@
+<map id="TakeManager::setVersionBounce" name="TakeManager::setVersionBounce">
+<area shape="rect" id="Node000001" title="Records the bounce file (relative to the takes folder) on a version." alt="" coords="5,42,237,67"/>
+<area shape="rect" id="Node000002" href="$df/db6/classTakeManager.html#a80febfa550c9e4c5f35cdb15bd6ea6cc" title="Loads the manifest from disk." alt="" coords="285,42,487,67"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="238,52,271,52,271,57,238,57"/>
+<area shape="rect" id="Node000003" href="$da/d15/structTakeManager_1_1Manifest.html#ac9df3e5450e4f9aee685e9814437d01f" title="Look up a take by its unique ID." alt="" coords="559,5,733,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="487,41,546,34,546,39,487,46"/>
+<area shape="rect" id="Node000004" href="$df/db6/classTakeManager.html#acb75e1e71f374b7b3c85690629eaf607" title="Returns the manifest.json path for a given project." alt="" coords="535,70,757,95"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="487,63,521,67,521,72,487,68"/>
+<area shape="rect" id="Node000005" href="$df/db6/classTakeManager.html#acfe0e3332867ecd9c0c1ea8817706e57" title="Returns the takes/ directory path for a given project." alt="" coords="805,70,1039,95"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="758,80,791,80,791,85,758,85"/>
+</map>

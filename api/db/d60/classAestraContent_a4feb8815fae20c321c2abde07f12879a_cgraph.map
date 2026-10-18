@@ -1,45 +1,45 @@
 <map id="AestraContent::toggleArsenalPanel" name="AestraContent::toggleArsenalPanel">
-<area shape="rect" id="Node000001" title="Toggle the Arsenal panel regardless of active mode." alt="" coords="5,219,219,259"/>
-<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#ae6930f4ad43aea5913222619cb6924b3" title="Explicitly show or hide the Arsenal panel." alt="" coords="267,219,459,259"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="219,237,253,237,253,242,219,242"/>
-<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#a1e0d0671846c7430d1d4c113656dd140" title="Show a panel from its preference: setBounds from resolveSurfacePlacement against the current region,..." alt="" coords="777,177,972,217"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="459,229,763,203,764,208,459,234"/>
-<area shape="rect" id="Node000006" href="$db/d1a/classAestraUI_1_1NUIComponent.html#a8ff75e00805b13ff9a6babd21f6cc556" title="Window&#45;absolute (V8&#45;X2b Window space): components render and hit&#45;test at bounds_ as&#45;is." alt="" coords="1608,181,1793,221"/>
-<area shape="poly" id="edge14_Node000002_Node000006" title=" " alt="" coords="389,217,467,163,521,131,583,99,651,69,723,44,798,27,873,21,1150,21,1213,18,1268,14,1362,4,1406,3,1453,9,1503,22,1561,46,1600,71,1634,103,1662,137,1683,167,1679,170,1658,140,1630,107,1597,75,1559,51,1502,27,1452,14,1406,9,1362,9,1268,19,1213,24,1150,26,873,26,799,32,725,49,653,74,586,103,524,136,470,168,392,221"/>
-<area shape="rect" id="Node000013" href="$db/d60/classAestraContent.html#ad0290fd113d01c4f8cfcc66a6ac47794" title="Relayout the workspace after a host resize." alt="" coords="525,284,707,309"/>
-<area shape="poly" id="edge15_Node000002_Node000013" title=" " alt="" coords="452,257,547,278,546,284,451,262"/>
-<area shape="rect" id="Node000018" href="$db/d60/classAestraContent.html#a7c4ca59b1871c922b297e25471a89727" title="Synchronize overlay state into owned child views." alt="" coords="507,333,725,359"/>
-<area shape="poly" id="edge25_Node000002_Node000018" title=" " alt="" coords="394,257,446,289,508,319,530,327,529,332,506,324,443,294,391,262"/>
-<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#af34b406e2d5b037466124205f95b0543" title="The single placement region for persistent surfaces (V8&#45;C14 step 5)." alt="" coords="1024,234,1273,274"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="971,214,1040,229,1039,234,970,219"/>
-<area shape="rect" id="Node000008" href="$db/d60/classAestraContent.html#a5fe05d59abf371680c7ec9a3bbf12b2a" title="The panel owned for a floating view, or nullptr for other views." alt="" coords="1043,111,1254,136"/>
-<area shape="poly" id="edge7_Node000003_Node000008" title=" " alt="" coords="930,174,1023,145,1060,136,1061,141,1025,150,931,179"/>
-<area shape="rect" id="Node000009" href="$db/d60/classAestraContent.html#a81eb24bc36ae457b76640a9b4ff0bfa6" title="The stored preference for a floating panel, or its per&#45;panel default when the user never moved,..." alt="" coords="1034,61,1263,87"/>
-<area shape="poly" id="edge8_Node000003_Node000009" title=" " alt="" coords="898,174,953,134,987,113,1023,95,1045,88,1047,93,1025,100,990,118,956,138,902,178"/>
-<area shape="rect" id="Node000012" href="$dc/d81/UISurfaceResolution_8h.html#a817ab042598424fcb029737cc375494c" title="The on&#45;screen rect for a stored preference in the current placement region." alt="" coords="1029,184,1268,209"/>
-<area shape="poly" id="edge12_Node000003_Node000012" title=" " alt="" coords="972,194,1016,194,1016,199,972,199"/>
-<area shape="rect" id="Node000005" href="$db/d60/classAestraContent.html#a747fc3bfb5c3b565623f999c228c9e75" title="Compute the safe workspace rectangle after chrome and sidebars." alt="" coords="1321,188,1560,213"/>
-<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="1258,231,1357,213,1358,218,1259,237"/>
-<area shape="rect" id="Node000007" href="$db/d60/classAestraContent.html#a75c1ce436d0185fc1d0acf11d301ee83" title="Get the x coordinate of the visible browser edge." alt="" coords="1347,287,1535,327"/>
-<area shape="poly" id="edge6_Node000004_Node000007" title=" " alt="" coords="1259,271,1333,285,1333,290,1258,277"/>
-<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="1560,198,1594,198,1594,203,1560,203"/>
-<area shape="rect" id="Node000010" href="$dc/d81/UISurfaceResolution_8h.html#aa9d79ef377bd570002f8646bed567f35" title="The preference a surface uses when the store has no entry for it." alt="" coords="1322,85,1559,111"/>
-<area shape="poly" id="edge9_Node000009_Node000010" title=" " alt="" coords="1264,81,1308,84,1308,90,1263,86"/>
-<area shape="rect" id="Node000011" href="$db/d60/classAestraContent.html#afbf0a48523732326319bb02e131fbd24" title="The app&#45;owned surface store, or nullptr before AestraApp provides it." alt="" coords="1338,237,1543,263"/>
-<area shape="poly" id="edge11_Node000009_Node000011" title=" " alt="" coords="1258,85,1275,96,1289,112,1296,128,1300,162,1303,194,1310,209,1323,224,1329,228,1325,232,1320,228,1306,212,1298,196,1295,162,1291,130,1285,115,1272,100,1255,89"/>
-<area shape="poly" id="edge10_Node000010_Node000010" title=" " alt="" coords="1399,87,1390,77,1394,67,1412,61,1441,59,1477,63,1487,67,1491,73,1487,76,1484,71,1476,68,1441,64,1413,66,1398,71,1395,76,1403,83"/>
-<area shape="poly" id="edge13_Node000012_Node000012" title=" " alt="" coords="1105,186,1095,176,1100,166,1118,159,1149,157,1188,161,1198,166,1202,172,1197,175,1195,170,1186,167,1149,163,1119,165,1104,170,1101,175,1109,182"/>
-<area shape="poly" id="edge16_Node000013_Node000003" title=" " alt="" coords="649,281,772,233,808,219,810,224,774,238,651,286"/>
-<area shape="poly" id="edge18_Node000013_Node000004" title=" " alt="" coords="707,283,773,277,1010,259,1011,264,774,282,708,289"/>
-<area shape="poly" id="edge19_Node000013_Node000006" title=" " alt="" coords="681,307,726,319,774,341,910,387,966,402,1020,413,1073,419,1131,420,1273,409,1357,400,1422,391,1484,373,1559,337,1593,313,1625,285,1674,230,1678,234,1629,289,1597,318,1561,342,1486,378,1423,396,1357,405,1274,414,1131,426,1073,424,1019,418,965,408,909,392,772,346,724,324,680,312"/>
-<area shape="rect" id="Node000014" href="$db/d60/classAestraContent.html#ac3a61a9e4765aadb4e43f89145418a38" title="Clamp an overlay rectangle to the current allowed bounds." alt="" coords="779,474,971,514"/>
-<area shape="poly" id="edge17_Node000013_Node000014" title=" " alt="" coords="707,307,727,320,741,336,749,353,753,387,756,421,763,437,775,453,789,465,786,469,771,457,758,440,751,422,748,388,744,355,737,339,724,324,705,312"/>
-<area shape="rect" id="Node000015" href="$d9/d85/classAestra_1_1TransportBar.html#a76884e324bcd16550774644f49a6be8b" title="Width the module row needs with the given optional modules shown." alt="" coords="797,538,952,578"/>
-<area shape="poly" id="edge20_Node000013_Node000015" title=" " alt="" coords="709,307,727,320,746,346,754,372,755,397,753,423,750,449,751,474,758,499,775,524,787,534,784,538,771,528,753,501,746,475,745,449,748,423,750,397,749,372,741,348,723,324,706,311"/>
-<area shape="rect" id="Node000016" href="$db/d60/classAestraContent.html#ada1feaa6b6102383a6b9ae0dfb1d0352" title="Seed rail widths from the surface store on first layout." alt="" coords="773,291,976,331"/>
-<area shape="poly" id="edge21_Node000013_Node000016" title=" " alt="" coords="708,299,759,302,759,307,707,304"/>
-<area shape="poly" id="edge24_Node000016_Node000011" title=" " alt="" coords="976,307,1117,299,1273,283,1321,273,1366,263,1367,268,1322,278,1274,289,1117,305,976,312"/>
-<area shape="rect" id="Node000017" href="$d2/d95/DockedRailWidths_8h.html#a5964638a3187994feff993621c5e0539" title="Applies a stored rail width to the live pref." alt="" coords="1042,373,1255,399"/>
-<area shape="poly" id="edge22_Node000016_Node000017" title=" " alt="" coords="949,329,1089,367,1087,372,948,334"/>
-<area shape="poly" id="edge23_Node000017_Node000017" title=" " alt="" coords="1105,375,1095,365,1100,355,1118,349,1149,347,1188,351,1198,356,1202,362,1197,364,1195,360,1186,356,1149,352,1119,354,1104,359,1101,364,1109,371"/>
+<area shape="rect" id="Node000001" title="Toggle the Arsenal panel regardless of active mode." alt="" coords="5,190,219,230"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#ae6930f4ad43aea5913222619cb6924b3" title="Explicitly show or hide the Arsenal panel." alt="" coords="267,190,459,230"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="219,207,253,207,253,212,219,212"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#a1e0d0671846c7430d1d4c113656dd140" title="Show a panel from its preference: setBounds from resolveSurfacePlacement against the current region,..." alt="" coords="777,132,972,172"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="459,190,506,183,763,158,764,163,507,188,459,195"/>
+<area shape="rect" id="Node000006" href="$db/d1a/classAestraUI_1_1NUIComponent.html#a8ff75e00805b13ff9a6babd21f6cc556" title="Window&#45;absolute (V8&#45;X2b Window space): components render and hit&#45;test at bounds_ as&#45;is." alt="" coords="1608,298,1793,338"/>
+<area shape="poly" id="edge12_Node000002_Node000006" title=" " alt="" coords="395,187,476,143,592,90,659,66,729,47,801,33,873,28,1150,28,1214,26,1269,19,1366,5,1411,3,1457,9,1507,26,1561,56,1590,78,1615,106,1636,136,1654,168,1680,231,1695,284,1690,285,1675,233,1649,170,1632,139,1611,109,1587,82,1559,60,1505,31,1456,15,1411,9,1366,10,1270,24,1214,31,1150,34,873,34,802,39,730,52,661,72,594,95,479,148,398,192"/>
+<area shape="rect" id="Node000013" href="$db/d60/classAestraContent.html#ad0290fd113d01c4f8cfcc66a6ac47794" title="Relayout the workspace after a host resize." alt="" coords="525,282,707,308"/>
+<area shape="poly" id="edge13_Node000002_Node000013" title=" " alt="" coords="424,227,565,276,564,281,422,232"/>
+<area shape="rect" id="Node000018" href="$db/d60/classAestraContent.html#a2505125cd9615ff9268078238a50b42a" title="Bring an open panel forward when another panel overlaps it from above; false if it was already in fro..." alt="" coords="507,197,725,222"/>
+<area shape="poly" id="edge22_Node000002_Node000018" title=" " alt="" coords="459,207,493,207,493,212,459,212"/>
+<area shape="rect" id="Node000019" href="$db/d60/classAestraContent.html#a7c4ca59b1871c922b297e25471a89727" title="Synchronize overlay state into owned child views." alt="" coords="507,332,725,357"/>
+<area shape="poly" id="edge24_Node000002_Node000019" title=" " alt="" coords="386,228,438,274,472,298,508,318,526,325,524,330,506,323,469,302,435,278,382,232"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#af34b406e2d5b037466124205f95b0543" title="The single placement region for persistent surfaces (V8&#45;C14 step 5)." alt="" coords="1024,268,1273,308"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="917,170,1096,260,1094,265,915,175"/>
+<area shape="rect" id="Node000008" href="$db/d60/classAestraContent.html#a5fe05d59abf371680c7ec9a3bbf12b2a" title="The panel owned for a floating view, or nullptr for other views." alt="" coords="1043,168,1254,193"/>
+<area shape="poly" id="edge7_Node000003_Node000008" title=" " alt="" coords="972,160,1030,166,1030,171,972,165"/>
+<area shape="rect" id="Node000009" href="$db/d60/classAestraContent.html#a81eb24bc36ae457b76640a9b4ff0bfa6" title="The stored preference for a floating panel, or its per&#45;panel default when the user never moved,..." alt="" coords="1034,69,1263,94"/>
+<area shape="poly" id="edge8_Node000003_Node000009" title=" " alt="" coords="936,130,1023,105,1065,95,1067,100,1025,110,938,135"/>
+<area shape="rect" id="Node000012" href="$d8/d94/namespaceAestra.html#a817ab042598424fcb029737cc375494c" title="The on&#45;screen rect for a stored preference in the current placement region." alt="" coords="1029,118,1268,144"/>
+<area shape="poly" id="edge11_Node000003_Node000012" title=" " alt="" coords="972,142,1015,139,1016,144,972,148"/>
+<area shape="rect" id="Node000005" href="$db/d60/classAestraContent.html#a747fc3bfb5c3b565623f999c228c9e75" title="Compute the safe workspace rectangle after chrome and sidebars." alt="" coords="1321,305,1560,330"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="1274,298,1308,302,1308,307,1273,304"/>
+<area shape="rect" id="Node000007" href="$db/d60/classAestraContent.html#a75c1ce436d0185fc1d0acf11d301ee83" title="Get the x coordinate of the visible browser edge." alt="" coords="1347,240,1535,280"/>
+<area shape="poly" id="edge6_Node000004_Node000007" title=" " alt="" coords="1273,274,1332,268,1333,273,1274,279"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="1560,315,1594,315,1594,320,1560,320"/>
+<area shape="rect" id="Node000010" href="$d8/d94/namespaceAestra.html#a064d827bf5123cd0035d8888490f8681" title="The preference a surface uses when the store has no entry for it." alt="" coords="1322,69,1559,94"/>
+<area shape="poly" id="edge9_Node000009_Node000010" title=" " alt="" coords="1264,79,1308,79,1308,84,1264,84"/>
+<area shape="rect" id="Node000011" href="$db/d60/classAestraContent.html#afbf0a48523732326319bb02e131fbd24" title="The app&#45;owned surface store, or nullptr before AestraApp provides it." alt="" coords="1338,154,1543,180"/>
+<area shape="poly" id="edge10_Node000009_Node000011" title=" " alt="" coords="1221,92,1274,105,1396,147,1395,152,1273,110,1220,97"/>
+<area shape="poly" id="edge14_Node000013_Node000003" title=" " alt="" coords="639,280,724,233,824,177,827,181,727,237,642,285"/>
+<area shape="poly" id="edge16_Node000013_Node000004" title=" " alt="" coords="708,295,773,296,875,298,976,296,1010,295,1010,300,976,302,875,303,773,302,708,301"/>
+<area shape="poly" id="edge17_Node000013_Node000006" title=" " alt="" coords="678,305,863,342,1024,368,1175,378,1292,375,1410,362,1560,340,1594,335,1595,341,1560,346,1410,367,1293,380,1175,383,1024,374,862,347,677,310"/>
+<area shape="rect" id="Node000014" href="$db/d60/classAestraContent.html#ac3a61a9e4765aadb4e43f89145418a38" title="Clamp an overlay rectangle to the current allowed bounds." alt="" coords="779,434,971,474"/>
+<area shape="poly" id="edge15_Node000013_Node000014" title=" " alt="" coords="705,306,727,318,746,342,753,366,759,390,775,413,792,425,788,429,771,417,754,392,748,368,741,344,724,322,702,310"/>
+<area shape="rect" id="Node000015" href="$d9/d85/classAestra_1_1TransportBar.html#a76884e324bcd16550774644f49a6be8b" title="Width the module row needs with the given optional modules shown." alt="" coords="797,498,952,538"/>
+<area shape="poly" id="edge18_Node000013_Node000015" title=" " alt="" coords="709,306,727,319,743,339,751,360,753,402,754,444,761,464,775,484,787,494,784,498,771,488,756,466,748,445,747,402,746,361,739,342,724,322,706,310"/>
+<area shape="rect" id="Node000016" href="$db/d60/classAestraContent.html#ada1feaa6b6102383a6b9ae0dfb1d0352" title="Seed rail widths from the surface store on first layout." alt="" coords="773,247,976,287"/>
+<area shape="poly" id="edge19_Node000013_Node000016" title=" " alt="" coords="707,283,759,277,760,282,708,288"/>
+<area shape="poly" id="edge21_Node000016_Node000011" title=" " alt="" coords="976,251,1117,230,1273,203,1375,181,1376,186,1274,208,1118,236,977,256"/>
+<area shape="rect" id="Node000017" href="$d8/d94/namespaceAestra.html#a5964638a3187994feff993621c5e0539" title="Applies a stored rail width to the live pref." alt="" coords="1042,333,1255,358"/>
+<area shape="poly" id="edge20_Node000016_Node000017" title=" " alt="" coords="927,285,1025,318,1064,328,1063,333,1023,323,925,290"/>
+<area shape="poly" id="edge23_Node000018_Node000008" title=" " alt="" coords="726,201,1029,184,1029,190,726,206"/>
 </map>

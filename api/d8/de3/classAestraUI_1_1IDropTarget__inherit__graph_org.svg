@@ -75,9 +75,9 @@
 <!-- Node5 -->
 <g id="Node000005" class="node">
 <title>Node5</title>
-<g id="a_Node000005"><a xlink:href="../../d8/d29/classAestra_1_1AuditionPanel.html" target="_top" xlink:title="Audition Mode panel &#45; immersive listening experience.">
-<polygon fill="white" stroke="#666666" points="301,-93 180,-93 180,-74 301,-74 301,-93"/>
-<text text-anchor="middle" x="240.5" y="-81" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::AuditionPanel</text>
+<g id="a_Node000005"><a xlink:href="../../d2/db1/classAestra_1_1AuditionQueuePage.html" target="_top" xlink:title="The queue, as a page of the Audition hub (FD&#45;26, V81&#45;A): what will play, in order.">
+<polygon fill="white" stroke="#666666" points="315,-93 166,-93 166,-74 315,-74 315,-93"/>
+<text text-anchor="middle" x="240.5" y="-81" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::AuditionQueuePage</text>
 </a>
 </g>
 </g>
@@ -85,7 +85,7 @@
 <g id="edge4_Node000001_Node000005" class="edge">
 <title>Node1&#45;&gt;Node5</title>
 <g id="a_edge4_Node000001_Node000005"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M131.62,-94.41C147.59,-92.79 164.41,-91.09 179.89,-89.53"/>
+<path fill="none" stroke="#63b8ff" d="M131.52,-94.42C142.83,-93.28 154.58,-92.09 165.97,-90.94"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="130.86,-90.97 121.27,-95.46 131.57,-97.93 130.86,-90.97"/>
 </a>
 </g>

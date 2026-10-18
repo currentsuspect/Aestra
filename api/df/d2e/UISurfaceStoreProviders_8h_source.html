@@ -98,7 +98,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="preprocessor">#include &lt;string&gt;</span></div>
 <div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="preprocessor">#include &lt;vector&gt;</span></div>
 <div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span> </div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="keyword">namespace </span>Aestra {</div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d8/d94/namespaceAestra.html">Aestra</a> {</div>
 <div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span> </div>
 <div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="keyword">inline</span> std::function&lt;std::optional&lt;std::vector&lt;std::string&gt;&gt;()&gt; storedListLoader(std::string key) {</div>
 <div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>    <span class="keywordflow">return</span> [key = std::move(key)]() -&gt; std::optional&lt;std::vector&lt;std::string&gt;&gt; {</div>
@@ -115,16 +115,20 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>    };</div>
 <div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>}</div>
 <div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span> </div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span><span class="keyword">inline</span> <span class="keywordtype">void</span> bindPluginBrowserStore(<a class="code hl_class" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html">AestraUI::PluginBrowserPanel</a>&amp; browser) {</div>
+<div class="foldopen" id="foldopen00035" data-start="{" data-end="}">
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno"><a class="line" href="../../d8/d94/namespaceAestra.html#a45eb3908467dc73fc04211983acb882d">   35</a></span><span class="keyword">inline</span> <span class="keywordtype">void</span> <a class="code hl_function" href="../../d8/d94/namespaceAestra.html#a45eb3908467dc73fc04211983acb882d">bindPluginBrowserStore</a>(<a class="code hl_class" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html">AestraUI::PluginBrowserPanel</a>&amp; browser) {</div>
 <div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    browser.setFavoritesProvider(storedListLoader(UISurfaceKeys::kPluginBrowserFavorites),</div>
 <div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>                                 storedListSaver(UISurfaceKeys::kPluginBrowserFavorites));</div>
 <div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    browser.<a class="code hl_function" href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#af320540336117b5f51b2b44aa4770433">setRecentsProvider</a>(storedListLoader(UISurfaceKeys::kPluginBrowserRecents),</div>
 <div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>                               storedListSaver(UISurfaceKeys::kPluginBrowserRecents));</div>
 <div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>}</div>
+</div>
 <div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span> </div>
 <div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>} <span class="comment">// namespace Aestra</span></div>
 <div class="ttc" id="aclassAestraUI_1_1PluginBrowserPanel_html"><div class="ttname"><a href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html">AestraUI::PluginBrowserPanel</a></div><div class="ttdoc">Comprehensive plugin browser panel.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00056">PluginBrowserPanel.h:56</a></div></div>
 <div class="ttc" id="aclassAestraUI_1_1PluginBrowserPanel_html_af320540336117b5f51b2b44aa4770433"><div class="ttname"><a href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#af320540336117b5f51b2b44aa4770433">AestraUI::PluginBrowserPanel::setRecentsProvider</a></div><div class="ttdeci">void setRecentsProvider(FavoritesLoader load, FavoritesSaver save)</div><div class="ttdoc">Same arrangement as favorites: a stored list wins; without a provider recents last for the session.</div><div class="ttdef"><b>Definition</b> <a href="../../d7/d2c/PluginBrowserFavorites_8cpp_source.html#l00119">PluginBrowserFavorites.cpp:119</a></div></div>
+<div class="ttc" id="anamespaceAestra_html"><div class="ttname"><a href="../../d8/d94/namespaceAestra.html">Aestra</a></div><div class="ttdoc">Main application class.</div><div class="ttdef"><b>Definition</b> <a href="../../d7/d7b/AestraAssert_8h_source.html#l00009">AestraAssert.h:9</a></div></div>
+<div class="ttc" id="anamespaceAestra_html_a45eb3908467dc73fc04211983acb882d"><div class="ttname"><a href="../../d8/d94/namespaceAestra.html#a45eb3908467dc73fc04211983acb882d">Aestra::bindPluginBrowserStore</a></div><div class="ttdeci">void bindPluginBrowserStore(AestraUI::PluginBrowserPanel &amp;browser)</div><div class="ttdoc">Binds the plugin browser's favorites and recents to the UI-state store (V8-C14, V8-S5).</div><div class="ttdef"><b>Definition</b> <a href="../../df/d2e/UISurfaceStoreProviders_8h_source.html#l00035">UISurfaceStoreProviders.h:35</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

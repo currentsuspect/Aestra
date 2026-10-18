@@ -90,7 +90,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#include &lt;chrono&gt;</span></div>
 <div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &lt;utility&gt;</span></div>
 <div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span> </div>
-<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="keyword">namespace </span>Aestra {</div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d8/d94/namespaceAestra.html">Aestra</a> {</div>
 <div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="keyword">namespace </span>Audio {</div>
 <div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span> </div>
 <div class="foldopen" id="foldopen00012" data-start="{" data-end="}">
@@ -120,7 +120,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>        <span class="keywordflow">if</span> (m_shutdown) {</div>
 <div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>            <span class="keywordflow">return</span>;</div>
 <div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>        }</div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>        <span class="keyword">const</span> Key key{job.sourceId, job.contentRevision, job.targetRate};</div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>        <span class="keyword">const</span> Key key{job.sourceId, job.contentRevision, job.targetRate, job.decimation};</div>
 <div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>        <span class="keywordflow">if</span> (m_tracked.count(key) != 0) {</div>
 <div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>            <span class="keywordflow">return</span>; <span class="comment">// already queued, running, or awaiting drain</span></div>
 <div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>        }</div>
@@ -141,7 +141,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    std::lock_guard&lt;std::mutex&gt; lock(m_mutex);</div>
 <div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    out.swap(m_completed);</div>
 <div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <a class="code hl_struct" href="../../d8/da7/structAestra_1_1Audio_1_1ClipPrefilterService_1_1Result.html">Result</a>&amp; r : out) {</div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>        m_tracked.erase(Key{r.sourceId, r.contentRevision, r.targetRate});</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>        m_tracked.erase(Key{r.sourceId, r.contentRevision, r.targetRate, r.decimation});</div>
 <div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>    }</div>
 <div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>    <span class="keywordflow">return</span> out;</div>
 <div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>}</div>
@@ -182,59 +182,68 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>        result.sourceId = job.sourceId;</div>
 <div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>        result.contentRevision = job.contentRevision;</div>
 <div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>        result.targetRate = job.targetRate;</div>
-<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>        result.specVersion = ClipPrefilter::kSpecVersion;</div>
-<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>        <span class="keyword">const</span> std::vector&lt;double&gt; h = ClipPrefilter::design(job.source-&gt;sampleRate, job.targetRate);</div>
-<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>        <span class="keywordflow">if</span> (!h.empty()) {</div>
-<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>            <span class="keyword">auto</span> filtered = std::make_shared&lt;AudioBufferData&gt;();</div>
-<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>            filtered-&gt;sampleRate = job.source-&gt;sampleRate; <span class="comment">// filtering does NOT resample</span></div>
-<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>            filtered-&gt;numChannels = job.source-&gt;numChannels;</div>
-<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>            filtered-&gt;numFrames = job.source-&gt;numFrames;</div>
-<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>            <span class="comment">// Read the source through copyFloats in blocks: a compact PCM source is converted as it is</span></div>
-<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>            <span class="comment">// filtered, never expanded to a whole-clip float copy (the filtered output is float32).</span></div>
-<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>            filtered-&gt;interleavedData.resize(<span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(job.source-&gt;storedSamples()));</div>
-<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>            <span class="keyword">const</span> AudioBufferData&amp; src = *job.source;</div>
-<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>            <span class="keyword">const</span> uint32_t channels = src.numChannels;</div>
-<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>            ClipPrefilter::applyStreaming(</div>
-<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>                [&amp;src, channels](uint64_t firstFrame, uint64_t frameCount, <span class="keywordtype">float</span>* dst) {</div>
-<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>                    src.copyFloats(firstFrame * channels, frameCount * channels, dst);</div>
-<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>                },</div>
-<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>                filtered-&gt;interleavedData.data(), job.source-&gt;numFrames, channels, h);</div>
-<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>            result.filtered = std::move(filtered);</div>
-<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>        }</div>
-<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>        result.buildMillis =</div>
-<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>            std::chrono::duration_cast&lt;std::chrono::duration&lt;double, std::milli&gt;&gt;(</div>
-<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>                std::chrono::steady_clock::now() - t0)</div>
-<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>                .count();</div>
-<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span> </div>
-<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>        <span class="keywordtype">bool</span> notify = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>        {</div>
-<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>            std::lock_guard&lt;std::mutex&gt; lock(m_mutex);</div>
-<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>            m_running = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>            <span class="keywordflow">if</span> (result.filtered) {</div>
-<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>                m_completed.push_back(std::move(result));</div>
-<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>                notify = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>            } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>                <span class="comment">// Nothing produced (spec said not needed): stop tracking the key.</span></div>
-<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>                m_tracked.erase(Key{job.sourceId, job.contentRevision, job.targetRate});</div>
-<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>            }</div>
-<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>        }</div>
-<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>        m_idle.notify_all();</div>
-<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>        <span class="keywordflow">if</span> (notify &amp;&amp; m_onJobComplete) {</div>
-<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>            m_onJobComplete(); <span class="comment">// atomic-only by contract (graph dirty request)</span></div>
-<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>        }</div>
-<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>    }</div>
-<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>}</div>
-<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span> </div>
-<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span>} <span class="comment">// namespace Audio</span></div>
-<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>        result.decimation = job.decimation;</div>
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>        result.specVersion = ClipPrefilter::kSpecVersion;</div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>        <span class="keyword">const</span> std::vector&lt;double&gt; h = ClipPrefilter::design(job.source-&gt;sampleRate, job.targetRate);</div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>        <span class="keywordflow">if</span> (!h.empty()) {</div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>            <span class="keyword">auto</span> filtered = std::make_shared&lt;AudioBufferData&gt;();</div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>            <span class="comment">// Decimated (stored at the target rate, see decimationFactor) only when the caller asked for it and</span></div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>            <span class="comment">// the ratio allows; otherwise the full-rate copy, which the kernel resamples as before.</span></div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>            <span class="keyword">const</span> uint32_t decimation =</div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>                job.decimation &gt; 1 &amp;&amp; job.decimation == ClipPrefilter::decimationFactor(job.source-&gt;sampleRate, job.targetRate)</div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>                    ? job.decimation</div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>                    : 1;</div>
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>            <span class="keyword">const</span> uint64_t outFrames = (job.source-&gt;numFrames + decimation - 1) / decimation;</div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>            filtered-&gt;sampleRate = decimation &gt; 1 ? job.targetRate : job.source-&gt;sampleRate;</div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>            filtered-&gt;numChannels = job.source-&gt;numChannels;</div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>            filtered-&gt;numFrames = outFrames;</div>
+<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>            <span class="comment">// Read the source through copyFloats in blocks: a compact PCM source is converted as it is</span></div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>            <span class="comment">// filtered, never expanded to a whole-clip float copy (the filtered output is float32).</span></div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>            filtered-&gt;interleavedData.resize(<span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(outFrames) * job.source-&gt;numChannels);</div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>            <span class="keyword">const</span> AudioBufferData&amp; src = *job.source;</div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>            <span class="keyword">const</span> uint32_t channels = src.numChannels;</div>
+<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>            ClipPrefilter::applyStreaming(</div>
+<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>                [&amp;src, channels](uint64_t firstFrame, uint64_t frameCount, <span class="keywordtype">float</span>* dst) {</div>
+<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>                    src.copyFloats(firstFrame * channels, frameCount * channels, dst);</div>
+<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>                },</div>
+<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>                filtered-&gt;interleavedData.data(), job.source-&gt;numFrames, channels, h, decimation);</div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>            result.filtered = std::move(filtered);</div>
+<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>        }</div>
+<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>        result.buildMillis =</div>
+<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>            std::chrono::duration_cast&lt;std::chrono::duration&lt;double, std::milli&gt;&gt;(</div>
+<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>                std::chrono::steady_clock::now() - t0)</div>
+<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>                .count();</div>
+<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span> </div>
+<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>        <span class="keywordtype">bool</span> notify = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>        {</div>
+<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>            std::lock_guard&lt;std::mutex&gt; lock(m_mutex);</div>
+<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>            m_running = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>            <span class="keywordflow">if</span> (result.filtered) {</div>
+<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>                m_completed.push_back(std::move(result));</div>
+<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>                notify = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>            } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>                <span class="comment">// Nothing produced (spec said not needed): stop tracking the key.</span></div>
+<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>                m_tracked.erase(Key{job.sourceId, job.contentRevision, job.targetRate, job.decimation});</div>
+<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span>            }</div>
+<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span>        }</div>
+<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>        m_idle.notify_all();</div>
+<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span>        <span class="keywordflow">if</span> (notify &amp;&amp; m_onJobComplete) {</div>
+<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span>            m_onJobComplete(); <span class="comment">// atomic-only by contract (graph dirty request)</span></div>
+<div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span>        }</div>
+<div class="line"><a id="l00139" name="l00139"></a><span class="lineno">  139</span>    }</div>
+<div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span>}</div>
+<div class="line"><a id="l00141" name="l00141"></a><span class="lineno">  141</span> </div>
+<div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span>} <span class="comment">// namespace Audio</span></div>
+<div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span>} <span class="comment">// namespace Aestra</span></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1ClipPrefilterService_html_a12465f17ae333a7dfbce37bc332a8044"><div class="ttname"><a href="../../d9/dee/classAestra_1_1Audio_1_1ClipPrefilterService.html#a12465f17ae333a7dfbce37bc332a8044">Aestra::Audio::ClipPrefilterService::drainCompleted</a></div><div class="ttdeci">std::vector&lt; Result &gt; drainCompleted()</div><div class="ttdoc">Move out all completed results (graph-build thread applies them).</div><div class="ttdef"><b>Definition</b> <a href="../../d0/d36/ClipPrefilterService_8cpp_source.html#l00050">ClipPrefilterService.cpp:50</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1ClipPrefilterService_html_a817086631813f75ba170af63556d4c0c"><div class="ttname"><a href="../../d9/dee/classAestra_1_1Audio_1_1ClipPrefilterService.html#a817086631813f75ba170af63556d4c0c">Aestra::Audio::ClipPrefilterService::hasWork</a></div><div class="ttdeci">bool hasWork() const</div><div class="ttdoc">True if any job is queued, running, or completed-but-undrained.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/d36/ClipPrefilterService_8cpp_source.html#l00060">ClipPrefilterService.cpp:60</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1ClipPrefilterService_html_a8a7ee13560ba3e17c5b6a330642be538"><div class="ttname"><a href="../../d9/dee/classAestra_1_1Audio_1_1ClipPrefilterService.html#a8a7ee13560ba3e17c5b6a330642be538">Aestra::Audio::ClipPrefilterService::ClipPrefilterService</a></div><div class="ttdeci">ClipPrefilterService(std::function&lt; void()&gt; onJobComplete)</div><div class="ttdoc">onJobComplete is invoked FROM THE WORKER THREAD after each finished job; it must only touch atomics (...</div><div class="ttdef"><b>Definition</b> <a href="../../d0/d36/ClipPrefilterService_8cpp_source.html#l00012">ClipPrefilterService.cpp:12</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1ClipPrefilterService_html_aac01548f4017ee6a58c309247b64df30"><div class="ttname"><a href="../../d9/dee/classAestra_1_1Audio_1_1ClipPrefilterService.html#aac01548f4017ee6a58c309247b64df30">Aestra::Audio::ClipPrefilterService::waitIdle</a></div><div class="ttdeci">void waitIdle()</div><div class="ttdoc">Block the CALLING (non-audio) thread until queue and worker are idle.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/d36/ClipPrefilterService_8cpp_source.html#l00065">ClipPrefilterService.cpp:65</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1ClipPrefilterService_html_ac61d336d0cbc926a6dea488e9ac795bc"><div class="ttname"><a href="../../d9/dee/classAestra_1_1Audio_1_1ClipPrefilterService.html#ac61d336d0cbc926a6dea488e9ac795bc">Aestra::Audio::ClipPrefilterService::enqueue</a></div><div class="ttdeci">void enqueue(Job job)</div><div class="ttdoc">Queue a job unless the same (sourceId, revision, targetRate) is already queued, running,...</div><div class="ttdef"><b>Definition</b> <a href="../../d0/d36/ClipPrefilterService_8cpp_source.html#l00026">ClipPrefilterService.cpp:26</a></div></div>
+<div class="ttc" id="anamespaceAestra_html"><div class="ttname"><a href="../../d8/d94/namespaceAestra.html">Aestra</a></div><div class="ttdoc">Main application class.</div><div class="ttdef"><b>Definition</b> <a href="../../d7/d7b/AestraAssert_8h_source.html#l00009">AestraAssert.h:9</a></div></div>
 <div class="ttc" id="anamespacestd_html"><div class="ttname"><a href="../../d8/dcc/namespacestd.html">std</a></div><div class="ttdoc">STL namespace.</div></div>
 <div class="ttc" id="astructAestra_1_1Audio_1_1ClipPrefilterService_1_1Job_html"><div class="ttname"><a href="../../d1/d35/structAestra_1_1Audio_1_1ClipPrefilterService_1_1Job.html">Aestra::Audio::ClipPrefilterService::Job</a></div><div class="ttdef"><b>Definition</b> <a href="../../db/d3a/ClipPrefilterService_8h_source.html#l00042">ClipPrefilterService.h:42</a></div></div>
-<div class="ttc" id="astructAestra_1_1Audio_1_1ClipPrefilterService_1_1Result_html"><div class="ttname"><a href="../../d8/da7/structAestra_1_1Audio_1_1ClipPrefilterService_1_1Result.html">Aestra::Audio::ClipPrefilterService::Result</a></div><div class="ttdef"><b>Definition</b> <a href="../../db/d3a/ClipPrefilterService_8h_source.html#l00049">ClipPrefilterService.h:49</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1ClipPrefilterService_1_1Result_html"><div class="ttname"><a href="../../d8/da7/structAestra_1_1Audio_1_1ClipPrefilterService_1_1Result.html">Aestra::Audio::ClipPrefilterService::Result</a></div><div class="ttdef"><b>Definition</b> <a href="../../db/d3a/ClipPrefilterService_8h_source.html#l00050">ClipPrefilterService.h:50</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

@@ -1,0 +1,5 @@
+<map id="Aestra::VersionBounce::peaks" name="Aestra::VersionBounce::peaks">
+<area shape="rect" id="Node000001" title="Loudest sample per bar, scaled so the loudest bar is 1. Silence is all zeros." alt="" coords="221,5,389,45"/>
+<area shape="rect" id="Node000002" href="$dd/d24/namespaceAestra_1_1VersionBounce.html#a98e434ee88cad8b00e690e43572e54f0" title="Bounce a saved version: render, write the WAV and its card info, and record the file on the version." alt="" coords="5,5,173,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="207,28,174,28,174,23,207,23"/>
+</map>

@@ -1,0 +1,13 @@
+<map id="Aestra::AuditionHooks" name="Aestra::AuditionHooks">
+<area shape="rect" id="Node000001" title="What the Audition hub needs from the app, handed over once: the open project, where references are ke..." alt="" coords="497,109,664,135"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="193,5,336,60"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="350,49,474,82,547,107,545,112,473,87,348,54"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="221,84,308,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="322,99,498,113,497,118,322,104"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="5,77,144,117"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="158,94,221,94,221,99,158,99"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="195,133,334,159"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="348,145,473,139,521,132,522,137,474,145,348,150"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="195,183,334,208"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="347,187,409,178,473,165,516,149,554,132,556,137,518,154,474,170,410,184,348,192"/>
+</map>

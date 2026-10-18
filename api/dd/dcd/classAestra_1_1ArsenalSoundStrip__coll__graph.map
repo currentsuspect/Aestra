@@ -1,0 +1,7 @@
+<map id="Aestra::ArsenalSoundStrip" name="Aestra::ArsenalSoundStrip">
+<area shape="rect" id="Node000001" title="The sound strip at the top of an open sampler row (V81&#45;AR1, FD&#45;27 point 5): step to the previous or n..." alt="" coords="5,108,196,133"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="26,5,77,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="49,44,50,64,55,83,65,96,78,106,75,110,61,99,50,85,44,65,44,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="121,5,181,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="144,45,124,85,110,109,106,106,120,83,139,42"/>
+</map>

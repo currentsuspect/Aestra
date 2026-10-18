@@ -1,7 +1,9 @@
 <map id="TakeManager::ensureManifest" name="TakeManager::ensureManifest">
-<area shape="rect" id="Node000001" title="Ensures a manifest exists, creating one with an initial take if needed." alt="" coords="271,31,488,56"/>
-<area shape="rect" id="Node000002" href="$df/db6/classTakeManager.html#aca0f3339708882aa536a01af04d2d9b5" title="Creates a new take snapshot." alt="" coords="21,5,207,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="256,34,207,30,208,24,257,29"/>
-<area shape="rect" id="Node000003" href="$df/db6/classTakeManager.html#af69296879493d1f9ba2977aeca314e0d" title="Overwrites the active take&#39;s snapshot with the current project state." alt="" coords="5,55,223,80"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="257,57,223,60,223,55,257,52"/>
+<area shape="rect" id="Node000001" title="Ensures a manifest exists, creating one with an initial take if needed." alt="" coords="505,31,723,56"/>
+<area shape="rect" id="Node000002" href="$df/db6/classTakeManager.html#a8cf8e024134554203dd9d1283493368d" title="Saves the state as a version on a branch (SPEC&#45;017)." alt="" coords="246,5,451,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="491,34,451,30,452,25,492,29"/>
+<area shape="rect" id="Node000004" href="$df/db6/classTakeManager.html#af69296879493d1f9ba2977aeca314e0d" title="Overwrites the active take&#39;s snapshot with the current project state." alt="" coords="240,55,457,80"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="492,57,458,60,457,55,491,52"/>
+<area shape="rect" id="Node000003" href="$df/db6/classTakeManager.html#aca0f3339708882aa536a01af04d2d9b5" title="Creates a new take snapshot." alt="" coords="5,5,192,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="232,21,192,21,192,15,232,15"/>
 </map>

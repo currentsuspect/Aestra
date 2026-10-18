@@ -75,6 +75,7 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
+<a href="#namespaces">Namespaces</a> &#124;
 <a href="#func-members">Functions</a> &#124;
 <a href="#var-members">Variables</a>  </div>
   <div class="headertitle"><div class="title">AutomationRegions.h File Reference</div></div>
@@ -106,6 +107,12 @@ $(function() {
 </div>
 <p><a href="../../d3/dbe/AutomationRegions_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:d8/d94/namespaceAestra" id="r_d8/d94/namespaceAestra"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d94/namespaceAestra.html">Aestra</a></td></tr>
+<tr class="memdesc:d8/d94/namespaceAestra"><td class="mdescLeft">&#160;</td><td class="mdescRight">Main application class. <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:a73fce7eace716cac10d527ab490176b5" id="r_a73fce7eace716cac10d527ab490176b5"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/dbe/AutomationRegions_8h.html#a73fce7eace716cac10d527ab490176b5">Aestra::Audio::AutomationRegions::inside</a> (const <a class="el" href="../../d4/d61/structAestra_1_1Audio_1_1AutomationRegion.html">AutomationRegion</a> &amp;r, double beat)</td></tr>
@@ -133,6 +140,9 @@ Functions</h2></td></tr>
 <tr class="memitem:adda37dfe26a1945508e2dc382d671879" id="r_adda37dfe26a1945508e2dc382d671879"><td class="memItemLeft" align="right" valign="top">std::optional&lt; uint64_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/dbe/AutomationRegions_8h.html#adda37dfe26a1945508e2dc382d671879">Aestra::Audio::AutomationRegions::copy</a> (<a class="el" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html">AutomationCurve</a> &amp;curve, uint64_t id, double deltaBeats)</td></tr>
 <tr class="memdesc:adda37dfe26a1945508e2dc382d671879"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copy region <code>id</code> to <code>deltaBeats</code> away. Returns the new region's id, or nothing if refused.  <br /></td></tr>
 <tr class="separator:adda37dfe26a1945508e2dc382d671879"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad07426f8fc4ff8145747923f6a1bab4a" id="r_ad07426f8fc4ff8145747923f6a1bab4a"><td class="memItemLeft" align="right" valign="top">std::optional&lt; uint64_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/dbe/AutomationRegions_8h.html#ad07426f8fc4ff8145747923f6a1bab4a">Aestra::Audio::AutomationRegions::create</a> (<a class="el" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html">AutomationCurve</a> &amp;curve, double start, double end, float value)</td></tr>
+<tr class="memdesc:ad07426f8fc4ff8145747923f6a1bab4a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a new clip over [start, end] holding two points at <code>value</code> (a flat line).  <br /></td></tr>
+<tr class="separator:ad07426f8fc4ff8145747923f6a1bab4a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa6b4d6aef7ed5063d8736bbfead18f54" id="r_aa6b4d6aef7ed5063d8736bbfead18f54"><td class="memItemLeft" align="right" valign="top">std::optional&lt; uint64_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/dbe/AutomationRegions_8h.html#aa6b4d6aef7ed5063d8736bbfead18f54">Aestra::Audio::AutomationRegions::split</a> (<a class="el" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html">AutomationCurve</a> &amp;curve, uint64_t id, double beat)</td></tr>
 <tr class="memdesc:aa6b4d6aef7ed5063d8736bbfead18f54"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cut region <code>id</code> in two at the segment holding <code>beat</code>. Returns the new (right-hand) id, or nothing.  <br /></td></tr>
 <tr class="separator:aa6b4d6aef7ed5063d8736bbfead18f54"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -206,7 +216,7 @@ Variables</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00085">Aestra::Audio::AutomationRegions::clearSpan()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00085">Aestra::Audio::AutomationRegions::clearSpan()</a>, <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00128">Aestra::Audio::AutomationRegions::copy()</a>, <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00093">Aestra::Audio::AutomationRegions::move()</a>, and <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00188">Aestra::Audio::AutomationRegions::remove()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00085">Aestra::Audio::AutomationRegions::clearSpan()</a>, <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00128">Aestra::Audio::AutomationRegions::copy()</a>, <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00161">Aestra::Audio::AutomationRegions::create()</a>, <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00093">Aestra::Audio::AutomationRegions::move()</a>, and <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00211">Aestra::Audio::AutomationRegions::remove()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">
@@ -219,7 +229,7 @@ Variables</h2></td></tr>
 <div id="dynsection-3-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-3-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/dbe/AutomationRegions_8h_ae62b9829f2dfd5e8543be4d9a387c1e6_icgraph.svg" width="446" height="251"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/dbe/AutomationRegions_8h_ae62b9829f2dfd5e8543be4d9a387c1e6_icgraph.svg" width="446" height="339"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -284,6 +294,77 @@ Variables</h2></td></tr>
 </div>
 <div id="dynsection-5-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/dbe/AutomationRegions_8h_adda37dfe26a1945508e2dc382d671879_icgraph.svg" width="204" height="75"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+
+</div>
+</div>
+<a id="ad07426f8fc4ff8145747923f6a1bab4a" name="ad07426f8fc4ff8145747923f6a1bab4a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad07426f8fc4ff8145747923f6a1bab4a">&#9670;&#160;</a></span>create()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::optional&lt; uint64_t &gt; Aestra::Audio::AutomationRegions::create </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html">AutomationCurve</a> &amp;&#160;</td>
+          <td class="paramname"><em>curve</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>start</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>end</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>value</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Create a new clip over [start, end] holding two points at <code>value</code> (a flat line). </p>
+<p>Returns the new region's id, or nothing if refused: it would start before 0, be empty, or land on another clip. Loose points under the span are replaced (the clip overwrites what it lands on); the points of other clips are never touched. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00161">161</a> of file <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html">AutomationRegions.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00085">Aestra::Audio::AutomationRegions::clearSpan()</a>, <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00161">Aestra::Audio::AutomationRegions::create()</a>, <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00065">Aestra::Audio::AutomationRegions::materialize()</a>, and <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00136">Aestra::Audio::AutomationCurve::regions</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00161">Aestra::Audio::AutomationRegions::create()</a>.</p>
+<div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-6-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-6-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/dbe/AutomationRegions_8h_ad07426f8fc4ff8145747923f6a1bab4a_cgraph.svg" width="446" height="163"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+<div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-7-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-7-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/dbe/AutomationRegions_8h_ad07426f8fc4ff8145747923f6a1bab4a_icgraph.svg" width="204" height="75"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -394,20 +475,20 @@ Variables</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00065">Aestra::Audio::AutomationRegions::materialize()</a>, and <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00136">Aestra::Audio::AutomationCurve::regions</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00128">Aestra::Audio::AutomationRegions::copy()</a>, <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00065">Aestra::Audio::AutomationRegions::materialize()</a>, <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00093">Aestra::Audio::AutomationRegions::move()</a>, <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00188">Aestra::Audio::AutomationRegions::remove()</a>, and <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00159">Aestra::Audio::AutomationRegions::split()</a>.</p>
-<div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-6-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00128">Aestra::Audio::AutomationRegions::copy()</a>, <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00161">Aestra::Audio::AutomationRegions::create()</a>, <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00065">Aestra::Audio::AutomationRegions::materialize()</a>, <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00093">Aestra::Audio::AutomationRegions::move()</a>, <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00211">Aestra::Audio::AutomationRegions::remove()</a>, and <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00182">Aestra::Audio::AutomationRegions::split()</a>.</p>
+<div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-8-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-6-content" class="dyncontent" style="display:none;">
+<div id="dynsection-8-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/dbe/AutomationRegions_8h_ac9b13f65ec62dcf69d8c5670c899e7dc_cgraph.svg" width="204" height="75"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
-<div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-7-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-9" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-9-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-9-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-7-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/dbe/AutomationRegions_8h_ac9b13f65ec62dcf69d8c5670c899e7dc_icgraph.svg" width="446" height="339"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div id="dynsection-9-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/dbe/AutomationRegions_8h_ac9b13f65ec62dcf69d8c5670c899e7dc_icgraph.svg" width="446" height="427"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -459,18 +540,18 @@ Variables</h2></td></tr>
 <p class="reference">References <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00085">Aestra::Audio::AutomationRegions::clearSpan()</a>, <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00065">Aestra::Audio::AutomationRegions::materialize()</a>, <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00093">Aestra::Audio::AutomationRegions::move()</a>, and <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00136">Aestra::Audio::AutomationCurve::regions</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00093">Aestra::Audio::AutomationRegions::move()</a>.</p>
-<div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-8-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-10" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-10-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-10-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-8-content" class="dyncontent" style="display:none;">
+<div id="dynsection-10-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/dbe/AutomationRegions_8h_a9bcad823a9a2f86cdda5fdc0be15250a_cgraph.svg" width="446" height="163"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
-<div id="dynsection-9" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-9-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-9-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-11" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-11-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-11-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-9-content" class="dyncontent" style="display:none;">
+<div id="dynsection-11-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/dbe/AutomationRegions_8h_a9bcad823a9a2f86cdda5fdc0be15250a_icgraph.svg" width="204" height="75"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -595,18 +676,18 @@ Variables</h2></td></tr>
 <p class="reference">References <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00050">Aestra::Audio::AutomationRegions::regionAt()</a>, and <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00136">Aestra::Audio::AutomationCurve::regions</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00050">Aestra::Audio::AutomationRegions::regionAt()</a>.</p>
-<div id="dynsection-10" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-10-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-10-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-12" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-12-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-12-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-10-content" class="dyncontent" style="display:none;">
+<div id="dynsection-12-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/dbe/AutomationRegions_8h_af75bfaa3f278c003ccc3a5a6a12289c7_cgraph.svg" width="204" height="75"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
-<div id="dynsection-11" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-11-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-11-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-13" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-13-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-13-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-11-content" class="dyncontent" style="display:none;">
+<div id="dynsection-13-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/dbe/AutomationRegions_8h_af75bfaa3f278c003ccc3a5a6a12289c7_icgraph.svg" width="204" height="75"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -648,23 +729,23 @@ Variables</h2></td></tr>
 
 <p>Delete region <code>id</code> and the points inside it. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00188">188</a> of file <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html">AutomationRegions.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00211">211</a> of file <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html">AutomationRegions.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00085">Aestra::Audio::AutomationRegions::clearSpan()</a>, <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00065">Aestra::Audio::AutomationRegions::materialize()</a>, <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00136">Aestra::Audio::AutomationCurve::regions</a>, and <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00188">Aestra::Audio::AutomationRegions::remove()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00085">Aestra::Audio::AutomationRegions::clearSpan()</a>, <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00065">Aestra::Audio::AutomationRegions::materialize()</a>, <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00136">Aestra::Audio::AutomationCurve::regions</a>, and <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00211">Aestra::Audio::AutomationRegions::remove()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00188">Aestra::Audio::AutomationRegions::remove()</a>.</p>
-<div id="dynsection-12" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-12-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-12-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00211">Aestra::Audio::AutomationRegions::remove()</a>.</p>
+<div id="dynsection-14" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-14-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-14-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-12-content" class="dyncontent" style="display:none;">
+<div id="dynsection-14-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/dbe/AutomationRegions_8h_ace3d47d7272f91b6d2948818c3e458ab_cgraph.svg" width="446" height="163"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
-<div id="dynsection-13" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-13-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-13-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-15" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-15-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-15-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-13-content" class="dyncontent" style="display:none;">
+<div id="dynsection-15-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/dbe/AutomationRegions_8h_ace3d47d7272f91b6d2948818c3e458ab_icgraph.svg" width="204" height="75"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -696,23 +777,23 @@ Variables</h2></td></tr>
 
 <p>After point edits (drag, add, delete): re-tighten every region to its points and drop empty ones. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00199">199</a> of file <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html">AutomationRegions.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00222">222</a> of file <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html">AutomationRegions.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00136">Aestra::Audio::AutomationCurve::regions</a>, and <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00199">Aestra::Audio::AutomationRegions::retighten()</a>.</p>
+<p class="reference">References <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00136">Aestra::Audio::AutomationCurve::regions</a>, and <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00222">Aestra::Audio::AutomationRegions::retighten()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00199">Aestra::Audio::AutomationRegions::retighten()</a>.</p>
-<div id="dynsection-14" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-14-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-14-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00222">Aestra::Audio::AutomationRegions::retighten()</a>.</p>
+<div id="dynsection-16" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-16-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-16-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-14-content" class="dyncontent" style="display:none;">
+<div id="dynsection-16-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/dbe/AutomationRegions_8h_af82b6225749517ae48ad158d92d8a464_cgraph.svg" width="204" height="75"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
-<div id="dynsection-15" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-15-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-15-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-17" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-17-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-17-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-15-content" class="dyncontent" style="display:none;">
+<div id="dynsection-17-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/dbe/AutomationRegions_8h_af82b6225749517ae48ad158d92d8a464_icgraph.svg" width="204" height="75"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -788,23 +869,23 @@ Variables</h2></td></tr>
 
 <p>Cut region <code>id</code> in two at the segment holding <code>beat</code>. Returns the new (right-hand) id, or nothing. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00159">159</a> of file <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html">AutomationRegions.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00182">182</a> of file <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html">AutomationRegions.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00065">Aestra::Audio::AutomationRegions::materialize()</a>, <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00136">Aestra::Audio::AutomationCurve::regions</a>, and <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00159">Aestra::Audio::AutomationRegions::split()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00065">Aestra::Audio::AutomationRegions::materialize()</a>, <a class="el" href="../../df/dfc/AutomationCurve_8h_source.html#l00136">Aestra::Audio::AutomationCurve::regions</a>, and <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00182">Aestra::Audio::AutomationRegions::split()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00159">Aestra::Audio::AutomationRegions::split()</a>.</p>
-<div id="dynsection-16" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-16-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-16-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d3/dbe/AutomationRegions_8h_source.html#l00182">Aestra::Audio::AutomationRegions::split()</a>.</p>
+<div id="dynsection-18" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-18-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-18-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-16-content" class="dyncontent" style="display:none;">
+<div id="dynsection-18-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/dbe/AutomationRegions_8h_aa6b4d6aef7ed5063d8736bbfead18f54_cgraph.svg" width="446" height="75"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
-<div id="dynsection-17" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-17-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-17-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-19" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-19-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-19-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-17-content" class="dyncontent" style="display:none;">
+<div id="dynsection-19-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d3/dbe/AutomationRegions_8h_aa6b4d6aef7ed5063d8736bbfead18f54_icgraph.svg" width="204" height="75"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 

@@ -76,13 +76,14 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a> &#124;
 <a href="#typedef-members">Typedefs</a> &#124;
 <a href="#enum-members">Enumerations</a>  </div>
   <div class="headertitle"><div class="title">HostVerbRegistry.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
 
-<p>The seam that lets Muse operate Aestra, not just its audio engine.  
+<p>The seam that lets Muse operate <a class="el" href="../../d8/d94/namespaceAestra.html" title="Main application class.">Aestra</a>, not just its audio engine.  
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &quot;Commands/MuseGrammar.h&quot;</code><br />
 <code>#include &quot;AestraJSON.h&quot;</code><br />
@@ -123,6 +124,12 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Names the host may register, and the validation every call passes.  <a href="../../d4/d8f/classAestra_1_1Audio_1_1HostVerbRegistry.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:d8/d94/namespaceAestra" id="r_d8/d94/namespaceAestra"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d94/namespaceAestra.html">Aestra</a></td></tr>
+<tr class="memdesc:d8/d94/namespaceAestra"><td class="mdescLeft">&#160;</td><td class="mdescRight">Main application class. <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
 <tr class="memitem:abd3379867d789daa6c89e102594da582" id="r_abd3379867d789daa6c89e102594da582"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d7a/HostVerbRegistry_8h.html#abd3379867d789daa6c89e102594da582">Aestra::Audio::HostVerbHandler</a> = std::function&lt; <a class="el" href="../../d5/d67/structAestra_1_1Audio_1_1HostVerbResult.html">HostVerbResult</a>(const <a class="el" href="../../df/dee/classAestra_1_1JSON.html">JSON</a> &amp;args)&gt;</td></tr>
@@ -148,7 +155,7 @@ Enumerations</h2></td></tr>
 <tr class="separator:a811b9605980bc3ec78624aa89a9e4d83"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>The seam that lets Muse operate Aestra, not just its audio engine. </p>
+<div class="textblock"><p>The seam that lets Muse operate <a class="el" href="../../d8/d94/namespaceAestra.html" title="Main application class.">Aestra</a>, not just its audio engine. </p>
 <p>MuseService lives in AestraAudio and can therefore only reach what AestraAudio owns. Settings, view navigation, the browser and dialogs live in the application layer, so until now they were structurally unreachable — the agent could change a gain but not open the mixer.</p>
 <p>The fix is NOT for AestraAudio to reach up into Source/; that would invert the dependency the whole codebase is built on. Instead the application registers its capabilities INTO this registry at startup: </p><pre class="fragment">Source/ ────registers────&gt; MuseService
                                ^
@@ -156,7 +163,7 @@ Muse CLI / agent ───────────────┘
 </pre><p> MuseService never learns what a SettingsDialog or a TrackManagerUI is. It holds a name, an argument schema, and a callable.</p>
 <h2><a class="anchor" id="autotoc_md0"></a>
 A verb is an application capability, not a UI gesture</h2>
-<p>Register <code>view.openMixer</code>, <code>settings.setAudioDevice</code>, <code>browser.search</code>. Never <code>clickMixerButton</code> or <code>pressBrowserSearchField</code>. The first survives a UI redesign and lets Muse operate Aestra semantically; the second makes Muse an accessibility macro system welded to today's widgets, and every future layout change silently breaks it.</p>
+<p>Register <code>view.openMixer</code>, <code>settings.setAudioDevice</code>, <code>browser.search</code>. Never <code>clickMixerButton</code> or <code>pressBrowserSearchField</code>. The first survives a UI redesign and lets Muse operate <a class="el" href="../../d8/d94/namespaceAestra.html" title="Main application class.">Aestra</a> semantically; the second makes Muse an accessibility macro system welded to today's widgets, and every future layout change silently breaks it.</p>
 <p>This is why registration requires a declared domain and a typed argument schema rather than accepting an arbitrary <code>(name, std::function&lt;JSON(JSON)&gt;)</code> pair. A generic escape hatch would become an undocumented internal RPC API within a release or two, and nothing in the type system would object. </p>
 
 <p class="definition">Definition in file <a class="el" href="../../d3/d7a/HostVerbRegistry_8h_source.html">HostVerbRegistry.h</a>.</p>

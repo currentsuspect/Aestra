@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::CommandHistory::redoTo" name="Aestra::Audio::CommandHistory::redoTo">
+<area shape="rect" id="Node000001" title="Redo to a specific position in the redo stack." alt="" coords="468,22,699,62"/>
+<area shape="rect" id="Node000002" href="$d8/d94/namespaceAestra.html#a16589670735f30467b550ed21a9a7a0a" title="A click on a step: land on the state just after it was made." alt="" coords="241,29,420,55"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="454,45,420,45,420,39,454,39"/>
+<area shape="poly" id="edge2_Node000002_Node000002" title=" " alt="" coords="372,20,361,11,331,8,306,10,293,15,290,20,297,27,293,31,285,21,289,11,305,5,331,3,363,7,375,16"/>
+<area shape="rect" id="Node000003" href="$d8/d94/namespaceAestra.html#a8a9ece62269ea3c905b91fd46e29cc1c" title="Hands the dock its live data: the project&#39;s name, the open version&#39;s steps, the unsaved count,..." alt="" coords="5,29,193,55"/>
+<area shape="poly" id="edge3_Node000002_Node000003" title=" " alt="" coords="227,45,193,45,193,39,227,39"/>
+<area shape="poly" id="edge4_Node000003_Node000003" title=" " alt="" coords="141,20,130,11,99,8,75,10,62,15,59,20,66,27,62,31,54,21,58,11,74,5,99,3,132,7,144,16"/>
+</map>

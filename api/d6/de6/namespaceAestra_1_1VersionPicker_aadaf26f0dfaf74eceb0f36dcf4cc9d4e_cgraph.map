@@ -1,0 +1,9 @@
+<map id="Aestra::VersionPicker::entries" name="Aestra::VersionPicker::entries">
+<area shape="rect" id="Node000001" title="One entry per branch, in lane order. A branch opens on its newest saved version (autosaves are never ..." alt="" coords="5,69,164,109"/>
+<area shape="rect" id="Node000002" href="$da/d15/structTakeManager_1_1Manifest.html#ace9f7d3a0cb864d5d140d266f9e1af52" title="Returns the currently active take, or nullptr if none." alt="" coords="212,5,385,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="152,67,217,47,219,52,153,72"/>
+<area shape="rect" id="Node000003" href="$d3/d6c/namespaceAestra_1_1VersionLanes.html#ac0a166ab89427132371d511b9c8ab004" title="How a branch reads on screen: the first lane is stored as &quot;Main&quot; and shows as the main mix." alt="" coords="219,69,378,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="164,87,206,87,206,92,164,92"/>
+<area shape="rect" id="Node000004" href="$d3/d6c/namespaceAestra_1_1VersionLanes.html#a886fec8573c481707befe1ea84208705" title="Branch names in lane order: the order they first appear in the manifest, the first being the main mix..." alt="" coords="219,133,378,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="153,107,219,127,217,132,152,112"/>
+</map>

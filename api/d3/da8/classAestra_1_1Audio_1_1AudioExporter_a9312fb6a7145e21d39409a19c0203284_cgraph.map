@@ -1,101 +1,103 @@
 <map id="Aestra::Audio::AudioExporter::render" name="Aestra::Audio::AudioExporter::render">
-<area shape="rect" id="Node000001" title="Render the project to an audio file using the full live engine path (processBlock)." alt="" coords="5,1093,215,1133"/>
+<area shape="rect" id="Node000001" title="Render the project to an audio file using the full live engine path (processBlock)." alt="" coords="5,1157,215,1197"/>
 <area shape="rect" id="Node000002" href="$dc/d56/classAestra_1_1Audio_1_1TrackOutputTap.html#a15272c82f180544241522057f0b49f6c" title="Control thread." alt="" coords="294,197,489,237"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="109,1093,118,930,127,808,141,675,161,541,187,418,202,364,220,317,239,277,261,247,280,232,283,237,265,251,244,280,225,319,207,366,192,419,166,542,147,676,133,809,123,930,115,1093"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="109,1157,116,983,124,853,138,709,157,565,183,432,199,373,217,322,238,280,261,247,280,232,283,237,265,251,242,282,222,324,204,375,188,433,162,566,143,710,130,853,121,983,114,1157"/>
 <area shape="rect" id="Node000003" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#ac38f8bee116648441fd156d9f3c29d9c" title="Convert bit depth to string for display." alt="" coords="287,261,496,301"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="110,1093,120,940,145,705,165,582,190,468,222,375,240,339,261,312,273,301,276,305,265,315,245,342,227,377,196,470,170,583,151,706,125,941,115,1093"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="109,1157,118,994,127,872,141,739,161,605,187,482,202,428,220,381,239,341,261,312,273,301,276,305,265,315,244,344,225,383,207,430,192,483,166,606,147,740,133,873,123,994,115,1157"/>
 <area shape="rect" id="Node000004" href="$d0/d3f/classAestra_1_1Audio_1_1AudioGraphBuilder.html#a0e05724d04fe5147f5aa306914aa6fbf" title="Build a render graph from the current TrackManager state." alt="" coords="275,325,507,365"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="110,1093,122,951,149,735,169,622,194,519,225,433,242,400,261,376,264,372,268,376,265,379,246,403,229,436,199,520,175,623,154,736,127,951,115,1093"/>
-<area shape="rect" id="Node000023" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a674743a0ec04a79402fe0810e895a1a4" title="Reset true&#45;peak running max (does not disturb FIR history)." alt="" coords="292,389,491,429"/>
-<area shape="poly" id="edge13_Node000001_Node000023" title=" " alt="" coords="110,1093,124,962,153,765,173,663,198,569,227,492,243,462,261,439,278,426,281,430,265,443,248,465,232,494,203,571,179,664,158,766,130,963,116,1093"/>
-<area shape="rect" id="Node000025" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#af9ea6f00d65d1352cf858b6f9c57b42a" title="Get transport tempo in beats per minute." alt="" coords="292,453,491,493"/>
-<area shape="poly" id="edge15_Node000001_Node000025" title=" " alt="" coords="111,1093,127,973,157,796,178,704,202,620,229,550,245,524,261,503,278,490,281,495,265,507,249,527,234,553,207,621,183,705,162,797,132,974,116,1094"/>
-<area shape="rect" id="Node000026" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a6f72e62a0b319f51dc2430532a8e1969" title="Get the current transport position in samples." alt="" coords="292,517,491,557"/>
-<area shape="poly" id="edge16_Node000001_Node000026" title=" " alt="" coords="112,1093,129,984,161,826,182,744,206,670,232,609,261,567,278,554,281,559,265,571,237,611,211,672,187,746,167,827,135,985,117,1093"/>
-<area shape="rect" id="Node000027" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#afbef8b6d9c81476518551a140070e32f" title="Latest max&#45;channel true peak in dBTP (decibels True Peak)." alt="" coords="292,581,491,621"/>
-<area shape="poly" id="edge17_Node000001_Node000027" title=" " alt="" coords="109,1093,113,1008,120,949,133,884,152,816,178,749,214,686,261,631,278,619,281,623,264,635,219,689,183,751,157,817,138,885,126,950,118,1008,114,1093"/>
-<area shape="rect" id="Node000031" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a9ed9e846aebbaf433f54fc7747022101" title="Configured preview duck depth in positive dB; 0 means disabled." alt="" coords="266,645,517,685"/>
-<area shape="poly" id="edge21_Node000001_Node000031" title=" " alt="" coords="110,1093,118,1018,141,911,160,853,186,795,219,742,261,695,266,691,270,695,265,699,223,745,190,798,165,855,146,912,123,1019,115,1094"/>
-<area shape="rect" id="Node000032" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a3a6dd6f5101ab90e0921f31a13dc7155" title="Get the active sample rate used by the engine." alt="" coords="292,709,491,749"/>
-<area shape="poly" id="edge22_Node000001_Node000032" title=" " alt="" coords="111,1092,123,1028,149,938,168,889,193,842,224,798,261,759,278,748,281,752,264,763,228,801,198,844,173,891,154,939,128,1029,116,1093"/>
-<area shape="rect" id="Node000033" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a40afe410124fc61652bdda25beec4e81" title="Check whether audition mode is enabled." alt="" coords="292,773,491,813"/>
-<area shape="poly" id="edge23_Node000001_Node000033" title=" " alt="" coords="113,1093,129,1038,157,966,177,927,201,889,229,854,261,823,278,812,281,817,264,827,233,857,205,892,182,929,162,968,134,1040,118,1094"/>
-<area shape="rect" id="Node000034" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a310c0e8e42249b79a5c286671e5762d7" title="Check whether transport looping is enabled." alt="" coords="292,837,491,877"/>
-<area shape="poly" id="edge24_Node000001_Node000034" title=" " alt="" coords="117,1092,136,1049,167,993,208,936,233,910,261,887,278,877,281,882,264,892,237,914,212,939,171,996,141,1052,121,1094"/>
-<area shape="rect" id="Node000035" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a42cf53433ef0ec8c10eaa72f8a836f0d" title="Check whether the metronome is enabled." alt="" coords="292,901,491,941"/>
-<area shape="poly" id="edge25_Node000001_Node000035" title=" " alt="" coords="122,1091,177,1022,217,984,261,951,278,943,280,947,264,956,220,988,181,1026,127,1095"/>
-<area shape="rect" id="Node000036" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#aded224ca7ad2e5e93a8bc4a59098963e" title="Check whether transport playback is active." alt="" coords="292,965,491,1005"/>
-<area shape="poly" id="edge26_Node000001_Node000036" title=" " alt="" coords="136,1091,192,1053,262,1015,282,1007,283,1012,264,1020,195,1057,139,1095"/>
-<area shape="rect" id="Node000037" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#adceb67afa4b518ef92ae59feff943b4c" title="Non&#45;real&#45;time maintenance hook for deferred resource reclamation." alt="" coords="266,1029,517,1069"/>
-<area shape="poly" id="edge27_Node000001_Node000037" title=" " alt="" coords="198,1091,289,1070,290,1075,199,1096"/>
-<area shape="rect" id="Node000038" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a1a32e060f4aa89c46d0a70aa14e45b6c" title="Queue keep&#45;length renders for every note a keep&#45;length sampler unit can play." alt="" coords="282,1093,501,1133"/>
-<area shape="poly" id="edge28_Node000001_Node000038" title=" " alt="" coords="215,1111,268,1111,268,1116,215,1116"/>
-<area shape="rect" id="Node000043" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a401079ac6501c3f1df6221fd7d596f84" title="Process a single audio block (driver callback entry)." alt="" coords="292,1157,491,1197"/>
-<area shape="poly" id="edge32_Node000001_Node000043" title=" " alt="" coords="199,1131,290,1152,289,1157,198,1136"/>
-<area shape="rect" id="Node000046" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a4df1a398645324848c1de67797442104" title="Snap preview&#45;duck smoothing to unity." alt="" coords="263,1221,520,1261"/>
-<area shape="poly" id="edge35_Node000001_Node000046" title=" " alt="" coords="139,1131,195,1170,264,1207,283,1214,282,1219,262,1212,192,1174,136,1136"/>
-<area shape="rect" id="Node000047" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a4708fa8d989557c07217a8ff48484a69" title="Enable or disable audition mode." alt="" coords="292,1285,491,1325"/>
-<area shape="poly" id="edge36_Node000001_Node000047" title=" " alt="" coords="127,1132,181,1201,220,1239,264,1271,280,1279,278,1284,261,1276,217,1243,177,1204,122,1135"/>
-<area shape="rect" id="Node000048" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#abdcd39f3f1b15706d70b65eda08a0539" title="Set the current transport position in samples." alt="" coords="292,1349,491,1389"/>
-<area shape="poly" id="edge37_Node000001_Node000048" title=" " alt="" coords="121,1132,141,1175,171,1230,212,1287,237,1313,264,1335,281,1345,278,1349,261,1340,233,1317,208,1291,167,1233,136,1178,117,1134"/>
-<area shape="rect" id="Node000049" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ab8be7c1087d349d3192bb60d6d70143c" title="Replace the active audio graph and compile it for rendering." alt="" coords="292,1413,491,1453"/>
-<area shape="poly" id="edge38_Node000001_Node000049" title=" " alt="" coords="118,1133,134,1186,162,1259,182,1297,205,1335,233,1369,264,1399,281,1410,278,1414,261,1403,229,1373,201,1338,177,1300,157,1261,129,1188,113,1134"/>
-<area shape="rect" id="Node000050" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a3000891e107091bf566390e20bf9f57f" title="Enable or disable transport looping." alt="" coords="292,1477,491,1517"/>
-<area shape="poly" id="edge39_Node000001_Node000050" title=" " alt="" coords="116,1133,128,1198,154,1287,173,1335,198,1382,228,1426,264,1463,281,1474,278,1479,261,1467,224,1429,193,1385,168,1337,149,1289,123,1199,111,1134"/>
-<area shape="rect" id="Node000051" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a7500e85dda831daf8385e481db0db008" title="Enable or disable the metronome." alt="" coords="292,1541,491,1581"/>
-<area shape="poly" id="edge40_Node000001_Node000051" title=" " alt="" coords="115,1133,123,1208,146,1314,165,1372,190,1429,223,1482,264,1527,281,1539,278,1544,261,1531,219,1485,186,1431,160,1374,141,1316,118,1208,110,1134"/>
-<area shape="rect" id="Node000052" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a9b59e40f220f5eda0ae66fdb1378e480" title="Mark the engine as rendering an offline export." alt="" coords="292,1605,491,1645"/>
-<area shape="poly" id="edge41_Node000001_Node000052" title=" " alt="" coords="114,1134,118,1218,126,1277,138,1342,157,1409,183,1476,219,1538,264,1591,281,1604,278,1608,261,1595,214,1541,178,1478,152,1411,133,1343,120,1278,113,1219,109,1134"/>
-<area shape="rect" id="Node000053" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a25e4926d1ef33812f8a0000174f5c2c1" title="Set output sample rate." alt="" coords="287,1669,495,1709"/>
-<area shape="poly" id="edge42_Node000001_Node000053" title=" " alt="" coords="117,1133,135,1242,167,1400,187,1481,211,1555,237,1615,265,1656,277,1665,274,1669,261,1659,232,1618,206,1557,182,1482,161,1401,129,1243,112,1134"/>
-<area shape="rect" id="Node000055" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#afdb32e086fdb0393e983e38d482370f8" title="Configure preview duck depth in positive dB; 0 disables ducking." alt="" coords="267,1733,516,1773"/>
-<area shape="poly" id="edge44_Node000001_Node000055" title=" " alt="" coords="116,1133,132,1253,162,1430,183,1522,207,1605,234,1674,249,1700,265,1720,268,1723,265,1727,261,1723,245,1703,229,1676,202,1607,178,1523,157,1431,127,1254,111,1134"/>
-<area shape="rect" id="Node000056" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad7a24d4a309f1f855dc35d9fee11a2a3" title="Set the active sample rate used by the engine." alt="" coords="292,1797,491,1837"/>
-<area shape="poly" id="edge45_Node000001_Node000056" title=" " alt="" coords="116,1133,130,1264,158,1461,179,1563,203,1656,232,1732,248,1762,265,1783,281,1796,278,1800,261,1787,243,1765,227,1735,198,1658,173,1564,153,1461,124,1265,110,1134"/>
-<area shape="rect" id="Node000058" href="$d2/dc0/structAestra_1_1Audio_1_1ExportQuantization_1_1TpdfDither.html#a1e04233a3121b99bfa5a584e3fa2bddf" title="Reseed the PRNG." alt="" coords="270,1861,513,1901"/>
-<area shape="poly" id="edge47_Node000001_Node000058" title=" " alt="" coords="115,1133,127,1275,154,1491,175,1603,199,1706,229,1791,246,1823,265,1848,268,1851,264,1854,261,1851,242,1826,225,1793,194,1708,169,1604,149,1492,122,1276,110,1134"/>
-<area shape="rect" id="Node000059" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a30382a1142183a3b1c60a7be770b5679" title="Set transport running state and mirror it onto the audio command queue." alt="" coords="292,1925,491,1965"/>
-<area shape="poly" id="edge48_Node000001_Node000059" title=" " alt="" coords="115,1133,125,1286,151,1521,170,1644,196,1757,227,1850,245,1885,265,1911,282,1925,278,1929,261,1915,240,1888,222,1852,190,1758,165,1645,145,1522,120,1286,110,1134"/>
-<area shape="rect" id="Node000060" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a4c69d51f36bdff50067dd8667ded2acd" title="V8&#45;W5: the offline renderer arms this to read one channel&#39;s output before it reaches the master." alt="" coords="292,1989,491,2029"/>
-<area shape="poly" id="edge49_Node000001_Node000060" title=" " alt="" coords="115,1133,123,1297,133,1418,147,1551,166,1684,192,1807,207,1861,225,1908,244,1947,265,1975,281,1989,278,1993,261,1979,239,1949,220,1910,202,1863,187,1808,161,1685,141,1552,127,1419,118,1297,109,1134"/>
-<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a93242cb25f3e5b28316741a5efac881f" title="Drain finished anti&#45;alias prefilter results into their sources, clear stale filtered variants,..." alt="" coords="574,5,782,45"/>
-<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="504,323,518,312,539,281,547,250,547,218,542,186,537,154,536,121,544,88,566,56,569,52,573,56,570,59,549,91,542,122,542,154,547,186,552,218,553,250,544,283,522,315,508,327"/>
-<area shape="rect" id="Node000015" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aef9478cbb19fa91eb0bcc60d51b77b77" title="Get a channel by index." alt="" coords="574,69,782,109"/>
-<area shape="poly" id="edge6_Node000004_Node000015" title=" " alt="" coords="503,323,518,311,535,289,543,266,544,242,542,218,540,194,541,169,549,144,566,120,570,116,574,120,570,123,553,146,546,170,545,194,547,218,549,242,548,266,540,291,522,315,507,327"/>
-<area shape="rect" id="Node000016" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a099a5c98a6cc1822fd44c1ca47dfb073" title="Get the number of channels." alt="" coords="574,133,782,173"/>
-<area shape="poly" id="edge7_Node000004_Node000016" title=" " alt="" coords="502,323,518,311,531,296,538,281,542,249,546,216,553,200,566,183,571,179,574,183,570,187,557,202,551,218,547,250,543,283,535,299,522,315,505,327"/>
-<area shape="rect" id="Node000017" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a76446df746c8a8b7fa97e05ea6e205f5" title="The channel&#39;s effect chain snapshot, owned by EffectChain." alt="" coords="575,197,781,237"/>
-<area shape="poly" id="edge8_Node000004_Node000017" title=" " alt="" coords="497,323,518,311,534,296,542,280,550,264,566,247,576,241,579,246,570,251,555,267,547,283,538,299,522,315,499,327"/>
-<area shape="rect" id="Node000019" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a653ee5f8eb05faa264a54e339a258233" title="Access the Master strip&#39;s mixer channel (id 0)." alt="" coords="574,261,782,301"/>
-<area shape="poly" id="edge9_Node000004_Node000019" title=" " alt="" coords="481,323,574,302,575,307,482,328"/>
-<area shape="rect" id="Node000020" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#af01fa49b38f12155c47b1917bad27ea4" title="Get the pattern manager." alt="" coords="574,325,782,365"/>
-<area shape="poly" id="edge10_Node000004_Node000020" title=" " alt="" coords="507,343,560,343,560,348,507,348"/>
-<area shape="rect" id="Node000021" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aacc633d4302bc413e6aead5df052520b" title="Get the playlist model." alt="" coords="574,389,782,429"/>
-<area shape="poly" id="edge11_Node000004_Node000021" title=" " alt="" coords="482,363,575,384,574,389,481,368"/>
-<area shape="rect" id="Node000022" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae2a894b9df65e65c63cc1b05f4b2e2d1" title="Get the source manager." alt="" coords="574,453,782,493"/>
-<area shape="poly" id="edge12_Node000004_Node000022" title=" " alt="" coords="499,363,522,375,538,391,547,408,555,424,570,439,579,445,576,449,566,443,550,427,542,410,534,394,518,379,497,368"/>
-<area shape="rect" id="Node000006" href="$d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a968a7b802dbe9dc8d54b3f251778674a" title="Get all source IDs." alt="" coords="836,5,1055,45"/>
-<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="782,23,822,23,822,28,782,28"/>
-<area shape="rect" id="Node000024" href="$dd/d42/classAestra_1_1Audio_1_1TruePeakMeter.html#ad7ad3bb574698331fa4b25f520c269bc" title="Clear running peak accumulators only; preserve filter history." alt="" coords="571,517,785,557"/>
-<area shape="poly" id="edge14_Node000023_Node000024" title=" " alt="" coords="492,424,522,439,538,455,547,472,555,488,570,503,579,509,576,513,566,507,550,491,542,474,534,458,518,444,490,429"/>
-<area shape="rect" id="Node000028" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#aebdfdbad3145cd170ab61495a9457951" title="Latest left&#45;channel true peak (linear, max&#45;hold since last clear)." alt="" coords="579,581,777,621"/>
-<area shape="poly" id="edge18_Node000027_Node000028" title=" " alt="" coords="491,599,565,599,565,604,491,604"/>
-<area shape="rect" id="Node000029" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a7ec9a8e1577c72c96b179fab3a0b6adf" title="Latest right&#45;channel true peak (linear, max&#45;hold since last clear)." alt="" coords="579,645,777,685"/>
-<area shape="poly" id="edge19_Node000027_Node000029" title=" " alt="" coords="482,619,575,640,574,645,481,624"/>
-<area shape="rect" id="Node000030" href="$dd/d42/classAestra_1_1Audio_1_1TruePeakMeter.html#a158ae11f93a62f4b5d4013f3a9815faa" title="Convert a linear peak value to dBTP, with a &#45;200 dB floor for silence." alt="" coords="571,709,785,749"/>
-<area shape="poly" id="edge20_Node000027_Node000030" title=" " alt="" coords="492,616,522,631,538,647,547,664,555,680,570,695,579,701,576,705,566,699,550,683,542,666,534,650,518,636,490,621"/>
-<area shape="rect" id="Node000039" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a2f38f4b25a7aa61512084f6470e90829" title="Get all patterns." alt="" coords="568,965,788,1005"/>
-<area shape="poly" id="edge29_Node000038_Node000039" title=" " alt="" coords="497,1091,518,1079,534,1064,542,1048,550,1032,566,1015,576,1009,579,1014,570,1019,555,1035,547,1051,538,1067,522,1083,499,1095"/>
-<area shape="rect" id="Node000040" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#aac74b831a3f7ddec240a7bfa49cb5ce3" title="Get all unit identifiers in display order." alt="" coords="577,1029,779,1069"/>
-<area shape="poly" id="edge30_Node000038_Node000040" title=" " alt="" coords="481,1091,574,1070,575,1075,482,1096"/>
-<area shape="rect" id="Node000041" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a82a1e326b2d555a4b7bbee755a30e0f5" title="Get the plugin instance attached to a unit." alt="" coords="577,1093,779,1133"/>
-<area shape="poly" id="edge31_Node000038_Node000041" title=" " alt="" coords="501,1111,564,1111,564,1116,501,1116"/>
-<area shape="rect" id="Node000044" href="$d7/da4/classAestra_1_1Audio_1_1EngineState.html#a8c10dfaa447b39a42842b9c9b4431e1d" title="Acquires a read handle to the currently active graph slot." alt="" coords="581,1157,775,1197"/>
-<area shape="poly" id="edge33_Node000043_Node000044" title=" " alt="" coords="491,1175,567,1175,567,1180,491,1180"/>
-<area shape="rect" id="Node000045" href="$dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a76c9ac9b4a5e8fceef32f0edda3d558a" title="B&#45;009: Record a successful (stable) audio block." alt="" coords="569,1221,787,1261"/>
-<area shape="poly" id="edge34_Node000043_Node000045" title=" " alt="" coords="482,1195,575,1216,574,1221,481,1200"/>
-<area shape="rect" id="Node000054" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ade6021686aeb8e7ea94e2517219a2338" title="Set the project sample rate." alt="" coords="575,1669,781,1709"/>
-<area shape="poly" id="edge43_Node000053_Node000054" title=" " alt="" coords="496,1687,562,1687,562,1692,496,1692"/>
-<area shape="rect" id="Node000057" href="$dd/d42/classAestra_1_1Audio_1_1TruePeakMeter.html#ae03e7b5a0559c9ac2e258990788d0044" title="(Re)generate filter coefficients for the given sample rate and clear history." alt="" coords="571,1797,785,1837"/>
-<area shape="poly" id="edge46_Node000056_Node000057" title=" " alt="" coords="491,1815,557,1815,557,1820,491,1820"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="111,1157,128,1018,160,806,181,695,205,591,231,503,260,440,277,419,296,400,337,370,340,374,299,404,281,422,265,443,236,505,210,592,186,696,165,807,133,1019,116,1157"/>
+<area shape="rect" id="Node000023" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a674743a0ec04a79402fe0810e895a1a4" title="Reset true&#45;peak running max (does not disturb FIR history)." alt="" coords="292,453,491,493"/>
+<area shape="poly" id="edge12_Node000001_Node000023" title=" " alt="" coords="110,1157,124,1026,153,829,173,727,198,633,227,556,243,526,261,503,278,490,281,494,265,507,248,529,232,558,203,635,179,728,158,830,130,1027,116,1157"/>
+<area shape="rect" id="Node000025" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#af9ea6f00d65d1352cf858b6f9c57b42a" title="Get transport tempo in beats per minute." alt="" coords="292,517,491,557"/>
+<area shape="poly" id="edge14_Node000001_Node000025" title=" " alt="" coords="111,1157,127,1037,157,860,178,768,202,684,229,614,245,588,261,567,278,554,281,559,265,571,249,591,234,617,207,685,183,769,162,861,132,1038,116,1158"/>
+<area shape="rect" id="Node000026" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a6f72e62a0b319f51dc2430532a8e1969" title="Get the current transport position in samples." alt="" coords="292,581,491,621"/>
+<area shape="poly" id="edge15_Node000001_Node000026" title=" " alt="" coords="112,1157,129,1048,161,890,182,808,206,734,232,673,261,631,278,618,281,623,265,635,237,675,211,736,187,810,167,891,135,1049,117,1157"/>
+<area shape="rect" id="Node000027" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#afbef8b6d9c81476518551a140070e32f" title="Latest max&#45;channel true peak in dBTP (decibels True Peak)." alt="" coords="292,645,491,685"/>
+<area shape="poly" id="edge16_Node000001_Node000027" title=" " alt="" coords="109,1157,113,1072,120,1013,133,948,152,880,178,813,214,750,261,695,278,683,281,687,264,699,219,753,183,815,157,881,138,949,126,1014,118,1072,114,1157"/>
+<area shape="rect" id="Node000031" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a9ed9e846aebbaf433f54fc7747022101" title="Configured preview duck depth in positive dB; 0 means disabled." alt="" coords="266,773,517,813"/>
+<area shape="poly" id="edge20_Node000001_Node000031" title=" " alt="" coords="111,1156,123,1092,149,1002,168,953,193,906,224,862,261,823,267,818,271,823,264,827,228,865,198,908,173,955,154,1003,128,1093,116,1157"/>
+<area shape="rect" id="Node000032" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a3a6dd6f5101ab90e0921f31a13dc7155" title="Get the active sample rate used by the engine." alt="" coords="292,837,491,877"/>
+<area shape="poly" id="edge21_Node000001_Node000032" title=" " alt="" coords="113,1157,129,1102,157,1030,177,991,201,953,229,918,261,887,278,876,281,881,264,891,233,921,205,956,182,993,162,1032,134,1104,118,1158"/>
+<area shape="rect" id="Node000033" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a40afe410124fc61652bdda25beec4e81" title="Check whether audition mode is enabled." alt="" coords="292,901,491,941"/>
+<area shape="poly" id="edge22_Node000001_Node000033" title=" " alt="" coords="117,1156,136,1113,167,1057,208,1000,233,974,261,951,278,941,281,946,264,956,237,978,212,1003,171,1060,141,1116,121,1158"/>
+<area shape="rect" id="Node000034" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a310c0e8e42249b79a5c286671e5762d7" title="Check whether transport looping is enabled." alt="" coords="292,965,491,1005"/>
+<area shape="poly" id="edge23_Node000001_Node000034" title=" " alt="" coords="122,1155,177,1086,217,1048,261,1015,278,1007,280,1011,264,1020,220,1052,181,1090,127,1159"/>
+<area shape="rect" id="Node000035" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a42cf53433ef0ec8c10eaa72f8a836f0d" title="Check whether the metronome is enabled." alt="" coords="292,1029,491,1069"/>
+<area shape="poly" id="edge24_Node000001_Node000035" title=" " alt="" coords="136,1155,192,1117,262,1079,282,1071,283,1076,264,1084,195,1121,139,1159"/>
+<area shape="rect" id="Node000036" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#aded224ca7ad2e5e93a8bc4a59098963e" title="Check whether transport playback is active." alt="" coords="292,1093,491,1133"/>
+<area shape="poly" id="edge25_Node000001_Node000036" title=" " alt="" coords="198,1155,289,1134,290,1139,199,1160"/>
+<area shape="rect" id="Node000037" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#adceb67afa4b518ef92ae59feff943b4c" title="Non&#45;real&#45;time maintenance hook for deferred resource reclamation." alt="" coords="266,1157,517,1197"/>
+<area shape="poly" id="edge26_Node000001_Node000037" title=" " alt="" coords="215,1175,252,1175,252,1180,215,1180"/>
+<area shape="rect" id="Node000038" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a1a32e060f4aa89c46d0a70aa14e45b6c" title="Queue keep&#45;length renders for every note a keep&#45;length sampler unit can play." alt="" coords="282,1221,501,1261"/>
+<area shape="poly" id="edge27_Node000001_Node000038" title=" " alt="" coords="199,1195,290,1216,289,1221,198,1200"/>
+<area shape="rect" id="Node000043" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a401079ac6501c3f1df6221fd7d596f84" title="Process a single audio block (driver callback entry)." alt="" coords="292,709,491,749"/>
+<area shape="poly" id="edge31_Node000001_Node000043" title=" " alt="" coords="110,1157,118,1082,141,975,160,917,186,859,219,806,261,759,278,747,281,751,264,763,223,809,190,862,165,919,146,976,123,1083,115,1158"/>
+<area shape="rect" id="Node000047" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a4df1a398645324848c1de67797442104" title="Snap preview&#45;duck smoothing to unity." alt="" coords="263,1285,520,1325"/>
+<area shape="poly" id="edge37_Node000001_Node000047" title=" " alt="" coords="139,1195,195,1234,264,1271,283,1278,282,1283,262,1276,192,1238,136,1200"/>
+<area shape="rect" id="Node000048" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a4708fa8d989557c07217a8ff48484a69" title="Enable or disable audition mode." alt="" coords="292,1349,491,1389"/>
+<area shape="poly" id="edge38_Node000001_Node000048" title=" " alt="" coords="127,1196,181,1265,220,1303,264,1335,280,1343,278,1348,261,1340,217,1307,177,1268,122,1199"/>
+<area shape="rect" id="Node000049" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#abdcd39f3f1b15706d70b65eda08a0539" title="Set the current transport position in samples." alt="" coords="292,1413,491,1453"/>
+<area shape="poly" id="edge39_Node000001_Node000049" title=" " alt="" coords="121,1196,141,1239,171,1294,212,1351,237,1377,264,1399,281,1409,278,1413,261,1404,233,1381,208,1355,167,1297,136,1242,117,1198"/>
+<area shape="rect" id="Node000050" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ab8be7c1087d349d3192bb60d6d70143c" title="Replace the active audio graph and compile it for rendering." alt="" coords="292,1477,491,1517"/>
+<area shape="poly" id="edge40_Node000001_Node000050" title=" " alt="" coords="118,1197,134,1250,162,1323,182,1361,205,1399,233,1433,264,1463,281,1474,278,1478,261,1467,229,1437,201,1402,177,1364,157,1325,129,1252,113,1198"/>
+<area shape="rect" id="Node000051" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a3000891e107091bf566390e20bf9f57f" title="Enable or disable transport looping." alt="" coords="292,1541,491,1581"/>
+<area shape="poly" id="edge41_Node000001_Node000051" title=" " alt="" coords="116,1197,128,1262,154,1351,173,1399,198,1446,228,1490,264,1527,281,1538,278,1543,261,1531,224,1493,193,1449,168,1401,149,1353,123,1263,111,1198"/>
+<area shape="rect" id="Node000052" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a7500e85dda831daf8385e481db0db008" title="Enable or disable the metronome." alt="" coords="292,1605,491,1645"/>
+<area shape="poly" id="edge42_Node000001_Node000052" title=" " alt="" coords="115,1197,123,1272,146,1378,165,1436,190,1493,223,1546,264,1591,281,1603,278,1608,261,1595,219,1549,186,1495,160,1438,141,1380,118,1272,110,1198"/>
+<area shape="rect" id="Node000053" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a9b59e40f220f5eda0ae66fdb1378e480" title="Mark the engine as rendering an offline export." alt="" coords="292,1669,491,1709"/>
+<area shape="poly" id="edge43_Node000001_Node000053" title=" " alt="" coords="114,1198,118,1282,126,1341,138,1406,157,1473,183,1540,219,1602,264,1655,281,1668,278,1672,261,1659,214,1605,178,1542,152,1475,133,1407,120,1342,113,1283,109,1198"/>
+<area shape="rect" id="Node000054" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a25e4926d1ef33812f8a0000174f5c2c1" title="Set output sample rate." alt="" coords="287,1733,495,1773"/>
+<area shape="poly" id="edge44_Node000001_Node000054" title=" " alt="" coords="117,1197,135,1306,167,1464,187,1545,211,1619,237,1679,265,1720,277,1729,274,1733,261,1723,232,1682,206,1621,182,1546,161,1465,129,1307,112,1198"/>
+<area shape="rect" id="Node000056" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#afdb32e086fdb0393e983e38d482370f8" title="Configure preview duck depth in positive dB; 0 disables ducking." alt="" coords="267,1797,516,1837"/>
+<area shape="poly" id="edge46_Node000001_Node000056" title=" " alt="" coords="116,1197,132,1317,162,1494,183,1586,207,1669,234,1738,249,1764,265,1784,268,1787,265,1791,261,1787,245,1767,229,1740,202,1671,178,1587,157,1495,127,1318,111,1198"/>
+<area shape="rect" id="Node000057" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad7a24d4a309f1f855dc35d9fee11a2a3" title="Set the active sample rate used by the engine." alt="" coords="292,1861,491,1901"/>
+<area shape="poly" id="edge47_Node000001_Node000057" title=" " alt="" coords="116,1197,130,1328,158,1525,179,1627,203,1720,232,1796,248,1826,265,1847,281,1860,278,1864,261,1851,243,1829,227,1799,198,1722,173,1628,153,1525,124,1329,110,1198"/>
+<area shape="rect" id="Node000059" href="$d2/dc0/structAestra_1_1Audio_1_1ExportQuantization_1_1TpdfDither.html#a1e04233a3121b99bfa5a584e3fa2bddf" title="Reseed the PRNG." alt="" coords="270,1925,513,1965"/>
+<area shape="poly" id="edge49_Node000001_Node000059" title=" " alt="" coords="115,1197,127,1339,154,1555,175,1667,199,1770,229,1855,246,1887,265,1912,268,1915,264,1918,261,1915,242,1890,225,1857,194,1772,169,1668,149,1556,122,1340,110,1198"/>
+<area shape="rect" id="Node000060" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a30382a1142183a3b1c60a7be770b5679" title="Set transport running state and mirror it onto the audio command queue." alt="" coords="292,1989,491,2029"/>
+<area shape="poly" id="edge50_Node000001_Node000060" title=" " alt="" coords="115,1197,125,1350,151,1585,170,1708,196,1821,227,1914,245,1949,265,1975,282,1989,278,1993,261,1979,240,1952,222,1916,190,1822,165,1709,145,1586,120,1350,110,1198"/>
+<area shape="rect" id="Node000061" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a4c69d51f36bdff50067dd8667ded2acd" title="V8&#45;W5: the offline renderer arms this to read one channel&#39;s output before it reaches the master." alt="" coords="292,2053,491,2093"/>
+<area shape="poly" id="edge51_Node000001_Node000061" title=" " alt="" coords="115,1197,123,1361,133,1482,147,1615,166,1748,192,1871,207,1925,225,1972,244,2011,265,2039,281,2053,278,2057,261,2043,239,2013,220,1974,202,1927,187,1872,161,1749,141,1616,127,1483,118,1361,109,1198"/>
+<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a93242cb25f3e5b28316741a5efac881f" title="Drain finished anti&#45;alias prefilter results into their sources, clear stale filtered variants,..." alt="" coords="595,261,803,301"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="488,323,588,302,589,307,489,328"/>
+<area shape="rect" id="Node000015" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aef9478cbb19fa91eb0bcc60d51b77b77" title="Get a channel by index." alt="" coords="595,325,803,365"/>
+<area shape="poly" id="edge5_Node000004_Node000015" title=" " alt="" coords="507,343,581,343,581,348,507,348"/>
+<area shape="rect" id="Node000016" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a099a5c98a6cc1822fd44c1ca47dfb073" title="Get the number of channels." alt="" coords="595,389,803,429"/>
+<area shape="poly" id="edge6_Node000004_Node000016" title=" " alt="" coords="489,363,589,384,588,389,488,368"/>
+<area shape="rect" id="Node000017" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a76446df746c8a8b7fa97e05ea6e205f5" title="The channel&#39;s effect chain snapshot, owned by EffectChain." alt="" coords="595,453,802,493"/>
+<area shape="poly" id="edge7_Node000004_Node000017" title=" " alt="" coords="425,363,490,401,569,439,592,447,590,452,567,444,488,406,422,368"/>
+<area shape="rect" id="Node000019" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a653ee5f8eb05faa264a54e339a258233" title="Access the Master strip&#39;s mixer channel (id 0)." alt="" coords="595,5,803,45"/>
+<area shape="poly" id="edge8_Node000004_Node000019" title=" " alt="" coords="504,323,518,312,539,280,547,249,546,218,541,186,536,153,535,121,544,88,566,56,581,43,584,47,570,59,549,90,541,121,541,153,547,185,552,217,552,250,544,283,522,315,508,327"/>
+<area shape="rect" id="Node000020" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#af01fa49b38f12155c47b1917bad27ea4" title="Get the pattern manager." alt="" coords="595,69,803,109"/>
+<area shape="poly" id="edge9_Node000004_Node000020" title=" " alt="" coords="503,323,518,311,535,289,542,265,543,242,541,218,539,193,540,168,548,144,566,119,581,108,584,112,570,123,553,146,546,169,545,193,547,217,549,242,548,266,540,291,522,315,507,327"/>
+<area shape="rect" id="Node000021" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aacc633d4302bc413e6aead5df052520b" title="Get the playlist model." alt="" coords="595,133,803,173"/>
+<area shape="poly" id="edge10_Node000004_Node000021" title=" " alt="" coords="502,323,518,311,531,296,538,281,541,249,545,216,553,199,566,183,581,173,584,177,570,187,557,202,550,217,547,250,543,283,535,299,522,315,505,327"/>
+<area shape="rect" id="Node000022" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae2a894b9df65e65c63cc1b05f4b2e2d1" title="Get the source manager." alt="" coords="595,197,803,237"/>
+<area shape="poly" id="edge11_Node000004_Node000022" title=" " alt="" coords="497,323,518,311,534,296,542,280,550,263,566,247,581,239,583,244,570,251,554,266,546,282,538,299,522,315,499,327"/>
+<area shape="rect" id="Node000024" href="$dd/d42/classAestra_1_1Audio_1_1TruePeakMeter.html#ad7ad3bb574698331fa4b25f520c269bc" title="Clear running peak accumulators only; preserve filter history." alt="" coords="591,517,806,557"/>
+<area shape="poly" id="edge13_Node000023_Node000024" title=" " alt="" coords="489,491,589,512,588,517,488,496"/>
+<area shape="rect" id="Node000028" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#aebdfdbad3145cd170ab61495a9457951" title="Latest left&#45;channel true peak (linear, max&#45;hold since last clear)." alt="" coords="599,645,798,685"/>
+<area shape="poly" id="edge17_Node000027_Node000028" title=" " alt="" coords="491,663,585,663,585,668,491,668"/>
+<area shape="rect" id="Node000029" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a7ec9a8e1577c72c96b179fab3a0b6adf" title="Latest right&#45;channel true peak (linear, max&#45;hold since last clear)." alt="" coords="599,709,798,749"/>
+<area shape="poly" id="edge18_Node000027_Node000029" title=" " alt="" coords="489,683,589,704,588,709,488,688"/>
+<area shape="rect" id="Node000030" href="$dd/d42/classAestra_1_1Audio_1_1TruePeakMeter.html#a158ae11f93a62f4b5d4013f3a9815faa" title="Convert a linear peak value to dBTP, with a &#45;200 dB floor for silence." alt="" coords="591,581,806,621"/>
+<area shape="poly" id="edge19_Node000027_Node000030" title=" " alt="" coords="488,643,588,622,589,627,489,648"/>
+<area shape="rect" id="Node000039" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a2f38f4b25a7aa61512084f6470e90829" title="Get all patterns." alt="" coords="589,1157,809,1197"/>
+<area shape="poly" id="edge28_Node000038_Node000039" title=" " alt="" coords="488,1219,588,1198,589,1203,489,1224"/>
+<area shape="rect" id="Node000040" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#aac74b831a3f7ddec240a7bfa49cb5ce3" title="Get all unit identifiers in display order." alt="" coords="598,1221,799,1261"/>
+<area shape="poly" id="edge29_Node000038_Node000040" title=" " alt="" coords="501,1239,584,1239,584,1244,501,1244"/>
+<area shape="rect" id="Node000041" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a82a1e326b2d555a4b7bbee755a30e0f5" title="Get the plugin instance attached to a unit." alt="" coords="598,1285,799,1325"/>
+<area shape="poly" id="edge30_Node000038_Node000041" title=" " alt="" coords="489,1259,589,1280,588,1285,488,1264"/>
+<area shape="poly" id="edge34_Node000043_Node000028" title=" " alt="" coords="488,707,588,686,589,691,489,712"/>
+<area shape="poly" id="edge35_Node000043_Node000029" title=" " alt="" coords="491,727,585,727,585,732,491,732"/>
+<area shape="rect" id="Node000044" href="$d7/da4/classAestra_1_1Audio_1_1EngineState.html#a8c10dfaa447b39a42842b9c9b4431e1d" title="Acquires a read handle to the currently active graph slot." alt="" coords="601,773,796,813"/>
+<area shape="poly" id="edge32_Node000043_Node000044" title=" " alt="" coords="489,747,589,768,588,773,488,752"/>
+<area shape="rect" id="Node000045" href="$d9/d8c/classAestra_1_1Audio_1_1LoudnessWindow.html#ae52d2270f76ce009fdf304fc6552cdd4" title="Audio thread, once per sample." alt="" coords="568,838,829,863"/>
+<area shape="poly" id="edge33_Node000043_Node000045" title=" " alt="" coords="492,744,522,759,538,775,546,792,554,809,570,823,583,831,581,835,566,827,550,812,541,795,534,779,518,763,490,749"/>
+<area shape="rect" id="Node000046" href="$dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a76c9ac9b4a5e8fceef32f0edda3d558a" title="B&#45;009: Record a successful (stable) audio block." alt="" coords="589,888,808,928"/>
+<area shape="poly" id="edge36_Node000043_Node000046" title=" " alt="" coords="493,742,522,759,534,773,542,788,547,818,551,846,558,860,570,873,579,880,576,884,566,877,554,862,546,848,541,818,537,790,530,776,518,763,490,746"/>
+<area shape="rect" id="Node000055" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ade6021686aeb8e7ea94e2517219a2338" title="Set the project sample rate." alt="" coords="596,1733,801,1773"/>
+<area shape="poly" id="edge45_Node000054_Node000055" title=" " alt="" coords="495,1751,582,1751,582,1756,495,1756"/>
+<area shape="rect" id="Node000058" href="$dd/d42/classAestra_1_1Audio_1_1TruePeakMeter.html#ae03e7b5a0559c9ac2e258990788d0044" title="(Re)generate filter coefficients for the given sample rate and clear history." alt="" coords="591,1861,806,1901"/>
+<area shape="poly" id="edge48_Node000057_Node000058" title=" " alt="" coords="491,1879,577,1879,577,1884,491,1884"/>
 </map>

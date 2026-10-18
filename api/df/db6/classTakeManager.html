@@ -118,15 +118,30 @@ Static Public Member Functions</h2></td></tr>
 <tr class="memitem:aca0f3339708882aa536a01af04d2d9b5" id="r_aca0f3339708882aa536a01af04d2d9b5"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d8/d7e/structTakeManager_1_1Result.html">Result</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/db6/classTakeManager.html#aca0f3339708882aa536a01af04d2d9b5">createTake</a> (const std::string &amp;projectPath, const std::string &amp;currentProjectContents, const std::string &amp;name, const std::string &amp;parentId=&quot;&quot;)</td></tr>
 <tr class="memdesc:aca0f3339708882aa536a01af04d2d9b5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a new take snapshot.  <br /></td></tr>
 <tr class="separator:aca0f3339708882aa536a01af04d2d9b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8cf8e024134554203dd9d1283493368d" id="r_a8cf8e024134554203dd9d1283493368d"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d8/d7e/structTakeManager_1_1Result.html">Result</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/db6/classTakeManager.html#a8cf8e024134554203dd9d1283493368d">createVersion</a> (const std::string &amp;projectPath, const std::string &amp;currentProjectContents, const std::string &amp;name, const std::string &amp;parentId, const std::string &amp;branch, <a class="el" href="../../d6/d74/structTakeManager_1_1TakeEntry.html#a2fed03af8e67ae2b4db257f59a630ce6">TakeEntry::Kind</a> kind, const std::vector&lt; <a class="el" href="../../d2/dae/structTakeManager_1_1TakeEntry_1_1Step.html">TakeEntry::Step</a> &gt; &amp;steps)</td></tr>
+<tr class="memdesc:a8cf8e024134554203dd9d1283493368d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Saves the state as a version on a branch (SPEC-017).  <br /></td></tr>
+<tr class="separator:a8cf8e024134554203dd9d1283493368d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4413867974b41b8881e91b7f6910f2d2" id="r_a4413867974b41b8881e91b7f6910f2d2"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d8/d7e/structTakeManager_1_1Result.html">Result</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/db6/classTakeManager.html#a4413867974b41b8881e91b7f6910f2d2">setVersionSteps</a> (const std::string &amp;projectPath, const std::string &amp;takeId, const std::vector&lt; <a class="el" href="../../d2/dae/structTakeManager_1_1TakeEntry_1_1Step.html">TakeEntry::Step</a> &gt; &amp;steps)</td></tr>
+<tr class="memdesc:a4413867974b41b8881e91b7f6910f2d2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Replaces a version's step log (written when the version is saved).  <br /></td></tr>
+<tr class="separator:a4413867974b41b8881e91b7f6910f2d2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa410a7a053bf6c125fe8961161391f77" id="r_aa410a7a053bf6c125fe8961161391f77"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d8/d7e/structTakeManager_1_1Result.html">Result</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/db6/classTakeManager.html#aa410a7a053bf6c125fe8961161391f77">setVersionBounce</a> (const std::string &amp;projectPath, const std::string &amp;takeId, const std::string &amp;relativePath)</td></tr>
+<tr class="memdesc:aa410a7a053bf6c125fe8961161391f77"><td class="mdescLeft">&#160;</td><td class="mdescRight">Records the bounce file (relative to the takes folder) on a version.  <br /></td></tr>
+<tr class="separator:aa410a7a053bf6c125fe8961161391f77"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac7274d0ea1832734156d20e2ac205def" id="r_ac7274d0ea1832734156d20e2ac205def"><td class="memItemLeft" align="right" valign="top">static std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/db6/classTakeManager.html#ac7274d0ea1832734156d20e2ac205def">resolveBouncePath</a> (const std::string &amp;projectPath, const <a class="el" href="../../d6/d74/structTakeManager_1_1TakeEntry.html">TakeEntry</a> &amp;take)</td></tr>
+<tr class="memdesc:ac7274d0ea1832734156d20e2ac205def"><td class="mdescLeft">&#160;</td><td class="mdescRight">Absolute path of a version's bounce, or empty when it has none or the path leaves the takes folder.  <br /></td></tr>
+<tr class="separator:ac7274d0ea1832734156d20e2ac205def"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af9287b5c6628b953c0a8fdf057936071" id="r_af9287b5c6628b953c0a8fdf057936071"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d8/d7e/structTakeManager_1_1Result.html">Result</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/db6/classTakeManager.html#af9287b5c6628b953c0a8fdf057936071">addVersionNote</a> (const std::string &amp;projectPath, const std::string &amp;takeId, const std::string &amp;text)</td></tr>
+<tr class="memdesc:af9287b5c6628b953c0a8fdf057936071"><td class="mdescLeft">&#160;</td><td class="mdescRight">Appends a note to a version.  <br /></td></tr>
+<tr class="separator:af9287b5c6628b953c0a8fdf057936071"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a71f33af16beed38833247763572fb099" id="r_a71f33af16beed38833247763572fb099"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d8/d7e/structTakeManager_1_1Result.html">Result</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/db6/classTakeManager.html#a71f33af16beed38833247763572fb099">setActiveTake</a> (const std::string &amp;projectPath, const std::string &amp;takeId)</td></tr>
 <tr class="memdesc:a71f33af16beed38833247763572fb099"><td class="mdescLeft">&#160;</td><td class="mdescRight">Switches the active take.  <br /></td></tr>
 <tr class="separator:a71f33af16beed38833247763572fb099"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afcc865c68e5c7eb9f0be1b8f259573a9" id="r_afcc865c68e5c7eb9f0be1b8f259573a9"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d8/d7e/structTakeManager_1_1Result.html">Result</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/db6/classTakeManager.html#afcc865c68e5c7eb9f0be1b8f259573a9">renameTake</a> (const std::string &amp;projectPath, const std::string &amp;takeId, const std::string &amp;newName)</td></tr>
 <tr class="memdesc:afcc865c68e5c7eb9f0be1b8f259573a9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Renames an existing take.  <br /></td></tr>
 <tr class="separator:afcc865c68e5c7eb9f0be1b8f259573a9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a407826eace82c3e2e477e1f608340224" id="r_a407826eace82c3e2e477e1f608340224"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d8/d7e/structTakeManager_1_1Result.html">Result</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/db6/classTakeManager.html#a407826eace82c3e2e477e1f608340224">duplicateTake</a> (const std::string &amp;projectPath, const std::string &amp;takeId, const std::string &amp;newName=&quot;&quot;)</td></tr>
-<tr class="memdesc:a407826eace82c3e2e477e1f608340224"><td class="mdescLeft">&#160;</td><td class="mdescRight">Duplicates a take by copying its snapshot into a new take entry.  <br /></td></tr>
-<tr class="separator:a407826eace82c3e2e477e1f608340224"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a35532730621415d08a0c5cb84549460f" id="r_a35532730621415d08a0c5cb84549460f"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d8/d7e/structTakeManager_1_1Result.html">Result</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/db6/classTakeManager.html#a35532730621415d08a0c5cb84549460f">duplicateTake</a> (const std::string &amp;projectPath, const std::string &amp;takeId, const std::string &amp;newName=&quot;&quot;, const std::string &amp;branch=&quot;&quot;)</td></tr>
+<tr class="memdesc:a35532730621415d08a0c5cb84549460f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Duplicates a take by copying its snapshot into a new take entry.  <br /></td></tr>
+<tr class="separator:a35532730621415d08a0c5cb84549460f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4bfdd60c05dd236082716dbda70ee256" id="r_a4bfdd60c05dd236082716dbda70ee256"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../d8/d7e/structTakeManager_1_1Result.html">Result</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/db6/classTakeManager.html#a4bfdd60c05dd236082716dbda70ee256">deleteTake</a> (const std::string &amp;projectPath, const std::string &amp;takeId)</td></tr>
 <tr class="memdesc:a4bfdd60c05dd236082716dbda70ee256"><td class="mdescLeft">&#160;</td><td class="mdescRight">Deletes a take from the manifest and removes its snapshot.  <br /></td></tr>
 <tr class="separator:a4bfdd60c05dd236082716dbda70ee256"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -137,6 +152,61 @@ Static Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00015">15</a> of file <a class="el" href="../../d8/d4b/TakeManager_8h_source.html">TakeManager.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
+<a id="af9287b5c6628b953c0a8fdf057936071" name="af9287b5c6628b953c0a8fdf057936071"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af9287b5c6628b953c0a8fdf057936071">&#9670;&#160;</a></span>addVersionNote()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d8/d7e/structTakeManager_1_1Result.html">TakeManager::Result</a> TakeManager::addVersionNote </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>projectPath</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>takeId</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>text</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Appends a note to a version. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00597">597</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00051">TakeManager::Manifest::errorMessage</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00019">TakeManager::TakeEntry::id</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00288">loadManifest()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00044">TakeManager::TakeEntry::notes</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00050">TakeManager::Manifest::ok</a>, and <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00054">TakeManager::Manifest::takes</a>.</p>
+<div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-0-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-0-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-0-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_af9287b5c6628b953c0a8fdf057936071_cgraph.svg" width="100%" height="376"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+
+</div>
+</div>
 <a id="aca0f3339708882aa536a01af04d2d9b5" name="aca0f3339708882aa536a01af04d2d9b5"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aca0f3339708882aa536a01af04d2d9b5">&#9670;&#160;</a></span>createTake()</h2>
 
@@ -194,15 +264,104 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00434">434</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00503">503</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00025">TakeManager::TakeEntry::active</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00033">TakeManager::Manifest::activeTakeId</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00023">TakeManager::TakeEntry::createdAtMs</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00346">ensureManifest()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00019">TakeManager::TakeEntry::id</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00047">TakeManager::Result::manifest</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00020">TakeManager::TakeEntry::name</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00044">TakeManager::Result::ok</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00021">TakeManager::TakeEntry::parentId</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00022">TakeManager::TakeEntry::snapshotPath</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00034">TakeManager::Manifest::takes</a>, and <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00024">TakeManager::TakeEntry::updatedAtMs</a>.</p>
-<div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-0-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-0-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00508">createVersion()</a>.</p>
+<div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-1-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-0-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_aca0f3339708882aa536a01af04d2d9b5_cgraph.svg" width="100%" height="419"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div id="dynsection-1-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_aca0f3339708882aa536a01af04d2d9b5_cgraph.svg" width="100%" height="432"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+
+</div>
+</div>
+<a id="a8cf8e024134554203dd9d1283493368d" name="a8cf8e024134554203dd9d1283493368d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8cf8e024134554203dd9d1283493368d">&#9670;&#160;</a></span>createVersion()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d8/d7e/structTakeManager_1_1Result.html">TakeManager::Result</a> TakeManager::createVersion </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>projectPath</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>currentProjectContents</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>name</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>parentId</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>branch</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d6/d74/structTakeManager_1_1TakeEntry.html#a2fed03af8e67ae2b4db257f59a630ce6">TakeEntry::Kind</a>&#160;</td>
+          <td class="paramname"><em>kind</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="../../d2/dae/structTakeManager_1_1TakeEntry_1_1Step.html">TakeEntry::Step</a> &gt; &amp;&#160;</td>
+          <td class="paramname"><em>steps</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Saves the state as a version on a branch (SPEC-017). </p>
+<p>An empty branch continues the parent's branch; a name starts a new branch from the parent. <code>steps</code> becomes the version's read-only step log. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00508">508</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00025">TakeManager::TakeEntry::active</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00053">TakeManager::Manifest::activeTakeId</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00041">TakeManager::TakeEntry::branch</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00023">TakeManager::TakeEntry::createdAtMs</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00415">ensureManifest()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00241">TakeManager::Manifest::findTake()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00019">TakeManager::TakeEntry::id</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00042">TakeManager::TakeEntry::kind</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00069">TakeManager::Result::manifest</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00020">TakeManager::TakeEntry::name</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00066">TakeManager::Result::ok</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00021">TakeManager::TakeEntry::parentId</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00022">TakeManager::TakeEntry::snapshotPath</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00045">TakeManager::TakeEntry::steps</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00054">TakeManager::Manifest::takes</a>, and <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00024">TakeManager::TakeEntry::updatedAtMs</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00503">createTake()</a>.</p>
+<div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-2-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-2-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_a8cf8e024134554203dd9d1283493368d_cgraph.svg" width="100%" height="432"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+<div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-3-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-3-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_a8cf8e024134554203dd9d1283493368d_icgraph.svg" width="451" height="36"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -250,21 +409,21 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00597">597</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00738">738</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00033">TakeManager::Manifest::activeTakeId</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00031">TakeManager::Manifest::errorMessage</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00216">TakeManager::Manifest::findTake()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00019">TakeManager::TakeEntry::id</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00254">loadManifest()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00020">TakeManager::TakeEntry::name</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00030">TakeManager::Manifest::ok</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00021">TakeManager::TakeEntry::parentId</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00247">resolveSnapshotPath()</a>, and <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00034">TakeManager::Manifest::takes</a>.</p>
-<div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-1-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00053">TakeManager::Manifest::activeTakeId</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00051">TakeManager::Manifest::errorMessage</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00241">TakeManager::Manifest::findTake()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00019">TakeManager::TakeEntry::id</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00288">loadManifest()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00020">TakeManager::TakeEntry::name</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00050">TakeManager::Manifest::ok</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00021">TakeManager::TakeEntry::parentId</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00281">resolveSnapshotPath()</a>, and <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00054">TakeManager::Manifest::takes</a>.</p>
+<div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-4-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-1-content" class="dyncontent" style="display:none;">
+<div id="dynsection-4-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_a4bfdd60c05dd236082716dbda70ee256_cgraph.svg" width="100%" height="408"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
 </div>
-<a id="a407826eace82c3e2e477e1f608340224" name="a407826eace82c3e2e477e1f608340224"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a407826eace82c3e2e477e1f608340224">&#9670;&#160;</a></span>duplicateTake()</h2>
+<a id="a35532730621415d08a0c5cb84549460f" name="a35532730621415d08a0c5cb84549460f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a35532730621415d08a0c5cb84549460f">&#9670;&#160;</a></span>duplicateTake()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -288,7 +447,13 @@ Static Public Member Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">const std::string &amp;&#160;</td>
-          <td class="paramname"><em>newName</em> = <code>&quot;&quot;</code>&#160;</td>
+          <td class="paramname"><em>newName</em> = <code>&quot;&quot;</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>branch</em> = <code>&quot;&quot;</code>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -309,19 +474,20 @@ Static Public Member Functions</h2></td></tr>
     <tr><td class="paramname">projectPath</td><td>Path to the project directory. </td></tr>
     <tr><td class="paramname">takeId</td><td>ID of the take to duplicate. </td></tr>
     <tr><td class="paramname">newName</td><td>Name for the duplicate (empty derives "&lt;source&gt; Copy"). </td></tr>
+    <tr><td class="paramname">branch</td><td>Branch the copy starts; empty keeps the source's branch. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00543">543</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00682">682</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00031">TakeManager::Manifest::errorMessage</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00216">TakeManager::Manifest::findTake()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00019">TakeManager::TakeEntry::id</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00254">loadManifest()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00020">TakeManager::TakeEntry::name</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00030">TakeManager::Manifest::ok</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00247">resolveSnapshotPath()</a>, and <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00034">TakeManager::Manifest::takes</a>.</p>
-<div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-2-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00041">TakeManager::TakeEntry::branch</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00051">TakeManager::Manifest::errorMessage</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00241">TakeManager::Manifest::findTake()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00019">TakeManager::TakeEntry::id</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00288">loadManifest()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00020">TakeManager::TakeEntry::name</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00050">TakeManager::Manifest::ok</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00281">resolveSnapshotPath()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00045">TakeManager::TakeEntry::steps</a>, and <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00054">TakeManager::Manifest::takes</a>.</p>
+<div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-5-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-2-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_a407826eace82c3e2e477e1f608340224_cgraph.svg" width="100%" height="408"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div id="dynsection-5-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_a35532730621415d08a0c5cb84549460f_cgraph.svg" width="100%" height="408"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -376,24 +542,24 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00346">346</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00415">415</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00025">TakeManager::TakeEntry::active</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00225">TakeManager::Manifest::activeTake()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00033">TakeManager::Manifest::activeTakeId</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00023">TakeManager::TakeEntry::createdAtMs</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00031">TakeManager::Manifest::errorMessage</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00216">TakeManager::Manifest::findTake()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00019">TakeManager::TakeEntry::id</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00254">loadManifest()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00020">TakeManager::TakeEntry::name</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00030">TakeManager::Manifest::ok</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00032">TakeManager::Manifest::projectPath</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00022">TakeManager::TakeEntry::snapshotPath</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00034">TakeManager::Manifest::takes</a>, and <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00024">TakeManager::TakeEntry::updatedAtMs</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00025">TakeManager::TakeEntry::active</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00250">TakeManager::Manifest::activeTake()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00053">TakeManager::Manifest::activeTakeId</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00023">TakeManager::TakeEntry::createdAtMs</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00051">TakeManager::Manifest::errorMessage</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00241">TakeManager::Manifest::findTake()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00019">TakeManager::TakeEntry::id</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00288">loadManifest()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00020">TakeManager::TakeEntry::name</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00050">TakeManager::Manifest::ok</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00052">TakeManager::Manifest::projectPath</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00022">TakeManager::TakeEntry::snapshotPath</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00054">TakeManager::Manifest::takes</a>, and <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00024">TakeManager::TakeEntry::updatedAtMs</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00434">createTake()</a>, and <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00402">saveActiveTake()</a>.</p>
-<div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-3-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00508">createVersion()</a>, and <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00471">saveActiveTake()</a>.</p>
+<div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-6-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-3-content" class="dyncontent" style="display:none;">
+<div id="dynsection-6-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_a140b2004fb5dfb4ed837fb80d603f9da_cgraph.svg" width="100%" height="419"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
-<div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-4-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-7-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-4-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_a140b2004fb5dfb4ed837fb80d603f9da_icgraph.svg" width="494" height="86"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div id="dynsection-7-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_a140b2004fb5dfb4ed837fb80d603f9da_icgraph.svg" width="100%" height="364"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -424,24 +590,24 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Returns the manifest.json path for a given project. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00238">238</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00272">272</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00229">getTakesDirectory()</a>.</p>
+<p class="reference">References <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00263">getTakesDirectory()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00254">loadManifest()</a>.</p>
-<div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-5-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00288">loadManifest()</a>.</p>
+<div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-8-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-5-content" class="dyncontent" style="display:none;">
+<div id="dynsection-8-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_acb75e1e71f374b7b3c85690629eaf607_cgraph.svg" width="515" height="36"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
-<div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-6-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-9" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-9-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-9-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-6-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_acb75e1e71f374b7b3c85690629eaf607_icgraph.svg" width="100%" height="475"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div id="dynsection-9-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_acb75e1e71f374b7b3c85690629eaf607_icgraph.svg" width="100%" height="600"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -472,15 +638,15 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Returns the takes/ directory path for a given project. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00229">229</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00263">263</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00238">getManifestPath()</a>.</p>
-<div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-7-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d4/df2/VersionBounce_8h_source.html#l00106">Aestra::VersionBounce::bounceVersion()</a>, and <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00272">getManifestPath()</a>.</p>
+<div id="dynsection-10" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-10-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-10-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-7-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_acfe0e3332867ecd9c0c1ea8817706e57_icgraph.svg" width="100%" height="475"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div id="dynsection-10-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_acfe0e3332867ecd9c0c1ea8817706e57_icgraph.svg" width="100%" height="600"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -512,24 +678,24 @@ Static Public Member Functions</h2></td></tr>
 <p>Loads the manifest from disk. </p>
 <p>Returns ok=false if missing or corrupt. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00254">254</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00288">288</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00025">TakeManager::TakeEntry::active</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00033">TakeManager::Manifest::activeTakeId</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00023">TakeManager::TakeEntry::createdAtMs</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00216">TakeManager::Manifest::findTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00238">getManifestPath()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00019">TakeManager::TakeEntry::id</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00020">TakeManager::TakeEntry::name</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00030">TakeManager::Manifest::ok</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00021">TakeManager::TakeEntry::parentId</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00032">TakeManager::Manifest::projectPath</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00022">TakeManager::TakeEntry::snapshotPath</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00034">TakeManager::Manifest::takes</a>, and <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00024">TakeManager::TakeEntry::updatedAtMs</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00025">TakeManager::TakeEntry::active</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00053">TakeManager::Manifest::activeTakeId</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00043">TakeManager::TakeEntry::bounce</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00041">TakeManager::TakeEntry::branch</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00023">TakeManager::TakeEntry::createdAtMs</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00241">TakeManager::Manifest::findTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00272">getManifestPath()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00019">TakeManager::TakeEntry::id</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00042">TakeManager::TakeEntry::kind</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00020">TakeManager::TakeEntry::name</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00044">TakeManager::TakeEntry::notes</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00050">TakeManager::Manifest::ok</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00021">TakeManager::TakeEntry::parentId</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00052">TakeManager::Manifest::projectPath</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00022">TakeManager::TakeEntry::snapshotPath</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00045">TakeManager::TakeEntry::steps</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00054">TakeManager::Manifest::takes</a>, and <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00024">TakeManager::TakeEntry::updatedAtMs</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00597">deleteTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00543">duplicateTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00346">ensureManifest()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00504">renameTake()</a>, and <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00475">setActiveTake()</a>.</p>
-<div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-8-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00597">addVersionNote()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00738">deleteTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00682">duplicateTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00415">ensureManifest()</a>, <a class="el" href="../../dd/d61/AuditionHub_8cpp_source.html#l00103">Aestra::AuditionHub::refresh()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00643">renameTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00614">setActiveTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00576">setVersionBounce()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00560">setVersionSteps()</a>, <a class="el" href="../../d2/db3/VersionsPanelWiring_8h_source.html#l00091">Aestra::wireBringOver()</a>, and <a class="el" href="../../d2/db3/VersionsPanelWiring_8h_source.html#l00053">Aestra::wireVersionsDock()</a>.</p>
+<div id="dynsection-11" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-11-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-11-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-8-content" class="dyncontent" style="display:none;">
+<div id="dynsection-11-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_a80febfa550c9e4c5f35cdb15bd6ea6cc_cgraph.svg" width="100%" height="376"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
-<div id="dynsection-9" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-9-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-9-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-12" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-12-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-12-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-9-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_a80febfa550c9e4c5f35cdb15bd6ea6cc_icgraph.svg" width="100%" height="475"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div id="dynsection-12-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_a80febfa550c9e4c5f35cdb15bd6ea6cc_icgraph.svg" width="100%" height="600"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -584,15 +750,66 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00504">504</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00643">643</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00031">TakeManager::Manifest::errorMessage</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00019">TakeManager::TakeEntry::id</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00254">loadManifest()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00020">TakeManager::TakeEntry::name</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00030">TakeManager::Manifest::ok</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00034">TakeManager::Manifest::takes</a>, and <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00024">TakeManager::TakeEntry::updatedAtMs</a>.</p>
-<div id="dynsection-10" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-10-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-10-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00051">TakeManager::Manifest::errorMessage</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00019">TakeManager::TakeEntry::id</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00288">loadManifest()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00020">TakeManager::TakeEntry::name</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00050">TakeManager::Manifest::ok</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00054">TakeManager::Manifest::takes</a>, and <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00024">TakeManager::TakeEntry::updatedAtMs</a>.</p>
+<div id="dynsection-13" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-13-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-13-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-10-content" class="dyncontent" style="display:none;">
+<div id="dynsection-13-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_afcc865c68e5c7eb9f0be1b8f259573a9_cgraph.svg" width="100%" height="376"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+
+</div>
+</div>
+<a id="ac7274d0ea1832734156d20e2ac205def" name="ac7274d0ea1832734156d20e2ac205def"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac7274d0ea1832734156d20e2ac205def">&#9670;&#160;</a></span>resolveBouncePath()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string TakeManager::resolveBouncePath </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>projectPath</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="../../d6/d74/structTakeManager_1_1TakeEntry.html">TakeEntry</a> &amp;&#160;</td>
+          <td class="paramname"><em>take</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Absolute path of a version's bounce, or empty when it has none or the path leaves the takes folder. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00592">592</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00043">TakeManager::TakeEntry::bounce</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../dc/d69/AuditionLibrary_8h_source.html#l00046">Aestra::AuditionLibrary::versionItems()</a>, <a class="el" href="../../d2/db3/VersionsPanelWiring_8h_source.html#l00091">Aestra::wireBringOver()</a>, and <a class="el" href="../../d2/db3/VersionsPanelWiring_8h_source.html#l00073">Aestra::wireVersionBounces()</a>.</p>
+<div id="dynsection-14" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-14-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-14-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-14-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_ac7274d0ea1832734156d20e2ac205def_icgraph.svg" width="502" height="199"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -633,17 +850,17 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Returns the full snapshot file path for a specific take. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00247">247</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00281">281</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00022">TakeManager::TakeEntry::snapshotPath</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00597">deleteTake()</a>, and <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00543">duplicateTake()</a>.</p>
-<div id="dynsection-11" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-11-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-11-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00738">deleteTake()</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00682">duplicateTake()</a>, and <a class="el" href="../../d2/db3/VersionsPanelWiring_8h_source.html#l00091">Aestra::wireBringOver()</a>.</p>
+<div id="dynsection-15" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-15-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-15-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-11-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_a44969c9d8f0d20574fc90765e0b7a98d_icgraph.svg" width="516" height="86"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div id="dynsection-15-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_a44969c9d8f0d20574fc90765e0b7a98d_icgraph.svg" width="516" height="159"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -691,14 +908,14 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00402">402</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00471">471</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00025">TakeManager::TakeEntry::active</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00033">TakeManager::Manifest::activeTakeId</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00346">ensureManifest()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00019">TakeManager::TakeEntry::id</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00047">TakeManager::Result::manifest</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00044">TakeManager::Result::ok</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00034">TakeManager::Manifest::takes</a>, and <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00024">TakeManager::TakeEntry::updatedAtMs</a>.</p>
-<div id="dynsection-12" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-12-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-12-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00025">TakeManager::TakeEntry::active</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00053">TakeManager::Manifest::activeTakeId</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00415">ensureManifest()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00019">TakeManager::TakeEntry::id</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00069">TakeManager::Result::manifest</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00066">TakeManager::Result::ok</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00054">TakeManager::Manifest::takes</a>, and <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00024">TakeManager::TakeEntry::updatedAtMs</a>.</p>
+<div id="dynsection-16" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-16-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-16-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-12-content" class="dyncontent" style="display:none;">
+<div id="dynsection-16-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_af69296879493d1f9ba2977aeca314e0d_cgraph.svg" width="100%" height="419"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -747,15 +964,134 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00475">475</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00614">614</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00025">TakeManager::TakeEntry::active</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00033">TakeManager::Manifest::activeTakeId</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00031">TakeManager::Manifest::errorMessage</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00216">TakeManager::Manifest::findTake()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00019">TakeManager::TakeEntry::id</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00254">loadManifest()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00030">TakeManager::Manifest::ok</a>, and <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00034">TakeManager::Manifest::takes</a>.</p>
-<div id="dynsection-13" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-13-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-13-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00025">TakeManager::TakeEntry::active</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00053">TakeManager::Manifest::activeTakeId</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00051">TakeManager::Manifest::errorMessage</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00241">TakeManager::Manifest::findTake()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00019">TakeManager::TakeEntry::id</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00288">loadManifest()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00050">TakeManager::Manifest::ok</a>, and <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00054">TakeManager::Manifest::takes</a>.</p>
+<div id="dynsection-17" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-17-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-17-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-13-content" class="dyncontent" style="display:none;">
+<div id="dynsection-17-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_a71f33af16beed38833247763572fb099_cgraph.svg" width="100%" height="376"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+
+</div>
+</div>
+<a id="aa410a7a053bf6c125fe8961161391f77" name="aa410a7a053bf6c125fe8961161391f77"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa410a7a053bf6c125fe8961161391f77">&#9670;&#160;</a></span>setVersionBounce()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d8/d7e/structTakeManager_1_1Result.html">TakeManager::Result</a> TakeManager::setVersionBounce </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>projectPath</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>takeId</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>relativePath</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Records the bounce file (relative to the takes folder) on a version. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00576">576</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00043">TakeManager::TakeEntry::bounce</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00051">TakeManager::Manifest::errorMessage</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00019">TakeManager::TakeEntry::id</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00288">loadManifest()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00050">TakeManager::Manifest::ok</a>, and <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00054">TakeManager::Manifest::takes</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d4/df2/VersionBounce_8h_source.html#l00106">Aestra::VersionBounce::bounceVersion()</a>.</p>
+<div id="dynsection-18" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-18-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-18-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-18-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_aa410a7a053bf6c125fe8961161391f77_cgraph.svg" width="100%" height="376"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+<div id="dynsection-19" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-19-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-19-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-19-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_aa410a7a053bf6c125fe8961161391f77_icgraph.svg" width="459" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+
+</div>
+</div>
+<a id="a4413867974b41b8881e91b7f6910f2d2" name="a4413867974b41b8881e91b7f6910f2d2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4413867974b41b8881e91b7f6910f2d2">&#9670;&#160;</a></span>setVersionSteps()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d8/d7e/structTakeManager_1_1Result.html">TakeManager::Result</a> TakeManager::setVersionSteps </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>projectPath</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>takeId</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="../../d2/dae/structTakeManager_1_1TakeEntry_1_1Step.html">TakeEntry::Step</a> &gt; &amp;&#160;</td>
+          <td class="paramname"><em>steps</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Replaces a version's step log (written when the version is saved). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00560">560</a> of file <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html">TakeManager.cpp</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00051">TakeManager::Manifest::errorMessage</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00019">TakeManager::TakeEntry::id</a>, <a class="el" href="../../dd/d14/TakeManager_8cpp_source.html#l00288">loadManifest()</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00050">TakeManager::Manifest::ok</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00045">TakeManager::TakeEntry::steps</a>, <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00054">TakeManager::Manifest::takes</a>, and <a class="el" href="../../d8/d4b/TakeManager_8h_source.html#l00024">TakeManager::TakeEntry::updatedAtMs</a>.</p>
+<div id="dynsection-20" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-20-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-20-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-20-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../df/db6/classTakeManager_a4413867974b41b8881e91b7f6910f2d2_cgraph.svg" width="100%" height="376"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>

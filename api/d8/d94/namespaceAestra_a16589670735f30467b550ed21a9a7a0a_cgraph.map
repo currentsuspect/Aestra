@@ -1,0 +1,8 @@
+<map id="Aestra::goToVersionStep" name="Aestra::goToVersionStep">
+<area shape="rect" id="Node000001" title="A click on a step: land on the state just after it was made." alt="" coords="5,45,184,70"/>
+<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="54,46,45,36,50,26,67,20,95,18,130,22,140,27,144,32,139,35,137,31,129,27,95,23,68,25,53,30,51,36,58,43"/>
+<area shape="rect" id="Node000002" href="$df/d31/classAestra_1_1Audio_1_1CommandHistory.html#a5d86393420d5dea9702d64852b85580e" title="Redo to a specific position in the redo stack." alt="" coords="232,5,463,45"/>
+<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="184,43,218,39,219,44,184,49"/>
+<area shape="rect" id="Node000003" href="$df/d31/classAestra_1_1Audio_1_1CommandHistory.html#aca57f8b3c7abb2b341320710dc7010eb" title="Undo to a specific position in the undo stack." alt="" coords="232,69,463,109"/>
+<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="184,66,219,70,218,76,184,71"/>
+</map>

@@ -37,20 +37,20 @@
 </a>
 </g>
 </g>
-<!-- Node7 -->
-<g id="Node000007" class="node">
-<title>Node7</title>
-<g id="a_Node000007"><a xlink:href="../../d3/d51/classAestra_1_1MixerViewModel.html#a9cb7570e827500d4cf667ba9877edeee" target="_top" xlink:title="Sync channel list from engine state.">
+<!-- Node8 -->
+<g id="Node000008" class="node">
+<title>Node8</title>
+<g id="a_Node000008"><a xlink:href="../../d3/d51/classAestra_1_1MixerViewModel.html#a9cb7570e827500d4cf667ba9877edeee" target="_top" xlink:title="Sync channel list from engine state.">
 <polygon fill="white" stroke="#666666" points="725.5,-30 590.5,-30 590.5,0 725.5,0 725.5,-30"/>
 <text text-anchor="start" x="598.5" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::MixerViewModel</text>
 <text text-anchor="middle" x="658" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::syncFromEngine</text>
 </a>
 </g>
 </g>
-<!-- Node1&#45;&gt;Node7 -->
-<g id="edge7_Node000001_Node000007" class="edge">
-<title>Node1&#45;&gt;Node7</title>
-<g id="a_edge7_Node000001_Node000007"><a xlink:title=" ">
+<!-- Node1&#45;&gt;Node8 -->
+<g id="edge8_Node000001_Node000008" class="edge">
+<title>Node1&#45;&gt;Node8</title>
+<g id="a_edge8_Node000001_Node000008"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M770.42,-28.44C755.35,-26.62 739.91,-24.76 725.51,-23.02"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="770.43,-31.96 780.78,-29.69 771.27,-25.01 770.43,-31.96"/>
 </a>
@@ -138,6 +138,25 @@
 <g id="a_edge5_Node000005_Node000004"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M159.04,-93.72C167.62,-93.77 176.31,-93.76 184.82,-93.66"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="159.08,-90.22 149.04,-93.61 159,-97.22 159.08,-90.22"/>
+</a>
+</g>
+</g>
+<!-- Node7 -->
+<g id="Node000007" class="node">
+<title>Node7</title>
+<g id="a_Node000007"><a xlink:href="../../db/d60/classAestraContent.html#a540998ede72de460fd746a8f6d4f4d60" target="_top" xlink:title="The whole project&#39;s mix, rendered offline into memory (a version&#39;s bounce). False when there is nothi...">
+<polygon fill="white" stroke="#666666" points="145.5,-54 3.5,-54 3.5,-24 145.5,-24 145.5,-54"/>
+<text text-anchor="start" x="11.5" y="-42" font-family="Helvetica,sans-Serif" font-size="10.00">AestraContent::renderMix</text>
+<text text-anchor="middle" x="74.5" y="-31" font-family="Helvetica,sans-Serif" font-size="10.00">ToBuffer</text>
+</a>
+</g>
+</g>
+<!-- Node6&#45;&gt;Node7 -->
+<g id="edge7_Node000006_Node000007" class="edge">
+<title>Node6&#45;&gt;Node7</title>
+<g id="a_edge7_Node000006_Node000007"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M174.74,-39C165.03,-39 155.23,-39 145.77,-39"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="174.82,-42.5 184.82,-39 174.82,-35.5 174.82,-42.5"/>
 </a>
 </g>
 </g>

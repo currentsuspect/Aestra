@@ -7,5 +7,6 @@ var searchData=
   ['quantizepcm24dithered_4',['quantizePcm24Dithered',['../d0/d8a/AudioExportQuantization_8h.html#a287255f4dfa3f21697b90ed5f0182a3a',1,'Aestra::Audio::ExportQuantization']]],
   ['quantizeselectednotes_5',['quantizeSelectedNotes',['../d3/df4/classAestraUI_1_1PianoRollNoteLayer.html#a1bebb37a9a87d0cf847d4e32613d38c5',1,'AestraUI::PianoRollNoteLayer']]],
   ['quarantineplugin_6',['quarantinePlugin',['../de/dd7/classAestra_1_1Audio_1_1EngineSupervisor.html#a7a0c4222c91f12c843bb56ed84857183',1,'Aestra::Audio::EngineSupervisor']]],
-  ['quit_7',['quit',['../d8/df8/classAestraUI_1_1NUIApp.html#a6f2c6098a2e3304fc92fcc1db7c9cf10',1,'AestraUI::NUIApp']]]
+  ['quietdefaults_7',['quietDefaults',['../dc/d1e/classAestra_1_1ArsenalSceneStrip.html#a5053611d04e7e2aeeb4e8d70840a59d7',1,'Aestra::ArsenalSceneStrip']]],
+  ['quit_8',['quit',['../d8/df8/classAestraUI_1_1NUIApp.html#a6f2c6098a2e3304fc92fcc1db7c9cf10',1,'AestraUI::NUIApp']]]
 ];

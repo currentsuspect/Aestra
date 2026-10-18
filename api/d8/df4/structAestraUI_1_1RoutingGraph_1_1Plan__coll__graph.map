@@ -1,0 +1,22 @@
+<map id="AestraUI::RoutingGraph::Plan" name="AestraUI::RoutingGraph::Plan">
+<area shape="rect" id="Node000001" title=" " alt="" coords="414,343,589,383"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="210,247,385,273"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="335,277,465,340,462,345,332,281"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="332,5,407,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="361,44,342,94,303,247,298,246,337,93,357,42"/>
+<area shape="rect" id="Node000007" href="$d4/d50/structAestraUI_1_1RoutingGraph_1_1Placed.html" title=" " alt="" coords="417,93,592,133"/>
+<area shape="poly" id="edge7_Node000007_Node000003" title=" " alt="" coords="399,36,479,91,476,95,396,41"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="10,101,140,126"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="39,136,28,146,19,159,8,188,10,201,18,214,30,224,48,232,96,244,153,251,210,255,210,260,152,256,95,249,46,237,27,228,14,218,5,203,3,188,14,156,24,143,36,132"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="409,240,594,280"/>
+<area shape="poly" id="edge10_Node000006_Node000004" title=" " alt="" coords="113,129,209,170,325,213,413,237,412,243,324,219,207,175,111,134"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="56,5,94,31"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="78,44,78,101,72,101,72,44"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="504,294,504,343,499,343,499,294"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="507,147,505,240,499,240,501,147"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="581,5,620,31"/>
+<area shape="poly" id="edge11_Node000001_Node000008" title=" " alt="" coords="613,43,616,54,616,69,621,130,629,178,629,225,622,252,609,281,596,301,579,319,542,345,539,340,576,315,592,298,605,279,617,250,623,225,623,179,615,130,611,69,611,55,608,44"/>
+<area shape="poly" id="edge8_Node000007_Node000008" title=" " alt="" coords="578,42,562,57,524,95,520,91,559,53,575,38"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="474,5,524,31"/>
+<area shape="poly" id="edge9_Node000007_Node000009" title=" " alt="" coords="502,45,503,69,505,93,500,94,498,69,497,45"/>
+</map>

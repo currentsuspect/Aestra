@@ -1,0 +1,25 @@
+<map id="Aestra::BringOverCard::Layout" name="Aestra::BringOverCard::Layout">
+<area shape="rect" id="Node000001" title=" " alt="" coords="351,519,517,559"/>
+<area shape="rect" id="Node000002" href="$da/d4e/structAestraUI_1_1NUIRect.html" title=" " alt="" coords="365,152,503,177"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="437,191,437,519,431,519,431,191"/>
+<area shape="rect" id="Node000005" href="$d7/d14/structAestra_1_1BringOverCard_1_1Layout_1_1Entry.html" title=" " alt="" coords="196,240,363,280"/>
+<area shape="poly" id="edge9_Node000005_Node000002" title=" " alt="" coords="405,187,312,242,309,238,402,182"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="473,13,523,38"/>
+<area shape="poly" id="edge12_Node000001_Node000003" title=" " alt="" coords="515,49,524,68,539,115,543,163,543,430,537,459,520,484,498,505,474,521,471,516,494,500,516,481,532,457,538,430,538,163,534,116,520,70,510,51"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="488,52,479,70,442,153,437,151,474,68,483,49"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="191,401,368,456"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="325,462,368,492,404,516,401,521,364,497,322,466"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="282,294,282,401,277,401,277,294"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="115,152,153,177"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="156,185,191,214,235,237,232,242,189,218,153,189"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="178,152,229,177"/>
+<area shape="poly" id="edge6_Node000005_Node000007" title=" " alt="" coords="218,188,236,214,259,238,255,242,232,218,214,191"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="253,152,340,177"/>
+<area shape="poly" id="edge7_Node000005_Node000008" title=" " alt="" coords="295,191,285,240,280,239,289,190"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="227,5,366,45"/>
+<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="299,59,299,152,294,152,294,59"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="5,247,135,273"/>
+<area shape="poly" id="edge10_Node000004_Node000010" title=" " alt="" coords="74,286,84,332,95,355,111,375,128,389,148,400,191,415,189,420,146,405,125,394,107,379,90,358,79,333,69,287"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="24,152,63,177"/>
+<area shape="poly" id="edge11_Node000010_Node000011" title=" " alt="" coords="44,190,47,215,63,246,59,248,42,217,39,191"/>
+</map>

@@ -1,0 +1,19 @@
+<map id="Aestra::Audio::TakesPanel::BounceCard" name="Aestra::Audio::TakesPanel::BounceCard">
+<area shape="rect" id="Node000001" title="A version&#39;s bounce, when it has one: its file and what the card shows. Read once per refresh,..." alt="" coords="62,387,250,427"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="31,299,118,324"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="96,333,141,385,137,388,92,336"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,181,144,221"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="77,235,77,298,72,298,72,235"/>
+<area shape="rect" id="Node000004" href="$dd/ddc/structAestra_1_1VersionBounceInfo.html" title="What the dock shows about a version&#39;s bounce (SPEC&#45;017, V81&#45;V1): how long it is, how loud,..." alt="" coords="142,299,335,324"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="221,336,175,388,171,385,217,333"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="187,189,253,214"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="227,227,239,298,234,299,222,228"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="278,189,429,214"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="339,227,294,277,260,301,257,296,290,273,335,223"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="276,93,327,119"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="306,131,314,156,326,173,340,187,337,190,322,176,310,159,301,133"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="351,93,481,119"/>
+<area shape="poly" id="edge7_Node000006_Node000008" title=" " alt="" coords="403,132,363,190,359,187,398,129"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="397,5,435,31"/>
+<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="419,45,419,93,413,93,413,45"/>
+</map>

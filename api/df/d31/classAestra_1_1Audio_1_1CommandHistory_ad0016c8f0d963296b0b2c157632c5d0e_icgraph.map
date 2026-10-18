@@ -1,0 +1,14 @@
+<map id="Aestra::Audio::CommandHistory::getUndoStack" name="Aestra::Audio::CommandHistory::getUndoStack">
+<area shape="rect" id="Node000001" title="Get the undo stack (most recent first)." alt="" coords="488,71,719,111"/>
+<area shape="rect" id="Node000002" href="$d8/d94/namespaceAestra.html#ae1f7715e14ddaa0000a96b5f9a0aae98" title="The steps made in the open version, oldest first (SPEC&#45;017): one entry per command on the undo stack." alt="" coords="241,5,440,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="525,70,439,45,395,33,397,28,441,39,527,65"/>
+<area shape="rect" id="Node000003" href="$d8/d94/namespaceAestra.html#afdc9afbb7523a8e49bc4569316160de8" title="Steps made since the open version was saved: the history&#39;s depth beyond the steps the version recorde..." alt="" coords="243,79,438,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="474,94,438,94,438,89,474,89"/>
+<area shape="rect" id="Node000005" href="$d8/d94/namespaceAestra.html#af5663ad2048234e9060f855bb3a3b746" title="What the Versions dock reads from the command history (SPEC&#45;017): the open version&#39;s steps,..." alt="" coords="243,128,438,153"/>
+<area shape="poly" id="edge6_Node000001_Node000005" title=" " alt="" coords="484,117,409,131,408,125,483,111"/>
+<area shape="poly" id="edge3_Node000003_Node000003" title=" " alt="" coords="384,70,372,61,341,57,315,59,301,64,299,70,306,77,302,80,293,70,298,60,314,54,341,52,374,56,387,65"/>
+<area shape="rect" id="Node000004" href="$d8/d94/namespaceAestra.html#a8a9ece62269ea3c905b91fd46e29cc1c" title="Hands the dock its live data: the project&#39;s name, the open version&#39;s steps, the unsaved count,..." alt="" coords="5,104,193,129"/>
+<area shape="poly" id="edge4_Node000003_Node000004" title=" " alt="" coords="230,106,194,109,193,104,229,100"/>
+<area shape="poly" id="edge5_Node000004_Node000004" title=" " alt="" coords="143,95,131,86,99,83,74,85,60,90,57,95,64,102,60,106,52,96,56,86,72,80,99,77,133,81,146,91"/>
+<area shape="poly" id="edge7_Node000005_Node000004" title=" " alt="" coords="229,132,193,129,194,123,230,127"/>
+</map>

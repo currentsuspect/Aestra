@@ -1,0 +1,5 @@
+<map id="Aestra::ArsenalKitCard" name="Aestra::ArsenalKitCard">
+<area shape="rect" id="Node000001" title="The card the empty Arsenal shows under its rows: a heading, one line, and a button that chooses the f..." alt="" coords="5,123,175,148"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="11,5,169,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="93,44,93,123,87,123,87,44"/>
+</map>

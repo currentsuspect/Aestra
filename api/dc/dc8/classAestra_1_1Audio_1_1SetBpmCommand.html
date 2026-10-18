@@ -70,7 +70,7 @@ $(function() {
 
 <div id="nav-path" class="navpath">
   <ul>
-<li class="navelem"><b>Aestra</b></li><li class="navelem"><b>Audio</b></li><li class="navelem"><a class="el" href="../../dc/dc8/classAestra_1_1Audio_1_1SetBpmCommand.html">SetBpmCommand</a></li>  </ul>
+<li class="navelem"><a class="el" href="../../d8/d94/namespaceAestra.html">Aestra</a></li><li class="navelem"><b>Audio</b></li><li class="navelem"><a class="el" href="../../dc/dc8/classAestra_1_1Audio_1_1SetBpmCommand.html">SetBpmCommand</a></li>  </ul>
 </div>
 </div><!-- top -->
 <div class="header">
@@ -80,6 +80,11 @@ $(function() {
   <div class="headertitle"><div class="title">Aestra::Audio::SetBpmCommand Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>Sets the project tempo the way the transport bar does: the engine (metronome), the playlist, the timeline clock the scheduler reads, and a rewind of scheduled pattern instances.  
+ <a href="../../dc/dc8/classAestra_1_1Audio_1_1SetBpmCommand.html#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="../../df/d45/MuseStubs_8h_source.html">MuseStubs.h</a>&gt;</code></p>
 <div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-0-trigger" src="../../closed.png" alt="+"/> Inheritance diagram for Aestra::Audio::SetBpmCommand:</div>
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
@@ -97,8 +102,8 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:ac6b4a57b45ea4ca9e2913e6ac0fcd74f" id="r_ac6b4a57b45ea4ca9e2913e6ac0fcd74f"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/dc8/classAestra_1_1Audio_1_1SetBpmCommand.html#ac6b4a57b45ea4ca9e2913e6ac0fcd74f">SetBpmCommand</a> (<a class="el" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html">AudioEngine</a> &amp;engine, float bpm)</td></tr>
-<tr class="separator:ac6b4a57b45ea4ca9e2913e6ac0fcd74f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4f5329ffe043aca495f29cd48d83e998" id="r_a4f5329ffe043aca495f29cd48d83e998"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/dc8/classAestra_1_1Audio_1_1SetBpmCommand.html#a4f5329ffe043aca495f29cd48d83e998">SetBpmCommand</a> (<a class="el" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html">AudioEngine</a> &amp;engine, float bpm, <a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html">TrackManager</a> *trackManager=nullptr)</td></tr>
+<tr class="separator:a4f5329ffe043aca495f29cd48d83e998"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a097a155d6f6858809f8c1ad6d5e85000" id="r_a097a155d6f6858809f8c1ad6d5e85000"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/dc8/classAestra_1_1Audio_1_1SetBpmCommand.html#a097a155d6f6858809f8c1ad6d5e85000">execute</a> () override</td></tr>
 <tr class="memdesc:a097a155d6f6858809f8c1ad6d5e85000"><td class="mdescLeft">&#160;</td><td class="mdescRight">Execute the command (first time)  <br /></td></tr>
 <tr class="separator:a097a155d6f6858809f8c1ad6d5e85000"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -127,13 +132,18 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a11bfa71f7dddb182290c97f24ffe7bbb inherit pub_methods_classAestra_1_1Audio_1_1ICommand" id="r_a11bfa71f7dddb182290c97f24ffe7bbb"><td class="memItemLeft" align="right" valign="top">virtual std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#a11bfa71f7dddb182290c97f24ffe7bbb">serialize</a> () const</td></tr>
 <tr class="memdesc:a11bfa71f7dddb182290c97f24ffe7bbb inherit pub_methods_classAestra_1_1Audio_1_1ICommand"><td class="mdescLeft">&#160;</td><td class="mdescRight">Serialize command to <a class="el" href="../../df/dee/classAestra_1_1JSON.html">JSON</a> string for persistence.  <br /></td></tr>
 <tr class="separator:a11bfa71f7dddb182290c97f24ffe7bbb inherit pub_methods_classAestra_1_1Audio_1_1ICommand"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af6218e802879166c82ed1e9c7bf7844d inherit pub_methods_classAestra_1_1Audio_1_1ICommand" id="r_af6218e802879166c82ed1e9c7bf7844d"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#af6218e802879166c82ed1e9c7bf7844d">createdAtMs</a> () const</td></tr>
+<tr class="memdesc:af6218e802879166c82ed1e9c7bf7844d inherit pub_methods_classAestra_1_1Audio_1_1ICommand"><td class="mdescLeft">&#160;</td><td class="mdescRight">When the command was made (epoch ms): the moment of the user's action, which the Versions steps list shows.  <br /></td></tr>
+<tr class="separator:af6218e802879166c82ed1e9c7bf7844d inherit pub_methods_classAestra_1_1Audio_1_1ICommand"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock">
-<p class="definition">Definition at line <a class="el" href="../../df/d45/MuseStubs_8h_source.html#l00013">13</a> of file <a class="el" href="../../df/d45/MuseStubs_8h_source.html">MuseStubs.h</a>.</p>
+<div class="textblock"><p>Sets the project tempo the way the transport bar does: the engine (metronome), the playlist, the timeline clock the scheduler reads, and a rewind of scheduled pattern instances. </p>
+<p>Setting only the engine made get_transport say 140 while notes still played at 120. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../df/d45/MuseStubs_8h_source.html#l00016">16</a> of file <a class="el" href="../../df/d45/MuseStubs_8h_source.html">MuseStubs.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="ac6b4a57b45ea4ca9e2913e6ac0fcd74f" name="ac6b4a57b45ea4ca9e2913e6ac0fcd74f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac6b4a57b45ea4ca9e2913e6ac0fcd74f">&#9670;&#160;</a></span>SetBpmCommand()</h2>
+<a id="a4f5329ffe043aca495f29cd48d83e998" name="a4f5329ffe043aca495f29cd48d83e998"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4f5329ffe043aca495f29cd48d83e998">&#9670;&#160;</a></span>SetBpmCommand()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -148,7 +158,13 @@ Public Member Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">float&#160;</td>
-          <td class="paramname"><em>bpm</em>&#160;</td>
+          <td class="paramname"><em>bpm</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html">TrackManager</a> *&#160;</td>
+          <td class="paramname"><em>trackManager</em> = <code>nullptr</code>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -190,7 +206,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#a22e8a4fe943a30ec50ff3d83d3bff9ee">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d45/MuseStubs_8h_source.html#l00021">21</a> of file <a class="el" href="../../df/d45/MuseStubs_8h_source.html">MuseStubs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d45/MuseStubs_8h_source.html#l00024">24</a> of file <a class="el" href="../../df/d45/MuseStubs_8h_source.html">MuseStubs.h</a>.</p>
 
 </div>
 </div>
@@ -221,7 +237,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#a659dccd246e1e0dd194b9c65186bd79a">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00012">12</a> of file <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html">MuseStubs.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00022">22</a> of file <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html">MuseStubs.cpp</a>.</p>
 
 </div>
 </div>
@@ -252,7 +268,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#ae3e1f451745928e912757c133d949589">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00035">35</a> of file <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html">MuseStubs.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00045">45</a> of file <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html">MuseStubs.cpp</a>.</p>
 
 </div>
 </div>
@@ -283,7 +299,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#a4fd53fa4b883ba1b1b6535d49fb9e381">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00027">27</a> of file <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html">MuseStubs.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00037">37</a> of file <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html">MuseStubs.cpp</a>.</p>
 
 </div>
 </div>
@@ -315,7 +331,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#aaf05e3a951ccf862d912b62ddf0ee5a1">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d45/MuseStubs_8h_source.html#l00020">20</a> of file <a class="el" href="../../df/d45/MuseStubs_8h_source.html">MuseStubs.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d45/MuseStubs_8h_source.html#l00023">23</a> of file <a class="el" href="../../df/d45/MuseStubs_8h_source.html">MuseStubs.h</a>.</p>
 
 </div>
 </div>
@@ -346,7 +362,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#a7328063595af865922e82ba6feaaf5c3">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00020">20</a> of file <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html">MuseStubs.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00030">30</a> of file <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html">MuseStubs.cpp</a>.</p>
 
 </div>
 </div>

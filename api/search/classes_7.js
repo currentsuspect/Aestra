@@ -7,12 +7,13 @@ var searchData=
   ['headlesscheckoptions_4',['HeadlessCheckOptions',['../db/d20/structAestra_1_1HeadlessCheckOptions.html',1,'Aestra']]],
   ['headlessmusicgenerator_5',['HeadlessMusicGenerator',['../d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html',1,'Aestra::Audio']]],
   ['historyentry_6',['HistoryEntry',['../d3/d98/structProjectSerializer_1_1HistoryEntry.html',1,'ProjectSerializer']]],
-  ['hooks_7',['Hooks',['../d1/dfa/structAestra_1_1Audio_1_1AutomationClipLayer_1_1Hooks.html',1,'Aestra::Audio::AutomationClipLayer']]],
-  ['hostverbarg_8',['HostVerbArg',['../d9/d69/structAestra_1_1Audio_1_1HostVerbArg.html',1,'Aestra::Audio']]],
-  ['hostverbregistry_9',['HostVerbRegistry',['../d4/d8f/classAestra_1_1Audio_1_1HostVerbRegistry.html',1,'Aestra::Audio']]],
-  ['hostverbresult_10',['HostVerbResult',['../d5/d67/structAestra_1_1Audio_1_1HostVerbResult.html',1,'Aestra::Audio']]],
-  ['hostverbspec_11',['HostVerbSpec',['../df/d52/structAestra_1_1Audio_1_1HostVerbSpec.html',1,'Aestra::Audio']]],
-  ['hsl_12',['HSL',['../d4/dac/structAestraUI_1_1NUIColor_1_1HSL.html',1,'AestraUI::NUIColor']]],
-  ['httpresponse_13',['HttpResponse',['../dd/de2/structAestra_1_1MuseAgent_1_1HttpResponse.html',1,'Aestra::MuseAgent']]],
-  ['hybridpluginfactory_14',['HybridPluginFactory',['../dd/d4a/classAestra_1_1Audio_1_1HybridPluginFactory.html',1,'Aestra::Audio']]]
+  ['hit_7',['Hit',['../de/dd0/structAestra_1_1ArsenalSceneStrip_1_1Hit.html',1,'Aestra::ArsenalSceneStrip']]],
+  ['hooks_8',['Hooks',['../d1/dfa/structAestra_1_1Audio_1_1AutomationClipLayer_1_1Hooks.html',1,'Aestra::Audio::AutomationClipLayer']]],
+  ['hostverbarg_9',['HostVerbArg',['../d9/d69/structAestra_1_1Audio_1_1HostVerbArg.html',1,'Aestra::Audio']]],
+  ['hostverbregistry_10',['HostVerbRegistry',['../d4/d8f/classAestra_1_1Audio_1_1HostVerbRegistry.html',1,'Aestra::Audio']]],
+  ['hostverbresult_11',['HostVerbResult',['../d5/d67/structAestra_1_1Audio_1_1HostVerbResult.html',1,'Aestra::Audio']]],
+  ['hostverbspec_12',['HostVerbSpec',['../df/d52/structAestra_1_1Audio_1_1HostVerbSpec.html',1,'Aestra::Audio']]],
+  ['hsl_13',['HSL',['../d4/dac/structAestraUI_1_1NUIColor_1_1HSL.html',1,'AestraUI::NUIColor']]],
+  ['httpresponse_14',['HttpResponse',['../dd/de2/structAestra_1_1MuseAgent_1_1HttpResponse.html',1,'Aestra::MuseAgent']]],
+  ['hybridpluginfactory_15',['HybridPluginFactory',['../dd/d4a/classAestra_1_1Audio_1_1HybridPluginFactory.html',1,'Aestra::Audio']]]
 ];

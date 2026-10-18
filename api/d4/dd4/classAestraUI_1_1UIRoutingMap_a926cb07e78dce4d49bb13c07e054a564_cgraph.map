@@ -1,0 +1,5 @@
+<map id="AestraUI::UIRoutingMap::refreshLiveState" name="AestraUI::UIRoutingMap::refreshLiveState">
+<area shape="rect" id="Node000001" title="Refresh live state (mute/solo/levels) from the bound view model. Cheap; call per frame." alt="" coords="5,5,184,45"/>
+<area shape="rect" id="Node000002" href="$d3/d51/classAestra_1_1MixerViewModel.html#ac43c7f0354f795c8fdf0834c1bd3a0ba" title="Get channel by ID." alt="" coords="232,5,412,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="184,23,218,23,218,28,184,28"/>
+</map>

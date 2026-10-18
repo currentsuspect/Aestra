@@ -1,26 +1,42 @@
 <map id="TakeManager::Result" name="TakeManager::Result">
-<area shape="rect" id="Node000001" title="Result of a take operation — carries the affected take and manifest." alt="" coords="538,535,695,560"/>
-<area shape="rect" id="Node000002" title=" " alt="" coords="507,95,558,120"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="494,117,405,133,299,159,251,175,211,194,185,216,178,227,175,238,175,460,178,473,185,484,213,503,255,517,308,528,427,541,538,544,538,549,427,546,307,534,254,523,211,507,181,487,173,475,170,461,170,238,173,225,181,212,208,190,249,170,297,154,403,127,493,112"/>
-<area shape="rect" id="Node000005" href="$d6/d74/structTakeManager_1_1TakeEntry.html" title="Metadata for a single take snapshot." alt="" coords="570,227,749,252"/>
-<area shape="poly" id="edge7_Node000005_Node000002" title=" " alt="" coords="549,131,572,165,604,201,638,224,635,229,600,205,568,169,544,134"/>
-<area shape="rect" id="Node000007" href="$da/d15/structTakeManager_1_1Manifest.html" title="The on&#45;disk manifest listing all takes and the active selection." alt="" coords="449,447,622,472"/>
-<area shape="poly" id="edge9_Node000007_Node000002" title=" " alt="" coords="536,134,538,446,533,446,530,134"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="835,95,921,120"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="911,125,937,145,962,171,982,202,990,238,990,461,988,472,981,483,958,500,925,514,883,525,788,539,696,546,696,541,787,534,882,520,923,509,956,496,977,479,983,470,985,460,985,238,977,204,958,174,933,149,908,130"/>
-<area shape="poly" id="edge5_Node000005_Node000003" title=" " alt="" coords="822,121,796,131,773,146,762,160,758,174,754,189,743,205,723,219,701,229,699,224,720,214,739,201,749,187,753,172,758,157,770,142,794,127,820,116"/>
-<area shape="poly" id="edge10_Node000007_Node000003" title=" " alt="" coords="879,134,873,168,862,204,831,276,802,331,763,378,702,425,664,443,623,454,622,449,662,438,699,420,759,374,798,328,826,273,857,202,868,167,873,133"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="809,5,947,45"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="881,59,881,94,875,94,875,59"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="665,266,667,313,667,375,660,444,643,512,629,536,625,533,638,510,654,443,661,374,662,313,659,266"/>
-<area shape="rect" id="Node000008" title=" " alt="" coords="306,344,498,384"/>
-<area shape="poly" id="edge12_Node000008_Node000005" title=" " alt="" coords="557,251,488,261,461,269,442,278,429,292,419,310,408,345,402,343,414,308,424,289,439,274,459,264,487,256,556,245"/>
-<area shape="rect" id="Node000006" title=" " alt="" coords="615,95,690,120"/>
-<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="655,134,657,202,660,226,655,227,651,203,649,134"/>
-<area shape="poly" id="edge8_Node000001_Node000007" title=" " alt="" coords="555,481,580,509,605,533,602,537,576,513,551,484"/>
-<area shape="poly" id="edge11_Node000007_Node000008" title=" " alt="" coords="437,390,478,420,516,444,513,449,475,425,434,395"/>
-<area shape="rect" id="Node000009" title=" " alt="" coords="5,227,135,252"/>
-<area shape="poly" id="edge13_Node000008_Node000009" title=" " alt="" coords="100,257,153,288,216,318,306,343,305,348,214,322,150,293,97,262"/>
-<area shape="rect" id="Node000010" title=" " alt="" coords="51,95,89,120"/>
-<area shape="poly" id="edge14_Node000009_Node000010" title=" " alt="" coords="73,134,73,226,67,226,67,134"/>
+<area shape="rect" id="Node000001" title="Result of a take operation — carries the affected take and manifest." alt="" coords="2120,179,2277,205"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="903,139,953,165"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="967,149,1352,149,1924,149,1983,152,2042,159,2143,177,2142,182,2041,164,1983,157,1924,155,1352,155,967,155"/>
+<area shape="rect" id="Node000005" href="$d6/d74/structTakeManager_1_1TakeEntry.html" title="Metadata for a single take snapshot." alt="" coords="1264,371,1443,397"/>
+<area shape="poly" id="edge7_Node000005_Node000002" title=" " alt="" coords="967,160,1124,208,1199,233,1241,251,1276,280,1307,313,1347,370,1342,373,1302,316,1273,284,1239,256,1197,238,1122,213,965,165"/>
+<area shape="rect" id="Node000014" href="$da/d15/structTakeManager_1_1Manifest.html" title="The on&#45;disk manifest listing all takes and the active selection." alt="" coords="1836,89,2009,114"/>
+<area shape="poly" id="edge21_Node000014_Node000002" title=" " alt="" coords="967,142,1048,131,1270,114,1491,104,1836,98,1836,104,1491,110,1271,119,1048,136,968,147"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="193,191,280,217"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="294,204,732,218,1038,225,1352,228,1924,228,1982,226,2040,219,2140,202,2141,207,2040,225,1982,231,1924,233,1352,233,1038,230,732,224,294,209"/>
+<area shape="poly" id="edge5_Node000005_Node000003" title=" " alt="" coords="293,188,304,187,354,183,404,187,643,210,827,236,1010,275,1241,337,1325,369,1323,374,1239,343,1008,280,826,241,642,215,404,192,354,189,304,192,294,193"/>
+<area shape="rect" id="Node000009" href="$d4/dca/structTakeManager_1_1TakeEntry_1_1Note.html" title="A timestamped note on a version." alt="" coords="428,261,607,301"/>
+<area shape="poly" id="edge12_Node000009_Node000003" title=" " alt="" coords="273,221,305,235,367,253,429,266,427,271,366,258,303,240,271,226"/>
+<area shape="rect" id="Node000013" href="$d2/dae/structTakeManager_1_1TakeEntry_1_1Step.html" title="One change made inside a version: the label, time and command type, written when it is saved." alt="" coords="428,379,607,419"/>
+<area shape="poly" id="edge17_Node000013_Node000003" title=" " alt="" coords="245,229,265,289,282,320,306,346,333,364,364,377,428,392,427,398,362,383,331,369,302,350,278,323,260,291,240,231"/>
+<area shape="poly" id="edge22_Node000014_Node000003" title=" " alt="" coords="259,179,302,140,363,97,399,77,436,61,476,51,516,47,1653,47,1717,51,1779,61,1882,86,1881,91,1778,66,1716,56,1653,52,516,52,477,56,438,66,401,82,366,101,306,144,262,183"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="5,184,144,224"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="157,201,193,201,193,207,157,207"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="1415,397,1484,411,1567,422,1658,425,1703,421,1747,413,1816,394,1883,369,1948,339,2009,308,2112,247,2178,203,2181,207,2115,252,2012,313,1950,344,1885,374,1817,399,1749,419,1704,426,1658,430,1567,427,1483,417,1414,403"/>
+<area shape="rect" id="Node000015" title=" " alt="" coords="1556,364,1748,404"/>
+<area shape="poly" id="edge24_Node000015_Node000005" title=" " alt="" coords="1456,381,1556,381,1556,387,1456,387"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="199,375,274,401"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="288,380,428,364,595,352,726,347,856,346,1024,349,1132,352,1240,361,1289,369,1288,374,1240,367,1132,357,1024,355,856,351,726,352,596,358,428,369,288,385"/>
+<area shape="poly" id="edge11_Node000009_Node000006" title=" " alt="" coords="251,362,273,335,303,311,355,296,428,286,428,291,356,301,305,316,277,338,255,365"/>
+<area shape="poly" id="edge18_Node000013_Node000006" title=" " alt="" coords="270,405,305,419,339,424,374,424,442,416,442,421,375,430,339,429,303,424,268,410"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="903,429,953,454"/>
+<area shape="poly" id="edge8_Node000005_Node000007" title=" " alt="" coords="967,435,1240,401,1284,394,1285,399,1240,407,968,440"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="832,364,1024,404"/>
+<area shape="poly" id="edge9_Node000005_Node000008" title=" " alt="" coords="1038,381,1264,381,1264,387,1038,387"/>
+<area shape="poly" id="edge10_Node000008_Node000009" title=" " alt="" coords="621,278,713,286,762,295,809,308,861,333,903,362,900,366,858,337,807,313,761,300,713,291,620,283"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="453,499,582,525"/>
+<area shape="poly" id="edge13_Node000008_Node000010" title=" " alt="" coords="573,493,630,479,682,474,724,476,763,474,783,467,806,454,814,445,818,436,822,425,830,414,849,402,852,406,834,418,826,427,823,437,819,448,810,458,786,472,764,479,724,482,682,479,631,484,574,498"/>
+<area shape="rect" id="Node000012" title=" " alt="" coords="832,479,1024,519"/>
+<area shape="poly" id="edge19_Node000012_Node000010" title=" " alt="" coords="596,511,697,511,808,508,831,506,832,512,808,513,697,517,596,516"/>
+<area shape="poly" id="edge25_Node000015_Node000010" title=" " alt="" coords="596,515,832,528,947,532,1037,532,1126,525,1239,505,1339,482,1437,454,1595,402,1597,407,1438,459,1340,487,1241,511,1127,530,1037,537,947,537,832,533,596,521"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="217,499,256,525"/>
+<area shape="poly" id="edge14_Node000010_Node000011" title=" " alt="" coords="270,509,452,509,452,515,270,515"/>
+<area shape="poly" id="edge15_Node000005_Node000012" title=" " alt="" coords="1037,488,1137,473,1189,461,1239,446,1291,421,1333,395,1336,399,1294,426,1241,450,1190,466,1138,478,1038,493"/>
+<area shape="poly" id="edge16_Node000012_Node000013" title=" " alt="" coords="620,394,730,399,777,407,809,419,820,430,823,442,826,453,834,463,854,476,851,481,830,467,821,455,818,443,815,433,807,424,775,412,729,404,620,399"/>
+<area shape="poly" id="edge20_Node000001_Node000014" title=" " alt="" coords="2024,112,2097,132,2143,154,2181,177,2178,182,2141,159,2095,137,2022,117"/>
+<area shape="poly" id="edge23_Node000014_Node000015" title=" " alt="" coords="1680,352,1907,113,1911,116,1684,356"/>
 </map>

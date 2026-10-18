@@ -10,12 +10,12 @@
 <area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="592,197,502,176,504,171,593,192"/>
 <area shape="rect" id="Node000009" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#af47f2b977f84c15cf5b7770c358454a5" title="Start Arsenal playback for the supplied pattern." alt="" coords="311,197,519,237"/>
 <area shape="poly" id="edge8_Node000002_Node000009" title=" " alt="" coords="570,220,519,220,519,215,570,215"/>
-<area shape="rect" id="Node000012" href="$d7/dc5/classAestra_1_1Audio_1_1QuantizePatternCommand.html#a99e8c49e3abea3dd519439a585d17029" title="Undo the command." alt="" coords="305,261,526,301"/>
-<area shape="poly" id="edge11_Node000002_Node000012" title=" " alt="" coords="593,243,504,264,502,259,592,238"/>
-<area shape="rect" id="Node000013" href="$d2/d0c/classAestra_1_1Audio_1_1SetPatternLengthCommand.html#a8946a0511511b32c1392107621deb4f0" title="Undo the command." alt="" coords="323,325,507,365"/>
-<area shape="poly" id="edge12_Node000002_Node000013" title=" " alt="" coords="656,248,601,283,537,316,505,328,503,323,535,311,598,278,653,243"/>
-<area shape="rect" id="Node000014" href="$d6/d95/classAestra_1_1Audio_1_1SetStepsCommand.html#a14751af4a7755ebe3c72e810ce283e45" title="Undo the command." alt="" coords="295,389,536,429"/>
-<area shape="poly" id="edge13_Node000002_Node000014" title=" " alt="" coords="673,250,616,316,579,350,537,380,512,392,510,387,535,375,576,346,612,312,669,247"/>
+<area shape="rect" id="Node000013" href="$d7/dc5/classAestra_1_1Audio_1_1QuantizePatternCommand.html#a99e8c49e3abea3dd519439a585d17029" title="Undo the command." alt="" coords="305,261,526,301"/>
+<area shape="poly" id="edge12_Node000002_Node000013" title=" " alt="" coords="593,243,504,264,502,259,592,238"/>
+<area shape="rect" id="Node000014" href="$d2/d0c/classAestra_1_1Audio_1_1SetPatternLengthCommand.html#a8946a0511511b32c1392107621deb4f0" title="Undo the command." alt="" coords="323,325,507,365"/>
+<area shape="poly" id="edge13_Node000002_Node000014" title=" " alt="" coords="656,248,601,283,537,316,505,328,503,323,535,311,598,278,653,243"/>
+<area shape="rect" id="Node000015" href="$d6/d95/classAestra_1_1Audio_1_1SetStepsCommand.html#a14751af4a7755ebe3c72e810ce283e45" title="Undo the command." alt="" coords="295,389,536,429"/>
+<area shape="poly" id="edge14_Node000002_Node000015" title=" " alt="" coords="673,250,616,316,579,350,537,380,512,392,510,387,535,375,576,346,612,312,669,247"/>
 <area shape="rect" id="Node000004" href="$d7/dc5/classAestra_1_1Audio_1_1QuantizePatternCommand.html#ab3cd01b070835f30fcadea96baee0b09" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="15,5,237,45"/>
 <area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="291,28,237,28,237,23,291,23"/>
 <area shape="rect" id="Node000006" href="$d2/d0c/classAestra_1_1Audio_1_1SetPatternLengthCommand.html#ab88d94eec9f692120475566b29cfdd60" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="34,69,218,109"/>
@@ -26,4 +26,6 @@
 <area shape="poly" id="edge9_Node000009_Node000010" title=" " alt="" coords="298,220,242,220,242,215,298,215"/>
 <area shape="rect" id="Node000011" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a03084991ebcfdc0bd7a61b86b0839191" title="A pattern clip previews from the Timeline: pattern playback without an Arsenal focus." alt="" coords="13,261,239,301"/>
 <area shape="poly" id="edge10_Node000009_Node000011" title=" " alt="" coords="311,243,218,264,216,259,310,238"/>
+<area shape="rect" id="Node000012" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a70f15085c9ec7f1d44e14728dbe98e5e" title="The Arsenal&#39;s active pattern changed (a scene chip, the pattern browser)." alt="" coords="11,325,241,365"/>
+<area shape="poly" id="edge11_Node000009_Node000012" title=" " alt="" coords="306,246,296,251,281,267,273,283,265,299,248,315,226,328,224,323,245,311,260,296,268,280,277,263,293,247,303,241"/>
 </map>

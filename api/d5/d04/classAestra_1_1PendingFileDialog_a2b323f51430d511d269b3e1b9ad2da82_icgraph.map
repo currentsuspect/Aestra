@@ -1,0 +1,5 @@
+<map id="Aestra::PendingFileDialog::start" name="Aestra::PendingFileDialog::start">
+<area shape="rect" id="Node000001" title="False if a picker from this owner is already open, or no platform layer." alt="" coords="255,5,444,45"/>
+<area shape="rect" id="Node000002" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a5c9ac77599f4bd13c12f7b9dd2bbc805" title="Handle mouse input routed to the Arsenal panel." alt="" coords="5,5,207,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="241,28,207,28,207,23,241,23"/>
+</map>

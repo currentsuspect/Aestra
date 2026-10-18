@@ -210,8 +210,8 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span> </div>
 <div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>std::vector&lt;SystemPlace&gt; discoverSystemPlacesFrom(<span class="keyword">const</span> std::string&amp; homeDir,</div>
 <div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>                                                  <span class="keyword">const</span> std::vector&lt;std::pair&lt;std::string, std::string&gt;&gt;&amp; xdg) {</div>
-<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>    std::vector&lt;SystemPlace&gt; places;</div>
-<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>    <span class="keywordflow">if</span> (homeDir.empty()) <span class="keywordflow">return</span> places;</div>
+<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>    std::vector&lt;SystemPlace&gt; <a class="code hl_function" href="../../d5/d7a/namespaceAestra_1_1AuditionFiles.html#aebc3282b36f33a9d2818571a42f913c7">places</a>;</div>
+<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>    <span class="keywordflow">if</span> (homeDir.empty()) <span class="keywordflow">return</span> <a class="code hl_function" href="../../d5/d7a/namespaceAestra_1_1AuditionFiles.html#aebc3282b36f33a9d2818571a42f913c7">places</a>;</div>
 <div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span> </div>
 <div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>    <span class="keyword">const</span> std::filesystem::path home(homeDir);</div>
 <div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span>    <span class="keyword">const</span> <span class="keyword">auto</span> xdgPath = [&amp;](<span class="keyword">const</span> <span class="keywordtype">char</span>* key, <span class="keyword">const</span> <span class="keywordtype">char</span>* fallbackName) -&gt; std::filesystem::path {</div>
@@ -239,9 +239,9 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>        <span class="keywordflow">if</span> (label != <span class="stringliteral">&quot;Home&quot;</span> &amp;&amp; key == homeKey) <span class="keywordflow">continue</span>;</div>
 <div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>        <span class="keywordflow">if</span> (std::find(seen.begin(), seen.end(), key) != seen.end()) <span class="keywordflow">continue</span>;</div>
 <div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>        seen.push_back(key);</div>
-<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>        places.push_back({label, path.string()});</div>
+<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>        <a class="code hl_function" href="../../d5/d7a/namespaceAestra_1_1AuditionFiles.html#aebc3282b36f33a9d2818571a42f913c7">places</a>.push_back({<a class="code hl_function" href="../../d3/d6c/namespaceAestra_1_1VersionLanes.html#ac0a166ab89427132371d511b9c8ab004">label</a>, path.string()});</div>
 <div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>    }</div>
-<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>    <span class="keywordflow">return</span> places;</div>
+<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>    <span class="keywordflow">return</span> <a class="code hl_function" href="../../d5/d7a/namespaceAestra_1_1AuditionFiles.html#aebc3282b36f33a9d2818571a42f913c7">places</a>;</div>
 <div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>}</div>
 <div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span> </div>
 <div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>std::vector&lt;SystemPlace&gt; discoverSystemPlaces() {</div>
@@ -596,6 +596,8 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00512" name="l00512"></a><span class="lineno">  512</span>}</div>
 <div class="line"><a id="l00513" name="l00513"></a><span class="lineno">  513</span> </div>
 <div class="line"><a id="l00514" name="l00514"></a><span class="lineno">  514</span>} <span class="comment">// namespace AestraUI::BrowserLibrary</span></div>
+<div class="ttc" id="anamespaceAestra_1_1AuditionFiles_html_aebc3282b36f33a9d2818571a42f913c7"><div class="ttname"><a href="../../d5/d7a/namespaceAestra_1_1AuditionFiles.html#aebc3282b36f33a9d2818571a42f913c7">Aestra::AuditionFiles::places</a></div><div class="ttdeci">std::vector&lt; Place &gt; places(const std::string &amp;projectDir, const std::string &amp;home)</div><div class="ttdoc">The folders worth jumping to, the ones that exist: the project's own, then the usual places for music...</div><div class="ttdef"><b>Definition</b> <a href="../../d6/db9/AuditionFiles_8h_source.html#l00064">AuditionFiles.h:64</a></div></div>
+<div class="ttc" id="anamespaceAestra_1_1VersionLanes_html_ac0a166ab89427132371d511b9c8ab004"><div class="ttname"><a href="../../d3/d6c/namespaceAestra_1_1VersionLanes.html#ac0a166ab89427132371d511b9c8ab004">Aestra::VersionLanes::label</a></div><div class="ttdeci">std::string label(const std::string &amp;branch)</div><div class="ttdoc">How a branch reads on screen: the first lane is stored as &quot;Main&quot; and shows as the main mix.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d43/VersionLanes_8h_source.html#l00027">VersionLanes.h:27</a></div></div>
 <div class="ttc" id="anamespacestd_html"><div class="ttname"><a href="../../d8/dcc/namespacestd.html">std</a></div><div class="ttdoc">STL namespace.</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

@@ -90,7 +90,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#include &lt;cassert&gt;</span></div>
 <div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &lt;iostream&gt;</span></div>
 <div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span> </div>
-<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="keyword">using namespace </span>Aestra;</div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="keyword">using namespace </span><a class="code hl_namespace" href="../../d8/d94/namespaceAestra.html">Aestra</a>;</div>
 <div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span> </div>
 <div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="preprocessor">#define TEST_ASSERT(condition, message)                  \</span></div>
 <div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="preprocessor">    if (!(condition)) {                                  \</span></div>
@@ -163,9 +163,9 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span> </div>
 <div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    <span class="comment">// Test version</span></div>
 <div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    std::cout &lt;&lt; <span class="stringliteral">&quot;  Version: &quot;</span> &lt;&lt; AESTRA_VERSION_STRING &lt;&lt; std::endl;</div>
-<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>    TEST_ASSERT(AESTRA_VERSION_MAJOR == 0, <span class="stringliteral">&quot;Major version should be 0&quot;</span>);</div>
-<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>    TEST_ASSERT(AESTRA_VERSION_MINOR == 1, <span class="stringliteral">&quot;Minor version should be 1&quot;</span>);</div>
-<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>    TEST_ASSERT(AESTRA_VERSION_PATCH == 0, <span class="stringliteral">&quot;Patch version should be 0&quot;</span>);</div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>    <span class="comment">// Built in the tree, the version is the project&#39;s, not a header&#39;s fallback (it said 0.1.0 through v0.8.0).</span></div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>    TEST_ASSERT(std::string(AESTRA_VERSION_STRING) != <span class="stringliteral">&quot;unknown&quot;</span>, <span class="stringliteral">&quot;Version should come from the build&quot;</span>);</div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>    TEST_ASSERT(std::string(AESTRA_VERSION_STRING) != <span class="stringliteral">&quot;0.1.0&quot;</span>, <span class="stringliteral">&quot;Version should not be the old hard-coded 0.1.0&quot;</span>);</div>
 <div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span> </div>
 <div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    <span class="comment">// Test utility macros</span></div>
 <div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>    <span class="keyword">const</span> <span class="keywordtype">char</span>* test = AESTRA_STRINGIFY(AESTRA);</div>
@@ -298,6 +298,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span> </div>
 <div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>    <span class="keywordflow">return</span> allPassed ? 0 : 1;</div>
 <div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>}</div>
+<div class="ttc" id="anamespaceAestra_html"><div class="ttname"><a href="../../d8/d94/namespaceAestra.html">Aestra</a></div><div class="ttdoc">Main application class.</div><div class="ttdef"><b>Definition</b> <a href="../../d7/d7b/AestraAssert_8h_source.html#l00009">AestraAssert.h:9</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

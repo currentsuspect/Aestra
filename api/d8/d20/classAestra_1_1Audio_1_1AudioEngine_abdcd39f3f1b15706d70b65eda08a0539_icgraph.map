@@ -4,12 +4,12 @@
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="881,127,831,92,772,60,741,48,743,43,774,55,834,88,884,123"/>
 <area shape="rect" id="Node000003" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a9312fb6a7145e21d39409a19c0203284" title="Render the project to an audio file using the full live engine path (processBlock)." alt="" coords="553,69,762,109"/>
 <area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="824,133,740,112,741,107,825,127"/>
-<area shape="rect" id="Node000007" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a4ad10b6d3c3d40e7490eca3f02a6c676" title="Set the playhead position in beats." alt="" coords="558,133,757,173"/>
-<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="808,156,757,156,757,151,808,151"/>
-<area shape="rect" id="Node000008" href="$db/d60/classAestraContent.html#ab90c78e0fe24a2ff739817b3c4a4440d" title="Create the Arsenal and sample&#45;editor overlays." alt="" coords="553,197,761,237"/>
-<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="825,179,741,200,740,195,824,174"/>
-<area shape="rect" id="Node000009" href="$db/d60/classAestraContent.html#a3f46086b14acbf0007e9c0235a2f7c49" title="Stop playback based on the current focus mode." alt="" coords="541,261,773,301"/>
-<area shape="poly" id="edge9_Node000001_Node000009" title=" " alt="" coords="884,184,834,219,774,252,743,264,741,259,772,247,831,215,881,180"/>
+<area shape="rect" id="Node000008" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a4ad10b6d3c3d40e7490eca3f02a6c676" title="Set the playhead position in beats." alt="" coords="558,133,757,173"/>
+<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="808,156,757,156,757,151,808,151"/>
+<area shape="rect" id="Node000009" href="$db/d60/classAestraContent.html#ab90c78e0fe24a2ff739817b3c4a4440d" title="Create the Arsenal and sample&#45;editor overlays." alt="" coords="553,197,761,237"/>
+<area shape="poly" id="edge9_Node000001_Node000009" title=" " alt="" coords="825,179,741,200,740,195,824,174"/>
+<area shape="rect" id="Node000010" href="$db/d60/classAestraContent.html#a3f46086b14acbf0007e9c0235a2f7c49" title="Stop playback based on the current focus mode." alt="" coords="541,261,773,301"/>
+<area shape="poly" id="edge10_Node000001_Node000010" title=" " alt="" coords="884,184,834,219,774,252,743,264,741,259,772,247,831,215,881,180"/>
 <area shape="rect" id="Node000004" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a7db2feb78f7e58219497974d28a5225f" title="Convenience helper matching AudioEngine::bounceRangeToWav signature." alt="" coords="268,37,477,77"/>
 <area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="539,79,477,72,478,66,540,73"/>
 <area shape="rect" id="Node000006" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a1400dd1c5eded988d4e0c4bc78e592e2" title="Render the same range render() would, into memory (V8&#45;W4)." alt="" coords="268,101,477,141"/>
@@ -17,6 +17,8 @@
 <area shape="rect" id="Node000005" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file." alt="" coords="5,37,204,77"/>
 <area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="255,69,204,69,204,63,255,64"/>
 <area shape="poly" id="edge5_Node000005_Node000004" title=" " alt="" coords="218,46,268,46,268,51,218,51"/>
-<area shape="rect" id="Node000010" href="$db/d60/classAestraContent.html#aa2d67aab8ab85aa5c68d72369b31278f" title="Create the transport bar and wire it to the audio engine." alt="" coords="252,269,493,294"/>
-<area shape="poly" id="edge10_Node000009_Node000010" title=" " alt="" coords="528,284,494,284,494,279,528,279"/>
+<area shape="rect" id="Node000007" href="$db/d60/classAestraContent.html#a540998ede72de460fd746a8f6d4f4d60" title="The whole project&#39;s mix, rendered offline into memory (a version&#39;s bounce). False when there is nothi..." alt="" coords="10,101,199,141"/>
+<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="254,124,200,124,200,119,254,119"/>
+<area shape="rect" id="Node000011" href="$db/d60/classAestraContent.html#aa2d67aab8ab85aa5c68d72369b31278f" title="Create the transport bar and wire it to the audio engine." alt="" coords="252,269,493,294"/>
+<area shape="poly" id="edge11_Node000010_Node000011" title=" " alt="" coords="528,284,494,284,494,279,528,279"/>
 </map>

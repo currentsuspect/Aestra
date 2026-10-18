@@ -1,7 +1,10 @@
 <map id="TakeManager::resolveSnapshotPath" name="TakeManager::resolveSnapshotPath">
-<area shape="rect" id="Node000001" title="Returns the full snapshot file path for a specific take." alt="" coords="259,31,511,56"/>
+<area shape="rect" id="Node000001" title="Returns the full snapshot file path for a specific take." alt="" coords="259,55,511,80"/>
 <area shape="rect" id="Node000002" href="$df/db6/classTakeManager.html#a4bfdd60c05dd236082716dbda70ee256" title="Deletes a take from the manifest and removes its snapshot." alt="" coords="15,5,201,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="245,33,201,29,202,24,245,28"/>
-<area shape="rect" id="Node000003" href="$df/db6/classTakeManager.html#a407826eace82c3e2e477e1f608340224" title="Duplicates a take by copying its snapshot into a new take entry." alt="" coords="5,55,211,80"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="245,58,211,61,210,56,245,53"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="299,55,180,33,181,28,300,50"/>
+<area shape="rect" id="Node000003" href="$df/db6/classTakeManager.html#a35532730621415d08a0c5cb84549460f" title="Duplicates a take by copying its snapshot into a new take entry." alt="" coords="5,55,211,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="245,70,211,70,211,65,245,65"/>
+<area shape="rect" id="Node000004" href="$d8/d94/namespaceAestra.html#aaf0e6915c00569f7145d2073f3ac8509" title="Bring over: read another version&#39;s snapshot into a scratch project and offer what it has; confirming ..." alt="" coords="25,128,191,153"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="323,86,158,130,156,125,321,81"/>
+<area shape="poly" id="edge4_Node000004_Node000004" title=" " alt="" coords="157,119,155,114,146,111,108,107,78,109,63,114,59,119,68,126,64,130,54,120,59,110,77,103,108,101,147,105,158,110,162,116"/>
 </map>

@@ -1,0 +1,9 @@
+<map id="Aestra::ArsenalSceneStrip::onMouse" name="Aestra::ArsenalSceneStrip::onMouse">
+<area shape="rect" id="Node000001" title="Pointer routing for the strip: chips select, &quot;+&quot; makes the next pattern, the swing zone drags,..." alt="" coords="5,37,196,77"/>
+<area shape="rect" id="Node000002" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#af17c4e7693841ef1bc5821a6b4cbba8c" title="Create a MIDI pattern." alt="" coords="244,5,464,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="196,43,230,38,231,44,196,48"/>
+<area shape="rect" id="Node000004" href="$dc/d1e/classAestra_1_1ArsenalSceneStrip.html#a7f60847d0bb4e1d6f50c70f7f5188a48" title="&quot;Pattern N&quot; that no existing scene already uses." alt="" coords="259,69,449,109"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="196,67,245,73,245,78,196,72"/>
+<area shape="rect" id="Node000003" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#ac8e1d96a07695282b8eb255ad01a6b9a" title="Create a MIDI pattern restoring a serialized identity (#446)." alt="" coords="512,5,732,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="464,23,498,23,498,28,464,28"/>
+</map>

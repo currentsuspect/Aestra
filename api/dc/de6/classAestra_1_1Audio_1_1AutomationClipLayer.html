@@ -70,7 +70,7 @@ $(function() {
 
 <div id="nav-path" class="navpath">
   <ul>
-<li class="navelem"><b>Aestra</b></li><li class="navelem"><b>Audio</b></li><li class="navelem"><a class="el" href="../../dc/de6/classAestra_1_1Audio_1_1AutomationClipLayer.html">AutomationClipLayer</a></li>  </ul>
+<li class="navelem"><a class="el" href="../../d8/d94/namespaceAestra.html">Aestra</a></li><li class="navelem"><b>Audio</b></li><li class="navelem"><a class="el" href="../../dc/de6/classAestra_1_1Audio_1_1AutomationClipLayer.html">AutomationClipLayer</a></li>  </ul>
 </div>
 </div><!-- top -->
 <div class="header">
@@ -83,7 +83,7 @@ $(function() {
 </div><!--header-->
 <div class="contents">
 
-<p>The automation clips of one lane: drawn as headed bands, dragged by their grip to move, Ctrl-dragged to copy, right-clicked on the header for Duplicate / Split Here / Delete (V8-A7).  
+<p>The automation clips of one lane: drawn as headed bands, dragged by their grip to move, Ctrl-dragged to copy, right-clicked on the header for Duplicate / Split Here / Delete (V8-A7), and created with a right-click on empty lane space ("Create Automation Clip").  
  <a href="../../dc/de6/classAestra_1_1Audio_1_1AutomationClipLayer.html#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="../../d6/dfc/AutomationClipLayer_8h_source.html">AutomationClipLayer.h</a>&gt;</code></p>
@@ -120,11 +120,11 @@ Static Public Attributes</h2></td></tr>
 <tr class="separator:ad6a1cf65a964bdd6e36e43a4b3e18f25"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>The automation clips of one lane: drawn as headed bands, dragged by their grip to move, Ctrl-dragged to copy, right-clicked on the header for Duplicate / Split Here / Delete (V8-A7). </p>
+<div class="textblock"><p>The automation clips of one lane: drawn as headed bands, dragged by their grip to move, Ctrl-dragged to copy, right-clicked on the header for Duplicate / Split Here / Delete (V8-A7), and created with a right-click on empty lane space ("Create Automation Clip"). </p>
 <p>Only the grip (a small tab at the clip's start) and a right-click on the header are the layer's. Every other press, including one on the rest of the header, is point editing's, and a point under the pointer always wins, so adding or grabbing points near the top of the lane works as before.</p>
 <p>The operations are <a class="el" href="../../d3/dbe/AutomationRegions_8h.html" title="Automation clips (V8-A7): the operations, as pure functions on one curve.">AutomationRegions.h</a>; this is only the gesture on top of them. Every edit is one undo step: the lane's curves are snapshotted at the press, edited live while dragging, and pushed as an <a class="el" href="../../d6/d92/classAestra_1_1Audio_1_1EditAutomationCurvesCommand.html" title="Undoable whole-vector replacement of a lane&#39;s automation curves.">EditAutomationCurvesCommand</a> on release. A curve that has points but no stored clips shows one implicit clip over all its points. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/dfc/AutomationClipLayer_8h_source.html#l00037">37</a> of file <a class="el" href="../../d6/dfc/AutomationClipLayer_8h_source.html">AutomationClipLayer.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/dfc/AutomationClipLayer_8h_source.html#l00038">38</a> of file <a class="el" href="../../d6/dfc/AutomationClipLayer_8h_source.html">AutomationClipLayer.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a53469db4022e0a17ed3784201e88028f" name="a53469db4022e0a17ed3784201e88028f"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a53469db4022e0a17ed3784201e88028f">&#9670;&#160;</a></span>AutomationClipLayer()</h2>
@@ -150,7 +150,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d6/dfc/AutomationClipLayer_8h_source.html#l00051">51</a> of file <a class="el" href="../../d6/dfc/AutomationClipLayer_8h_source.html">AutomationClipLayer.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/dfc/AutomationClipLayer_8h_source.html#l00053">53</a> of file <a class="el" href="../../d6/dfc/AutomationClipLayer_8h_source.html">AutomationClipLayer.h</a>.</p>
 
 </div>
 </div>
@@ -197,7 +197,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d6/dfc/AutomationClipLayer_8h_source.html#l00062">62</a> of file <a class="el" href="../../d6/dfc/AutomationClipLayer_8h_source.html">AutomationClipLayer.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/dfc/AutomationClipLayer_8h_source.html#l00064">64</a> of file <a class="el" href="../../d6/dfc/AutomationClipLayer_8h_source.html">AutomationClipLayer.h</a>.</p>
 
 </div>
 </div>
@@ -255,7 +255,7 @@ Static Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../de/d37/AutomationClipLayer_8cpp_source.html#l00127">127</a> of file <a class="el" href="../../de/d37/AutomationClipLayer_8cpp_source.html">AutomationClipLayer.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/dfc/AutomationClipLayer_8h_source.html#l00047">Aestra::Audio::AutomationClipLayer::Hooks::captureMouse</a>, <a class="el" href="../../d6/dfc/AutomationClipLayer_8h_source.html#l00048">Aestra::Audio::AutomationClipLayer::Hooks::changed</a>, <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00225">Aestra::Audio::PlaylistModel::getLane()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00636">Aestra::Audio::TrackManager::getPlaylistModel()</a>, and <a class="el" href="../../d6/dfc/AutomationClipLayer_8h_source.html#l00046">Aestra::Audio::AutomationClipLayer::Hooks::snapBeat</a>.</p>
+<p class="reference">References <a class="el" href="../../d6/dfc/AutomationClipLayer_8h_source.html#l00041">Aestra::Audio::AutomationClipLayer::Geometry::bounds</a>, <a class="el" href="../../d6/dfc/AutomationClipLayer_8h_source.html#l00049">Aestra::Audio::AutomationClipLayer::Hooks::captureMouse</a>, <a class="el" href="../../d6/dfc/AutomationClipLayer_8h_source.html#l00050">Aestra::Audio::AutomationClipLayer::Hooks::changed</a>, <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00225">Aestra::Audio::PlaylistModel::getLane()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00636">Aestra::Audio::TrackManager::getPlaylistModel()</a>, and <a class="el" href="../../d6/dfc/AutomationClipLayer_8h_source.html#l00048">Aestra::Audio::AutomationClipLayer::Hooks::snapBeat</a>.</p>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-1-summary" class="dynsummary" style="display:block;">
@@ -329,7 +329,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d6/dfc/AutomationClipLayer_8h_source.html#l00054">54</a> of file <a class="el" href="../../d6/dfc/AutomationClipLayer_8h_source.html">AutomationClipLayer.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/dfc/AutomationClipLayer_8h_source.html#l00056">56</a> of file <a class="el" href="../../d6/dfc/AutomationClipLayer_8h_source.html">AutomationClipLayer.h</a>.</p>
 
 </div>
 </div>

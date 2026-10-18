@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::TrackManager::getTimelineClock" name="Aestra::Audio::TrackManager::getTimelineClock">
+<area shape="rect" id="Node000001" title="Access the transport clock used by timeline and pattern playback." alt="" coords="284,5,492,45"/>
+<area shape="rect" id="Node000002" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a70f15085c9ec7f1d44e14728dbe98e5e" title="The Arsenal&#39;s active pattern changed (a scene chip, the pattern browser)." alt="" coords="5,5,236,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="271,28,236,28,236,23,271,23"/>
+</map>

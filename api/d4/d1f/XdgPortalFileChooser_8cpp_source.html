@@ -282,7 +282,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>    <span class="keywordtype">void</span> filters(<span class="keyword">const</span> std::vector&lt;Filter&gt;&amp; filters) {</div>
 <div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>        <span class="keywordflow">if</span> (filters.empty()) <span class="keywordflow">return</span>;</div>
 <div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>        entry(<span class="stringliteral">&quot;filters&quot;</span>, <span class="stringliteral">&quot;a(sa(us))&quot;</span>, [&amp;](DBusMessageIter* v) {</div>
-<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>            DBusMessageIter list{};</div>
+<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>            DBusMessageIter <a class="code hl_function" href="../../d5/d7a/namespaceAestra_1_1AuditionFiles.html#a9bc5465bc247aac916885e2c54891f45">list</a>{};</div>
 <div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>            m_api.message_iter_open_container(v, kTypeArray, <span class="stringliteral">&quot;(sa(us))&quot;</span>, &amp;list);</div>
 <div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>            <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; f : filters) {</div>
 <div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>                DBusMessageIter item{};</div>
@@ -608,6 +608,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00524" name="l00524"></a><span class="lineno">  524</span>}</div>
 <div class="line"><a id="l00525" name="l00525"></a><span class="lineno">  525</span> </div>
 <div class="line"><a id="l00526" name="l00526"></a><span class="lineno">  526</span>} <span class="comment">// namespace Aestra::XdgPortal</span></div>
+<div class="ttc" id="anamespaceAestra_1_1AuditionFiles_html_a9bc5465bc247aac916885e2c54891f45"><div class="ttname"><a href="../../d5/d7a/namespaceAestra_1_1AuditionFiles.html#a9bc5465bc247aac916885e2c54891f45">Aestra::AuditionFiles::list</a></div><div class="ttdeci">std::vector&lt; Entry &gt; list(const std::string &amp;dir)</div><div class="ttdoc">Folders first, then audio files, each in name order (case-insensitive).</div><div class="ttdef"><b>Definition</b> <a href="../../d6/db9/AuditionFiles_8h_source.html#l00045">AuditionFiles.h:45</a></div></div>
 <div class="ttc" id="anamespacestd_html"><div class="ttname"><a href="../../d8/dcc/namespacestd.html">std</a></div><div class="ttdoc">STL namespace.</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

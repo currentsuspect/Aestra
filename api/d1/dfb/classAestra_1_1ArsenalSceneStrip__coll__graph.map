@@ -1,0 +1,7 @@
+<map id="Aestra::ArsenalSceneStrip" name="Aestra::ArsenalSceneStrip">
+<area shape="rect" id="Node000001" title="The Arsenal&#39;s pattern scenes (V81&#45;AR1, FD&#45;27 point 1): every MIDI pattern is a chip,..." alt="" coords="5,181,196,207"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="30,5,81,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="52,44,47,98,50,128,59,156,68,169,81,179,77,183,65,173,54,159,45,129,42,98,47,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="117,5,177,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="147,45,137,97,121,158,110,182,105,180,115,156,132,96,141,44"/>
+</map>

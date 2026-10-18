@@ -1,14 +1,26 @@
 <map id="AestraAudio/include/Playback/AuditionEngine.h" name="AestraAudio/include/Playback/AuditionEngine.h">
-<area shape="rect" id="Node000001" title="Dedicated audio engine for Audition Mode." alt="" coords="248,5,447,45"/>
-<area shape="rect" id="Node000002" href="$df/dc3/AudioEngine_8cpp_source.html" title=" " alt="" coords="5,93,164,133"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="278,52,143,96,141,91,276,47"/>
-<area shape="rect" id="Node000003" href="$d2/d66/AuditionEngine_8cpp_source.html" title=" " alt="" coords="189,93,375,133"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="327,58,299,95,294,91,323,55"/>
-<area shape="rect" id="Node000004" href="$dd/de4/AestraContent_8cpp.html" title="Main content area for Aestra &#45; Implementation." alt="" coords="301,181,525,207"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="370,56,390,92,405,141,413,181,408,182,400,142,385,94,366,58"/>
-<area shape="rect" id="Node000005" href="$d3/d97/AuditionPanel_8h.html" title="Main UI panel for Audition Mode &#45; the &quot;Spotify for musicians&quot; experience." alt="" coords="451,101,668,126"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="408,48,532,98,530,103,406,53"/>
-<area shape="poly" id="edge5_Node000005_Node000004" title=" " alt="" coords="527,135,436,183,433,179,524,130"/>
-<area shape="rect" id="Node000006" href="$d1/dd1/AuditionPanel_8cpp_source.html" title=" " alt="" coords="549,181,781,207"/>
-<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="587,132,651,179,647,183,584,136"/>
+<area shape="rect" id="Node000001" title="Dedicated audio engine for Audition Mode." alt="" coords="382,5,581,45"/>
+<area shape="rect" id="Node000002" href="$df/dc3/AudioEngine_8cpp_source.html" title=" " alt="" coords="49,93,207,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="391,51,206,96,205,91,390,46"/>
+<area shape="rect" id="Node000003" href="$d2/d66/AuditionEngine_8cpp_source.html" title=" " alt="" coords="232,93,419,133"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="436,54,361,96,358,91,434,50"/>
+<area shape="rect" id="Node000004" href="$dd/de4/AestraContent_8cpp.html" title="Main content area for Aestra &#45; Implementation." alt="" coords="5,277,229,302"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="475,60,459,98,433,135,401,163,366,189,293,230,221,260,162,279,160,274,219,255,290,225,364,184,398,159,429,132,454,96,470,58"/>
+<area shape="rect" id="Node000005" href="$d3/d93/AestraContentBounce_8cpp_source.html" title=" " alt="" coords="940,269,1137,309"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="595,39,679,57,773,85,866,125,911,150,952,179,997,224,1029,268,1025,271,993,228,949,183,908,155,864,130,771,90,678,62,594,44"/>
+<area shape="rect" id="Node000006" href="$da/db2/AuditionHub_8h.html" title="The Audition mode&#39;s shell (FD&#45;26, V81&#45;A): navigation at the left, a player bar along the bottom,..." alt="" coords="493,189,701,214"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="495,57,512,94,534,132,560,162,585,186,582,190,556,166,530,135,507,96,491,59"/>
+<area shape="rect" id="Node000010" href="$d2/d1a/AuditionQueuePage_8h_source.html" title=" " alt="" coords="543,93,755,133"/>
+<area shape="poly" id="edge11_Node000001_Node000010" title=" " alt="" coords="531,49,614,91,611,96,529,54"/>
+<area shape="poly" id="edge6_Node000006_Node000004" title=" " alt="" coords="520,219,182,279,181,274,519,214"/>
+<area shape="poly" id="edge7_Node000006_Node000005" title=" " alt="" coords="670,214,942,267,941,272,669,219"/>
+<area shape="rect" id="Node000007" href="$dd/d61/AuditionHub_8cpp_source.html" title=" " alt="" coords="253,277,475,302"/>
+<area shape="poly" id="edge8_Node000006_Node000007" title=" " alt="" coords="554,221,396,279,394,274,552,216"/>
+<area shape="rect" id="Node000008" href="$d5/d18/AuditionHubItem_8cpp_source.html" title=" " alt="" coords="499,269,695,309"/>
+<area shape="poly" id="edge9_Node000006_Node000008" title=" " alt="" coords="600,228,600,269,595,269,595,228"/>
+<area shape="rect" id="Node000009" href="$df/d06/AuditionHubTabs_8cpp_source.html" title=" " alt="" coords="719,269,915,309"/>
+<area shape="poly" id="edge10_Node000006_Node000009" title=" " alt="" coords="641,217,770,267,768,272,639,222"/>
+<area shape="poly" id="edge12_Node000010_Node000006" title=" " alt="" coords="633,147,607,190,602,187,628,144"/>
+<area shape="rect" id="Node000011" href="$dd/db9/AuditionQueuePage_8cpp_source.html" title=" " alt="" coords="726,181,938,221"/>
+<area shape="poly" id="edge13_Node000010_Node000011" title=" " alt="" coords="703,137,793,179,791,184,701,142"/>
 </map>

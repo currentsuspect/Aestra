@@ -70,7 +70,7 @@ $(function() {
 
 <div id="nav-path" class="navpath">
   <ul>
-<li class="navelem"><b>Aestra</b></li><li class="navelem"><b>Audio</b></li><li class="navelem"><a class="el" href="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html">ArsenalPanel</a></li>  </ul>
+<li class="navelem"><a class="el" href="../../d8/d94/namespaceAestra.html">Aestra</a></li><li class="navelem"><b>Audio</b></li><li class="navelem"><a class="el" href="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html">ArsenalPanel</a></li>  </ul>
 </div>
 </div><!-- top -->
 <div class="header">
@@ -148,6 +148,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:afcb4b10be1a700b9e7c2998f9d7c541f" id="r_afcb4b10be1a700b9e7c2998f9d7c541f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#afcb4b10be1a700b9e7c2998f9d7c541f">refreshUnits</a> ()</td></tr>
 <tr class="memdesc:afcb4b10be1a700b9e7c2998f9d7c541f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Rebuild the UI rows from the current <a class="el" href="../../d4/d49/classAestra_1_1Audio_1_1UnitManager.html" title="Unit manager for Arsenal system.">UnitManager</a> state.  <br /></td></tr>
 <tr class="separator:afcb4b10be1a700b9e7c2998f9d7c541f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6413e1cd6063f31736ae026d26011a2f" id="r_a6413e1cd6063f31736ae026d26011a2f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a6413e1cd6063f31736ae026d26011a2f">resetToDefault</a> ()</td></tr>
+<tr class="memdesc:a6413e1cd6063f31736ae026d26011a2f"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="../../d9/d59/classAestra_1_1File.html">File</a> &gt; New Project: the project was emptied; recreate Pattern 1 and Sampler 1 and drop selections.  <br /></td></tr>
+<tr class="separator:a6413e1cd6063f31736ae026d26011a2f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4a935a8cf733c2f3f73e5a3325ffb6f3" id="r_a4a935a8cf733c2f3f73e5a3325ffb6f3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a4a935a8cf733c2f3f73e5a3325ffb6f3">setPatternBrowser</a> (class <a class="el" href="../../d6/de5/classAestra_1_1Audio_1_1PatternBrowserPanel.html">PatternBrowserPanel</a> *browser)</td></tr>
 <tr class="memdesc:a4a935a8cf733c2f3f73e5a3325ffb6f3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bind the pattern browser used for bidirectional pattern sync.  <br /></td></tr>
 <tr class="separator:a4a935a8cf733c2f3f73e5a3325ffb6f3"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -190,8 +193,13 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a383b566eab86c355b0bb174aa5a0faa4" id="r_a383b566eab86c355b0bb174aa5a0faa4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a383b566eab86c355b0bb174aa5a0faa4">setOnPluginDroppedToUnit</a> (std::function&lt; void(UnitID, const std::string &amp;)&gt; cb)</td></tr>
 <tr class="memdesc:a383b566eab86c355b0bb174aa5a0faa4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the callback used for plugin drops onto a specific unit.  <br /></td></tr>
 <tr class="separator:a383b566eab86c355b0bb174aa5a0faa4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1a36038cf0df7ebe839d4211af079b3c" id="r_a1a36038cf0df7ebe839d4211af079b3c"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a1a36038cf0df7ebe839d4211af079b3c">handleDrawerKey</a> (const <a class="el" href="../../dd/d88/structAestraUI_1_1NUIKeyEvent.html">AestraUI::NUIKeyEvent</a> &amp;event)</td></tr>
+<tr class="memdesc:a1a36038cf0df7ebe839d4211af079b3c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the callback used when an audio sample is dropped onto a unit.  <br /></td></tr>
+<tr class="separator:a1a36038cf0df7ebe839d4211af079b3c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab4639dc800c14c8a6e78d460a6c60977" id="r_ab4639dc800c14c8a6e78d460a6c60977"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#ab4639dc800c14c8a6e78d460a6c60977">setSoundSetProviders</a> (std::function&lt; std::vector&lt; std::string &gt;()&gt; names, std::function&lt; std::vector&lt; std::string &gt;(const std::string &amp;)&gt; members, std::function&lt; void(UnitID, const std::string &amp;)&gt; chosen)</td></tr>
+<tr class="memdesc:ab4639dc800c14c8a6e78d460a6c60977"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sound sets (V81-AR2): the collections a row's drawer can walk, a collection's members, and a unit's choice.  <br /></td></tr>
+<tr class="separator:ab4639dc800c14c8a6e78d460a6c60977"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a70c162af3e6a37e8b76efd0b17479485" id="r_a70c162af3e6a37e8b76efd0b17479485"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a70c162af3e6a37e8b76efd0b17479485">setOnSampleDroppedToUnit</a> (std::function&lt; void(UnitID, const std::string &amp;)&gt; cb)</td></tr>
-<tr class="memdesc:a70c162af3e6a37e8b76efd0b17479485"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the callback used when an audio sample is dropped onto a unit.  <br /></td></tr>
 <tr class="separator:a70c162af3e6a37e8b76efd0b17479485"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0969942d233ef3fc99dbfd2fba715700" id="r_a0969942d233ef3fc99dbfd2fba715700"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a0969942d233ef3fc99dbfd2fba715700">setOnSelectedUnitChanged</a> (std::function&lt; void(UnitID)&gt; cb)</td></tr>
 <tr class="memdesc:a0969942d233ef3fc99dbfd2fba715700"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the callback fired when unit selection changes.  <br /></td></tr>
@@ -205,8 +213,10 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a3810d94ebedda617a14f9395af9a9ec4" id="r_a3810d94ebedda617a14f9395af9a9ec4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a3810d94ebedda617a14f9395af9a9ec4">setOnPatternEdited</a> (std::function&lt; void(<a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">PatternID</a>)&gt; cb)</td></tr>
 <tr class="memdesc:a3810d94ebedda617a14f9395af9a9ec4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the callback fired when the active pattern is edited.  <br /></td></tr>
 <tr class="separator:a3810d94ebedda617a14f9395af9a9ec4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae55eb2c13c8ca0f7e73e2121feded784" id="r_ae55eb2c13c8ca0f7e73e2121feded784"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#ae55eb2c13c8ca0f7e73e2121feded784">setOnPlaceInTimeline</a> (std::function&lt; void(<a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">PatternID</a>)&gt; cb)</td></tr>
+<tr class="memdesc:ae55eb2c13c8ca0f7e73e2121feded784"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the callback fired when the active pattern changes.  <br /></td></tr>
+<tr class="separator:ae55eb2c13c8ca0f7e73e2121feded784"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afd3c28aecb78e9cff971e673aa94fa54" id="r_afd3c28aecb78e9cff971e673aa94fa54"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#afd3c28aecb78e9cff971e673aa94fa54">setOnActivePatternChanged</a> (std::function&lt; void(<a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">PatternID</a>)&gt; cb)</td></tr>
-<tr class="memdesc:afd3c28aecb78e9cff971e673aa94fa54"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the callback fired when the active pattern changes.  <br /></td></tr>
 <tr class="separator:afd3c28aecb78e9cff971e673aa94fa54"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a91c18be96b8b0e1eecc4fec14a5e12c0" id="r_a91c18be96b8b0e1eecc4fec14a5e12c0"><td class="memItemLeft" align="right" valign="top">UnitID&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a91c18be96b8b0e1eecc4fec14a5e12c0">getSelectedUnitId</a> () const</td></tr>
 <tr class="memdesc:a91c18be96b8b0e1eecc4fec14a5e12c0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the currently selected unit identifier.  <br /></td></tr>
@@ -328,6 +338,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a2b3f7ebc1d4af1d46fcb206080bf7cf3 inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a2b3f7ebc1d4af1d46fcb206080bf7cf3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a2b3f7ebc1d4af1d46fcb206080bf7cf3">bringToFront</a> ()</td></tr>
 <tr class="memdesc:a2b3f7ebc1d4af1d46fcb206080bf7cf3 inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="mdescLeft">&#160;</td><td class="mdescRight">Moves this component to the top of its parent's children list (rendered last, receives events first)  <br /></td></tr>
 <tr class="separator:a2b3f7ebc1d4af1d46fcb206080bf7cf3 inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a71e85694284576b3f396979b144878de inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a71e85694284576b3f396979b144878de"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a71e85694284576b3f396979b144878de">bringToFrontPriority</a> ()</td></tr>
+<tr class="memdesc:a71e85694284576b3f396979b144878de inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a2b3f7ebc1d4af1d46fcb206080bf7cf3" title="Moves this component to the top of its parent&#39;s children list (rendered last, receives events first)">bringToFront()</a> for a deliberate open.  <br /></td></tr>
+<tr class="separator:a71e85694284576b3f396979b144878de inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a16788f874b25327365e0e57c1bcfe73b inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a16788f874b25327365e0e57c1bcfe73b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">NUIComponent</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a16788f874b25327365e0e57c1bcfe73b">getParent</a> () const</td></tr>
 <tr class="separator:a16788f874b25327365e0e57c1bcfe73b inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3a07e69f6d5bee5fa05f044b6b1f599e inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a3a07e69f6d5bee5fa05f044b6b1f599e"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; std::shared_ptr&lt; <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">NUIComponent</a> &gt; &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a3a07e69f6d5bee5fa05f044b6b1f599e">getChildren</a> () const</td></tr>
@@ -465,7 +478,7 @@ Additional Inherited Members</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>The Arsenal: Unit-Based Sequencer Window Standardized as a <a class="el" href="../../dc/d3e/classAestra_1_1Audio_1_1WindowPanel.html" title="WindowPanel - A dockable window panel with title bar.">WindowPanel</a> (v3.1) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00020">20</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00027">27</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a054437827bbf8d4cda98b022cb03669e" name="a054437827bbf8d4cda98b022cb03669e"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a054437827bbf8d4cda98b022cb03669e">&#9670;&#160;</a></span>ArsenalPanel()</h2>
@@ -485,15 +498,15 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Create the Arsenal sequencer panel. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00162">162</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00144">144</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00292">refreshUnits()</a>.</p>
+<p class="reference">References <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00259">refreshUnits()</a>, and <a class="el" href="../../d3/d38/ArsenalRowLanes_8h_source.html#l00047">Aestra::ArsenalRowLanes::setOnSwap()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-2-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel_a054437827bbf8d4cda98b022cb03669e_cgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel_a054437827bbf8d4cda98b022cb03669e_cgraph.svg" width="100%" height="410"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -523,9 +536,9 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Destroy the Arsenal sequencer panel. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00202">202</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00176">176</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00908">unregisterDropTargets()</a>.</p>
+<p class="reference">References <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00820">unregisterDropTargets()</a>.</p>
 <div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-3-summary" class="dynsummary" style="display:block;">
@@ -554,7 +567,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Copy notes from the selected unit into the local clipboard. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01542">1542</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01303">1303</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
 
 </div>
 </div>
@@ -583,7 +596,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Get the active pattern edited by Arsenal. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00065">65</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00080">80</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
 
 </div>
 </div>
@@ -614,7 +627,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d3/d88/classAestraUI_1_1IDropTarget.html#a96f1742ef992a1c5c8d2514c4dd26657">AestraUI::IDropTarget</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01509">1509</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01270">1270</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d36/NUIComponent_8h_source.html#l00071">AestraUI::NUIComponent::getBounds()</a>.</p>
 <div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -652,7 +665,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Get the currently selected unit identifier. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00105">105</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00127">127</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
 
 </div>
 </div>
@@ -681,7 +694,38 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Get the visible step count for Arsenal rows. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00070">70</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00085">85</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
+
+</div>
+</div>
+<a id="a1a36038cf0df7ebe839d4211af079b3c" name="a1a36038cf0df7ebe839d4211af079b3c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1a36038cf0df7ebe839d4211af079b3c">&#9670;&#160;</a></span>handleDrawerKey()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::ArsenalPanel::handleDrawerKey </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="../../dd/d88/structAestraUI_1_1NUIKeyEvent.html">AestraUI::NUIKeyEvent</a> &amp;&#160;</td>
+          <td class="paramname"><em>event</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set the callback used when an audio sample is dropped onto a unit. </p>
+<p>While a sound drawer is open the app routes typing here first, before global shortcuts and musical typing. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00106">106</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
 
 </div>
 </div>
@@ -723,9 +767,9 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d3/d88/classAestraUI_1_1IDropTarget.html#aa15505ba354c1931dfdd9a02ba321858">AestraUI::IDropTarget</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01328">1328</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01115">1115</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01332">onDragOver()</a>.</p>
+<p class="reference">References <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01119">onDragOver()</a>.</p>
 <div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-5-summary" class="dynsummary" style="display:block;">
@@ -763,7 +807,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d3/d88/classAestraUI_1_1IDropTarget.html#a306ccccae926817614c9c545104bf77e">AestraUI::IDropTarget</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01353">1353</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01140">1140</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
 
 </div>
 </div>
@@ -805,9 +849,9 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d3/d88/classAestraUI_1_1IDropTarget.html#a8319ed1c3d74b57348c7f658c555c389">AestraUI::IDropTarget</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01332">1332</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01119">1119</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01328">onDragEnter()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01115">onDragEnter()</a>.</p>
 <div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-6-summary" class="dynsummary" style="display:block;">
@@ -856,9 +900,9 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d3/d88/classAestraUI_1_1IDropTarget.html#a7a1e8b8b5d72345ca9d76f7ed34ea720">AestraUI::IDropTarget</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01401">1401</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01162">1162</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00292">refreshUnits()</a>.</p>
+<p class="reference">References <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00259">refreshUnits()</a>.</p>
 <div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-7-summary" class="dynsummary" style="display:block;">
@@ -897,15 +941,15 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01604">1604</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01365">1365</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d36/NUIComponent_8h_source.html#l00071">AestraUI::NUIComponent::getBounds()</a>.</p>
+<p class="reference">References <a class="el" href="../../de/d80/ArsenalRackLayout_8h_source.html#l00102">Aestra::ArsenalRackLayout::dropSlotForY()</a>, <a class="el" href="../../d9/d36/NUIComponent_8h_source.html#l00071">AestraUI::NUIComponent::getBounds()</a>, <a class="el" href="../../de/d80/ArsenalRackLayout_8h_source.html#l00121">Aestra::ArsenalRackLayout::insertIndexForSlot()</a>, <a class="el" href="../../db/d03/ArsenalSceneStrip_8h_source.html#l00223">Aestra::ArsenalSceneStrip::onMouse()</a>, <a class="el" href="../../d3/d38/ArsenalRowLanes_8h_source.html#l00089">Aestra::ArsenalRowLanes::onMouse()</a>, <a class="el" href="../../d5/d9d/classAestra_1_1IPlatformUtils.html#a9af28fa56d1b8522774b294c279ef922">Aestra::IPlatformUtils::selectFolderDialog()</a>, <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00550">setActivePattern()</a>, and <a class="el" href="../../d7/dbd/AestraFileDialog_8h_source.html#l00063">Aestra::PendingFileDialog::start()</a>.</p>
 <div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-8-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-8-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel_a5c9ac77599f4bd13c12f7b9dd2bbc805_cgraph.svg" width="446" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel_a5c9ac77599f4bd13c12f7b9dd2bbc805_cgraph.svg" width="100%" height="600"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -938,15 +982,15 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00671">671</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00661">661</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01358">renderDragPreview()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d38/ArsenalRowLanes_8h_source.html#l00056">Aestra::ArsenalRowLanes::draw()</a>, <a class="el" href="../../d4/d98/ArsenalRackDraw_8h_source.html#l00028">Aestra::drawArsenalRackHeaders()</a>, <a class="el" href="../../db/d03/ArsenalSceneStrip_8h_source.html#l00104">Aestra::ArsenalSceneStrip::quietDefaults()</a>, <a class="el" href="../../db/d03/ArsenalSceneStrip_8h_source.html#l00124">Aestra::ArsenalSceneStrip::refresh()</a>, <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00259">refreshUnits()</a>, and <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01145">renderDragPreview()</a>.</p>
 <div id="dynsection-9" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-9-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-9-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-9-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel_ad0272af2020e23cd94658d1e4beacfe5_cgraph.svg" width="100%" height="482"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel_ad0272af2020e23cd94658d1e4beacfe5_cgraph.svg" width="100%" height="600"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -989,7 +1033,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00827">827</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00739">739</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1021,7 +1065,16 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00834">834</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00746">746</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d7/dbd/AestraFileDialog_8h_source.html#l00079">Aestra::PendingFileDialog::takeResult()</a>.</p>
+<div id="dynsection-10" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-10-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-10-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-10-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel_ac56717dac7db62d01ac48aa6b235e78e_cgraph.svg" width="450" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 
 </div>
 </div>
@@ -1042,14 +1095,14 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Paste clipboard notes into the selected unit. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01564">1564</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01325">1325</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00292">refreshUnits()</a>.</p>
-<div id="dynsection-10" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-10-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-10-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00259">refreshUnits()</a>.</p>
+<div id="dynsection-11" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-11-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-11-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-10-content" class="dyncontent" style="display:none;">
+<div id="dynsection-11-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel_aa25fcc7b11ea29f5a00382d1c0c2ce7b_cgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -1072,24 +1125,24 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Rebuild the UI rows from the current <a class="el" href="../../d4/d49/classAestra_1_1Audio_1_1UnitManager.html" title="Unit manager for Arsenal system.">UnitManager</a> state. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00292">292</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00259">259</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00292">refreshUnits()</a>, <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00877">registerDropTargets()</a>, and <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00908">unregisterDropTargets()</a>.</p>
+<p class="reference">References <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00259">refreshUnits()</a>, <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00789">registerDropTargets()</a>, and <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00820">unregisterDropTargets()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00162">ArsenalPanel()</a>, <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01401">onDrop()</a>, <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01564">pastePattern()</a>, <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00292">refreshUnits()</a>, and <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00584">setActivePattern()</a>.</p>
-<div id="dynsection-11" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-11-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-11-summary" class="dynsummary" style="display:block;">
-</div>
-<div id="dynsection-11-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel_afcb4b10be1a700b9e7c2998f9d7c541f_cgraph.svg" width="462" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
-</div>
+<p class="reference">Referenced by <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00144">ArsenalPanel()</a>, <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01162">onDrop()</a>, <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00661">onRender()</a>, <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01325">pastePattern()</a>, <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00259">refreshUnits()</a>, <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00063">resetToDefault()</a>, and <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00550">setActivePattern()</a>.</p>
 <div id="dynsection-12" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-12-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+  <img id="dynsection-12-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-12-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-12-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel_afcb4b10be1a700b9e7c2998f9d7c541f_icgraph.svg" width="462" height="243"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel_afcb4b10be1a700b9e7c2998f9d7c541f_cgraph.svg" width="462" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+<div id="dynsection-13" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-13-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-13-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-13-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel_afcb4b10be1a700b9e7c2998f9d7c541f_icgraph.svg" width="100%" height="578"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -1112,15 +1165,15 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Register the panel and current rows for lifecycle-scoped drag/drop. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00877">877</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00789">789</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00292">refreshUnits()</a>.</p>
-<div id="dynsection-13" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-13-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-13-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00259">refreshUnits()</a>.</p>
+<div id="dynsection-14" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-14-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-14-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-13-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel_adeb1609a296597c46ac498882afcf457_icgraph.svg" width="100%" height="482"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div id="dynsection-14-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel_adeb1609a296597c46ac498882afcf457_icgraph.svg" width="100%" height="578"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -1143,24 +1196,62 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Drag-hover ghost: dashed "new unit" outline while dragging a sample over empty Arsenal space. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01358">1358</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01145">1145</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8287a2b8a0d43d3eb03d7354121b4a95">AestraUI::NUIRenderer::drawLine()</a>, <a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">AestraUI::NUIRenderer::drawText()</a>, <a class="el" href="../../d9/d36/NUIComponent_8h_source.html#l00071">AestraUI::NUIComponent::getBounds()</a>, and <a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#abe394d6a3fb11601766324bcd8793ac3">AestraUI::NUIRenderer::measureText()</a>.</p>
+<p class="reference">References <a class="el" href="../../d4/d98/ArsenalRackDraw_8h_source.html#l00107">Aestra::drawArsenalDropGhost()</a>, and <a class="el" href="../../d9/d36/NUIComponent_8h_source.html#l00071">AestraUI::NUIComponent::getBounds()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00671">onRender()</a>.</p>
-<div id="dynsection-14" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-14-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-14-summary" class="dynsummary" style="display:block;">
-</div>
-<div id="dynsection-14-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel_aa94a93c30f05a4177c1cd16390cf7706_cgraph.svg" width="446" height="243"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
-</div>
+<p class="reference">Referenced by <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00661">onRender()</a>.</p>
 <div id="dynsection-15" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-15-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+  <img id="dynsection-15-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-15-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-15-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel_aa94a93c30f05a4177c1cd16390cf7706_cgraph.svg" width="100%" height="434"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+<div id="dynsection-16" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-16-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-16-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-16-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel_aa94a93c30f05a4177c1cd16390cf7706_icgraph.svg" width="462" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+
+</div>
+</div>
+<a id="a6413e1cd6063f31736ae026d26011a2f" name="a6413e1cd6063f31736ae026d26011a2f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6413e1cd6063f31736ae026d26011a2f">&#9670;&#160;</a></span>resetToDefault()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::ArsenalPanel::resetToDefault </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p><a class="el" href="../../d9/d59/classAestra_1_1File.html">File</a> &gt; New Project: the project was emptied; recreate Pattern 1 and Sampler 1 and drop selections. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00063">63</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00259">refreshUnits()</a>.</p>
+<div id="dynsection-17" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-17-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-17-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-17-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel_a6413e1cd6063f31736ae026d26011a2f_cgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -1183,15 +1274,24 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the active pattern edited by Arsenal. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00584">584</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00550">550</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00292">refreshUnits()</a>.</p>
-<div id="dynsection-16" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-16-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-16-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00259">refreshUnits()</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l01365">onMouseEvent()</a>.</p>
+<div id="dynsection-18" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-18-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-18-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-16-content" class="dyncontent" style="display:none;">
+<div id="dynsection-18-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel_aabded31db5191dc40f6eeb98d4054eb8_cgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+<div id="dynsection-19" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-19-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-19-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-19-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel_aabded31db5191dc40f6eeb98d4054eb8_icgraph.svg" width="462" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -1220,9 +1320,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Set the callback fired when the active pattern changes. </p>
-
-<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00103">103</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00125">125</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
 
 </div>
 </div>
@@ -1252,7 +1350,38 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the callback fired when the active pattern is edited. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00101">101</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00121">121</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
+
+</div>
+</div>
+<a id="ae55eb2c13c8ca0f7e73e2121feded784" name="ae55eb2c13c8ca0f7e73e2121feded784"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae55eb2c13c8ca0f7e73e2121feded784">&#9670;&#160;</a></span>setOnPlaceInTimeline()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::ArsenalPanel::setOnPlaceInTimeline </td>
+          <td>(</td>
+          <td class="paramtype">std::function&lt; void(<a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">PatternID</a>)&gt;&#160;</td>
+          <td class="paramname"><em>cb</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set the callback fired when the active pattern changes. </p>
+<p>Set the callback fired by the header's "Place in timeline" button (the pattern to place). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00124">124</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
 
 </div>
 </div>
@@ -1282,7 +1411,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the callback used for generic plugin drops. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00086">86</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00101">101</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
 
 </div>
 </div>
@@ -1312,7 +1441,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the callback used for plugin drops onto a specific unit. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00088">88</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00103">103</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
 
 </div>
 </div>
@@ -1342,7 +1471,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Fired while the user clicks/drags the progress header to cue the playhead (#831). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00095">95</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00115">115</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
 
 </div>
 </div>
@@ -1370,7 +1499,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00107">107</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00129">129</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
 
 </div>
 </div>
@@ -1400,7 +1529,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the callback used to open a unit editor. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00078">78</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00093">93</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
 
 </div>
 </div>
@@ -1430,7 +1559,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the callback used to request sample loading. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00082">82</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00097">97</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
 
 </div>
 </div>
@@ -1460,7 +1589,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the callback used to open a pattern in the Piano Roll. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00080">80</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00095">95</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
 
 </div>
 </div>
@@ -1490,7 +1619,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the callback used to activate playback before editing. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00099">99</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00119">119</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
 
 </div>
 </div>
@@ -1520,7 +1649,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the callback used to open the sample editor. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00084">84</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00099">99</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
 
 </div>
 </div>
@@ -1548,9 +1677,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Set the callback used when an audio sample is dropped onto a unit. </p>
-
-<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00090">90</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00110">110</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
 
 </div>
 </div>
@@ -1580,7 +1707,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the callback fired when unit selection changes. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00092">92</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00112">112</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
 
 </div>
 </div>
@@ -1610,7 +1737,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Bind the pattern browser used for bidirectional pattern sync. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00057">57</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00072">72</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
 
 </div>
 </div>
@@ -1632,7 +1759,62 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Select the Arsenal unit used for editing and clipboard actions. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00599">599</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00565">565</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab4639dc800c14c8a6e78d460a6c60977" name="ab4639dc800c14c8a6e78d460a6c60977"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab4639dc800c14c8a6e78d460a6c60977">&#9670;&#160;</a></span>setSoundSetProviders()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::ArsenalPanel::setSoundSetProviders </td>
+          <td>(</td>
+          <td class="paramtype">std::function&lt; std::vector&lt; std::string &gt;()&gt;&#160;</td>
+          <td class="paramname"><em>names</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::function&lt; std::vector&lt; std::string &gt;(const std::string &amp;)&gt;&#160;</td>
+          <td class="paramname"><em>members</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::function&lt; void(UnitID, const std::string &amp;)&gt;&#160;</td>
+          <td class="paramname"><em>chosen</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Sound sets (V81-AR2): the collections a row's drawer can walk, a collection's members, and a unit's choice. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html#l00108">108</a> of file <a class="el" href="../../d2/d36/ArsenalPanel_8h_source.html">ArsenalPanel.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/d38/ArsenalRowLanes_8h_source.html#l00050">Aestra::ArsenalRowLanes::setSoundSetProviders()</a>.</p>
+<div id="dynsection-20" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-20-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-20-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-20-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel_ab4639dc800c14c8a6e78d460a6c60977_cgraph.svg" width="447" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 
 </div>
 </div>
@@ -1654,7 +1836,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the visible step count for Arsenal rows. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00617">617</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00583">583</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
 
 </div>
 </div>
@@ -1675,15 +1857,15 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Unregister the panel and current rows from drag/drop. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00908">908</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00820">820</a> of file <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html">ArsenalPanel.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00292">refreshUnits()</a>, and <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00202">~ArsenalPanel()</a>.</p>
-<div id="dynsection-17" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-17-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-17-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00259">refreshUnits()</a>, and <a class="el" href="../../dc/d18/ArsenalPanel_8cpp_source.html#l00176">~ArsenalPanel()</a>.</p>
+<div id="dynsection-21" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-21-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-21-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-17-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel_ad164b5928ab64d33251225dd2e90c4c0_icgraph.svg" width="100%" height="482"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div id="dynsection-21-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel_ad164b5928ab64d33251225dd2e90c4c0_icgraph.svg" width="100%" height="578"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>

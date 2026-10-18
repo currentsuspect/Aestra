@@ -70,7 +70,7 @@ $(function() {
 
 <div id="nav-path" class="navpath">
   <ul>
-<li class="navelem"><b>Aestra</b></li><li class="navelem"><b>Audio</b></li><li class="navelem"><a class="el" href="../../d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html">PlaybackContextController</a></li>  </ul>
+<li class="navelem"><a class="el" href="../../d8/d94/namespaceAestra.html">Aestra</a></li><li class="navelem"><b>Audio</b></li><li class="navelem"><a class="el" href="../../d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html">PlaybackContextController</a></li>  </ul>
 </div>
 </div><!-- top -->
 <div class="header">
@@ -112,6 +112,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:aacf1d628dbee0767beabeebf50da6148" id="r_aacf1d628dbee0767beabeebf50da6148"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#aacf1d628dbee0767beabeebf50da6148">startArsenalPlayback</a> (<a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">PatternID</a> pattern, double patternLengthBeats, double startSeconds=-1.0)</td></tr>
 <tr class="memdesc:aacf1d628dbee0767beabeebf50da6148"><td class="mdescLeft">&#160;</td><td class="mdescRight">Play pressed in Arsenal.  <br /></td></tr>
 <tr class="separator:aacf1d628dbee0767beabeebf50da6148"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a70f15085c9ec7f1d44e14728dbe98e5e" id="r_a70f15085c9ec7f1d44e14728dbe98e5e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a70f15085c9ec7f1d44e14728dbe98e5e">switchArsenalPattern</a> (<a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">PatternID</a> pattern, double patternLengthBeats)</td></tr>
+<tr class="memdesc:a70f15085c9ec7f1d44e14728dbe98e5e"><td class="mdescLeft">&#160;</td><td class="mdescRight">The Arsenal's active pattern changed (a scene chip, the pattern browser).  <br /></td></tr>
+<tr class="separator:a70f15085c9ec7f1d44e14728dbe98e5e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7246862389155e4d2fe2548f9b838fae" id="r_a7246862389155e4d2fe2548f9b838fae"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a7246862389155e4d2fe2548f9b838fae">applyArsenalLoopLength</a> (double patternLengthBeats)</td></tr>
 <tr class="memdesc:a7246862389155e4d2fe2548f9b838fae"><td class="mdescLeft">&#160;</td><td class="mdescRight">The active pattern's length changed while in Arsenal: the engine loop and the recording loop follow it.  <br /></td></tr>
 <tr class="separator:a7246862389155e4d2fe2548f9b838fae"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -226,7 +229,7 @@ Public Member Functions</h2></td></tr>
 <p>The active pattern's length changed while in Arsenal: the engine loop and the recording loop follow it. </p>
 <p>A no-op outside Arsenal. Arming the engine anywhere else seized the transport and muted the timeline. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00138">138</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00168">168</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01987">Aestra::Audio::TrackManager::arsenalLoopLengthBeats()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01506">Aestra::Audio::TrackManager::setPatternLoopOverride()</a>.</p>
 <div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -299,9 +302,9 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if pattern playback was torn down. The caller then restores the timeline position. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00284">284</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00314">314</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00233">teardownPatternPlayback()</a>.</p>
+<p class="reference">References <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00263">teardownPatternPlayback()</a>.</p>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-1-summary" class="dynsummary" style="display:block;">
@@ -377,9 +380,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Focus entered Audition: the DAW transport is parked and exclusive audition takes over. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00254">254</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00284">284</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01506">Aestra::Audio::TrackManager::setPatternLoopOverride()</a>, and <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00233">teardownPatternPlayback()</a>.</p>
+<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01506">Aestra::Audio::TrackManager::setPatternLoopOverride()</a>, and <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00263">teardownPatternPlayback()</a>.</p>
 <div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-3-summary" class="dynsummary" style="display:block;">
@@ -416,9 +419,9 @@ Public Member Functions</h2></td></tr>
 <p>Focus entered Timeline. </p>
 <p>Ends any pattern playback still running, then clears every pattern mirror. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00242">242</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00272">272</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01506">Aestra::Audio::TrackManager::setPatternLoopOverride()</a>, and <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00233">teardownPatternPlayback()</a>.</p>
+<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01506">Aestra::Audio::TrackManager::setPatternLoopOverride()</a>, and <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00263">teardownPatternPlayback()</a>.</p>
 <div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-4-summary" class="dynsummary" style="display:block;">
@@ -487,7 +490,7 @@ Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00097">97</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00034">Aestra::Audio::PlaybackMirrors::audition</a>, <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00030">Aestra::Audio::PlaybackMirrors::enginePattern</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00618">Aestra::Audio::AudioEngine::isAuditionModeEnabled()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01715">Aestra::Audio::TrackManager::isPatternLoopOverrideActive()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01713">Aestra::Audio::TrackManager::isPatternMode()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00483">Aestra::Audio::AudioEngine::isPatternPlaybackMode()</a>, <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00032">Aestra::Audio::PlaybackMirrors::loopOverride</a>, <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00031">Aestra::Audio::PlaybackMirrors::trackManagerPattern</a>, and <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00033">Aestra::Audio::PlaybackMirrors::uiPattern</a>.</p>
+<p class="reference">References <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00034">Aestra::Audio::PlaybackMirrors::audition</a>, <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00030">Aestra::Audio::PlaybackMirrors::enginePattern</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00620">Aestra::Audio::AudioEngine::isAuditionModeEnabled()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01715">Aestra::Audio::TrackManager::isPatternLoopOverrideActive()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01713">Aestra::Audio::TrackManager::isPatternMode()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00485">Aestra::Audio::AudioEngine::isPatternPlaybackMode()</a>, <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00032">Aestra::Audio::PlaybackMirrors::loopOverride</a>, <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00031">Aestra::Audio::PlaybackMirrors::trackManagerPattern</a>, and <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00033">Aestra::Audio::PlaybackMirrors::uiPattern</a>.</p>
 <div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-5-summary" class="dynsummary" style="display:block;">
@@ -523,7 +526,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Timeline play: the pattern loop override ends, so the timeline's own loop applies again. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00223">223</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00253">253</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01333">Aestra::Audio::TrackManager::play()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01506">Aestra::Audio::TrackManager::setPatternLoopOverride()</a>.</p>
 <div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -563,7 +566,7 @@ Public Member Functions</h2></td></tr>
 <p>A focus self-transition re-asserts the UI mirror only. </p>
 <p>Engine, transport and scheduler stay untouched. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00295">295</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00325">325</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
 
 </div>
 </div>
@@ -594,7 +597,7 @@ Public Member Functions</h2></td></tr>
 <p>The engine loop only: the sequencer re-requesting activation, and piano-roll length edits during pattern playback. </p>
 <p>The ONE intended behaviour change in PR 2. The piano roll used to decide by <a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html" title="Track/Channel manager for the audio engine.">TrackManager</a>'s pattern flag, which is also set during a ClipPreview, where the Timeline is in focus. A length edit there put the engine into pattern mode and muted the whole timeline, the same seize that updatePatternLoopLength's focus guard exists to prevent. Deciding by context closes that. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00156">156</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00186">186</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01987">Aestra::Audio::TrackManager::arsenalLoopLengthBeats()</a>.</p>
 
@@ -665,7 +668,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00175">175</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00205">205</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01713">Aestra::Audio::TrackManager::isPatternMode()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01395">Aestra::Audio::TrackManager::isPlaying()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01964">Aestra::Audio::TrackManager::setArsenalLoopZone()</a>.</p>
 
@@ -752,7 +755,7 @@ Public Member Functions</h2></td></tr>
 <p>Arm or disarm recording (<a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#ac07698510fdbdf1a91de536b1b847450" title="Toggle record-arm state and manage capture session lifetime.">TrackManager::record</a>) and keep the Arsenal loop consistent. </p>
 <p>An armed record ignores the loop zone (<a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#aeae68fd7ad35f4229ef6ee5e7d086e5a" title="The zone Arsenal playback of pattern would use: the stored zone if it was drawn on that pattern.">TrackManager::activeArsenalLoopZone</a>). So in Arsenal the loop is re-applied at once, not left at the zone's length until the next play, and a pattern already playing is rescheduled at the same pattern position (no jump). Arming reschedules BEFORE record(): a capture session takes its start beat from the transport at arm time, and that must already be the whole-pattern transport, not the zone-relative one. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00209">209</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00239">239</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01434">Aestra::Audio::TrackManager::record()</a>.</p>
 <div id="dynsection-11" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -793,7 +796,7 @@ Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00089">89</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00501">Aestra::Audio::AudioEngine::getRequestedContextGeneration()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00503">Aestra::Audio::AudioEngine::getRequestedContextGeneration()</a>.</p>
 <div id="dynsection-12" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-12-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-12-summary" class="dynsummary" style="display:block;">
@@ -917,7 +920,7 @@ Public Member Functions</h2></td></tr>
 
 <p>A pattern clip previews from the Timeline: pattern playback without an Arsenal focus. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00263">263</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00293">293</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l02017">Aestra::Audio::TrackManager::playPatternInArsenal()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l02064">Aestra::Audio::TrackManager::preparePatternForArsenal()</a>.</p>
 <div id="dynsection-14" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -926,6 +929,56 @@ Public Member Functions</h2></td></tr>
 </div>
 <div id="dynsection-14-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d6/de1/classAestra_1_1Audio_1_1PlaybackContextController_a03084991ebcfdc0bd7a61b86b0839191_cgraph.svg" width="100%" height="578"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+
+</div>
+</div>
+<a id="a70f15085c9ec7f1d44e14728dbe98e5e" name="a70f15085c9ec7f1d44e14728dbe98e5e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a70f15085c9ec7f1d44e14728dbe98e5e">&#9670;&#160;</a></span>switchArsenalPattern()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::PlaybackContextController::switchArsenalPattern </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">PatternID</a>&#160;</td>
+          <td class="paramname"><em>pattern</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>patternLengthBeats</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The Arsenal's active pattern changed (a scene chip, the pattern browser). </p>
+<p>While Arsenal is playing another pattern, the new one takes over at once, at the same beat of the loop, so switching between ideas never stops the music. Before, the old pattern kept playing until the next stop and play, while the screen already showed the new one. Stopped, the new pattern only becomes the one the next play starts (startArsenalPlayback sets it anyway). A piano-roll zone on the new pattern starts it at the zone's top instead. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00143">143</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01978">Aestra::Audio::TrackManager::activeArsenalLoopZone()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01987">Aestra::Audio::TrackManager::arsenalLoopLengthBeats()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00927">Aestra::Audio::TrackManager::getPosition()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01932">Aestra::Audio::TrackManager::getTimelineClock()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01713">Aestra::Audio::TrackManager::isPatternMode()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01395">Aestra::Audio::TrackManager::isPlaying()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l02017">Aestra::Audio::TrackManager::playPatternInArsenal()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01506">Aestra::Audio::TrackManager::setPatternLoopOverride()</a>.</p>
+<div id="dynsection-15" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-15-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-15-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-15-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d6/de1/classAestra_1_1Audio_1_1PlaybackContextController_a70f15085c9ec7f1d44e14728dbe98e5e_cgraph.svg" width="100%" height="600"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -956,23 +1009,23 @@ Public Member Functions</h2></td></tr>
 <p>Leave pattern playback: stop, drop the scheduled instances, leave pattern mode. </p>
 <p>Only if <a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html" title="Track/Channel manager for the audio engine.">TrackManager</a> is actually in pattern mode. Otherwise the transport is not ours to stop. </p><dl class="section return"><dt>Returns</dt><dd>True if it tore anything down. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00233">233</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00263">263</a> of file <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html">PlaybackContextController.h</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01713">Aestra::Audio::TrackManager::isPatternMode()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01720">Aestra::Audio::TrackManager::stopArsenalPlayback()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00284">endClipPreview()</a>, <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00254">enterAudition()</a>, and <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00242">enterTimeline()</a>.</p>
-<div id="dynsection-15" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-15-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-15-summary" class="dynsummary" style="display:block;">
-</div>
-<div id="dynsection-15-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d6/de1/classAestra_1_1Audio_1_1PlaybackContextController_ac8768f3bf65fade329062213829924f5_cgraph.svg" width="100%" height="410"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
-</div>
+<p class="reference">Referenced by <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00314">endClipPreview()</a>, <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00284">enterAudition()</a>, and <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00272">enterTimeline()</a>.</p>
 <div id="dynsection-16" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-16-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+  <img id="dynsection-16-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-16-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-16-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d6/de1/classAestra_1_1Audio_1_1PlaybackContextController_ac8768f3bf65fade329062213829924f5_cgraph.svg" width="100%" height="410"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+<div id="dynsection-17" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-17-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-17-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-17-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d6/de1/classAestra_1_1Audio_1_1PlaybackContextController_ac8768f3bf65fade329062213829924f5_icgraph.svg" width="546" height="179"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 

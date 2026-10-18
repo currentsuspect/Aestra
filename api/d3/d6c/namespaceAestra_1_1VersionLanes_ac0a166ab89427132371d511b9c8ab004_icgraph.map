@@ -1,0 +1,5 @@
+<map id="Aestra::VersionLanes::label" name="Aestra::VersionLanes::label">
+<area shape="rect" id="Node000001" title="How a branch reads on screen: the first lane is stored as &quot;Main&quot; and shows as the main mix." alt="" coords="212,5,371,45"/>
+<area shape="rect" id="Node000002" href="$d6/de6/namespaceAestra_1_1VersionPicker.html#aadaf26f0dfaf74eceb0f36dcf4cc9d4e" title="One entry per branch, in lane order. A branch opens on its newest saved version (autosaves are never ..." alt="" coords="5,5,164,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="198,28,164,28,164,23,198,23"/>
+</map>

@@ -1,8 +1,15 @@
 <map id="AestraUI::FileBrowser::BrowserLayout" name="AestraUI::FileBrowser::BrowserLayout">
-<area shape="rect" id="Node000001" title=" " alt="" coords="5,372,168,412"/>
-<area shape="rect" id="Node000002" href="$da/d4e/structAestraUI_1_1NUIRect.html" title=" " alt="" coords="127,137,265,163"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="188,176,98,373,93,371,183,174"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="32,5,83,31"/>
-<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="57,45,51,137,53,205,62,272,84,371,79,372,56,272,47,206,45,137,52,44"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="81,38,185,135,182,139,78,42"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="269,449,432,489"/>
+<area shape="rect" id="Node000002" href="$da/d4e/structAestraUI_1_1NUIRect.html" title=" " alt="" coords="281,137,420,163"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="353,176,353,449,348,449,348,176"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="148,286,303,326"/>
+<area shape="poly" id="edge4_Node000004_Node000002" title=" " alt="" coords="294,170,269,189,252,212,241,238,230,286,225,285,236,236,248,209,265,185,291,166"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="407,5,457,31"/>
+<area shape="poly" id="edge7_Node000001_Node000003" title=" " alt="" coords="455,41,461,54,465,70,465,84,461,113,467,192,476,254,478,284,476,315,468,349,452,388,439,408,423,425,388,451,384,447,419,421,435,404,447,385,463,348,471,315,473,284,471,255,461,192,456,113,459,83,460,71,456,56,450,43"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="420,44,360,138,356,136,415,41"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="241,337,263,380,294,424,321,447,318,451,290,427,259,383,236,340"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="5,137,128,163"/>
+<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="74,175,86,200,109,226,136,249,189,284,186,288,133,253,105,230,82,203,70,177"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="47,5,86,31"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="69,44,69,137,64,137,64,44"/>
 </map>

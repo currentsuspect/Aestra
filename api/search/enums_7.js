@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['outcome_0',['Outcome',['../d0/d70/classAestra_1_1MuseAgent_1_1MuseSocketClient.html#a75e925977614e2f4df0010efef14ed8f',1,'Aestra::MuseAgent::MuseSocketClient']]]
+  ['nuicursorrestorepolicy_0',['NUICursorRestorePolicy',['../dc/d15/NUICursorService_8h.html#a5a4a7cc03777f041adeac66d57a47fcf',1,'AestraUI']]]
 ];

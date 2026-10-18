@@ -1,0 +1,5 @@
+<map id="Aestra::readPanelMode" name="Aestra::readPanelMode">
+<area shape="rect" id="Node000001" title="The stored mode for panelKey, each field independently falling back to the default." alt="" coords="279,5,451,31"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#aafd24063f0e73f1b8b5f977dbcbd7894" title="the plugin editors&#39; shared mode, from the store" alt="" coords="5,5,231,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="265,21,231,21,231,15,265,15"/>
+</map>

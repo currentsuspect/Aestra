@@ -1,0 +1,9 @@
+<map id="AestraUI::RoutingGraph::Placed" name="AestraUI::RoutingGraph::Placed">
+<area shape="rect" id="Node000001" title=" " alt="" coords="37,93,211,133"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,80,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="64,39,109,91,105,95,60,43"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="105,5,143,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="127,44,127,93,121,93,121,44"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="183,5,233,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="199,44,181,71,154,95,151,91,177,68,194,41"/>
+</map>

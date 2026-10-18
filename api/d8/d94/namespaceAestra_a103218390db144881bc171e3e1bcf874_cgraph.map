@@ -1,0 +1,13 @@
+<map id="Aestra::drawArsenalRackHeaders" name="Aestra::drawArsenalRackHeaders">
+<area shape="rect" id="Node000001" title="Every header of the rack that is in view, clipped to the list viewport." alt="" coords="5,45,244,70"/>
+<area shape="rect" id="Node000002" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#a54f60f3fc2af410bce11eee76e28cc36" title="Clear the clip rectangle." alt="" coords="303,5,473,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="229,42,289,35,290,40,230,47"/>
+<area shape="rect" id="Node000003" href="$d8/d94/namespaceAestra.html#ac714b0dd88e2c3b6546266f85a444158" title="A group header in the Arsenal rack: &quot;DRUMS &#160;5 ————&quot; (FD&#45;27 point 2), drawn across the row width." alt="" coords="292,69,484,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="230,67,279,73,278,79,229,73"/>
+<area shape="rect" id="Node000004" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc" title="Draw text at the given position." alt="" coords="532,5,701,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="459,67,531,46,533,52,461,72"/>
+<area shape="rect" id="Node000005" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4" title="Draw a filled rectangle." alt="" coords="532,69,701,109"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="485,87,518,87,518,92,485,92"/>
+<area shape="rect" id="Node000006" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#abe394d6a3fb11601766324bcd8793ac3" title="Measure text dimensions." alt="" coords="532,133,701,173"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="461,107,533,127,531,132,459,112"/>
+</map>

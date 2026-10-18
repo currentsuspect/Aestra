@@ -1,0 +1,5 @@
+<map id="Aestra::collectVersionSteps" name="Aestra::collectVersionSteps">
+<area shape="rect" id="Node000001" title="The steps made in the open version, oldest first (SPEC&#45;017): one entry per command on the undo stack." alt="" coords="5,13,204,38"/>
+<area shape="rect" id="Node000002" href="$df/d31/classAestra_1_1Audio_1_1CommandHistory.html#ad0016c8f0d963296b0b2c157632c5d0e" title="Get the undo stack (most recent first)." alt="" coords="252,5,483,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="204,23,238,23,238,28,204,28"/>
+</map>

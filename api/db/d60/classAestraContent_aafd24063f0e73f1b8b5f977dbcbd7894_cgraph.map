@@ -1,5 +1,9 @@
 <map id="AestraContent::wireEditorMode" name="AestraContent::wireEditorMode">
-<area shape="rect" id="Node000001" title="the plugin editors&#39; shared mode, from the store" alt="" coords="5,5,231,31"/>
-<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#afbf0a48523732326319bb02e131fbd24" title="The app&#45;owned surface store, or nullptr before AestraApp provides it." alt="" coords="279,5,484,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="231,15,265,15,265,21,231,21"/>
+<area shape="rect" id="Node000001" title="the plugin editors&#39; shared mode, from the store" alt="" coords="5,55,231,80"/>
+<area shape="rect" id="Node000002" href="$d8/d94/namespaceAestra.html#ae0d620c7218f52a252b61f92b08a1fe2" title="The stored mode for panelKey, each field independently falling back to the default." alt="" coords="295,5,467,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="186,52,299,31,300,36,187,57"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#afbf0a48523732326319bb02e131fbd24" title="The app&#45;owned surface store, or nullptr before AestraApp provides it." alt="" coords="279,55,484,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="231,65,265,65,265,70,231,70"/>
+<area shape="rect" id="Node000004" href="$d8/d94/namespaceAestra.html#a7e039fc3383dc9e298db1059b4dfd467" title="Writes only what differs from the default, and removes nothing: a field set back to its default is st..." alt="" coords="293,104,469,129"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="187,77,300,99,299,104,186,83"/>
 </map>

@@ -1,0 +1,7 @@
+<map id="Aestra::ArsenalStepLanes" name="Aestra::ArsenalStepLanes">
+<area shape="rect" id="Node000001" title="Step lanes under an open Arsenal row (V81&#45;AR1, FD&#45;27 point 4): the values behind the pads,..." alt="" coords="5,181,193,207"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="22,5,73,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="44,44,38,98,41,128,51,156,61,169,75,179,72,183,58,173,46,159,36,129,33,98,38,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="133,5,172,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="153,45,144,98,126,158,111,182,107,180,121,156,139,97,148,44"/>
+</map>

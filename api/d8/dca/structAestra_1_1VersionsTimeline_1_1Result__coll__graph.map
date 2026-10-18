@@ -1,0 +1,35 @@
+<map id="Aestra::VersionsTimeline::Result" name="Aestra::VersionsTimeline::Result">
+<area shape="rect" id="Node000001" title=" " alt="" coords="949,245,1133,285"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="671,58,857,83"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="796,89,1013,243,1010,247,793,93"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="306,13,393,38"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="407,28,647,52,673,55,672,61,646,57,406,33"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="5,5,144,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="158,23,306,23,306,28,158,28"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="285,118,414,143"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="412,112,465,101,571,86,670,76,671,81,572,91,466,107,413,117"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="689,317,839,342"/>
+<area shape="poly" id="edge8_Node000007_Node000005" title=" " alt="" coords="385,149,416,173,444,203,452,220,454,236,457,250,467,263,497,275,553,289,689,315,688,320,552,294,495,280,464,267,452,252,449,237,447,222,439,205,412,176,382,153"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="689,159,839,214"/>
+<area shape="poly" id="edge14_Node000009_Node000005" title=" " alt="" coords="428,133,532,142,647,157,689,165,688,171,646,163,532,148,428,138"/>
+<area shape="rect" id="Node000013" title=" " alt="" coords="689,238,839,293"/>
+<area shape="poly" id="edge18_Node000013_Node000005" title=" " alt="" coords="381,149,421,172,466,192,516,204,556,207,596,208,647,217,701,235,699,240,646,223,596,214,555,212,515,209,464,197,418,177,379,153"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="55,103,94,129"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="108,115,285,125,284,130,108,120"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="833,311,953,283,954,288,834,316"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="49,387,100,413"/>
+<area shape="poly" id="edge19_Node000001_Node000008" title=" " alt="" coords="114,401,240,410,426,413,532,408,641,397,751,379,857,352,938,319,1006,283,1008,288,941,324,858,357,752,384,642,402,532,413,426,418,240,416,114,407"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="114,395,339,376,646,344,688,338,689,344,647,349,340,381,114,400"/>
+<area shape="rect" id="Node000010" href="$de/d71/structAestra_1_1VersionsTimeline_1_1Node.html" title=" " alt="" coords="257,216,441,256"/>
+<area shape="poly" id="edge12_Node000010_Node000008" title=" " alt="" coords="113,390,173,369,204,353,231,332,240,319,243,307,246,294,255,279,291,254,294,258,259,283,251,296,248,308,245,321,235,335,207,357,175,374,115,395"/>
+<area shape="poly" id="edge9_Node000001_Node000009" title=" " alt="" coords="854,209,971,243,969,248,852,214"/>
+<area shape="poly" id="edge10_Node000009_Node000010" title=" " alt="" coords="455,243,549,243,598,239,646,232,699,212,700,216,647,237,599,245,549,248,455,248"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="55,254,94,279"/>
+<area shape="poly" id="edge11_Node000010_Node000011" title=" " alt="" coords="108,260,257,244,257,249,108,266"/>
+<area shape="rect" id="Node000014" href="$db/dc3/structAestra_1_1VersionsTimeline_1_1Link.html" title="node indices: parent to child" alt="" coords="257,293,441,333"/>
+<area shape="poly" id="edge17_Node000014_Node000011" title=" " alt="" coords="108,273,169,287,257,301,257,306,167,292,107,278"/>
+<area shape="rect" id="Node000012" title=" " alt="" coords="49,163,100,189"/>
+<area shape="poly" id="edge13_Node000010_Node000012" title=" " alt="" coords="114,182,258,213,257,219,113,187"/>
+<area shape="poly" id="edge15_Node000001_Node000013" title=" " alt="" coords="853,263,949,263,949,268,853,268"/>
+<area shape="poly" id="edge16_Node000013_Node000014" title=" " alt="" coords="449,333,496,338,546,340,597,335,646,323,657,314,669,303,692,290,695,295,672,307,661,318,648,328,598,340,546,345,495,344,448,338"/>
+</map>

@@ -90,20 +90,22 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#include &lt;functional&gt;</span></div>
 <div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &lt;string&gt;</span></div>
 <div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span> </div>
-<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="keyword">namespace </span>Aestra {</div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d8/d94/namespaceAestra.html">Aestra</a> {</div>
 <div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span> </div>
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="keyword">enum class</span> DialogResponse {</div>
+<div class="foldopen" id="foldopen00014" data-start="{" data-end="};">
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno"><a class="line" href="../../d8/d94/namespaceAestra.html#a63bbad236fed90fca4d9551b26731773">   14</a></span><span class="keyword">enum class</span> <a class="code hl_enumeration" href="../../d8/d94/namespaceAestra.html#a63bbad236fed90fca4d9551b26731773">DialogResponse</a> {</div>
 <div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span>    None,       <span class="comment">// Dialog not yet answered</span></div>
 <div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span>    Save,       <span class="comment">// User chose to save</span></div>
 <div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span>    DontSave,   <span class="comment">// User chose to discard changes</span></div>
 <div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>    Cancel,     <span class="comment">// User cancelled the action</span></div>
 <div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span>    Confirm     <span class="comment">// User confirmed a generic destructive action</span></div>
 <div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>};</div>
+</div>
 <div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span> </div>
 <div class="foldopen" id="foldopen00030" data-start="{" data-end="};">
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno"><a class="line" href="../../d8/d2f/classAestra_1_1ConfirmationDialog.html">   30</a></span><span class="keyword">class </span><a class="code hl_class" href="../../d8/d2f/classAestra_1_1ConfirmationDialog.html">ConfirmationDialog</a> : <span class="keyword">public</span> <a class="code hl_class" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a> {</div>
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span><span class="keyword">public</span>:</div>
-<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>    <span class="keyword">using </span>ResponseCallback = std::function&lt;void(DialogResponse)&gt;;</div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>    <span class="keyword">using </span>ResponseCallback = std::function&lt;void(<a class="code hl_enumeration" href="../../d8/d94/namespaceAestra.html#a63bbad236fed90fca4d9551b26731773">DialogResponse</a>)&gt;;</div>
 <div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    </div>
 <div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    <a class="code hl_class" href="../../d8/d2f/classAestra_1_1ConfirmationDialog.html">ConfirmationDialog</a>();</div>
 <div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>    <a class="code hl_class" href="../../d8/d2f/classAestra_1_1ConfirmationDialog.html">~ConfirmationDialog</a>() <span class="keyword">override</span> = <span class="keywordflow">default</span>;</div>
@@ -122,13 +124,13 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>    </div>
 <div class="line"><a id="l00068" name="l00068"></a><span class="lineno"><a class="line" href="../../d8/d2f/classAestra_1_1ConfirmationDialog.html#abe71e0200e055a260914ba69fdea925a">   68</a></span>    <span class="keywordtype">bool</span> <a class="code hl_function" href="../../d8/d2f/classAestra_1_1ConfirmationDialog.html#abe71e0200e055a260914ba69fdea925a">isDialogVisible</a>()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> m_isVisible; }</div>
 <div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    </div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno"><a class="line" href="../../d8/d2f/classAestra_1_1ConfirmationDialog.html#ab0911f8fd0488f15f53afcfbd4c0644d">   73</a></span>    DialogResponse <a class="code hl_function" href="../../d8/d2f/classAestra_1_1ConfirmationDialog.html#ab0911f8fd0488f15f53afcfbd4c0644d">getResponse</a>()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> m_response; }</div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno"><a class="line" href="../../d8/d2f/classAestra_1_1ConfirmationDialog.html#ab0911f8fd0488f15f53afcfbd4c0644d">   73</a></span>    <a class="code hl_enumeration" href="../../d8/d94/namespaceAestra.html#a63bbad236fed90fca4d9551b26731773">DialogResponse</a> <a class="code hl_function" href="../../d8/d2f/classAestra_1_1ConfirmationDialog.html#ab0911f8fd0488f15f53afcfbd4c0644d">getResponse</a>()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> m_response; }</div>
 <div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    </div>
 <div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span><span class="keyword">private</span>:</div>
 <div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    std::string m_title;</div>
 <div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>    std::string m_message;</div>
 <div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>    ResponseCallback m_callback;</div>
-<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>    DialogResponse m_response;</div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>    <a class="code hl_enumeration" href="../../d8/d94/namespaceAestra.html#a63bbad236fed90fca4d9551b26731773">DialogResponse</a> m_response;</div>
 <div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    <span class="keywordtype">bool</span> m_isVisible;</div>
 <div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    <span class="keywordtype">bool</span> m_isConfirmMode{<span class="keyword">false</span>};</div>
 <div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>    std::string m_confirmLabel{<span class="stringliteral">&quot;Delete&quot;</span>};</div>
@@ -143,7 +145,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>    <span class="keywordtype">int</span> m_focusIndex{2};</div>
 <div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>    <span class="comment">// Button the mouse press landed on; the response fires on release so the</span></div>
 <div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>    <span class="comment">// matching release is consumed too (no click-through to the app behind).</span></div>
-<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>    DialogResponse m_pressedButton{DialogResponse::None};</div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>    <a class="code hl_enumeration" href="../../d8/d94/namespaceAestra.html#a63bbad236fed90fca4d9551b26731773">DialogResponse</a> m_pressedButton{DialogResponse::None};</div>
 <div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span> </div>
 <div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    <span class="comment">// Button rectangles (calculated during render)</span></div>
 <div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>    <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> m_saveButtonRect;</div>
@@ -152,10 +154,10 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>    <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> m_dialogRect;</div>
 <div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>    <span class="keywordtype">float</span> m_messageCentreY = 0.0f; <span class="comment">// the message line (and its dot) centre on this</span></div>
 <div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span> </div>
-<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>    <span class="keywordtype">void</span> handleResponse(DialogResponse response);</div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>    <span class="keywordtype">void</span> handleResponse(<a class="code hl_enumeration" href="../../d8/d94/namespaceAestra.html#a63bbad236fed90fca4d9551b26731773">DialogResponse</a> response);</div>
 <div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    <span class="keywordtype">void</span> calculateLayout();</div>
 <div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>    <span class="comment">// Maps a focus index / response to its button rect and vice-versa.</span></div>
-<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>    DialogResponse responseForFocus(<span class="keywordtype">int</span> index) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>    <a class="code hl_enumeration" href="../../d8/d94/namespaceAestra.html#a63bbad236fed90fca4d9551b26731773">DialogResponse</a> responseForFocus(<span class="keywordtype">int</span> index) <span class="keyword">const</span>;</div>
 <div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>};</div>
 </div>
 <div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span> </div>
@@ -168,6 +170,8 @@ $(document).ready(function() { init_codefold(1); });
 <div class="ttc" id="aclassAestra_1_1ConfirmationDialog_html_ab0911f8fd0488f15f53afcfbd4c0644d"><div class="ttname"><a href="../../d8/d2f/classAestra_1_1ConfirmationDialog.html#ab0911f8fd0488f15f53afcfbd4c0644d">Aestra::ConfirmationDialog::getResponse</a></div><div class="ttdeci">DialogResponse getResponse() const</div><div class="ttdoc">Get the last response (None if dialog still open)</div><div class="ttdef"><b>Definition</b> <a href="../../dd/dee/ConfirmationDialog_8h_source.html#l00073">ConfirmationDialog.h:73</a></div></div>
 <div class="ttc" id="aclassAestra_1_1ConfirmationDialog_html_abe71e0200e055a260914ba69fdea925a"><div class="ttname"><a href="../../d8/d2f/classAestra_1_1ConfirmationDialog.html#abe71e0200e055a260914ba69fdea925a">Aestra::ConfirmationDialog::isDialogVisible</a></div><div class="ttdeci">bool isDialogVisible() const</div><div class="ttdoc">Check if dialog is currently visible.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/dee/ConfirmationDialog_8h_source.html#l00068">ConfirmationDialog.h:68</a></div></div>
 <div class="ttc" id="aclassAestra_1_1ConfirmationDialog_html_afdf567e618d5829afb3c2e61aad2e445"><div class="ttname"><a href="../../d8/d2f/classAestra_1_1ConfirmationDialog.html#afdf567e618d5829afb3c2e61aad2e445">Aestra::ConfirmationDialog::showConfirm</a></div><div class="ttdeci">void showConfirm(const std::string &amp;title, const std::string &amp;message, const std::string &amp;confirmLabel, ResponseCallback callback)</div><div class="ttdoc">Show a generic two-button confirm dialog.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d71/ConfirmationDialog_8cpp_source.html#l00035">ConfirmationDialog.cpp:35</a></div></div>
+<div class="ttc" id="anamespaceAestra_html"><div class="ttname"><a href="../../d8/d94/namespaceAestra.html">Aestra</a></div><div class="ttdoc">Main application class.</div><div class="ttdef"><b>Definition</b> <a href="../../d7/d7b/AestraAssert_8h_source.html#l00009">AestraAssert.h:9</a></div></div>
+<div class="ttc" id="anamespaceAestra_html_a63bbad236fed90fca4d9551b26731773"><div class="ttname"><a href="../../d8/d94/namespaceAestra.html#a63bbad236fed90fca4d9551b26731773">Aestra::DialogResponse</a></div><div class="ttdeci">DialogResponse</div><div class="ttdoc">Dialog response options for user confirmation.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/dee/ConfirmationDialog_8h_source.html#l00014">ConfirmationDialog.h:14</a></div></div>
 <div class="ttc" id="astructAestraUI_1_1NUIKeyEvent_html"><div class="ttname"><a href="../../dd/d88/structAestraUI_1_1NUIKeyEvent.html">AestraUI::NUIKeyEvent</a></div><div class="ttdef"><b>Definition</b> <a href="../../dc/d90/NUITypes_8h_source.html#l00457">NUITypes.h:457</a></div></div>
 <div class="ttc" id="astructAestraUI_1_1NUIMouseEvent_html"><div class="ttname"><a href="../../db/d1d/structAestraUI_1_1NUIMouseEvent.html">AestraUI::NUIMouseEvent</a></div><div class="ttdef"><b>Definition</b> <a href="../../dc/d90/NUITypes_8h_source.html#l00442">NUITypes.h:442</a></div></div>
 <div class="ttc" id="astructAestraUI_1_1NUIRect_html"><div class="ttname"><a href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a></div><div class="ttdef"><b>Definition</b> <a href="../../dc/d90/NUITypes_8h_source.html#l00058">NUITypes.h:58</a></div></div>

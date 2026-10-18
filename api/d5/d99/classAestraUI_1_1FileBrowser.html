@@ -78,6 +78,7 @@ $(function() {
 <a href="#nested-classes">Classes</a> &#124;
 <a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-static-methods">Static Public Member Functions</a> &#124;
 <a href="../../d7/dfb/classAestraUI_1_1FileBrowser-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">AestraUI::FileBrowser Class Reference</div></div>
 </div><!--header-->
@@ -177,6 +178,11 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a6732dc8869815a67a03163027e001daf" id="r_a6732dc8869815a67a03163027e001daf"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a6732dc8869815a67a03163027e001daf">setPlatformBridge</a> (<a class="el" href="../../d2/d9e/classAestraUI_1_1NUIPlatformBridge.html">NUIPlatformBridge</a> *bridge)</td></tr>
 <tr class="memdesc:a6732dc8869815a67a03163027e001daf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the platform bridge for hover cursor styling (grab on rows).  <br /></td></tr>
 <tr class="separator:a6732dc8869815a67a03163027e001daf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2fae92f2028b0e0ab160b8d73ed9b023" id="r_a2fae92f2028b0e0ab160b8d73ed9b023"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a2fae92f2028b0e0ab160b8d73ed9b023">setAutoPreviewEnabled</a> (bool on)</td></tr>
+<tr class="memdesc:a2fae92f2028b0e0ab160b8d73ed9b023"><td class="mdescLeft">&#160;</td><td class="mdescRight">Arrow keys play the sound they land on (the preview dock's Auto-play).  <br /></td></tr>
+<tr class="separator:a2fae92f2028b0e0ab160b8d73ed9b023"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a616e3dc0dcd9923a6d45319cd3534f0e" id="r_a616e3dc0dcd9923a6d45319cd3534f0e"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a616e3dc0dcd9923a6d45319cd3534f0e">isAutoPreviewEnabled</a> () const</td></tr>
+<tr class="separator:a616e3dc0dcd9923a6d45319cd3534f0e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9f1016e9bb855dbb70089696b3e53993" id="r_a9f1016e9bb855dbb70089696b3e53993"><td class="memItemLeft" align="right" valign="top"><a id="a9f1016e9bb855dbb70089696b3e53993" name="a9f1016e9bb855dbb70089696b3e53993"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>setCurrentPath</b> (const std::string &amp;path)</td></tr>
 <tr class="separator:a9f1016e9bb855dbb70089696b3e53993"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -256,6 +262,9 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>setCurrentPath</b> (c
 <tr class="separator:a3447875d220b7544816b8fbf9392fe18"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa33438e7cbdf260571fc6f8227f498e4" id="r_aa33438e7cbdf260571fc6f8227f498e4"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; std::string &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#aa33438e7cbdf260571fc6f8227f498e4">getCollections</a> () const</td></tr>
 <tr class="separator:aa33438e7cbdf260571fc6f8227f498e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9679b86237061f4a5df4c4a6525b5d23" id="r_a9679b86237061f4a5df4c4a6525b5d23"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a9679b86237061f4a5df4c4a6525b5d23">getCollectionMembers</a> (const std::string &amp;name) const</td></tr>
+<tr class="memdesc:a9679b86237061f4a5df4c4a6525b5d23"><td class="mdescLeft">&#160;</td><td class="mdescRight">The files and folders in a collection, wherever they live (a sound set's members).  <br /></td></tr>
+<tr class="separator:a9679b86237061f4a5df4c4a6525b5d23"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a386de7ff491933bffa8f3d517f8dd102" id="r_a386de7ff491933bffa8f3d517f8dd102"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a386de7ff491933bffa8f3d517f8dd102">createCollection</a> (const std::string &amp;name)</td></tr>
 <tr class="memdesc:a386de7ff491933bffa8f3d517f8dd102"><td class="mdescLeft">&#160;</td><td class="mdescRight">false if empty or taken  <br /></td></tr>
 <tr class="separator:a386de7ff491933bffa8f3d517f8dd102"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -335,6 +344,14 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>setCurrentPath</b> (c
 <tr class="separator:a6eedcea67a795c09a824cedaed2fe654"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa9a61bd8301a1f65e5b41bf2d82e1c84" id="r_aa9a61bd8301a1f65e5b41bf2d82e1c84"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/d3d/structAestraUI_1_1FileBrowser_1_1BrowserLayout.html">BrowserLayout</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#aa9a61bd8301a1f65e5b41bf2d82e1c84">computeBrowserLayout</a> () const</td></tr>
 <tr class="separator:aa9a61bd8301a1f65e5b41bf2d82e1c84"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af3016beba5a24eedd2bc3c1ee44d1b45" id="r_af3016beba5a24eedd2bc3c1ee44d1b45"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#af3016beba5a24eedd2bc3c1ee44d1b45">setPlacesOpen</a> (bool open)</td></tr>
+<tr class="memdesc:af3016beba5a24eedd2bc3c1ee44d1b45"><td class="mdescLeft">&#160;</td><td class="mdescRight">Places (FD-47): favourites, the project, the library, this computer and collections, in one list that drops over the rows from the place chip.  <br /></td></tr>
+<tr class="separator:af3016beba5a24eedd2bc3c1ee44d1b45"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1aa6b785dd2d91b6cb018cf82823e534" id="r_a1aa6b785dd2d91b6cb018cf82823e534"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a1aa6b785dd2d91b6cb018cf82823e534">isPlacesOpen</a> () const</td></tr>
+<tr class="separator:a1aa6b785dd2d91b6cb018cf82823e534"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afac83733e920f9616bb0632f403a5193" id="r_afac83733e920f9616bb0632f403a5193"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#afac83733e920f9616bb0632f403a5193">selectKind</a> (int kind)</td></tr>
+<tr class="memdesc:afac83733e920f9616bb0632f403a5193"><td class="mdescLeft">&#160;</td><td class="mdescRight">Switch to Sounds, Patterns or Plugins, as a click on the tab does.  <br /></td></tr>
+<tr class="separator:afac83733e920f9616bb0632f403a5193"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6da8eb551688092f5a738405a677890c" id="r_a6da8eb551688092f5a738405a677890c"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; <a class="el" href="../../d1/d75/structAestraUI_1_1FileBrowser_1_1BrowserNavHit.html">BrowserNavHit</a> &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a6da8eb551688092f5a738405a677890c">getNavHits</a> () const</td></tr>
 <tr class="memdesc:a6da8eb551688092f5a738405a677890c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Navigation rows as laid out by the last paint (bounds are screen space).  <br /></td></tr>
 <tr class="separator:a6da8eb551688092f5a738405a677890c"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -408,6 +425,9 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>setCurrentPath</b> (c
 <tr class="memitem:a2b3f7ebc1d4af1d46fcb206080bf7cf3 inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a2b3f7ebc1d4af1d46fcb206080bf7cf3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a2b3f7ebc1d4af1d46fcb206080bf7cf3">bringToFront</a> ()</td></tr>
 <tr class="memdesc:a2b3f7ebc1d4af1d46fcb206080bf7cf3 inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="mdescLeft">&#160;</td><td class="mdescRight">Moves this component to the top of its parent's children list (rendered last, receives events first)  <br /></td></tr>
 <tr class="separator:a2b3f7ebc1d4af1d46fcb206080bf7cf3 inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a71e85694284576b3f396979b144878de inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a71e85694284576b3f396979b144878de"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a71e85694284576b3f396979b144878de">bringToFrontPriority</a> ()</td></tr>
+<tr class="memdesc:a71e85694284576b3f396979b144878de inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a2b3f7ebc1d4af1d46fcb206080bf7cf3" title="Moves this component to the top of its parent&#39;s children list (rendered last, receives events first)">bringToFront()</a> for a deliberate open.  <br /></td></tr>
+<tr class="separator:a71e85694284576b3f396979b144878de inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a16788f874b25327365e0e57c1bcfe73b inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a16788f874b25327365e0e57c1bcfe73b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">NUIComponent</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a16788f874b25327365e0e57c1bcfe73b">getParent</a> () const</td></tr>
 <tr class="separator:a16788f874b25327365e0e57c1bcfe73b inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3a07e69f6d5bee5fa05f044b6b1f599e inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a3a07e69f6d5bee5fa05f044b6b1f599e"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; std::shared_ptr&lt; <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">NUIComponent</a> &gt; &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a3a07e69f6d5bee5fa05f044b6b1f599e">getChildren</a> () const</td></tr>
@@ -464,8 +484,11 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>setCurrentPath</b> (c
 <tr class="memitem:a1d87d5d3062bbbbab05b21752e5c2f4d inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a1d87d5d3062bbbbab05b21752e5c2f4d"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a1d87d5d3062bbbbab05b21752e5c2f4d">getTooltip</a> () const</td></tr>
 <tr class="separator:a1d87d5d3062bbbbab05b21752e5c2f4d inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="inherited" name="inherited"></a>
-Additional Inherited Members</h2></td></tr>
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
+Static Public Member Functions</h2></td></tr>
+<tr class="memitem:a6559e04854809d966857ae66aa38423a" id="r_a6559e04854809d966857ae66aa38423a"><td class="memItemLeft" align="right" valign="top">static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d99/classAestraUI_1_1FileBrowser.html#a6559e04854809d966857ae66aa38423a">kindOf</a> (BrowserNavAction action)</td></tr>
+<tr class="memdesc:a6559e04854809d966857ae66aa38423a"><td class="mdescLeft">&#160;</td><td class="mdescRight">The kind a nav action belongs to: 0 Sounds, 1 Patterns, 2 Plugins.  <br /></td></tr>
+<tr class="separator:a6559e04854809d966857ae66aa38423a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_static_methods_classAestraUI_1_1NUIComponent"><td colspan="2" onclick="javascript:toggleInherit('pub_static_methods_classAestraUI_1_1NUIComponent')"><img src="../../closed.png" alt="-"/>&#160;Static Public Member Functions inherited from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a></td></tr>
 <tr class="memitem:a2c997dcc987fff37c232e9c7a56668b7 inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_a2c997dcc987fff37c232e9c7a56668b7"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a2c997dcc987fff37c232e9c7a56668b7">dispatchMouseEvent</a> (<a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">NUIComponent</a> *target, const <a class="el" href="../../db/d1d/structAestraUI_1_1NUIMouseEvent.html">NUIMouseEvent</a> &amp;event)</td></tr>
 <tr class="separator:a2c997dcc987fff37c232e9c7a56668b7 inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -514,6 +537,9 @@ Additional Inherited Members</h2></td></tr>
 <tr class="separator:a7c0eefbb0906e4a3732cc101938f50fe inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ada1e54ce302d575496f0109d41633f5e inherit pub_static_methods_classAestraUI_1_1NUIComponent" id="r_ada1e54ce302d575496f0109d41633f5e"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#ada1e54ce302d575496f0109d41633f5e">isCursorCaptureActive</a> ()</td></tr>
 <tr class="separator:ada1e54ce302d575496f0109d41633f5e inherit pub_static_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="inherited" name="inherited"></a>
+Additional Inherited Members</h2></td></tr>
 <tr class="inherit_header pub_attribs_classAestraUI_1_1NUIComponent"><td colspan="2" onclick="javascript:toggleInherit('pub_attribs_classAestraUI_1_1NUIComponent')"><img src="../../closed.png" alt="-"/>&#160;Public Attributes inherited from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a></td></tr>
 <tr class="memitem:a1ae675c5a181ae05a45c97a294db9b2c inherit pub_attribs_classAestraUI_1_1NUIComponent" id="r_a1ae675c5a181ae05a45c97a294db9b2c"><td class="memItemLeft" align="right" valign="top">NUIMouseCallback&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a1ae675c5a181ae05a45c97a294db9b2c">onMouseDown</a></td></tr>
 <tr class="separator:a1ae675c5a181ae05a45c97a294db9b2c inherit pub_attribs_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -563,7 +589,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00291">291</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00296">296</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -587,7 +613,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00271">271</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00276">276</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -611,7 +637,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00262">262</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00267">267</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -726,7 +752,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03222">3222</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03186">3186</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -768,7 +794,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03697">3697</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03661">3661</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -787,7 +813,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03192">3192</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03156">3156</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -870,7 +896,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03901">3901</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03865">3865</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -897,7 +923,37 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00350">350</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00369">369</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+
+</div>
+</div>
+<a id="a9679b86237061f4a5df4c4a6525b5d23" name="a9679b86237061f4a5df4c4a6525b5d23"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9679b86237061f4a5df4c4a6525b5d23">&#9670;&#160;</a></span>getCollectionMembers()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; std::string &gt; AestraUI::FileBrowser::getCollectionMembers </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>name</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The files and folders in a collection, wherever they live (a sound set's members). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00210">210</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -924,7 +980,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00205">205</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00208">208</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -943,7 +999,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00452">452</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00448">448</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -997,7 +1053,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00254">254</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00259">259</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1016,7 +1072,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03881">3881</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03845">3845</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1043,7 +1099,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00191">191</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00194">194</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1070,7 +1126,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00256">256</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00261">261</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1100,7 +1156,7 @@ Additional Inherited Members</h2></td></tr>
 <p>Library root: the folder the Library categories (User Library, Packs, ...) live under, and where the browser starts. </p>
 <p>It does not restrict navigation. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00230">230</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00235">235</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1127,7 +1183,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00226">226</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00231">231</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1156,7 +1212,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Navigation rows as laid out by the last paint (bounds are screen space). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00339">339</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00358">358</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1175,7 +1231,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00446">446</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00444">444</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1202,7 +1258,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00198">198</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00201">201</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1221,7 +1277,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03689">3689</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03653">3653</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1248,7 +1304,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00255">255</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00260">260</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1275,7 +1331,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00168">168</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00171">171</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1302,7 +1358,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00287">287</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00292">292</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1329,7 +1385,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00242">242</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00247">247</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1358,7 +1414,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>The rows actually on screen: getFiles() after search, quick and tag filters. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00258">258</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00263">263</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1388,7 +1444,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02615">2615</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02579">2579</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1411,6 +1467,33 @@ Additional Inherited Members</h2></td></tr>
 <p>App startup: adopt <code>statePath</code> as the autosave target and load it, or, on first run, import the pre-v3 ~/.config/aestra/browser_settings.json. </p>
 
 <p class="definition">Definition at line <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html#l00014">14</a> of file <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html">FileBrowserLibrary.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a616e3dc0dcd9923a6d45319cd3534f0e" name="a616e3dc0dcd9923a6d45319cd3534f0e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a616e3dc0dcd9923a6d45319cd3534f0e">&#9670;&#160;</a></span>isAutoPreviewEnabled()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool AestraUI::FileBrowser::isAutoPreviewEnabled </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00138">138</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1437,7 +1520,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00371">371</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00390">390</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1503,7 +1586,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00162">162</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00165">165</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1524,6 +1607,33 @@ Additional Inherited Members</h2></td></tr>
 </div><div class="memdoc">
 
 <p class="definition">Definition at line <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html#l00071">71</a> of file <a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html">FileBrowserLibrary.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a1aa6b785dd2d91b6cb018cf82823e534" name="a1aa6b785dd2d91b6cb018cf82823e534"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1aa6b785dd2d91b6cb018cf82823e534">&#9670;&#160;</a></span>isPlacesOpen()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool AestraUI::FileBrowser::isPlacesOpen </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00351">351</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1553,7 +1663,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html#l00394">394</a> of file <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html">FileBrowserNavigation.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html#l00393">393</a> of file <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html">FileBrowserNavigation.cpp</a>.</p>
 
 </div>
 </div>
@@ -1580,7 +1690,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00184">184</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00187">187</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1607,7 +1717,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00212">212</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00217">217</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1626,7 +1736,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02077">2077</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02014">2014</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1645,7 +1755,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03693">3693</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03657">3657</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1672,7 +1782,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00285">285</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00290">290</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1699,7 +1809,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00225">225</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00230">230</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -1726,7 +1836,37 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00288">288</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00293">293</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+
+</div>
+</div>
+<a id="a6559e04854809d966857ae66aa38423a" name="a6559e04854809d966857ae66aa38423a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6559e04854809d966857ae66aa38423a">&#9670;&#160;</a></span>kindOf()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">int AestraUI::FileBrowser::kindOf </td>
+          <td>(</td>
+          <td class="paramtype">BrowserNavAction&#160;</td>
+          <td class="paramname"><em>action</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The kind a nav action belongs to: 0 Sounds, 1 Patterns, 2 Plugins. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html#l00018">18</a> of file <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html">FileBrowserNavigation.cpp</a>.</p>
 
 </div>
 </div>
@@ -1746,7 +1886,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03757">3757</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03721">3721</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1766,7 +1906,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01855">1855</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01792">1792</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1785,7 +1925,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01841">1841</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01778">1778</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1805,7 +1945,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html#l00408">408</a> of file <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html">FileBrowserNavigation.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html#l00407">407</a> of file <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html">FileBrowserNavigation.cpp</a>.</p>
 
 </div>
 </div>
@@ -1835,7 +1975,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01463">1463</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01399">1399</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1865,7 +2005,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00939">939</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00866">866</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1894,7 +2034,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01665">1665</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01602">1602</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -1992,7 +2132,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00874">874</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00801">801</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -2022,7 +2162,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00784">784</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00711">711</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -2042,7 +2182,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01907">1907</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01844">1844</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -2062,7 +2202,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01920">1920</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01857">1857</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -2092,7 +2232,7 @@ Additional Inherited Members</h2></td></tr>
 <p>Pump background scan results into the model. </p>
 <p>onUpdate() does this every frame; exposed so headless callers (tests) can drive the browser. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00246">246</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00251">251</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -2111,7 +2251,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01805">1805</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01742">1742</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -2141,7 +2281,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00458">458</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00452">452</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -2235,7 +2375,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Hover washes drawn per-frame OUTSIDE the FBO cache, so hover changes never force a cache rebuild (see renderFileList / nav drawRow). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00625">625</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00546">546</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a54f60f3fc2af410bce11eee76e28cc36">AestraUI::NUIRenderer::clearClipRect()</a>, <a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4">AestraUI::NUIRenderer::fillRect()</a>, and <a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8edd36aab59578f6c121fae6046db289">AestraUI::NUIRenderer::fillRoundedRect()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -2283,7 +2423,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03715">3715</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03679">3679</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -2324,7 +2464,38 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01861">1861</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01798">1798</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+
+</div>
+</div>
+<a id="afac83733e920f9616bb0632f403a5193" name="afac83733e920f9616bb0632f403a5193"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afac83733e920f9616bb0632f403a5193">&#9670;&#160;</a></span>selectKind()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::FileBrowser::selectKind </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>kind</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Switch to Sounds, Patterns or Plugins, as a click on the tab does. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html#l00034">34</a> of file <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html">FileBrowserNavigation.cpp</a>.</p>
+
+<p class="reference">References <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html#l00026">setPlacesOpen()</a>.</p>
+<div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-3-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-3-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d5/d99/classAestraUI_1_1FileBrowser_afac83733e920f9616bb0632f403a5193_cgraph.svg" width="384" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 
 </div>
 </div>
@@ -2347,7 +2518,7 @@ Additional Inherited Members</h2></td></tr>
 <p>Programmatically select a navigation entry — same pipeline as clicking it (content view swap, nav callback), minus hit-testing. </p>
 <p>Lets host surfaces (e.g. the mixer plugin dropdown's "Browse all plugins") open a specific library section. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html#l00018">18</a> of file <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html">FileBrowserNavigation.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html#l00054">54</a> of file <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html">FileBrowserNavigation.cpp</a>.</p>
 
 </div>
 </div>
@@ -2367,7 +2538,37 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01900">1900</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01837">1837</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a2fae92f2028b0e0ab160b8d73ed9b023" name="a2fae92f2028b0e0ab160b8d73ed9b023"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2fae92f2028b0e0ab160b8d73ed9b023">&#9670;&#160;</a></span>setAutoPreviewEnabled()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::FileBrowser::setAutoPreviewEnabled </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>on</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Arrow keys play the sound they land on (the preview dock's Auto-play). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00137">137</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -2387,7 +2588,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00475">475</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l00469">469</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -2435,7 +2636,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00370">370</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00389">389</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -2483,7 +2684,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00157">157</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00160">160</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -2511,7 +2712,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00151">151</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00154">154</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -2539,7 +2740,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00150">150</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00153">153</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -2567,7 +2768,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00365">365</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00384">384</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -2595,7 +2796,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00152">152</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00155">155</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -2623,7 +2824,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00154">154</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00157">157</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -2651,7 +2852,38 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00153">153</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00156">156</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+
+</div>
+</div>
+<a id="af3016beba5a24eedd2bc3c1ee44d1b45" name="af3016beba5a24eedd2bc3c1ee44d1b45"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af3016beba5a24eedd2bc3c1ee44d1b45">&#9670;&#160;</a></span>setPlacesOpen()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::FileBrowser::setPlacesOpen </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>open</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Places (FD-47): favourites, the project, the library, this computer and collections, in one list that drops over the rows from the place chip. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html#l00026">26</a> of file <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html">FileBrowserNavigation.cpp</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html#l00034">selectKind()</a>.</p>
+<div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-4-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-4-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d5/d99/classAestraUI_1_1FileBrowser_af3016beba5a24eedd2bc3c1ee44d1b45_icgraph.svg" width="384" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 
 </div>
 </div>
@@ -2701,7 +2933,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03211">3211</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03175">3175</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -2732,7 +2964,7 @@ Additional Inherited Members</h2></td></tr>
 <p>Current Project: supplies the audio files the open project uses. </p>
 <p>The app wires it to the engine's source list; the browser stays engine-agnostic. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00216">216</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00221">221</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -2752,7 +2984,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03205">3205</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03169">3169</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -2772,7 +3004,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03199">3199</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03163">3163</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -2812,7 +3044,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02134">2134</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02071">2071</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -2832,7 +3064,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02082">2082</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02019">2019</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -2860,7 +3092,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00238">238</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d72/FileBrowser_8h_source.html#l00243">243</a> of file <a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a>.</p>
 
 </div>
 </div>
@@ -2899,7 +3131,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01980">1980</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l01917">1917</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -2974,7 +3206,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03158">3158</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l03122">3122</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -2994,7 +3226,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02257">2257</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02194">2194</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -3024,7 +3256,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02625">2625</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html#l02589">2589</a> of file <a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a>.</p>
 
 </div>
 </div>
@@ -3052,6 +3284,7 @@ Additional Inherited Members</h2></td></tr>
 <li>Source/Components/<a class="el" href="../../dd/d72/FileBrowser_8h_source.html">FileBrowser.h</a></li>
 <li>AestraUI/Widgets/<a class="el" href="../../dd/d8f/NUIUtilityWidgets_8cpp_source.html">NUIUtilityWidgets.cpp</a></li>
 <li>Source/Components/<a class="el" href="../../df/d8c/FileBrowser_8cpp_source.html">FileBrowser.cpp</a></li>
+<li>Source/Components/<a class="el" href="../../d9/d20/FileBrowserChrome_8cpp_source.html">FileBrowserChrome.cpp</a></li>
 <li>Source/Components/<a class="el" href="../../db/dcc/FileBrowserLibrary_8cpp_source.html">FileBrowserLibrary.cpp</a></li>
 <li>Source/Components/<a class="el" href="../../dc/dac/FileBrowserNavigation_8cpp_source.html">FileBrowserNavigation.cpp</a></li>
 <li>Source/Components/<a class="el" href="../../d3/d92/FileBrowserScan_8cpp_source.html">FileBrowserScan.cpp</a></li>

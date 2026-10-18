@@ -70,7 +70,7 @@ $(function() {
 
 <div id="nav-path" class="navpath">
   <ul>
-<li class="navelem"><b>Aestra</b></li><li class="navelem"><b>Audio</b></li><li class="navelem"><a class="el" href="../../d3/d87/namespaceAestra_1_1Audio_1_1Interpolators.html">Interpolators</a></li>  </ul>
+<li class="navelem"><a class="el" href="../../d8/d94/namespaceAestra.html">Aestra</a></li><li class="navelem"><b>Audio</b></li><li class="navelem"><a class="el" href="../../d3/d87/namespaceAestra_1_1Audio_1_1Interpolators.html">Interpolators</a></li>  </ul>
 </div>
 </div><!-- top -->
 <div class="header">
@@ -155,7 +155,7 @@ Variables</h2></td></tr>
 </ul>
 <p>Measured delivered behavior is PATH-SPECIFIC (Audio Research Bench Phases 1 + 2D, 2026-07; see Aestra-Internals: aestra-docs/audio-research-bench.md §8):</p><ul>
 <li>MAINLINE session playback and full-mix export (AudioEngine::renderGraph) dispatch quality Sinc64 to the legacy exact-sinc <a class="el" href="../../d7/d2f/structAestra_1_1Audio_1_1Interpolators_1_1Sinc64Interpolator.html">Sinc64Interpolator</a> and measured ~146-154 dB full-band single-tone residual SINAD at 1 kHz in full-session tests (SessionResamplingTruthTest).</li>
-<li><a class="el" href="../../d5/dc9/structAestra_1_1Audio_1_1Interpolators_1_1Sinc64Turbo.html">Sinc64Turbo</a> consumers (SamplerPlugin, AuditionEngine/ClipResampler) measured ~88 dB at FRACTIONAL rate ratios (bounded by nearest-phase LUT quantization, not the kernel) and ~154 dB at exact 2:1. Phase 1's ~88 dB figure describes these paths only, not Aestra resampling globally. (Isolated-track bounce was in this class until Phase 2E unified its kernel table with renderGraph's — it now measures mainline-equivalent.) ALL of these kernels reconstruct at the SOURCE Nyquist: on every measured path, downsampling is not anti-aliased by a ratio-aware low-pass, so content between the output and source Nyquist frequencies folds back into the output band. </li>
+<li><a class="el" href="../../d5/dc9/structAestra_1_1Audio_1_1Interpolators_1_1Sinc64Turbo.html">Sinc64Turbo</a> consumers (SamplerPlugin, AuditionEngine/ClipResampler) measured ~88 dB at FRACTIONAL rate ratios (bounded by nearest-phase LUT quantization, not the kernel) and ~154 dB at exact 2:1. Phase 1's ~88 dB figure describes these paths only, not <a class="el" href="../../d8/d94/namespaceAestra.html" title="Main application class.">Aestra</a> resampling globally. (Isolated-track bounce was in this class until Phase 2E unified its kernel table with renderGraph's — it now measures mainline-equivalent.) ALL of these kernels reconstruct at the SOURCE Nyquist: on every measured path, downsampling is not anti-aliased by a ratio-aware low-pass, so content between the output and source Nyquist frequencies folds back into the output band. </li>
 </ul>
 </div><h2 class="groupheader">Enumeration Type Documentation</h2>
 <a id="a8e917e5f76757ec9a3eb21c73ddd0c60" name="a8e917e5f76757ec9a3eb21c73ddd0c60"></a>

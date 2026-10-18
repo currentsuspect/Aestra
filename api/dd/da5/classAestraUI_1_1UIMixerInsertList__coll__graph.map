@@ -1,0 +1,17 @@
+<map id="AestraUI::UIMixerInsertList" name="AestraUI::UIMixerInsertList">
+<area shape="rect" id="Node000001" title="The strip&#39;s insert chain by name (V81&#45;M1, FD&#45;28 point 3): &quot;Aestra EQ&quot;, &quot;Saturator&quot; ...." alt="" coords="759,171,955,197"/>
+<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="375,91,560,117"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="575,113,654,125,735,141,823,169,821,174,734,147,653,130,574,118"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,225,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="240,23,296,29,351,41,406,64,449,89,446,94,403,69,350,47,295,35,239,29"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="35,84,195,124"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="209,101,374,101,374,107,209,107"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="36,148,195,188"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="208,160,278,151,350,136,374,126,411,114,412,119,376,130,351,141,279,157,209,165"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="448,141,487,166"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="500,153,759,174,758,179,500,158"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="442,201,493,226"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="506,213,610,216,734,209,811,194,812,199,735,215,610,221,506,218"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="398,261,537,286"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="550,274,640,269,688,262,734,251,764,239,792,224,837,194,840,199,795,229,766,244,735,256,689,267,640,274,551,279"/>
+</map>

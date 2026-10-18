@@ -11,10 +11,10 @@
 <!-- Node0 -->
 <g id="Node000000" class="node">
 <title>Node0</title>
-<g id="a_Node000000"><a xlink:href="dc/de6/classAestra_1_1Audio_1_1AutomationClipLayer.html" target="_top" xlink:title="The automation clips of one lane: drawn as headed bands, dragged by their grip to move,...">
+<g id="a_Node000000"><a xlink:href="da/d08/structAestra_1_1Audio_1_1AudioGraphState.html" target="_top" xlink:title="Encapsulates the complete state required to render audio for a moment in time.">
 <polygon fill="white" stroke="#666666" points="145,-30 0,-30 0,0 145,0 145,-30"/>
-<text text-anchor="start" x="8" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::Automation</text>
-<text text-anchor="middle" x="72.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">ClipLayer</text>
+<text text-anchor="start" x="8" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioGraph</text>
+<text text-anchor="middle" x="72.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">State</text>
 </a>
 </g>
 </g>

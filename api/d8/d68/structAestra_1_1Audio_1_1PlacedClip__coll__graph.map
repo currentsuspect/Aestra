@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::PlacedClip" name="Aestra::Audio::PlacedClip">
+<area shape="rect" id="Node000001" title="Where &quot;Place in timeline&quot; puts an Arsenal pattern (V81&#45;AR1, FD&#45;27: the mock&#39;s &quot;Place in timeline&quot;)." alt="" coords="9,108,195,133"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,44,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="39,41,65,82,89,106,86,110,61,86,34,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="69,5,135,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="105,45,105,108,99,108,99,45"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="159,5,234,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="192,45,183,66,169,86,152,100,134,110,131,105,149,95,165,82,178,63,187,43"/>
+</map>

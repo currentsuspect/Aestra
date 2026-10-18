@@ -1,0 +1,13 @@
+<map id="Aestra::VersionBounceInfo" name="Aestra::VersionBounceInfo">
+<area shape="rect" id="Node000001" title="What the dock shows about a version&#39;s bounce (SPEC&#45;017, V81&#45;V1): how long it is, how loud,..." alt="" coords="5,284,199,309"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="27,181,94,207"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="72,219,88,259,99,283,94,285,84,261,67,221"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="119,181,269,207"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="178,219,141,262,117,286,113,282,137,258,174,216"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="117,93,167,119"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="147,132,155,156,178,179,174,183,150,159,142,133"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="192,93,321,119"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="242,131,205,182,201,179,238,128"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="237,5,276,31"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="259,45,259,93,254,93,254,45"/>
+</map>

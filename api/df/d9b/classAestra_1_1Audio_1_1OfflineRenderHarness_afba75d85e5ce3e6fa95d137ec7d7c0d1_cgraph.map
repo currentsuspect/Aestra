@@ -1,9 +1,15 @@
 <map id="Aestra::Audio::OfflineRenderHarness::processBlocks" name="Aestra::Audio::OfflineRenderHarness::processBlocks">
-<area shape="rect" id="Node000001" title="Process N blocks offline." alt="" coords="5,37,212,77"/>
-<area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a401079ac6501c3f1df6221fd7d596f84" title="Process a single audio block (driver callback entry)." alt="" coords="260,37,459,77"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="212,55,246,55,246,60,212,60"/>
-<area shape="rect" id="Node000003" href="$d7/da4/classAestra_1_1Audio_1_1EngineState.html#a8c10dfaa447b39a42842b9c9b4431e1d" title="Acquires a read handle to the currently active graph slot." alt="" coords="519,5,713,45"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="459,42,505,37,505,42,459,48"/>
-<area shape="rect" id="Node000004" href="$dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a76c9ac9b4a5e8fceef32f0edda3d558a" title="B&#45;009: Record a successful (stable) audio block." alt="" coords="507,69,725,109"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="459,67,493,71,493,77,459,72"/>
+<area shape="rect" id="Node000001" title="Process N blocks offline." alt="" coords="5,120,212,160"/>
+<area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a401079ac6501c3f1df6221fd7d596f84" title="Process a single audio block (driver callback entry)." alt="" coords="260,120,459,160"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="212,137,246,137,246,143,212,143"/>
+<area shape="rect" id="Node000003" href="$d7/da4/classAestra_1_1Audio_1_1EngineState.html#a8c10dfaa447b39a42842b9c9b4431e1d" title="Acquires a read handle to the currently active graph slot." alt="" coords="540,5,735,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="389,117,442,86,506,55,528,47,530,52,508,60,445,90,392,122"/>
+<area shape="rect" id="Node000004" href="$d9/d8c/classAestra_1_1Audio_1_1LoudnessWindow.html#ae52d2270f76ce009fdf304fc6552cdd4" title="Audio thread, once per sample." alt="" coords="507,70,768,95"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="450,117,506,105,555,95,557,101,507,111,451,123"/>
+<area shape="rect" id="Node000005" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#aebdfdbad3145cd170ab61495a9457951" title="Latest left&#45;channel true peak (linear, max&#45;hold since last clear)." alt="" coords="538,120,737,160"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="459,137,524,137,524,143,459,143"/>
+<area shape="rect" id="Node000006" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a7ec9a8e1577c72c96b179fab3a0b6adf" title="Latest right&#45;channel true peak (linear, max&#45;hold since last clear)." alt="" coords="538,184,737,224"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="448,157,537,178,536,184,446,163"/>
+<area shape="rect" id="Node000007" href="$dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a76c9ac9b4a5e8fceef32f0edda3d558a" title="B&#45;009: Record a successful (stable) audio block." alt="" coords="528,248,747,288"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="387,158,441,196,508,234,527,241,525,246,506,238,438,201,384,162"/>
 </map>

@@ -1,0 +1,5 @@
+<map id="Aestra::UISurfaceStore::load" name="Aestra::UISurfaceStore::load">
+<area shape="rect" id="Node000001" title="Read the store from path." alt="" coords="5,5,175,45"/>
+<area shape="rect" id="Node000002" href="$d8/d94/namespaceAestra.html#a9b2615179273aeda892d3ed81a104e0f" title="Read and strictly parse the JSON object at path." alt="" coords="223,13,389,38"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="175,23,209,23,209,28,175,28"/>
+</map>

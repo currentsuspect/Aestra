@@ -1,0 +1,20 @@
+<map id="Aestra::RecoveryInfo::Info" name="Aestra::RecoveryInfo::Info">
+<area shape="rect" id="Node000001" title=" " alt="" coords="182,313,341,353"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,196,56,221"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="32,235,36,263,42,276,50,287,71,299,103,309,182,323,181,328,102,314,68,304,46,291,37,279,31,264,27,236"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="94,196,181,221"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="134,235,132,262,135,276,141,288,159,305,183,317,180,322,156,310,137,291,130,278,127,263,128,235"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="68,93,207,133"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="140,147,140,196,135,196,135,147"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="264,101,339,126"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="294,140,277,197,268,261,265,314,259,313,263,260,272,195,289,138"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="374,196,549,221"/>
+<area shape="poly" id="edge7_Node000007_Node000005" title=" " alt="" coords="331,132,392,170,438,193,436,198,389,174,328,136"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="573,196,611,221"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="573,234,537,264,492,292,455,306,416,317,342,329,341,324,415,311,453,301,489,287,534,260,569,230"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="432,231,294,315,291,311,429,226"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="397,101,526,126"/>
+<area shape="poly" id="edge8_Node000007_Node000008" title=" " alt="" coords="464,140,464,196,459,196,459,140"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="442,5,481,31"/>
+<area shape="poly" id="edge9_Node000008_Node000009" title=" " alt="" coords="464,44,464,101,459,101,459,44"/>
+</map>

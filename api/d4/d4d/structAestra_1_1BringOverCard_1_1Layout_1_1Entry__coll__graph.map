@@ -1,0 +1,15 @@
+<map id="Aestra::BringOverCard::Layout::Entry" name="Aestra::BringOverCard::Layout::Entry">
+<area shape="rect" id="Node000001" title=" " alt="" coords="53,240,220,280"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,152,44,177"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="41,187,65,214,100,238,97,242,62,218,37,191"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="69,152,119,177"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="98,190,104,215,120,238,115,241,100,217,93,192"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="144,152,231,177"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="177,190,149,241,145,239,172,188"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="118,5,257,45"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="190,59,190,152,185,152,185,59"/>
+<area shape="rect" id="Node000006" href="$da/d4e/structAestraUI_1_1NUIRect.html" title=" " alt="" coords="255,152,394,177"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="291,186,176,242,173,238,288,181"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="299,13,350,38"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="327,52,327,152,322,152,322,52"/>
+</map>

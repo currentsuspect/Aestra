@@ -132,20 +132,20 @@
 </a>
 </g>
 </g>
-<!-- Node68 -->
-<g id="Node000068" class="node">
-<title>Node68</title>
-<g id="a_Node000068"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a5d58311171dbdf556b2f670c4435a417" target="_top" xlink:title="Publish the channel&#45;slot map used by the audio thread.">
+<!-- Node69 -->
+<g id="Node000069" class="node">
+<title>Node69</title>
+<g id="a_Node000069"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a5d58311171dbdf556b2f670c4435a417" target="_top" xlink:title="Publish the channel&#45;slot map used by the audio thread.">
 <polygon fill="white" stroke="#666666" points="346,-654 197,-654 197,-624 346,-624 346,-654"/>
 <text text-anchor="start" x="205" y="-642" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
 <text text-anchor="middle" x="271.5" y="-631" font-family="Helvetica,sans-Serif" font-size="10.00">::setChannelSlotMap</text>
 </a>
 </g>
 </g>
-<!-- Node1&#45;&gt;Node68 -->
-<g id="edge56_Node000001_Node000068" class="edge">
-<title>Node1&#45;&gt;Node68</title>
-<g id="a_edge56_Node000001_Node000068"><a xlink:title=" ">
+<!-- Node1&#45;&gt;Node69 -->
+<g id="edge58_Node000001_Node000069" class="edge">
+<title>Node1&#45;&gt;Node69</title>
+<g id="a_edge58_Node000001_Node000069"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M79.57,-1007.84C80.68,-953.1 91.96,-763.53 193,-663 194.09,-661.91 195.23,-660.88 196.41,-659.89"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="198.6,-662.62 204.76,-654 194.57,-656.9 198.6,-662.62"/>
 </a>
@@ -164,9 +164,9 @@
 <g id="Node000003" class="node">
 <title>Node3</title>
 <g id="a_Node000003"><a xlink:href="../../d7/da4/classAestra_1_1Audio_1_1EngineState.html#a8c10dfaa447b39a42842b9c9b4431e1d" target="_top" xlink:title="Acquires a read handle to the currently active graph slot.">
-<polygon fill="white" stroke="#666666" points="768.5,-1036 622.5,-1036 622.5,-1006 768.5,-1006 768.5,-1036"/>
-<text text-anchor="start" x="630.5" y="-1024" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::EngineState</text>
-<text text-anchor="middle" x="695.5" y="-1013" font-family="Helvetica,sans-Serif" font-size="10.00">::activeGraphRead</text>
+<polygon fill="white" stroke="#666666" points="768.5,-1012 622.5,-1012 622.5,-982 768.5,-982 768.5,-1012"/>
+<text text-anchor="start" x="630.5" y="-1000" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::EngineState</text>
+<text text-anchor="middle" x="695.5" y="-989" font-family="Helvetica,sans-Serif" font-size="10.00">::activeGraphRead</text>
 </a>
 </g>
 </g>
@@ -174,8 +174,8 @@
 <g id="edge2_Node000002_Node000003" class="edge">
 <title>Node2&#45;&gt;Node3</title>
 <g id="a_edge2_Node000002_Node000003"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M297.75,-1398.22C354.36,-1430.15 493.12,-1496.03 579,-1431 642.19,-1383.15 680.54,-1127.93 691.34,-1046.2"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="694.82,-1046.64 692.63,-1036.27 687.87,-1045.74 694.82,-1046.64"/>
+<path fill="none" stroke="#63b8ff" d="M297.4,-1398.07C353.87,-1430.09 493.38,-1496.81 579,-1431 645.62,-1379.79 681.94,-1107.13 691.75,-1022.24"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="695.24,-1022.53 692.89,-1012.2 688.29,-1021.74 695.24,-1022.53"/>
 </a>
 </g>
 </g>
@@ -273,9 +273,9 @@
 </g>
 </g>
 <!-- Node12&#45;&gt;Node7 -->
-<g id="edge54_Node000012_Node000007" class="edge">
+<g id="edge56_Node000012_Node000007" class="edge">
 <title>Node12&#45;&gt;Node7</title>
-<g id="a_edge54_Node000012_Node000007"><a xlink:title=" ">
+<g id="a_edge56_Node000012_Node000007"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M273.49,-798.21C279.03,-878.7 308.78,-1254.35 386,-1335 389.84,-1339.01 394.25,-1342.39 399.01,-1345.24"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="397.44,-1348.36 407.93,-1349.8 400.62,-1342.13 397.44,-1348.36"/>
 </a>
@@ -303,9 +303,9 @@
 <g id="Node000013" class="node">
 <title>Node13</title>
 <g id="a_Node000013"><a xlink:href="../../dc/d56/classAestra_1_1Audio_1_1TrackOutputTap.html#a15272c82f180544241522057f0b49f6c" target="_top" xlink:title="Control thread.">
-<polygon fill="white" stroke="#666666" points="555.5,-414 409.5,-414 409.5,-384 555.5,-384 555.5,-414"/>
-<text text-anchor="start" x="417.5" y="-402" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackOutput</text>
-<text text-anchor="middle" x="482.5" y="-391" font-family="Helvetica,sans-Serif" font-size="10.00">Tap::arm</text>
+<polygon fill="white" stroke="#666666" points="555.5,-366 409.5,-366 409.5,-336 555.5,-336 555.5,-366"/>
+<text text-anchor="start" x="417.5" y="-354" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackOutput</text>
+<text text-anchor="middle" x="482.5" y="-343" font-family="Helvetica,sans-Serif" font-size="10.00">Tap::arm</text>
 </a>
 </g>
 </g>
@@ -313,8 +313,8 @@
 <g id="edge15_Node000012_Node000013" class="edge">
 <title>Node12&#45;&gt;Node13</title>
 <g id="a_edge15_Node000012_Node000013"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M340.44,-767.78C343.99,-765.28 347.23,-762.37 350,-759 445.44,-643.04 287.46,-536.34 386,-423 390.02,-418.37 394.8,-414.57 400.03,-411.45"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="401.85,-414.45 409.21,-406.83 398.71,-408.2 401.85,-414.45"/>
+<path fill="none" stroke="#63b8ff" d="M340.49,-767.83C344.03,-765.31 347.25,-762.39 350,-759 404.02,-692.46 330.2,-440.05 386,-375 389.99,-370.35 394.74,-366.52 399.96,-363.39"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="401.78,-366.39 409.12,-358.75 398.62,-360.15 401.78,-366.39"/>
 </a>
 </g>
 </g>
@@ -322,9 +322,9 @@
 <g id="Node000014" class="node">
 <title>Node14</title>
 <g id="a_Node000014"><a xlink:href="../../d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#ac38f8bee116648441fd156d9f3c29d9c" target="_top" xlink:title="Convert bit depth to string for display.">
-<polygon fill="white" stroke="#666666" points="561,-366 404,-366 404,-336 561,-336 561,-366"/>
-<text text-anchor="start" x="412" y="-354" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioExporter</text>
-<text text-anchor="middle" x="482.5" y="-343" font-family="Helvetica,sans-Serif" font-size="10.00">::bitDepthToString</text>
+<polygon fill="white" stroke="#666666" points="561,-318 404,-318 404,-288 561,-288 561,-318"/>
+<text text-anchor="start" x="412" y="-306" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioExporter</text>
+<text text-anchor="middle" x="482.5" y="-295" font-family="Helvetica,sans-Serif" font-size="10.00">::bitDepthToString</text>
 </a>
 </g>
 </g>
@@ -332,8 +332,8 @@
 <g id="edge16_Node000012_Node000014" class="edge">
 <title>Node12&#45;&gt;Node14</title>
 <g id="a_edge16_Node000012_Node000014"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M340.49,-767.83C344.03,-765.31 347.25,-762.39 350,-759 404.02,-692.46 330.2,-440.05 386,-375 388.68,-371.88 391.7,-369.13 394.97,-366.72"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="396.92,-369.62 403.57,-361.37 393.23,-363.68 396.92,-369.62"/>
+<path fill="none" stroke="#63b8ff" d="M340.53,-767.86C344.06,-765.34 347.27,-762.4 350,-759 410.33,-683.9 323.66,-400.44 386,-327 388.72,-323.79 391.8,-320.98 395.15,-318.52"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="397.29,-321.31 403.96,-313.08 393.61,-315.35 397.29,-321.31"/>
 </a>
 </g>
 </g>
@@ -341,9 +341,9 @@
 <g id="Node000015" class="node">
 <title>Node15</title>
 <g id="a_Node000015"><a xlink:href="../../d0/d3f/classAestra_1_1Audio_1_1AudioGraphBuilder.html#a0e05724d04fe5147f5aa306914aa6fbf" target="_top" xlink:title="Build a render graph from the current TrackManager state.">
-<polygon fill="white" stroke="#666666" points="569.5,-318 395.5,-318 395.5,-288 569.5,-288 569.5,-318"/>
-<text text-anchor="start" x="403.5" y="-306" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioGraph</text>
-<text text-anchor="middle" x="482.5" y="-295" font-family="Helvetica,sans-Serif" font-size="10.00">Builder::buildFromTrackManager</text>
+<polygon fill="white" stroke="#666666" points="569.5,-270 395.5,-270 395.5,-240 569.5,-240 569.5,-270"/>
+<text text-anchor="start" x="403.5" y="-258" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioGraph</text>
+<text text-anchor="middle" x="482.5" y="-247" font-family="Helvetica,sans-Serif" font-size="10.00">Builder::buildFromTrackManager</text>
 </a>
 </g>
 </g>
@@ -351,8 +351,8 @@
 <g id="edge17_Node000012_Node000015" class="edge">
 <title>Node12&#45;&gt;Node15</title>
 <g id="a_edge17_Node000012_Node000015"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M340.53,-767.86C344.06,-765.34 347.27,-762.4 350,-759 410.33,-683.9 323.66,-400.44 386,-327 386.63,-326.26 387.28,-325.54 387.94,-324.84"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="390.45,-327.3 395.72,-318.1 385.87,-322 390.45,-327.3"/>
+<path fill="none" stroke="#63b8ff" d="M340.56,-767.89C344.08,-765.36 347.28,-762.42 350,-759 416.65,-675.34 317.11,-360.83 386,-279 386.63,-278.26 387.27,-277.53 387.94,-276.83"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="390.45,-279.28 395.69,-270.07 385.85,-274.01 390.45,-279.28"/>
 </a>
 </g>
 </g>
@@ -360,9 +360,9 @@
 <g id="Node000034" class="node">
 <title>Node34</title>
 <g id="a_Node000034"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a674743a0ec04a79402fe0810e895a1a4" target="_top" xlink:title="Reset true&#45;peak running max (does not disturb FIR history).">
-<polygon fill="white" stroke="#666666" points="557,-270 408,-270 408,-240 557,-240 557,-270"/>
-<text text-anchor="start" x="416" y="-258" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
-<text text-anchor="middle" x="482.5" y="-247" font-family="Helvetica,sans-Serif" font-size="10.00">::clearTruePeakHold</text>
+<polygon fill="white" stroke="#666666" points="557,-222 408,-222 408,-192 557,-192 557,-222"/>
+<text text-anchor="start" x="416" y="-210" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
+<text text-anchor="middle" x="482.5" y="-199" font-family="Helvetica,sans-Serif" font-size="10.00">::clearTruePeakHold</text>
 </a>
 </g>
 </g>
@@ -370,8 +370,8 @@
 <g id="edge26_Node000012_Node000034" class="edge">
 <title>Node12&#45;&gt;Node34</title>
 <g id="a_edge26_Node000012_Node000034"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M340.56,-767.89C344.08,-765.36 347.28,-762.42 350,-759 416.65,-675.34 317.11,-360.83 386,-279 389.65,-274.67 393.95,-271.05 398.68,-268.05"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="400.43,-271.08 407.59,-263.26 397.13,-264.91 400.43,-271.08"/>
+<path fill="none" stroke="#63b8ff" d="M340.59,-767.91C344.1,-765.37 347.29,-762.42 350,-759 422.97,-666.77 310.57,-321.23 386,-231 389.63,-226.66 393.92,-223.03 398.64,-220.02"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="400.4,-223.05 407.55,-215.23 397.08,-216.88 400.4,-223.05"/>
 </a>
 </g>
 </g>
@@ -379,9 +379,9 @@
 <g id="Node000036" class="node">
 <title>Node36</title>
 <g id="a_Node000036"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a6f72e62a0b319f51dc2430532a8e1969" target="_top" xlink:title="Get the current transport position in samples.">
-<polygon fill="white" stroke="#666666" points="557,-222 408,-222 408,-192 557,-192 557,-222"/>
-<text text-anchor="start" x="416" y="-210" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
-<text text-anchor="middle" x="482.5" y="-199" font-family="Helvetica,sans-Serif" font-size="10.00">::getGlobalSamplePos</text>
+<polygon fill="white" stroke="#666666" points="557,-78 408,-78 408,-48 557,-48 557,-78"/>
+<text text-anchor="start" x="416" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
+<text text-anchor="middle" x="482.5" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">::getGlobalSamplePos</text>
 </a>
 </g>
 </g>
@@ -389,8 +389,8 @@
 <g id="edge29_Node000012_Node000036" class="edge">
 <title>Node12&#45;&gt;Node36</title>
 <g id="a_edge29_Node000012_Node000036"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M340.59,-767.91C344.1,-765.37 347.29,-762.42 350,-759 422.97,-666.77 310.57,-321.23 386,-231 389.63,-226.66 393.92,-223.03 398.64,-220.02"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="400.4,-223.05 407.55,-215.23 397.08,-216.88 400.4,-223.05"/>
+<path fill="none" stroke="#63b8ff" d="M340.65,-767.95C344.15,-765.41 347.32,-762.44 350,-759 441.93,-641.04 290.92,-202.43 386,-87 389.67,-82.55 394.03,-78.85 398.84,-75.79"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="400.75,-78.74 407.92,-70.94 397.45,-72.56 400.75,-78.74"/>
 </a>
 </g>
 </g>
@@ -398,9 +398,9 @@
 <g id="Node000037" class="node">
 <title>Node37</title>
 <g id="a_Node000037"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#afbef8b6d9c81476518551a140070e32f" target="_top" xlink:title="Latest max&#45;channel true peak in dBTP (decibels True Peak).">
-<polygon fill="#fff0f0" stroke="red" points="557,-174 408,-174 408,-144 557,-144 557,-174"/>
-<text text-anchor="start" x="416" y="-162" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
-<text text-anchor="middle" x="482.5" y="-151" font-family="Helvetica,sans-Serif" font-size="10.00">::getMaxTruePeakdBTP</text>
+<polygon fill="#fff0f0" stroke="red" points="557,-414 408,-414 408,-384 557,-384 557,-414"/>
+<text text-anchor="start" x="416" y="-402" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
+<text text-anchor="middle" x="482.5" y="-391" font-family="Helvetica,sans-Serif" font-size="10.00">::getMaxTruePeakdBTP</text>
 </a>
 </g>
 </g>
@@ -408,8 +408,8 @@
 <g id="edge30_Node000012_Node000037" class="edge">
 <title>Node12&#45;&gt;Node37</title>
 <g id="a_edge30_Node000012_Node000037"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M340.61,-767.92C344.12,-765.38 347.3,-762.43 350,-759 429.28,-658.19 304.02,-281.63 386,-183 389.69,-178.56 394.06,-174.88 398.88,-171.83"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="400.79,-174.77 407.98,-166.99 397.51,-168.59 400.79,-174.77"/>
+<path fill="none" stroke="#63b8ff" d="M340.44,-767.78C343.99,-765.28 347.23,-762.37 350,-759 445.44,-643.04 287.46,-536.34 386,-423 389.72,-418.73 394.07,-415.16 398.83,-412.18"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="400.59,-415.21 407.8,-407.44 397.32,-409.02 400.59,-415.21"/>
 </a>
 </g>
 </g>
@@ -565,222 +565,203 @@
 </a>
 </g>
 </g>
-<!-- Node54 -->
-<g id="Node000054" class="node">
-<title>Node54</title>
-<g id="a_Node000054"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a4df1a398645324848c1de67797442104" target="_top" xlink:title="Snap preview&#45;duck smoothing to unity.">
+<!-- Node55 -->
+<g id="Node000055" class="node">
+<title>Node55</title>
+<g id="a_Node000055"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a4df1a398645324848c1de67797442104" target="_top" xlink:title="Snap preview&#45;duck smoothing to unity.">
 <polygon fill="white" stroke="#666666" points="579,-942 386,-942 386,-912 579,-912 579,-942"/>
 <text text-anchor="start" x="394" y="-930" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
 <text text-anchor="middle" x="482.5" y="-919" font-family="Helvetica,sans-Serif" font-size="10.00">::resetPreviewDuckForOfflineRender</text>
 </a>
 </g>
 </g>
-<!-- Node12&#45;&gt;Node54 -->
-<g id="edge43_Node000012_Node000054" class="edge">
-<title>Node12&#45;&gt;Node54</title>
-<g id="a_edge43_Node000012_Node000054"><a xlink:title=" ">
+<!-- Node12&#45;&gt;Node55 -->
+<g id="edge45_Node000012_Node000055" class="edge">
+<title>Node12&#45;&gt;Node55</title>
+<g id="a_edge45_Node000012_Node000055"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M282.42,-798.14C300.07,-823.81 339.48,-875.76 386,-903 389.04,-904.78 392.21,-906.43 395.48,-907.96"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="394.3,-911.26 404.87,-911.95 397.04,-904.82 394.3,-911.26"/>
-</a>
-</g>
-</g>
-<!-- Node55 -->
-<g id="Node000055" class="node">
-<title>Node55</title>
-<g id="a_Node000055"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a4708fa8d989557c07217a8ff48484a69" target="_top" xlink:title="Enable or disable audition mode.">
-<polygon fill="white" stroke="#666666" points="557,-894 408,-894 408,-864 557,-864 557,-894"/>
-<text text-anchor="start" x="416" y="-882" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
-<text text-anchor="middle" x="482.5" y="-871" font-family="Helvetica,sans-Serif" font-size="10.00">::setAuditionModeEnabled</text>
-</a>
-</g>
-</g>
-<!-- Node12&#45;&gt;Node55 -->
-<g id="edge44_Node000012_Node000055" class="edge">
-<title>Node12&#45;&gt;Node55</title>
-<g id="a_edge44_Node000012_Node000055"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M291.92,-798.06C313.7,-814.29 350.62,-839.8 386,-855 390.79,-857.06 395.79,-858.96 400.88,-860.73"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="400.17,-864.18 410.76,-863.94 402.34,-857.52 400.17,-864.18"/>
 </a>
 </g>
 </g>
 <!-- Node56 -->
 <g id="Node000056" class="node">
 <title>Node56</title>
-<g id="a_Node000056"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#abdcd39f3f1b15706d70b65eda08a0539" target="_top" xlink:title="Set the current transport position in samples.">
-<polygon fill="white" stroke="#666666" points="557,-846 408,-846 408,-816 557,-816 557,-846"/>
-<text text-anchor="start" x="416" y="-834" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
-<text text-anchor="middle" x="482.5" y="-823" font-family="Helvetica,sans-Serif" font-size="10.00">::setGlobalSamplePos</text>
+<g id="a_Node000056"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a4708fa8d989557c07217a8ff48484a69" target="_top" xlink:title="Enable or disable audition mode.">
+<polygon fill="white" stroke="#666666" points="557,-894 408,-894 408,-864 557,-864 557,-894"/>
+<text text-anchor="start" x="416" y="-882" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
+<text text-anchor="middle" x="482.5" y="-871" font-family="Helvetica,sans-Serif" font-size="10.00">::setAuditionModeEnabled</text>
 </a>
 </g>
 </g>
 <!-- Node12&#45;&gt;Node56 -->
-<g id="edge45_Node000012_Node000056" class="edge">
+<g id="edge46_Node000012_Node000056" class="edge">
 <title>Node12&#45;&gt;Node56</title>
-<g id="a_edge45_Node000012_Node000056"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M338.06,-798.06C359.75,-803.04 384.05,-808.62 406.4,-813.75"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="405.65,-817.17 416.18,-816 407.21,-810.35 405.65,-817.17"/>
+<g id="a_edge46_Node000012_Node000056"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M291.92,-798.06C313.7,-814.29 350.62,-839.8 386,-855 390.79,-857.06 395.79,-858.96 400.88,-860.73"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="400.17,-864.18 410.76,-863.94 402.34,-857.52 400.17,-864.18"/>
 </a>
 </g>
 </g>
 <!-- Node57 -->
 <g id="Node000057" class="node">
 <title>Node57</title>
-<g id="a_Node000057"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ab8be7c1087d349d3192bb60d6d70143c" target="_top" xlink:title="Replace the active audio graph and compile it for rendering.">
-<polygon fill="white" stroke="#666666" points="557,-798 408,-798 408,-768 557,-768 557,-798"/>
-<text text-anchor="start" x="416" y="-786" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
-<text text-anchor="middle" x="482.5" y="-775" font-family="Helvetica,sans-Serif" font-size="10.00">::setGraph</text>
+<g id="a_Node000057"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#abdcd39f3f1b15706d70b65eda08a0539" target="_top" xlink:title="Set the current transport position in samples.">
+<polygon fill="white" stroke="#666666" points="557,-846 408,-846 408,-816 557,-816 557,-846"/>
+<text text-anchor="start" x="416" y="-834" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
+<text text-anchor="middle" x="482.5" y="-823" font-family="Helvetica,sans-Serif" font-size="10.00">::setGlobalSamplePos</text>
 </a>
 </g>
 </g>
 <!-- Node12&#45;&gt;Node57 -->
-<g id="edge46_Node000012_Node000057" class="edge">
+<g id="edge47_Node000012_Node000057" class="edge">
 <title>Node12&#45;&gt;Node57</title>
-<g id="a_edge46_Node000012_Node000057"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M350.03,-783C365.56,-783 381.95,-783 397.68,-783"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="397.91,-786.5 407.91,-783 397.91,-779.5 397.91,-786.5"/>
+<g id="a_edge47_Node000012_Node000057"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M338.06,-798.06C359.75,-803.04 384.05,-808.62 406.4,-813.75"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="405.65,-817.17 416.18,-816 407.21,-810.35 405.65,-817.17"/>
 </a>
 </g>
 </g>
 <!-- Node58 -->
 <g id="Node000058" class="node">
 <title>Node58</title>
-<g id="a_Node000058"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a3000891e107091bf566390e20bf9f57f" target="_top" xlink:title="Enable or disable transport looping.">
-<polygon fill="white" stroke="#666666" points="557,-750 408,-750 408,-720 557,-720 557,-750"/>
-<text text-anchor="start" x="416" y="-738" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
-<text text-anchor="middle" x="482.5" y="-727" font-family="Helvetica,sans-Serif" font-size="10.00">::setLoopEnabled</text>
+<g id="a_Node000058"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ab8be7c1087d349d3192bb60d6d70143c" target="_top" xlink:title="Replace the active audio graph and compile it for rendering.">
+<polygon fill="white" stroke="#666666" points="557,-798 408,-798 408,-768 557,-768 557,-798"/>
+<text text-anchor="start" x="416" y="-786" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
+<text text-anchor="middle" x="482.5" y="-775" font-family="Helvetica,sans-Serif" font-size="10.00">::setGraph</text>
 </a>
 </g>
 </g>
 <!-- Node12&#45;&gt;Node58 -->
-<g id="edge47_Node000012_Node000058" class="edge">
+<g id="edge48_Node000012_Node000058" class="edge">
 <title>Node12&#45;&gt;Node58</title>
-<g id="a_edge47_Node000012_Node000058"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M338.06,-767.94C359.75,-762.96 384.05,-757.38 406.4,-752.25"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="407.21,-755.65 416.18,-750 405.65,-748.83 407.21,-755.65"/>
+<g id="a_edge48_Node000012_Node000058"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M350.03,-783C365.56,-783 381.95,-783 397.68,-783"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="397.91,-786.5 407.91,-783 397.91,-779.5 397.91,-786.5"/>
 </a>
 </g>
 </g>
 <!-- Node59 -->
 <g id="Node000059" class="node">
 <title>Node59</title>
-<g id="a_Node000059"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a7500e85dda831daf8385e481db0db008" target="_top" xlink:title="Enable or disable the metronome.">
-<polygon fill="white" stroke="#666666" points="557,-702 408,-702 408,-672 557,-672 557,-702"/>
-<text text-anchor="start" x="416" y="-690" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
-<text text-anchor="middle" x="482.5" y="-679" font-family="Helvetica,sans-Serif" font-size="10.00">::setMetronomeEnabled</text>
+<g id="a_Node000059"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a3000891e107091bf566390e20bf9f57f" target="_top" xlink:title="Enable or disable transport looping.">
+<polygon fill="white" stroke="#666666" points="557,-750 408,-750 408,-720 557,-720 557,-750"/>
+<text text-anchor="start" x="416" y="-738" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
+<text text-anchor="middle" x="482.5" y="-727" font-family="Helvetica,sans-Serif" font-size="10.00">::setLoopEnabled</text>
 </a>
 </g>
 </g>
 <!-- Node12&#45;&gt;Node59 -->
-<g id="edge48_Node000012_Node000059" class="edge">
+<g id="edge49_Node000012_Node000059" class="edge">
 <title>Node12&#45;&gt;Node59</title>
-<g id="a_edge48_Node000012_Node000059"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M334.29,-767.87C339.83,-765.34 345.16,-762.41 350,-759 371.8,-743.64 363.79,-725.76 386,-711 389.97,-708.36 394.21,-706.01 398.62,-703.92"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="400.03,-707.12 407.85,-699.97 397.28,-700.68 400.03,-707.12"/>
+<g id="a_edge49_Node000012_Node000059"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M338.06,-767.94C359.75,-762.96 384.05,-757.38 406.4,-752.25"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="407.21,-755.65 416.18,-750 405.65,-748.83 407.21,-755.65"/>
 </a>
 </g>
 </g>
 <!-- Node60 -->
 <g id="Node000060" class="node">
 <title>Node60</title>
-<g id="a_Node000060"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a9b59e40f220f5eda0ae66fdb1378e480" target="_top" xlink:title="Mark the engine as rendering an offline export.">
-<polygon fill="white" stroke="#666666" points="557,-654 408,-654 408,-624 557,-624 557,-654"/>
-<text text-anchor="start" x="416" y="-642" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
-<text text-anchor="middle" x="482.5" y="-631" font-family="Helvetica,sans-Serif" font-size="10.00">::setOfflineRenderActive</text>
+<g id="a_Node000060"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a7500e85dda831daf8385e481db0db008" target="_top" xlink:title="Enable or disable the metronome.">
+<polygon fill="white" stroke="#666666" points="557,-702 408,-702 408,-672 557,-672 557,-702"/>
+<text text-anchor="start" x="416" y="-690" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
+<text text-anchor="middle" x="482.5" y="-679" font-family="Helvetica,sans-Serif" font-size="10.00">::setMetronomeEnabled</text>
 </a>
 </g>
 </g>
 <!-- Node12&#45;&gt;Node60 -->
-<g id="edge49_Node000012_Node000060" class="edge">
+<g id="edge50_Node000012_Node000060" class="edge">
 <title>Node12&#45;&gt;Node60</title>
-<g id="a_edge49_Node000012_Node000060"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M337.66,-768C342.13,-765.45 346.31,-762.48 350,-759 383.15,-727.73 352.02,-693.36 386,-663 389.88,-659.53 394.2,-656.55 398.78,-653.98"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="400.43,-657.07 407.89,-649.55 397.37,-650.78 400.43,-657.07"/>
+<g id="a_edge50_Node000012_Node000060"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M334.29,-767.87C339.83,-765.34 345.16,-762.41 350,-759 371.8,-743.64 363.79,-725.76 386,-711 389.97,-708.36 394.21,-706.01 398.62,-703.92"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="400.03,-707.12 407.85,-699.97 397.28,-700.68 400.03,-707.12"/>
 </a>
 </g>
 </g>
 <!-- Node61 -->
 <g id="Node000061" class="node">
 <title>Node61</title>
-<g id="a_Node000061"><a xlink:href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a25e4926d1ef33812f8a0000174f5c2c1" target="_top" xlink:title="Set output sample rate.">
+<g id="a_Node000061"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a9b59e40f220f5eda0ae66fdb1378e480" target="_top" xlink:title="Mark the engine as rendering an offline export.">
+<polygon fill="white" stroke="#666666" points="557,-654 408,-654 408,-624 557,-624 557,-654"/>
+<text text-anchor="start" x="416" y="-642" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
+<text text-anchor="middle" x="482.5" y="-631" font-family="Helvetica,sans-Serif" font-size="10.00">::setOfflineRenderActive</text>
+</a>
+</g>
+</g>
+<!-- Node12&#45;&gt;Node61 -->
+<g id="edge51_Node000012_Node000061" class="edge">
+<title>Node12&#45;&gt;Node61</title>
+<g id="a_edge51_Node000012_Node000061"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M337.66,-768C342.13,-765.45 346.31,-762.48 350,-759 383.15,-727.73 352.02,-693.36 386,-663 389.88,-659.53 394.2,-656.55 398.78,-653.98"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="400.43,-657.07 407.89,-649.55 397.37,-650.78 400.43,-657.07"/>
+</a>
+</g>
+</g>
+<!-- Node62 -->
+<g id="Node000062" class="node">
+<title>Node62</title>
+<g id="a_Node000062"><a xlink:href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a25e4926d1ef33812f8a0000174f5c2c1" target="_top" xlink:title="Set output sample rate.">
 <polygon fill="#fff0f0" stroke="red" points="560.5,-606 404.5,-606 404.5,-576 560.5,-576 560.5,-606"/>
 <text text-anchor="start" x="412.5" y="-594" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackManager</text>
 <text text-anchor="middle" x="482.5" y="-583" font-family="Helvetica,sans-Serif" font-size="10.00">::setOutputSampleRate</text>
 </a>
 </g>
 </g>
-<!-- Node12&#45;&gt;Node61 -->
-<g id="edge50_Node000012_Node000061" class="edge">
-<title>Node12&#45;&gt;Node61</title>
-<g id="a_edge50_Node000012_Node000061"><a xlink:title=" ">
+<!-- Node12&#45;&gt;Node62 -->
+<g id="edge52_Node000012_Node000062" class="edge">
+<title>Node12&#45;&gt;Node62</title>
+<g id="a_edge52_Node000012_Node000062"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M339.2,-767.78C343.15,-765.28 346.81,-762.38 350,-759 395.34,-711.08 339.38,-661.68 386,-615 388.91,-612.09 392.11,-609.51 395.53,-607.24"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="397.47,-610.16 404.43,-602.17 394.01,-604.08 397.47,-610.16"/>
-</a>
-</g>
-</g>
-<!-- Node63 -->
-<g id="Node000063" class="node">
-<title>Node63</title>
-<g id="a_Node000063"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#afdb32e086fdb0393e983e38d482370f8" target="_top" xlink:title="Configure preview duck depth in positive dB; 0 disables ducking.">
-<polygon fill="white" stroke="#666666" points="576,-558 389,-558 389,-528 576,-528 576,-558"/>
-<text text-anchor="start" x="397" y="-546" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
-<text text-anchor="middle" x="482.5" y="-535" font-family="Helvetica,sans-Serif" font-size="10.00">::setPreviewDuckingAttenuationDb</text>
-</a>
-</g>
-</g>
-<!-- Node12&#45;&gt;Node63 -->
-<g id="edge51_Node000012_Node000063" class="edge">
-<title>Node12&#45;&gt;Node63</title>
-<g id="a_edge51_Node000012_Node000063"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M339.43,-767.99C343.32,-765.44 346.91,-762.47 350,-759 407.76,-694.18 326.51,-630.23 386,-567 386.79,-566.16 387.61,-565.35 388.44,-564.56"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="390.86,-567.12 396.56,-558.19 386.53,-561.61 390.86,-567.12"/>
 </a>
 </g>
 </g>
 <!-- Node64 -->
 <g id="Node000064" class="node">
 <title>Node64</title>
-<g id="a_Node000064"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad7a24d4a309f1f855dc35d9fee11a2a3" target="_top" xlink:title="Set the active sample rate used by the engine.">
+<g id="a_Node000064"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#afdb32e086fdb0393e983e38d482370f8" target="_top" xlink:title="Configure preview duck depth in positive dB; 0 disables ducking.">
+<polygon fill="white" stroke="#666666" points="576,-558 389,-558 389,-528 576,-528 576,-558"/>
+<text text-anchor="start" x="397" y="-546" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
+<text text-anchor="middle" x="482.5" y="-535" font-family="Helvetica,sans-Serif" font-size="10.00">::setPreviewDuckingAttenuationDb</text>
+</a>
+</g>
+</g>
+<!-- Node12&#45;&gt;Node64 -->
+<g id="edge53_Node000012_Node000064" class="edge">
+<title>Node12&#45;&gt;Node64</title>
+<g id="a_edge53_Node000012_Node000064"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M339.43,-767.99C343.32,-765.44 346.91,-762.47 350,-759 407.76,-694.18 326.51,-630.23 386,-567 386.79,-566.16 387.61,-565.35 388.44,-564.56"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="390.86,-567.12 396.56,-558.19 386.53,-561.61 390.86,-567.12"/>
+</a>
+</g>
+</g>
+<!-- Node65 -->
+<g id="Node000065" class="node">
+<title>Node65</title>
+<g id="a_Node000065"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad7a24d4a309f1f855dc35d9fee11a2a3" target="_top" xlink:title="Set the active sample rate used by the engine.">
 <polygon fill="#fff0f0" stroke="red" points="557,-510 408,-510 408,-480 557,-480 557,-510"/>
 <text text-anchor="start" x="416" y="-498" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
 <text text-anchor="middle" x="482.5" y="-487" font-family="Helvetica,sans-Serif" font-size="10.00">::setSampleRate</text>
 </a>
 </g>
 </g>
-<!-- Node12&#45;&gt;Node64 -->
-<g id="edge52_Node000012_Node000064" class="edge">
-<title>Node12&#45;&gt;Node64</title>
-<g id="a_edge52_Node000012_Node000064"><a xlink:title=" ">
+<!-- Node12&#45;&gt;Node65 -->
+<g id="edge54_Node000012_Node000065" class="edge">
+<title>Node12&#45;&gt;Node65</title>
+<g id="a_edge54_Node000012_Node000065"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M339.92,-767.88C343.65,-765.36 347.06,-762.42 350,-759 420.28,-677.18 313.53,-598.89 386,-519 389.64,-514.99 393.84,-511.6 398.41,-508.75"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="400.39,-511.66 407.6,-503.89 397.12,-505.47 400.39,-511.66"/>
-</a>
-</g>
-</g>
-<!-- Node66 -->
-<g id="Node000066" class="node">
-<title>Node66</title>
-<g id="a_Node000066"><a xlink:href="../../d2/dc0/structAestra_1_1Audio_1_1ExportQuantization_1_1TpdfDither.html#a1e04233a3121b99bfa5a584e3fa2bddf" target="_top" xlink:title="Reseed the PRNG.">
-<polygon fill="white" stroke="#666666" points="573.5,-126 391.5,-126 391.5,-96 573.5,-96 573.5,-126"/>
-<text text-anchor="start" x="399.5" y="-114" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::ExportQuantization</text>
-<text text-anchor="middle" x="482.5" y="-103" font-family="Helvetica,sans-Serif" font-size="10.00">::TpdfDither::setSeed</text>
-</a>
-</g>
-</g>
-<!-- Node12&#45;&gt;Node66 -->
-<g id="edge53_Node000012_Node000066" class="edge">
-<title>Node12&#45;&gt;Node66</title>
-<g id="a_edge53_Node000012_Node000066"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M340.63,-767.94C344.13,-765.4 347.31,-762.44 350,-759 435.6,-649.62 297.47,-242.03 386,-135 386.62,-134.25 387.26,-133.52 387.92,-132.82"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="390.44,-135.26 395.62,-126.01 385.8,-130.01 390.44,-135.26"/>
 </a>
 </g>
 </g>
 <!-- Node67 -->
 <g id="Node000067" class="node">
 <title>Node67</title>
-<g id="a_Node000067"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a4c69d51f36bdff50067dd8667ded2acd" target="_top" xlink:title="V8&#45;W5: the offline renderer arms this to read one channel&#39;s output before it reaches the master.">
-<polygon fill="white" stroke="#666666" points="557,-78 408,-78 408,-48 557,-48 557,-78"/>
-<text text-anchor="start" x="416" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
-<text text-anchor="middle" x="482.5" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">::trackOutputTap</text>
+<g id="a_Node000067"><a xlink:href="../../d2/dc0/structAestra_1_1Audio_1_1ExportQuantization_1_1TpdfDither.html#a1e04233a3121b99bfa5a584e3fa2bddf" target="_top" xlink:title="Reseed the PRNG.">
+<polygon fill="white" stroke="#666666" points="573.5,-174 391.5,-174 391.5,-144 573.5,-144 573.5,-174"/>
+<text text-anchor="start" x="399.5" y="-162" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::ExportQuantization</text>
+<text text-anchor="middle" x="482.5" y="-151" font-family="Helvetica,sans-Serif" font-size="10.00">::TpdfDither::setSeed</text>
 </a>
 </g>
 </g>
@@ -788,8 +769,27 @@
 <g id="edge55_Node000012_Node000067" class="edge">
 <title>Node12&#45;&gt;Node67</title>
 <g id="a_edge55_Node000012_Node000067"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M340.65,-767.95C344.15,-765.41 347.32,-762.44 350,-759 441.93,-641.04 290.92,-202.43 386,-87 389.67,-82.55 394.03,-78.85 398.84,-75.79"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="400.75,-78.74 407.92,-70.94 397.45,-72.56 400.75,-78.74"/>
+<path fill="none" stroke="#63b8ff" d="M340.61,-767.92C344.12,-765.38 347.3,-762.43 350,-759 429.28,-658.19 304.02,-281.63 386,-183 386.62,-182.25 387.26,-181.53 387.92,-180.82"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="390.44,-183.27 395.64,-174.03 385.82,-178.01 390.44,-183.27"/>
+</a>
+</g>
+</g>
+<!-- Node68 -->
+<g id="Node000068" class="node">
+<title>Node68</title>
+<g id="a_Node000068"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a4c69d51f36bdff50067dd8667ded2acd" target="_top" xlink:title="V8&#45;W5: the offline renderer arms this to read one channel&#39;s output before it reaches the master.">
+<polygon fill="white" stroke="#666666" points="557,-126 408,-126 408,-96 557,-96 557,-126"/>
+<text text-anchor="start" x="416" y="-114" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
+<text text-anchor="middle" x="482.5" y="-103" font-family="Helvetica,sans-Serif" font-size="10.00">::trackOutputTap</text>
+</a>
+</g>
+</g>
+<!-- Node12&#45;&gt;Node68 -->
+<g id="edge57_Node000012_Node000068" class="edge">
+<title>Node12&#45;&gt;Node68</title>
+<g id="a_edge57_Node000012_Node000068"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M340.63,-767.94C344.13,-765.4 347.31,-762.44 350,-759 435.6,-649.62 297.47,-242.03 386,-135 389.68,-130.55 394.05,-126.86 398.86,-123.81"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="400.77,-126.75 407.95,-118.96 397.47,-120.58 400.77,-126.75"/>
 </a>
 </g>
 </g>
@@ -797,9 +797,9 @@
 <g id="Node000016" class="node">
 <title>Node16</title>
 <g id="a_Node000016"><a xlink:href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a93242cb25f3e5b28316741a5efac881f" target="_top" xlink:title="Drain finished anti&#45;alias prefilter results into their sources, clear stale filtered variants,...">
-<polygon fill="#fff0f0" stroke="red" points="773.5,-270 617.5,-270 617.5,-240 773.5,-240 773.5,-270"/>
-<text text-anchor="start" x="625.5" y="-258" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackManager</text>
-<text text-anchor="middle" x="695.5" y="-247" font-family="Helvetica,sans-Serif" font-size="10.00">::ensureClipPrefilters</text>
+<polygon fill="#fff0f0" stroke="red" points="773.5,-126 617.5,-126 617.5,-96 773.5,-96 773.5,-126"/>
+<text text-anchor="start" x="625.5" y="-114" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackManager</text>
+<text text-anchor="middle" x="695.5" y="-103" font-family="Helvetica,sans-Serif" font-size="10.00">::ensureClipPrefilters</text>
 </a>
 </g>
 </g>
@@ -807,8 +807,8 @@
 <g id="edge18_Node000015_Node000016" class="edge">
 <title>Node15&#45;&gt;Node16</title>
 <g id="a_edge18_Node000015_Node000016"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M549.68,-287.94C571.58,-282.96 596.12,-277.38 618.68,-272.25"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="619.58,-275.63 628.55,-270 618.02,-268.81 619.58,-275.63"/>
+<path fill="none" stroke="#63b8ff" d="M566.43,-239.9C570.94,-237.36 575.18,-234.42 579,-231 612.98,-200.64 581.74,-166.15 615,-135 616.27,-133.81 617.59,-132.69 618.96,-131.62"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="620.91,-134.52 627.29,-126.07 617.02,-128.7 620.91,-134.52"/>
 </a>
 </g>
 </g>
@@ -816,9 +816,9 @@
 <g id="Node000026" class="node">
 <title>Node26</title>
 <g id="a_Node000026"><a xlink:href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#aef9478cbb19fa91eb0bcc60d51b77b77" target="_top" xlink:title="Get a channel by index.">
-<polygon fill="white" stroke="#666666" points="773.5,-222 617.5,-222 617.5,-192 773.5,-192 773.5,-222"/>
-<text text-anchor="start" x="625.5" y="-210" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackManager</text>
-<text text-anchor="middle" x="695.5" y="-199" font-family="Helvetica,sans-Serif" font-size="10.00">::getChannel</text>
+<polygon fill="white" stroke="#666666" points="773.5,-78 617.5,-78 617.5,-48 773.5,-48 773.5,-78"/>
+<text text-anchor="start" x="625.5" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackManager</text>
+<text text-anchor="middle" x="695.5" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">::getChannel</text>
 </a>
 </g>
 </g>
@@ -826,8 +826,8 @@
 <g id="edge19_Node000015_Node000026" class="edge">
 <title>Node15&#45;&gt;Node26</title>
 <g id="a_edge19_Node000015_Node000026"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M562.51,-287.84C568.3,-285.33 573.88,-282.41 579,-279 601.21,-264.24 593.15,-246.28 615,-231 617.12,-229.52 619.33,-228.13 621.61,-226.82"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="623.39,-229.84 630.71,-222.18 620.22,-223.6 623.39,-229.84"/>
+<path fill="none" stroke="#63b8ff" d="M567.77,-239.86C571.83,-237.32 575.62,-234.39 579,-231 625.62,-184.32 569.49,-134.76 615,-87 615.92,-86.03 616.88,-85.1 617.88,-84.21"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="620.18,-86.86 626.09,-78.07 615.99,-81.25 620.18,-86.86"/>
 </a>
 </g>
 </g>
@@ -835,9 +835,9 @@
 <g id="Node000027" class="node">
 <title>Node27</title>
 <g id="a_Node000027"><a xlink:href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a099a5c98a6cc1822fd44c1ca47dfb073" target="_top" xlink:title="Get the number of channels.">
-<polygon fill="white" stroke="#666666" points="773.5,-558 617.5,-558 617.5,-528 773.5,-528 773.5,-558"/>
-<text text-anchor="start" x="625.5" y="-546" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackManager</text>
-<text text-anchor="middle" x="695.5" y="-535" font-family="Helvetica,sans-Serif" font-size="10.00">::getChannelCount</text>
+<polygon fill="white" stroke="#666666" points="773.5,-414 617.5,-414 617.5,-384 773.5,-384 773.5,-414"/>
+<text text-anchor="start" x="625.5" y="-402" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackManager</text>
+<text text-anchor="middle" x="695.5" y="-391" font-family="Helvetica,sans-Serif" font-size="10.00">::getChannelCount</text>
 </a>
 </g>
 </g>
@@ -845,8 +845,8 @@
 <g id="edge20_Node000015_Node000027" class="edge">
 <title>Node15&#45;&gt;Node27</title>
 <g id="a_edge20_Node000015_Node000027"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M568.44,-318.19C572.28,-320.72 575.84,-323.64 579,-327 638.49,-390.23 557.01,-454.39 615,-519 615.77,-519.86 616.57,-520.69 617.4,-521.49"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="615.49,-524.44 625.49,-527.92 619.84,-518.96 615.49,-524.44"/>
+<path fill="none" stroke="#63b8ff" d="M566.43,-270.1C570.94,-272.64 575.18,-275.58 579,-279 612.98,-309.36 581.74,-343.85 615,-375 616.27,-376.19 617.59,-377.31 618.96,-378.38"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="617.02,-381.3 627.29,-383.93 620.91,-375.48 617.02,-381.3"/>
 </a>
 </g>
 </g>
@@ -854,9 +854,9 @@
 <g id="Node000028" class="node">
 <title>Node28</title>
 <g id="a_Node000028"><a xlink:href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a76446df746c8a8b7fa97e05ea6e205f5" target="_top" xlink:title="The channel&#39;s effect chain snapshot, owned by EffectChain.">
-<polygon fill="#fff0f0" stroke="red" points="773,-510 618,-510 618,-480 773,-480 773,-510"/>
-<text text-anchor="start" x="626" y="-498" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::MixerChannel</text>
-<text text-anchor="middle" x="695.5" y="-487" font-family="Helvetica,sans-Serif" font-size="10.00">::getEffectChainSnapshot</text>
+<polygon fill="#fff0f0" stroke="red" points="773,-366 618,-366 618,-336 773,-336 773,-366"/>
+<text text-anchor="start" x="626" y="-354" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::MixerChannel</text>
+<text text-anchor="middle" x="695.5" y="-343" font-family="Helvetica,sans-Serif" font-size="10.00">::getEffectChainSnapshot</text>
 </a>
 </g>
 </g>
@@ -864,8 +864,8 @@
 <g id="edge21_Node000015_Node000028" class="edge">
 <title>Node15&#45;&gt;Node28</title>
 <g id="a_edge21_Node000015_Node000028"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M567.77,-318.14C571.83,-320.68 575.62,-323.61 579,-327 625.62,-373.68 569.49,-423.24 615,-471 615.92,-471.97 616.88,-472.9 617.88,-473.79"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="615.99,-476.75 626.09,-479.93 620.18,-471.14 615.99,-476.75"/>
+<path fill="none" stroke="#63b8ff" d="M562.51,-270.16C568.3,-272.67 573.88,-275.59 579,-279 601.21,-293.76 593.15,-311.72 615,-327 617.12,-328.48 619.33,-329.87 621.61,-331.18"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="620.22,-334.4 630.71,-335.82 623.39,-328.16 620.22,-334.4"/>
 </a>
 </g>
 </g>
@@ -873,9 +873,9 @@
 <g id="Node000030" class="node">
 <title>Node30</title>
 <g id="a_Node000030"><a xlink:href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a653ee5f8eb05faa264a54e339a258233" target="_top" xlink:title="Access the Master strip&#39;s mixer channel (id 0).">
-<polygon fill="white" stroke="#666666" points="773.5,-462 617.5,-462 617.5,-432 773.5,-432 773.5,-462"/>
-<text text-anchor="start" x="625.5" y="-450" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackManager</text>
-<text text-anchor="middle" x="695.5" y="-439" font-family="Helvetica,sans-Serif" font-size="10.00">::getMasterChannel</text>
+<polygon fill="white" stroke="#666666" points="773.5,-318 617.5,-318 617.5,-288 773.5,-288 773.5,-318"/>
+<text text-anchor="start" x="625.5" y="-306" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackManager</text>
+<text text-anchor="middle" x="695.5" y="-295" font-family="Helvetica,sans-Serif" font-size="10.00">::getMasterChannel</text>
 </a>
 </g>
 </g>
@@ -883,8 +883,8 @@
 <g id="edge22_Node000015_Node000030" class="edge">
 <title>Node15&#45;&gt;Node30</title>
 <g id="a_edge22_Node000015_Node000030"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M566.43,-318.1C570.94,-320.64 575.18,-323.58 579,-327 612.98,-357.36 581.74,-391.85 615,-423 616.27,-424.19 617.59,-425.31 618.96,-426.38"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="617.02,-429.3 627.29,-431.93 620.91,-423.48 617.02,-429.3"/>
+<path fill="none" stroke="#63b8ff" d="M549.68,-270.06C571.58,-275.04 596.12,-280.62 618.68,-285.75"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="618.02,-289.19 628.55,-288 619.58,-282.37 618.02,-289.19"/>
 </a>
 </g>
 </g>
@@ -892,9 +892,9 @@
 <g id="Node000031" class="node">
 <title>Node31</title>
 <g id="a_Node000031"><a xlink:href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#af01fa49b38f12155c47b1917bad27ea4" target="_top" xlink:title="Get the pattern manager.">
-<polygon fill="white" stroke="#666666" points="773.5,-414 617.5,-414 617.5,-384 773.5,-384 773.5,-414"/>
-<text text-anchor="start" x="625.5" y="-402" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackManager</text>
-<text text-anchor="middle" x="695.5" y="-391" font-family="Helvetica,sans-Serif" font-size="10.00">::getPatternManager</text>
+<polygon fill="white" stroke="#666666" points="773.5,-270 617.5,-270 617.5,-240 773.5,-240 773.5,-270"/>
+<text text-anchor="start" x="625.5" y="-258" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackManager</text>
+<text text-anchor="middle" x="695.5" y="-247" font-family="Helvetica,sans-Serif" font-size="10.00">::getPatternManager</text>
 </a>
 </g>
 </g>
@@ -902,8 +902,8 @@
 <g id="edge23_Node000015_Node000031" class="edge">
 <title>Node15&#45;&gt;Node31</title>
 <g id="a_edge23_Node000015_Node000031"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M562.51,-318.16C568.3,-320.67 573.88,-323.59 579,-327 601.21,-341.76 593.15,-359.72 615,-375 617.12,-376.48 619.33,-377.87 621.61,-379.18"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="620.22,-382.4 630.71,-383.82 623.39,-376.16 620.22,-382.4"/>
+<path fill="none" stroke="#63b8ff" d="M569.63,-255C582,-255 594.74,-255 607.14,-255"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="607.46,-258.5 617.46,-255 607.46,-251.5 607.46,-258.5"/>
 </a>
 </g>
 </g>
@@ -911,9 +911,9 @@
 <g id="Node000032" class="node">
 <title>Node32</title>
 <g id="a_Node000032"><a xlink:href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#aacc633d4302bc413e6aead5df052520b" target="_top" xlink:title="Get the playlist model.">
-<polygon fill="white" stroke="#666666" points="773.5,-366 617.5,-366 617.5,-336 773.5,-336 773.5,-366"/>
-<text text-anchor="start" x="625.5" y="-354" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackManager</text>
-<text text-anchor="middle" x="695.5" y="-343" font-family="Helvetica,sans-Serif" font-size="10.00">::getPlaylistModel</text>
+<polygon fill="white" stroke="#666666" points="773.5,-222 617.5,-222 617.5,-192 773.5,-192 773.5,-222"/>
+<text text-anchor="start" x="625.5" y="-210" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackManager</text>
+<text text-anchor="middle" x="695.5" y="-199" font-family="Helvetica,sans-Serif" font-size="10.00">::getPlaylistModel</text>
 </a>
 </g>
 </g>
@@ -921,8 +921,8 @@
 <g id="edge24_Node000015_Node000032" class="edge">
 <title>Node15&#45;&gt;Node32</title>
 <g id="a_edge24_Node000015_Node000032"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M549.68,-318.06C571.58,-323.04 596.12,-328.62 618.68,-333.75"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="618.02,-337.19 628.55,-336 619.58,-330.37 618.02,-337.19"/>
+<path fill="none" stroke="#63b8ff" d="M549.68,-239.94C571.58,-234.96 596.12,-229.38 618.68,-224.25"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="619.58,-227.63 628.55,-222 618.02,-220.81 619.58,-227.63"/>
 </a>
 </g>
 </g>
@@ -930,9 +930,9 @@
 <g id="Node000033" class="node">
 <title>Node33</title>
 <g id="a_Node000033"><a xlink:href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae2a894b9df65e65c63cc1b05f4b2e2d1" target="_top" xlink:title="Get the source manager.">
-<polygon fill="white" stroke="#666666" points="773.5,-318 617.5,-318 617.5,-288 773.5,-288 773.5,-318"/>
-<text text-anchor="start" x="625.5" y="-306" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackManager</text>
-<text text-anchor="middle" x="695.5" y="-295" font-family="Helvetica,sans-Serif" font-size="10.00">::getSourceManager</text>
+<polygon fill="white" stroke="#666666" points="773.5,-174 617.5,-174 617.5,-144 773.5,-144 773.5,-174"/>
+<text text-anchor="start" x="625.5" y="-162" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackManager</text>
+<text text-anchor="middle" x="695.5" y="-151" font-family="Helvetica,sans-Serif" font-size="10.00">::getSourceManager</text>
 </a>
 </g>
 </g>
@@ -940,8 +940,8 @@
 <g id="edge25_Node000015_Node000033" class="edge">
 <title>Node15&#45;&gt;Node33</title>
 <g id="a_edge25_Node000015_Node000033"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M569.63,-303C582,-303 594.74,-303 607.14,-303"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="607.46,-306.5 617.46,-303 607.46,-299.5 607.46,-306.5"/>
+<path fill="none" stroke="#63b8ff" d="M562.51,-239.84C568.3,-237.33 573.88,-234.41 579,-231 601.21,-216.24 593.15,-198.28 615,-183 617.12,-181.52 619.33,-180.13 621.61,-178.82"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="623.39,-181.84 630.71,-174.18 620.22,-175.6 623.39,-181.84"/>
 </a>
 </g>
 </g>
@@ -949,9 +949,9 @@
 <g id="Node000035" class="node">
 <title>Node35</title>
 <g id="a_Node000035"><a xlink:href="../../dd/d42/classAestra_1_1Audio_1_1TruePeakMeter.html#ad7ad3bb574698331fa4b25f520c269bc" target="_top" xlink:title="Clear running peak accumulators only; preserve filter history.">
-<polygon fill="white" stroke="#666666" points="776,-174 615,-174 615,-144 776,-144 776,-174"/>
-<text text-anchor="start" x="623" y="-162" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TruePeakMeter</text>
-<text text-anchor="middle" x="695.5" y="-151" font-family="Helvetica,sans-Serif" font-size="10.00">::clearPeaks</text>
+<polygon fill="white" stroke="#666666" points="776,-30 615,-30 615,0 776,0 776,-30"/>
+<text text-anchor="start" x="623" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TruePeakMeter</text>
+<text text-anchor="middle" x="695.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::clearPeaks</text>
 </a>
 </g>
 </g>
@@ -959,8 +959,8 @@
 <g id="edge27_Node000034_Node000035" class="edge">
 <title>Node34&#45;&gt;Node35</title>
 <g id="a_edge27_Node000034_Node000035"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M557.15,-242.03C564.86,-239.07 572.31,-235.45 579,-231 601.21,-216.24 593.15,-198.28 615,-183 617.12,-181.52 619.33,-180.13 621.61,-178.82"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="623.39,-181.84 630.71,-174.18 620.22,-175.6 623.39,-181.84"/>
+<path fill="none" stroke="#63b8ff" d="M557.29,-197.35C565.34,-193.83 572.84,-189.17 579,-183 625.62,-136.32 569.49,-86.76 615,-39 615.92,-38.03 616.88,-37.1 617.88,-36.21"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="620.18,-38.86 626.09,-30.07 615.99,-33.25 620.18,-38.86"/>
 </a>
 </g>
 </g>
@@ -968,9 +968,9 @@
 <g id="Node000038" class="node">
 <title>Node38</title>
 <g id="a_Node000038"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#aebdfdbad3145cd170ab61495a9457951" target="_top" xlink:title="Latest left&#45;channel true peak (linear, max&#45;hold since last clear).">
-<polygon fill="white" stroke="#666666" points="770,-126 621,-126 621,-96 770,-96 770,-126"/>
-<text text-anchor="start" x="629" y="-114" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
-<text text-anchor="middle" x="695.5" y="-103" font-family="Helvetica,sans-Serif" font-size="10.00">::getTruePeakL</text>
+<polygon fill="white" stroke="#666666" points="770,-510 621,-510 621,-480 770,-480 770,-510"/>
+<text text-anchor="start" x="629" y="-498" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
+<text text-anchor="middle" x="695.5" y="-487" font-family="Helvetica,sans-Serif" font-size="10.00">::getTruePeakL</text>
 </a>
 </g>
 </g>
@@ -978,8 +978,8 @@
 <g id="edge31_Node000037_Node000038" class="edge">
 <title>Node37&#45;&gt;Node38</title>
 <g id="a_edge31_Node000037_Node000038"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M549.68,-143.94C571.58,-138.96 596.12,-133.38 618.68,-128.25"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="619.58,-131.63 628.55,-126 618.02,-124.81 619.58,-131.63"/>
+<path fill="none" stroke="#63b8ff" d="M557.15,-411.97C564.86,-414.93 572.31,-418.55 579,-423 601.21,-437.76 593.15,-455.72 615,-471 617.12,-472.48 619.33,-473.87 621.61,-475.18"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="620.22,-478.4 630.71,-479.82 623.39,-472.16 620.22,-478.4"/>
 </a>
 </g>
 </g>
@@ -987,9 +987,9 @@
 <g id="Node000039" class="node">
 <title>Node39</title>
 <g id="a_Node000039"><a xlink:href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a7ec9a8e1577c72c96b179fab3a0b6adf" target="_top" xlink:title="Latest right&#45;channel true peak (linear, max&#45;hold since last clear).">
-<polygon fill="white" stroke="#666666" points="770,-78 621,-78 621,-48 770,-48 770,-78"/>
-<text text-anchor="start" x="629" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
-<text text-anchor="middle" x="695.5" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">::getTruePeakR</text>
+<polygon fill="white" stroke="#666666" points="770,-462 621,-462 621,-432 770,-432 770,-462"/>
+<text text-anchor="start" x="629" y="-450" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
+<text text-anchor="middle" x="695.5" y="-439" font-family="Helvetica,sans-Serif" font-size="10.00">::getTruePeakR</text>
 </a>
 </g>
 </g>
@@ -997,8 +997,8 @@
 <g id="edge32_Node000037_Node000039" class="edge">
 <title>Node37&#45;&gt;Node39</title>
 <g id="a_edge32_Node000037_Node000039"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M557.15,-146.03C564.86,-143.07 572.31,-139.45 579,-135 601.21,-120.24 593.15,-102.28 615,-87 617.12,-85.52 619.33,-84.13 621.61,-82.82"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="623.39,-85.84 630.71,-78.18 620.22,-79.6 623.39,-85.84"/>
+<path fill="none" stroke="#63b8ff" d="M549.68,-414.06C571.58,-419.04 596.12,-424.62 618.68,-429.75"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="618.02,-433.19 628.55,-432 619.58,-426.37 618.02,-433.19"/>
 </a>
 </g>
 </g>
@@ -1006,8 +1006,26 @@
 <g id="edge42_Node000052_Node000003" class="edge">
 <title>Node52&#45;&gt;Node3</title>
 <g id="a_edge42_Node000052_Node000003"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M557.04,-456.22C565.24,-459.8 572.84,-464.59 579,-471 616.44,-509.93 675.52,-893.01 690.8,-995.75"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="687.36,-996.46 692.29,-1005.84 694.29,-995.43 687.36,-996.46"/>
+<path fill="none" stroke="#63b8ff" d="M557.46,-456.49C565.49,-460.03 572.93,-464.74 579,-471 650.32,-544.5 684.16,-877.41 692.44,-971.92"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="688.96,-972.32 693.3,-981.99 695.93,-971.73 688.96,-972.32"/>
+</a>
+</g>
+</g>
+<!-- Node52&#45;&gt;Node38 -->
+<g id="edge43_Node000052_Node000038" class="edge">
+<title>Node52&#45;&gt;Node38</title>
+<g id="a_edge43_Node000052_Node000038"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M549.68,-462.06C571.58,-467.04 596.12,-472.62 618.68,-477.75"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="618.02,-481.19 628.55,-480 619.58,-474.37 618.02,-481.19"/>
+</a>
+</g>
+</g>
+<!-- Node52&#45;&gt;Node39 -->
+<g id="edge44_Node000052_Node000039" class="edge">
+<title>Node52&#45;&gt;Node39</title>
+<g id="a_edge44_Node000052_Node000039"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M557,-447C574.3,-447 592.87,-447 610.59,-447"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="610.9,-450.5 620.9,-447 610.9,-443.5 610.9,-450.5"/>
 </a>
 </g>
 </g>

@@ -1,5 +1,9 @@
 <map id="Aestra::Audio::PatternManager::createMidiPatternWithId" name="Aestra::Audio::PatternManager::createMidiPatternWithId">
-<area shape="rect" id="Node000001" title="Create a MIDI pattern restoring a serialized identity (#446)." alt="" coords="273,5,493,45"/>
-<area shape="rect" id="Node000002" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#af17c4e7693841ef1bc5821a6b4cbba8c" title="Create a MIDI pattern." alt="" coords="5,5,225,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="260,28,226,28,226,23,260,23"/>
+<area shape="rect" id="Node000001" title="Create a MIDI pattern restoring a serialized identity (#446)." alt="" coords="761,5,981,45"/>
+<area shape="rect" id="Node000002" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#af17c4e7693841ef1bc5821a6b4cbba8c" title="Create a MIDI pattern." alt="" coords="493,5,713,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="748,28,714,28,714,23,748,23"/>
+<area shape="rect" id="Node000003" href="$dc/d1e/classAestra_1_1ArsenalSceneStrip.html#af1dca6ad0a81b9efc7ef2d6e4fb22b79" title="Pointer routing for the strip: chips select, &quot;+&quot; makes the next pattern, the swing zone drags,..." alt="" coords="255,5,445,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="480,28,446,28,446,23,480,23"/>
+<area shape="rect" id="Node000004" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a5c9ac77599f4bd13c12f7b9dd2bbc805" title="Handle mouse input routed to the Arsenal panel." alt="" coords="5,5,207,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="241,28,207,28,207,23,241,23"/>
 </map>

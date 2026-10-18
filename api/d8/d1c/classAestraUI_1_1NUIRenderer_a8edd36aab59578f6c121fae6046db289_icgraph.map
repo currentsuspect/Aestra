@@ -1,7 +1,11 @@
 <map id="AestraUI::NUIRenderer::fillRoundedRect" name="AestraUI::NUIRenderer::fillRoundedRect">
-<area shape="rect" id="Node000001" title="Draw a filled rounded rectangle." alt="" coords="239,27,408,67"/>
-<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a3a105b59305ebc04e7f57f6f3ab61b06" title="Render the workspace and active overlays." alt="" coords="5,5,191,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="225,37,190,33,191,27,226,32"/>
-<area shape="rect" id="Node000003" href="$d5/d99/classAestraUI_1_1FileBrowser.html#ab3728bdebc18bd1dcfc38413229e7a68" title="Hover washes drawn per&#45;frame OUTSIDE the FBO cache, so hover changes never force a cache rebuild (see..." alt="" coords="13,55,183,95"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="225,62,183,67,183,62,225,57"/>
+<area shape="rect" id="Node000001" title="Draw a filled rounded rectangle." alt="" coords="264,85,433,125"/>
+<area shape="rect" id="Node000002" href="$d8/d94/namespaceAestra.html#aa45d0bc74271e0e911e25da707a86b72" title="The FIT | SCROLL segmented control in the command header; the active mode is lightly filled." alt="" coords="5,5,216,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="297,81,215,46,172,33,174,28,217,41,299,76"/>
+<area shape="rect" id="Node000003" href="$d8/d94/namespaceAestra.html#abaad3941fb42d235143e54ae7d86a43e" title="The &quot;+ ADD UNIT&quot; type picker: a 2x2 card of unit kinds with a one&#45;line description each." alt="" coords="5,55,216,95"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="250,95,216,91,217,86,251,90"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a3a105b59305ebc04e7f57f6f3ab61b06" title="Render the workspace and active overlays." alt="" coords="18,120,203,145"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="251,119,204,124,203,119,250,114"/>
+<area shape="rect" id="Node000005" href="$d5/d99/classAestraUI_1_1FileBrowser.html#ab3728bdebc18bd1dcfc38413229e7a68" title="Hover washes drawn per&#45;frame OUTSIDE the FBO cache, so hover changes never force a cache rebuild (see..." alt="" coords="26,170,195,210"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="287,132,217,159,178,172,176,167,215,154,285,127"/>
 </map>

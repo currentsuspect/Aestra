@@ -70,12 +70,13 @@ $(function() {
 
 <div id="nav-path" class="navpath">
   <ul>
-<li class="navelem"><b>Aestra</b></li><li class="navelem"><a class="el" href="../../d4/d81/structAestra_1_1ChannelViewModel.html">ChannelViewModel</a></li>  </ul>
+<li class="navelem"><a class="el" href="../../d8/d94/namespaceAestra.html">Aestra</a></li><li class="navelem"><a class="el" href="../../d4/d81/structAestra_1_1ChannelViewModel.html">ChannelViewModel</a></li>  </ul>
 </div>
 </div><!-- top -->
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="../../d5/d19/structAestra_1_1ChannelViewModel-members.html">List of all members</a>  </div>
@@ -101,6 +102,15 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d45/structAestra_1_1ChannelViewModel_1_1SendViewModel.html">SendViewModel</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
+Public Types</h2></td></tr>
+<tr class="memitem:a5e51ae343e804603bebac2e5bcbab13d" id="r_a5e51ae343e804603bebac2e5bcbab13d"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#a5e51ae343e804603bebac2e5bcbab13d">Role</a> { <b>Track</b>
+, <b>Bus</b>
+, <b>Return</b>
+ }</td></tr>
+<tr class="memdesc:a5e51ae343e804603bebac2e5bcbab13d"><td class="mdescLeft">&#160;</td><td class="mdescRight">What the channel is to the others (V81-M1): a Bus when other channels route their main output into it, a Return when other channels send to it, else a plain Track.  <a href="../../d4/d81/structAestra_1_1ChannelViewModel.html#a5e51ae343e804603bebac2e5bcbab13d">More...</a><br /></td></tr>
+<tr class="separator:a5e51ae343e804603bebac2e5bcbab13d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
@@ -217,6 +227,15 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:ace37eb979df9d23cfc947a8895c4a9f9" id="r_ace37eb979df9d23cfc947a8895c4a9f9"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#ace37eb979df9d23cfc947a8895c4a9f9">integratedLufs</a> {-144.0f}</td></tr>
 <tr class="memdesc:ace37eb979df9d23cfc947a8895c4a9f9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Integrated/Gated LUFS (dB)  <br /></td></tr>
 <tr class="separator:ace37eb979df9d23cfc947a8895c4a9f9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1e6bcaa3792fac445518a1ad06b12268" id="r_a1e6bcaa3792fac445518a1ad06b12268"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#a1e6bcaa3792fac445518a1ad06b12268">momentaryLufs</a> {-144.0f}</td></tr>
+<tr class="memdesc:a1e6bcaa3792fac445518a1ad06b12268"><td class="mdescLeft">&#160;</td><td class="mdescRight">Momentary (400 ms) LUFS, master only.  <br /></td></tr>
+<tr class="separator:a1e6bcaa3792fac445518a1ad06b12268"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a71388141862ae7e5afaf75abde438153" id="r_a71388141862ae7e5afaf75abde438153"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#a71388141862ae7e5afaf75abde438153">shortTermLufs</a> {-144.0f}</td></tr>
+<tr class="memdesc:a71388141862ae7e5afaf75abde438153"><td class="mdescLeft">&#160;</td><td class="mdescRight">Short-term (3 s) LUFS, master only.  <br /></td></tr>
+<tr class="separator:a71388141862ae7e5afaf75abde438153"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad55c3829e1d41167861ab5d89240f0c0" id="r_ad55c3829e1d41167861ab5d89240f0c0"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#ad55c3829e1d41167861ab5d89240f0c0">truePeakDb</a> {-144.0f}</td></tr>
+<tr class="memdesc:ad55c3829e1d41167861ab5d89240f0c0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Held true peak in dBTP, master only (-144 = none yet)  <br /></td></tr>
+<tr class="separator:ad55c3829e1d41167861ab5d89240f0c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa4088a51c1fbf94125bc08732a759e15" id="r_aa4088a51c1fbf94125bc08732a759e15"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#aa4088a51c1fbf94125bc08732a759e15">peakHoldL</a> {<a class="el" href="../../db/d9f/namespaceAestra_1_1MixerMath.html#a25e4117c1a67674d77b60e4fab6257a9">MixerMath::DB_MIN</a>}</td></tr>
 <tr class="memdesc:aa4088a51c1fbf94125bc08732a759e15"><td class="mdescLeft">&#160;</td><td class="mdescRight">Peak hold left (dB)  <br /></td></tr>
 <tr class="separator:aa4088a51c1fbf94125bc08732a759e15"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -243,6 +262,11 @@ Public Attributes</h2></td></tr>
 <tr class="separator:a415049b65a636bc4e95885b34ac8f46d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a00b6092b0a4c2c3fcbef1f207a59fc8c" id="r_a00b6092b0a4c2c3fcbef1f207a59fc8c"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="../../dd/d45/structAestra_1_1ChannelViewModel_1_1SendViewModel.html">SendViewModel</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#a00b6092b0a4c2c3fcbef1f207a59fc8c">sends</a></td></tr>
 <tr class="separator:a00b6092b0a4c2c3fcbef1f207a59fc8c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7aaf1eeaf217824a96386afc65a5f875" id="r_a7aaf1eeaf217824a96386afc65a5f875"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#a5e51ae343e804603bebac2e5bcbab13d">Role</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#a7aaf1eeaf217824a96386afc65a5f875">role</a> {Role::Track}</td></tr>
+<tr class="separator:a7aaf1eeaf217824a96386afc65a5f875"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a174bc02095b0738c7472be497b7a23f2" id="r_a174bc02095b0738c7472be497b7a23f2"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#a174bc02095b0738c7472be497b7a23f2">peakSinceResetDb</a> {<a class="el" href="../../db/d9f/namespaceAestra_1_1MixerMath.html#a25e4117c1a67674d77b60e4fab6257a9">MixerMath::DB_MIN</a>}</td></tr>
+<tr class="memdesc:a174bc02095b0738c7472be497b7a23f2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Highest peak since the last reset, in dB; the strip footer reads it. Cleared by resetPeaks().  <br /></td></tr>
+<tr class="separator:a174bc02095b0738c7472be497b7a23f2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Per-channel UI state for the mixer. </p>
@@ -250,7 +274,35 @@ Public Attributes</h2></td></tr>
 <p>Requirements: 3.1 - Each channel strip SHALL display track name and color. Requirements: 12.3 - Meter smoothing state per channel. </p>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00034">34</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
-</div><h2 class="groupheader">Member Function Documentation</h2>
+</div><h2 class="groupheader">Member Enumeration Documentation</h2>
+<a id="a5e51ae343e804603bebac2e5bcbab13d" name="a5e51ae343e804603bebac2e5bcbab13d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5e51ae343e804603bebac2e5bcbab13d">&#9670;&#160;</a></span>Role</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum class <a class="el" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#a5e51ae343e804603bebac2e5bcbab13d">Aestra::ChannelViewModel::Role</a></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>What the channel is to the others (V81-M1): a Bus when other channels route their main output into it, a Return when other channels send to it, else a plain Track. </p>
+<p>A bus that also receives sends stays a Bus. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00116">116</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Member Function Documentation</h2>
 <a id="ac4b6f64c764981714a8b268c86495e13" name="ac4b6f64c764981714a8b268c86495e13"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ac4b6f64c764981714a8b268c86495e13">&#9670;&#160;</a></span>resetMeters()</h2>
 
@@ -276,9 +328,9 @@ Public Attributes</h2></td></tr>
 
 <p>Reset meter state to silence. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00114">114</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00125">125</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00094">clipLatchL</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00095">clipLatchR</a>, <a class="el" href="../../db/d46/MixerMath_8h_source.html#l00022">Aestra::MixerMath::DB_MIN</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00079">envEnergyL</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00080">envEnergyR</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00081">envLowEnergyL</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00082">envLowEnergyR</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00077">envPeakL</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00078">envPeakR</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00090">peakHoldL</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00091">peakHoldR</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00092">peakHoldTimerL</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00093">peakHoldTimerR</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00083">smoothedPeakL</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00084">smoothedPeakR</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00096">suppressClipRelatchL</a>, and <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00097">suppressClipRelatchR</a>.</p>
+<p class="reference">References <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00097">clipLatchL</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00098">clipLatchR</a>, <a class="el" href="../../db/d46/MixerMath_8h_source.html#l00022">Aestra::MixerMath::DB_MIN</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00079">envEnergyL</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00080">envEnergyR</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00081">envLowEnergyL</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00082">envLowEnergyR</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00077">envPeakL</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00078">envPeakR</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00093">peakHoldL</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00094">peakHoldR</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00095">peakHoldTimerL</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00096">peakHoldTimerR</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00083">smoothedPeakL</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00084">smoothedPeakR</a>, <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00099">suppressClipRelatchL</a>, and <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00100">suppressClipRelatchR</a>.</p>
 
 </div>
 </div>
@@ -353,7 +405,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00038">38</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/d7b/UIMixerPanel_8cpp_source.html#l00956">AestraUI::UIMixerPanel::onDrop()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/d7b/UIMixerPanel_8cpp_source.html#l01137">AestraUI::UIMixerPanel::onDrop()</a>.</p>
 
 </div>
 </div>
@@ -371,9 +423,9 @@ Public Attributes</h2></td></tr>
 
 <p>Left channel clip latch. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00094">94</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00097">97</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00114">resetMeters()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00125">resetMeters()</a>.</p>
 
 </div>
 </div>
@@ -391,9 +443,9 @@ Public Attributes</h2></td></tr>
 
 <p>Right channel clip latch. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00095">95</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00098">98</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00114">resetMeters()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00125">resetMeters()</a>.</p>
 
 </div>
 </div>
@@ -431,7 +483,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00079">79</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00114">resetMeters()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00125">resetMeters()</a>.</p>
 
 </div>
 </div>
@@ -451,7 +503,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00080">80</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00114">resetMeters()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00125">resetMeters()</a>.</p>
 
 </div>
 </div>
@@ -471,7 +523,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00081">81</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00114">resetMeters()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00125">resetMeters()</a>.</p>
 
 </div>
 </div>
@@ -491,7 +543,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00082">82</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00114">resetMeters()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00125">resetMeters()</a>.</p>
 
 </div>
 </div>
@@ -511,7 +563,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00077">77</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00114">resetMeters()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00125">resetMeters()</a>.</p>
 
 </div>
 </div>
@@ -531,7 +583,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00078">78</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00114">resetMeters()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00125">resetMeters()</a>.</p>
 
 </div>
 </div>
@@ -587,7 +639,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00036">36</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/d7b/UIMixerPanel_8cpp_source.html#l00956">AestraUI::UIMixerPanel::onDrop()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/d7b/UIMixerPanel_8cpp_source.html#l01137">AestraUI::UIMixerPanel::onDrop()</a>.</p>
 
 </div>
 </div>
@@ -715,6 +767,24 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="a1e6bcaa3792fac445518a1ad06b12268" name="a1e6bcaa3792fac445518a1ad06b12268"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1e6bcaa3792fac445518a1ad06b12268">&#9670;&#160;</a></span>momentaryLufs</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float Aestra::ChannelViewModel::momentaryLufs {-144.0f}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Momentary (400 ms) LUFS, master only. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00090">90</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
+
+</div>
+</div>
 <a id="a2f0176df67b5e44e35d8278e4777e964" name="a2f0176df67b5e44e35d8278e4777e964"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a2f0176df67b5e44e35d8278e4777e964">&#9670;&#160;</a></span>monitored</h2>
 
@@ -749,6 +819,8 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00051">51</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
+<p class="reference">Referenced by <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html#l00223">AestraUI::UIRoutingMap::refreshLiveState()</a>.</p>
+
 </div>
 </div>
 <a id="a4bbf13ed13a18c12cba5c241e592881c" name="a4bbf13ed13a18c12cba5c241e592881c"></a>
@@ -767,7 +839,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00040">40</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/d7b/UIMixerPanel_8cpp_source.html#l00956">AestraUI::UIMixerPanel::onDrop()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/d7b/UIMixerPanel_8cpp_source.html#l01137">AestraUI::UIMixerPanel::onDrop()</a>.</p>
 
 </div>
 </div>
@@ -803,9 +875,9 @@ Public Attributes</h2></td></tr>
 
 <p>Peak hold left (dB) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00090">90</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00093">93</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00114">resetMeters()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00125">resetMeters()</a>.</p>
 
 </div>
 </div>
@@ -823,9 +895,9 @@ Public Attributes</h2></td></tr>
 
 <p>Peak hold right (dB) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00091">91</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00094">94</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00114">resetMeters()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00125">resetMeters()</a>.</p>
 
 </div>
 </div>
@@ -843,9 +915,9 @@ Public Attributes</h2></td></tr>
 
 <p>Time since peak hold set (seconds) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00092">92</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00095">95</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00114">resetMeters()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00125">resetMeters()</a>.</p>
 
 </div>
 </div>
@@ -863,9 +935,43 @@ Public Attributes</h2></td></tr>
 
 <p>Time since peak hold set (seconds) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00093">93</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00096">96</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00114">resetMeters()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00125">resetMeters()</a>.</p>
+
+</div>
+</div>
+<a id="a174bc02095b0738c7472be497b7a23f2" name="a174bc02095b0738c7472be497b7a23f2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a174bc02095b0738c7472be497b7a23f2">&#9670;&#160;</a></span>peakSinceResetDb</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float Aestra::ChannelViewModel::peakSinceResetDb {<a class="el" href="../../db/d9f/namespaceAestra_1_1MixerMath.html#a25e4117c1a67674d77b60e4fab6257a9">MixerMath::DB_MIN</a>}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Highest peak since the last reset, in dB; the strip footer reads it. Cleared by resetPeaks(). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00120">120</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a7aaf1eeaf217824a96386afc65a5f875" name="a7aaf1eeaf217824a96386afc65a5f875"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7aaf1eeaf217824a96386afc65a5f875">&#9670;&#160;</a></span>role</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d4/d81/structAestra_1_1ChannelViewModel.html#a5e51ae343e804603bebac2e5bcbab13d">Role</a> Aestra::ChannelViewModel::role {Role::Track}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00117">117</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
 </div>
 </div>
@@ -899,7 +1005,25 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00109">109</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00112">112</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
+
+</div>
+</div>
+<a id="a71388141862ae7e5afaf75abde438153" name="a71388141862ae7e5afaf75abde438153"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a71388141862ae7e5afaf75abde438153">&#9670;&#160;</a></span>shortTermLufs</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float Aestra::ChannelViewModel::shortTermLufs {-144.0f}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Short-term (3 s) LUFS, master only. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00091">91</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
 </div>
 </div>
@@ -955,7 +1079,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00083">83</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00114">resetMeters()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html#l00223">AestraUI::UIRoutingMap::refreshLiveState()</a>, and <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00125">resetMeters()</a>.</p>
 
 </div>
 </div>
@@ -975,7 +1099,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00084">84</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00114">resetMeters()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html#l00223">AestraUI::UIRoutingMap::refreshLiveState()</a>, and <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00125">resetMeters()</a>.</p>
 
 </div>
 </div>
@@ -1031,6 +1155,8 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00052">52</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
+<p class="reference">Referenced by <a class="el" href="../../df/db7/UIRoutingMap_8cpp_source.html#l00223">AestraUI::UIRoutingMap::refreshLiveState()</a>.</p>
+
 </div>
 </div>
 <a id="a308f4dfb386b3604d8fa0f7ccd8bc6fe" name="a308f4dfb386b3604d8fa0f7ccd8bc6fe"></a>
@@ -1047,9 +1173,9 @@ Public Attributes</h2></td></tr>
 
 <p>Ignore re-latch until clip drops once. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00096">96</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00099">99</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00114">resetMeters()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00125">resetMeters()</a>.</p>
 
 </div>
 </div>
@@ -1067,9 +1193,9 @@ Public Attributes</h2></td></tr>
 
 <p>Ignore re-latch until clip drops once. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00097">97</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00100">100</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00114">resetMeters()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00125">resetMeters()</a>.</p>
 
 </div>
 </div>
@@ -1106,6 +1232,24 @@ Public Attributes</h2></td></tr>
 <p>Trim/gain in dB. </p>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00050">50</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
+
+</div>
+</div>
+<a id="ad55c3829e1d41167861ab5d89240f0c0" name="ad55c3829e1d41167861ab5d89240f0c0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad55c3829e1d41167861ab5d89240f0c0">&#9670;&#160;</a></span>truePeakDb</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float Aestra::ChannelViewModel::truePeakDb {-144.0f}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Held true peak in dBTP, master only (-144 = none yet) </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html#l00092">92</a> of file <a class="el" href="../../dd/dd1/MixerViewModel_8h_source.html">MixerViewModel.h</a>.</p>
 
 </div>
 </div>

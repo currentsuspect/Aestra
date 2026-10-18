@@ -5,5 +5,6 @@ var searchData=
   ['gamma_2',['gamma',['../dc/dac/structAestraUI_1_1NUIRenderer_1_1TextDiagnostics_1_1Tier.html#aa14c56af6d1b8b5779c32a09915c2891',1,'AestraUI::NUIRenderer::TextDiagnostics::Tier']]],
   ['generation_3',['generation',['../d6/d07/structAestra_1_1Audio_1_1CompensationRingDescriptor.html#a595664c967b5b8aea22d472c6c43280e',1,'Aestra::Audio::CompensationRingDescriptor::generation'],['../d4/dd7/structAestra_1_1Audio_1_1LatencyGraph.html#a188c36e187fa8ab494319e5bacc565e1',1,'Aestra::Audio::LatencyGraph::generation'],['../da/dff/structAestra_1_1Audio_1_1SolvedLatencyTopology.html#af90daec66a3d6ddf6d32646996bd388b',1,'Aestra::Audio::SolvedLatencyTopology::generation']]],
   ['graphdirty_4',['graphDirty',['../d1/d11/classAestra_1_1Audio_1_1TrackManagerUI.html#a57de94445d4d494e39eaff5343cf065d',1,'Aestra::Audio::TrackManagerUI']]],
-  ['group_5',['group',['../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#a32981ba6ed1aea0be633b51667c7ba32',1,'Aestra::Audio::UnitInfo']]]
+  ['group_5',['group',['../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#a32981ba6ed1aea0be633b51667c7ba32',1,'Aestra::Audio::UnitInfo']]],
+  ['groups_6',['groups',['../df/de5/structAestra_1_1MixerGroupedOrder.html#a1de32b7d34e529019dba3359d3ddae19',1,'Aestra::MixerGroupedOrder']]]
 ];

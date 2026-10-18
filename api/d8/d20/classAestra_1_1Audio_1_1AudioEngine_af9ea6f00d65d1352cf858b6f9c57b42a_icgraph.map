@@ -8,8 +8,8 @@
 <area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="777,147,697,168,695,163,775,142"/>
 <area shape="rect" id="Node000007" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a9312fb6a7145e21d39409a19c0203284" title="Render the project to an audio file using the full live engine path (processBlock)." alt="" coords="512,101,721,141"/>
 <area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="756,124,721,124,721,119,756,119"/>
-<area shape="rect" id="Node000009" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a4ad10b6d3c3d40e7490eca3f02a6c676" title="Set the playhead position in beats." alt="" coords="517,229,716,269"/>
-<area shape="poly" id="edge10_Node000001_Node000009" title=" " alt="" coords="832,152,782,186,722,220,693,232,691,227,720,215,779,182,829,147"/>
+<area shape="rect" id="Node000010" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a4ad10b6d3c3d40e7490eca3f02a6c676" title="Set the playhead position in beats." alt="" coords="517,229,716,269"/>
+<area shape="poly" id="edge11_Node000001_Node000010" title=" " alt="" coords="832,152,782,186,722,220,693,232,691,227,720,215,779,182,829,147"/>
 <area shape="rect" id="Node000003" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file." alt="" coords="5,9,204,49"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="240,41,204,41,204,35,240,35"/>
 <area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="218,18,253,18,253,23,218,23"/>
@@ -18,4 +18,6 @@
 <area shape="poly" id="edge8_Node000007_Node000002" title=" " alt="" coords="534,99,511,92,407,52,409,47,513,87,536,94"/>
 <area shape="rect" id="Node000008" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a1400dd1c5eded988d4e0c4bc78e592e2" title="Render the same range render() would, into memory (V8&#45;W4)." alt="" coords="253,101,463,141"/>
 <area shape="poly" id="edge9_Node000007_Node000008" title=" " alt="" coords="499,124,463,124,463,119,499,119"/>
+<area shape="rect" id="Node000009" href="$db/d60/classAestraContent.html#a540998ede72de460fd746a8f6d4f4d60" title="The whole project&#39;s mix, rendered offline into memory (a version&#39;s bounce). False when there is nothi..." alt="" coords="10,101,199,141"/>
+<area shape="poly" id="edge10_Node000008_Node000009" title=" " alt="" coords="240,124,200,124,200,119,240,119"/>
 </map>

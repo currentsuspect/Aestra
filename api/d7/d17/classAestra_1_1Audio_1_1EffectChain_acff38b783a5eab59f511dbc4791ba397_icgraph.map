@@ -13,4 +13,6 @@
 <area shape="rect" id="Node000006" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file." alt="" coords="5,5,204,45"/>
 <area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="238,37,204,37,204,31,238,32"/>
 <area shape="poly" id="edge6_Node000006_Node000005" title=" " alt="" coords="217,14,252,14,252,19,217,19"/>
+<area shape="rect" id="Node000008" href="$db/d60/classAestraContent.html#a540998ede72de460fd746a8f6d4f4d60" title="The whole project&#39;s mix, rendered offline into memory (a version&#39;s bounce). False when there is nothi..." alt="" coords="10,69,199,109"/>
+<area shape="poly" id="edge8_Node000007_Node000008" title=" " alt="" coords="238,92,200,92,200,87,238,87"/>
 </map>

@@ -1,17 +1,19 @@
 <map id="Aestra::Audio::TrackManager::recomputeEffectiveLoop" name="Aestra::Audio::TrackManager::recomputeEffectiveLoop">
-<area shape="rect" id="Node000001" title="Effective loop = pattern override when active, else timeline region." alt="" coords="564,165,772,205"/>
-<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#abd605c4c1cc4109adfb007934cad24cd" title="Pattern&#45;mode loop override (#845)." alt="" coords="308,133,516,173"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="550,173,516,169,516,164,551,168"/>
-<area shape="rect" id="Node000008" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a07996a685d2384f02eaafdda0fbdcd47" title="Mirror of the engine TIMELINE loop region (beats), for transport decisions that must stay reachable i..." alt="" coords="308,197,516,237"/>
-<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="551,203,516,207,516,202,550,197"/>
+<area shape="rect" id="Node000001" title="Effective loop = pattern override when active, else timeline region." alt="" coords="564,197,772,237"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#abd605c4c1cc4109adfb007934cad24cd" title="Pattern&#45;mode loop override (#845)." alt="" coords="308,165,516,205"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="550,205,516,201,516,196,551,200"/>
+<area shape="rect" id="Node000009" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a07996a685d2384f02eaafdda0fbdcd47" title="Mirror of the engine TIMELINE loop region (beats), for transport decisions that must stay reachable i..." alt="" coords="308,229,516,269"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="551,235,516,239,516,234,550,229"/>
 <area shape="rect" id="Node000003" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a7246862389155e4d2fe2548f9b838fae" title="The active pattern&#39;s length changed while in Arsenal: the engine loop and the recording loop follow i..." alt="" coords="5,5,260,45"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="372,127,320,92,259,60,226,48,228,43,261,55,323,88,375,123"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="381,157,328,107,294,81,259,60,231,48,233,43,261,55,297,77,331,103,385,153"/>
 <area shape="rect" id="Node000004" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a99046b73ab17f1cb029fe8baf214ee6a" title="Focus entered Audition: the DAW transport is parked and exclusive audition takes over." alt="" coords="19,69,246,109"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="310,133,220,112,221,107,311,128"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="354,162,259,124,219,112,221,107,261,119,356,157"/>
 <area shape="rect" id="Node000005" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a029092bcaac56bceeb4bb5b0a226b64e" title="Focus entered Timeline." alt="" coords="19,133,246,173"/>
-<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="294,156,246,156,246,151,294,151"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="294,174,246,169,247,164,294,169"/>
 <area shape="rect" id="Node000006" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#ae5ce64039a9718f23433ef6be2692339" title="Timeline play: the pattern loop override ends, so the timeline&#39;s own loop applies again." alt="" coords="19,197,246,237"/>
-<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="311,179,221,200,220,195,310,174"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="294,201,247,207,246,202,294,196"/>
 <area shape="rect" id="Node000007" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#aacf1d628dbee0767beabeebf50da6148" title="Play pressed in Arsenal." alt="" coords="17,261,249,301"/>
-<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="318,182,310,187,295,203,287,219,278,235,262,251,239,264,236,259,258,247,274,232,282,216,290,200,306,183,315,178"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="326,213,309,220,286,236,261,252,229,264,227,259,259,247,283,231,307,215,324,208"/>
+<area shape="rect" id="Node000008" href="$d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a70f15085c9ec7f1d44e14728dbe98e5e" title="The Arsenal&#39;s active pattern changed (a scene chip, the pattern browser)." alt="" coords="17,325,248,365"/>
+<area shape="poly" id="edge7_Node000002_Node000008" title=" " alt="" coords="316,215,310,219,299,231,293,242,287,266,281,291,273,303,262,315,243,327,240,323,258,311,269,300,276,289,282,265,288,240,295,228,306,215,313,210"/>
 </map>

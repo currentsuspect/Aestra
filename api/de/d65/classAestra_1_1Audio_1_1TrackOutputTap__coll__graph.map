@@ -1,5 +1,5 @@
 <map id="Aestra::Audio::TrackOutputTap" name="Aestra::Audio::TrackOutputTap">
-<area shape="rect" id="Node000001" title="Copies one mixer channel&#39;s output before it is routed to the master or a group (V8&#45;W5 Bounce in Place..." alt="" coords="5,93,223,119"/>
+<area shape="rect" id="Node000001" title="Copies one mixer channel&#39;s output before it is routed to the master or a group (V8&#45;W5 Bounce in Place..." alt="" coords="5,108,223,133"/>
 <area shape="rect" id="Node000002" title=" " alt="" coords="77,5,151,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="117,45,117,93,111,93,111,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="117,45,117,108,111,108,111,45"/>
 </map>

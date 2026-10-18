@@ -75,20 +75,20 @@
 </a>
 </g>
 </g>
-<!-- Node16 -->
-<g id="Node000016" class="node">
-<title>Node16</title>
-<g id="a_Node000016"><a xlink:href="../../da/df9/classAestra_1_1Audio_1_1ClipRenderService.html#adbc6b59ea80b9b1efca3eb534d66ef27" target="_top" xlink:title="Resolve the audio a clip currently plays.">
+<!-- Node17 -->
+<g id="Node000017" class="node">
+<title>Node17</title>
+<g id="a_Node000017"><a xlink:href="../../da/df9/classAestra_1_1Audio_1_1ClipRenderService.html#adbc6b59ea80b9b1efca3eb534d66ef27" target="_top" xlink:title="Resolve the audio a clip currently plays.">
 <polygon fill="white" stroke="#666666" points="942.5,-174 795.5,-174 795.5,-144 942.5,-144 942.5,-174"/>
 <text text-anchor="start" x="803.5" y="-162" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::ClipRender</text>
 <text text-anchor="middle" x="869" y="-151" font-family="Helvetica,sans-Serif" font-size="10.00">Service::resolveClipRegion</text>
 </a>
 </g>
 </g>
-<!-- Node1&#45;&gt;Node16 -->
-<g id="edge16_Node000001_Node000016" class="edge">
-<title>Node1&#45;&gt;Node16</title>
-<g id="a_edge16_Node000001_Node000016"><a xlink:title=" ">
+<!-- Node1&#45;&gt;Node17 -->
+<g id="edge17_Node000001_Node000017" class="edge">
+<title>Node1&#45;&gt;Node17</title>
+<g id="a_edge17_Node000001_Node000017"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M976.88,-171.96C965.43,-170.57 953.84,-169.16 942.72,-167.81"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="976.55,-175.44 986.89,-173.17 977.39,-168.49 976.55,-175.44"/>
 </a>
@@ -208,20 +208,20 @@
 </a>
 </g>
 </g>
-<!-- Node15 -->
-<g id="Node000015" class="node">
-<title>Node15</title>
-<g id="a_Node000015"><a xlink:href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a053a4811d93fb0e055bb0e745126e404" target="_top" xlink:title="Block the calling NON&#45;AUDIO thread until all queued prefilter jobs are done, then apply them.">
+<!-- Node16 -->
+<g id="Node000016" class="node">
+<title>Node16</title>
+<g id="a_Node000016"><a xlink:href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a053a4811d93fb0e055bb0e745126e404" target="_top" xlink:title="Block the calling NON&#45;AUDIO thread until all queued prefilter jobs are done, then apply them.">
 <polygon fill="white" stroke="#666666" points="741,-30 585,-30 585,0 741,0 741,-30"/>
 <text text-anchor="start" x="593" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackManager</text>
 <text text-anchor="middle" x="663" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::waitForClipPrefilters</text>
 </a>
 </g>
 </g>
-<!-- Node9&#45;&gt;Node15 -->
-<g id="edge15_Node000009_Node000015" class="edge">
-<title>Node9&#45;&gt;Node15</title>
-<g id="a_edge15_Node000009_Node000015"><a xlink:title=" ">
+<!-- Node9&#45;&gt;Node16 -->
+<g id="edge16_Node000009_Node000016" class="edge">
+<title>Node9&#45;&gt;Node16</title>
+<g id="a_edge16_Node000009_Node000016"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M794.17,-45.63C772.42,-40.51 748.82,-34.96 727.76,-30"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="793.48,-49.06 804.01,-47.94 795.08,-42.25 793.48,-49.06"/>
 </a>
@@ -312,48 +312,67 @@
 </a>
 </g>
 </g>
-<!-- Node16&#45;&gt;Node7 -->
-<g id="edge17_Node000016_Node000007" class="edge">
-<title>Node16&#45;&gt;Node7</title>
-<g id="a_edge17_Node000016_Node000007"><a xlink:title=" ">
+<!-- Node15 -->
+<g id="Node000015" class="node">
+<title>Node15</title>
+<g id="a_Node000015"><a xlink:href="../../db/d60/classAestraContent.html#a540998ede72de460fd746a8f6d4f4d60" target="_top" xlink:title="The whole project&#39;s mix, rendered offline into memory (a version&#39;s bounce). False when there is nothi...">
+<polygon fill="white" stroke="#666666" points="145.5,-54 3.5,-54 3.5,-24 145.5,-24 145.5,-54"/>
+<text text-anchor="start" x="11.5" y="-42" font-family="Helvetica,sans-Serif" font-size="10.00">AestraContent::renderMix</text>
+<text text-anchor="middle" x="74.5" y="-31" font-family="Helvetica,sans-Serif" font-size="10.00">ToBuffer</text>
+</a>
+</g>
+</g>
+<!-- Node14&#45;&gt;Node15 -->
+<g id="edge15_Node000014_Node000015" class="edge">
+<title>Node14&#45;&gt;Node15</title>
+<g id="a_edge15_Node000014_Node000015"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M175.87,-39C165.73,-39 155.5,-39 145.65,-39"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="175.95,-42.5 185.95,-39 175.95,-35.5 175.95,-42.5"/>
+</a>
+</g>
+</g>
+<!-- Node17&#45;&gt;Node7 -->
+<g id="edge18_Node000017_Node000007" class="edge">
+<title>Node17&#45;&gt;Node7</title>
+<g id="a_edge18_Node000017_Node000007"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M792.72,-176.02C778.9,-178.7 764.56,-181.17 751,-183 677.74,-192.86 593.38,-197.66 534.5,-199.96"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="793.55,-179.43 802.68,-174.05 792.19,-172.56 793.55,-179.43"/>
-</a>
-</g>
-</g>
-<!-- Node17 -->
-<g id="Node000017" class="node">
-<title>Node17</title>
-<g id="a_Node000017"><a xlink:href="../../d0/d62/classAestra_1_1Audio_1_1ReverseAudioClipCommand.html#a96c8a9f625eea70ef256c3f46ead14fc" target="_top" xlink:title="Produce the replacement audio for this clip.">
-<polygon fill="white" stroke="#666666" points="740.5,-174 585.5,-174 585.5,-144 740.5,-144 740.5,-174"/>
-<text text-anchor="start" x="593.5" y="-162" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::ReverseAudio</text>
-<text text-anchor="middle" x="663" y="-151" font-family="Helvetica,sans-Serif" font-size="10.00">ClipCommand::renderBuffer</text>
-</a>
-</g>
-</g>
-<!-- Node16&#45;&gt;Node17 -->
-<g id="edge18_Node000016_Node000017" class="edge">
-<title>Node16&#45;&gt;Node17</title>
-<g id="a_edge18_Node000016_Node000017"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M785.12,-159C770.38,-159 755.1,-159 740.55,-159"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="785.22,-162.5 795.22,-159 785.22,-155.5 785.22,-162.5"/>
 </a>
 </g>
 </g>
 <!-- Node18 -->
 <g id="Node000018" class="node">
 <title>Node18</title>
-<g id="a_Node000018"><a xlink:href="../../dd/dde/classAestra_1_1Audio_1_1CommitAudioClipEditsCommand.html#a3e074459ab4eaf54e0750ecad0c25aa8" target="_top" xlink:title="Produce the replacement audio for this clip.">
+<g id="a_Node000018"><a xlink:href="../../d0/d62/classAestra_1_1Audio_1_1ReverseAudioClipCommand.html#a96c8a9f625eea70ef256c3f46ead14fc" target="_top" xlink:title="Produce the replacement audio for this clip.">
+<polygon fill="white" stroke="#666666" points="740.5,-174 585.5,-174 585.5,-144 740.5,-144 740.5,-174"/>
+<text text-anchor="start" x="593.5" y="-162" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::ReverseAudio</text>
+<text text-anchor="middle" x="663" y="-151" font-family="Helvetica,sans-Serif" font-size="10.00">ClipCommand::renderBuffer</text>
+</a>
+</g>
+</g>
+<!-- Node17&#45;&gt;Node18 -->
+<g id="edge19_Node000017_Node000018" class="edge">
+<title>Node17&#45;&gt;Node18</title>
+<g id="a_edge19_Node000017_Node000018"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M785.12,-159C770.38,-159 755.1,-159 740.55,-159"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="785.22,-162.5 795.22,-159 785.22,-155.5 785.22,-162.5"/>
+</a>
+</g>
+</g>
+<!-- Node19 -->
+<g id="Node000019" class="node">
+<title>Node19</title>
+<g id="a_Node000019"><a xlink:href="../../dd/dde/classAestra_1_1Audio_1_1CommitAudioClipEditsCommand.html#a3e074459ab4eaf54e0750ecad0c25aa8" target="_top" xlink:title="Produce the replacement audio for this clip.">
 <polygon fill="white" stroke="#666666" points="751,-126 575,-126 575,-96 751,-96 751,-126"/>
 <text text-anchor="start" x="583" y="-114" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::CommitAudio</text>
 <text text-anchor="middle" x="663" y="-103" font-family="Helvetica,sans-Serif" font-size="10.00">ClipEditsCommand::renderBuffer</text>
 </a>
 </g>
 </g>
-<!-- Node16&#45;&gt;Node18 -->
-<g id="edge19_Node000016_Node000018" class="edge">
-<title>Node16&#45;&gt;Node18</title>
-<g id="a_edge19_Node000016_Node000018"><a xlink:title=" ">
+<!-- Node17&#45;&gt;Node19 -->
+<g id="edge20_Node000017_Node000019" class="edge">
+<title>Node17&#45;&gt;Node19</title>
+<g id="a_edge20_Node000017_Node000019"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M794.17,-141.63C772.42,-136.51 748.82,-130.96 727.76,-126"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="793.48,-145.06 804.01,-143.94 795.08,-138.25 793.48,-145.06"/>
 </a>

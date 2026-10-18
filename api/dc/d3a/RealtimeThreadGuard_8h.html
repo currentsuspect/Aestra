@@ -76,6 +76,7 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a> &#124;
 <a href="#define-members">Macros</a> &#124;
 <a href="#typedef-members">Typedefs</a> &#124;
 <a href="#func-members">Functions</a> &#124;
@@ -108,6 +109,12 @@ $(function() {
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dce/classAestra_1_1Audio_1_1ScopedRealtimeAudioThread.html">Aestra::Audio::ScopedRealtimeAudioThread</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:d8/d94/namespaceAestra" id="r_d8/d94/namespaceAestra"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d94/namespaceAestra.html">Aestra</a></td></tr>
+<tr class="memdesc:d8/d94/namespaceAestra"><td class="mdescLeft">&#160;</td><td class="mdescRight">Main application class. <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
@@ -197,7 +204,7 @@ Variables</h2></td></tr>
 <p>── The two waivers in this header ──</p>
 <p>Clang refuses thread-local access inside a nonblocking function, because in the general-dynamic TLS model the first access on a thread goes through __tls_get_addr, which may allocate. That rule is a blanket one — Clang does not look at the TLS model when applying it.</p>
 <p>g_realtimeAudioThreadDepth is therefore pinned to the initial-exec model, which resolves to a fixed offset from the thread pointer with no call and no lazy allocation, and it is a constant-initialized int, so there is no guard variable either. That makes the access genuinely non-blocking, and only then is the diagnostic waived for the three functions that touch it.</p>
-<p>initial-exec is valid because every Aestra library is STATIC and linked into the executable. If a target ever becomes SHARED and is dlopen'd, initial-exec can fail at load time with "cannot allocate memory in static TLS block" — at that point drop the model pin and the waiver together, because the waiver's justification goes with it.</p>
+<p>initial-exec is valid because every <a class="el" href="../../d8/d94/namespaceAestra.html" title="Main application class.">Aestra</a> library is STATIC and linked into the executable. If a target ever becomes SHARED and is dlopen'd, initial-exec can fail at load time with "cannot allocate memory in static TLS block" — at that point drop the model pin and the waiver together, because the waiver's justification goes with it.</p>
 <p>reportRealtimeMisuse carries the second waiver: it dispatches through a function pointer, which Clang cannot follow. The obligation moves to the handler — a RealtimeMisuseHandler must itself be non-blocking. AudioEngine's handler only bumps atomics.</p>
 <p>The same waiver also covers that function's debug-only assert, which reaches __assert_fail. That is deliberate and not a hole: it fires only in a debug build with no handler installed, where the program is already in a state it was built to abort on. Nothing about it is meant to survive to a release build, and NDEBUG removes it there. </p>
 

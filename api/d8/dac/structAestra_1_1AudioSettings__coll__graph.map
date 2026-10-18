@@ -1,5 +1,9 @@
 <map id="Aestra::AudioSettings" name="Aestra::AudioSettings">
-<area shape="rect" id="Node000001" title="Audio configuration as persisted in audio_settings.conf." alt="" coords="5,240,168,265"/>
-<area shape="rect" id="Node000002" title=" " alt="" coords="67,5,106,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="89,45,89,240,84,240,84,45"/>
+<area shape="rect" id="Node000001" title="Audio configuration as persisted in audio_settings.conf." alt="" coords="22,329,184,355"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="6,95,45,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="21,134,13,170,8,214,12,261,19,283,29,304,42,317,59,327,56,332,39,322,25,307,14,285,7,262,3,214,8,169,15,133"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="137,95,224,120"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="185,134,186,170,182,214,173,262,153,307,141,321,127,331,124,327,138,317,149,304,167,260,177,214,180,170,180,134"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="111,5,250,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="183,59,183,94,178,94,178,59"/>
 </map>

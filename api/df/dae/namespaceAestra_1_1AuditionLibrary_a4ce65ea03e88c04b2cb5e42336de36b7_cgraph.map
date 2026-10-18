@@ -1,0 +1,9 @@
+<map id="Aestra::AuditionLibrary::versionItems" name="Aestra::AuditionLibrary::versionItems">
+<area shape="rect" id="Node000001" title="The project&#39;s bounces, newest first." alt="" coords="5,47,176,87"/>
+<area shape="rect" id="Node000002" href="$d6/d89/namespaceAestra_1_1VersionTime.html#aba5269a0508240fdabafe84da0ef8106" title="&quot;today 14:02&quot;, &quot;yesterday&quot;, &quot;2 days ago&quot;, &quot;Sep 27&quot;: how long ago a bounce was made,..." alt="" coords="251,5,437,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="176,48,264,31,265,36,177,53"/>
+<area shape="rect" id="Node000003" href="$df/db6/classTakeManager.html#ac7274d0ea1832734156d20e2ac205def" title="Absolute path of a version&#39;s bounce, or empty when it has none or the path leaves the takes folder." alt="" coords="224,55,464,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="176,65,210,65,210,70,176,70"/>
+<area shape="rect" id="Node000004" href="$df/dae/namespaceAestra_1_1AuditionLibrary.html#af79e74d04a1ca04200b8766c4781ab11" title="FNV&#45;1a: the same name always gets the same cover." alt="" coords="259,105,429,145"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="177,84,246,100,244,105,176,89"/>
+</map>

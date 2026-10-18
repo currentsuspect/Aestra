@@ -1,0 +1,7 @@
+<map id="Aestra::drawArsenalGroupHeader" name="Aestra::drawArsenalGroupHeader">
+<area shape="rect" id="Node000001" title="A group header in the Arsenal rack: &quot;DRUMS &#160;5 ————&quot; (FD&#45;27 point 2), drawn across the row width." alt="" coords="541,5,733,45"/>
+<area shape="rect" id="Node000002" href="$d8/d94/namespaceAestra.html#a103218390db144881bc171e3e1bcf874" title="Every header of the rack that is in view, clipped to the list viewport." alt="" coords="255,13,493,38"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="528,28,494,28,494,23,528,23"/>
+<area shape="rect" id="Node000003" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#ad0272af2020e23cd94658d1e4beacfe5" title="Render the Arsenal panel and unit rows." alt="" coords="5,5,207,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="241,28,207,28,207,23,241,23"/>
+</map>

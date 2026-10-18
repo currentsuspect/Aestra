@@ -91,7 +91,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &lt;filesystem&gt;</span></div>
 <div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="preprocessor">#include &lt;fstream&gt;</span></div>
 <div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span> </div>
-<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="keyword">namespace </span>Aestra {</div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d8/d94/namespaceAestra.html">Aestra</a> {</div>
 <div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span> </div>
 <div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="keyword">namespace </span>{</div>
 <div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span> </div>
@@ -131,8 +131,9 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span> </div>
 <div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>} <span class="comment">// namespace</span></div>
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span> </div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>AudioSettings parseAudioSettings(std::istream&amp; in) {</div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    AudioSettings settings;</div>
+<div class="foldopen" id="foldopen00050" data-start="{" data-end="}">
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno"><a class="line" href="../../d8/d94/namespaceAestra.html#ac58b2b63cc85c44bc6a85a7f03181746">   50</a></span><a class="code hl_struct" href="../../d3/d4d/structAestra_1_1AudioSettings.html">AudioSettings</a> <a class="code hl_function" href="../../d8/d94/namespaceAestra.html#ac58b2b63cc85c44bc6a85a7f03181746">parseAudioSettings</a>(std::istream&amp; in) {</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    <a class="code hl_struct" href="../../d3/d4d/structAestra_1_1AudioSettings.html">AudioSettings</a> settings;</div>
 <div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span> </div>
 <div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    std::string line;</div>
 <div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    <span class="keywordflow">while</span> (std::getline(in, line)) {</div>
@@ -147,81 +148,100 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>            <span class="keywordflow">continue</span>;</div>
 <div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>        }</div>
 <div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span> </div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; binding : kBindings) {</div>
-<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>            <span class="keywordflow">if</span> (key != binding.key) {</div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>                <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>            }</div>
-<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>            <span class="comment">// A malformed value leaves the field UNSET rather than defaulting.</span></div>
-<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>            <span class="comment">// Defaulting here would be indistinguishable, downstream, from the</span></div>
-<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>            <span class="comment">// user having chosen the default.</span></div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>            <span class="keywordflow">try</span> {</div>
-<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>                <span class="keywordtype">size_t</span> consumed = 0;</div>
-<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>                <span class="keyword">const</span> <span class="keywordtype">int</span> parsed = std::stoi(value, &amp;consumed);</div>
-<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>                <span class="keywordflow">if</span> (consumed == value.size()) {</div>
-<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>                    settings.*(binding.field) = parsed;</div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>                }</div>
-<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>            } <span class="keywordflow">catch</span> (<span class="keyword">const</span> std::exception&amp;) {</div>
-<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>                <span class="comment">// leave unset</span></div>
-<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>            }</div>
-<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>            <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>        }</div>
-<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>    }</div>
-<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span> </div>
-<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    <span class="keywordflow">return</span> settings;</div>
-<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>}</div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>        <span class="keywordflow">if</span> (key == <span class="stringliteral">&quot;device_name&quot;</span>) { settings.<a class="code hl_variable" href="../../d3/d4d/structAestra_1_1AudioSettings.html#a0d4814d20c269315ab34debfb9ea894b">deviceName</a> = value; <span class="keywordflow">continue</span>; }</div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>        <span class="keywordflow">if</span> (key == <span class="stringliteral">&quot;input_device_name&quot;</span>) { settings.inputDeviceName = value; <span class="keywordflow">continue</span>; }</div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span> </div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; binding : kBindings) {</div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>            <span class="keywordflow">if</span> (key != binding.key) {</div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>                <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>            }</div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>            <span class="comment">// A malformed value leaves the field UNSET rather than defaulting.</span></div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>            <span class="comment">// Defaulting here would be indistinguishable, downstream, from the</span></div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>            <span class="comment">// user having chosen the default.</span></div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>            <span class="keywordflow">try</span> {</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>                <span class="keywordtype">size_t</span> consumed = 0;</div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>                <span class="keyword">const</span> <span class="keywordtype">int</span> parsed = std::stoi(value, &amp;consumed);</div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>                <span class="keywordflow">if</span> (consumed == value.size()) {</div>
+<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>                    settings.*(binding.field) = parsed;</div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>                }</div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>            } <span class="keywordflow">catch</span> (<span class="keyword">const</span> std::exception&amp;) {</div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>                <span class="comment">// leave unset</span></div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>            }</div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>            <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>        }</div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>    }</div>
 <div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span> </div>
-<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span><span class="keywordtype">void</span> serializeAudioSettings(std::ostream&amp; out, <span class="keyword">const</span> AudioSettings&amp; settings) {</div>
-<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; binding : kBindings) {</div>
-<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>        <span class="keyword">const</span> <span class="keywordtype">int</span> value = settings.*(binding.field);</div>
-<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>        <span class="keywordflow">if</span> (value != <a class="code hl_variable" href="../../d3/d4d/structAestra_1_1AudioSettings.html#aa3e817a8c30d44b71082fe90088528d1">AudioSettings::kUnset</a>) {</div>
-<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>            out &lt;&lt; binding.key &lt;&lt; <span class="charliteral">&#39;=&#39;</span> &lt;&lt; value &lt;&lt; <span class="charliteral">&#39;\n&#39;</span>;</div>
-<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>        }</div>
-<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>    }</div>
-<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>}</div>
-<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span> </div>
-<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>std::string audioSettingsConfigPath() {</div>
-<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>    std::error_code ec;</div>
-<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>    <span class="keywordflow">if</span> (<span class="keyword">auto</span>* utils = Aestra::Platform::getUtils()) {</div>
-<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>        std::filesystem::path appDataDir(utils-&gt;getAppDataPath(<span class="stringliteral">&quot;Aestra&quot;</span>));</div>
-<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>        <span class="keywordflow">if</span> (!appDataDir.empty()) {</div>
-<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>            std::filesystem::create_directories(appDataDir, ec);</div>
-<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>            <span class="keywordflow">if</span> (!ec) {</div>
-<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>                std::filesystem::path appDataPath = appDataDir / <span class="stringliteral">&quot;audio_settings.conf&quot;</span>;</div>
-<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>                <span class="keywordflow">if</span> (std::filesystem::exists(appDataPath, ec)) {</div>
-<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>                    <span class="keywordflow">return</span> appDataPath.string();</div>
-<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>                }</div>
-<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>            }</div>
-<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>        }</div>
-<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>    }</div>
-<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span> </div>
-<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>    <span class="comment">// Legacy location: a config written before the app-data move.</span></div>
-<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>    std::filesystem::path legacyPath = std::filesystem::current_path() / <span class="stringliteral">&quot;audio_settings.conf&quot;</span>;</div>
-<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>    <span class="keywordflow">if</span> (std::filesystem::exists(legacyPath, ec)) {</div>
-<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>        <span class="keywordflow">return</span> legacyPath.string();</div>
-<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>    }</div>
-<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span> </div>
-<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>    <span class="keywordflow">if</span> (<span class="keyword">auto</span>* utils = Aestra::Platform::getUtils()) {</div>
-<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>        std::filesystem::path appDataDir(utils-&gt;getAppDataPath(<span class="stringliteral">&quot;Aestra&quot;</span>));</div>
-<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>        <span class="keywordflow">if</span> (!appDataDir.empty()) {</div>
-<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>            <span class="keywordflow">return</span> (appDataDir / <span class="stringliteral">&quot;audio_settings.conf&quot;</span>).string();</div>
-<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>        }</div>
-<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>    }</div>
-<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>    <span class="keywordflow">return</span> legacyPath.string();</div>
-<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>}</div>
-<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span> </div>
-<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>AudioSettings loadAudioSettings() {</div>
-<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>    std::ifstream file(audioSettingsConfigPath());</div>
-<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>    <span class="keywordflow">if</span> (!file.is_open()) {</div>
-<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>        <span class="keywordflow">return</span> {}; <span class="comment">// all unset — nothing persisted, so nothing to apply</span></div>
-<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>    }</div>
-<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span>    <span class="keywordflow">return</span> parseAudioSettings(file);</div>
-<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span>}</div>
-<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span> </div>
-<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span>} <span class="comment">// namespace Aestra</span></div>
-<div class="ttc" id="astructAestra_1_1AudioSettings_html_a2e8f5d0fd01c1e2f6887688a7959a223"><div class="ttname"><a href="../../d3/d4d/structAestra_1_1AudioSettings.html#a2e8f5d0fd01c1e2f6887688a7959a223">Aestra::AudioSettings::multiThreading</a></div><div class="ttdeci">int multiThreading</div><div class="ttdoc">tri-state</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dbb/AudioSettingsStore_8h_source.html#l00051">AudioSettingsStore.h:51</a></div></div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>    <span class="keywordflow">return</span> settings;</div>
+<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>}</div>
+</div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span> </div>
+<div class="foldopen" id="foldopen00092" data-start="{" data-end="}">
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno"><a class="line" href="../../d8/d94/namespaceAestra.html#a52c160ecc8f670651895c09ab39db914">   92</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d8/d94/namespaceAestra.html#a52c160ecc8f670651895c09ab39db914">serializeAudioSettings</a>(std::ostream&amp; out, <span class="keyword">const</span> <a class="code hl_struct" href="../../d3/d4d/structAestra_1_1AudioSettings.html">AudioSettings</a>&amp; settings) {</div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; binding : kBindings) {</div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>        <span class="keyword">const</span> <span class="keywordtype">int</span> value = settings.*(binding.field);</div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>        <span class="keywordflow">if</span> (value != <a class="code hl_variable" href="../../d3/d4d/structAestra_1_1AudioSettings.html#aa3e817a8c30d44b71082fe90088528d1">AudioSettings::kUnset</a>) {</div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>            out &lt;&lt; binding.key &lt;&lt; <span class="charliteral">&#39;=&#39;</span> &lt;&lt; value &lt;&lt; <span class="charliteral">&#39;\n&#39;</span>;</div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>        }</div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    }</div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>    <span class="keywordflow">if</span> (!settings.<a class="code hl_variable" href="../../d3/d4d/structAestra_1_1AudioSettings.html#a0d4814d20c269315ab34debfb9ea894b">deviceName</a>.empty()) out &lt;&lt; <span class="stringliteral">&quot;device_name=&quot;</span> &lt;&lt; settings.<a class="code hl_variable" href="../../d3/d4d/structAestra_1_1AudioSettings.html#a0d4814d20c269315ab34debfb9ea894b">deviceName</a> &lt;&lt; <span class="charliteral">&#39;\n&#39;</span>;</div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>    <span class="keywordflow">if</span> (!settings.inputDeviceName.empty()) out &lt;&lt; <span class="stringliteral">&quot;input_device_name=&quot;</span> &lt;&lt; settings.inputDeviceName &lt;&lt; <span class="charliteral">&#39;\n&#39;</span>;</div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>}</div>
+</div>
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span> </div>
+<div class="foldopen" id="foldopen00103" data-start="{" data-end="}">
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno"><a class="line" href="../../d8/d94/namespaceAestra.html#ab9ae7a36f7315d42af31e6bdf65f8f78">  103</a></span>std::string <a class="code hl_function" href="../../d8/d94/namespaceAestra.html#ab9ae7a36f7315d42af31e6bdf65f8f78">audioSettingsConfigPath</a>() {</div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    std::error_code ec;</div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>    <span class="keywordflow">if</span> (<span class="keyword">auto</span>* utils = Aestra::Platform::getUtils()) {</div>
+<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>        std::filesystem::path appDataDir(utils-&gt;getAppDataPath(<span class="stringliteral">&quot;Aestra&quot;</span>));</div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>        <span class="keywordflow">if</span> (!appDataDir.empty()) {</div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>            std::filesystem::create_directories(appDataDir, ec);</div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>            <span class="keywordflow">if</span> (!ec) {</div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>                std::filesystem::path appDataPath = appDataDir / <span class="stringliteral">&quot;audio_settings.conf&quot;</span>;</div>
+<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>                <span class="keywordflow">if</span> (std::filesystem::exists(appDataPath, ec)) {</div>
+<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>                    <span class="keywordflow">return</span> appDataPath.string();</div>
+<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>                }</div>
+<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>            }</div>
+<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>        }</div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>    }</div>
+<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span> </div>
+<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>    <span class="comment">// Legacy location: a config written before the app-data move.</span></div>
+<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>    std::filesystem::path legacyPath = std::filesystem::current_path() / <span class="stringliteral">&quot;audio_settings.conf&quot;</span>;</div>
+<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>    <span class="keywordflow">if</span> (std::filesystem::exists(legacyPath, ec)) {</div>
+<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>        <span class="keywordflow">return</span> legacyPath.string();</div>
+<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>    }</div>
+<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span> </div>
+<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>    <span class="keywordflow">if</span> (<span class="keyword">auto</span>* utils = Aestra::Platform::getUtils()) {</div>
+<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>        std::filesystem::path appDataDir(utils-&gt;getAppDataPath(<span class="stringliteral">&quot;Aestra&quot;</span>));</div>
+<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>        <span class="keywordflow">if</span> (!appDataDir.empty()) {</div>
+<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>            <span class="keywordflow">return</span> (appDataDir / <span class="stringliteral">&quot;audio_settings.conf&quot;</span>).string();</div>
+<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>        }</div>
+<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>    }</div>
+<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>    <span class="keywordflow">return</span> legacyPath.string();</div>
+<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>}</div>
+</div>
+<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span> </div>
+<div class="foldopen" id="foldopen00133" data-start="{" data-end="}">
+<div class="line"><a id="l00133" name="l00133"></a><span class="lineno"><a class="line" href="../../d8/d94/namespaceAestra.html#a02501fcf1fc05c5d15639134e665f936">  133</a></span><a class="code hl_struct" href="../../d3/d4d/structAestra_1_1AudioSettings.html">AudioSettings</a> <a class="code hl_function" href="../../d8/d94/namespaceAestra.html#a02501fcf1fc05c5d15639134e665f936">loadAudioSettings</a>() {</div>
+<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span>    std::ifstream file(<a class="code hl_function" href="../../d8/d94/namespaceAestra.html#ab9ae7a36f7315d42af31e6bdf65f8f78">audioSettingsConfigPath</a>());</div>
+<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>    <span class="keywordflow">if</span> (!file.is_open()) {</div>
+<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span>        <span class="keywordflow">return</span> {}; <span class="comment">// all unset — nothing persisted, so nothing to apply</span></div>
+<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span>    }</div>
+<div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span>    <span class="keywordflow">return</span> <a class="code hl_function" href="../../d8/d94/namespaceAestra.html#ac58b2b63cc85c44bc6a85a7f03181746">parseAudioSettings</a>(file);</div>
+<div class="line"><a id="l00139" name="l00139"></a><span class="lineno">  139</span>}</div>
+</div>
+<div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span> </div>
+<div class="line"><a id="l00141" name="l00141"></a><span class="lineno">  141</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="ttc" id="anamespaceAestra_html"><div class="ttname"><a href="../../d8/d94/namespaceAestra.html">Aestra</a></div><div class="ttdoc">Main application class.</div><div class="ttdef"><b>Definition</b> <a href="../../d7/d7b/AestraAssert_8h_source.html#l00009">AestraAssert.h:9</a></div></div>
+<div class="ttc" id="anamespaceAestra_html_a02501fcf1fc05c5d15639134e665f936"><div class="ttname"><a href="../../d8/d94/namespaceAestra.html#a02501fcf1fc05c5d15639134e665f936">Aestra::loadAudioSettings</a></div><div class="ttdeci">AudioSettings loadAudioSettings()</div><div class="ttdoc">Convenience: parse the file at audioSettingsConfigPath(). All-unset if absent.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dff/AudioSettingsStore_8cpp_source.html#l00133">AudioSettingsStore.cpp:133</a></div></div>
+<div class="ttc" id="anamespaceAestra_html_a52c160ecc8f670651895c09ab39db914"><div class="ttname"><a href="../../d8/d94/namespaceAestra.html#a52c160ecc8f670651895c09ab39db914">Aestra::serializeAudioSettings</a></div><div class="ttdeci">void serializeAudioSettings(std::ostream &amp;out, const AudioSettings &amp;settings)</div><div class="ttdoc">Write every SET field.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dff/AudioSettingsStore_8cpp_source.html#l00092">AudioSettingsStore.cpp:92</a></div></div>
+<div class="ttc" id="anamespaceAestra_html_ab9ae7a36f7315d42af31e6bdf65f8f78"><div class="ttname"><a href="../../d8/d94/namespaceAestra.html#ab9ae7a36f7315d42af31e6bdf65f8f78">Aestra::audioSettingsConfigPath</a></div><div class="ttdeci">std::string audioSettingsConfigPath()</div><div class="ttdoc">Resolved path to audio_settings.conf (app-data, with the legacy cwd fallback).</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dff/AudioSettingsStore_8cpp_source.html#l00103">AudioSettingsStore.cpp:103</a></div></div>
+<div class="ttc" id="anamespaceAestra_html_ac58b2b63cc85c44bc6a85a7f03181746"><div class="ttname"><a href="../../d8/d94/namespaceAestra.html#ac58b2b63cc85c44bc6a85a7f03181746">Aestra::parseAudioSettings</a></div><div class="ttdeci">AudioSettings parseAudioSettings(std::istream &amp;in)</div><div class="ttdoc">Parse key=value lines.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dff/AudioSettingsStore_8cpp_source.html#l00050">AudioSettingsStore.cpp:50</a></div></div>
+<div class="ttc" id="astructAestra_1_1AudioSettings_html"><div class="ttname"><a href="../../d3/d4d/structAestra_1_1AudioSettings.html">Aestra::AudioSettings</a></div><div class="ttdoc">Audio configuration as persisted in audio_settings.conf.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dbb/AudioSettingsStore_8h_source.html#l00032">AudioSettingsStore.h:32</a></div></div>
+<div class="ttc" id="astructAestra_1_1AudioSettings_html_a0d4814d20c269315ab34debfb9ea894b"><div class="ttname"><a href="../../d3/d4d/structAestra_1_1AudioSettings.html#a0d4814d20c269315ab34debfb9ea894b">Aestra::AudioSettings::deviceName</a></div><div class="ttdeci">std::string deviceName</div><div class="ttdoc">The devices' names (empty = not saved). Ids shift when devices come and go; the name wins when presen...</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dbb/AudioSettingsStore_8h_source.html#l00041">AudioSettingsStore.h:41</a></div></div>
+<div class="ttc" id="astructAestra_1_1AudioSettings_html_a2e8f5d0fd01c1e2f6887688a7959a223"><div class="ttname"><a href="../../d3/d4d/structAestra_1_1AudioSettings.html#a2e8f5d0fd01c1e2f6887688a7959a223">Aestra::AudioSettings::multiThreading</a></div><div class="ttdeci">int multiThreading</div><div class="ttdoc">tri-state</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dbb/AudioSettingsStore_8h_source.html#l00054">AudioSettingsStore.h:54</a></div></div>
 <div class="ttc" id="astructAestra_1_1AudioSettings_html_aa3e817a8c30d44b71082fe90088528d1"><div class="ttname"><a href="../../d3/d4d/structAestra_1_1AudioSettings.html#aa3e817a8c30d44b71082fe90088528d1">Aestra::AudioSettings::kUnset</a></div><div class="ttdeci">static constexpr int kUnset</div><div class="ttdoc">Sentinel for a key that was absent or unparseable.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dbb/AudioSettingsStore_8h_source.html#l00034">AudioSettingsStore.h:34</a></div></div>
-<div class="ttc" id="astructAestra_1_1AudioSettings_html_aba6778952eb9ceff0a03545967256792"><div class="ttname"><a href="../../d3/d4d/structAestra_1_1AudioSettings.html#aba6778952eb9ceff0a03545967256792">Aestra::AudioSettings::masterLimiter</a></div><div class="ttdeci">int masterLimiter</div><div class="ttdoc">tri-state</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dbb/AudioSettingsStore_8h_source.html#l00050">AudioSettingsStore.h:50</a></div></div>
-<div class="ttc" id="astructAestra_1_1AudioSettings_html_afa76bad8685eff523f4153f2be231094"><div class="ttname"><a href="../../d3/d4d/structAestra_1_1AudioSettings.html#afa76bad8685eff523f4153f2be231094">Aestra::AudioSettings::dcRemoval</a></div><div class="ttdeci">int dcRemoval</div><div class="ttdoc">tri-state: kUnset / 0 off / 1 on</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dbb/AudioSettingsStore_8h_source.html#l00049">AudioSettingsStore.h:49</a></div></div>
+<div class="ttc" id="astructAestra_1_1AudioSettings_html_aba6778952eb9ceff0a03545967256792"><div class="ttname"><a href="../../d3/d4d/structAestra_1_1AudioSettings.html#aba6778952eb9ceff0a03545967256792">Aestra::AudioSettings::masterLimiter</a></div><div class="ttdeci">int masterLimiter</div><div class="ttdoc">tri-state</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dbb/AudioSettingsStore_8h_source.html#l00053">AudioSettingsStore.h:53</a></div></div>
+<div class="ttc" id="astructAestra_1_1AudioSettings_html_afa76bad8685eff523f4153f2be231094"><div class="ttname"><a href="../../d3/d4d/structAestra_1_1AudioSettings.html#afa76bad8685eff523f4153f2be231094">Aestra::AudioSettings::dcRemoval</a></div><div class="ttdeci">int dcRemoval</div><div class="ttdoc">tri-state: kUnset / 0 off / 1 on</div><div class="ttdef"><b>Definition</b> <a href="../../d9/dbb/AudioSettingsStore_8h_source.html#l00052">AudioSettingsStore.h:52</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::ArsenalPanel::setSoundSetProviders" name="Aestra::Audio::ArsenalPanel::setSoundSetProviders">
+<area shape="rect" id="Node000001" title="Sound sets (V81&#45;AR2): the collections a row&#39;s drawer can walk, a collection&#39;s members,..." alt="" coords="5,5,207,45"/>
+<area shape="rect" id="Node000002" href="$d9/d85/classAestra_1_1ArsenalRowLanes.html#a24bb79d61a64377f16e7848387bd5f11" title="Sound sets (V81&#45;AR2): the library&#39;s collection names, a collection&#39;s members, and the choice of a set..." alt="" coords="255,5,441,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="207,23,241,23,241,28,207,28"/>
+</map>

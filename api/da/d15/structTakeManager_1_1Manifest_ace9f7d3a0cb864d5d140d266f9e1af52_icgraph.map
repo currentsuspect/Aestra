@@ -1,9 +1,19 @@
 <map id="TakeManager::Manifest::activeTake" name="TakeManager::Manifest::activeTake">
-<area shape="rect" id="Node000001" title="Returns the currently active take, or nullptr if none." alt="" coords="536,23,709,63"/>
-<area shape="rect" id="Node000002" href="$df/db6/classTakeManager.html#a140b2004fb5dfb4ed837fb80d603f9da" title="Ensures a manifest exists, creating one with an initial take if needed." alt="" coords="271,31,488,56"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="522,46,488,46,488,41,522,41"/>
-<area shape="rect" id="Node000003" href="$df/db6/classTakeManager.html#aca0f3339708882aa536a01af04d2d9b5" title="Creates a new take snapshot." alt="" coords="21,5,207,31"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="256,34,207,30,208,24,257,29"/>
-<area shape="rect" id="Node000004" href="$df/db6/classTakeManager.html#af69296879493d1f9ba2977aeca314e0d" title="Overwrites the active take&#39;s snapshot with the current project state." alt="" coords="5,55,223,80"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="257,57,223,60,223,55,257,52"/>
+<area shape="rect" id="Node000001" title="Returns the currently active take, or nullptr if none." alt="" coords="771,79,944,119"/>
+<area shape="rect" id="Node000002" href="$df/db6/classTakeManager.html#a140b2004fb5dfb4ed837fb80d603f9da" title="Ensures a manifest exists, creating one with an initial take if needed." alt="" coords="505,29,723,55"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="759,79,722,70,669,57,670,52,723,65,760,74"/>
+<area shape="rect" id="Node000006" href="$d6/de6/namespaceAestra_1_1VersionPicker.html#aadaf26f0dfaf74eceb0f36dcf4cc9d4e" title="One entry per branch, in lane order. A branch opens on its newest saved version (autosaves are never ..." alt="" coords="535,79,693,119"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="757,102,693,102,693,97,757,97"/>
+<area shape="rect" id="Node000007" href="$d8/d94/namespaceAestra.html#afdc9afbb7523a8e49bc4569316160de8" title="Steps made since the open version was saved: the history&#39;s depth beyond the steps the version recorde..." alt="" coords="517,168,711,193"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="784,126,654,170,652,165,783,121"/>
+<area shape="rect" id="Node000003" href="$df/db6/classTakeManager.html#a8cf8e024134554203dd9d1283493368d" title="Saves the state as a version on a branch (SPEC&#45;017)." alt="" coords="246,5,451,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="491,34,451,30,452,25,492,28"/>
+<area shape="rect" id="Node000005" href="$df/db6/classTakeManager.html#af69296879493d1f9ba2977aeca314e0d" title="Overwrites the active take&#39;s snapshot with the current project state." alt="" coords="240,55,457,80"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="492,56,458,60,457,54,491,51"/>
+<area shape="rect" id="Node000004" href="$df/db6/classTakeManager.html#aca0f3339708882aa536a01af04d2d9b5" title="Creates a new take snapshot." alt="" coords="5,5,192,31"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="232,21,192,21,192,15,232,15"/>
+<area shape="poly" id="edge7_Node000007_Node000007" title=" " alt="" coords="657,159,654,154,647,150,614,147,588,149,574,154,571,159,579,166,575,170,566,160,571,150,587,144,614,141,648,145,658,150,662,156"/>
+<area shape="rect" id="Node000008" href="$d8/d94/namespaceAestra.html#a8a9ece62269ea3c905b91fd46e29cc1c" title="Hands the dock its live data: the project&#39;s name, the open version&#39;s steps, the unsaved count,..." alt="" coords="255,168,443,193"/>
+<area shape="poly" id="edge8_Node000007_Node000008" title=" " alt="" coords="503,183,443,183,443,178,503,178"/>
+<area shape="poly" id="edge9_Node000008_Node000008" title=" " alt="" coords="393,159,390,154,382,150,349,147,322,149,308,154,305,159,312,166,308,170,300,160,304,150,321,144,349,141,384,145,394,150,397,156"/>
 </map>

@@ -1,0 +1,7 @@
+<map id="Aestra::ArsenalRowLanes::noSounds" name="Aestra::ArsenalRowLanes::noSounds">
+<area shape="rect" id="Node000001" title="True when no unit has a sound yet (the kit card&#39;s moment): no sample path, and no loaded instrument." alt="" coords="5,37,192,77"/>
+<area shape="rect" id="Node000002" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#aac74b831a3f7ddec240a7bfa49cb5ce3" title="Get all unit identifiers in display order." alt="" coords="240,5,441,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="192,42,226,38,227,43,193,48"/>
+<area shape="rect" id="Node000003" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="240,69,441,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="193,67,227,72,226,77,192,72"/>
+</map>

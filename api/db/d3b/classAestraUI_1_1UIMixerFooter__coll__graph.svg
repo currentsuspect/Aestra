@@ -57,9 +57,9 @@ var sectionId = 'dynsection-1';
 <!-- Node1 -->
 <g id="Node000001" class="node">
 <title>Node1</title>
-<g id="a_Node000001"><a xlink:title="Mixer strip footer: track number label.">
-<polygon fill="#999999" stroke="#666666" points="701,-48.5 568,-48.5 568,-29.5 701,-29.5 701,-48.5"/>
-<text text-anchor="middle" x="634.5" y="-36.5" font-family="Helvetica,sans-Serif" font-size="10.00">AestraUI::UIMixerFooter</text>
+<g id="a_Node000001"><a xlink:title="Mixer strip footer (V81&#45;M1, FD&#45;28 point 3): the fader&#39;s gain on the left, the highest peak since the ...">
+<polygon fill="#999999" stroke="#666666" points="701,-53.5 568,-53.5 568,-34.5 701,-34.5 701,-53.5"/>
+<text text-anchor="middle" x="634.5" y="-41.5" font-family="Helvetica,sans-Serif" font-size="10.00">AestraUI::UIMixerFooter</text>
 </a>
 </g>
 </g>
@@ -76,8 +76,8 @@ var sectionId = 'dynsection-1';
 <g id="edge1_Node000001_Node000002" class="edge">
 <title>Node2&#45;&gt;Node1</title>
 <g id="a_edge1_Node000001_Node000002"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M426.18,-56.4C470.56,-52.67 525.4,-48.07 567.52,-44.54"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="425.68,-52.93 416,-57.25 426.26,-59.9 425.68,-52.93"/>
+<path fill="none" stroke="#63b8ff" d="M426.18,-57.77C470.56,-54.82 525.4,-51.18 567.52,-48.38"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="425.75,-54.29 416,-58.45 426.21,-61.28 425.75,-54.29"/>
 </a>
 </g>
 </g>
@@ -157,11 +157,12 @@ var sectionId = 'dynsection-1';
 <g id="edge5_Node000001_Node000006" class="edge">
 <title>Node6&#45;&gt;Node1</title>
 <g id="a_edge5_Node000001_Node000006"><a xlink:title=" ">
-<path fill="none" stroke="#9a32cd" stroke-dasharray="5,2" d="M408.89,-26.96C449.06,-27.8 502.68,-29.32 550,-32 555.81,-32.33 561.84,-32.73 567.89,-33.16"/>
-<polygon fill="#9a32cd" stroke="#9a32cd" points="408.78,-23.45 398.72,-26.75 408.64,-30.45 408.78,-23.45"/>
+<path fill="none" stroke="#9a32cd" stroke-dasharray="5,2" d="M409.02,-23.19C449.24,-22.11 502.87,-22.13 550,-27 564.72,-28.52 580.68,-31.45 594.66,-34.45"/>
+<polygon fill="#9a32cd" stroke="#9a32cd" points="408.72,-19.69 398.83,-23.49 408.93,-26.69 408.72,-19.69"/>
 </a>
 </g>
-<text text-anchor="middle" x="492" y="-35" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey"> onInvalidateRequested</text>
+<text text-anchor="middle" x="492" y="-41" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey"> onInvalidateRequested</text>
+<text text-anchor="middle" x="492" y="-30" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">onResetPeakRequested</text>
 </g>
 </g>
 </svg>

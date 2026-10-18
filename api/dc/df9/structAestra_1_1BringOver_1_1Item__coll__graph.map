@@ -1,0 +1,13 @@
+<map id="Aestra::BringOver::Item" name="Aestra::BringOver::Item">
+<area shape="rect" id="Node000001" title=" " alt="" coords="69,197,243,223"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,95,56,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="51,128,96,171,134,195,132,200,93,175,47,132"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="80,95,155,120"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="129,132,154,196,149,198,124,134"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="179,95,266,120"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="210,133,166,199,161,196,205,130"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="153,5,292,45"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="225,59,225,94,220,94,220,59"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="290,95,353,120"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="301,132,275,154,244,176,192,200,190,195,241,171,272,150,298,128"/>
+</map>

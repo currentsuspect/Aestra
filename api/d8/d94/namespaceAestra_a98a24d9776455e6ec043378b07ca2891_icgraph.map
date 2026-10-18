@@ -1,0 +1,7 @@
+<map id="Aestra::contextualViewsToClose" name="Aestra::contextualViewsToClose">
+<area shape="rect" id="Node000001" title="Which of the panels that saw a press outside themselves should close, a frame after the press." alt="" coords="516,5,711,45"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#aa6777cac5178b47ce7e1f165cc3f85e8" title="runs a frame later, once the press has been handled" alt="" coords="240,5,468,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="502,28,468,28,468,23,502,23"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#a9cd2ff0a44640c8c7c68543fc33f56d1" title="Advance workspace state and child&#45;panel updates." alt="" coords="5,13,192,38"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="226,28,192,28,192,23,226,23"/>
+</map>

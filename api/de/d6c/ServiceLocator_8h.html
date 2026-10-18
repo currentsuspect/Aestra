@@ -75,7 +75,8 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
-<a href="#nested-classes">Classes</a>  </div>
+<a href="#nested-classes">Classes</a> &#124;
+<a href="#namespaces">Namespaces</a>  </div>
   <div class="headertitle"><div class="title">ServiceLocator.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
@@ -107,6 +108,12 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d29/classAestra_1_1ServiceLocator.html">Aestra::ServiceLocator</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">B-003: Minimal service locator.  <a href="../../d4/d29/classAestra_1_1ServiceLocator.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:d8/d94/namespaceAestra" id="r_d8/d94/namespaceAestra"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d94/namespaceAestra.html">Aestra</a></td></tr>
+<tr class="memdesc:d8/d94/namespaceAestra"><td class="mdescLeft">&#160;</td><td class="mdescRight">Main application class. <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>B-003: Service locator for global services. </p>
@@ -119,7 +126,7 @@ Classes</h2></td></tr>
 <li>Services themselves must be thread-safe if accessed from multiple threads</li>
 </ul>
 <p>DESIGN NOTES:</p><ul>
-<li>Keys are per-type static tag addresses, not typeid, so this header stays valid under -fno-rtti (newer GCC rejects typeid in template bodies even uninstantiated). Tag addresses are unique per type within a single binary, which is all Aestra needs (statically linked, no services registered across shared-library boundaries).</li>
+<li>Keys are per-type static tag addresses, not typeid, so this header stays valid under -fno-rtti (newer GCC rejects typeid in template bodies even uninstantiated). Tag addresses are unique per type within a single binary, which is all <a class="el" href="../../d8/d94/namespaceAestra.html" title="Main application class.">Aestra</a> needs (statically linked, no services registered across shared-library boundaries).</li>
 <li>Services are stored as void* to allow any type</li>
 <li>Lifetime management is external (caller owns services) </li>
 </ul>

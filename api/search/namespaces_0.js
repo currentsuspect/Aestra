@@ -1,10 +1,20 @@
 var searchData=
 [
-  ['aestra_3a_3aaudio_3a_3afastmath_0',['FastMath',['../de/dee/namespaceAestra_1_1Audio_1_1FastMath.html',1,'Aestra::Audio']]],
-  ['aestra_3a_3aaudio_3a_3ainterpolators_1',['Interpolators',['../d3/d87/namespaceAestra_1_1Audio_1_1Interpolators.html',1,'Aestra::Audio']]],
-  ['aestra_3a_3aaudio_3a_3amuseinternal_2',['MuseInternal',['../dd/d2b/namespaceAestra_1_1Audio_1_1MuseInternal.html',1,'Aestra::Audio']]],
-  ['aestra_3a_3aaudio_3a_3awaveformsimd_3',['WaveformSIMD',['../d7/d98/namespaceAestra_1_1Audio_1_1WaveformSIMD.html',1,'Aestra::Audio']]],
-  ['aestra_3a_3amixermath_4',['MixerMath',['../db/d9f/namespaceAestra_1_1MixerMath.html',1,'Aestra']]],
-  ['aestra_3a_3auisurfacekeys_5',['UISurfaceKeys',['../d8/d2b/namespaceAestra_1_1UISurfaceKeys.html',1,'Aestra']]],
-  ['aestraui_3a_3aeditorkit_6',['EditorKit',['../d8/d10/namespaceAestraUI_1_1EditorKit.html',1,'AestraUI']]]
+  ['aestra_0',['Aestra',['../d8/d94/namespaceAestra.html',1,'']]],
+  ['aestra_3a_3aaudio_3a_3afastmath_1',['FastMath',['../de/dee/namespaceAestra_1_1Audio_1_1FastMath.html',1,'Aestra::Audio']]],
+  ['aestra_3a_3aaudio_3a_3ainterpolators_2',['Interpolators',['../d3/d87/namespaceAestra_1_1Audio_1_1Interpolators.html',1,'Aestra::Audio']]],
+  ['aestra_3a_3aaudio_3a_3amuseinternal_3',['MuseInternal',['../dd/d2b/namespaceAestra_1_1Audio_1_1MuseInternal.html',1,'Aestra::Audio']]],
+  ['aestra_3a_3aaudio_3a_3awaveformsimd_4',['WaveformSIMD',['../d7/d98/namespaceAestra_1_1Audio_1_1WaveformSIMD.html',1,'Aestra::Audio']]],
+  ['aestra_3a_3aauditioncompare_5',['AuditionCompare',['../d3/d91/namespaceAestra_1_1AuditionCompare.html',1,'Aestra']]],
+  ['aestra_3a_3aauditionfiles_6',['AuditionFiles',['../d5/d7a/namespaceAestra_1_1AuditionFiles.html',1,'Aestra']]],
+  ['aestra_3a_3aauditionlibrary_7',['AuditionLibrary',['../df/dae/namespaceAestra_1_1AuditionLibrary.html',1,'Aestra']]],
+  ['aestra_3a_3abringover_8',['BringOver',['../da/d25/namespaceAestra_1_1BringOver.html',1,'Aestra']]],
+  ['aestra_3a_3amixermath_9',['MixerMath',['../db/d9f/namespaceAestra_1_1MixerMath.html',1,'Aestra']]],
+  ['aestra_3a_3arecoveryinfo_10',['RecoveryInfo',['../da/dd5/namespaceAestra_1_1RecoveryInfo.html',1,'Aestra']]],
+  ['aestra_3a_3auisurfacekeys_11',['UISurfaceKeys',['../d8/d2b/namespaceAestra_1_1UISurfaceKeys.html',1,'Aestra']]],
+  ['aestra_3a_3aversionbounce_12',['VersionBounce',['../dd/d24/namespaceAestra_1_1VersionBounce.html',1,'Aestra']]],
+  ['aestra_3a_3aversionlanes_13',['VersionLanes',['../d3/d6c/namespaceAestra_1_1VersionLanes.html',1,'Aestra']]],
+  ['aestra_3a_3aversionpicker_14',['VersionPicker',['../d6/de6/namespaceAestra_1_1VersionPicker.html',1,'Aestra']]],
+  ['aestra_3a_3aversiontime_15',['VersionTime',['../d6/d89/namespaceAestra_1_1VersionTime.html',1,'Aestra']]],
+  ['aestraui_3a_3aeditorkit_16',['EditorKit',['../d8/d10/namespaceAestraUI_1_1EditorKit.html',1,'AestraUI']]]
 ];

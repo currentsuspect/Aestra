@@ -1,0 +1,15 @@
+<map id="Aestra::AuditionHubLayout" name="Aestra::AuditionHubLayout">
+<area shape="rect" id="Node000001" title="Where everything in the Audition hub sits (FD&#45;26, V81&#45;A): the navigation at the left,..." alt="" coords="8,431,204,456"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,189,44,214"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="24,228,22,265,23,311,33,360,52,405,64,418,79,428,76,433,61,422,48,408,27,362,18,312,16,265,19,228"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="81,189,131,214"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="109,228,109,431,103,431,103,228"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="156,181,323,221"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="247,235,249,274,246,320,234,366,224,388,211,408,194,423,175,433,172,428,191,419,207,405,220,386,229,365,241,319,243,274,241,235"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="163,93,214,119"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="192,132,199,156,218,180,213,183,194,159,187,133"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="238,93,361,119"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="287,131,254,183,249,180,282,129"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="280,5,319,31"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="302,45,302,93,297,93,297,45"/>
+</map>

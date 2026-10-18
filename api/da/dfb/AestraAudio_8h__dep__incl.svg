@@ -46,7 +46,7 @@
   </g>
 </defs>
 <script type="application/ecmascript">
-var viewWidth = 1094;
+var viewWidth = 1142;
 var viewHeight = 225;
 var sectionId = 'dynsection-1';
 </script>
@@ -192,38 +192,38 @@ var sectionId = 'dynsection-1';
 </a>
 </g>
 </g>
-<!-- Node13 -->
-<g id="Node000013" class="node">
-<title>Node13</title>
-<g id="a_Node000013"><a xlink:href="../../d5/d10/MixerViewModel_8cpp_source.html" target="_top" xlink:title=" ">
+<!-- Node15 -->
+<g id="Node000015" class="node">
+<title>Node15</title>
+<g id="a_Node000015"><a xlink:href="../../d5/d10/MixerViewModel_8cpp_source.html" target="_top" xlink:title=" ">
 <polygon fill="white" stroke="#666666" points="863,-85 695,-85 695,-55 863,-55 863,-85"/>
 <text text-anchor="start" x="703" y="-73" font-family="Helvetica,sans-Serif" font-size="10.00">Source/Components/MixerView</text>
 <text text-anchor="middle" x="779" y="-62" font-family="Helvetica,sans-Serif" font-size="10.00">Model.cpp</text>
 </a>
 </g>
 </g>
-<!-- Node7&#45;&gt;Node13 -->
-<g id="edge12_Node000007_Node000013" class="edge">
-<title>Node7&#45;&gt;Node13</title>
-<g id="a_edge12_Node000007_Node000013"><a xlink:title=" ">
+<!-- Node7&#45;&gt;Node15 -->
+<g id="edge14_Node000007_Node000015" class="edge">
+<title>Node7&#45;&gt;Node15</title>
+<g id="a_edge14_Node000007_Node000015"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M733.39,-118.85C743.22,-108.54 755.84,-95.3 765.31,-85.36"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="730.59,-116.72 726.23,-126.37 735.66,-121.54 730.59,-116.72"/>
 </a>
 </g>
 </g>
-<!-- Node14 -->
-<g id="Node000014" class="node">
-<title>Node14</title>
-<g id="a_Node000014"><a xlink:href="../../dc/d21/AestraAudioController_8cpp_source.html" target="_top" xlink:title=" ">
+<!-- Node16 -->
+<g id="Node000016" class="node">
+<title>Node16</title>
+<g id="a_Node000016"><a xlink:href="../../dc/d21/AestraAudioController_8cpp_source.html" target="_top" xlink:title=" ">
 <polygon fill="white" stroke="#666666" points="1085.5,-79.5 880.5,-79.5 880.5,-60.5 1085.5,-60.5 1085.5,-79.5"/>
 <text text-anchor="middle" x="983" y="-67.5" font-family="Helvetica,sans-Serif" font-size="10.00">Source/Core/AestraAudioController.cpp</text>
 </a>
 </g>
 </g>
-<!-- Node7&#45;&gt;Node14 -->
-<g id="edge13_Node000007_Node000014" class="edge">
-<title>Node7&#45;&gt;Node14</title>
-<g id="a_edge13_Node000007_Node000014"><a xlink:title=" ">
+<!-- Node7&#45;&gt;Node16 -->
+<g id="edge15_Node000007_Node000016" class="edge">
+<title>Node7&#45;&gt;Node16</title>
+<g id="a_edge15_Node000007_Node000016"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M763.46,-124.02C815.68,-111.41 900.26,-90.98 947.75,-79.51"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="762.36,-120.69 753.46,-126.44 764.01,-127.49 762.36,-120.69"/>
 </a>
@@ -233,8 +233,8 @@ var sectionId = 'dynsection-1';
 <g id="Node000009" class="node">
 <title>Node9</title>
 <g id="a_Node000009"><a xlink:href="../../db/d11/AestraApp_8cpp_source.html" target="_top" xlink:title=" ">
-<polygon fill="white" stroke="#666666" points="450.5,-19 305.5,-19 305.5,0 450.5,0 450.5,-19"/>
-<text text-anchor="middle" x="378" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Source/App/AestraApp.cpp</text>
+<polygon fill="white" stroke="#666666" points="206.5,-19 61.5,-19 61.5,0 206.5,0 206.5,-19"/>
+<text text-anchor="middle" x="134" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Source/App/AestraApp.cpp</text>
 </a>
 </g>
 </g>
@@ -242,17 +242,17 @@ var sectionId = 'dynsection-1';
 <g id="edge8_Node000008_Node000009" class="edge">
 <title>Node8&#45;&gt;Node9</title>
 <g id="a_edge8_Node000008_Node000009"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M566.53,-58.04C521.68,-46.73 452.69,-29.33 411.78,-19.02"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="565.71,-61.44 576.27,-60.49 567.42,-54.65 565.71,-61.44"/>
+<path fill="none" stroke="#63b8ff" d="M556.77,-58.7C549.15,-57.37 541.38,-56.09 534,-55 502.51,-50.35 313.12,-29.77 206.62,-18.29"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="556.22,-62.15 566.68,-60.47 557.45,-55.26 556.22,-62.15"/>
 </a>
 </g>
 </g>
 <!-- Node10 -->
 <g id="Node000010" class="node">
 <title>Node10</title>
-<g id="a_Node000010"><a xlink:href="../../d5/de0/Main_8cpp.html" target="_top" xlink:title="Aestra &#45; Main Application Entry Point.">
-<polygon fill="white" stroke="#666666" points="587.5,-19 468.5,-19 468.5,0 587.5,0 587.5,-19"/>
-<text text-anchor="middle" x="528" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Source/App/Main.cpp</text>
+<g id="a_Node000010"><a xlink:href="../../d8/d71/AestraAppRecovery_8cpp_source.html" target="_top" xlink:title=" ">
+<polygon fill="white" stroke="#666666" points="413.5,-19 224.5,-19 224.5,0 413.5,0 413.5,-19"/>
+<text text-anchor="middle" x="319" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Source/App/AestraAppRecovery.cpp</text>
 </a>
 </g>
 </g>
@@ -260,17 +260,17 @@ var sectionId = 'dynsection-1';
 <g id="edge9_Node000008_Node000010" class="edge">
 <title>Node8&#45;&gt;Node10</title>
 <g id="a_edge9_Node000008_Node000010"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M589.46,-54.35C573.93,-43.27 553.13,-28.43 540.15,-19.17"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="587.73,-57.41 597.9,-60.37 591.79,-51.71 587.73,-57.41"/>
+<path fill="none" stroke="#63b8ff" d="M557.58,-58.46C501.41,-47.17 413.33,-29.46 361.36,-19.02"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="557.19,-61.95 567.69,-60.49 558.57,-55.09 557.19,-61.95"/>
 </a>
 </g>
 </g>
 <!-- Node11 -->
 <g id="Node000011" class="node">
 <title>Node11</title>
-<g id="a_Node000011"><a xlink:href="../../d8/d83/MuseHostVerbs_8cpp_source.html" target="_top" xlink:title=" ">
-<polygon fill="white" stroke="#666666" points="776,-19 606,-19 606,0 776,0 776,-19"/>
-<text text-anchor="middle" x="691" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Source/App/MuseHostVerbs.cpp</text>
+<g id="a_Node000011"><a xlink:href="../../dc/d5c/AestraAppVersions_8cpp_source.html" target="_top" xlink:title=" ">
+<polygon fill="white" stroke="#666666" points="618,-19 432,-19 432,0 618,0 618,-19"/>
+<text text-anchor="middle" x="525" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Source/App/AestraAppVersions.cpp</text>
 </a>
 </g>
 </g>
@@ -278,17 +278,17 @@ var sectionId = 'dynsection-1';
 <g id="edge10_Node000008_Node000011" class="edge">
 <title>Node8&#45;&gt;Node11</title>
 <g id="a_edge10_Node000008_Node000011"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M630.29,-54.35C645.63,-43.27 666.18,-28.43 679,-19.17"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="628.01,-51.68 621.95,-60.37 632.11,-57.35 628.01,-51.68"/>
+<path fill="none" stroke="#63b8ff" d="M589.16,-54.66C573.01,-43.55 551.17,-28.51 537.59,-19.17"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="587.24,-57.58 597.46,-60.37 591.2,-51.82 587.24,-57.58"/>
 </a>
 </g>
 </g>
 <!-- Node12 -->
 <g id="Node000012" class="node">
 <title>Node12</title>
-<g id="a_Node000012"><a xlink:href="../../dd/da3/ProjectLifecycle_8cpp_source.html" target="_top" xlink:title=" ">
-<polygon fill="white" stroke="#666666" points="966,-19 794,-19 794,0 966,0 966,-19"/>
-<text text-anchor="middle" x="880" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Source/App/ProjectLifecycle.cpp</text>
+<g id="a_Node000012"><a xlink:href="../../d5/de0/Main_8cpp.html" target="_top" xlink:title="Aestra &#45; Main Application Entry Point.">
+<polygon fill="white" stroke="#666666" points="755.5,-19 636.5,-19 636.5,0 755.5,0 755.5,-19"/>
+<text text-anchor="middle" x="696" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Source/App/Main.cpp</text>
 </a>
 </g>
 </g>
@@ -296,8 +296,44 @@ var sectionId = 'dynsection-1';
 <g id="edge11_Node000008_Node000012" class="edge">
 <title>Node8&#45;&gt;Node12</title>
 <g id="a_edge11_Node000008_Node000012"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M659.28,-58.32C711.43,-47.02 792.68,-29.42 840.69,-19.02"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="658.29,-54.96 649.26,-60.49 659.77,-61.8 658.29,-54.96"/>
+<path fill="none" stroke="#63b8ff" d="M631.08,-54.66C647.42,-43.55 669.52,-28.51 683.26,-19.17"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="628.99,-51.85 622.69,-60.37 632.93,-57.64 628.99,-51.85"/>
+</a>
+</g>
+</g>
+<!-- Node13 -->
+<g id="Node000013" class="node">
+<title>Node13</title>
+<g id="a_Node000013"><a xlink:href="../../d8/d83/MuseHostVerbs_8cpp_source.html" target="_top" xlink:title=" ">
+<polygon fill="white" stroke="#666666" points="944,-19 774,-19 774,0 944,0 944,-19"/>
+<text text-anchor="middle" x="859" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Source/App/MuseHostVerbs.cpp</text>
+</a>
+</g>
+</g>
+<!-- Node8&#45;&gt;Node13 -->
+<g id="edge12_Node000008_Node000013" class="edge">
+<title>Node8&#45;&gt;Node13</title>
+<g id="a_edge12_Node000008_Node000013"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M656.05,-58.18C704.17,-46.88 778.66,-29.38 822.75,-19.02"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="655.14,-54.8 646.21,-60.49 656.74,-61.61 655.14,-54.8"/>
+</a>
+</g>
+</g>
+<!-- Node14 -->
+<g id="Node000014" class="node">
+<title>Node14</title>
+<g id="a_Node000014"><a xlink:href="../../dd/da3/ProjectLifecycle_8cpp_source.html" target="_top" xlink:title=" ">
+<polygon fill="white" stroke="#666666" points="1134,-19 962,-19 962,0 1134,0 1134,-19"/>
+<text text-anchor="middle" x="1048" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Source/App/ProjectLifecycle.cpp</text>
+</a>
+</g>
+</g>
+<!-- Node8&#45;&gt;Node14 -->
+<g id="edge13_Node000008_Node000014" class="edge">
+<title>Node8&#45;&gt;Node14</title>
+<g id="a_edge13_Node000008_Node000014"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M663.78,-58.68C671.23,-57.37 678.8,-56.11 686,-55 782.39,-40.21 893.81,-27.11 967.29,-19.02"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="662.96,-55.27 653.73,-60.48 664.19,-62.16 662.96,-55.27"/>
 </a>
 </g>
 </g>

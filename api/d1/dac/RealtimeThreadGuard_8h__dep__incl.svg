@@ -102,418 +102,418 @@ var sectionId = 'dynsection-1';
 </a>
 </g>
 </g>
-<!-- Node76 -->
-<g id="Node000076" class="node">
-<title>Node76</title>
-<g id="a_Node000076"><a xlink:href="../../d4/dfc/TrackManager_8h_source.html" target="_top" xlink:title=" ">
+<!-- Node81 -->
+<g id="Node000081" class="node">
+<title>Node81</title>
+<g id="a_Node000081"><a xlink:href="../../d4/dfc/TrackManager_8h_source.html" target="_top" xlink:title=" ">
 <polygon fill="#fff0f0" stroke="red" points="1313.83,-173 1179.83,-173 1179.83,-143 1313.83,-143 1313.83,-173"/>
 <text text-anchor="start" x="1187.83" y="-161" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
 <text text-anchor="middle" x="1246.83" y="-150" font-family="Helvetica,sans-Serif" font-size="10.00">/Models/TrackManager.h</text>
 </a>
 </g>
 </g>
-<!-- Node1&#45;&gt;Node76 -->
-<g id="edge59_Node000001_Node000076" class="edge">
-<title>Node1&#45;&gt;Node76</title>
-<g id="a_edge59_Node000001_Node000076"><a xlink:title=" ">
+<!-- Node1&#45;&gt;Node81 -->
+<g id="edge59_Node000001_Node000081" class="edge">
+<title>Node1&#45;&gt;Node81</title>
+<g id="a_edge59_Node000001_Node000081"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2829.59,-353.98C2605.76,-350.68 1965.68,-338.52 1758.83,-305 1577.03,-275.54 1368.07,-203.5 1284.35,-173"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2829.56,-357.48 2839.61,-354.13 2829.66,-350.48 2829.56,-357.48"/>
 </a>
 </g>
 </g>
-<!-- Node42 -->
-<g id="Node000042" class="node">
-<title>Node42</title>
-<g id="a_Node000042"><a xlink:href="../../dc/d21/AestraAudioController_8cpp_source.html" target="_top" xlink:title=" ">
+<!-- Node45 -->
+<g id="Node000045" class="node">
+<title>Node45</title>
+<g id="a_Node000045"><a xlink:href="../../dc/d21/AestraAudioController_8cpp_source.html" target="_top" xlink:title=" ">
 <polygon fill="white" stroke="#666666" points="2543.33,-96 2338.33,-96 2338.33,-77 2543.33,-77 2543.33,-96"/>
 <text text-anchor="middle" x="2440.83" y="-84" font-family="Helvetica,sans-Serif" font-size="10.00">Source/Core/AestraAudioController.cpp</text>
 </a>
 </g>
 </g>
-<!-- Node1&#45;&gt;Node42 -->
-<g id="edge91_Node000001_Node000042" class="edge">
-<title>Node1&#45;&gt;Node42</title>
-<g id="a_edge91_Node000001_Node000042"><a xlink:title=" ">
+<!-- Node1&#45;&gt;Node45 -->
+<g id="edge91_Node000001_Node000045" class="edge">
+<title>Node1&#45;&gt;Node45</title>
+<g id="a_edge91_Node000001_Node000045"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2829.56,-350.6C2737.93,-344.35 2592.62,-330.7 2544.83,-305 2463.36,-261.19 2445.05,-130.93 2441.56,-96.13"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2829.41,-354.1 2839.62,-351.27 2829.88,-347.11 2829.41,-354.1"/>
 </a>
 </g>
 </g>
-<!-- Node129 -->
-<g id="Node000129" class="node">
-<title>Node129</title>
-<g id="a_Node000129"><a xlink:href="../../d8/d00/MixerChannel_8cpp_source.html" target="_top" xlink:title=" ">
+<!-- Node143 -->
+<g id="Node000143" class="node">
+<title>Node143</title>
+<g id="a_Node000143"><a xlink:href="../../d8/d00/MixerChannel_8cpp_source.html" target="_top" xlink:title=" ">
 <polygon fill="white" stroke="#666666" points="214.33,-173 95.33,-173 95.33,-143 214.33,-143 214.33,-173"/>
 <text text-anchor="start" x="103.33" y="-161" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/src/Core</text>
 <text text-anchor="middle" x="154.83" y="-150" font-family="Helvetica,sans-Serif" font-size="10.00">/MixerChannel.cpp</text>
 </a>
 </g>
 </g>
-<!-- Node1&#45;&gt;Node129 -->
-<g id="edge88_Node000001_Node000129" class="edge">
-<title>Node1&#45;&gt;Node129</title>
-<g id="a_edge88_Node000001_Node000129"><a xlink:title=" ">
+<!-- Node1&#45;&gt;Node143 -->
+<g id="edge88_Node000001_Node000143" class="edge">
+<title>Node1&#45;&gt;Node143</title>
+<g id="a_edge88_Node000001_Node000143"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2829.56,-354.76C2391.72,-353.25 263.67,-343.95 208.83,-305 165.2,-274.02 156.76,-203.62 155.17,-173.32"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2829.57,-358.26 2839.58,-354.79 2829.6,-351.26 2829.57,-358.26"/>
 </a>
 </g>
 </g>
-<!-- Node130 -->
-<g id="Node000130" class="node">
-<title>Node130</title>
-<g id="a_Node000130"><a xlink:href="../../d8/dac/ChannelSlotMap_8h_source.html" target="_top" xlink:title=" ">
+<!-- Node144 -->
+<g id="Node000144" class="node">
+<title>Node144</title>
+<g id="a_Node000144"><a xlink:href="../../d8/dac/ChannelSlotMap_8h_source.html" target="_top" xlink:title=" ">
 <polygon fill="white" stroke="#666666" points="2122.83,-239 1988.83,-239 1988.83,-209 2122.83,-209 2122.83,-239"/>
 <text text-anchor="start" x="1996.83" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
 <text text-anchor="middle" x="2055.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/Core/ChannelSlotMap.h</text>
 </a>
 </g>
 </g>
-<!-- Node1&#45;&gt;Node130 -->
-<g id="edge39_Node000001_Node000130" class="edge">
-<title>Node1&#45;&gt;Node130</title>
-<g id="a_edge39_Node000001_Node000130"><a xlink:title=" ">
+<!-- Node1&#45;&gt;Node144 -->
+<g id="edge39_Node000001_Node000144" class="edge">
+<title>Node1&#45;&gt;Node144</title>
+<g id="a_edge39_Node000001_Node000144"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2829.61,-352.4C2678.23,-346.82 2350.43,-331.99 2240.83,-305 2180.86,-290.23 2115.64,-257.8 2080.92,-239.08"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2829.64,-355.9 2839.76,-352.77 2829.9,-348.91 2829.64,-355.9"/>
-</a>
-</g>
-</g>
-<!-- Node131 -->
-<g id="Node000131" class="node">
-<title>Node131</title>
-<g id="a_Node000131"><a xlink:href="../../d0/d48/RTGuard_8h_source.html" target="_top" xlink:title=" ">
-<polygon fill="white" stroke="#666666" points="1949.83,-305 1835.83,-305 1835.83,-275 1949.83,-275 1949.83,-305"/>
-<text text-anchor="start" x="1843.83" y="-293" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
-<text text-anchor="middle" x="1892.83" y="-282" font-family="Helvetica,sans-Serif" font-size="10.00">/Core/RTGuard.h</text>
-</a>
-</g>
-</g>
-<!-- Node1&#45;&gt;Node131 -->
-<g id="edge47_Node000001_Node000131" class="edge">
-<title>Node1&#45;&gt;Node131</title>
-<g id="a_edge47_Node000001_Node000131"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M2829.4,-350.05C2632.69,-337.65 2121.85,-305.44 1950.11,-294.61"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="2829.46,-353.57 2839.66,-350.7 2829.9,-346.58 2829.46,-353.57"/>
-</a>
-</g>
-</g>
-<!-- Node133 -->
-<g id="Node000133" class="node">
-<title>Node133</title>
-<g id="a_Node000133"><a xlink:href="../../df/d0e/TruePeakMeter_8h_source.html" target="_top" xlink:title=" ">
-<polygon fill="white" stroke="#666666" points="2372.33,-305 2249.33,-305 2249.33,-275 2372.33,-275 2372.33,-305"/>
-<text text-anchor="start" x="2257.33" y="-293" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
-<text text-anchor="middle" x="2310.83" y="-282" font-family="Helvetica,sans-Serif" font-size="10.00">/DSP/TruePeakMeter.h</text>
-</a>
-</g>
-</g>
-<!-- Node1&#45;&gt;Node133 -->
-<g id="edge49_Node000001_Node000133" class="edge">
-<title>Node1&#45;&gt;Node133</title>
-<g id="a_edge49_Node000001_Node000133"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M2829.56,-347.27C2734.34,-337.76 2568.71,-320.93 2426.83,-305 2409.19,-303.02 2390.06,-300.76 2372.51,-298.64"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="2829.39,-350.77 2839.69,-348.27 2830.08,-343.8 2829.39,-350.77"/>
-</a>
-</g>
-</g>
-<!-- Node136 -->
-<g id="Node000136" class="node">
-<title>Node136</title>
-<g id="a_Node000136"><a xlink:href="../../d6/dbd/GarbageCollector_8h_source.html" target="_top" xlink:title=" ">
-<polygon fill="white" stroke="#666666" points="2830.83,-173 2716.83,-173 2716.83,-143 2830.83,-143 2830.83,-173"/>
-<text text-anchor="start" x="2724.83" y="-161" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
-<text text-anchor="middle" x="2773.83" y="-150" font-family="Helvetica,sans-Serif" font-size="10.00">/GarbageCollector.h</text>
-</a>
-</g>
-</g>
-<!-- Node1&#45;&gt;Node136 -->
-<g id="edge53_Node000001_Node000136" class="edge">
-<title>Node1&#45;&gt;Node136</title>
-<g id="a_edge53_Node000001_Node000136"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M2829.38,-344.36C2721.64,-327.93 2536.73,-292.56 2497.83,-239 2489.99,-228.21 2489.28,-219.23 2497.83,-209 2511.74,-192.34 2640.09,-174.64 2716.77,-165.43"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="2829.15,-347.87 2839.56,-345.89 2830.19,-340.94 2829.15,-347.87"/>
-</a>
-</g>
-</g>
-<!-- Node140 -->
-<g id="Node000140" class="node">
-<title>Node140</title>
-<g id="a_Node000140"><a xlink:href="../../d6/ddd/MetronomeEngine_8h_source.html" target="_top" xlink:title=" ">
-<polygon fill="#fff0f0" stroke="red" points="1814.33,-173 1649.33,-173 1649.33,-143 1814.33,-143 1814.33,-173"/>
-<text text-anchor="start" x="1657.33" y="-161" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
-<text text-anchor="middle" x="1731.83" y="-150" font-family="Helvetica,sans-Serif" font-size="10.00">/Playback/MetronomeEngine.h</text>
-</a>
-</g>
-</g>
-<!-- Node1&#45;&gt;Node140 -->
-<g id="edge60_Node000001_Node000140" class="edge">
-<title>Node1&#45;&gt;Node140</title>
-<g id="a_edge60_Node000001_Node000140"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M2829.63,-353.97C2597.15,-350.54 1920.58,-337.83 1826.83,-305 1779.67,-288.49 1759.63,-282.93 1735.83,-239 1724.63,-218.34 1726.47,-190.09 1729.02,-173.28"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="2829.65,-357.47 2839.7,-354.11 2829.75,-350.47 2829.65,-357.47"/>
-</a>
-</g>
-</g>
-<!-- Node142 -->
-<g id="Node000142" class="node">
-<title>Node142</title>
-<g id="a_Node000142"><a xlink:href="../../df/da3/AestraComp_8h_source.html" target="_top" xlink:title=" ">
-<polygon fill="#fff0f0" stroke="red" points="2898.83,-239 2776.83,-239 2776.83,-209 2898.83,-209 2898.83,-239"/>
-<text text-anchor="start" x="2784.83" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
-<text text-anchor="middle" x="2837.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/Plugin/AestraComp.h</text>
-</a>
-</g>
-</g>
-<!-- Node1&#45;&gt;Node142 -->
-<g id="edge62_Node000001_Node000142" class="edge">
-<title>Node1&#45;&gt;Node142</title>
-<g id="a_edge62_Node000001_Node000142"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M2895.31,-331.75C2880.82,-304.84 2857.43,-261.4 2845.44,-239.14"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="2892.38,-333.69 2900.2,-340.84 2898.55,-330.38 2892.38,-333.69"/>
 </a>
 </g>
 </g>
 <!-- Node145 -->
 <g id="Node000145" class="node">
 <title>Node145</title>
-<g id="a_Node000145"><a xlink:href="../../d7/d42/AestraDelay_8h_source.html" target="_top" xlink:title=" ">
-<polygon fill="#fff0f0" stroke="red" points="2758.83,-239 2638.83,-239 2638.83,-209 2758.83,-209 2758.83,-239"/>
-<text text-anchor="start" x="2646.83" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
-<text text-anchor="middle" x="2698.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/Plugin/AestraDelay.h</text>
+<g id="a_Node000145"><a xlink:href="../../d0/d48/RTGuard_8h_source.html" target="_top" xlink:title=" ">
+<polygon fill="white" stroke="#666666" points="1949.83,-305 1835.83,-305 1835.83,-275 1949.83,-275 1949.83,-305"/>
+<text text-anchor="start" x="1843.83" y="-293" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
+<text text-anchor="middle" x="1892.83" y="-282" font-family="Helvetica,sans-Serif" font-size="10.00">/Core/RTGuard.h</text>
 </a>
 </g>
 </g>
 <!-- Node1&#45;&gt;Node145 -->
-<g id="edge64_Node000001_Node000145" class="edge">
+<g id="edge47_Node000001_Node000145" class="edge">
 <title>Node1&#45;&gt;Node145</title>
-<g id="a_edge64_Node000001_Node000145"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M2876.51,-335.52C2834.01,-309.09 2759.08,-262.48 2721.57,-239.14"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="2874.72,-338.53 2885.06,-340.84 2878.42,-332.59 2874.72,-338.53"/>
+<g id="a_edge47_Node000001_Node000145"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M2829.4,-350.05C2632.69,-337.65 2121.85,-305.44 1950.11,-294.61"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="2829.46,-353.57 2839.66,-350.7 2829.9,-346.58 2829.46,-353.57"/>
 </a>
 </g>
 </g>
 <!-- Node147 -->
 <g id="Node000147" class="node">
 <title>Node147</title>
-<g id="a_Node000147"><a xlink:href="../../d6/d25/AestraDrift_8h_source.html" target="_top" xlink:title=" ">
-<polygon fill="#fff0f0" stroke="red" points="3030.83,-239 2916.83,-239 2916.83,-209 3030.83,-209 3030.83,-239"/>
-<text text-anchor="start" x="2924.83" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
-<text text-anchor="middle" x="2973.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/Plugin/AestraDrift.h</text>
+<g id="a_Node000147"><a xlink:href="../../df/d0e/TruePeakMeter_8h_source.html" target="_top" xlink:title=" ">
+<polygon fill="white" stroke="#666666" points="2372.33,-305 2249.33,-305 2249.33,-275 2372.33,-275 2372.33,-305"/>
+<text text-anchor="start" x="2257.33" y="-293" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
+<text text-anchor="middle" x="2310.83" y="-282" font-family="Helvetica,sans-Serif" font-size="10.00">/DSP/TruePeakMeter.h</text>
 </a>
 </g>
 </g>
 <!-- Node1&#45;&gt;Node147 -->
-<g id="edge66_Node000001_Node000147" class="edge">
+<g id="edge49_Node000001_Node000147" class="edge">
 <title>Node1&#45;&gt;Node147</title>
-<g id="a_edge66_Node000001_Node000147"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M2919.63,-331.75C2933.29,-304.84 2955.35,-261.4 2966.65,-239.14"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="2916.42,-330.34 2915.02,-340.84 2922.67,-333.51 2916.42,-330.34"/>
+<g id="a_edge49_Node000001_Node000147"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M2829.56,-347.27C2734.34,-337.76 2568.71,-320.93 2426.83,-305 2409.19,-303.02 2390.06,-300.76 2372.51,-298.64"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="2829.39,-350.77 2839.69,-348.27 2830.08,-343.8 2829.39,-350.77"/>
 </a>
 </g>
 </g>
-<!-- Node149 -->
-<g id="Node000149" class="node">
-<title>Node149</title>
-<g id="a_Node000149"><a xlink:href="../../dc/d15/AestraEQ_8h_source.html" target="_top" xlink:title=" ">
-<polygon fill="#fff0f0" stroke="red" points="3162.83,-239 3048.83,-239 3048.83,-209 3162.83,-209 3162.83,-239"/>
-<text text-anchor="start" x="3056.83" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
-<text text-anchor="middle" x="3105.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/Plugin/AestraEQ.h</text>
+<!-- Node150 -->
+<g id="Node000150" class="node">
+<title>Node150</title>
+<g id="a_Node000150"><a xlink:href="../../d6/dbd/GarbageCollector_8h_source.html" target="_top" xlink:title=" ">
+<polygon fill="white" stroke="#666666" points="2830.83,-173 2716.83,-173 2716.83,-143 2830.83,-143 2830.83,-173"/>
+<text text-anchor="start" x="2724.83" y="-161" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
+<text text-anchor="middle" x="2773.83" y="-150" font-family="Helvetica,sans-Serif" font-size="10.00">/GarbageCollector.h</text>
 </a>
 </g>
 </g>
-<!-- Node1&#45;&gt;Node149 -->
-<g id="edge67_Node000001_Node000149" class="edge">
-<title>Node1&#45;&gt;Node149</title>
-<g id="a_edge67_Node000001_Node000149"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M2934.8,-334.94C2957.42,-318.34 2990.76,-294.44 3020.83,-275 3040.53,-262.27 3063.49,-248.84 3080.57,-239.11"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="2932.66,-332.16 2926.69,-340.91 2936.81,-337.8 2932.66,-332.16"/>
+<!-- Node1&#45;&gt;Node150 -->
+<g id="edge53_Node000001_Node000150" class="edge">
+<title>Node1&#45;&gt;Node150</title>
+<g id="a_edge53_Node000001_Node000150"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M2829.38,-344.36C2721.64,-327.93 2536.73,-292.56 2497.83,-239 2489.99,-228.21 2489.28,-219.23 2497.83,-209 2511.74,-192.34 2640.09,-174.64 2716.77,-165.43"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="2829.15,-347.87 2839.56,-345.89 2830.19,-340.94 2829.15,-347.87"/>
 </a>
 </g>
 </g>
-<!-- Node153 -->
-<g id="Node000153" class="node">
-<title>Node153</title>
-<g id="a_Node000153"><a xlink:href="../../d7/d8b/AestraFilter_8h_source.html" target="_top" xlink:title=" ">
-<polygon fill="#fff0f0" stroke="red" points="3298.33,-239 3181.33,-239 3181.33,-209 3298.33,-209 3298.33,-239"/>
-<text text-anchor="start" x="3189.33" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
-<text text-anchor="middle" x="3239.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/Plugin/AestraFilter.h</text>
+<!-- Node154 -->
+<g id="Node000154" class="node">
+<title>Node154</title>
+<g id="a_Node000154"><a xlink:href="../../d6/ddd/MetronomeEngine_8h_source.html" target="_top" xlink:title=" ">
+<polygon fill="#fff0f0" stroke="red" points="1814.33,-173 1649.33,-173 1649.33,-143 1814.33,-143 1814.33,-173"/>
+<text text-anchor="start" x="1657.33" y="-161" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
+<text text-anchor="middle" x="1731.83" y="-150" font-family="Helvetica,sans-Serif" font-size="10.00">/Playback/MetronomeEngine.h</text>
 </a>
 </g>
 </g>
-<!-- Node1&#45;&gt;Node153 -->
-<g id="edge68_Node000001_Node000153" class="edge">
-<title>Node1&#45;&gt;Node153</title>
-<g id="a_edge68_Node000001_Node000153"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M2986.08,-348.52C3058.31,-341.25 3159.18,-327.45 3191.83,-305 3215.19,-288.94 3229.04,-257.45 3235.47,-239.14"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="2985.69,-345.04 2976.08,-349.5 2986.38,-352.01 2985.69,-345.04"/>
+<!-- Node1&#45;&gt;Node154 -->
+<g id="edge60_Node000001_Node000154" class="edge">
+<title>Node1&#45;&gt;Node154</title>
+<g id="a_edge60_Node000001_Node000154"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M2829.63,-353.97C2597.15,-350.54 1920.58,-337.83 1826.83,-305 1779.67,-288.49 1759.63,-282.93 1735.83,-239 1724.63,-218.34 1726.47,-190.09 1729.02,-173.28"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="2829.65,-357.47 2839.7,-354.11 2829.75,-350.47 2829.65,-357.47"/>
 </a>
 </g>
 </g>
-<!-- Node155 -->
-<g id="Node000155" class="node">
-<title>Node155</title>
-<g id="a_Node000155"><a xlink:href="../../da/dcc/AestraLFO_8h_source.html" target="_top" xlink:title=" ">
-<polygon fill="#fff0f0" stroke="red" points="2620.83,-239 2506.83,-239 2506.83,-209 2620.83,-209 2620.83,-239"/>
-<text text-anchor="start" x="2514.83" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
-<text text-anchor="middle" x="2563.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/Plugin/AestraLFO.h</text>
+<!-- Node156 -->
+<g id="Node000156" class="node">
+<title>Node156</title>
+<g id="a_Node000156"><a xlink:href="../../df/da3/AestraComp_8h_source.html" target="_top" xlink:title=" ">
+<polygon fill="#fff0f0" stroke="red" points="2898.83,-239 2776.83,-239 2776.83,-209 2898.83,-209 2898.83,-239"/>
+<text text-anchor="start" x="2784.83" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
+<text text-anchor="middle" x="2837.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/Plugin/AestraComp.h</text>
 </a>
 </g>
 </g>
-<!-- Node1&#45;&gt;Node155 -->
-<g id="edge69_Node000001_Node000155" class="edge">
-<title>Node1&#45;&gt;Node155</title>
-<g id="a_edge69_Node000001_Node000155"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M2860.94,-337.28C2791.86,-311.18 2664.15,-262.91 2601.08,-239.08"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="2860.1,-340.7 2870.69,-340.96 2862.57,-334.16 2860.1,-340.7"/>
-</a>
-</g>
-</g>
-<!-- Node157 -->
-<g id="Node000157" class="node">
-<title>Node157</title>
-<g id="a_Node000157"><a xlink:href="../../d2/da2/AestraLimit_8h_source.html" target="_top" xlink:title=" ">
-<polygon fill="#fff0f0" stroke="red" points="3434.83,-239 3316.83,-239 3316.83,-209 3434.83,-209 3434.83,-239"/>
-<text text-anchor="start" x="3324.83" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
-<text text-anchor="middle" x="3375.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/Plugin/AestraLimit.h</text>
-</a>
-</g>
-</g>
-<!-- Node1&#45;&gt;Node157 -->
-<g id="edge71_Node000001_Node000157" class="edge">
-<title>Node1&#45;&gt;Node157</title>
-<g id="a_edge71_Node000001_Node000157"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M2986,-349.22C3049.86,-342.9 3141.84,-330.11 3218.83,-305 3269.58,-288.44 3324.09,-257.29 3353.65,-239.13"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="2985.61,-345.74 2975.99,-350.18 2986.28,-352.71 2985.61,-345.74"/>
+<!-- Node1&#45;&gt;Node156 -->
+<g id="edge62_Node000001_Node000156" class="edge">
+<title>Node1&#45;&gt;Node156</title>
+<g id="a_edge62_Node000001_Node000156"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M2895.31,-331.75C2880.82,-304.84 2857.43,-261.4 2845.44,-239.14"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="2892.38,-333.69 2900.2,-340.84 2898.55,-330.38 2892.38,-333.69"/>
 </a>
 </g>
 </g>
 <!-- Node159 -->
 <g id="Node000159" class="node">
 <title>Node159</title>
-<g id="a_Node000159"><a xlink:href="../../d8/d0c/AestraOTT_8h_source.html" target="_top" xlink:title=" ">
-<polygon fill="#fff0f0" stroke="red" points="3566.83,-239 3452.83,-239 3452.83,-209 3566.83,-209 3566.83,-239"/>
-<text text-anchor="start" x="3460.83" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
-<text text-anchor="middle" x="3509.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/Plugin/AestraOTT.h</text>
+<g id="a_Node000159"><a xlink:href="../../d7/d42/AestraDelay_8h_source.html" target="_top" xlink:title=" ">
+<polygon fill="#fff0f0" stroke="red" points="2758.83,-239 2638.83,-239 2638.83,-209 2758.83,-209 2758.83,-239"/>
+<text text-anchor="start" x="2646.83" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
+<text text-anchor="middle" x="2698.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/Plugin/AestraDelay.h</text>
 </a>
 </g>
 </g>
 <!-- Node1&#45;&gt;Node159 -->
-<g id="edge72_Node000001_Node000159" class="edge">
+<g id="edge64_Node000001_Node000159" class="edge">
 <title>Node1&#45;&gt;Node159</title>
-<g id="a_edge72_Node000001_Node000159"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M2986.16,-348.11C3059.19,-340.74 3170.8,-327.03 3265.83,-305 3341.18,-287.53 3426.47,-257 3473.62,-239.13"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="2985.73,-344.64 2976.12,-349.11 2986.42,-351.61 2985.73,-344.64"/>
+<g id="a_edge64_Node000001_Node000159"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M2876.51,-335.52C2834.01,-309.09 2759.08,-262.48 2721.57,-239.14"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="2874.72,-338.53 2885.06,-340.84 2878.42,-332.59 2874.72,-338.53"/>
 </a>
 </g>
 </g>
 <!-- Node161 -->
 <g id="Node000161" class="node">
 <title>Node161</title>
-<g id="a_Node000161"><a xlink:href="../../d2/d0b/AestraSat_8h_source.html" target="_top" xlink:title=" ">
-<polygon fill="#fff0f0" stroke="red" points="3698.83,-239 3584.83,-239 3584.83,-209 3698.83,-209 3698.83,-239"/>
-<text text-anchor="start" x="3592.83" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
-<text text-anchor="middle" x="3641.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/Plugin/AestraSat.h</text>
+<g id="a_Node000161"><a xlink:href="../../d6/d25/AestraDrift_8h_source.html" target="_top" xlink:title=" ">
+<polygon fill="#fff0f0" stroke="red" points="3030.83,-239 2916.83,-239 2916.83,-209 3030.83,-209 3030.83,-239"/>
+<text text-anchor="start" x="2924.83" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
+<text text-anchor="middle" x="2973.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/Plugin/AestraDrift.h</text>
 </a>
 </g>
 </g>
 <!-- Node1&#45;&gt;Node161 -->
-<g id="edge73_Node000001_Node000161" class="edge">
+<g id="edge66_Node000001_Node000161" class="edge">
 <title>Node1&#45;&gt;Node161</title>
-<g id="a_edge73_Node000001_Node000161"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M2985.95,-348.88C3071.02,-341.49 3210.83,-327.2 3329.83,-305 3425.2,-287.2 3534.61,-256.78 3595.22,-239.03"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="2985.52,-345.4 2975.86,-349.75 2986.12,-352.38 2985.52,-345.4"/>
+<g id="a_edge66_Node000001_Node000161"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M2919.63,-331.75C2933.29,-304.84 2955.35,-261.4 2966.65,-239.14"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="2916.42,-330.34 2915.02,-340.84 2922.67,-333.51 2916.42,-330.34"/>
 </a>
 </g>
 </g>
 <!-- Node163 -->
 <g id="Node000163" class="node">
 <title>Node163</title>
-<g id="a_Node000163"><a xlink:href="../../df/d6e/AestraTransient_8h_source.html" target="_top" xlink:title=" ">
-<polygon fill="#fff0f0" stroke="red" points="3854.33,-239 3717.33,-239 3717.33,-209 3854.33,-209 3854.33,-239"/>
-<text text-anchor="start" x="3725.33" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
-<text text-anchor="middle" x="3785.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/Plugin/AestraTransient.h</text>
+<g id="a_Node000163"><a xlink:href="../../dc/d15/AestraEQ_8h_source.html" target="_top" xlink:title=" ">
+<polygon fill="#fff0f0" stroke="red" points="3162.83,-239 3048.83,-239 3048.83,-209 3162.83,-209 3162.83,-239"/>
+<text text-anchor="start" x="3056.83" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
+<text text-anchor="middle" x="3105.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/Plugin/AestraEQ.h</text>
 </a>
 </g>
 </g>
 <!-- Node1&#45;&gt;Node163 -->
-<g id="edge74_Node000001_Node000163" class="edge">
+<g id="edge67_Node000001_Node000163" class="edge">
 <title>Node1&#45;&gt;Node163</title>
-<g id="a_edge74_Node000001_Node000163"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M2986.25,-349.81C3084.99,-342.67 3259.63,-328.02 3407.83,-305 3522.83,-287.13 3655.58,-256.74 3729.19,-239"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="2985.78,-346.34 2976.06,-350.54 2986.28,-353.32 2985.78,-346.34"/>
-</a>
-</g>
-</g>
-<!-- Node165 -->
-<g id="Node000165" class="node">
-<title>Node165</title>
-<g id="a_Node000165"><a xlink:href="../../d9/d40/InternalPluginBase_8h_source.html" target="_top" xlink:title=" ">
-<polygon fill="#fff0f0" stroke="red" points="3182.33,-305 3029.33,-305 3029.33,-275 3182.33,-275 3182.33,-305"/>
-<text text-anchor="start" x="3037.33" y="-293" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
-<text text-anchor="middle" x="3105.83" y="-282" font-family="Helvetica,sans-Serif" font-size="10.00">/Plugin/InternalPluginBase.h</text>
-</a>
-</g>
-</g>
-<!-- Node1&#45;&gt;Node165 -->
-<g id="edge75_Node000001_Node000165" class="edge">
-<title>Node1&#45;&gt;Node165</title>
-<g id="a_edge75_Node000001_Node000165"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M2960.87,-337.86C2992.66,-327.58 3032.58,-314.68 3062.48,-305.01"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="2959.72,-334.55 2951.28,-340.95 2961.87,-341.21 2959.72,-334.55"/>
+<g id="a_edge67_Node000001_Node000163"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M2934.8,-334.94C2957.42,-318.34 2990.76,-294.44 3020.83,-275 3040.53,-262.27 3063.49,-248.84 3080.57,-239.11"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="2932.66,-332.16 2926.69,-340.91 2936.81,-337.8 2932.66,-332.16"/>
 </a>
 </g>
 </g>
 <!-- Node167 -->
 <g id="Node000167" class="node">
 <title>Node167</title>
-<g id="a_Node000167"><a xlink:href="../../d8/d68/MixerBus_8cpp_source.html" target="_top" xlink:title=" ">
-<polygon fill="white" stroke="#666666" points="3952.33,-305 3833.33,-305 3833.33,-275 3952.33,-275 3952.33,-305"/>
-<text text-anchor="start" x="3841.33" y="-293" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/src/Core</text>
-<text text-anchor="middle" x="3892.83" y="-282" font-family="Helvetica,sans-Serif" font-size="10.00">/MixerBus.cpp</text>
+<g id="a_Node000167"><a xlink:href="../../d7/d8b/AestraFilter_8h_source.html" target="_top" xlink:title=" ">
+<polygon fill="#fff0f0" stroke="red" points="3298.33,-239 3181.33,-239 3181.33,-209 3298.33,-209 3298.33,-239"/>
+<text text-anchor="start" x="3189.33" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
+<text text-anchor="middle" x="3239.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/Plugin/AestraFilter.h</text>
 </a>
 </g>
 </g>
 <!-- Node1&#45;&gt;Node167 -->
-<g id="edge87_Node000001_Node000167" class="edge">
+<g id="edge68_Node000001_Node000167" class="edge">
 <title>Node1&#45;&gt;Node167</title>
-<g id="a_edge87_Node000001_Node000167"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M2986.2,-354.18C3144.24,-351.76 3512.26,-342.25 3818.83,-305 3823.5,-304.43 3828.32,-303.75 3833.16,-302.99"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="2986.04,-350.68 2976.1,-354.33 2986.15,-357.68 2986.04,-350.68"/>
-</a>
-</g>
-</g>
-<!-- Node168 -->
-<g id="Node000168" class="node">
-<title>Node168</title>
-<g id="a_Node000168"><a xlink:href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html" target="_top" xlink:title=" ">
-<polygon fill="white" stroke="#666666" points="4122.83,-305 3970.83,-305 3970.83,-275 4122.83,-275 4122.83,-305"/>
-<text text-anchor="start" x="3978.83" y="-293" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/src/Playback</text>
-<text text-anchor="middle" x="4046.83" y="-282" font-family="Helvetica,sans-Serif" font-size="10.00">/PatternPlaybackEngine.cpp</text>
-</a>
-</g>
-</g>
-<!-- Node1&#45;&gt;Node168 -->
-<g id="edge89_Node000001_Node000168" class="edge">
-<title>Node1&#45;&gt;Node168</title>
-<g id="a_edge89_Node000001_Node000168"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M2986.01,-354.38C3161.19,-352.33 3598.34,-343.43 3961.83,-305 3964.65,-304.7 3967.53,-304.37 3970.43,-304.01"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="2985.82,-350.89 2975.86,-354.5 2985.9,-357.89 2985.82,-350.89"/>
+<g id="a_edge68_Node000001_Node000167"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M2986.08,-348.52C3058.31,-341.25 3159.18,-327.45 3191.83,-305 3215.19,-288.94 3229.04,-257.45 3235.47,-239.14"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="2985.69,-345.04 2976.08,-349.5 2986.38,-352.01 2985.69,-345.04"/>
 </a>
 </g>
 </g>
 <!-- Node169 -->
 <g id="Node000169" class="node">
 <title>Node169</title>
-<g id="a_Node000169"><a xlink:href="../../d1/d19/EffectChain_8cpp_source.html" target="_top" xlink:title=" ">
+<g id="a_Node000169"><a xlink:href="../../da/dcc/AestraLFO_8h_source.html" target="_top" xlink:title=" ">
+<polygon fill="#fff0f0" stroke="red" points="2620.83,-239 2506.83,-239 2506.83,-209 2620.83,-209 2620.83,-239"/>
+<text text-anchor="start" x="2514.83" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
+<text text-anchor="middle" x="2563.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/Plugin/AestraLFO.h</text>
+</a>
+</g>
+</g>
+<!-- Node1&#45;&gt;Node169 -->
+<g id="edge69_Node000001_Node000169" class="edge">
+<title>Node1&#45;&gt;Node169</title>
+<g id="a_edge69_Node000001_Node000169"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M2860.94,-337.28C2791.86,-311.18 2664.15,-262.91 2601.08,-239.08"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="2860.1,-340.7 2870.69,-340.96 2862.57,-334.16 2860.1,-340.7"/>
+</a>
+</g>
+</g>
+<!-- Node171 -->
+<g id="Node000171" class="node">
+<title>Node171</title>
+<g id="a_Node000171"><a xlink:href="../../d2/da2/AestraLimit_8h_source.html" target="_top" xlink:title=" ">
+<polygon fill="#fff0f0" stroke="red" points="3434.83,-239 3316.83,-239 3316.83,-209 3434.83,-209 3434.83,-239"/>
+<text text-anchor="start" x="3324.83" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
+<text text-anchor="middle" x="3375.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/Plugin/AestraLimit.h</text>
+</a>
+</g>
+</g>
+<!-- Node1&#45;&gt;Node171 -->
+<g id="edge71_Node000001_Node000171" class="edge">
+<title>Node1&#45;&gt;Node171</title>
+<g id="a_edge71_Node000001_Node000171"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M2986,-349.22C3049.86,-342.9 3141.84,-330.11 3218.83,-305 3269.58,-288.44 3324.09,-257.29 3353.65,-239.13"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="2985.61,-345.74 2975.99,-350.18 2986.28,-352.71 2985.61,-345.74"/>
+</a>
+</g>
+</g>
+<!-- Node173 -->
+<g id="Node000173" class="node">
+<title>Node173</title>
+<g id="a_Node000173"><a xlink:href="../../d8/d0c/AestraOTT_8h_source.html" target="_top" xlink:title=" ">
+<polygon fill="#fff0f0" stroke="red" points="3566.83,-239 3452.83,-239 3452.83,-209 3566.83,-209 3566.83,-239"/>
+<text text-anchor="start" x="3460.83" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
+<text text-anchor="middle" x="3509.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/Plugin/AestraOTT.h</text>
+</a>
+</g>
+</g>
+<!-- Node1&#45;&gt;Node173 -->
+<g id="edge72_Node000001_Node000173" class="edge">
+<title>Node1&#45;&gt;Node173</title>
+<g id="a_edge72_Node000001_Node000173"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M2986.16,-348.11C3059.19,-340.74 3170.8,-327.03 3265.83,-305 3341.18,-287.53 3426.47,-257 3473.62,-239.13"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="2985.73,-344.64 2976.12,-349.11 2986.42,-351.61 2985.73,-344.64"/>
+</a>
+</g>
+</g>
+<!-- Node175 -->
+<g id="Node000175" class="node">
+<title>Node175</title>
+<g id="a_Node000175"><a xlink:href="../../d2/d0b/AestraSat_8h_source.html" target="_top" xlink:title=" ">
+<polygon fill="#fff0f0" stroke="red" points="3698.83,-239 3584.83,-239 3584.83,-209 3698.83,-209 3698.83,-239"/>
+<text text-anchor="start" x="3592.83" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
+<text text-anchor="middle" x="3641.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/Plugin/AestraSat.h</text>
+</a>
+</g>
+</g>
+<!-- Node1&#45;&gt;Node175 -->
+<g id="edge73_Node000001_Node000175" class="edge">
+<title>Node1&#45;&gt;Node175</title>
+<g id="a_edge73_Node000001_Node000175"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M2985.95,-348.88C3071.02,-341.49 3210.83,-327.2 3329.83,-305 3425.2,-287.2 3534.61,-256.78 3595.22,-239.03"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="2985.52,-345.4 2975.86,-349.75 2986.12,-352.38 2985.52,-345.4"/>
+</a>
+</g>
+</g>
+<!-- Node177 -->
+<g id="Node000177" class="node">
+<title>Node177</title>
+<g id="a_Node000177"><a xlink:href="../../df/d6e/AestraTransient_8h_source.html" target="_top" xlink:title=" ">
+<polygon fill="#fff0f0" stroke="red" points="3854.33,-239 3717.33,-239 3717.33,-209 3854.33,-209 3854.33,-239"/>
+<text text-anchor="start" x="3725.33" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
+<text text-anchor="middle" x="3785.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/Plugin/AestraTransient.h</text>
+</a>
+</g>
+</g>
+<!-- Node1&#45;&gt;Node177 -->
+<g id="edge74_Node000001_Node000177" class="edge">
+<title>Node1&#45;&gt;Node177</title>
+<g id="a_edge74_Node000001_Node000177"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M2986.25,-349.81C3084.99,-342.67 3259.63,-328.02 3407.83,-305 3522.83,-287.13 3655.58,-256.74 3729.19,-239"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="2985.78,-346.34 2976.06,-350.54 2986.28,-353.32 2985.78,-346.34"/>
+</a>
+</g>
+</g>
+<!-- Node179 -->
+<g id="Node000179" class="node">
+<title>Node179</title>
+<g id="a_Node000179"><a xlink:href="../../d9/d40/InternalPluginBase_8h_source.html" target="_top" xlink:title=" ">
+<polygon fill="#fff0f0" stroke="red" points="3182.33,-305 3029.33,-305 3029.33,-275 3182.33,-275 3182.33,-305"/>
+<text text-anchor="start" x="3037.33" y="-293" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
+<text text-anchor="middle" x="3105.83" y="-282" font-family="Helvetica,sans-Serif" font-size="10.00">/Plugin/InternalPluginBase.h</text>
+</a>
+</g>
+</g>
+<!-- Node1&#45;&gt;Node179 -->
+<g id="edge75_Node000001_Node000179" class="edge">
+<title>Node1&#45;&gt;Node179</title>
+<g id="a_edge75_Node000001_Node000179"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M2960.87,-337.86C2992.66,-327.58 3032.58,-314.68 3062.48,-305.01"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="2959.72,-334.55 2951.28,-340.95 2961.87,-341.21 2959.72,-334.55"/>
+</a>
+</g>
+</g>
+<!-- Node181 -->
+<g id="Node000181" class="node">
+<title>Node181</title>
+<g id="a_Node000181"><a xlink:href="../../d8/d68/MixerBus_8cpp_source.html" target="_top" xlink:title=" ">
+<polygon fill="white" stroke="#666666" points="3952.33,-305 3833.33,-305 3833.33,-275 3952.33,-275 3952.33,-305"/>
+<text text-anchor="start" x="3841.33" y="-293" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/src/Core</text>
+<text text-anchor="middle" x="3892.83" y="-282" font-family="Helvetica,sans-Serif" font-size="10.00">/MixerBus.cpp</text>
+</a>
+</g>
+</g>
+<!-- Node1&#45;&gt;Node181 -->
+<g id="edge87_Node000001_Node000181" class="edge">
+<title>Node1&#45;&gt;Node181</title>
+<g id="a_edge87_Node000001_Node000181"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M2986.2,-354.18C3144.24,-351.76 3512.26,-342.25 3818.83,-305 3823.5,-304.43 3828.32,-303.75 3833.16,-302.99"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="2986.04,-350.68 2976.1,-354.33 2986.15,-357.68 2986.04,-350.68"/>
+</a>
+</g>
+</g>
+<!-- Node182 -->
+<g id="Node000182" class="node">
+<title>Node182</title>
+<g id="a_Node000182"><a xlink:href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html" target="_top" xlink:title=" ">
+<polygon fill="white" stroke="#666666" points="4122.83,-305 3970.83,-305 3970.83,-275 4122.83,-275 4122.83,-305"/>
+<text text-anchor="start" x="3978.83" y="-293" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/src/Playback</text>
+<text text-anchor="middle" x="4046.83" y="-282" font-family="Helvetica,sans-Serif" font-size="10.00">/PatternPlaybackEngine.cpp</text>
+</a>
+</g>
+</g>
+<!-- Node1&#45;&gt;Node182 -->
+<g id="edge89_Node000001_Node000182" class="edge">
+<title>Node1&#45;&gt;Node182</title>
+<g id="a_edge89_Node000001_Node000182"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M2986.01,-354.38C3161.19,-352.33 3598.34,-343.43 3961.83,-305 3964.65,-304.7 3967.53,-304.37 3970.43,-304.01"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="2985.82,-350.89 2975.86,-354.5 2985.9,-357.89 2985.82,-350.89"/>
+</a>
+</g>
+</g>
+<!-- Node183 -->
+<g id="Node000183" class="node">
+<title>Node183</title>
+<g id="a_Node000183"><a xlink:href="../../d1/d19/EffectChain_8cpp_source.html" target="_top" xlink:title=" ">
 <polygon fill="white" stroke="#666666" points="4266.83,-305 4140.83,-305 4140.83,-275 4266.83,-275 4266.83,-305"/>
 <text text-anchor="start" x="4148.83" y="-293" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/src/Plugin</text>
 <text text-anchor="middle" x="4203.83" y="-282" font-family="Helvetica,sans-Serif" font-size="10.00">/EffectChain.cpp</text>
 </a>
 </g>
 </g>
-<!-- Node1&#45;&gt;Node169 -->
-<g id="edge90_Node000001_Node000169" class="edge">
-<title>Node1&#45;&gt;Node169</title>
-<g id="a_edge90_Node000001_Node000169"><a xlink:title=" ">
+<!-- Node1&#45;&gt;Node183 -->
+<g id="edge90_Node000001_Node000183" class="edge">
+<title>Node1&#45;&gt;Node183</title>
+<g id="a_edge90_Node000001_Node000183"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2986.15,-353.35C3219.64,-348.19 3908.6,-331.11 4131.83,-305 4134.74,-304.66 4137.71,-304.27 4140.7,-303.84"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2985.96,-349.85 2976.04,-353.57 2986.11,-356.85 2985.96,-349.85"/>
 </a>
@@ -538,83 +538,83 @@ var sectionId = 'dynsection-1';
 </a>
 </g>
 </g>
-<!-- Node34 -->
-<g id="Node000034" class="node">
-<title>Node34</title>
-<g id="a_Node000034"><a xlink:href="../../d3/d43/HeadlessMain_8cpp_source.html" target="_top" xlink:title=" ">
+<!-- Node35 -->
+<g id="Node000035" class="node">
+<title>Node35</title>
+<g id="a_Node000035"><a xlink:href="../../d3/d43/HeadlessMain_8cpp_source.html" target="_top" xlink:title=" ">
 <polygon fill="white" stroke="#666666" points="218.83,-24.5 54.83,-24.5 54.83,-5.5 218.83,-5.5 218.83,-24.5"/>
 <text text-anchor="middle" x="136.83" y="-12.5" font-family="Helvetica,sans-Serif" font-size="10.00">Source/App/HeadlessMain.cpp</text>
 </a>
 </g>
 </g>
-<!-- Node2&#45;&gt;Node34 -->
-<g id="edge36_Node000002_Node000034" class="edge">
-<title>Node2&#45;&gt;Node34</title>
-<g id="a_edge36_Node000002_Node000034"><a xlink:title=" ">
+<!-- Node2&#45;&gt;Node35 -->
+<g id="edge36_Node000002_Node000035" class="edge">
+<title>Node2&#45;&gt;Node35</title>
+<g id="a_edge36_Node000002_Node000035"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M207.5,-278.55C148.8,-270.32 79.54,-257.2 55.83,-239 -6.02,-191.53 -17.06,-130.43 26.83,-66 41.83,-43.98 69.02,-31.5 92.61,-24.52"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="207.19,-282.04 217.57,-279.93 208.14,-275.1 207.19,-282.04"/>
 </a>
 </g>
 </g>
-<!-- Node45 -->
-<g id="Node000045" class="node">
-<title>Node45</title>
-<g id="a_Node000045"><a xlink:href="../../db/d59/UnifiedHUD_8h_source.html" target="_top" xlink:title=" ">
+<!-- Node48 -->
+<g id="Node000048" class="node">
+<title>Node48</title>
+<g id="a_Node000048"><a xlink:href="../../db/d59/UnifiedHUD_8h_source.html" target="_top" xlink:title=" ">
 <polygon fill="#fff0f0" stroke="red" points="380.83,-24.5 236.83,-24.5 236.83,-5.5 380.83,-5.5 380.83,-24.5"/>
 <text text-anchor="middle" x="308.83" y="-12.5" font-family="Helvetica,sans-Serif" font-size="10.00">Source/HUD/UnifiedHUD.h</text>
 </a>
 </g>
 </g>
-<!-- Node2&#45;&gt;Node45 -->
-<g id="edge37_Node000002_Node000045" class="edge">
-<title>Node2&#45;&gt;Node45</title>
-<g id="a_edge37_Node000002_Node000045"><a xlink:title=" ">
+<!-- Node2&#45;&gt;Node48 -->
+<g id="edge37_Node000002_Node000048" class="edge">
+<title>Node2&#45;&gt;Node48</title>
+<g id="a_edge37_Node000002_Node000048"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M207.36,-283.03C168.31,-276.65 124.23,-263.96 90.83,-239 27.76,-191.89 2.78,-126.77 52.83,-66 56.15,-61.96 188.01,-37.71 261.15,-24.53"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="207.29,-286.56 217.7,-284.6 208.34,-279.64 207.29,-286.56"/>
 </a>
 </g>
 </g>
-<!-- Node25 -->
-<g id="Node000025" class="node">
-<title>Node25</title>
-<g id="a_Node000025"><a xlink:href="../../d9/de8/PianoRollPanel_8cpp_source.html" target="_top" xlink:title=" ">
+<!-- Node26 -->
+<g id="Node000026" class="node">
+<title>Node26</title>
+<g id="a_Node000026"><a xlink:href="../../d9/de8/PianoRollPanel_8cpp_source.html" target="_top" xlink:title=" ">
 <polygon fill="white" stroke="#666666" points="578.33,-24.5 399.33,-24.5 399.33,-5.5 578.33,-5.5 578.33,-24.5"/>
 <text text-anchor="middle" x="488.83" y="-12.5" font-family="Helvetica,sans-Serif" font-size="10.00">Source/Panels/PianoRollPanel.cpp</text>
 </a>
 </g>
 </g>
-<!-- Node2&#45;&gt;Node25 -->
-<g id="edge38_Node000002_Node000025" class="edge">
-<title>Node2&#45;&gt;Node25</title>
-<g id="a_edge38_Node000002_Node000025"><a xlink:title=" ">
+<!-- Node2&#45;&gt;Node26 -->
+<g id="edge38_Node000002_Node000026" class="edge">
+<title>Node2&#45;&gt;Node26</title>
+<g id="a_edge38_Node000002_Node000026"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M224.73,-272.23C154.01,-252.01 62.17,-211.86 85.83,-143 99.93,-101.97 108.33,-87.81 145.83,-66 147.36,-65.11 331.62,-38.56 429.41,-24.52"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="223.99,-275.66 234.56,-274.95 225.85,-268.91 223.99,-275.66"/>
 </a>
 </g>
 </g>
-<!-- Node51 -->
-<g id="Node000051" class="node">
-<title>Node51</title>
-<g id="a_Node000051"><a xlink:href="../../d9/d8f/MixerChannel_8h_source.html" target="_top" xlink:title=" ">
+<!-- Node54 -->
+<g id="Node000054" class="node">
+<title>Node54</title>
+<g id="a_Node000054"><a xlink:href="../../d9/d8f/MixerChannel_8h_source.html" target="_top" xlink:title=" ">
 <polygon fill="#fff0f0" stroke="red" points="360.33,-239 239.33,-239 239.33,-209 360.33,-209 360.33,-239"/>
 <text text-anchor="start" x="247.33" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
 <text text-anchor="middle" x="299.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/Core/MixerChannel.h</text>
 </a>
 </g>
 </g>
-<!-- Node2&#45;&gt;Node51 -->
-<g id="edge9_Node000002_Node000051" class="edge">
-<title>Node2&#45;&gt;Node51</title>
-<g id="a_edge9_Node000002_Node000051"><a xlink:title=" ">
+<!-- Node2&#45;&gt;Node54 -->
+<g id="edge9_Node000002_Node000054" class="edge">
+<title>Node2&#45;&gt;Node54</title>
+<g id="a_edge9_Node000002_Node000054"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M299.83,-264.54C299.83,-255.96 299.83,-246.61 299.83,-239.16"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="296.33,-264.8 299.83,-274.8 303.33,-264.8 296.33,-264.8"/>
 </a>
 </g>
 </g>
-<!-- Node2&#45;&gt;Node76 -->
-<g id="edge35_Node000002_Node000076" class="edge">
-<title>Node2&#45;&gt;Node76</title>
-<g id="a_edge35_Node000002_Node000076"><a xlink:title=" ">
+<!-- Node2&#45;&gt;Node81 -->
+<g id="edge35_Node000002_Node000081" class="edge">
+<title>Node2&#45;&gt;Node81</title>
+<g id="a_edge35_Node000002_Node000081"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M392.18,-276.32C582.22,-250.24 1013.14,-191.08 1179.52,-168.24"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="391.64,-272.86 382.21,-277.69 392.6,-279.8 391.64,-272.86"/>
 </a>
@@ -648,221 +648,221 @@ var sectionId = 'dynsection-1';
 </a>
 </g>
 </g>
-<!-- Node3&#45;&gt;Node34 -->
-<g id="edge5_Node000003_Node000034" class="edge">
-<title>Node3&#45;&gt;Node34</title>
-<g id="a_edge5_Node000003_Node000034"><a xlink:title=" ">
+<!-- Node3&#45;&gt;Node35 -->
+<g id="edge5_Node000003_Node000035" class="edge">
+<title>Node3&#45;&gt;Node35</title>
+<g id="a_edge5_Node000003_Node000035"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M1971.29,-71.17C1959.2,-69.08 1946.68,-67.23 1934.83,-66 1180.03,12.19 983.8,-95.84 227.83,-30 213.66,-28.77 198.34,-26.7 184.39,-24.52"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="1970.85,-74.65 1981.32,-72.97 1972.09,-67.76 1970.85,-74.65"/>
 </a>
 </g>
 </g>
-<!-- Node24 -->
-<g id="Node000024" class="node">
-<title>Node24</title>
-<g id="a_Node000024"><a xlink:href="../../dd/de4/AestraContent_8cpp.html" target="_top" xlink:title="Main content area for Aestra &#45; Implementation.">
+<!-- Node25 -->
+<g id="Node000025" class="node">
+<title>Node25</title>
+<g id="a_Node000025"><a xlink:href="../../dd/de4/AestraContent_8cpp.html" target="_top" xlink:title="Main content area for Aestra &#45; Implementation.">
 <polygon fill="white" stroke="#666666" points="2320.83,-24.5 2152.83,-24.5 2152.83,-5.5 2320.83,-5.5 2320.83,-24.5"/>
 <text text-anchor="middle" x="2236.83" y="-12.5" font-family="Helvetica,sans-Serif" font-size="10.00">Source/Core/AestraContent.cpp</text>
 </a>
 </g>
 </g>
-<!-- Node3&#45;&gt;Node24 -->
-<g id="edge6_Node000003_Node000024" class="edge">
-<title>Node3&#45;&gt;Node24</title>
-<g id="a_edge6_Node000003_Node000024"><a xlink:title=" ">
+<!-- Node3&#45;&gt;Node25 -->
+<g id="edge6_Node000003_Node000025" class="edge">
+<title>Node3&#45;&gt;Node25</title>
+<g id="a_edge6_Node000003_Node000025"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2088.37,-68.11C2127.91,-54.23 2181.62,-35.38 2212.42,-24.57"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2087.17,-64.82 2078.9,-71.44 2089.49,-71.43 2087.17,-64.82"/>
 </a>
 </g>
 </g>
-<!-- Node3&#45;&gt;Node45 -->
-<g id="edge7_Node000003_Node000045" class="edge">
-<title>Node3&#45;&gt;Node45</title>
-<g id="a_edge7_Node000003_Node000045"><a xlink:title=" ">
+<!-- Node3&#45;&gt;Node48 -->
+<g id="edge7_Node000003_Node000048" class="edge">
+<title>Node3&#45;&gt;Node48</title>
+<g id="a_edge7_Node000003_Node000048"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M1971.28,-71.19C1959.19,-69.1 1946.68,-67.24 1934.83,-66 1251.71,5.52 1073.44,-96.67 389.83,-30 377.19,-28.77 363.55,-26.7 351.13,-24.53"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="1970.85,-74.67 1981.31,-73 1972.09,-67.78 1970.85,-74.67"/>
 </a>
 </g>
 </g>
-<!-- Node3&#45;&gt;Node25 -->
-<g id="edge8_Node000003_Node000025" class="edge">
-<title>Node3&#45;&gt;Node25</title>
-<g id="a_edge8_Node000003_Node000025"><a xlink:title=" ">
+<!-- Node3&#45;&gt;Node26 -->
+<g id="edge8_Node000003_Node000026" class="edge">
+<title>Node3&#45;&gt;Node26</title>
+<g id="a_edge8_Node000003_Node000026"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M1971.28,-71.23C1959.19,-69.13 1946.67,-67.26 1934.83,-66 1339.31,-2.62 1184.62,-80.01 587.83,-30 572.61,-28.72 556.15,-26.67 541.11,-24.53"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="1970.85,-74.71 1981.31,-73.03 1972.09,-67.82 1970.85,-74.71"/>
 </a>
 </g>
 </g>
-<!-- Node51&#45;&gt;Node24 -->
-<g id="edge34_Node000051_Node000024" class="edge">
-<title>Node51&#45;&gt;Node24</title>
-<g id="a_edge34_Node000051_Node000024"><a xlink:title=" ">
+<!-- Node54&#45;&gt;Node25 -->
+<g id="edge34_Node000054_Node000025" class="edge">
+<title>Node54&#45;&gt;Node25</title>
+<g id="a_edge34_Node000054_Node000025"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M290.33,-199.44C282.49,-182.23 270.04,-159.17 253.83,-143 230.99,-120.23 207.02,-134.89 190.83,-107 181.68,-91.24 178.1,-79.04 190.83,-66 208.24,-48.15 1769.45,-23.14 2152.63,-17.27"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="287.2,-201.02 294.4,-208.8 293.62,-198.23 287.2,-201.02"/>
 </a>
 </g>
 </g>
-<!-- Node59 -->
-<g id="Node000059" class="node">
-<title>Node59</title>
-<g id="a_Node000059"><a xlink:href="../../dc/d64/RoutingCommands_8h_source.html" target="_top" xlink:title=" ">
+<!-- Node64 -->
+<g id="Node000064" class="node">
+<title>Node64</title>
+<g id="a_Node000064"><a xlink:href="../../dc/d64/RoutingCommands_8h_source.html" target="_top" xlink:title=" ">
 <polygon fill="#fff0f0" stroke="red" points="379.83,-101.5 199.83,-101.5 199.83,-71.5 379.83,-71.5 379.83,-101.5"/>
 <text text-anchor="start" x="207.83" y="-89.5" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
 <text text-anchor="middle" x="289.83" y="-78.5" font-family="Helvetica,sans-Serif" font-size="10.00">/Commands/RoutingCommands.h</text>
 </a>
 </g>
 </g>
-<!-- Node51&#45;&gt;Node59 -->
-<g id="edge10_Node000051_Node000059" class="edge">
-<title>Node51&#45;&gt;Node59</title>
-<g id="a_edge10_Node000051_Node000059"><a xlink:title=" ">
+<!-- Node54&#45;&gt;Node64 -->
+<g id="edge10_Node000054_Node000064" class="edge">
+<title>Node54&#45;&gt;Node64</title>
+<g id="a_edge10_Node000054_Node000064"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M298.49,-198.79C297.57,-182.92 296.26,-161.71 294.83,-143 293.75,-128.92 292.28,-112.85 291.21,-101.63"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="295,-199.05 299.06,-208.83 301.99,-198.65 295,-199.05"/>
 </a>
 </g>
 </g>
-<!-- Node51&#45;&gt;Node76 -->
-<g id="edge11_Node000051_Node000076" class="edge">
-<title>Node51&#45;&gt;Node76</title>
-<g id="a_edge11_Node000051_Node000076"><a xlink:title=" ">
+<!-- Node54&#45;&gt;Node81 -->
+<g id="edge11_Node000054_Node000081" class="edge">
+<title>Node54&#45;&gt;Node81</title>
+<g id="a_edge11_Node000054_Node000081"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M370.74,-218.21C547.72,-206.25 1007,-175.21 1179.78,-163.53"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="370.25,-214.73 360.51,-218.9 370.72,-221.72 370.25,-214.73"/>
 </a>
 </g>
 </g>
-<!-- Node65 -->
-<g id="Node000065" class="node">
-<title>Node65</title>
-<g id="a_Node000065"><a xlink:href="../../d4/d69/TrackUIComponent_8cpp_source.html" target="_top" xlink:title=" ">
+<!-- Node70 -->
+<g id="Node000070" class="node">
+<title>Node70</title>
+<g id="a_Node000070"><a xlink:href="../../d4/d69/TrackUIComponent_8cpp_source.html" target="_top" xlink:title=" ">
 <polygon fill="white" stroke="#666666" points="826.83,-24.5 596.83,-24.5 596.83,-5.5 826.83,-5.5 826.83,-24.5"/>
 <text text-anchor="middle" x="711.83" y="-12.5" font-family="Helvetica,sans-Serif" font-size="10.00">Source/Components/TrackUIComponent.cpp</text>
 </a>
 </g>
 </g>
-<!-- Node51&#45;&gt;Node65 -->
-<g id="edge33_Node000051_Node000065" class="edge">
-<title>Node51&#45;&gt;Node65</title>
-<g id="a_edge33_Node000051_Node000065"><a xlink:title=" ">
+<!-- Node54&#45;&gt;Node70 -->
+<g id="edge33_Node000054_Node000070" class="edge">
+<title>Node54&#45;&gt;Node70</title>
+<g id="a_edge33_Node000054_Node000070"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M281.79,-200.91C267.08,-183.79 245.16,-160.16 222.83,-143 196.64,-122.88 174.59,-135.45 157.83,-107 148.58,-91.3 145.49,-79.41 157.83,-66 190.21,-30.79 539.22,-34.66 586.83,-30 603.67,-28.35 621.77,-26.42 638.83,-24.52"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="279.27,-203.36 288.4,-208.74 284.62,-198.84 279.27,-203.36"/>
 </a>
 </g>
 </g>
-<!-- Node128 -->
-<g id="Node000128" class="node">
-<title>Node128</title>
-<g id="a_Node000128"><a xlink:href="../../d1/d7f/ChannelSlotMap_8cpp_source.html" target="_top" xlink:title=" ">
+<!-- Node142 -->
+<g id="Node000142" class="node">
+<title>Node142</title>
+<g id="a_Node000142"><a xlink:href="../../d1/d7f/ChannelSlotMap_8cpp_source.html" target="_top" xlink:title=" ">
 <polygon fill="white" stroke="#666666" points="2058.33,-173 1903.33,-173 1903.33,-143 2058.33,-143 2058.33,-173"/>
 <text text-anchor="start" x="1911.33" y="-161" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/src/ChannelSlot</text>
 <text text-anchor="middle" x="1980.83" y="-150" font-family="Helvetica,sans-Serif" font-size="10.00">Map.cpp</text>
 </a>
 </g>
 </g>
-<!-- Node51&#45;&gt;Node128 -->
-<g id="edge31_Node000051_Node000128" class="edge">
-<title>Node51&#45;&gt;Node128</title>
-<g id="a_edge31_Node000051_Node000128"><a xlink:title=" ">
+<!-- Node54&#45;&gt;Node142 -->
+<g id="edge31_Node000054_Node000142" class="edge">
+<title>Node54&#45;&gt;Node142</title>
+<g id="a_edge31_Node000054_Node000142"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M370.82,-222.09C588.3,-218.99 1264.55,-207.08 1823.83,-173 1849.64,-171.43 1877.79,-169.11 1903.03,-166.81"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="370.45,-218.59 360.5,-222.23 370.55,-225.59 370.45,-218.59"/>
 </a>
 </g>
 </g>
-<!-- Node51&#45;&gt;Node129 -->
-<g id="edge32_Node000051_Node000129" class="edge">
-<title>Node51&#45;&gt;Node129</title>
-<g id="a_edge32_Node000051_Node000129"><a xlink:title=" ">
+<!-- Node54&#45;&gt;Node143 -->
+<g id="edge32_Node000054_Node000143" class="edge">
+<title>Node54&#45;&gt;Node143</title>
+<g id="a_edge32_Node000054_Node000143"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M258.56,-204.78C235.7,-194.69 207.71,-182.34 186.58,-173.01"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="257.45,-208.12 268.01,-208.95 260.27,-201.71 257.45,-208.12"/>
 </a>
 </g>
 </g>
-<!-- Node76&#45;&gt;Node3 -->
-<g id="edge23_Node000076_Node000003" class="edge">
-<title>Node76&#45;&gt;Node3</title>
-<g id="a_edge23_Node000076_Node000003"><a xlink:title=" ">
+<!-- Node81&#45;&gt;Node3 -->
+<g id="edge23_Node000081_Node000003" class="edge">
+<title>Node81&#45;&gt;Node3</title>
+<g id="a_edge23_Node000081_Node000003"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M1323.98,-152.5C1496.81,-142.29 1904.78,-117.45 1966.83,-107 1975.13,-105.6 1983.86,-103.66 1992.26,-101.53"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="1323.71,-149.01 1313.93,-153.09 1324.12,-155.99 1323.71,-149.01"/>
 </a>
 </g>
 </g>
-<!-- Node76&#45;&gt;Node4 -->
-<g id="edge21_Node000076_Node000004" class="edge">
-<title>Node76&#45;&gt;Node4</title>
-<g id="a_edge21_Node000076_Node000004"><a xlink:title=" ">
+<!-- Node81&#45;&gt;Node4 -->
+<g id="edge21_Node000081_Node000004" class="edge">
+<title>Node81&#45;&gt;Node4</title>
+<g id="a_edge21_Node000081_Node000004"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M1169.64,-156.38C1083.04,-153.86 950.51,-143.88 918.83,-107 906.95,-93.18 912.12,-82.94 918.83,-66 924.45,-51.82 936.2,-39.32 946.54,-30.37"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="1169.61,-159.89 1179.7,-156.65 1169.79,-152.89 1169.61,-159.89"/>
 </a>
 </g>
 </g>
-<!-- Node76&#45;&gt;Node34 -->
-<g id="edge24_Node000076_Node000034" class="edge">
-<title>Node76&#45;&gt;Node34</title>
-<g id="a_edge24_Node000076_Node000034"><a xlink:title=" ">
+<!-- Node81&#45;&gt;Node35 -->
+<g id="edge24_Node000081_Node000035" class="edge">
+<title>Node81&#45;&gt;Node35</title>
+<g id="a_edge24_Node000081_Node000035"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M1169.51,-157.12C996.58,-156.57 583.44,-150.6 451.83,-107 420.12,-96.5 419.77,-78.59 388.83,-66 353.97,-51.82 255.57,-34.61 192.54,-24.52"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="1169.54,-160.62 1179.55,-157.14 1169.56,-153.62 1169.54,-160.62"/>
 </a>
 </g>
 </g>
-<!-- Node76&#45;&gt;Node24 -->
-<g id="edge30_Node000076_Node000024" class="edge">
-<title>Node76&#45;&gt;Node24</title>
-<g id="a_edge30_Node000076_Node000024"><a xlink:title=" ">
+<!-- Node81&#45;&gt;Node25 -->
+<g id="edge30_Node000081_Node000025" class="edge">
+<title>Node81&#45;&gt;Node25</title>
+<g id="a_edge30_Node000081_Node000025"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M1324.05,-152.13C1500.91,-140.88 1921.2,-113.55 1934.83,-107 1957.22,-96.24 1951.09,-78.03 1972.83,-66 2027.93,-35.52 2098.34,-23.28 2152.58,-18.52"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="1323.79,-148.64 1314.03,-152.77 1324.23,-155.63 1323.79,-148.64"/>
 </a>
 </g>
 </g>
-<!-- Node76&#45;&gt;Node59 -->
-<g id="edge22_Node000076_Node000059" class="edge">
-<title>Node76&#45;&gt;Node59</title>
-<g id="a_edge22_Node000076_Node000059"><a xlink:title=" ">
+<!-- Node81&#45;&gt;Node64 -->
+<g id="edge22_Node000081_Node000064" class="edge">
+<title>Node81&#45;&gt;Node64</title>
+<g id="a_edge22_Node000081_Node000064"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M1169.63,-155.75C1019.61,-152.59 678.46,-141.88 393.83,-107 382.16,-105.57 369.82,-103.64 357.89,-101.54"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="1169.59,-159.25 1179.66,-155.95 1169.74,-152.25 1169.59,-159.25"/>
 </a>
 </g>
 </g>
-<!-- Node77 -->
-<g id="Node000077" class="node">
-<title>Node77</title>
-<g id="a_Node000077"><a xlink:href="../../d0/d79/AddChannelCommand_8h_source.html" target="_top" xlink:title=" ">
+<!-- Node82 -->
+<g id="Node000082" class="node">
+<title>Node82</title>
+<g id="a_Node000082"><a xlink:href="../../d0/d79/AddChannelCommand_8h_source.html" target="_top" xlink:title=" ">
 <polygon fill="#fff0f0" stroke="red" points="1123.83,-101.5 927.83,-101.5 927.83,-71.5 1123.83,-71.5 1123.83,-101.5"/>
 <text text-anchor="start" x="935.83" y="-89.5" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
 <text text-anchor="middle" x="1025.83" y="-78.5" font-family="Helvetica,sans-Serif" font-size="10.00">/Commands/AddChannelCommand.h</text>
 </a>
 </g>
 </g>
-<!-- Node76&#45;&gt;Node77 -->
-<g id="edge12_Node000076_Node000077" class="edge">
-<title>Node76&#45;&gt;Node77</title>
-<g id="a_edge12_Node000076_Node000077"><a xlink:title=" ">
+<!-- Node81&#45;&gt;Node82 -->
+<g id="edge12_Node000081_Node000082" class="edge">
+<title>Node81&#45;&gt;Node82</title>
+<g id="a_edge12_Node000081_Node000082"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M1192.35,-139.87C1154.86,-128.08 1105.66,-112.61 1070.49,-101.54"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="1191.52,-143.27 1202.11,-142.94 1193.62,-136.6 1191.52,-143.27"/>
 </a>
 </g>
 </g>
-<!-- Node84 -->
-<g id="Node000084" class="node">
-<title>Node84</title>
-<g id="a_Node000084"><a xlink:href="../../d3/d39/ArrangePatternCommand_8h_source.html" target="_top" xlink:title=" ">
+<!-- Node89 -->
+<g id="Node000089" class="node">
+<title>Node89</title>
+<g id="a_Node000089"><a xlink:href="../../d3/d39/ArrangePatternCommand_8h_source.html" target="_top" xlink:title=" ">
 <polygon fill="#fff0f0" stroke="red" points="1351.83,-101.5 1141.83,-101.5 1141.83,-71.5 1351.83,-71.5 1351.83,-101.5"/>
 <text text-anchor="start" x="1149.83" y="-89.5" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
 <text text-anchor="middle" x="1246.83" y="-78.5" font-family="Helvetica,sans-Serif" font-size="10.00">/Commands/ArrangePatternCommand.h</text>
 </a>
 </g>
 </g>
-<!-- Node76&#45;&gt;Node84 -->
-<g id="edge13_Node000076_Node000084" class="edge">
-<title>Node76&#45;&gt;Node84</title>
-<g id="a_edge13_Node000076_Node000084"><a xlink:title=" ">
+<!-- Node81&#45;&gt;Node89 -->
+<g id="edge13_Node000081_Node000089" class="edge">
+<title>Node81&#45;&gt;Node89</title>
+<g id="a_edge13_Node000081_Node000089"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M1246.83,-132.75C1246.83,-122.31 1246.83,-110.49 1246.83,-101.54"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="1243.33,-132.94 1246.83,-142.94 1250.33,-132.94 1243.33,-132.94"/>
 </a>
 </g>
 </g>
-<!-- Node85 -->
-<g id="Node000085" class="node">
-<title>Node85</title>
-<g id="a_Node000085"><a xlink:href="../../da/d58/AssignUnitToFirstFreeMixerChannelCommand_8h_source.html" target="_top" xlink:title=" ">
+<!-- Node90 -->
+<g id="Node000090" class="node">
+<title>Node90</title>
+<g id="a_Node000090"><a xlink:href="../../da/d58/AssignUnitToFirstFreeMixerChannelCommand_8h_source.html" target="_top" xlink:title=" ">
 <polygon fill="#fff0f0" stroke="red" points="1533.83,-107 1369.83,-107 1369.83,-66 1533.83,-66 1533.83,-107"/>
 <text text-anchor="start" x="1377.83" y="-95" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
 <text text-anchor="start" x="1377.83" y="-84" font-family="Helvetica,sans-Serif" font-size="10.00">/Commands/AssignUnitToFirst</text>
@@ -870,19 +870,19 @@ var sectionId = 'dynsection-1';
 </a>
 </g>
 </g>
-<!-- Node76&#45;&gt;Node85 -->
-<g id="edge14_Node000076_Node000085" class="edge">
-<title>Node76&#45;&gt;Node85</title>
-<g id="a_edge14_Node000076_Node000085"><a xlink:title=" ">
+<!-- Node81&#45;&gt;Node90 -->
+<g id="edge14_Node000081_Node000090" class="edge">
+<title>Node81&#45;&gt;Node90</title>
+<g id="a_edge14_Node000081_Node000090"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M1297.91,-139.68C1327.12,-129.78 1363.84,-117.33 1394.09,-107.07"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="1296.66,-136.41 1288.31,-142.94 1298.91,-143.04 1296.66,-136.41"/>
 </a>
 </g>
 </g>
-<!-- Node88 -->
-<g id="Node000088" class="node">
-<title>Node88</title>
-<g id="a_Node000088"><a xlink:href="../../d3/dc1/EditAutomationCurvesCommand_8h_source.html" target="_top" xlink:title=" ">
+<!-- Node94 -->
+<g id="Node000094" class="node">
+<title>Node94</title>
+<g id="a_Node000094"><a xlink:href="../../d3/dc1/EditAutomationCurvesCommand_8h_source.html" target="_top" xlink:title=" ">
 <polygon fill="#fff0f0" stroke="red" points="871.83,-107 683.83,-107 683.83,-66 871.83,-66 871.83,-107"/>
 <text text-anchor="start" x="691.83" y="-95" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
 <text text-anchor="start" x="691.83" y="-84" font-family="Helvetica,sans-Serif" font-size="10.00">/Commands/EditAutomationCurves</text>
@@ -890,47 +890,47 @@ var sectionId = 'dynsection-1';
 </a>
 </g>
 </g>
-<!-- Node76&#45;&gt;Node88 -->
-<g id="edge15_Node000076_Node000088" class="edge">
-<title>Node76&#45;&gt;Node88</title>
-<g id="a_edge15_Node000076_Node000088"><a xlink:title=" ">
+<!-- Node81&#45;&gt;Node94 -->
+<g id="edge15_Node000081_Node000094" class="edge">
+<title>Node81&#45;&gt;Node94</title>
+<g id="a_edge15_Node000081_Node000094"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M1169.45,-147.22C1096.26,-137.74 983.4,-122.56 885.83,-107 881.31,-106.28 876.7,-105.52 872.03,-104.74"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="1169.14,-150.7 1179.51,-148.51 1170.04,-143.76 1169.14,-150.7"/>
 </a>
 </g>
 </g>
-<!-- Node76&#45;&gt;Node65 -->
-<g id="edge28_Node000076_Node000065" class="edge">
-<title>Node76&#45;&gt;Node65</title>
-<g id="a_edge28_Node000076_Node000065"><a xlink:title=" ">
+<!-- Node81&#45;&gt;Node70 -->
+<g id="edge28_Node000081_Node000070" class="edge">
+<title>Node81&#45;&gt;Node70</title>
+<g id="a_edge28_Node000081_Node000070"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M1169.5,-154.88C976.76,-149.23 488.7,-132.45 464.83,-107 452.36,-93.71 453.29,-80.11 464.83,-66 476.5,-51.73 579.81,-34.59 649.08,-24.53"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="1169.46,-158.38 1179.56,-155.17 1169.66,-151.38 1169.46,-158.38"/>
 </a>
 </g>
 </g>
-<!-- Node96 -->
-<g id="Node000096" class="node">
-<title>Node96</title>
-<g id="a_Node000096"><a xlink:href="../../dc/df2/EffectCommands_8h_source.html" target="_top" xlink:title=" ">
+<!-- Node102 -->
+<g id="Node000102" class="node">
+<title>Node102</title>
+<g id="a_Node000102"><a xlink:href="../../dc/df2/EffectCommands_8h_source.html" target="_top" xlink:title=" ">
 <polygon fill="#fff0f0" stroke="red" points="1721.83,-101.5 1551.83,-101.5 1551.83,-71.5 1721.83,-71.5 1721.83,-101.5"/>
 <text text-anchor="start" x="1559.83" y="-89.5" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
 <text text-anchor="middle" x="1636.83" y="-78.5" font-family="Helvetica,sans-Serif" font-size="10.00">/Commands/EffectCommands.h</text>
 </a>
 </g>
 </g>
-<!-- Node76&#45;&gt;Node96 -->
-<g id="edge17_Node000076_Node000096" class="edge">
-<title>Node76&#45;&gt;Node96</title>
-<g id="a_edge17_Node000076_Node000096"><a xlink:title=" ">
+<!-- Node81&#45;&gt;Node102 -->
+<g id="edge17_Node000081_Node000102" class="edge">
+<title>Node81&#45;&gt;Node102</title>
+<g id="a_edge17_Node000081_Node000102"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M1324.09,-144.76C1383.9,-135.08 1468.75,-120.94 1542.83,-107 1551.92,-105.29 1561.49,-103.4 1570.9,-101.5"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="1323.28,-141.34 1313.96,-146.39 1324.39,-148.25 1323.28,-141.34"/>
 </a>
 </g>
 </g>
-<!-- Node98 -->
-<g id="Node000098" class="node">
-<title>Node98</title>
-<g id="a_Node000098"><a xlink:href="../../d1/d79/MakeAudioClipUniqueCommand_8h_source.html" target="_top" xlink:title=" ">
+<!-- Node104 -->
+<g id="Node000104" class="node">
+<title>Node104</title>
+<g id="a_Node000104"><a xlink:href="../../d1/d79/MakeAudioClipUniqueCommand_8h_source.html" target="_top" xlink:title=" ">
 <polygon fill="#fff0f0" stroke="red" points="1925.33,-107 1740.33,-107 1740.33,-66 1925.33,-66 1925.33,-107"/>
 <text text-anchor="start" x="1748.33" y="-95" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
 <text text-anchor="start" x="1748.33" y="-84" font-family="Helvetica,sans-Serif" font-size="10.00">/Commands/MakeAudioClipUnique</text>
@@ -938,19 +938,19 @@ var sectionId = 'dynsection-1';
 </a>
 </g>
 </g>
-<!-- Node76&#45;&gt;Node98 -->
-<g id="edge18_Node000076_Node000098" class="edge">
-<title>Node76&#45;&gt;Node98</title>
-<g id="a_edge18_Node000076_Node000098"><a xlink:title=" ">
+<!-- Node81&#45;&gt;Node104 -->
+<g id="edge18_Node000081_Node000104" class="edge">
+<title>Node81&#45;&gt;Node104</title>
+<g id="a_edge18_Node000081_Node000104"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M1324.17,-151.07C1419.93,-143.26 1587.9,-128.01 1730.83,-107 1733.95,-106.54 1737.12,-106.05 1740.32,-105.54"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="1323.68,-147.6 1314,-151.9 1324.25,-154.58 1323.68,-147.6"/>
 </a>
 </g>
 </g>
-<!-- Node100 -->
-<g id="Node000100" class="node">
-<title>Node100</title>
-<g id="a_Node000100"><a xlink:href="../../d4/dae/MakeClipPatternUniqueCommand_8h_source.html" target="_top" xlink:title=" ">
+<!-- Node106 -->
+<g id="Node000106" class="node">
+<title>Node106</title>
+<g id="a_Node000106"><a xlink:href="../../d4/dae/MakeClipPatternUniqueCommand_8h_source.html" target="_top" xlink:title=" ">
 <polygon fill="white" stroke="#666666" points="665.83,-107 473.83,-107 473.83,-66 665.83,-66 665.83,-107"/>
 <text text-anchor="start" x="481.83" y="-95" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/include</text>
 <text text-anchor="start" x="481.83" y="-84" font-family="Helvetica,sans-Serif" font-size="10.00">/Commands/MakeClipPatternUnique</text>
@@ -958,414 +958,414 @@ var sectionId = 'dynsection-1';
 </a>
 </g>
 </g>
-<!-- Node76&#45;&gt;Node100 -->
-<g id="edge19_Node000076_Node000100" class="edge">
-<title>Node76&#45;&gt;Node100</title>
-<g id="a_edge19_Node000076_Node000100"><a xlink:title=" ">
+<!-- Node81&#45;&gt;Node106 -->
+<g id="edge19_Node000081_Node000106" class="edge">
+<title>Node81&#45;&gt;Node106</title>
+<g id="a_edge19_Node000081_Node000106"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M1169.65,-152.62C1059.51,-145.84 851.07,-131.01 674.83,-107 671.89,-106.6 668.91,-106.17 665.9,-105.73"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="1169.47,-156.12 1179.67,-153.24 1169.9,-149.13 1169.47,-156.12"/>
 </a>
 </g>
 </g>
-<!-- Node54 -->
-<g id="Node000054" class="node">
-<title>Node54</title>
-<g id="a_Node000054"><a xlink:href="../../dd/dd1/MixerViewModel_8h_source.html" target="_top" xlink:title=" ">
+<!-- Node57 -->
+<g id="Node000057" class="node">
+<title>Node57</title>
+<g id="a_Node000057"><a xlink:href="../../dd/dd1/MixerViewModel_8h_source.html" target="_top" xlink:title=" ">
 <polygon fill="#fff0f0" stroke="red" points="2320.83,-101.5 2152.83,-101.5 2152.83,-71.5 2320.83,-71.5 2320.83,-101.5"/>
 <text text-anchor="start" x="2160.83" y="-89.5" font-family="Helvetica,sans-Serif" font-size="10.00">Source/Components/MixerView</text>
 <text text-anchor="middle" x="2236.83" y="-78.5" font-family="Helvetica,sans-Serif" font-size="10.00">Model.h</text>
 </a>
 </g>
 </g>
-<!-- Node76&#45;&gt;Node54 -->
-<g id="edge25_Node000076_Node000054" class="edge">
-<title>Node76&#45;&gt;Node54</title>
-<g id="a_edge25_Node000076_Node000054"><a xlink:title=" ">
+<!-- Node81&#45;&gt;Node57 -->
+<g id="edge25_Node000081_Node000057" class="edge">
+<title>Node81&#45;&gt;Node57</title>
+<g id="a_edge25_Node000081_Node000057"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M1324.18,-154.82C1474.91,-150.06 1818.4,-136.7 2105.83,-107 2121.04,-105.43 2137.19,-103.36 2152.76,-101.15"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="1323.98,-151.33 1314.1,-155.14 1324.2,-158.32 1323.98,-151.33"/>
 </a>
 </g>
 </g>
-<!-- Node76&#45;&gt;Node42 -->
-<g id="edge29_Node000076_Node000042" class="edge">
-<title>Node76&#45;&gt;Node42</title>
-<g id="a_edge29_Node000076_Node000042"><a xlink:title=" ">
+<!-- Node81&#45;&gt;Node45 -->
+<g id="edge29_Node000081_Node000045" class="edge">
+<title>Node81&#45;&gt;Node45</title>
+<g id="a_edge29_Node000081_Node000045"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M1323.91,-154.01C1554.77,-144.98 2230.8,-117.94 2329.83,-107 2353.07,-104.43 2378.8,-100.01 2399.63,-96.03"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="1323.77,-150.52 1313.91,-154.4 1324.04,-157.51 1323.77,-150.52"/>
 </a>
 </g>
 </g>
-<!-- Node88&#45;&gt;Node65 -->
-<g id="edge16_Node000088_Node000065" class="edge">
-<title>Node88&#45;&gt;Node65</title>
-<g id="a_edge16_Node000088_Node000065"><a xlink:title=" ">
+<!-- Node94&#45;&gt;Node70 -->
+<g id="edge16_Node000094_Node000070" class="edge">
+<title>Node94&#45;&gt;Node70</title>
+<g id="a_edge16_Node000094_Node000070"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M751.91,-58.2C740.62,-46.32 728.19,-33.22 720.2,-24.82"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="749.67,-60.93 759.09,-65.77 754.74,-56.11 749.67,-60.93"/>
 </a>
 </g>
 </g>
-<!-- Node100&#45;&gt;Node65 -->
-<g id="edge20_Node000100_Node000065" class="edge">
-<title>Node100&#45;&gt;Node65</title>
-<g id="a_edge20_Node000100_Node000065"><a xlink:title=" ">
+<!-- Node106&#45;&gt;Node70 -->
+<g id="edge20_Node000106_Node000070" class="edge">
+<title>Node106&#45;&gt;Node70</title>
+<g id="a_edge20_Node000106_Node000070"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M618.83,-61.52C645.05,-48.68 675.72,-33.67 694.45,-24.5"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="617.21,-58.42 609.76,-65.96 620.28,-64.7 617.21,-58.42"/>
 </a>
 </g>
 </g>
-<!-- Node54&#45;&gt;Node24 -->
-<g id="edge27_Node000054_Node000024" class="edge">
-<title>Node54&#45;&gt;Node24</title>
-<g id="a_edge27_Node000054_Node000024"><a xlink:title=" ">
+<!-- Node57&#45;&gt;Node25 -->
+<g id="edge27_Node000057_Node000025" class="edge">
+<title>Node57&#45;&gt;Node25</title>
+<g id="a_edge27_Node000057_Node000025"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2236.83,-61.06C2236.83,-48.45 2236.83,-33.85 2236.83,-24.77"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2233.33,-61.44 2236.83,-71.44 2240.33,-61.44 2233.33,-61.44"/>
 </a>
 </g>
 </g>
-<!-- Node56 -->
-<g id="Node000056" class="node">
-<title>Node56</title>
-<g id="a_Node000056"><a xlink:href="../../de/df6/UIMixerStrip_8cpp_source.html" target="_top" xlink:title=" ">
+<!-- Node59 -->
+<g id="Node000059" class="node">
+<title>Node59</title>
+<g id="a_Node000059"><a xlink:href="../../de/df6/UIMixerStrip_8cpp_source.html" target="_top" xlink:title=" ">
 <polygon fill="white" stroke="#666666" points="2680.83,-30 2538.83,-30 2538.83,0 2680.83,0 2680.83,-30"/>
 <text text-anchor="start" x="2546.83" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">AestraUI/Widgets/UIMixer</text>
 <text text-anchor="middle" x="2609.83" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Strip.cpp</text>
 </a>
 </g>
 </g>
-<!-- Node54&#45;&gt;Node56 -->
-<g id="edge26_Node000054_Node000056" class="edge">
-<title>Node54&#45;&gt;Node56</title>
-<g id="a_edge26_Node000054_Node000056"><a xlink:title=" ">
+<!-- Node57&#45;&gt;Node59 -->
+<g id="edge26_Node000057_Node000059" class="edge">
+<title>Node57&#45;&gt;Node59</title>
+<g id="a_edge26_Node000057_Node000059"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2312.46,-69.44C2318.33,-68.26 2324.17,-67.1 2329.83,-66 2400.72,-52.24 2482,-37.88 2538.66,-28.1"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2311.67,-66.03 2302.57,-71.46 2313.07,-72.89 2311.67,-66.03"/>
 </a>
 </g>
 </g>
-<!-- Node130&#45;&gt;Node3 -->
-<g id="edge40_Node000130_Node000003" class="edge">
-<title>Node130&#45;&gt;Node3</title>
-<g id="a_edge40_Node000130_Node000003"><a xlink:title=" ">
+<!-- Node144&#45;&gt;Node3 -->
+<g id="edge40_Node000144_Node000003" class="edge">
+<title>Node144&#45;&gt;Node3</title>
+<g id="a_edge40_Node000144_Node000003"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2064.17,-199.32C2068.66,-183.28 2072.42,-161.68 2067.83,-143 2064.15,-128.01 2055.63,-112.57 2048.77,-101.8"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2060.8,-198.39 2061.2,-208.97 2067.49,-200.45 2060.8,-198.39"/>
 </a>
 </g>
 </g>
-<!-- Node130&#45;&gt;Node24 -->
-<g id="edge46_Node000130_Node000024" class="edge">
-<title>Node130&#45;&gt;Node24</title>
-<g id="a_edge46_Node000130_Node000024"><a xlink:title=" ">
+<!-- Node144&#45;&gt;Node25 -->
+<g id="edge46_Node000144_Node000025" class="edge">
+<title>Node144&#45;&gt;Node25</title>
+<g id="a_edge46_Node000144_Node000025"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2132.94,-207.61C2269.23,-180.04 2539.67,-123.58 2552.83,-107 2564.16,-92.73 2564.66,-79.86 2552.83,-66 2523.56,-31.74 2404.46,-20.82 2321.15,-17.42"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2132.07,-204.21 2122.96,-209.62 2133.46,-211.07 2132.07,-204.21"/>
 </a>
 </g>
 </g>
-<!-- Node130&#45;&gt;Node76 -->
-<g id="edge41_Node000130_Node000076" class="edge">
-<title>Node130&#45;&gt;Node76</title>
-<g id="a_edge41_Node000130_Node000076"><a xlink:title=" ">
+<!-- Node144&#45;&gt;Node81 -->
+<g id="edge41_Node000144_Node000081" class="edge">
+<title>Node144&#45;&gt;Node81</title>
+<g id="a_edge41_Node000144_Node000081"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M1978.48,-216.88C1820.47,-204.38 1463.01,-176.1 1314.01,-164.31"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="1978.35,-220.38 1988.59,-217.68 1978.9,-213.4 1978.35,-220.38"/>
 </a>
 </g>
 </g>
-<!-- Node130&#45;&gt;Node65 -->
-<g id="edge45_Node000130_Node000065" class="edge">
-<title>Node130&#45;&gt;Node65</title>
-<g id="a_edge45_Node000130_Node000065"><a xlink:title=" ">
+<!-- Node144&#45;&gt;Node70 -->
+<g id="edge45_Node000144_Node000070" class="edge">
+<title>Node144&#45;&gt;Node70</title>
+<g id="a_edge45_Node000144_Node000070"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2074.81,-200.89C2101.29,-167.32 2142.2,-103.46 2105.83,-66 2058.63,-17.39 954.48,-33.7 886.83,-30 861.11,-28.59 833.31,-26.59 807.59,-24.54"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2072.02,-198.76 2068.44,-208.73 2077.46,-203.17 2072.02,-198.76"/>
 </a>
 </g>
 </g>
-<!-- Node130&#45;&gt;Node54 -->
-<g id="edge44_Node000130_Node000054" class="edge">
-<title>Node130&#45;&gt;Node54</title>
-<g id="a_edge44_Node000130_Node000054"><a xlink:title=" ">
+<!-- Node144&#45;&gt;Node57 -->
+<g id="edge44_Node000144_Node000057" class="edge">
+<title>Node144&#45;&gt;Node57</title>
+<g id="a_edge44_Node000144_Node000057"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2091.04,-203.63C2106.14,-194.85 2123.74,-183.99 2138.83,-173 2170.21,-150.13 2203.66,-119.39 2222.24,-101.69"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2088.94,-200.79 2082,-208.8 2092.42,-206.87 2088.94,-200.79"/>
 </a>
 </g>
 </g>
-<!-- Node130&#45;&gt;Node56 -->
-<g id="edge43_Node000130_Node000056" class="edge">
-<title>Node130&#45;&gt;Node56</title>
-<g id="a_edge43_Node000130_Node000056"><a xlink:title=" ">
+<!-- Node144&#45;&gt;Node59 -->
+<g id="edge43_Node000144_Node000059" class="edge">
+<title>Node144&#45;&gt;Node59</title>
+<g id="a_edge43_Node000144_Node000059"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2132.92,-209.08C2333.16,-178.91 2427.06,-241.18 2570.83,-107 2593.32,-86.01 2603.43,-49.88 2607.47,-30.05"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2132.33,-205.63 2123,-210.64 2133.42,-212.55 2132.33,-205.63"/>
 </a>
 </g>
 </g>
-<!-- Node130&#45;&gt;Node128 -->
-<g id="edge42_Node000130_Node000128" class="edge">
-<title>Node130&#45;&gt;Node128</title>
-<g id="a_edge42_Node000130_Node000128"><a xlink:title=" ">
+<!-- Node144&#45;&gt;Node142 -->
+<g id="edge42_Node000144_Node000142" class="edge">
+<title>Node144&#45;&gt;Node142</title>
+<g id="a_edge42_Node000144_Node000142"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2031.46,-202.2C2020.32,-192.7 2007.42,-181.69 1997.43,-173.16"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2029.31,-204.97 2039.18,-208.8 2033.85,-199.64 2029.31,-204.97"/>
 </a>
 </g>
 </g>
-<!-- Node132 -->
-<g id="Node000132" class="node">
-<title>Node132</title>
-<g id="a_Node000132"><a xlink:href="../../da/d46/RTGuard_8cpp_source.html" target="_top" xlink:title=" ">
+<!-- Node146 -->
+<g id="Node000146" class="node">
+<title>Node146</title>
+<g id="a_Node000146"><a xlink:href="../../da/d46/RTGuard_8cpp_source.html" target="_top" xlink:title=" ">
 <polygon fill="white" stroke="#666666" points="1863.33,-239 1744.33,-239 1744.33,-209 1863.33,-209 1863.33,-239"/>
 <text text-anchor="start" x="1752.33" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/src/Core</text>
 <text text-anchor="middle" x="1803.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/RTGuard.cpp</text>
 </a>
 </g>
 </g>
-<!-- Node131&#45;&gt;Node132 -->
-<g id="edge48_Node000131_Node000132" class="edge">
-<title>Node131&#45;&gt;Node132</title>
-<g id="a_edge48_Node000131_Node000132"><a xlink:title=" ">
+<!-- Node145&#45;&gt;Node146 -->
+<g id="edge48_Node000145_Node000146" class="edge">
+<title>Node145&#45;&gt;Node146</title>
+<g id="a_edge48_Node000145_Node000146"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M1864.67,-268.75C1851.29,-259.13 1835.61,-247.86 1823.53,-239.16"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="1862.91,-271.8 1873.08,-274.8 1867,-266.12 1862.91,-271.8"/>
 </a>
 </g>
 </g>
-<!-- Node133&#45;&gt;Node3 -->
-<g id="edge50_Node000133_Node000003" class="edge">
-<title>Node133&#45;&gt;Node3</title>
-<g id="a_edge50_Node000133_Node000003"><a xlink:title=" ">
+<!-- Node147&#45;&gt;Node3 -->
+<g id="edge50_Node000147_Node000003" class="edge">
+<title>Node147&#45;&gt;Node3</title>
+<g id="a_edge50_Node000147_Node000003"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2238.79,-288.51C2169.75,-285.67 2063.91,-275.05 1979.83,-239 1935.87,-220.15 1915.86,-215.96 1894.83,-173 1888.97,-161.02 1887.28,-153.99 1894.83,-143 1900.86,-134.22 1954.94,-114.94 1995.07,-101.58"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2239,-292.02 2249.12,-288.88 2239.25,-285.02 2239,-292.02"/>
 </a>
 </g>
 </g>
-<!-- Node134 -->
-<g id="Node000134" class="node">
-<title>Node134</title>
-<g id="a_Node000134"><a xlink:href="../../d9/d41/AudioAnalysis_8cpp_source.html" target="_top" xlink:title=" ">
+<!-- Node148 -->
+<g id="Node000148" class="node">
+<title>Node148</title>
+<g id="a_Node000148"><a xlink:href="../../d9/d41/AudioAnalysis_8cpp_source.html" target="_top" xlink:title=" ">
 <polygon fill="white" stroke="#666666" points="2278.33,-239 2141.33,-239 2141.33,-209 2278.33,-209 2278.33,-239"/>
 <text text-anchor="start" x="2149.33" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/src/Analysis</text>
 <text text-anchor="middle" x="2209.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/AudioAnalysis.cpp</text>
 </a>
 </g>
 </g>
-<!-- Node133&#45;&gt;Node134 -->
-<g id="edge51_Node000133_Node000134" class="edge">
-<title>Node133&#45;&gt;Node134</title>
-<g id="a_edge51_Node000133_Node000134"><a xlink:title=" ">
+<!-- Node147&#45;&gt;Node148 -->
+<g id="edge51_Node000147_Node000148" class="edge">
+<title>Node147&#45;&gt;Node148</title>
+<g id="a_edge51_Node000147_Node000148"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2279.74,-269.3C2264.37,-259.56 2246.16,-248.02 2232.18,-239.16"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2278.09,-272.4 2288.41,-274.8 2281.84,-266.49 2278.09,-272.4"/>
 </a>
 </g>
 </g>
-<!-- Node135 -->
-<g id="Node000135" class="node">
-<title>Node135</title>
-<g id="a_Node000135"><a xlink:href="../../d6/d30/TruePeakMeter_8cpp_source.html" target="_top" xlink:title=" ">
+<!-- Node149 -->
+<g id="Node000149" class="node">
+<title>Node149</title>
+<g id="a_Node000149"><a xlink:href="../../d6/d30/TruePeakMeter_8cpp_source.html" target="_top" xlink:title=" ">
 <polygon fill="white" stroke="#666666" points="2412.83,-239 2296.83,-239 2296.83,-209 2412.83,-209 2412.83,-239"/>
 <text text-anchor="start" x="2304.83" y="-227" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/src/DSP</text>
 <text text-anchor="middle" x="2354.83" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">/TruePeakMeter.cpp</text>
 </a>
 </g>
 </g>
-<!-- Node133&#45;&gt;Node135 -->
-<g id="edge52_Node000133_Node000135" class="edge">
-<title>Node133&#45;&gt;Node135</title>
-<g id="a_edge52_Node000133_Node000135"><a xlink:title=" ">
+<!-- Node147&#45;&gt;Node149 -->
+<g id="edge52_Node000147_Node000149" class="edge">
+<title>Node147&#45;&gt;Node149</title>
+<g id="a_edge52_Node000147_Node000149"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2326.28,-266.53C2332.54,-257.43 2339.57,-247.19 2345.09,-239.16"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2323.38,-264.57 2320.59,-274.8 2329.14,-268.54 2323.38,-264.57"/>
 </a>
 </g>
 </g>
-<!-- Node136&#45;&gt;Node3 -->
-<g id="edge54_Node000136_Node000003" class="edge">
-<title>Node136&#45;&gt;Node3</title>
-<g id="a_edge54_Node000136_Node000003"><a xlink:title=" ">
+<!-- Node150&#45;&gt;Node3 -->
+<g id="edge54_Node000150_Node000003" class="edge">
+<title>Node150&#45;&gt;Node3</title>
+<g id="a_edge54_Node000150_Node000003"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2706.62,-153.97C2591.16,-148.26 2347.87,-133.97 2143.83,-107 2128.39,-104.96 2111.78,-102.16 2096.42,-99.32"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2706.56,-157.48 2716.72,-154.47 2706.9,-150.48 2706.56,-157.48"/>
 </a>
 </g>
 </g>
-<!-- Node136&#45;&gt;Node18 -->
-<g id="edge55_Node000136_Node000018" class="edge">
-<title>Node136&#45;&gt;Node18</title>
-<g id="a_edge55_Node000136_Node000018"><a xlink:title=" ">
+<!-- Node150&#45;&gt;Node18 -->
+<g id="edge55_Node000150_Node000018" class="edge">
+<title>Node150&#45;&gt;Node18</title>
+<g id="a_edge55_Node000150_Node000018"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2841.11,-156.66C2903.06,-153.84 2995.98,-143.15 3067.83,-107 3104.76,-88.42 3136.96,-50.62 3152.65,-30.07"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2840.91,-153.16 2831.06,-157.06 2841.19,-160.16 2840.91,-153.16"/>
 </a>
 </g>
 </g>
-<!-- Node137 -->
-<g id="Node000137" class="node">
-<title>Node137</title>
-<g id="a_Node000137"><a xlink:href="../../d0/d70/UnitManager_8cpp_source.html" target="_top" xlink:title=" ">
+<!-- Node151 -->
+<g id="Node000151" class="node">
+<title>Node151</title>
+<g id="a_Node000151"><a xlink:href="../../d0/d70/UnitManager_8cpp_source.html" target="_top" xlink:title=" ">
 <polygon fill="white" stroke="#666666" points="2913.33,-101.5 2782.33,-101.5 2782.33,-71.5 2913.33,-71.5 2913.33,-101.5"/>
 <text text-anchor="start" x="2790.33" y="-89.5" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/src/Models</text>
 <text text-anchor="middle" x="2847.83" y="-78.5" font-family="Helvetica,sans-Serif" font-size="10.00">/UnitManager.cpp</text>
 </a>
 </g>
 </g>
-<!-- Node136&#45;&gt;Node137 -->
-<g id="edge56_Node000136_Node000137" class="edge">
-<title>Node136&#45;&gt;Node137</title>
-<g id="a_edge56_Node000136_Node000137"><a xlink:title=" ">
+<!-- Node150&#45;&gt;Node151 -->
+<g id="edge56_Node000150_Node000151" class="edge">
+<title>Node150&#45;&gt;Node151</title>
+<g id="a_edge56_Node000150_Node000151"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2796.2,-135.99C2808.08,-124.84 2822.35,-111.43 2832.88,-101.54"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2793.7,-133.54 2788.8,-142.94 2798.49,-138.64 2793.7,-133.54"/>
 </a>
 </g>
 </g>
-<!-- Node138 -->
-<g id="Node000138" class="node">
-<title>Node138</title>
-<g id="a_Node000138"><a xlink:href="../../d2/d29/KeepLengthCache_8cpp_source.html" target="_top" xlink:title=" ">
+<!-- Node152 -->
+<g id="Node000152" class="node">
+<title>Node152</title>
+<g id="a_Node000152"><a xlink:href="../../d2/d29/KeepLengthCache_8cpp_source.html" target="_top" xlink:title=" ">
 <polygon fill="white" stroke="#666666" points="3058.33,-101.5 2931.33,-101.5 2931.33,-71.5 3058.33,-71.5 3058.33,-101.5"/>
 <text text-anchor="start" x="2939.33" y="-89.5" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/src/Plugin</text>
 <text text-anchor="middle" x="2994.83" y="-78.5" font-family="Helvetica,sans-Serif" font-size="10.00">/KeepLengthCache.cpp</text>
 </a>
 </g>
 </g>
-<!-- Node136&#45;&gt;Node138 -->
-<g id="edge57_Node000136_Node000138" class="edge">
-<title>Node136&#45;&gt;Node138</title>
-<g id="a_edge57_Node000136_Node000138"><a xlink:title=" ">
+<!-- Node150&#45;&gt;Node152 -->
+<g id="edge57_Node000150_Node000152" class="edge">
+<title>Node150&#45;&gt;Node152</title>
+<g id="a_edge57_Node000150_Node000152"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2828.3,-139.87C2865.8,-128.08 2914.99,-112.61 2950.17,-101.54"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2827.04,-136.6 2818.55,-142.94 2829.14,-143.27 2827.04,-136.6"/>
 </a>
 </g>
 </g>
-<!-- Node139 -->
-<g id="Node000139" class="node">
-<title>Node139</title>
-<g id="a_Node000139"><a xlink:href="../../dc/d93/SamplerPlugin_8cpp_source.html" target="_top" xlink:title=" ">
+<!-- Node153 -->
+<g id="Node000153" class="node">
+<title>Node153</title>
+<g id="a_Node000153"><a xlink:href="../../dc/d93/SamplerPlugin_8cpp_source.html" target="_top" xlink:title=" ">
 <polygon fill="white" stroke="#666666" points="2763.83,-101.5 2637.83,-101.5 2637.83,-71.5 2763.83,-71.5 2763.83,-101.5"/>
 <text text-anchor="start" x="2645.83" y="-89.5" font-family="Helvetica,sans-Serif" font-size="10.00">AestraAudio/src/Plugin</text>
 <text text-anchor="middle" x="2700.83" y="-78.5" font-family="Helvetica,sans-Serif" font-size="10.00">/SamplerPlugin.cpp</text>
 </a>
 </g>
 </g>
-<!-- Node136&#45;&gt;Node139 -->
-<g id="edge58_Node000136_Node000139" class="edge">
-<title>Node136&#45;&gt;Node139</title>
-<g id="a_edge58_Node000136_Node000139"><a xlink:title=" ">
+<!-- Node150&#45;&gt;Node153 -->
+<g id="edge58_Node000150_Node000153" class="edge">
+<title>Node150&#45;&gt;Node153</title>
+<g id="a_edge58_Node000150_Node000153"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2751.76,-135.99C2740.04,-124.84 2725.96,-111.43 2715.58,-101.54"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2749.4,-138.58 2759.06,-142.94 2754.23,-133.51 2749.4,-138.58"/>
 </a>
 </g>
 </g>
-<!-- Node140&#45;&gt;Node3 -->
-<g id="edge61_Node000140_Node000003" class="edge">
-<title>Node140&#45;&gt;Node3</title>
-<g id="a_edge61_Node000140_Node000003"><a xlink:title=" ">
+<!-- Node154&#45;&gt;Node3 -->
+<g id="edge61_Node000154_Node000003" class="edge">
+<title>Node154&#45;&gt;Node3</title>
+<g id="a_edge61_Node000154_Node000003"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M1812.56,-140.96C1858.01,-131.65 1915.74,-119.34 1966.83,-107 1973.75,-105.33 1981.02,-103.47 1988.18,-101.59"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="1811.85,-137.54 1802.76,-142.96 1813.25,-144.39 1811.85,-137.54"/>
 </a>
 </g>
 </g>
-<!-- Node142&#45;&gt;Node56 -->
-<g id="edge63_Node000142_Node000056" class="edge">
-<title>Node142&#45;&gt;Node56</title>
-<g id="a_edge63_Node000142_Node000056"><a xlink:title=" ">
+<!-- Node156&#45;&gt;Node59 -->
+<g id="edge63_Node000156_Node000059" class="edge">
+<title>Node156&#45;&gt;Node59</title>
+<g id="a_edge63_Node000156_Node000059"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2909.08,-209.12C2974.07,-201.08 3106.82,-210.38 3138.83,-173 3169.76,-136.88 3170.83,-101.17 3138.83,-66 3108.6,-32.78 2818.22,-21.17 2680.99,-17.51"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2908.26,-205.7 2898.88,-210.63 2909.29,-212.62 2908.26,-205.7"/>
 </a>
 </g>
 </g>
-<!-- Node145&#45;&gt;Node24 -->
-<g id="edge65_Node000145_Node000024" class="edge">
-<title>Node145&#45;&gt;Node24</title>
-<g id="a_edge65_Node000145_Node000024"><a xlink:title=" ">
+<!-- Node159&#45;&gt;Node25 -->
+<g id="edge65_Node000159_Node000025" class="edge">
+<title>Node159&#45;&gt;Node25</title>
+<g id="a_edge65_Node000159_Node000025"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2769.2,-209.07C2849.09,-199.51 3015.64,-211.49 3066.83,-173 3106.12,-143.46 3128.56,-101.76 3094.83,-66 3088.23,-59.01 2536.01,-30.86 2321.09,-20.16"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2768.41,-205.65 2758.99,-210.5 2769.38,-212.58 2768.41,-205.65"/>
 </a>
 </g>
 </g>
-<!-- Node155&#45;&gt;Node24 -->
-<g id="edge70_Node000155_Node000024" class="edge">
-<title>Node155&#45;&gt;Node24</title>
-<g id="a_edge70_Node000155_Node000024"><a xlink:title=" ">
+<!-- Node169&#45;&gt;Node25 -->
+<g id="edge70_Node000169_Node000025" class="edge">
+<title>Node169&#45;&gt;Node25</title>
+<g id="a_edge70_Node000169_Node000025"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M2631,-208.89C2842.61,-171.79 3206.02,-212.76 3067.83,-66 3061.47,-59.25 2531.13,-31.18 2321.11,-20.32"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="2630.24,-205.47 2621.04,-210.72 2631.51,-212.36 2630.24,-205.47"/>
 </a>
 </g>
 </g>
-<!-- Node165&#45;&gt;Node142 -->
-<g id="edge76_Node000165_Node000142" class="edge">
-<title>Node165&#45;&gt;Node142</title>
-<g id="a_edge76_Node000165_Node000142"><a xlink:title=" ">
+<!-- Node179&#45;&gt;Node156 -->
+<g id="edge76_Node000179_Node000156" class="edge">
+<title>Node179&#45;&gt;Node156</title>
+<g id="a_edge76_Node000179_Node000156"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M3037.08,-272.58C2993.58,-262.19 2937.93,-248.9 2896.51,-239.01"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="3036.48,-276.04 3047.02,-274.95 3038.1,-269.23 3036.48,-276.04"/>
 </a>
 </g>
 </g>
-<!-- Node165&#45;&gt;Node145 -->
-<g id="edge77_Node000165_Node000145" class="edge">
-<title>Node165&#45;&gt;Node145</title>
-<g id="a_edge77_Node000165_Node000145"><a xlink:title=" ">
+<!-- Node179&#45;&gt;Node159 -->
+<g id="edge77_Node000179_Node000159" class="edge">
+<title>Node179&#45;&gt;Node159</title>
+<g id="a_edge77_Node000179_Node000159"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M3018.83,-277.43C2950.44,-268.02 2852.86,-253.9 2767.83,-239 2764.94,-238.49 2761.99,-237.96 2759,-237.41"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="3018.74,-280.95 3029.13,-278.84 3019.69,-274.02 3018.74,-280.95"/>
 </a>
 </g>
 </g>
-<!-- Node165&#45;&gt;Node147 -->
-<g id="edge78_Node000165_Node000147" class="edge">
-<title>Node165&#45;&gt;Node147</title>
-<g id="a_edge78_Node000165_Node000147"><a xlink:title=" ">
+<!-- Node179&#45;&gt;Node161 -->
+<g id="edge78_Node000179_Node000161" class="edge">
+<title>Node179&#45;&gt;Node161</title>
+<g id="a_edge78_Node000179_Node000161"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M3067.7,-270.51C3046.99,-260.47 3021.8,-248.26 3002.73,-239.01"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="3066.34,-273.74 3076.86,-274.95 3069.39,-267.44 3066.34,-273.74"/>
 </a>
 </g>
 </g>
-<!-- Node165&#45;&gt;Node149 -->
-<g id="edge79_Node000165_Node000149" class="edge">
-<title>Node165&#45;&gt;Node149</title>
-<g id="a_edge79_Node000165_Node000149"><a xlink:title=" ">
+<!-- Node179&#45;&gt;Node163 -->
+<g id="edge79_Node000179_Node000163" class="edge">
+<title>Node179&#45;&gt;Node163</title>
+<g id="a_edge79_Node000179_Node000163"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M3105.83,-264.54C3105.83,-255.96 3105.83,-246.61 3105.83,-239.16"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="3102.33,-264.8 3105.83,-274.8 3109.33,-264.8 3102.33,-264.8"/>
 </a>
 </g>
 </g>
-<!-- Node165&#45;&gt;Node153 -->
-<g id="edge80_Node000165_Node000153" class="edge">
-<title>Node165&#45;&gt;Node153</title>
-<g id="a_edge80_Node000165_Node000153"><a xlink:title=" ">
+<!-- Node179&#45;&gt;Node167 -->
+<g id="edge80_Node000179_Node000167" class="edge">
+<title>Node179&#45;&gt;Node167</title>
+<g id="a_edge80_Node000179_Node000167"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M3144.54,-270.51C3165.56,-260.47 3191.13,-248.26 3210.49,-239.01"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="3142.75,-267.49 3135.24,-274.95 3145.77,-273.8 3142.75,-267.49"/>
 </a>
 </g>
 </g>
-<!-- Node165&#45;&gt;Node155 -->
-<g id="edge81_Node000165_Node000155" class="edge">
-<title>Node165&#45;&gt;Node155</title>
-<g id="a_edge81_Node000165_Node000155"><a xlink:title=" ">
+<!-- Node179&#45;&gt;Node169 -->
+<g id="edge81_Node000179_Node000169" class="edge">
+<title>Node179&#45;&gt;Node169</title>
+<g id="a_edge81_Node000179_Node000169"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M3019.04,-282.62C2923.36,-274.95 2765.04,-260.38 2629.83,-239 2626.94,-238.54 2623.98,-238.04 2621,-237.51"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="3019,-286.13 3029.25,-283.43 3019.56,-279.15 3019,-286.13"/>
 </a>
 </g>
 </g>
-<!-- Node165&#45;&gt;Node157 -->
-<g id="edge82_Node000165_Node000157" class="edge">
-<title>Node165&#45;&gt;Node157</title>
-<g id="a_edge82_Node000165_Node000157"><a xlink:title=" ">
+<!-- Node179&#45;&gt;Node171 -->
+<g id="edge82_Node000179_Node000171" class="edge">
+<title>Node179&#45;&gt;Node171</title>
+<g id="a_edge82_Node000179_Node000171"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M3174.81,-272.65C3218.68,-262.25 3274.89,-248.93 3316.71,-239.01"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="3174,-269.24 3165.08,-274.95 3175.62,-276.05 3174,-269.24"/>
 </a>
 </g>
 </g>
-<!-- Node165&#45;&gt;Node159 -->
-<g id="edge83_Node000165_Node000159" class="edge">
-<title>Node165&#45;&gt;Node159</title>
-<g id="a_edge83_Node000165_Node000159"><a xlink:title=" ">
+<!-- Node179&#45;&gt;Node173 -->
+<g id="edge83_Node000179_Node000173" class="edge">
+<title>Node179&#45;&gt;Node173</title>
+<g id="a_edge83_Node000179_Node000173"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M3192.87,-277.64C3261.27,-268.35 3358.87,-254.28 3443.83,-239 3446.71,-238.48 3449.66,-237.93 3452.63,-237.36"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="3192.01,-274.22 3182.57,-279.03 3192.95,-281.16 3192.01,-274.22"/>
 </a>
 </g>
 </g>
-<!-- Node165&#45;&gt;Node161 -->
-<g id="edge84_Node000165_Node000161" class="edge">
-<title>Node165&#45;&gt;Node161</title>
-<g id="a_edge84_Node000165_Node000161"><a xlink:title=" ">
+<!-- Node179&#45;&gt;Node175 -->
+<g id="edge84_Node000179_Node000175" class="edge">
+<title>Node179&#45;&gt;Node175</title>
+<g id="a_edge84_Node000179_Node000175"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M3192.77,-282.45C3287.37,-274.7 3442.9,-260.11 3575.83,-239 3578.72,-238.54 3581.68,-238.04 3584.66,-237.5"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="3192.36,-278.97 3182.67,-283.27 3192.92,-285.95 3192.36,-278.97"/>
 </a>
 </g>
 </g>
-<!-- Node165&#45;&gt;Node163 -->
-<g id="edge85_Node000165_Node000163" class="edge">
-<title>Node165&#45;&gt;Node163</title>
-<g id="a_edge85_Node000165_Node000163"><a xlink:title=" ">
+<!-- Node179&#45;&gt;Node177 -->
+<g id="edge85_Node000179_Node000177" class="edge">
+<title>Node179&#45;&gt;Node177</title>
+<g id="a_edge85_Node000179_Node000177"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M3192.57,-284.38C3309.81,-277.55 3525.2,-262.92 3707.83,-239 3710.83,-238.61 3713.89,-238.18 3716.98,-237.72"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="3192.36,-280.89 3182.58,-284.96 3192.76,-287.88 3192.36,-280.89"/>
 </a>

@@ -1,0 +1,5 @@
+<map id="Aestra::ArsenalSoundStrip::useList" name="Aestra::ArsenalSoundStrip::useList">
+<area shape="rect" id="Node000001" title="Walk files (a sound set) instead of the sound&#39;s own folder, until useFolder()." alt="" coords="5,5,196,45"/>
+<area shape="rect" id="Node000002" href="$df/d43/classAestra_1_1ArsenalSoundStrip.html#a3458ccefcaa9a6a4071a939fb9e539f5" title="Where path sits in list, or &#45;1." alt="" coords="244,5,435,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="196,23,230,23,230,28,196,28"/>
+</map>

@@ -4,8 +4,9 @@ var searchData=
   ['value_1',['value',['../df/d72/structAestra_1_1Audio_1_1MixerChannelID.html#ae2891007ca65f935ccdfb74578fcecc7',1,'Aestra::Audio::MixerChannelID']]],
   ['valuelabelpad_2',['valueLabelPad',['../dd/d66/structAestraUI_1_1EditorKit_1_1KnobLook.html#ae18fcc01a40358e91b06c078297c4e19',1,'AestraUI::EditorKit::KnobLook']]],
   ['vendor_3',['vendor',['../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html#ab915fc6eaff1b28b8976033332e3666b',1,'Aestra::Audio::PluginInfo::vendor'],['../d8/d1a/structAestraUI_1_1PluginListItem.html#a5cb593c36df116ba5cfeacf6f86d276f',1,'AestraUI::PluginListItem::vendor']]],
-  ['version_4',['version',['../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html#a597697581f0c70468c05754ab9fe9449',1,'Aestra::Audio::PluginInfo::version'],['../d8/d1a/structAestraUI_1_1PluginListItem.html#afedd9d41aee3e1df98cf20412a21ddea',1,'AestraUI::PluginListItem::version']]],
-  ['violationcount_5',['violationCount',['../d7/d54/structAestra_1_1Audio_1_1IPluginInstance_1_1WatchdogStats.html#a2e635aa96a671f906aed113e505df8f3',1,'Aestra::Audio::IPluginInstance::WatchdogStats']]],
-  ['visible_6',['visible',['../dc/d8c/structAestraContent_1_1ViewOpenState.html#a1816236acebb7a5d89d4f5d94d1cc55b',1,'AestraContent::ViewOpenState']]],
-  ['volume_7',['volume',['../d0/d83/structAestra_1_1Audio_1_1PlaylistLane.html#aea0c21e1f7815e6425e45a27e2fe27e6',1,'Aestra::Audio::PlaylistLane']]]
+  ['version_4',['version',['../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html#a597697581f0c70468c05754ab9fe9449',1,'Aestra::Audio::PluginInfo::version'],['../d8/d1a/structAestraUI_1_1PluginListItem.html#afedd9d41aee3e1df98cf20412a21ddea',1,'AestraUI::PluginListItem::version'],['../de/d71/structAestra_1_1VersionsTimeline_1_1Node.html#aea0d6e1a2b205c9c9c5d204d1eea42e6',1,'Aestra::VersionsTimeline::Node::version']]],
+  ['versionid_5',['versionId',['../d5/db0/structAestra_1_1VersionPicker_1_1Entry.html#a63942e2b6aaff545022d5d19caf52a17',1,'Aestra::VersionPicker::Entry']]],
+  ['violationcount_6',['violationCount',['../d7/d54/structAestra_1_1Audio_1_1IPluginInstance_1_1WatchdogStats.html#a2e635aa96a671f906aed113e505df8f3',1,'Aestra::Audio::IPluginInstance::WatchdogStats']]],
+  ['visible_7',['visible',['../dc/d8c/structAestraContent_1_1ViewOpenState.html#a1816236acebb7a5d89d4f5d94d1cc55b',1,'AestraContent::ViewOpenState']]],
+  ['volume_8',['volume',['../d0/d83/structAestra_1_1Audio_1_1PlaylistLane.html#aea0c21e1f7815e6425e45a27e2fe27e6',1,'Aestra::Audio::PlaylistLane']]]
 ];

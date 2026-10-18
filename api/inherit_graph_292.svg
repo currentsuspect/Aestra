@@ -11,9 +11,9 @@
 <!-- Node0 -->
 <g id="Node000000" class="node">
 <title>Node0</title>
-<g id="a_Node000000"><a xlink:href="d3/d38/structAestra_1_1Audio_1_1UnitState.html" target="_top" xlink:title="Lightweight unit state used by the audio&#45;thread snapshot.">
+<g id="a_Node000000"><a xlink:href="d9/d53/structAestra_1_1Audio_1_1Spectrum.html" target="_top" xlink:title="The spectrum of a signal in third&#45;octave bands, for the tonal&#45;balance curve (FD&#45;26,...">
 <polygon fill="white" stroke="#666666" points="134,-19 0,-19 0,0 134,0 134,-19"/>
-<text text-anchor="middle" x="67" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::UnitState</text>
+<text text-anchor="middle" x="67" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::Spectrum</text>
 </a>
 </g>
 </g>

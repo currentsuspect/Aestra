@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::PatternPlaybackEngine::contentFingerprint" name="Aestra::Audio::PatternPlaybackEngine::contentFingerprint">
+<area shape="rect" id="Node000001" title="Order&#45;sensitive hash of everything about a pattern that changes what plays." alt="" coords="276,5,499,45"/>
+<area shape="rect" id="Node000002" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a61d37a9f648c0e8ffa6fad83728630e3" title="Refill lookahead window with events (non&#45;RT thread) Called periodically by scheduler." alt="" coords="5,5,228,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="262,28,228,28,228,23,262,23"/>
+</map>

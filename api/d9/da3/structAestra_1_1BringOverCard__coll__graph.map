@@ -1,0 +1,25 @@
+<map id="Aestra::BringOverCard" name="Aestra::BringOverCard">
+<area shape="rect" id="Node000001" title="The Bring over card (SPEC&#45;017, V81&#45;V1): what another version has, with a check beside each thing that..." alt="" coords="106,491,273,516"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,322,56,347"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="25,361,20,386,18,413,22,441,34,465,44,473,61,480,106,490,105,495,60,485,42,477,30,468,17,442,13,414,15,385,20,360"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="491,95,578,120"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="547,133,549,144,553,182,552,225,547,265,538,292,509,333,472,370,432,401,389,428,303,468,233,493,231,488,301,463,386,423,429,397,469,366,505,330,534,289,542,264,546,225,547,182,544,144,542,134"/>
+<area shape="rect" id="Node000006" href="$d5/d3f/structAestra_1_1BringOverCard_1_1Row.html" title=" " alt="" coords="157,197,360,223"/>
+<area shape="poly" id="edge6_Node000006_Node000003" title=" " alt="" coords="518,132,476,176,428,190,361,201,360,196,427,185,473,171,514,129"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="465,5,604,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="537,59,537,94,532,94,532,59"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="171,315,347,355"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="248,369,197,492,192,490,243,367"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="261,236,261,314,256,314,256,236"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="301,95,363,120"/>
+<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="318,133,269,199,265,196,313,129"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="117,95,168,120"/>
+<area shape="poly" id="edge12_Node000001_Node000008" title=" " alt="" coords="145,134,148,223,153,289,161,354,189,490,184,491,156,355,147,289,143,223,140,134"/>
+<area shape="poly" id="edge8_Node000006_Node000008" title=" " alt="" coords="156,131,169,152,186,171,205,185,226,195,224,200,202,189,182,175,164,155,151,134"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="201,95,276,120"/>
+<area shape="poly" id="edge9_Node000006_Node000009" title=" " alt="" coords="246,133,259,197,254,198,241,134"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="385,197,514,223"/>
+<area shape="poly" id="edge10_Node000005_Node000010" title=" " alt="" coords="405,230,372,249,352,270,331,293,296,317,293,312,328,289,348,266,369,245,403,226"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="389,95,427,120"/>
+<area shape="poly" id="edge11_Node000010_Node000011" title=" " alt="" coords="407,134,407,153,412,172,421,185,432,195,429,199,417,188,407,174,402,154,401,134"/>
+</map>

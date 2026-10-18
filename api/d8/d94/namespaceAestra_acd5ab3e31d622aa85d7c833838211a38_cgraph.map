@@ -1,0 +1,15 @@
+<map id="Aestra::importLegacyMixerInspectorPreference" name="Aestra::importLegacyMixerInspectorPreference">
+<area shape="rect" id="Node000001" title="Runs once at startup, before any surface reads the store." alt="" coords="5,69,203,109"/>
+<area shape="rect" id="Node000002" href="$dc/d45/classAestra_1_1UISurfaceStoreFile.html#aa35af609557ba38282dafde93eaed2a3" title="The stored value, or nullopt when the user has never set this preference." alt="" coords="258,5,450,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="182,67,262,46,263,51,184,72"/>
+<area shape="rect" id="Node000003" href="$d8/d94/namespaceAestra.html#a115b1a9b1330e562655d7d072324828a" title="The legacy file&#39;s inspector preference, if it holds a usable one." alt="" coords="251,69,457,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="203,87,237,87,237,92,203,92"/>
+<area shape="rect" id="Node000005" href="$dc/d45/classAestra_1_1UISurfaceStoreFile.html#a958d1a018c67184dd775e5406d9d2ceb" title="Sets and saves." alt="" coords="258,133,450,173"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="184,107,263,127,262,133,182,112"/>
+<area shape="rect" id="Node000004" href="$d8/d94/namespaceAestra.html#a9b2615179273aeda892d3ed81a104e0f" title="Read and strictly parse the JSON object at path." alt="" coords="507,77,673,102"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="457,87,493,87,493,92,457,92"/>
+<area shape="rect" id="Node000006" href="$da/d22/structAestra_1_1UISurfaceStore.html#a21fb83c4d8839a6b20049839e0c00202" title="Write the store to path via the shared atomic&#45;write helper." alt="" coords="505,133,675,173"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="450,151,492,151,492,156,450,156"/>
+<area shape="rect" id="Node000007" href="$d8/d94/namespaceAestra.html#a91dc79620775d24f4d0c47759593731b" title="Write root to path via the house crash&#45;safe pattern: write to a &quot;&lt;path&gt;.tmp&quot; sibling,..." alt="" coords="723,141,905,166"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="675,151,709,151,709,156,675,156"/>
+</map>

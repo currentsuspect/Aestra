@@ -1,0 +1,13 @@
+<map id="Aestra::ArsenalRowLanes::onKey" name="Aestra::ArsenalRowLanes::onKey">
+<area shape="rect" id="Node000001" title="Keyboard for the open drawer: typing searches, Up/Down audition, Enter keeps, Esc puts the old sound ..." alt="" coords="5,69,192,109"/>
+<area shape="rect" id="Node000002" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="243,5,445,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="175,67,253,46,254,51,177,72"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae644fa1ba9f25586fd7d597ed08d651f" title="Get the unit manager (Arsenal)" alt="" coords="240,69,448,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="192,87,226,87,226,92,192,92"/>
+<area shape="rect" id="Node000004" href="$d9/d54/classAestra_1_1ArsenalSoundDrawer.html#a36b43a74dd2471e317c440568c6acb7a" title="What a key press does." alt="" coords="240,133,448,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="177,107,254,127,253,132,175,112"/>
+<area shape="rect" id="Node000005" href="$d9/d54/classAestra_1_1ArsenalSoundDrawer.html#aae89f7fc35c23d124e74b52d2a732cbf" title="Indices into list whose file name contains every word of filter. An empty filter keeps everything." alt="" coords="496,101,704,141"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="448,138,482,133,483,139,448,143"/>
+<area shape="rect" id="Node000006" href="$d9/d54/classAestra_1_1ArsenalSoundDrawer.html#a7df02bb33fb613b23f9a696785102808" title="Scroll just enough that the selected row is inside the window." alt="" coords="496,165,704,205"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="448,164,483,168,482,173,448,169"/>
+</map>

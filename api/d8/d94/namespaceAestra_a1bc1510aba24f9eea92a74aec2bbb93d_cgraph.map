@@ -1,0 +1,5 @@
+<map id="Aestra::resolveAppDataFilePath" name="Aestra::resolveAppDataFilePath">
+<area shape="rect" id="Node000001" title="Shared, crash&#45;safe JSON&#45;file I/O for per&#45;user config files." alt="" coords="5,13,232,38"/>
+<area shape="rect" id="Node000002" href="$d5/d9d/classAestra_1_1IPlatformUtils.html#a93945f74d88f6ff480566a3b6e6e972c" title="Get the platform&#45;specific application data directory for an app name." alt="" coords="280,5,443,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="232,23,266,23,266,28,232,28"/>
+</map>

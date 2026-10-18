@@ -13,6 +13,6 @@ var searchData=
   ['applifecycle_2eh_10',['AppLifecycle.h',['../d8/d61/AppLifecycle_8h.html',1,'']]],
   ['audioexportquantization_2eh_11',['AudioExportQuantization.h',['../d0/d8a/AudioExportQuantization_8h.html',1,'']]],
   ['auditionengine_2eh_12',['AuditionEngine.h',['../d5/d0c/AuditionEngine_8h.html',1,'']]],
-  ['auditionpanel_2eh_13',['AuditionPanel.h',['../d3/d97/AuditionPanel_8h.html',1,'']]],
+  ['auditionhub_2eh_13',['AuditionHub.h',['../da/db2/AuditionHub_8h.html',1,'']]],
   ['automationregions_2eh_14',['AutomationRegions.h',['../d3/dbe/AutomationRegions_8h.html',1,'']]]
 ];

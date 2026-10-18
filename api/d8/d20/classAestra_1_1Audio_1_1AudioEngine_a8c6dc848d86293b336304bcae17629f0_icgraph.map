@@ -1,15 +1,20 @@
 <map id="Aestra::Audio::AudioEngine::setAuditionEngine" name="Aestra::Audio::AudioEngine::setAuditionEngine">
-<area shape="rect" id="Node000001" title="Bind the audition engine used by audition mode." alt="" coords="553,59,752,99"/>
-<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#af214284a167c0d4485e8c7849733eee2" title="Create the file/plugin/preview/pattern browser panels." alt="" coords="293,30,505,70"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="539,69,505,65,506,60,540,64"/>
-<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#acd45e0922aede06c12894ca10bb42bac" title="Set the active workspace mode." alt="" coords="293,95,505,120"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="540,94,506,98,505,93,539,89"/>
-<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a93c11d72cedc0fa43592a62e6d2c23a0" title="Handle global keyboard shortcuts for the workspace." alt="" coords="25,5,225,31"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="313,93,292,84,277,75,267,64,258,55,244,46,210,33,212,28,247,41,262,51,271,61,281,70,295,80,315,88"/>
-<area shape="rect" id="Node000005" href="$db/d60/classAestraContent.html#aa69bf8fb97b3308a6460aff47cc01536" title="Restore persisted workspace state (project load)." alt="" coords="5,55,245,95"/>
-<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="279,96,245,92,246,87,280,91"/>
-<area shape="rect" id="Node000006" href="$db/d60/classAestraContent.html#ab90c78e0fe24a2ff739817b3c4a4440d" title="Create the Arsenal and sample&#45;editor overlays." alt="" coords="21,119,229,159"/>
-<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="280,124,230,130,229,125,279,119"/>
-<area shape="rect" id="Node000007" href="$db/d60/classAestraContent.html#a59842dc639e11b43359a064651907ae6" title="Create the mixer overlay and the routing&#45;map full panel." alt="" coords="28,183,223,223"/>
-<area shape="poly" id="edge6_Node000003_Node000007" title=" " alt="" coords="360,128,246,174,208,186,206,181,244,169,358,123"/>
+<area shape="rect" id="Node000001" title="Bind the audition engine used by audition mode." alt="" coords="823,119,1021,159"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#af214284a167c0d4485e8c7849733eee2" title="Create the file/plugin/preview/pattern browser panels." alt="" coords="549,62,761,102"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="814,119,748,105,750,99,815,114"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#acd45e0922aede06c12894ca10bb42bac" title="Set the active workspace mode." alt="" coords="549,127,761,152"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="809,142,762,142,762,137,809,137"/>
+<area shape="rect" id="Node000009" href="$db/d60/classAestraContent.html#a1682faab73a897fa2545677eb81951d9" title="Play a file through the preview engine, or stop it if it is the file already playing...." alt="" coords="536,176,775,201"/>
+<area shape="poly" id="edge9_Node000001_Node000009" title=" " alt="" coords="809,163,725,179,724,173,808,158"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a93c11d72cedc0fa43592a62e6d2c23a0" title="Handle global keyboard shortcuts for the workspace." alt="" coords="268,5,468,31"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="547,123,534,116,517,98,510,80,502,62,486,45,462,33,464,28,490,41,507,59,514,78,522,96,538,112,550,119"/>
+<area shape="rect" id="Node000005" href="$db/d60/classAestraContent.html#aa69bf8fb97b3308a6460aff47cc01536" title="Restore persisted workspace state (project load)." alt="" coords="248,55,488,95"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="580,126,535,117,454,98,455,93,537,111,581,121"/>
+<area shape="rect" id="Node000006" href="$db/d60/classAestraContent.html#ab90c78e0fe24a2ff739817b3c4a4440d" title="Create the Arsenal and sample&#45;editor overlays." alt="" coords="264,119,472,159"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="535,142,472,142,472,137,535,137"/>
+<area shape="rect" id="Node000007" href="$db/d60/classAestraContent.html#a59842dc639e11b43359a064651907ae6" title="Create the mixer overlay and the routing&#45;map full panel." alt="" coords="5,206,200,246"/>
+<area shape="poly" id="edge6_Node000003_Node000007" title=" " alt="" coords="579,157,488,174,200,216,200,211,488,169,578,152"/>
+<area shape="rect" id="Node000008" href="$db/d60/classAestraContent.html#aa98ab25b4192e937de3de3309131ca69" title="Open the routing graph (V81&#45;R1), selecting channelId first when it is not 0. Remembers where to go ba..." alt="" coords="265,234,471,274"/>
+<area shape="poly" id="edge7_Node000003_Node000008" title=" " alt="" coords="550,159,537,166,523,177,514,190,505,204,489,218,452,236,449,231,487,213,501,200,509,187,519,174,535,161,548,155"/>
+<area shape="poly" id="edge8_Node000008_Node000007" title=" " alt="" coords="251,244,200,239,200,234,251,239"/>
 </map>

@@ -1,0 +1,9 @@
+<map id="Aestra::DeviceChoiceCandidate" name="Aestra::DeviceChoiceCandidate">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,212,232,237"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="33,95,71,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="49,134,48,161,56,187,68,200,84,210,81,214,64,204,51,189,43,162,44,134"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="142,95,229,120"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="182,134,172,162,158,190,136,214,132,210,154,186,168,160,177,133"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="116,5,255,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="188,59,188,94,183,94,183,59"/>
+</map>

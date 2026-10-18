@@ -1,0 +1,5 @@
+<map id="AestraUI::FileBrowser::selectKind" name="AestraUI::FileBrowser::selectKind">
+<area shape="rect" id="Node000001" title="Switch to Sounds, Patterns or Plugins, as a click on the tab does." alt="" coords="5,5,168,45"/>
+<area shape="rect" id="Node000002" href="$d5/d99/classAestraUI_1_1FileBrowser.html#af3016beba5a24eedd2bc3c1ee44d1b45" title="Places (FD&#45;47): favourites, the project, the library, this computer and collections,..." alt="" coords="216,5,379,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="168,23,202,23,202,28,168,28"/>
+</map>

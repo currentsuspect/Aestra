@@ -48,7 +48,7 @@
 <script type="application/ecmascript">
 var viewWidth = 808;
 var viewHeight = 326;
-var sectionId = 'dynsection-11';
+var sectionId = 'dynsection-13';
 </script>
 <script type="application/ecmascript" xlink:href="../../svg.min.js"/>
 <svg id="graph" class="graph">
@@ -159,32 +159,13 @@ var sectionId = 'dynsection-11';
 </a>
 </g>
 </g>
-<!-- Node12 -->
-<g id="Node000012" class="node">
-<title>Node12</title>
-<g id="a_Node000012"><a xlink:href="../../d7/dc5/classAestra_1_1Audio_1_1QuantizePatternCommand.html#a99e8c49e3abea3dd519439a585d17029" target="_top" xlink:title="Undo the command.">
-<polygon fill="white" stroke="#666666" points="390.5,-126 224.5,-126 224.5,-96 390.5,-96 390.5,-126"/>
-<text text-anchor="start" x="232.5" y="-114" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::QuantizePattern</text>
-<text text-anchor="middle" x="307.5" y="-103" font-family="Helvetica,sans-Serif" font-size="10.00">Command::undo</text>
-</a>
-</g>
-</g>
-<!-- Node2&#45;&gt;Node12 -->
-<g id="edge11_Node000002_Node000012" class="edge">
-<title>Node2&#45;&gt;Node12</title>
-<g id="a_edge11_Node000002_Node000012"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M440.58,-141.63C418.51,-136.51 394.57,-130.96 373.2,-126"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="440.04,-145.09 450.57,-143.94 441.62,-138.28 440.04,-145.09"/>
-</a>
-</g>
-</g>
 <!-- Node13 -->
 <g id="Node000013" class="node">
 <title>Node13</title>
-<g id="a_Node000013"><a xlink:href="../../d2/d0c/classAestra_1_1Audio_1_1SetPatternLengthCommand.html#a8946a0511511b32c1392107621deb4f0" target="_top" xlink:title="Undo the command.">
-<polygon fill="white" stroke="#666666" points="376.5,-78 238.5,-78 238.5,-48 376.5,-48 376.5,-78"/>
-<text text-anchor="start" x="246.5" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::SetPattern</text>
-<text text-anchor="middle" x="307.5" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">LengthCommand::undo</text>
+<g id="a_Node000013"><a xlink:href="../../d7/dc5/classAestra_1_1Audio_1_1QuantizePatternCommand.html#a99e8c49e3abea3dd519439a585d17029" target="_top" xlink:title="Undo the command.">
+<polygon fill="white" stroke="#666666" points="390.5,-126 224.5,-126 224.5,-96 390.5,-96 390.5,-126"/>
+<text text-anchor="start" x="232.5" y="-114" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::QuantizePattern</text>
+<text text-anchor="middle" x="307.5" y="-103" font-family="Helvetica,sans-Serif" font-size="10.00">Command::undo</text>
 </a>
 </g>
 </g>
@@ -192,18 +173,18 @@ var sectionId = 'dynsection-11';
 <g id="edge12_Node000002_Node000013" class="edge">
 <title>Node2&#45;&gt;Node13</title>
 <g id="a_edge12_Node000002_Node000013"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M486.56,-137.99C463.53,-122.1 429.96,-100.74 398,-87 390.31,-83.7 382.06,-80.75 373.78,-78.14"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="484.65,-140.93 494.85,-143.79 488.66,-135.19 484.65,-140.93"/>
+<path fill="none" stroke="#63b8ff" d="M440.58,-141.63C418.51,-136.51 394.57,-130.96 373.2,-126"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="440.04,-145.09 450.57,-143.94 441.62,-138.28 440.04,-145.09"/>
 </a>
 </g>
 </g>
 <!-- Node14 -->
 <g id="Node000014" class="node">
 <title>Node14</title>
-<g id="a_Node000014"><a xlink:href="../../d6/d95/classAestra_1_1Audio_1_1SetStepsCommand.html#a14751af4a7755ebe3c72e810ce283e45" target="_top" xlink:title="Undo the command.">
-<polygon fill="white" stroke="#666666" points="398,-30 217,-30 217,0 398,0 398,-30"/>
-<text text-anchor="start" x="225" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::SetStepsCommand</text>
-<text text-anchor="middle" x="307.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::undo</text>
+<g id="a_Node000014"><a xlink:href="../../d2/d0c/classAestra_1_1Audio_1_1SetPatternLengthCommand.html#a8946a0511511b32c1392107621deb4f0" target="_top" xlink:title="Undo the command.">
+<polygon fill="white" stroke="#666666" points="376.5,-78 238.5,-78 238.5,-48 376.5,-48 376.5,-78"/>
+<text text-anchor="start" x="246.5" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::SetPattern</text>
+<text text-anchor="middle" x="307.5" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">LengthCommand::undo</text>
 </a>
 </g>
 </g>
@@ -211,6 +192,25 @@ var sectionId = 'dynsection-11';
 <g id="edge13_Node000002_Node000014" class="edge">
 <title>Node2&#45;&gt;Node14</title>
 <g id="a_edge13_Node000002_Node000014"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M486.56,-137.99C463.53,-122.1 429.96,-100.74 398,-87 390.31,-83.7 382.06,-80.75 373.78,-78.14"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="484.65,-140.93 494.85,-143.79 488.66,-135.19 484.65,-140.93"/>
+</a>
+</g>
+</g>
+<!-- Node15 -->
+<g id="Node000015" class="node">
+<title>Node15</title>
+<g id="a_Node000015"><a xlink:href="../../d6/d95/classAestra_1_1Audio_1_1SetStepsCommand.html#a14751af4a7755ebe3c72e810ce283e45" target="_top" xlink:title="Undo the command.">
+<polygon fill="white" stroke="#666666" points="398,-30 217,-30 217,0 398,0 398,-30"/>
+<text text-anchor="start" x="225" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::SetStepsCommand</text>
+<text text-anchor="middle" x="307.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::undo</text>
+</a>
+</g>
+</g>
+<!-- Node2&#45;&gt;Node15 -->
+<g id="edge14_Node000002_Node000015" class="edge">
+<title>Node2&#45;&gt;Node15</title>
+<g id="a_edge14_Node000002_Node000015"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M498.99,-135.77C478.41,-108.53 440.7,-63.96 398,-39 392.17,-35.59 385.84,-32.65 379.33,-30.13"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="496.29,-138 505.05,-143.95 501.91,-133.83 496.29,-138"/>
 </a>
@@ -308,6 +308,25 @@ var sectionId = 'dynsection-11';
 <g id="a_edge10_Node000009_Node000011"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M229,-141.7C205.99,-136.56 180.99,-130.98 158.7,-126"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="228.54,-145.18 239.06,-143.94 230.07,-138.35 228.54,-145.18"/>
+</a>
+</g>
+</g>
+<!-- Node12 -->
+<g id="Node000012" class="node">
+<title>Node12</title>
+<g id="a_Node000012"><a xlink:href="../../d6/de1/classAestra_1_1Audio_1_1PlaybackContextController.html#a70f15085c9ec7f1d44e14728dbe98e5e" target="_top" xlink:title="The Arsenal&#39;s active pattern changed (a scene chip, the pattern browser).">
+<polygon fill="white" stroke="#666666" points="177,-78 4,-78 4,-48 177,-48 177,-78"/>
+<text text-anchor="start" x="12" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::PlaybackContext</text>
+<text text-anchor="middle" x="90.5" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">Controller::switchArsenalPattern</text>
+</a>
+</g>
+</g>
+<!-- Node9&#45;&gt;Node12 -->
+<g id="edge11_Node000009_Node000012" class="edge">
+<title>Node9&#45;&gt;Node12</title>
+<g id="a_edge11_Node000009_Node000012"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M224.15,-139.36C221.69,-138 219.29,-136.55 217,-135 194.91,-120.06 203.09,-101.94 181,-87 175.94,-83.58 170.4,-80.64 164.65,-78.12"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="222.83,-142.61 233.35,-143.88 225.91,-136.33 222.83,-142.61"/>
 </a>
 </g>
 </g>

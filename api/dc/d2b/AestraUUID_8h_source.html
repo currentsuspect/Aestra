@@ -91,7 +91,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &lt;random&gt;</span></div>
 <div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="preprocessor">#include &lt;string&gt;</span></div>
 <div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span> </div>
-<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="keyword">namespace </span>Aestra {</div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d8/d94/namespaceAestra.html">Aestra</a> {</div>
 <div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="keyword">namespace </span>Audio {</div>
 <div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span> </div>
 <div class="foldopen" id="foldopen00013" data-start="{" data-end="};">
@@ -183,7 +183,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span><span class="comment">// Hash specialization for AestraUUID</span></div>
 <div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span><span class="keyword">namespace </span><a class="code hl_namespace" href="../../d8/dcc/namespacestd.html">std</a> {</div>
 <div class="foldopen" id="foldopen00104" data-start="{" data-end="};">
-<div class="line"><a id="l00104" name="l00104"></a><span class="lineno"><a class="line" href="../../d4/dfc/structstd_1_1hash_3_01Aestra_1_1Audio_1_1AestraUUID_01_4.html">  104</a></span><span class="keyword">template</span> &lt;&gt; <span class="keyword">struct </span>hash&lt;Aestra::Audio::AestraUUID&gt; {</div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno"><a class="line" href="../../d4/dfc/structstd_1_1hash_3_01Aestra_1_1Audio_1_1AestraUUID_01_4.html">  104</a></span><span class="keyword">template</span> &lt;&gt; <span class="keyword">struct </span>hash&lt;<a class="code hl_namespace" href="../../d8/d94/namespaceAestra.html">Aestra</a>::Audio::AestraUUID&gt; {</div>
 <div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>    <span class="keywordtype">size_t</span> operator()(<span class="keyword">const</span> <a class="code hl_struct" href="../../db/d96/structAestra_1_1Audio_1_1AestraUUID.html">Aestra::Audio::AestraUUID</a>&amp; uuid) <span class="keyword">const</span> <span class="keyword">noexcept</span> {</div>
 <div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>        <span class="comment">// Combine low and high using a hash combiner</span></div>
 <div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>        <span class="keywordtype">size_t</span> h1 = std::hash&lt;uint64_t&gt;{}(uuid.low);</div>
@@ -193,6 +193,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>};</div>
 </div>
 <div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>} <span class="comment">// namespace std</span></div>
+<div class="ttc" id="anamespaceAestra_html"><div class="ttname"><a href="../../d8/d94/namespaceAestra.html">Aestra</a></div><div class="ttdoc">Main application class.</div><div class="ttdef"><b>Definition</b> <a href="../../d7/d7b/AestraAssert_8h_source.html#l00009">AestraAssert.h:9</a></div></div>
 <div class="ttc" id="anamespacestd_html"><div class="ttname"><a href="../../d8/dcc/namespacestd.html">std</a></div><div class="ttdoc">STL namespace.</div></div>
 <div class="ttc" id="astructAestra_1_1Audio_1_1AestraUUID_html"><div class="ttname"><a href="../../db/d96/structAestra_1_1Audio_1_1AestraUUID.html">Aestra::Audio::AestraUUID</a></div><div class="ttdef"><b>Definition</b> <a href="../../dc/d2b/AestraUUID_8h_source.html#l00013">AestraUUID.h:13</a></div></div>
 <div class="ttc" id="astructAestra_1_1Audio_1_1AestraUUID_html_a12ee8bd7d482dfdca1f71c67a8ef5991"><div class="ttname"><a href="../../db/d96/structAestra_1_1Audio_1_1AestraUUID.html#a12ee8bd7d482dfdca1f71c67a8ef5991">Aestra::Audio::AestraUUID::tryParse</a></div><div class="ttdeci">static bool tryParse(const std::string &amp;str, AestraUUID &amp;out)</div><div class="ttdoc">Parse the toString() representation (32 lowercase/uppercase hex chars).</div><div class="ttdef"><b>Definition</b> <a href="../../dc/d2b/AestraUUID_8h_source.html#l00067">AestraUUID.h:67</a></div></div>

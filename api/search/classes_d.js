@@ -1,9 +1,9 @@
 var searchData=
 [
   ['nativeaudiodriver_0',['NativeAudioDriver',['../d2/d68/classAestra_1_1Audio_1_1NativeAudioDriver.html',1,'Aestra::Audio']]],
-  ['node_1',['Node',['../d2/dba/structAestra_1_1Audio_1_1LatencyGraph_1_1Node.html',1,'Aestra::Audio::LatencyGraph']]],
+  ['node_1',['node',['../d2/dba/structAestra_1_1Audio_1_1LatencyGraph_1_1Node.html',1,'Aestra::Audio::LatencyGraph::Node'],['../de/d71/structAestra_1_1VersionsTimeline_1_1Node.html',1,'Aestra::VersionsTimeline::Node']]],
   ['nodesolution_2',['NodeSolution',['../d6/d3a/structAestra_1_1Audio_1_1SolvedLatencyTopology_1_1NodeSolution.html',1,'Aestra::Audio::SolvedLatencyTopology']]],
-  ['note_3',['Note',['../df/d73/structAestra_1_1Audio_1_1HeadlessMusicGenerator_1_1Note.html',1,'Aestra::Audio::HeadlessMusicGenerator']]],
+  ['note_3',['note',['../d4/dca/structTakeManager_1_1TakeEntry_1_1Note.html',1,'TakeManager::TakeEntry::Note'],['../df/d73/structAestra_1_1Audio_1_1HeadlessMusicGenerator_1_1Note.html',1,'Aestra::Audio::HeadlessMusicGenerator::Note']]],
   ['notediffresult_4',['NoteDiffResult',['../d0/d03/structAestra_1_1Audio_1_1NoteDiffResult.html',1,'Aestra::Audio']]],
   ['notificationtoast_5',['NotificationToast',['../d3/d02/classAestraUI_1_1NotificationToast.html',1,'AestraUI']]],
   ['nuiadaptivefps_6',['NUIAdaptiveFPS',['../dc/d08/classAestraUI_1_1NUIAdaptiveFPS.html',1,'AestraUI']]],

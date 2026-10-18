@@ -70,7 +70,7 @@ $(function() {
 
 <div id="nav-path" class="navpath">
   <ul>
-<li class="navelem"><b>Aestra</b></li><li class="navelem"><b>Audio</b></li><li class="navelem"><a class="el" href="../../dc/d56/classAestra_1_1Audio_1_1TrackOutputTap.html">TrackOutputTap</a></li>  </ul>
+<li class="navelem"><a class="el" href="../../d8/d94/namespaceAestra.html">Aestra</a></li><li class="navelem"><b>Audio</b></li><li class="navelem"><a class="el" href="../../dc/d56/classAestra_1_1Audio_1_1TrackOutputTap.html">TrackOutputTap</a></li>  </ul>
 </div>
 </div><!-- top -->
 <div class="header">
@@ -91,7 +91,7 @@ $(function() {
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-0-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../de/d65/classAestra_1_1Audio_1_1TrackOutputTap__coll__graph.svg" width="228" height="124"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../de/d65/classAestra_1_1Audio_1_1TrackOutputTap__coll__graph.svg" width="228" height="139"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 <center><span class="legend">[<a href="../../graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
@@ -110,6 +110,12 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a17828122d5d1fd4098c362b1e6bc477f" id="r_a17828122d5d1fd4098c362b1e6bc477f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d56/classAestra_1_1Audio_1_1TrackOutputTap.html#a17828122d5d1fd4098c362b1e6bc477f">capture</a> (const double *interleaved, uint32_t frames)</td></tr>
 <tr class="memdesc:a17828122d5d1fd4098c362b1e6bc477f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio/render thread.  <br /></td></tr>
 <tr class="separator:a17828122d5d1fd4098c362b1e6bc477f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a739c20b6660dea30c389f03f7fd175d0" id="r_a739c20b6660dea30c389f03f7fd175d0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d56/classAestra_1_1Audio_1_1TrackOutputTap.html#a739c20b6660dea30c389f03f7fd175d0">beginDelta</a> (const double *interleaved, uint32_t frames)</td></tr>
+<tr class="memdesc:a739c20b6660dea30c389f03f7fd175d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio/render thread, with kMasterDirect: the master buffer BEFORE the direct sources are added.  <br /></td></tr>
+<tr class="separator:a739c20b6660dea30c389f03f7fd175d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6f54b56a2576c548419463763d91ac8c" id="r_a6f54b56a2576c548419463763d91ac8c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d56/classAestra_1_1Audio_1_1TrackOutputTap.html#a6f54b56a2576c548419463763d91ac8c">endDelta</a> (const double *interleaved)</td></tr>
+<tr class="memdesc:a6f54b56a2576c548419463763d91ac8c"><td class="mdescLeft">&#160;</td><td class="mdescRight">The same buffer AFTER them: the block becomes what they added.  <br /></td></tr>
+<tr class="separator:a6f54b56a2576c548419463763d91ac8c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adec736f5cb421d8e84bf6e897451b970" id="r_adec736f5cb421d8e84bf6e897451b970"><td class="memItemLeft" align="right" valign="top">const float *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d56/classAestra_1_1Audio_1_1TrackOutputTap.html#adec736f5cb421d8e84bf6e897451b970">block</a> () const</td></tr>
 <tr class="memdesc:adec736f5cb421d8e84bf6e897451b970"><td class="mdescLeft">&#160;</td><td class="mdescRight">The last captured block (interleaved stereo); frames == 0 if the channel did not render.  <br /></td></tr>
 <tr class="separator:adec736f5cb421d8e84bf6e897451b970"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -122,6 +128,9 @@ Public Member Functions</h2></td></tr>
 Static Public Attributes</h2></td></tr>
 <tr class="memitem:a8dbaec9c5ad820ffcdbb1d899a558754" id="r_a8dbaec9c5ad820ffcdbb1d899a558754"><td class="memItemLeft" align="right" valign="top">static constexpr uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d56/classAestra_1_1Audio_1_1TrackOutputTap.html#a8dbaec9c5ad820ffcdbb1d899a558754">kNoChannel</a> = 0xFFFFFFFFu</td></tr>
 <tr class="separator:a8dbaec9c5ad820ffcdbb1d899a558754"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a795854f6de03053e4be6170875a8a1f4" id="r_a795854f6de03053e4be6170875a8a1f4"><td class="memItemLeft" align="right" valign="top">static constexpr uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d56/classAestra_1_1Audio_1_1TrackOutputTap.html#a795854f6de03053e4be6170875a8a1f4">kMasterDirect</a> = 0xFFFFFFFEu</td></tr>
+<tr class="memdesc:a795854f6de03053e4be6170875a8a1f4"><td class="mdescLeft">&#160;</td><td class="mdescRight">What goes straight to the master: units and clips routed to Master rather than through a track, before the master stage.  <br /></td></tr>
+<tr class="separator:a795854f6de03053e4be6170875a8a1f4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Copies one mixer channel's output before it is routed to the master or a group (V8-W5 Bounce in Place, V8-S1 stems). </p>
@@ -177,7 +186,7 @@ Static Public Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html#l00029">29</a> of file <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html">TrackOutputTap.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html#l00036">36</a> of file <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html">TrackOutputTap.h</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>.</p>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -187,6 +196,46 @@ Static Public Attributes</h2></td></tr>
 <div id="dynsection-1-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../dc/d56/classAestra_1_1Audio_1_1TrackOutputTap_a15272c82f180544241522057f0b49f6c_icgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
+
+</div>
+</div>
+<a id="a739c20b6660dea30c389f03f7fd175d0" name="a739c20b6660dea30c389f03f7fd175d0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a739c20b6660dea30c389f03f7fd175d0">&#9670;&#160;</a></span>beginDelta()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::TrackOutputTap::beginDelta </td>
+          <td>(</td>
+          <td class="paramtype">const double *&#160;</td>
+          <td class="paramname"><em>interleaved</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname"><em>frames</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Audio/render thread, with kMasterDirect: the master buffer BEFORE the direct sources are added. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html#l00064">64</a> of file <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html">TrackOutputTap.h</a>.</p>
 
 </div>
 </div>
@@ -215,7 +264,7 @@ Static Public Attributes</h2></td></tr>
 
 <p>The last captured block (interleaved stereo); frames == 0 if the channel did not render. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html#l00057">57</a> of file <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html">TrackOutputTap.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html#l00079">79</a> of file <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html">TrackOutputTap.h</a>.</p>
 
 </div>
 </div>
@@ -256,7 +305,7 @@ Static Public Attributes</h2></td></tr>
 <p>Audio/render thread. </p>
 <p>Takes interleaved stereo doubles; never allocates. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html#l00048">48</a> of file <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html">TrackOutputTap.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html#l00055">55</a> of file <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html">TrackOutputTap.h</a>.</p>
 
 </div>
 </div>
@@ -283,7 +332,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html#l00059">59</a> of file <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html">TrackOutputTap.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html#l00081">81</a> of file <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html">TrackOutputTap.h</a>.</p>
 
 </div>
 </div>
@@ -310,7 +359,37 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html#l00035">35</a> of file <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html">TrackOutputTap.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html#l00042">42</a> of file <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html">TrackOutputTap.h</a>.</p>
+
+</div>
+</div>
+<a id="a6f54b56a2576c548419463763d91ac8c" name="a6f54b56a2576c548419463763d91ac8c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6f54b56a2576c548419463763d91ac8c">&#9670;&#160;</a></span>endDelta()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::TrackOutputTap::endDelta </td>
+          <td>(</td>
+          <td class="paramtype">const double *&#160;</td>
+          <td class="paramname"><em>interleaved</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The same buffer AFTER them: the block becomes what they added. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html#l00072">72</a> of file <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html">TrackOutputTap.h</a>.</p>
 
 </div>
 </div>
@@ -337,7 +416,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html#l00058">58</a> of file <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html">TrackOutputTap.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html#l00080">80</a> of file <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html">TrackOutputTap.h</a>.</p>
 
 </div>
 </div>
@@ -367,9 +446,9 @@ Static Public Attributes</h2></td></tr>
 
 <p>True when <code>mixerChannelId</code> is the armed channel. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html#l00038">38</a> of file <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html">TrackOutputTap.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html#l00045">45</a> of file <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html">TrackOutputTap.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html#l00043">wantsAt()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html#l00050">wantsAt()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">
@@ -416,9 +495,9 @@ Static Public Attributes</h2></td></tr>
 
 <p>True when the armed channel is <code>mixerChannelId</code> and the tap sits at this side of the fader. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html#l00043">43</a> of file <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html">TrackOutputTap.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html#l00050">50</a> of file <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html">TrackOutputTap.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html#l00038">wants()</a>.</p>
+<p class="reference">References <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html#l00045">wants()</a>.</p>
 <div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-3-summary" class="dynsummary" style="display:block;">
@@ -430,6 +509,33 @@ Static Public Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Data Documentation</h2>
+<a id="a795854f6de03053e4be6170875a8a1f4" name="a795854f6de03053e4be6170875a8a1f4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a795854f6de03053e4be6170875a8a1f4">&#9670;&#160;</a></span>kMasterDirect</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">constexpr uint32_t Aestra::Audio::TrackOutputTap::kMasterDirect = 0xFFFFFFFEu</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span><span class="mlabel">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>What goes straight to the master: units and clips routed to Master rather than through a track, before the master stage. </p>
+<p>Captured as the difference those sources make to the master buffer (beginDelta/endDelta), so the tracks already summed into it cancel out. Bounce in Place uses it for a pattern whose sounds play on several tracks or on Master directly. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html#l00029">29</a> of file <a class="el" href="../../dd/d3c/TrackOutputTap_8h_source.html">TrackOutputTap.h</a>.</p>
+
+</div>
+</div>
 <a id="a8dbaec9c5ad820ffcdbb1d899a558754" name="a8dbaec9c5ad820ffcdbb1d899a558754"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a8dbaec9c5ad820ffcdbb1d899a558754">&#9670;&#160;</a></span>kNoChannel</h2>
 

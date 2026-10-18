@@ -1,14 +1,20 @@
 <map id="Aestra::Audio::ArsenalPanel::registerDropTargets" name="Aestra::Audio::ArsenalPanel::registerDropTargets">
-<area shape="rect" id="Node000001" title="Register the panel and current rows for lifecycle&#45;scoped drag/drop." alt="" coords="504,101,705,141"/>
-<area shape="rect" id="Node000002" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#afcb4b10be1a700b9e7c2998f9d7c541f" title="Rebuild the UI rows from the current UnitManager state." alt="" coords="255,101,456,141"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="490,124,456,124,456,119,490,119"/>
-<area shape="poly" id="edge5_Node000002_Node000002" title=" " alt="" coords="398,90,383,83,355,80,331,82,317,87,312,93,314,100,309,102,306,92,314,82,330,77,355,75,384,78,400,85"/>
-<area shape="rect" id="Node000003" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a054437827bbf8d4cda98b022cb03669e" title="Create the Arsenal sequencer panel." alt="" coords="5,5,207,45"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="297,98,206,60,172,48,174,43,208,55,299,93"/>
-<area shape="rect" id="Node000004" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a96d188406be91124f4c413783ae273d7" title="Commit a drop operation onto the Arsenal panel." alt="" coords="5,69,207,109"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="241,109,207,105,207,100,241,104"/>
-<area shape="rect" id="Node000005" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#aa25fcc7b11ea29f5a00382d1c0c2ce7b" title="Paste clipboard notes into the selected unit." alt="" coords="5,133,207,173"/>
-<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="241,139,207,143,207,138,241,133"/>
-<area shape="rect" id="Node000006" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#aabded31db5191dc40f6eeb98d4054eb8" title="Set the active pattern edited by Arsenal." alt="" coords="5,197,207,237"/>
-<area shape="poly" id="edge6_Node000002_Node000006" title=" " alt="" coords="299,150,208,188,174,200,172,195,206,183,297,145"/>
+<area shape="rect" id="Node000001" title="Register the panel and current rows for lifecycle&#45;scoped drag/drop." alt="" coords="753,165,955,205"/>
+<area shape="rect" id="Node000002" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#afcb4b10be1a700b9e7c2998f9d7c541f" title="Rebuild the UI rows from the current UnitManager state." alt="" coords="504,165,705,205"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="739,188,706,188,706,183,739,183"/>
+<area shape="poly" id="edge6_Node000002_Node000002" title=" " alt="" coords="647,154,632,147,605,144,581,146,566,151,561,157,564,164,559,166,556,156,563,146,580,141,605,139,633,142,649,149"/>
+<area shape="rect" id="Node000003" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a054437827bbf8d4cda98b022cb03669e" title="Create the Arsenal sequencer panel." alt="" coords="255,5,456,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="574,157,521,107,489,82,455,60,430,48,432,43,457,55,492,78,525,103,578,153"/>
+<area shape="rect" id="Node000004" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a96d188406be91124f4c413783ae273d7" title="Commit a drop operation onto the Arsenal panel." alt="" coords="255,69,456,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="546,162,455,124,421,112,423,107,457,119,549,157"/>
+<area shape="rect" id="Node000005" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#ad0272af2020e23cd94658d1e4beacfe5" title="Render the Arsenal panel and unit rows." alt="" coords="255,133,456,173"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="490,173,456,169,457,164,491,168"/>
+<area shape="rect" id="Node000006" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#aa25fcc7b11ea29f5a00382d1c0c2ce7b" title="Paste clipboard notes into the selected unit." alt="" coords="255,197,456,237"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="491,203,457,207,456,202,490,197"/>
+<area shape="rect" id="Node000007" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a6413e1cd6063f31736ae026d26011a2f" title="File &gt; New Project: the project was emptied; recreate Pattern 1 and Sampler 1 and drop selections." alt="" coords="255,261,456,301"/>
+<area shape="poly" id="edge7_Node000002_Node000007" title=" " alt="" coords="549,214,457,252,423,264,421,259,455,247,546,209"/>
+<area shape="rect" id="Node000008" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#aabded31db5191dc40f6eeb98d4054eb8" title="Set the active pattern edited by Arsenal." alt="" coords="255,325,456,365"/>
+<area shape="poly" id="edge8_Node000002_Node000008" title=" " alt="" coords="578,217,525,267,492,293,457,316,432,328,430,323,455,311,489,289,521,263,574,213"/>
+<area shape="rect" id="Node000009" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a5c9ac77599f4bd13c12f7b9dd2bbc805" title="Handle mouse input routed to the Arsenal panel." alt="" coords="5,325,207,365"/>
+<area shape="poly" id="edge9_Node000008_Node000009" title=" " alt="" coords="241,348,207,348,207,343,241,343"/>
 </map>

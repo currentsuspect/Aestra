@@ -8,5 +8,6 @@ var searchData=
   ['ghostpattern_5',['GhostPattern',['../d1/dc8/structAestraUI_1_1PianoRollNoteLayer_1_1GhostPattern.html',1,'AestraUI::PianoRollNoteLayer']]],
   ['globalaudioarena_6',['GlobalAudioArena',['../db/d30/classAestra_1_1GlobalAudioArena.html',1,'Aestra']]],
   ['gpustats_7',['GPUStats',['../d1/d88/structAestra_1_1GPUStats.html',1,'Aestra']]],
-  ['graphreadhandle_8',['GraphReadHandle',['../d4/dce/classAestra_1_1Audio_1_1EngineState_1_1GraphReadHandle.html',1,'Aestra::Audio::EngineState']]]
+  ['graphreadhandle_8',['GraphReadHandle',['../d4/dce/classAestra_1_1Audio_1_1EngineState_1_1GraphReadHandle.html',1,'Aestra::Audio::EngineState']]],
+  ['group_9',['Group',['../d6/d42/structAestraUI_1_1UIMixerNavigator_1_1Group.html',1,'AestraUI::UIMixerNavigator']]]
 ];

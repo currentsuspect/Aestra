@@ -1,4 +1,6 @@
 var searchData=
 [
-  ['registerstatus_0',['RegisterStatus',['../d4/d8f/classAestra_1_1Audio_1_1HostVerbRegistry.html#a8ad8fd72c16f66cc54db72f76b202f41',1,'Aestra::Audio::HostVerbRegistry']]]
+  ['performancealert_0',['PerformanceAlert',['../d8/d94/namespaceAestra.html#a8d25cbd8ce2ed8df613b27bea13fb167',1,'Aestra']]],
+  ['playbackscope_1',['PlaybackScope',['../dc/dd6/AestraContent_8h.html#a9d0335fc021220fd4c22638b85697e6b',1,'AestraContent.h']]],
+  ['previewducksource_2',['PreviewDuckSource',['../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a9eb720786524a322a152bec9c65661e0',1,'Aestra::Audio::AudioEngine']]]
 ];

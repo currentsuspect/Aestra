@@ -1,0 +1,5 @@
+<map id="Aestra::BringOver::Command::execute" name="Aestra::BringOver::Command::execute">
+<area shape="rect" id="Node000001" title="Execute the command (first time)" alt="" coords="199,5,347,45"/>
+<area shape="rect" id="Node000002" href="$dc/d40/classAestra_1_1BringOver_1_1Command.html#a87e2508620e847e662b7327d0591c9d0" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,151,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="185,28,151,28,151,23,185,23"/>
+</map>

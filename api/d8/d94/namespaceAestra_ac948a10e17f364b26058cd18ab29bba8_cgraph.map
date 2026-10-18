@@ -1,0 +1,9 @@
+<map id="Aestra::drawArsenalDropGhost" name="Aestra::drawArsenalDropGhost">
+<area shape="rect" id="Node000001" title="The dashed &quot;a new unit will land here&quot; ghost shown while a sample is dragged over empty space." alt="" coords="5,77,228,102"/>
+<area shape="rect" id="Node000002" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#a8287a2b8a0d43d3eb03d7354121b4a95" title="Draw a line." alt="" coords="276,5,445,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="166,74,270,46,271,52,167,79"/>
+<area shape="rect" id="Node000003" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc" title="Draw text at the given position." alt="" coords="276,69,445,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="228,87,262,87,262,92,228,92"/>
+<area shape="rect" id="Node000004" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#abe394d6a3fb11601766324bcd8793ac3" title="Measure text dimensions." alt="" coords="276,133,445,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="167,100,271,127,270,132,166,105"/>
+</map>

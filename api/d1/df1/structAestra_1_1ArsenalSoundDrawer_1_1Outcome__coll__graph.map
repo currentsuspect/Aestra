@@ -1,0 +1,9 @@
+<map id="Aestra::ArsenalSoundDrawer::Outcome" name="Aestra::ArsenalSoundDrawer::Outcome">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,183,213,223"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="35,95,98,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="75,133,84,158,98,181,93,184,79,160,70,134"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="122,95,209,120"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="154,133,123,184,118,181,149,130"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="96,5,235,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="168,59,168,94,163,94,163,59"/>
+</map>

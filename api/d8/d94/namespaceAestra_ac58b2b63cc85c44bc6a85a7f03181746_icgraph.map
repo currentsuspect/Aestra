@@ -1,0 +1,5 @@
+<map id="Aestra::parseAudioSettings" name="Aestra::parseAudioSettings">
+<area shape="rect" id="Node000001" title="Parse key=value lines." alt="" coords="244,5,443,31"/>
+<area shape="rect" id="Node000002" href="$d8/d94/namespaceAestra.html#a02501fcf1fc05c5d15639134e665f936" title="Convenience: parse the file at audioSettingsConfigPath(). All&#45;unset if absent." alt="" coords="5,5,196,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="230,21,196,21,196,15,230,15"/>
+</map>
