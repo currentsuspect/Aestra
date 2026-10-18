@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include "ArsenalClip.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 
@@ -101,7 +102,7 @@ public:
     int index() const { return m_index; }
     std::string neighbour(int delta) const { return stepped(m_list, m_index, delta, m_custom); }
 
-    void draw(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& r) const {
+    void draw(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& r, const AestraUI::NUIRect& outer = {}) const {
         auto& theme = AestraUI::NUIThemeManager::getInstance();
         const auto& tp = theme.getCurrentTheme();
         renderer.fillRoundedRect(r, tp.radiusS, theme.getColor("backgroundPrimary").withAlpha(0.9f));
@@ -115,11 +116,11 @@ public:
             renderer.drawTextCentered(glyph, rect, tp.fontSizeS, txt);
         }
         const AestraUI::NUIRect nameRect{prevRect(r).right() + 8.0f, r.y, nextRect(r).x - prevRect(r).right() - 16.0f, r.height};
-        renderer.setClipRect(nameRect);
+        ArsenalClip::within(renderer, nameRect, outer);
         const std::string name = m_path.empty() ? "No sound loaded" : displayName(m_path);
         renderer.drawTextCentered(name + ((m_custom ? "   [" + m_setName + "]" : std::string()) + (canStep && m_index >= 0 ? "   " + std::to_string(m_index + 1) + "/" + std::to_string(m_list.size()) : std::string())), nameRect, tp.fontSizeXS,
                                   theme.getColor("textPrimary").withAlpha(0.92f));
-        renderer.clearClipRect();
+        ArsenalClip::restore(renderer, outer);
     }
 
 private:

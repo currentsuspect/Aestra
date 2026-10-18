@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include "ArsenalClip.h"
 #include "NUIRenderer.h"
 #include "NUITypes.h"
 #include "NUIThemeSystem.h"
@@ -136,7 +137,7 @@ public:
 
     static void draw(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& r, const State& s,
                      const std::vector<std::string>& list, const std::string& current, const AestraUI::NUIColor& accent,
-                     const std::string& setLabel = {}, size_t missing = 0) {
+                     const std::string& setLabel = {}, size_t missing = 0, const AestraUI::NUIRect& outer = {}) {
         auto& theme = AestraUI::NUIThemeManager::getInstance();
         const auto& tp = theme.getCurrentTheme();
         renderer.fillRect(r, theme.getColor("backgroundPrimary"));
@@ -151,10 +152,10 @@ public:
         const auto chip = chipRect(r);
         renderer.fillRect(chip, theme.getColor("surfaceTertiary"));
         const std::string label = setLabel.empty() ? "Folder" : setLabel;
-        renderer.setClipRect({chip.x, chip.y, chip.width - 16.0f, chip.height});
+        ArsenalClip::within(renderer, {chip.x, chip.y, chip.width - 16.0f, chip.height}, outer);
         renderer.drawText(label, {chip.x + 8.0f, std::round(renderer.calculateTextY(chip, tp.fontSizeXS))}, tp.fontSizeXS,
                           setLabel.empty() ? theme.getColor("textSecondary") : theme.getColor("textPrimary"));
-        renderer.clearClipRect();
+        ArsenalClip::restore(renderer, outer);
         renderer.drawLine({chip.right() - 13.0f, chip.y + chip.height * 0.5f - 1.5f}, {chip.right() - 10.0f, chip.y + chip.height * 0.5f + 1.5f}, 1.2f, theme.getColor("textSecondary"));
         renderer.drawLine({chip.right() - 10.0f, chip.y + chip.height * 0.5f + 1.5f}, {chip.right() - 7.0f, chip.y + chip.height * 0.5f - 1.5f}, 1.2f, theme.getColor("textSecondary"));
         std::string count = std::to_string(idx.size()) + (idx.size() == 1 ? " sound" : " sounds");
@@ -174,7 +175,7 @@ public:
                                       theme.getColor("textSecondary").withAlpha(0.6f));
             return;
         }
-        renderer.setClipRect({r.x, search.bottom(), r.width, kRowH * kVisibleRows});
+        ArsenalClip::within(renderer, {r.x, search.bottom(), r.width, kRowH * kVisibleRows}, outer);
         for (int v = 0; v < kVisibleRows; ++v) {
             const int row = s.scroll + v;
             if (row >= static_cast<int>(idx.size())) break;
@@ -185,7 +186,7 @@ public:
             renderer.drawText(nameOf(path), {rr.x + 14.0f, std::round(renderer.calculateTextY(rr, tp.fontSizeS))}, tp.fontSizeS,
                               row == s.selected ? theme.getColor("textPrimary") : theme.getColor("textPrimary").withAlpha(0.78f));
         }
-        renderer.clearClipRect();
+        ArsenalClip::restore(renderer, outer);
 
         // A thin scroll thumb when there are more matches than rows.
         if (static_cast<int>(idx.size()) > kVisibleRows) {

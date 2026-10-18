@@ -266,12 +266,12 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
     drawControlBlock(renderer, controlRect);
 
     float separatorX = cardBounds.x + m_controlWidth;
-    renderer.drawLine(NUIPoint(separatorX, cardBounds.y + 8.0f),
-                      NUIPoint(separatorX, cardBounds.y + cardBounds.height - 8.0f), 1.0f,
+    renderer.drawLine(NUIPoint(separatorX, cardBounds.y + 8.0f), NUIPoint(separatorX, cardBounds.bottom() - 8.0f), 1.0f,
                       theme.getColor("borderSubtle").withAlpha(0.55f));
 
     NUIRect contextRect(separatorX + 8.0f, cardBounds.y + 6.0f, cardBounds.right() - separatorX - 2.0f - routeColumn(),
                         cardBounds.height - 12.0f);
+    renderer.setClipRect(intersectRects(paintClip, contextRect)); // scrolled pads and notes stop at the lane, not on the output pill
     drawContextBlock(renderer, contextRect);
     renderer.clearClipRect();
 }

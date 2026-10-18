@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include "ArsenalClip.h"
 #include "Commands/EditPatternNotesCommand.h"
 #include "Models/TrackManager.h"
 #include "NUIRenderer.h"
@@ -132,6 +133,7 @@ public:
         AestraUI::NUIRect strip{};  ///< the row's step strip (x and width are what lines the columns up)
         float stepW{0.0f}, groupGap{2.0f}, scrollX{0.0f};
         AestraUI::NUIColor accent{};
+        AestraUI::NUIRect clip{};   ///< the Arsenal list viewport the lanes must stay inside (none: unclipped)
     };
 
     void draw(AestraUI::NUIRenderer& renderer, const Context& c) const {
@@ -144,7 +146,7 @@ public:
         for (size_t i = 0; i < lanes.size(); ++i) {
             const auto r = laneRect(c, i);
             renderer.drawText(label(lanes[i]), {c.area.x + 12.0f, r.y + r.height * 0.5f - 5.0f}, tp.fontSizeMicro, theme.getColor("textSecondary").withAlpha(0.8f));
-            renderer.setClipRect({c.strip.x, r.y, c.strip.width, r.height});
+            ArsenalClip::within(renderer, {c.strip.x, r.y, c.strip.width, r.height}, c.clip);
             renderer.fillRect({c.strip.x, r.y + r.height * 0.5f, c.strip.width, 1.0f}, theme.getColor("border").withAlpha(lanes[i] == Lane::Pitch ? 0.5f : 0.0f));
             for (int s = 0; s < c.steps; ++s) {
                 const Audio::MidiNote* n = noteAt(notes, c.unit, s);
@@ -167,7 +169,7 @@ public:
                     renderer.drawTextCentered(txt, {cell.x, std::max(r.y, bar.y - 12.0f), bw, 11.0f}, tp.fontSizeMicro, theme.getColor("textSecondary"));
                 }
             }
-            renderer.clearClipRect();
+            ArsenalClip::restore(renderer, c.clip);
         }
     }
 

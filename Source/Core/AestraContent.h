@@ -346,6 +346,8 @@ public:
 
     /** @brief The panel owned for a floating view, or nullptr for other views. */
     std::shared_ptr<Aestra::Audio::WindowPanel> panelForView(Aestra::Audio::ViewType view);
+    /** @brief Bring an open panel forward when another panel overlaps it from above; false if it was already in front (or closed). */
+    bool raiseIfCovered(Aestra::Audio::ViewType view);
 
     // One accessor per floating panel, existing so the descriptor table can name
     // a panel without friendship or type erasure. The five members are distinct
