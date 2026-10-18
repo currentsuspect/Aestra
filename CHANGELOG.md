@@ -360,9 +360,90 @@ the app can fail a build.
   anti-alias copy while they are played, and preparing it keeps one core busy for a couple of minutes.
 - Presets and in-app documentation are deferred to v0.8.1.
 
+## v0.8.1-alpha — The revamp: Arsenal, Mixer, Routing, Audition, Versions (2026-10-18)
+
+86 PRs since v0.8.0-alpha. The surfaces you spend the most time in are rebuilt: the Arsenal is a rack you
+play, the mixer reads meters first, the routing graph shows only what you changed, Audition is a place to
+listen and compare, and Versions replaces the history list.
+
+### Arsenal
+
+- **A rack you play.** Units are grouped rows with output pills, patterns are one-click scenes under the
+  header, and a row opens into step lanes. The Arsenal opens full width, in the unit's channel colour.
+  (#1094, #1095, #1096, #1105, #1106, #1107)
+- **Start with a kit.** An empty Arsenal offers to load a folder of sounds: every file becomes a unit,
+  named after it. (#1104)
+- **Explore sounds without stopping.** A row's < > arrows step to the next sound in its folder, and the
+  sound drawer searches the folder and auditions with the arrow keys. A swap comes in on the next hit,
+  with no gap. (#1101, #1103, #1136)
+- **Sound sets.** A row can walk a library collection made from many folders. (#1137)
+- **Swing, chance and ratchets.** Chance plays a step only some of the time, a ratchet splits it into a
+  quick roll, swing shifts the off-beats. (#1098, #1100)
+- **Place in timeline** puts the pattern in your song. Press it again and the next copy follows the last
+  one. Switching patterns while playing takes over at once. (#1109, #1147, #1151)
+- **Hits no longer drop when the screen is busy.** Hits were queued only ~85 ms ahead from the UI thread,
+  so a slow frame skipped them with no xrun anywhere. The lookahead is a quarter second; edits are still
+  heard at once. `get_audio_health` reports any missed hits. (#1161)
+
+### Mixer and routing
+
+- **Meters first.** Strips are grouped by output under coloured headers, with three densities and a
+  navigator for big sessions. A strip names its inserts and its output; one dB scale serves them all.
+  (#1085, #1086, #1088, #1089, #1090, #1154)
+- **The master reads loudness:** integrated, short-term, true peak and correlation. (#1087)
+- **The inspector is one column**, sends one line each; the routing minimap is gone. (#1091, #1092, #1093)
+- **The routing graph shows only custom routes.** Tracks that go straight to the master are listed, not
+  drawn. Select a channel to trace its chain, drag to patch, and a loop is refused. (#1153)
+
+### Audition
+
+- **A hub for listening.** Open a mix and compare it with a reference that plays alongside it at the
+  same position, level-matched. Switching is a short ramp, never a cut. (#1127, #1146)
+- **Tonal, Dynamics, Stereo and Sections** tabs on an item: tonal balance, PLR, width and mono
+  problems, and a section map. (#1126, #1150)
+
+### Versions
+
+- **Versions replaces the History and Takes lists.** Saved versions sit on a branch timeline, each with
+  its steps. Branch from any version, bounce a version and play it, bring tracks and patterns over from
+  another version, and find a crash-recovery card when something went wrong.
+  (#1120–#1124, #1139–#1145, #1155)
+
+### The v0.8.1 look
+
+- One context-menu look, one panel chrome, flat library, pattern and plugin rows. The sample and audio
+  clip editors are rebuilt. (#1113, #1114, #1117, #1119, #1128–#1135)
+- **The library browser:** Sounds, Patterns and Plugins tabs, one Places button for all your locations,
+  tag chips, and a preview strip with Add to Arsenal. (#1160)
+- **One playhead everywhere:** a solid line with a filled head in the timeline, piano roll and Arsenal. (#1162)
+- **Settings show real values,** with a real auto-save switch and no Windows path on Linux. (#1157)
+
+### Fixes
+
+- **Opening Aestra with a project plays at that project's tempo.** It used to play at 120 while showing
+  yours, so loops sounded cut off. (#1165)
+- **New Project and Open Project ask about unsaved work,** as Quit does. (#1163)
+- New Project starts clean; the kit picker no longer freezes the window. (#1149)
+- Trims and undo/redo rebuild audio playback (no more trimmed-off tails playing). (#1158)
+- Closing a title-bar menu no longer crashes. (#1159)
+- Audio devices are found by name, not list position. (#1102)
+- Held voices are released on stop, pause and loop wrap. (#1078)
+- Bounce in Place works on pattern clips, and a pattern on several tracks becomes one clip on Master.
+  (#1084, #1152)
+
+### Known gaps
+
+- **Moved to v0.8.2 (FD-51):** presets, in-app documentation, the piano roll, Settings/Export and
+  timeline looks, the second half of Audition (band solo, Mono/Sides, blind tests) and Versions' compare
+  with the current mix.
+- Bounce a version blocks the window while it renders (about 3x real time).
+- Bounce in Place on a multi-track pattern does not follow sends or group buses.
+- The browser's In tempo preview, per-row waveforms and key column need the analysis service.
+- Seen on a virtual display and in tests; the real-screen pass on the 1366x768 laptop is part of the cut.
+
 ## [Unreleased]
 
-Nothing yet — v0.7.1-alpha was cut on 2026-09-12. v0.8.0 work lands here.
+Nothing yet — v0.8.1-alpha was cut on 2026-10-18. v0.8.2 work lands here.
 
 ## Unfiled — shipped before v0.7.0, never assigned to a release
 
