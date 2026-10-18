@@ -220,6 +220,10 @@ private:
     // Menus
     std::shared_ptr<AestraUI::NUIMenuBar> m_menuBar;
     std::shared_ptr<AestraUI::NUIContextMenu> m_activeMenu;
+    /// A closed menu kept alive until the next frame: it may still be inside its own hide()
+    /// or in the middle of a click being dispatched through the root's children.
+    std::shared_ptr<AestraUI::NUIContextMenu> m_retiredMenu;
+    void retireMenu(std::shared_ptr<AestraUI::NUIContextMenu> menu);
     float m_activeMenuXOffset{-1.0f};
 
     // Cursor
