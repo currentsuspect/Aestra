@@ -3817,6 +3817,7 @@ if(AESTRA_ENABLE_UI)
         AestraUI/FileBrowserLibraryTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowser.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserNavigation.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserChrome.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserLibrary.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserScan.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/BrowserLibrary.cpp

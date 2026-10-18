@@ -399,21 +399,29 @@ bool FileBrowser::searchQueryIsEmpty() const {
 
 FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
     NUIRect bounds = getBounds();
-    const float effectiveW = bounds.width;
-    const float searchH = BROWSER_SEARCH_ROW_H;
-    const float navW = computeNavigationWidth(effectiveW);
-    const float previewH =
-        previewPanelVisible_ ? std::min(kPreviewPanelHeight, std::max(0.0f, bounds.height - searchH)) : 0.0f;
+    const bool embedded = kindOf(activeNavAction_) != 0;
+    FileBrowserBands bands;
+    bands.locationRow = embedded ? 0.0f : 30.0f;
+    bands.listHeader = embedded ? 0.0f : 26.0f;
+    bands.chipsRow = (!embedded && !collections_.empty()) ? 30.0f : 0.0f;
+    bands.preview = previewPanelVisible_ ? kPreviewPanelHeight : 0.0f;
+    // The scope chip (Here / Everywhere) sits at the end of the field; the clear
+    // button joins it once there is a query.
+    const float trailing = (embedded ? 10.0f : 92.0f) + (searchQueryIsEmpty() ? 0.0f : 26.0f);
 
     // V8-X2b: panes and chrome in Local space (FileBrowserLayout.h), converted once.
     const Layout::NUIWindowPoint origin(bounds.x, bounds.y);
     const auto win = [&](const Layout::NUILocalRect& r) { return Layout::localToWindow(r, origin).raw(); };
     auto* trace = Layout::beginLayoutPass("browser", origin); // AESTRA_LAYOUT_TRACE=browser
-    const auto local = resolveFileBrowserLayout(effectiveW, bounds.height, searchH, searchQueryIsEmpty() ? 34.0f : 60.0f,
-                                                navW, BROWSER_LIST_HEADER_H, previewH, trace);
+    const auto local = resolveFileBrowserLayout(bounds.width, bounds.height, bands, trailing, trace);
     Layout::finishLayoutPass(trace);
 
     BrowserLayout layout;
+    layout.kindRow = win(local.kindRow);
+    for (size_t i = 0; i < layout.kinds.size(); ++i) layout.kinds[i] = win(local.kinds[i]);
+    layout.location = win(local.location);
+    layout.chips = win(local.chips);
+    layout.body = win(local.body);
     layout.searchBar = win(local.searchBar);
     layout.search = win(local.search);
     layout.navPane = win(local.navPane);
@@ -422,37 +430,23 @@ FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
     layout.listHeader = win(local.listHeader);
     layout.list = win(local.list);
     layout.backButton = win(local.back);
-    layout.forwardButton = win(local.forward);
-    layout.upButton = win(local.up);
+    layout.pathLabel = win(local.path);
     layout.sortButton = win(local.sort);
     layout.filterButton = win(local.filter);
-    layout.pathLabel = NUIRect(layout.upButton.right() + 7.0f, layout.upButton.y,
-                               std::max(0.0f, layout.filterButton.x - layout.upButton.right() - 11.0f), 24.0f);
-    // Clear-query button only. The filter control that used to share this slot
-    // was a duplicate of the funnel in the list header below (spec 2 §3), and
-    // the two used different icons for the same menu.
-    //
-    // An empty query leaves no button and no reserved gap: layout.search widens
-    // to the full row instead, so nothing unexplained is left behind.
+    // Forward and up have no buttons any more: Alt+Right and the breadcrumbs do both.
     layout.searchActionButton = searchQueryIsEmpty()
                                     ? NUIRect()
-                                    : NUIRect(layout.searchBar.right() - 30.0f,
-                                              layout.searchBar.y + (layout.searchBar.height - 26.0f) * 0.5f,
-                                              26.0f, 26.0f);
-    layout.navWidth = navW;
+                                    : NUIRect(layout.search.right() + 2.0f, layout.search.y + 1.0f, 26.0f, 26.0f);
+    layout.navWidth = placesOpen_ ? layout.navPane.width : 0.0f;
     return layout;
 }
 
 float FileBrowser::getNavPaneWidth() const {
-    NUIRect bounds = getBounds();
-    const float effectiveW = bounds.width;
-    return computeNavigationWidth(effectiveW);
+    return placesOpen_ ? getBounds().width : 0.0f;
 }
 
 NUIRect FileBrowser::getContentViewBounds() const {
-    const BrowserLayout layout = computeBrowserLayout();
-    return NUIRect(layout.listHeader.x, layout.searchBar.bottom(), layout.listHeader.width,
-                   std::max(0.0f, layout.list.bottom() - layout.searchBar.bottom()));
+    return computeBrowserLayout().body;
 }
 
 void FileBrowser::registerContentView(BrowserNavAction action, const std::shared_ptr<NUIComponent>& component) {
@@ -492,96 +486,6 @@ void FileBrowser::updateContentViews() {
     }
 }
 
-void FileBrowser::renderListHeader(NUIRenderer& renderer, const BrowserLayout& layout) {
-    auto& themeManager = NUIThemeManager::getInstance();
-    const NUIColor headerBg = themeManager.getColor("backgroundSecondary").darkened(0.03f);
-    const NUIColor border = themeManager.getColor("border").withAlpha(0.38f);
-    const NUIColor text = themeManager.getColor("textPrimary");
-    const NUIColor muted = themeManager.getColor("textSecondary");
-    const NUIColor accent = themeManager.getColor("accentPrimary");
-    renderer.fillRect(layout.listHeader, headerBg);
-
-    const auto& themeProps = themeManager.getCurrentTheme();
-
-    const auto drawChevron = [&](const NUIRect& rect, bool pointsRight, bool enabled) {
-        const float cx = rect.x + rect.width * 0.5f;
-        const float cy = rect.y + rect.height * 0.5f;
-        const float direction = pointsRight ? 1.0f : -1.0f;
-        const NUIColor color = muted.withAlpha(enabled ? 0.78f : 0.24f);
-        renderer.drawLine({cx - direction * 2.0f, cy - 4.0f}, {cx + direction * 2.0f, cy}, 1.5f, color);
-        renderer.drawLine({cx + direction * 2.0f, cy}, {cx - direction * 2.0f, cy + 4.0f}, 1.5f, color);
-    };
-    drawChevron(layout.backButton, false, navHistoryIndex_ > 0);
-    drawChevron(layout.forwardButton, true,
-                navHistoryIndex_ >= 0 && navHistoryIndex_ < static_cast<int>(navHistory_.size()) - 1);
-
-    const bool canNavigateUp = isShowingListing() ||
-                               (!currentPath_.empty() &&
-                                std::filesystem::path(currentPath_).parent_path() != std::filesystem::path(currentPath_) &&
-                                !std::filesystem::path(currentPath_).parent_path().empty());
-    const float upCx = layout.upButton.x + layout.upButton.width * 0.5f;
-    const float upCy = layout.upButton.y + layout.upButton.height * 0.5f;
-    const NUIColor upColor = muted.withAlpha(canNavigateUp ? 0.78f : 0.24f);
-    renderer.drawLine({upCx - 4.0f, upCy + 2.0f}, {upCx, upCy - 2.0f}, 1.5f, upColor);
-    renderer.drawLine({upCx, upCy - 2.0f}, {upCx + 4.0f, upCy + 2.0f}, 1.5f, upColor);
-    renderer.drawLine({upCx, upCy - 2.0f}, {upCx, upCy + 5.0f}, 1.5f, upColor);
-
-    std::string location = "Library";
-    if (isShowingListing()) {
-        location = listingTitle_;
-    } else if (!currentPath_.empty()) {
-        std::filesystem::path p(currentPath_);
-        location = p.filename().string();
-        if (location.empty()) location = currentPath_;
-    }
-    location = ellipsizeMiddle(renderer, location, themeProps.fontSizeS, layout.pathLabel.width);
-    renderer.drawText(location,
-                      {layout.pathLabel.x, std::round(renderer.calculateTextY(layout.pathLabel, themeProps.fontSizeS))},
-                      themeProps.fontSizeS, text.withAlpha(0.88f));
-
-    renderer.drawLine({layout.listHeader.x, layout.listHeader.bottom()},
-                      {layout.listHeader.right(), layout.listHeader.bottom()},
-                      1.0f, border);
-
-    const bool filterActive = isFilterActive();
-    const NUIColor controlColor = filterActive ? accent.withAlpha(0.94f) : muted.withAlpha(0.62f);
-    const float filterCx = layout.filterButton.x + layout.filterButton.width * 0.5f;
-    const float filterCy = layout.filterButton.y + layout.filterButton.height * 0.5f;
-    renderer.drawLine({filterCx - 5.0f, filterCy - 4.0f}, {filterCx + 5.0f, filterCy - 4.0f}, 1.2f, controlColor);
-    renderer.drawLine({filterCx - 3.0f, filterCy}, {filterCx + 3.0f, filterCy}, 1.2f, controlColor);
-    renderer.drawLine({filterCx - 1.0f, filterCy + 4.0f}, {filterCx + 1.0f, filterCy + 4.0f}, 1.2f, controlColor);
-    if (filterActive) renderer.fillCircle({layout.filterButton.right() - 5.0f, layout.filterButton.y + 5.0f}, 2.0f, accent);
-
-    const NUIColor sortColor = muted.withAlpha(0.62f);
-    if (layout.sortButton.width > 30.0f) {
-        const char* sortLabel = "Name";
-        switch (sortMode_) {
-            case SortMode::Name: sortLabel = "Name"; break;
-            case SortMode::Type: sortLabel = "Type"; break;
-            case SortMode::Size: sortLabel = "Size"; break;
-            case SortMode::Modified: sortLabel = "Date"; break;
-            case SortMode::Length: sortLabel = "Length"; break;
-            case SortMode::Bpm: sortLabel = "BPM"; break;
-        }
-        const NUIRect labelRect(layout.sortButton.x + 6.0f, layout.sortButton.y, layout.sortButton.width - 28.0f,
-                                layout.sortButton.height);
-        renderer.drawText(sortLabel,
-                          {labelRect.x, std::round(renderer.calculateTextY(labelRect, themeProps.fontSizeXS))},
-                          themeProps.fontSizeXS, muted.withAlpha(0.86f));
-    }
-    const float sortCx = layout.sortButton.right() - 11.0f;
-    const float sortCy = layout.sortButton.y + layout.sortButton.height * 0.5f;
-    renderer.drawLine({sortCx - 5.0f, sortCy - 4.0f}, {sortCx + 2.0f, sortCy - 4.0f}, 1.2f, sortColor);
-    renderer.drawLine({sortCx - 5.0f, sortCy}, {sortCx, sortCy}, 1.2f, sortColor);
-    renderer.drawLine({sortCx - 5.0f, sortCy + 4.0f}, {sortCx - 2.0f, sortCy + 4.0f}, 1.2f, sortColor);
-    renderer.drawLine({sortCx + 5.0f, sortCy - 4.0f}, {sortCx + 5.0f, sortCy + 4.0f}, 1.2f, sortColor);
-    const float arrowDirection = sortAscending_ ? -1.0f : 1.0f;
-    renderer.drawLine({sortCx + 2.5f, sortCy + arrowDirection * 1.5f},
-                      {sortCx + 5.0f, sortCy + arrowDirection * 4.0f}, 1.2f, sortColor);
-    renderer.drawLine({sortCx + 7.5f, sortCy + arrowDirection * 1.5f},
-                      {sortCx + 5.0f, sortCy + arrowDirection * 4.0f}, 1.2f, sortColor);
-}
-
 void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& bounds) {
     auto& themeManager = NUIThemeManager::getInstance();
 
@@ -607,15 +511,32 @@ void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& boun
     renderer.fillRect(fileBrowserBounds, themeManager.getColor("backgroundPrimary"));
     // Search row sits ON the surface (DESIGN.md rule 4: no recessed dark
     // well); the single quiet divider below it explains the boundary.
+    renderer.fillRect(NUIRect(bounds.x, bounds.y, bounds.width, browserLayout.searchBar.bottom() - bounds.y),
+                      themeManager.getColor("backgroundSecondary"));
     renderer.drawLine({browserLayout.searchBar.x, browserLayout.searchBar.bottom() - 1.0f},
                       {browserLayout.searchBar.right(), browserLayout.searchBar.bottom() - 1.0f},
                       1.0f, themeManager.getColor("border").withAlpha(0.30f));
 
-    // Flat square border — the curved grey top treatment is gone (0.7.0 triage).
+    // FD-47: tabs, search, location, chips, header, rows; Places drops over them last.
+    chromeHits_.clear();
+    renderKindTabs(renderer, browserLayout);
+    renderSearchScope(renderer, browserLayout);
+    if (kindOf(activeNavAction_) == 0) {
+        if (searchInput_) {
+            std::string here;
+            currentPlaceLabel(&here);
+            const std::string folder = isShowingListing() ? listingTitle_
+                                       : std::filesystem::path(currentPath_).filename().string();
+            searchInput_->setPlaceholderText(searchWholeLibrary_ || folder.empty() ? "Search everything"
+                                                                                   : "Search " + folder);
+        }
+        renderLocationRow(renderer, browserLayout);
+        renderTagChips(renderer, browserLayout);
+        renderListHeader(renderer, browserLayout);
+        renderFileList(renderer);
+        renderScrollbar(renderer);
+    }
     renderNavigationPane(renderer, browserLayout);
-    renderListHeader(renderer, browserLayout);
-    renderFileList(renderer);
-    renderScrollbar(renderer);
     if (isFocused() && (!searchInput_ || !searchInput_->isFocused())) {
         renderer.strokeRoundedRect(browserLayout.list, 2.0f, 1.0f,
                                    themeManager.getColor("accentPrimary").withAlpha(0.28f));
@@ -654,6 +575,11 @@ void FileBrowser::renderHoverOverlays(NUIRenderer& renderer) {
         if (!selected) {
             renderer.fillRoundedRect(hit.bounds, themeProps.radiusS, NUIColor::white().withAlpha(0.065f));
         }
+    }
+
+    if (hoveredChromeHit_ >= 0 && hoveredChromeHit_ < static_cast<int>(chromeHits_.size())) {
+        const NUIRect& r = chromeHits_[static_cast<size_t>(hoveredChromeHit_)].bounds;
+        renderer.fillRoundedRect(r, 3.0f, NUIColor::white().withAlpha(0.06f));
     }
 
     const BrowserLayout layout = computeBrowserLayout();
@@ -763,7 +689,8 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
         const BrowserLayout layout = computeBrowserLayout();
         const NUIRect search = layout.searchBar;
         if (m_searchIcon) {
-            m_searchIcon->setBounds({search.x + 6.0f, search.y + (search.height - 15.0f) * 0.5f, 15.0f, 15.0f});
+            const NUIRect field = layout.search;
+            m_searchIcon->setBounds({field.x - 19.0f, field.y + (field.height - 13.0f) * 0.5f, 13.0f, 13.0f});
             m_searchIcon->setColor(themeManager.getColor("textSecondary").withAlpha(0.72f));
             m_searchIcon->onRender(renderer);
         }
@@ -957,7 +884,13 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
         }
     }
 
-    if (handleChromeMouse(event, browserLayout)) {
+    if (handleChromeHits(event) || handleChromeMouse(event, browserLayout)) {
+        return true;
+    }
+    // A press outside Places (but inside the browser) closes it, like a menu.
+    if (placesOpen_ && event.pressed && !browserLayout.navPane.contains(event.position) &&
+        bounds.contains(event.position)) {
+        setPlacesOpen(false);
         return true;
     }
 
@@ -1007,6 +940,9 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 
     if (handleWheelScroll(event, browserLayout, mouseInside, view)) {
         return true;
+    }
+    if (placesOpen_ && browserLayout.navPane.contains(event.position)) {
+        return true; // Places covers the rows: nothing under it takes the event
     }
 
     // Clear hover if mouse leaves the file browser entirely (but allow scrollbar dragging)
@@ -1169,7 +1105,7 @@ bool FileBrowser::handleWheelScroll(const NUIMouseEvent& event, const BrowserLay
     const float itemHeight = BROWSER_LIST_ROW_H;
     // === NAV PANE WHEEL (independent of the file list) ===
     // Scroll the collections/categories/places column when it overflows.
-    if (event.wheelDelta != 0 && browserLayout.navPane.contains(event.position)) {
+    if (placesOpen_ && event.wheelDelta != 0 && browserLayout.navPane.contains(event.position)) {
         const float navOverflow = std::max(0.0f, navContentHeight_ - navViewportHeight_);
         if (navOverflow > 0.0f) {
             navScrollOffset_ = std::clamp(navScrollOffset_ - event.wheelDelta * 3.0f * BROWSER_NAV_ROW_H,
@@ -1243,7 +1179,7 @@ bool FileBrowser::handleListMouse(const NUIMouseEvent& event, const std::vector<
                 setDirty(true); // hover overlay only — no cache rebuild
             }
             if (m_platformBridge) m_platformBridge->setCursorStyle(NUICursorStyle::Arrow);
-            if (!browserLayout.navPane.contains(event.position)) {
+            if (!(placesOpen_ && browserLayout.navPane.contains(event.position))) {
                 AestraUI::NUIComponent::hideRemoteTooltip(this);
             }
         }
@@ -1479,6 +1415,7 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
     if (NUIComponent::onKeyEvent(event)) return true;
 
     if (event.pressed) {
+        if (placesOpen_ && event.keyCode == NUIKeyCode::Escape) { setPlacesOpen(false); return true; }
         if (event.modifiers & NUIModifiers::Alt) {
             if (event.keyCode == NUIKeyCode::Left) { navigateBack(); return true; }
             if (event.keyCode == NUIKeyCode::Right) { navigateForward(); return true; }
@@ -2469,7 +2406,14 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         if (!item) continue;
         const bool playbackActive = !activePlaybackPath_.empty() && mapKeyForPath(item->path) == activePlaybackPath_;
         if (playbackActive) {
-            renderer.fillRect({itemRect.x, itemRect.y, 3.0f, itemRect.height}, themeManager.getColor("accentPrimary").withAlpha(0.96f));
+            // FD-47: the sound that is playing is tinted, with teal bars where the
+            // play glyph would be — teal is what "live" means everywhere in Aestra.
+            renderer.fillRect(itemRect, themeManager.getColor("accentPrimary").withAlpha(0.14f));
+            const NUIColor live = themeManager.getColor("accentCyan");
+            const float bx = itemRect.x + 5.0f, cy = itemRect.y + itemRect.height * 0.5f;
+            renderer.fillRect({bx, cy - 3.0f, 2.0f, 6.0f}, live);
+            renderer.fillRect({bx + 3.0f, cy - 5.0f, 2.0f, 10.0f}, live);
+            renderer.fillRect({bx + 6.0f, cy - 2.0f, 2.0f, 4.0f}, live);
         }
 
         const float indent = std::min(static_cast<float>(item->depth) * rowIndentStep, 68.0f);
@@ -2507,7 +2451,33 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         }
         contentX += 20.0f;
 
-        const float maxTextWidth = std::max(0.0f, itemRect.right() - contentX - 12.0f);
+        // Key and length sit in two right-hand columns on audio rows (FD-47).
+        std::string keyText, lengthText;
+        if (!item->isDirectory && !item->isPlaceholder) {
+            keyText = item->musicalKey;
+            if (item->durationSec > 0.0) {
+                char buf[16];
+                if (item->durationSec < 10.0) std::snprintf(buf, sizeof(buf), "%.2f", item->durationSec);
+                else std::snprintf(buf, sizeof(buf), "%d:%02d", static_cast<int>(item->durationSec) / 60,
+                                   static_cast<int>(item->durationSec) % 60);
+                lengthText = buf;
+            }
+        }
+        const float factFont = themeProps.fontSizeXS;
+        const float lengthColW = 34.0f;
+        const float keyColW = keyText.empty() ? 0.0f : renderer.measureText(keyText, factFont).width + 10.0f;
+        const float factsW = (lengthText.empty() && keyText.empty()) ? 0.0f : lengthColW + keyColW + 4.0f;
+        if (!lengthText.empty()) {
+            const float w = renderer.measureText(lengthText, factFont).width;
+            renderer.drawText(lengthText, {itemRect.right() - 12.0f - w, std::round(renderer.calculateTextY(itemRect, factFont))},
+                              factFont, muted.withAlpha(0.75f));
+        }
+        if (!keyText.empty()) {
+            renderer.drawText(keyText, {itemRect.right() - 12.0f - lengthColW - keyColW + 6.0f,
+                                        std::round(renderer.calculateTextY(itemRect, factFont))},
+                              factFont, muted.withAlpha(1.0f));
+        }
+        const float maxTextWidth = std::max(0.0f, itemRect.right() - contentX - 12.0f - factsW);
         std::string displayName = item->name;
         bool prefixDropped = false;
         if (!item->isDirectory && !sharedPrefixes.empty()) {
@@ -2542,7 +2512,7 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             if (isShowingListing() || mapKeyForPath(parent.string()) != mapKeyForPath(currentPath_)) {
                 const std::string folder = parent.filename().string();
                 const float hintFont = themeProps.fontSizeXS;
-                const float room = itemRect.right() - 12.0f - (afterNameX + 8.0f);
+                const float room = itemRect.right() - 12.0f - factsW - (afterNameX + 8.0f);
                 if (!folder.empty() && room > 40.0f) {
                     const std::string hint = ellipsizeEnd(renderer, folder, hintFont, room);
                     renderer.drawText(hint, {afterNameX + 8.0f, std::round(renderer.calculateTextY(itemRect, hintFont))},
@@ -2552,8 +2522,8 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             }
         }
 
-        // BPM stays in metadata (search/drag) but is not shown as a row
-        // column — owner direction: no number on the right of audio rows.
+        // BPM stays in metadata (search/drag) but is not a row column; FD-47
+        // gave rows key and length only (the board the owner approved).
 
         // Tag dots (after name)
         if (!item->isDirectory) {

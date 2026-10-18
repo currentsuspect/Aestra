@@ -12,7 +12,43 @@ namespace AestraUI {
 using namespace FileBrowserInternal;
 
 bool FileBrowser::usesCompactNavigation() const {
-    return getNavPaneWidth() < 112.0f;
+    return false; // FD-47: no icon rail; Places is a labelled overlay at every width
+}
+
+int FileBrowser::kindOf(BrowserNavAction action) {
+    switch (action) {
+        case BrowserNavAction::Patterns: return 1;
+        case BrowserNavAction::Plugins: return 2;
+        default: return 0;
+    }
+}
+
+void FileBrowser::setPlacesOpen(bool open) {
+    if (placesOpen_ == open) return;
+    placesOpen_ = open;
+    hoveredNavIndex_ = -1;
+    if (!open) NUIComponent::hideRemoteTooltip(this);
+    invalidateCache();
+}
+
+void FileBrowser::selectKind(int kind) {
+    BrowserNavHit hit;
+    hit.action = kind == 1 ? BrowserNavAction::Patterns
+               : kind == 2 ? BrowserNavAction::Plugins
+                           : lastSoundsAction_;
+    // Sounds returns to the folder on screen, not to the category it came from:
+    // re-running a category action would navigate away from where the user was.
+    if (kind == 0) {
+        const BrowserNavAction previous = activeNavAction_;
+        activeNavAction_ = lastSoundsAction_;
+        updateContentViews();
+        if (previous == BrowserNavAction::Plugins || previous == BrowserNavAction::Patterns) applyFilter();
+        if (onNavActionSelected_) onNavActionSelected_(activeNavAction_);
+        invalidateCache();
+        return;
+    }
+    setPlacesOpen(false);
+    activateNav(hit);
 }
 
 void FileBrowser::selectNavAction(BrowserNavAction action) {
@@ -28,14 +64,15 @@ void FileBrowser::selectNavAction(BrowserNavAction action) {
 void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayout& layout) {
     auto& themeManager = NUIThemeManager::getInstance();
     navHits_.clear();
+    if (!placesOpen_ || layout.navPane.isEmpty()) return;
 
-    const NUIColor paneBg = themeManager.getColor("backgroundSecondary");
+    const NUIColor paneBg = themeManager.getColor("surfaceRaised");
     const NUIColor sectionColor = themeManager.getColor("textSecondary").withAlpha(0.58f);  // Stronger section headers
     const NUIColor rowText = themeManager.getColor("textPrimary").withAlpha(0.78f);
     const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.48f);
-    const NUIColor selectedBg = themeManager.getColor("accentPrimary").withAlpha(0.05f);
+    const NUIColor selectedBg = themeManager.getColor("accentPrimary").withAlpha(0.16f);
     const NUIColor divider = themeManager.getColor("divider");
-    const bool compact = layout.navWidth < 112.0f;
+    const bool compact = false;
 
     renderer.fillRect(layout.navPane, paneBg);
     renderer.setClipRect(layout.navPane);
@@ -50,29 +87,16 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     renderer.drawLine({navHeader.x, navHeader.bottom()}, {navHeader.right(), navHeader.bottom()},
                       1.0f, themeManager.getColor("border").withAlpha(0.42f));
 
-    // Folder name at top (like breadcrumb on the right)
+    // Title band: what this list is, and how to leave it.
     const auto& themeProps = themeManager.getCurrentTheme();
-    std::string folderName = "Browse";
-    if (!currentPath_.empty()) {
-        std::filesystem::path p(currentPath_);
-        folderName = p.filename().string();
-        if (folderName.empty()) folderName = currentPath_;
-    }
-    if (!compact) {
-        renderer.drawText(
-            folderName,
-            {navHeader.x + themeProps.spacingM,
-             std::round(renderer.calculateTextY(NUIRect(navHeader.x, navHeader.y + 5.0f, navHeader.width, 20.0f),
-                                                themeProps.fontSizeXS))},
-            themeProps.fontSizeXS, themeManager.getColor("textPrimary").withAlpha(0.76f));
-    } else {
-        const std::string compactLabel = "Library";
-        const auto labelSize = renderer.measureText(compactLabel, 8.5f);
-        renderer.drawText(compactLabel,
-                          {navHeader.x + (navHeader.width - labelSize.width) * 0.5f,
-                           std::round(renderer.calculateTextY(
-                               NUIRect(navHeader.x, navHeader.y + 5.0f, navHeader.width, 20.0f), 8.5f))},
-                          8.5f, themeManager.getColor("textSecondary").withAlpha(0.54f));
+    renderer.drawText("Places", {navHeader.x + 12.0f, std::round(renderer.calculateTextY(navHeader, themeProps.fontSizeS))},
+                      themeProps.fontSizeS, themeManager.getColor("textPrimary"));
+    {
+        const std::string hint = "Esc to close";
+        const auto hintSize = renderer.measureText(hint, themeProps.fontSizeXS);
+        renderer.drawText(hint, {navHeader.right() - hintSize.width - 12.0f,
+                                 std::round(renderer.calculateTextY(navHeader, themeProps.fontSizeXS))},
+                          themeProps.fontSizeXS, muted);
     }
 
     // Scrollable content region below the fixed folder-name header. Short
@@ -111,14 +135,6 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
         std::transform(upper.begin(), upper.end(), upper.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
         NUIRect labelRect(layout.navPane.x + themeProps.spacingM, y, layout.navPane.width - themeProps.spacingM * 2.0f, 22.0f);
         renderer.drawText(upper, {labelRect.x, std::round(renderer.calculateTextY(labelRect, themeProps.fontSizeXS))}, themeProps.fontSizeXS, sectionColor);
-        if (label == "Collections") {
-            // Small up-chevron replacing "^" text glyph
-            const float upCx = layout.navPane.right() - 14.0f;
-            const float upCy = labelRect.y + labelRect.height * 0.5f;
-            const float upS = 2.5f;
-            renderer.drawLine({upCx - upS, upCy + upS * 0.5f}, {upCx, upCy - upS * 0.5f}, 1.3f, sectionColor.withAlpha(0.72f));
-            renderer.drawLine({upCx, upCy - upS * 0.5f}, {upCx + upS, upCy + upS * 0.5f}, 1.3f, sectionColor.withAlpha(0.72f));
-        }
         y += 22.0f;
     };
 
@@ -265,9 +281,7 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
             selected = listingKind_ == ListingKind::Collection && listingTag_ == path;
         }
         if (selected) {
-            renderer.fillRoundedRect(row, themeProps.radiusS, selectedBg);
-            renderer.fillRoundedRect({row.x, row.y + 4.0f, 2.0f, row.height - 8.0f}, 1.0f,
-                                     themeManager.getColor("accentPrimary").withAlpha(0.92f));
+            renderer.fillRoundedRect(row, themeProps.radiusS, selectedBg); // a tint, never an edge
         }
         // Nav hover wash also lives in renderHoverOverlays(), outside the cache.
         drawIcon(row, action, selected, label);
@@ -289,23 +303,41 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
         ++hitIndex;
     };
 
-    auto drawDivider = [&]() {
-        y += compact ? 3.0f : 5.0f;
-        // Narrow rail: smaller inset so the rule reads as a divider, not a stub.
-        const float divInset = compact ? 8.0f : 14.0f;
-        renderer.drawLine({layout.navPane.x + divInset, y},
-                          {layout.navPane.right() - divInset, y},
-                          1.0f, divider.withAlpha(0.45f));
-        y += compact ? 4.0f : 8.0f;
-    };
-
-    drawSection("Collections");
-    y += 2.0f; // small gap so first nav row aligns with first file row
+    // FD-47 board 4: Favourites, This project, Library, This computer, Collections.
+    // Patterns and Plugins are tabs now; Sounds is the tab this list belongs to.
+    y += 4.0f;
+    drawSection("Favourites");
     drawRow(BrowserNavAction::Favorites, "Favorites", static_cast<int>(favoritesPaths_.size()));
+    drawSection("This project");
+    drawRow(BrowserNavAction::CurrentProject, "Audio in this project");
+    drawSection("Library");
+    drawRow(BrowserNavAction::UserLibrary, "User Library");
+    drawRow(BrowserNavAction::Packs, "Packs");
+    drawRow(BrowserNavAction::Samples, "Samples");
+    drawRow(BrowserNavAction::Drums, "Drums");
+    drawRow(BrowserNavAction::Instruments, "Instruments");
+    drawRow(BrowserNavAction::AudioEffects, "Effects");
+    drawRow(BrowserNavAction::Clips, "Clips");
+    for (const auto& place : customPlacePaths_) {
+        std::filesystem::path p(place);
+        std::string label = p.filename().string();
+        if (label.empty()) {
+            label = place;
+        }
+        drawRow(BrowserNavAction::CustomPlace, label, -1, place);
+    }
+    drawRow(BrowserNavAction::AddFolder, "+ Add a folder...");
+    if (!systemPlaces_.empty()) {
+        drawSection("This computer");
+        for (const auto& place : systemPlaces_) {
+            drawRow(BrowserNavAction::SystemPlace, place.label, -1, place.path);
+        }
+    }
+    drawSection("Collections");
     for (const auto& name : collections_) {
         drawRow(BrowserNavAction::Collection, name, collectionCount(name), name);
     }
-    drawRow(BrowserNavAction::AddCollection, "+ New Collection");
+    drawRow(BrowserNavAction::AddCollection, "+ New collection");
     // The inline rename editor sits over its collection's row (rows move with
     // the nav scroll, so it is re-placed on every nav paint).
     if (navEditor_) {
@@ -317,47 +349,14 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
             }
         }
     }
-    drawDivider();
-    drawSection("Places");
-    drawRow(BrowserNavAction::Packs, "Packs");
-    drawRow(BrowserNavAction::UserLibrary, "User Library");
-    drawRow(BrowserNavAction::CurrentProject, "Current Project");
-    for (const auto& place : customPlacePaths_) {
-        std::filesystem::path p(place);
-        std::string label = p.filename().string();
-        if (label.empty()) {
-            label = place;
-        }
-        drawRow(BrowserNavAction::CustomPlace, label, -1, place);
-    }
-    drawRow(BrowserNavAction::AddFolder, "+ Add Folder...");
-
-    // Folders come before Categories: at ordinary window heights anything
-    // after the eight category rows is below the fold, and Places/Computer
-    // are how the user reaches their own sounds.
-    if (!systemPlaces_.empty()) {
-        drawSection("Computer");
-        for (const auto& place : systemPlaces_) {
-            drawRow(BrowserNavAction::SystemPlace, place.label, -1, place.path);
-        }
-    }
-    drawDivider();
-    drawSection("Categories");
-    drawRow(BrowserNavAction::Sounds, "Sounds");
-    drawRow(BrowserNavAction::Drums, "Drums");
-    drawRow(BrowserNavAction::Instruments, "Instruments");
-    drawRow(BrowserNavAction::AudioEffects, "Effects");
-    drawRow(BrowserNavAction::Plugins, "Plugins");
-    drawRow(BrowserNavAction::Patterns, "Patterns");
-    drawRow(BrowserNavAction::Clips, "Clips");
-    drawRow(BrowserNavAction::Samples, "Samples");
+    y += 8.0f;
 
     // Drag-over visual for Places section
     if (m_isDragOverPlaces) {
         // Find the bounds of the Places section (from Packs to AddFolder)
         float placesTop = 0, placesBottom = 0;
         for (const auto& hit : navHits_) {
-            if (hit.action == BrowserNavAction::Packs) placesTop = hit.bounds.y;
+            if (hit.action == BrowserNavAction::UserLibrary) placesTop = hit.bounds.y;
             if (hit.action == BrowserNavAction::AddFolder) placesBottom = hit.bounds.bottom();
         }
         if (placesTop > 0 && placesBottom > placesTop) {
@@ -439,7 +438,7 @@ void FileBrowser::showPlaceContextMenu(const BrowserNavHit& hit, const NUIPoint&
 }
 
 bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const BrowserLayout& layout) {
-    if (event.cursorCaptured) return false;
+    if (event.cursorCaptured || !placesOpen_) return false;
 
     // Ignore the fixed folder-name header band: rows scrolled up under it are
     // visually clipped, so they must not be clickable there either. navViewport is
@@ -498,10 +497,20 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
         return false;
     }
 
+    const BrowserNavHit hit = navHits_[newHovered];
+    if (hit.action != BrowserNavAction::AddCollection) setPlacesOpen(false); // a destination closes Places
+    activateNav(hit);
+    return true;
+}
+
+void FileBrowser::activateNav(const BrowserNavHit& hit) {
     const BrowserNavAction previousAction = activeNavAction_;
-    const BrowserNavAction action = navHits_[newHovered].action;
+    const BrowserNavAction action = hit.action;
+    if (kindOf(action) == 0 && action != BrowserNavAction::AddCollection && action != BrowserNavAction::AddFolder) {
+        lastSoundsAction_ = action;
+    }
     activeNavAction_ = action;
-    activeNavPath_ = navHits_[newHovered].path;
+    activeNavPath_ = hit.path;
     updateContentViews();
     auto setFilter = [this](QuickFilter filter) {
         if (activeQuickFilter_ != filter) {
@@ -521,7 +530,7 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
             break;
         case BrowserNavAction::Collection:
             activeQuickFilter_ = QuickFilter::All;
-            showCollection(navHits_[newHovered].path);
+            showCollection(hit.path);
             break;
         case BrowserNavAction::AddCollection:
             activeNavAction_ = previousAction; // an action, not a destination
@@ -610,8 +619,8 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
         }
         case BrowserNavAction::CustomPlace:
         case BrowserNavAction::SystemPlace:
-            if (!navHits_[newHovered].path.empty()) {
-                navigateTo(navHits_[newHovered].path);
+            if (!hit.path.empty()) {
+                navigateTo(hit.path);
             }
             activeTagFilter_.clear();
             setFilter(QuickFilter::All);
@@ -643,7 +652,6 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
     }
 
     invalidateCache();
-    return true;
 }
 
 } // namespace AestraUI
