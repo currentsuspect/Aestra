@@ -133,6 +133,9 @@ public:
 
     /** @brief Set the platform bridge for hover cursor styling (grab on rows). */
     void setPlatformBridge(NUIPlatformBridge* bridge) { m_platformBridge = bridge; }
+    /// Arrow keys play the sound they land on (the preview dock's Auto-play).
+    void setAutoPreviewEnabled(bool on) { m_autoPreviewEnabled = on; }
+    bool isAutoPreviewEnabled() const { return m_autoPreviewEnabled; }
     
     // File browser functionality
     void setCurrentPath(const std::string& path);
@@ -318,6 +321,11 @@ public:
     };
 
     struct BrowserLayout {
+        NUIRect kindRow;               //!< Sounds | Patterns | Plugins (FD-47)
+        std::array<NUIRect, 3> kinds;  //!< the three tabs, in that order
+        NUIRect location;              //!< back, the place chip and breadcrumbs
+        NUIRect chips;                 //!< colour-tag chips; empty when there are none
+        NUIRect body;                  //!< under the search row: embedded views fill it
         NUIRect searchBar;
         NUIRect search;
         NUIRect navPane;
@@ -336,6 +344,15 @@ public:
     };
 
     BrowserLayout computeBrowserLayout() const;
+
+    /// Places (FD-47): favourites, the project, the library, this computer and
+    /// collections, in one list that drops over the rows from the place chip.
+    void setPlacesOpen(bool open);
+    bool isPlacesOpen() const { return placesOpen_; }
+    /// The kind a nav action belongs to: 0 Sounds, 1 Patterns, 2 Plugins.
+    static int kindOf(BrowserNavAction action);
+    /// Switch to Sounds, Patterns or Plugins, as a click on the tab does.
+    void selectKind(int kind);
 
     /// Navigation rows as laid out by the last paint (bounds are screen space).
     const std::vector<BrowserNavHit>& getNavHits() const { return navHits_; }
@@ -590,6 +607,27 @@ public:
             ClearSearch
         };
         ChromeAction hoveredChromeAction_ = ChromeAction::None;
+        // FD-47 chrome: Places overlay, kind tabs, location row and tag chips.
+        bool placesOpen_ = false;
+        BrowserNavAction lastSoundsAction_ = BrowserNavAction::Sounds; // what Sounds returns to
+        struct ChromeHit {
+            NUIRect bounds;
+            int kind = -1;          //!< a kind tab
+            bool placeChip = false; //!< the chip that opens Places
+            bool scopeChip = false; //!< Here / Everywhere in the search row
+            bool hasTag = false;    //!< a tag chip; tag "" is All
+            std::string tag;
+            std::string path;       //!< a breadcrumb
+        };
+        std::vector<ChromeHit> chromeHits_;
+        int hoveredChromeHit_ = -1;
+        void activateNav(const BrowserNavHit& hit);
+        void renderKindTabs(NUIRenderer& renderer, const BrowserLayout& layout);
+        void renderLocationRow(NUIRenderer& renderer, const BrowserLayout& layout);
+        void renderTagChips(NUIRenderer& renderer, const BrowserLayout& layout);
+        void renderSearchScope(NUIRenderer& renderer, const BrowserLayout& layout);
+        bool handleChromeHits(const NUIMouseEvent& event);
+        std::string currentPlaceLabel(std::string* placePath) const;
         std::vector<BrowserNavHit> navHits_;
         struct BrowserContentView {
             BrowserNavAction action;

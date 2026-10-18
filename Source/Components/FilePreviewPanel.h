@@ -34,6 +34,11 @@ public:
     void setOnPlay(std::function<void(const FileItem&)> callback) { onPlay_ = callback; }
     void setOnStop(std::function<void()> callback) { onStop_ = callback; }
     void setOnSeek(std::function<void(double)> callback) { onSeek_ = callback; }
+    /// FD-47 dock actions: Add to Arsenal (a new sampler row) and the Auto-play switch.
+    void setOnAddToArsenal(std::function<void(const FileItem&)> callback) { onAddToArsenal_ = std::move(callback); }
+    void setOnAutoPlayChanged(std::function<void(bool)> callback) { onAutoPlayChanged_ = std::move(callback); }
+    void setAutoPlay(bool on) { autoPlay_ = on; setDirty(true); }
+    bool isAutoPlay() const { return autoPlay_; }
     void setPlayheadPosition(double seconds);
     void setDuration(double seconds);
     bool hasFileSelection() const { return hasCurrentFile_ && !currentFile_.isDirectory; }
@@ -68,6 +73,11 @@ private:
     bool isSeekDragging_ = false;
     NUIRect playButtonBounds_;
     NUIRect scrubberBounds_;
+    NUIRect autoPlayBounds_;
+    NUIRect addBounds_;
+    bool autoPlay_ = true;
+    std::function<void(const FileItem&)> onAddToArsenal_;
+    std::function<void(bool)> onAutoPlayChanged_;
 
     // Callbacks
     std::function<void(const FileItem&)> onPlay_;

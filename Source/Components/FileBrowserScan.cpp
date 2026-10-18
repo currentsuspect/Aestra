@@ -132,6 +132,9 @@ std::vector<FileItem> FileBrowser::scanDirectory(const std::string& path, int de
             std::error_code dirEc;
             const bool isDir = entry.is_directory(dirEc);
             if (dirEc) continue;
+            // A project's own bundles (versions, history, autosaves) are not
+            // sounds; they sat among the user's sample folders (FD-47).
+            if (isDir && isProjectBundleName(name)) continue;
 
             if (!isDir && !FileFilter::isAllowed(entryPath)) {
                 continue; // Whitelist filter

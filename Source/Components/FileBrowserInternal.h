@@ -28,6 +28,7 @@
 #include <filesystem>
 #include <chrono>
 #include <cmath>
+#include <cstdio>
 #include <cstdlib>
 #include <iomanip>
 #include <optional>
@@ -46,16 +47,13 @@ namespace AestraUI {
 namespace FileBrowserInternal {
 
 
-constexpr float kPreviewPanelHeight = 72.0f;
-constexpr float kCompactNavWidth = 52.0f;
-constexpr float kCompactNavStartWidth = 320.0f;
-constexpr float kExpandedNavStartWidth = 440.0f;
+constexpr float kPreviewPanelHeight = 112.0f; // FD-47 preview dock: label, waveform, facts, actions
 constexpr float BROWSER_SEARCH_ROW_H = 56.0f;
 constexpr float BROWSER_TOP_PAD = 7.0f;
 constexpr float BROWSER_CONTENT_GAP = 8.0f;
 constexpr float BROWSER_NAV_ROW_H = 30.0f;
 constexpr float BROWSER_LIST_HEADER_H = 34.0f;
-constexpr float BROWSER_LIST_ROW_H = 28.0f;
+constexpr float BROWSER_LIST_ROW_H = 32.0f; // FD-47 sound rows
 
 // Where builds before the v3 library file kept browser settings. Read once, to
 // import places dropped onto the nav pane; never written again.
@@ -73,19 +71,13 @@ inline AestraUI::NUIComponent* getRootComponent(AestraUI::NUIComponent* componen
     return root;
 }
 
-inline float computeNavigationWidth(float browserWidth) {
-    if (browserWidth <= kCompactNavStartWidth) {
-        return std::min(browserWidth, kCompactNavWidth);
+/// Folders a project writes beside itself: "Song.takes", "Song.history", "Song.autosave".
+inline bool isProjectBundleName(const std::string& name) {
+    for (const char* ext : {".takes", ".history", ".autosave"}) {
+        const std::string e(ext);
+        if (name.size() > e.size() && name.compare(name.size() - e.size(), e.size(), e) == 0) return true;
     }
-
-    const float expandedWidth = std::clamp(browserWidth * 0.34f, 118.0f, 188.0f);
-    if (browserWidth >= kExpandedNavStartWidth) {
-        return expandedWidth;
-    }
-
-    const float expandedAtBreakpoint = kExpandedNavStartWidth * 0.34f;
-    const float progress = (browserWidth - kCompactNavStartWidth) / (kExpandedNavStartWidth - kCompactNavStartWidth);
-    return kCompactNavWidth + progress * (expandedAtBreakpoint - kCompactNavWidth);
+    return false;
 }
 
 inline void detachPopupMenu(const std::shared_ptr<AestraUI::NUIContextMenu>& menu) {

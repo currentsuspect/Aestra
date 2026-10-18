@@ -5,7 +5,9 @@
 #include "AestraContent.h"
 
 #include "../AestraCore/include/AestraLog.h"
+#include "Commands/AssignUnitToFirstFreeMixerChannelCommand.h"
 #include "Commands/ClipPlacement.h"
+#include "ArsenalPanel.h"
 #include "MiniAudioDecoder.h"
 #include "TrackManagerUI.h"
 #include "TransportBar.h"
@@ -15,6 +17,26 @@
 
 using namespace Aestra;
 using namespace Aestra::Audio;
+
+// FD-47 preview dock: "Add to Arsenal" makes a new sampler row for the sound,
+// routed like every other new unit, as a drop on Arsenal's empty space does.
+void AestraContent::addSampleToArsenal(const std::string& filePath) {
+    if (!m_trackManager || filePath.empty()) return;
+    auto& unitMgr = m_trackManager->getUnitManager();
+    const std::string name = std::filesystem::path(filePath).stem().string();
+    const UnitID unit = unitMgr.createUnit(name, UnitType::Sampler);
+    if (unit == 0) {
+        showToast("Could not add a row to the Arsenal");
+        return;
+    }
+    unitMgr.setUnitEnabled(unit, true);
+    if (const auto* u = unitMgr.getUnit(unit)) {
+        routeUnitToFirstFreeMixerChannel(*m_trackManager, unit, u->name.empty() ? "Mixer Channel" : u->name, u->color);
+    }
+    loadSampleIntoUnitAsync(unit, filePath, false);
+    if (m_sequencerPanel) m_sequencerPanel->refreshUnits();
+    showToast("Added " + name + " to the Arsenal");
+}
 
 void AestraContent::loadSampleIntoSelectedTrack(const std::string& filePath) {
     AESTRA_LOG_DEBUG("=== Loading sample into arrangement: " + filePath + " ===");

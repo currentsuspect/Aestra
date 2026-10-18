@@ -806,8 +806,7 @@ void AestraContent::setupBrowserPanels() {
     m_fileBrowser->setOnNavActionSelected([this](AestraUI::FileBrowser::BrowserNavAction action) {
         const bool isPlugins = (action == AestraUI::FileBrowser::BrowserNavAction::Plugins);
         const bool isPatterns = (action == AestraUI::FileBrowser::BrowserNavAction::Patterns);
-        m_fileBrowser->setSearchPlaceholder(isPlugins ? "Search plugins..."
-                                                      : (isPatterns ? "Search patterns..." : "Search library..."));
+        if (isPlugins || isPatterns) m_fileBrowser->setSearchPlaceholder(isPlugins ? "Search plugins" : "Search patterns");
         if (m_patternBrowser) {
             if (isPatterns) {
                 m_patternBrowser->showPatternsTab();
@@ -911,6 +910,8 @@ void AestraContent::setupBrowserPanels() {
     m_previewPanel->setOnPlay([this](const AestraUI::FileItem& file) { playSoundPreview(file); });
     m_previewPanel->setOnStop([this]() { stopSoundPreview(); });
     m_previewPanel->setOnSeek([this](double seconds) { seekSoundPreview(seconds); });
+    m_previewPanel->setOnAddToArsenal([this](const AestraUI::FileItem& f) { addSampleToArsenal(f.path); });
+    m_previewPanel->setOnAutoPlayChanged([this](bool on) { if (m_fileBrowser) m_fileBrowser->setAutoPreviewEnabled(on); });
     m_workspaceLayer->addChild(m_previewPanel);
 
     // Link file selection to preview panel
@@ -2077,14 +2078,10 @@ void AestraContent::onResize(int width, int height) {
     if (*activeBrowserWidthPref <= 0.0f) {
         *activeBrowserWidthPref = computedFileBrowserWidth;
     }
-    if (m_fileBrowser) {
-        if (activeNavAction == AestraUI::FileBrowser::BrowserNavAction::Plugins) {
-            m_fileBrowser->setSearchPlaceholder("Search plugins...");
-        } else if (activeNavAction == AestraUI::FileBrowser::BrowserNavAction::Patterns) {
-            m_fileBrowser->setSearchPlaceholder("Search patterns...");
-        } else {
-            m_fileBrowser->setSearchPlaceholder("Search library...");
-        }
+    if (m_fileBrowser && activeNavAction == AestraUI::FileBrowser::BrowserNavAction::Plugins) {
+        m_fileBrowser->setSearchPlaceholder("Search plugins"); // Sounds names its folder itself (FD-47)
+    } else if (m_fileBrowser && activeNavAction == AestraUI::FileBrowser::BrowserNavAction::Patterns) {
+        m_fileBrowser->setSearchPlaceholder("Search patterns");
     }
     const bool legacyPatternTabActive = browserTab == 2;
     const bool patternNavActive = activeNavAction == AestraUI::FileBrowser::BrowserNavAction::Patterns;

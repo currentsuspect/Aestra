@@ -437,6 +437,8 @@ public:
     void playSoundPreview(const AestraUI::FileItem& file);
     /** @brief Stop the active file-browser preview. */
     void stopSoundPreview();
+    /** @brief A new Arsenal sampler row playing @p filePath (the preview dock's Add to Arsenal). */
+    void addSampleToArsenal(const std::string& filePath);
     /** @brief Load a sample into the currently selected track. */
     void loadSampleIntoSelectedTrack(const std::string& filePath);
     /** @brief Decode and publish a sample to an Arsenal unit off the UI/drop path. */
