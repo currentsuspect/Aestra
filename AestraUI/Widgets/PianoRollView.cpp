@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "NUIPianoRollWidgets.h"
+#include "PlayheadMarker.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include "PianoRollWidgetShared.h"
@@ -207,22 +208,7 @@ void PianoRollView::onRender(NUIRenderer& renderer) {
             playheadX >= gridBounds.x && playheadX <= gridBounds.right()) {
             const float playheadStartY = rulerBounds.bottom();
             const float playheadEndY = m_controls ? m_controls->getBounds().bottom() : gridBounds.bottom();
-            if (m_isPlayingCallback && m_isPlayingCallback()) {
-                const float glowWidth = 4.0f;
-                const float lineHeight = playheadEndY - playheadStartY;
-                renderer.fillRectGradient(NUIRect(playheadX - glowWidth, playheadStartY, glowWidth, lineHeight),
-                                          accent.withAlpha(0.0f),
-                                          accent.withAlpha(0.14f),
-                                          false);
-                renderer.fillRectGradient(NUIRect(playheadX, playheadStartY, glowWidth, lineHeight),
-                                          accent.withAlpha(0.14f),
-                                          accent.withAlpha(0.0f),
-                                          false);
-            }
-            renderer.drawLine(NUIPoint(playheadX, playheadStartY),
-                              NUIPoint(playheadX, playheadEndY),
-                              1.0f,
-                              accent.withAlpha(0.72f));
+            Playhead::drawLine(renderer, playheadX, playheadStartY, playheadEndY, accent); // flat, 2 px
         }
     }
 
