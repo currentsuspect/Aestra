@@ -224,9 +224,10 @@ constexpr float SILENCE_THRESHOLD = -96.0f; // dB
 // Version Information
 // =============================================================================
 
-#define AESTRA_VERSION_MAJOR 0
-#define AESTRA_VERSION_MINOR 1
-#define AESTRA_VERSION_PATCH 0
-#define AESTRA_VERSION_STRING "0.1.0"
+// The build defines AESTRA_VERSION_STRING from project(VERSION) in the top-level CMakeLists. This header used to
+// define "0.1.0" unconditionally, which replaced it, so every release's startup log said "Aestra v0.1.0".
+#ifndef AESTRA_VERSION_STRING
+#define AESTRA_VERSION_STRING "unknown"
+#endif
 
 } // namespace Aestra

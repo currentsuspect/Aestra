@@ -362,7 +362,7 @@ the app can fail a build.
 
 ## v0.8.1-alpha — The revamp: Arsenal, Mixer, Routing, Audition, Versions (2026-10-18)
 
-87 PRs since v0.8.0-alpha. The surfaces you spend the most time in are rebuilt: the Arsenal is a rack you
+88 PRs since v0.8.0-alpha. The surfaces you spend the most time in are rebuilt: the Arsenal is a rack you
 play, the mixer reads meters first, the routing graph shows only what you changed, Audition is a place to
 listen and compare, and Versions replaces the history list.
 
@@ -420,6 +420,8 @@ listen and compare, and Versions replaces the history list.
 
 ### Fixes
 
+- **The startup log names the real version.** It said "Aestra v0.1.0" on every release, so a crash report could not
+  say which build it came from. (#1167)
 - **Panel buttons bring a covered panel forward** instead of closing it, and Arsenal steps and lanes no longer
   spill over the rack when you scroll. (#1166)
 - **Opening Aestra with a project plays at that project's tempo.** It used to play at 120 while showing
