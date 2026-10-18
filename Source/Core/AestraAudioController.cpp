@@ -425,7 +425,7 @@ bool AestraAudioController::startStream() {
             "AestraAudio/assets/Aestra_metronome.wav",
             "AestraAudio/assets/Aestra_metronome_up.wav"
         );
-        m_audioEngine->setBPM(120.0f);
+        if (m_audioEngine->getBPM() <= 0.0f) m_audioEngine->setBPM(120.0f); // keep a loaded project's tempo (stream opens after a launch-time load)
     }
 
     // [FIX] Update Content Managers to ensure AudioGraph is rebuilt with correct rate!
