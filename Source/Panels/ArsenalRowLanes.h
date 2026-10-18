@@ -70,13 +70,14 @@ public:
             r.drawLine({cx - 4.0f, cy - d}, {cx, cy + d}, 1.5f, col);
             r.drawLine({cx, cy + d}, {cx + 4.0f, cy - d}, 1.5f, col);
             if (open && item.extraH > 0.0f) {
-                const auto ctx = contextFor(*tm, pattern, row, item.extraH);
+                auto ctx = contextFor(*tm, pattern, row, item.extraH);
+                ctx.clip = viewport; // nested clips stay inside the list, and hand it back when done
                 if (hasSound(*tm, row.getUnitId())) {
                     auto& strip = syncStrip(*tm, row.getUnitId());
-                    strip.draw(r, soundRect(row));
+                    strip.draw(r, soundRect(row), viewport);
                     if (m_drawerUnit == row.getUnitId())
                         ArsenalSoundDrawer::draw(r, drawerRect(row), m_drawer, strip.list(), tm->getUnitManager().getUnit(row.getUnitId())->audioClipPath,
-                                                 row.channelColor(), strip.setName(), m_missing[row.getUnitId()]);
+                                                 row.channelColor(), strip.setName(), m_missing[row.getUnitId()], viewport);
                 }
                 m_lanes.draw(r, ctx);
             }

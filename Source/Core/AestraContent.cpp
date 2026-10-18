@@ -1008,7 +1008,7 @@ void AestraContent::setupMixerPanels() {
     // Create panels (add to overlay)
     m_mixerPanel = std::make_shared<MixerPanel>(m_trackManager);
     m_mixerPanel->setVisible(false);
-    m_mixerPanel->setOnClose([this]() { toggleView(Audio::ViewType::Mixer); });
+    m_mixerPanel->setOnClose([this]() { setViewOpen(Audio::ViewType::Mixer, false); }); // close, never toggle: a covered panel's toggle raises it
     if (const auto mixerUI = m_mixerPanel->getMixerUI()) {
         // The mixer dropdown's "Browse all plugins" opens the full plugin
         // browser (internal + VST3/CLAP) in the library pane, with the same
@@ -1172,7 +1172,7 @@ void AestraContent::setupPianoRollPanel() {
     });
     m_pianoRollPanel->setOnClose([this]() {
         m_pianoRollPanel->savePattern();
-        toggleView(Audio::ViewType::PianoRoll);
+        setViewOpen(Audio::ViewType::PianoRoll, false);
     });
     wireFloatingPanel(m_pianoRollPanel, ViewType::PianoRoll);
     m_overlayLayer->addChild(m_pianoRollPanel);
@@ -2402,6 +2402,7 @@ bool AestraContent::isViewOpen(Audio::ViewType view) const {
 
 void AestraContent::setViewOpen(Audio::ViewType view, bool open) {
     ++m_viewChangeSerial; // lets a contextual panel tell a toggle from a plain outside press
+    if (open) raiseIfCovered(view); // an open request for a panel that is open but covered brings it forward
     bool changed = false;
     switch (view) {
     case Audio::ViewType::Mixer:
@@ -2480,6 +2481,7 @@ void AestraContent::setViewOpen(Audio::ViewType view, bool open) {
 }
 
 void AestraContent::toggleView(Audio::ViewType view) {
+    if (raiseIfCovered(view)) return; // a panel button on a covered panel brings it forward; only a front panel closes
     if (view == Audio::ViewType::Sequencer) {
         // Toggle panel visibility only, don't change mode
         toggleArsenalPanel();
@@ -2488,17 +2490,10 @@ void AestraContent::toggleView(Audio::ViewType view) {
 
     bool current = false;
     switch (view) {
-    case Audio::ViewType::Mixer:
-        current = m_viewState.mixerOpen;
-        break;
-    case Audio::ViewType::PianoRoll:
-        current = m_viewState.pianoRollOpen;
-        break;
-    case Audio::ViewType::Playlist:
-        current = m_viewState.playlistActive;
-        break;
-    default:
-        break;
+    case Audio::ViewType::Mixer: current = m_viewState.mixerOpen; break;
+    case Audio::ViewType::PianoRoll: current = m_viewState.pianoRollOpen; break;
+    case Audio::ViewType::Playlist: current = m_viewState.playlistActive; break;
+    default: break;
     }
     setViewOpen(view, !current);
 }
@@ -2961,11 +2956,13 @@ void AestraContent::setArsenalPanelVisible(bool visible) {
 
     const bool wasVisible = m_sequencerPanel->isVisible();
     if (wasVisible == visible && m_viewState.sequencerOpen == visible) {
+        if (visible) raiseIfCovered(Audio::ViewType::Sequencer); // the Arsenal tab on an open, covered Arsenal
         return;
     }
 
     if (visible) {
         m_sequencerPanel->setVisible(true);
+        m_sequencerPanel->bringToFrontPriority(); // it opened behind whatever was already up
         applyPanelPreference(Audio::ViewType::Sequencer);
         m_sequencerPanel->refreshUnits();
         m_sequencerPanel->registerDropTargets(true);
