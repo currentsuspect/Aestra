@@ -61,6 +61,8 @@ public:
     
     // Tempo control
     void setTempo(float bpm);
+    /// Show a tempo set elsewhere (Muse, a loaded project) without announcing it back as a user change.
+    void showTempo(float bpm);
     float getTempo() const { return m_tempo; }
     
     // Position control

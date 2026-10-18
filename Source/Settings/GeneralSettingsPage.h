@@ -5,6 +5,7 @@
 #include "NUILabel.h"
 #include "NUITextInput.h"
 #include "NUIButton.h"
+#include "NUICoreWidgets.h"
 #include <functional>
 
 namespace Aestra {
@@ -39,7 +40,8 @@ private:
     std::shared_ptr<AestraUI::NUIButton> m_browseButton;
     
     std::shared_ptr<AestraUI::NUILabel> m_autoSaveLabel;
-    std::shared_ptr<AestraUI::NUIButton> m_autoSaveToggle;
+    std::shared_ptr<AestraUI::NUIToggle> m_autoSaveToggle;
+    std::shared_ptr<AestraUI::NUILabel> m_autoSaveDetail;
 
     std::function<void(bool)> m_onAutoSaveToggled;
 };

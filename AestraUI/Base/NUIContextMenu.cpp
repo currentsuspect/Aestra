@@ -20,7 +20,6 @@ constexpr float kMenuMinWidth = 132.0f;
 constexpr float kMenuMaxWidth = 380.0f;
 /** @brief Clear space between a label and its shortcut. */
 constexpr float kMenuShortcutGap = 28.0f;
-constexpr float kMenuIndicatorSize = 14.0f;
 constexpr float kMenuArrowSize = 12.0f;
 } // namespace
 
@@ -173,9 +172,9 @@ void NUIContextMenu::onThemeChanged(const NUIThemeProperties& theme)
         hoverColor_ = theme.hover; // overlay tint, see the constructor
         separatorColor_ = theme.borderSubtle;
         shortcutColor_ = theme.textSecondary;
-        borderRadius_ = theme.radiusM;
+        borderRadius_ = std::min(theme.radiusM, 4.0f); // one step rounder than the 2 px clips and pads, not the old 7
         itemHeight_ = theme.layout.standardMenuRowHeight;
-        iconSize_ = theme.layout.standardIconSize;
+        iconSize_ = 14.0f;                              // the mock's icon slot
         updateSize();
     }
     NUIComponent::onThemeChanged(theme);
@@ -346,6 +345,7 @@ void NUIContextMenu::addItem(const std::string& text, std::function<void()> call
 {
     auto item = std::make_shared<NUIContextMenuItem>(text);
     item->setOnClick(callback);
+    item->setDestructive(text.rfind("Delete", 0) == 0); // every Delete… verb reads the same, in every menu
     addItem(item);
 }
 
@@ -411,6 +411,8 @@ void NUIContextMenu::showAt(const NUIPoint& position)
 
 void NUIContextMenu::showAt(int x, int y)
 {
+    if (!exactPlacement_) { x += 6; y += 6; } // the first row opens clear of the pointer, not under it
+    exactPlacement_ = false;
     updateLayout();
     scrollOffset_ = 0.0f;
     requestedPosition_ = NUIPoint(static_cast<float>(x), static_cast<float>(y));
@@ -712,9 +714,9 @@ void NUIContextMenu::drawItem(NUIRenderer& renderer, std::shared_ptr<NUIContextM
     auto& themeManager = NUIThemeManager::getInstance();
     const auto& props = themeManager.getCurrentTheme();
     if (index == pressedItemIndex_ && item->isEnabled()) {
-        renderer.fillRoundedRect(itemRect, props.radiusS, themeManager.getColor("controlPressed"));
+        renderer.fillRect(itemRect, themeManager.getColor("controlPressed")); // flat: a fill, never a pill
     } else if (index == hoveredItemIndex_ && item->isEnabled()) {
-        renderer.fillRoundedRect(itemRect, props.radiusS, hoverColor_);
+        renderer.fillRect(itemRect, hoverColor_);
     }
     
     // Draw item content
@@ -732,56 +734,31 @@ void NUIContextMenu::drawItem(NUIRenderer& renderer, std::shared_ptr<NUIContextM
         x += iconSize_ + itemPadding_ * 0.5f;
     }
     
-    // Draw checkbox/radio indicator
-    if (item->getType() == NUIContextMenuItem::Type::Checkbox || 
-        item->getType() == NUIContextMenuItem::Type::Radio)
+    // A check or radio item shows its state as a check mark in the leading slot (no box, no ring),
+    // so a ticked and an unticked row keep one left edge.
+    const bool hasState = item->getType() == NUIContextMenuItem::Type::Checkbox ||
+                          item->getType() == NUIContextMenuItem::Type::Radio;
+    if (hasState && item->isChecked())
     {
-        float indicatorSize = 14.0f;
-        float indicatorY = itemRect.y + (itemRect.height - indicatorSize) * 0.5f;
-        NUIRect indicatorRect(x, indicatorY, indicatorSize, indicatorSize);
-        
-        if (item->getType() == NUIContextMenuItem::Type::Checkbox)
-        {
-            // Checkbox - rounded square
-            renderer.strokeRoundedRect(indicatorRect, 3.0f, 1.0f, themeManager.getColor("borderSubtle"));
-            
-            if (item->isChecked())
-            {
-                // Fill with purple
-                renderer.fillRoundedRect(indicatorRect, 3.0f, themeManager.getColor("primary"));
-                
-                // Use NUIIcon for checkmark
-                auto checkIcon = NUIIcon::createCheckIcon();
-                checkIcon->setIconSize(indicatorSize * 0.8f, indicatorSize * 0.8f);
-                checkIcon->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
-                NUIPoint center = indicatorRect.center();
-                checkIcon->setPosition(center.x - indicatorSize * 0.4f, center.y - indicatorSize * 0.4f);
-                checkIcon->onRender(renderer);
-            }
-        }
-        else
-        {
-            // Radio - "Dotted" style (Selected = Solid Dot, Unselected = Empty Ring)
-            NUIPoint center = indicatorRect.center();
-            
-            if (item->isChecked())
-            {
-                // Selected: Solid filled "dot" in Aestra Purple
-                NUIColor radioFill = themeManager.getColor("accentPrimary");
-                renderer.fillCircle(center, indicatorSize * 0.4f, radioFill);
-            }
-            else
-            {
-                // Unselected: Empty ring (faint)
-                renderer.strokeCircle(center, indicatorSize * 0.5f, 1.0f, themeManager.getColor("borderSubtle").withAlpha(0.5f));
-            }
-        }
-        
-        x += indicatorSize + itemPadding_;
+        auto checkIcon = NUIIcon::createCheckIcon();
+        checkIcon->setIconSize(iconSize_, iconSize_);
+        checkIcon->setColor(themeManager.getColor("secondary"));
+        checkIcon->setPosition(x, itemRect.y + (itemRect.height - iconSize_) * 0.5f);
+        checkIcon->onRender(renderer);
     }
-    
+    if (hasState || (!item->getIconObject() && hasLeadingSlot()))
+        x += iconSize_ + itemPadding_ * 0.5f;
+
+    // A colour swatch (a channel's own colour), before the label.
+    if (item->hasSwatch()) {
+        renderer.fillRect(NUIRect(x, itemRect.y + (itemRect.height - 14.0f) * 0.5f, 4.0f, 14.0f), item->getSwatch());
+        x += 4.0f + itemPadding_ * 0.8f;
+    }
+
     // Draw text
-    NUIColor textColor = item->isEnabled() ? textColor_ : themeManager.getColor("textDisabled");
+    NUIColor textColor = !item->isEnabled() ? themeManager.getColor("textDisabled")
+                       : item->isDestructive() ? themeManager.getColor("error")
+                       : textColor_;
     renderer.drawText(item->getText(), NUIPoint(x, y), itemFontSize, textColor);
     
     // Draw shortcut
@@ -990,15 +967,22 @@ void NUIContextMenu::updateSize()
 // Everything on a row that is not the label or the shortcut: icon, check/radio
 // indicator, submenu chevron. Shared by the estimate and the real measurement so
 // the two cannot disagree about what a row has to fit.
+bool NUIContextMenu::hasLeadingSlot() const
+{
+    for (const auto& item : items_) {
+        if (!item || !item->isVisible()) continue;
+        if (item->getIconObject() || item->getType() == NUIContextMenuItem::Type::Checkbox ||
+            item->getType() == NUIContextMenuItem::Type::Radio) return true;
+    }
+    return false;
+}
+
 float NUIContextMenu::decorationWidthFor(const std::shared_ptr<NUIContextMenuItem>& item) const
 {
     if (!item) return 0.0f;
     float w = 4.0f; // drawItem's leading nudge past the padding
-    if (item->getIconObject()) w += iconSize_ + itemPadding_ * 0.5f;
-    if (item->getType() == NUIContextMenuItem::Type::Checkbox ||
-        item->getType() == NUIContextMenuItem::Type::Radio) {
-        w += kMenuIndicatorSize + itemPadding_;
-    }
+    if (hasLeadingSlot()) w += iconSize_ + itemPadding_ * 0.5f; // every row reserves the same slot
+    if (item->hasSwatch()) w += 4.0f + itemPadding_ * 0.8f;
     if (item->getType() == NUIContextMenuItem::Type::Submenu) w += kMenuArrowSize + 4.0f;
     return w;
 }
@@ -1069,6 +1053,7 @@ void NUIContextMenu::showSubmenu(int itemIndex)
     float targetX = myBounds.x + myBounds.width + 2.0f;
     float targetY = itemRect.y;
 
+    activeSubmenu_->exactPlacement_ = true;
     activeSubmenu_->showAt(static_cast<int>(targetX), static_cast<int>(targetY));
 
     // Submenus are rendered by their owning menu rather than attached as root

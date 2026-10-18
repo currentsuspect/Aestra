@@ -31,6 +31,10 @@ struct MeterSnapshotBuffer {
         float sidechainPeak = 0.0f;
         float lufs = -144.0f;
         float integratedLufs = -144.0f;
+        float momentaryLufs = -144.0f;
+        float shortTermLufs = -144.0f;
+        float truePeakL = 0.0f; ///< linear, held until cleared (master only)
+        float truePeakR = 0.0f;
         float correlation = 0.0f;
         bool clipL = false;
         bool clipR = false;
@@ -48,6 +52,10 @@ struct MeterSnapshotBuffer {
         std::atomic<float> correlation{0.0f};
         std::atomic<float> lufs{-144.0f};
         std::atomic<float> integratedLufs{-144.0f};
+        std::atomic<float> momentaryLufs{-144.0f};
+        std::atomic<float> shortTermLufs{-144.0f};
+        std::atomic<float> truePeakL{0.0f};
+        std::atomic<float> truePeakR{0.0f};
         std::atomic<int> clipL{0}; // 0 = no clip, 1 = clipping (sticky until cleared)
         std::atomic<int> clipR{0};
     };
@@ -80,6 +88,16 @@ struct MeterSnapshotBuffer {
         s.integratedLufs.store(lufs, std::memory_order_relaxed);
     }
 
+    /// Master loudness beyond the integrated value that writeLevels carries (V81-M2).
+    void writeLoudness(int slot, float momentary, float shortTerm, float truePeakL, float truePeakR) {
+        if (slot < 0 || slot >= MAX_CHANNELS) return;
+        auto& s = slots[slot];
+        s.momentaryLufs.store(momentary, std::memory_order_relaxed);
+        s.shortTermLufs.store(shortTerm, std::memory_order_relaxed);
+        s.truePeakL.store(truePeakL, std::memory_order_relaxed);
+        s.truePeakR.store(truePeakR, std::memory_order_relaxed);
+    }
+
     void setClip(int slot, bool cL, bool cR) {
         if (slot < 0 || slot >= MAX_CHANNELS) return;
         if (cL) slots[slot].clipL.store(1, std::memory_order_relaxed);
@@ -106,6 +124,10 @@ struct MeterSnapshotBuffer {
         r.correlation = s.correlation.load(std::memory_order_relaxed);
         r.lufs = s.lufs.load(std::memory_order_relaxed);
         r.integratedLufs = s.integratedLufs.load(std::memory_order_relaxed);
+        r.momentaryLufs = s.momentaryLufs.load(std::memory_order_relaxed);
+        r.shortTermLufs = s.shortTermLufs.load(std::memory_order_relaxed);
+        r.truePeakL = s.truePeakL.load(std::memory_order_relaxed);
+        r.truePeakR = s.truePeakR.load(std::memory_order_relaxed);
         r.clipL = s.clipL.load(std::memory_order_relaxed) != 0;
         r.clipR = s.clipR.load(std::memory_order_relaxed) != 0;
         return r;

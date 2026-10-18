@@ -1,3 +1,4 @@
+#include "AudioDeviceChoice.h"
 #include "AudioSettingsPage.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraCore/include/AestraLog.h"
@@ -212,18 +213,8 @@ AudioSettingsPage::AudioSettingsPage(AudioDeviceManager* audioManager, AudioEngi
     m_loadingLabel->setVisible(false);
     addChild(m_loadingLabel);
     
-    m_testSoundButton = std::make_shared<AestraUI::NUIButton>();
-    m_testSoundButton->setText("Test Sound");
-    m_testSoundButton->setOnClick([this]() {
-        bool playing = m_audioEngine->isTestToneEnabled();
-        playing = !playing;
-        m_audioEngine->setTestToneEnabled(playing);
-        
-        m_testSoundButton->setText(playing ? "Stop Test Sound" : "Test Sound");
-        
-        // NOTE: No stream restore needed - test tone uses existing audio callback
-    });
-    addChild(m_testSoundButton);
+    // (Test Sound is created once, in createUI(). A second copy made here used to replace the member, so the
+    // first was never placed and drew at the window corner.)
     
     // Start async device enumeration (non-blocking)
     startAsyncDeviceLoad();
@@ -378,18 +369,11 @@ void AudioSettingsPage::createUI() {
         updateLatencyEstimate();
     });
     
-    m_qualityPresetDropdown = createDropdown([this](int idx) { 
-        m_dirty = true; 
-        if (idx == 0) { // Eco
-             m_resamplingDropdown->setSelectedByValue(0); // Fast
-             m_ditheringDropdown->setSelectedByValue((int)DitheringMode::None);
-        } else if (idx == 1) { // Normal
-             m_resamplingDropdown->setSelectedByValue(2); // Cubic
-             m_ditheringDropdown->setSelectedByValue((int)DitheringMode::Triangular);
-        } else if (idx == 2) { // High
-             m_resamplingDropdown->setSelectedByValue(3); // Sinc64
-             m_ditheringDropdown->setSelectedByValue((int)DitheringMode::Triangular);
-        }
+    // The preset's item VALUE says which it is (Eco = 0, High Quality = 2); the list has two entries, so the
+    // index is not the preset.
+    m_qualityPresetDropdown = createDropdown([this](int) {
+        m_dirty = true;
+        applyQualityPreset(m_qualityPresetDropdown->getSelectedValue());
     });
     m_qualityPresetDropdown->addItem("Eco", 0);
     m_qualityPresetDropdown->addItem("High Quality", 2);
@@ -419,8 +403,10 @@ void AudioSettingsPage::createUI() {
     m_previewDuckingDropdown->addItem("-9 dB", 9);
     m_previewDuckingDropdown->setSelectedByValue(6);
     
-    // Now safe to set quality preset which triggers callback
-    m_qualityPresetDropdown->setSelectedIndex(1);
+    // The preset's callback is muted while the page is built, so fill its dependents directly: before this the
+    // Resampling and Dithering boxes opened on "Select an option...".
+    m_qualityPresetDropdown->setSelectedByValue(2);
+    applyQualityPreset(2);
     
     m_threadCountInput = std::make_shared<ThreadCountDisplay>();
     int maxThreads = (int)std::thread::hardware_concurrency();
@@ -660,10 +646,23 @@ void AudioSettingsPage::layoutComponents() {
     layRow(m_previewDuckingLabel, m_previewDuckingDropdown, x2); y += rowHeight + gap;
     layRow(m_multiThreadingLabel, m_multiThreadingToggle, x2); y += rowHeight + gap;
     
-    // Conditionally show thread count if multithreading is enabled
+    // Conditionally show thread count if multithreading is enabled. Hidden, not just left unplaced: an unplaced
+    // row still drew at the window's corner, over the File menu.
+    m_threadCountLabel->setVisible(m_multiThreadingToggle->isOn());
+    m_threadCountInput->setVisible(m_multiThreadingToggle->isOn());
     if (m_multiThreadingToggle->isOn()) {
          layRow(m_threadCountLabel, m_threadCountInput, x2);
          y += rowHeight + gap; // Fix: Increment Y so subsequent elements (if any) don't overlap
+    }
+}
+
+void AudioSettingsPage::applyQualityPreset(int preset) {
+    if (preset == 0) { // Eco
+        m_resamplingDropdown->setSelectedByValue(0); // Fast
+        m_ditheringDropdown->setSelectedByValue((int)DitheringMode::None);
+    } else { // High Quality
+        m_resamplingDropdown->setSelectedByValue(3); // Sinc64
+        m_ditheringDropdown->setSelectedByValue((int)DitheringMode::Triangular);
     }
 }
 
@@ -761,6 +760,13 @@ bool AudioSettingsPage::saveSettings() {
         file << "driver=" << driverValue << "\n";
         file << "device=" << deviceValue << "\n";
         file << "input_device=" << inputDeviceValue << "\n";
+        // Ids are list positions and shift as devices come and go; the name is what the selection means.
+        const auto nameFor = [](const std::vector<std::pair<std::string, int>>& list, int id) {
+            for (const auto& [name, deviceId] : list) if (deviceId == id) return name;
+            return std::string();
+        };
+        if (const auto n = nameFor(m_cachedDevices.outputDevices, deviceValue); !n.empty()) file << "device_name=" << n << "\n";
+        if (const auto n = nameFor(m_cachedDevices.inputDevices, inputDeviceValue); !n.empty()) file << "input_device_name=" << n << "\n";
         file << "samplerate=" << m_sampleRateDropdown->getSelectedValue() << "\n";
         file << "buffersize=" << m_bufferSizeDropdown->getSelectedValue() << "\n";
         file << "quality_preset=" << m_qualityPresetDropdown->getSelectedValue() << "\n";
@@ -799,6 +805,20 @@ void AudioSettingsPage::loadSettings() {
     // We only need to populate the UI dropdowns to reflect saved values.
     // After init, user interactions via dropdown callbacks will handle audio changes.
     const bool skipAudioCalls = m_isInitializing;
+    // Saved devices are found by name (ids shift as devices come and go); the id is only the fallback.
+    std::string savedDeviceName, savedInputName;
+    {
+        std::ifstream names(configPath);
+        std::string l;
+        while (std::getline(names, l)) {
+            if (l.rfind("device_name=", 0) == 0) savedDeviceName = l.substr(12);
+            else if (l.rfind("input_device_name=", 0) == 0) savedInputName = l.substr(18);
+        }
+    }
+    std::vector<Aestra::DeviceChoiceCandidate> candidates;
+    if (m_audioManager)
+        for (const auto& d : m_audioManager->getDevices())
+            candidates.push_back({static_cast<int>(d.id), d.name, static_cast<int>(d.maxInputChannels), static_cast<int>(d.maxOutputChannels)});
     std::string line;
     while (std::getline(file, line)) {
         auto pos = line.find('=');
@@ -824,11 +844,13 @@ void AudioSettingsPage::loadSettings() {
             m_driverDropdown->setSelectedByValue(val);
         }
         else if (key == "device") {
+            val = Aestra::resolveSavedDeviceId(candidates, savedDeviceName, val, false);
             m_savedDeviceId = val;
             if (m_audioManager && !skipAudioCalls) m_audioManager->switchDevice((uint32_t)val);
             m_deviceDropdown->setSelectedByValue(val);
         }
         else if (key == "input_device") {
+            val = Aestra::resolveSavedDeviceId(candidates, savedInputName, val, true);
             m_savedInputDeviceId = val;
             if (m_audioManager && !skipAudioCalls) m_audioManager->switchInputDevice((uint32_t)val);
             m_inputDeviceDropdown->setSelectedByValue(val);

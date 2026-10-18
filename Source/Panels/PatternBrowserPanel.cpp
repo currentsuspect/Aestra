@@ -9,6 +9,7 @@
 #include "NUIButton.h"
 #include "NUIIcon.h"
 #include "NUIContextMenu.h"
+#include "Widgets/TrackColorPalette.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include <cctype>
@@ -111,8 +112,8 @@ void attachAndShowContextMenu(AestraUI::NUIComponent* owner,
 
 constexpr float kCardInsetX = 4.0f;
 constexpr float kCardInsetY = 3.0f;
-constexpr float kCardRadius = 8.0f;
-constexpr float kAccentStripWidth = 6.0f;
+constexpr float kCardRadius = 2.0f;
+constexpr float kAccentStripWidth = 4.0f;
 
 AestraUI::NUIRect computeBinCardRect(const AestraUI::NUIRect& bounds, float y, float itemHeight) {
     return AestraUI::NUIRect(bounds.x + kCardInsetX, y + kCardInsetY,
@@ -283,6 +284,17 @@ void PatternBrowserPanel::refreshPatterns() {
         entry.isMidi = p->isMidi();
         entry.lengthBeats = p->lengthBeats;
         entry.isPlacedOnTimeline = playlistModel.isPatternUsed(entry.id);
+        // The strip wears the colour of the channel the pattern plays through: an audio pattern's own route, or the
+        // route of the unit whose default pattern it is. The same colour as that unit's Arsenal row.
+        uint32_t channelId = p->isAudio() ? p->getMixerChannelId() : 0;
+        if (channelId == 0) {
+            auto& units = m_trackManager->getUnitManager();
+            for (const auto unitId : units.getAllUnitIDs())
+                if (const auto* unit = units.getUnit(unitId); unit && unit->defaultPatternId == p->id) channelId = unit->targetMixerChannelId;
+        }
+        for (size_t c = 0; channelId != 0 && c < m_trackManager->getChannelCount(); ++c)
+            if (const auto* channel = m_trackManager->getChannel(c); channel && channel->getChannelId() == channelId)
+                entry.colorArgb = AestraUI::paletteIndexToARGB(channel->getTrackColorIndex());
         m_patterns.push_back(entry);
     }
 
@@ -695,19 +707,12 @@ void PatternBrowserPanel::renderPatternItem(AestraUI::NUIRenderer& renderer, con
     const AestraUI::NUIRect cardRect = computeBinCardRect(bounds, y, m_itemHeight);
     const auto accent = theme.getColor("accentPrimary");
 
-    if (selected) {
-        renderer.fillRoundedRect(cardRect, kCardRadius, accent.withAlpha(0.15f));
-        renderer.strokeRoundedRect(cardRect, kCardRadius, 1.0f, accent.withAlpha(0.46f));
-    } else if (hovered) {
-        renderer.fillRoundedRect(cardRect, kCardRadius, theme.getColor("hover").withAlpha(0.07f));
-        renderer.strokeRoundedRect(cardRect, kCardRadius, 1.0f, theme.getColor("borderSubtle").withAlpha(0.20f));
-    } else {
-        renderer.fillRoundedRect(cardRect, kCardRadius, theme.getColor("surfaceRaised").withAlpha(0.12f));
-        renderer.strokeRoundedRect(cardRect, kCardRadius, 1.0f, theme.getColor("borderSubtle").withAlpha(0.14f));
-    }
+    // Flat: selection is a fill, hover a lighter one, no outlines.
+    if (selected) renderer.fillRoundedRect(cardRect, kCardRadius, theme.getColor("surfaceRaised"));
+    else if (hovered) renderer.fillRoundedRect(cardRect, kCardRadius, theme.getColor("surfaceTertiary"));
 
     renderer.fillRect(AestraUI::NUIRect(cardRect.x, cardRect.y, kAccentStripWidth, cardRect.height),
-                      accent.withAlpha(selected ? 0.95f : 0.72f));
+                      entry.colorArgb != 0 ? AestraUI::NUIColor::fromARGB(entry.colorArgb) : accent.withAlpha(selected ? 0.95f : 0.72f));
 
     // Type icon using NUIIcon
     float iconX = cardRect.x + 12.0f;

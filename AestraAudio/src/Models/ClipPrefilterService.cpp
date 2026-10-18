@@ -33,7 +33,7 @@ void ClipPrefilterService::enqueue(Job job) {
         if (m_shutdown) {
             return;
         }
-        const Key key{job.sourceId, job.contentRevision, job.targetRate};
+        const Key key{job.sourceId, job.contentRevision, job.targetRate, job.decimation};
         if (m_tracked.count(key) != 0) {
             return; // already queued, running, or awaiting drain
         }
@@ -52,7 +52,7 @@ std::vector<ClipPrefilterService::Result> ClipPrefilterService::drainCompleted()
     std::lock_guard<std::mutex> lock(m_mutex);
     out.swap(m_completed);
     for (const Result& r : out) {
-        m_tracked.erase(Key{r.sourceId, r.contentRevision, r.targetRate});
+        m_tracked.erase(Key{r.sourceId, r.contentRevision, r.targetRate, r.decimation});
     }
     return out;
 }
@@ -88,23 +88,31 @@ void ClipPrefilterService::workerLoop() {
         result.sourceId = job.sourceId;
         result.contentRevision = job.contentRevision;
         result.targetRate = job.targetRate;
+        result.decimation = job.decimation;
         result.specVersion = ClipPrefilter::kSpecVersion;
         const std::vector<double> h = ClipPrefilter::design(job.source->sampleRate, job.targetRate);
         if (!h.empty()) {
             auto filtered = std::make_shared<AudioBufferData>();
-            filtered->sampleRate = job.source->sampleRate; // filtering does NOT resample
+            // Decimated (stored at the target rate, see decimationFactor) only when the caller asked for it and
+            // the ratio allows; otherwise the full-rate copy, which the kernel resamples as before.
+            const uint32_t decimation =
+                job.decimation > 1 && job.decimation == ClipPrefilter::decimationFactor(job.source->sampleRate, job.targetRate)
+                    ? job.decimation
+                    : 1;
+            const uint64_t outFrames = (job.source->numFrames + decimation - 1) / decimation;
+            filtered->sampleRate = decimation > 1 ? job.targetRate : job.source->sampleRate;
             filtered->numChannels = job.source->numChannels;
-            filtered->numFrames = job.source->numFrames;
+            filtered->numFrames = outFrames;
             // Read the source through copyFloats in blocks: a compact PCM source is converted as it is
             // filtered, never expanded to a whole-clip float copy (the filtered output is float32).
-            filtered->interleavedData.resize(static_cast<size_t>(job.source->storedSamples()));
+            filtered->interleavedData.resize(static_cast<size_t>(outFrames) * job.source->numChannels);
             const AudioBufferData& src = *job.source;
             const uint32_t channels = src.numChannels;
             ClipPrefilter::applyStreaming(
                 [&src, channels](uint64_t firstFrame, uint64_t frameCount, float* dst) {
                     src.copyFloats(firstFrame * channels, frameCount * channels, dst);
                 },
-                filtered->interleavedData.data(), job.source->numFrames, channels, h);
+                filtered->interleavedData.data(), job.source->numFrames, channels, h, decimation);
             result.filtered = std::move(filtered);
         }
         result.buildMillis =
@@ -121,7 +129,7 @@ void ClipPrefilterService::workerLoop() {
                 notify = true;
             } else {
                 // Nothing produced (spec said not needed): stop tracking the key.
-                m_tracked.erase(Key{job.sourceId, job.contentRevision, job.targetRate});
+                m_tracked.erase(Key{job.sourceId, job.contentRevision, job.targetRate, job.decimation});
             }
         }
         m_idle.notify_all();

@@ -509,6 +509,33 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/TakeManagerTest.cpp")
     set_tests_properties(TakeManagerTest PROPERTIES LABELS "integration;takes;project;contract:durability")
 endif()
 
+# Versions data model (SPEC-017): branches, kinds, step logs, take migration
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/TakeManagerVersionsTest.cpp")
+    add_executable(TakeManagerVersionsTest
+        Integration/TakeManagerVersionsTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/TakeManager.cpp
+    )
+    target_link_libraries(TakeManagerVersionsTest PRIVATE AestraAudio)
+    target_include_directories(TakeManagerVersionsTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Core
+    )
+    add_test(NAME TakeManagerVersionsTest COMMAND TakeManagerVersionsTest)
+    set_tests_properties(TakeManagerVersionsTest PROPERTIES LABELS "integration;takes;versions;project;contract:durability")
+endif()
+
 # Plugin Scanner Test
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/PluginScanTest.cpp")
     add_executable(AestraPluginScanTest Integration/PluginScanTest.cpp)
@@ -772,6 +799,18 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerStereoParityTest.cpp")
     set_tests_properties(SamplerStereoParityTest PROPERTIES LABELS "audio;sampler;regression;contract:audio")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerReleaseAllTest.cpp")
+    add_executable(SamplerReleaseAllTest AestraAudio/SamplerReleaseAllTest.cpp)
+    target_link_libraries(SamplerReleaseAllTest PRIVATE AestraAudio)
+    target_include_directories(SamplerReleaseAllTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME SamplerReleaseAllTest COMMAND SamplerReleaseAllTest)
+    set_tests_properties(SamplerReleaseAllTest PROPERTIES LABELS "audio;sampler;regression;contract:audio")
+endif()
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerCutSelfTest.cpp")
     add_executable(SamplerCutSelfTest AestraAudio/SamplerCutSelfTest.cpp)
     target_link_libraries(SamplerCutSelfTest PRIVATE AestraAudio)
@@ -831,6 +870,38 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternContentEditDuringPlayb
     add_test(NAME PatternContentEditDuringPlaybackTest COMMAND PatternContentEditDuringPlaybackTest)
     set_tests_properties(PatternContentEditDuringPlaybackTest
         PROPERTIES LABELS "audio;playback;regression;contract:audio")
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternLateRefillTest.cpp")
+    add_executable(PatternLateRefillTest AestraAudio/PatternLateRefillTest.cpp)
+    target_link_libraries(PatternLateRefillTest PRIVATE AestraAudio)
+    target_include_directories(PatternLateRefillTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PatternLateRefillTest COMMAND PatternLateRefillTest)
+    set_tests_properties(PatternLateRefillTest
+        PROPERTIES LABELS "audio;playback;regression;contract:audio")
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternPlacementTest.cpp")
+    add_executable(PatternPlacementTest AestraAudio/PatternPlacementTest.cpp)
+    target_include_directories(PatternPlacementTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
+    add_test(NAME PatternPlacementTest COMMAND PatternPlacementTest)
+    set_tests_properties(PatternPlacementTest PROPERTIES LABELS "audio;playback;regression;contract:audio")
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/NoteExpressionTest.cpp")
+    add_executable(NoteExpressionTest AestraAudio/NoteExpressionTest.cpp)
+    target_link_libraries(NoteExpressionTest PRIVATE AestraAudio)
+    target_include_directories(NoteExpressionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME NoteExpressionTest COMMAND NoteExpressionTest)
+    set_tests_properties(NoteExpressionTest PROPERTIES LABELS "audio;playback;regression;contract:audio")
 endif()
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerLoopModeTest.cpp")
@@ -1083,6 +1154,17 @@ target_include_directories(AudioAnalysisTest PRIVATE
 add_test(NAME AudioAnalysisTest COMMAND AudioAnalysisTest)
 set_tests_properties(AudioAnalysisTest PROPERTIES LABELS "audio;analysis;headless;contract:audio")
 
+# Reference measurements for Audition's tools (FD-26, V81-AU2): PLR, stereo width and mono
+# problems, section detection, level matching, tonal balance.
+add_executable(ReferenceAnalysisTest AestraAudio/ReferenceAnalysisTest.cpp)
+target_link_libraries(ReferenceAnalysisTest PRIVATE AestraAudio)
+target_include_directories(ReferenceAnalysisTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME ReferenceAnalysisTest COMMAND ReferenceAnalysisTest)
+set_tests_properties(ReferenceAnalysisTest PROPERTIES LABELS "audio;analysis;headless;contract:audio")
+
 # #845 regression: recording in a session with existing clips + patterns
 add_executable(RecordingSessionContentTest AestraAudio/RecordingSessionContentTest.cpp)
 target_link_libraries(RecordingSessionContentTest PRIVATE AestraAudio)
@@ -1224,6 +1306,12 @@ add_executable(AestraAuditionEngineLifecycleTest AestraAudio/AuditionEngineLifec
 target_link_libraries(AestraAuditionEngineLifecycleTest PRIVATE AestraAudio)
 add_test(NAME AestraAuditionEngineLifecycleTest COMMAND AestraAuditionEngineLifecycleTest)
 set_tests_properties(AestraAuditionEngineLifecycleTest PROPERTIES LABELS "contract:application")
+
+# Synchronised dual playback in the Audition engine (V81-E2, FD-26).
+add_executable(AuditionDualPlaybackTest AestraAudio/AuditionDualPlaybackTest.cpp)
+target_link_libraries(AuditionDualPlaybackTest PRIVATE AestraAudio)
+add_test(NAME AuditionDualPlaybackTest COMMAND AuditionDualPlaybackTest)
+set_tests_properties(AuditionDualPlaybackTest PROPERTIES LABELS "audio;audition;contract:audio")
 
 add_executable(PreviewAuditionGainParityTest AestraAudio/PreviewAuditionGainParityTest.cpp)
 target_link_libraries(PreviewAuditionGainParityTest PRIVATE AestraAudio)
@@ -1402,7 +1490,7 @@ endif()
 
 # Arsenal bridge-mode terminology contract test (Phase 2B policy-only)
 add_executable(ArsenalBridgeContractTest AestraAudio/ArsenalBridgeContractTest.cpp)
-target_link_libraries(ArsenalBridgeContractTest PRIVATE)
+target_link_libraries(ArsenalBridgeContractTest PRIVATE AestraAudioCore)
 target_include_directories(ArsenalBridgeContractTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraAudio/include
     ${CMAKE_SOURCE_DIR}/AestraCore/include
@@ -2614,6 +2702,25 @@ if(AESTRA_ENABLE_UI)
     add_test(NAME MixerViewModelDynamicInsertsTest COMMAND MixerViewModelDynamicInsertsTest)
     set_tests_properties(MixerViewModelDynamicInsertsTest PROPERTIES
         LABELS "audio;mixer;contract:audio")
+    # V81-M2: the master channel carries short-term loudness and true peak through the view model.
+    aestra_require_ui_targets(MixerViewModelMasterLoudnessTest AestraUI_Core AestraUI_Platform)
+    add_executable(MixerViewModelMasterLoudnessTest
+        AestraAudio/MixerViewModelMasterLoudnessTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/MixerViewModel.cpp
+    )
+    target_link_libraries(MixerViewModelMasterLoudnessTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(MixerViewModelMasterLoudnessTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME MixerViewModelMasterLoudnessTest COMMAND MixerViewModelMasterLoudnessTest)
+    set_tests_properties(MixerViewModelMasterLoudnessTest PROPERTIES LABELS "audio;mixer;metering;contract:audio")
     # V8-S4: the master chain behaves like a channel chain through the view model.
     aestra_require_ui_targets(MasterInsertParityTest AestraUI_Core AestraUI_Platform)
     add_executable(MasterInsertParityTest
@@ -2829,6 +2936,331 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(UnitRowStepSelectionTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
 
+# Arsenal: a loaded one-shot (Sampler / 808 unit) must offer "Open in Piano Roll" on right-click; the
+# grid stays the erase gesture (owner report, 2026-10-11).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(UnitRowContextMenuTest AestraUI_Core)
+    add_executable(UnitRowContextMenuTest AestraUI/UnitRowContextMenuTest.cpp)
+    target_link_libraries(UnitRowContextMenuTest PRIVATE AestraUI_Core AestraAudio)
+    target_include_directories(UnitRowContextMenuTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME UnitRowContextMenuTest COMMAND UnitRowContextMenuTest)
+    set_tests_properties(UnitRowContextMenuTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
+# Mixer knobs (trim, pan, width) keep showing their live value while dragged (owner report, 2026-10-11).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(UIMixerKnobDragReadoutTest AestraUI_Core AestraUI_Platform)
+    add_executable(UIMixerKnobDragReadoutTest AestraUI/UIMixerKnobDragReadoutTest.cpp)
+    target_link_libraries(UIMixerKnobDragReadoutTest PRIVATE AestraUI_Core AestraUI_Platform)
+    target_include_directories(UIMixerKnobDragReadoutTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME UIMixerKnobDragReadoutTest COMMAND UIMixerKnobDragReadoutTest)
+    set_tests_properties(UIMixerKnobDragReadoutTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
+# The mixer strip names its inserts and its output (V81-M1, FD-28 point 3).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(UIMixerStripContentTest AestraUI_Core AestraUI_Platform)
+    add_executable(UIMixerStripContentTest
+        AestraUI/UIMixerStripContentTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/MixerViewModel.cpp
+    )
+    target_link_libraries(UIMixerStripContentTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(UIMixerStripContentTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME UIMixerStripContentTest COMMAND UIMixerStripContentTest)
+    set_tests_properties(UIMixerStripContentTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
+# The mixer groups strips by where they go (V81-M1, FD-28 point 1).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(MixerGroupingTest AestraUI_Core)
+    add_executable(MixerGroupingTest AestraUI/MixerGroupingTest.cpp)
+    target_link_libraries(MixerGroupingTest PRIVATE AestraUI_Core)
+    target_include_directories(MixerGroupingTest PRIVATE ${CMAKE_SOURCE_DIR}/Source/Components)
+    add_test(NAME MixerGroupingTest COMMAND MixerGroupingTest)
+    set_tests_properties(MixerGroupingTest PROPERTIES LABELS "ui;mixer;regression;contract:application")
+endif()
+
+# The real mixer panel lays strips out grouped by output, under headers (V81-M1, FD-28 point 1).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(UIMixerPanelGroupingTest AestraUI_Core AestraUI_Platform)
+    add_executable(UIMixerPanelGroupingTest
+        AestraUI/UIMixerPanelGroupingTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/MixerViewModel.cpp
+    )
+    target_link_libraries(UIMixerPanelGroupingTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(UIMixerPanelGroupingTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME UIMixerPanelGroupingTest COMMAND UIMixerPanelGroupingTest)
+    set_tests_properties(UIMixerPanelGroupingTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
+# The kit behind the new mixer strip: shared dB scale, parameter bar, footer, send list, overlay fader (V81-K1).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(UIMixerKitTest AestraUI_Core AestraUI_Platform)
+    add_executable(UIMixerKitTest AestraUI/UIMixerKitTest.cpp)
+    target_link_libraries(UIMixerKitTest PRIVATE AestraUI_Core AestraUI_Platform)
+    target_include_directories(UIMixerKitTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME UIMixerKitTest COMMAND UIMixerKitTest)
+    set_tests_properties(UIMixerKitTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
+# The mixer navigator for overflowing sessions: ticks, bracket, group labels (V81-M1, FD-28 point 7).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(UIMixerNavigatorTest AestraUI_Core AestraUI_Platform)
+    add_executable(UIMixerNavigatorTest AestraUI/UIMixerNavigatorTest.cpp)
+    target_link_libraries(UIMixerNavigatorTest PRIVATE AestraUI_Core AestraUI_Platform)
+    target_include_directories(UIMixerNavigatorTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME UIMixerNavigatorTest COMMAND UIMixerNavigatorTest)
+    set_tests_properties(UIMixerNavigatorTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
+# The mixer inspector is one column: output, inserts, sends, input; "Fed by"; the routing graph link (V81-R2).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(UIMixerInspectorColumnTest AestraUI_Core AestraUI_Platform)
+    add_executable(UIMixerInspectorColumnTest
+        AestraUI/UIMixerInspectorColumnTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/MixerViewModel.cpp
+    )
+    target_link_libraries(UIMixerInspectorColumnTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(UIMixerInspectorColumnTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME UIMixerInspectorColumnTest COMMAND UIMixerInspectorColumnTest)
+    set_tests_properties(UIMixerInspectorColumnTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
+# The routing graph is the full panel only; the minimap mode is gone (FD-28 point 8).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(UIRoutingMapGraphTest AestraUI_Core AestraUI_Platform)
+    add_executable(UIRoutingMapGraphTest
+        AestraUI/UIRoutingMapGraphTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/MixerViewModel.cpp
+    )
+    target_link_libraries(UIRoutingMapGraphTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(UIRoutingMapGraphTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME UIRoutingMapGraphTest COMMAND UIRoutingMapGraphTest)
+    set_tests_properties(UIRoutingMapGraphTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
+# The sound strip: step to the neighbouring sound in the folder, gap-free (V81-AR1, FD-27 point 5).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(ArsenalSoundStripTest AestraUI_Core)
+    add_executable(ArsenalSoundStripTest AestraUI/ArsenalSoundStripTest.cpp)
+    target_link_libraries(ArsenalSoundStripTest PRIVATE AestraUI_Core)
+    target_include_directories(ArsenalSoundStripTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ArsenalSoundStripTest COMMAND ArsenalSoundStripTest)
+    set_tests_properties(ArsenalSoundStripTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
+# The sound drawer: search, audition by arrows, Enter keeps, Esc reverts (V81-AR1, FD-27 point 4).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(ArsenalSoundDrawerTest AestraUI_Core)
+    add_executable(ArsenalSoundDrawerTest AestraUI/ArsenalSoundDrawerTest.cpp)
+    target_link_libraries(ArsenalSoundDrawerTest PRIVATE AestraUI_Core)
+    target_include_directories(ArsenalSoundDrawerTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ArsenalSoundDrawerTest COMMAND ArsenalSoundDrawerTest)
+    set_tests_properties(ArsenalSoundDrawerTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
+# Sound sets: a library collection a row can walk (V81-AR2, FD-46).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(ArsenalSoundSetTest AestraUI_Core)
+    add_executable(ArsenalSoundSetTest AestraUI/ArsenalSoundSetTest.cpp)
+    target_link_libraries(ArsenalSoundSetTest PRIVATE AestraUI_Core)
+    target_include_directories(ArsenalSoundSetTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ArsenalSoundSetTest COMMAND ArsenalSoundSetTest)
+    set_tests_properties(ArsenalSoundSetTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
+# The History timeline layout (V81-V1, SPEC-017).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(VersionsTimelineTest AestraUI_Core)
+    add_executable(VersionsTimelineTest AestraUI/VersionsTimelineTest.cpp)
+    target_link_libraries(VersionsTimelineTest PRIVATE AestraUI_Core)
+    target_include_directories(VersionsTimelineTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME VersionsTimelineTest COMMAND VersionsTimelineTest)
+    set_tests_properties(VersionsTimelineTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(AuditionHubLayoutTest AestraUI_Core)
+    add_executable(AuditionHubLayoutTest AestraUI/AuditionHubLayoutTest.cpp)
+    target_link_libraries(AuditionHubLayoutTest PRIVATE AestraUI_Core)
+    target_include_directories(AuditionHubLayoutTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME AuditionHubLayoutTest COMMAND AuditionHubLayoutTest)
+    set_tests_properties(AuditionHubLayoutTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
+# Kits and the empty state: a folder of sounds becomes a row of units (V81-AR1, FD-27 point 6).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(ArsenalKitTest AestraUI_Core)
+    add_executable(ArsenalKitTest AestraUI/ArsenalKitTest.cpp)
+    target_link_libraries(ArsenalKitTest PRIVATE AestraUI_Core)
+    target_include_directories(ArsenalKitTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ArsenalKitTest COMMAND ArsenalKitTest)
+    set_tests_properties(ArsenalKitTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
+# Open rows show step lanes fitted to the unit (V81-AR1, FD-27 point 4).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(ArsenalStepLanesTest AestraUI_Core)
+    add_executable(ArsenalStepLanesTest AestraUI/ArsenalStepLanesTest.cpp)
+    target_link_libraries(ArsenalStepLanesTest PRIVATE AestraAudio AestraUI_Core)
+    target_include_directories(ArsenalStepLanesTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ArsenalStepLanesTest COMMAND ArsenalStepLanesTest)
+    set_tests_properties(ArsenalStepLanesTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
+# Patterns are one-click scenes in a strip under the Arsenal header (V81-AR1, FD-27 point 1).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(ArsenalSceneStripTest AestraUI_Core)
+    add_executable(ArsenalSceneStripTest AestraUI/ArsenalSceneStripTest.cpp)
+    target_link_libraries(ArsenalSceneStripTest PRIVATE AestraAudio AestraUI_Core)
+    target_include_directories(ArsenalSceneStripTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ArsenalSceneStripTest COMMAND ArsenalSceneStripTest)
+    set_tests_properties(ArsenalSceneStripTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
+# The Arsenal rack is grouped under headers; one layout answers layout, scroll and drop (V81-AR1, FD-27 point 2).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(ArsenalRackLayoutTest AestraUI_Core)
+    add_executable(ArsenalRackLayoutTest AestraUI/ArsenalRackLayoutTest.cpp)
+    target_link_libraries(ArsenalRackLayoutTest PRIVATE AestraAudio)
+    target_include_directories(ArsenalRackLayoutTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ArsenalRackLayoutTest COMMAND ArsenalRackLayoutTest)
+    set_tests_properties(ArsenalRackLayoutTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
 # The inspector rack must follow the LAST-bound chain: bindEffectRack() used
 # to append bindings and refreshRackDisplay() read the first match, so a
 # selection switch left the rack bound to a chain that died with its channel
@@ -2871,14 +3303,12 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(WindowPanelRaiseTest PROPERTIES LABELS "ui;input;regression;contract:application")
 endif()
 
-# Takes/History workspace panels: command-timeline presentation + navigation,
-# takes manifest listing, actions, inline rename, non-destructive branching.
+# Versions panel (class TakesPanel): takes manifest listing, actions, inline rename, non-destructive branching.
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(TakesHistoryPanelTest AestraUI_Core)
     add_executable(TakesHistoryPanelTest
         AestraUI/TakesHistoryPanelTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/WindowPanel.cpp
-        ${CMAKE_SOURCE_DIR}/Source/Panels/AestraHistoryPanel.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/TakesPanel.cpp
         ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Core/TakeManager.cpp
@@ -2906,7 +3336,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Panels
     )
     add_test(NAME TakesHistoryPanelTest COMMAND TakesHistoryPanelTest)
-    set_tests_properties(TakesHistoryPanelTest PROPERTIES LABELS "ui;takes;history;regression;contract:application")
+    set_tests_properties(TakesHistoryPanelTest PROPERTIES LABELS "ui;takes;versions;regression;contract:application")
 endif()
 
 # Plugin-browser filtering must preserve selection by stable plugin ID rather
@@ -3083,6 +3513,61 @@ if(AESTRA_ENABLE_UI)
     )
     add_test(NAME ClipContextMenuReachabilityTest COMMAND ClipContextMenuReachabilityTest)
     set_tests_properties(ClipContextMenuReachabilityTest PROPERTIES
+        LABELS "ui;menu;interaction;timeline;regression;contract:application")
+endif()
+
+# A selection of several clips copies, pastes, drags and nudges as one block (owner report, 2026-10-11).
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(ClipGroupOpsTest AestraUI_Core AestraUI_Platform AestraUI_OpenGL)
+    add_executable(ClipGroupOpsTest
+        AestraUI/ClipGroupOpsTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
+        # compiles in.
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapRenderer.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineSummaryCache.cpp
+    )
+    # TrackManagerUIRender references the FBO render cache. The test never reaches
+    # that path — NullRenderer::getRenderCache() returns nullptr, so the documented
+    # no-cache branch runs — but the symbols are needed at link time. The cache
+    # lives in AestraUI_OpenGL, which also carries the glad and FreeType include
+    # paths its header needs. Note AestraUI_OpenGL deliberately does not link
+    # OpenGL::GL: glad resolves GL entry points dynamically, and this test never
+    # initialises them.
+    target_link_libraries(ClipGroupOpsTest PRIVATE
+        AestraUI_Core AestraUI_Platform AestraUI_OpenGL AestraAudio AestraCore)
+    target_include_directories(ClipGroupOpsTest PRIVATE
+        ${CMAKE_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        # TrackManagerUI.h pulls MixerPanel.h and PianoRollPanel.h transitively
+        # without using either, so these are needed to compile, not to link.
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/Source/Settings
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
+        ${CMAKE_SOURCE_DIR}/AestraUI/Helpers
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ClipGroupOpsTest COMMAND ClipGroupOpsTest)
+    set_tests_properties(ClipGroupOpsTest PROPERTIES
         LABELS "ui;menu;interaction;timeline;regression;contract:application")
 endif()
 
@@ -3332,6 +3817,7 @@ if(AESTRA_ENABLE_UI)
         AestraUI/FileBrowserLibraryTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowser.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserNavigation.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserChrome.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserLibrary.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/FileBrowserScan.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/BrowserLibrary.cpp
@@ -3400,6 +3886,7 @@ if(AESTRA_ENABLE_UI)
         EditorCloseDeferredTest
         PanelWindowClickSwallowTest
         MixerViewModelAutomationPresenceTest
+        MixerViewModelMasterLoudnessTest
         MixerViewModelDynamicInsertsTest
         MasterInsertParityTest
         MixerDropdownKeyboardTest
@@ -3410,6 +3897,25 @@ if(AESTRA_ENABLE_UI)
         AutomationClipLayerTest
         PanelModeBehaviourTest
         UnitRowStepSelectionTest
+        ClipGroupOpsTest
+        UnitRowContextMenuTest
+        UIMixerKnobDragReadoutTest
+        UIMixerStripContentTest
+        MixerGroupingTest
+        UIMixerKitTest
+        UIMixerNavigatorTest
+        UIMixerInspectorColumnTest
+        UIRoutingMapGraphTest
+        ArsenalRackLayoutTest
+        ArsenalSceneStripTest
+        ArsenalStepLanesTest
+        ArsenalSoundStripTest
+        ArsenalSoundDrawerTest
+        ArsenalSoundSetTest
+        VersionsTimelineTest
+        AuditionHubLayoutTest
+        ArsenalKitTest
+        UIMixerPanelGroupingTest
         PluginRackBindingLifecycleTest
         WindowPanelRaiseTest
         TakesHistoryPanelTest
@@ -3639,6 +4145,26 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/TruePeakMeterTest.cpp")
     add_test(NAME TruePeakMeterTest COMMAND TruePeakMeterTest)
     set_tests_properties(TruePeakMeterTest PROPERTIES LABELS "audio;dsp;metering;contract:audio")
 endif()
+
+# Live momentary and short-term loudness for the master meter (V81-M2)
+add_executable(LoudnessWindowTest AestraAudio/LoudnessWindowTest.cpp)
+target_link_libraries(LoudnessWindowTest PRIVATE AestraAudio)
+target_include_directories(LoudnessWindowTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME LoudnessWindowTest COMMAND LoudnessWindowTest)
+set_tests_properties(LoudnessWindowTest PROPERTIES LABELS "audio;dsp;metering;contract:audio")
+
+add_executable(MasterLoudnessSnapshotTest AestraAudio/MasterLoudnessSnapshotTest.cpp)
+target_link_libraries(MasterLoudnessSnapshotTest PRIVATE AestraAudio)
+target_include_directories(MasterLoudnessSnapshotTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Tests/AestraAudio
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MasterLoudnessSnapshotTest COMMAND MasterLoudnessSnapshotTest)
+set_tests_properties(MasterLoudnessSnapshotTest PROPERTIES LABELS "audio;metering;contract:audio" TIMEOUT 120)
 
 # Piano Roll Edge Case Stress Test
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PianoRollEdgeCaseStressTest.cpp")

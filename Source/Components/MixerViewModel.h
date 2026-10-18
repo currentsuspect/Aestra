@@ -87,6 +87,9 @@ struct ChannelViewModel {
     float correlation{0.0f};                 ///< Phase correlation (-1.0 to 1.0)
     float sidechainPeak{0.0f};               ///< Live sidechain detector input peak (linear 0..1)
     float integratedLufs{-144.0f};           ///< Integrated/Gated LUFS (dB)
+    float momentaryLufs{-144.0f};            ///< Momentary (400 ms) LUFS, master only
+    float shortTermLufs{-144.0f};            ///< Short-term (3 s) LUFS, master only
+    float truePeakDb{-144.0f};               ///< Held true peak in dBTP, master only (-144 = none yet)
     float peakHoldL{MixerMath::DB_MIN};      ///< Peak hold left (dB)
     float peakHoldR{MixerMath::DB_MIN};      ///< Peak hold right (dB)
     double peakHoldTimerL{0.0};              ///< Time since peak hold set (seconds)
@@ -107,6 +110,14 @@ struct ChannelViewModel {
         bool sidechainOnly{false};
     };
     std::vector<SendViewModel> sends;
+
+    /// What the channel is to the others (V81-M1): a Bus when other channels route their main output into it,
+    /// a Return when other channels send to it, else a plain Track. A bus that also receives sends stays a Bus.
+    enum class Role { Track, Bus, Return };
+    Role role{Role::Track};
+
+    /// Highest peak since the last reset, in dB; the strip footer reads it. Cleared by resetPeaks().
+    float peakSinceResetDb{MixerMath::DB_MIN};
 
     /**
      * @brief Reset meter state to silence.
@@ -239,6 +250,9 @@ public:
     /**
      * @brief Get master channel.
      */
+    /// Forget every channel's peak-since-reset and clip latch (the mixer's "Reset peaks").
+    void resetPeaks();
+
     ChannelViewModel* getMaster() { return m_master.get(); }
     const ChannelViewModel* getMaster() const { return m_master.get(); }
 

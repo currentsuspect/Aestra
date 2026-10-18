@@ -2,10 +2,12 @@
 #pragma once
 
 #include "WindowPanel.h"
+#include "NUITextInput.h"
 #include "NUIComponent.h"
 #include "NUIButton.h"
 #include "NUISlider.h"
 #include <vector>
+#include <array>
 #include <string>
 #include <memory>
 #include <functional>
@@ -62,12 +64,14 @@ public:
     };
 
     void setLoopPoints(const LoopPoints& lp);
+    /// The waveform takes the unit's channel colour (alpha 0: the neutral bone).
+    void setWaveformColor(const AestraUI::NUIColor& color);
     LoopPoints getLoopPoints() const { return m_loopPoints; }
 
     // Pitch/tune
     struct PitchTune {
         int rootMidiNote{60}; // C3 default
-        int coarse{0};        // ±24 semitones
+        int coarse{0};        // ±12 semitones: all the sampler can store (it keeps coarse as a 0..1 value over 24 st centred on 0.5)
         float fine{0.0f}; // ±100 cents
     };
 
@@ -149,9 +153,14 @@ private:
     std::shared_ptr<AestraUI::NUILabel> m_pitchLabel;
     std::shared_ptr<AestraUI::NUILabel> m_pitchRootLabel;
     std::shared_ptr<AestraUI::NUILabel> m_pitchRootValueLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_pitchCoarseValueLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_pitchFineValueLabel;
     std::shared_ptr<AestraUI::NUILabel> m_pitchCoarseLabel;
     std::shared_ptr<AestraUI::NUILabel> m_pitchFineLabel;
     std::shared_ptr<AestraUI::NUILabel> m_adsrLabel;
+    // A, D, S and R as typed fields under the graph (ms, ms, %, ms). Return or leaving the field applies it.
+    std::array<std::shared_ptr<AestraUI::NUITextInput>, 4> m_adsrFields;
+    std::array<std::shared_ptr<AestraUI::NUILabel>, 4> m_adsrFieldCaptions;
 
     // Layout container
     std::shared_ptr<AestraUI::NUIComponent> m_contentContainer;
@@ -163,6 +172,9 @@ private:
     void onADSRDisplayChanged(const ADSRParams& params);
     void onLoopControlChanged();
     void onPitchControlChanged();
+    void updatePitchValueLabels();
+    void refreshADSRFields();
+    void commitADSRField(int index);
     void onVoiceCountControlChanged();
     void setMonoModeInternal(bool mono, bool notify);
     void setCutSelfModeInternal(bool cutSelf, bool notify);
@@ -183,6 +195,10 @@ public:
     void setZoom(float zoom);
     void setLoopPoints(float start, float end);
     void setScrollOffset(float offset);
+    /// The signal's colour: the channel's own. Empty (alpha 0) falls back to the neutral bone.
+    void setColor(const AestraUI::NUIColor& color) { m_color = color; repaint(); }
+    /// The sample's length, for the time ruler along the top; 0 hides the ruler.
+    void setDurationSeconds(double seconds) { m_durationSeconds = seconds; repaint(); }
 
     float getScrollOffset() const { return m_scrollOffset; }
     float getZoom() const { return m_zoom; }
@@ -201,6 +217,8 @@ private:
     float m_scrollOffset{0.0f}; // 0.0 - 1.0
     float m_loopStart{0.0f};
     float m_loopEnd{1.0f};
+    AestraUI::NUIColor m_color{0.0f, 0.0f, 0.0f, 0.0f};
+    double m_durationSeconds{0.0};
 
     // Dragging state
     bool m_draggingLoopStart{false};

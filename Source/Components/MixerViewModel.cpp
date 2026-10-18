@@ -9,7 +9,9 @@
 #include "../Core/AestraAudioController.h"
 #include "../../AestraUI/Widgets/TrackColorPalette.h"
 #include "Models/AutomationPresence.h"
+#include <algorithm>
 #include <cstdio>
+#include <unordered_set>
 #include <unordered_map>
 
 namespace Aestra {
@@ -467,6 +469,37 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
         }
         m_selectedChannelId = static_cast<int32_t>(fallbackId);
     }
+
+    // Roles follow the routing: who feeds whom decides what a channel is.
+    std::unordered_set<uint32_t> busIds;
+    std::unordered_set<uint32_t> returnIds;
+    for (const auto& channel : m_channels) {
+        if (!channel) continue;
+        if (channel->mainOutputId != 0 && channel->mainOutputId != channel->id) busIds.insert(channel->mainOutputId);
+        for (const auto& send : channel->sends) {
+            if (!send.muted && !send.sidechainOnly) returnIds.insert(send.targetId);
+        }
+    }
+    for (auto& channel : m_channels) {
+        if (!channel) continue;
+        channel->role = busIds.count(channel->id) ? ChannelViewModel::Role::Bus
+                       : returnIds.count(channel->id) ? ChannelViewModel::Role::Return
+                                                      : ChannelViewModel::Role::Track;
+    }
+}
+
+void MixerViewModel::resetPeaks() {
+    const auto reset = [](ChannelViewModel& channel) {
+        channel.peakSinceResetDb = MixerMath::DB_MIN;
+        channel.clipLatchL = false;
+        channel.clipLatchR = false;
+        channel.suppressClipRelatchL = true;
+        channel.suppressClipRelatchR = true;
+    };
+    for (auto& channel : m_channels) {
+        if (channel) reset(*channel);
+    }
+    if (m_master) reset(*m_master);
 }
 
 ChannelViewModel* MixerViewModel::getChannelById(uint32_t id) {
@@ -599,6 +632,11 @@ void MixerViewModel::smoothMeterChannel(ChannelViewModel& channel,
     channel.integratedLufs = std::isfinite(snapshot.integratedLufs)
                                  ? std::clamp(snapshot.integratedLufs, -144.0f, 12.0f)
                                  : -144.0f;
+    const auto clampLufs = [](float v) { return std::isfinite(v) ? std::clamp(v, -144.0f, 12.0f) : -144.0f; };
+    channel.momentaryLufs = clampLufs(snapshot.momentaryLufs);
+    channel.shortTermLufs = clampLufs(snapshot.shortTermLufs);
+    const float truePeakLinear = std::max(sanitizeLinear(snapshot.truePeakL), sanitizeLinear(snapshot.truePeakR));
+    channel.truePeakDb = truePeakLinear > 1e-7f ? 20.0f * std::log10(truePeakLinear) : -144.0f;
     
     channel.smoothedPeakR = smoothDb(channel.smoothedPeakR, channel.envPeakR, DISPLAY_ATTACK_MS, DISPLAY_RELEASE_MS);
 
@@ -613,6 +651,8 @@ void MixerViewModel::smoothMeterChannel(ChannelViewModel& channel,
 
     channel.smoothedPeakL = std::max(channel.smoothedPeakL, MixerMath::DB_MIN);
     channel.smoothedPeakR = std::max(channel.smoothedPeakR, MixerMath::DB_MIN);
+
+    channel.peakSinceResetDb = std::max({channel.peakSinceResetDb, peakDbL, peakDbR});
 
     // Peak hold uses true peak (for gain-staging confidence).
     if (peakDbL > channel.peakHoldL) {

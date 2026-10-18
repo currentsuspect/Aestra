@@ -124,6 +124,21 @@ public:
      * @return Scroll offset in pixels.
      */
     float getScrollX() const { return m_scrollX; }
+    /// Where the step pads sit inside the row (the same inset the pads are drawn and hit-tested with).
+    /// The output chip's column at the row's right end (the chip, its 16 px margin, a gap): the grid stops before it.
+    /// Where the head (stripe, name, M S and the open-lanes key) ends, from the row's left edge.
+    float headRight() const { return m_controlWidth; }
+    float routeColumn() const { return (m_density == Density::Minimal ? 24.0f : m_density == Density::Compact ? 64.0f : 96.0f) + 24.0f; }
+    NUIRect stepStrip() const {
+        const auto b = getBounds();
+        const float sepX = m_controlWidth; // refreshed on every render and pointer event
+        return {b.x + sepX + 14.0f, b.y + 12.0f, std::max(0.0f, b.width - (sepX + 2.0f) - routeColumn() - 12.0f), std::max(0.0f, b.height - 24.0f)};
+    }
+    /// Width of one step pad at the current fit/scroll mode, and the 4-step group gap, so lanes line up with the pads.
+    /// The colour this row reads as (its output channel's), for the lanes and strips drawn under it.
+    NUIColor channelColor() const { return identityColor(); }
+    float stepPadWidth() const { return gridStepWidth(stepStrip().width); }
+    static constexpr float stepGroupGap() { return kStepGroupGap; }
     /**
      * @brief Set the callback fired when the user wheel-scrolls the step grid.
      * When set, the panel owns the scroll offset and pushes it back via setScrollX
@@ -143,6 +158,9 @@ public:
      * @return Backing unit identifier.
      */
     Aestra::Audio::UnitID getUnitId() const { return m_unitId; }
+    /** @brief The output by name ("Master", "Drum Bus"), as the row's pill reads it. */
+    const std::string& outputName() const { return m_mixerRouteName; }
+    int outputColorIndex() const { return m_mixerRouteColorIndex; }
     /**
      * @brief Update the row's selected-state styling.
      * @param selected True when the row is currently selected.
@@ -198,6 +216,8 @@ private:
     std::vector<float> m_audioPreviewWaveform;
     uint32_t m_mixerChannelId = Aestra::Audio::MASTER_MIXER_CHANNEL_ID;
     std::string m_mixerRouteShortLabel{"M"};
+    std::string m_mixerRouteName{"Master"}; ///< the output by name (FD-27), shown in the pill
+    int m_mixerRouteColorIndex{-1};        ///< that channel's track colour, -1 for the master
 
     // === Internal State ===
     void layoutNameLabel();
@@ -279,6 +299,7 @@ private:
     int m_lastClipClickStep = -1;        // Step of the last grid press; -1 = miss / non-grid
 
     // === Helpers ===
+    NUIColor identityColor() const; // the output channel's colour, else the unit's own
     void drawContent(NUIRenderer& renderer); // Main drawing logic (cached)
     void drawDragHandle(NUIRenderer& renderer, const NUIRect& bounds);
     void drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds);
@@ -317,11 +338,8 @@ private:
     void selectAllNotes();                     // Ctrl+A: select every step that has a note
 
     // Icon drawing helpers
-    void drawPowerIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active);
-    void drawArmIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active);
     void drawMuteIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active, bool engaged = true);
     void drawSoloIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active, bool engaged = true);
-    void drawGearIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active); // [NEW]
 
     // Internal components
     std::shared_ptr<UnitNameLabel> m_nameLabel;

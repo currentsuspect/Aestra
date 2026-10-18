@@ -127,7 +127,7 @@ private:
     bool m_minimized{false};
     bool m_maximized{false};
     float m_titleBarHeight{28.0f};
-    static constexpr float kDefaultTitleBarHeight{28.0f};
+    static constexpr float kDefaultTitleBarHeight{32.0f};
     std::shared_ptr<AestraUI::NUIComponent> m_titleBarAccessory;
     float m_accessoryHeight{0.0f};
     float m_accessoryTitleZone{0.0f};

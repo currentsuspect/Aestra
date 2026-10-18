@@ -11,6 +11,8 @@
  */
 
 #pragma once
+#include "AuditionHooks.h"
+#include "SamplerEditHistory.h"
 
 #include "../AestraUI/Widgets/PanelMode.h"
 #include "../AestraAudio/include/Commands/CommandParser.h"
@@ -70,7 +72,6 @@ namespace Aestra::Audio {
     class AudioClipEditorPanel;
     class PatternBrowserPanel;
     class WindowPanel;
-    class AestraHistoryPanel;
     class TakesPanel;
     class AuditionEngine;  // For Audition Mode
     class PlaybackGraphController;
@@ -78,7 +79,7 @@ namespace Aestra::Audio {
 }
 
 namespace Aestra {
-    class AuditionPanel;   // For Audition Mode UI
+    class AuditionHub;     // For Audition Mode UI
 }
 
 namespace AestraUI {
@@ -234,6 +235,8 @@ public:
     void setMixerVisible(bool visible);
     /** @brief Set the active workspace mode. */
     void setViewFocus(ViewFocus focus);
+    /// Open the routing graph (V81-R1), selecting `channelId` first when it is not 0. Remembers where to go back.
+    void showRoutingGraph(uint32_t channelId);
     /** @brief Get the active workspace mode. */
     ViewFocus getViewFocus() const { return m_viewFocus; }
     /** @brief Whether the piano-roll overlay is remembered-open (for persistence). */
@@ -253,9 +256,19 @@ public:
     /** @brief Toggle the Arsenal panel regardless of active mode. */
     void toggleArsenalPanel();
     /** @brief Toggle the History panel visibility. */
-    void toggleHistoryPanel();
     /** @brief Toggle the Takes panel visibility. */
     void toggleTakesPanel();
+    /// The whole project's mix, rendered offline into memory (a version's bounce). False when there is nothing to render.
+    bool renderMixToBuffer(std::vector<float>& interleaved, uint32_t& channels, uint32_t& sampleRate);
+    /// Play a file through the preview engine, or stop it if it is the file already playing. True when it is playing after.
+    bool togglePreviewFile(const std::string& path);
+    /// What the Audition hub needs from the app (the open project, the reference list, import and bounce); applied when it is shown.
+    void setAuditionHooks(Aestra::AuditionHooks hooks) { m_auditionHooks = std::move(hooks); applyAuditionHooks(); }
+    void applyAuditionHooks();
+    /// Audition shown or hidden: the hub appears, and the file browser steps aside (and comes back as it was).
+    void setAuditionActive(bool active);
+    void addAuditionReference(const std::string& path);
+    bool isPreviewFilePlaying(const std::string& path) const;
     /** @brief Get the Takes panel (for app-level action wiring). */
     std::shared_ptr<Aestra::Audio::TakesPanel> getTakesPanel() const { return m_takesPanel; }
 
@@ -313,6 +326,7 @@ public:
     void wireEditorMode();  ///< the plugin editors' shared mode, from the store
     void wirePanelMode(const std::shared_ptr<Aestra::Audio::WindowPanel>& panel, Aestra::Audio::ViewType view);
     void showPanelMenu(Aestra::Audio::ViewType view, const AestraUI::NUIPoint& at);
+    void placePatternInTimeline(Aestra::Audio::PatternID pattern); ///< AestraContentPlacement.cpp: the Arsenal's "Place in timeline"
     void noteOutsidePress(Aestra::Audio::ViewType view);  ///< a contextual panel saw a press outside it
     void closeContextualPanels();                         ///< runs a frame later, once the press has been handled
     int m_viewChangeSerial = 0;                           ///< bumped whenever a view is opened or closed
@@ -332,18 +346,18 @@ public:
 
     /** @brief The panel owned for a floating view, or nullptr for other views. */
     std::shared_ptr<Aestra::Audio::WindowPanel> panelForView(Aestra::Audio::ViewType view);
+    /** @brief Bring an open panel forward when another panel overlaps it from above; false if it was already in front (or closed). */
+    bool raiseIfCovered(Aestra::Audio::ViewType view);
 
     // One accessor per floating panel, existing so the descriptor table can name
     // a panel without friendship or type erasure. The five members are distinct
-    // derived types (MixerPanel, PianoRollPanel, ArsenalPanel, AestraHistoryPanel,
-    // TakesPanel), so they cannot share a member pointer; a pointer-to-member-
+    // derived types (MixerPanel, PianoRollPanel, ArsenalPanel, TakesPanel), so they cannot share a member pointer; a pointer-to-member-
     // function is compile-checked, allocates nothing and carries no std::any or
     // std::function through the frame loop. Each is the upcast panelForView()
     // already performed inside its switch arm.
     std::shared_ptr<Aestra::Audio::WindowPanel> mixerWindowFor() const;
     std::shared_ptr<Aestra::Audio::WindowPanel> pianoRollWindowFor() const;
     std::shared_ptr<Aestra::Audio::WindowPanel> sequencerWindowFor() const;
-    std::shared_ptr<Aestra::Audio::WindowPanel> historyWindowFor() const;
     std::shared_ptr<Aestra::Audio::WindowPanel> takesWindowFor() const;
     /** @brief The app-owned surface store, or nullptr before AestraApp provides it. */
     Aestra::UISurfaceStoreFile* surfaceStore() const;
@@ -425,6 +439,8 @@ public:
     void playSoundPreview(const AestraUI::FileItem& file);
     /** @brief Stop the active file-browser preview. */
     void stopSoundPreview();
+    /** @brief A new Arsenal sampler row playing @p filePath (the preview dock's Add to Arsenal). */
+    void addSampleToArsenal(const std::string& filePath);
     /** @brief Load a sample into the currently selected track. */
     void loadSampleIntoSelectedTrack(const std::string& filePath);
     /** @brief Decode and publish a sample to an Arsenal unit off the UI/drop path. */
@@ -525,7 +541,6 @@ private:
     // Musical typing: QWERTY plays the piano roll's editing unit live.
     Aestra::KeyboardNoteInput m_keyboardNoteInput;
     std::shared_ptr<Aestra::Audio::ArsenalPanel> m_sequencerPanel;
-    std::shared_ptr<Aestra::Audio::AestraHistoryPanel> m_historyPanel;
     std::shared_ptr<Aestra::Audio::TakesPanel> m_takesPanel;
     std::shared_ptr<AestraUI::PluginUIController> m_pluginController;
     std::shared_ptr<AestraUI::UIRoutingMap> m_routingMapPanel;
@@ -535,7 +550,10 @@ private:
 
     // Audition Mode
     std::shared_ptr<Aestra::Audio::AuditionEngine> m_auditionEngine;
-    std::shared_ptr<Aestra::AuditionPanel> m_auditionPanel;
+    std::shared_ptr<Aestra::AuditionHub> m_auditionPanel;
+    Aestra::AuditionHooks m_auditionHooks;
+    bool m_browserHiddenByAudition{false};
+    bool m_browserWasVisible{true};
 
     std::unique_ptr<Aestra::Audio::PreviewEngine> m_previewEngine;
     Aestra::MusicalTypingController m_musicalTyping;
@@ -591,6 +609,7 @@ private:
     /** V8-W5: render the clips' track output, replace them with it, tell the user the outcome. */
     void bounceClipsInPlace(const std::vector<Aestra::Audio::ClipInstanceID>& clipIds);
     void syncSampleEditorToUnit(Aestra::Audio::UnitID unitId);
+    Aestra::SamplerEditHistory m_samplerEdits; ///< undo for the Sample Editor's controls
     void enqueueMainThreadTask(std::function<void()> task);
     // AestraContentImport.cpp: the sample decodes on a worker thread, the clip is placed on the main one.
     void placeSampleOnTimeline(Aestra::Audio::ClipSourceID sourceId, const std::string& filePath);

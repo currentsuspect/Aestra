@@ -155,6 +155,29 @@ inline std::optional<uint64_t> copy(AutomationCurve& curve, uint64_t id, double 
     return newId;
 }
 
+/// Create a new clip over [start, end] holding two points at @p value (a flat line). Returns the new region's id, or
+/// nothing if refused: it would start before 0, be empty, or land on another clip. Loose points under the span are
+/// replaced (the clip overwrites what it lands on); the points of other clips are never touched.
+inline std::optional<uint64_t> create(AutomationCurve& curve, double start, double end, float value) {
+    if (start < -kEps || end <= start + kEps)
+        return std::nullopt;
+    materialize(curve); // an implicit clip over all the points becomes a stored one, so the overlap test sees it
+    if (overlapsAnother(curve, 0, start, end))
+        return std::nullopt;
+    clearSpan(curve, start, end);
+    for (const double beat : {start, end}) {
+        AutomationPoint p;
+        p.beat = beat;
+        p.value = value;
+        curve.points.push_back(p);
+    }
+    curve.sortPoints();
+    const uint64_t newId = nextId(curve);
+    curve.regions.push_back({newId, start, end});
+    sortRegions(curve);
+    return newId;
+}
+
 /// Cut region @p id in two at the segment holding @p beat. Returns the new (right-hand) id, or nothing.
 inline std::optional<uint64_t> split(AutomationCurve& curve, uint64_t id, double beat) {
     materialize(curve);

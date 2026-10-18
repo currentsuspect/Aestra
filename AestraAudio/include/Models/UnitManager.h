@@ -6,6 +6,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include "AestraAtomicSharedPtr.h"
 #include <string>
@@ -127,6 +128,11 @@ struct UnitInfo {
     bool isEnabled{false};
     /** @brief Associated audio clip path for clip-based units. */
     std::string audioClipPath;
+    /**
+     * @brief Name of the sound set (a library collection) this unit's sound arrows and drawer walk; empty walks the
+     * sound's own folder. A reference by name: the set lives in the user's library, not in the project (V81-AR2).
+     */
+    std::string soundSet;
     /** @brief Cached clip duration for audio-style units. */
     double audioDurationSeconds{0.0};
     /** @brief Lightweight preview waveform bins for Arsenal rendering. */
@@ -290,6 +296,8 @@ public:
     int getUnitTimelineLane(UnitID id) const;
     /** @brief Attach an audio clip path to a unit. */
     void setUnitAudioClip(UnitID id, const std::string& path);
+    /** @brief Point a unit's sound arrows and drawer at a sound set (empty: its own folder). */
+    void setUnitSoundSet(UnitID id, const std::string& setName);
     /** @brief Set the unit's linear output gain (published to the audio snapshot). */
     void setUnitGain(UnitID id, float gain);
     /** @brief Publish a pre-decoded audio clip to a unit without doing file I/O on the caller. */
@@ -298,6 +306,8 @@ public:
                                      double durationSeconds);
     /** @brief Set the UI accent color for a unit. */
     void setUnitColor(UnitID id, uint32_t color);
+    /// Where a new unit's colour comes from (given how many units exist); unset keeps the grey default.
+    void setDefaultColorProvider(std::function<uint32_t(size_t)> provider) { m_defaultColor = std::move(provider); }
     /** @brief Set the unit group classification. */
     void setUnitGroup(UnitID id, UnitGroup group);
     /** @brief Set the unit content type and keep its group classification aligned. */
@@ -345,6 +355,7 @@ private:
     UnitID nextId{1};
     std::unordered_map<UnitID, UnitInfo> m_units;
     std::vector<UnitID> m_unitOrder;
+    std::function<uint32_t(size_t)> m_defaultColor;
     std::atomic<double> m_sampleRate{48000.0};
     std::atomic<uint32_t> m_blockSize{512};
     PatternManager* m_patternManager{nullptr};

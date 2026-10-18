@@ -105,6 +105,13 @@ public:
      * @brief Moves this component to the top of its parent's children list (rendered last, receives events first)
      */
     void bringToFront(); 
+
+    /**
+     * @brief bringToFront() for a deliberate open. Inside an event dispatch it runs after every ordinary raise
+     *        queued by that same event, so a panel that merely saw the click (e.g. a maximized panel under the
+     *        menu item that opened another) cannot jump back in front of the one just opened.
+     */
+    void bringToFrontPriority();
     
     NUIComponent* getParent() const { return parent_; }
     const std::vector<std::shared_ptr<NUIComponent>>& getChildren() const { return children_; }

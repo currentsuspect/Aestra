@@ -326,6 +326,71 @@ void testArsenalDefaultPatternRebindsAfterLoad() {
     assert(payload.notes[0].unitId == 7);
 }
 
+void testSoundSetNameRoundTrips() {
+    std::cout << "[TEST] A unit's sound set name survives save and load, and an old project has none..." << std::endl;
+
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectRoundTripIntegrity"};
+    const auto project = testDirScope.path() / "project.aes";
+    const auto resaved = testDirScope.path() / "resaved.aes";
+    std::ofstream(project) << R"({
+        "version": 1, "tempo": 120.0, "playhead": 0.0, "sources": [], "patterns": [], "lanes": [],
+        "arsenal": {"units": [
+          {"id": 3, "name": "Hat", "enabled": true, "targetMixerRoute": -1, "color": "4286611584", "soundSet": "Trap hats",
+           "audioClipPath": "", "defaultPatternId": 0, "group": {"id": 2, "name": "Drums"}, "type": {"id": 1, "name": "Sampler"}},
+          {"id": 4, "name": "Kick", "enabled": true, "targetMixerRoute": -1, "color": "4286611584",
+           "audioClipPath": "", "defaultPatternId": 0, "group": {"id": 2, "name": "Drums"}, "type": {"id": 1, "name": "Sampler"}}]}
+    })";
+    auto tm = std::make_shared<Aestra::Audio::TrackManager>();
+    assert(ProjectSerializer::load(project.string(), tm).ok);
+    assert(tm->getUnitManager().getUnit(3) && tm->getUnitManager().getUnit(3)->soundSet == "Trap hats");
+    assert(tm->getUnitManager().getUnit(4) && tm->getUnitManager().getUnit(4)->soundSet.empty()); // a project without the field has no set
+
+    assert(ProjectSerializer::save(resaved.string(), tm, 120.0, 0.0));
+    auto tm2 = std::make_shared<Aestra::Audio::TrackManager>();
+    assert(ProjectSerializer::load(resaved.string(), tm2).ok);
+    assert(tm2->getUnitManager().getUnit(3) && tm2->getUnitManager().getUnit(3)->soundSet == "Trap hats");
+    assert(tm2->getUnitManager().getUnit(4) && tm2->getUnitManager().getUnit(4)->soundSet.empty());
+}
+
+void testNoteExpressionRoundTrips() {
+    std::cout << "[TEST] Swing, chance, ratchet and long gates survive save and load..." << std::endl;
+
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectRoundTripIntegrity"};
+    std::filesystem::path testProject = testDirScope.path() / "project.aes";
+    std::ofstream(testProject) << R"({
+        "version": 1, "tempo": 120.0, "playhead": 0.0, "sources": [],
+        "patterns": [{"id": 5, "name": "Expressive", "type": "midi", "length": 4.0, "swing": 0.4,
+            "notes": [
+              {"pitch": 60, "startBeat": 0.25, "durationBeats": 0.25, "velocity": 0.8, "unitId": 1, "gate": 1.5, "chance": 0.5, "ratchet": 3},
+              {"pitch": 60, "startBeat": 0.5, "durationBeats": 0.25, "velocity": 0.8, "unitId": 1}]}],
+        "lanes": []
+    })";
+
+    auto tm = std::make_shared<Aestra::Audio::TrackManager>();
+    auto result = ProjectSerializer::load(testProject.string(), tm);
+    assert(result.ok);
+    const auto* pattern = tm->getPatternManager().getPattern(Aestra::Audio::PatternID{5});
+    assert(pattern);
+    assert(std::abs(pattern->swing - 0.4f) < 1e-6f);
+    const auto& notes = std::get<Aestra::Audio::MidiPayload>(pattern->payload).notes;
+    assert(notes.size() == 2);
+    assert(std::abs(notes[0].gate - 1.5f) < 1e-6f);   // gates past one step used to be cut to 1 on load
+    assert(std::abs(notes[0].chance - 0.5f) < 1e-6f);
+    assert(notes[0].ratchet == 3);
+    assert(notes[1].chance == 1.0f && notes[1].ratchet == 1); // older notes read as always-play, single hit
+
+    const std::string saved = serializeProject(*tm, result.tempo, result.playhead);
+    auto tm2 = std::make_shared<Aestra::Audio::TrackManager>();
+    std::filesystem::path again = testDirScope.path() / "again.aes";
+    std::ofstream(again) << saved;
+    auto result2 = ProjectSerializer::load(again.string(), tm2);
+    assert(result2.ok);
+    const auto* p2 = tm2->getPatternManager().getPattern(Aestra::Audio::PatternID{5});
+    assert(p2 && std::abs(p2->swing - 0.4f) < 1e-6f);
+    const auto& n2 = std::get<Aestra::Audio::MidiPayload>(p2->payload).notes;
+    assert(n2.size() == 2 && n2[0].ratchet == 3 && std::abs(n2[0].chance - 0.5f) < 1e-6f && std::abs(n2[0].gate - 1.5f) < 1e-6f);
+}
+
 void testArsenalSamplerAudioClipPathRehydratesPluginAfterLoad() {
     std::cout << "[TEST] Arsenal sampler audioClipPath rehydrates plugin after load..." << std::endl;
 
@@ -882,6 +947,8 @@ int main() {
     testSourcesLanesClipsPatternsRoundTrip();
     testArsenalUnitsRoundTrip();
     testArsenalDefaultPatternRebindsAfterLoad();
+    testSoundSetNameRoundTrips();
+    testNoteExpressionRoundTrips();
     testArsenalSamplerAudioClipPathRehydratesPluginAfterLoad();
     testMissingPatternReferenceDoesNotCompound();
     testMultipleRoundTripCycles();

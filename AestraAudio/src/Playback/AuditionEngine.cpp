@@ -17,6 +17,7 @@ namespace Aestra {
 namespace Audio {
 
 AuditionEngine::AuditionEngine() {
+    m_referenceScratch.assign(8192 * 2, 0.0f); // reference blocks are rendered in chunks of at most 8192 stereo frames
     m_decodeWorkerThread = std::thread(&AuditionEngine::decodeWorkerLoop, this);
     Log::info("[AuditionEngine] Created");
 }
@@ -436,6 +437,54 @@ void AuditionEngine::setDSPPreset(const AuditionDSPPreset& preset) {
 
 // === Audio Processing ===
 
+void AuditionEngine::renderSource(const AudioBufferData* srcBuffer, double startSeconds, float* output,
+                                  uint32_t numFrames, uint32_t numChannels) {
+    const double srcRate = static_cast<double>(srcBuffer->sampleRate);
+    const double dstRate = m_sampleRate.load(std::memory_order_relaxed);
+    const float* interleavedData = srcBuffer->interleavedData.data();
+    const int64_t totalFrames = static_cast<int64_t>(srcBuffer->numFrames);
+    const uint32_t srcChannels = srcBuffer->numChannels;
+    double currentPos = startSeconds;
+
+    // Sinc64Turbo for stereo (measured quality: Aestra-Internals: aestra-docs/audio-research-bench.md)
+    for (uint32_t i = 0; i < numFrames; ++i) {
+        const double srcPosition = currentPos * srcRate;
+        currentPos += 1.0 / dstRate;
+
+        if (srcPosition < 0 || srcPosition >= static_cast<double>(totalFrames)) {
+            for (uint32_t ch = 0; ch < numChannels; ++ch) output[i * numChannels + ch] = 0.0f;
+            continue;
+        }
+        if (srcChannels >= 2 && numChannels >= 2) {
+            float outL, outR;
+            Interpolators::Sinc64Turbo::interpolate(interleavedData, totalFrames, srcPosition, outL, outR);
+            output[i * numChannels] = outL;
+            output[i * numChannels + 1] = outR;
+        } else {
+            m_resampler.setQuality(ClipResamplingQuality::High);
+            for (uint32_t ch = 0; ch < numChannels; ++ch) {
+                const uint32_t srcCh = (srcChannels == 1) ? 0 : ch;
+                output[i * numChannels + ch] = m_resampler.getSample(interleavedData, totalFrames, srcChannels, srcPosition, srcCh);
+            }
+        }
+    }
+}
+
+void AuditionEngine::setMixSource(std::shared_ptr<ClipSource> source) {
+    m_cachedDurationSeconds.store(source ? source->getDurationSeconds() : 0.0, std::memory_order_release);
+    m_positionSeconds.store(0.0, std::memory_order_relaxed);
+    m_currentSource.store(std::move(source), std::memory_order_release);
+}
+
+void AuditionEngine::setReferenceSource(std::shared_ptr<ClipSource> source, double offsetSeconds) {
+    m_referenceOffsetSeconds.store(offsetSeconds, std::memory_order_relaxed);
+    m_referenceSource.store(std::move(source), std::memory_order_release);
+}
+
+void AuditionEngine::clearReferenceSource() {
+    m_referenceSource.store(std::shared_ptr<ClipSource>(nullptr), std::memory_order_release);
+}
+
 void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t numChannels) {
     // Clear output first
     std::fill(output, output + numFrames * numChannels, 0.0f);
@@ -467,47 +516,9 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
     }
 
     double currentPos = m_positionSeconds.load(std::memory_order_relaxed);
-    double ratio = srcRate / dstRate;
-    (void)ratio; // Used for reference
-
-    // Get interleaved data pointer for Sinc64 interpolation
-    const float* interleavedData = srcBuffer->interleavedData.data();
-    const int64_t totalFrames = static_cast<int64_t>(srcBuffer->numFrames);
-    const uint32_t srcChannels = srcBuffer->numChannels;
-
-    // Process frames with Sinc64Turbo (measured quality: Aestra-Internals: aestra-docs/audio-research-bench.md)
-    for (uint32_t i = 0; i < numFrames; ++i) {
-        // Calculate source frame position (fractional)
-        double srcPosition = currentPos * srcRate;
-
-        // Advance time for next sample
-        currentPos += 1.0 / dstRate;
-
-        // Bounds check
-        if (srcPosition < 0 || srcPosition >= static_cast<double>(totalFrames)) {
-            for (uint32_t ch = 0; ch < numChannels; ++ch) {
-                output[i * numChannels + ch] = 0.0f;
-            }
-            continue;
-        }
-
-        // Use Sinc64Turbo for stereo sources (optimal path)
-        if (srcChannels >= 2 && numChannels >= 2) {
-            float outL, outR;
-            Interpolators::Sinc64Turbo::interpolate(interleavedData, totalFrames, srcPosition, outL, outR);
-            output[i * numChannels] = outL;
-            output[i * numChannels + 1] = outR;
-        } else {
-            // Mono source or mono output - use ClipResampler (falls back to Cubic for mono)
-            m_resampler.setQuality(ClipResamplingQuality::High);
-
-            for (uint32_t ch = 0; ch < numChannels; ++ch) {
-                uint32_t srcCh = (srcChannels == 1) ? 0 : ch;
-                output[i * numChannels + ch] =
-                    m_resampler.getSample(interleavedData, totalFrames, srcChannels, srcPosition, srcCh);
-            }
-        }
-    }
+    const double startPos = currentPos;
+    currentPos += static_cast<double>(numFrames) / dstRate;
+    renderSource(srcBuffer, startPos, output, numFrames, numChannels);
 
     // Match the main engine's centered-track reference gain. Audition is a
     // separate listening surface, but bypass should not be louder than placing
@@ -519,6 +530,36 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
         for (uint32_t i = 0; i < numFrames * numChannels; ++i) {
             output[i] *= outputGain;
         }
+    }
+
+    // Synchronised dual playback (V81-E2): with a reference loaded, both sides are read at the same position every
+    // block and a switch is a short gain ramp between them, so A/B never seeks or drops a sample.
+    if (auto reference = m_referenceSource.load(std::memory_order_acquire)) {
+        const auto* refBuffer = reference->getRawBuffer();
+        const bool refPlayable = refBuffer && refBuffer->isValid();
+        const bool hearReference = m_listenSide.load(std::memory_order_relaxed) == 1;
+        const float targetMix = hearReference ? 0.0f : m_mixGain.load(std::memory_order_relaxed);
+        const float targetRef = (hearReference && refPlayable) ? m_referenceGain.load(std::memory_order_relaxed) : 0.0f;
+        const float rampSamples = std::max(1.0f, m_switchRampMs.load(std::memory_order_relaxed) * 0.001f * static_cast<float>(dstRate));
+        const float slew = 1.0f / rampSamples;
+        const double refStart = startPos + m_referenceOffsetSeconds.load(std::memory_order_relaxed);
+        const uint32_t chunkFrames = static_cast<uint32_t>(m_referenceScratch.size() / std::max<uint32_t>(1, numChannels));
+        for (uint32_t done = 0; done < numFrames && chunkFrames > 0; done += chunkFrames) {
+            const uint32_t n = std::min(chunkFrames, numFrames - done);
+            if (refPlayable) renderSource(refBuffer, refStart + static_cast<double>(done) / dstRate, m_referenceScratch.data(), n, numChannels);
+            else std::fill(m_referenceScratch.begin(), m_referenceScratch.begin() + n * numChannels, 0.0f);
+            for (uint32_t i = 0; i < n; ++i) {
+                m_sideGainMix += std::clamp(targetMix - m_sideGainMix, -slew, slew);
+                m_sideGainReference += std::clamp(targetRef - m_sideGainReference, -slew, slew);
+                for (uint32_t ch = 0; ch < numChannels; ++ch) {
+                    float& o = output[(done + i) * numChannels + ch];
+                    o = o * m_sideGainMix + m_referenceScratch[i * numChannels + ch] * outputGain * m_sideGainReference;
+                }
+            }
+        }
+    } else {
+        m_sideGainMix = 1.0f; // no reference: the mix plays untouched, and the next reference starts from the mix
+        m_sideGainReference = 0.0f;
     }
 
     // Check for end of track

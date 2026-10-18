@@ -546,6 +546,40 @@ void testTheScheduledArsenalPatternIsKnownAndClearsOnStop() {
     check(!f.tm.scheduledArsenalPattern().isValid(), "and stopping clears it");
 }
 
+// Switching the active pattern while Arsenal plays: the new pattern takes over at once, at the same
+// beat, instead of the old one playing on until the next stop and play. Stopped, nothing is scheduled.
+void testSwitchingPatternsWhilePlayingTakesOverAtOnce() {
+    auto owned = makeFixture();
+    auto& f = *owned;
+    auto& patterns = f.tm.getPatternManager();
+    const PatternID variation = patterns.createPattern();
+    if (auto* source = patterns.getPattern(variation)) {
+        source->type = PatternSource::Type::Midi;
+        source->lengthBeats = 8.0;
+        source->payload = MidiPayload{};
+    }
+    f.ctx.enterArsenal(8.0);
+    f.ctx.switchArsenalPattern(variation, 8.0);
+    f.settle();
+    check(!f.tm.scheduledArsenalPattern().isValid(), "switching while stopped schedules nothing");
+
+    f.ctx.startArsenalPlayback(f.pattern, 8.0, 1.0);
+    f.settle();
+    check(f.tm.scheduledArsenalPattern() == f.pattern, "play starts the pattern asked for");
+    const double before = f.tm.getPosition();
+    f.ctx.switchArsenalPattern(variation, 8.0);
+    f.settle();
+    check(f.tm.scheduledArsenalPattern() == variation, "switching while playing schedules the new pattern");
+    auto insts = f.tm.getPatternPlaybackEngine().snapshotInstances();
+    check(insts.size() == 1 && insts[0].patternId == variation, "and only the new pattern sounds");
+    check(std::abs(f.tm.getPosition() - before) < 0.05, "at the same place in the loop");
+    check(f.tm.isPlaying(), "and the music never stops");
+
+    f.ctx.switchArsenalPattern(f.pattern, 8.0);
+    f.settle();
+    check(f.tm.scheduledArsenalPattern() == f.pattern, "and back again");
+}
+
 int main() {
     testDocumentedTable();
     testEnteringTimelineOrAuditionClearsEveryPatternMirror();
@@ -563,6 +597,7 @@ int main() {
     testArmingRecordWhilePlayingReschedulesTheWholePattern();
     testAZoneShapesOnlyItsPatternInArsenal();
     testTheScheduledArsenalPatternIsKnownAndClearsOnStop();
+    testSwitchingPatternsWhilePlayingTakesOverAtOnce();
 
     if (g_failures == 0) {
         std::cout << "Playback context tests passed\n";

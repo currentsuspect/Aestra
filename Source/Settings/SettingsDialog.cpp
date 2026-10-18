@@ -243,7 +243,7 @@ void SettingsDialog::onRender(AestraUI::NUIRenderer& renderer) {
     
     // 3. Dialog Window Background - FORCE correct key to avoid purple fallback
     // Use rounded rect with standard radius (e.g. 8px or theme radius)
-    float radius = props.radiusL;
+    float radius = 2.0f; // the 2 px frame of every panel
     renderer.fillRoundedRect(m_dialogBounds, radius, theme.getColor("elevatedPanel"));
     renderer.strokeRoundedRect(m_dialogBounds, radius, props.layout.dividerWidth, theme.getColor("borderStrong"));
     
@@ -256,8 +256,8 @@ void SettingsDialog::onRender(AestraUI::NUIRenderer& renderer) {
                       0.5f, theme.getColor("borderSubtle"));
 
     // 5. Title text — vertically centered via font metrics
-    float titleBaseline = renderer.calculateTextY(titleBar, props.fontSizeM);
-    renderer.drawText("Settings", {m_dialogBounds.x + 12.0f, titleBaseline}, props.fontSizeM,
+    float titleBaseline = renderer.calculateTextY(titleBar, 11.0f);
+    renderer.drawText("SETTINGS", {m_dialogBounds.x + 12.0f, titleBaseline}, 11.0f, // 11 px capitals, as every panel
                       theme.getColor("textSecondary"));
 
     // 6. Close button — line-drawn X matching AestraPanelWindow chrome
@@ -280,16 +280,11 @@ void SettingsDialog::onRender(AestraUI::NUIRenderer& renderer) {
 
     // 8. Sidebar Items
     for (const auto& item : m_sidebarItems) {
-        AestraUI::NUIColor bg = item.active ? theme.getColor("selection") :
+        AestraUI::NUIColor bg = item.active ? theme.getColor("surfaceRaised") :
                               (item.hovered ? theme.getColor("list.hover") : AestraUI::NUIColor(0,0,0,0));
 
         if (item.active || item.hovered) {
             renderer.fillRect(item.bounds, bg);
-        }
-
-        // Active indicator strip
-        if (item.active) {
-            renderer.fillRect(AestraUI::NUIRect(item.bounds.x, item.bounds.y, 3, item.bounds.height), theme.getColor("primary"));
         }
 
         renderer.drawText(item.title, AestraUI::NUIPoint(item.bounds.x + 20, item.bounds.y + 8), props.fontSizeM,
@@ -298,7 +293,7 @@ void SettingsDialog::onRender(AestraUI::NUIRenderer& renderer) {
 
     // 9. Footer Divider
     float footerY = m_dialogBounds.y + m_dialogBounds.height - 60.0f;
-    renderer.fillRect(AestraUI::NUIRect(m_dialogBounds.x + 220, footerY, m_dialogBounds.width - 220, 1),
+    renderer.fillRect(AestraUI::NUIRect(m_contentBounds.x, footerY, m_contentBounds.width, 1),
                      theme.getColor("divider"));
 
     // 10. Blink Effect

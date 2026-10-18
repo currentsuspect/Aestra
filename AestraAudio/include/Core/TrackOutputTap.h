@@ -20,6 +20,13 @@ namespace Audio {
 class TrackOutputTap {
 public:
     static constexpr uint32_t kNoChannel = 0xFFFFFFFFu;
+    /**
+     * What goes straight to the master: units and clips routed to Master rather than through a track, before
+     * the master stage. Captured as the difference those sources make to the master buffer
+     * (beginDelta/endDelta), so the tracks already summed into it cancel out. Bounce in Place uses it for a
+     * pattern whose sounds play on several tracks or on Master directly.
+     */
+    static constexpr uint32_t kMasterDirect = 0xFFFFFFFEu;
 
     /**
      * @brief Control thread. Arms the tap with room for @p maxFrames stereo frames.
@@ -51,6 +58,21 @@ public:
             m_block[i] = static_cast<float>(interleaved[i]);
         }
         m_frames = n;
+    }
+
+    /** @brief Audio/render thread, with kMasterDirect: the master buffer BEFORE the direct sources are added. */
+    void beginDelta(const double* interleaved, uint32_t frames) {
+        const uint32_t n = frames * 2u <= m_block.size() ? frames : static_cast<uint32_t>(m_block.size() / 2u);
+        for (uint32_t i = 0; i < n * 2u; ++i) {
+            m_block[i] = -static_cast<float>(interleaved[i]);
+        }
+        m_frames = n;
+    }
+    /** @brief The same buffer AFTER them: the block becomes what they added. */
+    void endDelta(const double* interleaved) {
+        for (uint32_t i = 0; i < m_frames * 2u; ++i) {
+            m_block[i] += static_cast<float>(interleaved[i]);
+        }
     }
 
     /** @brief The last captured block (interleaved stereo); frames == 0 if the channel did not render. */

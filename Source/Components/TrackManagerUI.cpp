@@ -257,6 +257,14 @@ void TrackManagerUI::refreshTracks() {
             [this](TrackUIComponent* trackComp, double splitTime) { this->onSplitRequested(trackComp, splitTime); });
 
         trackUI->setOnClipSelected([this](TrackUIComponent*, ClipInstanceID clipId) {
+            // Pressing a clip that is part of a multi-selection keeps the selection so it can be dragged as a
+            // group; on release without a drag it collapses to this clip (resolvePendingGroupClick).
+            if (clipId.isValid() && m_clipSelection.size() > 1 && m_clipSelection.contains(clipId)) {
+                m_pendingGroupCollapse = clipId;
+                return;
+            }
+            m_pendingGroupCollapse = ClipInstanceID{};
+            clearClipSelection(); // a plain click replaces the selection set too (it used to linger behind the single view)
             selectClip(clipId);
             if (clipId.isValid()) {
                 Log::info("TrackManagerUI: Clip selected " + clipId.toString());
@@ -327,6 +335,12 @@ void TrackManagerUI::refreshTracks() {
         m_selectedClipId = ClipInstanceID{};
     }
     selectClip(m_selectedClipId);
+    if (m_clipSelection.size() > 1) {
+        // selectClip put every lane in single-select view; a multi-selection must stay visible across a refresh.
+        for (const auto& trackUI : m_trackUIComponents) {
+            if (trackUI) trackUI->setSelectedClips(&m_clipSelection);
+        }
+    }
 
     layoutTracks();
 
@@ -801,6 +815,8 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
 
     m_activeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
     auto menu = m_activeContextMenu;
+    std::shared_ptr<AestraUI::NUIContextMenuItem> deleteLaneItem; // listed last, behind a divider (P1)
+    uint32_t routingChannel = 0; // the track's mixer channel, for "Show in Routing Graph"
 
     TrackUIComponent* selectedTrack = target ? target : getSelectedTrackUI();
     auto* lane = selectedTrack && m_trackManager
@@ -856,16 +872,19 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
         const uint64_t owningTrackId = lane->trackId;
         const auto* owningTrack = owningTrackId != 0 ? m_trackManager->getTrack(owningTrackId) : nullptr;
         const bool deletable = owningTrack == nullptr || owningTrack->laneIds.size() > 1;
-        auto deleteLaneItem = std::make_shared<AestraUI::NUIContextMenuItem>("Delete Lane");
+        if (owningTrack) routingChannel = owningTrack->channelId;
+        deleteLaneItem = std::make_shared<AestraUI::NUIContextMenuItem>("Delete Lane");
+        deleteLaneItem->setDestructive(true);
         deleteLaneItem->setEnabled(deletable);
         deleteLaneItem->setOnClick([this, laneId]() { deleteLane(laneId); });
-        menu->addItem(deleteLaneItem);
     }
 
     menu->addItem("Send Track to Audition", [onSendToAudition]() {
         if (onSendToAudition)
             onSendToAudition();
     });
+    if (routingChannel != 0 && m_onShowRoutingGraph)
+        menu->addItem("Show in Routing Graph", [this, routingChannel]() { m_onShowRoutingGraph(routingChannel); });
     menu->addSeparator();
     auto selectAllItem = std::make_shared<AestraUI::NUIContextMenuItem>("Select All Clips");
     selectAllItem->setShortcut("Ctrl+A");
@@ -873,6 +892,10 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
     // the track-row fallback applying on an empty timeline.
     selectAllItem->setOnClick([this]() { selectAllClips(); });
     menu->addItem(selectAllItem);
+    if (deleteLaneItem) {
+        menu->addSeparator();
+        menu->addItem(deleteLaneItem);
+    }
 
     attachAndShowContextMenu(this, menu, position);
 }

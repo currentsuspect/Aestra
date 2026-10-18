@@ -42,6 +42,18 @@ int main() {
     require(arsenalRouteModeFromRouteId(0) == ArsenalRouteMode::RoutedToTimelineTrack,
             "Route mode compatibility changed for timeline routing");
 
+    // New units take their colour from the provider (the Arsenal rotates the Ember palette); without one, grey.
+    {
+        UnitManager units;
+        const auto plain = units.createUnit("Plain", UnitType::Sampler);
+        require(units.getUnit(plain)->color == 0x808080, "no provider keeps the grey default");
+        units.setDefaultColorProvider([](size_t n) { return static_cast<uint32_t>(0xFF000000u | (n + 1)); });
+        const auto first = units.createUnit("A", UnitType::Sampler);
+        const auto second = units.createUnit("B", UnitType::Sampler);
+        require(units.getUnit(first)->color == (0xFF000000u | 2u), "provider is told how many units exist");
+        require(units.getUnit(second)->color == (0xFF000000u | 3u), "each new unit gets the next colour");
+    }
+
     std::cout << "[PASS] ArsenalBridgeContractTest\n";
     return 0;
 }

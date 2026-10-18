@@ -553,6 +553,13 @@ void TransportBar::togglePlayPause() {
 }
 
 void TransportBar::setTempo(float bpm) {
+    showTempo(bpm);
+    if (m_onTempoChange) {
+        m_onTempoChange(m_tempo);
+    }
+}
+
+void TransportBar::showTempo(float bpm) {
     m_tempo = std::max(20.0f, std::min(999.0f, bpm));
     updateMetronomePose();
     if (m_infoContainer) {
@@ -560,9 +567,6 @@ void TransportBar::setTempo(float bpm) {
     }
     // Beats derive from the tempo: refresh the musical face while paused.
     syncClockDisplays();
-    if (m_onTempoChange) {
-        m_onTempoChange(m_tempo);
-    }
 }
 
 void TransportBar::setPosition(double seconds) {
@@ -608,8 +612,7 @@ void TransportBar::setViewToggled(Audio::ViewType view, bool active) {
         case Audio::ViewType::PianoRoll: m_pianoRollActive = active; break;
         // Timeline has no toolbar control to light up — the title-bar tab owns it.
         case Audio::ViewType::Playlist: break;
-        // History and Takes have no toolbar control either; Count is a sentinel.
-        case Audio::ViewType::History:
+        // Versions has no toolbar control either; Count is a sentinel.
         case Audio::ViewType::Takes:
         case Audio::ViewType::Count: break;
     }

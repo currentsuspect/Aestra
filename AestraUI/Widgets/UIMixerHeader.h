@@ -26,6 +26,8 @@ public:
     void setTrackColorIndex(int index);
     void setSelected(bool selected);
     void setIsMaster(bool isMaster);
+    /// Narrow density: tight padding, a smaller face, long names split over two lines.
+    void setCompact(bool compact) { if (compact != m_compact) { m_compact = compact; repaint(); } }
 
     // Fired when user picks a color from the context menu
     std::function<void(int colorIndex)> onColorChanged;
@@ -37,6 +39,7 @@ private:
     uint32_t m_trackColorArgb{0xFF808080};
     bool m_selected{false};
     bool m_isMaster{false};
+    bool m_compact{false};
 
     std::shared_ptr<NUIContextMenu> m_colorMenu;
 

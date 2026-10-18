@@ -2,8 +2,10 @@
 #pragma once
 
 #include "NUIComponent.h"
-#include "NUIRenderer.h"
 #include "NUIContextMenu.h"
+#include "NUIRenderer.h"
+#include "RoutingGraphLayout.h"
+
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -13,27 +15,29 @@
 namespace Aestra {
 class MixerViewModel;
 struct ChannelViewModel;
-}
+} // namespace Aestra
 
 namespace AestraUI {
 
 /**
- * @brief Routing map visualizer — minimap and full panel modes.
+ * @brief The routing graph (V81-R1, FD-25): opt-in, exceptions only.
  *
- * Interactive graph of the mixer routing state: drag-to-reroute main paths,
- * drag-to-add sends (audio or sidechain), node repositioning, edge selection
- * and send-level editing, hover-to-trace, search, live signal pulses.
- * Automation presence per channel is indicated read-only (FD-16); curve
- * authoring stays out of this widget.
+ * Opened from the mixer inspector's "Show in routing graph", it draws only what a producer could not assume:
+ * custom outputs, sends and sidechains. Channels that simply go to Master are listed on the left, not drawn.
+ * Columns follow signal depth and Master is a rail on the right. The graph is still when idle; ports light
+ * with level, and wires move only when "Signal flow" is on. Selecting a channel traces its chain and opens a
+ * detail strip (output, sends, inserts). Dragging an output patches it: drop to route, Alt to send, Shift to
+ * sidechain; channels that would loop refuse the drop and say why.
  */
 class UIRoutingMap : public NUIComponent {
 public:
-    enum class Mode { Minimap, FullPanel };
-
-    explicit UIRoutingMap(Mode mode = Mode::Minimap);
+    UIRoutingMap();
 
     void onRender(NUIRenderer& renderer) override;
-    void onThemeChanged(const NUIThemeProperties& theme) override { cacheThemeColors(); NUIComponent::onThemeChanged(theme); }
+    void onThemeChanged(const NUIThemeProperties& theme) override {
+        cacheThemeColors();
+        NUIComponent::onThemeChanged(theme);
+    }
     void onUpdate(double deltaTime) override;
     void onResize(int width, int height) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
@@ -41,252 +45,193 @@ public:
 
     void setViewModel(Aestra::MixerViewModel* viewModel);
 
-    Mode getMode() const { return m_mode; }
-    void setMode(Mode mode);
-
-    /// Callback fired on double-click (minimap → full panel transition)
-    void setOnDoubleClick(std::function<void()> callback) { m_onDoubleClick = std::move(callback); }
+    /// What the graph currently holds, for tests: drawn channel nodes (Master is the rail, not a node) and
+    /// drawn wires (outputs, sends, sidechains; an output to Master is a wire to the rail).
+    size_t nodeCount() const { return m_nodes.size(); }
+    size_t edgeCount() const { return m_edges.size(); }
+    /// Channels listed as "Direct to Master" instead of drawn.
+    size_t directCount() const { return m_direct.size(); }
+    /// Column of a drawn channel, -1 when it is listed or unknown.
+    int columnOf(uint32_t channelId) const;
+    /// Draw every channel ("All tracks") instead of custom routes only.
+    void setShowAllTracks(bool all);
+    bool showsAllTracks() const { return m_allTracks; }
 
     /// Callback fired when a node is clicked (track selection)
     void setOnNodeSelected(std::function<void(uint32_t channelId)> callback) { m_onNodeSelected = std::move(callback); }
 
-    /// Callback fired from full panel collapse button
+    /// Callback fired by the close button and Escape.
     void setOnCollapse(std::function<void()> callback) { m_onCollapse = std::move(callback); }
 
-    /// Callback fired when user drags from a track output port and drops on another node
-    /// to reroute that track's main output. Args: (sourceChannelId, newTargetId)
+    /// Callback fired when an output is dropped on another channel or the Master rail. Args: (source, target)
     void setOnRerouteMain(std::function<void(uint32_t, uint32_t)> cb) { m_onRerouteMain = std::move(cb); }
 
-    /// Callback fired when user drags from a track input port and drops on another node
-    /// to create a new send. Args: (sourceChannelId, targetId, sidechainOnly)
+    /// Callback fired when an output is dropped with Alt (send) or Shift (sidechain). Args: (source, target, sidechain)
     void setOnAddSend(std::function<void(uint32_t, uint32_t, bool)> cb) { m_onAddSend = std::move(cb); }
 
-    /// Callback fired on right-click of a node to toggle mute.
+    /// Callback fired from a node's menu to toggle mute.
     void setOnNodeMuteToggle(std::function<void(uint32_t)> cb) { m_onNodeMuteToggle = std::move(cb); }
 
     /// Callback fired on shift-click of a node to toggle solo.
     void setOnNodeSoloToggle(std::function<void(uint32_t)> cb) { m_onNodeSoloToggle = std::move(cb); }
 
-    /// Callback fired when a selected send edge is deleted (e.g. via Delete key).
+    /// Callback fired when a send is deleted (wire or send-row menu).
     void setOnRemoveSend(std::function<void(uint32_t channelId, uint64_t sendId)> cb) { m_onRemoveSend = std::move(cb); }
 
-    /// Callback fired when user edits a send level directly (e.g. right-click edge).
-    void setOnEditSendLevel(std::function<void(uint32_t channelId, uint64_t sendId, float newDb)> cb) { m_onEditSendLevel = std::move(cb); }
+    /// Callback fired when a send level is set from a menu.
+    void setOnEditSendLevel(std::function<void(uint32_t channelId, uint64_t sendId, float newDb)> cb) {
+        m_onEditSendLevel = std::move(cb);
+    }
 
     /// Refresh live state (mute/solo/levels) from the bound view model. Cheap; call per frame.
     void refreshLiveState();
 
 private:
-    Mode m_mode;
     Aestra::MixerViewModel* m_viewModel{nullptr};
 
     struct Node {
-        uint32_t id{0};          // 0 = master, otherwise channel ID
-        enum Type { Track, Master, Send } type{Track};
+        uint32_t id{0};
+        RoutingGraph::Role role{RoutingGraph::Role::Track};
         std::string label;
         uint32_t color{0xFF808080};
-        int insertCount{0};
-
-        // Live engine state (snapshotted from ChannelViewModel each rebuild/update)
+        int column{0};
+        float x{0}, y{0}; // world, top-left
         bool muted{false};
         bool soloed{false};
-        float peakDb{-144.0f};   // Smoothed peak level (dB)
-
-        // Routing warning for this channel
-        bool hasRoutingWarning{false};
-
-        // Automation presence (FD-16): derived from persisted curves addressing
-        // this channel. bit0 Volume · bit1 Pan · bit2 custom/other.
-        int automationCurveCount{0};
-        uint32_t automationTargetMask{0};
-
-        // Insert names for mini dots (up to 4)
-        std::vector<std::string> insertNames;
-
-        // Layout (local to the canvas)
-        float x{0}, y{0};
-        float w{80}, h{20};
-
-        // Port positions (local to node)
-        float inputX{0}, inputY{0};
-        float outputX{0}, outputY{0};
-
-        bool hovered{false};
+        float peakDb{-144.0f};
     };
 
     struct Edge {
-        uint32_t sourceNodeId{0};
-        uint32_t targetNodeId{0};
-        enum Type { MainPath, SendPath, SidechainPath } type{MainPath};
-        float sendLevelDb{0.0f};
-        uint64_t sendId{0}; // stable send identity (Contract D2); 0 = main path
-        bool hovered{false};
-        // Y attachment within the target node (node-local, world units).
-        // Negative → use the node's default input pin. Assigned by
-        // updateEdgeAttachments() so many incoming wires spread along the
-        // node's edge instead of fanning into a single point.
-        float dstPinYOffset{-1.0f};
+        uint32_t source{0};
+        uint32_t target{0}; // RoutingGraph::kMaster = the rail
+        enum Type { Output, Send, Sidechain } type{Output};
+        float levelDb{0.0f};
+        bool postFader{true};
+        uint64_t sendId{0}; // 0 = the main output
     };
 
+    struct DirectRow {
+        uint32_t id{0};
+        std::string label;
+        uint32_t color{0xFF808080};
+    };
+
+    /// Screen regions, derived from bounds and state each time they are needed.
+    struct Geometry {
+        NUIRect header, list, canvas, rail, detail;
+    };
+
+    std::vector<RoutingGraph::Channel> m_channels; // the routing as the layout sees it
     std::vector<Node> m_nodes;
     std::vector<Edge> m_edges;
+    std::vector<DirectRow> m_direct;
+    RoutingGraph::Plan m_plan;
+    size_t m_signature{0};
+    bool m_allTracks{false};
+    bool m_signalFlow{false};
+    float m_flowPhase{0.0f};
 
-    // Full-panel camera
-    float m_cameraX{0};
-    float m_cameraY{0};
+    // Camera: screen = canvas.origin + camera + world * zoom
+    float m_cameraX{40.0f};
+    float m_cameraY{64.0f};
     float m_zoom{1.0f};
-    float m_targetZoom{1.0f};
-    bool m_panning{false};
-    bool m_middlePanning{false};
     bool m_fitPending{true};
-    NUIPoint m_panStartMouse;
-    float m_panStartCameraX{0};
-    float m_panStartCameraY{0};
-    NUIPoint m_middlePanStartMouse;
-    float m_middlePanStartCameraX{0};
-    float m_middlePanStartCameraY{0};
-    NUIPoint m_zoomAnchorScreen{0, 0};
-    bool m_zoomAnchorActive{false};
+    bool m_panning{false};
+    NUIPoint m_panStart{0, 0};
+    float m_panCamX{0}, m_panCamY{0};
+    float m_listScroll{0.0f};
 
-    // Minimap last-rendered transform (for accurate hit-testing)
-    float m_minimapScale{1.0f};
-    float m_minimapOffsetX{0.0f};
-    float m_minimapOffsetY{0.0f};
-    float m_minimapCenterX{0.0f};
-    float m_minimapCenterY{0.0f};
+    // Selection and hover
+    uint32_t m_selectedId{0}; // 0 = nothing selected (Master is never selected)
+    int32_t m_lastVmSelection{-2};
+    int m_hoverNode{-1};
+    int m_hoverDirect{-1};
+    int m_hoverEdge{-1};
+    int m_hoverButton{-1}; // header button index, -1 = none
+    RoutingGraph::Trace m_trace;
 
-    // World-space bounds of laid-out graph (for fit-to-view)
-    float m_worldMinX{0}, m_worldMinY{0}, m_worldMaxX{0}, m_worldMaxY{0};
+    // Patching: dragging an output
+    bool m_patching{false};
+    uint32_t m_patchSource{0};
+    NUIPoint m_patchStartScreen{0, 0}; // where the wire leaves (an output port or a list row)
+    NUIPoint m_patchMouse{0, 0};
+    NUIModifiers m_patchMods{NUIModifiers::None};
+    std::vector<uint32_t> m_patchRefused; // channels that would loop
+    bool m_pressOnNode{false};
+    int m_pressNode{-1};
+    NUIPoint m_pressPos{0, 0};
 
-    // Hover / interaction
-    int m_hoveredNodeIdx{-1};
-    int m_hoveredEdgeIdx{-1};
-    long long m_lastClickTimeMs{0};
-    long long m_lastNodeClickTimeMs{0};
-    int m_lastNodeClickIdx{-1};
+    // Search
+    bool m_searchOpen{false};
+    std::string m_search;
 
-    // Drag-to-reroute state (full panel only)
-    bool m_draggingConnection{false};
-    int m_dragSourceNodeIdx{-1};
-    NUIPoint m_dragCurrentPos{0, 0};
+    // Detail strip hit rects (rebuilt each render)
+    NUIRect m_outputBox{0, 0, 0, 0};
+    NUIRect m_addSendRect{0, 0, 0, 0};
+    std::vector<std::pair<NUIRect, uint64_t>> m_sendRows;
+    // Header hit rects (rebuilt each render): segment Custom, segment All, Signal flow, search, close
+    NUIRect m_buttons[5]{};
 
-    // Drag-to-reposition state (full panel only)
-    bool m_draggingNode{false};
-    int m_dragNodeIdx{-1};
-    NUIPoint m_dragNodeStartMouse{0, 0};
-    NUIPoint m_dragNodeStartPos{0, 0};
+    std::shared_ptr<NUIContextMenu> m_menu;
 
-    // Drag-to-add-send state (full panel only)
-    bool m_draggingSend{false};
-    int m_dragSendSourceIdx{-1};
-    NUIPoint m_dragSendCurrentPos{0, 0};
-
-    // Send-type confirmation menu (shown on quick-send drop)
-    std::shared_ptr<AestraUI::NUIContextMenu> m_sendTypeMenu;
-    bool m_sendTypeMenuPending{false};
-    uint32_t m_pendingSendSourceId{0};
-    uint32_t m_pendingSendTargetId{0};
-
-    // Floating inspector panel (full panel only)
-    bool m_inspectorVisible{false};
-    int m_inspectorNodeIdx{-1};
-    NUIRect m_inspectorCloseRect{0, 0, 0, 0};
-    bool m_inspectorCloseHovered{false};
-    NUIRect m_inspectorPanelRect{0, 0, 0, 0};
-    float m_inspectorScrollY{0.0f};
-
-    // Hover-to-trace state
-    std::vector<bool> m_traceUpstreamMask; // per-node
-    std::vector<bool> m_traceDownstreamMask; // per-node
-    std::vector<bool> m_traceEdgeMask; // per-edge
-
-    // Right-click node context menu
-    std::shared_ptr<AestraUI::NUIContextMenu> m_nodeContextMenu;
-
-    // Search bar state
-    bool m_searchActive{false};
-    std::string m_searchQuery;
-    NUIRect m_searchRect{0, 0, 0, 0};
-    bool m_searchHovered{false};
-    bool m_searchFocused{false};
-    std::vector<int> m_searchMatches;       // indices into m_nodes
-    int m_searchHoveredMatch{-1};           // dropdown item index (-1 = none)
-    NUIRect m_searchDropdownRects[5];       // hit rects for up to 5 suggestions
-    float m_searchCaretTimer{0.0f};
-    bool m_searchCaretVisible{true};
-
-    // Edge right-click context menu
-    std::shared_ptr<AestraUI::NUIContextMenu> m_edgeContextMenu;
-
-    // Animation / live signal state
-    float m_livePulsePhase{0.0f};
-    bool m_anySoloed{false};
-
-    // Dirty flag for graph rebuild
-    bool m_graphDirty{true};
-    uint32_t m_lastChannelCount{0};
-    uint32_t m_lastSelectedId{0xFFFFFFFFu};
-
-    // Title-bar buttons (full panel only)
-    NUIRect m_collapseButtonRect{0, 0, 0, 0};
-    bool m_collapseHovered{false};
-    NUIRect m_fitButtonRect{0, 0, 0, 0};
-    bool m_fitHovered{false};
-    NUIRect m_resetButtonRect{0, 0, 0, 0};
-    bool m_resetHovered{false};
-
-    // Port hover state (full panel only)
-    enum PortType { NoPort, InputPort, OutputPort };
-    PortType m_hoveredPortType{NoPort};
-    int m_hoveredPortNodeIdx{-1};
-
-    // Edge selection state (full panel only)
-    int m_selectedEdgeIdx{-1};
+    // Live state that decides whether a frame needs painting
+    std::vector<bool> m_lit;
+    float m_masterPeakL{-144.0f}, m_masterPeakR{-144.0f};
 
     // Cached colors
-    NUIColor m_bg;
-    NUIColor m_bgSecondary;
-    NUIColor m_bgTertiary;
-    NUIColor m_border;
-    NUIColor m_borderSecondary;
-    NUIColor m_text;
-    NUIColor m_textSecondary;
-    NUIColor m_textInfo;
-    NUIColor m_accent;
-    NUIColor m_warning;
-    NUIColor m_error;
+    NUIColor m_bg, m_panel, m_node, m_raised, m_border, m_text, m_textSecondary, m_textMuted;
+    NUIColor m_accent, m_live, m_sidechain, m_refuse;
 
     void cacheThemeColors();
+    size_t routingSignature() const;
     void rebuildGraph();
-    void rebuildFocusedGraph(const Aestra::ChannelViewModel* selected);
-    void autoLayout();
-    void updateEdgeAttachments();
-    float edgeTargetY(const Edge& edge, const Node& dst) const;
-    void computeWorldBounds();
     void fitToView();
     void clampCamera();
-    void renderMinimap(NUIRenderer& renderer);
-    void renderFullPanel(NUIRenderer& renderer);
+    Geometry geometry() const;
+    void showMenu(const NUIPoint& at);
+    void selectChannel(uint32_t id);
 
-    int hitTestNode(const NUIPoint& p) const;
-    int hitTestEdge(const NUIPoint& p) const;
-    int hitTestOutputPort(const NUIPoint& p) const;
+    // World/screen
+    NUIRect nodeRect(const Node& n) const;
+    NUIPoint outputPort(const Node& n) const;
+    NUIPoint inputPort(const Node& n) const;
+    NUIPoint sidechainPort(const Node& n) const;
+    float railPortY(float y) const;
+    const Node* nodeById(uint32_t id) const;
 
-    void drawNode(NUIRenderer& renderer, const Node& node, float scale);
-    void drawBezier(NUIRenderer& renderer, const NUIPoint& a, const NUIPoint& b, float thickness, const NUIColor& color, bool dashed);
-    void drawDotGrid(NUIRenderer& renderer);
+    int hitNode(const NUIPoint& p) const;
+    int hitOutputPort(const NUIPoint& p) const;
+    int hitDirect(const NUIPoint& p) const;
+    int hitEdge(const NUIPoint& p) const;
+    bool overRail(const NUIPoint& p) const;
+    bool refuses(uint32_t id) const;
 
-    void drawLivePulse(NUIRenderer& renderer, const NUIPoint& a, const NUIPoint& b, float peakDb);
-    void drawSendLevelLabel(NUIRenderer& renderer, const NUIPoint& a, const NUIPoint& b, float sendLevelDb);
-    void drawInsertDots(NUIRenderer& renderer, const Node& node, float nx, float ny, float nw, float nh);
-    NUIColor resolveInsertColor(const std::string& name) const;
+    // Patching
+    void beginPatch(uint32_t source, const NUIPoint& from, const NUIPoint& mouse);
+    void finishPatch(const NUIPoint& mouse);
+    uint32_t patchTarget(const NUIPoint& mouse, bool& isMaster) const;
 
-    int hitTestInputPort(const NUIPoint& p) const;
-    void renderMiniOverview(NUIRenderer& renderer);
-    void renderInspector(NUIRenderer& renderer);
-    void recomputeSearchMatches();
+    // Menus
+    void openOutputMenu(const NUIPoint& at, uint32_t channelId);
+    void openAddSendMenu(const NUIPoint& at, uint32_t channelId);
+    void openSendMenu(const NUIPoint& at, uint32_t channelId, uint64_t sendId);
+    void openNodeMenu(const NUIPoint& at, uint32_t channelId);
 
-    std::function<void()> m_onDoubleClick;
+    // Drawing (UIRoutingMapDraw.cpp)
+    void drawHeader(NUIRenderer& r, const Geometry& g);
+    void drawDirectList(NUIRenderer& r, const Geometry& g);
+    void drawColumnHeadings(NUIRenderer& r, const Geometry& g);
+    void drawEdges(NUIRenderer& r, const Geometry& g);
+    void drawNodes(NUIRenderer& r, const Geometry& g);
+    void drawExpanded(NUIRenderer& r, const Node& n);
+    void drawRail(NUIRenderer& r, const Geometry& g);
+    void drawPatch(NUIRenderer& r, const Geometry& g);
+    void drawDetail(NUIRenderer& r, const Geometry& g);
+    void drawLegend(NUIRenderer& r, const Geometry& g);
+    void drawEmpty(NUIRenderer& r, const Geometry& g);
+    void drawWire(NUIRenderer& r, NUIPoint a, NUIPoint b, float thickness, const NUIColor& c, bool dashed,
+                  bool vertical = false);
+
     std::function<void(uint32_t)> m_onNodeSelected;
     std::function<void()> m_onCollapse;
     std::function<void(uint32_t, uint32_t)> m_onRerouteMain;

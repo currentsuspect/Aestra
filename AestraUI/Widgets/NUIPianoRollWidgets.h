@@ -196,6 +196,8 @@ public:
      *        makes no zone and does not call.
      */
     std::function<void(double startBeat, double endBeat)> onLoopZoneDrawn;
+    /** @brief Whether a right-drag (or Ctrl+left-drag) draws a loop zone; off for hosts that only want numbers, ticks and scrub. */
+    void setLoopZoneEnabled(bool enabled) { allowLoopZone_ = enabled; }
     /** @brief The zone to draw (the view owns it). */
     void setLoopZone(bool active, double startBeat, double endBeat) {
         loopZoneActive_ = active;
@@ -214,6 +216,7 @@ private:
     NUIMouseButton zoneButton_ = NUIMouseButton::None;
     double zoneAnchorBeat_ = 0.0;
     double zoneDragBeat_ = 0.0;
+    bool allowLoopZone_ = true;
     bool loopZoneActive_ = false;
     double loopZoneStart_ = 0.0;
     double loopZoneEnd_ = 0.0;

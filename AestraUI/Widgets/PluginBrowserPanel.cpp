@@ -136,7 +136,7 @@ void PluginBrowserPanel::renderHeaderBar(NUIRenderer& renderer) {
 
     // Scan control — accent pill, consistent with the filter pills.
     NUIRect scanBtn = getScanButtonRect();
-    const float scanRadius = scanBtn.height * 0.5f;
+    const float scanRadius = 2.0f;
     if (m_scanning) {
         renderer.fillRoundedRect(scanBtn, scanRadius, Colors::accentPrimary().withAlpha(0.10f));
         auto dots = renderer.measureText("\xe2\x80\xa6", 11.0f); // ellipsis glyph
@@ -174,7 +174,7 @@ void PluginBrowserPanel::renderFilterBar(NUIRenderer& renderer) {
                         int columns = 3) {
         const float w = std::max(24.0f, (availW - (columns - 1) * gap) / static_cast<float>(columns));
         NUIRect rect = {startX + col * (w + gap), y, w, pillH};
-        renderer.fillRoundedRect(rect, pillH * 0.5f, active ? Colors::pillActiveBg() : Colors::pillInactiveBg());
+        renderer.fillRoundedRect(rect, 2.0f, active ? Colors::pillActiveBg() : Colors::pillInactiveBg());
 
         NUIColor textColor = active ? Colors::pillActiveText() : Colors::pillInactiveText();
         auto measured = renderer.measureText(label, 10.0f);
@@ -251,12 +251,9 @@ void PluginBrowserPanel::renderPluginRow(NUIRenderer& renderer,
 
     // Row background
     if (index == m_selectedIndex) {
-        renderer.fillRoundedRect(rowRect, 6.0f, Colors::listSelected());
-        renderer.fillRoundedRect({rowRect.x, rowRect.y + 4.0f, 3.0f, rowRect.height - 8.0f},
-                                 1.5f,
-                                 Colors::accentPrimary().withAlpha(0.85f));
+        renderer.fillRect(rowRect, NUIThemeManager::getInstance().getColor("surfaceRaised")); // selection is a fill, never an edge
     } else if (index == m_hoveredIndex) {
-        renderer.fillRoundedRect(rowRect, 6.0f, Colors::listHover());
+        renderer.fillRect(rowRect, NUIThemeManager::getInstance().getColor("surfaceTertiary"));
     }
 
     // Star rect (for hit-testing)
@@ -272,25 +269,33 @@ void PluginBrowserPanel::renderPluginRow(NUIRenderer& renderer,
         renderer.drawText("\xe2\x98\x85", {starX + 1, starY + 1}, 12.0f, Colors::starGhost());
     }
 
-    // Type dot — with a soft outer halo on hover/selection so it reads as a status pip.
+    // Type swatch: a 4 px bar in the type's colour (the same swatch language as the Arsenal rows and the pattern list).
     float dotX = rowRect.x + 22;
-    float dotCX = dotX + 4.0f;
-    float dotCY = rowRect.y + rowRect.height * 0.5f;
     NUIColor dotColor = Colors::textDisabled().withAlpha(0.3f);
     if (plugin.typeName == "Effect") dotColor = Colors::typeEffect;
     else if (plugin.typeName == "Instrument") dotColor = Colors::typeInstrument;
     else if (plugin.typeName == "Analyzer") dotColor = Colors::typeAnalyzer;
     else if (plugin.typeName == "MIDI") dotColor = Colors::typeMidi;
-    if (index == m_selectedIndex || index == m_hoveredIndex) {
-        renderer.fillCircle({dotCX, dotCY}, 6.5f, dotColor.withAlpha(0.20f));
+    renderer.fillRect({dotX, rowRect.y + (rowRect.height - 24.0f) * 0.5f, 4.0f, 24.0f}, dotColor);
+
+    // Type tag at the right edge (INST, FX, ...), flat; the format badge sits to its left.
+    float contentRightEdge = rowRect.right() - 8.0f;
+    {
+        const char* tag = plugin.typeName == "Instrument" ? "INST" : plugin.typeName == "Effect" ? "FX"
+                        : plugin.typeName == "Analyzer" ? "ANALYZER" : plugin.typeName == "MIDI" ? "MIDI" : "";
+        if (*tag) {
+            const float tw = renderer.measureText(tag, 9.0f).width;
+            const NUIRect tagRect = {rowRect.right() - tw - 14.0f - 6.0f, rowRect.y + (rowRect.height - 16.0f) * 0.5f, tw + 14.0f, 16.0f};
+            renderer.fillRect(tagRect, NUIThemeManager::getInstance().getColor("surfaceTertiary"));
+            renderer.drawText(tag, {tagRect.x + 7.0f, tagRect.y + 2.5f}, 9.0f, dotColor);
+            contentRightEdge = tagRect.x - 8.0f;
+        }
     }
-    renderer.fillCircle({dotCX, dotCY}, 4.0f, dotColor);
 
     // Format badge (right-aligned) — only for third-party formats. Internal
     // plugins are the default, so tagging every one of them just adds noise;
     // skipping "Int" declutters the list and gives the name more room.
     const bool external = (plugin.formatStr != "Int" && !plugin.formatStr.empty());
-    float contentRightEdge = rowRect.right() - 8.0f;
     if (external) {
         std::string badgeLabel = "VST3";
         NUIColor badgeBg = Colors::badgeVst3Bg;
@@ -301,10 +306,10 @@ void PluginBrowserPanel::renderPluginRow(NUIRenderer& renderer,
             badgeText = Colors::badgeClapText;
         }
         float badgeLabelW = renderer.measureText(badgeLabel, 9.0f).width;
-        NUIRect badgeRect = {rowRect.right() - (badgeLabelW + 12.0f) - 6.0f,
+        NUIRect badgeRect = {contentRightEdge - (badgeLabelW + 12.0f),
                              rowRect.y + (rowRect.height - 16.0f) * 0.5f,
                              badgeLabelW + 12.0f, 16.0f};
-        renderer.fillRoundedRect(badgeRect, 4.0f, badgeBg);
+        renderer.fillRect(badgeRect, badgeBg);
         renderer.drawText(badgeLabel, {badgeRect.x + (badgeRect.width - badgeLabelW) * 0.5f, badgeRect.y + 2.5f}, 9.0f, badgeText);
         contentRightEdge = badgeRect.x - 8.0f;
     }
@@ -320,7 +325,6 @@ void PluginBrowserPanel::renderPluginRow(NUIRenderer& renderer,
     // Vendor · type (muted, second line)
     float vendorMaxW = contentRightEdge - nameX;
     std::string vendorMeta = plugin.vendor;
-    if (!plugin.typeName.empty()) vendorMeta += " · " + plugin.typeName;
     vendorMeta = fitText(renderer, vendorMeta, 10.0f, vendorMaxW);
     renderer.drawText(vendorMeta, {nameX, rowRect.y + 20.0f}, 10.0f, Colors::textSecondary().withAlpha(0.58f));
 }

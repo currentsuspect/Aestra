@@ -1,21 +1,16 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 //
-// Takes/History workspace panel behavior:
-//   * History panel presents the session command timeline (undo + redo stacks),
-//     refreshes on state change, and navigates safely through activateEntry.
-//   * Takes panel lists the takes manifest with lineage depth, routes every
+// Versions panel (class TakesPanel) behavior:
+//   * The panel lists the takes manifest with lineage depth, routes every
 //     action through app-layer callbacks, supports inline rename via key
 //     events, and never mutates project state itself.
 //   * Panel opening: hidden panels ignore input; showing + refresh presents
 //     current data.
 
-#include "../../Source/Panels/AestraHistoryPanel.h"
 #include "../../Source/Panels/TakesPanel.h"
 
 #include "../../Source/Core/TakeManager.h"
 #include "../Support/TestTempDirectory.h"
-#include "Commands/ICommand.h"
-#include "Models/TrackManager.h"
 
 #include <cstdlib>
 #include <filesystem>
@@ -26,9 +21,7 @@
 #include <string>
 #include <utility>
 
-using Aestra::Audio::AestraHistoryPanel;
 using Aestra::Audio::TakesPanel;
-using Aestra::Audio::TrackManager;
 
 namespace {
 
@@ -38,20 +31,6 @@ void require(bool cond, const char* msg) {
         std::exit(1);
     }
 }
-
-/** Minimal named command so the history panel has real timeline entries. */
-class NamedTestCommand : public Aestra::Audio::ICommand {
-public:
-    NamedTestCommand(std::string name, int& counter) : m_name(std::move(name)), m_counter(counter) {}
-    void execute() override { ++m_counter; }
-    void undo() override { --m_counter; }
-    void redo() override { ++m_counter; }
-    std::string getName() const override { return m_name; }
-
-private:
-    std::string m_name;
-    int& m_counter;
-};
 
 std::string readFileContents(const std::string& path) {
     std::ifstream in(path, std::ios::binary);
@@ -75,122 +54,6 @@ AestraUI::NUIMouseEvent leftPress(float x, float y) {
     return e;
 }
 
-AestraUI::NUIMouseEvent scrollBy(float x, float y, float wheelDelta) {
-    AestraUI::NUIMouseEvent e;
-    e.type = AestraUI::NUIMouseEventType::Scroll;
-    e.wheelDelta = wheelDelta;
-    e.position = {x, y};
-    return e;
-}
-
-// =============================================================================
-// History panel — command timeline presentation and navigation
-// =============================================================================
-
-void testHistoryPanel() {
-    auto trackManager = std::make_shared<TrackManager>();
-    auto& history = trackManager->getCommandHistory();
-
-    AestraHistoryPanel panel(trackManager);
-    panel.setBounds(AestraUI::NUIRect(0.0f, 0.0f, 280.0f, 460.0f));
-    panel.setVisible(true);
-
-    require(panel.getEntryCount() == 0, "History panel should start empty");
-
-    int counter = 0;
-    history.pushAndExecute(std::make_shared<NamedTestCommand>("Move Clip", counter));
-    history.pushAndExecute(std::make_shared<NamedTestCommand>("Add Track", counter));
-    history.pushAndExecute(std::make_shared<NamedTestCommand>("Change Volume", counter));
-    require(counter == 3, "Commands should have executed");
-
-    panel.refreshHistory();
-    require(panel.getEntryCount() == 3, "Panel should present all executed commands");
-    for (int i = 0; i < 3; ++i) {
-        require(!panel.isEntryRedo(i), "No redo entries expected before undo");
-    }
-    bool sawMove = false, sawAdd = false, sawVolume = false;
-    for (int i = 0; i < 3; ++i) {
-        const auto& name = panel.getEntryName(i);
-        sawMove = sawMove || name == "Move Clip";
-        sawAdd = sawAdd || name == "Add Track";
-        sawVolume = sawVolume || name == "Change Volume";
-    }
-    require(sawMove && sawAdd && sawVolume, "Panel entries should carry command names");
-
-    // Undo → most recent command moves to the redo (greyed) region.
-    require(history.undo(), "Undo should succeed");
-    panel.refreshHistory();
-    require(panel.getEntryCount() == 3, "Undone commands stay visible in the timeline");
-    int redoCount = 0;
-    for (int i = 0; i < panel.getEntryCount(); ++i) {
-        if (panel.isEntryRedo(i)) {
-            ++redoCount;
-            require(panel.getEntryName(i) == "Change Volume", "Undone command should appear as redo entry");
-        }
-    }
-    require(redoCount == 1, "Exactly one redo entry expected after a single undo");
-    require(counter == 2, "Undo should have reverted the command");
-
-    // Navigate by clicking the redo entry — redoes it and fires the callback.
-    int historyChangedCalls = 0;
-    panel.setOnHistoryChanged([&historyChangedCalls]() { ++historyChangedCalls; });
-    int redoIndex = -1;
-    for (int i = 0; i < panel.getEntryCount(); ++i) {
-        if (panel.isEntryRedo(i)) {
-            redoIndex = i;
-            break;
-        }
-    }
-    require(redoIndex >= 0, "Redo entry should exist");
-    panel.activateEntry(redoIndex);
-    require(counter == 3, "Activating a redo entry should re-apply the command");
-    require(!history.canRedo(), "Redo stack should be drained");
-    require(historyChangedCalls == 1, "History navigation should notify listeners");
-
-    // Jump back to the beginning of the session through the timeline.
-    panel.activateEntry(panel.getEntryCount() - 1); // deepest undo row keeps that stackIndex
-    require(history.canRedo(), "Timeline jump should produce redoable commands");
-    require(counter < 3, "Timeline jump should have undone commands");
-
-    // Hidden panel must ignore input entirely.
-    panel.setVisible(false);
-    require(!panel.onMouseEvent(leftPress(10.0f, 50.0f)), "Hidden history panel must not consume events");
-
-    std::cout << "[PASS] History panel timeline\n";
-}
-
-// Clicking rows after scrolling must hit the visually shifted entries —
-// regression for the scroll offset being tracked but never applied.
-void testHistoryPanelScrolledClick() {
-    auto trackManager = std::make_shared<TrackManager>();
-    auto& history = trackManager->getCommandHistory();
-
-    AestraHistoryPanel panel(trackManager);
-    // 36px header + room for ~3 of the 26px rows: most entries start clipped.
-    panel.setBounds(AestraUI::NUIRect(0.0f, 0.0f, 280.0f, 114.0f));
-    panel.setVisible(true);
-
-    int counter = 0;
-    for (int i = 0; i < 10; ++i) {
-        history.pushAndExecute(std::make_shared<NamedTestCommand>("Cmd " + std::to_string(i), counter));
-    }
-    panel.refreshHistory();
-    require(panel.getEntryCount() == 10, "All commands should be listed");
-    require(counter == 10, "All commands should have executed");
-
-    // Two wheel notches = 60px of scroll (30px per notch).
-    require(panel.onMouseEvent(scrollBy(100.0f, 60.0f, -1.0f)), "Scroll should be consumed");
-    require(panel.onMouseEvent(scrollBy(100.0f, 60.0f, -1.0f)), "Scroll should be consumed");
-
-    // With scrollY=60, row i spans y = [36 + 26*i - 60, +26) → y=40 hits row 2.
-    // Entry 2 = undoStack[2], so undoTo(2) keeps exactly 2 commands applied.
-    require(panel.onMouseEvent(leftPress(100.0f, 40.0f)), "Row click should be consumed");
-    require(counter == 2, "Scrolled click should activate the visually shifted entry");
-    require(history.canRedo(), "Timeline jump should leave redoable commands");
-
-    std::cout << "[PASS] History panel scrolled click\n";
-}
-
 // =============================================================================
 // Takes panel — manifest presentation, actions, rename, non-destructive branch
 // =============================================================================
@@ -205,7 +68,7 @@ void testTakesPanel() {
     require(created.ok, "Failed to create second take");
 
     TakesPanel panel;
-    panel.setBounds(AestraUI::NUIRect(0.0f, 0.0f, 320.0f, 480.0f));
+    panel.setBounds(AestraUI::NUIRect(0.0f, 0.0f, 1100.0f, 560.0f));
     panel.setVisible(true);
     panel.setTakesProvider([&projectPath]() { return TakeManager::loadManifest(projectPath); });
     panel.setSnapshotsProvider([]() {
@@ -250,11 +113,84 @@ void testTakesPanel() {
     require(panel.requestCreateTake(), "Create action should succeed");
     require(panel.getTakeCount() == 3, "New take should appear in the panel");
 
-    // Mouse selection: click on the first take row.
+    // The timeline: every version is a node, and clicking one selects it like its row does.
     panel.selectTake(-1);
-    const float rowCenterY = 36.0f + 30.0f + 13.0f; // header + toolbar + half row
-    require(panel.onMouseEvent(leftPress(160.0f, rowCenterY)), "Row click should be consumed");
-    require(panel.getSelectedTake() == 0, "Click should select the first take row");
+    AestraUI::NUIPoint node;
+    require(panel.getTimelineNodeCenter(2, node), "A version should have a node on the timeline");
+    require(panel.onMouseEvent(leftPress(node.x, node.y)), "A node click should be consumed");
+    require(panel.getSelectedTake() == 2, "Clicking a node should select that version");
+
+    // The dock: the open version offers saves, with the steps behind it; an older one offers to open.
+    std::vector<TakesPanel::StepEntry> steps{{"Add track", false, 0}, {"Gain", true, 1}};
+    panel.setStepsProvider([&]() { return steps; });
+    int jumpedTo = -1;
+    panel.setOnStepActivated([&](const TakesPanel::StepEntry& e) { jumpedTo = e.stackIndex; });
+    int unsavedCount = 3;
+    panel.setUnsavedProvider([&]() { return unsavedCount; });
+    bool newBranch = false;
+    panel.setOnSaveToNewBranch([&]() { newBranch = true; return true; });
+    require(panel.requestSaveToNewBranch() && newBranch, "Save to new branch should route through its callback");
+    panel.refreshTakes();
+    int openRow = -1;
+    for (int i = 0; i < panel.getTakeCount(); ++i) if (panel.getTakeAt(i).active) openRow = i;
+    panel.selectTake(openRow);
+    AestraUI::NUIPoint np;
+    require(panel.getTimelineNodeCenter(openRow, np), "Open version has a node");
+    panel.selectTake(-1);
+    require(panel.getDockVersion() == openRow, "With nothing selected the dock shows the open version");
+
+    // A bounce: the card appears for the version in view, its play button toggles through the callback,
+    // and the bounce action runs only after the status has had frames to show.
+    require(panel.getDockBounce() == nullptr, "A version with no bounce shows no card");
+    const std::string openId = panel.getTakeAt(openRow).id;
+    panel.setBounceProvider([&](const TakeManager::TakeEntry& t) -> std::optional<TakesPanel::BounceCard> {
+        if (t.id != openId) return std::nullopt;
+        TakesPanel::BounceCard card;
+        card.path = "/tmp/x.bounce.wav";
+        card.info.seconds = 161.0;
+        card.info.lufs = -9.8;
+        card.info.peaks = {0.5f, 1.0f};
+        return card;
+    });
+    std::string toggled;
+    panel.setOnToggleBounce([&](const std::string& path) { toggled = path; return true; });
+    panel.setBouncePlayingProvider([](const std::string&) { return false; });
+    panel.refreshTakes();
+    require(panel.getDockBounce() != nullptr, "The open version shows its bounce card");
+    AestraUI::NUIPoint play;
+    require(panel.getBouncePlayCenter(play), "The card has a play button");
+    require(panel.onMouseEvent(leftPress(play.x, play.y)) && toggled == "/tmp/x.bounce.wav", "Play routes the bounce path to the preview");
+    std::string bounced;
+    panel.setOnBounce([&](const std::string& id) { bounced = id; return true; });
+    require(panel.requestBounce() && bounced == openId, "Bounce renders the version in view");
+
+    // Bring over: the card opens for an older version, checks toggle, blocked rows refuse, and confirming hands back what is checked.
+    int olderRow = -1;
+    for (int i = 0; i < panel.getTakeCount(); ++i) if (!panel.getTakeAt(i).active) olderRow = i;
+    require(olderRow >= 0, "There is an older version to bring from");
+    panel.selectTake(olderRow);
+    panel.setBringOverProvider([&](const std::string&) -> std::optional<Aestra::BringOverCard> {
+        Aestra::BringOverCard card;
+        card.from = "Alt hook v2";
+        card.into = "Mix pass 1";
+        card.rows = {{"Hook vox", "take 4 kept", Aestra::BringOverCard::Status::New, true, false, 11},
+                     {"Pad", "same as current", Aestra::BringOverCard::Status::Same, false, false, 12},
+                     {"Lonely", "needs an instrument", Aestra::BringOverCard::Status::Blocked, false, true, 13},
+                     {"Hook B", "new in Alt hook v2", Aestra::BringOverCard::Status::New, true, true, 14}};
+        return card;
+    });
+    std::vector<Aestra::BringOverCard::Row> handed;
+    panel.setOnBringOver([&](const std::string&, const std::vector<Aestra::BringOverCard::Row>& rows) { handed = rows; return true; });
+    require(panel.requestBringOver() && panel.isBringOverOpen(), "Bring over opens its card for an older version");
+    require(panel.getBringOver()->checkedCount() == 2 && panel.getBringOver()->bringLabel() == "Bring over 2 items", "New things start checked");
+    AestraUI::NUIPoint at;
+    require(panel.getBringOverRowCenter(1, at) && panel.onMouseEvent(leftPress(at.x, at.y)), "A row click is taken by the card");
+    require(panel.getBringOver()->rows[1].checked, "...and checks the row");
+    require(panel.getBringOverRowCenter(2, at) && panel.onMouseEvent(leftPress(at.x, at.y)) && !panel.getBringOver()->rows[2].checked, "A blocked row cannot be checked");
+    require(panel.getBringOverButtonCenter("bring", at) && panel.onMouseEvent(leftPress(at.x, at.y)), "Bring over confirms");
+    require(!panel.isBringOverOpen() && handed.size() == 3 && handed[0].id == 11 && handed[2].pattern, "The checked rows are handed back, tracks and patterns");
+    panel.selectTake(olderRow);
+    require(panel.requestBringOver() && panel.handleKeyEvent(keyPress(AestraUI::NUIKeyCode::Escape)) && !panel.isBringOverOpen(), "Escape closes the card");
 
     // Inline rename: keyboard-driven edit, committed through the callback.
     panel.setOnRenameTake([&](const std::string& takeId, const std::string& name) {
@@ -350,7 +286,7 @@ void testTakesPanel() {
 
     // Hidden panel ignores input.
     panel.setVisible(false);
-    require(!panel.onMouseEvent(leftPress(160.0f, rowCenterY)), "Hidden takes panel must not consume events");
+    require(!panel.onMouseEvent(leftPress(np.x, np.y)), "Hidden takes panel must not consume events");
     require(!panel.handleKeyEvent(keyPress(AestraUI::NUIKeyCode::Enter)), "Hidden takes panel must not consume keys");
 
     std::cout << "[PASS] Takes panel actions\n";
@@ -359,8 +295,6 @@ void testTakesPanel() {
 } // namespace
 
 int main() {
-    testHistoryPanel();
-    testHistoryPanelScrolledClick();
     testTakesPanel();
     std::cout << "[PASS] TakesHistoryPanelTest\n";
     return 0;

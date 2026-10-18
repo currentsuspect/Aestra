@@ -762,11 +762,12 @@ void AestraWindowManager::showDropdownMenu(std::shared_ptr<AestraUI::NUIContextM
     m_activeMenu = menu;
     m_activeMenuXOffset = xOffset;
 
-    // Set up callback to clear m_activeMenu when hidden
+    // Clear m_activeMenu when it hides. Retire, never destroy: this runs inside the
+    // menu's own hide(), and dropping the last reference here freed the menu while
+    // hide() was still using it (a crash after clicking outside the version picker).
     menu->setOnHide([this, menuPtr = menu.get()]() {
         if (m_activeMenu.get() == menuPtr) {
-            if (m_rootComponent) m_rootComponent->removeChild(m_activeMenu);
-            m_activeMenu = nullptr;
+            retireMenu(std::move(m_activeMenu));
             m_activeMenuXOffset = -1.0f;
         }
     });
@@ -774,10 +775,17 @@ void AestraWindowManager::showDropdownMenu(std::shared_ptr<AestraUI::NUIContextM
 
 void AestraWindowManager::hideActiveMenu() {
     if (m_activeMenu && m_activeMenu->isVisible()) {
-        m_activeMenu->hide();
-        if (m_rootComponent) m_rootComponent->removeChild(m_activeMenu);
+        auto menu = m_activeMenu; // keeps it alive through hide() and its callback
+        menu->hide();
+        retireMenu(std::move(menu));
         m_activeMenu = nullptr;
     }
+}
+
+void AestraWindowManager::retireMenu(std::shared_ptr<AestraUI::NUIContextMenu> menu) {
+    if (!menu) return;
+    if (m_retiredMenu && m_retiredMenu != menu && m_rootComponent) m_rootComponent->removeChild(m_retiredMenu);
+    m_retiredMenu = std::move(menu); // removed from the root at the start of the next frame
 }
 
 bool AestraWindowManager::isMenuOpen() const {
@@ -788,6 +796,14 @@ void AestraWindowManager::setProjectStatus(const std::string& name, bool modifie
     if (m_customWindow && m_customWindow->getTitleBar()) {
         m_customWindow->getTitleBar()->setProjectStatus(name, modified, note);
     }
+}
+
+void AestraWindowManager::setVersionChip(const std::string& branch, const AestraUI::NUIColor& color, const std::string& version) {
+    if (m_customWindow && m_customWindow->getTitleBar()) m_customWindow->getTitleBar()->setVersionChip(branch, color, version);
+}
+
+void AestraWindowManager::setOnVersionChip(std::function<void(float)> onClick) {
+    if (m_customWindow && m_customWindow->getTitleBar()) m_customWindow->getTitleBar()->setOnVersionChip(std::move(onClick));
 }
 
 void AestraWindowManager::setWindowTitle(const std::string& title) {
@@ -860,6 +876,10 @@ double AestraWindowManager::endFrame() {
 
 void AestraWindowManager::render() {
     if (!m_renderer || !m_rootComponent) return;
+    if (m_retiredMenu) { // safe here: no event or update is walking the root's children
+        m_rootComponent->removeChild(m_retiredMenu);
+        m_retiredMenu.reset();
+    }
 
     resolveCursorState();
 

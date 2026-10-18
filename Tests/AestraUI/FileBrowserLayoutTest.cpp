@@ -1,9 +1,8 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 //
-// V8-X2b phase 5: the file browser's panes and header chrome (FileBrowserLayout.h),
-// checked against the arithmetic computeBrowserLayout() did by hand before, and the
-// one rect the folder pane is now drawn, clipped and hit-tested by (navViewport).
-// Real constants: search row 56, list header 34, preview dock 72. Header-only.
+// The file browser's bands (FileBrowserLayout.h, FD-47): tabs, search, location,
+// chips, list header, rows, preview dock; and the one rect the Places overlay is
+// drawn, clipped and hit-tested by (navViewport). Header-only.
 
 #include "FileBrowserLayout.h"
 
@@ -26,66 +25,63 @@ bool same(const AestraUI::Layout::NUILocalRect& r, float x, float y, float w, fl
     return near(r.x, x) && near(r.y, y) && near(r.width, w) && near(r.height, h);
 }
 
-constexpr float kSearch = 56.0f, kHeader = 34.0f, kPreview = 72.0f;
-
-void testMatchesTheHandWrittenLayout() {
-    for (float w : {280.0f, 420.0f, 560.0f}) {
-        for (float h : {300.0f, 720.0f}) {
-            for (bool preview : {false, true}) {
-                for (bool emptyQuery : {true, false}) {
-                    const float navW = std::round(w * 0.38f);
-                    // --- pre-migration computeBrowserLayout(), origin 0,0 ---
-                    const float contentY = kSearch, contentH = std::max(0.0f, h - kSearch);
-                    const float listX = navW, listW = std::max(0.0f, w - navW);
-                    const float previewH = preview ? std::min(kPreview, contentH) : 0.0f;
-                    const float trailing = emptyQuery ? 34.0f : 60.0f;
-                    const float chromeY = contentY + 5.0f;
-                    const float sortW = listW >= 300.0f ? 62.0f : 22.0f;
-                    const float sortX = listX + listW - 5.0f - sortW;
-                    // --------------------------------------------------------
-                    const auto l = AestraUI::resolveFileBrowserLayout(w, h, kSearch, trailing, navW, kHeader, previewH);
-                    const std::string at = " at " + std::to_string(int(w)) + "x" + std::to_string(int(h)) +
-                                           (preview ? " +preview" : "") + (emptyQuery ? "" : " +query");
-                    check(same(l.searchBar, 0, 0, w, kSearch), "search row" + at);
-                    check(same(l.search, 26, 4, std::max(0.0f, w - trailing), kSearch - 8), "search field" + at);
-                    check(same(l.navPane, 0, contentY, navW, contentH), "nav pane" + at);
-                    check(same(l.listHeader, listX, contentY, listW, kHeader), "list header" + at);
-                    check(same(l.list, listX, contentY + kHeader, listW, std::max(0.0f, contentH - kHeader - previewH)),
-                          "list" + at);
-                    check(same(l.back, listX + 5, chromeY, 22, 24) && same(l.forward, listX + 29, chromeY, 22, 24) &&
-                              same(l.up, listX + 53, chromeY, 22, 24),
-                          "back/forward/up" + at);
-                    check(same(l.sort, sortX, chromeY, sortW, 24) && same(l.filter, sortX - 24, chromeY, 22, 24),
-                          "sort/filter" + at);
-                }
+// FD-47: one column of bands; Places is an overlay under the location band.
+void testBandsStackTopToBottom() {
+    for (float w : {248.0f, 288.0f, 420.0f}) {
+        for (bool preview : {false, true}) {
+            for (bool chips : {false, true}) {
+                AestraUI::FileBrowserBands b;
+                b.chipsRow = chips ? 30.0f : 0.0f;
+                b.preview = preview ? 112.0f : 0.0f;
+                const auto l = AestraUI::resolveFileBrowserLayout(w, 700.0f, b, 92.0f);
+                const std::string at = " at " + std::to_string(int(w)) + (preview ? " +preview" : "") + (chips ? " +chips" : "");
+                check(same(l.kindRow, 0, 0, w, 40), "kind tabs on top" + at);
+                check(same(l.searchBar, 0, 40, w, 36), "search under the tabs" + at);
+                check(same(l.location, 0, 76, w, 30), "location under search" + at);
+                const float chipsH = chips ? 30.0f : 0.0f;
+                check(same(l.chips, 0, 106, w, chipsH), "chips under location" + at);
+                check(same(l.listHeader, 0, 106 + chipsH, w, 26), "header under chips" + at);
+                const float listY = 106 + chipsH + 26;
+                check(same(l.list, 0, listY, w, 700 - listY - (preview ? 112 : 0)), "rows fill to the dock" + at);
+                check(near(l.kinds[0].x, 12) && near(l.kinds[2].right(), w - 12) &&
+                          near(l.kinds[0].width, l.kinds[1].width) && near(l.kinds[1].width, l.kinds[2].width),
+                      "three equal tabs inside the segment" + at);
+                check(near(l.search.right(), w - 92), "the field leaves room for the scope chip" + at);
+                check(near(l.body.y, 76) && near(l.body.bottom(), 700), "embedded views fill under search" + at);
             }
         }
     }
 }
 
-void testOneRectForTheFolderRows() {
-    // The old render side clipped to navPane.y + header .. navPane.bottom(); the old
-    // hit test accepted navPane minus the same header. Both now read navViewport.
-    const auto l = AestraUI::resolveFileBrowserLayout(420, 720, kSearch, 34, 160, kHeader, 0);
-    check(same(l.navViewport, 0, kSearch + kHeader, 160, 720 - kSearch - kHeader), "rows below the folder header");
-    check(same(l.navHeader, 0, kSearch, 160, kHeader), "the folder header is the band above them");
+void testPlacesOverlay() {
+    const auto l = AestraUI::resolveFileBrowserLayout(288, 700, AestraUI::FileBrowserBands{}, 92);
+    check(same(l.navPane, 0, l.location.bottom(), 288, 700 - l.location.bottom()), "Places drops from under the location band");
     check(near(l.navHeader.bottom(), l.navViewport.y) && near(l.navViewport.bottom(), l.navPane.bottom()),
-          "header and rows tile the pane exactly");
+          "its title band and rows tile it exactly");
+}
+
+void testEmbeddedViewsDropTheFolderBands() {
+    AestraUI::FileBrowserBands b;
+    b.locationRow = 0.0f;
+    b.listHeader = 0.0f;
+    const auto l = AestraUI::resolveFileBrowserLayout(288, 700, b, 10);
+    check(l.location.height == 0.0f && l.listHeader.height == 0.0f && l.back.width == 0.0f,
+          "Patterns and Plugins have no location or list header");
 }
 
 void testSortLabelThreshold() {
-    // The sort control names its key from a 300 px list exactly, not from 301.
-    const auto at300 = AestraUI::resolveFileBrowserLayout(460, 600, kSearch, 34, 160, kHeader, 0);
-    const auto at299 = AestraUI::resolveFileBrowserLayout(459, 600, kSearch, 34, 160, kHeader, 0);
-    check(near(at300.sort.width, 62.0f), "a 300 px list shows the named sort control");
-    check(near(at299.sort.width, 22.0f), "a 299 px list keeps the bare glyph");
+    const auto at240 = AestraUI::resolveFileBrowserLayout(240, 600, AestraUI::FileBrowserBands{}, 92);
+    const auto at239 = AestraUI::resolveFileBrowserLayout(239, 600, AestraUI::FileBrowserBands{}, 92);
+    check(near(at240.sort.width, 62.0f), "a 240 px browser names its sort key");
+    check(near(at239.sort.width, 22.0f), "a narrower one keeps the bare glyph");
 }
 
 } // namespace
 
 int main() {
-    testMatchesTheHandWrittenLayout();
-    testOneRectForTheFolderRows();
+    testBandsStackTopToBottom();
+    testPlacesOverlay();
+    testEmbeddedViewsDropTheFolderBands();
     testSortLabelThreshold();
     if (g_failures) {
         std::cerr << g_failures << " check(s) failed\n";

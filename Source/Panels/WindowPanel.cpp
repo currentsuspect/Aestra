@@ -205,7 +205,7 @@ void WindowPanel::onRender(AestraUI::NUIRenderer& renderer) {
     m_titleBarBounds = titleBarRect;
     
     // Unified panel shell + flat titlebar treatment
-    const float windowRadius = theme.getRadius("m");
+    const float windowRadius = std::min(theme.getRadius("m"), 2.0f); // 2 px, as the clips, pads and mixer strips
     auto bodyColor = theme.getColor("surfaceTertiary");
     // Title bar shares the transport bar's charcoal (backgroundSecondary) so all
     // docked-panel chrome reads as one consistent surface.
@@ -222,8 +222,8 @@ void WindowPanel::onRender(AestraUI::NUIRenderer& renderer) {
         
         // Separator for title bar
         renderer.drawLine(
-            AestraUI::NUIPoint(bounds.x + 4, bounds.y + m_titleBarHeight),
-            AestraUI::NUIPoint(bounds.x + bounds.width - 4, bounds.y + m_titleBarHeight),
+            AestraUI::NUIPoint(bounds.x + 1, bounds.y + m_titleBarHeight),
+            AestraUI::NUIPoint(bounds.x + bounds.width - 1, bounds.y + m_titleBarHeight),
             1.0f, 
             borderColor.withAlpha(0.72f)
         );
@@ -235,11 +235,13 @@ void WindowPanel::onRender(AestraUI::NUIRenderer& renderer) {
     
     // Draw title text
     auto textColor = theme.getColor("textSecondary"); // Use secondary text color
-    float fontSize = 12.0f;
-    auto titleSize = renderer.measureText(m_title, fontSize);
-    float textX = bounds.x + 10.0f;
+    float fontSize = 11.0f; // the 11 px capitals the Arsenal header already uses, on every panel
+    std::string caps = m_title;
+    std::transform(caps.begin(), caps.end(), caps.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+    auto titleSize = renderer.measureText(caps, fontSize);
+    float textX = bounds.x + 12.0f;
     float textY = bounds.y + (m_titleBarHeight - titleSize.height) * 0.5f;
-    renderer.drawText(m_title, AestraUI::NUIPoint(textX, textY), fontSize, textColor);
+    renderer.drawText(caps, AestraUI::NUIPoint(textX, textY), fontSize, textColor);
     
     // Render children (content + buttons)
     renderChildren(renderer);

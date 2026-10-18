@@ -125,6 +125,39 @@ void test_raise_requires_bounds_not_z_position() {
     check(isTopmost(overlay, *panelB), "no panel may be raised by an out-of-bounds press");
 }
 
+void test_deliberate_open_stays_in_front_of_the_panel_that_saw_the_click() {
+    // File > Takes: the menu item opens the Takes panel, and the same press is also
+    // forwarded to the maximized Arsenal underneath it, which raises itself. The
+    // panel that was opened on purpose must still end up in front.
+    NUIComponent overlay;
+    overlay.setBounds({0, 0, 900, 600});
+
+    auto takes = std::make_shared<WindowPanel>("Takes");
+    takes->setBounds({100, 100, 300, 200});
+    auto arsenal = std::make_shared<WindowPanel>("Arsenal");
+    arsenal->setBounds({0, 0, 900, 600});
+    overlay.addChild(takes);
+    overlay.addChild(arsenal);
+    check(isTopmost(overlay, *arsenal), "sanity: the Arsenal starts in front");
+
+    NUIComponent::beginEventDispatch();
+    takes->bringToFrontPriority();           // the menu action
+    arsenal->onMouseEvent(leftPress(50, 50)); // the same press reaching the Arsenal
+    NUIComponent::endEventDispatch();
+
+    check(isTopmost(overlay, *takes), "a panel opened on purpose must end up in front of the one that saw the click");
+}
+
+void test_priority_raise_outside_dispatch_is_immediate() {
+    NUIComponent overlay;
+    auto a = std::make_shared<WindowPanel>("A");
+    auto b = std::make_shared<WindowPanel>("B");
+    overlay.addChild(a);
+    overlay.addChild(b);
+    a->bringToFrontPriority();
+    check(isTopmost(overlay, *a), "outside a dispatch the priority raise happens at once");
+}
+
 } // namespace
 
 int main() {
@@ -134,6 +167,8 @@ int main() {
     test_press_inside_bounds_raises_panel();
     test_press_inside_topmost_panel_stays_consumed();
     test_raise_requires_bounds_not_z_position();
+    test_deliberate_open_stays_in_front_of_the_panel_that_saw_the_click();
+    test_priority_raise_outside_dispatch_is_immediate();
 
     if (g_failures != 0) {
         std::cout << "\n=== Results: " << g_failures << " failed ===\n";

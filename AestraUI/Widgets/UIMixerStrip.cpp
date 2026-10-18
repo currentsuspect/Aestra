@@ -21,15 +21,19 @@ namespace AestraUI {
 
 namespace {
     constexpr float HEADER_H = 30.0f;
-    constexpr float KNOB_H = 32.0f;
-    constexpr float FX_H = 30.0f;
+    constexpr float PAN_H = 8.0f;
+    constexpr float PAN_VALUE_H = 12.0f;
+    constexpr float MIN_METER_H = 120.0f;
+    constexpr float OUTPUT_CHIP_H = 17.0f;
+    constexpr int INSERT_ROWS = 3;
     constexpr float BUTTONS_H = 26.0f;
-    constexpr float FOOTER_H = 22.0f;
+    constexpr float FOOTER_H = 18.0f;
     constexpr float PAD = 8.0f;
     constexpr float GAP = 8.0f;
     constexpr float SIDE_INSET = 4.0f;
     constexpr float SECTION_GAP = 8.0f;
-    constexpr float METER_W = 22.0f;
+    constexpr float METER_W = 24.0f;     // two 11 px bars and the gap between them
+    constexpr float FADER_COL_W = 14.0f; // the handle column beside the meters
     constexpr float MASTER_METER_W = 36.0f;
     // Technical master readouts (held peak dBFS, integrated LUFS, gain) are a
     // permanent fixture under the master's meter/fader columns — the master
@@ -41,7 +45,9 @@ namespace {
     // strip (its footer is hidden, so the space is otherwise dead). Two stacked
     // blocks plus bottom slack: with only 4px of slack the second value landed
     // on the strip's bottom edge and was not drawn at all.
-    constexpr float MASTER_READOUT_H = MASTER_BLOCK_H * 2.0f + 14.0f;
+    constexpr float MASTER_ROW_H = 15.0f;
+    // Integrated, short-term, true peak, correlation (with its bar), gain: one line each.
+    constexpr float MASTER_READOUT_H = MASTER_ROW_H * 6.0f + 8.0f;
 
     constexpr float SELECT_TOP_H = 3.0f;
     constexpr float MIXER_MIN_CHANNEL_HEIGHT = 220.0f;
@@ -54,95 +60,6 @@ namespace {
                         ((argb >> 8) & 0xFF) / 255.0f,
                         (argb & 0xFF) / 255.0f,
                         ((argb >> 24) & 0xFF) / 255.0f);
-    }
-
-    std::string compactRouteName(uint32_t targetId, const std::string& targetName)
-    {
-        if (targetId == 0 || targetName == "Master" || targetName == "MASTER") {
-            return "M";
-        }
-        const std::string channelPrefix = "Channel ";
-        if (targetName.rfind(channelPrefix, 0) == 0) {
-            return "C" + targetName.substr(channelPrefix.size());
-        }
-        // Projects saved before strips were renamed still carry "Insert N".
-        const std::string legacyInsertPrefix = "Insert ";
-        if (targetName.rfind(legacyInsertPrefix, 0) == 0) {
-            return "I" + targetName.substr(legacyInsertPrefix.size());
-        }
-        const std::string legacyTrackPrefix = "Track ";
-        if (targetName.rfind(legacyTrackPrefix, 0) == 0) {
-            return "I" + targetName.substr(legacyTrackPrefix.size());
-        }
-        const std::string lanePrefix = "Lane ";
-        if (targetName.rfind(lanePrefix, 0) == 0) {
-            return "L" + targetName.substr(lanePrefix.size());
-        }
-        if (targetName.size() <= 6) {
-            return targetName;
-        }
-        return targetName.substr(0, 6);
-    }
-
-    std::string buildStripRouteSummary(const Aestra::ChannelViewModel& channel)
-    {
-        if (channel.id == 0) {
-            return channel.routeName;
-        }
-
-        const bool busOnly = !channel.masterSendEnabled && channel.mainOutputId != 0;
-        int audibleSendCount = 0;
-        int sidechainSendCount = 0;
-        std::string audibleTarget;
-        std::string sidechainTarget;
-        std::unordered_set<uint32_t> audibleTargets;
-        std::unordered_set<uint32_t> sidechainTargets;
-
-        for (const auto& send : channel.sends) {
-            if (send.muted) continue;
-            if (send.sidechainOnly) {
-                ++sidechainSendCount;
-                sidechainTargets.insert(send.targetId);
-                if (sidechainTarget.empty()) {
-                    sidechainTarget = compactRouteName(send.targetId, send.targetName);
-                }
-                continue;
-            }
-            ++audibleSendCount;
-            audibleTargets.insert(send.targetId);
-            if (audibleTarget.empty()) {
-                audibleTarget = compactRouteName(send.targetId, send.targetName);
-            }
-        }
-
-        std::ostringstream summary;
-        bool first = true;
-        auto appendToken = [&](const std::string& token) {
-            if (token.empty()) return;
-            if (!first) summary << " • ";
-            summary << token;
-            first = false;
-        };
-
-        if (busOnly) {
-            appendToken("Bus " + compactRouteName(channel.mainOutputId, channel.routeName));
-        }
-        if (audibleSendCount > 0) {
-            if (audibleTargets.size() == 1) {
-                appendToken("Snd " + audibleTarget);
-            } else {
-                appendToken("S+" + std::to_string(static_cast<int>(audibleTargets.size())));
-            }
-        }
-        if (sidechainSendCount > 0) {
-            if (sidechainTargets.size() == 1) {
-                appendToken("SC " + sidechainTarget);
-            } else {
-                appendToken("SC+" + std::to_string(static_cast<int>(sidechainTargets.size())));
-            }
-        }
-
-        return summary.str();
     }
 
     std::string buildFxStatus(const Aestra::ChannelViewModel& channel)
@@ -231,33 +148,26 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
 
     // Input Selector REMOVED (Moved to Inspector)
 
-    m_trimKnob = std::make_shared<UIMixerKnob>(UIMixerKnobType::Trim);
-    m_trimKnob->setVisible(true);
-    m_trimKnob->onValueChanged = [this](float db) {
-        if (!m_viewModel || !m_continuousParams) return;
-        auto* channel = m_viewModel->getChannelById(m_channelId);
-        if (!channel) return;
-
-        channel->trimDb = db;
-        m_continuousParams->setTrimDb(channel->slotIndex, db);
-
-        // Undo/redo parity with pan: route through the command history so the
-        // serialized MixerChannel state and the RT buffer move together.
-        if (onTrimChanged) onTrimChanged(db, channel->slotIndex);
-    };
-    addChild(m_trimKnob);
-
-    m_fxSummary = std::make_shared<UIMixerFXSummary>();
-    m_fxSummary->onInvalidateRequested = [this]() { invalidateStaticCache(); };
-    m_fxSummary->onClicked = [this]() {
+    m_insertList = std::make_shared<UIMixerInsertList>();
+    m_insertList->onInvalidateRequested = [this]() { invalidateStaticCache(); };
+    m_insertList->onClicked = [this]() {
         if (onFXClicked) onFXClicked(m_channelId);
     };
-    addChild(m_fxSummary);
+    addChild(m_insertList);
 
-    // Pan Knob (Always visible)
-    m_panKnob = std::make_shared<UIMixerKnob>(UIMixerKnobType::Pan);
-    m_panKnob->setVisible(true);
-    m_panKnob->onValueChanged = [this](float pan) {
+    // Where this channel goes, by name and colour (FD-28). The master has no output to name.
+    m_outputChip = std::make_shared<UIOutputChip>();
+    m_outputChip->setVisible(m_channelId != 0);
+    m_outputChip->onClicked = [this]() {
+        if (onOutputClicked) onOutputClicked(m_channelId);
+    };
+    addChild(m_outputChip);
+
+    // Pan as a bar with its value under it (the strip's pan, V81-M1): drag along it, double-click to centre.
+    m_panBar = std::make_shared<UIParamBar>(UIParamBar::Look::Bar);
+    m_panBar->setRange(-1.0f, 1.0f, 0.0f);
+    m_panBar->setBipolar(true);
+    m_panBar->onValueChanged = [this](float pan) {
         if (!m_viewModel || !m_continuousParams) return;
         auto* channel = m_viewModel->getChannelById(m_channelId);
         if (!channel) return;
@@ -268,22 +178,14 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
         // Fire undo/redo callback
         if (onPanChanged) onPanChanged(pan);
     };
-    addChild(m_panKnob);
+    addChild(m_panBar);
 
-    // Width Knob (Always visible)
-    m_widthKnob = std::make_shared<UIMixerKnob>(UIMixerKnobType::Width);
-    m_widthKnob->setVisible(true);
-    m_widthKnob->onValueChanged = [this](float width) {
-        if (!m_viewModel) return; 
-        auto* channel = m_viewModel->getChannelById(m_channelId);
-        if (!channel) return;
-
-        channel->width = width;
-        if (auto mc = channel->channel) {
-             mc->setWidth(width);
-        }
+    // Sends by destination and level; a click opens the channel's inspector.
+    m_sendList = std::make_shared<UIMixerSendList>();
+    m_sendList->onClicked = [this]() {
+        if (m_viewModel) m_viewModel->setSelectedChannelId(static_cast<int32_t>(m_channelId));
     };
-    addChild(m_widthKnob);
+    addChild(m_sendList);
 
     m_buttons = std::make_shared<UIMixerButtonRow>();
     m_buttons->onInvalidateRequested = [this]() { invalidateStaticCache(); };
@@ -346,8 +248,9 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
     m_fader = std::make_shared<UIMixerFader>();
     m_fader->setRangeDb(-90.0f, 6.0f);
     m_fader->setDefaultDb(0.0f);
-    // The master strip is wide enough to label its unity mark.
+    // The master strip is wide enough to label its unity mark; channel strips draw the cap across the meters.
     m_fader->setShowScaleLabels(m_channelId == 0);
+    if (m_channelId != 0) m_fader->setOverlay(true, METER_W + 2.0f);
     m_fader->onValueChanged = [this](float db) {
         if (!m_viewModel || !m_continuousParams) return;
         auto* channel = m_viewModel->getChannelById(m_channelId);
@@ -363,7 +266,15 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
 
     m_footer = std::make_shared<UIMixerFooter>();
     m_footer->onInvalidateRequested = [this]() { invalidateStaticCache(); };
-    m_footer->setTrackNumber(m_trackNumber);
+    m_footer->onResetPeakRequested = [this]() {
+        if (!m_viewModel) return;
+        auto* channel = m_viewModel->getChannelById(m_channelId);
+        if (!channel) return;
+        channel->peakSinceResetDb = Aestra::MixerMath::DB_MIN;
+        m_viewModel->clearClipLatch(channel->id);
+        if (m_meterSnapshots) m_meterSnapshots->clearClip(channel->slotIndex);
+        if (m_meter) m_meter->setClipLatch(false, false);
+    };
     addChild(m_footer);
 
     // Clip clear callback
@@ -384,15 +295,11 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
     if (m_channelId == 0 && m_buttons) {
         m_buttons->setVisible(false);
     }
-    if (m_channelId == 0 && m_panKnob) {
-        m_panKnob->setVisible(false);
+    if (m_channelId == 0 && m_panBar) {
+        m_panBar->setVisible(false);
     }
-    // Hide Trim/Width for master (master bus doesn't have per-strip trim or width)
-    if (m_channelId == 0 && m_trimKnob) {
-        m_trimKnob->setVisible(false);
-    }
-    if (m_channelId == 0 && m_widthKnob) {
-        m_widthKnob->setVisible(false);
+    if (m_channelId == 0 && m_sendList) {
+        m_sendList->setVisible(false);
     }
     if (m_channelId == 0 && m_footer) {
         m_footer->setVisible(false);
@@ -403,9 +310,6 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
 
 void UIMixerStrip::setPlatformBridge(NUIPlatformBridge* bridge)
 {
-    if (m_trimKnob) m_trimKnob->setPlatformBridge(bridge);
-    if (m_panKnob) m_panKnob->setPlatformBridge(bridge);
-    if (m_widthKnob) m_widthKnob->setPlatformBridge(bridge);
     if (m_fader) m_fader->setPlatformBridge(bridge);
 }
 
@@ -429,57 +333,51 @@ void UIMixerStrip::cacheThemeColors()
     m_masterBorder = theme.getColor("border").withAlpha(0.36f);
 }
 
+void UIMixerStrip::setDensity(MixerDensity density)
+{
+    if (density == m_density) return;
+    m_density = density;
+    const bool narrow = density == MixerDensity::Narrow;
+    const bool master = m_channelId == 0;
+    // Narrow keeps the name, the meters, the fader, M S and the output's colour; the rest waits for room.
+    if (m_insertList) m_insertList->setVisible(master || !narrow);
+    if (m_sendList) m_sendList->setVisible(!master && !narrow);
+    if (m_panBar) m_panBar->setVisible(!master && !narrow);
+    if (m_buttons && !master) m_buttons->setCompact(narrow);
+    if (m_outputChip && !master) m_outputChip->setCompact(narrow);
+    if (m_footer && !master) m_footer->setCompact(narrow);
+    if (m_header && !master) m_header->setCompact(narrow);
+    if (m_fader && !master) {
+        constexpr float kBar = 11.0f;
+        const float meterW = narrow ? 18.0f : 24.0f;
+        (void)kBar;
+        m_fader->setOverlay(true, meterW + 2.0f);
+    }
+    layoutChildren();
+    invalidateStaticCache();
+    repaint();
+}
+
 void UIMixerStrip::layoutChildren()
 {
     auto bounds = getBounds();
 
     const float contentX = bounds.x + SIDE_INSET;
     const float contentW = std::max(1.0f, bounds.width - SIDE_INSET * 2.0f);
+    const bool isMaster = (m_channelId == 0);
+    const bool narrow = !isMaster && (m_density == MixerDensity::Narrow);
     float y = bounds.y + PAD * 0.75f;
 
     if (m_header) {
         m_header->setBounds(contentX, y, contentW, HEADER_H);
-        y += HEADER_H + SECTION_GAP;
+        y += HEADER_H + 2.0f;
     }
 
-    // Input Dropdown Removed from Strip Layout
-
-    // Three-knob row: Trim + Pan + Width (channel controls grouped together)
-    const bool showTrim = (m_trimKnob && m_trimKnob->isVisible());
-    const bool showPan = (m_panKnob && m_panKnob->isVisible());
-    const bool showWidth = (m_widthKnob && m_widthKnob->isVisible());
-    int visibleKnobCount = (showTrim ? 1 : 0) + (showPan ? 1 : 0) + (showWidth ? 1 : 0);
-    if (visibleKnobCount > 0) {
-        const float knobW = (contentW - GAP * (visibleKnobCount - 1)) / visibleKnobCount;
-        float knobX = contentX;
-        if (showTrim) {
-            m_trimKnob->setBounds(knobX, y, knobW, KNOB_H);
-            knobX += knobW + GAP;
-        }
-        if (showPan) {
-            m_panKnob->setBounds(knobX, y, knobW, KNOB_H);
-            knobX += knobW + GAP;
-        }
-        if (showWidth) {
-            m_widthKnob->setBounds(knobX, y, knobW, KNOB_H);
-        }
-        y += KNOB_H + SECTION_GAP;
-    }
-
-    // M/S/R buttons moved below knobs, above FX summary
-    const bool hasButtons = (m_buttons && m_buttons->isVisible());
-    if (hasButtons) {
-        m_buttons->setBounds(contentX, y, contentW, BUTTONS_H);
-        y += BUTTONS_H + 6.0f;
-    }
-
-    // FX Summary (Add Insert) below the channel controls
-    if (m_fxSummary && m_fxSummary->isVisible()) {
-        if (m_channelId == 0) {
-            y += 10.0f;
-        }
-        m_fxSummary->setBounds(contentX, y, contentW, FX_H);
-        y += FX_H + SECTION_GAP;
+    // The output, as a named coloured chip right under the name.
+    if (m_outputChip && m_outputChip->isVisible()) {
+        const float chipH = (m_density == MixerDensity::Narrow) ? 5.0f : OUTPUT_CHIP_H;
+        m_outputChip->setBounds(contentX, y, contentW, chipH);
+        y += chipH + 4.0f;
     }
 
     const bool hasFooter = (m_footer && m_footer->isVisible());
@@ -489,112 +387,173 @@ void UIMixerStrip::layoutChildren()
         m_footer->setBounds(contentX, footerY, contentW, FOOTER_H);
     }
 
-    const bool isMaster = (m_channelId == 0);
-    const float meterW = isMaster ? MASTER_METER_W : METER_W;
+    // Room is spent in priority order: the meter first, then the keys and the pan, then the insert names,
+    // and the sends last. A short strip drops rows before it squeezes the meter.
+    const bool hasButtons = (m_buttons && m_buttons->isVisible());
+    const bool hasPan = (m_panBar && m_panBar->isVisible());
+    const float keysH = hasButtons ? BUTTONS_H + 6.0f : 0.0f;
+    const float panH = hasPan ? PAN_H + PAN_VALUE_H + 6.0f : 0.0f;
+    const int wantedSends = (m_sendList && m_sendList->isVisible()) ? std::min(static_cast<int>(m_sendList->rows().size()), UIMixerSendList::kMaxRows) : 0;
+    const bool hasInserts = (m_insertList && m_insertList->isVisible() && !narrow);
+    const float masterGap = (isMaster && hasInserts) ? 10.0f : 0.0f;
+    const float readoutH = isMaster ? MASTER_READOUT_H : 0.0f;
+
+    int insertRows = m_density == MixerDensity::Wide ? INSERT_ROWS * 2 : INSERT_ROWS;
+    int sendRows = wantedSends;
+    const auto meterHeightFor = [&](int inserts, int sends) {
+        const float insertsH = hasInserts ? UIMixerInsertList::heightForRows(inserts) + SECTION_GAP : 0.0f;
+        const float sendsH = sends > 0 ? UIMixerSendList::heightForRows(sends) + 4.0f : 0.0f;
+        return (footerY - GAP - readoutH) - (y + masterGap + insertsH + sendsH + panH + keysH);
+    };
+    while (sendRows > 0 && meterHeightFor(insertRows, sendRows) < MIN_METER_H) --sendRows;
+    while (insertRows > 1 && meterHeightFor(insertRows, sendRows) < MIN_METER_H) --insertRows;
+
+    y += masterGap;
+    if (hasInserts) {
+        m_insertList->setBounds(contentX, y, contentW, UIMixerInsertList::heightForRows(insertRows));
+        y += UIMixerInsertList::heightForRows(insertRows) + SECTION_GAP;
+    }
+    if (m_sendList && m_sendList->isVisible()) {
+        const float h = UIMixerSendList::heightForRows(sendRows);
+        m_sendList->setBounds(contentX, y, contentW, h);
+        y += h > 0.0f ? h + 4.0f : 0.0f;
+    }
+    if (hasPan) {
+        m_panBar->setBounds(contentX + 4.0f, y, contentW - 8.0f, PAN_H);
+        m_panValueRect = NUIRect{contentX, y + PAN_H, contentW, PAN_VALUE_H};
+        y += PAN_H + PAN_VALUE_H + 6.0f;
+    } else {
+        m_panValueRect = NUIRect{};
+    }
+    if (hasButtons) {
+        m_buttons->setBounds(contentX, y, contentW, BUTTONS_H);
+        y += BUTTONS_H + 6.0f;
+    }
 
     // The master reserves a labelled Peak/LUFS/Gain block at the foot of the
     // strip; its footer is hidden, so that space is otherwise unused.
-    const float readoutH = isMaster ? MASTER_READOUT_H : 0.0f;
+    const float meterW = isMaster ? MASTER_METER_W : METER_W;
 
     // Meter + fader fill the strip between the channel controls and the footer.
-    // (Previously sized to 62% of the free height and bottom-anchored, which
-    // left a large dead gap above the fader — the tallest, most-used control.)
     const float meterY = y;
     const float meterH = std::max(16.0f, (footerY - GAP - readoutH) - y);
-    const float meterX = contentX + 2.0f;
 
-    if (m_meter) {
-        m_meter->setBounds(meterX, meterY, meterW, meterH);
-    }
-
-    if (m_fader) {
-        const float faderX = meterX + meterW + GAP;
-        const float faderW = std::max(16.0f, (contentX + contentW) - faderX);
-        m_fader->setBounds(faderX, meterY, faderW, meterH);
-    }
-
-    // Readouts sit under the column they describe: observed signal (Peak, LUFS)
-    // under the meter, user-controlled gain under the fader. Keeping all three
-    // in one bottom block made the eye travel from the live bars to a detached
-    // table to interpret state, and blurred which side owns which number.
     if (isMaster) {
+        const float meterX = contentX + 2.0f;
+        if (m_meter) m_meter->setBounds(meterX, meterY, meterW, meterH);
+        if (m_fader) {
+            const float faderX = meterX + meterW + GAP;
+            const float faderW = std::max(16.0f, (contentX + contentW) - faderX);
+            m_fader->setBounds(faderX, meterY, faderW, meterH);
+        }
+        // Readouts sit under the column they describe: observed signal (Peak, LUFS)
+        // under the meter, user-controlled gain under the fader.
         const float readoutY = footerY - MASTER_READOUT_H;
-        m_masterMeterReadoutRect = NUIRect{meterX, readoutY, meterW + GAP, MASTER_READOUT_H};
-        const float gainX = meterX + meterW + GAP;
-        m_masterGainReadoutRect =
-            NUIRect{gainX, readoutY, std::max(16.0f, (contentX + contentW) - gainX), MASTER_READOUT_H};
-    } else {
-        m_masterMeterReadoutRect = NUIRect{};
+        m_masterMeterReadoutRect = NUIRect{contentX, readoutY, contentW, MASTER_READOUT_H};
         m_masterGainReadoutRect = NUIRect{};
+        return;
     }
+
+    // Channel strips: the meters sit centred with the fader's handle column on their right edge, and the cap
+    // line drawn by the fader runs back across both bars.
+    const float chMeterW = narrow ? 18.0f : meterW;
+    const float chFaderCol = narrow ? 12.0f : FADER_COL_W;
+    const float groupW = chMeterW + 2.0f + chFaderCol;
+    const float meterX = std::floor(contentX + (contentW - groupW) * 0.5f);
+    if (m_meter) m_meter->setBounds(meterX, meterY, chMeterW, meterH);
+    if (m_fader) {
+        // The meter reserves its clip lamp at the top; the fader's track starts where the bars do.
+        constexpr float kClipLamp = 6.0f;
+        constexpr float kHandleHalf = 9.0f;
+        m_fader->setBounds(meterX + chMeterW + 1.0f, meterY + kClipLamp - kHandleHalf, chFaderCol,
+                           meterH - kClipLamp + kHandleHalf * 2.0f);
+    }
+    m_masterMeterReadoutRect = NUIRect{};
+    m_masterGainReadoutRect = NUIRect{};
+}
+
+void UIMixerStrip::renderPanValue(NUIRenderer& renderer, const Aestra::ChannelViewModel& channel)
+{
+    if (m_panValueRect.isEmpty()) return;
+    // C, or the side and how far: L25, R10 (percent of full pan).
+    const int percent = static_cast<int>(std::lround(std::fabs(channel.pan) * 100.0f));
+    const std::string text = percent == 0 ? std::string("C")
+                                           : std::string(channel.pan < 0.0f ? "L" : "R") + std::to_string(percent);
+    renderer.drawTextCentered(text, m_panValueRect, 9.5f,
+                              NUIThemeManager::getInstance().getColor("textSecondary").withAlpha(0.85f));
 }
 
 void UIMixerStrip::renderMasterReadout(NUIRenderer& renderer,
                                        const Aestra::ChannelViewModel& channel)
 {
-    const NUIRect& meterArea = m_masterMeterReadoutRect;
-    const NUIRect& gainArea = m_masterGainReadoutRect;
-    if (meterArea.width <= 0.0f || meterArea.height <= 0.0f) return;
+    const NUIRect& card = m_masterMeterReadoutRect;
+    if (card.width <= 0.0f || card.height <= 0.0f) return;
 
     auto& theme = NUIThemeManager::getInstance();
     const NUIColor labelColor = theme.getColor("textSecondary").withAlpha(0.864f);
     const NUIColor valueColor = theme.getColor("textPrimary").withAlpha(0.978f);
+    const NUIColor warnColor = theme.getColor("meterWarn");
     const NUIColor clipColor = theme.getColor("meterCrit");
 
-    const bool clipped = channel.clipLatchL || channel.clipLatchR;
+    renderer.fillRoundedRect(card, 5.0f, theme.getColor("buttonBgDefault").withAlpha(0.55f));
 
-    // Peak: prefer the held value, which is what the meter's hold line shows.
-    float peakDb = std::max(channel.smoothedPeakL, channel.smoothedPeakR);
-    if (channel.peakHoldL > Aestra::MixerMath::DB_MIN ||
-        channel.peakHoldR > Aestra::MixerMath::DB_MIN) {
-        peakDb = std::max(channel.peakHoldL, channel.peakHoldR);
-    }
-
+    constexpr const char* kSilence = "\xE2\x88\x92\xE2\x88\x9E"; // minus infinity
     char buf[32];
-    // Stacked label-over-value: the master columns are too narrow for a
-    // side-by-side label and a signed value.
-    auto block = [&](const NUIRect& area, int index, const char* label,
-                     const std::string& value, const NUIColor& color) {
-        const float y = area.y + static_cast<float>(index) * MASTER_BLOCK_H;
-        const NUIRect labelRect{area.x, y, area.width, MASTER_LABEL_H};
-        const NUIRect valueRect{area.x, y + MASTER_LABEL_H, area.width, MASTER_VALUE_H};
-        renderer.drawTextCentered(label, labelRect, 8.5f, labelColor);
-        renderer.drawTextCentered(value, valueRect, 10.0f, color);
+    int row = 0;
+    // One line per reading: the label on the left, the value (sign always kept) on the right, in LU or dB.
+    auto line = [&](const char* label, const char* shortLabel, const std::string& value, const char* unit, const NUIColor& color) {
+        const float y = card.y + 4.0f + static_cast<float>(row++) * MASTER_ROW_H;
+        const NUIRect labelRect{card.x + 7.0f, y, card.width * 0.5f, MASTER_ROW_H};
+        const NUIRect valueRect{card.x + card.width * 0.38f, y, card.width * 0.62f - 7.0f, MASTER_ROW_H};
+        const std::string text = value + (unit[0] ? std::string(" ") + unit : std::string());
+        const float w = renderer.measureText(text, 10.0f).width;
+        // The full label while it clears the value; the short one (INT, ST, PEAK, CORR) when the strip is narrow.
+        const bool fits = labelRect.x + renderer.measureText(label, 8.5f).width + 8.0f <= valueRect.right() - w;
+        renderer.drawText(fits ? label : shortLabel, {labelRect.x, y + (MASTER_ROW_H - 8.5f) * 0.5f - 1.0f}, 8.5f, labelColor);
+        renderer.drawText(text, {valueRect.right() - w, y + (MASTER_ROW_H - 10.0f) * 0.5f - 1.0f}, 10.0f, color);
+    };
+    auto lufsText = [&](float lufs) {
+        if (lufs <= -100.0f) return std::string(kSilence);
+        std::snprintf(buf, sizeof(buf), "%.1f", lufs);
+        return std::string(buf);
     };
 
-    // --- Observed signal, under the meter ---
-    // PEAK — dBFS, explicitly. Doubles as the clip/over indicator.
-    std::string peakText;
-    if (peakDb <= Aestra::MixerMath::DB_MIN) {
-        peakText = "\xE2\x88\x92\xE2\x88\x9E";
-    } else {
-        std::snprintf(buf, sizeof(buf), "%.1f", peakDb);
-        peakText = buf;
-    }
-    block(meterArea, 0, clipped ? "OVER" : "PEAK dBFS", peakText, clipped ? clipColor : valueColor);
+    // Integrated is undefined until the gate has material; short-term ramps in over the first three seconds.
+    line("INTEGRATED", "INT", lufsText(channel.integratedLufs), "LUFS", valueColor);
+    line("SHORT-TERM", "SHORT", lufsText(channel.shortTermLufs), "LUFS", valueColor);
 
-    // LUFS — integrated, and the sign always survives (see UIMixerMeter).
-    // Integrated LUFS is undefined until the gate has material; show the same
-    // silence marker the peak readout uses rather than an ambiguous dash.
-    std::string lufsText = "\xE2\x88\x92\xE2\x88\x9E";
-    if (channel.integratedLufs > -100.0f) {
-        std::snprintf(buf, sizeof(buf), "%.1f", channel.integratedLufs);
-        lufsText = buf;
+    // True peak, held. Red once it passes 0 dBTP or the output has clipped, amber within 1 dB of it.
+    const bool clipped = channel.clipLatchL || channel.clipLatchR;
+    const float tp = channel.truePeakDb;
+    std::string tpText = kSilence;
+    if (tp > -100.0f) {
+        std::snprintf(buf, sizeof(buf), "%.1f", tp);
+        tpText = buf;
     }
-    block(meterArea, 1, "LUFS INT", lufsText, valueColor);
+    line(clipped ? "OVER" : "TRUE PEAK", clipped ? "OVER" : "PEAK", tpText, "dBTP", (clipped || tp > 0.0f) ? clipColor : (tp > -1.0f ? warnColor : valueColor));
 
-    // --- User-controlled gain, under the fader ---
-    if (gainArea.width > 0.0f) {
-        // Same silence floor as UIMixerFader::updateCachedText. Without it the
-        // fader reads "−∞" while the readout right under it reads "-90.0",
-        // which looks like two different values for one control.
-        std::string gainText = "\xE2\x88\x92\xE2\x88\x9E";
-        if (channel.faderGainDb > UIMixerFader::FADER_FLOOR_THRESHOLD) {
-            std::snprintf(buf, sizeof(buf), "%.1f", channel.faderGainDb);
-            gainText = buf;
-        }
-        block(gainArea, 0, "GAIN dB", gainText, valueColor);
+    // Phase correlation: a value and a bar from -1 (out of phase) through 0 to +1 (mono).
+    std::snprintf(buf, sizeof(buf), "%+.2f", channel.correlation);
+    line("CORRELATION", "CORR", buf, "", channel.correlation < 0.0f ? warnColor : valueColor);
+    {
+        const NUIRect bar{card.x + 7.0f, card.y + 4.0f + static_cast<float>(row) * MASTER_ROW_H - 1.0f,
+                          card.width - 14.0f, 3.0f};
+        renderer.fillRoundedRect(bar, 1.5f, theme.getColor("border").withAlpha(0.35f));
+        const float mid = bar.x + bar.width * 0.5f;
+        const float pos = mid + std::clamp(channel.correlation, -1.0f, 1.0f) * bar.width * 0.5f;
+        renderer.fillRect(NUIRect{std::min(mid, pos), bar.y, std::max(1.5f, std::abs(pos - mid)), bar.height},
+                          (channel.correlation < 0.0f ? warnColor : theme.getColor("accentPrimary")).withAlpha(0.9f));
+        renderer.fillRect(NUIRect{mid - 0.5f, bar.y - 1.0f, 1.0f, bar.height + 2.0f}, labelColor.withAlpha(0.6f));
     }
+
+    // The fader's gain: the one user-controlled number, kept with the readings it governs.
+    std::string gainText = kSilence;
+    if (channel.faderGainDb > UIMixerFader::FADER_FLOOR_THRESHOLD) {
+        std::snprintf(buf, sizeof(buf), "%.1f", channel.faderGainDb);
+        gainText = buf;
+    }
+    ++row; // room under the correlation bar
+    line("GAIN", "GAIN", gainText, "dB", valueColor);
 }
 
 void UIMixerStrip::onResize(int width, int height)
@@ -652,12 +611,15 @@ void UIMixerStrip::onUpdate(double deltaTime)
             invalidateStaticCache();
         }
         m_header->setTrackName(channel->name);
-        const std::string stripRoute = buildStripRouteSummary(*channel);
-        if (m_cachedRoute != stripRoute) {
-            m_cachedRoute = stripRoute;
+        // BUS / RETURN under the name; plain tracks say nothing.
+        const std::string tag = channel->id == 0 ? std::string()
+            : channel->role == Aestra::ChannelViewModel::Role::Bus ? std::string("BUS")
+            : channel->role == Aestra::ChannelViewModel::Role::Return ? std::string("RETURN") : std::string();
+        if (m_cachedTag != tag) {
+            m_cachedTag = tag;
             invalidateStaticCache();
         }
-        m_header->setRouteName(stripRoute);
+        m_header->setRouteName(channel->id == 0 ? channel->routeName : tag);
         if (m_cachedTrackColorArgb != static_cast<uint32_t>(channel->trackColorIndex + 1)) {
             m_cachedTrackColorArgb = static_cast<uint32_t>(channel->trackColorIndex + 1);
             invalidateStaticCache();
@@ -685,61 +647,79 @@ void UIMixerStrip::onUpdate(double deltaTime)
         m_buttons->setMonitored(channel->armed);
     }
 
-    if (m_trimKnob && m_trimKnob->isVisible() && !m_trimKnob->isDragging()) {
-        const bool hovered = m_trimKnob->isHovered();
-        if (m_cachedTrimHovered != hovered) {
-            m_cachedTrimHovered = hovered;
-            invalidateStaticCache();
-        }
-        if (std::abs(m_cachedTrimDb - channel->trimDb) > 1e-3f) {
-            m_cachedTrimDb = channel->trimDb;
-            invalidateStaticCache();
-        }
-        m_trimKnob->setValue(channel->trimDb);
-    }
-
-    if (m_panKnob && m_panKnob->isVisible() && !m_panKnob->isDragging()) {
-        const bool hovered = m_panKnob->isHovered();
-        if (m_cachedPanHovered != hovered) {
-            m_cachedPanHovered = hovered;
-            invalidateStaticCache();
-        }
+    if (m_panBar && m_panBar->isVisible() && !m_panBar->isDragging()) {
         if (std::abs(m_cachedPan - channel->pan) > 1e-4f) {
             m_cachedPan = channel->pan;
             invalidateStaticCache();
         }
-        m_panKnob->setValue(channel->pan);
+        m_panBar->setValue(channel->pan);
     }
 
-    if (m_widthKnob && m_widthKnob->isVisible() && !m_widthKnob->isDragging()) {
-        const bool hovered = m_widthKnob->isHovered();
-        if (m_cachedWidthHovered != hovered) {
-            m_cachedWidthHovered = hovered;
-            invalidateStaticCache();
+    if (m_sendList && m_sendList->isVisible()) {
+        std::vector<UIMixerSendList::Row> rows;
+        std::string sig;
+        for (const auto& send : channel->sends) {
+            UIMixerSendList::Row row;
+            row.name = send.targetName;
+            row.sidechain = send.sidechainOnly;
+            row.muted = send.muted;
+            row.levelDb = send.gain > 1e-6f ? 20.0f * std::log10(send.gain) : -90.0f;
+            const auto* target = m_viewModel->getChannelById(send.targetId);
+            row.color = (target && target->trackColorIndex >= 0) ? trackColorFromIndex(target->trackColorIndex)
+                                                                  : NUIThemeManager::getInstance().getColor("accentPrimary");
+            sig += row.name + ":" + std::to_string(static_cast<int>(row.levelDb * 10.0f)) + (row.sidechain ? "s" : "") +
+                   (row.muted ? "m" : "") + ";";
+            rows.push_back(std::move(row));
         }
-        if (std::abs(m_cachedWidth - channel->width) > 1e-4f) {
-            m_cachedWidth = channel->width;
+        if (m_cachedSendSig != sig) {
+            const bool countChanged = m_sendList->rows().size() != rows.size();
+            m_cachedSendSig = sig;
+            m_sendList->setRows(std::move(rows));
             invalidateStaticCache();
+            if (countChanged) layoutChildren(); // the send rows ask for height; re-spend the strip's room
         }
-        m_widthKnob->setValue(channel->width);
     }
 
-    if (m_fxSummary && m_fxSummary->isVisible()) {
-        if (m_cachedFxCount != channel->fxCount) {
-            m_cachedFxCount = channel->fxCount;
+    if (m_insertList && m_insertList->isVisible()) {
+        std::vector<UIMixerInsertList::Row> rows;
+        std::string sig;
+        for (const auto& insert : channel->inserts) {
+            if (insert.isEmpty || insert.pendingRemoval)
+                continue;
+            rows.push_back({insert.name, insert.bypassed});
+            sig += insert.name + (insert.bypassed ? "~|" : "|");
+        }
+        if (m_cachedInsertSig != sig) {
+            m_cachedInsertSig = sig;
             invalidateStaticCache();
-            m_fxSummary->setFxCount(channel->fxCount);
+            m_insertList->setRows(std::move(rows));
         }
         const std::string fxStatus = buildFxStatus(*channel);
         if (m_cachedFxStatus != fxStatus) {
             m_cachedFxStatus = fxStatus;
             invalidateStaticCache();
-            m_fxSummary->setStatusText(fxStatus);
+            m_insertList->setStatusText(fxStatus);
         }
     }
 
+    if (m_outputChip && m_outputChip->isVisible()) {
+        const auto* target = m_viewModel->getChannelById(channel->mainOutputId);
+        const int colorIndex = (channel->mainOutputId != 0 && target) ? target->trackColorIndex : -1;
+        if (m_cachedOutputLabel != channel->routeName || m_cachedOutputColorIndex != colorIndex) {
+            m_cachedOutputLabel = channel->routeName;
+            m_cachedOutputColorIndex = colorIndex;
+            m_outputChip->setLabel(channel->routeName);
+            m_outputChip->setColor(colorIndex >= 0 ? trackColorFromIndex(colorIndex)
+                                                    : NUIThemeManager::getInstance().getColor("accentPrimary"));
+            invalidateStaticCache();
+        }
+        // A channel whose main output is off (bus-only elsewhere or muted path) shows its chip dimmed.
+        m_outputChip->setDimmed(channel->mainOutputId == 0 && !channel->masterSendEnabled);
+    }
+
     if (m_footer && m_footer->isVisible()) {
-        m_footer->setTrackNumber(m_trackNumber);
+        m_footer->setGainDb(channel->faderGainDb);
+        m_footer->setPeakDb(channel->peakSinceResetDb, channel->clipLatchL || channel->clipLatchR);
     }
 
     if (m_meter) {
@@ -814,14 +794,14 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     // While dragging, render live (no caching) so interactive controls update every frame.
     const bool dragging =
         (m_fader && m_fader->isDragging()) ||
-        (m_trimKnob && m_trimKnob->isDragging()) ||
-        (m_panKnob && m_panKnob->isDragging()) ||
-        (m_widthKnob && m_widthKnob->isDragging());
+        (m_panBar && m_panBar->isDragging());
     if (dragging) {
         invalidateStaticCache();
         renderChildren(renderer);
         if (m_channelId == 0 && channel) {
             renderMasterReadout(renderer, *channel);
+        } else if (channel) {
+            renderPanValue(renderer, *channel);
         }
         if (channel && channel->muted) {
             renderer.fillRect(getBounds(), m_mutedOverlay);
@@ -858,6 +838,8 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     renderChildren(renderer);
     if (m_channelId == 0 && channel) {
         renderMasterReadout(renderer, *channel);
+    } else if (channel) {
+        renderPanValue(renderer, *channel);
     }
     if (m_channelId == 0 && m_viewModel && m_viewModel->isPreviewDuckingActive()) {
         auto& theme = NUIThemeManager::getInstance();
@@ -937,20 +919,20 @@ void UIMixerStrip::renderStaticLayer(NUIRenderer& renderer)
     if (m_header && m_header->isVisible()) {
         m_header->onRender(renderer);
     }
-    if (m_trimKnob && m_trimKnob->isVisible()) {
-        m_trimKnob->onRender(renderer);
+    if (m_panBar && m_panBar->isVisible()) {
+        m_panBar->onRender(renderer);
     }
-    if (m_panKnob && m_panKnob->isVisible()) {
-        m_panKnob->onRender(renderer);
-    }
-    if (m_widthKnob && m_widthKnob->isVisible()) {
-        m_widthKnob->onRender(renderer);
+    if (m_sendList && m_sendList->isVisible()) {
+        m_sendList->onRender(renderer);
     }
     if (m_buttons && m_buttons->isVisible()) {
         m_buttons->onRender(renderer);
     }
-    if (m_fxSummary && m_fxSummary->isVisible()) {
-        m_fxSummary->onRender(renderer);
+    if (m_outputChip && m_outputChip->isVisible()) {
+        m_outputChip->onRender(renderer);
+    }
+    if (m_insertList && m_insertList->isVisible()) {
+        m_insertList->onRender(renderer);
     }
     if (m_fader && m_fader->isVisible()) {
         m_fader->onRender(renderer);
@@ -960,9 +942,17 @@ void UIMixerStrip::renderStaticLayer(NUIRenderer& renderer)
     }
 }
 
+NUIRect UIMixerStrip::meterBarsRect() const
+{
+    if (!m_meter) return NUIRect{};
+    constexpr float kClipLamp = 6.0f; // the meter reserves this at the top for its clip indicator
+    const auto b = m_meter->getBounds();
+    return NUIRect{b.x, b.y + kClipLamp, b.width, std::max(0.0f, b.height - kClipLamp)};
+}
+
 NUIRect UIMixerStrip::getFXSummaryBounds() const
 {
-    return m_fxSummary ? m_fxSummary->getBounds() : NUIRect{};
+    return m_insertList ? m_insertList->getBounds() : NUIRect{};
 }
 
 void UIMixerStrip::dismissFaderEdit(const NUIPoint& position)

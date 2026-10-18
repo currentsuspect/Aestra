@@ -1,3 +1,4 @@
+#include <cmath>
 #include <unordered_set>
 #include "TrackManager.h"
 #include <unordered_map>
@@ -52,6 +53,7 @@ void TrackManager::ensureClipPrefilters() {
     // copy is a full float32 copy of the source, so one made for a source nothing plays (a browser preview,
     // a deleted clip's leftover) is memory for nothing.
     std::unordered_set<uint64_t> playedSources;
+    std::unordered_set<uint64_t> variedSources; // played by some clip at a speed or pitch other than 1
     for (size_t l = 0; l < m_playlistModel.getLaneCount(); ++l) {
         const PlaylistLane* lane = m_playlistModel.getLane(m_playlistModel.getLaneId(l));
         if (lane == nullptr) {
@@ -60,7 +62,11 @@ void TrackManager::ensureClipPrefilters() {
         for (const ClipInstance& clip : lane->clips) {
             const PatternSource* pattern = m_patternManager.getPattern(clip.patternId);
             if (pattern != nullptr && pattern->isAudio()) {
-                playedSources.insert(std::get<AudioSlicePayload>(pattern->payload).audioSourceId.value);
+                const uint64_t sourceKey = std::get<AudioSlicePayload>(pattern->payload).audioSourceId.value;
+                playedSources.insert(sourceKey);
+                if (std::fabs(static_cast<double>(clip.edits.effectiveVarispeed()) - 1.0) > 1e-6) {
+                    variedSources.insert(sourceKey);
+                }
             }
         }
     }
@@ -86,7 +92,17 @@ void TrackManager::ensureClipPrefilters() {
             source->filteredVariantSpec() != ClipPrefilter::kSpecVersion) {
             source->clearFilteredVariant(); // filter spec changed
         }
-        if (source->getFilteredBufferFor(targetRate)) {
+        // A whole-number rate ratio can be stored decimated: half the memory and no resampling, and the
+        // kernel plays it exactly as it played the full-rate copy (bit for bit) at speed and pitch 1. At any
+        // other speed the two differ (the decimated data is interpolated close to its Nyquist), so a source
+        // some clip plays at another speed needs the full-rate copy. The full-rate copy is sticky: once a
+        // source has it, it keeps it. While an upgrade builds, the decimated copy keeps playing.
+        const uint32_t factor = ClipPrefilter::decimationFactor(buffer->sampleRate, targetRate);
+        const auto current = source->getFilteredBufferFor(targetRate);
+        const bool currentIsFullRate = current && current->sampleRate != targetRate;
+        const uint32_t wantDecimation =
+            (factor > 1 && variedSources.count(id.value) == 0 && !currentIsFullRate) ? factor : 1;
+        if (current && (currentIsFullRate || wantDecimation > 1)) {
             continue; // ready
         }
 
@@ -100,6 +116,7 @@ void TrackManager::ensureClipPrefilters() {
         job.sourceId = id.value;
         job.contentRevision = source->getContentRevision();
         job.targetRate = targetRate;
+        job.decimation = wantDecimation;
         job.source = source->getSharedBuffer();
         m_clipPrefilterService->enqueue(std::move(job)); // dedupes internally
     }

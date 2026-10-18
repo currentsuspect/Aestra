@@ -10,9 +10,12 @@
 namespace Aestra {
 namespace Audio {
 
+/// Sets the project tempo the way the transport bar does: the engine (metronome), the playlist, the timeline
+/// clock the scheduler reads, and a rewind of scheduled pattern instances. Setting only the engine made
+/// get_transport say 140 while notes still played at 120.
 class SetBpmCommand : public ICommand {
 public:
-    SetBpmCommand(AudioEngine& engine, float bpm);
+    SetBpmCommand(AudioEngine& engine, float bpm, TrackManager* trackManager = nullptr);
     void execute() override;
     void undo() override;
     void redo() override;
@@ -20,8 +23,10 @@ public:
     std::string type() const override { return "set_bpm"; }
     bool changesProjectState() const override { return true; }
 private:
+    void apply(float bpm);
     AudioEngine& m_engine;
     float m_bpm;
+    TrackManager* m_trackManager;
     float m_previousBpm = 120.0f;
     bool m_executed = false;
 };

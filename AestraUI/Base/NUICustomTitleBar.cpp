@@ -103,6 +103,14 @@ void NUICustomTitleBar::setProjectStatus(const std::string& name, bool modified,
     setDirty(true);
 }
 
+void NUICustomTitleBar::setVersionChip(const std::string& branch, const NUIColor& branchColor, const std::string& version) {
+    if (chipBranch_ == branch && chipVersion_ == version && chipColor_ == branchColor) return;
+    chipBranch_ = branch;
+    chipVersion_ = version;
+    chipColor_ = branchColor;
+    setDirty(true);
+}
+
 void NUICustomTitleBar::setHeight(float height) {
     if (height_ == height) return;
     height_ = height;
@@ -210,6 +218,7 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
                           membershipVerified_ ? text : accountInk);
     }
 
+    versionChipRect_ = NUIRect();
     if (!projectName_.empty()) {
         const float clusterLeft = showBadge ? m_statusClusterRect.x : minimizeButtonRect_.x - kGapToControls;
         constexpr float kLamp = 6.0f;
@@ -233,6 +242,24 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
                 const float lampX = nameX + nameW + kInnerGap;
                 renderer.fillCircle({lampX + kLamp * 0.5f, bounds.y + height_ * 0.5f}, kLamp * 0.5f, lamp);
                 renderer.drawText(state, {lampX + kLamp + 5.0f, textY}, userFont, muted);
+            }
+            versionChipRect_ = NUIRect();
+            if (!chipBranch_.empty()) {  // which branch and version this is: a click opens the picker
+                const std::string label = chipVersion_.empty() ? chipBranch_ : chipBranch_ + "  \xc2\xb7  " + chipVersion_;
+                const float labelW = renderer.measureText(label, userFont).width;
+                const float chipW = labelW + 14.0f + 8.0f + 14.0f + 12.0f;
+                const float chipX = nameX - 14.0f - chipW;
+                if (chipX > toggleRightEdge + kClusterGuard) {
+                    const float chipH = 24.0f;
+                    versionChipRect_ = NUIRect(chipX, bounds.y + std::round((height_ - chipH) * 0.5f), chipW, chipH);
+                    renderer.fillRect(versionChipRect_, chipHovered_ ? themeManager.getColor("surfaceRaised") : themeManager.getColor("surfaceTertiary"));
+                    renderer.strokeRect(versionChipRect_, 1.0f, themeManager.getColor("accentPrimary").withAlpha(chipHovered_ ? 0.9f : 0.55f));
+                    renderer.fillCircle({versionChipRect_.x + 13.0f, versionChipRect_.y + chipH * 0.5f}, 3.5f, chipColor_);
+                    renderer.drawText(label, {versionChipRect_.x + 22.0f, textY}, userFont, text);
+                    const float cx = versionChipRect_.right() - 14.0f, cy = versionChipRect_.y + chipH * 0.5f;
+                    renderer.drawLine({cx - 3.5f, cy - 1.5f}, {cx, cy + 2.0f}, 1.3f, muted);
+                    renderer.drawLine({cx, cy + 2.0f}, {cx + 3.5f, cy - 1.5f}, 1.3f, muted);
+                }
             }
             if (showBadge) {
                 const float divX = std::round(right + kGapToAccount * 0.5f) + 0.5f;
@@ -355,6 +382,8 @@ bool NUICustomTitleBar::onMouseEvent(const NUIMouseEvent& event) {
 
     const bool statusClusterHit = !m_statusClusterRect.isEmpty()
                                   && m_statusClusterRect.contains(mousePos);
+    const bool chipHit = !versionChipRect_.isEmpty() && versionChipRect_.contains(mousePos);
+    if (chipHit != chipHovered_) { chipHovered_ = chipHit; setDirty(true); }
     if (statusClusterHit != m_statusHovered) {
         m_statusHovered = statusClusterHit;
         setDirty(true);
@@ -376,6 +405,10 @@ bool NUICustomTitleBar::onMouseEvent(const NUIMouseEvent& event) {
     }
     
     if (event.pressed && event.button == NUIMouseButton::Left) {
+        if (chipHit) {
+            if (onVersionChip_) onVersionChip_(versionChipRect_.x);
+            return true;
+        }
         // Membership status cluster opens the account page
         if (statusClusterHit) {
             if (onMembershipClicked_) onMembershipClicked_();
@@ -468,6 +501,8 @@ Aestra::HitTestResult NUICustomTitleBar::hitTest(const NUIPoint& point) {
     if (!m_statusClusterRect.isEmpty() && m_statusClusterRect.contains(point)) {
         return Aestra::HitTestResult::Client;
     }
+
+    if (!versionChipRect_.isEmpty() && versionChipRect_.contains(point)) return Aestra::HitTestResult::Client;
 
     // 3. Check Child Components (Menu Bar, Mode Toggle, etc.)
     // Recursively check if point hits any interactive child

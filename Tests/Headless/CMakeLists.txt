@@ -245,6 +245,21 @@ if(TARGET AestraAudioCore)
     )
 endif()
 
+# Sample Editor undo: one step per gesture over the sampler's envelope, trim, loop, pitch, voices and modes.
+if(TARGET AestraAudioCore)
+    add_executable(SamplerEditUndoTest SamplerEditUndoTest.cpp)
+    target_link_libraries(SamplerEditUndoTest PRIVATE AestraAudioCore)
+    target_include_directories(SamplerEditUndoTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME SamplerEditUndoTest COMMAND SamplerEditUndoTest)
+    set_tests_properties(SamplerEditUndoTest PROPERTIES
+        LABELS "headless;sampler;undo;regression;contract:application"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 # Sampler Voice Behaviour Test: layering one-shots. Pitching (incl. a 44.1 kHz
 # file on a 48 kHz engine and chords), one note-off per note for same-pitch
 # overlaps in poly/cut-self/mono, and a square envelope leaves no tail.
@@ -261,6 +276,24 @@ if(TARGET AestraAudioCore)
     add_test(NAME SamplerVoiceBehaviourTest COMMAND SamplerVoiceBehaviourTest)
     set_tests_properties(SamplerVoiceBehaviourTest PROPERTIES
         LABELS "headless;sampler;audio;dsp;regression;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
+# Sampler swap test: a sample swapped while notes sound must not cut or jump them, and the next hit
+# uses the new sample (V81-E3). Core-linked, every CI lane.
+if(TARGET AestraAudioCore)
+    add_executable(SamplerSwapTest
+        SamplerSwapTest.cpp
+    )
+    target_link_libraries(SamplerSwapTest PRIVATE AestraAudioCore)
+    target_include_directories(SamplerSwapTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME SamplerSwapTest COMMAND SamplerSwapTest)
+    set_tests_properties(SamplerSwapTest PROPERTIES
+        LABELS "headless;sampler;audio;regression;contract:audio"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()

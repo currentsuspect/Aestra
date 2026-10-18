@@ -857,9 +857,12 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 nj.set("pitchOffset", JSON(static_cast<double>(note.pitchOffset)));
                 nj.set("gate", JSON(static_cast<double>(note.gate)));
                 nj.set("slide", JSON(note.slide));
+                if (note.chance < 1.0f) nj.set("chance", JSON(static_cast<double>(note.chance)));
+                if (note.ratchet > 1) nj.set("ratchet", JSON(static_cast<double>(note.ratchet)));
                 notesArray.push(nj);
             }
             pjs.set("notes", notesArray);
+            if (p->swing > 0.0f) pjs.set("swing", JSON(static_cast<double>(p->swing)));
 
             // Serialize scale context if present
             if (p->scaleOverride.has_value()) {
@@ -1806,7 +1809,9 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             note.unitId = static_cast<uint64_t>(
                                 finiteNumberOr(notes[n], "unitId", 0.0, 0.0, static_cast<double>(UINT64_MAX)));
                             note.pitchOffset = static_cast<int8_t>(finiteNumberOr(notes[n], "pitchOffset", 0.0, -128.0, 127.0));
-                            note.gate = static_cast<float>(finiteNumberOr(notes[n], "gate", 1.0, 0.0, 1.0));
+                            note.gate = static_cast<float>(finiteNumberOr(notes[n], "gate", 1.0, 0.0, 2.0)); // the engine plays gates up to 2 steps
+                            note.chance = static_cast<float>(finiteNumberOr(notes[n], "chance", 1.0, 0.0, 1.0));
+                            note.ratchet = static_cast<uint8_t>(finiteNumberOr(notes[n], "ratchet", 1.0, 1.0, 4.0));
                             if (notes[n].has("slide")) note.slide = notes[n]["slide"].asBool();
                             payload.notes.push_back(note);
                         }
@@ -1814,7 +1819,8 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     // Restore serialized pattern identity (#446), as above.
                     PatternID newId = patternManager.createMidiPatternWithId(PatternID{oldId}, name, length, payload);
                     patternMap[oldId] = newId;
-    
+                    if (PatternSource* sp = patternManager.getPattern(newId)) sp->swing = static_cast<float>(finiteNumberOr(pj[i], "swing", 0.0, 0.0, 1.0));
+
                     // Deserialize scale context if present
                     if (pj[i].has("scale") && pj[i]["scale"].isObject()) {
                         const JSON& scaleJson = pj[i]["scale"];

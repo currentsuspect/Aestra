@@ -46,19 +46,21 @@ void UIMixerButtonRow::cacheThemeColors()
 void UIMixerButtonRow::layoutButtons()
 {
     const auto b = getBounds();
-    const float totalW = BTN_W * kButtonCount + BTN_GAP * (kButtonCount - 1);
+    // The keys shrink to fit a narrow strip rather than spilling over its edges.
+    const float btnW = std::min(BTN_W, std::floor((b.width - BTN_GAP * (m_count - 1)) / static_cast<float>(m_count)));
+    const float totalW = btnW * m_count + BTN_GAP * (m_count - 1);
     const float startX = std::round(b.x + (b.width - totalW) * 0.5f);
     const float y = std::round(b.y + (b.height - BTN_H) * 0.5f);
 
     for (int i = 0; i < kButtonCount; ++i) {
-        const float x = startX + i * (BTN_W + BTN_GAP);
-        m_buttonBounds[i] = NUIRect{x, y, BTN_W, BTN_H};
+        const float x = startX + i * (btnW + BTN_GAP);
+        m_buttonBounds[i] = i < m_count ? NUIRect{x, y, btnW, BTN_H} : NUIRect{};
     }
 }
 
 int UIMixerButtonRow::hitTest(const NUIPoint& p) const
 {
-    for (int i = 0; i < kButtonCount; ++i) {
+    for (int i = 0; i < m_count; ++i) {
         if (m_buttonBounds[i].contains(p)) return i;
     }
     return -1;
@@ -70,6 +72,15 @@ void UIMixerButtonRow::requestInvalidate()
     if (onInvalidateRequested) {
         onInvalidateRequested();
     }
+}
+
+void UIMixerButtonRow::setCompact(bool compact)
+{
+    const int count = compact ? 2 : kButtonCount;
+    if (count == m_count) return;
+    m_count = count;
+    layoutButtons();
+    requestInvalidate();
 }
 
 void UIMixerButtonRow::setMuted(bool muted)
@@ -109,7 +120,7 @@ void UIMixerButtonRow::onRender(NUIRenderer& renderer)
     auto& theme = NUIThemeManager::getInstance();
     const NUIColor inkOnActive = theme.getColor("backgroundPrimary");
 
-    for (int i = 0; i < kButtonCount; ++i) {
+    for (int i = 0; i < m_count; ++i) {
         const bool hovered = (i == m_hovered);
         const bool pressed = (i == m_pressed);
 

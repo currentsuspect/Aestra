@@ -12,6 +12,7 @@
  */
 
 #include <atomic>
+#include <cmath>
 #include <condition_variable>
 #include <cstdint>
 #include <functional>
@@ -29,6 +30,7 @@ namespace Aestra {
 namespace Audio {
 
 class ClipSource;
+struct AudioBufferData;
 
 /**
  * @brief Represents a single item in the audition queue
@@ -57,7 +59,7 @@ struct AuditionQueueItem {
  * @brief DSP simulation preset for audition playback
  */
 struct AuditionDSPPreset {
-    std::string name;          // "Spotify", "Apple Music", etc.
+    std::string name;          // "Streaming", "Car", etc. (descriptive names, never a real service: FD-26)
     float targetLufs{-14.0f};  // Loudness normalization target
     float highCutHz{20000.0f}; // High frequency cutoff
     float lowCutHz{20.0f};     // Low frequency cutoff
@@ -68,7 +70,7 @@ struct AuditionDSPPreset {
 
     // Dynamics
     float compressionRatio{1.0f};   // 1.0 = no compression
-    float limiterCeilingDb{-1.0f};  // True peak ceiling (Spotify = -1dB)
+    float limiterCeilingDb{-1.0f};  // True peak ceiling (a common streaming ceiling is -1dB)
     float limiterAttackMs{5.0f};    // Limiter attack time
     float limiterReleaseMs{100.0f}; // Limiter release time
 
@@ -78,42 +80,42 @@ struct AuditionDSPPreset {
 
     // Research-based Presets
 
-    static AuditionDSPPreset Spotify() {
-        // -14 LUFS, -1dB True Peak, Limiter on "Loud" setting (simulated here with slight compression)
+    static AuditionDSPPreset Streaming() {
+        // Streaming: -14 LUFS, -1dB True Peak, Limiter on a "loud" setting (simulated here with slight compression)
         // 5ms attack, 100ms release limiter
-        return {"Spotify", -14.0f, 20000.0f, 20.0f, 0.0f, 0.0f, 2.0f, -1.0f, 5.0f, 100.0f, 0.0f, true};
+        return {"Streaming", -14.0f, 20000.0f, 20.0f, 0.0f, 0.0f, 2.0f, -1.0f, 5.0f, 100.0f, 0.0f, true};
     }
 
-    static AuditionDSPPreset AppleMusic() {
-        // -16 LUFS (Sound Check), cleaner signal path, ALAC (lossless)
-        return {"Apple Music", -16.0f, 20000.0f, 20.0f, 0.0f, 0.0f, 1.0f, -0.1f, 10.0f, 100.0f, 0.0f, true};
+    static AuditionDSPPreset Lossless() {
+        // Lossless: -16 LUFS, cleaner signal path
+        return {"Lossless", -16.0f, 20000.0f, 20.0f, 0.0f, 0.0f, 1.0f, -0.1f, 10.0f, 100.0f, 0.0f, true};
     }
 
-    static AuditionDSPPreset YouTube() {
-        // -14 LUFS, Opus compression artifacts (simulated via slight lofi/treble cut)
+    static AuditionDSPPreset VideoPlatform() {
+        // Video platform: -14 LUFS, Opus compression artifacts (simulated via slight lofi/treble cut)
         // Often slightly compressed dynamics
-        return {"YouTube", -14.0f, 16000.0f, 30.0f, 0.0f, -0.5f, 1.5f, -1.0f, 10.0f, 200.0f, 0.05f, true};
+        return {"Video platform", -14.0f, 16000.0f, 30.0f, 0.0f, -0.5f, 1.5f, -1.0f, 10.0f, 200.0f, 0.05f, true};
     }
 
-    static AuditionDSPPreset SoundCloud() {
-        // -14 LUFS, often 128kbps MP3 legacy / 64kbps Opus (more artifacts)
+    static AuditionDSPPreset CompressedStream() {
+        // Compressed stream: -14 LUFS, low-bitrate artifacts
         // Lofi set to 0.12 to give mild bit reduction (approx 14.8 bits) without decimating sample rate
-        return {"SoundCloud", -14.0f, 15000.0f, 40.0f, 1.0f, -1.0f, 2.0f, -1.0f, 10.0f, 100.0f, 0.12f, true};
+        return {"Compressed stream", -14.0f, 15000.0f, 40.0f, 1.0f, -1.0f, 2.0f, -1.0f, 10.0f, 100.0f, 0.12f, true};
     }
 
-    static AuditionDSPPreset CarSpeakers() {
+    static AuditionDSPPreset Car() {
         // Harman curve-ish: Bass boost (+4dB), treble roll-off (-3dB), high noise floor (compression)
         // Bass boost centered around 50-60Hz (simulated with shelf for now)
-        return {"Car Speakers", -12.0f, 14000.0f, 45.0f, 4.0f, -3.0f, 3.0f, -6.0f, 20.0f, 300.0f, 0.0f, true};
+        return {"Car", -12.0f, 14000.0f, 45.0f, 4.0f, -3.0f, 3.0f, -6.0f, 20.0f, 300.0f, 0.0f, true};
     }
 
-    static AuditionDSPPreset AirPods() {
-        // Adaptive EQ simulation: Mild bass lift (+2dB), mild treble roll-off (-1dB), clean dynamics
-        return {"AirPods Pro", -16.0f, 18000.0f, 20.0f, 2.0f, -1.5f, 1.2f, -0.5f, 10.0f, 50.0f, 0.0f, true};
+    static AuditionDSPPreset Earbuds() {
+        // Earbuds: mild bass lift (+2dB), mild treble roll-off (-1dB), clean dynamics
+        return {"Earbuds", -16.0f, 18000.0f, 20.0f, 2.0f, -1.5f, 1.2f, -0.5f, 10.0f, 50.0f, 0.0f, true};
     }
 
     static AuditionDSPPreset Bypass() {
-        return {"Studio Reference", 0.0f, 20000.0f, 20.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, false};
+        return {"Studio", 0.0f, 20000.0f, 20.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, false};
     }
 };
 
@@ -250,6 +252,35 @@ public:
     /// Set output sample rate
     void setSampleRate(double sampleRate) { m_sampleRate.store(sampleRate); }
 
+    // === Synchronised dual playback (V81-E2, FD-26) ===
+    //
+    // A reference (side B) runs in lockstep with the mix (side A) once one is set: both are read every block at
+    // the same position (plus an optional offset), so a switch is a short gain ramp between two live signals, never
+    // a seek, and anything applied after the sum (the DSP chain) hears both alike. With no reference set, playback
+    // is exactly what it was.
+
+    enum class ListenSide { Mix, Reference };
+
+    /// Play an in-memory source as the mix (a bounce, a render). Main thread; the audio thread picks it up atomically.
+    void setMixSource(std::shared_ptr<ClipSource> source);
+    /// Set the reference that runs alongside the mix. `offsetSeconds` is where the reference is when the mix is at 0
+    /// (positive: the reference is ahead), so a switch can land in the matching section.
+    void setReferenceSource(std::shared_ptr<ClipSource> source, double offsetSeconds = 0.0);
+    void clearReferenceSource();
+    bool hasReference() const { return m_referenceSource.load(std::memory_order_acquire) != nullptr; }
+    void setReferenceOffsetSeconds(double seconds) { m_referenceOffsetSeconds.store(seconds); }
+    double getReferenceOffsetSeconds() const { return m_referenceOffsetSeconds.load(); }
+
+    /// Which side is heard. Takes effect as a ramp of getSwitchRampMs(), not a cut.
+    void setListenSide(ListenSide side) { m_listenSide.store(side == ListenSide::Reference ? 1 : 0); }
+    ListenSide getListenSide() const { return m_listenSide.load() == 1 ? ListenSide::Reference : ListenSide::Mix; }
+    void setSwitchRampMs(float ms) { m_switchRampMs.store(ms < 1.0f ? 1.0f : ms); }
+    float getSwitchRampMs() const { return m_switchRampMs.load(); }
+
+    /// Level match: gain on each side in dB (reference minus mix from the analysis layer).
+    void setMixGainDb(float db) { m_mixGain.store(dbToGain(db)); }
+    void setReferenceGainDb(float db) { m_referenceGain.store(dbToGain(db)); }
+
 private:
     void loadCurrentTrack(bool startPlayback);
     /// Internal: queue decode and publish track. Caller must NOT hold m_queueMutex.
@@ -342,6 +373,22 @@ private:
     std::function<void(double)> m_onPositionChanged;
     std::function<void()> m_onQueueUpdated;
     mutable std::mutex m_callbackMutex;
+
+    // Dual playback (RT thread state is only touched in processBlock)
+    static float dbToGain(float db) { return std::pow(10.0f, db / 20.0f); }
+    AtomicSharedPtr<ClipSource> m_referenceSource;
+    std::atomic<double> m_referenceOffsetSeconds{0.0};
+    std::atomic<int> m_listenSide{0};
+    std::atomic<float> m_switchRampMs{10.0f};
+    std::atomic<float> m_mixGain{1.0f};
+    std::atomic<float> m_referenceGain{1.0f};
+    float m_sideGainMix{1.0f};       // smoothed, audio thread only
+    float m_sideGainReference{0.0f}; // smoothed, audio thread only
+    std::vector<float> m_referenceScratch; // sized once; processBlock never allocates
+
+    /// Read `numFrames` of one source starting at `startSeconds` into `out` (interleaved, `numChannels`).
+    void renderSource(const AudioBufferData* buffer, double startSeconds, float* out, uint32_t numFrames,
+                      uint32_t numChannels);
 
     // Internal helpers
     void loadCurrentTrack();

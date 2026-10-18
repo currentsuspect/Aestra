@@ -282,6 +282,17 @@ target_include_directories(TrackRestoreAfterClearTest PRIVATE
 add_test(NAME TrackRestoreAfterClearTest COMMAND TrackRestoreAfterClearTest)
 set_tests_properties(TrackRestoreAfterClearTest PROPERTIES LABELS "audio;regression;contract:durability")
 
+# File > New Project empties the whole project (units, patterns, tracks too),
+# so a new project never inherits the last one's Arsenal rack or track table.
+add_executable(NewProjectClearTest AestraAudio/NewProjectClearTest.cpp)
+target_link_libraries(NewProjectClearTest PRIVATE AestraAudio)
+target_include_directories(NewProjectClearTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME NewProjectClearTest COMMAND NewProjectClearTest)
+set_tests_properties(NewProjectClearTest PROPERTIES LABELS "audio;regression;contract:durability")
+
 # #747: varispeed tempo-fit math — span/rate relationship, varispeed clamp,
 # input guards. Pitch-follows-tempo is definitional, not a defect.
 add_executable(ClipFitToBarsTest AestraAudio/ClipFitToBarsTest.cpp)

@@ -132,6 +132,36 @@ public:
     }
 
     /**
+     * @brief The Arsenal's active pattern changed (a scene chip, the pattern browser).
+     *
+     * While Arsenal is playing another pattern, the new one takes over at once, at the same beat of the
+     * loop, so switching between ideas never stops the music. Before, the old pattern kept playing
+     * until the next stop and play, while the screen already showed the new one. Stopped, the new
+     * pattern only becomes the one the next play starts (startArsenalPlayback sets it anyway).
+     * A piano-roll zone on the new pattern starts it at the zone's top instead.
+     */
+    void switchArsenalPattern(PatternID pattern, double patternLengthBeats) {
+        if (!pattern.isValid() || pattern == m_arsenalPattern) {
+            return;
+        }
+        const bool playing = m_context == PlaybackContext::Arsenal && m_trackManager.isPlaying() &&
+                             m_trackManager.isPatternMode() && m_arsenalPattern.isValid();
+        m_arsenalPattern = pattern;
+        if (!playing) {
+            return;
+        }
+        const double loopBeats = m_trackManager.arsenalLoopLengthBeats(pattern, patternLengthBeats);
+        const double bpm = std::max(1.0, m_trackManager.getTimelineClock().getCurrentTempo());
+        double beat = std::fmod(std::max(0.0, m_trackManager.getPosition()) * bpm / 60.0, std::max(1e-6, loopBeats));
+        if (m_trackManager.activeArsenalLoopZone(pattern)) {
+            beat = 0.0;
+        }
+        publishEngineContext(true, loopBeats, m_engineAudition);
+        m_trackManager.setPatternLoopOverride(0.0, loopBeats, true);
+        m_trackManager.playPatternInArsenal(pattern, beat * 60.0 / bpm, /*useLoopZone=*/true);
+    }
+
+    /**
      * The active pattern's length changed while in Arsenal: the engine loop and the recording loop follow it.
      * A no-op outside Arsenal. Arming the engine anywhere else seized the transport and muted the timeline.
      */

@@ -12,6 +12,8 @@ set(Aestra_SOURCES
 	App/Main.cpp
 	App/AestraApp.h
 	App/AestraApp.cpp
+	App/AestraAppVersions.cpp
+	App/AestraAppRecovery.cpp
     App/MuseHostVerbs.cpp
     App/MuseProjectLoadReport.h
     App/MuseProjectLoadReport.cpp
@@ -30,6 +32,8 @@ set(Aestra_SOURCES
 	Core/AestraContentBounce.cpp
 	Core/AestraContentImport.cpp
 	Core/AestraContentPanelMode.cpp
+	Core/AestraContentPlacement.cpp
+	Core/AestraContentRouting.cpp
 	Core/WorkspaceFocus.h
 	Core/MusicalTypingController.h
 	Core/MusicalTypingController.cpp
@@ -60,10 +64,14 @@ set(Aestra_SOURCES
 	# Panels/StepSequencerPanel removed
 	Panels/PatternBrowserPanel.h
 	Panels/PatternBrowserPanel.cpp
-	Panels/AuditionPanel.h
-	Panels/AuditionPanel.cpp
-	Panels/AestraHistoryPanel.h
-	Panels/AestraHistoryPanel.cpp
+	Panels/AuditionQueuePage.h
+	Panels/AuditionQueuePage.cpp
+	Panels/AuditionHub.h
+	Panels/AuditionHub.cpp
+	Panels/AuditionHubItem.cpp
+	Panels/AuditionHubTabs.cpp
+	Panels/AuditionFilesPage.h
+	Panels/AuditionFilesPage.cpp
 	Panels/TakesPanel.h
 	Panels/TakesPanel.cpp
 	Panels/SampleEditorPanel.h
@@ -102,6 +110,7 @@ set(Aestra_SOURCES
 	Components/FileBrowser.h
 	Components/FileBrowser.cpp
 	Components/FileBrowserNavigation.cpp
+	Components/FileBrowserChrome.cpp
 	Components/FileBrowserLibrary.cpp
 	Components/FileBrowserScan.cpp
 	Components/FileBrowserInternal.h

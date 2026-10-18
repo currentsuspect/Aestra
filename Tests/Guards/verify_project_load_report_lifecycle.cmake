@@ -16,6 +16,8 @@ if(NOT EXISTS "${APP_SOURCE}")
 endif()
 
 file(READ "${APP_SOURCE}" APP_TEXT)
+# What the app does with the recovery card's answers lives in its own file (the load path itself is the same one).
+file(READ "${AESTRA_SOURCE_ROOT}/Source/App/AestraAppRecovery.cpp" RECOVERY_TEXT)
 
 # New Project must clear the report after replacing the session with a blank.
 #
@@ -81,11 +83,11 @@ endif()
 
 # Recovery bypasses loadProjectFromPath through loadFirstValid(), so it needs
 # the same clear/record lifecycle at that separate call site.
-string(FIND "${APP_TEXT}" "if (response == Aestra::RecoveryResponse::Recover)" RECOVERY_AT)
+string(FIND "${RECOVERY_TEXT}" "response == Aestra::RecoveryResponse::Recover ||" RECOVERY_AT)
 if(RECOVERY_AT EQUAL -1)
     message(FATAL_ERROR "Could not find the recovery load application path")
 endif()
-string(SUBSTRING "${APP_TEXT}" ${RECOVERY_AT} 1200 RECOVERY_BODY)
+string(SUBSTRING "${RECOVERY_TEXT}" ${RECOVERY_AT} 1200 RECOVERY_BODY)
 string(FIND "${RECOVERY_BODY}" "beginProjectLoadAttempt();" RECOVERY_BEGIN_AT)
 string(FIND "${RECOVERY_BODY}" "ProjectSerializer::loadFirstValid(" RECOVERY_LOAD_AT)
 string(FIND "${RECOVERY_BODY}"

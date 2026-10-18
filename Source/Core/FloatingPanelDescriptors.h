@@ -48,6 +48,7 @@ struct FloatingPanelGeometry {
     double defaultAnchorY;
     double minWidth;
     double minHeight;
+    bool defaultMaximized{false}; ///< first open fills the workspace (the Arsenal is a view of its own, not a card)
 };
 
 /**
@@ -62,12 +63,11 @@ struct FloatingPanelGeometry {
  * Adding a ViewType means adding a row here and an accessor in
  * AestraContent.cpp. PanelDescriptorRegistryTest fails until both are done.
  */
-inline constexpr std::array<FloatingPanelGeometry, 5> kFloatingPanelGeometry{{
+inline constexpr std::array<FloatingPanelGeometry, 4> kFloatingPanelGeometry{{
     {Audio::ViewType::Mixer, UISurfaceKeys::kPanelMixer, 800.0, 400.0, 0.0, 0.0, 560.0, 300.0},
-    {Audio::ViewType::Sequencer, UISurfaceKeys::kPanelSequencer, 600.0, 300.0, 0.0, 0.0, 520.0, 220.0},
+    {Audio::ViewType::Sequencer, UISurfaceKeys::kPanelSequencer, 600.0, 300.0, 0.0, 0.0, 520.0, 220.0, true},
     {Audio::ViewType::PianoRoll, UISurfaceKeys::kPanelPianoRoll, 800.0, 450.0, 0.0, 0.0, 560.0, 280.0},
-    {Audio::ViewType::History, UISurfaceKeys::kPanelHistory, 280.0, 460.0, 0.5, 0.0, 240.0, 220.0},
-    {Audio::ViewType::Takes, UISurfaceKeys::kPanelTakes, 320.0, 480.0, 0.5, 0.0, 280.0, 180.0},
+    {Audio::ViewType::Takes, UISurfaceKeys::kPanelTakes, 960.0, 520.0, 0.5, 0.0, 760.0, 400.0},
 }};
 
 /// Every ViewType, in enum order. Written out by hand, so the static_assert
@@ -78,7 +78,6 @@ inline constexpr std::array<Audio::ViewType, static_cast<size_t>(Audio::ViewType
     Audio::ViewType::Sequencer,
     Audio::ViewType::PianoRoll,
     Audio::ViewType::Playlist,
-    Audio::ViewType::History,
     Audio::ViewType::Takes,
 }};
 

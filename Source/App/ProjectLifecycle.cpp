@@ -8,9 +8,13 @@
 #include "Commands/MuseService.h"
 #include "Core/AestraContent.h"
 #include "Core/ProjectSerializer.h"
+#include "Models/ProjectReset.h"
 #include "MuseProjectLoadReport.h"
 
 #include "AestraLog.h"
+#include "Settings/ConfirmationDialog.h"
+#include "Core/AestraWindowManager.h"
+#include "AestraRootComponent.h"
 
 #include <filesystem>
 #include <string>
@@ -53,12 +57,69 @@ void syncRecordingProjectPath(const std::shared_ptr<AestraContent>& content,
 // Extracted from the File menu's inline lambdas verbatim. The menu items now
 // call these, so the agent and the human run the same sequence.
 
+// New and Open used to replace the session without asking, while Quit asked
+// (FD-50). The same dialog now guards all three. Don't Save keeps the autosave:
+// unlike Quit, the work is only being left, and Versions can still reach it.
+void AestraApp::confirmLeaveProject(const std::string& what, std::function<void()> proceed) {
+    auto trackManager = m_content ? m_content->getTrackManager() : nullptr;
+    if (!trackManager || !trackManager->isModified() || !m_windowManager) {
+        proceed();
+        return;
+    }
+    m_autoSaveManager.forceAutosave(); // recoverable even if the app dies with the dialog open
+    auto dialog = m_windowManager->getConfirmationDialog();
+    if (!dialog) {
+        dialog = std::make_shared<Aestra::ConfirmationDialog>();
+        m_windowManager->setConfirmationDialog(dialog);
+    }
+    if (auto* root = m_windowManager->getRootComponent()) {
+        dialog->setBounds(root->getBounds());
+        root->removeChild(dialog);
+        root->addChild(dialog);
+    }
+    const std::string name = m_documentState.displayName();
+    dialog->show("Unsaved Changes", "Save \"" + name + "\" before " + what + "?",
+                 [this, proceed = std::move(proceed)](Aestra::DialogResponse response) {
+                     if (response == Aestra::DialogResponse::Save) {
+                         saveCurrentProject([proceed](bool saved) {
+                             if (saved) proceed();
+                         });
+                     } else if (response == Aestra::DialogResponse::DontSave) {
+                         proceed();
+                     }
+                 });
+}
+
 void AestraApp::createNewProject() {
     if (m_content && m_content->getTrackManager()) m_content->getTrackManager()->stop();
     // Leave the old session: discards its unsaved/unreferenced takes.
     cleanupUnreferencedRecordings();
     if (m_content) m_content->resetToDefaultProject();
     clearProjectLoadReport();
+    // The tempo lives in four places (engine, playlist, the clock notes are
+    // scheduled by, the transport field); a new project resets all of them, the
+    // way applyLoadedProject() sets them from a file. The playhead goes home.
+    constexpr double tempo = Aestra::Audio::kNewProjectTempo;
+    if (m_audioController && m_audioController->getEngine()) {
+        m_audioController->getEngine()->setBPM(static_cast<float>(tempo));
+        m_audioController->getEngine()->setGlobalSamplePos(0);
+    }
+    if (m_content) {
+        m_content->setPluginTempo(static_cast<float>(tempo));
+        if (auto trackManager = m_content->getTrackManager()) {
+            trackManager->getPlaylistModel().setBPM(tempo);
+            trackManager->getTimelineClock().setTempo(tempo);
+            trackManager->getPatternPlaybackEngine().rewindScheduledInstances();
+            trackManager->setPosition(0.0);
+            trackManager->setPlayStartPosition(0.0);
+            trackManager->setModified(false);
+        }
+        if (auto transportBar = m_content->getTransportBar()) {
+            transportBar->setTempo(static_cast<float>(tempo));
+            transportBar->setPosition(0.0);
+        }
+        m_content->refreshProjectViews(); // mixer, pattern browser and Arsenal show the empty project
+    }
     m_documentState.startUntitled(autosavePathOrEmpty());
     reinitAutosaveManager();
     syncRecordingProjectPath(m_content, m_documentState.canonicalPath());

@@ -272,7 +272,7 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
     addChild(m_laneCountIcon);
 
     m_laneCountLabel = std::make_shared<AestraUI::NUILabel>();
-    m_laneCountLabel->setFontSize(11.0f);
+    m_laneCountLabel->setFontSize(10.0f);
     m_laneCountLabel->setEllipsize(false);
     m_laneCountLabel->setVisible(false);
     addChild(m_laneCountLabel);
@@ -383,7 +383,7 @@ void TrackUIComponent::showClipRoutingMenu(const ClipInstanceID& clipId, const A
         addAction("Cut", "Ctrl+X", [parentManager]() { parentManager->cutSelectedClip(); });
         addAction("Copy", "Ctrl+C", [parentManager]() { parentManager->copySelectedClip(); });
         addAction("Duplicate", "Ctrl+D", [parentManager]() { parentManager->duplicateSelectedClip(); });
-        if (pattern && pattern->isAudio())
+        if (pattern)
             addAction("Bounce in Place", "", [parentManager]() { parentManager->bounceSelectedClipsInPlace(); });
         if (pattern && m_trackManager) {
             // Break shared pattern identity for this clip only (duplicate → make unique).
@@ -815,11 +815,10 @@ void TrackUIComponent::updateUI() {
             // row — what the stack glyph depicts and what the chevron reveals.
             // A 3-take track reads "≡ 3", not "≡ 4" (laneIds includes the
             // primary row itself, which is never "inside" the chevron).
-            m_laneCountLabel->setText(std::to_string(track->laneIds.size() - 1));
+            const size_t nested = track->laneIds.size() - 1; m_laneCountLabel->setText(std::to_string(nested) + (nested == 1 ? " LANE" : " LANES"));
             m_laneCountLabel->setTextColor(themeManager.getColor("textSecondary").withAlpha(0.864f));
             m_laneCountLabel->setVisible(true);
-            m_laneCountIcon->setColor(themeManager.getColor("textSecondary").withAlpha(0.864f));
-            m_laneCountIcon->setVisible(true);
+            m_laneCountIcon->setVisible(false); // the word replaces the stack glyph
         } else {
             m_laneCountLabel->setVisible(false);
             m_laneCountIcon->setVisible(false);
@@ -2041,15 +2040,14 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
 
     const auto* lane = m_trackManager ? m_trackManager->getPlaylistModel().getLane(m_laneId) : nullptr;
 
+    if (m_isNestedLane) renderer.fillRect(controlAreaBounds, AestraUI::NUIColor::white().withAlpha(0.03f)); // one step lighter than its track
     // Apply highlight overlay (Selection / Solo / Mute)
     if (lane) {
         const bool soloSuppressed = m_anyPlaylistLaneSoloed && !lane->solo;
 
         if (lane->muted) {
             renderer.fillRect(controlAreaBounds, themeManager.getColor("backgroundSecondary").withAlpha(0.62f));
-        } else if (lane->solo) {
-            renderer.fillRect(controlAreaBounds, themeManager.getColor("accentCyan").withAlpha(0.10f));
-        } else if (soloSuppressed) {
+        } else if (soloSuppressed) { // a soloed lane shows it on its S key, not as a tint over the whole header
             renderer.fillRect(controlAreaBounds, themeManager.getColor("backgroundSecondary").withAlpha(0.44f));
         }
 
@@ -2290,7 +2288,7 @@ void TrackUIComponent::onResize(int width, int height) {
     // Every lane owns M/S; the record arm button is track-owned and renders
     // without a channel too. No volume slot in the header: volume lives in
     // the mixer only.
-    const int numButtons = 3;
+    const int numButtons = m_isNestedLane ? 2 : 3; // a nested lane has M/S only, so its name gets the freed width
     const float buttonsTotalW = numButtons * buttonW + (numButtons - 1) * spacing;
 
     // Spec 2 §8: the row's footprint shrinks by taking it out of padding and the
@@ -2311,7 +2309,7 @@ void TrackUIComponent::onResize(int width, int height) {
 
     // Lane-count indicator (FD-14 scope §10) sits just left of the buttons on
     // the track's primary row; the name label flexes around it.
-    const float laneIndicatorWidth = 54.0f;
+    const float laneIndicatorWidth = 62.0f;
     const float laneIndicatorGap = 6.0f;
     const float laneIndicatorX = localButtonsXStart - laneIndicatorGap - laneIndicatorWidth;
 
@@ -2334,7 +2332,7 @@ void TrackUIComponent::onResize(int width, int height) {
         if (m_expandButton && m_expandButton->isVisible()) {
             return expandButtonX;
         }
-        if (m_laneCountIcon && m_laneCountIcon->isVisible()) {
+        if (m_laneCountLabel && m_laneCountLabel->isVisible()) {
             return laneIndicatorX;
         }
         return localButtonsXStart;
@@ -2354,7 +2352,7 @@ void TrackUIComponent::onResize(int width, int height) {
         m_laneCountIcon->setBounds(
             AestraUI::NUIRect(bounds.x + laneIndicatorX, bounds.y + laneIconY, 13.0f, 13.0f));
         m_laneCountLabel->setBounds(AestraUI::NUIRect(
-            bounds.x + laneIndicatorX + 15.0f, bounds.y + localNameY, laneIndicatorWidth - 17.0f, localNameHeight));
+            bounds.x + laneIndicatorX, bounds.y + localNameY, laneIndicatorWidth, localNameHeight));
     }
 
     float xCursor = localButtonsXStart;
@@ -2887,21 +2885,22 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                         m_trimOriginalSourceOffsetSeconds, m_trimOriginalDurationSeconds, newStart,
                         newEnd);
                     m_trackManager->getCommandHistory().pushAndExecute(command);
-                    // The trim was live in the model throughout the drag;
-                    // reschedule once at release so the new bounds take
-                    // effect while playing (same staleness split refreshes).
+                    // Live in the model during the drag; audio clips play from the graph snapshot
+                    // (rebuild, as fades do), pattern clips from the scheduler set.
+                    m_trackManager->requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
                     m_trackManager->refreshTimelinePatternInstances();
                 }
             }
             Log::info("Finished trimming clip");
         }
-        
-        // Instant Drag Finish
-        if (m_isDraggingClip) {
+        // Instant Drag Finish; a press that never dragged resolves a pending multi-selection click
+        if (m_isDraggingClip || m_clipDragPotential) {
              if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
-                 parentMgr->finishInstantClipDrag();
-                 if (auto win = parentMgr->getPlatformWindow()) {
-                     win->setMouseCapture(false);
+                 if (m_isDraggingClip) {
+                     parentMgr->finishInstantClipDrag();
+                     if (auto win = parentMgr->getPlatformWindow()) win->setMouseCapture(false);
+                 } else {
+                     parentMgr->resolvePendingGroupClick(m_activeClipId);
                  }
              }
         }
@@ -2911,7 +2910,6 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         m_isTrimming = false;
         m_trimEdge = TrimEdge::None;
         m_activeClipId = ClipInstanceID{};  // Clear active clip
-        
         // Only consume the event if we were doing something
         if (wasActive) {
             return true;

@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerPanel.h"
 #include "UIMixerStrip.h"
+#include "MixerScale.h"
 #include "TrackColorPalette.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
@@ -26,7 +27,6 @@
 namespace AestraUI {
 
 namespace {
-constexpr float kMinimapRadius = 7.0f;
 
 float safeClampMixerScroll(float value, float upper)
 {
@@ -53,7 +53,44 @@ UIMixerPanel::UIMixerPanel(std::shared_ptr<Aestra::MixerViewModel> viewModel,
 
     // Inspector (pinned on right, before master).
     m_inspector = std::make_shared<UIMixerInspector>(m_viewModel.get());
+    // Trim and width live in the inspector now (they left the strips): trim drags live and commits one undo step.
+    m_inspector->onTrimEdited = [this](uint32_t channelId, float db, bool commit) {
+        if (!m_trackManager || !m_viewModel) return;
+        auto* vm = m_viewModel->getChannelById(channelId);
+        auto* mixerChannel = m_trackManager->getChannelById(channelId);
+        if (!vm || !mixerChannel) return;
+        if (!commit) {
+            vm->trimDb = db;
+            if (auto params = m_trackManager->getContinuousParams()) params->setTrimDb(vm->slotIndex, db);
+            return;
+        }
+        m_trackManager->getCommandHistory().pushAndExecute(
+            std::make_shared<Aestra::Audio::SetTrimCommand>(*m_trackManager, *mixerChannel, vm->slotIndex, db));
+    };
+    m_inspector->onWidthEdited = [this](uint32_t channelId, float width) {
+        if (!m_viewModel) return;
+        auto* vm = m_viewModel->getChannelById(channelId);
+        if (!vm) return;
+        vm->width = width;
+        if (vm->channel) vm->channel->setWidth(width);
+    };
     addChild(m_inspector);
+
+    m_navigator = std::make_shared<UIMixerNavigator>();
+    m_navigator->setVisible(false);
+    m_navigator->onScrollRequested = [this](float scroll) {
+        m_targetScrollX = std::clamp(scroll, 0.0f, getChannelMaxScroll());
+    };
+    m_navigator->onTickClicked = [this](uint32_t channelId) {
+        if (m_viewModel) m_viewModel->setSelectedChannelId(static_cast<int32_t>(channelId));
+    };
+    addChild(m_navigator);
+
+    m_toolbar = std::make_shared<UIMixerToolbar>();
+    m_toolbar->onDensityChanged = [this](MixerDensity d) { setDensity(d); };
+    m_toolbar->onGroupToggled = [this](bool on) { setGroupByOutput(on); };
+    m_toolbar->onResetPeaks = [this]() { resetPeaks(); };
+    addChild(m_toolbar);
 
     // Create master strip (pinned on right, does not scroll with channels).
     // Create master strip (pinned on right, does not scroll with channels).
@@ -151,6 +188,12 @@ void UIMixerPanel::refreshChannels()
         strip->onFXClicked = [this](uint32_t channelId) {
             showPluginDropdown(channelId);
         };
+        // The output chip opens the channel's I/O tab, where the destination is chosen.
+        strip->onOutputClicked = [this](uint32_t channelId) {
+            if (!m_viewModel) return;
+            m_viewModel->setSelectedChannelId(static_cast<int32_t>(channelId));
+            if (m_inspector) m_inspector->setActiveTab(UIMixerInspector::Tab::IO);
+        };
 
         // Wire fader to CommandHistory for undo/redo
         uint32_t chId = channel->id;
@@ -200,18 +243,6 @@ void UIMixerPanel::refreshChannels()
                 std::make_shared<Aestra::Audio::SetPanCommand>(*m_trackManager, *mixerChannel, pan));
         };
 
-        // Wire trim to CommandHistory for undo/redo + serialization parity.
-        // The slot index comes from the strip's view model (same buffer the
-        // knob writes for the live RT value).
-        strip->onTrimChanged = [this, chId](float db, uint32_t slotIndex) {
-            if (!m_trackManager) return;
-            auto* mixerChannel = m_trackManager->getChannelById(chId);
-            if (!mixerChannel) return;
-
-            m_trackManager->getCommandHistory().pushAndExecute(
-                std::make_shared<Aestra::Audio::SetTrimCommand>(*m_trackManager, *mixerChannel, slotIndex, db));
-        };
-
         // Wire input monitoring to CommandHistory for undo/redo + dirty parity
         strip->onMonitorToggled = [this, chId](bool monitored) {
             if (!m_trackManager) return;
@@ -222,6 +253,7 @@ void UIMixerPanel::refreshChannels()
                 std::make_shared<Aestra::Audio::SetMonitoringCommand>(*m_trackManager, *mixerChannel, monitored));
         };
 
+        strip->setDensity(m_density);
         m_strips.push_back(strip);
         addChild(strip);
     }
@@ -261,7 +293,7 @@ UIMixerPanel::TrailingLayout UIMixerPanel::trailingLayout(Layout::NUILayoutRecor
     // needs this method's inspectorRect.x for its own width, and depending on
     // it here would make the two call each other.
     const auto bounds = getBounds();
-    const float stripY = bounds.y + 2.0f + MINIMAP_HEIGHT + MINIMAP_GAP;
+    const float stripY = bounds.y + 2.0f + TOOLBAR_H + std::max(navigatorBlock(), MINIMAP_GAP);
     const float stripHeight = std::max(MIXER_MIN_CHANNEL_HEIGHT, bounds.bottom() - stripY - PADDING);
 
     // Master flush against the trailing edge (edgeMargin 0); inspector one
@@ -284,6 +316,161 @@ UIMixerPanel::TrailingLayout UIMixerPanel::trailingLayout(Layout::NUILayoutRecor
     return layout;
 }
 
+std::vector<uint32_t> UIMixerPanel::displayedChannelIds() const
+{
+    std::vector<uint32_t> ids;
+    for (const size_t index : m_stripOrder) {
+        if (index < m_strips.size() && m_strips[index]) ids.push_back(m_strips[index]->getChannelId());
+    }
+    return ids;
+}
+
+std::vector<std::string> UIMixerPanel::groupHeaderLabels() const
+{
+    std::vector<std::string> labels;
+    for (const auto& band : m_groupBands) labels.push_back(band.label);
+    return labels;
+}
+
+const UIMixerStrip* UIMixerPanel::stripForChannel(uint32_t channelId) const
+{
+    for (const auto& strip : m_strips) {
+        if (strip && strip->getChannelId() == channelId) return strip.get();
+    }
+    return nullptr;
+}
+
+void UIMixerPanel::updateNavigator()
+{
+    if (!m_navigator) return;
+    const bool show = navigatorShown() && !m_strips.empty();
+    m_navigator->setVisible(show);
+    if (!show) return;
+    m_navigator->setBounds(getMinimapRect());
+
+    std::vector<UIMixerNavigator::Tick> ticks;
+    std::vector<UIMixerNavigator::Group> groups;
+    ticks.reserve(m_stripOrder.size());
+    const float step = stripWidth() + STRIP_SPACING;
+    size_t groupIndex = 0;
+    for (size_t slot = 0; slot < m_stripOrder.size(); ++slot) {
+        while (m_grouping.grouped() && groupIndex + 1 < m_grouping.groups.size() &&
+               slot >= m_grouping.groups[groupIndex].first + m_grouping.groups[groupIndex].count) {
+            ++groupIndex;
+        }
+        const float left = static_cast<float>(slot) * step + (m_grouping.grouped() ? static_cast<float>(groupIndex) * GROUP_GAP : 0.0f);
+        const auto& strip = m_strips[m_stripOrder[slot]];
+        const auto* ch = m_viewModel ? m_viewModel->getChannelById(strip->getChannelId()) : nullptr;
+        UIMixerNavigator::Tick tick;
+        tick.channelId = strip->getChannelId();
+        tick.x = left;
+        tick.w = stripWidth();
+        if (ch) {
+            const uint32_t argb = ch->trackColorIndex >= 0 ? paletteIndexToARGB(ch->trackColorIndex) : 0xFF808080u;
+            tick.color = NUIColor(((argb >> 16) & 0xFF) / 255.0f, ((argb >> 8) & 0xFF) / 255.0f, (argb & 0xFF) / 255.0f, 1.0f);
+            tick.level = MixerScale::norm(std::max(ch->smoothedPeakL, ch->smoothedPeakR));
+            tick.clipped = ch->clipLatchL || ch->clipLatchR;
+            tick.soloed = ch->soloed;
+            tick.selected = m_viewModel->getSelectedChannelId() == static_cast<int32_t>(ch->id);
+        }
+        ticks.push_back(tick);
+    }
+    if (m_grouping.grouped()) {
+        for (size_t g = 0; g < m_grouping.groups.size(); ++g) {
+            const auto& group = m_grouping.groups[g];
+            UIMixerNavigator::Group label;
+            label.label = group.label;
+            label.x = ticks[group.first].x;
+            label.w = ticks[group.first + group.count - 1].x + stripWidth() - label.x;
+            groups.push_back(std::move(label));
+        }
+    }
+    m_navigator->setContent(std::move(ticks), std::move(groups), getChannelContentWidth());
+    m_navigator->setViewport(m_scrollX, getChannelViewportWidth());
+}
+
+void UIMixerPanel::setDensity(MixerDensity density)
+{
+    if (density == m_density) return;
+    m_density = density;
+    for (auto& strip : m_strips) {
+        if (strip) strip->setDensity(density);
+    }
+    if (m_toolbar) m_toolbar->setDensity(density);
+    layoutMeters();
+    repaint();
+    if (onViewPreferencesChanged) onViewPreferencesChanged();
+}
+
+void UIMixerPanel::setGroupByOutput(bool on)
+{
+    if (on == m_groupByOutput) return;
+    m_groupByOutput = on;
+    if (m_toolbar) m_toolbar->setGroupByOutput(on);
+    recomputeGrouping();
+    layoutMeters();
+    repaint();
+    if (onViewPreferencesChanged) onViewPreferencesChanged();
+}
+
+void UIMixerPanel::resetPeaks()
+{
+    if (!m_viewModel) return;
+    m_viewModel->resetPeaks();
+    if (m_trackManager) {
+        if (auto snaps = m_trackManager->getMeterSnapshots()) {
+            for (size_t i = 0; i < m_viewModel->getChannelCount(); ++i) {
+                if (const auto* ch = m_viewModel->getChannelByIndex(i)) snaps->clearClip(static_cast<int>(ch->slotIndex));
+            }
+            if (const auto* master = m_viewModel->getMaster()) snaps->clearClip(static_cast<int>(master->slotIndex));
+        }
+    }
+    repaint();
+}
+
+bool UIMixerPanel::recomputeGrouping()
+{
+    std::vector<Aestra::MixerGroupInput> inputs;
+    inputs.reserve(m_strips.size());
+    std::string signature;
+    for (const auto& strip : m_strips) {
+        const auto* channel = (m_viewModel && strip) ? m_viewModel->getChannelById(strip->getChannelId()) : nullptr;
+        Aestra::MixerGroupInput in;
+        in.id = strip ? strip->getChannelId() : 0;
+        if (channel) {
+            in.mainOutputId = channel->mainOutputId;
+            in.name = channel->name;
+            in.colorIndex = channel->trackColorIndex;
+        }
+        signature += std::to_string(in.id) + ">" + std::to_string(in.mainOutputId) + ":" +
+                     std::to_string(in.colorIndex) + ":" + in.name + ";";
+        inputs.push_back(std::move(in));
+    }
+    signature += m_groupByOutput ? "|g" : "|f";
+    if (signature == m_groupingSignature && m_stripOrder.size() == m_strips.size()) {
+        return false;
+    }
+    m_groupingSignature = std::move(signature);
+    if (m_groupByOutput) {
+        m_grouping = Aestra::groupMixerStripsByOutput(inputs);
+    } else {
+        // Flat: the project's own channel order, one group, no headers.
+        m_grouping = Aestra::MixerGroupedOrder{};
+        Aestra::MixerStripGroup all;
+        all.label = "Master";
+        all.count = inputs.size();
+        for (size_t i = 0; i < inputs.size(); ++i) m_grouping.order.push_back(i);
+        if (!inputs.empty()) m_grouping.groups.push_back(all);
+    }
+    m_stripOrder = m_grouping.order;
+    return true;
+}
+
+float UIMixerPanel::groupGapsWidth() const
+{
+    return m_grouping.grouped() ? static_cast<float>(m_grouping.groups.size() - 1) * GROUP_GAP : 0.0f;
+}
+
 void UIMixerPanel::layoutMeters()
 {
     // Derived state first: the rest of the layout reads inspectorWidth().
@@ -297,8 +484,18 @@ void UIMixerPanel::layoutMeters()
         trace->beginPass(Layout::NUIWindowPoint(0.0f, 0.0f));
     }
     const TrailingLayout trailing = trailingLayout(trace);
-    const float stripY = trailing.masterRect.y;
-    const float stripHeight = trailing.masterRect.height;
+    recomputeGrouping();
+    // Under group headers the strips start lower, so the headers have a band of their own.
+    const float bandH = m_grouping.grouped() ? GROUP_HEADER_H : 0.0f;
+    const float bandY = trailing.masterRect.y;
+    const float stripY = trailing.masterRect.y + bandH;
+    const float stripHeight = trailing.masterRect.height - bandH;
+
+    if (m_toolbar) {
+        const float toolbarW = std::max(0.0f, trailing.inspectorRect.x - STRIP_SPACING - bounds.x);
+        m_toolbar->setBounds(bounds.x, bounds.y + 2.0f, toolbarW, TOOLBAR_H);
+        m_toolbar->setSummary(static_cast<int>(m_strips.size()), m_grouping.grouped());
+    }
 
     // Layout master strip on the right.
     if (m_masterStrip) {
@@ -324,7 +521,7 @@ void UIMixerPanel::layoutMeters()
     }
 
     // Layout channel strips to the left, keeping them out of the inspector/master area.
-    const float left = bounds.x; // Start at 0, no padding
+    const float left = bounds.x + SCALE_W; // the shared dB scale sits at the far left
     const float right = trailing.inspectorRect.x - STRIP_SPACING;
     const float maxScroll = getChannelMaxScroll();
     m_scrollX = safeClampMixerScroll(m_scrollX, maxScroll);
@@ -335,11 +532,79 @@ void UIMixerPanel::layoutMeters()
         trace->scope("strips");
     }
     const auto items =
-        Layout::arrangeScrollingRow(viewport, STRIP_WIDTH, STRIP_SPACING, m_strips.size(), m_scrollX, trace);
+        Layout::arrangeScrollingRow(viewport, stripWidth(), STRIP_SPACING, m_strips.size(), m_scrollX, trace);
     Layout::finishLayoutPass(trace);
-    for (size_t i = 0; i < m_strips.size(); ++i) {
-        m_strips[i]->setVisible(items[i].visible);
-        m_strips[i]->setBounds(items[i].rect.raw());
+    m_groupBands.clear();
+    size_t groupIndex = 0;
+    for (size_t slot = 0; slot < m_stripOrder.size() && slot < items.size(); ++slot) {
+        while (groupIndex + 1 < m_grouping.groups.size() &&
+               slot >= m_grouping.groups[groupIndex].first + m_grouping.groups[groupIndex].count) {
+            ++groupIndex;
+        }
+        NUIRect rect = items[slot].rect.raw();
+        rect.x += static_cast<float>(groupIndex) * (m_grouping.grouped() ? GROUP_GAP : 0.0f);
+        const bool visible = rect.right() > viewport.raw().x && rect.x < viewport.raw().right();
+        auto& strip = m_strips[m_stripOrder[slot]];
+        strip->setVisible(visible);
+        strip->setBounds(rect);
+    }
+    if (m_grouping.grouped()) {
+        for (const auto& group : m_grouping.groups) {
+            const auto& first = m_strips[m_stripOrder[group.first]]->getBounds();
+            const auto& last = m_strips[m_stripOrder[group.first + group.count - 1]]->getBounds();
+            GroupBand band;
+            band.rect = NUIRect{first.x, bandY, last.right() - first.x, GROUP_HEADER_H - 3.0f};
+            band.label = group.label;
+            band.colorIndex = group.colorIndex;
+            band.master = group.targetId == 0;
+            m_groupBands.push_back(std::move(band));
+        }
+    }
+}
+
+void UIMixerPanel::renderDbScale(NUIRenderer& renderer)
+{
+    // One scale for every strip (FD-28 point 2), drawn once at the far left against the meters' own height.
+    const UIMixerStrip* ref = nullptr;
+    for (const auto& strip : m_strips) {
+        if (strip && strip->isVisible()) { ref = strip.get(); break; }
+    }
+    if (!ref) return;
+    const NUIRect bars = ref->meterBarsRect();
+    if (bars.isEmpty()) return;
+    auto& theme = NUIThemeManager::getInstance();
+    const auto b = getBounds();
+    const NUIColor label = theme.getColor("textSecondary").withAlpha(0.75f);
+    const NUIColor tick = theme.getColor("border").withAlpha(0.55f);
+    float lastY = 1e9f;
+    for (const float db : MixerScale::kTicks) {
+        const float y = bars.bottom() - MixerScale::norm(db) * bars.height;
+        if (lastY - y < 11.0f && lastY < 1e8f) continue; // never print two labels on top of each other
+        lastY = y;
+        char buf[8];
+        std::snprintf(buf, sizeof(buf), "%s%d", db > 0.0f ? "+" : (db < 0.0f ? "\xE2\x88\x92" : ""), static_cast<int>(std::fabs(db)));
+        const float w = renderer.measureText(buf, 8.5f).width;
+        renderer.drawText(buf, {b.x + SCALE_W - 8.0f - w, y - 5.5f}, 8.5f, label);
+        renderer.fillRect(NUIRect{b.x + SCALE_W - 5.0f, y, 4.0f, 1.0f}, tick);
+    }
+}
+
+void UIMixerPanel::renderGroupBands(NUIRenderer& renderer)
+{
+    if (m_groupBands.empty()) return;
+    auto& theme = NUIThemeManager::getInstance();
+    for (const auto& band : m_groupBands) {
+        NUIColor color = theme.getColor("accentPrimary");
+        if (!band.master && band.colorIndex >= 0) {
+            const uint32_t argb = paletteIndexToARGB(band.colorIndex);
+            color = NUIColor(((argb >> 16) & 0xFF) / 255.0f, ((argb >> 8) & 0xFF) / 255.0f, (argb & 0xFF) / 255.0f, 1.0f);
+        } else if (band.master) {
+            color = theme.getColor("textSecondary");
+        }
+        renderer.fillRoundedRect(band.rect, 3.0f, color.withAlpha(band.master ? 0.10f : 0.18f));
+        renderer.fillRect(NUIRect{band.rect.x, band.rect.y, band.rect.width, 2.0f}, color.withAlpha(band.master ? 0.45f : 0.9f));
+        renderer.drawText("\xE2\x86\x92 " + band.label, {band.rect.x + 6.0f, band.rect.y + 3.0f}, 10.0f,
+                          theme.getColor("textPrimary").withAlpha(0.88f));
     }
 }
 
@@ -363,7 +628,7 @@ void UIMixerPanel::updateInspectorWidthConstraint()
     // The inspector only earns its width if the strips it sits beside are still
     // usable. Below that, collapse is imposed regardless of preference.
     const float needed = MASTER_STRIP_WIDTH + STRIP_SPACING + INSPECTOR_WIDTH + STRIP_SPACING
-                       + MIN_STRIPS_BESIDE_INSPECTOR * (STRIP_WIDTH + STRIP_SPACING);
+                       + MIN_STRIPS_BESIDE_INSPECTOR * (stripWidth() + STRIP_SPACING);
 
     const bool wasForced = m_inspectorCollapse.forcedCollapsed;
     m_inspectorCollapse.setForcedCollapsed(available < needed);
@@ -427,6 +692,12 @@ void UIMixerPanel::onUpdate(double deltaTime)
         m_scrollX = m_targetScrollX;
         layoutMeters();
     }
+
+    // A route or colour change reorders the groups; lay out again only when it did.
+    if (recomputeGrouping()) {
+        layoutMeters();
+    }
+    updateNavigator();
 
     if (m_viewModel && m_trackManager) {
         auto snapshots = m_trackManager->getMeterSnapshots();
@@ -509,81 +780,22 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
     // Background
     renderer.fillRect(bounds, m_backgroundColor);
 
-    const NUIRect minimapRect = getMinimapRect();
-    const NUIColor minimapFill = m_backgroundColor.withAlpha(0.72f);
-    const NUIColor minimapBorder = m_separatorColor.withAlpha(0.70f);
-    renderer.fillRoundedRect(minimapRect, kMinimapRadius, minimapFill);
-    renderer.strokeRoundedRect(minimapRect, kMinimapRadius, 1.0f, minimapBorder);
+    if (m_toolbar) m_toolbar->onRender(renderer);
 
-    const float contentW = getChannelContentWidth();
-    const float visibleW = getChannelViewportWidth();
-    if (contentW > 0.0f && minimapRect.width > 8.0f) {
-        const float gap = 2.0f;
-        const float laneW = std::max(1.0f, minimapRect.width - gap * 2.0f);
-        const float laneH = std::max(1.0f, minimapRect.height - gap * 2.0f);
-        const float perStripW = static_cast<float>(STRIP_WIDTH + STRIP_SPACING) / contentW * laneW;
-        const float barW = std::max(2.0f, perStripW - 1.0f);
-        float x = minimapRect.x + gap;
-        for (size_t i = 0; i < m_strips.size(); ++i) {
-            const auto* channel = m_viewModel ? m_viewModel->getChannelById(m_strips[i]->getChannelId()) : nullptr;
-            const bool selected = m_viewModel && m_viewModel->getSelectedChannelId() == static_cast<int32_t>(m_strips[i]->getChannelId());
-            // The overview is navigation infrastructure, not a second rainbow
-            // track header. Use neutral structure, audio colour for activity,
-            // and purple only for the selected viewport target.
-            const auto& theme = NUIThemeManager::getInstance();
-            const NUIColor structure = theme.getColor("textSecondary").withAlpha(0.28f);
-            const NUIColor stripColor = selected
-                ? theme.getColor("primary").withAlpha(0.88f)
-                : structure;
-            const NUIColor activityColor = selected
-                ? theme.getColor("primary").withAlpha(0.42f)
-                : theme.getColor("meterSafe").withAlpha(0.30f);
-
-            const float activityDb = channel ? std::max(channel->smoothedPeakL, channel->smoothedPeakR) : -72.0f;
-            const float activityNorm = std::clamp((activityDb + 60.0f) / 60.0f, 0.0f, 1.0f);
-            const float capH = std::min(4.0f, laneH * 0.28f);
-            const float bodyY = minimapRect.y + gap + capH + 1.0f;
-            const float bodyH = std::max(1.0f, laneH - capH - 1.0f);
-            const float activeH = std::max(1.0f, bodyH * activityNorm);
-
-            const NUIRect fullRect(x, minimapRect.y + gap, barW, laneH);
-            renderer.fillRoundedRect(fullRect, 2.5f, m_separatorColor.withAlpha(selected ? 0.20f : 0.10f));
-
-            renderer.fillRoundedRect(
-                NUIRect(x, minimapRect.y + gap, barW, capH),
-                2.0f,
-                stripColor);
-
-            renderer.fillRoundedRect(
-                NUIRect(x, bodyY + (bodyH - activeH), barW, activeH),
-                2.0f,
-                activityColor);
-
-            if (selected) {
-                renderer.strokeRoundedRect(fullRect, 3.0f, 1.0f, theme.getColor("primary").withAlpha(0.58f));
-            }
-            x += perStripW;
-        }
-
-        const float maxScroll = getChannelMaxScroll();
-        const float viewportRatio = std::clamp(contentW > 0.0f ? visibleW / contentW : 1.0f, 0.05f, 1.0f);
-        const float viewportW = std::max(16.0f, laneW * viewportRatio);
-        const float viewportX = minimapRect.x + gap +
-            (maxScroll > 0.0f ? (m_scrollX / maxScroll) * std::max(0.0f, laneW - viewportW) : 0.0f);
-        const NUIRect viewportRect(viewportX, minimapRect.y + 1.0f, viewportW, minimapRect.height - 2.0f);
-        const NUIColor accent = NUIThemeManager::getInstance().getColor("accentPrimary");
-        renderer.fillRoundedRect(viewportRect, 6.0f, accent.withAlpha(0.10f));
-        renderer.strokeRoundedRect(viewportRect, 6.0f, 1.25f, accent.withAlpha(0.60f));
-    }
+    if (m_navigator && m_navigator->isVisible()) m_navigator->onRender(renderer);
 
     // Separators
     renderSeparators(renderer);
 
     // Render channel strips with a clip so they never draw into the inspector/master area.
     const TrailingLayout trailing = trailingLayout();
-    const float channelW = std::max(0.0f, (trailing.inspectorRect.x - STRIP_SPACING) - bounds.x);
+    const float channelW = std::max(0.0f, (trailing.inspectorRect.x - STRIP_SPACING) - (bounds.x + SCALE_W));
+    const NUIRect minimapRect = getMinimapRect();
     const float channelY = minimapRect.bottom() + MINIMAP_GAP;
-    const NUIRect channelClip(bounds.x, channelY, channelW, std::max(0.0f, bounds.bottom() - channelY));
+    const NUIRect channelClip(bounds.x + SCALE_W, channelY, channelW, std::max(0.0f, bounds.bottom() - channelY));
+
+    // The scale lives left of the clipped strip area, so it is drawn before the clip is set.
+    renderDbScale(renderer);
 
     bool clipEnabled = false;
     if (!channelClip.isEmpty()) {
@@ -591,6 +803,7 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
         clipEnabled = true;
     }
 
+    renderGroupBands(renderer);
     for (const auto& strip : m_strips) {
         if (strip && strip->isVisible()) {
             strip->onRender(renderer);
@@ -670,9 +883,10 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
 bool UIMixerPanel::onMouseEvent(const NUIMouseEvent& event)
 {
     const NUIRect minimapRect = getMinimapRect();
-    const float contentW = getChannelContentWidth();
-    const float visibleW = getChannelViewportWidth();
     const float maxScroll = getChannelMaxScroll();
+
+    // A bracket drag keeps the pointer even when it strays off the navigator.
+    if (m_navigator && m_navigator->isDragging()) return m_navigator->onMouseEvent(event);
 
     // One dismissal path for inline fader entry. A press on another strip is
     // never routed to the editing fader, so without this the editor stays open.
@@ -707,34 +921,6 @@ bool UIMixerPanel::onMouseEvent(const NUIMouseEvent& event)
         }
     }
 
-    if (m_isDraggingMinimap) {
-        if (event.released && event.button == NUIMouseButton::Left) {
-            m_isDraggingMinimap = false;
-            return true;
-        }
-        updateScrollFromMinimapX(event.position.x - m_minimapDragOffsetX);
-        return true;
-    }
-
-    if (event.pressed && event.button == NUIMouseButton::Left && minimapRect.contains(event.position) && maxScroll > 0.0f) {
-        const float gap = 2.0f;
-        const float laneW = std::max(1.0f, minimapRect.width - gap * 2.0f);
-        const float viewportRatio = std::clamp(contentW > 0.0f ? visibleW / contentW : 1.0f, 0.05f, 1.0f);
-        const float viewportW = std::max(16.0f, laneW * viewportRatio);
-        const float viewportX = minimapRect.x + gap +
-            (maxScroll > 0.0f ? (m_scrollX / maxScroll) * std::max(0.0f, laneW - viewportW) : 0.0f);
-        const NUIRect viewportRect(viewportX, minimapRect.y + 1.0f, viewportW, minimapRect.height - 2.0f);
-        if (viewportRect.contains(event.position)) {
-            m_isDraggingMinimap = true;
-            m_minimapDragOffsetX = event.position.x - viewportRect.x;
-        } else {
-            m_minimapDragOffsetX = viewportW * 0.5f;
-            updateScrollFromMinimapX(event.position.x - m_minimapDragOffsetX);
-            m_isDraggingMinimap = true;
-        }
-        return true;
-    }
-
     if (event.wheelDelta != 0.0f) {
         auto bounds = getBounds();
         // These three already matched getChannelViewportWidth()/
@@ -744,7 +930,7 @@ bool UIMixerPanel::onMouseEvent(const NUIMouseEvent& event)
         const float maxScroll = getChannelMaxScroll();
         const float channelY = minimapRect.bottom() + MINIMAP_GAP;
 
-        const NUIRect channelClip(bounds.x, channelY, visibleW, std::max(0.0f, bounds.bottom() - channelY));
+        const NUIRect channelClip(bounds.x + SCALE_W, channelY, visibleW, std::max(0.0f, bounds.bottom() - channelY));
         if (maxScroll > 0.0f && channelClip.contains(event.position)) {
             constexpr float SCROLL_PX = 60.0f;
             m_targetScrollX = std::clamp(m_targetScrollX - static_cast<float>(event.wheelDelta) * SCROLL_PX, 0.0f, maxScroll);
@@ -755,24 +941,38 @@ bool UIMixerPanel::onMouseEvent(const NUIMouseEvent& event)
     return NUIComponent::onMouseEvent(event);
 }
 
+bool UIMixerPanel::navigatorShown() const
+{
+    // Derived from the layout constants rather than trailingLayout(), which itself needs the navigator's height.
+    const auto bounds = getBounds();
+    const float viewport = bounds.width - MASTER_STRIP_WIDTH - inspectorWidth() - STRIP_SPACING * 2.0f - SCALE_W;
+    return getChannelContentWidth() > viewport + 0.5f;
+}
+
+float UIMixerPanel::navigatorBlock() const
+{
+    return navigatorShown() ? UIMixerNavigator::heightFor(m_grouping.grouped()) + MINIMAP_GAP : 0.0f;
+}
+
 NUIRect UIMixerPanel::getMinimapRect() const
 {
+    // The navigator's rect (zero height when channels fit): kept under its old name for the callers below.
     const auto bounds = getBounds();
-    const TrailingLayout trailing = trailingLayout();
-    const float width = std::max(0.0f, (trailing.inspectorRect.x - STRIP_SPACING) - bounds.x);
-    return NUIRect(bounds.x, bounds.y + 2.0f, width, MINIMAP_HEIGHT);
+    const float width = std::max(0.0f, bounds.width - MASTER_STRIP_WIDTH - inspectorWidth() - STRIP_SPACING * 2.0f - SCALE_W);
+    const float h = navigatorShown() ? UIMixerNavigator::heightFor(m_grouping.grouped()) : 0.0f;
+    return NUIRect(bounds.x + SCALE_W, bounds.y + 2.0f + TOOLBAR_H, width, h);
 }
 
 float UIMixerPanel::getChannelViewportWidth() const
 {
     const auto bounds = getBounds();
     const TrailingLayout trailing = trailingLayout();
-    return std::max(0.0f, (trailing.inspectorRect.x - STRIP_SPACING) - bounds.x);
+    return std::max(0.0f, (trailing.inspectorRect.x - STRIP_SPACING) - (bounds.x + SCALE_W));
 }
 
 float UIMixerPanel::getChannelContentWidth() const
 {
-    return m_strips.empty() ? 0.0f : (m_strips.size() * (STRIP_WIDTH + STRIP_SPACING) - STRIP_SPACING);
+    return m_strips.empty() ? 0.0f : (m_strips.size() * (stripWidth() + STRIP_SPACING) - STRIP_SPACING) + groupGapsWidth();
 }
 
 float UIMixerPanel::getChannelMaxScroll() const
@@ -780,25 +980,6 @@ float UIMixerPanel::getChannelMaxScroll() const
     return std::max(0.0f, getChannelContentWidth() - getChannelViewportWidth());
 }
 
-void UIMixerPanel::updateScrollFromMinimapX(float x)
-{
-    const NUIRect minimapRect = getMinimapRect();
-    const float contentW = getChannelContentWidth();
-    const float visibleW = getChannelViewportWidth();
-    const float maxScroll = getChannelMaxScroll();
-    if (maxScroll <= 0.0f) {
-        m_targetScrollX = 0.0f;
-        return;
-    }
-
-    const float gap = 2.0f;
-    const float laneW = std::max(1.0f, minimapRect.width - gap * 2.0f);
-    const float viewportRatio = std::clamp(contentW > 0.0f ? visibleW / contentW : 1.0f, 0.05f, 1.0f);
-    const float viewportW = std::max(16.0f, laneW * viewportRatio);
-    const float clampedX = std::clamp(x, minimapRect.x + gap, minimapRect.x + gap + std::max(0.0f, laneW - viewportW));
-    const float t = (laneW - viewportW) > 0.0f ? (clampedX - (minimapRect.x + gap)) / (laneW - viewportW) : 0.0f;
-    m_targetScrollX = std::clamp(t * maxScroll, 0.0f, maxScroll);
-}
 
 void UIMixerPanel::showPluginDropdown(uint32_t channelId)
 {

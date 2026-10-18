@@ -122,6 +122,9 @@ public:
     /** @brief Update the native window title. */
     void setWindowTitle(const std::string& title);
     void setProjectStatus(const std::string& name, bool modified, const std::string& note);
+    /// The branch and version chip beside the project name; a click calls @p onClick with the chip's left edge.
+    void setVersionChip(const std::string& branch, const AestraUI::NUIColor& color, const std::string& version);
+    void setOnVersionChip(std::function<void(float)> onClick);
     /** @brief Toggle fullscreen mode. */
     void toggleFullScreen();
     /** @brief Check whether the native window is fullscreen. */
@@ -217,6 +220,10 @@ private:
     // Menus
     std::shared_ptr<AestraUI::NUIMenuBar> m_menuBar;
     std::shared_ptr<AestraUI::NUIContextMenu> m_activeMenu;
+    /// A closed menu kept alive until the next frame: it may still be inside its own hide()
+    /// or in the middle of a click being dispatched through the root's children.
+    std::shared_ptr<AestraUI::NUIContextMenu> m_retiredMenu;
+    void retireMenu(std::shared_ptr<AestraUI::NUIContextMenu> menu);
     float m_activeMenuXOffset{-1.0f};
 
     // Cursor

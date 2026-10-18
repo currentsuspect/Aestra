@@ -31,6 +31,9 @@
  * Manages the lifecycle of all AESTRA subsystems and the main event loop.
  * Refactored to delegate to AestraWindowManager and AestraAudioController.
  */
+#include "../Core/RecoveryInfo.h"
+namespace Aestra { enum class RecoveryResponse; namespace Audio { class TakesPanel; } }
+
 class AestraApp {
 public:
     AestraApp();
@@ -142,6 +145,9 @@ private:
     // menu items and the project.* Muse verbs both call these, so there is one
     // implementation. Defined in ProjectLifecycle.cpp.
     void createNewProject();
+    /** @brief Ask "Save <name> before <what>?" when the project has unsaved changes, then run
+        @p proceed after a save that landed or after Don't Save; Cancel runs nothing (FD-50). */
+    void confirmLeaveProject(const std::string& what, std::function<void()> proceed);
     ProjectSerializer::LoadResult openProjectFromPath(const std::string& path);
     void requestClose();
     /// Save, or Save As when the document has no path yet. Save As shows a
@@ -170,7 +176,7 @@ private:
     ProjectSerializer::SerializeResult
     serializeCurrentProject(int indentSpaces, const ProjectSerializer::UIState* uiState = nullptr) const;
     bool saveActiveTakeSnapshot(const ProjectSerializer::UIState* uiState = nullptr);
-    bool createTakeFromCurrentProject();
+    bool createTakeFromCurrentProject(bool newBranch = false);
     ProjectSerializer::LoadResult switchToTake(const std::string& takeId);
     bool branchFromTake(const std::string& takeId);
     void wireTakesPanel();
@@ -190,6 +196,14 @@ private:
     void cleanupUnreferencedRecordings(const std::string& keeperProjectPath = "");
     /** @brief Push the project name and saved state to the title bar. */
     void pushProjectStatus();
+    void wireVersionsPanel(Aestra::Audio::TakesPanel& panel);
+    void refreshVersionChip();
+    void wireAudition();
+    Aestra::RecoveryInfo::Info recoveryInfoFor(const std::string& originalProjectPath, const std::vector<std::string>& candidates);
+    void onRecoveryResponse(Aestra::RecoveryResponse response, const std::string& autosavePath, const std::string& projectPath,
+                            bool hasRequestedProject, const std::string& originalProjectPath, const std::vector<std::string>& candidates);
+    void showVersionPicker(float x);
+    int m_recordedSteps = 0;  ///< steps the open version recorded when saved, for the "N unsaved" count
     static std::string getRecoveryMarkerPath(const std::string& autosavePath);
     static std::string readCrashFlagToken();
     static std::string readRecoveryOriginalProjectPath(const std::string& recoveryMarkerPath,

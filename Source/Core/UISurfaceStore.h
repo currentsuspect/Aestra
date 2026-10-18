@@ -142,6 +142,9 @@ struct UISurfaceStore {
 /// function-local constexpr used inside a lambda fails to compile on MSVC (C3493).
 namespace UISurfaceKeys {
 inline constexpr char kMixerInspectorExpanded[] = "panel.mixer.inspectorExpanded";
+// Mixer view (V81-M1): strips grouped by output, and how much a strip shows ("wide" | "normal" | "narrow").
+inline constexpr char kMixerGroupByOutput[] = "panel.mixer.groupByOutput";
+inline constexpr char kMixerDensity[] = "panel.mixer.density";
 inline constexpr char kPanelMixer[] = "panel.mixer";
 inline constexpr char kPanelBrowser[] = "panel.browser";
 inline constexpr char kPanelPatternBrowser[] = "panel.pattern-browser";

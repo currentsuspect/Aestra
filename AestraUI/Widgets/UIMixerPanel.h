@@ -2,6 +2,10 @@
 #pragma once
 
 #include "Base/NUISlider.h"
+#include "MixerDensity.h"
+#include "MixerGrouping.h"
+#include "UIMixerNavigator.h"
+#include "UIMixerToolbar.h"
 #include "NUIComponent.h"
 #include "NUIDragDrop.h"
 #include "NUITypes.h"
@@ -76,6 +80,25 @@ public:
      * Call when tracks are added/removed to rebuild meter widgets.
      */
     void refreshChannels();
+
+    /// Strip density and the Group-by-output switch (FD-28 points 1 and 4). Both persist per user.
+    void setDensity(MixerDensity density);
+    MixerDensity density() const { return m_density; }
+    void setGroupByOutput(bool on);
+    bool groupByOutput() const { return m_groupByOutput; }
+    /// "Reset peaks": every channel's peak-since-reset and clip latch.
+    void resetPeaks();
+    /// Fired when density or grouping changes, so the owner can save the preference.
+    std::function<void()> onViewPreferencesChanged;
+    const UIMixerToolbar* toolbar() const { return m_toolbar.get(); }
+    const UIMixerNavigator* navigator() const { return m_navigator.get(); }
+
+    /// Channel ids in the order the strips are shown (grouped by output), left to right.
+    std::vector<uint32_t> displayedChannelIds() const;
+    /// The group headers above the strips, left to right; empty when the project has a single group.
+    std::vector<std::string> groupHeaderLabels() const;
+    /// Where a channel's strip is laid out, or nullptr when there is none.
+    const UIMixerStrip* stripForChannel(uint32_t channelId) const;
 
     /**
      * @brief Replace the plugin dropdown's catalog.
@@ -168,7 +191,10 @@ private:
     float getChannelViewportWidth() const;
     float getChannelContentWidth() const;
     float getChannelMaxScroll() const;
-    void updateScrollFromMinimapX(float x);
+    void updateNavigator();
+    /// The navigator shows only when the strips overflow the panel.
+    bool navigatorShown() const;
+    float navigatorBlock() const;
 
     void showPluginDropdown(uint32_t channelId);
     void loadPluginToSelectedChannel(const std::string& pluginId);
@@ -192,6 +218,28 @@ private:
     /// Channel strips (header + meter + fader)
     std::vector<std::shared_ptr<UIMixerStrip>> m_strips;
 
+    /// Display order and groups (V81-M1): strips are shown grouped by where they go.
+    /// m_stripOrder maps a display slot to an index in m_strips.
+    MixerDensity m_density{MixerDensity::Normal};
+    bool m_groupByOutput{true};
+    std::shared_ptr<UIMixerToolbar> m_toolbar;
+    std::vector<size_t> m_stripOrder;
+    Aestra::MixerGroupedOrder m_grouping;
+    std::string m_groupingSignature;
+    struct GroupBand {
+        NUIRect rect;
+        std::string label;
+        int colorIndex{-1};
+        bool master{false};
+    };
+    std::vector<GroupBand> m_groupBands;
+    /// Rebuilds the grouping from the view model; true when it changed.
+    bool recomputeGrouping();
+    /// Extra width the gaps between groups add to the strip row.
+    float groupGapsWidth() const;
+    void renderGroupBands(NUIRenderer& renderer);
+    void renderDbScale(NUIRenderer& renderer);
+
     /// Master strip (pinned on the right)
     std::shared_ptr<UIMixerStrip> m_masterStrip;
 
@@ -211,12 +259,15 @@ private:
     // Horizontal scroll offset for channel strips (pixels).
     float m_scrollX{0.0f};
     float m_targetScrollX{0.0f};
-    bool m_isDraggingMinimap{false};
-    float m_minimapDragOffsetX{0.0f};
+    std::shared_ptr<UIMixerNavigator> m_navigator;
 
     // Layout constants (from design spec)
-    static constexpr float STRIP_WIDTH = 110.0f;
+    static constexpr float TOOLBAR_H = 26.0f;
+    float stripWidth() const { return mixerStripWidth(m_density); }
     static constexpr float STRIP_SPACING = 6.0f;
+    static constexpr float GROUP_HEADER_H = 18.0f;
+    static constexpr float GROUP_GAP = 10.0f;
+    static constexpr float SCALE_W = 26.0f; // the shared dB scale at the far left
     static constexpr float HEADER_HEIGHT = 28.0f;
     static constexpr float PADDING = 8.0f;
     static constexpr float MASTER_STRIP_WIDTH = 146.0f;

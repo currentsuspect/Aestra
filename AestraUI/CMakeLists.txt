@@ -123,6 +123,19 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/UIMixerKnob.cpp
     Widgets/UIMixerFXSummary.h
     Widgets/UIMixerFXSummary.cpp
+    Widgets/UIMixerInsertList.h
+    Widgets/UIMixerInsertList.cpp
+    Widgets/UIOutputChip.h
+    Widgets/UIOutputChip.cpp
+    Widgets/UIParamBar.h
+    Widgets/UIParamBar.cpp
+    Widgets/UIMixerSendList.h
+    Widgets/UIMixerSendList.cpp
+    Widgets/UIMixerToolbar.h
+    Widgets/UIMixerToolbar.cpp
+    Widgets/MixerDensity.h
+    Widgets/UIMixerNavigator.h
+    Widgets/UIMixerNavigator.cpp
     Widgets/UIMixerStrip.h
     Widgets/UIMixerStrip.cpp
     Widgets/UIMixerFooter.h
@@ -135,6 +148,8 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/UIInsertRoutePicker.cpp
     Widgets/UIRoutingMap.h
     Widgets/UIRoutingMap.cpp
+    Widgets/UIRoutingMapDraw.cpp
+    Widgets/RoutingGraphLayout.h
     Widgets/UnitRow.h
     Widgets/UnitRow.cpp
     Widgets/UnitNameLabel.h

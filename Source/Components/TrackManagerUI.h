@@ -183,6 +183,8 @@ public:
         std::function<void(const std::string& title, const std::string& message, const std::string& confirmLabel,
                            std::function<void(bool confirmed)> onResult)>;
     void setOnConfirmDialogRequest(ConfirmDialogRequest cb) { m_onConfirmDialogRequest = std::move(cb); }
+    /// "Show in Routing Graph" from a track header's menu; the argument is the track's mixer channel.
+    void setOnShowRoutingGraph(std::function<void(uint32_t channelId)> cb) { m_onShowRoutingGraph = std::move(cb); }
     void setOnSendSelectionToAudition(std::function<void(double startBeat, double endBeat)> cb) {
         m_onSendSelectionToAudition = cb;
     }
@@ -282,6 +284,15 @@ public:
     void finishInstantClipDrag();
     void cancelInstantClipDrag();
     bool isInstantClipDragActive() const { return m_isDraggingClipInstant; }
+    /** @brief Apply an intent to a batch of clips and push the set to rows (#848). */
+    void selectClips(const std::vector<ClipInstanceID>& clipIds, TrackSelectionIntent intent);
+    const TimelineClipSelection& clipSelection() const { return m_clipSelection; }
+    /** @brief A press on a clip that belongs to a multi-selection keeps the selection, so it can be dragged as a
+     *  group; a click that did not drag collapses the selection to that clip. Called on release. */
+    void resolvePendingGroupClick(ClipInstanceID clickedClip);
+    /** @brief Move every selected clip by @p beats and @p laneDelta lanes as ONE undo step (arrow-key nudge).
+     *  The block is clamped as a whole: it never crosses beat 0 or the first/last lane. */
+    bool nudgeSelectedClips(double beats, int laneDelta);
     bool clampInstantClipDragPosition(::AestraUI::NUIPoint& position) const;
     bool placeFileOnTimeline(const std::string& filePath, const std::string& displayName = "");
     bool placePatternOnTimeline(PatternID patternId);
@@ -458,7 +469,14 @@ private:
     std::shared_ptr<::AestraUI::NUIContextMenu> m_activeContextMenu; // Keep track for cleanup
 
     // Clipboard
-    Audio::ClipInstance m_clipboardClip;
+    Audio::ClipInstance m_clipboardClip; // the anchor clip: the paint tool's stamp source and the single-clip paste
+    struct ClipboardEntry {
+        Audio::ClipInstance clip;
+        PlaylistLaneID lane;
+    };
+    std::vector<ClipboardEntry> m_clipboardBlock; // every copied clip when the selection held several (paste keeps their layout)
+    void pasteClipboardBlock();
+    void captureClipboardBlock(const std::vector<ClipInstanceID>& targets);
 
     // Animation state
     float m_menuIconRotation = 0.0f;
@@ -490,6 +508,7 @@ private:
     PlaylistTool m_currentTool = PlaylistTool::Select;
     bool m_cursorHidden = false; // Track cursor visibility state
     std::function<void(bool)> m_onCursorVisibilityChanged;
+    std::function<void(uint32_t)> m_onShowRoutingGraph;
 
     // Multi-selection
     TimelineTrackSelection m_trackSelection;
@@ -504,6 +523,18 @@ private:
 
     float m_clipDragOffsetX = 0.0f;       // Offset from clip start to mouse
     double m_clipOriginalStartTime = 0.0; // Original position before drag
+    struct GroupDragEntry {
+        ClipInstanceID id;
+        double startBeat = 0.0;
+        PlaylistLaneID lane;
+        int laneIndex = 0;
+    };
+    std::vector<GroupDragEntry> m_groupDrag; // the whole selection while a multi-selected clip is dragged
+    double m_groupDragAnchorStart = 0.0;
+    int m_groupDragAnchorLaneIndex = 0;
+    ClipInstanceID m_pendingGroupCollapse;
+    int laneIndexOf(const PlaylistLaneID& laneId) const;
+    bool applyGroupMove(const std::vector<GroupDragEntry>& origin, double beatDelta, int laneDelta); // clamped; live model move
     int m_clipOriginalTrackIndex = -1;    // Original track before drag
     PlaylistLaneID m_clipOriginalLaneId;  // Original lane before drag
 
@@ -654,9 +685,6 @@ private:
     void onAddTrackClicked();
     void syncTrackSelectionView();
     void selectClip(ClipInstanceID clipId);
-    /** @brief Apply an intent to a batch of clips and push the set to rows (#848). */
-    void selectClips(const std::vector<ClipInstanceID>& clipIds, TrackSelectionIntent intent);
-    const TimelineClipSelection& clipSelection() const { return m_clipSelection; }
     /** @brief Ctrl+A: select every clip in the playlist (falls back to tracks when empty). */
     void selectAllClips();
     /** @brief Drop the multi-clip set and its row highlight. */

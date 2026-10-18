@@ -1,6 +1,12 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include "ArsenalRackLayout.h"
+#include "ArsenalKit.h"
+#include "AestraFileDialog.h"
+#include "../AestraUI/Widgets/NUIPianoRollWidgets.h"
+#include "ArsenalRowLanes.h"
+#include "ArsenalSceneStrip.h"
 #include "WindowPanel.h"
 #include "TrackManager.h"
 #include <chrono>
@@ -9,6 +15,7 @@
 #include "NUIComponent.h"
 #include "../AestraUI/Core/NUIDragDrop.h"
 #include <optional>
+#include <utility>
 
 namespace Aestra {
 namespace Audio {
@@ -52,6 +59,14 @@ public:
 
     /** @brief Rebuild the UI rows from the current UnitManager state. */
     void refreshUnits();
+    /// File > New Project: the project was emptied; recreate Pattern 1 and Sampler 1 and drop selections.
+    void resetToDefault() {
+        m_selectedUnitId = m_selectionUnitId = 0;
+        m_selectedSteps.clear();
+        ensureDefaultPattern();
+        if (m_trackManager) ensureDefaultUnit();
+        refreshUnits();
+    }
     
     /** @brief Bind the pattern browser used for bidirectional pattern sync. */
     void setPatternBrowser(class PatternBrowserPanel* browser) { m_patternBrowser = browser; }
@@ -87,6 +102,11 @@ public:
     /** @brief Set the callback used for plugin drops onto a specific unit. */
     void setOnPluginDroppedToUnit(std::function<void(UnitID, const std::string&)> cb) { m_onPluginDroppedToUnit = cb; }
     /** @brief Set the callback used when an audio sample is dropped onto a unit. */
+    /// While a sound drawer is open the app routes typing here first, before global shortcuts and musical typing.
+    bool handleDrawerKey(const AestraUI::NUIKeyEvent& event) { return m_lanes.drawerOpen() && onKeyEvent(event); }
+    /// Sound sets (V81-AR2): the collections a row's drawer can walk, a collection's members, and a unit's choice.
+    void setSoundSetProviders(std::function<std::vector<std::string>()> names, std::function<std::vector<std::string>(const std::string&)> members,
+                              std::function<void(UnitID, const std::string&)> chosen) { m_lanes.setSoundSetProviders(std::move(names), std::move(members), std::move(chosen)); }
     void setOnSampleDroppedToUnit(std::function<void(UnitID, const std::string&)> cb) { m_onSampleDroppedToUnit = cb; }
     /** @brief Set the callback fired when unit selection changes. */
     void setOnSelectedUnitChanged(std::function<void(UnitID)> cb) { m_onSelectedUnitChanged = std::move(cb); }
@@ -100,6 +120,8 @@ public:
     /** @brief Set the callback fired when the active pattern is edited. */
     void setOnPatternEdited(std::function<void(PatternID)> cb) { m_onPatternEdited = std::move(cb); }
     /** @brief Set the callback fired when the active pattern changes. */
+    /// Set the callback fired by the header's "Place in timeline" button (the pattern to place).
+    void setOnPlaceInTimeline(std::function<void(PatternID)> cb) { m_onPlaceInTimeline = std::move(cb); }
     void setOnActivePatternChanged(std::function<void(PatternID)> cb) { m_onActivePatternChanged = std::move(cb); }
     /** @brief Get the currently selected unit identifier. */
     UnitID getSelectedUnitId() const { return m_selectedUnitId; }
@@ -114,6 +136,11 @@ private:
     // Container for the scrollable list of units
     std::shared_ptr<AestraUI::NUIComponent> m_listContainer;
     std::vector<std::shared_ptr<AestraUI::UnitRow>> m_unitRows;
+    Aestra::ArsenalKitCard m_kitCard; ///< the empty state (FD-27 point 6)
+    Aestra::ArsenalRowLanes m_lanes; ///< which rows are open into step lanes (FD-27 point 4)
+    Aestra::ArsenalSceneStrip m_scenes; ///< pattern chips under the command header (FD-27 point 1)
+    AestraUI::NUIRect m_sceneRect{};
+    Aestra::ArsenalRackLayout m_rack; ///< groups, headers and row positions (one answer for layout, scroll and drop)
     
     // Header controls
     std::shared_ptr<AestraUI::NUIButton> m_addUnitBtn;
@@ -144,28 +171,30 @@ private:
     void followGridPlayhead(); // Keep the playing bar in view unless the user scrolled away
     
     // Pattern Progress Visualization
-    static constexpr float COMMAND_HEADER_HEIGHT = 52.0f;
+    static constexpr float COMMAND_HEADER_HEIGHT = 64.0f;
     static constexpr float PROGRESS_HEADER_HEIGHT = 34.0f;
-    int m_currentPlayStep = -1;  // Current step for visualization (-1 = not playing)
     void drawProgressHeader(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds);
     void drawCommandHeader(AestraUI::NUIRenderer& renderer);
     int calculateCurrentStep(); // Calculate step from TrackManager clock
 
     // Progress-header scrubbing helpers (#831).
     double headerLengthBeats() const;
-    double headerBeatAtX(const AestraUI::NUIRect& bounds, float x) const;
-    void headerScrubTo(const AestraUI::NUIRect& bounds, float x);
+    std::pair<float, float> gridSpan() const; ///< the pads' left edge and width, from the rows
+    double calculatePlayheadBeat(); ///< the playhead in grid beats (steps at 0.25), looping over the pattern; -1 outside pattern mode
     int computeLoopStepCount() const; // Steps spanning the full active-pattern loop (4/beat)
     int beatsPerBar() const; // Time-signature numerator from the timeline clock
     void adjustPatternBars(int deltaBars);
     void adjustPatternSteps(int deltaBars);
-    void createUnitOfType(UnitType type);
+    void createUnitOfType(UnitType type, const std::string& nameOverride = {});
+    void loadKitFromFolder(const std::string& folder); ///< each audio file in the folder becomes a unit
+    Aestra::PendingFileDialog m_kitPicker; ///< "Choose a folder" runs off the UI thread, so the app never stops responding
     void drawUnitTypePicker(AestraUI::NUIRenderer& renderer);
 
     // Pattern Management (driven by Pattern Browser)
     PatternID m_activePatternID{}; // The pattern being edited
     class PatternBrowserPanel* m_patternBrowser = nullptr; // For refresh
     void ensureDefaultPattern(); // Auto-create Pattern 1 if needed
+    void ensureDefaultUnit();    // Sampler 1 when the rack is empty (needs m_trackManager)
     
     // Copy/paste clipboard
     struct PatternClipboard {
@@ -177,7 +206,6 @@ private:
     UnitID m_selectionUnitId = 0; // Unit owning the current step selection (survives row rebuilds)
     std::vector<int> m_selectedSteps; // Selected step indices for m_selectionUnitId
 
-    void createLayout();
     void onAddUnit();
     bool removeSelectedUnit();
     void syncRowSelection();
@@ -199,12 +227,12 @@ private:
     std::function<void(UnitID, const std::string&)> m_onSampleDroppedToUnit;
     std::function<void(UnitID)> m_onSelectedUnitChanged;
     std::function<void(double beat, bool active)> m_onPositionScrubbed;
-    bool m_headerScrubbing{false};
-    double m_headerScrubBeat{0.0};
+    std::shared_ptr<AestraUI::PianoRollRuler> m_ruler; ///< the bar ruler the piano roll uses (numbers, ticks, playhead marker, scrub)
     std::function<void(float)> m_onPreferredHeightChanged;
     std::function<void()> m_onRequestPlaybackActivation;
     std::function<void(PatternID)> m_onPatternEdited;
     std::function<void(PatternID)> m_onActivePatternChanged;
+    std::function<void(PatternID)> m_onPlaceInTimeline;
     bool m_dropTargetRegistered = false;
     bool m_showUnitTypePicker = false;
     AestraUI::NUIRect m_addUnitButtonRect{};

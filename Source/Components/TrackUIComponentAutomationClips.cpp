@@ -36,7 +36,9 @@ bool TrackUIComponent::handleAutomationClipMouse(const AestraUI::NUIMouseEvent& 
     };
     int edited = -1;
     const bool handled = m_clipLayer.onMouse(event, *m_trackManager, m_laneId,
-                                             {bounds, gridStartX, m_pixelsPerBeat, m_timelineScrollOffset}, hooks, edited);
+                                             {bounds, gridStartX, m_pixelsPerBeat, m_timelineScrollOffset,
+                                              m_editedAutomationTarget},
+                                             hooks, edited);
     if (edited >= 0) {
         if (const auto* lane = m_trackManager->getPlaylistModel().getLane(m_laneId))
             if (edited < static_cast<int>(lane->automationCurves.size()))

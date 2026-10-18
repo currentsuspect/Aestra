@@ -307,6 +307,7 @@ UnitID UnitManager::createUnit(const std::string& name, UnitType type) {
     info.name = name;
     info.type = type;
     info.group = unitGroupForType(type);
+    if (m_defaultColor) info.color = m_defaultColor(m_unitOrder.size());
     info.bridgeMode = bridgeModeFallbackFromRouteId(info.targetMixerRoute);
 
     if (m_patternManager && type != UnitType::Audio) {
@@ -346,6 +347,7 @@ UnitID UnitManager::duplicateUnit(UnitID sourceId) {
     dst->isArmed          = src->isArmed;
     dst->group            = src->group;
     dst->audioClipPath    = src->audioClipPath;
+    dst->soundSet         = src->soundSet;
     dst->audioDurationSeconds  = src->audioDurationSeconds;
     dst->audioPreviewWaveform  = src->audioPreviewWaveform;
     dst->pluginId         = src->pluginId;
@@ -427,6 +429,10 @@ void UnitManager::clear() {
     m_unitOrder.clear();
     nextId = 1;
     publishSnapshot();
+}
+
+void UnitManager::setUnitSoundSet(UnitID id, const std::string& setName) {
+    if (auto* u = getUnit(id)) u->soundSet = setName;
 }
 
 void UnitManager::setUnitName(UnitID id, const std::string& name) { if (auto* u = getUnit(id)) u->name = name; }
@@ -751,6 +757,7 @@ JSON UnitManager::saveToJSON() const {
         u.set("solo", JSON(unit->isSolo));
         u.set("armed", JSON(unit->isArmed));
         u.set("audioClipPath", JSON(unit->audioClipPath));
+        if (!unit->soundSet.empty()) u.set("soundSet", JSON(unit->soundSet)); // additive: absent means the sound's own folder
         u.set("gain", JSON(static_cast<double>(unit->gain)));
         u.set("audioDurationSeconds", JSON(unit->audioDurationSeconds));
         u.set("defaultPatternId", JSON(static_cast<double>(unit->defaultPatternId.value)));
@@ -885,6 +892,7 @@ void UnitManager::loadFromJSON(const JSON& json) {
         unit.isSolo = ju.has("solo") ? ju["solo"].asBool() : false;
         unit.isArmed = ju.has("armed") ? ju["armed"].asBool() : false;
         unit.audioClipPath = ju.has("audioClipPath") ? ju["audioClipPath"].asString() : std::string{};
+        unit.soundSet = (ju.has("soundSet") && ju["soundSet"].isString()) ? ju["soundSet"].asString() : std::string{};
         unit.gain = 1.0f;
         if (ju.has("gain") && ju["gain"].isNumber()) {
             const float loadedGain = static_cast<float>(ju["gain"].asNumber());

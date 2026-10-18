@@ -23,6 +23,26 @@ public:
         uint64_t createdAtMs{0};  ///< Creation timestamp (epoch ms).
         uint64_t updatedAtMs{0};  ///< Last-modified timestamp (epoch ms).
         bool active{false};       ///< True if this is the currently active take.
+
+        // --- Versions (SPEC-017, V81-V1). Additive: an older manifest has none of these. ---
+        /** @brief What kind of version this is. */
+        enum class Kind { Saved, Autosave };
+        /** @brief One change made inside a version: the label, time and command type, written when it is saved. */
+        struct Step {
+            std::string label;        ///< e.g. "Move clip · Pad".
+            std::string commandType;  ///< The command class, for grouping and colour.
+            uint64_t atMs{0};         ///< When the step was made (epoch ms).
+        };
+        /** @brief A timestamped note on a version. */
+        struct Note {
+            uint64_t atMs{0};
+            std::string text;
+        };
+        std::string branch;        ///< Name of the branch this version sits on ("Main" for the first).
+        Kind kind{Kind::Saved};    ///< Saved by the user, or kept by the app on its own.
+        std::string bounce;        ///< Relative path to a bounce of this version; empty when it has none.
+        std::vector<Note> notes;   ///< Notes on this version.
+        std::vector<Step> steps;   ///< Read-only log of the steps made in this version.
     };
 
     /** @brief The on-disk manifest listing all takes and the active selection. */
@@ -37,6 +57,8 @@ public:
         const TakeEntry* findTake(const std::string& id) const;
         /** @brief Returns the currently active take, or nullptr if none. */
         const TakeEntry* activeTake() const;
+        /** @brief The distinct branch names, in the order their first version appears. */
+        std::vector<std::string> branches() const;
     };
 
     /** @brief Result of a take operation — carries the affected take and manifest. */
@@ -84,6 +106,26 @@ public:
                              const std::string& name, const std::string& parentId = "");
 
     /**
+     * @brief Saves the state as a version on a branch (SPEC-017). An empty branch continues the parent's branch;
+     *        a name starts a new branch from the parent. `steps` becomes the version's read-only step log.
+     */
+    static Result createVersion(const std::string& projectPath, const std::string& currentProjectContents,
+                                const std::string& name, const std::string& parentId, const std::string& branch,
+                                TakeEntry::Kind kind, const std::vector<TakeEntry::Step>& steps);
+
+    /** @brief Replaces a version's step log (written when the version is saved). */
+    static Result setVersionSteps(const std::string& projectPath, const std::string& takeId,
+                                  const std::vector<TakeEntry::Step>& steps);
+
+    /** @brief Records the bounce file (relative to the takes folder) on a version. */
+    static Result setVersionBounce(const std::string& projectPath, const std::string& takeId, const std::string& relativePath);
+    /** @brief Absolute path of a version's bounce, or empty when it has none or the path leaves the takes folder. */
+    static std::string resolveBouncePath(const std::string& projectPath, const TakeEntry& take);
+
+    /** @brief Appends a note to a version. */
+    static Result addVersionNote(const std::string& projectPath, const std::string& takeId, const std::string& text);
+
+    /**
      * @brief Switches the active take. Does not load the snapshot — caller must do that.
      * @param projectPath  Path to the project directory.
      * @param takeId       ID of the take to activate.
@@ -106,9 +148,10 @@ public:
      * @param projectPath  Path to the project directory.
      * @param takeId       ID of the take to duplicate.
      * @param newName      Name for the duplicate (empty derives "<source> Copy").
+     * @param branch       Branch the copy starts; empty keeps the source's branch.
      */
     static Result duplicateTake(const std::string& projectPath, const std::string& takeId,
-                                const std::string& newName = "");
+                                const std::string& newName = "", const std::string& branch = "");
 
     /**
      * @brief Deletes a take from the manifest and removes its snapshot.

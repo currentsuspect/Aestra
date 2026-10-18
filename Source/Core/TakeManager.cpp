@@ -20,6 +20,7 @@ namespace {
 
 constexpr int TAKE_MANIFEST_VERSION = 1;
 constexpr size_t TAKE_MAX_ENTRIES = 256;
+constexpr size_t TAKE_MAX_STEPS = 4096;
 constexpr size_t TAKE_MAX_STRING_BYTES = 4096;
 constexpr uintmax_t TAKE_MAX_MANIFEST_BYTES = 4ull * 1024ull * 1024ull;
 
@@ -150,6 +151,30 @@ Aestra::JSON takeToJson(const TakeManager::TakeEntry& take) {
     json.set("snapshotPath", Aestra::JSON(take.snapshotPath));
     json.set("createdAtMs", Aestra::JSON(static_cast<double>(take.createdAtMs)));
     json.set("updatedAtMs", Aestra::JSON(static_cast<double>(take.updatedAtMs)));
+    json.set("branch", Aestra::JSON(take.branch));
+    json.set("kind", Aestra::JSON(take.kind == TakeManager::TakeEntry::Kind::Autosave ? "autosave" : "saved"));
+    if (!take.bounce.empty()) json.set("bounce", Aestra::JSON(take.bounce));
+    if (!take.notes.empty()) {
+        Aestra::JSON notes = Aestra::JSON::array();
+        for (const auto& n : take.notes) {
+            Aestra::JSON item = Aestra::JSON::object();
+            item.set("atMs", Aestra::JSON(static_cast<double>(n.atMs)));
+            item.set("text", Aestra::JSON(n.text));
+            notes.push(item);
+        }
+        json.set("notes", notes);
+    }
+    if (!take.steps.empty()) {
+        Aestra::JSON steps = Aestra::JSON::array();
+        for (const auto& st : take.steps) {
+            Aestra::JSON item = Aestra::JSON::object();
+            item.set("label", Aestra::JSON(st.label));
+            item.set("commandType", Aestra::JSON(st.commandType));
+            item.set("atMs", Aestra::JSON(static_cast<double>(st.atMs)));
+            steps.push(item);
+        }
+        json.set("steps", steps);
+    }
     return json;
 }
 
@@ -224,6 +249,15 @@ const TakeManager::TakeEntry* TakeManager::Manifest::findTake(const std::string&
 
 const TakeManager::TakeEntry* TakeManager::Manifest::activeTake() const {
     return findTake(activeTakeId);
+}
+
+std::vector<std::string> TakeManager::Manifest::branches() const {
+    std::vector<std::string> out;
+    for (const auto& take : takes) {
+        if (take.branch.empty()) continue;
+        if (std::find(out.begin(), out.end(), take.branch) == out.end()) out.push_back(take.branch);
+    }
+    return out;
 }
 
 std::string TakeManager::getTakesDirectory(const std::string& projectPath) {
@@ -322,6 +356,25 @@ TakeManager::Manifest TakeManager::loadManifest(const std::string& projectPath) 
         take.createdAtMs = boundedUint64Or(item, "createdAtMs", 0);
         take.updatedAtMs = boundedUint64Or(item, "updatedAtMs", take.createdAtMs);
         take.active = !take.id.empty() && take.id == manifest.activeTakeId;
+        take.branch = boundedStringOr(item, "branch", "");
+        take.kind = boundedStringOr(item, "kind", "saved") == "autosave" ? TakeEntry::Kind::Autosave
+                                                                         : TakeEntry::Kind::Saved;
+        take.bounce = boundedStringOr(item, "bounce", "");
+        if (item.has("notes") && item["notes"].isArray()) {
+            const Aestra::JSON& notes = item["notes"];
+            for (size_t n = 0; n < notes.size() && n < TAKE_MAX_ENTRIES; ++n) {
+                if (!notes[n].isObject()) continue;
+                take.notes.push_back({boundedUint64Or(notes[n], "atMs", 0), boundedStringOr(notes[n], "text", "")});
+            }
+        }
+        if (item.has("steps") && item["steps"].isArray()) {
+            const Aestra::JSON& steps = item["steps"];
+            for (size_t n = 0; n < steps.size() && n < TAKE_MAX_STEPS; ++n) {
+                if (!steps[n].isObject()) continue;
+                take.steps.push_back({boundedStringOr(steps[n], "label", ""), boundedStringOr(steps[n], "commandType", ""),
+                                      boundedUint64Or(steps[n], "atMs", 0)});
+            }
+        }
 
         if (!take.id.empty()) {
             manifest.takes.push_back(std::move(take));
@@ -330,6 +383,22 @@ TakeManager::Manifest TakeManager::loadManifest(const std::string& projectPath) 
 
     if (manifest.takes.empty()) {
         return makeErrorManifest(projectPath, "Takes manifest contains no valid takes");
+    }
+
+    // Migration (SPEC-017): a take saved before versions has no branch. A top-level take is on Main; a take's
+    // first child continues its branch; any later child starts a branch named after itself. In memory only;
+    // the next save writes the branches out.
+    for (auto& take : manifest.takes) {
+        if (!take.branch.empty()) continue;
+        if (take.parentId.empty()) { take.branch = "Main"; continue; }
+        const TakeEntry* parent = manifest.findTake(take.parentId);
+        bool firstChild = true;
+        for (const auto& other : manifest.takes) {
+            if (&other == &take) break;
+            if (other.parentId == take.parentId) { firstChild = false; break; }
+        }
+        take.branch = (parent && firstChild && !parent->branch.empty()) ? parent->branch
+                      : (parent && firstChild) ? "Main" : take.name;
     }
 
     if (!manifest.findTake(manifest.activeTakeId)) {
@@ -433,6 +502,13 @@ TakeManager::Result TakeManager::saveActiveTake(const std::string& projectPath,
 
 TakeManager::Result TakeManager::createTake(const std::string& projectPath, const std::string& currentProjectContents,
                                             const std::string& name, const std::string& parentId) {
+    return createVersion(projectPath, currentProjectContents, name, parentId, "", TakeEntry::Kind::Saved, {});
+}
+
+TakeManager::Result TakeManager::createVersion(const std::string& projectPath, const std::string& currentProjectContents,
+                                               const std::string& name, const std::string& parentId,
+                                               const std::string& branch, TakeEntry::Kind kind,
+                                               const std::vector<TakeEntry::Step>& steps) {
     Result ensured = ensureManifest(projectPath, currentProjectContents);
     if (!ensured.ok) {
         return ensured;
@@ -452,6 +528,15 @@ TakeManager::Result TakeManager::createTake(const std::string& projectPath, cons
     take.createdAtMs = nowMs();
     take.updatedAtMs = take.createdAtMs;
     take.active = true;
+    take.kind = kind;
+    take.steps = steps.size() > TAKE_MAX_STEPS ? std::vector<TakeEntry::Step>(steps.begin(), steps.begin() + TAKE_MAX_STEPS) : steps;
+    if (!branch.empty()) {
+        take.branch = branch.substr(0, TAKE_MAX_STRING_BYTES); // a named branch starts here
+    } else if (const TakeEntry* parent = manifest.findTake(effectiveParentId); parent && !parent->branch.empty()) {
+        take.branch = parent->branch; // continue the parent's branch
+    } else {
+        take.branch = "Main";
+    }
 
     for (auto& existing : manifest.takes) {
         existing.active = false;
@@ -470,6 +555,60 @@ TakeManager::Result TakeManager::createTake(const std::string& projectPath, cons
 
     Aestra::Log::info("[Takes] Created take '" + take.name + "' for project: " + projectPath);
     return makeResult(true, "", manifest, take);
+}
+
+TakeManager::Result TakeManager::setVersionSteps(const std::string& projectPath, const std::string& takeId,
+                                                 const std::vector<TakeEntry::Step>& steps) {
+    Manifest manifest = loadManifest(projectPath);
+    if (!manifest.ok) return makeResult(false, manifest.errorMessage, manifest);
+    const std::string id = sanitizeIdPart(takeId);
+    for (auto& take : manifest.takes) {
+        if (take.id != id) continue;
+        take.steps = steps.size() > TAKE_MAX_STEPS ? std::vector<TakeEntry::Step>(steps.begin(), steps.begin() + TAKE_MAX_STEPS) : steps;
+        take.updatedAtMs = nowMs();
+        std::string error;
+        if (!saveManifest(manifest, error)) return makeResult(false, error, manifest, take);
+        return makeResult(true, "", manifest, take);
+    }
+    return makeResult(false, "Version not found: " + takeId, manifest);
+}
+
+TakeManager::Result TakeManager::setVersionBounce(const std::string& projectPath, const std::string& takeId,
+                                                  const std::string& relativePath) {
+    Manifest manifest = loadManifest(projectPath);
+    if (!manifest.ok) return makeResult(false, manifest.errorMessage, manifest);
+    if (resolveManifestSnapshotPath(projectPath, relativePath).empty()) return makeResult(false, "Bounce path is not inside the takes folder", manifest);
+    const std::string id = sanitizeIdPart(takeId);
+    for (auto& take : manifest.takes) {
+        if (take.id != id) continue;
+        take.bounce = relativePath;
+        std::string error;
+        if (!saveManifest(manifest, error)) return makeResult(false, error, manifest, take);
+        return makeResult(true, "", manifest, take);
+    }
+    return makeResult(false, "Version not found: " + takeId, manifest);
+}
+
+std::string TakeManager::resolveBouncePath(const std::string& projectPath, const TakeEntry& take) {
+    if (projectPath.empty() || take.bounce.empty()) return {};
+    return resolveManifestSnapshotPath(projectPath, take.bounce).string();
+}
+
+TakeManager::Result TakeManager::addVersionNote(const std::string& projectPath, const std::string& takeId,
+                                                const std::string& text) {
+    Manifest manifest = loadManifest(projectPath);
+    if (!manifest.ok) return makeResult(false, manifest.errorMessage, manifest);
+    if (text.empty()) return makeResult(false, "A note cannot be empty", manifest);
+    const std::string id = sanitizeIdPart(takeId);
+    for (auto& take : manifest.takes) {
+        if (take.id != id) continue;
+        if (take.notes.size() >= TAKE_MAX_ENTRIES) return makeResult(false, "Too many notes on this version", manifest, take);
+        take.notes.push_back({nowMs(), text.substr(0, TAKE_MAX_STRING_BYTES)});
+        std::string error;
+        if (!saveManifest(manifest, error)) return makeResult(false, error, manifest, take);
+        return makeResult(true, "", manifest, take);
+    }
+    return makeResult(false, "Version not found: " + takeId, manifest);
 }
 
 TakeManager::Result TakeManager::setActiveTake(const std::string& projectPath, const std::string& takeId) {
@@ -541,7 +680,7 @@ TakeManager::Result TakeManager::renameTake(const std::string& projectPath, cons
 }
 
 TakeManager::Result TakeManager::duplicateTake(const std::string& projectPath, const std::string& takeId,
-                                               const std::string& newName) {
+                                               const std::string& newName, const std::string& branch) {
     namespace fs = std::filesystem;
 
     Manifest manifest = loadManifest(projectPath);
@@ -572,6 +711,8 @@ TakeManager::Result TakeManager::duplicateTake(const std::string& projectPath, c
     copy.createdAtMs = nowMs();
     copy.updatedAtMs = copy.createdAtMs;
     copy.active = false;
+    copy.branch = branch.empty() ? source->branch : branch.substr(0, TAKE_MAX_STRING_BYTES);
+    copy.steps = source->steps; // the copy is the same state, so it carries the same steps
 
     const std::string copySnapshot = resolveSnapshotPath(projectPath, copy);
     if (copySnapshot.empty()) {

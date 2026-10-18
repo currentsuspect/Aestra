@@ -8,6 +8,7 @@
 #include "FloatingPanelDescriptors.h"
 #include "PanelPlacement.h"
 #include "UISurfaceResolution.h"
+#include "Panels/ArsenalPanel.h"
 #include "Panels/WindowPanel.h"
 
 #include <algorithm>
@@ -49,6 +50,9 @@ void AestraContent::wirePanelMode(const std::shared_ptr<Audio::WindowPanel>& pan
     panel->setOnMenuRequested([this, view](const AestraUI::NUIPoint& at) { showPanelMenu(view, at); });
     panel->setOnOutsidePress([this, view]() { noteOutsidePress(view); });
     applyPanelMode(view);
+    if (view == Audio::ViewType::Sequencer)
+        if (auto arsenal = std::dynamic_pointer_cast<Audio::ArsenalPanel>(panel))
+            arsenal->setOnPlaceInTimeline([this](Audio::PatternID id) { placePatternInTimeline(id); });
 }
 
 void AestraContent::showPanelMenu(Audio::ViewType view, const AestraUI::NUIPoint& at) {
@@ -62,7 +66,7 @@ void AestraContent::showPanelMenu(Audio::ViewType view, const AestraUI::NUIPoint
     };
     actions.resetPosition = [this, view, spec]() {
         savePanelPreference(view, defaultSurfacePreference(spec->defaultWidth, spec->defaultHeight,
-                                                           spec->defaultAnchorX, spec->defaultAnchorY));
+                                                           spec->defaultAnchorX, spec->defaultAnchorY, spec->defaultMaximized));
         applyPanelPreference(view);
         setDirty(true);
     };
@@ -98,6 +102,29 @@ void AestraContent::closeContextualPanels() {
         setViewOpen(view, false);
 }
 
+// A panel button, F-key or open request on a panel that is open but under another one raises it instead of closing
+// it (owner report, 2026-10-18: the Arsenal button closed an Arsenal that sat behind the piano roll). Only a panel
+// nothing overlaps from above counts as in front, so the button still closes the panel you are looking at.
+bool AestraContent::raiseIfCovered(Audio::ViewType view) {
+    auto panel = panelForView(view);
+    if (!panel || !panel->isVisible() || !m_overlayLayer)
+        return false;
+    const auto& layer = m_overlayLayer->getChildren();
+    auto it = std::find(layer.begin(), layer.end(), std::static_pointer_cast<AestraUI::NUIComponent>(panel));
+    if (it == layer.end())
+        return false;
+    const bool covered = std::any_of(std::next(it), layer.end(), [&panel](const auto& above) {
+        return std::dynamic_pointer_cast<Audio::WindowPanel>(above) && above->isVisible() &&
+               above->getBounds().intersects(panel->getBounds());
+    });
+    if (covered) {
+        ++m_viewChangeSerial; // a raise is a view change: the button press must not then close a contextual panel
+        panel->bringToFrontPriority();
+        setDirty(true);
+    }
+    return covered;
+}
+
 void AestraContent::gatherPanels() {
     for (const auto& g : Content::kFloatingPanelGeometry) {
         auto panel = panelForView(g.view);
@@ -112,7 +139,7 @@ void AestraContent::gatherPanels() {
 void AestraContent::resetPanelPositions() {
     for (const auto& g : Content::kFloatingPanelGeometry) {
         savePanelPreference(g.view, defaultSurfacePreference(g.defaultWidth, g.defaultHeight, g.defaultAnchorX,
-                                                             g.defaultAnchorY));
+                                                             g.defaultAnchorY, g.defaultMaximized));
         if (auto panel = panelForView(g.view); panel && panel->isVisible())
             applyPanelPreference(g.view);
     }

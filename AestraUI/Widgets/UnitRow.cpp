@@ -9,6 +9,7 @@
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include "PluginBrowserPanel.h"
+#include "TrackColorPalette.h"
 #include "TrackManager.h"
 
 #include <algorithm>
@@ -87,18 +88,23 @@ void UnitRow::updateState() {
         m_pluginId = unit->pluginId;
         m_mixerChannelId = unit->targetMixerChannelId;
         m_mixerRouteShortLabel = "M";
+        m_mixerRouteName = "Master";
+        m_mixerRouteColorIndex = -1;
         if (m_mixerChannelId != Aestra::Audio::MASTER_MIXER_CHANNEL_ID && m_trackManager) {
             bool resolved = false;
             for (size_t i = 0; i < m_trackManager->getChannelCount(); ++i) {
                 const auto* channel = m_trackManager->getChannel(i);
                 if (channel && channel->getChannelId() == m_mixerChannelId) {
                     m_mixerRouteShortLabel = std::to_string(i + 1);
+                    m_mixerRouteName = channel->getName().empty() ? "Channel " + std::to_string(i + 1) : channel->getName();
+                    m_mixerRouteColorIndex = channel->getTrackColorIndex();
                     resolved = true;
                     break;
                 }
             }
             if (!resolved) {
                 m_mixerRouteShortLabel = "!";
+                m_mixerRouteName = "Missing channel";
             }
         }
         m_audioDurationSeconds = unit->audioDurationSeconds;
@@ -204,12 +210,16 @@ void UnitRow::onRender(NUIRenderer& renderer) {
         renderer.clearClipRect();
 }
 
+// A unit reads as its output channel's colour (chip, pads and stripe agree); its own colour is the unrouted fallback.
+NUIColor UnitRow::identityColor() const {
+    return m_mixerRouteColorIndex >= 0 ? colorFromUnitValue(paletteIndexToARGB(m_mixerRouteColorIndex)) : colorFromUnitValue(m_color);
+}
+
 void UnitRow::drawContent(NUIRenderer& renderer) {
     auto bounds = getBounds();
     auto& theme = NUIThemeManager::getInstance();
 
-    NUIRect cardBounds = bounds;
-    cardBounds.height = 56.0f;
+    NUIRect cardBounds = bounds; // the panel sizes the row (44 px in the grouped rack)
 
     // Clip all painting to the card, further trimmed to the panel's list
     // viewport so rows scrolled past the panel edge don't spill over it.
@@ -226,7 +236,7 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
 
     const auto& themeProps = theme.getCurrentTheme();
     const float radius = std::max(0.0f, themeProps.radiusM - 1.0f);
-    const NUIColor unitAccent = colorFromUnitValue(m_color);
+    const NUIColor unitAccent = identityColor();
     NUIColor cardBg = theme.getColor("backgroundSecondary");
     NUIColor border = theme.getColor("border").withAlpha(0.08f);
     if (m_isDropHighlighted) {
@@ -247,7 +257,7 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
 
     // Density-derived control floor (responsive contract): narrow rows give
     // the grid the width back instead of clipping it against a fixed 220.
-    m_controlWidth = std::clamp(cardBounds.width * 0.38f, controlFloorForDensity(cardBounds.width), 312.0f);
+    m_controlWidth = controlFloorForDensity(cardBounds.width); // the head is fixed width (the mock: 208 + handle)
 
     NUIRect dragRect(cardBounds.x + 6.0f, cardBounds.y + 6.0f, 32.0f, cardBounds.height - 12.0f);
     drawDragHandle(renderer, dragRect);
@@ -256,12 +266,12 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
     drawControlBlock(renderer, controlRect);
 
     float separatorX = cardBounds.x + m_controlWidth;
-    renderer.drawLine(NUIPoint(separatorX, cardBounds.y + 8.0f),
-                      NUIPoint(separatorX, cardBounds.y + cardBounds.height - 8.0f), 1.0f,
+    renderer.drawLine(NUIPoint(separatorX, cardBounds.y + 8.0f), NUIPoint(separatorX, cardBounds.bottom() - 8.0f), 1.0f,
                       theme.getColor("borderSubtle").withAlpha(0.55f));
 
-    NUIRect contextRect(separatorX + 8.0f, cardBounds.y + 6.0f, cardBounds.right() - separatorX - 2.0f,
+    NUIRect contextRect(separatorX + 8.0f, cardBounds.y + 6.0f, cardBounds.right() - separatorX - 2.0f - routeColumn(),
                         cardBounds.height - 12.0f);
+    renderer.setClipRect(intersectRects(paintClip, contextRect)); // scrolled pads and notes stop at the lane, not on the output pill
     drawContextBlock(renderer, contextRect);
     renderer.clearClipRect();
 }
@@ -279,132 +289,40 @@ void UnitRow::drawDragHandle(NUIRenderer& renderer, const NUIRect& bounds) {
     }
 }
 
-void UnitRow::drawPowerIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active) {
+// A flat lettered key (the mock's M and S): a 1 px outline until it is on, then solid in its colour.
+static void drawKey(NUIRenderer& renderer, const NUIRect& bounds, const char* label, bool active, bool engaged, const char* activeToken) {
     auto& theme = NUIThemeManager::getInstance();
-    float cx = bounds.x + bounds.width / 2.0f;
-    float cy = bounds.y + bounds.height / 2.0f;
-    float radius = bounds.width / 2.0f - 2.0f;
-
-    NUIColor color = active ? theme.getColor("accentPrimary") : theme.getColor("textDisabled");
-
-    // Outer circle
-    renderer.strokeCircle(NUIPoint(cx, cy), radius, 1.5f, color);
-
-    // Inner dot when active
-    if (active) {
-        renderer.fillCircle(NUIPoint(cx, cy), radius * 0.4f, color);
-        // Glow
-        renderer.strokeCircle(NUIPoint(cx, cy), radius + 2.0f, 1.5f, color.withAlpha(0.3f));
-    }
+    const NUIColor on = theme.getColor(activeToken);
+    const float radius = theme.getRadius("xs");
+    if (active) renderer.fillRoundedRect(bounds, radius, on);
+    else renderer.strokeRoundedRect(bounds, radius, 1.0f, theme.getColor("border").withAlpha(engaged ? 0.9f : 0.6f));
+    renderer.drawTextCentered(label, bounds, 10.0f, active ? theme.getContrastColor(on) : theme.getColor("textSecondary").withAlpha(engaged ? 1.0f : 0.7f));
 }
 
-void UnitRow::drawArmIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active) {
-    auto& theme = NUIThemeManager::getInstance();
-    float cx = bounds.x + bounds.width / 2.0f;
-    float cy = bounds.y + bounds.height / 2.0f;
-    float radius = bounds.width / 2.0f - 2.0f;
+void UnitRow::drawMuteIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active, bool engaged) { drawKey(renderer, bounds, "M", active, engaged, "warning"); }
 
-    NUIColor color = active ? theme.getColor("accentRed") : theme.getColor("textSecondary");
-
-    // Outer circle (record button style)
-    renderer.strokeCircle(NUIPoint(cx, cy), radius, 1.5f, color);
-
-    // Inner filled circle when armed
-    if (active) {
-        renderer.fillCircle(NUIPoint(cx, cy), radius * 0.6f, color);
-    }
-}
-
-void UnitRow::drawMuteIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active, bool engaged) {
-    auto& theme = NUIThemeManager::getInstance();
-
-    NUIColor bgColor = active ? theme.getColor("warning") : theme.getColor("backgroundPrimary");
-    NUIColor textColor = active
-                             ? theme.getContrastColor(bgColor)
-                             : (engaged ? theme.getColor("textSecondary")
-                                        : theme.getColor("textDisabled").withAlpha(0.55f));
-    NUIColor borderColor = active ? bgColor
-                                  : (engaged ? theme.getColor("textDisabled")
-                                             : theme.getColor("textDisabled").withAlpha(0.40f));
-
-    // Circular Button
-    float radius = theme.getRadius("xs") * 2.0f;
-    renderer.fillRoundedRect(bounds, radius, bgColor);
-    // Glow if active
-    if (active) {
-        renderer.drawShadow(bounds, 0, 0, 8.0f, bgColor.withAlpha(0.6f));
-    } else {
-        renderer.strokeRoundedRect(bounds, radius, 1.0f, borderColor);
-    }
-
-    // "M" label centered
-    renderer.drawTextCentered("M", bounds, 10.0f, textColor);
-}
-
-void UnitRow::drawSoloIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active, bool engaged) {
-    auto& theme = NUIThemeManager::getInstance();
-
-    NUIColor bgColor = active ? theme.getColor("success") : theme.getColor("backgroundPrimary");
-    NUIColor textColor = active
-                             ? theme.getContrastColor(bgColor)
-                             : (engaged ? theme.getColor("textSecondary")
-                                        : theme.getColor("textDisabled").withAlpha(0.55f));
-    NUIColor borderColor = active ? bgColor
-                                  : (engaged ? theme.getColor("textDisabled")
-                                             : theme.getColor("textDisabled").withAlpha(0.40f));
-
-    // Circular Button
-    float radius = theme.getRadius("xs") * 2.0f;
-    renderer.fillRoundedRect(bounds, radius, bgColor);
-    // Glow if active
-    if (active) {
-        renderer.drawShadow(bounds, 0, 0, 8.0f, bgColor.withAlpha(0.6f));
-    } else {
-        renderer.strokeRoundedRect(bounds, radius, 1.0f, borderColor);
-    }
-
-    // "S" label centered
-    renderer.drawTextCentered("S", bounds, 10.0f, textColor);
-}
-
-void UnitRow::drawGearIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active) {
-    auto& theme = NUIThemeManager::getInstance();
-
-    NUIColor color = active ? theme.getColor("accentPrimary") : theme.getColor("textSecondary");
-    if (!m_isHovered && !active)
-        color = theme.getColor("textDisabled");
-
-    float cx = bounds.x + bounds.width / 2.0f;
-    float cy = bounds.y + bounds.height / 2.0f;
-    float r = 6.0f;
-
-    // Simple "Settings" cog visual
-    renderer.strokeCircle(NUIPoint(cx, cy), r, 1.5f, color);
-    renderer.fillCircle(NUIPoint(cx, cy), 2.0f, color);
-
-    // Teeth (Cardinals)
-    renderer.drawLine(NUIPoint(cx, cy - r - 2), NUIPoint(cx, cy + r + 2), 2.0f, color);
-    renderer.drawLine(NUIPoint(cx - r - 2, cy), NUIPoint(cx + r + 2, cy), 2.0f, color);
-}
+void UnitRow::drawSoloIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active, bool engaged) { drawKey(renderer, bounds, "S", active, engaged, "success"); }
 
 std::array<NUIRect, 3> UnitRow::controlPillRects(const NUIRect& controlBounds) const {
-    const bool showBars = (m_density == Density::Full);
-    const float routeW = (m_density == Density::Minimal) ? 24.0f : (m_density == Density::Compact) ? 34.0f : 42.0f;
-    const float muteW = (m_density == Density::Minimal) ? 16.0f : (m_density == Density::Compact) ? 20.0f : 24.0f;
-    const float soloW = (m_density == Density::Minimal) ? 16.0f : (m_density == Density::Compact) ? 20.0f : 24.0f;
+    // The mock: M and S close the row's head; the output chip ends the row. The control rect starts 42 px in, in
+    // whichever frame the caller works, so the row's own left edge and width place the chip.
+    const bool minimal = m_density == Density::Minimal;
+    const float routeW = minimal ? 24.0f : (m_density == Density::Compact) ? 64.0f : 96.0f;
+    const float keyW = minimal ? 16.0f : 20.0f;
     const float pillY = controlBounds.y + controlBounds.height * 0.5f - 10.0f;
-    const float bandRight = controlBounds.right() - (showBars ? 18.0f : 4.0f);
+    const float bandRight = controlBounds.right() - 8.0f - (minimal ? 19.0f : 23.0f); // the open-lanes key sits after S
+    const float rowRight = controlBounds.x - 42.0f + getBounds().width;
     return {
-        NUIRect(bandRight - soloW - 6.0f - muteW - 6.0f - routeW, pillY, routeW, 20.0f), // route
-        NUIRect(bandRight - soloW - 6.0f - muteW, pillY, muteW, 20.0f),                   // mute
-        NUIRect(bandRight - soloW, pillY, soloW, 20.0f),                                  // solo
+        NUIRect(rowRight - 16.0f - routeW, pillY, routeW, 20.0f), // output chip, row's right end
+        NUIRect(bandRight - keyW - 3.0f - keyW, pillY, keyW, 20.0f), // mute
+        NUIRect(bandRight - keyW, pillY, keyW, 20.0f),               // solo
     };
 }
 
 void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     auto& theme = NUIThemeManager::getInstance();
     const float nameX = bounds.x + 12.0f;
-    const NUIColor unitAccent = colorFromUnitValue(m_color);
+    const NUIColor unitAccent = identityColor();
     const bool engaged = m_isHovered || m_isSelected;
 
     // Center the status dot on the primary name line ("Sampler 2"), using the
@@ -421,16 +339,23 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     const NUIRect& routeRect = pills[0];
     const NUIRect& muteRect = pills[1];
     const NUIRect& soloRect = pills[2];
-    const NUIColor routeFill = m_mixerChannelId == Aestra::Audio::MASTER_MIXER_CHANNEL_ID
-                                   ? theme.getColor("surfaceTertiary")
-                                   : unitAccent.withAlpha(engaged ? 0.16f : 0.07f);
-    const NUIColor routeStroke =
-        m_mixerRouteShortLabel == "!" ? theme.getColor("error").withAlpha(0.75f)
-                                      : unitAccent.withAlpha(engaged ? 0.42f : 0.20f);
-    renderer.fillRoundedRect(routeRect, 4.0f, routeFill);
-    renderer.strokeRoundedRect(routeRect, 4.0f, 1.0f, routeStroke);
-    renderer.drawTextCentered(m_mixerRouteShortLabel, routeRect, m_density == Density::Minimal ? 7.5f : 9.0f,
-                              theme.getColor("textPrimary").withAlpha(engaged ? 0.9f : 0.45f));
+    // The output chip: a flat 1 px outline with the channel's colour square and its name (the mock).
+    renderer.strokeRoundedRect(routeRect, 2.0f, 1.0f, m_mixerRouteShortLabel == "!" ? theme.getColor("error").withAlpha(0.75f) : theme.getColor("border").withAlpha(engaged ? 0.9f : 0.6f));
+    const NUIColor routeText = theme.getColor("textSecondary");
+    if (m_density == Density::Minimal) {
+        renderer.drawTextCentered(m_mixerRouteShortLabel, routeRect, 7.5f, routeText);
+    } else {
+        // A colour dot for the destination, then its name, cut with an ellipsis to fit.
+        NUIColor dot = theme.getColor("accentPrimary");
+        if (m_mixerRouteColorIndex >= 0) dot = colorFromUnitValue(paletteIndexToARGB(m_mixerRouteColorIndex));
+        renderer.fillRect(NUIRect{routeRect.x + 8.0f, routeRect.y + routeRect.height * 0.5f - 3.0f, 6.0f, 6.0f}, dot);
+        std::string label = m_mixerRouteName;
+        const float room = routeRect.width - 28.0f;
+        bool cut = false;
+        while (label.size() > 1 && renderer.measureText(label, 10.5f).width > room) { label.pop_back(); cut = true; }
+        if (cut) label += "\xE2\x80\xA6";
+        renderer.drawText(label, {routeRect.x + 20.0f, routeRect.y + routeRect.height * 0.5f - 6.0f}, 10.5f, routeText);
+    }
     drawMuteIcon(renderer, muteRect, m_isMuted, engaged);
     drawSoloIcon(renderer, soloRect, m_isSolo, engaged);
 
@@ -513,12 +438,20 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     const int playStep = (playBeat >= 0.0) ? static_cast<int>(std::floor(playBeat / 0.25)) : -1;
     const NUIColor playheadAccent = theme.getColor("accentPrimary");
 
+    const NUIColor inactiveFill = theme.getColor("surfaceTertiary").lightened(0.05f);
+    const NUIColor inactiveStroke = theme.getColor("border").withAlpha(0.14f);
+    // The beat-group seam after every fourth pad.
+    const auto drawSeam = [&](int step, const NUIRect& cellRect, float cellGap) {
+        if ((step + 1) % 4 != 0 || step + 1 >= m_stepCount) return;
+        const float seamX = cellRect.right() + (cellGap + kStepGroupGap) * 0.5f;
+        renderer.drawLine(NUIPoint(seamX, timelineStrip.y + 2.0f), NUIPoint(seamX, timelineStrip.bottom() - 2.0f), 1.0f,
+                          theme.getColor("border").withAlpha(0.18f));
+    };
+
     if (m_type == Aestra::Audio::UnitType::Sampler && !noteRollMode) {
-        const NUIColor inactiveFill = theme.getColor("surfaceTertiary").lightened(0.05f);
-        const NUIColor inactiveStroke = theme.getColor("border").withAlpha(0.14f);
-        const NUIColor activeFill = theme.getColor("primary");
+        const NUIColor activeFill = identityColor();
         const float cellGap = 3.0f;
-        const float cellRadius = 3.0f;
+        const float cellRadius = 2.0f; // flat pads (the Arsenal mock: sharp, opaque)
         const float cellHeight = std::max(10.0f, timelineStrip.height - 6.0f);
         const float cellY = timelineStrip.y + (timelineStrip.height - cellHeight) * 0.5f;
 
@@ -536,9 +469,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             const bool isSelected = isStepSelected(step);
             NUIRect cellRect(cellX, cellY, cellWidth, cellHeight);
             NUIColor cellFill = isActive ? activeFill : inactiveFill;
-            if (((step / 4) & 1) != 0) {
-                cellFill = NUIColor::lerp(cellFill, theme.getColor("accentPrimary"), 0.10f);
-            }
+            if (((step / 4) & 1) != 0 && !isActive) cellFill = cellFill.lightened(0.06f); // neutral beat-group tint
             if (isPlayhead && isActive) {
                 cellFill = activeFill.lightened(0.35f); // note lights up under the playhead
             }
@@ -572,22 +503,14 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                 renderer.strokeRoundedRect(haloRect, cellRadius + 1.5f, 1.5f,
                                            theme.getColor("textPrimary").withAlpha(0.9f));
             }
-            if ((step + 1) % 4 == 0 && step + 1 < m_stepCount) {
-                const float seamX = cellRect.right() + (cellGap + kStepGroupGap) * 0.5f;
-                renderer.drawLine(NUIPoint(seamX, timelineStrip.y + 2.0f),
-                                  NUIPoint(seamX, timelineStrip.bottom() - 2.0f), 1.0f,
-                                  theme.getColor("border").withAlpha(0.18f));
-            }
+            drawSeam(step, cellRect, cellGap);
             if (isPlayhead) {
                 renderer.strokeRoundedRect(cellRect, cellRadius, 1.5f,
                                            playheadAccent.withAlpha(isActive ? 0.95f : 0.45f));
             }
-
         }
     } else if (m_type == Aestra::Audio::UnitType::PitchedSampler) {
-        const NUIColor inactiveFill = theme.getColor("surfaceTertiary").lightened(0.05f);
-        const NUIColor inactiveStroke = theme.getColor("border").withAlpha(0.14f);
-        const NUIColor activeFill = theme.getColor("primary");
+        const NUIColor activeFill = identityColor();
         const NUIColor pitchText = theme.getColor("textSecondary").withAlpha(0.72f);
         const float cellGap = 3.0f;
         const float topHeight = std::max(8.0f, timelineStrip.height * 0.58f);
@@ -611,9 +534,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             const bool isSelected = isStepSelected(step);
             NUIRect cellRect(cellX, topY, cellWidth, topHeight);
             NUIColor cellFill = isActive ? activeFill : inactiveFill;
-            if (((step / 4) & 1) != 0) {
-                cellFill = NUIColor::lerp(cellFill, theme.getColor("accentPrimary"), 0.10f);
-            }
+            if (((step / 4) & 1) != 0 && !isActive) cellFill = cellFill.lightened(0.06f); // neutral beat-group tint
             if (isPlayhead && isActive) {
                 cellFill = activeFill.lightened(0.35f);
             }
@@ -628,12 +549,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                 renderer.strokeRoundedRect(haloRect, 4.5f, 1.5f,
                                            theme.getColor("textPrimary").withAlpha(0.9f));
             }
-            if ((step + 1) % 4 == 0 && step + 1 < m_stepCount) {
-                const float seamX = cellRect.right() + (cellGap + kStepGroupGap) * 0.5f;
-                renderer.drawLine(NUIPoint(seamX, timelineStrip.y + 2.0f),
-                                  NUIPoint(seamX, timelineStrip.bottom() - 2.0f), 1.0f,
-                                  theme.getColor("border").withAlpha(0.18f));
-            }
+            drawSeam(step, cellRect, cellGap);
             if (isPlayhead) {
                 renderer.strokeRoundedRect(cellRect, 3.0f, 1.5f, playheadAccent.withAlpha(isActive ? 0.95f : 0.45f));
             }
@@ -685,7 +601,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         minPitch = std::max(0, minPitch - 2);
         maxPitch = std::min(127, maxPitch + 2);
         const int pitchRange = std::max(12, maxPitch - minPitch);
-        const NUIColor noteFill = theme.getColor("primary").withAlpha(0.88f);
+        const NUIColor noteFill = identityColor().withAlpha(0.95f);
         const NUIColor noteStroke = theme.getColor("border").withAlpha(0.10f);
         const float noteHeight = 4.0f;
 
@@ -809,11 +725,12 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
     }
 
     auto bounds = getBounds();
-    const NUIRect localDragRect(6.0f, 6.0f, 32.0f, 44.0f);
-    m_controlWidth = std::clamp(bounds.width * 0.38f, controlFloorForDensity(bounds.width), 312.0f);
-    const NUIRect localControlRect(42.0f, 0.0f, std::max(0.0f, m_controlWidth - 48.0f), 56.0f);
+    const float rowH = bounds.height; // the panel sizes the row (44 px in the grouped rack)
+    const NUIRect localDragRect(6.0f, 6.0f, 32.0f, rowH - 12.0f);
+    m_controlWidth = controlFloorForDensity(bounds.width);
+    const NUIRect localControlRect(42.0f, 0.0f, std::max(0.0f, m_controlWidth - 48.0f), rowH);
     const float separatorX = m_controlWidth;
-    const NUIRect localContextRect(separatorX + 8.0f, 6.0f, std::max(0.0f, bounds.width - (separatorX + 2.0f)), 44.0f);
+    const NUIRect localContextRect(separatorX + 8.0f, 6.0f, std::max(0.0f, bounds.width - (separatorX + 2.0f) - routeColumn()), rowH - 12.0f);
     // Step math must use the same geometry the pads are DRAWN with:
     // drawContextBlock insets the context rect by 6px lane padding before
     // laying out steps. Resolving against the un-inset rect skewed the step
@@ -1005,7 +922,7 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
                         m_onDragStart(m_unitId);
                     invalidateVisuals();
                     return true;
-                } else if (localControlRect.contains(localPoint)) {
+                } else if (localControlRect.contains(localPoint) || controlPillRects(localControlRect)[0].contains(localPoint)) {
                     handleControlClick(event, localControlRect);
                     return true;
                 } else if (localContextRect.contains(localPoint)) {
@@ -1067,7 +984,7 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
         // === Right-click (row body, outside name label which is handled by UnitNameLabel child) ===
         if (event.button == NUIMouseButton::Right) {
             if (bounds.contains(event.position)) {
-                if (localControlRect.contains(localPoint)) {
+                if (localControlRect.contains(localPoint) || controlPillRects(localControlRect)[0].contains(localPoint)) {
                     const auto pills = controlPillRects(localControlRect);
                     if (pills[0].contains(localPoint)) {
                         showMixerRoutingMenu(event.position);
@@ -1075,9 +992,7 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
                     }
                 }
 
-                // Right-drag across a step grid erases every crossed pad.
-                // Right-click raises the row context menu only from the name
-                // label (far left) — the grid never opens menus.
+                // Right-drag across the step grid erases crossed pads; the grid never opens menus.
                 if (localContextRect.contains(localPoint) && usesStepSequencerForType(m_type) &&
                     !shouldUseNoteRoll() && m_patternId.isValid() && m_trackManager) {
                     const int stepIndex = resolveGridStep(localPoint, localGridRect);
@@ -1095,8 +1010,9 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
                         return true;
                     }
                 }
-                // Row context menu lives on the far-left text (name) area only.
-                if (m_nameLabel && m_nameLabel->getBounds().contains(localPoint)) {
+                // The row menu opens from anywhere on the row except the step grid, where a right-press
+                // is the erase gesture (it used to open only from the name label).
+                if (!localGridRect.contains(localPoint)) {
                     showRowContextMenu(event.position);
                 }
                 return true;
@@ -1778,14 +1694,12 @@ void UnitRow::layoutNameLabel() {
     // Minimal below. The control block floor follows the tier so narrow rows
     // give the step grid the width back instead of clipping it.
     m_density = densityForWidth(bounds.width);
-    float controlWidth = std::clamp(bounds.width * 0.38f, controlFloorForDensity(bounds.width), 312.0f);
+    float controlWidth = controlFloorForDensity(bounds.width);
     float labelX = 54.0f; // 42 (control block) + 12 (name indent)
     // The label ends before the pill band; the band width follows the tier.
-    const float pillBand = (m_density == Density::Full)     ? 142.0f
-                           : (m_density == Density::Compact) ? 110.0f
-                                                             : 74.0f;
+    const float pillBand = (m_density == Density::Minimal) ? 57.0f : 71.0f; // the M, S and open-lanes keys
     float labelWidth = std::max(16.0f, (controlWidth - 48.0f) - pillBand - 6.0f);
-    m_nameLabel->setBounds(NUIRect(labelX, 8.0f, labelWidth, 30.0f));
+    m_nameLabel->setBounds(NUIRect(labelX, 7.0f, labelWidth, 30.0f));
     m_nameLabel->setCompact(m_density != Density::Full);
 }
 
@@ -1797,9 +1711,9 @@ UnitRow::Density UnitRow::densityForWidth(float width) {
 
 float UnitRow::controlFloorForDensity(float width) {
     const Density d = densityForWidth(width);
-    return (d == Density::Minimal)   ? 150.0f
-           : (d == Density::Compact) ? 180.0f
-                                     : 220.0f;
+    return (d == Density::Minimal)   ? 169.0f
+           : (d == Density::Compact) ? 262.0f
+                                     : 294.0f;
 }
 
 void UnitRow::routeToMixerChannel(uint32_t channelId) {
@@ -1830,22 +1744,21 @@ void UnitRow::showMixerRoutingMenu(const NUIPoint& pos) {
 
     m_mixerRoutingMenu = std::make_shared<NUIContextMenu>();
     m_mixerRoutingMenu->setOnHide([this]() { detachContextMenu(m_mixerRoutingMenu); });
+    m_mixerRoutingMenu->setMaxHeight(7.0f * m_mixerRoutingMenu->getItemHeight() + 12.0f); // seven rows, then scroll
 
-    const auto addRouteItem = [this](uint32_t channelId, const std::string& label) {
+    const auto addRouteItem = [this](uint32_t channelId, const std::string& label, int paletteIndex = -1) {
         const bool selected = channelId == m_mixerChannelId;
-        m_mixerRoutingMenu->addItem((selected ? "✓ " : "  ") + label,
-                                    [this, channelId]() { routeToMixerChannel(channelId); });
+        auto item = std::make_shared<NUIContextMenuItem>(label, NUIContextMenuItem::Type::Checkbox); // tick in the shared slot
+        item->setChecked(selected); item->setOnClick([this, channelId]() { routeToMixerChannel(channelId); });
+        if (paletteIndex >= 0) item->setSwatch(NUIColor::fromARGB(paletteIndexToARGB(paletteIndex))); // the channel's own colour
+        m_mixerRoutingMenu->addItem(item);
     };
 
     addRouteItem(Aestra::Audio::MASTER_MIXER_CHANNEL_ID, "Master");
-    if (m_trackManager->getChannelCount() > 0) {
-        m_mixerRoutingMenu->addSeparator();
-    }
-    for (size_t i = 0; i < m_trackManager->getChannelCount(); ++i) {
+    if (m_trackManager->getChannelCount() > 0) m_mixerRoutingMenu->addSeparator(); for (size_t i = 0; i < m_trackManager->getChannelCount(); ++i) {
         const auto* channel = m_trackManager->getChannel(i);
-        if (!channel)
-            continue;
-        addRouteItem(channel->getChannelId(), std::to_string(i + 1) + "  " + channel->getName());
+        if (!channel) continue;
+        addRouteItem(channel->getChannelId(), std::to_string(i + 1) + " · " + channel->getName(), channel->getTrackColorIndex());
     }
 
     m_mixerRoutingMenu->addSeparator();
@@ -1866,7 +1779,8 @@ void UnitRow::showRowContextMenu(const NUIPoint& pos) {
     m_rowContextMenu = std::make_shared<NUIContextMenu>();
     m_rowContextMenu->setOnHide([this]() { detachContextMenu(m_rowContextMenu); });
 
-    if (usesPianoRollForType(type) && hasPattern) {
+    // Every pattern unit can open in the piano roll, a loaded one-shot included (it was Instrument-only).
+    if (hasPattern && type != Aestra::Audio::UnitType::Audio) {
         m_rowContextMenu->addItem("Open in Piano Roll", [this]() {
             // Verify unit still exists (defensive check against use-after-free)
             if (!m_manager.getUnit(m_unitId))

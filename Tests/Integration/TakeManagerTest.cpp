@@ -1,6 +1,13 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "../../Source/Core/TakeManager.h"
+#include "../../Source/Core/VersionBounce.h"
+#include "../../Source/Core/VersionBringOver.h"
+#include "../../Source/Core/VersionPicker.h"
+#include "../../Source/Core/RecoveryInfo.h"
+#include "../../Source/Core/AuditionLibrary.h"
+#include "../../Source/Core/AuditionCompare.h"
+#include "../../Source/Core/AuditionFiles.h"
 
 #include "../../Source/Core/ProjectSerializer.h"
 #include "../Support/TestTempDirectory.h"
@@ -9,6 +16,7 @@
 #include <atomic>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <thread>
@@ -221,5 +229,185 @@ int main() {
     require(afterDelete.activeTakeId == branch.take.id, "Deletion must not change the active take");
 
     std::cout << "[PASS] TakeManagerTest\n";
+    // A bounce: the render is written beside the snapshot, its card info is kept, and the version points at it.
+    {
+        namespace VB = Aestra::VersionBounce;
+        std::vector<float> tone;
+        for (int f = 0; f < 8000; ++f) { const float a = f < 4000 ? 0.25f : 0.5f; tone.push_back(a); tone.push_back(-a); }
+        const auto bars = VB::peaks(tone, 2, 8);
+        require(bars.size() == 8 && bars.back() == 1.0f && bars.front() == 0.5f, "Peaks are scaled so the loudest bar is 1");
+        require(VB::peaks({}, 2, 4) == std::vector<float>(4, 0.0f), "An empty render has flat peaks");
+        require(VB::lengthLabel(161.4) == "2:41", "Length reads minutes and seconds");
+
+        const std::string id = TakeManager::createVersion(projectPath.string(), mainContents, "Bounced", "", "", TakeManager::TakeEntry::Kind::Saved, {}).take.id;
+        require(!id.empty(), "A version to bounce exists");
+        const bool ok = VB::bounceVersion(projectPath.string(), id,
+            [&](std::vector<float>& a, uint32_t& c, uint32_t& r) { a = tone; c = 2; r = 8000; return true; },
+            [](const std::vector<float>&, uint32_t, uint32_t) { return -9.8; });
+        require(ok, "A bounce is written");
+        const auto manifest = TakeManager::loadManifest(projectPath.string());
+        const auto* v = manifest.findTake(id);
+        require(v && v->bounce == VB::fileNameFor(id), "The version records its bounce");
+        const std::string wav = TakeManager::resolveBouncePath(projectPath.string(), *v);
+        require(!wav.empty() && std::filesystem::file_size(wav) == 44 + tone.size() * 2, "The WAV is 16-bit PCM of the whole render");
+        Aestra::VersionBounceInfo info;
+        require(VB::readInfo(wav, info) && info.peaks.size() == VB::kBars && std::fabs(info.lufs + 9.8) < 0.01 && std::fabs(info.seconds - 1.0) < 1e-6, "The card info round-trips");
+        require(!VB::bounceVersion(projectPath.string(), id, [](std::vector<float>&, uint32_t&, uint32_t&) { return false; }, nullptr), "An empty render makes no bounce");
+        TakeManager::TakeEntry escape = *v;
+        escape.bounce = "../outside.wav";
+        require(TakeManager::resolveBouncePath(projectPath.string(), escape).empty(), "A bounce path cannot leave the takes folder");
+    }
+
+    // Bring over: choose tracks and patterns from another version; one undo takes them back out.
+    {
+        namespace BO = Aestra::BringOver;
+        auto current = makeProject("Drums");
+        auto other = makeProject("Drums");
+        auto& op = other->getPatternManager();
+        Aestra::Audio::MidiPayload hook;
+        hook.notes.push_back({60, 0.0, 1.0, 0.8f});
+        hook.notes.push_back({64, 1.0, 1.0, 0.8f});
+        const auto hookId = op.createMidiPattern("Hook B", 4.0, hook);
+        Aestra::Audio::MidiPayload lonely = hook;
+        lonely.notes[0].unitId = 99;  // plays an instrument the open version does not have
+        const auto lonelyId = op.createMidiPattern("Lonely", 4.0, lonely);
+        auto& playlist = other->getPlaylistModel();
+        const auto lane = playlist.createLane("Hook vox");
+        other->createTrack(lane, "Hook vox");
+        Aestra::Audio::ClipInstance clip;
+        clip.patternId = hookId;
+        clip.startBeat = 8.0;
+        clip.durationBeats = 4.0;
+        playlist.addClip(lane, clip);
+
+        const auto plan = BO::plan(*other, *current, "Alt hook");
+        require(plan.tracks.size() == 1 && plan.tracks[0].name == "Hook vox" && plan.tracks[0].status == BO::Status::New, "A track the open version lacks is listed as new");
+        bool sawHook = false, sawLonely = false;
+        for (const auto& it : plan.patterns) {
+            if (it.name == "Hook B") sawHook = it.status == BO::Status::New && BO::defaultChecked(it);
+            if (it.name == "Lonely") sawLonely = it.status == BO::Status::Blocked && !BO::defaultChecked(it);
+        }
+        require(sawHook && sawLonely, "New patterns start checked; ones needing a missing instrument are blocked");
+
+        const size_t lanesBefore = current->getPlaylistModel().getLaneCount();
+        auto cmd = std::make_shared<BO::Command>(*current, *other, std::vector<uint64_t>{plan.tracks[0].id}, std::vector<uint64_t>{});
+        require(cmd->trackCount() == 1 && cmd->patternCount() == 1, "The command takes the track and the pattern its clip plays");
+        cmd->execute();
+        require(current->getPlaylistModel().getLaneCount() == lanesBefore + 1, "The track arrives as a lane");
+        bool found = false;
+        for (auto* t : current->getTracks()) found = found || t->name == "Hook vox";
+        require(found, "...with its track");
+        require(BO::plan(*other, *current, "Alt hook").tracks[0].status == BO::Status::Same, "Once brought over, the track reads as the same as current");
+        cmd->undo();
+        require(current->getPlaylistModel().getLaneCount() == lanesBefore, "One undo removes the lane");
+        found = false;
+        for (auto* t : current->getTracks()) found = found || t->name == "Hook vox";
+        require(!found, "...and the track");
+        bool patternGone = true;
+        current->getPatternManager().forEachPattern([&](const Aestra::Audio::PatternSource& p) { patternGone = patternGone && p.name != "Hook B"; });
+        require(patternGone, "...and the pattern it brought");
+        cmd->redo();
+        require(current->getPlaylistModel().getLaneCount() == lanesBefore + 1, "Redo brings it back");
+        (void)lonelyId;
+    }
+
+    // The title-bar chip and picker read from the manifest alone.
+    {
+        namespace VP = Aestra::VersionPicker;
+        TakeManager::Manifest m;
+        m.ok = true;
+        const auto mk = [](const char* id, const char* name, const char* branch, uint64_t t, bool autosave = false, bool active = false) {
+            TakeManager::TakeEntry v;
+            v.id = id; v.name = name; v.branch = branch; v.createdAtMs = t; v.active = active;
+            v.kind = autosave ? TakeManager::TakeEntry::Kind::Autosave : TakeManager::TakeEntry::Kind::Saved;
+            return v;
+        };
+        m.takes = {mk("a", "Start", "Main", 1), mk("s", "", "Main", 2, true), mk("b", "Mix pass 1", "Main", 3, false, true), mk("c", "Alt hook v2", "Alt hook", 4)};
+        m.activeTakeId = "b";
+        const auto chip = VP::chip(m);
+        require(chip.branch == "Main mix" && chip.version == "Mix pass 1" && chip.lane == 0, "The chip reads the open branch as the main mix, and the open version");
+        const auto entries = VP::entries(m);
+        require(entries.size() == 2 && entries[0].branch == "Main mix" && entries[0].current && entries[0].versionId == "b", "Each branch lands on its newest saved version");
+        require(entries[1].branch == "Alt hook" && !entries[1].current && entries[1].versionName == "Alt hook v2", "...and the other branch is not the current one");
+        m.takes[2].kind = TakeManager::TakeEntry::Kind::Autosave;
+        require(VP::entries(m)[0].versionId == "a", "An autosave is never where a branch opens");
+        require(VP::chip(TakeManager::Manifest{}).branch.empty(), "No manifest, no chip");
+    }
+
+    // The recovery card compares the autosaves with the last saved version, in plain words.
+    {
+        namespace RI = Aestra::RecoveryInfo;
+        TakeManager::Manifest m;
+        m.ok = true;
+        TakeManager::TakeEntry v;
+        v.id = "b"; v.name = "Mix pass 1"; v.branch = "Main"; v.active = true; v.createdAtMs = 1'000'000; v.updatedAtMs = 1'000'000;
+        m.takes = {v};
+        m.activeTakeId = "b";
+        const uint64_t minute = 60'000;
+        auto info = RI::build(m, {1'000'000 + 2 * minute, 1'000'000 - 5 * minute, 1'000'000 + 15 * minute, 1'000'000 + 28 * minute, 1'000'000 + 30 * minute});
+        require(info.hasVersion && info.lastSavedName == "Mix pass 1" && info.branch == "Main mix", "The card names the last saved version and its branch");
+        require(info.autosaveMs.size() == RI::kMaxDots && info.autosaveMs.back() == 1'000'000 + 30 * minute, "Only the newest autosaves after it are lit, newest last");
+        require(info.detail == "The newest autosave is 30 minutes after your last saved version.", "The gap is said in minutes");
+        require(RI::gapWords(0, 30'000) == "1 minute" && RI::gapWords(0, 10'000) == "moments" && RI::gapWords(0, 3 * 3'600'000) == "3 hours", "Gaps read as minutes, hours, or moments");
+        require(RI::build(m, {1'000'000 - minute}).autosaveMs.empty() && RI::build(m, {1'000'000 - minute}).detail == "Nothing newer than your last saved version was autosaved.", "An autosave older than the version is not lit");
+        require(!RI::build(TakeManager::Manifest{}, {5}).hasVersion && RI::build(TakeManager::Manifest{}, {5}).autosaveMs.size() == 1, "A project with no versions still shows its autosaves");
+    }
+
+    // What Audition lists: the project's bounces newest first, and imported references that survive a restart.
+    {
+        namespace AL = Aestra::AuditionLibrary;
+        const auto manifest = TakeManager::loadManifest(projectPath.string());
+        const auto items = AL::versionItems("Night Drive", projectPath.string(), manifest, 2'000'000'000'000ull);
+        require(!items.empty() && items[0].kind == AL::Item::Kind::Version && items[0].title == "Night Drive", "A bounced version is listed under the project's name");
+        require(items[0].hasLufs && std::fabs(items[0].lufs + 9.8) < 0.01 && items[0].badge[0] == 'v', "...with its loudness and a version number");
+        require(AL::seedOf("Night Drive") == AL::seedOf("Night Drive") && AL::seedOf("Night Drive") != AL::seedOf("Glass Coast"), "A name always gets the same cover seed");
+        const auto file = (tempDir / "audition_library.txt").string();
+        std::vector<AL::Reference> refs{{"/music/Glass Coast.flac", "Glass Coast", 242.0, -8.6, true, 5}, {"/music/Low Orbit.flac", "Low Orbit", 211.0, 0.0, false, 6}};
+        require(AL::save(file, refs), "The reference list is written");
+        const auto back = AL::load(file);
+        require(back.size() == 2 && back[0].title == "Glass Coast" && back[0].hasLufs && std::fabs(back[0].lufs + 8.6) < 1e-3 && !back[1].hasLufs, "...and read back, loudness or not");
+        require(AL::itemOf(back[0]).badge == "REF" && AL::itemOf(back[0]).subtitle.find("LUFS") != std::string::npos, "A reference reads as REF with its loudness");
+        require(Aestra::VersionTime::ago(1'000'000'000'000ull, 1'000'000'000'000ull + 86'400'000ull * 2 + 3'600'000ull) == "2 days ago", "A bounce from two days ago says so");
+    }
+
+    // Comparing a mix with a reference: the reference is turned to the mix's level, and both are drawn on one scale.
+    {
+        namespace AC = Aestra::AuditionCompare;
+        const auto tone = [](float amp, int seconds) {
+            std::vector<float> v;
+            for (int i = 0; i < 44100 * seconds; ++i) { const float s = amp * std::sin(2.0f * 3.14159265f * 220.0f * static_cast<float>(i) / 44100.0f); v.push_back(s); v.push_back(s); }
+            return v;
+        };
+        const auto quiet = AC::measure("mix.wav", tone(0.1f, 6), 2, 44100);
+        const auto loud = AC::measure("ref.wav", tone(0.2f, 6), 2, 44100);  // 6 dB louder
+        const auto result = AC::compare(quiet, loud);
+        require(result.ok, "Two real signals can be compared");
+        require(std::fabs(result.referenceGainDb + 6.02) < 0.3, "A reference 6 dB louder is turned down by about 6 dB");
+        require(result.mix.peaks.size() == AC::kWaveColumns && result.mix.peaks[10] > 0.0f, "Each side has a waveform");
+        require(std::fabs(result.ref.peaks[10] - result.mix.peaks[10]) < 0.02f, "After the match the two waveforms are the same size");
+        const auto flipped = AC::compare(loud, quiet);
+        require(flipped.referenceGainDb > 5.0, "A quieter reference is turned up");
+        std::vector<float> silence(44100 * 6 * 2, 0.0f);
+        require(!AC::compare(quiet, AC::measure("s.wav", silence, 2, 44100)).ok, "Silence cannot be compared");
+    }
+
+    // The files Audition shows: folders and audio, nothing else, folders first.
+    {
+        namespace AF = Aestra::AuditionFiles;
+        const auto dir = tempDir / "audition_files";
+        std::filesystem::create_directories(dir / "Zed folder");
+        std::filesystem::create_directories(dir / ".hidden");
+        const auto touch = [&](const char* name) { std::ofstream(dir / name) << "x"; };
+        touch("b track.WAV"); touch("a track.flac"); touch("plugin.vst3"); touch("project.aes"); touch("notes.txt"); touch(".secret.wav");
+        const auto entries = AF::list(dir.string());
+        require(entries.size() == 3, "Only folders and audio are listed: not plugins, projects or text, and not hidden things");
+        require(entries[0].folder && entries[0].name == "Zed folder", "Folders come first");
+        require(entries[1].name == "a track.flac" && entries[2].name == "b track.WAV", "Audio follows in name order, any case of extension");
+        require(AF::list((dir / "nope").string()).empty(), "A folder that is not there lists as empty");
+        const auto places = AF::places(dir.string(), "/definitely/not/home");
+        require(places.size() == 1 && places[0].name == "Project", "Places that do not exist are left out");
+        require(AF::sizeLabel(512) == "1 KB" && AF::sizeLabel(3 * 1024 * 1024) == "3.0 MB", "Sizes read in KB and MB");
+    }
+
     return 0;
 }

@@ -238,7 +238,7 @@ namespace {
 // strong refs so affected children stay alive until dispatch unwinds.
 thread_local int g_eventDispatchDepth = 0;
 
-enum class DeferredHierarchyOperationType { Add, Remove, RemoveAll, BringToFront };
+enum class DeferredHierarchyOperationType { Add, Remove, RemoveAll, BringToFront, BringToFrontPriority };
 
 struct DeferredHierarchyOperation {
     DeferredHierarchyOperationType type;
@@ -323,7 +323,10 @@ void NUIComponent::endEventDispatch() {
 
     auto pending = std::move(g_deferredHierarchyOperations);
     g_deferredHierarchyOperations.clear();
+    for (int pass = 0; pass < 2; ++pass)
     for (auto& operation : pending) {
+        // Pass 0 runs everything in order except deliberate opens; pass 1 raises those last.
+        if ((operation.type == DeferredHierarchyOperationType::BringToFrontPriority) != (pass == 1)) continue;
         switch (operation.type) {
         case DeferredHierarchyOperationType::Add:
             if (operation.parent) {
@@ -341,6 +344,7 @@ void NUIComponent::endEventDispatch() {
             }
             break;
         case DeferredHierarchyOperationType::BringToFront:
+        case DeferredHierarchyOperationType::BringToFrontPriority:
             if (operation.child) {
                 operation.child->bringToFront();
             }
@@ -402,6 +406,15 @@ void NUIComponent::bringToFront() {
         store.push_back(self);
         parent_->setDirty();
     }
+}
+
+void NUIComponent::bringToFrontPriority() {
+    if (parent_ && g_eventDispatchDepth > 0) {
+        g_deferredHierarchyOperations.push_back(
+            {DeferredHierarchyOperationType::BringToFrontPriority, parent_, shared_from_this()});
+        return;
+    }
+    bringToFront();
 }
 
 std::shared_ptr<NUIComponent> NUIComponent::findChildById(const std::string& id) {

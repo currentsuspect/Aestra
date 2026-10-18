@@ -45,6 +45,7 @@ MixerPanel::MixerPanel(std::shared_ptr<TrackManager> trackManager)
     // fires onInspectorPreferenceChanged, so wiring first would echo the load into a save.
     loadUIPreferences();
     m_newMixer->onInspectorPreferenceChanged = [this](bool) { saveUIPreferences(); };
+    m_newMixer->onViewPreferencesChanged = [this]() { saveUIPreferences(); };
 
     refreshChannels();
 }
@@ -63,6 +64,12 @@ void MixerPanel::loadUIPreferences()
     if (const auto expanded = store->boolPreference(Aestra::UISurfaceKeys::kMixerInspectorExpanded)) {
         m_newMixer->setInspectorExpandedPreference(*expanded);
     }
+    if (const auto group = store->boolPreference(Aestra::UISurfaceKeys::kMixerGroupByOutput)) {
+        m_newMixer->setGroupByOutput(*group);
+    }
+    if (const auto density = store->listPreference(Aestra::UISurfaceKeys::kMixerDensity); density && !density->empty()) {
+        m_newMixer->setDensity(AestraUI::mixerDensityFromName((*density)[0].c_str()));
+    }
 }
 
 void MixerPanel::saveUIPreferences() const
@@ -77,6 +84,9 @@ void MixerPanel::saveUIPreferences() const
                                   m_newMixer->getInspectorExpandedPreference())) {
         AESTRA_LOG_WARNING("Failed to save mixer layout to " + store->path());
     }
+    store->setBoolPreference(Aestra::UISurfaceKeys::kMixerGroupByOutput, m_newMixer->groupByOutput());
+    store->setListPreference(Aestra::UISurfaceKeys::kMixerDensity,
+                             std::vector<std::string>{AestraUI::mixerDensityName(m_newMixer->density())});
 }
 
 

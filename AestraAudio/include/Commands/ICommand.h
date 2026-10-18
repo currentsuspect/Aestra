@@ -1,6 +1,8 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include <chrono>
+#include <cstdint>
 #include <string>
 
 namespace Aestra {
@@ -60,6 +62,13 @@ public:
      * @return String identifier like "add_clip", "move_pattern", etc.
      */
     virtual std::string type() const { return {}; }
+
+    /// When the command was made (epoch ms): the moment of the user's action, which the Versions steps list shows.
+    uint64_t createdAtMs() const { return m_createdAtMs; }
+
+private:
+    uint64_t m_createdAtMs = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
 };
 
 } // namespace Audio

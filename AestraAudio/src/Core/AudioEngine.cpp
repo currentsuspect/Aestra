@@ -777,9 +777,9 @@ void AudioEngine::performNonRealtimeMaintenance() {
     // Pattern engine lookahead refill (non-RT, runs every main loop iteration)
     auto* patEng = m_patternEngine.load(std::memory_order_acquire);
     if (patEng && m_transportPlaying.load(std::memory_order_relaxed)) {
-        constexpr int LOOKAHEAD_SAMPLES = 4096; // ~85ms at 48kHz — covers main loop jitter
         uint64_t currentFrame = m_globalSamplePos.load(std::memory_order_relaxed);
         uint32_t sr = m_sampleRate.load(std::memory_order_relaxed);
+        const int LOOKAHEAD_SAMPLES = std::max(4096, static_cast<int>(sr / 4)); // 250 ms: see refillWindow() docs
         if (sr > 0) {
             uint64_t loopLenSamples = 0;
             bool deferRefill = false;
@@ -911,15 +911,18 @@ void AudioEngine::reclaimRetiredCompensationWhenStopped() {
     }
 }
 
-void AudioEngine::resetCachedSamplerVoicesRt() noexcept {
+void AudioEngine::resetCachedSamplerVoicesRt(bool soft) noexcept {
     auto* cache = m_samplerCacheRaw.load(std::memory_order_acquire);
     if (!cache)
         return;
     const size_t cachedCount = cache->count;
     for (size_t i = 0; i < cachedCount && i < cache->samplers.size(); ++i) {
-        if (cache->samplers[i]) {
+        if (!cache->samplers[i])
+            continue;
+        if (soft)
+            cache->samplers[i]->requestReleaseAllVoices();
+        else
             cache->samplers[i]->requestHardResetVoices();
-        }
     }
 }
 
@@ -1079,19 +1082,15 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
 
     // State transitions
     bool isPlaying = m_transportPlaying.load(std::memory_order_relaxed);
-    // [CHANGED] Disable global fade-out to allow effects tails to ring out.
-    // if (wasPlaying && !isPlaying &&
-    //     m_fadeState != FadeState::FadingOut && m_fadeState != FadeState::Silent) {
-    //     m_fadeState = FadeState::FadingOut;
-    //     m_fadeSamplesRemaining = FADE_OUT_SAMPLES;
-    // }
+    // No global fade-out on stop: effect tails ring out.
 
-    // Rewind Pattern Engine on Stop to prevent stale events.
-    // NOTE: normal stop does NOT cut one-shots (tails are allowed).
+    // Rewind on stop/pause. The rewind drops the queued note-offs, so release held voices through
+    // their own ADSR (a stop does not cut them, but must not leave them sustaining).
     if (transportStop) {
         auto* pe = m_patternEngine.load(std::memory_order_relaxed);
         if (pe)
             pe->rewindScheduledInstances();
+        resetCachedSamplerVoicesRt(true);
     }
 
     // On transport restart (play start or seek):
@@ -1299,6 +1298,7 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
                 auto* pe = m_patternEngine.load(std::memory_order_relaxed);
                 if (pe)
                     pe->rewindScheduledInstances();
+                resetCachedSamplerVoicesRt(true); // notes held at the wrap must not ring into the loop top
             }
             m_globalSamplePos.store(loopStartSample, std::memory_order_relaxed);
             renderGraph(graph, numFrames - loopSplitFrame, loopSplitFrame, patternFrame(loopStartSample));
@@ -1486,6 +1486,7 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
 
         // Accumulate Energy
         m_loudnessState.blockEnergySum += (f2L * f2L) + (f2R * f2R);
+        m_loudnessWindow.add((f2L * f2L) + (f2R * f2R));
         // -----------------------------------
 
         // Track output-boundary clips without mutating the limiter-disabled float path.
@@ -1565,6 +1566,8 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
 
         snaps->writeLevels(ChannelSlotMap::MASTER_SLOT_INDEX, masterPeakL, masterPeakR, masterRmsL, masterRmsR,
                            masterLowL, masterLowR, masterCorr, integratedLufs);
+        snaps->writeLoudness(ChannelSlotMap::MASTER_SLOT_INDEX, m_loudnessWindow.momentaryLufs(),
+                             m_loudnessWindow.shortTermLufs(), getTruePeakL(), getTruePeakR());
 
         if (masterPeakL >= 1.0f || masterPeakR >= 1.0f) {
             snaps->setClip(ChannelSlotMap::MASTER_SLOT_INDEX, masterPeakL >= 1.0f, masterPeakR >= 1.0f);
@@ -1579,14 +1582,6 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         m_loudnessState.energyQueue.try_push(avgBlockEnergy);
         m_loudnessState.blockEnergySum = 0.0;
         m_loudnessState.blockSamples = 0;
-
-        // Momentary (Short-term) readout for UI feedback
-        if (avgBlockEnergy > 1e-14) {
-            float m = -0.691f + 10.0f * std::log10(static_cast<float>(avgBlockEnergy));
-            m_loudnessState.momentaryLufs.store(m, std::memory_order_relaxed);
-        } else {
-            m_loudnessState.momentaryLufs.store(-144.0f, std::memory_order_relaxed);
-        }
     }
 
     // Fade envelopes (short ramps prevent clicks on stop/seek). An offline render takes no fade-in (V8-W4).
@@ -2078,7 +2073,6 @@ AudioEngine::AudioEngine() {
     m_activeKWeightIndex.store(0, std::memory_order_relaxed);
 
     m_loudnessState.integratedLufs.store(-144.0f); // Force silence init
-    m_loudnessState.momentaryLufs.store(-144.0f);
 
     // Metronome sounds generated in MetronomeEngine constructor
     startLoudnessWorker();
@@ -2469,6 +2463,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
     // soloable owner (mixerChannelId 0 = Master, which is never soloed), so any
     // active solo silences them. Isolated-track bounce excludes the master
     // stage entirely by design — this gate is live-path only.
+    const bool tapDirect = m_trackOutputTap.wants(TrackOutputTap::kMasterDirect); // multi-track pattern bounce: what direct sources add
+    if (tapDirect) m_trackOutputTap.beginDelta(masterBuf, numFrames);
     if (!ctx.anySolo) {
         renderClips(graph.masterClips, masterBuf, ctx, srcActiveThisBlock);
     }
@@ -2502,6 +2498,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             }
         }
     }
+    if (tapDirect) m_trackOutputTap.endDelta(masterBuf);
 
     if (srcActiveThisBlock) {
         m_telemetry.incrementSrcActiveBlocks();
@@ -2519,7 +2516,6 @@ void AudioEngine::renderClips(const std::vector<ClipRenderState>& clips, double*
     const Interpolators::InterpolationQuality cachedInterpQuality = ctx.cachedInterpQuality;
     const bool cachedPatternMode = ctx.cachedPatternMode;
 
-    // Check isPlaying inside loop to avoid brace wrapping issues
     // [FIX] Suppress timeline clips if in Pattern Mode (Audio Isolation)
     bool patternMode = cachedPatternMode;
 
@@ -2550,7 +2546,6 @@ void AudioEngine::renderTrackUnits(uint32_t mixerChannelId, std::vector<double>&
         for (const auto& unit : unitSnapshot->units) {
             if (unit.mixerChannelId == mixerChannelId && unit.enabled && unit.plugin && !unit.isMuted &&
                 (!ctx.anyUnitSolo || unit.isSolo)) {
-                // Found unit for this track
                 MidiBuffer* midiBuf = nullptr;
                 for (size_t r = 0; r < unitMidiRouteCount; ++r) {
                     if (unitMidiRoutes[r].unitId == static_cast<UnitID>(unit.id)) {
@@ -2559,7 +2554,6 @@ void AudioEngine::renderTrackUnits(uint32_t mixerChannelId, std::vector<double>&
                     }
                 }
 
-                // Render to scratch
                 // Note: Inputs are nullptr (Generator)
                 if (m_scratchL.size() < numFrames || m_scratchR.size() < numFrames) {
                     // Should not happen (pre-sized in setBufferConfig); fail-safe

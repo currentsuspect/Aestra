@@ -15,6 +15,7 @@
 #include "NUILabel.h"
 #include "NUIRenderer.h"
 #include "NUISlider.h"
+#include "Widgets/FlatSlider.h"
 #include "NUIThemeSystem.h"
 #include "SampleEditorPanel.h"
 #include "TrackColorPalette.h"
@@ -37,13 +38,14 @@ constexpr float kMinPanelWidth = 660.0f;
 // the surface (panel height minus the 28px WindowPanel title bar); the
 // controls card starts at surfaceBottom - kControlsCardHeight - 8 - 14 and
 // the waveform top is at surfaceY + 130, so a 64px waveform needs a surface
-// of 458px, i.e. a panel of 486px. 490 leaves ~96px of waveform and
+// of 458px, i.e. a panel of 486px. The card has since grown 14px: the minimum is 520, which leaves ~96px of waveform and
 // guarantees the card can never overlap the waveform (triage 2026-08-14).
-constexpr float kMinPanelHeight = 490.0f;
+constexpr float kMinPanelHeight = 520.0f;
 constexpr size_t kWaveformBuckets = 768;
 constexpr float kNormalizeTargetLinear = 0.89125094f; // -1 dBFS peak
-constexpr float kControlsCardHeight = 242.0f;
-constexpr float kSourceCardHeight = 88.0f;
+constexpr float kControlsCardHeight = 188.0f; // the two titled columns
+constexpr float kHeaderHeight = 62.0f;        // name, facts, output chip
+constexpr float kActionRowHeight = 42.0f;     // Reverse, Commit, Normalize, Mute, Reset
 
 // All editor colors come from the theme system. The editor uses the standard
 // surface hierarchy (canvas < card < sub-card < raised) and the Aestra accent
@@ -88,35 +90,7 @@ NUIColor accentStrongColor() {
     return NUIThemeManager::getInstance().getColor("primaryHover");
 }
 
-class ClipRangeSlider final : public NUISlider {
-public:
-    explicit ClipRangeSlider(bool bipolar) : NUISlider(), m_bipolar(bipolar) {}
-
-protected:
-    void drawSliderTrack(NUIRenderer& renderer) override {
-        const auto bounds = getBounds();
-        const float trackY = bounds.y + (bounds.height - getSliderThickness()) * 0.5f;
-        const float inset = std::min(getSliderRadius(), bounds.width * 0.5f);
-        const NUIRect track{bounds.x + inset, trackY,
-                            std::max(0.0f, bounds.width - inset * 2.0f), getSliderThickness()};
-        const float radius = getSliderThickness() * 0.5f;
-        renderer.fillRoundedRect(track, radius, getTrackColor());
-
-        const float valueX = track.x + track.width * static_cast<float>(valueToProportionOfLength(getValue()));
-        if (m_bipolar) {
-            const float centerX = track.x + track.width * static_cast<float>(valueToProportionOfLength(0.0));
-            const float left = std::min(centerX, valueX);
-            const float right = std::max(centerX, valueX);
-            if (right > left)
-                renderer.fillRoundedRect({left, track.y, right - left, track.height}, radius, getFillColor());
-        } else if (valueX > track.x) {
-            renderer.fillRoundedRect({track.x, track.y, valueX - track.x, track.height}, radius, getFillColor());
-        }
-    }
-
-private:
-    bool m_bipolar{false};
-};
+using ClipRangeSlider = FlatSlider; // the shared sharp slider; a bipolar one fills from zero
 
 class AudioClipEditorSurface final : public NUIComponent {
 public:
@@ -124,38 +98,19 @@ public:
         if (!isVisible())
             return;
         const auto bounds = getBounds();
-        renderer.fillRect(bounds, canvasColor());
+        // One panel colour. What you read (waveform, value wells) sits on the darker bed; there are no cards inside
+        // the panel, only one-pixel rules between the regions and under each section title.
+        renderer.fillRect(bounds, surface1Color());
 
-        const auto card = surface1Color();
-        const auto stroke = borderColor();
-        const NUIRect sourceCard{bounds.x + 8.0f, bounds.y + 8.0f, bounds.width - 16.0f, kSourceCardHeight};
-        const NUIRect controlsCard{bounds.x + 8.0f, bounds.bottom() - kControlsCardHeight - 8.0f, bounds.width - 16.0f,
-                                   kControlsCardHeight};
-        renderer.fillRoundedRect(sourceCard, 9.0f, card);
-        renderer.strokeRoundedRect(sourceCard, 10.0f, 1.0f, stroke);
-        renderer.fillRoundedRect({sourceCard.x, sourceCard.y + 13.0f, 3.0f, sourceCard.height - 26.0f}, 1.5f,
-                                 clipAccent());
-
-        // The waveform is a separate editing surface, not part of the source
-        // card. Keep its eyebrow marker in the canvas gap above the card.
-        renderer.fillRoundedRect({bounds.x + 16.0f, bounds.y + 110.0f, 2.0f, 10.0f}, 1.0f, clipAccent());
-
-        renderer.fillRoundedRect(controlsCard, 9.0f, card.withAlpha(0.92f));
-        renderer.strokeRoundedRect(controlsCard, 10.0f, 1.0f, stroke);
-
-        const float innerPad = 10.0f;
-        const float sectionGap = 10.0f;
-        const float sectionTop = controlsCard.y + 42.0f;
-        const float sectionHeight = controlsCard.height - 52.0f;
-        const float sectionWidth = (controlsCard.width - innerPad * 2.0f - sectionGap) * 0.5f;
-        const NUIRect toneCard{controlsCard.x + innerPad, sectionTop, sectionWidth, sectionHeight};
-        const NUIRect timingCard{toneCard.right() + sectionGap, sectionTop, sectionWidth, sectionHeight};
-        renderer.fillRoundedRect(toneCard, 8.0f, surface2Color());
-        renderer.strokeRoundedRect(toneCard, 8.0f, 1.0f, borderColor());
-        renderer.fillRoundedRect(timingCard, 8.0f, surface2Color());
-        renderer.strokeRoundedRect(timingCard, 8.0f, 1.0f, borderColor());
-        renderer.fillRoundedRect({toneCard.x + 10.0f, toneCard.y + 29.0f, 2.0f, 10.0f}, 1.0f, clipAccent());
-        renderer.fillRoundedRect({timingCard.x + 10.0f, timingCard.y + 29.0f, 2.0f, 10.0f}, 1.0f, clipAccent());
+        const NUIColor rule = NUIThemeManager::getInstance().getColor("borderSubtle");
+        const float controlsTop = bounds.bottom() - kControlsCardHeight;
+        renderer.fillRect({bounds.x, controlsTop, bounds.width, 1.0f}, rule);
+        const float splitX = bounds.x + bounds.width * 0.5f;
+        renderer.fillRect({splitX, controlsTop, 1.0f, kControlsCardHeight}, rule);
+        const float pad = 16.0f;
+        const float titleRuleY = controlsTop + 30.0f;
+        renderer.fillRect({bounds.x + pad, titleRuleY, bounds.width * 0.5f - pad * 2.0f, 1.0f}, rule);
+        renderer.fillRect({splitX + pad, titleRuleY, bounds.width * 0.5f - pad * 2.0f, 1.0f}, rule);
         renderChildren(renderer);
         setDirty(false);
     }
@@ -203,7 +158,7 @@ void AudioClipEditorPanel::buildUI() {
         slider->setId(name);
         slider->setOrientation(NUISlider::Orientation::Horizontal);
         slider->setTextBoxVisible(false);
-        slider->setSliderRadius(6.5f);
+        slider->setSliderRadius(3.0f);
         slider->setSliderThickness(3.0f);
         slider->setRange(minimum, maximum);
         slider->setValue(initial);
@@ -218,23 +173,21 @@ void AudioClipEditorPanel::buildUI() {
     const auto styleButton = [](const std::shared_ptr<NUIButton>& button) {
         button->setStyle(NUIButton::Style::Text);
         button->setFontSize(12.0f);
-        button->setCornerRadius(6.0f);
+        button->setCornerRadius(2.0f);
         button->setGlowEnabled(false);
         button->setBackgroundColor(surface2Color());
         button->setHoverColor(surface3Color());
         button->setPressedColor(surface3Color());
         button->setTextColor(secondaryTextColor());
-        button->setBorderEnabled(true);
-        button->setBorderWidth(1.0f);
-        button->setBorderColor(borderColor());
+        button->setBorderEnabled(false); // flat keys, no outline
     };
 
     m_sourceNameLabel = makeLabel("No audio clip selected", 15.0f);
     m_sourceNameLabel->setTextColor(primaryTextColor());
     m_sourceMetaLabel = makeLabel("");
-    m_routeLabel = makeLabel("OUTPUT CHANNEL", 10.0f);
+    m_routeLabel = makeLabel("OUT", 10.0f);
     m_routeLabel->setTextColor(mutedTextColor());
-    m_routeLabel->setVisible(false);
+    m_routeLabel->setAlignment(NUILabel::Alignment::Right); m_routeLabel->setEllipsize(false);
     m_routeHintLabel = makeLabel("");
     m_routeHintLabel->setVisible(false);
     m_routePicker = std::make_shared<UIInsertRoutePicker>();
@@ -264,7 +217,7 @@ void AudioClipEditorPanel::buildUI() {
     m_speedValueLabel = makeLabel("1.00x", 11.5f);
     m_sourceStartValueLabel = makeLabel("0.000 s", 11.5f);
     m_waveformHintLabel = makeLabel("Scroll to zoom • edits are non-destructive", 11.0f);
-    m_waveformHintLabel->setAlignment(NUILabel::Alignment::Right);
+    m_waveformHintLabel->setAlignment(NUILabel::Alignment::Left);
     for (const auto& value : {m_gainValueLabel, m_panValueLabel, m_fadeInValueLabel, m_fadeOutValueLabel,
                               m_pitchValueLabel, m_speedValueLabel, m_sourceStartValueLabel}) {
         value->setAlignment(NUILabel::Alignment::Right);
@@ -492,6 +445,7 @@ void AudioClipEditorPanel::rebuildWaveform() {
     }
 
     m_sourceDurationSeconds = buffer->durationSeconds();
+    m_waveform->setDurationSeconds(m_sourceDurationSeconds);
     m_sourcePeak = buffer->peakAbs();
 
     m_sourceNameLabel->setText(source->getName().empty() ? clip->name : source->getName());
@@ -611,6 +565,13 @@ void AudioClipEditorPanel::rebuildRoutes(bool force) {
     if (const auto* pattern = m_trackManager->getPatternManager().getPattern(m_patternId)) {
         selectedRoute = pattern->getMixerChannelId();
     }
+    // The waveform wears its channel's colour, the same one as that channel's rows and clips; Master has none, so the
+    // signal stays the neutral bone.
+    NUIColor signal{0.0f, 0.0f, 0.0f, 0.0f};
+    for (const auto& route : routes)
+        if (route.id == selectedRoute && route.colorArgb != 0)
+            signal = NUIColor::fromARGB(route.colorArgb);
+    m_waveform->setColor(signal);
     m_routePicker->setRoutes(std::move(routes), selectedRoute);
     m_suppressCallbacks = false;
 }
@@ -814,92 +775,89 @@ void AudioClipEditorPanel::onResize(int width, int height) {
     const auto bounds = m_surface->getBounds();
     const float pad = 16.0f;
     const float contentWidth = bounds.width - pad * 2.0f;
-    const float routeWidth = std::min(238.0f, contentWidth * 0.34f);
-    m_sourceNameLabel->setBounds({bounds.x + pad + 2.0f, bounds.y + 17.0f, contentWidth - routeWidth - 20.0f, 20.0f});
-    m_sourceMetaLabel->setBounds({bounds.x + pad + 2.0f, bounds.y + 43.0f, contentWidth - routeWidth - 20.0f, 16.0f});
-    m_routeLabel->setBounds({bounds.right() - pad - routeWidth, bounds.y + 17.0f, routeWidth, 14.0f});
-    m_routePicker->setTriggerBounds({bounds.right() - pad - routeWidth, bounds.y + 29.0f, routeWidth, 38.0f});
-    m_routeHintLabel->setBounds({});
 
-    const float controlsTop = bounds.bottom() - kControlsCardHeight - 8.0f;
-    const float waveformSectionTop = bounds.y + 108.0f;
-    const float waveformTop = waveformSectionTop + 22.0f;
-    const float waveformBottom = controlsTop - 14.0f;
-    // Never let the waveform grow into the controls card: clamp to zero and
-    // hide it below the 64px usability floor instead (triage 2026-08-14).
-    // The old max(64, ...) painted the waveform over the card's top edge.
+    // Header: the clip's name and facts at the left, the output as a small chip at the right.
+    const float chipWidth = std::min(150.0f, contentWidth * 0.3f);
+    const float chipX = bounds.right() - pad - chipWidth;
+    m_sourceNameLabel->setBounds({bounds.x + pad, bounds.y + 12.0f, chipX - bounds.x - pad - 52.0f, 20.0f});
+    m_sourceMetaLabel->setBounds({bounds.x + pad, bounds.y + 36.0f, chipX - bounds.x - pad - 52.0f, 16.0f});
+    m_routeLabel->setBounds({chipX - 44.0f, bounds.y + 19.0f, 38.0f, 14.0f});
+    m_routePicker->setTriggerBounds({chipX, bounds.y + 14.0f, chipWidth, 26.0f});
+    m_routeHintLabel->setBounds({});
+    m_waveformTitleLabel->setBounds({});
+    m_instanceLabel->setBounds({});
+
+    const float controlsTop = bounds.bottom() - kControlsCardHeight;
+    const float actionY = controlsTop - kActionRowHeight + 8.0f;
+    const float waveformTop = bounds.y + kHeaderHeight;
+    const float waveformBottom = actionY - 26.0f; // the hint line sits between the waveform and the actions
     const float waveformHeight = std::max(0.0f, waveformBottom - waveformTop);
     const bool waveformUsable = waveformHeight >= 64.0f;
     m_waveform->setVisible(waveformUsable);
     if (waveformUsable) {
-        m_waveform->setBounds({bounds.x + 8.0f, waveformTop, bounds.width - 16.0f, waveformHeight});
+        m_waveform->setBounds({bounds.x + pad, waveformTop, contentWidth, waveformHeight});
     } else {
         m_waveform->setBounds({});
     }
-    m_waveformTitleLabel->setBounds({bounds.x + pad + 9.0f, waveformSectionTop, 110.0f, 14.0f});
-    m_waveformHintLabel->setBounds({bounds.x + pad, waveformSectionTop, contentWidth - 4.0f, 14.0f});
+    m_waveformHintLabel->setBounds({bounds.x + pad, waveformBottom + 6.0f, contentWidth, 14.0f});
 
-    m_instanceLabel->setBounds({bounds.x + pad, controlsTop + 10.0f, 96.0f, 14.0f});
+    // Actions: flat keys at the left, Reset at the right, shrinking together when the panel is narrow.
     const float buttonGap = 6.0f;
-    const float actionY = controlsTop + 8.0f;
-    const float actionH = 26.0f;
-    // The CLIP ACTIONS label owns the first 96px; the action row starts after
-    // it and shrinks proportionally when the panel is narrow, instead of the
-    // old fixed-width row that collided below ~574px (triage 2026-08-14).
+    const float actionH = 24.0f;
     const float resetWidth = 104.0f;
-    float actionX = bounds.x + pad + 104.0f;
-    float totalRequired = buttonGap * 4.0f + 78.0f + 78.0f + 78.0f + 88.0f +
-                          (m_makeUniqueButton->isVisible() ? 92.0f : 0.0f);
-    const float available = (bounds.right() - pad - resetWidth) - actionX;
+    float actionX = bounds.x + pad;
+    const float totalRequired = buttonGap * 3.0f + 78.0f + 78.0f + 88.0f + 88.0f +
+                                (m_makeUniqueButton->isVisible() ? buttonGap + 100.0f : 0.0f);
+    const float available = (bounds.right() - pad - resetWidth) - actionX - buttonGap;
     const float scale = totalRequired > 0.0f ? std::clamp(available / totalRequired, 0.0f, 1.0f) : 1.0f;
     const auto placeAction = [&](const std::shared_ptr<NUIButton>& button, float width) {
-        // No width floor: the proportional shrink keeps the row inside the
-        // available band at every panel width (a floor here would overflow
-        // into the Reset button when the panel is forced very narrow).
         const float w = width * scale;
         button->setBounds({actionX, actionY, w, actionH});
         actionX += w + buttonGap * scale;
     };
     placeAction(m_reverseButton, 78.0f);
     placeAction(m_commitButton, 78.0f);
-    placeAction(m_normalizeButton, 78.0f);
+    placeAction(m_normalizeButton, 88.0f);
     placeAction(m_muteButton, 88.0f);
     if (m_makeUniqueButton->isVisible())
-        placeAction(m_makeUniqueButton, 92.0f);
+        placeAction(m_makeUniqueButton, 100.0f);
     m_resetButton->setBounds({bounds.right() - pad - resetWidth, actionY, resetWidth, actionH});
+    m_instanceLabel->setBounds({});
 
-    const float columnGap = 30.0f;
-    const float columnWidth = (contentWidth - columnGap) * 0.5f;
-    const float labelWidth = 58.0f;
-    const float valueWidth = 116.0f;
-    // Floor at zero: a negative slider width produced inverted bounds that
-    // rendered as malformed controls on narrow panels (triage 2026-08-14).
-    const float sliderWidth = std::max(0.0f, columnWidth - labelWidth - valueWidth - 18.0f);
+    // Two columns of four rows under titled rules.
+    const float columnWidth = bounds.width * 0.5f - pad * 2.0f;
+    const float labelWidth = 60.0f;
+    const float valueWidth = 78.0f;
+    const float sliderWidth = std::max(0.0f, columnWidth - labelWidth - valueWidth - 12.0f);
     const auto layoutControl = [&](float x, float y, const auto& label, const auto& slider, const auto& value) {
-        label->setBounds({x, y + 5.0f, labelWidth, 16.0f});
+        label->setBounds({x, y + 4.0f, labelWidth, 16.0f});
         slider->setBounds({x + labelWidth, y, sliderWidth, 24.0f});
-        value->setBounds({x + labelWidth + sliderWidth + 8.0f, y + 5.0f, valueWidth, 16.0f});
+        value->setBounds({x + labelWidth + sliderWidth + 12.0f, y + 4.0f, valueWidth, 16.0f});
     };
-    const float left = bounds.x + pad + 10.0f;
-    const float right = left + columnWidth + columnGap;
-    m_toneSectionLabel->setBounds({left + 9.0f, controlsTop + 49.0f, columnWidth - 29.0f, 14.0f});
-    m_timingSectionLabel->setBounds({right + 9.0f, controlsTop + 49.0f, columnWidth - 29.0f, 14.0f});
-    layoutControl(left, controlsTop + 78.0f, m_gainLabel, m_gainSlider, m_gainValueLabel);
-    layoutControl(left, controlsTop + 124.0f, m_panLabel, m_panSlider, m_panValueLabel);
-    layoutControl(left, controlsTop + 170.0f, m_pitchLabel, m_pitchSlider, m_pitchValueLabel);
-    layoutControl(left, controlsTop + 216.0f, m_speedLabel, m_speedSlider, m_speedValueLabel);
-    layoutControl(right, controlsTop + 78.0f, m_fadeInLabel, m_fadeInSlider, m_fadeInValueLabel);
-    layoutControl(right, controlsTop + 124.0f, m_fadeOutLabel, m_fadeOutSlider, m_fadeOutValueLabel);
-    layoutControl(right, controlsTop + 170.0f, m_sourceStartLabel, m_sourceStartSlider, m_sourceStartValueLabel);
+    const float left = bounds.x + pad;
+    const float right = bounds.x + bounds.width * 0.5f + pad;
+    m_toneSectionLabel->setBounds({left, controlsTop + 10.0f, columnWidth, 14.0f});
+    m_timingSectionLabel->setBounds({right, controlsTop + 10.0f, columnWidth, 14.0f});
+    const float rowTop = controlsTop + 40.0f;
+    const float rowStep = 32.0f;
+    layoutControl(left, rowTop, m_gainLabel, m_gainSlider, m_gainValueLabel);
+    layoutControl(left, rowTop + rowStep, m_panLabel, m_panSlider, m_panValueLabel);
+    layoutControl(left, rowTop + rowStep * 2.0f, m_pitchLabel, m_pitchSlider, m_pitchValueLabel);
+    layoutControl(left, rowTop + rowStep * 3.0f, m_speedLabel, m_speedSlider, m_speedValueLabel);
+    layoutControl(right, rowTop, m_fadeInLabel, m_fadeInSlider, m_fadeInValueLabel);
+    layoutControl(right, rowTop + rowStep, m_fadeOutLabel, m_fadeOutSlider, m_fadeOutValueLabel);
+    layoutControl(right, rowTop + rowStep * 2.0f, m_sourceStartLabel, m_sourceStartSlider, m_sourceStartValueLabel);
 
-    // Fit-to-bars row (#747): free slot under Source start in the right column.
-    m_fitLabel->setBounds({right + 9.0f, controlsTop + 221.0f, labelWidth, 16.0f});
+    // Fit-to-bars (#747): the fourth row of the right column, five keys that end inside it.
+    const float fitY = rowTop + rowStep * 3.0f;
+    m_fitLabel->setBounds({right, fitY + 4.0f, labelWidth, 16.0f});
     {
-        float fitX = right + 9.0f + labelWidth + 8.0f;
-        const float fitW = std::max(0.0f, (columnWidth - labelWidth - 8.0f - 4.0f * buttonGap) / 5.0f);
+        const float fitGap = 1.0f;
+        float fitX = right + labelWidth;
+        const float fitW = std::max(0.0f, (columnWidth - labelWidth - 4.0f * fitGap) / 5.0f);
         for (const auto& fitButton : m_fitButtons) {
-            fitButton->setBounds({fitX, controlsTop + 216.0f, fitW, 24.0f});
-            fitX += fitW + buttonGap;
+            fitButton->setBounds({fitX, fitY, fitW, 24.0f});
+            fitX += fitW + fitGap;
         }
     }
 }
