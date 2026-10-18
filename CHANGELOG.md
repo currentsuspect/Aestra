@@ -362,7 +362,7 @@ the app can fail a build.
 
 ## v0.8.1-alpha — The revamp: Arsenal, Mixer, Routing, Audition, Versions (2026-10-18)
 
-85 PRs since v0.8.0-alpha. The surfaces you spend the most time in are rebuilt: the Arsenal is a rack you
+86 PRs since v0.8.0-alpha. The surfaces you spend the most time in are rebuilt: the Arsenal is a rack you
 play, the mixer reads meters first, the routing graph shows only what you changed, Audition is a place to
 listen and compare, and Versions replaces the history list.
 
@@ -420,6 +420,8 @@ listen and compare, and Versions replaces the history list.
 
 ### Fixes
 
+- **Opening Aestra with a project plays at that project's tempo.** It used to play at 120 while showing
+  yours, so loops sounded cut off. (#1165)
 - **New Project and Open Project ask about unsaved work,** as Quit does. (#1163)
 - New Project starts clean; the kit picker no longer freezes the window. (#1149)
 - Trims and undo/redo rebuild audio playback (no more trimmed-off tails playing). (#1158)
