@@ -266,7 +266,7 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     if (bounds.isEmpty()) return;
 
     const bool hasSelection = hasCurrentFile_;
-    NUIColor bgColor = theme.getColor("backgroundPrimary").darkened(0.02f);
+    NUIColor bgColor = theme.getColor("surfaceRaised");
     NUIColor borderColor = theme.getColor("borderSubtle").withAlpha(0.62f);
     NUIColor accent = theme.getColor("accentPrimary");
 
@@ -325,107 +325,61 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
         return;
     }
 
-    // === AUDIO FILE STATE ===
-    const float padL = 10.0f;
-    const float padR = 10.0f;
-    const float scrubberH = 3.0f;
-    const float padB = 8.0f; // bottom padding below scrubber
-    const float playBtnSize = 26.0f;
-    const float playBtnX = bounds.x + padL;
-    const float centerY = bounds.y + bounds.height * 0.5f;
-
-    // Play button bounds
-    playButtonBounds_ = NUIRect(playBtnX, centerY - playBtnSize * 0.5f, playBtnSize, playBtnSize);
-
-    // The text and waveform share a lane to the right of the play button.
-    const float textX = playButtonBounds_.right() + 8.0f;
-    const float textMaxWidth = std::max(0.0f, bounds.right() - padR - textX);
-    scrubberBounds_ = NUIRect(textX, bounds.bottom() - padB - scrubberH, textMaxWidth, scrubberH);
+    // === AUDIO FILE STATE === (FD-47 dock, top to bottom: label and name,
+    // waveform with the playhead, the facts line, then play, Auto-play and
+    // Add to Arsenal.)
+    const float padX = 12.0f;
+    const float laneW = std::max(0.0f, bounds.width - padX * 2.0f);
+    const NUIColor live = theme.getColor("accentCyan");
+    const NUIColor muted = theme.getColor("textSecondary");
+    const float xs = theme.getFontSize("xs");
+    const float s = theme.getFontSize("s");
 
     float progress = 0.0f;
     if (duration_ > 0.0) {
         progress = std::clamp(static_cast<float>(playheadPosition_ / duration_), 0.0f, 1.0f);
     }
 
-    // -- Quiet waveform lane. Purple is reserved for played progress. --
+    // Label and name
+    const NUIRect labelRow(bounds.x + padX, bounds.y + 8.0f, laneW, 16.0f);
+    const std::string label = isPlaying_ ? "PLAYING" : "PREVIEW";
+    renderer.drawText(label, NUIPoint(labelRow.x, std::round(renderer.calculateTextY(labelRow, xs))), xs,
+                      isPlaying_ ? live : muted.withAlpha(0.75f));
+    const float nameX = labelRow.x + renderer.measureText(label, xs).width + 8.0f;
+    const bool loading = isLoading_ || isWaveformLoading_;
+    const float nameRight = labelRow.right() - (loading ? 18.0f : 0.0f);
+    renderer.drawText(truncateToWidth(renderer, currentFile_.name, s, std::max(0.0f, nameRight - nameX)),
+                      NUIPoint(nameX, std::round(renderer.calculateTextY(labelRow, s))), s,
+                      theme.getColor("textPrimary"));
+
+    // Waveform: the whole sound, teal while it plays, a white playhead line.
+    const NUIRect wave(bounds.x + padX, bounds.y + 28.0f, laneW, 30.0f);
+    scrubberBounds_ = wave;
+    renderer.fillRect(wave, theme.getColor("backgroundPrimary").darkened(0.35f));
     {
         std::lock_guard<std::mutex> lock(waveformMutex_);
-        if (!waveformData_.empty() && textMaxWidth > 0.0f) {
-            const NUIRect waveformRect(textX, bounds.y + 31.0f, textMaxWidth, 22.0f);
-            const NUIColor waveformFill = theme.getColor("textSecondary").withAlpha(0.10f);
-            const NUIColor waveformPlayed = accent.withAlpha(0.48f);
-            const float playedX = waveformRect.x + waveformRect.width * progress;
-            const float wfY = waveformRect.y + waveformRect.height * 0.5f;
-            const float maxAmp = waveformRect.height * 0.42f;
-            const float samplesPerPixel = static_cast<float>(waveformData_.size()) / waveformRect.width;
-
-            if (samplesPerPixel > 0.0f) {
-                for (float x = 0; x < waveformRect.width; x += 2.0f) {
-                    int startSample = static_cast<int>(x * samplesPerPixel);
-                    int endSample = static_cast<int>((x + 2.0f) * samplesPerPixel);
-                    startSample = std::clamp(startSample, 0, (int)waveformData_.size() - 1);
-                    endSample = std::clamp(endSample, startSample + 1, (int)waveformData_.size());
-
-                    float amplitude = 0.0f;
-                    for (int i = startSample; i < endSample; ++i) {
-                        amplitude = std::max(amplitude, waveformData_[i]);
-                    }
-
-                    float barHeight = std::max(1.0f, amplitude * maxAmp * 2.0f);
-                    float yStart = wfY - barHeight * 0.5f;
-                    // Keyed off the playhead, not isPlaying_, so pausing keeps the
-                    // accent in step with the scrubber fill below.
-                    const bool played = duration_ > 0.0 && (waveformRect.x + x) < playedX;
-                    renderer.drawLine(
-                        NUIPoint(waveformRect.x + x, yStart),
-                        NUIPoint(waveformRect.x + x, yStart + barHeight),
-                        1.0f, played ? waveformPlayed : waveformFill
-                    );
-                }
+        if (!waveformData_.empty() && wave.width > 0.0f) {
+            const float midY = wave.y + wave.height * 0.5f;
+            const float maxAmp = wave.height * 0.44f;
+            const float perPx = static_cast<float>(waveformData_.size()) / wave.width;
+            const NUIColor rest = muted.withAlpha(0.42f);
+            for (float x = 0.0f; x < wave.width; x += 2.0f) {
+                int a = std::clamp(static_cast<int>(x * perPx), 0, static_cast<int>(waveformData_.size()) - 1);
+                int b = std::clamp(static_cast<int>((x + 2.0f) * perPx), a + 1, static_cast<int>(waveformData_.size()));
+                float amp = 0.0f;
+                for (int i = a; i < b; ++i) amp = std::max(amp, waveformData_[static_cast<size_t>(i)]);
+                const float h = std::max(1.0f, amp * maxAmp * 2.0f);
+                renderer.drawLine(NUIPoint(wave.x + x, midY - h * 0.5f), NUIPoint(wave.x + x, midY + h * 0.5f), 1.0f,
+                                  isPlaying_ ? live.withAlpha(0.85f) : rest);
             }
         }
     }
-
-    // -- Play button --
-    NUIColor btnBg = isPlaying_ ? accent.withAlpha(0.22f) : NUIColor::transparent();
-    NUIColor btnBorder = isPlaying_
-        ? accent.withAlpha(0.20f)
-        : theme.getColor("border").withAlpha(0.35f);
-    if (!isPlaying_) {
-        // Subtle hover ring could be added here if hover state tracked
-        btnBorder = theme.getColor("border").withAlpha(0.45f);
+    if (duration_ > 0.0 && (isPlaying_ || progress > 0.0f)) {
+        const float px = wave.x + wave.width * progress;
+        renderer.drawLine(NUIPoint(px, wave.y), NUIPoint(px, wave.bottom()), 1.0f, theme.getColor("textPrimary"));
     }
 
-    renderer.fillRoundedRect(playButtonBounds_, playBtnSize * 0.5f, btnBg);
-    renderer.strokeRoundedRect(playButtonBounds_, playBtnSize * 0.5f, 1.0f, btnBorder);
-
-    auto& icon = isPlaying_ ? stopIcon_ : playIcon_;
-    if (icon) {
-        float iconSize = 13.0f;
-        float iconX = std::floor(playButtonBounds_.x + (playButtonBounds_.width - iconSize) * 0.5f);
-        float iconY = std::floor(playButtonBounds_.y + (playButtonBounds_.height - iconSize) * 0.5f);
-
-        icon->setBounds(NUIRect(iconX, iconY, iconSize, iconSize));
-        icon->setColor(isPlaying_ ? NUIColor::white() : theme.getColor("textPrimary").withAlpha(0.85f));
-        icon->onRender(renderer);
-    }
-
-    // -- Loading spinner geometry. Declared up here so the filename lane can
-    // reserve the space instead of running underneath the spinner. --
-    const bool loading = isLoading_ || isWaveformLoading_;
-    const float spinnerR = 6.0f;
-    const float spinnerCX = bounds.right() - 28.0f;
-    const float spinnerLeft = spinnerCX - (spinnerR + 2.0f);
-
-    // -- File info. The row already establishes that this is audio, so the
-    // redundant glyph gives its width back to the filename. --
-    const float infoTopY = bounds.y + 8.0f;
-    const float nameX = bounds.x + padL;
-    const float nameRight = loading ? spinnerLeft - 6.0f : bounds.right() - padR;
-    const float nameFont = theme.getFontSize("m");
-
-    // What the header told us: length, rate, channels, tempo, key. Right-aligned
-    // in the name lane; the name gives up width first.
+    // Facts: what the header told us.
     std::string facts;
     const auto addFact = [&facts](const std::string& fact) {
         if (fact.empty()) return;
@@ -435,12 +389,8 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     if (currentFile_.durationSec > 0.0) {
         char buf[32];
         const double d = currentFile_.durationSec;
-        if (d < 10.0) {
-            std::snprintf(buf, sizeof(buf), "%.1f s", d);
-        } else {
-            const int total = static_cast<int>(d + 0.5);
-            std::snprintf(buf, sizeof(buf), "%d:%02d", total / 60, total % 60);
-        }
+        if (d < 10.0) std::snprintf(buf, sizeof(buf), "%.2f s", d);
+        else std::snprintf(buf, sizeof(buf), "%d:%02d", static_cast<int>(d + 0.5) / 60, static_cast<int>(d + 0.5) % 60);
         addFact(buf);
     }
     if (currentFile_.sampleRate > 0) {
@@ -448,67 +398,57 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
         std::snprintf(buf, sizeof(buf), "%g kHz", std::round(currentFile_.sampleRate / 100.0) / 10.0);
         addFact(buf);
     }
-    if (currentFile_.channels == 1) addFact("Mono");
-    else if (currentFile_.channels == 2) addFact("Stereo");
+    if (currentFile_.channels == 1) addFact("mono");
+    else if (currentFile_.channels == 2) addFact("stereo");
     else if (currentFile_.channels > 2) addFact(std::to_string(currentFile_.channels) + " ch");
     if (currentFile_.detectedBpm > 0) addFact(std::to_string(currentFile_.detectedBpm) + " BPM");
     addFact(currentFile_.musicalKey);
+    const NUIRect factsRow(bounds.x + padX, wave.bottom() + 4.0f, laneW, 14.0f);
+    renderer.drawText(truncateToWidth(renderer, facts, xs, laneW),
+                      NUIPoint(factsRow.x, std::round(renderer.calculateTextY(factsRow, xs))), xs, muted.withAlpha(0.80f));
 
-    float factsW = 0.0f;
-    const float factsFont = theme.getFontSize("xs");
-    if (!facts.empty()) {
-        factsW = renderer.measureText(facts, factsFont).width;
-        // Never let the facts take more than half the lane.
-        if (factsW > (nameRight - nameX) * 0.5f) {
-            facts.clear();
-            factsW = 0.0f;
+    // Actions
+    const float rowY = factsRow.bottom() + 6.0f;
+    playButtonBounds_ = NUIRect(bounds.x + padX, rowY, 24.0f, 22.0f);
+    renderer.fillRoundedRect(playButtonBounds_, 3.0f, theme.getColor("surfaceRaised"));
+    if (auto& icon = isPlaying_ ? stopIcon_ : playIcon_) {
+        icon->setBounds(NUIRect(playButtonBounds_.x + 6.0f, playButtonBounds_.y + 5.0f, 12.0f, 12.0f));
+        icon->setColor(isPlaying_ ? live : theme.getColor("textPrimary"));
+        icon->onRender(renderer);
+    }
+    {
+        const std::string t = "Auto-play";
+        const float w = renderer.measureText(t, xs).width + 24.0f;
+        autoPlayBounds_ = NUIRect(playButtonBounds_.right() + 6.0f, rowY, w, 22.0f);
+        renderer.strokeRoundedRect(autoPlayBounds_, 3.0f, 1.0f,
+                                   autoPlay_ ? live.withAlpha(0.55f) : theme.getColor("border").withAlpha(0.75f));
+        renderer.fillCircle(NUIPoint(autoPlayBounds_.x + 9.0f, autoPlayBounds_.y + 11.0f), 3.0f,
+                            autoPlay_ ? live : muted.withAlpha(0.45f));
+        renderer.drawText(t, NUIPoint(autoPlayBounds_.x + 16.0f, std::round(renderer.calculateTextY(autoPlayBounds_, xs))),
+                          xs, autoPlay_ ? live : muted);
+    }
+    if (onAddToArsenal_) {
+        const std::string t = "Add to Arsenal";
+        const float w = renderer.measureText(t, xs).width + 18.0f;
+        addBounds_ = NUIRect(bounds.right() - padX - w, rowY, w, 22.0f);
+        if (addBounds_.x > autoPlayBounds_.right() + 6.0f) {
+            renderer.fillRoundedRect(addBounds_, 3.0f, theme.getColor("accentPrimary"));
+            renderer.drawTextCentered(t, addBounds_, xs, NUIColor::white());
+        } else {
+            addBounds_ = NUIRect();
         }
     }
-    const float nameMaxW = std::max(0.0f, nameRight - nameX - (factsW > 0.0f ? factsW + 10.0f : 0.0f));
-    std::string displayName = truncateToWidth(renderer, currentFile_.name, nameFont, nameMaxW);
-    renderer.drawText(displayName, NUIPoint(nameX, infoTopY), nameFont, theme.getColor("textPrimary").withAlpha(0.92f));
-    if (!facts.empty()) {
-        renderer.drawText(facts, NUIPoint(nameRight - factsW, infoTopY + 2.0f), factsFont,
-                          theme.getColor("textSecondary").withAlpha(0.70f));
-    }
 
-    // -- Scrubber / Progress bar --
-    float trackY = scrubberBounds_.y + scrubberBounds_.height * 0.5f;
-
-    // Track background
-    renderer.fillRoundedRect(scrubberBounds_, scrubberH * 0.5f, theme.getColor("border").withAlpha(0.22f));
-
-    // Progress fill
-    float fillW = scrubberBounds_.width * progress;
-    if (fillW > 0.5f) {
-        NUIRect fillRect(scrubberBounds_.x, scrubberBounds_.y, fillW, scrubberBounds_.height);
-        renderer.fillRoundedRect(fillRect, scrubberH * 0.5f, accent.withAlpha(0.78f));
-    }
-
-    // Playhead indicator
-    if (duration_ > 0.0) {
-        float playheadX = scrubberBounds_.x + progress * scrubberBounds_.width;
-        float indicatorH = 7.0f;
-        renderer.drawLine(
-            NUIPoint(playheadX, trackY - indicatorH * 0.5f),
-            NUIPoint(playheadX, trackY + indicatorH * 0.5f),
-            2.0f, accent.withAlpha(0.92f)
-        );
-    }
-
-    // -- Loading spinner overlay (geometry hoisted above the filename lane) --
+    // Loading spinner at the end of the name row.
     if (loading) {
-        float spinnerCY = infoTopY + 6.0f;
-        int segments = 8;
-        float angleOffset = loadingAnimationTime_ * 5.0f;
-        for (int i = 0; i < segments; ++i) {
-            float a = angleOffset + (i * 2.0f * 3.14159265f / segments);
-            float alpha = (1.0f - static_cast<float>(i) / segments) * 0.8f;
-            float x1 = spinnerCX + std::cos(a) * (spinnerR - 2.0f);
-            float y1 = spinnerCY + std::sin(a) * (spinnerR - 2.0f);
-            float x2 = spinnerCX + std::cos(a) * (spinnerR + 2.0f);
-            float y2 = spinnerCY + std::sin(a) * (spinnerR + 2.0f);
-            renderer.drawLine(NUIPoint(x1, y1), NUIPoint(x2, y2), 1.8f, accent.withAlpha(alpha));
+        const float cx = labelRow.right() - 7.0f, cy = labelRow.y + labelRow.height * 0.5f, r = 5.0f;
+        const float offset = loadingAnimationTime_ * 5.0f;
+        for (int i = 0; i < 8; ++i) {
+            const float ang = offset + (i * 2.0f * 3.14159265f / 8.0f);
+            const float alpha = (1.0f - static_cast<float>(i) / 8.0f) * 0.8f;
+            renderer.drawLine(NUIPoint(cx + std::cos(ang) * (r - 2.0f), cy + std::sin(ang) * (r - 2.0f)),
+                              NUIPoint(cx + std::cos(ang) * (r + 2.0f), cy + std::sin(ang) * (r + 2.0f)), 1.6f,
+                              accent.withAlpha(alpha));
         }
     }
 }
@@ -547,6 +487,16 @@ bool FilePreviewPanel::onMouseEvent(const NUIMouseEvent& event) {
     }
 
     if (event.pressed && event.button == NUIMouseButton::Left) {
+        if (autoPlayBounds_.contains(event.position)) {
+            autoPlay_ = !autoPlay_;
+            if (onAutoPlayChanged_) onAutoPlayChanged_(autoPlay_);
+            setDirty(true);
+            return true;
+        }
+        if (!addBounds_.isEmpty() && addBounds_.contains(event.position)) {
+            if (onAddToArsenal_) onAddToArsenal_(currentFile_);
+            return true;
+        }
         if (playButtonBounds_.contains(event.position)) {
             if (isPlaying_) {
                 if (onStop_) onStop_();

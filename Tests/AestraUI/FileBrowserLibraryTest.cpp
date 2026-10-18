@@ -116,12 +116,30 @@ std::unique_ptr<FileBrowser> makeBrowser(float height = 600.0f) {
     return browser;
 }
 
-// Paint once so the nav pane lays out its rows, then click the first row with
+// Open Places and paint once so it lays out its rows, then click the first row with
 // @p action (and @p label, when several rows share an action). Returns false if
 // the row is missing or below the fold, where a user could not click it either.
 bool clickNav(FileBrowser& browser, FileBrowser::BrowserNavAction action, const std::string& label = {},
               AestraUI::NUIMouseButton button = AestraUI::NUIMouseButton::Left) {
     Aestra::Testing::NullRenderer renderer;
+    browser.setPlacesOpen(true); // FD-47: the rows live in Places, opened from the place chip
+    // Places scrolls: Collections sit below the library rows, so wheel down as a user
+    // would until the row is in view, and give up only when scrolling stops moving it.
+    for (int wheel = 0; wheel < 40; ++wheel) {
+        browser.onRender(renderer);
+        const auto navPane = browser.computeBrowserLayout().navPane;
+        const auto hits = browser.getNavHits();
+        const auto found = std::find_if(hits.begin(), hits.end(), [&](const auto& hit) {
+            return hit.action == action && (label.empty() || hit.label == label);
+        });
+        if (found == hits.end()) return false;
+        if (found->bounds.bottom() <= navPane.bottom()) break;
+        AestraUI::NUIMouseEvent scroll;
+        scroll.type = AestraUI::NUIMouseEventType::Scroll;
+        scroll.position = {navPane.x + navPane.width * 0.5f, navPane.y + navPane.height * 0.5f};
+        scroll.wheelDelta = -1.0f;
+        if (!browser.onMouseEvent(scroll)) return false; // nothing left to scroll: below the fold for good
+    }
     browser.onRender(renderer);
     for (const auto& hit : browser.getNavHits()) {
         if (hit.action != action || (!label.empty() && hit.label != label)) continue;
