@@ -14,9 +14,9 @@
 #include "TrackHeaderText.h"
 #include "TrackManager.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
-#include "../AestraUI/Platform/NUIPlatformBridge.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <unordered_set>
 
@@ -30,7 +30,9 @@ constexpr double kSourceLineRefreshSeconds = 0.5;
 } // namespace
 
 const std::string& TrackUIComponent::headerSourceLine() {
-    const double now = Aestra::Platform::getUtils()->getTime();
+    // The standard clock, not the platform's: headless harnesses (UIScenarioTest) paint lanes with no platform layer.
+    const double now =
+        std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
     if (m_headerSourceLineAt >= 0.0 && now - m_headerSourceLineAt < kSourceLineRefreshSeconds) {
         return m_headerSourceLine;
     }
