@@ -150,6 +150,19 @@ void TrackUIComponent::paintHeaderIdentity(AestraUI::NUIRenderer& renderer,
                               theme.getColor("textSecondary").withAlpha(m_selected ? 0.72f : 0.52f));
         }
     }
+
+    // V82-T1: a small curve after the name when this track's automation lane is hidden but holds points; a click
+    // on it shows the lane again (TrackUIComponentAutomationRow.cpp).
+    m_hiddenAutomationMarkRect = {};
+    if (m_hasHiddenAutomation && m_nameLabel && lane) {
+        const auto name = m_nameLabel->getBounds();
+        const float textWidth = renderer.measureText(m_nameLabel->getText(), m_nameLabel->getFontSize()).width;
+        const float x = std::min(name.x + textWidth + 9.0f, name.right() - 12.0f);
+        const float cy = std::round(name.y + name.height * 0.5f);
+        const AestraUI::NUIPoint wave[] = {{x, cy + 3.0f}, {x + 3.0f, cy + 3.0f}, {x + 6.0f, cy - 3.0f}, {x + 9.0f, cy - 3.0f}};
+        renderer.drawPolyline(wave, 4, 1.2f, ClipPaint::identityFromARGB(lane->colorRGBA).withAlpha(0.9f));
+        m_hiddenAutomationMarkRect = {x - 3.0f, cy - 8.0f, 15.0f, 16.0f};
+    }
 }
 
 } // namespace Audio

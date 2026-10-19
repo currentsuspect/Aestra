@@ -404,7 +404,7 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
     {
         size_t tracks = 0;
         for (const auto& row : m_trackUIComponents) {
-            if (row && row->isPrimaryForLane()) ++tracks;
+            if (row && row->isPrimaryForLane() && !row->isAutomationRow()) ++tracks;
         }
         const AestraUI::NUIRect corner(bounds.x + 10.0f, bounds.y + kTimelineRulerTop, 160.0f, kTimelineRulerHeight);
         renderer.drawText(std::to_string(tracks) + (tracks == 1 ? " TRACK" : " TRACKS"),

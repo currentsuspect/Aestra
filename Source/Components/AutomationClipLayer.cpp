@@ -74,7 +74,11 @@ void AutomationClipLayer::closeMenu() {
 void AutomationClipLayer::render(AestraUI::NUIRenderer& renderer, const PlaylistLane& lane, int editedCurve,
                                  const Geometry& g) const {
     auto& theme = AestraUI::NUIThemeManager::getInstance();
-    const auto accent = theme.getColor("accentCyan");
+    // V82-T1: regions take the track's colour, like its curve; an unset (white/grey) lane colour keeps the accent.
+    const uint32_t argb = lane.colorRGBA;
+    const auto r8 = static_cast<uint8_t>(argb >> 16), g8 = static_cast<uint8_t>(argb >> 8), b8 = static_cast<uint8_t>(argb);
+    const auto accent = (r8 == g8 && g8 == b8) ? theme.getColor("accentCyan")
+                                               : AestraUI::NUIColor(r8 / 255.0f, g8 / 255.0f, b8 / 255.0f, 1.0f);
     for (size_t c = 0; c < lane.automationCurves.size(); ++c) {
         const bool edited = static_cast<int>(c) == editedCurve;
         for (const auto& region : visibleRegions(lane.automationCurves[c])) {

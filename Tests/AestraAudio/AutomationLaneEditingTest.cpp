@@ -103,6 +103,19 @@ void testSelection() {
     check(selectedAutomationPointCount(curves) == 1, "an index past the end changes nothing");
 }
 
+// V82-T1: what an automation row's header says.
+void testHeaderLabels() {
+    check(automationTargetLabel(AutomationTarget::Volume) == "Volume", "header names volume");
+    check(automationTargetLabel(AutomationTarget::Pan) == "Pan", "header names pan");
+    check(automationValueLabel(AutomationTarget::Volume, 1.0) == "0.0 dB", "unity volume reads 0.0 dB");
+    check(automationValueLabel(AutomationTarget::Volume, 0.5) == "-6.0 dB", "half gain reads -6.0 dB");
+    check(automationValueLabel(AutomationTarget::Volume, 0.7) == "-3.1 dB", "0.7 reads -3.1 dB (board 8)");
+    check(automationValueLabel(AutomationTarget::Volume, 0.0) == "-\xE2\x88\x9E dB", "silence reads -inf dB");
+    check(automationValueLabel(AutomationTarget::Pan, 0.0) == "C", "centre pan reads C");
+    check(automationValueLabel(AutomationTarget::Pan, -0.4) == "L 40", "pan left in percent");
+    check(automationValueLabel(AutomationTarget::Pan, 0.25) == "R 25", "pan right in percent");
+}
+
 } // namespace
 
 int main() {
@@ -110,6 +123,7 @@ int main() {
     testCurvesByTarget();
     testHitReachesEveryCurve();
     testSelection();
+    testHeaderLabels();
     if (g_failures == 0) {
         std::cout << "AutomationLaneEditingTest: all passed\n";
         return 0;

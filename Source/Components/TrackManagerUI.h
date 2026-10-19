@@ -126,8 +126,19 @@ public:
     PlaylistTool getActiveTool() const { return m_currentTool; } // Alias
 
     // === VIEW MODES ===
+    /// Automation shows every lane's automation row; Clips hides them all (V82-T1: rows of their own now, so
+    /// this no longer dims every track's clips). Per lane: showAutomationLane / hideAutomationLane.
     void setPlaylistMode(PlaylistMode mode);
     PlaylistMode getPlaylistMode() const { return m_playlistMode; }
+
+    // V82-T1 (FD-50 board 8): one automation row under a track's lane, opened by "Automate Volume/Pan", hidden by
+    // its ×. Session-local, like lane collapse. @p deferred rebuilds the rows on the next paint, for requests that
+    // come from inside a row (its own handler must not destroy it). TrackManagerUIAutomation.cpp.
+    void showAutomationLane(PlaylistLaneID laneId, AutomationTarget target, bool deferred = false);
+    void hideAutomationLane(PlaylistLaneID laneId, bool deferred = false);
+    bool isAutomationLaneShown(PlaylistLaneID laneId) const;
+    /// The curve the lane's automation edits: the last one chosen, Volume until one is.
+    AutomationTarget automationLaneTarget(PlaylistLaneID laneId) const;
 
     // Pattern Playback Mode (Arsenal) - Hides playhead/playline
     void setPatternMode(bool enabled);
@@ -382,6 +393,18 @@ public:
     void expandTrack(uint64_t trackId) { m_collapsedTrackIds.erase(trackId); }
     /** Expand the lane's owning track, rebuild rows, and scroll it into view. */
     void revealLane(PlaylistLaneID laneId);
+    // V82-T1: the row under @p trackRow showing its lane's automation (refreshTracks), and the per-lane state.
+    std::shared_ptr<TrackUIComponent> makeAutomationRow(const std::shared_ptr<TrackUIComponent>& trackRow,
+                                                        AutomationTarget target);
+    struct AutomationLaneView {
+        PlaylistLaneID laneId;
+        AutomationTarget target{AutomationTarget::Volume};
+        bool chosen{false}; // until a curve is picked, the lane shows the curve it already has
+        bool shown{false};
+    };
+    AutomationLaneView& automationLaneView(PlaylistLaneID laneId);
+    const AutomationLaneView* findAutomationLaneView(PlaylistLaneID laneId) const;
+    void toggleAutomationForSelectedTracks();
 
 protected:
     void onRender(::AestraUI::NUIRenderer& renderer) override;
@@ -417,6 +440,7 @@ private:
     float m_scrollOffset{0.0f};
     float m_targetScrollOffset{0.0f};
     std::unordered_set<uint64_t> m_collapsedTrackIds;
+    std::vector<AutomationLaneView> m_automationLanes; // V82-T1, session-local
     PlaylistMode m_playlistMode{PlaylistMode::Clips};
     bool m_patternMode = false; // True when Pattern (Arsenal) playback is active
 

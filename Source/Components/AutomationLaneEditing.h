@@ -5,6 +5,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
+#include <string>
 #include <vector>
 
 namespace Aestra {
@@ -115,6 +117,35 @@ inline int selectedAutomationPointCount(const std::vector<AutomationCurve>& curv
         for (const auto& p : c.getPoints()) n += p.selected ? 1 : 0;
     }
     return n;
+}
+
+/// The parameter an automation lane's header names (V82-T1).
+inline std::string automationTargetLabel(AutomationTarget target) {
+    switch (target) {
+        case AutomationTarget::Volume: return "Volume";
+        case AutomationTarget::Pan: return "Pan";
+        default: return "Parameter";
+    }
+}
+
+/// A value as the lane header shows it at the playhead: volume (a gain, unity at 1) in dB with one decimal and
+/// "-∞ dB" at silence, as the mixer writes it; pan as "C", or "L 40" / "R 25" in percent of full.
+inline std::string automationValueLabel(AutomationTarget target, double value) {
+    char text[32];
+    if (target == AutomationTarget::Pan) {
+        const int percent = static_cast<int>(std::lround(std::clamp(value, -1.0, 1.0) * 100.0));
+        if (percent == 0) return "C";
+        std::snprintf(text, sizeof(text), "%c %d", percent < 0 ? 'L' : 'R', std::abs(percent));
+        return text;
+    }
+    if (target != AutomationTarget::Volume) {
+        std::snprintf(text, sizeof(text), "%.0f%%", std::clamp(value, 0.0, 1.0) * 100.0);
+        return text;
+    }
+    if (!(value > 1.0e-5)) return "-\xE2\x88\x9E dB"; // -∞ in UTF-8
+    const double db = 20.0 * std::log10(value);
+    std::snprintf(text, sizeof(text), "%.1f dB", std::abs(db) < 0.05 ? 0.0 : db);
+    return text;
 }
 
 } // namespace Audio

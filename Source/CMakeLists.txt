@@ -123,6 +123,7 @@ set(Aestra_SOURCES
 	Components/TrackUIComponentAutomationClips.cpp
 	Components/TrackUIComponentHeader.cpp
 	Components/TrackUIComponentErase.cpp
+	Components/TrackUIComponentAutomationRow.cpp
 	Components/TrackHeaderText.h
 	Components/TimelineClipGeometry.h
 	Components/TimelineClipPaint.h
@@ -132,6 +133,7 @@ set(Aestra_SOURCES
 	Components/TrackManagerUI.cpp
 	Components/TrackManagerUIInternal.h
 	Components/TrackManagerUIToolbar.cpp
+	Components/TrackManagerUIAutomation.cpp
 	Components/TrackManagerUIClipOps.cpp
 	Components/TrackManagerUIRender.cpp
 	Components/TrackManagerUIEvents.cpp

@@ -3500,6 +3500,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentHeader.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentErase.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationRow.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
@@ -3508,6 +3509,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
         # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
         # compiles in.
@@ -3558,6 +3560,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentHeader.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentErase.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationRow.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
@@ -3566,6 +3569,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
         # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
         # compiles in.
@@ -3618,6 +3622,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentHeader.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentErase.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationRow.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
@@ -3626,6 +3631,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
         # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
         # compiles in.
@@ -3679,6 +3685,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentHeader.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentErase.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationRow.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
@@ -3687,6 +3694,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
         # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
         # compiles in.
@@ -3739,6 +3747,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentHeader.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentErase.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationRow.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
@@ -3747,6 +3756,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
         # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
         # compiles in.
@@ -3797,6 +3807,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentHeader.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentErase.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationRow.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
@@ -3805,6 +3816,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
         # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
         # compiles in.

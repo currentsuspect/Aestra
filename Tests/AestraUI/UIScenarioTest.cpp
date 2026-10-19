@@ -184,7 +184,10 @@ public:
     void paint() {
         Aestra::Testing::NullRenderer renderer;
         root_->onRender(renderer);
-        for (const auto& lane : laneComponents()) lane->renderStatic(renderer);
+        for (const auto& lane : laneComponents()) {
+            lane->renderStatic(renderer);
+            lane->renderControlOverlay(renderer); // the header publishes its hit areas (automation ×, marks)
+        }
     }
 
     std::vector<std::shared_ptr<TrackUIComponent>> laneComponents() const {
@@ -195,15 +198,40 @@ public:
 
     std::shared_ptr<TrackUIComponent> laneComponentFor(int lane) const {
         for (const auto& c : laneComponents()) {
-            if (c->getLaneId() == lanes_.at(lane)) return c;
+            if (c->getLaneId() == lanes_.at(lane) && !c->isAutomationRow()) return c;
+        }
+        return nullptr;
+    }
+
+    // V82-T1: the automation row under the lane's track row, when it is shown.
+    std::shared_ptr<TrackUIComponent> automationRowFor(int lane) const {
+        for (const auto& c : laneComponents()) {
+            if (c->getLaneId() == lanes_.at(lane) && c->isAutomationRow()) return c;
         }
         return nullptr;
     }
 
     // A point named the way a user thinks of it: on a clip, or at a beat on a lane.
     bool resolvePoint(Run& run, const JSON& at, AestraUI::NUIPoint& out) {
-        if (!onlyKeys(run, at, {"clip", "fraction", "lane", "beat", "value", "target", "header", "x", "y"}, "at")) {
+        if (!onlyKeys(run, at, {"clip", "fraction", "lane", "beat", "value", "target", "header", "x", "y",
+                                "automationHide", "automationMark"},
+                      "at")) {
             return false;
+        }
+        if (at.has("lane") && (at.has("automationHide") || at.has("automationMark"))) {
+            // The automation row's ×, or the track's mark for hidden automation (V82-T1).
+            const int lane = static_cast<int>(at["lane"].asNumber());
+            const auto row = at.has("automationHide") ? automationRowFor(lane) : laneComponentFor(lane);
+            const AestraUI::NUIRect r = !row                      ? AestraUI::NUIRect{}
+                                        : at.has("automationHide") ? row->automationHideRect()
+                                                                   : row->hiddenAutomationMarkRect();
+            if (r.width <= 0.0f) {
+                run.fail("lane " + std::to_string(lane) + " has no " +
+                         (at.has("automationHide") ? "automation row ×" : "hidden-automation mark") + " to point at");
+                return false;
+            }
+            out = {r.x + r.width * 0.5f, r.y + r.height * 0.5f};
+            return true;
         }
         if (at.has("lane") && at.has("header") && at["header"].asBool()) {
             // The lane's header, right of its buttons: where a right-click opens the track menu.
@@ -234,10 +262,16 @@ public:
         if (at.has("lane") && at.has("beat")) {
             if (!pointAt(run, static_cast<int>(at["lane"].asNumber()), at["beat"].asNumber(), out)) return false;
             if (at.has("value")) {
-                // An automation value, drawn on its target's range in the lane row.
+                // An automation value, drawn on its target's range in the lane's automation row (V82-T1).
                 AutomationTarget target = AutomationTarget::Volume;
                 if (at.has("target") && !parseTarget(run, at["target"], target)) return false;
-                const auto b = laneComponentFor(static_cast<int>(at["lane"].asNumber()))->getBounds();
+                const auto row = automationRowFor(static_cast<int>(at["lane"].asNumber()));
+                if (!row) {
+                    run.fail("lane " + std::to_string(static_cast<int>(at["lane"].asNumber())) +
+                             " shows no automation row to point at");
+                    return false;
+                }
+                const auto b = row->getBounds();
                 out.y = b.y + (1.0f - static_cast<float>(automationHeightOfValue(target, at["value"].asNumber()))) *
                                   b.height;
             }
@@ -373,9 +407,52 @@ private:
 size_t undoDepth(TrackManager& m) { return m.getCommandHistory().getUndoStack().size(); }
 
 void checkExpect(Run& run, TimelineSurface& s, const JSON& expect, size_t undoBaseline) {
-    if (!onlyKeys(run, expect, {"clip", "undoDepth", "layoutProblems", "lanesInside", "automation", "editedTarget"},
+    if (!onlyKeys(run, expect,
+                  {"clip", "undoDepth", "layoutProblems", "lanesInside", "automation", "editedTarget",
+                   "automationRows", "hiddenAutomationMarks"},
                   "expect"))
         return;
+    if (expect.has("automationRows") || expect.has("hiddenAutomationMarks")) {
+        s.paint(); // a row's × or the mark rebuilds the rows on the next frame
+        const auto rows = s.laneComponents();
+        const auto lanesWhere = [&](auto&& pred) {
+            std::vector<int> out;
+            for (size_t i = 0; i < s.lanes().size(); ++i) {
+                if (pred(static_cast<int>(i))) out.push_back(static_cast<int>(i));
+            }
+            return out;
+        };
+        const auto listOf = [](const JSON& j) {
+            std::vector<int> out;
+            for (const auto& v : j.asArray()) out.push_back(static_cast<int>(v.asNumber()));
+            return out;
+        };
+        const auto str = [](const std::vector<int>& v) {
+            std::string t = "[";
+            for (size_t i = 0; i < v.size(); ++i) t += (i ? "," : "") + std::to_string(v[i]);
+            return t + "]";
+        };
+        if (expect.has("automationRows")) {
+            const auto got = lanesWhere([&](int lane) { return s.automationRowFor(lane) != nullptr; });
+            const auto want = listOf(expect["automationRows"]);
+            if (got != want) run.fail("automation rows under lanes " + str(got) + ", expected " + str(want));
+            for (int lane : got) { // each sits directly under its own track row
+                const auto track = s.laneComponentFor(lane);
+                const auto row = s.automationRowFor(lane);
+                if (!track || std::fabs(row->getBounds().y - track->getBounds().bottom()) > 0.5f) {
+                    run.fail("lane " + std::to_string(lane) + "'s automation row is not directly under its track");
+                }
+            }
+        }
+        if (expect.has("hiddenAutomationMarks")) {
+            const auto got = lanesWhere([&](int lane) {
+                const auto track = s.laneComponentFor(lane);
+                return track && track->hasHiddenAutomation();
+            });
+            const auto want = listOf(expect["hiddenAutomationMarks"]);
+            if (got != want) run.fail("hidden-automation marks on lanes " + str(got) + ", expected " + str(want));
+        }
+    }
     if (expect.has("automation")) {
         const JSON& a = expect["automation"];
         AutomationTarget target;
@@ -424,8 +501,9 @@ void checkExpect(Run& run, TimelineSurface& s, const JSON& expect, size_t undoBa
         const JSON& e = expect["editedTarget"];
         AutomationTarget target;
         if (onlyKeys(run, e, {"lane", "target"}, "expect.editedTarget") && parseTarget(run, e["target"], target)) {
-            const auto lane = s.laneComponentFor(static_cast<int>(e["lane"].asNumber()));
-            if (!lane || lane->getEditedAutomationTarget() != target) {
+            // The lane's choice lives on the timeline (V82-T1), so it holds whether its row is shown or not.
+            const size_t laneIndex = static_cast<size_t>(e["lane"].asNumber());
+            if (laneIndex >= s.lanes().size() || s.ui().automationLaneTarget(s.lanes()[laneIndex]) != target) {
                 run.fail("lane " + std::to_string(static_cast<int>(e["lane"].asNumber())) + " does not edit " +
                          e["target"].asString());
             }
