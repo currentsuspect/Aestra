@@ -24,9 +24,14 @@ namespace Audio {
 // timeline toolbar). There is no separate header strip — the header died with
 // the 2026-08 plane redesign, and `timelineTrackAreaTopY` is the single place
 // that knows the band's total height.
+// FD-50 board 7 adds the toolbar as the band's first row: labelled tools, the snap value, Follow, Fit song and
+// + Track, across the whole width. Every position below is measured from the component's top edge.
+constexpr float kTimelineToolbarHeight = 30.0f;
 constexpr float kTimelineRulerHeight = 28.0f;
 constexpr float kTimelineMinimapHeight = 24.0f;
-constexpr float kTimelineTimeBandHeight = kTimelineMinimapHeight + kTimelineRulerHeight;
+constexpr float kTimelineMinimapTop = kTimelineToolbarHeight;
+constexpr float kTimelineRulerTop = kTimelineMinimapTop + kTimelineMinimapHeight;
+constexpr float kTimelineTimeBandHeight = kTimelineRulerTop + kTimelineRulerHeight;
 // Must equal AestraUI::kOverlayScrollbarThickness — the DAW-wide gutter width
 // (spec 2 §2). It is restated rather than included because this header is kept
 // free of UI-framework dependencies so tests can use it; TrackManagerUI.cpp

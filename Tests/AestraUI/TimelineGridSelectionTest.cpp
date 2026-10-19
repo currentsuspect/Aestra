@@ -63,7 +63,7 @@ struct Fixture {
 
     // A right-drag in the ruler: the ruler zone, as a user makes it.
     void makeRulerZone() {
-        const float y = kTimelineMinimapHeight + 6.0f;
+        const float y = kTimelineRulerTop + 6.0f;
         using T = AestraUI::NUIMouseEventType;
         const auto right = AestraUI::NUIMouseButton::Right;
         ui->onMouseEvent(mouse(T::Down, right, gridX + 100.0f, y));

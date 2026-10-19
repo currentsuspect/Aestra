@@ -3485,6 +3485,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentHeader.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentErase.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
@@ -3542,6 +3543,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentHeader.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentErase.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
@@ -3601,6 +3603,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentHeader.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentErase.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
@@ -3661,6 +3664,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentHeader.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentErase.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
@@ -3720,6 +3724,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentHeader.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentErase.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
@@ -3777,6 +3782,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentHeader.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentErase.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp

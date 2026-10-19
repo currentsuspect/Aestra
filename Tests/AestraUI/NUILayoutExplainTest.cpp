@@ -78,7 +78,7 @@ void testEveryPlacedRectIsExplained() {
     check(row != nullptr, "row 3 has a step");
     if (row) {
         check(contains(row->rule, "scrolling stack (vertical), item 3 of 14"), "the rule names the algorithm and item");
-        check(contains(row->rule, "52 + 3 x (38 + 0) - scroll 0 = 166"), "the rule shows the arithmetic it did");
+        check(contains(row->rule, "82 + 3 x (38 + 0) - scroll 0 = 196"), "the rule shows the arithmetic it did");
         check(sameRect(row->available, layout.rows), "row 3 was given the row viewport");
         check(row->from == "timeline.body.leading", "row 3's space came from the body split");
         check(row->requestsHeight && row->requestedHeight == kRowHeight && !row->requestsWidth,
@@ -93,7 +93,7 @@ void testEveryPlacedRectIsExplained() {
     const std::string why = rec.explain("timeline.rows[3]");
     check(contains(why, "WHY did timeline.rows[3] end up here?"), "explain answers in SPEC-003 §10.2's form");
     check(contains(why, "Requested: fill × 38"), "explain quotes what was asked for");
-    check(contains(why, "Resolved:  0,166 1270×38  (Local)   = 100,366 1270×38  (Window)"),
+    check(contains(why, "Resolved:  0,196 1270×38  (Local)   = 100,396 1270×38  (Window)"),
           "explain quotes both spaces, converted by the surface's origin");
     check(contains(why, "↑ timeline.body.leading") && contains(why, "↑ timeline.bands.trailing"),
           "explain walks the chain of spaces back to the surface");
@@ -137,7 +137,7 @@ void testProblemsAreReported() {
     tracedPass(rec, 150.0f, 30.0f, 3, 0.0f);
     bool bandClamp = false;
     for (const auto& p : rec.problems()) {
-        if (p.step == "timeline.bands.leading" && contains(p.what, "height 52 clamped to 30")) {
+        if (p.step == "timeline.bands.leading" && contains(p.what, "height 82 clamped to 30")) {
             bandClamp = true;
         }
     }

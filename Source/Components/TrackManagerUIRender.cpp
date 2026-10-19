@@ -307,7 +307,7 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
         // through the ruler row itself — numbers read as labels attached to
         // the grid, not a separate strip. The minimap row above stays its own
         // surface.
-        const float planeTop = bounds.y + kTimelineMinimapHeight;
+        const float planeTop = bounds.y + kTimelineRulerTop;
         const float planeHeight = viewportBottom - planeTop;
         // Same quiet arrangement grammar the per-track grid used, with bars
         // carrying the continuity: majors obvious, beats/subdivisions whispers.
@@ -376,7 +376,7 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
     // coherent strip. The band's bottom hairline is the single "everything
     // below this is the timeline" cue.
     if (m_playlistVisible) {
-        AestraUI::NUIRect rulerRect(bounds.x, bounds.y + kTimelineMinimapHeight, bounds.width,
+        AestraUI::NUIRect rulerRect(bounds.x, bounds.y + kTimelineRulerTop, bounds.width,
                                     kTimelineRulerHeight);
         renderTimeRuler(renderer, rulerRect);
         renderLoopMarkers(renderer, rulerRect);
@@ -1223,7 +1223,7 @@ void TrackManagerUI::updateBackgroundCache(AestraUI::NUIRenderer& renderer) {
     // Draw time ruler (no header strip — the time band starts with the
     // minimap row, cropped to the plane column, then the ruler)
     float rulerHeight = kTimelineRulerHeight;
-    AestraUI::NUIRect rulerRect(0, kTimelineMinimapHeight, static_cast<float>(width), rulerHeight);
+    AestraUI::NUIRect rulerRect(0, kTimelineRulerTop, static_cast<float>(width), rulerHeight);
 
     // Render ruler ticks (static part only - no moving elements)
     double bpm = std::max(m_trackManager->getPlaylistModel().getBPM(), 1.0);

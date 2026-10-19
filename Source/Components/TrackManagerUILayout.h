@@ -30,12 +30,13 @@ namespace Audio {
 /**
  * @brief The timeline's fixed regions, in the component's Local space.
  *
- * Top to bottom: the time band (minimap row, then ruler row), then the track
+ * Top to bottom: the time band (toolbar row, minimap row, then ruler row), then the track
  * rows. The scrollbar gutter takes the trailing kTimelineScrollbarWidth of
  * every row below the band; the minimap starts at the track-controls boundary
  * and stops at the same gutter.
  */
 struct TimelineLayout {
+    AestraUI::Layout::NUILocalRect toolbar;   //!< FD-50 toolbar row, the band's top, full width less the gutter.
     AestraUI::Layout::NUILocalRect minimap;   //!< Overview row, cropped to the plane column.
     AestraUI::Layout::NUILocalRect scrollbar; //!< Vertical scrollbar gutter, below the time band.
     AestraUI::Layout::NUILocalRect rows;      //!< Track-row viewport: below the band, left of the gutter.
@@ -63,10 +64,15 @@ inline TimelineLayout resolveTimelineLayout(float width, float height, float tra
     const auto bandColumns = splitHorizontal(bands.leading, width - kTimelineScrollbarWidth, recorder);
     name("plane", "bandColumns.leading");
     const auto plane = splitHorizontal(bandColumns.leading, trackControlsWidth, recorder);
-    name("minimapRow", "plane.trailing");
-    const auto minimapRow = splitVertical(plane.trailing, kTimelineMinimapHeight, recorder);
+    name("belowToolbar", "plane.trailing");
+    const auto belowToolbar = splitVertical(plane.trailing, kTimelineToolbarHeight, recorder);
+    name("minimapRow", "belowToolbar.trailing");
+    const auto minimapRow = splitVertical(belowToolbar.trailing, kTimelineMinimapHeight, recorder);
+    name("toolbarRow", "bandColumns.leading");
+    const auto toolbarRow = splitVertical(bandColumns.leading, kTimelineToolbarHeight, recorder);
 
     TimelineLayout layout;
+    layout.toolbar = toolbarRow.leading;
     layout.minimap = minimapRow.leading;
     layout.scrollbar = body.trailing;
     layout.rows = body.leading;

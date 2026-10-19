@@ -49,7 +49,7 @@ struct RefRect { float x, y, w, h; };
 
 RefRect refMinimap(float width) {
     const float minimapWidth = std::max(0.0f, width - kTimelineScrollbarWidth - kControls);
-    return {kControls, 0.0f, minimapWidth, kTimelineMinimapHeight};
+    return {kControls, kTimelineMinimapTop, minimapWidth, kTimelineMinimapHeight};
 }
 
 RefRect refScrollbar(float width, float height) {
@@ -107,16 +107,15 @@ void testRowsMatchLayoutTracks() {
 }
 
 void testRowVisibilityAgainstTheViewport() {
-    // 720 tall: the row viewport runs from y=52 to 720. Scrolled 400 px, row i
-    // starts at 52 - 400 + 38i. Row 9 (-6..32) is entirely under the time band;
-    // row 10 (32..70) straddles the band's edge; row 28 (716..754) starts just
-    // inside the bottom; row 29 (754) starts below it.
+    // 720 tall: the row viewport runs from y=82 (toolbar 30 + minimap 24 + ruler 28) to 720. Scrolled 400 px,
+    // row i starts at 82 - 400 + 38i. Row 9 (24..62) is entirely under the time band; row 10 (62..100)
+    // straddles the band's edge; row 27 (708..746) starts just inside the bottom; row 28 (746) starts below it.
     const auto layout = resolveTimelineLayout(1280.0f, 720.0f, kControls);
     const auto rows = arrangeTimelineRows(layout, kRowHeight, 0.0f, 30, 400.0f);
     check(!rows[9].visible, "row 9 has scrolled entirely under the time band");
     check(rows[10].visible, "row 10 straddles the band's edge and counts as visible");
-    check(rows[28].visible, "row 28 starts inside the bottom edge");
-    check(!rows[29].visible, "row 29 starts below the row viewport");
+    check(rows[27].visible, "row 27 starts inside the bottom edge");
+    check(!rows[28].visible, "row 28 starts below the row viewport");
 }
 
 void testSlotsMatchTheHandWrittenHitTests() {
@@ -135,8 +134,8 @@ void testSlotsMatchTheHandWrittenHitTests() {
         }
     }
     check(timelineRowSlotAt(layout, kRowHeight, 0.0f, 0.0f, 10.0f) == -1, "the time band is above every row");
-    check(timelineRowSlotAt(layout, kRowHeight, 0.0f, 0.0f, 52.0f) == 0, "the first pixel under the band is row 0");
-    check(timelineRowSlotAt(layout, kRowHeight, 0.0f, 0.0f, 52.0f + 38.0f * 50.0f) == 50,
+    check(timelineRowSlotAt(layout, kRowHeight, 0.0f, 0.0f, 82.0f) == 0, "the first pixel under the band is row 0");
+    check(timelineRowSlotAt(layout, kRowHeight, 0.0f, 0.0f, 82.0f + 38.0f * 50.0f) == 50,
           "below the last row the slot keeps counting (drops can target new rows)");
 }
 
@@ -147,8 +146,8 @@ void testScrollRange() {
     check(nearly(timelineRowsContentHeight(kRowHeight, 6.0f, 3), 38.0f * 3.0f + 6.0f * 2.0f),
           "no spacing after the last row");
     check(nearly(timelineRowsContentHeight(kRowHeight, 6.0f, 0), 0.0f), "no rows, no content");
-    check(nearly(timelineMaxVerticalScroll(layout, kRowHeight, 0.0f, 30), 30.0f * 38.0f - 668.0f),
-          "max scroll is the content beyond the 668 px row viewport");
+    check(nearly(timelineMaxVerticalScroll(layout, kRowHeight, 0.0f, 30), 30.0f * 38.0f - 638.0f),
+          "max scroll is the content beyond the 638 px row viewport");
     check(nearly(timelineMaxVerticalScroll(layout, kRowHeight, 0.0f, 5), 0.0f), "content that fits does not scroll");
 }
 

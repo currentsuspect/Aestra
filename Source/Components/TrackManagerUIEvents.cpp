@@ -151,8 +151,7 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 
     // Layout constants — the time band is minimap row + ruler row.
     float rulerHeight = kTimelineRulerHeight;
-    float minimapHeight = kTimelineMinimapHeight;
-    AestraUI::NUIRect rulerRect(0, minimapHeight, bounds.width, rulerHeight);
+    AestraUI::NUIRect rulerRect(0, kTimelineRulerTop, bounds.width, rulerHeight);
 
     // Track area (below ruler)
     float trackAreaTop = kTimelineTimeBandHeight;
@@ -261,6 +260,11 @@ void TrackManagerUI::updateToolbarHover(const AestraUI::NUIMouseEvent& event) {
         bool oldMultiSelectHovered = m_multiSelectToolHovered;
         bool oldPaintHovered = m_paintToolHovered;
         bool oldFollowHovered = m_followPlayheadHovered;
+        const bool oldBoardHovered = m_eraseToolHovered || m_snapHovered || m_fitSongHovered;
+        m_eraseToolHovered = m_eraseToolBounds.contains(event.position);
+        m_snapHovered = m_snapBounds.contains(event.position);
+        m_fitSongHovered = m_fitSongBounds.contains(event.position);
+        if (oldBoardHovered != (m_eraseToolHovered || m_snapHovered || m_fitSongHovered)) setDirty(true);
 
         m_menuHovered = m_menuIconBounds.contains(event.position);
         m_selectToolHovered = m_selectToolBounds.contains(event.position);
@@ -280,13 +284,13 @@ void TrackManagerUI::updateToolbarHover(const AestraUI::NUIMouseEvent& event) {
             if (m_menuHovered && !oldMenuHovered)
                 tooltipText = "Menu";
             else if (m_selectToolHovered && !oldSelectHovered)
-                tooltipText = "Select Tool";
+                tooltipText = "Select (1)";
             else if (m_splitToolHovered && !oldSplitHovered)
-                tooltipText = "Split Tool";
+                tooltipText = "Split (2)";
             else if (m_multiSelectToolHovered && !oldMultiSelectHovered)
                 tooltipText = "Multi-Select Tool";
             else if (m_paintToolHovered && !oldPaintHovered)
-                tooltipText = "Paint Tool";
+                tooltipText = "Draw: click empty grid to stamp the copied clip";
             else if (m_followPlayheadHovered && !oldFollowHovered)
                 tooltipText = "Follow Playhead";
             if (!tooltipText.empty()) {
@@ -658,7 +662,7 @@ bool TrackManagerUI::handleRulerPress(const AestraUI::NUIMouseEvent& event, cons
     // dead zone). They stay hoverable/grabbable anywhere in the ruler row;
     // scrub, selection, and click-seek remain confined to right of that edge.
     const bool inRulerRow =
-        localPos.y >= kTimelineMinimapHeight && localPos.y < kTimelineTimeBandHeight;
+        localPos.y >= kTimelineRulerTop && localPos.y < kTimelineTimeBandHeight;
     if (isInRuler || (inRulerRow && m_hasRulerSelection)) {
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
@@ -780,7 +784,7 @@ bool TrackManagerUI::tryBeginLoopHandleDrag(const AestraUI::NUIMouseEvent& event
     if (!m_playlistVisible || !m_hasRulerSelection) {
         return false;
     }
-    if (localPos.y < kTimelineMinimapHeight || localPos.y >= kTimelineTimeBandHeight) {
+    if (localPos.y < kTimelineRulerTop || localPos.y >= kTimelineTimeBandHeight) {
         return false;
     }
 
