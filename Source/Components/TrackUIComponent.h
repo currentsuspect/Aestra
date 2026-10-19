@@ -270,9 +270,9 @@ private:
     std::map<ClipInstanceID, AestraUI::NUIRect> m_clipMenuGlyphRects;
     ClipInstanceID m_hoveredClipMenuId;  // the clip whose menu glyph is under the pointer
     bool m_clipMenuCursorClaimed = false; // hand the pointing-hand cursor back once on leaving
-    /** The clip-menu glyph's generous hit zone (the painted glyph, inflated). */
+    /** The clip-menu hit zone: the glyph's slot, reaching 2 px right and 3 px down into the clip (never outside it). */
     static AestraUI::NUIRect clipMenuHitRect(const AestraUI::NUIRect& glyph) {
-        return {glyph.x - 4.0f, glyph.y - 3.0f, glyph.width + 8.0f, glyph.height + 6.0f};
+        return {glyph.x, glyph.y, glyph.width + 2.0f, glyph.height + 3.0f};
     }
     /** The clip whose menu glyph contains @p point, or an invalid id. */
     ClipInstanceID clipMenuAt(const AestraUI::NUIPoint& point) const;
@@ -496,6 +496,14 @@ private:
     bool handleAutomationClipMouse(const AestraUI::NUIMouseEvent& event, const AestraUI::NUIRect& bounds,
                                    float gridStartX);
     AutomationClipLayer m_clipLayer{*this};
+
+    // Header identity (FD-50 board 8), in TrackUIComponentHeader.cpp: the colour bar, the 3 px level meter at the
+    // header's right edge, and the "what plays it → where it goes" line under the name.
+    void paintHeaderIdentity(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& controlAreaBounds);
+    const std::string& headerSourceLine();
+    std::string m_headerSourceLine;
+    double m_headerSourceLineAt{-1.0};
+    uint32_t m_headerMeterChannelId{0}; // the channel every unit on the lane plays into; 0 = none to meter
 
 
     // UI state

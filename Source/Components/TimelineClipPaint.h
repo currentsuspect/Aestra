@@ -39,9 +39,16 @@ AestraUI::NUIColor headerLabelInk(float alpha = 0.9f);
 void paintBody(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& visible, const AestraUI::NUIColor& identity,
                bool selected);
 
-/// Fills the header band across the visible part of the clip and writes the label from the left edge.
+/// The clip menu's slot: a square at the header band's left end, exactly the band's height, so the glyph and its
+/// hover shade never leave the band. Empty (zero width) when the clip is too small to carry one.
+AestraUI::NUIRect menuSlot(const AestraUI::NUIRect& visible);
+
+/// Fills the header band across the visible part of the clip and writes the label after the menu slot.
 void paintHeaderBand(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& visible,
                      const AestraUI::NUIColor& identity, const std::string& label, float fontSize);
+
+/// The ☰ glyph in its slot: three crisp 1 px lines in the band's dark ink, the slot shaded while pointed at.
+void paintMenuGlyph(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& slot, bool hot, bool pointed);
 
 /// A dashed vertical line where the pattern runs out inside a longer clip.
 void paintPatternEnd(AestraUI::NUIRenderer& renderer, float x, float top, float bottom, const AestraUI::NUIColor& ink);
