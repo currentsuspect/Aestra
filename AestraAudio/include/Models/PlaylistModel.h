@@ -62,6 +62,8 @@ struct MidiClipPlaybackInstance {
     double startBeat{0.0};
     double sourceOffsetBeats{0.0};
     double durationBeats{0.0};
+    /// The pattern's length when scheduled: a clip longer than it repeats it every this many beats (V82-T3).
+    double patternLengthBeats{0.0};
 
     bool isValid() const { return patternId.isValid() && durationBeats > 0.0; }
     double patternStartBeat() const { return startBeat - sourceOffsetBeats; }
@@ -108,8 +110,9 @@ selectScheduledTimelineInstances(const std::vector<MidiClipPlaybackInstance>& in
  * The piano roll's X axis is pattern-local; the transport reports arrangement beats. During
  * timeline playback the panel used to park its playhead at 0 because it resolved no clip
  * (SPEC 3 §2.1). This resolves one: the first clip of @p pattern whose span contains
- * @p arrangementBeat. The result is `arrangementBeat - clip.startBeat`, the same origin the
- * pattern scheduler emits that clip's notes from, so the playhead sits on what is audible.
+ * @p arrangementBeat. The result is measured from the clip's pattern start (clip start - source
+ * offset), the same origin the pattern scheduler emits that clip's notes from, and wraps every
+ * pattern length as the clip repeats its pattern (V82-T3), so the playhead sits on what is audible.
  * Nothing when no clip of the pattern is under the playhead.
  */
 inline std::optional<double> patternLocalBeatAt(const std::vector<MidiClipPlaybackInstance>& instances,
@@ -117,7 +120,8 @@ inline std::optional<double> patternLocalBeatAt(const std::vector<MidiClipPlayba
     for (const auto& instance : instances) {
         if (instance.patternId == pattern && instance.isValid() && arrangementBeat >= instance.startBeat &&
             arrangementBeat < instance.endBeat()) {
-            return arrangementBeat - instance.startBeat;
+            const double local = arrangementBeat - instance.patternStartBeat();
+            return instance.patternLengthBeats > 0.0 ? std::fmod(local, instance.patternLengthBeats) : local;
         }
     }
     return std::nullopt;
@@ -900,6 +904,7 @@ public:
                 instance.startBeat = clip.startBeat;
                 instance.sourceOffsetBeats = clip.sourceOffset;
                 instance.durationBeats = clip.durationBeats;
+                instance.patternLengthBeats = pattern->lengthBeats;
                 if (instance.isValid()) {
                     instances.push_back(instance);
                 }

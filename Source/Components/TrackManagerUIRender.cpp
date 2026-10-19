@@ -968,6 +968,20 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
         }
     }
 
+    // Song end (FD-50 board 8, V82-T3): a thin full-height line where the last clip ends. Export, Fit song,
+    // bounce and the Project loop all stop at this beat (PlaylistModel::getTotalDurationBeats), so the line
+    // shows where they agree the song stops. Full height so it never reads as a bar tick.
+    if (m_trackManager) {
+        const double songEndBeat = m_trackManager->getPlaylistModel().getTotalDurationBeats();
+        if (songEndBeat > 0.001) {
+            const float endX =
+                std::round(gridStartX + static_cast<float>(songEndBeat * m_pixelsPerBeat) - m_timelineScrollOffset) + 0.5f;
+            renderer.drawLine(AestraUI::NUIPoint(endX, rulerBounds.y + 2.0f),
+                              AestraUI::NUIPoint(endX, rulerBounds.bottom()), 1.0f,
+                              themeManager.getColor("textPrimary").withAlpha(0.55f));
+        }
+    }
+
     // === RULER SELECTION HIGHLIGHT ===
     // Draw selection highlight if active (either dragging or confirmed)
     if (m_isDraggingRulerSelection || m_hasRulerSelection) {

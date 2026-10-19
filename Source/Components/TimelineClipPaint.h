@@ -13,9 +13,11 @@
 
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "TimelineClipGeometry.h"
+#include "PatternSource.h"
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace Aestra {
 namespace Audio {
@@ -50,8 +52,16 @@ void paintHeaderBand(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& v
 /// The ☰ glyph in its slot: three crisp 1 px lines in the band's dark ink, the slot shaded while pointed at.
 void paintMenuGlyph(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& slot, bool hot, bool pointed);
 
-/// A dashed vertical line where the pattern runs out inside a longer clip.
-void paintPatternEnd(AestraUI::NUIRenderer& renderer, float x, float top, float bottom, const AestraUI::NUIColor& ink);
+/// A dashed vertical line where a clip starts its pattern again.
+void paintRepeatLine(AestraUI::NUIRenderer& renderer, float x, float top, float bottom, const AestraUI::NUIColor& ink);
+
+/// A pattern clip's mini piano roll in @p ink: each note where it sounds (noteBeatInClip), in every repeat of the
+/// pattern the clip plays (V82-T3), and a dashed line where each repeat starts. @p full is the whole clip,
+/// @p visible its on-screen part; content starts @p bandHeight below the top. Only on-screen repeats are walked.
+void paintMiniPianoRoll(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& visible,
+                        const AestraUI::NUIRect& full, float bandHeight, float pixelsPerBeat,
+                        const std::vector<MidiNote>& notes, double patternLengthBeats, double sourceOffsetBeats,
+                        double clipDurationBeats, const AestraUI::NUIColor& ink);
 
 void paintSelection(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& visible);
 

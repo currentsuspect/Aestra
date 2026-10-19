@@ -1288,7 +1288,7 @@ public:
             }
             nextSlots[instance.clipId] = it->second;
             m_patternPlaybackEngine.updatePatternInstance(instance.patternId, instance.patternStartBeat(), it->second,
-                                                          instance.sourceOffsetBeats, instance.durationBeats);
+                                                          instance.sourceOffsetBeats, instance.durationBeats, true);
         }
         for (const auto& [clip, slot] : m_timelineSlots) {
             if (nextSlots.find(clip) == nextSlots.end()) {
@@ -1310,7 +1310,7 @@ public:
             used[cursor] = true;
             nextSlots[instance->clipId] = cursor;
             m_patternPlaybackEngine.updatePatternInstance(instance->patternId, instance->patternStartBeat(), cursor,
-                                                          instance->sourceOffsetBeats, instance->durationBeats);
+                                                          instance->sourceOffsetBeats, instance->durationBeats, true);
         }
         m_timelineSlots = std::move(nextSlots);
         // Record what the slots now play, with the timing just handed to the scheduler.
@@ -2175,7 +2175,7 @@ private:
                       " schedStart=" + std::to_string(instance.patternStartBeat()) + " " + routeSummary);
             m_timelineSlots[instance.clipId] = instanceId;
             m_patternPlaybackEngine.schedulePatternInstance(instance.patternId, instance.patternStartBeat(), instanceId++,
-                                                            instance.sourceOffsetBeats, instance.durationBeats);
+                                                            instance.sourceOffsetBeats, instance.durationBeats, true);
         }
     }
 

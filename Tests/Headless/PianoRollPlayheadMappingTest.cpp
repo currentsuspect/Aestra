@@ -178,7 +178,8 @@ int main() {
           "between drums clips there is no position (the panel parks at 0)");
     check(!patternLocalBeatAt(instances, drums, 16.0).has_value(), "a clip's end is exclusive");
     check(approxEqual(patternLocalBeatAt(instances, drums, 8.0), 0.0), "a clip's start is inclusive");
-    check(approxEqual(patternLocalBeatAt(instances, bass, 20.0), 20.0),
+    // Bass is an 8-beat pattern in a 32-beat clip: it repeats (V82-T3), so beat 20 is 4 beats into its third pass.
+    check(approxEqual(patternLocalBeatAt(instances, bass, 20.0), 4.0),
           "another pattern's clips never answer for this one");
 
     if (g_failures == 0) {
