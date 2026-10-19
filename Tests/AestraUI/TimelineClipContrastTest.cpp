@@ -198,15 +198,20 @@ void testSelectionLiftsRatherThanDarkens() {
     }
 }
 
-// The body must stay clearly visible against the timeline's black canvas, or the
-// cap has gone too far and clips vanish instead of receding.
-void testBodyStaysVisibleAgainstCanvas() {
+// Since FD-50 (2026-10-16) a clip is found by its header band, a solid strip of the track's full hue, and the
+// body recedes to a deep tint of it. So the band must stand out from the timeline's black canvas, and the body
+// must still be told apart from it (a body equal to the canvas would make an empty lane and a clip look alike).
+// Before FD-50 the body alone carried this and had to reach 3:1.
+void testClipStaysVisibleAgainstCanvas() {
     const NUIColor canvas(0.0f, 0.0f, 0.0f, 1.0f);
     for (int i = 0; i < identityCount(); ++i) {
-        const NUIColor body = clipBodyTone(identityAt(i), false);
-        const float ratio = contrastRatio(body, canvas);
-        check(ratio >= 3.0f, "lane " + std::to_string(i) + ": body-vs-canvas contrast " +
-                                 std::to_string(ratio) + ":1 is too low to see the clip");
+        const NUIColor identity = identityAt(i);
+        const float band = contrastRatio(NUIColor(identity.r, identity.g, identity.b, 1.0f), canvas);
+        check(band >= 4.5f, "lane " + std::to_string(i) + ": header band-vs-canvas contrast " +
+                                std::to_string(band) + ":1 is too low to find the clip");
+        const float body = contrastRatio(clipBodyTone(identity, false), canvas);
+        check(body >= 1.3f, "lane " + std::to_string(i) + ": body-vs-canvas contrast " + std::to_string(body) +
+                                ":1 — the body has merged into the canvas");
     }
 }
 
@@ -263,7 +268,7 @@ int main() {
     testBodyKeepsPaletteSaturation();
     testLabelInkIsAlwaysTheLightOne();
     testSelectionLiftsRatherThanDarkens();
-    testBodyStaysVisibleAgainstCanvas();
+    testClipStaysVisibleAgainstCanvas();
     testLuminanceCapDarkensWithoutShiftingHue();
     testLaneIdentityRestraintIsNotAnIdentityFunction();
 

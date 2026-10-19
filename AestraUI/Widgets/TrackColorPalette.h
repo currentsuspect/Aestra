@@ -115,17 +115,15 @@ inline float clipRelativeLuminance(const NUIColor& color) {
 /**
  * @brief The luminance every clip body is pulled down to.
  *
- * Contrast of near-white against a surface at luminance L is (1.05)/(L + 0.05),
- * which crosses 4.5:1 at L = 0.183 — and that is for *pure* white, before the
- * selection lift brightens the body. So the ceiling is not a taste value with
- * slack in it: above roughly 0.15 no foreground colour whatsoever can carry a
- * label at AA on a selected clip, and the rule silently stops working. 0.14
- * leaves the margin the lift consumes while keeping the body ~3.8:1 against the
- * timeline's black canvas, so clips still read as clips.
+ * FD-50 (Unified Panels 2, boards 7 and 8, 2026-10-16) puts a solid header band in the track's full hue on
+ * every clip, so the clip is found by its band and the body can recede: a deep tint of the hue under content
+ * drawn in a light tint of the same hue. 0.03 matches the board's bodies (the violet pad body #2d2547 measures
+ * about 0.022, the teal pluck body #163a33 about 0.033). Before FD-50 the body carried the clip's visibility
+ * alone and sat at 0.14, about 3.8:1 against the canvas.
  *
  * TimelineClipContrastTest measures both ends rather than restating this number.
  */
-inline constexpr float kClipBodyLuminanceCeiling = 0.14f;
+inline constexpr float kClipBodyLuminanceCeiling = 0.03f;
 
 /** @brief How much brighter a selected body is than an unselected one. */
 inline constexpr float kClipSelectionLift = 1.06f;
@@ -165,9 +163,13 @@ inline NUIColor clipBodyTone(const NUIColor& identity, bool selected) {
     return selected ? restrainDawColor(capped, kClipSelectionLift, 1.0f, 1.0f) : capped;
 }
 
-/** @brief The tint clip content is lifted from — the body hue itself. */
+/**
+ * @brief The tint clip content is lifted from: the track's hue at full strength (FD-50), so notes and waveforms
+ * read as a light tint of the track's colour rather than as near-white. Selection lifts it slightly.
+ */
 inline NUIColor waveformTintTone(const NUIColor& identity, bool selected) {
-    return clipBodyTone(identity, selected);
+    const NUIColor hue(identity.r, identity.g, identity.b, 1.0f);
+    return selected ? restrainDawColor(hue, kClipSelectionLift, 1.0f, 1.0f) : hue;
 }
 
 /** @brief Lift a surface toward white. Sole authority for how light clip ink is. */
@@ -176,8 +178,8 @@ inline NUIColor liftClipInk(const NUIColor& surface, float amount) {
                           std::clamp(amount, 0.0f, 1.0f));
 }
 
-/** @brief Lift used for waveform/note ink — keeps a whisper of the clip's hue. */
-inline constexpr float kClipContentInkLift = 0.86f;
+/** @brief Lift used for waveform/note ink: the hue lifted part-way to white, a light tint of the track. */
+inline constexpr float kClipContentInkLift = 0.42f;
 
 /** @brief Lift used for labels and glyphs — the brightest thing on a clip. */
 inline constexpr float kClipLabelInkLift = 0.94f;
