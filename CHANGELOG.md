@@ -360,7 +360,7 @@ the app can fail a build.
   anti-alias copy while they are played, and preparing it keeps one core busy for a couple of minutes.
 - Presets and in-app documentation are deferred to v0.8.1.
 
-## v0.8.1-alpha — The revamp: Arsenal, Mixer, Routing, Audition, Versions (2026-10-18)
+## v0.8.1-alpha — The revamp: Arsenal, Mixer, Routing, Audition, Versions (2026-10-19)
 
 88 PRs since v0.8.0-alpha. The surfaces you spend the most time in are rebuilt: the Arsenal is a rack you
 play, the mixer reads meters first, the routing graph shows only what you changed, Audition is a place to
@@ -443,11 +443,11 @@ listen and compare, and Versions replaces the history list.
 - Bounce a version blocks the window while it renders (about 3x real time).
 - Bounce in Place on a multi-track pattern does not follow sends or group buses.
 - The browser's In tempo preview, per-row waveforms and key column need the analysis service.
-- Seen on a virtual display and in tests; the real-screen pass on the 1366x768 laptop is part of the cut.
+- Checked on the 1366x768 laptop for the Arsenal and the panels; the rest was seen on a virtual display and in tests.
 
 ## [Unreleased]
 
-Nothing yet — v0.8.1-alpha was cut on 2026-10-18. v0.8.2 work lands here.
+Nothing yet — v0.8.1-alpha was cut on 2026-10-19. v0.8.2 work lands here.
 
 ## Unfiled — shipped before v0.7.0, never assigned to a release
 
