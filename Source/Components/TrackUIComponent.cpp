@@ -30,6 +30,7 @@
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include "../AestraUI/Widgets/TrackColorPalette.h"
 #include "TimelineClipPaint.h"
+#include "TrackHeaderText.h"
 #include <algorithm>
 #include <charconv>
 #include <cmath>
@@ -1414,26 +1415,14 @@ void TrackUIComponent::drawClipAtPosition(AestraUI::NUIRenderer& renderer, const
                 if (clip.edits.muted) ClipPaint::paintMuted(renderer, insetClippedClipBounds);
                 if (isClipHighlighted(clip.id)) ClipPaint::paintSelection(renderer, insetClippedClipBounds);
 
-                // The clip menu glyph sits at the band's right end and shows only on hover or selection (the
-                // board draws clips without it). Its hit rect is published either way; Shift+right-click opens the
-                // same menu.
+                // The clip menu (☰) sits in a square slot at the band's left end; the slot is also its hit area, so
+                // the glyph and its hover shade stay inside the band. Shift+right-click opens the same menu.
                 {
-                    const AestraUI::NUIRect burgerRect(insetClippedClipBounds.right() - 16.0f,
-                                                       insetClippedClipBounds.y + 1.0f, 13.0f, 11.0f);
-                    if (insetClippedClipBounds.width > 40.0f && sampleClipShowsHeader(insetClippedClipBounds)) {
-                        m_clipMenuGlyphRects[clip.id] = burgerRect;
-                        const bool selectedClip = isClipHighlighted(clip.id);
-                        const bool hot = m_hoveredClipId == clip.id || selectedClip;
-                        if (m_hoveredClipMenuId == clip.id) {
-                            renderer.fillRect(clipMenuHitRect(burgerRect), AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.16f));
-                        }
-                        const auto lineColor = ClipPaint::headerLabelInk(m_hoveredClipMenuId == clip.id ? 0.95f : 0.7f);
-                        for (int i = 0; hot && i < 3; ++i) {
-                            const float ly = burgerRect.y + 2.0f + i * 3.5f;
-                            renderer.drawLine(AestraUI::NUIPoint(burgerRect.x + 1.5f, ly),
-                                              AestraUI::NUIPoint(burgerRect.x + burgerRect.width - 1.5f, ly),
-                                              1.4f, lineColor);
-                        }
+                    const AestraUI::NUIRect slot = ClipPaint::menuSlot(insetClippedClipBounds);
+                    if (slot.width > 0.0f) {
+                        m_clipMenuGlyphRects[clip.id] = slot;
+                        const bool hot = m_hoveredClipId == clip.id || isClipHighlighted(clip.id);
+                        ClipPaint::paintMenuGlyph(renderer, slot, hot, m_hoveredClipMenuId == clip.id);
                     }
                 }
             }
@@ -1698,44 +1687,6 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
     highlightRect.height = 1.0f;
     renderer.fillRect(highlightRect, themeManager.getColor("textPrimary").withAlpha(0.025f));
 
-    // Inline Volume Meter (Behind Name) - Uses real audio levels from MeterSnapshotBuffer
-    if (m_channel && !m_channel->isMuted() && m_trackManager) {
-        // Get meter data from MeterSnapshotBuffer via TrackManager
-        auto meterSnapshots = m_trackManager->getMeterSnapshots();
-        auto slotMapPtr = m_trackManager->getChannelSlotMapShared();
-        
-        if (meterSnapshots && slotMapPtr) {
-            uint32_t slotIndex = slotMapPtr->getSlotIndex(m_channel->getChannelId());
-            if (slotIndex != ChannelSlotMap::INVALID_SLOT) {
-                auto readout = meterSnapshots->readSnapshot(slotIndex);
-                
-                // Use peak levels (linear 0..1+), average L/R for mono display
-                // Note: MeterSnapshotBuffer already reports post-fader levels,
-                // do NOT multiply by track volume again.
-                float level = (readout.peakL + readout.peakR) * 0.5f;
-
-                if (level > 0.001f) {
-                    level = std::min(1.0f, std::max(0.0f, level));
-                    float visualLevel = std::pow(level, 0.5f); // Perceptual scaling
-                    
-                    float meterX = bounds.x + 20.0f; 
-                    float meterY = bounds.y + 13.0f;
-                    float meterW = 140.0f * visualLevel;
-                    float meterH = 22.0f;
-                    
-                    AestraUI::NUIRect meterRect(meterX, meterY, meterW, meterH);
-                    
-                    AestraUI::NUIColor meterColor = themeManager.getColor("success").withAlpha(0.055f);
-                    if (visualLevel > 0.8f) meterColor = themeManager.getColor("error").withAlpha(0.08f);
-                    else if (visualLevel > 0.5f) meterColor = themeManager.getColor("warning").withAlpha(0.075f);
-
-                    const auto& themeProps = themeManager.getCurrentTheme();
-                    renderer.fillRoundedRect(meterRect, themeProps.radiusS, meterColor);
-                }
-            }
-        }
-    }
-
     // Holographic Loading Feedback (Tech Aesthetic)
     if (m_isLoading) {
         auto cyan = themeManager.getColor("accentCyan");
@@ -1787,48 +1738,15 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
         }
     }
 
-    // Track color strip (identity)
-    if (lane) {
-        AestraUI::NUIColor stripColor;
-        
-        if (m_isLoading) {
-            stripColor = themeManager.getColor("accentCyan");
-            // Add a subtle pulse to the strip during loading
-            float pulse = (std::sin(static_cast<float>(Aestra::Platform::getUtils()->getTime()) * 8.0f) * 0.5f + 0.5f);
-            stripColor = stripColor.withAlpha(0.6f + pulse * 0.4f);
-        } else {
-            uint32_t argb = lane->colorRGBA;
-            float a = ((argb >> 24) & 0xFF) / 255.0f;
-            float r = ((argb >> 16) & 0xFF) / 255.0f;
-            float g = ((argb >> 8) & 0xFF) / 255.0f;
-            float b = (argb & 0xFF) / 255.0f;
-            stripColor = AestraUI::NUIColor(r, g, b, a > 0.0f ? a : 1.0f);
-        }
-        
-        const float stripWidth = 5.0f;
-        const float stripAlpha = (m_selected || lane->solo) ? 0.84f : 0.62f;
-        // Was 0.86f here against 0.84f in the static pass, so one lane strip had
-        // two brightnesses depending on which pass drew it. Both now go through
-        // the shared lane-identity restraint the minimap uses.
-        stripColor = AestraUI::restrainLaneIdentityColor(stripColor, stripAlpha);
-        
-        // Draw strip
-        renderer.fillRect(AestraUI::NUIRect(bounds.x, bounds.y, stripWidth, bounds.height), stripColor);
-
-        // If loading, draw a small progress bar on the strip itself
-        if (m_isLoading && m_loadProgress > 0.0f) {
-            float progressHeight = bounds.height * std::min(1.0f, m_loadProgress);
-            renderer.fillRect(AestraUI::NUIRect(bounds.x, bounds.bottom() - progressHeight, stripWidth, progressHeight), themeManager.getColor("textPrimary").withAlpha(0.75f));
-        }
-
-        // Selection Highlight Line (Inner Glow)
-        if (m_selected) {
-            auto glowColor = AestraUI::NUIColor::white().withAlpha(0.20f);
-            // Top highlight line inside control area (skipping strip)
-            renderer.fillRect(AestraUI::NUIRect(bounds.x + stripWidth, bounds.y, controlAreaWidth - stripWidth, 1.0f), glowColor);
-            // Bottom highlight
-            renderer.fillRect(AestraUI::NUIRect(bounds.x + stripWidth, bounds.y + bounds.height - 1.0f, controlAreaWidth - stripWidth, 1.0f), glowColor.withAlpha(0.12f));
-        }
+    // Colour bar, level meter and the source line (FD-50 board 8): TrackUIComponentHeader.cpp.
+    paintHeaderIdentity(renderer, controlAreaBounds);
+    if (lane && m_isLoading) { // the import strip pulses in the accent and fills with progress
+        const float pulse = std::sin(static_cast<float>(Aestra::Platform::getUtils()->getTime()) * 8.0f) * 0.5f + 0.5f;
+        renderer.fillRect(AestraUI::NUIRect(bounds.x, bounds.y, 3.0f, bounds.height),
+                          themeManager.getColor("accentCyan").withAlpha(0.6f + pulse * 0.4f));
+        const float progressHeight = bounds.height * std::clamp(m_loadProgress, 0.0f, 1.0f);
+        renderer.fillRect(AestraUI::NUIRect(bounds.x, bounds.bottom() - progressHeight, 3.0f, progressHeight),
+                          themeManager.getColor("textPrimary").withAlpha(0.75f));
     }
 
     // A single quiet bottom rule separates rows without boxing every header.
@@ -2067,7 +1985,11 @@ void TrackUIComponent::onResize(int width, int height) {
     const float localInlineRight = inlineRightEdge - 8.0f;
     const float localInlineWidth = std::max(0.0f, localInlineRight - localLabelLeft);
     const float localNameHeight = std::max(14.0f, layout.trackLabelHeight - 2.0f);
-    const float localNameY = localButtonsY + std::max(0.0f, (buttonH - localNameHeight) * 0.5f);
+    // Tall rows carry a second line (what plays the track, where it goes) under the name, so the name sits above
+    // the row's centre; short rows keep it centred on the buttons (FD-50 board 8).
+    const float localNameY = Aestra::Audio::TrackHeader::showsSourceLine(bounds.height)
+                                 ? std::round(bounds.height * 0.5f - localNameHeight + 2.0f)
+                                 : localButtonsY + std::max(0.0f, (buttonH - localNameHeight) * 0.5f);
     const float localLabelWidth = std::max(40.0f, localInlineWidth);
 
     // Name label: our bounds are window-absolute, so offset by bounds.x/y

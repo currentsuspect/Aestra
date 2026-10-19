@@ -410,7 +410,7 @@ private:
     // Spec 2 §8: 42 -> 38. Controls are 24px tall, so this keeps 7px of clear
     // space above and below them — compact without becoming cramped — and puts
     // another lane on screen at a typical window height.
-    int m_trackHeight{38};
+    int m_trackHeight{46}; // FD-50 board 8: two-line headers (name, then what plays it → where it goes)
     // Contiguous rows (2026-08 plane redesign): the grid plane is continuous,
     // so rows carry no seam — a quiet separator line marks each boundary.
     int m_trackSpacing{0};
