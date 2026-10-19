@@ -74,12 +74,69 @@ void paintMenuGlyph(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& sl
     }
 }
 
-void paintPatternEnd(AestraUI::NUIRenderer& renderer, float x, float top, float bottom,
+void paintRepeatLine(AestraUI::NUIRenderer& renderer, float x, float top, float bottom,
                      const AestraUI::NUIColor& ink) {
     constexpr float kDash = 3.0f;
     constexpr float kGap = 3.0f;
     for (float y = top; y < bottom; y += kDash + kGap) {
         renderer.drawLine({x, y}, {x, std::min(bottom, y + kDash)}, 1.0f, ink);
+    }
+}
+
+void paintMiniPianoRoll(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& visible,
+                        const AestraUI::NUIRect& full, float bandHeight, float pixelsPerBeat,
+                        const std::vector<MidiNote>& notes, double patternLengthBeats, double sourceOffsetBeats,
+                        double clipDurationBeats, const AestraUI::NUIColor& ink) {
+    if (!(pixelsPerBeat > 0.0f)) return;
+    const float noteAreaY = full.y + bandHeight + 3.0f;
+    const float noteAreaHeight = std::max(4.0f, full.bottom() - 3.0f - noteAreaY);
+    int minPitch = 127;
+    int maxPitch = 0;
+    double reach = std::max(0.0, patternLengthBeats);
+    for (const auto& n : notes) {
+        minPitch = std::min(minPitch, n.pitch);
+        maxPitch = std::max(maxPitch, n.pitch);
+        reach = std::max(reach, n.startBeat + n.durationBeats);
+    }
+    const int pitchRange = std::max(1, maxPitch - minPitch);
+    const float rowHeight = std::clamp(noteAreaHeight / static_cast<float>(pitchRange + 1), 1.0f, 2.0f);
+    const double ppb = pixelsPerBeat;
+
+    // Clip-relative beats of the on-screen part; the pattern starts at -sourceOffset in the same frame.
+    const double fromBeat = (visible.x - full.x) / ppb;
+    const double toBeat = (visible.right() - full.x) / ppb;
+    const bool repeating = patternLengthBeats > 0.0;
+    const PatternRepeat::Range repeats =
+        PatternRepeat::inWindow(patternLengthBeats, sourceOffsetBeats, sourceOffsetBeats + clipDurationBeats,
+                                -sourceOffsetBeats, fromBeat, toBeat, reach);
+    for (int64_t r = repeats.first; r <= repeats.last; ++r) {
+        const double repeatOffset = repeating ? static_cast<double>(r) * patternLengthBeats : 0.0;
+        for (const auto& n : notes) {
+            if (repeating && n.startBeat >= patternLengthBeats) continue; // wraps before it: never plays
+            const double inClip = repeatOffset + noteBeatInClip(n.startBeat, sourceOffsetBeats);
+            if (inClip + n.durationBeats <= 0.0 || inClip >= clipDurationBeats) continue;
+            const double start = std::max(0.0, inClip);
+            const double end = std::min(clipDurationBeats, inClip + n.durationBeats);
+            float x = full.x + static_cast<float>(start * ppb);
+            float right = full.x + static_cast<float>(end * ppb) - 1.0f;
+            x = std::max(x, visible.x + 1.0f);
+            right = std::min(right, visible.right());
+            if (right <= x) right = x + 1.0f;
+            if (x >= visible.right()) continue;
+            const float t = maxPitch > minPitch ? static_cast<float>(n.pitch - minPitch) / pitchRange : 0.5f;
+            const float y = noteAreaY + (noteAreaHeight - rowHeight) * (1.0f - t);
+            renderer.fillRect(AestraUI::NUIRect(x, y, right - x, rowHeight), ink.withAlpha(0.95f));
+        }
+    }
+
+    // Lines closer than a few pixels would fill the clip with dashes; the notes already show the rhythm then.
+    constexpr double kMinLineSpacingPx = 4.0;
+    if (!repeating || patternLengthBeats * ppb < kMinLineSpacingPx) return;
+    for (double beat : repeatLinesInClip(patternLengthBeats, sourceOffsetBeats, clipDurationBeats, fromBeat, toBeat)) {
+        const float x = full.x + static_cast<float>(beat * ppb);
+        if (x > visible.x && x < visible.right()) {
+            paintRepeatLine(renderer, std::round(x) + 0.5f, visible.y + bandHeight, visible.bottom(), ink.withAlpha(0.55f));
+        }
     }
 }
 

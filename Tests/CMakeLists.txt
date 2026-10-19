@@ -885,6 +885,19 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternLateRefillTest.cpp")
         PROPERTIES LABELS "audio;playback;regression;contract:audio")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternRepeatPlaybackTest.cpp")
+    add_executable(PatternRepeatPlaybackTest AestraAudio/PatternRepeatPlaybackTest.cpp)
+    target_link_libraries(PatternRepeatPlaybackTest PRIVATE AestraAudio)
+    target_include_directories(PatternRepeatPlaybackTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PatternRepeatPlaybackTest COMMAND PatternRepeatPlaybackTest)
+    set_tests_properties(PatternRepeatPlaybackTest
+        PROPERTIES LABELS "audio;playback;regression;contract:audio")
+endif()
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternPlacementTest.cpp")
     add_executable(PatternPlacementTest AestraAudio/PatternPlacementTest.cpp)
     target_include_directories(PatternPlacementTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
@@ -2349,6 +2362,7 @@ set_tests_properties(TimelineGeometryTest PROPERTIES LABELS "ui;timeline;geometr
 add_executable(TimelineClipGeometryTest AestraUI/TimelineClipGeometryTest.cpp)
 target_include_directories(TimelineClipGeometryTest PRIVATE
     ${CMAKE_SOURCE_DIR}/Source/Components
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
 )
 add_test(NAME TimelineClipGeometryTest COMMAND TimelineClipGeometryTest)
 set_tests_properties(TimelineClipGeometryTest PROPERTIES LABELS "ui;timeline;geometry;regression;contract:application")

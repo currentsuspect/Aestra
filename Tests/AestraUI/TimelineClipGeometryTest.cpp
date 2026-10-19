@@ -35,13 +35,25 @@ void testNotesSitWhereTheySound() {
     check(noteBeatInClip(2.0, 4.0) < 0.0, "a note before the source offset falls left of the clip (not drawn)");
 }
 
-void testPatternEndOnlyWhenTheClipRunsPastIt() {
-    check(near(patternEndInClip(8.0, 0.0, 16.0), 8.0), "an 8-beat pattern in a 16-beat clip ends 8 beats in");
-    check(near(patternEndInClip(8.0, 2.0, 16.0), 6.0), "the source offset shifts where the pattern ends");
-    check(patternEndInClip(32.0, 0.0, 16.0) < 0.0, "a clip shorter than its pattern has no end mark (the starter kit's 32-beat pattern in 16-beat clips)");
-    check(patternEndInClip(16.0, 0.0, 16.0) < 0.0, "a clip exactly as long as its pattern has no end mark");
-    check(patternEndInClip(0.0, 0.0, 16.0) < 0.0, "an empty-length pattern has no end mark");
-    check(patternEndInClip(4.0, 4.0, 16.0) < 0.0, "a source offset at or past the pattern's end has no end mark");
+bool linesAre(const std::vector<double>& lines, std::initializer_list<double> want) {
+    if (lines.size() != want.size()) return false;
+    size_t i = 0;
+    for (double w : want) {
+        if (!near(lines[i++], w)) return false;
+    }
+    return true;
+}
+
+void testRepeatLinesWhereThePatternStartsAgain() {
+    check(linesAre(repeatLinesInClip(8.0, 0.0, 16.0), {8.0}), "an 8-beat pattern in a 16-beat clip repeats 8 beats in");
+    check(linesAre(repeatLinesInClip(4.0, 0.0, 16.0), {4.0, 8.0, 12.0}), "a line at each repeat (board 8's Hat 1)");
+    check(linesAre(repeatLinesInClip(8.0, 2.0, 16.0), {6.0, 14.0}), "the source offset shifts every line");
+    check(repeatLinesInClip(32.0, 0.0, 16.0).empty(), "a clip shorter than its pattern has no line (the starter kit's 32-beat pattern in 16-beat clips)");
+    check(repeatLinesInClip(16.0, 0.0, 16.0).empty(), "a clip exactly as long as its pattern has no line");
+    check(repeatLinesInClip(0.0, 0.0, 16.0).empty(), "an empty-length pattern has no line");
+    check(linesAre(repeatLinesInClip(4.0, 4.0, 10.0), {4.0, 8.0}), "an offset of a whole pattern starts on a boundary, no line at 0");
+    check(linesAre(repeatLinesInClip(1.0, 0.0, 1000.0, 500.2, 503.0), {501.0, 502.0}),
+          "a long clip yields only the lines in the asked range");
 }
 
 void testHeaderBand() {
@@ -56,7 +68,7 @@ void testHeaderBand() {
 
 int main() {
     testNotesSitWhereTheySound();
-    testPatternEndOnlyWhenTheClipRunsPastIt();
+    testRepeatLinesWhereThePatternStartsAgain();
     testHeaderBand();
     if (failures > 0) {
         std::cerr << "[FAIL] TimelineClipGeometryTest: " << failures << " check(s) failed\n";

@@ -1449,45 +1449,12 @@ void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, c
     }
     if (!pattern || !pattern->isMidi()) return;
 
-    // A mini piano roll in a light tint of the track's hue. Notes sit where they sound (see
-    // ClipPaint::noteBeatInClip): the pattern is not stretched to the clip, and past its end the clip is silent.
-    const auto& midiPayload = std::get<MidiPayload>(pattern->payload);
-    const AestraUI::NUIColor contentInk = AestraUI::waveformInkTone(identity, isSelected);
-    const float noteAreaY = fullClipBounds.y + headerHeight + 3.0f;
-    const float noteAreaHeight = std::max(4.0f, fullClipBounds.bottom() - 3.0f - noteAreaY);
-    int minPitch = 127;
-    int maxPitch = 0;
-    for (const auto& n : midiPayload.notes) {
-        minPitch = std::min(minPitch, static_cast<int>(n.pitch));
-        maxPitch = std::max(maxPitch, static_cast<int>(n.pitch));
-    }
-    const int pitchRange = std::max(1, maxPitch - minPitch);
-    const float rowHeight = std::clamp(noteAreaHeight / static_cast<float>(pitchRange + 1), 1.0f, 2.0f);
-    const float ppb = m_pixelsPerBeat;
-    for (const auto& n : midiPayload.notes) {
-        const double inClip = ClipPaint::noteBeatInClip(n.startBeat, clip.sourceOffset);
-        if (inClip + n.durationBeats <= 0.0 || inClip >= clip.durationBeats) continue;
-        const double start = std::max(0.0, inClip);
-        const double end = std::min(clip.durationBeats, inClip + n.durationBeats);
-        float x = fullClipBounds.x + static_cast<float>(start * ppb);
-        float right = fullClipBounds.x + static_cast<float>(end * ppb) - 1.0f;
-        x = std::max(x, clipBounds.x + 1.0f);
-        right = std::min(right, clipBounds.right());
-        if (right <= x) right = x + 1.0f;
-        if (x >= clipBounds.right()) continue;
-        const float t = maxPitch > minPitch ? static_cast<float>(n.pitch - minPitch) / pitchRange : 0.5f;
-        const float y = noteAreaY + (noteAreaHeight - rowHeight) * (1.0f - t);
-        renderer.fillRect(AestraUI::NUIRect(x, y, right - x, rowHeight), contentInk.withAlpha(0.95f));
-    }
-
-    const double patternEnd = ClipPaint::patternEndInClip(pattern->lengthBeats, clip.sourceOffset, clip.durationBeats);
-    if (patternEnd > 0.0) {
-        const float x = fullClipBounds.x + static_cast<float>(patternEnd * ppb);
-        if (x > clipBounds.x && x < clipBounds.right()) {
-            ClipPaint::paintPatternEnd(renderer, std::round(x) + 0.5f, clipBounds.y + headerHeight,
-                                       clipBounds.bottom(), contentInk.withAlpha(0.55f));
-        }
-    }
+    // A mini piano roll in a light tint of the track's hue, notes where they sound and the pattern drawn again
+    // in every repeat the clip plays (V82-T3), a dashed line at each.
+    ClipPaint::paintMiniPianoRoll(renderer, clipBounds, fullClipBounds, headerHeight, m_pixelsPerBeat,
+                                  std::get<MidiPayload>(pattern->payload).notes, pattern->lengthBeats,
+                                  clip.sourceOffset, clip.durationBeats,
+                                  AestraUI::waveformInkTone(identity, isSelected));
 }
 
 
@@ -2649,10 +2616,15 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                                     clip.edits.effectiveVarispeed();
                             }
                         } else if (m_trimEdge == TrimEdge::Right) {
-                            // Trim right: change end position (duration)
-                            double newEnd = m_trimOriginalStart + m_trimOriginalDuration + deltaBeats;
-                            newEnd = snapBeatToGrid(newEnd); // Apply snap
-                            
+                            // Trim right: change end position (duration). A pattern clip lengthens in whole
+                            // repeats of its pattern (V82-T3); Alt drags it freely on the grid.
+                            double newEnd = snapBeatToGrid(m_trimOriginalStart + m_trimOriginalDuration + deltaBeats);
+                            const auto* pattern = m_trackManager->getPatternManager().getPattern(clip.patternId);
+                            if (pattern && pattern->isMidi() && !(event.modifiers & AestraUI::NUIModifiers::Alt)) {
+                                newEnd = PatternRepeat::snapEndToRepeat(pattern->lengthBeats, clip.startBeat - clip.sourceOffset,
+                                                                        clip.startBeat, newEnd);
+                            }
+
                             clip.durationBeats = std::max(0.1, newEnd - clip.startBeat);
                             if (m_trackManager && m_trackManager->getPlaylistModel().isAudioClip(clip)) {
                                 clip.durationSeconds =

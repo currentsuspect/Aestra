@@ -164,9 +164,12 @@ public:
      * @param pid Pattern identifier to schedule.
      * @param startBeat Beat at which the pattern starts.
      * @param instanceId Caller-supplied instance identifier.
+     * @param repeatPattern A timeline clip longer than its pattern plays it again from the top every pattern
+     *        length (V82-T3, PatternRepeat.h). Needs a finite @p durationBeats; off, the pattern plays once.
      */
     void schedulePatternInstance(PatternID pid, double startBeat, uint32_t instanceId,
-                                 double sourceStartBeat = 0.0, double durationBeats = -1.0);
+                                 double sourceStartBeat = 0.0, double durationBeats = -1.0,
+                                 bool repeatPattern = false);
 
     /**
      * @brief Re-place a slot while playing without disturbing what already sounds (non-RT thread).
@@ -179,7 +182,7 @@ public:
      * A slot that did not exist is scheduled fresh, exactly as by schedulePatternInstance().
      */
     void updatePatternInstance(PatternID pid, double startBeat, uint32_t instanceId, double sourceStartBeat = 0.0,
-                               double durationBeats = -1.0);
+                               double durationBeats = -1.0, bool repeatPattern = false);
 
     /**
      * @brief Remove a slot while playing (non-RT thread). Pair with patternContentEdited().
@@ -315,6 +318,7 @@ private:
         uint32_t instanceId;
         double sourceStartBeat;
         double sourceEndBeat;
+        bool repeatPattern{false}; // the source window wraps every pattern length (PatternRepeat.h)
         uint64_t scheduledThroughFrame;
         // Fingerprint of the pattern's notes when this instance was last scheduled; a change
         // re-queues from the playhead (see refillWindow). 0 = not seen yet.

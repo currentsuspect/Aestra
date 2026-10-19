@@ -1,12 +1,16 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 //
 // The pure rules behind the timeline clip look (FD-50, boards 7 and 8): how tall the header band is, when a
-// clip has room for one, and where a pattern's notes and end fall inside a clip. Header-only and free of the
+// clip has room for one, and where a pattern's notes and repeats fall inside a clip. Header-only and free of the
 // renderer, so TimelineClipGeometryTest runs in the headless build. TimelineClipPaint draws with these.
 #pragma once
 
+#include "Playback/PatternRepeat.h"
+
 #include <algorithm>
 #include <cmath>
+#include <limits>
+#include <vector>
 
 namespace Aestra {
 namespace Audio {
@@ -29,13 +33,25 @@ inline double noteBeatInClip(double noteStartBeat, double sourceOffsetBeats) {
     return noteStartBeat - sourceOffsetBeats;
 }
 
-/// Beat, from the clip's left edge, where the pattern's material runs out, or -1 when the clip ends first (or
-/// exactly at the pattern's end). Past this point the clip is silent: a clip does not loop its pattern.
-inline double patternEndInClip(double patternLengthBeats, double sourceOffsetBeats, double clipDurationBeats) {
+/// Beats, from the clip's left edge, where the clip starts its pattern again (board 8's dashed lines): every
+/// k * pattern length - source offset strictly inside the clip, limited to [fromBeat, toBeat) so a long clip of
+/// a short pattern only yields the lines on screen. A clip no longer than its pattern has none. The scheduler
+/// repeats the pattern at the same beats (PatternRepeat.h).
+inline std::vector<double> repeatLinesInClip(double patternLengthBeats, double sourceOffsetBeats,
+                                             double clipDurationBeats, double fromBeat = 0.0,
+                                             double toBeat = std::numeric_limits<double>::infinity()) {
+    std::vector<double> lines;
+    if (!(patternLengthBeats > 0.0) || !std::isfinite(patternLengthBeats) || !(clipDurationBeats > 0.0)) return lines;
     constexpr double kEpsilon = 1.0e-6;
-    const double end = patternLengthBeats - sourceOffsetBeats;
-    if (!(patternLengthBeats > 0.0) || end <= kEpsilon || end >= clipDurationBeats - kEpsilon) return -1.0;
-    return end;
+    const double end = std::min(clipDurationBeats - kEpsilon, toBeat);
+    const double firstK = std::max(std::floor(sourceOffsetBeats / patternLengthBeats) + 1.0,
+                                   std::floor((fromBeat + sourceOffsetBeats) / patternLengthBeats));
+    for (double k = firstK;; k += 1.0) {
+        const double x = (k * patternLengthBeats) - sourceOffsetBeats;
+        if (x >= end) break;
+        if (x > kEpsilon && x >= fromBeat) lines.push_back(x);
+    }
+    return lines;
 }
 
 } // namespace ClipPaint
