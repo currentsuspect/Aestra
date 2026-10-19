@@ -29,6 +29,7 @@
 #include "../AestraCore/include/AestraLog.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include "../AestraUI/Widgets/TrackColorPalette.h"
+#include "TimelineClipPaint.h"
 #include <algorithm>
 #include <charconv>
 #include <cmath>
@@ -114,18 +115,11 @@ std::string truncateClipLabel(const std::string& text, float availableWidth, flo
 // AESTRA_WAVE_TRACE span assertion maps peaks exactly like drawChannelWaveform().
 constexpr float kWaveDisplayGain = 1.45f;
 
-// Clip corner geometry. Clips are flat, opaque, square-cornered surfaces (owner
-// direction, 2026-09-15). One knob for every clip layer — body, header, mute dim,
-// selection — so a later move back to rounded stays a single edit.
-constexpr float kClipCornerRadius = 0.0f;
-
 // Sample clips get a name bar when they are big enough to hold one. The waveform
 // sits below that bar, inside the clip body, never under the name (owner
 // direction, 2026-09-15). Clips too small for a bar keep a full-height waveform.
-constexpr float kSampleClipHeaderHeight = 15.0f;
-
 bool sampleClipShowsHeader(const AestraUI::NUIRect& clipBounds) {
-    return clipBounds.height > kSampleClipHeaderHeight + 4.0f && clipBounds.width > 28.0f;
+    return Aestra::Audio::ClipPaint::showsHeaderBand(clipBounds);
 }
 
 TrackSelectionIntent selectionIntentFor(const AestraUI::NUIMouseEvent& event) {
@@ -137,23 +131,6 @@ TrackSelectionIntent selectionIntentFor(const AestraUI::NUIMouseEvent& event) {
 // Clip and lane tones all come from AestraUI/Widgets/TrackColorPalette.h now
 // (clipBodyTone / waveformTintTone / restrainLaneIdentityColor), so nothing here
 // open-codes a restraint the minimap cannot see.
-
-// Keep Playlist clip selection in the same visual language as Piano Roll
-// notes: a lifted secondary accent, crisp white edge, grounded shadow, and
-// subtle edit handles. Clip identity colour remains visible underneath.
-void drawPianoRollStyleSelection(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float radius) {
-    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    const auto selectedColor = themeManager.getColor("accentSecondary").lightened(0.12f);
-    renderer.drawShadow({bounds.x, bounds.y + 1.0f, bounds.width, bounds.height},
-                        0.0f, 2.0f, 5.0f, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.22f));
-    renderer.fillRoundedRect(bounds, radius, selectedColor.withAlpha(0.12f));
-    renderer.strokeRoundedRect(bounds, radius, 1.5f, AestraUI::NUIColor::white().withAlpha(0.78f));
-    const float handleHeight = std::max(2.0f, bounds.height - 6.0f);
-    renderer.fillRoundedRect({bounds.x + 1.0f, bounds.y + 3.0f, 2.0f, handleHeight},
-                             1.0f, AestraUI::NUIColor::white().withAlpha(0.68f));
-    renderer.fillRoundedRect({bounds.right() - 3.0f, bounds.y + 3.0f, 2.0f, handleHeight},
-                             1.0f, AestraUI::NUIColor::white().withAlpha(0.68f));
-}
 
 // Waveform ink derived from the clip color so the waveform reads as part of
 // the clip rather than an overlay: a light shade of the clip's own hue.
@@ -189,46 +166,6 @@ WaveformInk deriveWaveformInk(const AestraUI::NUIColor& base) {
     ink.envBottom = lifted.withAlpha(0.38f);
     ink.centerLine = lifted.withAlpha(0.22f);
     return ink;
-}
-
-// Unset clip colours arrive as white or grey. At full clip strength a grey reads
-// as a bright blank slab, so fall back to the theme accent — the rule pattern
-// clips already used, now shared by both clip types.
-AestraUI::NUIColor withClipIdentityFallback(const AestraUI::NUIColor& color) {
-    const float mx = std::max({color.r, color.g, color.b});
-    const float mn = std::min({color.r, color.g, color.b});
-    if (mx - mn < 0.06f) {
-        return AestraUI::NUIThemeManager::getInstance().getColor("accentPrimary");
-    }
-    return color;
-}
-
-AestraUI::NUIColor patternClipIdentity(const ClipInstance& clip) {
-    return withClipIdentityFallback(AestraUI::NUIColor::fromHex(clip.colorRGBA)).withAlpha(1.0f);
-}
-
-// Flat clip grammar shared by audio and pattern clips: the header is the body
-// darkened by a black wash (tone, not a divider), the edge is a thin dark line
-// that separates adjacent clips, and text/glyphs are always the light ink.
-AestraUI::NUIColor clipHeaderWash(bool selected) {
-    return AestraUI::NUIColor(0.0f, 0.0f, 0.0f, selected ? 0.30f : 0.22f);
-}
-
-AestraUI::NUIColor clipHeaderSurface(const AestraUI::NUIColor& identity, bool selected) {
-    return AestraUI::NUIColor::lerp(AestraUI::clipBodyTone(identity, selected),
-                                    AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 1.0f), clipHeaderWash(selected).a);
-}
-
-AestraUI::NUIColor clipEdgeColor() {
-    return AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.45f);
-}
-
-// One light foreground for every clip label and glyph, whatever the clip routes
-// to (spec 2 §1). Derived from the surface rather than the theme: the body does
-// not follow the UI theme, so a themed textPrimary would turn near-black on a
-// dark clip the moment the user switched to the light mode.
-AestraUI::NUIColor clipTextColor(const AestraUI::NUIColor& surface, float alpha) {
-    return AestraUI::clipForegroundInk(surface, alpha);
 }
 
 } // namespace
@@ -1288,168 +1225,34 @@ void TrackUIComponent::computeDirectPeaks(const Aestra::Audio::AudioBufferData& 
 }
 
 AestraUI::NUIColor TrackUIComponent::resolveClipDisplayColor(const ClipInstance& clip) const {
-    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    AestraUI::NUIColor clipColor = themeManager.getColor("primary");
-
-    if (!m_trackManager) return clipColor;
-    auto pattern = m_trackManager->getPatternManager().getPattern(clip.patternId);
-    if (!pattern) return clipColor;
-
-    // Audio-source color follows its mixer destination without coupling the
-    // Playlist lane itself to that insert.
-    auto routeChannel = pattern->isAudio() ? m_trackManager->getChannelById(pattern->getMixerChannelId()) : nullptr;
-    if (routeChannel) {
-        int colorIndex = routeChannel->getTrackColorIndex();
-        if (colorIndex < 0 || colorIndex >= AestraUI::PALETTE_SIZE) {
-            uint32_t trackId = routeChannel->getChannelId();
-            colorIndex = static_cast<int>((trackId - 1) % AestraUI::PALETTE_SIZE);
+    // FD-50: a clip is drawn in the colour of the track it sits on, the same colour as the track's strip, its
+    // mixer channel and its Arsenal row. A clip outside any lane keeps its own colour.
+    if (m_trackManager) {
+        if (const PlaylistLane* lane = m_trackManager->getPlaylistModel().getLane(m_laneId)) {
+            return ClipPaint::identityFromARGB(lane->colorRGBA);
         }
-        clipColor = AestraUI::NUIColor::fromARGB(AestraUI::paletteIndexToARGB(colorIndex));
-    } else {
-        clipColor = AestraUI::NUIColor::fromARGB(clip.colorRGBA);
     }
-    return withClipIdentityFallback(clipColor);
+    return ClipPaint::identityFromARGB(clip.colorRGBA);
 }
 
 void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
-                                            const AestraUI::NUIRect& fullClipBounds, const ClipInstance& clip,
-                                            bool seamLeft, bool seamRight) {
-    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-
-    const float clipRadius = kClipCornerRadius;
-
-    AestraUI::NUIColor clipColor = resolveClipDisplayColor(clip);
-    std::string sampleName = "Clip";
-    int patternRefCount = 1;  // How many clips share this pattern
-    int patternInstanceIndex = 1;  // This clip's instance number
-
-    if (m_trackManager) {
-        if (auto pattern = m_trackManager->getPatternManager().getPattern(clip.patternId)) {
-            sampleName = pattern->name;
-
-            // Count how many clips reference this pattern across all lanes
-            auto& playlist = m_trackManager->getPlaylistModel();
-            int count = 0;
-            int indexForThisClip = 0;
-            for (size_t l = 0; l < playlist.getLaneCount(); ++l) {
-                if (auto lane = playlist.getLane(playlist.getLaneId(l))) {
-                    for (const auto& c : lane->clips) {
-                        if (c.patternId == clip.patternId) {
-                            ++count;
-                            if (c.id == clip.id) {
-                                indexForThisClip = count;
-                            }
-                        }
-                    }
-                }
-            }
-            patternRefCount = count;
-            patternInstanceIndex = indexForThisClip;
-        }
-    }
-    
-    bool clipSelected = isClipHighlighted(clip.id);
-    // Selection eases the base look up slightly; the border and glow carry
-    // the state so the fill doesn't visibly "pop" on click-and-hold
-    // Deeper, less-saturated base so the clip reads rich rather than neon.
-    // Body sits lower than the waveform on purpose. Both tones are derived
-    // together in TrackColorPalette.h so the gap between them cannot drift: the
-    // clip stops reading as a bright slab and starts reading as a surface with
-    // audio drawn on it.
-    const AestraUI::NUIColor clipBase = AestraUI::clipBodyTone(clipColor, clipSelected);
-    // One opaque body colour, so the grid never bleeds through and the seam patches
-    // below cannot double-paint (a translucent tint painted twice showed as a
-    // lighter stripe at every split).
-    const AestraUI::NUIColor bodyFill = clipBase;
-    renderer.fillRoundedRect(clipBounds, clipRadius, bodyFill);
-
-    // Rounded corners expose the grid between adjacent slices, so their internal
-    // sides get squared with a patch that overlaps the neighbour by a pixel. Square
-    // clips need no patch — and the overlap made split slices visibly cross.
-    if (clipRadius > 0.0f) {
-        constexpr float kSeamOverlap = 1.0f;
-        const float seamFillWidth = clipRadius + kSeamOverlap;
-        if (seamLeft) {
-            renderer.fillRect({clipBounds.x - kSeamOverlap, clipBounds.y,
-                               seamFillWidth + kSeamOverlap, clipBounds.height}, bodyFill);
-        }
-        if (seamRight) {
-            renderer.fillRect({clipBounds.right() - seamFillWidth, clipBounds.y,
-                               seamFillWidth + kSeamOverlap, clipBounds.height}, bodyFill);
-        }
-    }
-
-    // Flat edge: a thin dark line that separates adjacent clips. Selection is
-    // carried by the selection ring drawn over the clip, not by a brighter bevel.
-    AestraUI::NUIColor borderColor = clipEdgeColor();
-    constexpr float borderWidth = 1.0f;
-
-    // Ghost instance check
-    bool isGhostInstance = (patternRefCount > 1 && patternInstanceIndex > 1);
-
-    if (isGhostInstance) {
-        // Ghost instances: Dimmer border
-        borderColor = borderColor.withAlpha(0.4f);
-        // Dashed border? For now just dim.
-    }
-    
-    renderer.strokeRoundedRect(clipBounds, clipRadius, borderWidth, borderColor);
-    // Selection reads through the brighter border, fill, and waveform ink —
-    // no shadow or ring around the clip
-
-    // Label + header band are drawn by drawSampleClipHeader() AFTER the waveform,
-    // so the waveform can fill the full clip height without hiding the filename.
-    (void)sampleName;
+                                            const AestraUI::NUIRect&, const ClipInstance& clip, bool, bool) {
+    // One opaque body in the track's colour (FD-50); the band and name are drawn by drawSampleClipHeader() after
+    // the waveform.
+    ClipPaint::paintBody(renderer, clipBounds, resolveClipDisplayColor(clip), isClipHighlighted(clip.id));
 }
 
-// Distinct dark header scrim + filename, drawn on top of the full-height waveform.
+// The header band and the file name, drawn after the waveform.
 void TrackUIComponent::drawSampleClipHeader(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
-                                            const ClipInstance& clip, bool seamLeft, bool seamRight) {
-    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    const float clipRadius = kClipCornerRadius;
-    constexpr float kClipHeaderHeight = kSampleClipHeaderHeight;
+                                            const ClipInstance& clip, bool, bool) {
     if (!sampleClipShowsHeader(clipBounds)) return;
-
     std::string sampleName = "Clip";
     if (m_trackManager) {
-        if (auto pattern = m_trackManager->getPatternManager().getPattern(clip.patternId)) {
-            sampleName = pattern->name;
-        }
+        if (auto pattern = m_trackManager->getPatternManager().getPattern(clip.patternId)) sampleName = pattern->name;
     }
-    const bool clipSelected = isClipHighlighted(clip.id);
-
-    const float headerLeft = clipBounds.x + (seamLeft ? 0.0f : 1.0f);
-    const float headerRight = clipBounds.right() - (seamRight ? 0.0f : 1.0f);
-    const AestraUI::NUIRect headerRect(headerLeft, clipBounds.y + 1.0f,
-                                       std::max(0.0f, headerRight - headerLeft), kClipHeaderHeight);
-    // Translucent black wash: the header reads as the body one tone down, and the
-    // full-height waveform stays visible through the label zone.
-    const auto headerFill = clipHeaderWash(clipSelected);
-    // The scrim is translucent, so it must be painted exactly once: a square patch
-    // over a rounded header darkened a band at every seam. A seamed header is simply
-    // square; headerRect already runs to the clip edge on seamed sides.
-    if (seamLeft || seamRight || clipRadius <= 1.0f) {
-        renderer.fillRect(headerRect, headerFill);
-    } else {
-        renderer.fillRoundedRect(headerRect, clipRadius - 1.0f, headerFill);
-    }
-    const AestraUI::NUIColor headerSurface = clipHeaderSurface(resolveClipDisplayColor(clip), clipSelected);
-
-    const std::string displayName = truncateClipLabel(sampleName, clipBounds.width - 16.0f, 6.0f);
-    if (!displayName.empty()) {
-        const float kClipLabelFontSize = themeManager.getFontSize("micro");
-        const auto metrics = renderer.getFontMetrics(kClipLabelFontSize);
-        const float textBoxH = (metrics.ascent > 0.0f && metrics.descent > 0.0f)
-                                   ? (metrics.ascent + metrics.descent)
-                                   : kClipLabelFontSize;
-        const float textY = headerRect.y + (headerRect.height - textBoxH) * 0.5f;
-        // Name starts after the hamburger affordance zone (top-left glyph).
-        constexpr float kHamburgerOffset = 15.0f;
-        renderer.drawText(displayName,
-                          AestraUI::NUIPoint(clipBounds.x + 6.0f + kHamburgerOffset, textY),
-                          kClipLabelFontSize,
-                          clipTextColor(headerSurface, clipSelected ? 0.978f : 0.931f));
-    }
+    const float fontSize = AestraUI::NUIThemeManager::getInstance().getFontSize("micro");
+    ClipPaint::paintHeaderBand(renderer, clipBounds, resolveClipDisplayColor(clip),
+                               truncateClipLabel(sampleName, clipBounds.width - 8.0f, 6.0f, 2), fontSize);
 }
 
 void TrackUIComponent::drawSampleClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds) {
@@ -1573,9 +1376,10 @@ void TrackUIComponent::drawClipAtPosition(AestraUI::NUIRenderer& renderer, const
                     // and the audio each own their zone instead of overlapping.
                     const float waveformPadLeft = seamLeft ? 0.0f : 3.0f;
                     const float waveformPadRight = seamRight ? 0.0f : 3.0f;
-                    const float waveformPadTop = sampleClipShowsHeader(insetClippedClipBounds)
-                                                     ? 1.0f + kSampleClipHeaderHeight + 2.0f
-                                                     : 2.0f;
+                    const float waveformPadTop =
+                        sampleClipShowsHeader(insetClippedClipBounds)
+                            ? ClipPaint::headerBandHeight(insetClippedClipBounds.height) + 2.0f
+                            : 2.0f;
                     constexpr float waveformPadBottom = 3.0f;
                     const AestraUI::NUIRect waveformInsideClip(
                         insetClippedClipBounds.x + waveformPadLeft,
@@ -1605,38 +1409,26 @@ void TrackUIComponent::drawClipAtPosition(AestraUI::NUIRenderer& renderer, const
                     // label bar. Drawing them first let the waveform paint over them.
                     drawClipFades(renderer, insetFullClipBounds, waveformInsideClip, clip);
                 }
-                // A muted clip is silent in playback, so it must not read as active.
-                // Same dim a muted lane applies to its grid area, scoped to the clip;
-                // selection still draws on top so a muted clip stays selectable.
-                if (clip.edits.muted) {
-                    renderer.fillRoundedRect(insetClippedClipBounds, kClipCornerRadius,
-                                             AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.40f));
-                }
-                if (isClipHighlighted(clip.id)) {
-                    drawPianoRollStyleSelection(renderer, insetClippedClipBounds, kClipCornerRadius);
-                }
+                // A muted clip is silent in playback: the whole clip at 40 %. Selection draws on top, so a muted
+                // clip stays selectable.
+                if (clip.edits.muted) ClipPaint::paintMuted(renderer, insetClippedClipBounds);
+                if (isClipHighlighted(clip.id)) ClipPaint::paintSelection(renderer, insetClippedClipBounds);
 
-                // Hamburger affordance (top-left of the clip): opens the full
-                // contextual menu — the home for the actions right-click used
-                // to carry before right-click became fast-delete.
+                // The clip menu glyph sits at the band's right end and shows only on hover or selection (the
+                // board draws clips without it). Its hit rect is published either way; Shift+right-click opens the
+                // same menu.
                 {
-                    const AestraUI::NUIRect burgerRect(insetClippedClipBounds.x + 3.0f, insetClippedClipBounds.y + 2.0f,
-                                             13.0f, 12.0f);
-                    if (burgerRect.width > 0.0f && insetClippedClipBounds.width > 20.0f) {
+                    const AestraUI::NUIRect burgerRect(insetClippedClipBounds.right() - 16.0f,
+                                                       insetClippedClipBounds.y + 1.0f, 13.0f, 11.0f);
+                    if (insetClippedClipBounds.width > 40.0f && sampleClipShowsHeader(insetClippedClipBounds)) {
                         m_clipMenuGlyphRects[clip.id] = burgerRect;
                         const bool selectedClip = isClipHighlighted(clip.id);
                         const bool hot = m_hoveredClipId == clip.id || selectedClip;
-                        // Hovering the glyph itself lights it: the affordance says "click me" where
-                        // it is drawn (it gave no feedback at all, SPEC 3 §3.3).
                         if (m_hoveredClipMenuId == clip.id) {
-                            renderer.fillRoundedRect(clipMenuHitRect(burgerRect), 3.0f,
-                                                     AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.16f));
+                            renderer.fillRect(clipMenuHitRect(burgerRect), AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.16f));
                         }
-                        const AestraUI::NUIColor identity =
-                            isPattern ? patternClipIdentity(clip) : resolveClipDisplayColor(clip);
-                        const auto lineColor =
-                            clipTextColor(clipHeaderSurface(identity, selectedClip), hot ? 0.9f : 0.5f);
-                        for (int i = 0; i < 3; ++i) {
+                        const auto lineColor = ClipPaint::headerLabelInk(m_hoveredClipMenuId == clip.id ? 0.95f : 0.7f);
+                        for (int i = 0; hot && i < 3; ++i) {
                             const float ly = burgerRect.y + 2.0f + i * 3.5f;
                             renderer.drawLine(AestraUI::NUIPoint(burgerRect.x + 1.5f, ly),
                                               AestraUI::NUIPoint(burgerRect.x + burgerRect.width - 1.5f, ly),
@@ -1651,125 +1443,60 @@ void TrackUIComponent::drawClipAtPosition(AestraUI::NUIRenderer& renderer, const
 
 void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
                                               const AestraUI::NUIRect& fullClipBounds, const ClipInstance& clip) {
-    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    
-    // Unset patterns default to a flat grey RGBA; withClipIdentityFallback() swaps
-    // that for the theme accent (shared with audio clips).
-    const AestraUI::NUIColor baseColor = patternClipIdentity(clip);
-    bool isSelected = isClipHighlighted(clip.id);
+    // FD-50 boards 7-8: the body and band take the track's colour; muted and selected are drawn once for every
+    // clip type in drawClipAtPosition().
+    const AestraUI::NUIColor identity = resolveClipDisplayColor(clip);
+    const bool isSelected = isClipHighlighted(clip.id);
+    ClipPaint::paintBody(renderer, clipBounds, identity, isSelected);
 
-    // Muted state is drawn once for every clip type in drawClipAtPosition().
-
-    const float clipRadius = kClipCornerRadius;
-    // Same flat grammar as audio clips: one opaque body in the identity hue and a
-    // thin dark edge.
-    renderer.fillRoundedRect(clipBounds, clipRadius, AestraUI::clipBodyTone(baseColor, isSelected));
-    renderer.strokeRoundedRect(clipBounds, clipRadius, 1.0f, clipEdgeColor());
-
-    // No left identity bar: the lane's colour strip is the one identity mark
-    // (DESIGN.md, Timeline rule 5), and audio clips never carried one.
-    const float headerHeight = std::min(18.0f, std::max(14.0f, clipBounds.height * 0.26f));
-    const AestraUI::NUIRect headerRect(clipBounds.x + 1.0f, clipBounds.y + 1.0f, std::max(0.0f, clipBounds.width - 2.0f), headerHeight);
-    renderer.fillRoundedRect(headerRect, std::max(0.0f, clipRadius - 1.0f), clipHeaderWash(isSelected));
-    const AestraUI::NUIColor headerSurface = clipHeaderSurface(baseColor, isSelected);
-    // Grid and notes are drawn in the clip's own deep ink, like the waveform.
-    const AestraUI::NUIColor contentInk = AestraUI::waveformInkTone(baseColor, isSelected);
-
-    std::string clipName = clip.name;
-    if (clipName.empty()) {
-        if (m_trackManager) {
-            auto pattern = m_trackManager->getPatternManager().getPattern(clip.patternId);
-            if (pattern) clipName = pattern->name;
-        }
-    }
-
-    const std::string displayName = truncateClipLabel(clipName, clipBounds.width - 46.0f, 5.9f);
-    if (!displayName.empty()) {
-        // Centred in the header band rather than offset from the clip's top edge:
-        // headerHeight is clamped, so a fixed offset drifts as the band resizes and
-        // left the label flush against the band's lower edge at short clip heights.
-        // Name starts after the hamburger affordance zone (top-left glyph).
+    auto pattern = m_trackManager ? m_trackManager->getPatternManager().getPattern(clip.patternId) : nullptr;
+    const bool band = ClipPaint::showsHeaderBand(clipBounds);
+    const float headerHeight = band ? ClipPaint::headerBandHeight(clipBounds.height) : 0.0f;
+    if (band) {
+        const std::string& clipName = !clip.name.empty() ? clip.name : (pattern ? pattern->name : clip.name);
         constexpr float kClipLabelFontSize = 9.5f;
-        constexpr float kHamburgerOffset = 15.0f;
-        renderer.drawText(displayName,
-                          AestraUI::NUIPoint(clipBounds.x + 10.0f + kHamburgerOffset,
-                                             renderer.calculateTextY(headerRect, kClipLabelFontSize)),
-                          kClipLabelFontSize, clipTextColor(headerSurface, isSelected ? 0.978f : 0.931f));
+        ClipPaint::paintHeaderBand(renderer, clipBounds, identity,
+                                   truncateClipLabel(clipName, clipBounds.width - 8.0f, 5.6f, 2), kClipLabelFontSize);
+    }
+    if (!pattern || !pattern->isMidi()) return;
+
+    // A mini piano roll in a light tint of the track's hue. Notes sit where they sound (see
+    // ClipPaint::noteBeatInClip): the pattern is not stretched to the clip, and past its end the clip is silent.
+    const auto& midiPayload = std::get<MidiPayload>(pattern->payload);
+    const AestraUI::NUIColor contentInk = AestraUI::waveformInkTone(identity, isSelected);
+    const float noteAreaY = fullClipBounds.y + headerHeight + 3.0f;
+    const float noteAreaHeight = std::max(4.0f, fullClipBounds.bottom() - 3.0f - noteAreaY);
+    int minPitch = 127;
+    int maxPitch = 0;
+    for (const auto& n : midiPayload.notes) {
+        minPitch = std::min(minPitch, static_cast<int>(n.pitch));
+        maxPitch = std::max(maxPitch, static_cast<int>(n.pitch));
+    }
+    const int pitchRange = std::max(1, maxPitch - minPitch);
+    const float rowHeight = std::clamp(noteAreaHeight / static_cast<float>(pitchRange + 1), 1.0f, 2.0f);
+    const float ppb = m_pixelsPerBeat;
+    for (const auto& n : midiPayload.notes) {
+        const double inClip = ClipPaint::noteBeatInClip(n.startBeat, clip.sourceOffset);
+        if (inClip + n.durationBeats <= 0.0 || inClip >= clip.durationBeats) continue;
+        const double start = std::max(0.0, inClip);
+        const double end = std::min(clip.durationBeats, inClip + n.durationBeats);
+        float x = fullClipBounds.x + static_cast<float>(start * ppb);
+        float right = fullClipBounds.x + static_cast<float>(end * ppb) - 1.0f;
+        x = std::max(x, clipBounds.x + 1.0f);
+        right = std::min(right, clipBounds.right());
+        if (right <= x) right = x + 1.0f;
+        if (x >= clipBounds.right()) continue;
+        const float t = maxPitch > minPitch ? static_cast<float>(n.pitch - minPitch) / pitchRange : 0.5f;
+        const float y = noteAreaY + (noteAreaHeight - rowHeight) * (1.0f - t);
+        renderer.fillRect(AestraUI::NUIRect(x, y, right - x, rowHeight), contentInk.withAlpha(0.95f));
     }
 
-    if (m_trackManager && clip.patternId.isValid()) {
-        auto pattern = m_trackManager->getPatternManager().getPattern(clip.patternId);
-        if (pattern && pattern->isMidi()) {
-            const auto& midiPayload = std::get<MidiPayload>(pattern->payload);
-            
-            float noteAreaY = fullClipBounds.y + headerHeight + 2.0f;
-            float noteAreaHeight = std::max(8.0f, fullClipBounds.height - headerHeight - 4.0f);
-
-            int minPitch = 127;
-            int maxPitch = 0;
-            if (midiPayload.notes.empty()) {
-                minPitch = 36; maxPitch = 84;
-            } else {
-                for (const auto& n : midiPayload.notes) {
-                    minPitch = std::min(minPitch, (int)n.pitch);
-                    maxPitch = std::max(maxPitch, (int)n.pitch);
-                }
-                // Add some padding
-                minPitch = std::max(0, minPitch - 2);
-                maxPitch = std::min(127, maxPitch + 2);
-            }
-            int pitchRange = std::max(12, maxPitch - minPitch);
-
-            const float laneHeight = std::max(1.0f, noteAreaHeight / static_cast<float>(pitchRange));
-            const int guideCount = std::min(8, pitchRange);
-            for (int i = 1; i < guideCount; ++i) {
-                const float y = noteAreaY + (noteAreaHeight / guideCount) * i;
-                renderer.drawLine(
-                    AestraUI::NUIPoint(clipBounds.x + 7.0f, y),
-                    AestraUI::NUIPoint(clipBounds.right() - 4.0f, y),
-                    1.0f,
-                    contentInk.withAlpha(0.14f)
-                );
-            }
-
-            const int stepCount = std::max(4, static_cast<int>(std::round(clip.durationBeats * 2.0)));
-            const float bodyX = clipBounds.x + 6.0f;
-            const float bodyWidth = std::max(0.0f, clipBounds.width - 12.0f);
-            for (int i = 1; i < stepCount; ++i) {
-                const float stepX = bodyX + (bodyWidth / stepCount) * i;
-                const bool major = (i % 4) == 0;
-                renderer.drawLine(
-                    AestraUI::NUIPoint(stepX, noteAreaY + 1.0f),
-                    AestraUI::NUIPoint(stepX, clipBounds.bottom() - 4.0f),
-                    1.0f,
-                    contentInk.withAlpha(major ? 0.18f : 0.09f)
-                );
-            }
-            
-            const auto& themeProps = themeManager.getCurrentTheme();
-            for (const auto& n : midiPayload.notes) {
-                float noteStartX = fullClipBounds.x + (n.startBeat / pattern->lengthBeats) * fullClipBounds.width;
-                float noteWidth = (n.durationBeats / pattern->lengthBeats) * fullClipBounds.width;
-
-                float normalizedPitch = (float)(n.pitch - minPitch) / pitchRange;
-                float noteY = noteAreaY + noteAreaHeight * (1.0f - normalizedPitch) - laneHeight;
-                float noteHeight = std::max(2.0f, laneHeight - 1.5f);
-
-                AestraUI::NUIRect noteRect(noteStartX, noteY, std::max(1.0f, noteWidth), std::max(1.0f, noteHeight));
-
-                if (noteRect.x + noteRect.width > clipBounds.x && noteRect.x < clipBounds.x + clipBounds.width) {
-                    if (noteRect.x < clipBounds.x) {
-                        noteRect.width -= (clipBounds.x - noteRect.x);
-                        noteRect.x = clipBounds.x;
-                    }
-                    if (noteRect.x + noteRect.width > clipBounds.x + clipBounds.width) {
-                        noteRect.width = (clipBounds.x + clipBounds.width) - noteRect.x;
-                    }
-                    // One solid fill per note. A tinted inset at these heights read
-                    // as a hollow outlined dash rather than a note.
-                    renderer.fillRoundedRect(noteRect, std::min(themeProps.radiusXS, kClipCornerRadius), contentInk.withAlpha(0.95f));
-                }
-            }
+    const double patternEnd = ClipPaint::patternEndInClip(pattern->lengthBeats, clip.sourceOffset, clip.durationBeats);
+    if (patternEnd > 0.0) {
+        const float x = fullClipBounds.x + static_cast<float>(patternEnd * ppb);
+        if (x > clipBounds.x && x < clipBounds.right()) {
+            ClipPaint::paintPatternEnd(renderer, std::round(x) + 0.5f, clipBounds.y + headerHeight,
+                                       clipBounds.bottom(), contentInk.withAlpha(0.55f));
         }
     }
 }

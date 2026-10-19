@@ -121,6 +121,9 @@ set(Aestra_SOURCES
 	Components/TrackUIComponent.h
 	Components/TrackUIComponent.cpp
 	Components/TrackUIComponentAutomationClips.cpp
+	Components/TimelineClipGeometry.h
+	Components/TimelineClipPaint.h
+	Components/TimelineClipPaint.cpp
 	Components/AutomationClipLayer.cpp
 	Components/TrackManagerUI.h
 	Components/TrackManagerUI.cpp

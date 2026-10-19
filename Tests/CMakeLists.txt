@@ -2345,6 +2345,14 @@ target_include_directories(TimelineGeometryTest PRIVATE
 add_test(NAME TimelineGeometryTest COMMAND TimelineGeometryTest)
 set_tests_properties(TimelineGeometryTest PROPERTIES LABELS "ui;timeline;geometry;regression;contract:application")
 
+# FD-50 clip look: notes drawn where they sound, the pattern-end mark, the header band's size.
+add_executable(TimelineClipGeometryTest AestraUI/TimelineClipGeometryTest.cpp)
+target_include_directories(TimelineClipGeometryTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Components
+)
+add_test(NAME TimelineClipGeometryTest COMMAND TimelineClipGeometryTest)
+set_tests_properties(TimelineClipGeometryTest PROPERTIES LABELS "ui;timeline;geometry;regression;contract:application")
+
 # V8-X2b phase 4: the timeline's regions and track rows come from the layout
 # system (TrackManagerUILayout.h); proven equal to the hand-written arithmetic
 # they replaced. Header-only, so AESTRA_CI=ON cannot skip it.
@@ -3468,6 +3476,7 @@ if(AESTRA_ENABLE_UI)
         AestraUI/ClipContextMenuReachabilityTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
@@ -3523,6 +3532,7 @@ if(AESTRA_ENABLE_UI)
         AestraUI/ClipGroupOpsTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
@@ -3580,6 +3590,7 @@ if(AESTRA_ENABLE_UI)
         AestraUI/ClipDragReleaseTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
@@ -3638,6 +3649,7 @@ if(AESTRA_ENABLE_UI)
         AestraUI/UIScenarioTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
@@ -3695,6 +3707,7 @@ if(AESTRA_ENABLE_UI)
         AestraUI/TimelineFollowPreferenceTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
@@ -3750,6 +3763,7 @@ if(AESTRA_ENABLE_UI)
         AestraUI/TimelineGridSelectionTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
