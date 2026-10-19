@@ -18,13 +18,12 @@ namespace Audio {
 // Shared by layout, rendering, hit testing, and drag math so visible and
 // interactive geometry cannot drift independently.
 //
-// Above the track rows sits ONE time band, top to bottom: the overview
-// minimap row (cropped to start at the track-controls boundary — it must not
-// span the toolbar corner), then the ruler row (whose left corner carries the
-// timeline toolbar). There is no separate header strip — the header died with
+// Above the track rows sits ONE time band, top to bottom: the toolbar row, the
+// overview minimap row (cropped to start at the track-controls boundary), then
+// the ruler row (whose left corner carries the track count). There is no separate header strip — the header died with
 // the 2026-08 plane redesign, and `timelineTrackAreaTopY` is the single place
 // that knows the band's total height.
-// FD-50 board 7 adds the toolbar as the band's first row: labelled tools, the snap value, Follow, Fit song and
+// FD-50 board 7 makes the toolbar the band's first row: labelled tools, the snap value, Follow, Fit song and
 // + Track, across the whole width. Every position below is measured from the component's top edge.
 constexpr float kTimelineToolbarHeight = 30.0f;
 constexpr float kTimelineRulerHeight = 28.0f;
