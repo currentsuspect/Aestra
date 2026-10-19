@@ -44,9 +44,9 @@ int main() {
     check(kTimelineScrollbarWidth > 0.0f, "scrollbar gutter must reserve real width");
     expectNear(timelineGridEndX(80.0f, 800.0f), 80.0 + 800.0 - kTimelineScrollbarWidth, 0.0001,
                "grid end excludes exactly one scrollbar gutter");
-    // Time band = minimap row (24) + ruler row (28); the minimap surface is
-    // cropped to start at the track-controls boundary.
-    expectNear(timelineTrackAreaTopY(40.0f), 92.0, 0.0001, "track area follows shared vertical stack");
+    // Time band = toolbar row (30) + minimap row (24) + ruler row (28); the
+    // minimap surface is cropped to start at the track-controls boundary.
+    expectNear(timelineTrackAreaTopY(40.0f), 122.0, 0.0001, "track area follows shared vertical stack");
 
     // Beat conversion is deliberately unclamped: zoom anchoring and dragging
     // left of bar one must preserve negative intermediate values.

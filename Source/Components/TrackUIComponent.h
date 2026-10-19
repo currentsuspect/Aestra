@@ -503,6 +503,10 @@ private:
     const std::string& headerSourceLine();
     std::string m_headerSourceLine;
     double m_headerSourceLineAt{-1.0};
+
+    // Erase tool (TrackUIComponentErase.cpp): click deletes a clip; holding the button keeps erasing.
+    bool handleEraseTool(const AestraUI::NUIMouseEvent& event);
+    bool m_eraseStroke{false};
     uint32_t m_headerMeterChannelId{0}; // the channel every unit on the lane plays into; 0 = none to meter
 
 

@@ -2025,9 +2025,8 @@ void TrackUIComponent::onResize(int width, int height) {
 // =============================================================================
 
 bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
-    // 1. Invalidate Cache on mouse movement in control area (for button hover feedback)
-    // AestraUI doesn't use event.type enum, so we infer from context.
-    // Any mouse event in the control area checks for invalidation.
+    if (handleEraseTool(event)) return true; // TrackUIComponentErase.cpp
+    // 1. Invalidate cache on mouse movement in the control area (button hover feedback).
     if (m_onCacheInvalidationCallback) {
         // Check if we are over the control area
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();

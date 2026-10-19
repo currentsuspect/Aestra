@@ -498,6 +498,15 @@ private:
     bool m_splitToolHovered = false;
     bool m_multiSelectToolHovered = false;
     bool m_paintToolHovered = false;
+    // FD-50 board 7 toolbar row: Erase, the snap value, Fit song (TrackManagerUIToolbar.cpp).
+    ::AestraUI::NUIRect m_eraseToolBounds;
+    ::AestraUI::NUIRect m_snapBounds;
+    ::AestraUI::NUIRect m_fitSongBounds;
+    bool m_eraseToolHovered = false;
+    bool m_snapHovered = false;
+    bool m_fitSongHovered = false;
+    void fitSong();          // zoom so the whole arrangement fills the grid, scrolled to bar 1
+    void showSnapMenuAt(const ::AestraUI::NUIPoint& anchor);
     bool m_followPlayheadHovered = false;
 
     // Loop state
