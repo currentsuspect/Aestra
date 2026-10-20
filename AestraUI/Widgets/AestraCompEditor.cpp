@@ -60,8 +60,8 @@ AestraCompEditor::AestraCompEditor(std::shared_ptr<Aestra::Audio::IPluginInstanc
     // Precompute log-frequency LUT: pixel index -> fractional bin index
     constexpr float kMinFreq = 20.0f;
     constexpr float kMaxFreq = 20000.0f;
-    constexpr float kLogMin = std::log(kMinFreq);
-    constexpr float kLogRange = std::log(kMaxFreq) - kLogMin;
+    const float kLogMin = std::log(kMinFreq); // std::log is not constexpr on MSVC
+    const float kLogRange = std::log(kMaxFreq) - kLogMin;
     const float sampleRate = 48000.0f;
     const float binHz = sampleRate / static_cast<float>(Aestra::Audio::Plugins::AestraComp::kFftSize);
     for (int i = 0; i < kLogFreqLutSize; ++i) {

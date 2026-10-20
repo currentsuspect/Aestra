@@ -135,6 +135,11 @@ endif()
 # =============================================================================
 # AestraCore - Base Utilities
 # =============================================================================
+# windows.h defines min/max macros that break std::min/std::max across the UI code.
+if(WIN32)
+    add_compile_definitions(NOMINMAX)
+endif()
+
 add_subdirectory(AestraCore)
 
 if(AESTRA_PLATFORM_LINUX)
