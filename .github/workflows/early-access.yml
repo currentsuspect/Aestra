@@ -44,6 +44,12 @@ jobs:
       - name: Setup MSVC environment
         uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
 
+      - name: Name this build (the version the app reports to the updater)
+        shell: pwsh
+        run: |
+          $v = "$($env:GITHUB_REF_NAME -replace '^early-access/v','')-preview.$env:GITHUB_RUN_NUMBER"
+          "AESTRA_BUILD_VERSION=$v" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
       - name: Configure (UI enabled)
         shell: pwsh
         run: |
@@ -52,6 +58,7 @@ jobs:
             -DAestra_CORE_MODE=ON `
             -DAESTRA_ENABLE_UI=ON `
             -DAESTRA_ENABLE_TESTS=OFF `
+            -DAESTRA_UPDATE_VERSION="$env:AESTRA_BUILD_VERSION" `
             -DCMAKE_TOOLCHAIN_FILE="$env:RUNNER_TEMP\vcpkg\scripts\buildsystems\vcpkg.cmake" `
             -DVCPKG_TARGET_TRIPLET=x64-windows
 
@@ -140,8 +147,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential cmake ninja-build libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev libsdl2-dev libfreetype-dev
 
+      - name: Name this build (the version the app reports to the updater)
+        run: echo "AESTRA_BUILD_VERSION=${GITHUB_REF_NAME#early-access/v}-preview.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+
       - name: Configure (UI enabled)
-        run: cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_UI=ON -DAESTRA_ENABLE_TESTS=OFF
+        run: cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_UI=ON -DAESTRA_ENABLE_TESTS=OFF -DAESTRA_UPDATE_VERSION="$AESTRA_BUILD_VERSION"
 
       - name: Build
         run: cmake --build build --target Aestra AestraPluginHost --parallel
