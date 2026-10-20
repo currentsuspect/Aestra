@@ -6,6 +6,10 @@ cmake_minimum_required(VERSION 3.22)
 add_library(thorvg STATIC)
 
 target_compile_definitions(thorvg PRIVATE TVG_STATIC)
+if(WIN32)
+    # windows.h defines min/max macros, which break std::min/std::max in tvgMath.
+    target_compile_definitions(thorvg PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
+endif()
 
 target_include_directories(thorvg
     PUBLIC
