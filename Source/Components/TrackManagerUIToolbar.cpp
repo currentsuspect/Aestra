@@ -826,7 +826,9 @@ void TrackManagerUI::renderToolCursor(AestraUI::NUIRenderer& renderer, const Aes
             }
         }
 
-        drawToolCursorGlyph(renderer, m_splitToolIcon, AestraUI::NUIRect(lineX - 10, position.y - 10, 20, 20));
+        // The blade follows the pointer exactly; only the dashed line is snapped, because that line is where the cut will
+        // land. (The glyph used to sit ON the snapped line, so the cursor itself jumped from grid line to grid line.)
+        drawToolCursorGlyph(renderer, m_splitToolIcon, AestraUI::NUIRect(position.x - 10, position.y - 10, 20, 20));
         return;
     }
 
