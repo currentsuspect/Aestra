@@ -97,6 +97,7 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/PianoRollToolbar.cpp
     Widgets/PianoRollGrid.cpp
     Widgets/PianoRollNoteLayer.cpp
+    Widgets/PianoRollNoteLayerDuplicate.cpp
     Widgets/PianoRollControlPanel.cpp
     Widgets/PianoRollView.cpp
     Widgets/NUIVisualWidgets.h

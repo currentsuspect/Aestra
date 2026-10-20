@@ -1776,40 +1776,10 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
             return true;
         }
         else if (ctrl && event.keyCode == NUIKeyCode::D) {
-            // Duplicate (Ctrl+D)
-            double minStart = 100000.0;
-            double maxEnd = -1.0;
-            bool hasSelection = false;
-            
-            for (const auto& n : notes_) {
-                if (n.selected && !n.isDeleted) {
-                    hasSelection = true;
-                    minStart = std::min(minStart, n.startBeat);
-                    maxEnd = std::max(maxEnd, n.startBeat + n.durationBeats);
-                }
-            }
-            
-            if (hasSelection && maxEnd > 0) {
-                double shift = maxEnd - minStart;
-                if (shift < 0.25) shift = 0.25;
-                
-                
-                auto oldNotes = notes_; // Snapshot
-                
-                for (auto& n : notes_) n.selected = false;
-
-                for (const auto& n : oldNotes) {
-                    if (n.selected && !n.isDeleted) {
-                        MidiNote clone = n;
-                        clone.startBeat += shift;
-                        clone.selected = true; 
-                        clone.isDeleted = false;
-                        notes_.push_back(clone);
-                    }
-                }
-                
-                commitNotes();
-                repaint();
+            // Duplicate (Ctrl+D), FL style: next whole-bar block, selection follows (duplicateLikeFl). A ruler
+            // highlight is the view's to handle first, since it owns the highlight.
+            if (std::any_of(notes_.begin(), notes_.end(), [](const MidiNote& n) { return n.selected && !n.isDeleted; })) {
+                duplicateLikeFl(std::nullopt);
                 return true;
             }
         }

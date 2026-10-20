@@ -4,6 +4,7 @@
 #include "PlayheadMarker.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
+#include "PianoRollDuplicate.h"
 #include "PianoRollWidgetShared.h"
 #include "../Helpers/PianoRollInteraction.h"
 #include <algorithm>
@@ -114,12 +115,17 @@ PianoRollView::PianoRollView()
         // zone entirely past the end becomes empty, and applyLoopZone drops it.
         const double limit = std::max(0.0, m_totalDurationBeats);
         applyLoopZone(std::make_pair(std::clamp(start, 0.0, limit), std::clamp(end, 0.0, limit)), true);
+        // The highlight selects the notes inside it (V82-PR1, FD-52), so Duplicate has something to act on.
+        if (m_loopZone) m_notes->selectStartingIn(m_loopZone->first, m_loopZone->second);
     };
-    m_notes->setOnEmptyGridPress([this]() {
-        if (m_loopZone) {
-            applyLoopZone(std::nullopt, true);
-        }
+    // Duplicate past the pattern's end grows the pattern by whole bars first (as the toolbar's + does).
+    m_notes->setOnNeedPatternEnd([this](double endBeat) {
+        const int bars = PianoRollDuplicate::barsToGrow(endBeat, m_patternLengthBeats, static_cast<double>(m_beatsPerBar));
+        if (bars > 0 && m_toolbar) m_toolbar->requestPatternBars(bars);
     });
+    m_ruler->onLoopZoneCleared = [this]() {
+        if (m_loopZone) applyLoopZone(std::nullopt, true);
+    };
 
     m_minimap->onViewChanged = [this](double start, double duration) {
         m_scrollX = static_cast<float>(start * m_pixelsPerBeat);
@@ -262,7 +268,8 @@ void PianoRollView::renderShortcutHelp(NUIRenderer& renderer) {
         {"Ctrl+G / Ctrl+Shift+G", "glue runs / subdivide by snap"},
         {"Ctrl+L", "connect notes (legato)"},
         {"Ctrl+Z / Y", "undo / redo"},
-        {"Ctrl+C / V / D", "copy / paste / duplicate"},
+        {"Ctrl+C / V", "copy / paste"},
+        {"Ctrl+D", "duplicate to next bar / range"},
         {"Ctrl+A", "select all"},
         {"Arrows", "nudge / transpose"},
         {"Shift+Left/Right", "resize by grid"},
@@ -625,6 +632,20 @@ bool PianoRollView::onMouseEvent(const NUIMouseEvent& event) {
         }
     }
 
+    // The ruler highlight clears two ways, so it is never a mystery: a left press on the grid OUTSIDE it, or a right press
+    // on the grid (a right-click on the ruler without dragging does too: PianoRollRuler). A press inside it leaves it be,
+    // and whatever the press does anyway (select, add or erase a note) still happens. Esc clears it as well.
+    if (m_loopZone && event.pressed && m_grid && m_pixelsPerBeat > 0.0f) {
+        const NUIRect g = m_grid->getBounds();
+        if (g.contains(event.position)) {
+            const double beat = static_cast<double>(event.position.x - g.x + m_scrollX) / static_cast<double>(m_pixelsPerBeat);
+            const bool outside = beat < m_loopZone->first - 1e-9 || beat >= m_loopZone->second - 1e-9;
+            if (event.button == NUIMouseButton::Right || (event.button == NUIMouseButton::Left && outside)) {
+                applyLoopZone(std::nullopt, true);
+            }
+        }
+    }
+
     // 1. Give children priority (Ruler, Minimap, Grid, Notes)
     if (NUIComponent::onMouseEvent(event)) return true;
 
@@ -683,6 +704,11 @@ bool PianoRollView::onKeyEvent(const NUIKeyEvent& event) {
     if (event.pressed && event.keyCode == NUIKeyCode::Escape && m_loopZone) {
         applyLoopZone(std::nullopt, true);
         m_notes->onKeyEvent(event);
+        return true;
+    }
+    // Duplicate with a ruler highlight copies the highlighted block and moves the highlight onto the copy (FL).
+    if (event.pressed && (event.modifiers & NUIModifiers::Ctrl) && event.keyCode == NUIKeyCode::D && m_loopZone) {
+        if (const auto next = m_notes->duplicateLikeFl(m_loopZone)) applyLoopZone(*next, true);
         return true;
     }
     if (m_notes->onKeyEvent(event)) return true;

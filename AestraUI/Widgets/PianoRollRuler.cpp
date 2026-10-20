@@ -66,6 +66,8 @@ bool PianoRollRuler::onMouseEvent(const NUIMouseEvent& event) {
             const double end = std::max(zoneAnchorBeat_, zoneDragBeat_);
             if (end - start > 1e-6 && onLoopZoneDrawn) {
                 onLoopZoneDrawn(start, end);
+            } else if (onLoopZoneCleared) {
+                onLoopZoneCleared(); // a click, not a drag: it clears the highlight
             }
         }
         repaint();
