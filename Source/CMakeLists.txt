@@ -61,6 +61,8 @@ set(Aestra_SOURCES
 	Panels/MixerPanel.cpp
 	Panels/ArsenalPanel.h
 	Panels/ArsenalPanel.cpp
+	Panels/ArsenalPanelScenes.cpp
+	Panels/ArsenalSceneMenu.cpp
 	# Panels/StepSequencerPanel removed
 	Panels/PatternBrowserPanel.h
 	Panels/PatternBrowserPanel.cpp
