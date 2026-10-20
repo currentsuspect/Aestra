@@ -317,8 +317,27 @@ void TrackManagerUI::refreshTracks() {
         // Pass platform bridge for cursor capture (volume knob)
         trackUI->setPlatformBridge(m_window);
 
+        // V82-T1: the lane's automation row sits directly under it when shown; when hidden, a lane that holds
+        // points marks its name, and a click on the mark brings the row back.
+        const bool automationShown = isAutomationLaneShown(laneId);
+        const bool hasPoints = std::any_of(lane->automationCurves.begin(), lane->automationCurves.end(),
+                                           [](const AutomationCurve& c) { return !c.getPoints().empty(); });
+        trackUI->setHasHiddenAutomation(!automationShown && hasPoints);
+        trackUI->setOnShowAutomationRequested(
+            [this, laneId]() { showAutomationLane(laneId, automationLaneTarget(laneId), true); });
+        trackUI->setOnEditedAutomationTargetChanged([this, laneId](AutomationTarget changed) {
+            auto& view = automationLaneView(laneId);
+            view.target = changed;
+            view.chosen = true;
+        });
+
         m_trackUIComponents.push_back(trackUI);
         addChild(trackUI);
+        if (automationShown) {
+            auto automationRow = makeAutomationRow(trackUI, automationLaneTarget(laneId));
+            m_trackUIComponents.push_back(automationRow);
+            addChild(automationRow);
+        }
     } // Close lane loop
 
     std::vector<PlaylistLaneID> validLaneIds;
@@ -581,23 +600,6 @@ void TrackManagerUI::layoutTracks() {
 void TrackManagerUI::updateTrackPositions() {
     layoutTracks();
 }
-void TrackManagerUI::setPlaylistMode(PlaylistMode mode) {
-    if (m_playlistMode != mode) {
-        m_playlistMode = mode;
-
-        // Propagate to all tracks
-        for (auto& trackUI : m_trackUIComponents) {
-            trackUI->setPlaylistMode(mode);
-        }
-
-        // Invalidate cache since rendering changes significantly
-        invalidateCache();
-        setDirty(true);
-
-        Log::info("[TrackManagerUI] Mode changed to: " +
-                  std::string(mode == PlaylistMode::Clips ? "Clips" : "Automation"));
-    }
-}
 
 // Pattern Playback Mode (Arsenal)
 void TrackManagerUI::setPatternMode(bool enabled) {
@@ -850,17 +852,13 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
         });
         menu->addSeparator();
 
-        // V8-A3: choose what this lane's automation edits. Choosing shows the
-        // automation view; the curve itself is created by its first point.
+        // V8-A3 / V82-T1: choose what this lane's automation edits. Choosing opens its automation row under
+        // the track (other tracks stay as they are); the curve itself is created by its first point.
         for (const auto& [label, target] : {std::pair{"Automate Volume", AutomationTarget::Volume},
                                             std::pair{"Automate Pan", AutomationTarget::Pan}}) {
-            const bool current =
-                m_playlistMode == PlaylistMode::Automation && selectedTrack->getEditedAutomationTarget() == target;
+            const bool current = isAutomationLaneShown(laneId) && automationLaneTarget(laneId) == target;
             menu->addRadioItem(label, "automationTarget", current, [this, laneId, target = target]() {
-                for (const auto& trackUI : m_trackUIComponents) {
-                    if (trackUI && trackUI->getLaneId() == laneId) trackUI->setEditedAutomationTarget(target);
-                }
-                setPlaylistMode(PlaylistMode::Automation);
+                showAutomationLane(laneId, target);
                 invalidateCache();
             });
         }

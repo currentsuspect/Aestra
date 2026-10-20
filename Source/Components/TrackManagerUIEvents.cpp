@@ -1044,9 +1044,9 @@ bool TrackManagerUI::handleSplitToolClick(const AestraUI::NUIMouseEvent& event, 
 }
 bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     if (event.pressed) {
-        // Hotkey 'A' toggles Automation Mode (FL/Ableton style)
+        // Hotkey 'A' opens or closes the selected tracks' automation rows (V82-T1)
         if (event.keyCode == AestraUI::NUIKeyCode::A && !(event.modifiers & AestraUI::NUIModifiers::Ctrl)) {
-            setPlaylistMode(m_playlistMode == PlaylistMode::Clips ? PlaylistMode::Automation : PlaylistMode::Clips);
+            toggleAutomationForSelectedTracks();
             return true;
         }
 
