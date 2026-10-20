@@ -124,6 +124,8 @@ public:
     void setActiveTool(PlaylistTool tool) { setCurrentTool(tool); } // Alias
     PlaylistTool getCurrentTool() const { return m_currentTool; }
     PlaylistTool getActiveTool() const { return m_currentTool; } // Alias
+    /// Whether the Draw tool has a clip to stamp (copied or selected earlier).
+    bool canPaintClip() const { return m_clipboardClip.id.isValid(); }
 
     // === VIEW MODES ===
     /// Automation shows every lane's automation row; Clips hides them all (V82-T1: rows of their own now, so
@@ -484,6 +486,7 @@ private:
     std::shared_ptr<::AestraUI::NUIIcon> m_splitToolIcon;
     std::shared_ptr<::AestraUI::NUIIcon> m_multiSelectToolIcon;
     std::shared_ptr<::AestraUI::NUIIcon> m_paintToolIcon;  // Paint/stamp tool icon
+    std::shared_ptr<::AestraUI::NUIIcon> m_eraseToolIcon;
     std::shared_ptr<::AestraUI::NUIIcon> m_moveCursorIcon; // Move (4-way arrow) cursor for Paint tool hovering clips
     std::shared_ptr<::AestraUI::NUIIcon> m_trimCursorIcon; // Canonical horizontal stretch cursor (registry SVG)
     std::shared_ptr<::AestraUI::NUIIcon> m_resizeCursorIcon; // Canonical ResizeEW registry glyph (minimap resize)
@@ -538,7 +541,9 @@ private:
     double m_lastProjectLoopExtentBeats{-1.0};
 
     // Current editing tool
-    PlaylistTool m_currentTool = PlaylistTool::Select;
+    // Starts on Draw (owner, 2026-10-20: "select probably shouldn't be the default"). With nothing to stamp yet, a Draw click falls
+    // through to the usual gestures (select, marquee), so the default never feels dead.
+    PlaylistTool m_currentTool = PlaylistTool::Paint;
     bool m_cursorHidden = false; // Track cursor visibility state
     std::function<void(bool)> m_onCursorVisibilityChanged;
     std::function<void(uint32_t)> m_onShowRoutingGraph;

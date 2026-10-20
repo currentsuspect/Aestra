@@ -75,6 +75,12 @@ void TrackManagerUI::createToolIcons() {
         R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M15.9 3.1A1.9 1.9 0 0 1 18.6 3.1L20.9 5.4A1.9 1.9 0 0 1 20.9 8.1L9.1 19.9 3.4 20.6 4.1 14.9Z M14.5 6.7L17.3 9.5 18.2 8.6 15.4 5.8Z"/></svg>)";
     m_paintToolIcon = std::make_shared<AestraUI::NUIIcon>(paintSvg);
 
+    // === ERASE TOOL ICON ===
+    // An eraser block cut at an angle with its worn end, drawn as one solid shape like the other three tool glyphs.
+    const char* eraseSvg =
+        R"(<svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M15.2 3.5a2 2 0 0 1 2.8 0l3.5 3.5a2 2 0 0 1 0 2.8L11.9 19.4H20v1.8H8.4l-5-5a2 2 0 0 1 0-2.8zm-1.4 3L5.4 14.9l3.7 3.7 8.4-8.4z"/></svg>)";
+    m_eraseToolIcon = std::make_shared<AestraUI::NUIIcon>(eraseSvg);
+
     // === MENU ICON (Hamburger) ===
     const char* menuSvg =
         R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>)";
@@ -275,7 +281,7 @@ void TrackManagerUI::setSnapSetting(AestraUI::SnapGrid snap) {
 // Tools are words, not bare icons; the snap value is always visible and opens the snap menu.
 namespace {
 constexpr float kToolbarControlHeight = 22.0f;
-constexpr float kToolLabelWidths[] = {52.0f, 46.0f, 44.0f, 48.0f}; // Select, Draw, Split, Erase at 12 px
+constexpr float kToolLabelWidths[] = {78.0f, 68.0f, 66.0f, 70.0f}; // Select, Draw, Split, Erase: a 14 px glyph, a gap, the word at 12 px
 } // namespace
 
 void TrackManagerUI::updateToolbarBounds() {
@@ -360,7 +366,7 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
         renderer.strokeRoundedRect(r, 4.0f, 1.0f, border.withAlpha(hovered ? 0.55f : 0.35f));
     };
 
-    // Tools: one segmented group of words; the active one is filled.
+    // Tools: one segmented group, a white glyph and the word; the active one is filled and fully lit.
     renderer.strokeRoundedRect(m_toolbarBounds, 5.0f, 1.0f, border.withAlpha(0.35f));
     struct Tool { const AestraUI::NUIRect* r; PlaylistTool tool; const char* label; bool hovered; };
     const Tool tools[] = {
@@ -376,7 +382,21 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
         } else if (t.hovered) {
             renderer.fillRoundedRect(*t.r, 3.0f, theme.getColor("buttonBgHover").withAlpha(0.9f));
         }
-        renderer.drawTextCentered(t.label, *t.r, fontSize, text.withAlpha(active ? 1.0f : (t.hovered ? 0.9f : 0.62f)));
+        const float alpha = active ? 1.0f : (t.hovered ? 0.9f : 0.62f);
+        const auto& glyph = t.tool == PlaylistTool::Select ? m_selectToolIcon
+                            : t.tool == PlaylistTool::Paint ? m_paintToolIcon
+                            : t.tool == PlaylistTool::Split ? m_splitToolIcon
+                                                            : m_eraseToolIcon;
+        constexpr float kGlyph = 14.0f, kGap = 6.0f;
+        const float labelWidth = renderer.measureText(t.label, fontSize).width;
+        const float startX = std::round(t.r->x + (t.r->width - (kGlyph + kGap + labelWidth)) * 0.5f);
+        if (glyph) {
+            glyph->setIconSize(kGlyph, kGlyph);
+            glyph->setBounds({startX, std::round(t.r->y + (t.r->height - kGlyph) * 0.5f), kGlyph, kGlyph});
+            glyph->setColor(text.withAlpha(alpha));
+            glyph->onRender(renderer);
+        }
+        renderer.drawText(t.label, {startX + kGlyph + kGap, renderer.calculateTextY(*t.r, fontSize)}, fontSize, text.withAlpha(alpha));
     }
 
     // SNAP value: small caps label, then the current value and a caret.

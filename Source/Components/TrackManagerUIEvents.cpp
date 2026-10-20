@@ -539,7 +539,9 @@ void TrackManagerUI::clearRulerSelection() {
 }
 
 bool TrackManagerUI::beginGridMarquee(const AestraUI::NUIMouseEvent& event) {
-    if (m_currentTool != PlaylistTool::Select || !event.pressed || event.button != AestraUI::NUIMouseButton::Left) {
+    // The Select tool's gesture, and Draw's too while Draw has nothing to stamp (the app starts on Draw).
+    const bool bandTool = m_currentTool == PlaylistTool::Select || (m_currentTool == PlaylistTool::Paint && !canPaintClip());
+    if (!bandTool || !event.pressed || event.button != AestraUI::NUIMouseButton::Left) {
         return false;
     }
     // Only a plain press replaces: Shift/Ctrl drag adds to or toggles what is already selected.

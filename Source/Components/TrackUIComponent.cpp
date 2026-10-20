@@ -2737,7 +2737,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 
             // Handle PAINT TOOL - Click on empty space
             if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
-                if (parentMgr->getCurrentTool() == PlaylistTool::Paint && !clickedClipId.isValid()) {
+                if (parentMgr->getCurrentTool() == PlaylistTool::Paint && parentMgr->canPaintClip() && !clickedClipId.isValid()) {
                     double beat = timelineGridOffsetToBeat(event.position.x - gridStartX, m_timelineScrollOffset,
                                                            m_pixelsPerBeat);
                     parentMgr->onPaintClip(this, beat);
