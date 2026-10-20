@@ -144,6 +144,8 @@ struct ClapEventParamValue {
 };
 
 constexpr uint16_t kClapEventParamValue = 5;
+constexpr uint16_t kClapEventParamGestureBegin = 7;
+constexpr uint16_t kClapEventParamGestureEnd = 8;
 
 // clap_event_note ABI (clap/events.h) — native CLAP note-on/off events (#244).
 struct ClapEventNote {
@@ -195,34 +197,124 @@ struct ClapPluginState {
     bool (*load)(const ClapPlugin* plugin, const ClapIstream* stream);
 };
 
+// clap_param_info ABI (clap/ext/params.h). Layout checked against the SDK header: id, flags, cookie, name[256],
+// module[1024], then three doubles. (An earlier copy of this struct carried fields the real one does not have.)
 struct ClapParamInfo {
     uint32_t id;
     uint32_t flags;
-    const void* cookie;
+    void* cookie;
     char name[256];
-    char module[256];
+    char module[1024];
     double minValue;
     double maxValue;
     double defaultValue;
-    char unit[32];
-    uint32_t valueCount;
-    int32_t stepCount;
 };
 
-constexpr uint32_t kClapParamIsAutomatable = (1u << 0);
-constexpr uint32_t kClapParamIsReadOnly = (1u << 1);
-constexpr uint32_t kClapParamIsBypass = (1u << 2);
-constexpr uint32_t kClapParamIsHidden = (1u << 3);
-constexpr uint32_t kClapParamIsAdvanced = (1u << 4);
+constexpr uint32_t kClapParamIsStepped = (1u << 0);
+constexpr uint32_t kClapParamIsPeriodic = (1u << 1);
+constexpr uint32_t kClapParamIsHidden = (1u << 2);
+constexpr uint32_t kClapParamIsReadOnly = (1u << 3);
+constexpr uint32_t kClapParamIsBypass = (1u << 4);
+constexpr uint32_t kClapParamIsAutomatable = (1u << 5);
 
 struct ClapPluginParams {
     uint32_t (*count)(const ClapPlugin* plugin);
-    bool (*getParamInfo)(const ClapPlugin* plugin, uint32_t paramIndex, ClapParamInfo* info);
-    double (*getParamValue)(const ClapPlugin* plugin, uint32_t paramId);
-    bool (*getParamValueById)(const ClapPlugin* plugin, const ClapParamInfo* paramInfo, double* value);
-    bool (*valueToText)(const ClapPlugin* plugin, uint32_t paramId, double value, char* display, uint32_t size);
-    bool (*textToValue)(const ClapPlugin* plugin, uint32_t paramId, const char* display, double* value);
-    void (*flush)(const ClapPlugin* plugin, const void* inChanges, const void* outChanges);
+    bool (*getInfo)(const ClapPlugin* plugin, uint32_t paramIndex, ClapParamInfo* info);
+    bool (*getValue)(const ClapPlugin* plugin, uint32_t paramId, double* outValue);
+    bool (*valueToText)(const ClapPlugin* plugin, uint32_t paramId, double value, char* outBuffer, uint32_t capacity);
+    bool (*textToValue)(const ClapPlugin* plugin, uint32_t paramId, const char* text, double* outValue);
+    void (*flush)(const ClapPlugin* plugin, const ClapInputEvents* in, const ClapOutputEvents* out);
+};
+
+// Host side of clap.params: the plugin tells us its parameters changed or wants a flush.
+struct ClapHostParams {
+    void (*rescan)(const ClapHost* host, uint32_t flags);
+    void (*clear)(const ClapHost* host, uint32_t paramId, uint32_t flags);
+    void (*requestFlush)(const ClapHost* host);
+};
+constexpr uint32_t kClapParamRescanValues = (1u << 0);
+constexpr uint32_t kClapParamRescanAll = (1u << 3);
+
+// clap.thread-check, clap.latency, clap.state: what a plugin asks the host (host side).
+struct ClapHostThreadCheck {
+    bool (*isMainThread)(const ClapHost* host);
+    bool (*isAudioThread)(const ClapHost* host);
+};
+struct ClapHostLatency {
+    void (*changed)(const ClapHost* host);
+};
+struct ClapHostState {
+    void (*markDirty)(const ClapHost* host);
+};
+constexpr const char* kClapExtThreadCheck = "clap.thread-check";
+constexpr const char* kClapExtHostLatency = "clap.latency";
+constexpr const char* kClapExtHostState = "clap.state";
+constexpr const char* kClapExtHostParams = "clap.params";
+
+// Plugin editors (V82-H3, CLAP side): clap.gui with the X11 window API, and the two extensions an X11 editor needs the
+// host to run for it: timers and file descriptors.
+constexpr const char* kClapExtGui = "clap.gui";
+constexpr const char* kClapExtTimerSupport = "clap.timer-support";
+constexpr const char* kClapExtPosixFdSupport = "clap.posix-fd-support";
+constexpr const char* kClapWindowApiX11 = "x11";
+
+struct ClapWindow {
+    const char* api;
+    unsigned long x11; // the union's x11 member; every member is pointer-sized or smaller, so this is the whole union
+};
+
+struct ClapGuiResizeHints {
+    bool canResizeHorizontally;
+    bool canResizeVertically;
+    bool preserveAspectRatio;
+    uint32_t aspectRatioWidth;
+    uint32_t aspectRatioHeight;
+};
+
+struct ClapPluginGui {
+    bool (*isApiSupported)(const ClapPlugin* plugin, const char* api, bool isFloating);
+    bool (*getPreferredApi)(const ClapPlugin* plugin, const char** api, bool* isFloating);
+    bool (*create)(const ClapPlugin* plugin, const char* api, bool isFloating);
+    void (*destroy)(const ClapPlugin* plugin);
+    bool (*setScale)(const ClapPlugin* plugin, double scale);
+    bool (*getSize)(const ClapPlugin* plugin, uint32_t* width, uint32_t* height);
+    bool (*canResize)(const ClapPlugin* plugin);
+    bool (*getResizeHints)(const ClapPlugin* plugin, ClapGuiResizeHints* hints);
+    bool (*adjustSize)(const ClapPlugin* plugin, uint32_t* width, uint32_t* height);
+    bool (*setSize)(const ClapPlugin* plugin, uint32_t width, uint32_t height);
+    bool (*setParent)(const ClapPlugin* plugin, const ClapWindow* window);
+    bool (*setTransient)(const ClapPlugin* plugin, const ClapWindow* window);
+    void (*suggestTitle)(const ClapPlugin* plugin, const char* title);
+    bool (*show)(const ClapPlugin* plugin);
+    bool (*hide)(const ClapPlugin* plugin);
+};
+
+struct ClapHostGui {
+    void (*resizeHintsChanged)(const ClapHost* host);
+    bool (*requestResize)(const ClapHost* host, uint32_t width, uint32_t height);
+    bool (*requestShow)(const ClapHost* host);
+    bool (*requestHide)(const ClapHost* host);
+    void (*closed)(const ClapHost* host, bool wasDestroyed);
+};
+
+struct ClapPluginTimerSupport {
+    void (*onTimer)(const ClapPlugin* plugin, uint32_t timerId);
+};
+struct ClapHostTimerSupport {
+    bool (*registerTimer)(const ClapHost* host, uint32_t periodMs, uint32_t* timerId);
+    bool (*unregisterTimer)(const ClapHost* host, uint32_t timerId);
+};
+
+constexpr uint32_t kClapPosixFdRead = (1u << 0);
+constexpr uint32_t kClapPosixFdWrite = (1u << 1);
+constexpr uint32_t kClapPosixFdError = (1u << 2);
+struct ClapPluginPosixFdSupport {
+    void (*onFd)(const ClapPlugin* plugin, int fd, uint32_t flags);
+};
+struct ClapHostPosixFdSupport {
+    bool (*registerFd)(const ClapHost* host, int fd, uint32_t flags);
+    bool (*modifyFd)(const ClapHost* host, int fd, uint32_t flags);
+    bool (*unregisterFd)(const ClapHost* host, int fd);
 };
 
 constexpr const char* kClapExtState = "clap.state";

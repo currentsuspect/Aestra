@@ -941,7 +941,7 @@ float OutOfProcessPluginInstance::getParameter(uint32_t id) const {
 }
 
 bool OutOfProcessPluginInstance::supportsRealtimeAutomation() const noexcept {
-    return m_info.format == PluginFormat::VST3; // CLAP joins when its parameters go through the sandbox (V82-H1)
+    return m_info.format == PluginFormat::VST3 || m_info.format == PluginFormat::CLAP;
 }
 
 void OutOfProcessPluginInstance::applyAutomation(uint32_t id, float normalizedValue) noexcept {
@@ -1062,8 +1062,8 @@ bool OutOfProcessPluginInstance::loadState(const std::vector<uint8_t>& state) {
 
 bool OutOfProcessPluginInstance::hasEditor() const {
 #if defined(__linux__)
-    return m_info.format == PluginFormat::VST3 && m_loaded.load(std::memory_order_acquire) &&
-           !m_crashed.load(std::memory_order_acquire);
+    return (m_info.format == PluginFormat::VST3 || m_info.format == PluginFormat::CLAP) &&
+           m_loaded.load(std::memory_order_acquire) && !m_crashed.load(std::memory_order_acquire);
 #else
     return false;
 #endif

@@ -253,6 +253,16 @@ if(UNIX)
     set_tests_properties(EditorLoopPumpTest PROPERTIES LABELS "audio;plugins;editor;regression;contract:plugins")
 endif()
 
+# The helper's hand-copied CLAP ABI against the SDK's own headers: a drift is a build failure here (V82-H1).
+if(UNIX AND EXISTS ${CMAKE_SOURCE_DIR}/AestraAudio/External/clap/include/clap/clap.h)
+    add_executable(ClapAbiMirrorLayoutTest AestraAudio/ClapAbiMirrorLayoutTest.cpp)
+    target_include_directories(ClapAbiMirrorLayoutTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/src/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraAudio/External/clap/include)
+    add_test(NAME ClapAbiMirrorLayoutTest COMMAND ClapAbiMirrorLayoutTest)
+    set_tests_properties(ClapAbiMirrorLayoutTest PROPERTIES LABELS "audio;plugins;clap;regression;contract:plugins")
+endif()
+
 # The road a parameter value takes to a VST3 processor, and back from the plugin's own window (V82-H4/H5).
 if(EXISTS ${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces/base/funknown.cpp)
     add_executable(Vst3ParamBridgeTest AestraAudio/Vst3ParamBridgeTest.cpp)
