@@ -1,0 +1,110 @@
+name: Early Access Build
+
+# Builds the desktop app for early-access testers: a Windows zip and a Linux tarball, uploaded as
+# workflow artifacts (not a public release). Runs on pushes to early-access/** branches, which are cut
+# from a release tag, so the build is exactly that release plus this file.
+
+on:
+  push:
+    branches: ['early-access/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  BUILD_TYPE: Release
+  VCPKG_REF: 52f5569a8e867859fac967c1e3f10ca0a8a3cc39 # vcpkg tag 2026.03.18, same as ci.yml
+
+jobs:
+  windows:
+    name: Windows app
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          submodules: false
+          persist-credentials: false
+
+      - name: Setup vcpkg and libsodium
+        shell: pwsh
+        run: |
+          $env:VCPKG_ROOT = "$env:RUNNER_TEMP\vcpkg"
+          git clone https://github.com/microsoft/vcpkg.git $env:VCPKG_ROOT
+          git -C $env:VCPKG_ROOT checkout --force $env:VCPKG_REF
+          & "$env:VCPKG_ROOT\bootstrap-vcpkg.bat" -disableMetrics
+          & "$env:VCPKG_ROOT\vcpkg.exe" install libsodium:x64-windows
+
+      - name: Setup MSVC environment
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+
+      - name: Configure (UI enabled)
+        shell: pwsh
+        run: |
+          cmake -B build -S . -G Ninja `
+            -DCMAKE_BUILD_TYPE=$env:BUILD_TYPE `
+            -DAestra_CORE_MODE=ON `
+            -DAESTRA_ENABLE_UI=ON `
+            -DAESTRA_ENABLE_TESTS=OFF `
+            -DCMAKE_TOOLCHAIN_FILE="$env:RUNNER_TEMP\vcpkg\scripts\buildsystems\vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows
+
+      - name: Build
+        run: cmake --build build --config Release --target Aestra AestraPluginHost --parallel
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $out = "Aestra-v0.8.1-alpha-windows-x64"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          Copy-Item build\bin\Aestra.exe $out\
+          if (Test-Path build\bin\AestraPluginHost.exe) { Copy-Item build\bin\AestraPluginHost.exe $out\ }
+          Get-ChildItem build\bin -Filter *.dll | Copy-Item -Destination $out\
+          Copy-Item -Recurse build\bin\AestraAssets $out\AestraAssets
+          Copy-Item LICENSE $out\ -ErrorAction SilentlyContinue
+          Get-ChildItem -Recurse $out | Select-Object FullName, Length
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Aestra-v0.8.1-alpha-windows-x64
+          path: Aestra-v0.8.1-alpha-windows-x64
+          retention-days: 30
+
+  linux:
+    name: Linux app
+    # 22.04 (glibc 2.35) so the binary also runs on older distros, not only current ones.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          submodules: false
+          persist-credentials: false
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev libsdl2-dev libfreetype-dev
+
+      - name: Configure (UI enabled)
+        run: cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_UI=ON -DAESTRA_ENABLE_TESTS=OFF
+
+      - name: Build
+        run: cmake --build build --target Aestra AestraPluginHost --parallel
+
+      - name: Package
+        run: |
+          out=Aestra-v0.8.1-alpha-linux-x64
+          mkdir -p "$out"
+          cp build/bin/Aestra "$out/"
+          [ -f build/bin/AestraPluginHost ] && cp build/bin/AestraPluginHost "$out/"
+          cp -r build/bin/AestraAssets "$out/"
+          cp LICENSE "$out/" 2>/dev/null || true
+          strip "$out/Aestra" "$out/AestraPluginHost" 2>/dev/null || true
+          ldd "$out/Aestra" | grep -v -E 'linux-vdso|ld-linux' | awk '{print $1}'
+          tar czf "$out.tar.gz" "$out"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Aestra-v0.8.1-alpha-linux-x64
+          path: Aestra-v0.8.1-alpha-linux-x64.tar.gz
+          retention-days: 30
