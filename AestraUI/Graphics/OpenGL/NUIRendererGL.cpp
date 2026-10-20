@@ -2327,7 +2327,7 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
         cache.clear();
 
         int loadedChars = 0;
-        const int loadFlagsBase = FT_LOAD_DEFAULT | FT_LOAD_FORCE_AUTOHINT;
+        const int loadFlagsBase = FT_LOAD_DEFAULT | FT_LOAD_FORCE_AUTOHINT | FT_LOAD_NO_BITMAP; // never the font's 1-bit strikes: read as 8-bit they shred (MS Gothic)
         const int loadFlagsLCD = loadFlagsBase | FT_LOAD_TARGET_LCD;
         const int loadFlagsGray = loadFlagsBase | FT_LOAD_TARGET_LIGHT;
         const int padding = 3;
@@ -2573,7 +2573,7 @@ bool NUIRendererGL::tryAddGlyphToAtlas(uint32_t codepoint, FT_Face face, int atl
         return false;
     }
 
-    const int loadFlagsBase = FT_LOAD_DEFAULT | FT_LOAD_FORCE_AUTOHINT;
+    const int loadFlagsBase = FT_LOAD_DEFAULT | FT_LOAD_FORCE_AUTOHINT | FT_LOAD_NO_BITMAP; // never the font's 1-bit strikes: read as 8-bit they shred (MS Gothic)
     const int loadFlagsLCD = loadFlagsBase | FT_LOAD_TARGET_LCD;
     const int loadFlagsGray = loadFlagsBase | FT_LOAD_TARGET_LIGHT;
     int loadFlags = fontUseLCD_ ? loadFlagsLCD : loadFlagsGray;
