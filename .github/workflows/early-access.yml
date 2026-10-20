@@ -42,7 +42,7 @@ jobs:
         shell: pwsh
         run: |
           cmake -B build -S . -G Ninja `
-            -DCMAKE_BUILD_TYPE=$env:BUILD_TYPE `
+            -DCMAKE_BUILD_TYPE=Release `
             -DAestra_CORE_MODE=ON `
             -DAESTRA_ENABLE_UI=ON `
             -DAESTRA_ENABLE_TESTS=OFF `
