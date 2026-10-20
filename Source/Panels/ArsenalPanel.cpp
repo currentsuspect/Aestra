@@ -259,7 +259,7 @@ void ArsenalPanel::followGridPlayhead() {
 void ArsenalPanel::refreshUnits() {
     if (!m_listContainer || !m_trackManager) return;
     auto& theme = NUIThemeManager::getInstance();
-    m_stepCount = computeLoopStepCount();
+    reconcilePatterns(); m_stepCount = computeLoopStepCount();
     const bool shouldRestoreDropTargets = m_dropTargetRegistered;
     if (shouldRestoreDropTargets) {
         unregisterDropTargets();
@@ -664,7 +664,7 @@ void ArsenalPanel::onRender(NUIRenderer& renderer) {
     if (m_trackManager && m_listContainer && isVisible()) {
         if (m_trackManager->getUnitManager().getAllUnitIDs().size() != m_unitRows.size()) refreshUnits(); // units added or removed elsewhere (Muse, undo)
         m_scenes.refresh(m_trackManager->getPatternManager(), m_activePatternID.value, m_sceneRect, ArsenalSceneStrip::quietDefaults(*m_trackManager));
-        m_scenes.draw(renderer);
+        m_scenes.draw(renderer); m_sceneMenu.draw(renderer);
     }
     if (m_listContainer && isVisible()) drawProgressHeader(renderer, m_progressHeaderRect);
     if (m_listContainer && isVisible()) Aestra::drawArsenalRackHeaders(renderer, m_rack, m_listViewportRect, m_progressHeaderRect.bottom() + 8.0f - m_scrollY);
@@ -1404,13 +1404,13 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         }
     }
 
-    if (m_ruler && m_ruler->onMouseEvent(event)) { repaint(); return true; } // click or drag on the bar ruler cues the playhead
+    if (m_sceneMenu.mouse(event) || (m_ruler && m_ruler->onMouseEvent(event))) { repaint(); return true; } // rename box first; then a click or drag on the bar ruler cues the playhead // click or drag on the bar ruler cues the playhead
     using SceneKind = Aestra::ArsenalSceneStrip::Action::Kind;
     Aestra::ArsenalSceneStrip::Action scene;
     if (m_trackManager && m_scenes.onMouse(event, m_trackManager->getPatternManager(), m_activePatternID.value, scene)) {
         if (scene.kind == SceneKind::Select || scene.kind == SceneKind::PatternAdded) { setActivePattern(PatternID{scene.id}); if (scene.kind == SceneKind::PatternAdded && m_patternBrowser) m_patternBrowser->refreshPatterns(); }
         if (scene.kind == SceneKind::SwingEdited && m_onPatternEdited) m_onPatternEdited(m_activePatternID);
-        if (scene.kind == SceneKind::PlaceInTimeline && m_onPlaceInTimeline) m_onPlaceInTimeline(m_activePatternID);
+        if (scene.kind == SceneKind::PlaceInTimeline && m_onPlaceInTimeline) m_onPlaceInTimeline(m_activePatternID); if (scene.kind == SceneKind::Menu) showSceneMenu(scene.id, scene.at);
         repaint();
         return true;
     }

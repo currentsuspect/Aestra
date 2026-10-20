@@ -2782,6 +2782,8 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Panels/AudioClipEditorPanel.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/SampleEditorPanel.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/ArsenalPanel.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/ArsenalPanelScenes.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/ArsenalSceneMenu.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/PatternBrowserPanel.cpp
     )
     target_link_libraries(PanelResizeLayoutTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
