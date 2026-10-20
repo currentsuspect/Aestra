@@ -253,6 +253,17 @@ if(UNIX)
     set_tests_properties(EditorLoopPumpTest PROPERTIES LABELS "audio;plugins;editor;regression;contract:plugins")
 endif()
 
+# The road a parameter value takes to a VST3 processor, and back from the plugin's own window (V82-H4/H5).
+if(EXISTS ${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces/base/funknown.cpp)
+    add_executable(Vst3ParamBridgeTest AestraAudio/Vst3ParamBridgeTest.cpp)
+    target_link_libraries(Vst3ParamBridgeTest PRIVATE AestraAudioCore)
+    target_include_directories(Vst3ParamBridgeTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk)
+    add_test(NAME Vst3ParamBridgeTest COMMAND Vst3ParamBridgeTest)
+    set_tests_properties(Vst3ParamBridgeTest PROPERTIES LABELS "audio;plugins;parameters;regression;contract:plugins")
+endif()
+
 # A plugin's own latency can change after it loads (V82-H2): the chain announces it so delay compensation is re-solved.
 add_executable(EffectChainLatencyRefreshTest AestraAudio/EffectChainLatencyRefreshTest.cpp)
 target_link_libraries(EffectChainLatencyRefreshTest PRIVATE AestraAudio)

@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "HelperEditorHost.h"
+#include "HelperParamCommands.h"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -951,6 +952,7 @@ int main(int argc, char** argv) {
 #if defined(AESTRA_HAS_X11)
     AestraHelper::EditorHost editorHost;
 #endif
+    AestraHelper::EditLog editLog;
 #endif
 
     while (std::getline(std::cin, line)) {
@@ -1107,6 +1109,7 @@ int main(int argc, char** argv) {
                     reply("ERR " + error);
                     continue;
                 }
+                vst3Module.plugin->setEditListener([&editLog](uint32_t paramId, double v) { editLog.add(paramId, v); });
             } else {
                 vst3Module.close();
             }
@@ -1170,6 +1173,15 @@ int main(int argc, char** argv) {
             }
 #else
             reply(sub == "OPEN" ? "ERR no-editor" : "OK EDITOR CLOSED"); // no X11: nothing to open, so nothing is ever open
+#endif
+#ifdef AESTRA_HAS_VST3
+        } else if (command == "PARAMS") {
+            reply(vst3Module.plugin ? AestraHelper::paramsReply(*vst3Module.plugin) : "OK 0");
+        } else if (command == "GETPARAM") {
+            uint32_t paramId = 0;
+            reply(!(input >> paramId) || !vst3Module.plugin ? "ERR no-plugin" : AestraHelper::getParamReply(*vst3Module.plugin, paramId));
+        } else if (command == "EDITS") {
+            reply(editLog.take());
 #endif
         } else if (command == "LATENCY") {
             // The plugin's own latency in samples (V82-H2). The app adds the sandbox's one block of transport delay.

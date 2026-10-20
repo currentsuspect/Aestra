@@ -407,6 +407,24 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    // Automation (V82-H5): the render thread hands a value over every block; it reaches the child through its own
+    // queue and takes effect, and a value that did not change is not sent again.
+    if (!instance->supportsRealtimeAutomation()) {
+        std::cerr << "a sandboxed VST3 must accept realtime automation\n";
+        return 1;
+    }
+    instance->applyAutomation(0, 0.5f);
+    instance->applyAutomation(0, 0.5f);
+    if (!pumpUntilGain(instance, paramIn, 0.5f)) {
+        std::cerr << "automated value did not reach the child plugin\n";
+        return 1;
+    }
+    instance->applyAutomation(0, 0.8f);
+    if (!pumpUntilGain(instance, paramIn, 0.8f)) {
+        std::cerr << "automation did not follow the curve to its next value\n";
+        return 1;
+    }
+
     // An out-of-range parameter id is rejected by the child but must not crash the
     // proxy, and the instance keeps working (unity gain restores cleanly after).
     instance->setParameter(99999u, 0.5f);

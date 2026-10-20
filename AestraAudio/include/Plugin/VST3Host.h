@@ -24,6 +24,7 @@ namespace Aestra {
 namespace Audio {
 
 class EditorLoopPump;
+struct Vst3ParamState; // pending parameter values and the controller's host (Vst3ParamBridge.h)
 
 /**
  * @brief VST3 plugin instance implementation
@@ -109,6 +110,18 @@ public:
     /// Whether the open editor accepts being resized by the host.
     bool canResizeEditor() const;
 
+    /**
+     * @brief Hear about knobs moved in the plugin's own window (IComponentHandler::performEdit), normalized 0..1.
+     * Called on the thread that runs the editor, so the listener must be quick and thread-safe. The value has already
+     * been queued for the processor; this is for telling the rest of the app (automation recording, parameter UI).
+     */
+    void setEditListener(std::function<void(uint32_t id, double normalized)> listener);
+    /**
+     * @brief Bring the controller up to date with what the processor reported (its own parameter moves) and act on
+     * restartComponent() flags. Call from the UI side (the editor loop), not the audio thread.
+     */
+    void pumpControllerSync();
+
     const PluginInfo& getInfo() const override { return m_info; }
     uint32_t getLatencySamples() const override;
     uint32_t getTailSamples() const override;
@@ -158,6 +171,7 @@ private:
     // Parameter cache
     mutable std::vector<PluginParameter> m_parameterCache;
     mutable bool m_parameterCacheValid = false;
+    std::unique_ptr<Vst3ParamState> m_params;
 
     // Internal helpers
     void buildParameterCache() const;

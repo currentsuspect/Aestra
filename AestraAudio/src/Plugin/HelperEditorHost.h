@@ -163,6 +163,7 @@ private:
             for (size_t i = 1; i < polls.size(); ++i)
                 if (polls[i].revents & (POLLIN | POLLHUP)) pump.dispatchFd(polls[i].fd);
             pump.fireDueTimers();
+            m_plugin->pumpControllerSync(); // what the processor reported, to the window
         }
 
         m_plugin->closeEditor();
