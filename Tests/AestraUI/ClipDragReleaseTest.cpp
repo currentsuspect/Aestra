@@ -23,6 +23,8 @@
 #include "PlaylistModel.h"
 #include "TrackManager.h"
 #include "TrackManagerUI.h"
+#include "TrackManagerUIMath.h"
+#include "NUIThemeSystem.h"
 #include "TrackUIComponent.h"
 
 #include <iostream>
@@ -254,6 +256,37 @@ void testDrawPlacesInTheCellThePointerIsIn() {
     check(placedAt(13.37) == 13.37, "snap off places exactly where the pointer is");
 }
 
+// Dropping a pattern from the browser places it the same way: in the cell the pointer is over, and the preview agrees.
+void testDropPlacesInTheCellThePointerIsOver() {
+    Fixture f;
+    if (!f.build()) {
+        return;
+    }
+    f.manager->setSnapSetting(AestraUI::SnapGrid::Beat);
+    auto& playlist = f.trackManager->getPlaylistModel();
+    const PatternID dropped = f.trackManager->getPatternManager().createMidiPattern("Dropped", 2.0, MidiPayload{});
+
+    const float controls = AestraUI::NUIThemeManager::getInstance().getLayoutDimensions().trackControlsWidth;
+    const float gridX = f.manager->getBounds().x + controls + kTimelineGridInsetX;
+    const float y = f.lane->getBounds().y + f.lane->getBounds().height * 0.5f;
+    const float zoom = f.manager->getHorizontalZoom();
+
+    const auto dropAt = [&](double beat) {
+        AestraUI::DragData data;
+        data.type = AestraUI::DragDataType::Pattern;
+        data.displayName = "Dropped";
+        data.customData = dropped;
+        const AestraUI::NUIPoint at(gridX + static_cast<float>(beat) * zoom, y);
+        f.manager->onDragOver(data, at); // the preview first, as a real drag does
+        const size_t before = playlist.getLane(f.laneId)->clips.size();
+        const auto result = f.manager->onDrop(data, at);
+        const auto& clips = playlist.getLane(f.laneId)->clips;
+        return result.accepted && clips.size() == before + 1 ? clips.back().startBeat : -1.0;
+    };
+    check(dropAt(6.2) == 6.0, "a drop at 6.2 lands in the cell that starts at 6");
+    check(dropAt(8.9) == 8.0, "a drop at 8.9 stays in the cell that starts at 8 (it used to land on 9)");
+}
+
 // The tool, its number key, and the default.
 void testMuteToolAndShortcuts() {
     Fixture f;
@@ -287,6 +320,7 @@ int main() {
     testSettingTheStateItAlreadyHasIsNotAChange();
     testMuteToolAndShortcuts();
     testDrawPlacesInTheCellThePointerIsIn();
+    testDropPlacesInTheCellThePointerIsOver();
 
     if (g_failures == 0) {
         std::cout << "Clip drag release tests passed\n";

@@ -120,7 +120,7 @@ AestraUI::DropFeedback TrackManagerUI::onDragOver(const AestraUI::DragData& data
     }
 
     double rawTimeBeats = gridOffsetToBeat(position.x - gridStartX);
-    double snappedBeats = snapBeatToGrid(rawTimeBeats);
+    double snappedBeats = snapPlacementToGrid(rawTimeBeats); // the cell under the pointer, so the preview shows where it lands
     double newTime = m_trackManager->getPlaylistModel().beatToSeconds(snappedBeats);
 
     int trackCount = static_cast<int>(m_trackUIComponents.size());
@@ -170,7 +170,7 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
     double rawTimeBeats = m_trackManager->getPlaylistModel().secondsToBeats(rawTimeSeconds);
 
     // Snap-to-grid logic (Canonical Beat-Space)
-    double timePositionBeats = snapBeatToGrid(rawTimeBeats);
+    double timePositionBeats = snapPlacementToGrid(rawTimeBeats);
 
     auto& playlist = m_trackManager->getPlaylistModel();
     const int displayRows = static_cast<int>(m_trackUIComponents.size());
