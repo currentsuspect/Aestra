@@ -2,7 +2,7 @@ name: Early Access Build
 
 # Builds the desktop app for early-access testers: a Windows zip and a Linux tarball, uploaded as
 # workflow artifacts (not a public release). Runs on pushes to early-access/** branches, which are cut
-# from a release tag, so the build is exactly that release plus this file.
+# from a known commit, so the build is exactly that commit plus this file.
 
 on:
   push:
@@ -25,6 +25,12 @@ jobs:
         with:
           submodules: false
           persist-credentials: false
+
+      - name: Fetch the VST3 SDK (plugin hosting)
+        shell: pwsh
+        run: |
+          git submodule update --init --depth 1 AestraAudio/External/vst3sdk
+          git -C AestraAudio/External/vst3sdk submodule update --init --depth 1 base pluginterfaces public.sdk
 
       - name: Setup vcpkg, libsodium and FreeType
         shell: pwsh
@@ -56,7 +62,7 @@ jobs:
       - name: Package
         shell: pwsh
         run: |
-          $out = "Aestra-v0.8.1-alpha-windows-x64"
+          $out = "Aestra-v0.8.2-preview-windows-x64"
           New-Item -ItemType Directory -Force -Path $out | Out-Null
           Copy-Item build\bin\Aestra.exe $out\
           if (Test-Path build\bin\AestraPluginHost.exe) { Copy-Item build\bin\AestraPluginHost.exe $out\ }
@@ -79,7 +85,7 @@ jobs:
           Invoke-WebRequest "https://github.com/pal1000/mesa-dist-win/releases/download/$ver/mesa3d-$ver-release-msvc.7z" -OutFile mesa.7z
           7z x mesa.7z -omesa -y | Out-Null
           $test = "smoke"
-          Copy-Item -Recurse "Aestra-v0.8.1-alpha-windows-x64" $test
+          Copy-Item -Recurse "Aestra-v0.8.2-preview-windows-x64" $test
           Copy-Item mesa\x64\*.dll $test\
           $env:GALLIUM_DRIVER = "llvmpipe"
           $env:APPDATA = "$PWD\smoke-appdata"; New-Item -ItemType Directory -Force $env:APPDATA | Out-Null
@@ -109,8 +115,8 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Aestra-v0.8.1-alpha-windows-x64
-          path: Aestra-v0.8.1-alpha-windows-x64
+          name: Aestra-v0.8.2-preview-windows-x64
+          path: Aestra-v0.8.2-preview-windows-x64
           retention-days: 30
 
   linux:
@@ -122,6 +128,12 @@ jobs:
         with:
           submodules: false
           persist-credentials: false
+
+      - name: Fetch the VST3 SDK (plugin hosting)
+        shell: bash
+        run: |
+          git submodule update --init --depth 1 AestraAudio/External/vst3sdk
+          git -C AestraAudio/External/vst3sdk submodule update --init --depth 1 base pluginterfaces public.sdk
 
       - name: Install dependencies
         run: |
@@ -136,7 +148,7 @@ jobs:
 
       - name: Package
         run: |
-          out=Aestra-v0.8.1-alpha-linux-x64
+          out=Aestra-v0.8.2-preview-linux-x64
           mkdir -p "$out"
           cp build/bin/Aestra "$out/"
           [ -f build/bin/AestraPluginHost ] && cp build/bin/AestraPluginHost "$out/"
@@ -155,6 +167,6 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Aestra-v0.8.1-alpha-linux-x64
-          path: Aestra-v0.8.1-alpha-linux-x64.tar.gz
+          name: Aestra-v0.8.2-preview-linux-x64
+          path: Aestra-v0.8.2-preview-linux-x64.tar.gz
           retention-days: 30
