@@ -1691,7 +1691,7 @@ public:
                 channel->resyncEngineState();
             }
         }
-        if (m_metronomeDirty.load(std::memory_order_relaxed) && m_commandSink) {
+        if (m_masterChannel) m_masterChannel->getEffectChain().refreshLatency(); /* master inserts too (V82-H2) */ if (m_metronomeDirty.load(std::memory_order_relaxed) && m_commandSink) {
             AudioQueueCommand cmd{};
             cmd.type = AudioQueueCommandType::SetMetronomeEnabled;
             cmd.value1 = m_metronomeEnabled.load(std::memory_order_relaxed) ? 1.0f : 0.0f;

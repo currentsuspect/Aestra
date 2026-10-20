@@ -245,6 +245,17 @@ target_include_directories(EffectChainCrashedPluginStateTest PRIVATE
 add_test(NAME EffectChainCrashedPluginStateTest COMMAND EffectChainCrashedPluginStateTest)
 set_tests_properties(EffectChainCrashedPluginStateTest PROPERTIES LABELS "audio;plugins;serialization;regression;contract:durability")
 
+# A plugin's own latency can change after it loads (V82-H2): the chain announces it so delay compensation is re-solved.
+add_executable(EffectChainLatencyRefreshTest AestraAudio/EffectChainLatencyRefreshTest.cpp)
+target_link_libraries(EffectChainLatencyRefreshTest PRIVATE AestraAudio)
+target_include_directories(EffectChainLatencyRefreshTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME EffectChainLatencyRefreshTest COMMAND EffectChainLatencyRefreshTest)
+set_tests_properties(EffectChainLatencyRefreshTest PROPERTIES LABELS "audio;plugins;pdc;regression;contract:plugins")
+
 # Plugin-instance identity must survive chain reordering (#667) — automation
 # addresses the instance a curve was drawn for, never the position it occupied.
 add_executable(EffectChainInstanceIdentityTest AestraAudio/EffectChainInstanceIdentityTest.cpp)

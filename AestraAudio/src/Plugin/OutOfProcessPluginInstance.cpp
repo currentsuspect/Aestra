@@ -753,8 +753,25 @@ bool OutOfProcessPluginInstance::initialize(double sampleRate, uint32_t maxBlock
         markCrashed();
         return false;
     }
+    refreshPluginLatency(); // VST3 and CLAP both know it once set up; activation can change it, so activate() asks again
     startWorker();
     return true;
+}
+
+void OutOfProcessPluginInstance::refreshPluginLatency() {
+    std::string response;
+    uint32_t latency = 0;
+    if (sendCommand("LATENCY", &response) && response.rfind("OK LATENCY ", 0) == 0) {
+        try {
+            // A hostile or broken helper must not be able to claim an absurd delay: more than ten seconds at 192 kHz
+            // is not a latency, it is garbage, and PDC would delay every other track by it.
+            const unsigned long parsed = std::stoul(response.substr(11));
+            latency = static_cast<uint32_t>(std::min<unsigned long>(parsed, 1920000UL));
+        } catch (const std::exception&) {
+            latency = 0;
+        }
+    }
+    m_pluginLatency.store(latency, std::memory_order_release);
 }
 
 void OutOfProcessPluginInstance::shutdown() {
@@ -771,6 +788,7 @@ void OutOfProcessPluginInstance::activate() {
     std::string response;
     if (sendCommand("ACTIVATE", &response) && response.find("OK") == 0) {
         m_active.store(true, std::memory_order_release);
+        refreshPluginLatency();
     } else {
         markCrashed();
     }
@@ -1069,7 +1087,12 @@ void OutOfProcessPluginInstance::workerLoop() {
             m_readyState.store(2, std::memory_order_release);
             // Published last, so an observer that sees this advance is guaranteed
             // to find the result readable rather than half-written.
-            m_processedBlocks.fetch_add(1, std::memory_order_acq_rel);
+            const uint64_t blocks = m_processedBlocks.fetch_add(1, std::memory_order_acq_rel) + 1;
+            // A plugin may only know its own latency once it has processed a block (LSP's limiters report theirs
+            // then), and it can change later: ask after the first block and every kLatencyCheckEveryBlocks after.
+            if (blocks == 1 || blocks % kLatencyCheckEveryBlocks == 0) {
+                refreshPluginLatency();
+            }
         }
     }
 }
