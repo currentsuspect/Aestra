@@ -9,6 +9,7 @@
 #include "../Settings/MissingAssetsDialog.h"
 #include "../Settings/ExportDialog.h"
 #include "ViewTypes.h"
+#include "StartupErrorDialog.h"
 #include "TrackManagerUI.h"
 #include "FileBrowser.h"
 #include "TransportBar.h"
@@ -140,7 +141,20 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         Log::info("Renderer init with actual client size: " + std::to_string(actualWidth) + "x" + std::to_string(actualHeight));
 
         if (!glRenderer->initialize(actualWidth, actualHeight)) {
-            Log::error("Failed to initialize UI renderer");
+            // Name the driver so a bug report says which machine could not run us. glGetString is OpenGL 1.0, so
+            // it is loaded even when the renderer refused the context for being older than 3.3.
+            const auto glString = [](GLenum name) {
+                const auto* text = glGetString ? reinterpret_cast<const char*>(glGetString(name)) : nullptr;
+                return std::string(text ? text : "unknown");
+            };
+            const std::string driver = "OpenGL " + glString(GL_VERSION) + " | " + glString(GL_RENDERER) + " | " +
+                                       glString(GL_VENDOR);
+            Log::error("Failed to initialize UI renderer (" + driver + ")");
+            showStartupError("Aestra can't start",
+                             "Aestra needs a graphics driver with OpenGL 3.3 or newer.\n\nThis computer reports: " +
+                                 driver +
+                                 "\n\nInstall the latest graphics driver for your PC (Intel, AMD or NVIDIA, or from "
+                                 "the PC maker's support site), then open Aestra again.");
             return false;
         }
 
