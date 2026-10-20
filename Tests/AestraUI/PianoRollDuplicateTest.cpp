@@ -224,6 +224,78 @@ int main() {
         check(commits == 0 && view.getNotes().size() == 1, "nothing selected, nothing happens");
     }
 
+    std::cout << "[9] the highlight clears two ways: a left press outside it, or a right press\n";
+    {
+        PianoRollView view;
+        view.setBounds({0.0f, 0.0f, 900.0f, 600.0f});
+        view.onResize(900, 600);
+        view.setBeatsPerBar(4);
+        view.setTotalDurationBeats(16.0);
+        view.setViewWindow(0.0, 16.0);
+        view.setTool(PianoRollTool::Pointer);
+        view.setNotes({note(60, 4.5, 0.5), note(62, 10.0, 0.5)});
+        int clears = 0;
+        view.setOnLoopZoneChanged([&](std::optional<std::pair<double, double>> z) { clears += z ? 0 : 1; });
+
+        const NUIRect grid = view.getGridBounds();
+        const NUIRect ruler = view.getRulerBounds();
+        const double ppb = static_cast<double>(grid.width) / view.getViewDurationBeats();
+        const auto gx = [&](double beat) { return grid.x + static_cast<float>(beat * ppb); };
+        const float gy = grid.y + 6.0f; // a row with no note on it
+        auto press = [&](NUIMouseButton button, float x, float y) {
+            NUIMouseEvent e;
+            e.type = NUIMouseEventType::Down;
+            e.button = button;
+            e.position = {x, y};
+            e.pressed = true;
+            view.onMouseEvent(e);
+            NUIMouseEvent up = e;
+            up.type = NUIMouseEventType::Up;
+            up.pressed = false;
+            up.released = true;
+            view.onMouseEvent(up);
+        };
+        const auto raise = [&] { view.setLoopZone(std::make_pair(4.0, 8.0)); };
+
+        raise();
+        press(NUIMouseButton::Left, gx(6.0), gy);
+        check(view.getLoopZone().has_value(), "a left press INSIDE the highlight (empty grid) leaves it");
+        press(NUIMouseButton::Left, gx(2.0), gy);
+        check(!view.getLoopZone() && clears == 1, "a left press on the grid outside it, before it, clears it");
+        raise();
+        press(NUIMouseButton::Left, gx(12.0), gy);
+        check(!view.getLoopZone(), "a left press outside it, after it, clears it");
+        raise();
+        press(NUIMouseButton::Left, gx(8.0), gy);
+        check(!view.getLoopZone(), "the end is outside: [4, 8) does not include 8");
+        raise();
+        press(NUIMouseButton::Right, gx(6.0), gy);
+        check(!view.getLoopZone(), "a right press clears it, even inside it");
+        raise();
+        press(NUIMouseButton::Right, gx(14.0), gy);
+        check(!view.getLoopZone(), "and outside it");
+
+        raise();
+        press(NUIMouseButton::Left, gx(4.75), grid.y + 6.0f);
+        check(view.getLoopZone().has_value(), "a left press inside it that selects or adds does not clear it");
+
+        raise();
+        press(NUIMouseButton::Right, ruler.x + static_cast<float>(10.0 * ppb), ruler.y + ruler.height * 0.5f);
+        check(!view.getLoopZone(), "a right click on the ruler, without dragging out a new range, clears it");
+        raise();
+        press(NUIMouseButton::Left, ruler.x + static_cast<float>(10.0 * ppb), ruler.y + ruler.height * 0.5f);
+        check(view.getLoopZone().has_value(), "a left press on the ruler is the scrub: it leaves the highlight");
+
+        raise();
+        press(NUIMouseButton::Left, grid.x - 20.0f, gy);
+        check(view.getLoopZone().has_value(), "a press outside the grid (the key lane) is not 'outside the highlight'");
+        NUIKeyEvent esc;
+        esc.keyCode = NUIKeyCode::Escape;
+        esc.pressed = true;
+        view.onKeyEvent(esc);
+        check(!view.getLoopZone(), "Esc still clears it too");
+    }
+
     std::cout << (g_failures == 0 ? "PianoRollDuplicateTest: all passed\n" : "PianoRollDuplicateTest: FAILURES\n");
     return g_failures == 0 ? 0 : 1;
 }

@@ -196,6 +196,8 @@ public:
      *        makes no zone and does not call.
      */
     std::function<void(double startBeat, double endBeat)> onLoopZoneDrawn;
+    /** @brief A zone gesture (right-click, Ctrl+click) that ended without dragging out a range: the owner clears the zone. */
+    std::function<void()> onLoopZoneCleared;
     /** @brief Whether a right-drag (or Ctrl+left-drag) draws a loop zone; off for hosts that only want numbers, ticks and scrub. */
     void setLoopZoneEnabled(bool enabled) { allowLoopZone_ = enabled; }
     /** @brief The zone to draw (the view owns it). */

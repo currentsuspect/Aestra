@@ -123,11 +123,9 @@ PianoRollView::PianoRollView()
         const int bars = PianoRollDuplicate::barsToGrow(endBeat, m_patternLengthBeats, static_cast<double>(m_beatsPerBar));
         if (bars > 0 && m_toolbar) m_toolbar->requestPatternBars(bars);
     });
-    m_notes->setOnEmptyGridPress([this]() {
-        if (m_loopZone) {
-            applyLoopZone(std::nullopt, true);
-        }
-    });
+    m_ruler->onLoopZoneCleared = [this]() {
+        if (m_loopZone) applyLoopZone(std::nullopt, true);
+    };
 
     m_minimap->onViewChanged = [this](double start, double duration) {
         m_scrollX = static_cast<float>(start * m_pixelsPerBeat);
@@ -631,6 +629,20 @@ bool PianoRollView::onMouseEvent(const NUIMouseEvent& event) {
         if (m_isResizingPanel) {
             m_isResizingPanel = false;
             return true;
+        }
+    }
+
+    // The ruler highlight clears two ways, so it is never a mystery: a left press on the grid OUTSIDE it, or a right press
+    // on the grid (a right-click on the ruler without dragging does too: PianoRollRuler). A press inside it leaves it be,
+    // and whatever the press does anyway (select, add or erase a note) still happens. Esc clears it as well.
+    if (m_loopZone && event.pressed && m_grid && m_pixelsPerBeat > 0.0f) {
+        const NUIRect g = m_grid->getBounds();
+        if (g.contains(event.position)) {
+            const double beat = static_cast<double>(event.position.x - g.x + m_scrollX) / static_cast<double>(m_pixelsPerBeat);
+            const bool outside = beat < m_loopZone->first - 1e-9 || beat >= m_loopZone->second - 1e-9;
+            if (event.button == NUIMouseButton::Right || (event.button == NUIMouseButton::Left && outside)) {
+                applyLoopZone(std::nullopt, true);
+            }
         }
     }
 
