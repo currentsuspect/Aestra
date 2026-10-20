@@ -62,6 +62,7 @@ jobs:
           Get-ChildItem build\bin -Filter *.dll | Copy-Item -Destination $out\
           Copy-Item -Recurse build\bin\AestraAssets $out\AestraAssets
           Copy-Item LICENSE $out\ -ErrorAction SilentlyContinue
+          Copy-Item "installer\READ ME FIRST.txt" $out\
           Get-ChildItem -Recurse $out | Select-Object FullName, Length
 
       - uses: actions/upload-artifact@v4
@@ -99,6 +100,7 @@ jobs:
           [ -f build/bin/AestraPluginHost ] && cp build/bin/AestraPluginHost "$out/"
           cp -r build/bin/AestraAssets "$out/"
           cp LICENSE "$out/" 2>/dev/null || true
+          cp "installer/READ ME FIRST.txt" "$out/"
           strip "$out/Aestra" "$out/AestraPluginHost" 2>/dev/null || true
           # libsodium's soname differs between distros (.so.23 here, .so.26 on Arch/newer), so ship ours
           # next to the binary and point the RPATH at it. The other libs keep stable sonames everywhere.
