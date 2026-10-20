@@ -870,9 +870,110 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
     }
 }
 
+namespace {
+bool hexToText(const std::string& hex, std::string& out) {
+    out.clear();
+    if (hex.size() % 2 != 0) return false;
+    auto nibble = [](char c) -> int {
+        if (c >= '0' && c <= '9') return c - '0';
+        if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+        if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+        return -1;
+    };
+    for (size_t i = 0; i < hex.size(); i += 2) {
+        const int hi = nibble(hex[i]), lo = nibble(hex[i + 1]);
+        if (hi < 0 || lo < 0) return false;
+        out.push_back(static_cast<char>(hi * 16 + lo));
+    }
+    return true;
+}
+} // namespace
+
+std::vector<PluginParameter> OutOfProcessPluginInstance::getParameters() const {
+    std::lock_guard<std::mutex> lock(m_paramListMutex);
+    if (m_paramListValid) return m_paramList;
+    if (!m_loaded.load(std::memory_order_acquire) || m_crashed.load(std::memory_order_acquire)) return {};
+
+    std::string response;
+    auto* self = const_cast<OutOfProcessPluginInstance*>(this);
+    if (!self->sendCommand("PARAMS", &response, std::chrono::seconds(10)) || response.rfind("OK ", 0) != 0) return {};
+    std::istringstream in(response.substr(3));
+    size_t count = 0;
+    in >> count;
+    std::vector<PluginParameter> list;
+    list.reserve(std::min<size_t>(count, 100000));
+    std::string token;
+    while (in >> token && list.size() < 100000) {
+        // id:flags:steps:default:name:short:unit
+        std::vector<std::string> field;
+        size_t start = 0;
+        for (size_t at; (at = token.find(':', start)) != std::string::npos; start = at + 1)
+            field.push_back(token.substr(start, at - start));
+        field.push_back(token.substr(start));
+        if (field.size() != 7) continue;
+        PluginParameter p;
+        try {
+            p.id = static_cast<uint32_t>(std::stoul(field[0]));
+            const int flags = std::stoi(field[1]);
+            p.isAutomatable = (flags & 1) != 0;
+            p.isBypass = (flags & 2) != 0;
+            p.isReadOnly = (flags & 4) != 0;
+            p.stepCount = static_cast<uint32_t>(std::stoul(field[2]));
+            p.defaultValue = std::stof(field[3]);
+        } catch (const std::exception&) {
+            continue;
+        }
+        if (!hexToText(field[4], p.name) || !hexToText(field[5], p.shortName) || !hexToText(field[6], p.unit)) continue;
+        list.push_back(std::move(p));
+    }
+    m_paramList = std::move(list);
+    m_paramListValid = true;
+    return m_paramList;
+}
+
 float OutOfProcessPluginInstance::getParameter(uint32_t id) const {
-    (void)id;
-    return 0.0f;
+    if (!m_loaded.load(std::memory_order_acquire) || m_crashed.load(std::memory_order_acquire)) return 0.0f;
+    std::string response;
+    auto* self = const_cast<OutOfProcessPluginInstance*>(this);
+    if (!self->sendCommand("GETPARAM " + std::to_string(id), &response) || response.rfind("OK GETPARAM ", 0) != 0)
+        return 0.0f;
+    return std::strtof(response.c_str() + 12, nullptr);
+}
+
+bool OutOfProcessPluginInstance::supportsRealtimeAutomation() const noexcept {
+    return m_info.format == PluginFormat::VST3; // CLAP joins when its parameters go through the sandbox (V82-H1)
+}
+
+void OutOfProcessPluginInstance::applyAutomation(uint32_t id, float normalizedValue) noexcept {
+    // Render thread: no lock, no allocation, no IPC. Unchanged values are not sent again.
+    for (auto& r : m_recentAutomation)
+        if (r.valid && r.id == id) {
+            if (r.value == normalizedValue) return;
+            r.value = normalizedValue;
+            m_autoQueue.push(ParamChange{id, normalizedValue}); // a full ring loses a step the next block repeats
+            return;
+        }
+    RecentAutomation& slot = m_recentAutomation[m_recentAutomationNext++ % m_recentAutomation.size()];
+    slot = {id, normalizedValue, true};
+    m_autoQueue.push(ParamChange{id, normalizedValue});
+}
+
+std::vector<OutOfProcessPluginInstance::ParameterEdit> OutOfProcessPluginInstance::takeEditedParameters() {
+    std::vector<ParameterEdit> edits;
+    if (!m_editorOpen.load(std::memory_order_acquire)) return edits; // edits only come from the window
+    std::string response;
+    if (!sendCommand("EDITS", &response) || response.rfind("OK EDITS", 0) != 0) return edits;
+    std::istringstream in(response.substr(8));
+    std::string token;
+    while (in >> token) {
+        const size_t colon = token.find(':');
+        if (colon == std::string::npos) continue;
+        ParameterEdit e;
+        e.id = static_cast<uint32_t>(std::strtoul(token.c_str(), nullptr, 10));
+        e.value = std::strtof(token.c_str() + colon + 1, nullptr);
+        edits.push_back(e);
+    }
+    return edits;
 }
 
 void OutOfProcessPluginInstance::setParameter(uint32_t id, float value) {
@@ -896,7 +997,8 @@ void OutOfProcessPluginInstance::drainParamQueueToChild() {
     // burst against a slow child cannot starve PROCESS; the remainder drains on
     // the next worker iteration, in order.
     ParamChange change;
-    for (size_t drained = 0; drained < kMaxParamDrainPerPass && m_paramQueue.pop(change); ++drained) {
+    for (size_t drained = 0;
+         drained < kMaxParamDrainPerPass && (m_autoQueue.pop(change) || m_paramQueue.pop(change)); ++drained) {
         std::ostringstream command;
         command << "SETPARAM " << change.id << " " << change.value;
         std::string response;
@@ -914,8 +1016,15 @@ void OutOfProcessPluginInstance::drainParamQueueToChild() {
 }
 
 std::string OutOfProcessPluginInstance::getParameterDisplay(uint32_t id) const {
-    (void)id;
-    return {};
+    if (!m_loaded.load(std::memory_order_acquire) || m_crashed.load(std::memory_order_acquire)) return {};
+    std::string response;
+    auto* self = const_cast<OutOfProcessPluginInstance*>(this);
+    if (!self->sendCommand("GETPARAM " + std::to_string(id), &response) || response.rfind("OK GETPARAM ", 0) != 0)
+        return {};
+    const size_t space = response.find(' ', 12);
+    std::string text;
+    if (space == std::string::npos || !hexToText(response.substr(space + 1), text)) return {};
+    return text;
 }
 
 std::vector<uint8_t> OutOfProcessPluginInstance::saveState() const {

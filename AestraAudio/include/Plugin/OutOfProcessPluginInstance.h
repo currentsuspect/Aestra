@@ -8,6 +8,7 @@
 #include <atomic>
 #include <chrono>
 #include <memory>
+#include <array>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -34,11 +35,22 @@ public:
     void process(const float* const* inputs, float** outputs, uint32_t numInputChannels, uint32_t numOutputChannels,
                  uint32_t numFrames, const MidiBuffer* midiInput = nullptr, MidiBuffer* midiOutput = nullptr) override;
 
-    std::vector<PluginParameter> getParameters() const override { return {}; }
-    uint32_t getParameterCount() const override { return 0; }
+    // Parameters (V82-H5). The list and the live values are asked of the helper (IPC), so these belong to the UI side,
+    // never the render thread; the render thread hands automation over through applyAutomation().
+    std::vector<PluginParameter> getParameters() const override;
+    uint32_t getParameterCount() const override { return static_cast<uint32_t>(getParameters().size()); }
     float getParameter(uint32_t id) const override;
     void setParameter(uint32_t id, float value) override;
     std::string getParameterDisplay(uint32_t id) const override;
+    bool supportsRealtimeAutomation() const noexcept override;
+    void applyAutomation(uint32_t id, float normalizedValue) noexcept override;
+
+    struct ParameterEdit {
+        uint32_t id{0};
+        float value{0.0f};
+    };
+    /// Knobs moved in the plugin's own window since the last call (newest value per parameter). UI thread.
+    std::vector<ParameterEdit> takeEditedParameters();
 
     std::vector<uint8_t> saveState() const override;
     bool loadState(const std::vector<uint8_t>& state) override;
@@ -175,6 +187,20 @@ private:
     // audible passThrough). The remainder stays queued for the next pass.
     static constexpr size_t kMaxParamDrainPerPass = 64;
     LockFreeRingBuffer<ParamChange, kParamQueueCapacity> m_paramQueue;
+    // Automation (V82-H5) has its own single producer, the render thread, so it gets its own ring; the worker drains
+    // both. A curve hands over its value every block, so only a value that changed is queued (recent[] remembers the
+    // last one sent per parameter; a miss in it just sends once more).
+    LockFreeRingBuffer<ParamChange, 1024> m_autoQueue;
+    struct RecentAutomation {
+        uint32_t id{0};
+        float value{0.0f};
+        bool valid{false};
+    };
+    std::array<RecentAutomation, 16> m_recentAutomation{};
+    size_t m_recentAutomationNext = 0;
+    mutable std::mutex m_paramListMutex;
+    mutable std::vector<PluginParameter> m_paramList;
+    mutable bool m_paramListValid = false;
     std::atomic<uint64_t> m_paramDrops{0};
 
     void drainParamQueueToChild();

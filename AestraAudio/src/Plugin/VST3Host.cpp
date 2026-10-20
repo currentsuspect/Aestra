@@ -4,6 +4,7 @@
 
 #include "AestraLog.h"
 #include "Plugin/EditorLoopPump.h"
+#include "Plugin/Vst3ParamBridge.h"
 
 #include <chrono>
 
@@ -223,7 +224,27 @@ static uint32_t countAudioBusChannels(IComponent* component, BusDirection direct
 // VST3PluginInstance Implementation
 // ============================================================================
 
-VST3PluginInstance::VST3PluginInstance() = default;
+/// What one VST3 instance needs to move parameter values between host, controller and processor.
+struct Vst3ParamState {
+    ParamBridge toProcessor;     ///< values the processor must hear (host sets, window edits)
+    ParamBridge toController;    ///< values the processor reported, for the controller to show
+    HostParameterChanges input;  ///< this block's IParameterChanges, rebuilt every block
+    OutputParameterChanges output;
+    std::mutex listenerMutex;
+    std::function<void(uint32_t, double)> listener;
+    std::unique_ptr<HostComponentHandler> handler;
+    Vst3ParamState()
+        : handler(std::make_unique<HostComponentHandler>(toProcessor, [this](uint32_t id, double v) {
+              std::function<void(uint32_t, double)> call;
+              {
+                  std::lock_guard<std::mutex> lock(listenerMutex);
+                  call = listener;
+              }
+              if (call) call(id, v);
+          })) {}
+};
+
+VST3PluginInstance::VST3PluginInstance() : m_params(std::make_unique<Vst3ParamState>()) {}
 
 VST3PluginInstance::~VST3PluginInstance() {
     unload();
@@ -339,6 +360,9 @@ bool VST3PluginInstance::load(const std::filesystem::path& path, int classIndex)
                 }
             }
         }
+
+        // The controller's host: edits made in the plugin's window come back through this and reach the processor.
+        if (m_controller) static_cast<IEditController*>(m_controller)->setComponentHandler(m_params->handler.get());
 
         // Get I/O configuration from the real component buses.
         const uint32_t discoveredInputs = countAudioBusChannels(comp, kInput);
@@ -506,8 +530,12 @@ void VST3PluginInstance::process(const float* const* inputs, float** outputs, ui
     data.numOutputs = 1;
     data.inputs = &inputBus;
     data.outputs = &outputBus;
-    data.inputParameterChanges = nullptr;
-    data.outputParameterChanges = nullptr;
+    // Parameter values for the processor (host sets and edits from the plugin's window), and its answers back.
+    ParamChange pending[kMaxParamChangesPerBlock];
+    m_params->input.fill(pending, m_params->toProcessor.drain(pending, kMaxParamChangesPerBlock));
+    m_params->output.clear();
+    data.inputParameterChanges = &m_params->input;
+    data.outputParameterChanges = &m_params->output;
     data.processContext = nullptr;
 
     // MIDI input events
@@ -616,6 +644,12 @@ void VST3PluginInstance::process(const float* const* inputs, float** outputs, ui
         return;
     }
 
+    if (m_params->output.getParameterCount() > 0) {
+        ParamChange reported[kMaxParamChangesPerBlock];
+        const size_t n = m_params->output.collect(reported, kMaxParamChangesPerBlock);
+        for (size_t i = 0; i < n; ++i) m_params->toController.push(reported[i].id, reported[i].value);
+    }
+
     auto endTime = std::chrono::high_resolution_clock::now();
     double durationNs = std::chrono::duration<double, std::nano>(endTime - startTime).count();
     const auto durationNsU64 = durationNs > 0.0 ? static_cast<uint64_t>(durationNs) : 0;
@@ -706,6 +740,23 @@ void VST3PluginInstance::setParameter(uint32_t id, float value) {
         return;
     auto ctrl = static_cast<IEditController*>(m_controller);
     ctrl->setParamNormalized(id, value);
+    // The controller alone changes nothing audible: the processor only hears what process() is handed.
+    m_params->toProcessor.push(id, value);
+}
+
+void VST3PluginInstance::setEditListener(std::function<void(uint32_t, double)> listener) {
+    std::lock_guard<std::mutex> lock(m_params->listenerMutex);
+    m_params->listener = std::move(listener);
+}
+
+void VST3PluginInstance::pumpControllerSync() {
+    if (!m_controller) return;
+    auto ctrl = static_cast<IEditController*>(m_controller);
+    ParamChange reported[kMaxParamChangesPerBlock];
+    size_t n;
+    while ((n = m_params->toController.drain(reported, kMaxParamChangesPerBlock)) > 0)
+        for (size_t i = 0; i < n; ++i) ctrl->setParamNormalized(reported[i].id, reported[i].value);
+    if (m_params->handler->takeRestartFlags() & kParamValuesChanged) m_parameterCacheValid = false;
 }
 
 std::string VST3PluginInstance::getParameterDisplay(uint32_t id) const {
@@ -896,7 +947,13 @@ bool VST3PluginInstance::loadState(const std::vector<uint8_t>& state) {
     } stream(state);
 
     auto component = static_cast<IComponent*>(m_component);
-    return component->setState(&stream) == kResultOk;
+    const bool ok = component->setState(&stream) == kResultOk;
+    // A split plugin's controller (and so its window) learns the processor's state from the same bytes.
+    if (ok && m_controller && m_controller != m_component) {
+        stream.pos = 0;
+        static_cast<IEditController*>(m_controller)->setComponentState(&stream);
+    }
+    return ok;
 }
 
 bool VST3PluginInstance::hasEditor() const {
