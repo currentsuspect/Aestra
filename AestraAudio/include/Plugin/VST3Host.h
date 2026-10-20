@@ -5,6 +5,7 @@
 
 #include <atomic>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -21,6 +22,8 @@ class IEditController;
 
 namespace Aestra {
 namespace Audio {
+
+class EditorLoopPump;
 
 /**
  * @brief VST3 plugin instance implementation
@@ -91,6 +94,21 @@ public:
     std::pair<int, int> getEditorSize() const override;
     bool resizeEditor(int width, int height) override;
 
+    /**
+     * @brief Linux (V82-H3): open the editor in an X11 window the caller creates.
+     *
+     * The plugin's view is created first so its preferred size is known; @p makeWindow is then called with that size and
+     * whether the plugin can be resized, and returns the X11 window id (0 = could not) the view is attached to
+     * ("X11EmbedWindowID"). The plugin drives itself through Linux::IRunLoop, which feeds @p pump: the caller's GUI
+     * thread polls the descriptors and timers the pump holds. When the plugin asks for another size
+     * (IPlugFrame::resizeView) @p requestResize runs, then the view is told the size took. Returns false, with nothing
+     * left open, if the plugin has no X11 editor. Call on the thread that owns the window and runs the pump.
+     */
+    bool openEditorX11(const std::function<unsigned long(int width, int height, bool resizable)>& makeWindow,
+                       EditorLoopPump& pump, std::function<void(int width, int height)> requestResize);
+    /// Whether the open editor accepts being resized by the host.
+    bool canResizeEditor() const;
+
     const PluginInfo& getInfo() const override { return m_info; }
     uint32_t getLatencySamples() const override;
     uint32_t getTailSamples() const override;
@@ -130,6 +148,7 @@ private:
     void* m_processor = nullptr;       // IAudioProcessor*
     void* m_controller = nullptr;      // IEditController*
     void* m_plugView = nullptr;        // IPlugView* (editor)
+    void* m_plugFrame = nullptr;       // host frame + run loop handed to the editor (Linux)
 
     // Audio buffers for VST3 ProcessData
     std::vector<float*> m_inputBuffers;
