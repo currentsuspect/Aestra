@@ -61,6 +61,9 @@ jobs:
           Copy-Item build\bin\Aestra.exe $out\
           if (Test-Path build\bin\AestraPluginHost.exe) { Copy-Item build\bin\AestraPluginHost.exe $out\ }
           Get-ChildItem build\bin -Filter *.dll | Copy-Item -Destination $out\
+          # App-local Visual C++ runtime (Microsoft permits this), so a fresh PC does not fail with "MSVCP140.dll was not found".
+          $crt = Get-ChildItem "$env:VCToolsRedistDir\x64" -Directory -Filter "Microsoft.VC*.CRT" | Select-Object -First 1
+          Get-ChildItem $crt.FullName -Filter *.dll | Copy-Item -Destination $out\
           Copy-Item -Recurse build\bin\AestraAssets $out\AestraAssets
           Copy-Item LICENSE $out\ -ErrorAction SilentlyContinue
           Copy-Item "installer\READ ME FIRST.txt" $out\
