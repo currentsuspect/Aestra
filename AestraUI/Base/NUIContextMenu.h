@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <optional>
 
 namespace AestraUI {
 
@@ -310,6 +311,12 @@ private:
     float scrollOffset_ = 0.0f;
     /** @brief Where the caller asked for the menu, before any edge clamping. */
     NUIPoint requestedPosition_;
+    // A submenu is painted by the menu that owns it, so it has no parent to measure against. showSubmenu() hands it the
+    // viewport and its parent menu's left edge, so that its MEASURED width (not the estimate) decides whether it opens
+    // to the right or flips to the left. Without them the first paint put it back at its requested spot, off-screen.
+    std::optional<NUIRect> viewport_;
+    bool flipsLeft_{false};
+    float flipLeftOf_{0.0f};
     /** @brief Set whenever the items change; cleared once measureAndFit() has run. */
     bool needsMeasure_ = true;
 
