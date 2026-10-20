@@ -23,19 +23,33 @@ constexpr float kAutomationEdgeSlop = 6.0f;
 struct AutomationHeaderReadout {
     double value{0.0};
     bool isNode{false};
+    /// For a node: how far it sits from its neighbour, e.g. "+3.2 dB vs prev"; "vs next" for the first node; empty when it
+    /// is the only node. The reason for clicking a node is usually to compare it with the one next to it.
+    std::string delta;
 };
+inline std::string automationDeltaLabel(AutomationTarget target, double value, double neighbour); // below
 inline AutomationHeaderReadout automationHeaderReadout(const AutomationCurve* curve, double defaultValue,
                                                        double playheadBeat) {
     if (!curve || curve->getPoints().empty()) return {defaultValue, false};
-    const AutomationPoint* only = nullptr;
+    const auto& points = curve->getPoints();
+    size_t onlyIndex = 0;
     int selected = 0;
-    for (const auto& point : curve->getPoints()) {
-        if (!point.selected) continue;
-        only = &point;
+    for (size_t i = 0; i < points.size(); ++i) {
+        if (!points[i].selected) continue;
+        onlyIndex = i;
         ++selected;
     }
-    if (selected == 1) return {only->value, true};
-    return {curve->getValueAtBeat(playheadBeat), false};
+    if (selected == 1) {
+        AutomationHeaderReadout readout{points[onlyIndex].value, true, {}};
+        if (points.size() > 1) {
+            const bool hasPrevious = onlyIndex > 0;
+            const AutomationPoint& neighbour = points[hasPrevious ? onlyIndex - 1 : onlyIndex + 1];
+            readout.delta = automationDeltaLabel(curve->getAutomationTarget(), readout.value, neighbour.value) +
+                            (hasPrevious ? " vs prev" : " vs next");
+        }
+        return readout;
+    }
+    return {curve->getValueAtBeat(playheadBeat), false, {}};
 }
 
 /// The part of a curve segment, from screen x1 to x2, that lies inside the lane [left, right], as a range of t (0 at x1,
@@ -191,6 +205,32 @@ inline std::string automationValueLabel(AutomationTarget target, double value) {
     if (!(value > 1.0e-5)) return "-\xE2\x88\x9E dB"; // -∞ in UTF-8
     const double db = 20.0 * std::log10(value);
     std::snprintf(text, sizeof(text), "%.1f dB", std::abs(db) < 0.05 ? 0.0 : db);
+    return text;
+}
+
+/// How far a node sits from its neighbour, signed, in the unit the lane reads in: volume in dB ("+3.2 dB"), pan in percent
+/// points of full ("+25"), anything else in percent. Silence has no dB, so a node above silence is "+\xE2\x88\x9E dB" and one
+/// that is silent against a sounding neighbour is "-\xE2\x88\x9E dB". Without a suffix: the caller says which neighbour.
+inline std::string automationDeltaLabel(AutomationTarget target, double value, double neighbour) {
+    char text[32];
+    if (target == AutomationTarget::Pan) {
+        const int points = static_cast<int>(std::lround((std::clamp(value, -1.0, 1.0) - std::clamp(neighbour, -1.0, 1.0)) * 100.0));
+        std::snprintf(text, sizeof(text), "%+d", points);
+        return points == 0 ? "0" : text;
+    }
+    if (target != AutomationTarget::Volume) {
+        const double points = (std::clamp(value, 0.0, 1.0) - std::clamp(neighbour, 0.0, 1.0)) * 100.0;
+        std::snprintf(text, sizeof(text), "%+.0f%%", points);
+        return std::fabs(points) < 0.5 ? "0%" : text;
+    }
+    const bool silent = !(value > 1.0e-5);
+    const bool neighbourSilent = !(neighbour > 1.0e-5);
+    if (silent && neighbourSilent) return "0.0 dB";
+    if (neighbourSilent) return "+\xE2\x88\x9E dB";
+    if (silent) return "-\xE2\x88\x9E dB";
+    const double db = 20.0 * std::log10(value / neighbour);
+    if (std::fabs(db) < 0.05) return "0.0 dB";
+    std::snprintf(text, sizeof(text), "%+.1f dB", db);
     return text;
 }
 

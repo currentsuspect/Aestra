@@ -102,13 +102,19 @@ void TrackUIComponent::renderAutomationRowHeader(AestraUI::NUIRenderer& renderer
     const std::string valueText = automationValueLabel(m_editedAutomationTarget, readout.value);
     const float valueSize = theme.getFontSize("xs");
     const float markerWidth = readout.isNode ? 9.0f : 0.0f; // a node's value wears the node's square
-    const float valueWidth = renderer.measureText(valueText, valueSize).width + markerWidth;
+    // With a neighbour to compare against, the node's level sits above and how far it is from that neighbour below;
+    // otherwise the single readout stays centred, as at the playhead.
+    const bool twoLines = readout.isNode && !readout.delta.empty();
+    const float deltaWidth = twoLines ? renderer.measureText(readout.delta, valueSize).width : 0.0f;
+    const float valueWidth = std::max(renderer.measureText(valueText, valueSize).width + markerWidth, deltaWidth);
     const float valueX = std::max(m_automationTargetRect.right() + 6.0f, m_automationHideRect.x - 6.0f - valueWidth);
+    const float lineShift = twoLines ? 6.0f : 0.0f;
+    const float valueY = std::round(renderer.calculateTextY(controlArea, valueSize)) - lineShift;
     if (readout.isNode) {
-        renderer.fillRect({valueX, cy - 2.5f, 5.0f, 5.0f}, AestraUI::NUIColor::white());
+        renderer.fillRect({valueX, std::round(cy - lineShift) - 2.5f, 5.0f, 5.0f}, AestraUI::NUIColor::white());
     }
-    renderer.drawText(valueText, {valueX + markerWidth, std::round(renderer.calculateTextY(controlArea, valueSize))},
-                      valueSize, ink);
+    renderer.drawText(valueText, {valueX + markerWidth, valueY}, valueSize, ink);
+    if (twoLines) renderer.drawText(readout.delta, {valueX, valueY + 13.0f}, valueSize, ink.withAlpha(0.62f));
 }
 
 bool TrackUIComponent::handleAutomationRowHeaderMouse(const AestraUI::NUIMouseEvent& event) {
