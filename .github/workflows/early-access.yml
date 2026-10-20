@@ -26,14 +26,14 @@ jobs:
           submodules: false
           persist-credentials: false
 
-      - name: Setup vcpkg and libsodium
+      - name: Setup vcpkg, libsodium and FreeType
         shell: pwsh
         run: |
           $env:VCPKG_ROOT = "$env:RUNNER_TEMP\vcpkg"
           git clone https://github.com/microsoft/vcpkg.git $env:VCPKG_ROOT
           git -C $env:VCPKG_ROOT checkout --force $env:VCPKG_REF
           & "$env:VCPKG_ROOT\bootstrap-vcpkg.bat" -disableMetrics
-          & "$env:VCPKG_ROOT\vcpkg.exe" install libsodium:x64-windows
+          & "$env:VCPKG_ROOT\vcpkg.exe" install libsodium:x64-windows freetype:x64-windows
 
       - name: Setup MSVC environment
         uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
