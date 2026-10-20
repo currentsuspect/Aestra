@@ -1169,7 +1169,7 @@ int main(int argc, char** argv) {
                 reply("ERR invalid-editor-request");
             }
 #else
-            reply("ERR no-editor");
+            reply(sub == "OPEN" ? "ERR no-editor" : "OK EDITOR CLOSED"); // no X11: nothing to open, so nothing is ever open
 #endif
         } else if (command == "LATENCY") {
             // The plugin's own latency in samples (V82-H2). The app adds the sandbox's one block of transport delay.
