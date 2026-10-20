@@ -631,14 +631,15 @@ endif()
 if(AESTRA_HAS_VST3)
     target_compile_definitions(AestraPluginHost PRIVATE AESTRA_HAS_VST3)
     target_link_libraries(AestraPluginHost PRIVATE AestraAudioCore)
-    # V82-H3: plugin editor windows on Linux are X11 windows the helper owns (see HelperEditorHost.h).
-    if(UNIX AND NOT APPLE)
-        find_package(X11)
-        if(X11_FOUND)
-            target_compile_definitions(AestraPluginHost PRIVATE AESTRA_HAS_X11)
-            target_include_directories(AestraPluginHost PRIVATE ${X11_INCLUDE_DIR})
-            target_link_libraries(AestraPluginHost PRIVATE ${X11_LIBRARIES})
-        endif()
+endif()
+
+# V82-H3: plugin editor windows on Linux are X11 windows the helper owns (see HelperEditorHost.h), VST3 and CLAP alike.
+if(UNIX AND NOT APPLE)
+    find_package(X11)
+    if(X11_FOUND)
+        target_compile_definitions(AestraPluginHost PRIVATE AESTRA_HAS_X11)
+        target_include_directories(AestraPluginHost PRIVATE ${X11_INCLUDE_DIR})
+        target_link_libraries(AestraPluginHost PRIVATE ${X11_LIBRARIES})
     endif()
 endif()
 

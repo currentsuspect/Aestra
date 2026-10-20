@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "HelperEditorHost.h"
+#include "HelperLineReader.h"
 #include "HelperParamCommands.h"
 #include <algorithm>
 #include <array>
@@ -31,10 +32,7 @@
 // rules are only needed there, so keep the include off the Windows build, where
 // this header is not on the include path.
 #ifndef _WIN32
-#include "ClapAbiMirror.h"
-#include "HelperFakeClap.h"
-#include "Plugin/ClapNoteConversion.h"
-#include <dlfcn.h>
+#include "HelperClapModule.h"
 #endif
 
 #if defined(AESTRA_ENABLE_TEST_HOOKS) && !defined(_WIN32)
@@ -47,613 +45,6 @@
 #endif
 
 namespace {
-
-#ifndef _WIN32
-// The shared CLAP note-conversion rules live in Aestra::Audio::ClapNote; this
-// file is in the global namespace, so alias it for brevity (#244).
-namespace ClapNote = Aestra::Audio::ClapNote;
-
-using namespace AestraHelper::ClapAbi; // the hand-mirrored CLAP ABI (ClapAbiMirror.h)
-
-constexpr const char* kProbeFirstClapPluginId = "__aestra_probe_first__";
-
-bool isClapVersionCompatible(const ClapVersion& version) {
-    return version.major == 1;
-}
-
-uint32_t emptyInputEventsSize(const ClapInputEvents* list) {
-    (void)list;
-    return 0;
-}
-
-const ClapEventHeader* emptyInputEventsGet(const ClapInputEvents* list, uint32_t index) {
-    (void)list;
-    (void)index;
-    return nullptr;
-}
-
-uint32_t midiInputEventsSize(const ClapInputEvents* list) {
-    const auto* events = list ? static_cast<const std::vector<ClapEventMidi>*>(list->ctx) : nullptr;
-    return events ? static_cast<uint32_t>(events->size()) : 0;
-}
-
-const ClapEventHeader* midiInputEventsGet(const ClapInputEvents* list, uint32_t index) {
-    const auto* events = list ? static_cast<const std::vector<ClapEventMidi>*>(list->ctx) : nullptr;
-    if (!events || index >= events->size()) {
-        return nullptr;
-    }
-    return &(*events)[index].header;
-}
-
-bool dropOutputEvent(const ClapOutputEvents* list, const ClapEventHeader* event) {
-    (void)list;
-    (void)event;
-    return true;
-}
-
-// Single clap_event_param_value input list, used to deliver a host-driven
-// parameter change to a CLAP plugin via params.flush() (#238).
-uint32_t singleParamEventSize(const ClapInputEvents* list) {
-    return (list && list->ctx) ? 1u : 0u;
-}
-
-const ClapEventHeader* singleParamEventGet(const ClapInputEvents* list, uint32_t index) {
-    if (!list || !list->ctx || index != 0) {
-        return nullptr;
-    }
-    return &static_cast<const ClapEventParamValue*>(list->ctx)->header;
-}
-
-// Heterogeneous, order-preserving input-event list: ctx is a vector of event
-// header pointers into stable backing storage. Lets note-on/off (CLAP dialect)
-// and raw MIDI events (CC etc.) be delivered in their original stream order (#244).
-uint32_t orderedEventsSize(const ClapInputEvents* list) {
-    const auto* order =
-        list ? static_cast<const std::vector<const ClapEventHeader*>*>(list->ctx) : nullptr;
-    return order ? static_cast<uint32_t>(order->size()) : 0;
-}
-
-const ClapEventHeader* orderedEventsGet(const ClapInputEvents* list, uint32_t index) {
-    const auto* order =
-        list ? static_cast<const std::vector<const ClapEventHeader*>*>(list->ctx) : nullptr;
-    if (!order || index >= order->size()) {
-        return nullptr;
-    }
-    return (*order)[index];
-}
-
-int64_t writeStateStream(const ClapOstream* stream, const void* buffer, uint64_t size) {
-    auto* out = stream ? static_cast<std::vector<uint8_t>*>(stream->ctx) : nullptr;
-    if (!out || (!buffer && size != 0)) {
-        return -1;
-    }
-    const auto* bytes = static_cast<const uint8_t*>(buffer);
-    out->insert(out->end(), bytes, bytes + size);
-    return static_cast<int64_t>(size);
-}
-
-struct StateReadContext {
-    const std::vector<uint8_t>* data{nullptr};
-    size_t offset{0};
-};
-
-int64_t readStateStream(const ClapIstream* stream, void* buffer, uint64_t size) {
-    auto* ctx = stream ? static_cast<StateReadContext*>(stream->ctx) : nullptr;
-    if (!ctx || !ctx->data || (!buffer && size != 0)) {
-        return -1;
-    }
-    const size_t available = ctx->offset < ctx->data->size() ? ctx->data->size() - ctx->offset : 0;
-    const size_t toRead = std::min<size_t>(available, static_cast<size_t>(size));
-    if (toRead > 0) {
-        std::memcpy(buffer, ctx->data->data() + ctx->offset, toRead);
-        ctx->offset += toRead;
-    }
-    return static_cast<int64_t>(toRead);
-}
-
-const void* hostGetExtension(const ClapHost* host, const char* extensionId) {
-    (void)host;
-    (void)extensionId;
-    return nullptr;
-}
-
-void hostRequestRestart(const ClapHost* host) {
-    (void)host;
-}
-
-void hostRequestProcess(const ClapHost* host) {
-    (void)host;
-}
-
-void hostRequestCallback(const ClapHost* host) {
-    (void)host;
-}
-
-#ifdef AESTRA_ENABLE_TEST_HOOKS
-namespace fakeclap = AestraHelper::FakeClap; // the test fake CLAP plugin (HelperFakeClap.h)
-#endif
-
-struct ClapModule {
-    void* library = nullptr;
-    const ClapPluginEntry* entry = nullptr;
-    const ClapPlugin* plugin = nullptr;
-    ClapHost host = {ClapVersion{1, 1, 0},   nullptr,
-                     "AestraPluginHost",     "Aestra Studios",
-                     "https://Aestra.audio", "1.0.0",
-                     hostGetExtension,       hostRequestRestart,
-                     hostRequestProcess,     hostRequestCallback};
-    bool active = false;
-    uint32_t maxBlockSize = 0;
-    std::vector<float> inputStorage[2];
-    std::vector<float> outputStorage[2];
-    std::vector<ClapEventMidi> midiEvents;
-    float* inputPlanes[2] = {nullptr, nullptr};
-    float* outputPlanes[2] = {nullptr, nullptr};
-    ClapInputEvents emptyInputEvents = {nullptr, emptyInputEventsSize, emptyInputEventsGet};
-    ClapOutputEvents outputEvents = {nullptr, dropOutputEvent};
-    const ClapPluginParams* paramsExt = nullptr;
-    const ClapPluginNotePorts* notePortsExt = nullptr;
-    // Note-delivery decision for input port 0, computed once at load (#244).
-    //  - noteDialect: kDialectClap / kDialectMidi, or 0 meaning "no mutually
-    //    supported dialect" → deliver no notes.
-    //  - rawMidiAllowed: may we send a raw CLAP_EVENT_MIDI on this port? True only
-    //    when the port advertises the MIDI dialect (or under the legacy fallback).
-    //    Non-note MIDI (CC etc.) on a CLAP-only port is dropped, never emitted as a
-    //    MIDI dialect the port did not advertise.
-    //  - noteDialectFromLegacyFallback: the plugin exposes no clap.note-ports
-    //    extension. Per the CLAP contract that means "no note ports"; Aestra
-    //    nonetheless sends raw MIDI to avoid regressing plugins that worked before
-    //    note-ports negotiation existed. This is a named legacy compatibility
-    //    fallback, NOT a standards-compliant negotiation result.
-    uint32_t noteDialect = ClapNote::kDialectMidi;
-    bool rawMidiAllowed = true;
-    bool noteDialectFromLegacyFallback = true;
-    // One capacity governs all note-event storage: the midi/note backing vectors,
-    // the heterogeneous event-order view, and the per-block accept cap. The
-    // backing vectors are reserved to this once (initialize), so the header
-    // pointers recorded in noteEventOrder stay valid for the whole process() call.
-    static constexpr size_t kMaxNoteEventsPerBlock = 1024;
-    std::vector<ClapEventNote> noteEvents;
-    // Heterogeneous in-order view over midiEvents/noteEvents for process.in_events.
-    std::vector<const ClapEventHeader*> noteEventOrder;
-
-    ~ClapModule() { close(); }
-
-    ClapModule() = default;
-    ClapModule(const ClapModule&) = delete;
-    ClapModule& operator=(const ClapModule&) = delete;
-
-    void close() {
-        deactivate();
-        paramsExt = nullptr;
-        notePortsExt = nullptr;
-        noteDialect = ClapNote::kDialectMidi;
-        rawMidiAllowed = true;
-        noteDialectFromLegacyFallback = true;
-        if (plugin && plugin->destroy) {
-            plugin->destroy(plugin);
-        }
-        plugin = nullptr;
-        if (entry && entry->deinit) {
-            entry->deinit();
-        }
-        entry = nullptr;
-        if (library) {
-            dlclose(library);
-            library = nullptr;
-        }
-        maxBlockSize = 0;
-    }
-
-    bool load(const std::string& path, const std::string& pluginId, std::string& error) {
-        close();
-        library = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
-        if (!library) {
-            error = "clap-dlopen-failed";
-            return false;
-        }
-
-        entry = reinterpret_cast<const ClapPluginEntry*>(dlsym(library, "clap_entry"));
-        if (!entry || !isClapVersionCompatible(entry->clapVersion) || !entry->init || !entry->getFactory) {
-            error = "invalid-clap-entry";
-            close();
-            return false;
-        }
-
-        if (!entry->init(path.c_str())) {
-            error = "clap-init-failed";
-            close();
-            return false;
-        }
-
-        const auto* factory = static_cast<const ClapPluginFactory*>(entry->getFactory(kClapPluginFactoryId));
-        if (!factory || !factory->getPluginCount || !factory->getPluginDescriptor) {
-            error = "missing-clap-factory";
-            close();
-            return false;
-        }
-
-        const uint32_t count = factory->getPluginCount(factory);
-        if (count == 0) {
-            error = "empty-clap-factory";
-            close();
-            return false;
-        }
-
-        const ClapPluginDescriptor* selected = nullptr;
-        if (pluginId == kProbeFirstClapPluginId) {
-            selected = factory->getPluginDescriptor(factory, 0);
-            if (!selected || !selected->id || selected->id[0] == '\0') {
-                error = "invalid-clap-descriptor";
-                close();
-                return false;
-            }
-        } else {
-            for (uint32_t index = 0; index < count; ++index) {
-                const ClapPluginDescriptor* descriptor = factory->getPluginDescriptor(factory, index);
-                if (descriptor && descriptor->id && pluginId == descriptor->id) {
-                    selected = descriptor;
-                    break;
-                }
-            }
-            if (!selected) {
-                error = "clap-plugin-id-not-found";
-                close();
-                return false;
-            }
-        }
-
-        if (!factory->createPlugin) {
-            error = "missing-clap-create-plugin";
-            close();
-            return false;
-        }
-        plugin = factory->createPlugin(factory, &host, selected->id);
-        if (!plugin || !plugin->init || !plugin->destroy || !plugin->activate || !plugin->deactivate ||
-            !plugin->startProcessing || !plugin->stopProcessing || !plugin->process) {
-            error = "invalid-clap-plugin";
-            close();
-            return false;
-        }
-        if (!plugin->init(plugin)) {
-            error = "clap-plugin-init-failed";
-            close();
-            return false;
-        }
-        if (plugin->getExtension) {
-            paramsExt = static_cast<const ClapPluginParams*>(plugin->getExtension(plugin, kClapExtParams));
-            notePortsExt =
-                static_cast<const ClapPluginNotePorts*>(plugin->getExtension(plugin, kClapExtNotePorts));
-        }
-        resolveNoteDialect();
-        return true;
-    }
-
-    // Decide, once (on the main thread, while deactivated — never on the RT path),
-    // how to deliver notes on input port 0. Advertised note-ports drive real
-    // negotiation; a missing extension is the named legacy compatibility fallback
-    // (Aestra sends raw MIDI as it always has, which is NOT the CLAP-compliant
-    // result — absence of the extension means "no note ports") (#244). Assumes
-    // plugin and notePortsExt are already resolved.
-    void resolveNoteDialect() {
-        const bool hasNotePort = plugin && notePortsExt && notePortsExt->count && notePortsExt->get &&
-                                 notePortsExt->count(plugin, /*isInput=*/true) > 0;
-        if (hasNotePort) {
-            noteDialectFromLegacyFallback = false;
-            ClapNotePortInfo info{};
-            if (notePortsExt->get(plugin, 0, /*isInput=*/true, &info)) {
-                noteDialect = ClapNote::selectDialect(info.supportedDialects, info.preferredDialect);
-                rawMidiAllowed = (info.supportedDialects & ClapNote::kDialectMidi) != 0;
-                if (noteDialect == 0) {
-                    std::cerr << "[AestraPluginHost] note port 0 advertises no host-supported "
-                                 "dialect; delivering no notes\n";
-                }
-            } else {
-                // Extension present but the port could not be read — deliver nothing
-                // rather than guess a dialect the plugin did not advertise.
-                noteDialect = 0;
-                rawMidiAllowed = false;
-            }
-        } else {
-            noteDialectFromLegacyFallback = true;
-            noteDialect = ClapNote::kDialectMidi;
-            rawMidiAllowed = true;
-        }
-    }
-
-#ifdef AESTRA_ENABLE_TEST_HOOKS
-    // Wire the fake CLAP plugin in place of a dlopen'd module and run the SAME
-    // note-ports resolution the real path uses, so tests exercise the production
-    // conversion boundary (#244). The fake's note-ports configuration is set on
-    // fakeclap::g_state before calling this.
-    void loadFakeForTest() {
-        close();
-        plugin = &fakeclap::g_plugin;
-        paramsExt = nullptr;
-        notePortsExt = plugin->getExtension
-                           ? static_cast<const ClapPluginNotePorts*>(
-                                 plugin->getExtension(plugin, kClapExtNotePorts))
-                           : nullptr;
-        resolveNoteDialect();
-    }
-#endif
-
-    /// The plugin's own latency in samples (clap.latency), 0 when it has none or is not active yet.
-    uint32_t latencySamples() const {
-        if (!plugin || !active || !plugin->getExtension) return 0;
-        const auto* latency = static_cast<const ClapPluginLatency*>(plugin->getExtension(plugin, kClapExtLatency));
-        return latency && latency->get ? latency->get(plugin) : 0;
-    }
-
-    bool initialize(double sampleRate, uint32_t blockSize, std::string& error) {
-        if (!plugin || sampleRate <= 0.0 || blockSize == 0 || blockSize > 65536) {
-            error = "invalid-clap-init";
-            return false;
-        }
-        maxBlockSize = blockSize;
-        for (auto& storage : inputStorage) {
-            storage.assign(maxBlockSize, 0.0f);
-        }
-        for (auto& storage : outputStorage) {
-            storage.assign(maxBlockSize, 0.0f);
-        }
-        midiEvents.reserve(kMaxNoteEventsPerBlock);
-        noteEvents.reserve(kMaxNoteEventsPerBlock);
-        noteEventOrder.reserve(kMaxNoteEventsPerBlock);
-        inputPlanes[0] = inputStorage[0].data();
-        inputPlanes[1] = inputStorage[1].data();
-        outputPlanes[0] = outputStorage[0].data();
-        outputPlanes[1] = outputStorage[1].data();
-        if (!plugin->activate(plugin, sampleRate, 1, maxBlockSize)) {
-            error = "clap-activate-failed";
-            return false;
-        }
-        active = true;
-        if (!plugin->startProcessing(plugin)) {
-            active = false;
-            plugin->deactivate(plugin);
-            error = "clap-start-processing-failed";
-            return false;
-        }
-        return true;
-    }
-
-    void deactivate() {
-        if (active && plugin) {
-            if (plugin->stopProcessing) {
-                plugin->stopProcessing(plugin);
-            }
-            if (plugin->deactivate) {
-                plugin->deactivate(plugin);
-            }
-        }
-        active = false;
-    }
-
-    // Deliver a host-driven parameter change to the plugin. CLAP has no direct
-    // setter; the host queues a param-value event and calls params.flush(), which
-    // the plugin applies on its main thread (#238). Returns false if the plugin
-    // has no params extension or the id is out of range.
-    bool setParameter(uint32_t paramId, double value) {
-        if (!plugin || !paramsExt || !paramsExt->flush) {
-            return false;
-        }
-        if (paramsExt->count && paramId >= paramsExt->count(plugin)) {
-            return false;
-        }
-        ClapEventParamValue event{};
-        event.header.size = sizeof(event);
-        event.header.time = 0;
-        event.header.spaceId = kClapCoreEventSpaceId;
-        event.header.type = kClapEventParamValue;
-        event.header.flags = 0;
-        event.paramId = paramId;
-        event.cookie = nullptr;
-        event.noteId = -1;
-        event.portIndex = -1;
-        event.channel = -1;
-        event.key = -1;
-        event.value = value;
-
-        ClapInputEvents inEvents = {&event, singleParamEventSize, singleParamEventGet};
-        ClapOutputEvents outEvents = {nullptr, dropOutputEvent};
-        paramsExt->flush(plugin, &inEvents, &outEvents);
-        return true;
-    }
-
-    bool process(const std::vector<float>& interleavedInput, uint32_t channels, uint32_t frames,
-                 const std::vector<uint8_t>* midiData, size_t midiBytes, std::vector<float>& interleavedOutput) {
-        if (!active || !plugin || channels == 0 || channels > 2 || frames == 0 || frames > maxBlockSize) {
-            return false;
-        }
-        for (uint32_t ch = 0; ch < 2; ++ch) {
-            std::fill(outputStorage[ch].begin(), outputStorage[ch].begin() + frames, 0.0f);
-            for (uint32_t frame = 0; frame < frames; ++frame) {
-                inputStorage[ch][frame] =
-                    (ch < channels) ? interleavedInput[static_cast<size_t>(frame) * channels + ch] : 0.0f;
-            }
-        }
-
-        // Convert incoming raw MIDI to the note dialect selected for this plugin's
-        // input port (#244): native CLAP note-on/off when the port prefers/only
-        // supports CLAP, else raw CLAP_EVENT_MIDI. Non-note messages stay raw MIDI.
-        // noteEventOrder preserves original stream order across both event types;
-        // backing vectors are reserved so the recorded header pointers stay valid.
-        midiEvents.clear();
-        noteEvents.clear();
-        noteEventOrder.clear();
-        if (midiData && midiBytes <= midiData->size() && (midiBytes % 8) == 0) {
-            for (size_t offset = 0; offset < midiBytes && noteEventOrder.size() < kMaxNoteEventsPerBlock;
-                 offset += 8) {
-                const uint8_t size = (*midiData)[offset + 4];
-                if (size != 3) {
-                    continue;
-                }
-                uint32_t sampleOffset = 0;
-                std::memcpy(&sampleOffset, midiData->data() + offset, sizeof(sampleOffset));
-                const uint32_t time = std::min<uint32_t>(sampleOffset, frames > 0 ? frames - 1 : 0);
-                const uint8_t* bytes = midiData->data() + offset + 5;
-                const ClapNote::DecodedNote note = ClapNote::decodeMidiMessage(bytes);
-                const bool isNote = note.kind == ClapNote::MidiNoteKind::NoteOn ||
-                                    note.kind == ClapNote::MidiNoteKind::NoteOff;
-
-                if (isNote) {
-                    // A note goes out in the selected dialect. noteDialect==0 means
-                    // the port shares no dialect with us — drop rather than guess.
-                    if (noteDialect == ClapNote::kDialectClap) {
-                        ClapEventNote event{};
-                        event.header.size = sizeof(event);
-                        event.header.time = time;
-                        event.header.spaceId = kClapCoreEventSpaceId;
-                        event.header.type = note.kind == ClapNote::MidiNoteKind::NoteOn ? kClapEventNoteOn
-                                                                                       : kClapEventNoteOff;
-                        event.header.flags = 0;
-                        event.noteId = -1;
-                        event.portIndex = 0;
-                        event.channel = static_cast<int16_t>(note.channel);
-                        event.key = static_cast<int16_t>(note.key);
-                        event.velocity = ClapNote::normalizedVelocity(note.velocity);
-                        noteEvents.push_back(event);
-                        noteEventOrder.push_back(&noteEvents.back().header);
-                    } else if (noteDialect == ClapNote::kDialectMidi) {
-                        ClapEventMidi event{};
-                        event.header.size = sizeof(event);
-                        event.header.time = time;
-                        event.header.spaceId = kClapCoreEventSpaceId;
-                        event.header.type = kClapEventMidi;
-                        event.header.flags = 0;
-                        event.portIndex = 0;
-                        std::memcpy(event.data, bytes, 3);
-                        midiEvents.push_back(event);
-                        noteEventOrder.push_back(&midiEvents.back().header);
-                    }
-                    // else noteDialect == 0: no mutually supported dialect, drop.
-                } else if (rawMidiAllowed) {
-                    // Non-note MIDI (CC, pitch bend…) rides the raw-MIDI dialect only
-                    // when the port advertises it. On a CLAP-only port it is dropped
-                    // deliberately — never emitted as a dialect the port did not accept.
-                    ClapEventMidi event{};
-                    event.header.size = sizeof(event);
-                    event.header.time = time;
-                    event.header.spaceId = kClapCoreEventSpaceId;
-                    event.header.type = kClapEventMidi;
-                    event.header.flags = 0;
-                    event.portIndex = 0;
-                    std::memcpy(event.data, bytes, 3);
-                    midiEvents.push_back(event);
-                    noteEventOrder.push_back(&midiEvents.back().header);
-                }
-            }
-        }
-        ClapInputEvents midiInputEvents = {&noteEventOrder, orderedEventsSize, orderedEventsGet};
-
-        ClapAudioBuffer inputBuffer = {};
-        inputBuffer.data32 = inputPlanes;
-        inputBuffer.channelCount = channels;
-        inputBuffer.latency = 0;
-        inputBuffer.constantMask = 0;
-
-        ClapAudioBuffer outputBuffer = {};
-        outputBuffer.data32 = outputPlanes;
-        outputBuffer.channelCount = channels;
-        outputBuffer.latency = 0;
-        outputBuffer.constantMask = 0;
-
-        ClapProcess processData = {};
-        processData.steadyTime = -1;
-        processData.framesCount = frames;
-        processData.transport = nullptr;
-        processData.audioInputs = &inputBuffer;
-        processData.audioOutputs = &outputBuffer;
-        processData.audioInputsCount = 1;
-        processData.audioOutputsCount = 1;
-        processData.inEvents = noteEventOrder.empty() ? &emptyInputEvents : &midiInputEvents;
-        processData.outEvents = &outputEvents;
-
-        if (plugin->process(plugin, &processData) == kClapProcessError) {
-            return false;
-        }
-
-        interleavedOutput.resize(static_cast<size_t>(channels) * frames);
-        for (uint32_t frame = 0; frame < frames; ++frame) {
-            for (uint32_t ch = 0; ch < channels; ++ch) {
-                interleavedOutput[static_cast<size_t>(frame) * channels + ch] = outputStorage[ch][frame];
-            }
-        }
-        return true;
-    }
-
-    bool saveState(std::vector<uint8_t>& stateData) {
-        stateData.clear();
-        if (!plugin || !plugin->getExtension) {
-            return false;
-        }
-        auto* state = static_cast<const ClapPluginState*>(plugin->getExtension(plugin, kClapExtState));
-        if (!state || !state->save) {
-            return false;
-        }
-        ClapOstream stream = {&stateData, writeStateStream};
-        return state->save(plugin, &stream);
-    }
-
-    bool loadState(const std::vector<uint8_t>& stateData) {
-        if (stateData.empty()) {
-            return true;
-        }
-        if (!plugin || !plugin->getExtension) {
-            return false;
-        }
-        auto* state = static_cast<const ClapPluginState*>(plugin->getExtension(plugin, kClapExtState));
-        if (!state || !state->load) {
-            return false;
-        }
-        StateReadContext ctx{&stateData, 0};
-        ClapIstream stream = {&ctx, readStateStream};
-        return state->load(plugin, &stream);
-    }
-
-    bool scanMetadata(const std::string& path, const ClapPluginDescriptor*& descriptor, std::string& error) {
-        descriptor = nullptr;
-        close();
-        library = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
-        if (!library) {
-            error = "clap-dlopen-failed";
-            return false;
-        }
-
-        entry = reinterpret_cast<const ClapPluginEntry*>(dlsym(library, "clap_entry"));
-        if (!entry || !isClapVersionCompatible(entry->clapVersion) || !entry->init || !entry->getFactory) {
-            error = "invalid-clap-entry";
-            close();
-            return false;
-        }
-        if (!entry->init(path.c_str())) {
-            error = "clap-init-failed";
-            close();
-            return false;
-        }
-
-        const auto* factory = static_cast<const ClapPluginFactory*>(entry->getFactory(kClapPluginFactoryId));
-        if (!factory || !factory->getPluginCount || !factory->getPluginDescriptor) {
-            error = "missing-clap-factory";
-            close();
-            return false;
-        }
-        if (factory->getPluginCount(factory) == 0) {
-            error = "empty-clap-factory";
-            close();
-            return false;
-        }
-        descriptor = factory->getPluginDescriptor(factory, 0);
-        if (!descriptor || !descriptor->id || descriptor->id[0] == '\0') {
-            error = "invalid-clap-descriptor";
-            close();
-            return false;
-        }
-        return true;
-    }
-};
-#endif
 
 #ifdef AESTRA_HAS_VST3
 struct Vst3Module {
@@ -949,13 +340,39 @@ int main(int argc, char** argv) {
 #endif
 #ifdef AESTRA_HAS_VST3
     Vst3Module vst3Module;
+#endif
 #if defined(AESTRA_HAS_X11)
     AestraHelper::EditorHost editorHost;
 #endif
     AestraHelper::EditLog editLog;
-#endif
 
-    while (std::getline(std::cin, line)) {
+#ifndef _WIN32
+    AestraHelper::LineReader lineReader;
+#endif
+    // The next command. On POSIX the same thread runs an open plugin editor between commands (HelperLineReader.h).
+    auto readCommand = [&](std::string& out) -> bool {
+#ifdef _WIN32
+        return static_cast<bool>(std::getline(std::cin, out));
+#else
+        return lineReader.next(
+            out,
+            [&](std::vector<pollfd>& fds, int& timeoutMs) {
+                clapModule.hostContext.pollFds(fds, timeoutMs);
+#if defined(AESTRA_HAS_X11)
+                editorHost.pollFds(fds, timeoutMs);
+#endif
+            },
+            [&] {
+                clapModule.hostContext.service();
+#if defined(AESTRA_HAS_X11)
+                editorHost.service();
+#endif
+            }
+        );
+#endif
+    };
+
+    while (readCommand(line)) {
         // Binary stdin (above) means getline no longer strips a '\r' for us. The
         // parent frames with '\n' alone, so this is belt-and-braces on an untrusted
         // parse boundary rather than a live case.
@@ -1095,6 +512,7 @@ int main(int argc, char** argv) {
                     reply("ERR " + error);
                     continue;
                 }
+                clapModule.onParamOut = [&editLog](uint32_t paramId, double v) { editLog.add(paramId, v); };
             } else {
                 clapModule.close();
             }
@@ -1154,13 +572,19 @@ int main(int argc, char** argv) {
             // V82-H3: EDITOR OPEN <titleHex> -> OK EDITOR <w> <h> | ERR; EDITOR CLOSE; EDITOR STATE -> OK EDITOR OPEN|CLOSED
             std::string sub;
             input >> sub;
-#if defined(AESTRA_HAS_VST3) && defined(AESTRA_HAS_X11)
+#if defined(AESTRA_HAS_X11)
             if (sub == "OPEN") {
                 std::string titleHex;
                 input >> titleHex;
                 int w = 0, h = 0;
-                if (!vst3Module.plugin) reply("ERR no-editor");
-                else if (!editorHost.open(vst3Module.plugin, hexDecode(titleHex), w, h)) reply("ERR no-editor");
+                AestraHelper::EditorBackend backend;
+#ifdef AESTRA_HAS_VST3
+                if (vst3Module.plugin) backend = AestraHelper::vst3EditorBackend(vst3Module.plugin);
+#endif
+#ifndef _WIN32
+                if (clapModule.plugin) backend = clapEditorBackend(clapModule);
+#endif
+                if (!editorHost.open(std::move(backend), hexDecode(titleHex), w, h)) reply("ERR no-editor");
                 else reply("OK EDITOR " + std::to_string(w) + " " + std::to_string(h));
             } else if (sub == "CLOSE") {
                 editorHost.close();
@@ -1183,6 +607,29 @@ int main(int argc, char** argv) {
         } else if (command == "EDITS") {
             reply(editLog.take());
 #endif
+        } else if (command == "PARAMS") {
+            std::string list = "OK 0";
+#ifdef AESTRA_HAS_VST3
+            if (vst3Module.plugin) list = AestraHelper::paramsReply(*vst3Module.plugin);
+#endif
+#ifndef _WIN32
+            if (clapModule.plugin) list = clapModule.paramsReply();
+#endif
+            reply(list);
+        } else if (command == "GETPARAM") {
+            uint32_t paramId = 0;
+            std::string answer = "ERR no-plugin";
+            if (input >> paramId) {
+#ifdef AESTRA_HAS_VST3
+                if (vst3Module.plugin) answer = AestraHelper::getParamReply(*vst3Module.plugin, paramId);
+#endif
+#ifndef _WIN32
+                if (clapModule.plugin) answer = clapModule.getParamReply(paramId);
+#endif
+            }
+            reply(answer);
+        } else if (command == "EDITS") {
+            reply(editLog.take());
         } else if (command == "LATENCY") {
             // The plugin's own latency in samples (V82-H2). The app adds the sandbox's one block of transport delay.
             uint32_t pluginLatency = 0;
