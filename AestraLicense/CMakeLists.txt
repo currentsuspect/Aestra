@@ -15,6 +15,7 @@ add_library(AestraLicense STATIC
     src/LicenseRefreshClient.cpp
     src/LocalAccountCache.cpp
     src/MembershipViewModel.cpp
+    src/UpdateFeed.cpp
 )
 
 target_include_directories(AestraLicense
