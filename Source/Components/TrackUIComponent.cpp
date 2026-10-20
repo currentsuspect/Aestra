@@ -320,7 +320,7 @@ void TrackUIComponent::showClipRoutingMenu(const ClipInstanceID& clipId, const A
             m_clipRoutingMenu->addSeparator();
         addAction("Cut", "Ctrl+X", [parentManager]() { parentManager->cutSelectedClip(); });
         addAction("Copy", "Ctrl+C", [parentManager]() { parentManager->copySelectedClip(); });
-        addAction("Duplicate", "Ctrl+D", [parentManager]() { parentManager->duplicateSelectedClip(); });
+        addAction("Duplicate", "Ctrl+D", [parentManager]() { parentManager->duplicateSelectedClip(); }); addAction(parentManager->isClipMuted(clipId) ? "Unmute" : "Mute", "Alt+Click", [parentManager, clipId]() { parentManager->toggleClipMute(clipId); });
         if (pattern)
             addAction("Bounce in Place", "", [parentManager]() { parentManager->bounceSelectedClipsInPlace(); });
         if (pattern && m_trackManager) {
@@ -1991,7 +1991,7 @@ void TrackUIComponent::onResize(int width, int height) {
 // =============================================================================
 
 bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
-    if (handleEraseTool(event) || handleAutomationRowHeaderMouse(event)) return true; // TrackUIComponentErase.cpp, …AutomationRow.cpp
+    if (handleMuteTool(event) || handleAutomationRowHeaderMouse(event)) return true; // TrackUIComponentMute.cpp, …AutomationRow.cpp
     // 1. Invalidate cache on mouse movement in the control area (button hover feedback).
     if (m_onCacheInvalidationCallback) {
         // Check if we are over the control area

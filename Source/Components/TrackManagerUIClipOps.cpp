@@ -19,6 +19,7 @@
 #include "Commands/MacroCommand.h"
 #include "Commands/MoveClipCommand.h"
 #include "Commands/RemoveClipCommand.h"
+#include "Commands/SetClipEditsCommand.h"
 #include "Commands/SplitClipCommand.h"
 #include "MiniAudioDecoder.h"
 #include "MixerChannel.h"
@@ -780,6 +781,35 @@ void TrackManagerUI::onPaintClip(TrackUIComponent* trackComp, double beat) {
 // =============================================================================
 // Clip Manipulation Methods
 // =============================================================================
+
+bool TrackManagerUI::isClipMuted(ClipInstanceID clipId) const {
+    if (!m_trackManager || !clipId.isValid()) return false;
+    const ClipInstance* clip = m_trackManager->getPlaylistModel().getClip(clipId);
+    return clip && clip->edits.muted;
+}
+
+bool TrackManagerUI::toggleClipMute(ClipInstanceID clipId, std::optional<bool> target) {
+    if (!m_trackManager || !clipId.isValid()) return false;
+    auto& model = m_trackManager->getPlaylistModel();
+    const ClipInstance* clip = model.getClip(clipId);
+    if (!clip) return false;
+    const bool before = clip->edits.muted;
+    const bool next = target.value_or(!before);
+    if (next == before) return next; // already there: no undo step for nothing
+
+    ClipEdits edits = clip->edits;
+    edits.muted = next;
+    auto change = std::make_shared<SetClipEditsCommand>(model, clipId, edits);
+    change->named(next ? "Mute Clip" : "Unmute Clip");
+    m_trackManager->getCommandHistory().pushAndExecute(change);
+
+    // A muted clip must go quiet (or come back) while the timeline is playing, the same refresh paint and duplicate use.
+    m_trackManager->refreshTimelinePatternInstances();
+    refreshTracks();
+    invalidateCache();
+    scheduleTimelineMinimapRebuild();
+    return next;
+}
 
 TrackUIComponent* TrackManagerUI::getSelectedTrackUI() const {
     for (const auto& trackUI : m_trackUIComponents) {

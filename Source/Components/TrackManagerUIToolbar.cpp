@@ -36,6 +36,25 @@
 namespace Aestra {
 namespace Audio {
 
+// The tools that draw their own glyph beside the pointer while it is over the grid.
+// Draw only shows its pencil when it has a clip to stamp; with nothing to stamp it behaves like Select and keeps the arrow.
+inline bool toolOwnsCursor(PlaylistTool t, bool canPaint) {
+    return t == PlaylistTool::Split || t == PlaylistTool::Mute || (t == PlaylistTool::Paint && canPaint);
+}
+
+// A cursor glyph with a soft dark edge, so a white glyph stays readable over bright clips as well as the dark grid.
+static void drawToolCursorGlyph(AestraUI::NUIRenderer& renderer, const std::shared_ptr<AestraUI::NUIIcon>& icon,
+                                AestraUI::NUIRect rect) {
+    if (!icon) return;
+    const AestraUI::NUIRect shadow(rect.x + 1.0f, rect.y + 1.0f, rect.width, rect.height);
+    icon->setColor(AestraUI::NUIColor(0, 0, 0, 150));
+    icon->setBounds(shadow);
+    icon->onRender(renderer);
+    icon->setColor(AestraUI::NUIColor(255, 255, 255, 255));
+    icon->setBounds(rect);
+    icon->onRender(renderer);
+}
+
 // =============================================================================
 // SECTION: Toolbar & Tools
 // =============================================================================
@@ -75,11 +94,11 @@ void TrackManagerUI::createToolIcons() {
         R"(<svg viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M15.9 3.1A1.9 1.9 0 0 1 18.6 3.1L20.9 5.4A1.9 1.9 0 0 1 20.9 8.1L9.1 19.9 3.4 20.6 4.1 14.9Z M14.5 6.7L17.3 9.5 18.2 8.6 15.4 5.8Z"/></svg>)";
     m_paintToolIcon = std::make_shared<AestraUI::NUIIcon>(paintSvg);
 
-    // === ERASE TOOL ICON ===
-    // An eraser block cut at an angle with its worn end, drawn as one solid shape like the other three tool glyphs.
-    const char* eraseSvg =
-        R"(<svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M15.2 3.5a2 2 0 0 1 2.8 0l3.5 3.5a2 2 0 0 1 0 2.8L11.9 19.4H20v1.8H8.4l-5-5a2 2 0 0 1 0-2.8zm-1.4 3L5.4 14.9l3.7 3.7 8.4-8.4z"/></svg>)";
-    m_eraseToolIcon = std::make_shared<AestraUI::NUIIcon>(eraseSvg);
+    // === MUTE TOOL ICON ===
+    // A speaker with a cross: the clip goes quiet. Solid, like the other tool glyphs.
+    const char* muteSvg =
+        R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.6 9.4v5.2h3.7l4.6 4V5.4l-4.6 4z"/><path d="M14.3 9.2l1.4-1.4 2.4 2.4 2.4-2.4 1.4 1.4-2.4 2.4 2.4 2.4-1.4 1.4-2.4-2.4-2.4 2.4-1.4-1.4 2.4-2.4z"/></svg>)";
+    m_muteToolIcon = std::make_shared<AestraUI::NUIIcon>(muteSvg);
 
     // === MENU ICON (Hamburger) ===
     const char* menuSvg =
@@ -126,7 +145,7 @@ void TrackManagerUI::setCurrentTool(PlaylistTool tool) {
     if (m_currentTool != tool) {
         m_currentTool = tool;
         // Split AND Paint tools manage their own cursor visibility
-        m_showSplitCursor = (tool == PlaylistTool::Split || tool == PlaylistTool::Paint);
+        m_showSplitCursor = toolOwnsCursor(tool, true);
 
         // If switching to Paint tool and clipboard is empty, try to pick selected clip
         if (tool == PlaylistTool::Paint && !m_clipboardClip.id.isValid() && m_selectedClipId.isValid()) {
@@ -210,7 +229,7 @@ bool TrackManagerUI::isCustomCursorActive() const {
     // already window-absolute, so getGlobalBounds() (gone since V8-X2b 6b) double-counted the parent
     // offset and shifts the region down, leaving a top strip where the arrow is
     // not suppressed while the tool cursor still draws (both cursors visible).
-    if (hoverCurrent && (m_currentTool == PlaylistTool::Split || m_currentTool == PlaylistTool::Paint)) {
+    if (hoverCurrent && toolOwnsCursor(m_currentTool, canPaintClip())) {
         AestraUI::NUIRect bounds = getBounds();
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
@@ -281,7 +300,8 @@ void TrackManagerUI::setSnapSetting(AestraUI::SnapGrid snap) {
 // Tools are words, not bare icons; the snap value is always visible and opens the snap menu.
 namespace {
 constexpr float kToolbarControlHeight = 22.0f;
-constexpr float kToolLabelWidths[] = {78.0f, 68.0f, 66.0f, 70.0f}; // Select, Draw, Split, Erase: a 14 px glyph, a gap, the word at 12 px
+constexpr float kToolButtonWidth = 30.0f; // Select, Draw, Split, Mute: a 14 px white glyph each; the active one is named beside the group
+constexpr float kToolNameSlot = 52.0f;
 } // namespace
 
 void TrackManagerUI::updateToolbarBounds() {
@@ -292,15 +312,16 @@ void TrackManagerUI::updateToolbarBounds() {
 
     float x = bounds.x + 10.0f;
     const float groupLeft = x;
-    AestraUI::NUIRect* tools[] = {&m_selectToolBounds, &m_paintToolBounds, &m_splitToolBounds, &m_eraseToolBounds};
+    AestraUI::NUIRect* tools[] = {&m_selectToolBounds, &m_paintToolBounds, &m_splitToolBounds, &m_muteToolBounds};
     for (int i = 0; i < 4; ++i) {
-        *tools[i] = AestraUI::NUIRect(x + 2.0f, y + 2.0f, kToolLabelWidths[i], h - 4.0f);
-        x += kToolLabelWidths[i];
+        *tools[i] = AestraUI::NUIRect(x + 2.0f, y + 2.0f, kToolButtonWidth, h - 4.0f);
+        x += kToolButtonWidth;
     }
     m_toolbarBounds = AestraUI::NUIRect(groupLeft, y, x + 4.0f - groupLeft, h);
+    x += 4.0f + 8.0f + kToolNameSlot; // the active tool's name sits here, so nothing shifts when the tool changes
     m_multiSelectToolBounds = AestraUI::NUIRect(); // not on the board; empty-grid drag marquees (ruling 2026-09-23)
 
-    x += 18.0f;
+    x += 10.0f;
     m_snapBounds = AestraUI::NUIRect(x, y, 78.0f, h);
     x += 78.0f + 10.0f;
     m_followPlayheadBounds = AestraUI::NUIRect(x, y, h, h);
@@ -366,15 +387,16 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
         renderer.strokeRoundedRect(r, 4.0f, 1.0f, border.withAlpha(hovered ? 0.55f : 0.35f));
     };
 
-    // Tools: one segmented group, a white glyph and the word; the active one is filled and fully lit.
+    // Tools: one segmented group of white glyphs; the active one is filled and fully lit, and named beside the group.
     renderer.strokeRoundedRect(m_toolbarBounds, 5.0f, 1.0f, border.withAlpha(0.35f));
     struct Tool { const AestraUI::NUIRect* r; PlaylistTool tool; const char* label; bool hovered; };
     const Tool tools[] = {
         {&m_selectToolBounds, PlaylistTool::Select, "Select", m_selectToolHovered},
         {&m_paintToolBounds, PlaylistTool::Paint, "Draw", m_paintToolHovered},
         {&m_splitToolBounds, PlaylistTool::Split, "Split", m_splitToolHovered},
-        {&m_eraseToolBounds, PlaylistTool::Erase, "Erase", m_eraseToolHovered},
+        {&m_muteToolBounds, PlaylistTool::Mute, "Mute", m_muteToolHovered},
     };
+    constexpr float kGlyph = 14.0f;
     for (const auto& t : tools) {
         const bool active = m_currentTool == t.tool;
         if (active) {
@@ -382,21 +404,20 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
         } else if (t.hovered) {
             renderer.fillRoundedRect(*t.r, 3.0f, theme.getColor("buttonBgHover").withAlpha(0.9f));
         }
-        const float alpha = active ? 1.0f : (t.hovered ? 0.9f : 0.62f);
         const auto& glyph = t.tool == PlaylistTool::Select ? m_selectToolIcon
                             : t.tool == PlaylistTool::Paint ? m_paintToolIcon
                             : t.tool == PlaylistTool::Split ? m_splitToolIcon
-                                                            : m_eraseToolIcon;
-        constexpr float kGlyph = 14.0f, kGap = 6.0f;
-        const float labelWidth = renderer.measureText(t.label, fontSize).width;
-        const float startX = std::round(t.r->x + (t.r->width - (kGlyph + kGap + labelWidth)) * 0.5f);
+                                                            : m_muteToolIcon;
         if (glyph) {
             glyph->setIconSize(kGlyph, kGlyph);
-            glyph->setBounds({startX, std::round(t.r->y + (t.r->height - kGlyph) * 0.5f), kGlyph, kGlyph});
-            glyph->setColor(text.withAlpha(alpha));
+            glyph->setBounds({std::round(t.r->x + (t.r->width - kGlyph) * 0.5f), std::round(t.r->y + (t.r->height - kGlyph) * 0.5f), kGlyph, kGlyph});
+            glyph->setColor(text.withAlpha(active ? 1.0f : (t.hovered ? 0.9f : 0.62f)));
             glyph->onRender(renderer);
         }
-        renderer.drawText(t.label, {startX + kGlyph + kGap, renderer.calculateTextY(*t.r, fontSize)}, fontSize, text.withAlpha(alpha));
+        if (active) {
+            const AestraUI::NUIRect slot(m_toolbarBounds.right() + 8.0f, m_toolbarBounds.y, kToolNameSlot, m_toolbarBounds.height);
+            renderer.drawText(t.label, {slot.x, renderer.calculateTextY(slot, fontSize)}, fontSize, text.withAlpha(0.8f));
+        }
     }
 
     // SNAP value: small caps label, then the current value and a caret.
@@ -670,8 +691,8 @@ bool TrackManagerUI::handleToolbarClick(const AestraUI::NUIPoint& position) {
         setCurrentTool(PlaylistTool::Split);
         return true;
     }
-    if (m_eraseToolBounds.contains(position)) {
-        setCurrentTool(PlaylistTool::Erase);
+    if (m_muteToolBounds.contains(position)) {
+        setCurrentTool(PlaylistTool::Mute);
         return true;
     }
     if (m_snapBounds.contains(position)) {
@@ -746,7 +767,7 @@ void TrackManagerUI::renderToolCursor(AestraUI::NUIRenderer& renderer, const Aes
     }
 
     // Only render if tool requires custom cursor
-    if (m_currentTool != PlaylistTool::Split && m_currentTool != PlaylistTool::Paint) {
+    if (!toolOwnsCursor(m_currentTool, canPaintClip())) {
         // No tool cursor needed - Main.cpp renders default arrow
         return;
     }
@@ -805,11 +826,7 @@ void TrackManagerUI::renderToolCursor(AestraUI::NUIRenderer& renderer, const Aes
             }
         }
 
-        if (m_splitToolIcon) {
-            AestraUI::NUIRect iconRect(lineX - 10, position.y - 10, 20, 20);
-            m_splitToolIcon->setBounds(iconRect);
-            m_splitToolIcon->onRender(renderer);
-        }
+        drawToolCursorGlyph(renderer, m_splitToolIcon, AestraUI::NUIRect(lineX - 10, position.y - 10, 20, 20));
         return;
     }
 
@@ -833,21 +850,18 @@ void TrackManagerUI::renderToolCursor(AestraUI::NUIRenderer& renderer, const Aes
 
         if (hoveringClip) {
             // Render MOVE cursor
-            if (m_moveCursorIcon) {
-                AestraUI::NUIRect iconRect(position.x - 10, position.y - 10, 20, 20);
-                m_moveCursorIcon->setBounds(iconRect);
-                m_moveCursorIcon->onRender(renderer);
-            }
+            drawToolCursorGlyph(renderer, m_moveCursorIcon, AestraUI::NUIRect(position.x - 10, position.y - 10, 20, 20));
         } else {
             // Render PAINT cursor
-            if (m_paintToolIcon) {
-                // Offset slightly so tip is at cursor
-                AestraUI::NUIRect iconRect(position.x, position.y - 20, 20, 20);
-                m_paintToolIcon->setBounds(iconRect);
-                m_paintToolIcon->onRender(renderer);
-            }
+            // The pencil's tip is the bottom-left of its glyph box: put that on the pointer.
+            drawToolCursorGlyph(renderer, m_paintToolIcon, AestraUI::NUIRect(position.x, position.y - 20, 20, 20));
         }
+        return;
     }
+
+    // === MUTE TOOL LOGIC ===
+    // The speaker-with-a-cross, centred on the pointer: the click lands on the clip under it.
+    drawToolCursorGlyph(renderer, m_muteToolIcon, AestraUI::NUIRect(position.x - 10, position.y - 10, 20, 20));
 }
 
 void TrackManagerUI::renderMinimapResizeCursor(AestraUI::NUIRenderer& renderer, const AestraUI::NUIPoint& position) {
@@ -863,7 +877,7 @@ void TrackManagerUI::renderMinimapResizeCursor(AestraUI::NUIRenderer& renderer, 
     }
 
     // 2. Split and Paint tools own the cursor while we're over the clip grid.
-    if (m_currentTool == PlaylistTool::Split || m_currentTool == PlaylistTool::Paint) {
+    if (toolOwnsCursor(m_currentTool, canPaintClip())) {
         AestraUI::NUIRect bounds = getBounds();
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();

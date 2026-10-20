@@ -538,9 +538,12 @@ private:
     std::string m_headerSourceLine;
     double m_headerSourceLineAt{-1.0};
 
-    // Erase tool (TrackUIComponentErase.cpp): click deletes a clip; holding the button keeps erasing.
-    bool handleEraseTool(const AestraUI::NUIMouseEvent& event);
-    bool m_eraseStroke{false};
+    // Mute tool (TrackUIComponentMute.cpp): click mutes or unmutes a clip; holding the button sets every clip crossed to
+    // the same state. Alt+click does the same once, whatever tool is active.
+    bool handleMuteTool(const AestraUI::NUIMouseEvent& event);
+    bool m_muteStroke{false};
+    bool m_muteStrokeTarget{true};
+    std::vector<ClipInstanceID> m_muteStrokeDone;
     uint32_t m_headerMeterChannelId{0}; // the channel every unit on the lane plays into; 0 = none to meter
 
 

@@ -174,12 +174,86 @@ void testRealMoveStillReschedules() {
     check(findLane(*f.manager) != laneBefore, "real move: the rows are rebuilt (the observable works)");
 }
 
+// ---- Mute tool (owner, 2026-10-20): one clip goes quiet, its track and its neighbours do not. -------------------------
+
+// Muting one pattern clip: that clip only, one named undo step, playback refreshed while playing, fully undoable.
+void testMutingOneClipLeavesTheTrackAndNeighboursAlone() {
+    Fixture f;
+    if (!f.build()) {
+        return;
+    }
+    auto& playlist = f.trackManager->getPlaylistModel();
+    const PatternID other = f.trackManager->getPatternManager().createMidiPattern("Other", 4.0, MidiPayload{});
+    const ClipInstanceID neighbour = playlist.addClipFromPattern(f.laneId, other, 8.0, 4.0);
+    check(neighbour.isValid(), "a second clip on the same track");
+
+    check(!f.manager->isClipMuted(f.clipId), "a new clip is not muted");
+    const uint64_t reschedules = f.trackManager->getTimelineRescheduleCount();
+    const size_t undo = f.undoDepth();
+
+    check(f.manager->toggleClipMute(f.clipId) == true, "toggle mutes it and says so");
+    check(f.manager->isClipMuted(f.clipId), "the clip is muted");
+    check(!f.manager->isClipMuted(neighbour), "the neighbour on the same track is not");
+    check(!playlist.getLane(f.laneId)->muted, "the track is not muted: only the clip is");
+    check(f.undoDepth() == undo + 1, "one undo step");
+    check(f.trackManager->getTimelineRescheduleCount() > reschedules, "playing MIDI is refreshed so the muted clip goes quiet at once");
+    check(f.trackManager->getCommandHistory().getUndoStack().back()->getName() == "Mute Clip", "the history says what happened");
+
+    check(f.manager->toggleClipMute(f.clipId) == false, "a second toggle unmutes");
+    check(f.trackManager->getCommandHistory().getUndoStack().back()->getName() == "Unmute Clip", "and says so");
+
+    f.trackManager->getCommandHistory().undo();
+    check(f.manager->isClipMuted(f.clipId), "undo of the unmute: muted again");
+    f.trackManager->getCommandHistory().undo();
+    check(!f.manager->isClipMuted(f.clipId), "undo of the mute: audible again");
+}
+
+// A sweep sets every clip to one state: asking for the state a clip is already in changes nothing and costs no undo step.
+void testSettingTheStateItAlreadyHasIsNotAChange() {
+    Fixture f;
+    if (!f.build()) {
+        return;
+    }
+    const size_t undo = f.undoDepth();
+    check(f.manager->toggleClipMute(f.clipId, true) == true, "set muted");
+    check(f.undoDepth() == undo + 1, "one step");
+    check(f.manager->toggleClipMute(f.clipId, true) == true, "set muted again");
+    check(f.undoDepth() == undo + 1, "no second step for the state it already had");
+    check(f.manager->toggleClipMute(ClipInstanceID{}) == false, "no clip, nothing happens");
+}
+
+// The tool, its number key, and the default.
+void testMuteToolAndShortcuts() {
+    Fixture f;
+    if (!f.build()) {
+        return;
+    }
+    check(f.manager->getCurrentTool() == PlaylistTool::Paint, "the Track Manager starts on Draw");
+    const auto key = [&](AestraUI::NUIKeyCode code) {
+        AestraUI::NUIKeyEvent e;
+        e.keyCode = code;
+        e.pressed = true;
+        f.manager->onKeyEvent(e);
+    };
+    key(AestraUI::NUIKeyCode::Num4);
+    check(f.manager->getCurrentTool() == PlaylistTool::Mute, "4 picks Mute");
+    key(AestraUI::NUIKeyCode::Num3);
+    check(f.manager->getCurrentTool() == PlaylistTool::Split, "3 picks Split");
+    key(AestraUI::NUIKeyCode::Num2);
+    check(f.manager->getCurrentTool() == PlaylistTool::Paint, "2 picks Draw");
+    key(AestraUI::NUIKeyCode::Num1);
+    check(f.manager->getCurrentTool() == PlaylistTool::Select, "1 picks Select");
+}
+
 } // namespace
 
 int main() {
     testClickReleaseIsANoOp();
     testDragAwayAndBackIsANoOp();
     testRealMoveStillReschedules();
+    testMutingOneClipLeavesTheTrackAndNeighboursAlone();
+    testSettingTheStateItAlreadyHasIsNotAChange();
+    testMuteToolAndShortcuts();
 
     if (g_failures == 0) {
         std::cout << "Clip drag release tests passed\n";

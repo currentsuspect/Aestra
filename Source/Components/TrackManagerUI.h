@@ -28,6 +28,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include "Events/Connection.h"
 #include <mutex>
 #include <unordered_map>
@@ -124,6 +125,10 @@ public:
     void setActiveTool(PlaylistTool tool) { setCurrentTool(tool); } // Alias
     PlaylistTool getCurrentTool() const { return m_currentTool; }
     PlaylistTool getActiveTool() const { return m_currentTool; } // Alias
+    /// Whether this clip is muted (silent on playback, drawn greyed).
+    bool isClipMuted(ClipInstanceID clipId) const;
+    /// Mute or unmute one clip as one undo step. @p target absent = flip it. Returns the state it is in afterwards.
+    bool toggleClipMute(ClipInstanceID clipId, std::optional<bool> target = std::nullopt);
     /// Whether the Draw tool has a clip to stamp (copied or selected earlier).
     bool canPaintClip() const { return m_clipboardClip.id.isValid(); }
 
@@ -486,7 +491,7 @@ private:
     std::shared_ptr<::AestraUI::NUIIcon> m_splitToolIcon;
     std::shared_ptr<::AestraUI::NUIIcon> m_multiSelectToolIcon;
     std::shared_ptr<::AestraUI::NUIIcon> m_paintToolIcon;  // Paint/stamp tool icon
-    std::shared_ptr<::AestraUI::NUIIcon> m_eraseToolIcon;
+    std::shared_ptr<::AestraUI::NUIIcon> m_muteToolIcon;
     std::shared_ptr<::AestraUI::NUIIcon> m_moveCursorIcon; // Move (4-way arrow) cursor for Paint tool hovering clips
     std::shared_ptr<::AestraUI::NUIIcon> m_trimCursorIcon; // Canonical horizontal stretch cursor (registry SVG)
     std::shared_ptr<::AestraUI::NUIIcon> m_resizeCursorIcon; // Canonical ResizeEW registry glyph (minimap resize)
@@ -526,10 +531,10 @@ private:
     bool m_multiSelectToolHovered = false;
     bool m_paintToolHovered = false;
     // FD-50 board 7 toolbar row: Erase, the snap value, Fit song (TrackManagerUIToolbar.cpp).
-    ::AestraUI::NUIRect m_eraseToolBounds;
+    ::AestraUI::NUIRect m_muteToolBounds;
     ::AestraUI::NUIRect m_snapBounds;
     ::AestraUI::NUIRect m_fitSongBounds;
-    bool m_eraseToolHovered = false;
+    bool m_muteToolHovered = false;
     bool m_snapHovered = false;
     bool m_fitSongHovered = false;
     void fitSong();          // zoom so the whole arrangement fills the grid, scrolled to bar 1
