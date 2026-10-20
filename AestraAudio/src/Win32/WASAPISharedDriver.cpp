@@ -2,6 +2,7 @@
 #include "WASAPISharedDriver.h"
 
 #include "AestraLog.h"
+#include "WasapiDiagnostics.h"
 #include "AudioTelemetry.h"
 #include "DitherUtils.h"
 
@@ -302,6 +303,13 @@ bool WASAPISharedDriver::enumerateDevices(std::vector<AudioDeviceInfo>& devices)
         deviceCollection->Release();
     }
 
+    if (devices.empty()) {
+        static bool reported = false; // once: callers ask repeatedly while waiting
+        if (!reported) {
+            reported = true;
+            logWasapiEndpointReport(reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator), "WASAPI");
+        }
+    }
     return !devices.empty();
 }
 
