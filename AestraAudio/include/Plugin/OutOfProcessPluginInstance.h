@@ -43,11 +43,13 @@ public:
     std::vector<uint8_t> saveState() const override;
     bool loadState(const std::vector<uint8_t>& state) override;
 
-    bool hasEditor() const override { return false; }
+    // The plugin's own window (V82-H3). The helper owns it (Linux, VST3): the app only asks for it to open or close and
+    // never gets a window handle, so a plugin that hangs or crashes in its UI takes the helper with it, not the app.
+    bool hasEditor() const override;
     bool openEditor(void* parentWindow) override;
-    void closeEditor() override {}
-    bool isEditorOpen() const override { return false; }
-    std::pair<int, int> getEditorSize() const override { return {0, 0}; }
+    void closeEditor() override;
+    bool isEditorOpen() const override { return m_editorOpen.load(std::memory_order_acquire); }
+    std::pair<int, int> getEditorSize() const override;
     bool resizeEditor(int width, int height) override;
 
     const PluginInfo& getInfo() const override { return m_info; }
@@ -121,6 +123,9 @@ private:
     std::atomic<uint64_t> m_watchdogAvgExecutionTimeNs{0};
     std::atomic<uint64_t> m_watchdogViolationCount{0};
     std::atomic<bool> m_watchdogBypassed{false};
+    std::atomic<bool> m_editorOpen{false};
+    std::atomic<int> m_editorWidth{0};
+    std::atomic<int> m_editorHeight{0};
     std::atomic<uint32_t> m_pluginLatency{0}; ///< the plugin's own latency in samples, from the helper
 
     double m_sampleRate = 44100.0;

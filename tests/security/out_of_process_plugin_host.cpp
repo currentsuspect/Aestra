@@ -439,6 +439,13 @@ int main(int argc, char** argv) {
             return 1;
         }
 
+        // V82-H3: a plugin with no editor (the fake) is refused a window cleanly, and the helper stays responsive.
+        if (oopFraming->sendRawCommandForTest("EDITOR OPEN 74657374").find("ERR") != 0 ||
+            oopFraming->sendRawCommandForTest("EDITOR STATE").find("OK EDITOR CLOSED") != 0) {
+            std::cerr << "EDITOR commands on a plugin without an editor misbehaved\n";
+            return 1;
+        }
+
         // A CRLF-terminated reply must arrive with the '\r' gone. Windows' default
         // text-mode stdout appended one to every reply, which prefix checks like
         // find("OK") == 0 cannot see — so LOAD/INITIALIZE/ACTIVATE all passed while

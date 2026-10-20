@@ -245,6 +245,14 @@ target_include_directories(EffectChainCrashedPluginStateTest PRIVATE
 add_test(NAME EffectChainCrashedPluginStateTest COMMAND EffectChainCrashedPluginStateTest)
 set_tests_properties(EffectChainCrashedPluginStateTest PROPERTIES LABELS "audio;plugins;serialization;regression;contract:durability")
 
+# The run loop bookkeeping behind plugin editors on Linux (V82-H3): fds and timers a VST3/CLAP editor asks the host for.
+if(UNIX)
+    add_executable(EditorLoopPumpTest AestraAudio/EditorLoopPumpTest.cpp)
+    target_include_directories(EditorLoopPumpTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
+    add_test(NAME EditorLoopPumpTest COMMAND EditorLoopPumpTest)
+    set_tests_properties(EditorLoopPumpTest PROPERTIES LABELS "audio;plugins;editor;regression;contract:plugins")
+endif()
+
 # A plugin's own latency can change after it loads (V82-H2): the chain announces it so delay compensation is re-solved.
 add_executable(EffectChainLatencyRefreshTest AestraAudio/EffectChainLatencyRefreshTest.cpp)
 target_link_libraries(EffectChainLatencyRefreshTest PRIVATE AestraAudio)

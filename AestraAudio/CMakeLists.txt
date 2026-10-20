@@ -127,6 +127,7 @@ if(EXISTS "${VST3_SDK_DIR}/pluginterfaces/base/funknown.cpp"
         ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/pluginterfacesupport.cpp
         ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/plugprovider.cpp
         ${VST3_SDK_DIR}/public.sdk/source/common/memorystream.cpp
+        ${VST3_SDK_DIR}/public.sdk/source/common/commoniids.cpp
         ${VST3_SDK_DIR}/public.sdk/source/vst/utility/stringconvert.cpp
         ${VST3_SDK_DIR}/public.sdk/source/common/commonstringconvert.cpp
         ${VST3_SDK_DIR}/public.sdk/source/vst/vstinitiids.cpp
@@ -630,6 +631,15 @@ endif()
 if(AESTRA_HAS_VST3)
     target_compile_definitions(AestraPluginHost PRIVATE AESTRA_HAS_VST3)
     target_link_libraries(AestraPluginHost PRIVATE AestraAudioCore)
+    # V82-H3: plugin editor windows on Linux are X11 windows the helper owns (see HelperEditorHost.h).
+    if(UNIX AND NOT APPLE)
+        find_package(X11)
+        if(X11_FOUND)
+            target_compile_definitions(AestraPluginHost PRIVATE AESTRA_HAS_X11)
+            target_include_directories(AestraPluginHost PRIVATE ${X11_INCLUDE_DIR})
+            target_link_libraries(AestraPluginHost PRIVATE ${X11_LIBRARIES})
+        endif()
+    endif()
 endif()
 
 # ENFORCEMENT: AestraAudioCore MUST NOT link Windows libraries

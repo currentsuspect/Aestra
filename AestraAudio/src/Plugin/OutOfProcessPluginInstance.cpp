@@ -4,6 +4,7 @@
 
 #include "AestraLog.h"
 
+#include <cstdio>
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
@@ -776,6 +777,7 @@ void OutOfProcessPluginInstance::refreshPluginLatency() {
 
 void OutOfProcessPluginInstance::shutdown() {
     m_active.store(false, std::memory_order_release);
+    m_editorOpen.store(false, std::memory_order_release); // the helper closes its window with it
     stopWorker();
     if (m_process) {
         sendCommand("SHUTDOWN", nullptr);
@@ -949,9 +951,35 @@ bool OutOfProcessPluginInstance::loadState(const std::vector<uint8_t>& state) {
     return sendCommand(command.str(), &response, std::chrono::seconds(5)) && response.find("OK") == 0;
 }
 
-bool OutOfProcessPluginInstance::openEditor(void* parentWindow) {
-    (void)parentWindow;
+bool OutOfProcessPluginInstance::hasEditor() const {
+#if defined(__linux__)
+    return m_info.format == PluginFormat::VST3 && m_loaded.load(std::memory_order_acquire) &&
+           !m_crashed.load(std::memory_order_acquire);
+#else
     return false;
+#endif
+}
+
+bool OutOfProcessPluginInstance::openEditor(void* parentWindow) {
+    (void)parentWindow; // the helper makes the window; there is nothing of the app's to embed into
+    if (!hasEditor()) return false;
+    std::string response;
+    if (!sendCommand("EDITOR OPEN " + hexEncode(m_info.name), &response, std::chrono::seconds(15))) return false;
+    int width = 0, height = 0;
+    if (std::sscanf(response.c_str(), "OK EDITOR %d %d", &width, &height) != 2) return false;
+    m_editorWidth.store(width, std::memory_order_relaxed);
+    m_editorHeight.store(height, std::memory_order_relaxed);
+    m_editorOpen.store(true, std::memory_order_release);
+    return true;
+}
+
+void OutOfProcessPluginInstance::closeEditor() {
+    if (!m_editorOpen.exchange(false, std::memory_order_acq_rel)) return;
+    sendCommand("EDITOR CLOSE", nullptr, std::chrono::seconds(5));
+}
+
+std::pair<int, int> OutOfProcessPluginInstance::getEditorSize() const {
+    return {m_editorWidth.load(std::memory_order_relaxed), m_editorHeight.load(std::memory_order_relaxed)};
 }
 
 bool OutOfProcessPluginInstance::resizeEditor(int width, int height) {

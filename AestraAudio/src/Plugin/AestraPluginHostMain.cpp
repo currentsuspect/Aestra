@@ -1,5 +1,6 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
+#include "HelperEditorHost.h"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -30,6 +31,7 @@
 // this header is not on the include path.
 #ifndef _WIN32
 #include "ClapAbiMirror.h"
+#include "HelperFakeClap.h"
 #include "Plugin/ClapNoteConversion.h"
 #include <dlfcn.h>
 #endif
@@ -167,99 +169,8 @@ void hostRequestCallback(const ClapHost* host) {
 }
 
 #ifdef AESTRA_ENABLE_TEST_HOOKS
-// A fake CLAP plugin used by the #244 headless tests. It advertises a
-// configurable note-input dialect and records every event actually delivered
-// through process.in_events, so a test can drive the REAL ClapModule::process
-// conversion boundary and assert exactly what dialect/payload the plugin received.
-namespace fakeclap {
-
-struct Recorded {
-    uint16_t type{0}; // kClapEventNoteOn / kClapEventNoteOff / kClapEventMidi
-    uint32_t time{0};
-    int16_t portIndex{0};
-    int16_t channel{0};
-    int16_t key{0};
-    double velocity{0.0};
-    uint8_t midi[3]{0, 0, 0};
-};
-
-struct State {
-    bool exposeNotePorts{true};
-    uint32_t supportedDialects{ClapNote::kDialectMidi};
-    uint32_t preferredDialect{0};
-    std::vector<Recorded> events;
-};
-State g_state;
-
-uint32_t notePortsCount(const ClapPlugin*, bool isInput) { return isInput ? 1u : 0u; }
-
-bool notePortsGet(const ClapPlugin*, uint32_t index, bool isInput, ClapNotePortInfo* info) {
-    if (!isInput || index != 0 || !info) {
-        return false;
-    }
-    *info = {};
-    info->id = 0;
-    info->supportedDialects = g_state.supportedDialects;
-    info->preferredDialect = g_state.preferredDialect;
-    std::snprintf(info->name, sizeof(info->name), "%s", "fake-note-in");
-    return true;
-}
-
-ClapPluginNotePorts g_notePorts = {notePortsCount, notePortsGet};
-
-bool init(const ClapPlugin*) { return true; }
-void destroy(const ClapPlugin*) {}
-bool activate(const ClapPlugin*, double, uint32_t, uint32_t) { return true; }
-void deactivate(const ClapPlugin*) {}
-bool startProcessing(const ClapPlugin*) { return true; }
-void stopProcessing(const ClapPlugin*) {}
-void reset(const ClapPlugin*) {}
-
-ClapProcessStatus process(const ClapPlugin*, const ClapProcess* proc) {
-    if (proc && proc->inEvents && proc->inEvents->size && proc->inEvents->get) {
-        const uint32_t n = proc->inEvents->size(proc->inEvents);
-        for (uint32_t i = 0; i < n; ++i) {
-            const ClapEventHeader* h = proc->inEvents->get(proc->inEvents, i);
-            if (!h) {
-                continue;
-            }
-            Recorded rec{};
-            rec.type = h->type;
-            rec.time = h->time;
-            if (h->type == kClapEventNoteOn || h->type == kClapEventNoteOff) {
-                const auto* note = reinterpret_cast<const ClapEventNote*>(h);
-                rec.portIndex = note->portIndex;
-                rec.channel = note->channel;
-                rec.key = note->key;
-                rec.velocity = note->velocity;
-            } else if (h->type == kClapEventMidi) {
-                const auto* midi = reinterpret_cast<const ClapEventMidi*>(h);
-                rec.portIndex = static_cast<int16_t>(midi->portIndex);
-                std::memcpy(rec.midi, midi->data, 3);
-            }
-            g_state.events.push_back(rec);
-        }
-    }
-    return kClapProcessError + 1; // CLAP_PROCESS_CONTINUE (non-error)
-}
-
-const void* getExtension(const ClapPlugin*, const char* id) {
-    if (g_state.exposeNotePorts && id && std::strcmp(id, kClapExtNotePorts) == 0) {
-        return &g_notePorts;
-    }
-    return nullptr;
-}
-
-void onMainThread(const ClapPlugin*) {}
-
-ClapPluginDescriptor g_descriptor = {};
-ClapPlugin g_plugin = {&g_descriptor, nullptr,        init,
-                       destroy,       activate,       deactivate,
-                       startProcessing, stopProcessing, reset,
-                       process,       getExtension,   onMainThread};
-
-} // namespace fakeclap
-#endif // AESTRA_ENABLE_TEST_HOOKS
+namespace fakeclap = AestraHelper::FakeClap; // the test fake CLAP plugin (HelperFakeClap.h)
+#endif
 
 struct ClapModule {
     void* library = nullptr;
@@ -1037,6 +948,9 @@ int main(int argc, char** argv) {
 #endif
 #ifdef AESTRA_HAS_VST3
     Vst3Module vst3Module;
+#if defined(AESTRA_HAS_X11)
+    AestraHelper::EditorHost editorHost;
+#endif
 #endif
 
     while (std::getline(std::cin, line)) {
@@ -1091,6 +1005,9 @@ int main(int argc, char** argv) {
             reply("ERR unsupported-platform");
 #endif
         } else if (command == "LOAD") {
+#if defined(AESTRA_HAS_VST3) && defined(AESTRA_HAS_X11)
+            editorHost.close(); // the old plugin's window must go before its module does
+#endif
             std::string format;
             std::string idHex;
             std::string pathHex;
@@ -1230,6 +1147,30 @@ int main(int argc, char** argv) {
             }
 #endif
             reply("OK INIT");
+        } else if (command == "EDITOR") {
+            // V82-H3: EDITOR OPEN <titleHex> -> OK EDITOR <w> <h> | ERR; EDITOR CLOSE; EDITOR STATE -> OK EDITOR OPEN|CLOSED
+            std::string sub;
+            input >> sub;
+#if defined(AESTRA_HAS_VST3) && defined(AESTRA_HAS_X11)
+            if (sub == "OPEN") {
+                std::string titleHex;
+                input >> titleHex;
+                int w = 0, h = 0;
+                if (!vst3Module.plugin) reply("ERR no-editor");
+                else if (!editorHost.open(vst3Module.plugin, hexDecode(titleHex), w, h)) reply("ERR no-editor");
+                else reply("OK EDITOR " + std::to_string(w) + " " + std::to_string(h));
+            } else if (sub == "CLOSE") {
+                editorHost.close();
+                reply("OK EDITOR CLOSED");
+            } else if (sub == "STATE") {
+                reply(editorHost.isOpen() ? "OK EDITOR OPEN " + std::to_string(editorHost.width()) + " " + std::to_string(editorHost.height())
+                                          : "OK EDITOR CLOSED");
+            } else {
+                reply("ERR invalid-editor-request");
+            }
+#else
+            reply(sub == "OPEN" ? "ERR no-editor" : "OK EDITOR CLOSED"); // no X11: nothing to open, so nothing is ever open
+#endif
         } else if (command == "LATENCY") {
             // The plugin's own latency in samples (V82-H2). The app adds the sandbox's one block of transport delay.
             uint32_t pluginLatency = 0;
@@ -1447,6 +1388,9 @@ int main(int argc, char** argv) {
 #endif
             reply(stateBuffer.empty() ? "OK STATE" : "ERR state-unavailable");
         } else if (command == "SHUTDOWN") {
+#if defined(AESTRA_HAS_VST3) && defined(AESTRA_HAS_X11)
+            editorHost.close();
+#endif
             active = false;
             loaded = false;
 #ifndef _WIN32
