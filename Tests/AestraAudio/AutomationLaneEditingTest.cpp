@@ -143,6 +143,20 @@ void testVisibleSegmentSpan() {
     check(!span.empty() && nearf(span.t1 - span.t0, 400.0 / 1000000.0), "zoomed far in, the visible slice is tiny but not empty");
 }
 
+void testDeltaLabel() {
+    const auto V = AutomationTarget::Volume;
+    check(automationDeltaLabel(V, 0.5, 0.25) == "+6.0 dB", "volume: twice the gain is +6.0 dB");
+    check(automationDeltaLabel(V, 0.25, 0.5) == "-6.0 dB", "and half is -6.0 dB");
+    check(automationDeltaLabel(V, 0.5, 0.5) == "0.0 dB", "equal levels read 0.0 dB, never -0.0");
+    check(automationDeltaLabel(V, 0.7079, 0.7071) == "0.0 dB", "a hair apart (< 0.05 dB) reads 0.0 dB");
+    check(automationDeltaLabel(V, 1.0, 0.0) == "+\xE2\x88\x9E dB", "a node above silence is +infinity dB");
+    check(automationDeltaLabel(V, 0.0, 1.0) == "-\xE2\x88\x9E dB", "a silent node against a sounding one is -infinity dB");
+    check(automationDeltaLabel(V, 0.0, 0.0) == "0.0 dB", "silence against silence is 0.0 dB");
+    check(automationDeltaLabel(AutomationTarget::Pan, 0.4, -0.1) == "+50", "pan: percent points of full, signed");
+    check(automationDeltaLabel(AutomationTarget::Pan, -0.8, 0.0) == "-80", "pan: toward the left is negative");
+    check(automationDeltaLabel(AutomationTarget::Pan, 0.25, 0.25) == "0", "pan: no difference is 0");
+}
+
 void testHeaderReadout() {
     AutomationCurve curve = makeAutomationCurve(AutomationTarget::Volume);
     constexpr double kSamplesPerBeat = 24000.0; // 120 bpm at 48 kHz
@@ -166,12 +180,34 @@ void testHeaderReadout() {
     check(!automationHeaderReadout(&curve, 1.0, 0.0).isNode, "deselected: the playhead again");
     check(!automationHeaderReadout(nullptr, 0.7, 3.0).isNode && nearf(automationHeaderReadout(nullptr, 0.7, 3.0).value, 0.7),
           "no curve yet: the default level, not a node");
+    // The delta: against the previous node, or the next when it is the first, nothing when it is the only one.
+    points[0].selected = points[1].selected = points[2].selected = false;
+    points[1].selected = true; // value 0.3 now (dragged above), previous node 1.0
+    r = automationHeaderReadout(&curve, 1.0, 0.0);
+    check(r.isNode && r.delta == "-10.5 dB vs prev", "a middle node compares with the previous one: 0.3 against 1.0 is -10.5 dB");
+    points[1].selected = false;
+    points[0].selected = true; // value 1.0, next node 0.3
+    r = automationHeaderReadout(&curve, 1.0, 0.0);
+    check(r.isNode && r.delta == "+10.5 dB vs next", "the first node has no previous one, so it compares with the next");
+    points[0].selected = false;
+    points[2].selected = true; // value 0.25, previous 0.3
+    r = automationHeaderReadout(&curve, 1.0, 0.0);
+    check(r.delta == "-1.6 dB vs prev", "the last node compares with the one before it");
+    points[2].selected = false;
+    check(automationHeaderReadout(&curve, 1.0, 0.0).delta.empty(), "no node selected: no delta");
+    AutomationCurve lone = makeAutomationCurve(AutomationTarget::Volume);
+    lone.addPoint(2.0, 0.5f, kSamplesPerBeat);
+    lone.getPoints()[0].selected = true;
+    r = automationHeaderReadout(&lone, 1.0, 0.0);
+    check(r.isNode && r.delta.empty(), "the only node has nothing to compare with: a level, no delta");
+
     AutomationCurve empty = makeAutomationCurve(AutomationTarget::Pan);
     const auto e = automationHeaderReadout(&empty, 0.0, 1.0);
     check(!e.isNode && nearf(e.value, 0.0), "a curve with no points: the default level");
 }
 
 int main() {
+    testDeltaLabel();
     testHeaderReadout();
     testVisibleSegmentSpan();
     testValueRanges();
