@@ -16,6 +16,7 @@
 #include "Preferences.h"
 
 #include "../AestraUI/Graphics/OpenGL/NUIRendererGL.h"
+#include "../AestraUI/External/glad/include/glad/glad.h"
 #include "../AestraUI/Core/NUIDragDrop.h"
 #include "../AestraUI/Core/NUICursorRegistry.h"
 #include "../AestraUI/Core/NUIPerfProbe.h"
