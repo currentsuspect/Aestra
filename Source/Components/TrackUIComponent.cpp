@@ -1583,7 +1583,7 @@ void TrackUIComponent::renderDynamic(AestraUI::NUIRenderer& renderer) {
 
     // Automation Layer (v3.1)
     if (m_playlistMode == PlaylistMode::Automation) {
-        renderAutomationLayer(renderer, bounds, bounds.x + controlAreaWidth);
+        renderAutomationLayer(renderer, bounds, timelineGridStartX(bounds.x, controlAreaWidth)); // the grid start clips and input use, not the controls edge
     }
 
     // Live Recording Waveform (v3.0.2) - Dynamic real-time update
@@ -2259,7 +2259,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     }
     
     if (m_playlistMode == PlaylistMode::Automation && (isInsideBounds || m_isDraggingPoint)) {
-        if (event.position.x >= gridStartX || m_isDraggingPoint) {
+        if (event.position.x >= gridStartX - kAutomationEdgeSlop || m_isDraggingPoint) {
             double beat =
                 timelineGridOffsetToBeat(event.position.x - gridStartX, m_timelineScrollOffset, m_pixelsPerBeat);
             // Height in the lane, 0 bottom … 1 top; each curve reads it on its own range (V8-A2).

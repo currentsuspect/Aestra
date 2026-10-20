@@ -12,6 +12,30 @@
 namespace Aestra {
 namespace Audio {
 
+/// A point at beat 0 sits on the lane's left edge, so its left half is over the row header. A press this close to the
+/// edge (still in the header strip) belongs to the lane's points, not the header, so the first point can be picked up.
+constexpr float kAutomationEdgeSlop = 6.0f;
+
+/// The part of a curve segment, from screen x1 to x2, that lies inside the lane [left, right], as a range of t (0 at x1,
+/// 1 at x2) along it; empty when none does. x grows linearly with t, so the curve is only ever sampled where it will be
+/// seen: sampling the whole segment and dropping what lies outside left too few samples when zoomed in, and not
+/// clipping drew it across the track header when a segment began off-screen to the left.
+struct SegmentSpan {
+    float t0{0.0f};
+    float t1{1.0f};
+    bool empty() const { return t1 <= t0; }
+};
+inline SegmentSpan visibleSegmentSpan(float x1, float x2, float left, float right) {
+    SegmentSpan span;
+    if (x2 > x1) {
+        span.t0 = std::clamp((left - x1) / (x2 - x1), 0.0f, 1.0f);
+        span.t1 = std::clamp((right - x1) / (x2 - x1), 0.0f, 1.0f);
+    } else if (x1 < left || x1 > right) {
+        span.t1 = span.t0; // a zero-length segment outside the lane
+    }
+    return span;
+}
+
 /**
  * @brief How an automation lane reads and draws its curves (V8-A2).
  *

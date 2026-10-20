@@ -119,7 +119,10 @@ bool TrackUIComponent::handleAutomationRowHeaderMouse(const AestraUI::NUIMouseEv
     }
     const auto& layout = AestraUI::NUIThemeManager::getInstance().getLayoutDimensions();
     const AestraUI::NUIRect bounds = getBounds();
-    const AestraUI::NUIRect controlArea(bounds.x, bounds.y, std::min(layout.trackControlsWidth, bounds.width),
+    // The header ends kAutomationEdgeSlop short of the lane: a point at beat 0 sits ON the lane's left edge, and its
+    // left half belongs to the lane (it used to be swallowed here, so the first point could not be picked up).
+    const AestraUI::NUIRect controlArea(bounds.x, bounds.y,
+                                        std::max(0.0f, std::min(layout.trackControlsWidth, bounds.width) - kAutomationEdgeSlop),
                                         bounds.height);
     if (!controlArea.contains(event.position)) return false;
     if (leftPress && m_automationHideRect.contains(event.position)) {
@@ -205,26 +208,28 @@ void TrackUIComponent::renderAutomationLayer(AestraUI::NUIRenderer& renderer, co
             const auto& p1 = points[i-1];
             const auto& p2 = points[i];
             
-            // Adaptive subdivision based on screen space length
-            float sx1 = gridStartX + (static_cast<float>(p1.beat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-            float sy1 = yOf(p1.value);
-            float sx2 = gridStartX + (static_cast<float>(p2.beat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-            float sy2 = yOf(p2.value);
-            
-            float dist = std::sqrt(std::pow(sx2 - sx1, 2) + std::pow(sy2 - sy1, 2));
-            
-            // Use fine subdivisions for smooth curves - 1 vertex per pixel
-            int steps = static_cast<int>(dist);
-            steps = std::clamp(steps, 4, 512); // Min 4 for smooth curves, Max 512
-            
+            const float sx1 = gridStartX + (static_cast<float>(p1.beat) * m_pixelsPerBeat) - m_timelineScrollOffset;
+            const float sy1 = yOf(p1.value);
+            const float sx2 = gridStartX + (static_cast<float>(p2.beat) * m_pixelsPerBeat) - m_timelineScrollOffset;
+            const float sy2 = yOf(p2.value);
+
+            // Only the part of the segment inside the lane is drawn, sampled at full density (visibleSegmentSpan).
+            const SegmentSpan span = visibleSegmentSpan(sx1, sx2, gridArea.x, gridArea.right());
+            if (span.empty()) continue; // wholly left or right of the lane
+            const float t0 = span.t0, t1 = span.t1;
+
+            // Adaptive subdivision based on the visible screen length: one vertex per pixel.
+            const float dist = std::hypot((sx2 - sx1) * (t1 - t0), (sy2 - sy1) * (t1 - t0));
+            const int steps = std::clamp(static_cast<int>(dist), 4, 512);
+
             for (int s = 0; s <= steps; ++s) {
-                 double t = static_cast<double>(s) / static_cast<double>(steps);
-                 double beat = p1.beat + (p2.beat - p1.beat) * t;
-                 double val = curve.getValueAtBeat(beat, samplesPerBeat);
-                 
-                 float x = gridStartX + (static_cast<float>(beat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-                 float y = yOf(val);
-                 
+                 const double t = static_cast<double>(t0) + static_cast<double>(t1 - t0) * (static_cast<double>(s) / static_cast<double>(steps));
+                 const double beat = p1.beat + (p2.beat - p1.beat) * t;
+                 const double val = curve.getValueAtBeat(beat, samplesPerBeat);
+
+                 const float x = gridStartX + (static_cast<float>(beat) * m_pixelsPerBeat) - m_timelineScrollOffset;
+                 const float y = yOf(val);
+
                  polyPoints.emplace_back(x, y);
             }
         }

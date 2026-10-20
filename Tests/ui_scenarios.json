@@ -318,6 +318,23 @@
         {"mouse": "down", "at": {"lane": 0, "automationMark": true}},
         {"expect": {"automationRows": [0], "hiddenAutomationMarks": []}}
       ]
+    },
+    {
+      "name": "automation_first_point_at_beat_zero_can_be_picked_up_from_its_left_half",
+      "surface": "timeline",
+      "setup": {
+        "lanes": 1,
+        "mode": "automation",
+        "snap": "none",
+        "automation": [{"lane": 0, "target": "volume", "points": [[0, 0.5], [8, 0.5]]}]
+      },
+      "steps": [
+        {"mouse": "down", "at": {"lane": 0, "beat": -0.04, "value": 0.5, "target": "volume"}},
+        {"mouse": "move", "at": {"lane": 0, "beat": -0.04, "value": 0.7, "target": "volume"}},
+        {"mouse": "move", "at": {"lane": 0, "beat": -0.04, "value": 0.9, "target": "volume"}},
+        {"mouse": "up", "at": {"lane": 0, "beat": -0.04, "value": 0.9, "target": "volume"}},
+        {"expect": {"automation": {"lane": 0, "target": "volume", "points": [[0, 0.9], [8, 0.5]]}, "undoDepth": 1}}
+      ]
     }
   ]
 }
