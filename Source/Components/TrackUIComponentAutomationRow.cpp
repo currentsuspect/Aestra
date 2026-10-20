@@ -95,15 +95,20 @@ void TrackUIComponent::renderAutomationRowHeader(AestraUI::NUIRenderer& renderer
 
     const int curveIndex = automationCurveIndexFor(lane->automationCurves, m_editedAutomationTarget);
     const double beat = m_trackManager->getUIPosition() * std::max(1.0, m_trackManager->getPlaylistModel().getBPM()) / 60.0;
-    const double value = curveIndex >= 0 && !lane->automationCurves[static_cast<size_t>(curveIndex)].getPoints().empty()
-                             ? lane->automationCurves[static_cast<size_t>(curveIndex)].getValueAtBeat(beat)
-                             : makeAutomationCurve(m_editedAutomationTarget).getDefaultValue();
-    const std::string valueText = automationValueLabel(m_editedAutomationTarget, value);
+    // A selected node's level when one is picked (a click says "where is THIS one"), else the level at the playhead.
+    const AutomationHeaderReadout readout = automationHeaderReadout(
+        curveIndex >= 0 ? &lane->automationCurves[static_cast<size_t>(curveIndex)] : nullptr,
+        makeAutomationCurve(m_editedAutomationTarget).getDefaultValue(), beat);
+    const std::string valueText = automationValueLabel(m_editedAutomationTarget, readout.value);
     const float valueSize = theme.getFontSize("xs");
-    const float valueWidth = renderer.measureText(valueText, valueSize).width;
+    const float markerWidth = readout.isNode ? 9.0f : 0.0f; // a node's value wears the node's square
+    const float valueWidth = renderer.measureText(valueText, valueSize).width + markerWidth;
     const float valueX = std::max(m_automationTargetRect.right() + 6.0f, m_automationHideRect.x - 6.0f - valueWidth);
-    renderer.drawText(valueText, {valueX, std::round(renderer.calculateTextY(controlArea, valueSize))}, valueSize,
-                      ink);
+    if (readout.isNode) {
+        renderer.fillRect({valueX, cy - 2.5f, 5.0f, 5.0f}, AestraUI::NUIColor::white());
+    }
+    renderer.drawText(valueText, {valueX + markerWidth, std::round(renderer.calculateTextY(controlArea, valueSize))},
+                      valueSize, ink);
 }
 
 bool TrackUIComponent::handleAutomationRowHeaderMouse(const AestraUI::NUIMouseEvent& event) {

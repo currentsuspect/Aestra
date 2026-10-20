@@ -143,7 +143,36 @@ void testVisibleSegmentSpan() {
     check(!span.empty() && nearf(span.t1 - span.t0, 400.0 / 1000000.0), "zoomed far in, the visible slice is tiny but not empty");
 }
 
+void testHeaderReadout() {
+    AutomationCurve curve = makeAutomationCurve(AutomationTarget::Volume);
+    constexpr double kSamplesPerBeat = 24000.0; // 120 bpm at 48 kHz
+    curve.addPoint(0.0, 1.0f, kSamplesPerBeat);
+    curve.addPoint(4.0, 0.5f, kSamplesPerBeat);
+    curve.addPoint(8.0, 0.25f, kSamplesPerBeat);
+
+    auto r = automationHeaderReadout(&curve, 1.0, 2.0);
+    check(!r.isNode && nearf(r.value, 0.75), "no node selected: the level at the playhead (halfway down the first slope)");
+    auto& points = curve.getPoints();
+    points[1].selected = true;
+    r = automationHeaderReadout(&curve, 1.0, 2.0);
+    check(r.isNode && nearf(r.value, 0.5), "one node selected: that node's level, wherever the playhead is");
+    points[1].value = 0.3;
+    r = automationHeaderReadout(&curve, 1.0, 2.0);
+    check(r.isNode && nearf(r.value, 0.3), "and it follows the node as it is dragged");
+    points[2].selected = true;
+    r = automationHeaderReadout(&curve, 1.0, 6.0);
+    check(!r.isNode, "two nodes selected: back to the playhead level, there is no single node to name");
+    points[1].selected = points[2].selected = false;
+    check(!automationHeaderReadout(&curve, 1.0, 0.0).isNode, "deselected: the playhead again");
+    check(!automationHeaderReadout(nullptr, 0.7, 3.0).isNode && nearf(automationHeaderReadout(nullptr, 0.7, 3.0).value, 0.7),
+          "no curve yet: the default level, not a node");
+    AutomationCurve empty = makeAutomationCurve(AutomationTarget::Pan);
+    const auto e = automationHeaderReadout(&empty, 0.0, 1.0);
+    check(!e.isNode && nearf(e.value, 0.0), "a curve with no points: the default level");
+}
+
 int main() {
+    testHeaderReadout();
     testVisibleSegmentSpan();
     testValueRanges();
     testCurvesByTarget();

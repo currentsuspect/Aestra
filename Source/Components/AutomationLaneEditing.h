@@ -16,6 +16,28 @@ namespace Audio {
 /// edge (still in the header strip) belongs to the lane's points, not the header, so the first point can be picked up.
 constexpr float kAutomationEdgeSlop = 6.0f;
 
+/// What the row header's level readout shows. With exactly ONE node selected on the edited curve it is that node's
+/// level: the click means "where is this one", usually to compare it with its neighbour, and it follows the node live
+/// while it is dragged. With none, or several, it is the level at the playhead, as before. @p isNode tells the header
+/// to mark the number as a node's (a small square, like the node itself).
+struct AutomationHeaderReadout {
+    double value{0.0};
+    bool isNode{false};
+};
+inline AutomationHeaderReadout automationHeaderReadout(const AutomationCurve* curve, double defaultValue,
+                                                       double playheadBeat) {
+    if (!curve || curve->getPoints().empty()) return {defaultValue, false};
+    const AutomationPoint* only = nullptr;
+    int selected = 0;
+    for (const auto& point : curve->getPoints()) {
+        if (!point.selected) continue;
+        only = &point;
+        ++selected;
+    }
+    if (selected == 1) return {only->value, true};
+    return {curve->getValueAtBeat(playheadBeat), false};
+}
+
 /// The part of a curve segment, from screen x1 to x2, that lies inside the lane [left, right], as a range of t (0 at x1,
 /// 1 at x2) along it; empty when none does. x grows linearly with t, so the curve is only ever sampled where it will be
 /// seen: sampling the whole segment and dropping what lies outside left too few samples when zoomed in, and not
