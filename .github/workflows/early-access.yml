@@ -170,3 +170,35 @@ jobs:
           name: Aestra-v0.8.2-preview-linux-x64
           path: Aestra-v0.8.2-preview-linux-x64.tar.gz
           retention-days: 30
+
+  publish:
+    name: Publish to the early channel
+    needs: [windows, linux]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    env:
+      AESTRA_UPDATE_PUBLIC_KEY: 8607d73af647b6d289c56d567fe40787ebfde329aeaaf8e96fe1f1e9e6f616d4
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          submodules: false
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish (update.aestra.studio, early channel)
+        env:
+          AESTRA_UPDATE_SIGNING_KEY: ${{ secrets.AESTRA_UPDATE_SIGNING_KEY }}
+          AESTRA_UPDATE_UPLOAD_KEY: ${{ secrets.AESTRA_UPDATE_UPLOAD_KEY }}
+        run: |
+          pip install --quiet cryptography
+          # early-access/v0.8.2 -> 0.8.2-preview.<run number>: each push is newer than the last
+          base=${GITHUB_REF_NAME#early-access/v}
+          version="${base}-preview.${GITHUB_RUN_NUMBER}"
+          printf 'Early-access build %s (%s)\n' "$version" "$(git log -1 --format=%s)" > notes.txt
+          (cd artifacts/Aestra-*-windows-x64 && zip -qr "$GITHUB_WORKSPACE/Aestra-$version-windows-x64.zip" .)
+          cp artifacts/Aestra-*-linux-x64/*.tar.gz "Aestra-$version-linux-x64.tar.gz"
+          tools/update/publish.sh early windows-x64 "$version" "Aestra-$version-windows-x64.zip" notes.txt
+          tools/update/publish.sh early linux-x64 "$version" "Aestra-$version-linux-x64.tar.gz" notes.txt
