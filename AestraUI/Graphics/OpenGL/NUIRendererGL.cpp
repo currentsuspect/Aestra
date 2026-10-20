@@ -3398,9 +3398,8 @@ void NUIRendererGL::ensureBasicPrimitive() {
 
 bool NUIRendererGL::initializeGL() {
     // Load OpenGL functions with GLAD
-    if (!gladLoadGL()) {
-        // Failed to load OpenGL functions
-        return false;
+    if (!gladLoadGL() || !GLAD_GL_VERSION_3_3) {
+        return false; // no GPU driver = GDI Generic GL 1.1, whose 3.x calls would crash below
     }
     
     // Enable blending for transparency

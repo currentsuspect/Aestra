@@ -25,6 +25,7 @@ set(Aestra_SOURCES
 	Core/AestraAudioController.cpp
 	Core/AestraWindowManager.h
 	Core/AestraWindowManager.cpp
+	Core/StartupErrorDialog.cpp
 	Core/AestraRootComponent.h
 	Core/AestraRootComponent.cpp
 	Core/AestraContent.h
