@@ -222,6 +222,38 @@ void testSettingTheStateItAlreadyHasIsNotAChange() {
     check(f.manager->toggleClipMute(ClipInstanceID{}) == false, "no clip, nothing happens");
 }
 
+// Placing with Draw: the clip starts in the grid cell the pointer is in, not on the nearest line. Rounding put one placed
+// in the right half of a cell on the NEXT cell (the same bug the piano roll had).
+void testDrawPlacesInTheCellThePointerIsIn() {
+    Fixture f;
+    if (!f.build()) {
+        return;
+    }
+    f.manager->setSnapSetting(AestraUI::SnapGrid::Beat);
+    f.manager->selectClips({f.clipId}, TrackSelectionIntent::Replace);
+    f.manager->copySelectedClip(); // something to stamp
+    check(f.manager->canPaintClip(), "a copied clip is something to stamp");
+
+    auto& playlist = f.trackManager->getPlaylistModel();
+    const auto startsOf = [&]() {
+        std::vector<double> starts;
+        for (const auto& clip : playlist.getLane(f.laneId)->clips) starts.push_back(clip.startBeat);
+        return starts;
+    };
+    const auto placedAt = [&](double beat) {
+        const size_t before = startsOf().size();
+        f.manager->onPaintClip(f.lane.get(), beat);
+        const auto after = startsOf();
+        return after.size() == before + 1 ? after.back() : -1.0;
+    };
+    check(placedAt(6.2) == 6.0, "6.2 is in the cell that starts at 6");
+    check(placedAt(7.9) == 7.0, "7.9 is still in the cell that starts at 7, not the next one (the reported bug)");
+    check(placedAt(9.0) == 9.0, "exactly on a line is that line's cell");
+    check(placedAt(11.0 - 1e-12) == 11.0, "a pointer a hair under a line (floating point) stays in that line's cell");
+    f.manager->setSnapSetting(AestraUI::SnapGrid::None);
+    check(placedAt(13.37) == 13.37, "snap off places exactly where the pointer is");
+}
+
 // The tool, its number key, and the default.
 void testMuteToolAndShortcuts() {
     Fixture f;
@@ -254,6 +286,7 @@ int main() {
     testMutingOneClipLeavesTheTrackAndNeighboursAlone();
     testSettingTheStateItAlreadyHasIsNotAChange();
     testMuteToolAndShortcuts();
+    testDrawPlacesInTheCellThePointerIsIn();
 
     if (g_failures == 0) {
         std::cout << "Clip drag release tests passed\n";

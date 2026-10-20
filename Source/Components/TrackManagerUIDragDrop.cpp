@@ -672,6 +672,19 @@ double TrackManagerUI::snapBeatToGrid(double beat) const {
     return std::max(0.0, snappedBeats);
 }
 
+double TrackManagerUI::snapPlacementToGrid(double beat) const {
+    if (!m_snapEnabled || m_snapSetting == AestraUI::SnapGrid::None) {
+        return beat;
+    }
+    const double grid = AestraUI::MusicTheory::getSnapDuration(m_snapSetting);
+    if (grid <= 0.00001) {
+        return beat;
+    }
+    // The epsilon keeps a pointer sitting exactly on a line (in floating point, a hair under it) in that line's cell
+    // rather than the one before.
+    return std::max(0.0, std::floor(beat / grid + 1e-9) * grid);
+}
+
 double TrackManagerUI::snapBeatToGridForward(double beat) const {
     if (!m_snapEnabled || m_snapSetting == AestraUI::SnapGrid::None) {
         return beat;

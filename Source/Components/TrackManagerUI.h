@@ -790,6 +790,10 @@ private:
     void clearDropPreview();                         // Clear drop preview state
     double snapBeatToGrid(double beat) const;        // Snap beat to nearest grid line
     double snapBeatToGridForward(double beat) const; // Snap beat to next grid line (paste-to-right)
+    // Where a NEW clip starts when placed with the Draw tool: the grid cell the pointer is in (floor), not the nearest line.
+    // Rounding put a clip placed in the right half of a cell on the NEXT cell, to the right of the pointer (the piano roll
+    // had the same bug: SPEC 3 §2.5). Moves and trims keep snapBeatToGrid(): a relative drag lands on the nearest line.
+    double snapPlacementToGrid(double beat) const;
 
     // Resolve a lane to its first pattern's mixer channel position, falling
     // back to fallbackIndex when the lane is missing or unresolved. Shared by

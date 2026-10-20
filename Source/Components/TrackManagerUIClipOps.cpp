@@ -762,7 +762,7 @@ void TrackManagerUI::onPaintClip(TrackUIComponent* trackComp, double beat) {
 
     ClipInstance newClip = m_clipboardClip;
     newClip.id = ClipInstanceID::generate();
-    newClip.startBeat = snapBeatToGrid(beat);
+    newClip.startBeat = snapPlacementToGrid(beat); // the cell the pointer is in, not the nearest line
 
     // Create Command
     auto cmd = std::make_shared<Aestra::Audio::AddClipCommand>(m_trackManager->getPlaylistModel(),
