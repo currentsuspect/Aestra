@@ -116,6 +116,7 @@ void MixerChannel::setSolo(bool solo) {
 
 bool MixerChannel::resyncEngineState() {
     if (reportRealtimeMisuse("MixerChannel::resyncEngineState")) return false;
+    m_effectChain.refreshLatency(); // a plugin's own latency can change by itself: re-solve delay compensation (V82-H2)
     if (!isStateDirty()) {
         return true;
     }

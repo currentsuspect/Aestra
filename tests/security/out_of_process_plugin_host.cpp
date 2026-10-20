@@ -3,6 +3,7 @@
 
 #include "Plugin/PluginFactory.h"
 #include "Plugin/OutOfProcessPluginInstance.h"
+#include "Plugin/PluginHostTestHooks.h"
 
 #include <algorithm>
 #include <cassert>
@@ -254,6 +255,47 @@ int main(int argc, char** argv) {
     }
 
     auto* oopInstance = static_cast<OutOfProcessPluginInstance*>(instance.get());
+
+    // --- V82-H2: the latency PDC compensates is the sandbox's block plus the plugin's own -------------------------
+    // It used to be the block alone, so a plugin with lookahead (a limiter, a linear-phase EQ) was compensated by
+    // too little and landed late against every other track. The helper's echo fake behaves like LSP's limiters: it
+    // reports no latency until it has processed a block, then kEchoTestLatencySamples. The instance asks again after
+    // the first block and every so often, so the value has to arrive without anyone calling anything.
+    if (oopInstance->getLatencySamples() != 64u) {
+        std::cerr << "before any audio the plugin reports no latency of its own: expected one 64-sample block, got "
+                  << oopInstance->getLatencySamples() << "\n";
+        return 1;
+    }
+    {
+        // A separate instance, so this audio does not disturb the pass-through checks below on the main one.
+        auto late = create(factory, makeInfo("__aestra_test_echo__"));
+        if (!late || !late->initialize(48000.0, 64)) {
+            std::cerr << "failed to create the latency probe instance\n";
+            return 1;
+        }
+        late->activate();
+        auto* lateOop = static_cast<OutOfProcessPluginInstance*>(late.get());
+        std::vector<float> in(2 * 64, 0.25f), out(2 * 64, 0.0f);
+        const float* inPlanes[2] = {in.data(), in.data() + 64};
+        float* outPlanes[2] = {out.data(), out.data() + 64};
+        if (lateOop->getLatencySamples() != 64u) {
+            std::cerr << "latency probe: expected only the block before any audio, got " << lateOop->getLatencySamples()
+                      << "\n";
+            return 1;
+        }
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+        while (lateOop->getLatencySamples() != 64u + kEchoTestLatencySamples &&
+               std::chrono::steady_clock::now() < deadline) {
+            late->process(inPlanes, outPlanes, 2, 2, 64);
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+        if (lateOop->getLatencySamples() != 64u + kEchoTestLatencySamples) {
+            std::cerr << "after the first block the sandbox latency should be one 64-sample block plus the plugin's "
+                      << "own " << kEchoTestLatencySamples << ", got " << lateOop->getLatencySamples() << "\n";
+            return 1;
+        }
+        late->shutdown();
+    }
 
 #ifndef _WIN32
     // --- #710: the fork child must hold exactly fds 0, 1, 2 ------------------

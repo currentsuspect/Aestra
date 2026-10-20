@@ -51,7 +51,11 @@ public:
     bool resizeEditor(int width, int height) override;
 
     const PluginInfo& getInfo() const override { return m_info; }
-    uint32_t getLatencySamples() const override { return m_maxBlockSize; }
+    // One block of transport delay (the sandbox hands audio over through a single-slot double buffer) plus the
+    // plugin's own latency, which the helper reports (LATENCY) once the plugin is set up and active. PDC reads this.
+    uint32_t getLatencySamples() const override {
+        return m_maxBlockSize + m_pluginLatency.load(std::memory_order_acquire);
+    }
     uint32_t getTailSamples() const override { return 0; }
 
     WatchdogStats getWatchdogStats() const override;
@@ -102,6 +106,7 @@ private:
     bool processBlockInHelper(const std::vector<float>& input, uint32_t channels, uint32_t frames,
                               const std::vector<uint8_t>& midiData, size_t midiBytes, std::vector<float>& output);
     void markCrashed();
+    void refreshPluginLatency(); ///< asks the helper for the plugin's own latency
     void passThrough(const float* const* inputs, float** outputs, uint32_t numInputChannels, uint32_t numOutputChannels,
                      uint32_t numFrames) const;
 
@@ -116,6 +121,7 @@ private:
     std::atomic<uint64_t> m_watchdogAvgExecutionTimeNs{0};
     std::atomic<uint64_t> m_watchdogViolationCount{0};
     std::atomic<bool> m_watchdogBypassed{false};
+    std::atomic<uint32_t> m_pluginLatency{0}; ///< the plugin's own latency in samples, from the helper
 
     double m_sampleRate = 44100.0;
     uint32_t m_maxBlockSize = 0;
@@ -167,6 +173,10 @@ private:
     std::atomic<uint64_t> m_paramDrops{0};
 
     void drainParamQueueToChild();
+
+    // How often the worker re-reads the plugin's own latency from the helper, in blocks: about 0.7 s at 512 frames,
+    // 48 kHz. One tiny command; the answer lands in m_pluginLatency, which EffectChain::refreshLatency() watches.
+    static constexpr uint64_t kLatencyCheckEveryBlocks = 64;
 };
 
 } // namespace Audio

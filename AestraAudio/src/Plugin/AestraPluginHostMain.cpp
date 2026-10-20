@@ -20,6 +20,7 @@
 #include <io.h>
 #endif
 
+#include "Plugin/PluginHostTestHooks.h"
 #ifdef AESTRA_HAS_VST3
 #include "Plugin/VST3Host.h"
 #endif
@@ -28,6 +29,7 @@
 // rules are only needed there, so keep the include off the Windows build, where
 // this header is not on the include path.
 #ifndef _WIN32
+#include "ClapAbiMirror.h"
 #include "Plugin/ClapNoteConversion.h"
 #include <dlfcn.h>
 #endif
@@ -48,217 +50,8 @@ namespace {
 // file is in the global namespace, so alias it for brevity (#244).
 namespace ClapNote = Aestra::Audio::ClapNote;
 
-struct ClapVersion {
-    uint32_t major;
-    uint32_t minor;
-    uint32_t revision;
-};
+using namespace AestraHelper::ClapAbi; // the hand-mirrored CLAP ABI (ClapAbiMirror.h)
 
-struct ClapPluginDescriptor {
-    ClapVersion clapVersion;
-    const char* id;
-    const char* name;
-    const char* vendor;
-    const char* url;
-    const char* manualUrl;
-    const char* supportUrl;
-    const char* version;
-    const char* description;
-    const char* const* features;
-};
-
-struct ClapHost;
-struct ClapPlugin;
-struct ClapProcess;
-struct ClapInputEvents;
-struct ClapOutputEvents;
-struct ClapEventHeader;
-
-using ClapProcessStatus = int32_t;
-constexpr ClapProcessStatus kClapProcessError = 0;
-
-// CLAP core constants (from clap/include/clap/)
-constexpr const char* kClapPluginFactoryId = "clap.plugin-factory";
-constexpr uint16_t kClapCoreEventSpaceId = 0;
-constexpr uint16_t kClapEventMidi = 10;
-
-struct ClapHost {
-    ClapVersion clapVersion;
-    void* hostData;
-    const char* name;
-    const char* vendor;
-    const char* url;
-    const char* version;
-    const void* (*getExtension)(const ClapHost* host, const char* extensionId);
-    void (*requestRestart)(const ClapHost* host);
-    void (*requestProcess)(const ClapHost* host);
-    void (*requestCallback)(const ClapHost* host);
-};
-
-struct ClapPluginFactory {
-    uint32_t (*getPluginCount)(const ClapPluginFactory* factory);
-    const ClapPluginDescriptor* (*getPluginDescriptor)(const ClapPluginFactory* factory, uint32_t index);
-    const ClapPlugin* (*createPlugin)(const ClapPluginFactory* factory, const ClapHost* host, const char* pluginId);
-};
-
-struct ClapPluginEntry {
-    ClapVersion clapVersion;
-    bool (*init)(const char* pluginPath);
-    void (*deinit)();
-    const void* (*getFactory)(const char* factoryId);
-};
-
-struct ClapPlugin {
-    const ClapPluginDescriptor* descriptor;
-    void* pluginData;
-    bool (*init)(const ClapPlugin* plugin);
-    void (*destroy)(const ClapPlugin* plugin);
-    bool (*activate)(const ClapPlugin* plugin, double sampleRate, uint32_t minFramesCount, uint32_t maxFramesCount);
-    void (*deactivate)(const ClapPlugin* plugin);
-    bool (*startProcessing)(const ClapPlugin* plugin);
-    void (*stopProcessing)(const ClapPlugin* plugin);
-    void (*reset)(const ClapPlugin* plugin);
-    ClapProcessStatus (*process)(const ClapPlugin* plugin, const ClapProcess* process);
-    const void* (*getExtension)(const ClapPlugin* plugin, const char* extensionId);
-    void (*onMainThread)(const ClapPlugin* plugin);
-};
-
-struct ClapAudioBuffer {
-    float** data32;
-    double** data64;
-    uint32_t channelCount;
-    uint32_t latency;
-    uint64_t constantMask;
-};
-
-struct ClapProcess {
-    int64_t steadyTime;
-    uint32_t framesCount;
-    const void* transport;
-    const ClapAudioBuffer* audioInputs;
-    ClapAudioBuffer* audioOutputs;
-    uint32_t audioInputsCount;
-    uint32_t audioOutputsCount;
-    const ClapInputEvents* inEvents;
-    const ClapOutputEvents* outEvents;
-};
-
-struct ClapEventHeader {
-    uint32_t size;
-    uint32_t time;
-    uint16_t spaceId;
-    uint16_t type;
-    uint32_t flags;
-};
-
-struct ClapInputEvents {
-    void* ctx;
-    uint32_t (*size)(const ClapInputEvents* list);
-    const ClapEventHeader* (*get)(const ClapInputEvents* list, uint32_t index);
-};
-
-struct ClapOutputEvents {
-    void* ctx;
-    bool (*tryPush)(const ClapOutputEvents* list, const ClapEventHeader* event);
-};
-
-struct ClapEventMidi {
-    ClapEventHeader header;
-    uint16_t portIndex;
-    uint8_t data[3];
-};
-
-// clap_event_param_value ABI (clap/events.h). Host-driven parameter changes are
-// delivered to a CLAP plugin as this event through params.flush() (#238).
-struct ClapEventParamValue {
-    ClapEventHeader header;
-    uint32_t paramId;
-    void* cookie;
-    int32_t noteId; // clap_event_param_value_t::note_id is int32_t (not int16_t)
-    int16_t portIndex;
-    int16_t channel;
-    int16_t key;
-    double value;
-};
-
-constexpr uint16_t kClapEventParamValue = 5;
-
-// clap_event_note ABI (clap/events.h) — native CLAP note-on/off events (#244).
-struct ClapEventNote {
-    ClapEventHeader header;
-    int32_t noteId;    // -1 if unspecified
-    int16_t portIndex; // note input port
-    int16_t channel;   // 0..15
-    int16_t key;       // 0..127
-    double velocity;   // 0..1
-};
-
-constexpr uint16_t kClapEventNoteOn = 0;
-constexpr uint16_t kClapEventNoteOff = 1;
-
-// clap.note-ports extension ABI (clap/ext/note-ports.h) — lets the host learn a
-// plugin's note input ports and which note dialects each accepts (#244).
-struct ClapNotePortInfo {
-    uint32_t id;
-    uint32_t supportedDialects;
-    uint32_t preferredDialect;
-    char name[256];
-};
-
-struct ClapPluginNotePorts {
-    uint32_t (*count)(const ClapPlugin* plugin, bool isInput);
-    bool (*get)(const ClapPlugin* plugin, uint32_t index, bool isInput, ClapNotePortInfo* info);
-};
-
-constexpr const char* kClapExtNotePorts = "clap.note-ports";
-
-struct ClapOstream {
-    void* ctx;
-    int64_t (*write)(const ClapOstream* stream, const void* buffer, uint64_t size);
-};
-
-struct ClapIstream {
-    void* ctx;
-    int64_t (*read)(const ClapIstream* stream, void* buffer, uint64_t size);
-};
-
-struct ClapPluginState {
-    bool (*save)(const ClapPlugin* plugin, const ClapOstream* stream);
-    bool (*load)(const ClapPlugin* plugin, const ClapIstream* stream);
-};
-
-struct ClapParamInfo {
-    uint32_t id;
-    uint32_t flags;
-    const void* cookie;
-    char name[256];
-    char module[256];
-    double minValue;
-    double maxValue;
-    double defaultValue;
-    char unit[32];
-    uint32_t valueCount;
-    int32_t stepCount;
-};
-
-constexpr uint32_t kClapParamIsAutomatable = (1u << 0);
-constexpr uint32_t kClapParamIsReadOnly = (1u << 1);
-constexpr uint32_t kClapParamIsBypass = (1u << 2);
-constexpr uint32_t kClapParamIsHidden = (1u << 3);
-constexpr uint32_t kClapParamIsAdvanced = (1u << 4);
-
-struct ClapPluginParams {
-    uint32_t (*count)(const ClapPlugin* plugin);
-    bool (*getParamInfo)(const ClapPlugin* plugin, uint32_t paramIndex, ClapParamInfo* info);
-    double (*getParamValue)(const ClapPlugin* plugin, uint32_t paramId);
-    bool (*getParamValueById)(const ClapPlugin* plugin, const ClapParamInfo* paramInfo, double* value);
-    bool (*valueToText)(const ClapPlugin* plugin, uint32_t paramId, double value, char* display, uint32_t size);
-    bool (*textToValue)(const ClapPlugin* plugin, uint32_t paramId, const char* display, double* value);
-    void (*flush)(const ClapPlugin* plugin, const void* inChanges, const void* outChanges);
-};
-
-constexpr const char* kClapExtState = "clap.state";
-constexpr const char* kClapExtParams = "clap.params";
 constexpr const char* kProbeFirstClapPluginId = "__aestra_probe_first__";
 
 bool isClapVersionCompatible(const ClapVersion& version) {
@@ -673,6 +466,13 @@ struct ClapModule {
     }
 #endif
 
+    /// The plugin's own latency in samples (clap.latency), 0 when it has none or is not active yet.
+    uint32_t latencySamples() const {
+        if (!plugin || !active || !plugin->getExtension) return 0;
+        const auto* latency = static_cast<const ClapPluginLatency*>(plugin->getExtension(plugin, kClapExtLatency));
+        return latency && latency->get ? latency->get(plugin) : 0;
+    }
+
     bool initialize(double sampleRate, uint32_t blockSize, std::string& error) {
         if (!plugin || sampleRate <= 0.0 || blockSize == 0 || blockSize > 65536) {
             error = "invalid-clap-init";
@@ -1024,6 +824,9 @@ struct Vst3Module {
         return plugin->isActive();
     }
 
+    /// IAudioProcessor::getLatencySamples(): the plugin's own delay, valid after setup and activation.
+    uint32_t latencySamples() const { return plugin ? plugin->getLatencySamples() : 0; }
+
     void deactivate() {
         if (plugin) {
             plugin->deactivate();
@@ -1223,6 +1026,8 @@ int main(int argc, char** argv) {
     // Parameter 0 is treated as an output gain applied to the echoed audio, so a
     // test can observe the change behaviorally rather than trusting a log (#238).
     bool echoPlugin = false;
+    // Like LSP's limiters, the echo fake only knows its own latency after it has processed a block (LATENCY command).
+    bool echoHasProcessed = false;
     std::array<float, 16> echoParams{};
     echoParams.fill(0.0f);
     echoParams[0] = 1.0f; // unity gain until set
@@ -1392,6 +1197,7 @@ int main(int argc, char** argv) {
             loaded = true;
 #ifdef AESTRA_ENABLE_TEST_HOOKS
             echoPlugin = (id == "__aestra_test_echo__");
+            echoHasProcessed = false;
 #endif
             reply("OK LOADED");
         } else if (command == "INIT") {
@@ -1424,6 +1230,19 @@ int main(int argc, char** argv) {
             }
 #endif
             reply("OK INIT");
+        } else if (command == "LATENCY") {
+            // The plugin's own latency in samples (V82-H2). The app adds the sandbox's one block of transport delay.
+            uint32_t pluginLatency = 0;
+#ifdef AESTRA_ENABLE_TEST_HOOKS
+            if (echoPlugin) pluginLatency = echoHasProcessed ? Aestra::Audio::kEchoTestLatencySamples : 0;
+#endif
+#ifndef _WIN32
+            if (clapModule.plugin) pluginLatency = clapModule.latencySamples();
+#endif
+#ifdef AESTRA_HAS_VST3
+            if (vst3Module.plugin) pluginLatency = vst3Module.latencySamples();
+#endif
+            reply("OK LATENCY " + std::to_string(pluginLatency));
         } else if (command == "ACTIVATE") {
             if (!loaded) {
                 reply("ERR not-loaded");
@@ -1707,6 +1526,7 @@ int main(int argc, char** argv) {
 #ifdef AESTRA_ENABLE_TEST_HOOKS
             // Echo fake plugin: apply parameter 0 as an output gain so a test can
             // observe host->child parameter delivery through the audio itself (#238).
+            if (echoPlugin) echoHasProcessed = true;
             if (echoPlugin && echoParams[0] != 1.0f) {
                 const size_t sampleCount = static_cast<size_t>(channels) * frames;
                 for (size_t i = 0; i < sampleCount && i < processBuffer.size(); ++i) {

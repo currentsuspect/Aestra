@@ -468,6 +468,16 @@ public:
      */
     uint32_t getTotalLatency() const;
 
+    /**
+     * @brief Tell the owner when the chain's total latency is not what it last announced.
+     *
+     * A plugin's own latency can change after it loads: some report it only once they have processed a block (LSP's
+     * limiters), others when a setting changes. Slot edits already announce through the latency callback; this covers
+     * the rest. The caller is the UI frame, which is also the thread that edits the chain, so the callback runs where
+     * the delay compensation is solved. Reads only each plugin's own latency, cheap when nothing changed.
+     */
+    void refreshLatency();
+
     // ==============================
     // Snapshot (Pass 2)
     // ==============================
@@ -511,6 +521,8 @@ private:
     std::shared_ptr<const EffectChainSnapshot> m_currentSnapshot; // Pass 2: published snapshot
 
     std::function<void()> m_onLatencyChanged;
+    uint32_t m_announcedLatency{0}; ///< the total the owner was last told (refreshLatency compares against it)
+    void announceLatency();
 
     // Pre-allocated buffers for dry/wet mixing
     std::vector<float> m_dryBuffer;

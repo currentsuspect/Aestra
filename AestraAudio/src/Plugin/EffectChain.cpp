@@ -248,9 +248,7 @@ bool EffectChain::insertPlugin(size_t slotIndex, PluginInstancePtr plugin, uint6
     at(slotIndex).faultState = std::make_shared<EffectSlotFaultState>();
 
     publishSnapshot();
-    if (m_onLatencyChanged) {
-        m_onLatencyChanged();
-    }
+    announceLatency();
     return true;
 }
 
@@ -273,9 +271,7 @@ PluginInstancePtr EffectChain::removePlugin(size_t slotIndex) {
     at(slotIndex).faultState = std::make_shared<EffectSlotFaultState>();
 
     publishSnapshot();
-    if (m_onLatencyChanged) {
-        m_onLatencyChanged();
-    }
+    announceLatency();
     return plugin;
 }
 
@@ -467,9 +463,7 @@ void EffectChain::setSlotBypassed(size_t slotIndex, bool bypassed) {
         at(slotIndex).bypassed.store(bypassed, std::memory_order_release);
         if (!reportRealtimeMisuse("EffectChain::setSlotBypassed")) {
             publishSnapshot();
-            if (m_onLatencyChanged) {
-                m_onLatencyChanged();
-            }
+            announceLatency();
         }
     }
 }
@@ -1105,6 +1099,19 @@ uint32_t EffectChain::getTotalLatency() const {
     }
 
     return total;
+}
+
+void EffectChain::announceLatency() {
+    m_announcedLatency = getTotalLatency();
+    if (m_onLatencyChanged) {
+        m_onLatencyChanged();
+    }
+}
+
+void EffectChain::refreshLatency() {
+    if (getTotalLatency() != m_announcedLatency) {
+        announceLatency();
+    }
 }
 
 void EffectChain::reset() {
