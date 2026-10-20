@@ -2576,6 +2576,19 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(PianoRollInteractionTest PROPERTIES LABELS "ui;interaction;contract:application")
 endif()
 
+# Duplicate in the piano roll like FL (V82-PR1, FD-52): whole-bar step, ruler highlight selects and duplicates.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(PianoRollDuplicateTest AestraUI_Core AestraUI_Platform)
+    add_executable(PianoRollDuplicateTest AestraUI/PianoRollDuplicateTest.cpp)
+    target_link_libraries(PianoRollDuplicateTest PRIVATE AestraUI_Core AestraUI_Platform)
+    target_include_directories(PianoRollDuplicateTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Common
+    )
+    add_test(NAME PianoRollDuplicateTest COMMAND PianoRollDuplicateTest)
+    set_tests_properties(PianoRollDuplicateTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
+endif()
+
 # Piano Roll harmony edits must traverse the real panel/view callback into
 # PatternManager and reload as one complete context.
 if(AESTRA_ENABLE_UI)
@@ -3928,6 +3941,7 @@ if(AESTRA_ENABLE_UI)
         TimelineGridSelectionTest
         ModalDialogInteractionTest
         PianoRollInteractionTest
+        PianoRollDuplicateTest
         PianoRollPanelPersistenceTest
         PianoRollStrokeInteractionTest
         PianoRollExternalEditCommitTest

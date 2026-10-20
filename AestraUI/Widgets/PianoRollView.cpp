@@ -4,6 +4,7 @@
 #include "PlayheadMarker.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
+#include "PianoRollDuplicate.h"
 #include "PianoRollWidgetShared.h"
 #include "../Helpers/PianoRollInteraction.h"
 #include <algorithm>
@@ -114,7 +115,14 @@ PianoRollView::PianoRollView()
         // zone entirely past the end becomes empty, and applyLoopZone drops it.
         const double limit = std::max(0.0, m_totalDurationBeats);
         applyLoopZone(std::make_pair(std::clamp(start, 0.0, limit), std::clamp(end, 0.0, limit)), true);
+        // The highlight selects the notes inside it (V82-PR1, FD-52), so Duplicate has something to act on.
+        if (m_loopZone) m_notes->selectStartingIn(m_loopZone->first, m_loopZone->second);
     };
+    // Duplicate past the pattern's end grows the pattern by whole bars first (as the toolbar's + does).
+    m_notes->setOnNeedPatternEnd([this](double endBeat) {
+        const int bars = PianoRollDuplicate::barsToGrow(endBeat, m_patternLengthBeats, static_cast<double>(m_beatsPerBar));
+        if (bars > 0 && m_toolbar) m_toolbar->requestPatternBars(bars);
+    });
     m_notes->setOnEmptyGridPress([this]() {
         if (m_loopZone) {
             applyLoopZone(std::nullopt, true);
@@ -262,7 +270,8 @@ void PianoRollView::renderShortcutHelp(NUIRenderer& renderer) {
         {"Ctrl+G / Ctrl+Shift+G", "glue runs / subdivide by snap"},
         {"Ctrl+L", "connect notes (legato)"},
         {"Ctrl+Z / Y", "undo / redo"},
-        {"Ctrl+C / V / D", "copy / paste / duplicate"},
+        {"Ctrl+C / V", "copy / paste"},
+        {"Ctrl+D", "duplicate to next bar / range"},
         {"Ctrl+A", "select all"},
         {"Arrows", "nudge / transpose"},
         {"Shift+Left/Right", "resize by grid"},
@@ -683,6 +692,11 @@ bool PianoRollView::onKeyEvent(const NUIKeyEvent& event) {
     if (event.pressed && event.keyCode == NUIKeyCode::Escape && m_loopZone) {
         applyLoopZone(std::nullopt, true);
         m_notes->onKeyEvent(event);
+        return true;
+    }
+    // Duplicate with a ruler highlight copies the highlighted block and moves the highlight onto the copy (FL).
+    if (event.pressed && (event.modifiers & NUIModifiers::Ctrl) && event.keyCode == NUIKeyCode::D && m_loopZone) {
+        if (const auto next = m_notes->duplicateLikeFl(m_loopZone)) applyLoopZone(*next, true);
         return true;
     }
     if (m_notes->onKeyEvent(event)) return true;

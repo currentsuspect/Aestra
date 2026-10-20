@@ -272,6 +272,8 @@ public:
     /** @brief Populate the unit switcher (reuses the PatternChoice value/label shape). */
     void setUnitChoices(const std::vector<PatternChoice>& choices, int selectedValue);
     void setOnAdjustPatternLength(std::function<void(int barsDelta)> cb) { onAdjustPatternLength_ = std::move(cb); }
+    /** @brief Ask the owner to change the pattern length by whole bars, as the toolbar buttons do. */
+    void requestPatternBars(int barsDelta) { if (onAdjustPatternLength_) onAdjustPatternLength_(barsDelta); }
     void setOnPatternChoiceSelected(std::function<void(int patternValue)> cb) {
         onPatternChoiceSelected_ = std::move(cb);
     }
@@ -577,6 +579,21 @@ public:
     void quantizeSelectedNotes();
 
     /**
+     * @brief Duplicate like FL Studio (V82-PR1, FD-52; rules in PianoRollDuplicate.h): copy into the next block and
+     * select the copies, as one undo step.
+     *
+     * With a ruler range that holds the selection (or nothing is selected) the range's notes are copied into the next
+     * block of the same length and the new range is returned, for the caller to move the highlight there. Otherwise
+     * the selection moves one whole-bar-rounded step on, and nothing is returned. The pattern is grown first when the
+     * copies would run past its end.
+     */
+    std::optional<std::pair<double, double>> duplicateLikeFl(const std::optional<std::pair<double, double>>& ruler);
+    /** @brief Select exactly the notes that start in [startBeat, endBeat) (what a ruler drag leaves selected). */
+    void selectStartingIn(double startBeat, double endBeat);
+    /** @brief Asked to make the pattern at least this long (in beats) before notes past its end are added. */
+    void setOnNeedPatternEnd(std::function<void(double endBeat)> cb) { onNeedPatternEnd_ = std::move(cb); }
+
+    /**
      * @brief Commit an edit applied externally (e.g. the velocity lane) as one step.
      *
      * The layer keeps no undo history (the owner's CommandHistory is the only
@@ -622,6 +639,7 @@ private:
     int beatsPerBar_ = 4;
 
     std::function<void(const std::vector<MidiNote>&)> onNotesChanged_;
+    std::function<void(double)> onNeedPatternEnd_;
     std::function<void(int pitch)> onHoveredPitchChanged_;
     std::function<void()> onEmptyGridPress_;
     std::function<void(int pitch, int velocity)> onPreviewNote_;

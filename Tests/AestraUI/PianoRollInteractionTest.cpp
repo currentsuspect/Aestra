@@ -615,7 +615,7 @@ static void test_minimap_drag_released_outside_the_editor_ends() {
 
 // SPEC 3 §5.2 (owner ruling): a right-drag, or Ctrl+left-drag, on the piano-roll ruler makes a
 // loop zone; a plain left press still scrubs. Esc, or a Select-tool press on empty grid, clears
-// it. The zone never selects notes (a separate, future interaction).
+// it. Since V82-PR1 the drag also selects the notes inside the zone (PianoRollDuplicateTest).
 static void test_ruler_draws_and_clears_a_loop_zone() {
     PianoRollView view;
     view.setBounds({0.0f, 0.0f, 900.0f, 600.0f});
