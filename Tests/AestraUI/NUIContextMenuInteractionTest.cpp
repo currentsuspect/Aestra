@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved.
 
 #include "NUIContextMenu.h"
+#include "../Support/NullRenderer.h"
 
 #include <iostream>
 #include <memory>
@@ -115,6 +116,44 @@ void testTallMenuScrollingAndViewportContainment() {
     pressEvent.released = true;
     child->onMouseEvent(pressEvent);
     check(activated == 1, "scrolling exposes and activates the next routing destination");
+}
+
+// A submenu near the right edge opens on the LEFT of its parent menu. showSubmenu() decided that with the provisional
+// width, but the submenu's first paint measures the real text and re-fits it from its requested position, and a
+// submenu has no parent to clamp against, so that paint put it back on the right, half off the window. The Snap
+// submenu of the timeline's menu showed only its check mark.
+void testSubmenuStaysOnLeftOfItsParentAfterMeasuring() {
+    auto root = std::make_shared<NUIComponent>();
+    root->setBounds({0.0f, 0.0f, 480.0f, 220.0f});
+    auto parent = std::make_shared<NUIContextMenu>();
+    auto child = std::make_shared<NUIContextMenu>();
+    for (int index = 0; index < 4; ++index) child->addItem("Option number " + std::to_string(index));
+    parent->addSubmenu("Snap", child);
+    parent->addItem("Loop");
+    root->addChild(parent);
+
+    parent->showAt(340, 40); // the parent fits; the submenu has no room to its right
+    parent->onKeyEvent(press(NUIKeyCode::Right));
+    check(child->isVisible(), "the submenu opens");
+    Aestra::Testing::NullRenderer renderer;
+    parent->onRender(renderer); // the first paint measures the text and re-fits every open menu
+    const NUIRect c = child->getBounds();
+    const NUIRect p = parent->getBounds();
+    check(c.x >= 0.0f && c.right() <= root->getBounds().right(), "after measuring, the submenu is inside the window");
+    check(c.right() <= p.x + 0.5f, "and it sits on the left of its parent, not over it");
+
+    // With room on the right it stays on the right.
+    auto roomy = std::make_shared<NUIComponent>();
+    roomy->setBounds({0.0f, 0.0f, 900.0f, 220.0f});
+    auto parent2 = std::make_shared<NUIContextMenu>();
+    auto child2 = std::make_shared<NUIContextMenu>();
+    child2->addItem("Option");
+    parent2->addSubmenu("Snap", child2);
+    roomy->addChild(parent2);
+    parent2->showAt(100, 40);
+    parent2->onKeyEvent(press(NUIKeyCode::Right));
+    parent2->onRender(renderer);
+    check(child2->getBounds().x >= parent2->getBounds().right(), "with room on the right the submenu stays there");
 }
 
 // A context menu is attached to the *root* component so it can draw outside its
@@ -272,6 +311,7 @@ int main() {
     testKeyboardNavigationAndFocusRestoration();
     testSubmenuKeyboardLifecycle();
     testTallMenuScrollingAndViewportContainment();
+    testSubmenuStaysOnLeftOfItsParentAfterMeasuring();
     testOwnerLifetimeGatesCallbacks();
     testSubmenuOwnerPropagation();
     NUIComponent::clearFocusedComponent();

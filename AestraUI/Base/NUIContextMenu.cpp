@@ -1015,14 +1015,24 @@ void NUIContextMenu::fitInsideParent(const NUISize& size)
     float posX = requestedPosition_.x;
     float posY = requestedPosition_.y;
 
+    NUIRect parentBounds{};
+    bool haveBounds = false;
     if (NUIComponent* parent = getParent()) {
-        const NUIRect parentBounds = parent->getBounds();
+        parentBounds = parent->getBounds();
+        haveBounds = true;
+    } else if (viewport_) {
+        parentBounds = *viewport_; // a submenu: painted by its owner, which told it where the window is
+        haveBounds = true;
+    }
+    if (haveBounds) {
         // Width yields before height: a menu that has to shrink horizontally is
         // still usable, whereas one pushed off-screen is not.
         width = std::min(width, std::max(kMenuMinWidth, parentBounds.width - 20.0f));
         const float availableHeight = std::max(1.0f, parentBounds.height - 20.0f);
         height = std::min(height, availableHeight);
 
+        // A submenu that does not fit on the right opens on the left of its parent menu, by its real width.
+        if (flipsLeft_ && posX + width > parentBounds.right()) posX = flipLeftOf_ - width - 2.0f;
         if (posX + width > parentBounds.right()) posX = parentBounds.right() - width - 10.0f;
         if (posY + height > parentBounds.bottom()) posY = parentBounds.bottom() - height - 10.0f;
         posX = std::max(posX, parentBounds.x + 10.0f);
@@ -1054,6 +1064,11 @@ void NUIContextMenu::showSubmenu(int itemIndex)
     float targetY = itemRect.y;
 
     activeSubmenu_->exactPlacement_ = true;
+    if (auto* viewportOwner = getParent()) {
+        activeSubmenu_->viewport_ = viewportOwner->getBounds();
+        activeSubmenu_->flipsLeft_ = true;
+        activeSubmenu_->flipLeftOf_ = myBounds.x;
+    }
     activeSubmenu_->showAt(static_cast<int>(targetX), static_cast<int>(targetY));
 
     // Submenus are rendered by their owning menu rather than attached as root
