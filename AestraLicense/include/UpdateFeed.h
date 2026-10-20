@@ -63,5 +63,8 @@ inline bool isNewerVersion(const std::string& offered, const std::string& curren
 /// "windows-x64" / "linux-x64" / "macos-arm64" for the running build.
 std::string currentUpdatePlatform();
 
+/// The Ed25519 key this build trusts for update feeds (32 bytes, from update_public_key.hex at build time).
+const unsigned char* bundledUpdatePublicKey();
+
 } // namespace License
 } // namespace Aestra

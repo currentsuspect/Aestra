@@ -118,6 +118,16 @@ std::string currentUpdatePlatform() {
 #endif
 }
 
+const unsigned char* bundledUpdatePublicKey() {
+    static const std::vector<unsigned char> key = [] {
+        std::vector<unsigned char> bytes;
+        decodeHex(AESTRA_UPDATE_PUBLIC_KEY_HEX, bytes);
+        bytes.resize(32);
+        return bytes;
+    }();
+    return key.data();
+}
+
 UpdateFeedResult parseSignedUpdateFeed(const std::string& document, const unsigned char publicKey[32],
                                        const std::string& expectedChannel, const std::string& expectedPlatform) {
     UpdateFeedResult result;

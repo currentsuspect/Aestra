@@ -31,6 +31,8 @@ if(TARGET AestraLicense)
     endif()
     add_executable(SecUpdateFeed update_feed_test.cpp)
     add_test(NAME SecUpdateFeed COMMAND SecUpdateFeed)
+    add_executable(SecUpdateClient update_client_test.cpp)
+    add_test(NAME SecUpdateClient COMMAND SecUpdateClient)
     add_executable(SecAccountApiClient account_api_client_test.cpp)
     add_test(NAME SecAccountApiClient COMMAND SecAccountApiClient)
     add_executable(SecAccountEndToEndSmoke account_end_to_end_smoke.cpp)
@@ -245,6 +247,13 @@ if(TARGET AestraLicense)
         ${CMAKE_CURRENT_LIST_DIR}
     )
     target_link_libraries(SecUpdateFeed PRIVATE AestraLicense)
+
+    target_include_directories(SecUpdateClient PRIVATE
+        ${REPO_ROOT}/AestraLicense/include
+        ${REPO_ROOT}/AestraCore/include
+        ${CMAKE_CURRENT_LIST_DIR}
+    )
+    target_link_libraries(SecUpdateClient PRIVATE AestraLicense)
 
     target_include_directories(SecAccountApiClient PRIVATE
         ${REPO_ROOT}/AestraLicense/include
