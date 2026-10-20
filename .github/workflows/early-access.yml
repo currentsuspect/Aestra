@@ -69,6 +69,44 @@ jobs:
           Copy-Item "installer\READ ME FIRST.txt" $out\
           Get-ChildItem -Recurse $out | Select-Object FullName, Length
 
+      # Smoke test: start the packaged app on this fresh Windows machine and prove it reaches a running window.
+      # The runner has no GPU, so a throwaway copy gets Mesa's software OpenGL (llvmpipe, GL 4.5) next to the
+      # exe; the zip testers download is untouched. Fails if Aestra exits, or never logs a core GL context.
+      - name: Smoke test (start the app, screenshot)
+        shell: pwsh
+        run: |
+          $ver = "26.2.4"
+          Invoke-WebRequest "https://github.com/pal1000/mesa-dist-win/releases/download/$ver/mesa3d-$ver-release-msvc.7z" -OutFile mesa.7z
+          7z x mesa.7z -omesa -y | Out-Null
+          $test = "smoke"
+          Copy-Item -Recurse "Aestra-v0.8.1-alpha-windows-x64" $test
+          Copy-Item mesa\x64\*.dll $test\
+          $env:GALLIUM_DRIVER = "llvmpipe"
+          $env:APPDATA = "$PWD\smoke-appdata"; New-Item -ItemType Directory -Force $env:APPDATA | Out-Null
+          $p = Start-Process -FilePath "$test\Aestra.exe" -WorkingDirectory $test -PassThru
+          Start-Sleep -Seconds 40
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+          [System.Drawing.Graphics]::FromImage($bmp).CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+          New-Item -ItemType Directory -Force smoke-out | Out-Null
+          $bmp.Save("smoke-out\screen.png")
+          $alive = -not $p.HasExited
+          if ($alive) { Stop-Process -Id $p.Id -Force } else { "Aestra exited with code $($p.ExitCode)" }
+          Copy-Item "$test\aestra_debug.log" smoke-out\ -ErrorAction SilentlyContinue
+          Get-Content smoke-out\aestra_debug.log -ErrorAction SilentlyContinue | Select-Object -Last 40
+          $log = Get-Content smoke-out\aestra_debug.log -Raw -ErrorAction SilentlyContinue
+          if (-not $alive) { Write-Error "Aestra did not stay running"; exit 1 }
+          if ($log -notmatch "OpenGL core context created") { Write-Error "No core OpenGL context in the log"; exit 1 }
+          "Smoke test passed: Aestra is running with a core GL context."
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-smoke-test
+          path: smoke-out
+          if-no-files-found: ignore
+
       - uses: actions/upload-artifact@v4
         with:
           name: Aestra-v0.8.1-alpha-windows-x64
