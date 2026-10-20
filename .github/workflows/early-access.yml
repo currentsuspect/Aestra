@@ -100,6 +100,12 @@ jobs:
           cp -r build/bin/AestraAssets "$out/"
           cp LICENSE "$out/" 2>/dev/null || true
           strip "$out/Aestra" "$out/AestraPluginHost" 2>/dev/null || true
+          # libsodium's soname differs between distros (.so.23 here, .so.26 on Arch/newer), so ship ours
+          # next to the binary and point the RPATH at it. The other libs keep stable sonames everywhere.
+          sudo apt-get install -y patchelf
+          mkdir -p "$out/lib"
+          cp -L "$(ldd build/bin/Aestra | awk '/libsodium/ {print $3}')" "$out/lib/"
+          patchelf --set-rpath '$ORIGIN/lib' "$out/Aestra"
           ldd "$out/Aestra" | grep -v -E 'linux-vdso|ld-linux' | awk '{print $1}'
           tar czf "$out.tar.gz" "$out"
 
