@@ -30,6 +30,7 @@
 #pragma comment(lib, "avrt.lib")
 
 #include "AestraLog.h"
+#include "WasapiDiagnostics.h"
 
 namespace Aestra {
 namespace Audio {
@@ -253,8 +254,17 @@ bool WASAPIExclusiveDriver::enumerateDevices(std::vector<AudioDeviceInfo>& devic
             }
         }
         deviceCollection->Release();
+    } else {
+        Aestra::Log::warning("[WASAPI Exclusive] EnumAudioEndpoints failed: " + wasapiHex(hr));
     }
 
+    if (devices.empty()) {
+        static bool reported = false; // once: the controller asks several times while it waits
+        if (!reported) {
+            reported = true;
+            logWasapiEndpointReport(reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator), "WASAPI Exclusive");
+        }
+    }
     return !devices.empty();
 }
 
