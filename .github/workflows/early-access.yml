@@ -64,7 +64,7 @@ jobs:
 
       - name: Build
         # -k 0 keeps going after a failure, so one run lists every Windows compile error.
-        run: cmake --build build --config Release --target Aestra AestraPluginHost --parallel -- -k 0
+        run: cmake --build build --config Release --target Aestra AestraPluginHost AestraUpdater --parallel -- -k 0
 
       - name: Package
         shell: pwsh
@@ -73,6 +73,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path $out | Out-Null
           Copy-Item build\bin\Aestra.exe $out\
           if (Test-Path build\bin\AestraPluginHost.exe) { Copy-Item build\bin\AestraPluginHost.exe $out\ }
+          Copy-Item build\bin\AestraUpdater.exe $out\ # swaps the installed copy for a new one when the user updates
           Get-ChildItem build\bin -Filter *.dll | Copy-Item -Destination $out\
           # App-local Visual C++ runtime (Microsoft permits this), so a fresh PC does not fail with "MSVCP140.dll was not found".
           $crt = Get-ChildItem "$env:VCToolsRedistDir\x64" -Directory -Filter "Microsoft.VC*.CRT" | Select-Object -First 1
@@ -154,7 +155,7 @@ jobs:
         run: cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_UI=ON -DAESTRA_ENABLE_TESTS=OFF -DAESTRA_UPDATE_VERSION="$AESTRA_BUILD_VERSION"
 
       - name: Build
-        run: cmake --build build --target Aestra AestraPluginHost --parallel
+        run: cmake --build build --target Aestra AestraPluginHost AestraUpdater --parallel
 
       - name: Package
         run: |
@@ -162,10 +163,11 @@ jobs:
           mkdir -p "$out"
           cp build/bin/Aestra "$out/"
           [ -f build/bin/AestraPluginHost ] && cp build/bin/AestraPluginHost "$out/"
+          cp build/bin/AestraUpdater "$out/" # swaps the installed copy for a new one when the user updates
           cp -r build/bin/AestraAssets "$out/"
           cp LICENSE "$out/" 2>/dev/null || true
           cp "installer/READ ME FIRST.txt" "$out/"
-          strip "$out/Aestra" "$out/AestraPluginHost" 2>/dev/null || true
+          strip "$out/Aestra" "$out/AestraPluginHost" "$out/AestraUpdater" 2>/dev/null || true
           # libsodium's soname differs between distros (.so.23 here, .so.26 on Arch/newer), so ship ours
           # next to the binary and point the RPATH at it. The other libs keep stable sonames everywhere.
           sudo apt-get install -y patchelf
