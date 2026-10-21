@@ -230,7 +230,7 @@ bool readLineWithTimeout(int fd, pid_t pid, std::string& line, std::chrono::mill
                 return true;
             }
             line.push_back(ch);
-            if (line.size() > 8192) {
+            if (line.size() > (1u << 20)) { // a bundle of ~200 plugins answers in about 30 KB
                 return false;
             }
         } else {
@@ -305,34 +305,35 @@ std::vector<PluginInfo> scanClapMetadataOutOfProcess(const std::filesystem::path
     fcntl(outPipe[0], F_SETFL, fcntl(outPipe[0], F_GETFL, 0) | O_NONBLOCK);
 
     std::vector<PluginInfo> result;
-    const std::string command = "SCAN clap " + hexEncodeString(path.string());
+    const std::string command = "SCANALL clap " + hexEncodeString(path.string());
     std::string response;
     bool childReaped = false;
     if (sendAll(inPipe[1], command) &&
-        readLineWithTimeout(outPipe[0], pid, response, std::chrono::milliseconds(1000), childReaped) &&
+        readLineWithTimeout(outPipe[0], pid, response, std::chrono::milliseconds(5000), childReaped) &&
         response.compare(0, 3, "OK ") == 0) {
-        std::istringstream fields(response.substr(3));
-        std::string idHex;
-        std::string nameHex;
-        std::string vendorHex;
-        std::string versionHex;
-        std::string featuresHex;
-        fields >> idHex >> nameHex >> vendorHex >> versionHex >> featuresHex;
-        PluginInfo info;
-        info.id = hexDecodeString(idHex);
-        info.name = hexDecodeString(nameHex);
-        info.vendor = hexDecodeString(vendorHex);
-        info.version = hexDecodeString(versionHex);
-        info.category = hexDecodeString(featuresHex);
-        info.format = PluginFormat::CLAP;
-        info.type = info.category.find("instrument") != std::string::npos ||
-                            info.category.find("synthesizer") != std::string::npos
-                        ? PluginType::Instrument
-                        : PluginType::Effect;
-        info.path = path;
-        info.hasEditor = true;
-        if (info.isValid()) {
-            result.push_back(std::move(info));
+        // One record per plugin in the bundle, ';' apart; fields (id,name,vendor,version,features) are hex, ',' apart.
+        std::istringstream records(response.substr(3));
+        std::string record;
+        while (std::getline(records, record, ';')) {
+            std::vector<std::string> field;
+            std::istringstream parts(record);
+            std::string part;
+            while (std::getline(parts, part, ',')) field.push_back(part);
+            while (field.size() < 5) field.emplace_back();
+            PluginInfo info;
+            info.id = hexDecodeString(field[0]);
+            info.name = hexDecodeString(field[1]);
+            info.vendor = hexDecodeString(field[2]);
+            info.version = hexDecodeString(field[3]);
+            info.category = hexDecodeString(field[4]);
+            info.format = PluginFormat::CLAP;
+            info.type = info.category.find("instrument") != std::string::npos ||
+                                info.category.find("synthesizer") != std::string::npos
+                            ? PluginType::Instrument
+                            : PluginType::Effect;
+            info.path = path;
+            info.hasEditor = true;
+            if (info.isValid()) result.push_back(std::move(info));
         }
     }
 

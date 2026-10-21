@@ -385,6 +385,45 @@ int main(int argc, char** argv) {
 
         if (command == "PING") {
             reply("OK PONG");
+        } else if (command == "SCANALL") {
+            // Like SCAN, but every plugin in the bundle: records "id,name,vendor,version,features" (each hex), joined by ';'.
+            std::string format;
+            std::string pathHex;
+            input >> format >> pathHex;
+            const std::string path = hexDecode(pathHex);
+            if (format != "clap") {
+                reply("ERR unsupported-format");
+                continue;
+            }
+            if (path.empty()) {
+                reply("ERR invalid-scan-request");
+                continue;
+            }
+#ifndef _WIN32
+            std::vector<const ClapPluginDescriptor*> descriptors;
+            std::string error;
+            if (!clapModule.listDescriptors(path, descriptors, error)) {
+                reply("ERR " + error);
+                continue;
+            }
+            std::string records;
+            for (const ClapPluginDescriptor* d : descriptors) {
+                std::string features;
+                if (d->features) {
+                    for (const char* const* f = d->features; *f; ++f) {
+                        if (!features.empty()) features += "|";
+                        features += *f;
+                    }
+                }
+                if (!records.empty()) records += ";";
+                records += hexEncodeString(d->id) + "," + hexEncodeString(d->name ? d->name : "") + "," +
+                           hexEncodeString(d->vendor ? d->vendor : "") + "," + hexEncodeString(d->version ? d->version : "") + "," +
+                           hexEncodeString(features);
+            }
+            reply("OK " + records);
+#else
+            reply("ERR unsupported-platform");
+#endif
         } else if (command == "SCAN") {
             std::string format;
             std::string pathHex;
