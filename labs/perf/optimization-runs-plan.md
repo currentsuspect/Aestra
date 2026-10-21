@@ -63,6 +63,14 @@ plugin, and none of that was the multiply count:
   control had cost as much as the arithmetic: nine dot products per sample).
 - The interpolator phases **skip the exactly-zero halfband taps**. One phase of
   a halfband is a single tap (the centre); the other carries all the work.
+  **This needed a second commit.** `sinc()` at an even offset leaves
+  `sin(pi*m)` at ~1e-17 rather than exactly 0, so the float coefficient came
+  out a tiny non-zero number and the phase builder could not tell it from a
+  real tap — it kept all 23 terms of the short phase and multiplied 22 of them
+  by nothing. CodeRabbit caught it. Snapping those taps to an exact zero makes
+  the kernel the halfband it is meant to be and makes the skip fire: the short
+  phase becomes one tap instead of 23, the render goes 0.48 s -> 0.47 s, and
+  the fixture's canonical digest is **bit-identical**.
 
 The kernel, the tap set, the tap order and the arithmetic are unchanged. Only
 the order of the sums differs.
@@ -164,6 +172,33 @@ theme colour even when the resolved colour was identical.
 3.7x less UI CPU**, and it still presents every frame while the transport runs
 (zero frames over the 16.7 ms budget).
 
+### Manual click-through (the gate for merging Run 2)
+
+The real risk here is UI that updates late: while the app redrew 30 times a
+second, a state change that forgot to mark itself dirty still showed up right
+away. Now the same change can take up to the 300 ms heartbeat. So it was
+clicked through by hand, with the pointer driven by `ydotool` and the app's own
+dirty-origin probe as the evidence:
+
+| Check | Result |
+|---|---|
+| Play — transport starts, playhead moves | **pass** — 56 fps, playhead confirmed moving between two captures |
+| Hover states | **pass** — `NUIButton<TrackUIComponent>` dirties on hover |
+| Click a control (mute) | **pass** — button and label repaint; the state persists |
+| **Fader drag while stopped** | **pass** — the master fader's readout went 0.0 -> 3.0 dB live |
+| File preview + meters | **pass** — the preview plays, the visualiser runs, the position advances |
+| The blinking caret | **pass** — 7 of 9 consecutive 200 ms captures differ in the caret region |
+| Menus open and close | **pass** — the File menu opens with every item and closes on Escape |
+| Clip drag in the timeline | **pass** — the drop preview and the minimap update |
+| Typing in the browser's search field | **pass** — the list filters, the empty state renders |
+
+The "late update" risk did not materialise.
+
+> Tooling note, because it cost an hour: `ydotool mousemove` is **relative** by
+> default (it needs `--absolute`), and in this ydotool version `0x01` is the
+> RIGHT mouse button — a left click is `0xC0`. The first attempts were
+> right-clicking a window that was in fact receiving pointer events all along.
+
 ### The FBO cache finally works
 
 With the invalidation storm gone, `TrackManagerUI`'s cache holds:
@@ -175,6 +210,36 @@ With the invalidation storm gone, `TrackManagerUI`'s cache holds:
 
 The July baseline said the cache was "a massive FPS boost" that never materialised
 because the cache was invalidated every frame. It now is not.
+
+---
+
+# RUN 3 — Link-time optimisation for every compiler (PR #1202)
+
+`Source/CMakeLists.txt` added `-flto` to the **app target only**, and only for
+non-MSVC compilers. So the **Windows release build** — the one
+`private-release.yml` ships — got no LTO in any library, and `AestraAudio`,
+where the DSP lives, got none on any platform.
+
+Now each first-party target carries `INTERPROCEDURAL_OPTIMIZATION_RELEASE`, so
+CMake picks the right spelling per compiler: `/GL` + `/LTCG` on MSVC, `-flto`
+elsewhere. `-DAESTRA_ENABLE_IPO=OFF` turns it back off.
+
+| | before | after | |
+|---|---:|---:|---|
+| stripped app binary + assets | 12,220,644 B | **11,702,300 B** | −4.2 % |
+| AestraHeadless peak RSS, stress | 28,692 kB | **26,528 kB** | −7.5 % |
+| AestraHeadless peak RSS, tone | 24,744 kB | **22,340 kB** | −9.7 % |
+| unstripped app binary | 15,033,344 B | **11,925,640 B** | −21 % |
+| offline render CPU | 0.48 s | 0.50 s | **no change** |
+| frame tree cost | 5.34 ms | 5.44 ms | **no change** |
+
+**This is a size and memory win, not a speed win.** The SSE2 oversampler
+already took the arithmetic win that was available in the render; LTO adds
+nothing on top of it. It is worth having on the 4 GB target for the RSS and
+for the installer budget, and it closes the Windows gap — and it is not worth
+having for speed, which is what this says plainly.
+
+The budget gate passes on all three metrics.
 
 ---
 
@@ -253,6 +318,16 @@ results** — each needs a measurement before it becomes a claim.
 | **Dropping N files starts N threads** | `TrackManagerUIDragDrop.cpp:501`, `AestraContentImport.cpp:74` | All N full float decodes are in memory at once before compaction. On the 4 GB target, dropping 12 tracks could spike hard. Route them through the bounded pool. |
 | **Waveform peaks are not saved to disk** | — | They are rebuilt from the full decode on every project open. A small cached peaks file per source makes reopening faster. |
 
+## Leads that were measured and turned out not to be worth doing
+
+Both were on the list as small, safe wins. Both measured as noise, and neither
+is shipped:
+
+| Lead | Why it was dropped |
+|---|---|
+| Only convert the sidechain buffer when something feeds it (`AudioEngine.cpp:2602`) | The whole function, `processTrackEffects`, is 0.47 % of the render, so halving its work is worth at most a quarter of a percent. The stale-buffer worry is also unfounded: the engine clears the buffer for every receiver, so a track whose plugins consume a sidechain has a buffer that was written or cleared this block. |
+| Combine the transform stack once on push and pop instead of per vertex | The stack is empty almost everywhere and depth 1 inside the FBO cache, so composing it per vertex is already a handful of multiply-adds. The cached version measured the same frame cost (tree 5.34 -> 5.44 ms, noise) and would have added a stale-cache failure mode for nothing. |
+
 ## Findings that are not performance
 
 - **The frozen Folio fixture no longer loads its effect chain on develop** (v1
@@ -275,7 +350,7 @@ results** — each needs a measurement before it becomes a claim.
 ## Status
 
 - [x] Baseline build, audio harness, frame harness, baseline numbers
-- [x] Run 1: oversampler SIMD — measured, verified, output unchanged
+- [x] Run 1: oversampler SIMD — measured, verified, output unchanged (PR #1199)
 - [x] Run 2: never-idle loop — measured, verified, 3.5x less UI CPU
 - [x] Tests: oversampler parity (new), AestraSat, AestraComp oversampling,
       Folio probe fixture, UI scenario suite
