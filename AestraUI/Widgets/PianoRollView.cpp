@@ -748,6 +748,7 @@ void PianoRollView::setGhostPatterns(const std::vector<PianoRollNoteLayer::Ghost
 
 void PianoRollView::setNoteColor(const NUIColor& color) {
     m_notes->setNoteColor(color);
+    m_toolbar->setUnitColor(color); // the chip beside the unit name
 }
 
 const std::vector<MidiNote>& PianoRollView::getNotes() const {

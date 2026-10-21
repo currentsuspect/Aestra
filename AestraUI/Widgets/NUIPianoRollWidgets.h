@@ -270,6 +270,8 @@ public:
     /** @brief Bind the note layer controlled by the toolbar tools. */
     void setNoteLayer(std::shared_ptr<PianoRollNoteLayer> notes); // To set tools directly
     void setPatternLengthBeats(double beats);
+    /** @brief The editing unit's colour, shown as a chip beside the unit name. */
+    void setUnitColor(const NUIColor& color) { m_unitColor = color; repaint(); }
     void setPatternChoices(const std::vector<PatternChoice>& choices, int selectedValue);
     /** @brief Populate the unit switcher (reuses the PatternChoice value/label shape). */
     void setUnitChoices(const std::vector<PatternChoice>& choices, int selectedValue);
@@ -325,6 +327,8 @@ private:
     std::shared_ptr<NUIButton> m_lengthUpBtn;
     std::shared_ptr<NUIButton> m_followBtn;
     std::shared_ptr<NUIButton> m_centerBtn;
+    std::shared_ptr<NUIButton> m_scaleBtn;   // SCALE value: opens the root/scale/snap-to-scale menu
+    NUIColor m_unitColor = NUIColor(0.55f, 0.6f, 0.7f, 1.0f);
     std::shared_ptr<NUIDropdown> m_patternDropdown;
     std::shared_ptr<NUIDropdown> m_unitDropdown;
     std::shared_ptr<NUIDropdown> m_snapDropdown;
@@ -332,6 +336,7 @@ private:
     GlobalTool activeTool_ = GlobalTool::Pencil;
     bool m_followPlayhead = false;
     void applySnap(SnapGrid snap);
+    void openScaleMenu();
     
     // Icons
     std::shared_ptr<AestraUI::NUIIcon> m_menuIcon;
