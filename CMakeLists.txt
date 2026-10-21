@@ -448,6 +448,28 @@ if(AESTRA_ENABLE_TESTS)
     add_subdirectory(Tests)
 endif()
 
+# =============================================================================
+# Performance-baseline apparatus (labs/perf) -- opt-in, never on by default.
+#
+# The apparatus measures the engine, so it must never be part of the engine's
+# default build: the thing being measured would stop being the thing that
+# ships. It lives untracked here (see .gitignore) and tracked on
+# perf/folio-baseline-v1, so this hook is what lets an official series be
+# collected against develop's engine without moving the frozen apparatus onto
+# develop.
+# =============================================================================
+option(AESTRA_BUILD_PERF_APPARATUS "Build the Folio performance-baseline apparatus" OFF)
+if(AESTRA_BUILD_PERF_APPARATUS)
+    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/labs/perf/CMakeLists.txt")
+        message(FATAL_ERROR
+            "AESTRA_BUILD_PERF_APPARATUS is ON but labs/perf/CMakeLists.txt is missing.\n"
+            "The performance apparatus is tracked on the perf/folio-baseline-dev-rev branch, not on\n"
+            "develop, so a checkout of develop alone cannot build it. Check that branch out, or turn\n"
+            "the option back OFF.")
+    endif()
+    add_subdirectory(labs/perf)
+endif()
+
 message(STATUS "")
 message(STATUS "=================================")
 message(STATUS "  Aestra - Pure Native")
