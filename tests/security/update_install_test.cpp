@@ -306,11 +306,14 @@ int main() {
         writeFile(d.path / "notatar.tar.gz", "this is not an archive");
         check(!extractUpdatePackage((d.path / "notatar.tar.gz").string(), (d.path / "staged5").string(), "Aestra", &err) && !fs::exists(d.path / "staged5"), "garbage is refused");
 
-        // An archive that names a path above the staging folder must not write there.
+        // An archive that names a path above the staging folder must not write there. (Needs GNU tar's --transform to make
+        // such an archive; macOS's bsdtar cannot, so the case runs where it can.)
         writeFile(src / "up" / "Aestra", "x");
-        check(run("tar -czf '" + (d.path / "up.tar.gz").string() + "' --transform='s,^\\./,../escaped-,' -C '" + (src / "up").string() + "' ./Aestra"), "(test setup) tarball with an escaping name");
-        extractUpdatePackage((d.path / "up.tar.gz").string(), (d.path / "staged6").string(), "Aestra", &err);
-        check(!fs::exists(d.path / "escaped-Aestra"), "nothing was written above the staging folder");
+        if (run("tar --version 2>/dev/null | grep -q 'GNU tar'")) check(run("tar -czf '" + (d.path / "up.tar.gz").string() + "' --transform='s,^\\./,../escaped-,' -C '" + (src / "up").string() + "' ./Aestra"), "(test setup) tarball with an escaping name");
+        if (run("tar --version 2>/dev/null | grep -q 'GNU tar'")) {
+            extractUpdatePackage((d.path / "up.tar.gz").string(), (d.path / "staged6").string(), "Aestra", &err);
+            check(!fs::exists(d.path / "escaped-Aestra"), "nothing was written above the staging folder");
+        }
     }
 #endif
 

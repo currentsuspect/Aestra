@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 
 if os.name == "nt":
@@ -98,8 +99,8 @@ with tempfile.TemporaryDirectory() as root:
     d = os.path.join(root, "wait"); os.makedirs(d)
     app, staged = world(d, program("old-ran"), program("new-ran", sleep=5))
     closing = subprocess.Popen(["sleep", "1"])
+    threading.Thread(target=closing.wait, daemon=True).start()  # reap it the moment it ends, as init would for a real app
     code, res = run(d, app, staged, "--pid", str(closing.pid))
-    closing.wait()
     check(code == 0 and res and res["ok"], f"waits for the old version to close, then updates (got {code} {res})")
 
     # 6. Missing required arguments.
