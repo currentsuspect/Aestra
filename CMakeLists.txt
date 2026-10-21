@@ -460,6 +460,13 @@ endif()
 # =============================================================================
 option(AESTRA_BUILD_PERF_APPARATUS "Build the Folio performance-baseline apparatus" OFF)
 if(AESTRA_BUILD_PERF_APPARATUS)
+    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/labs/perf/CMakeLists.txt")
+        message(FATAL_ERROR
+            "AESTRA_BUILD_PERF_APPARATUS is ON but labs/perf/CMakeLists.txt is missing.\n"
+            "The performance apparatus is tracked on the perf/folio-baseline-dev-rev branch, not on\n"
+            "develop, so a checkout of develop alone cannot build it. Check that branch out, or turn\n"
+            "the option back OFF.")
+    endif()
     add_subdirectory(labs/perf)
 endif()
 

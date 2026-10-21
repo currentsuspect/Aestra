@@ -89,6 +89,23 @@ public:
         const double i0Beta = besselI0(kaiserBeta);
         for (uint32_t n = 0; n < numTaps; ++n) {
             const int32_t k = static_cast<int32_t>(n) - center;
+
+            // A halfband's even-offset taps are zero by construction. Evaluating
+            // sinc() at those offsets leaves sin(pi*m) at ~1e-17 rather than
+            // exactly 0, so the float coefficient comes out as a tiny non-zero
+            // number and the phase builder below cannot tell it from a real
+            // tap -- it kept all 23 terms of the short phase and multiplied 22
+            // of them by nothing.
+            //
+            // Snapping them to an exact zero makes the kernel the halfband it
+            // is meant to be and lets the phase builder drop the taps that
+            // carry no signal. The kernel changes by ~1e-17 relative, far
+            // below one float32 ULP of the output.
+            if (k != 0 && (k % 2) == 0) {
+                m_coeffs[n] = 0.0f;
+                continue;
+            }
+
             const double window =
                 besselI0(kaiserBeta * std::sqrt(std::max(0.0, 1.0 - sq((2.0 * n) / (numTaps - 1) - 1.0)))) / i0Beta;
             m_coeffs[n] = static_cast<float>(0.5 * sinc(0.5 * k) * window);
