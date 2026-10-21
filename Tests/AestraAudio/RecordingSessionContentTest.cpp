@@ -161,7 +161,7 @@ bool testRecordLandsTakeInPatternModeSession() {
 // Take-lane creation must not collide with existing content: the take gets its
 // own lane, the pre-existing lane keeps its clip untouched.
 bool testExistingLaneUntouchedByTake() {
-    std::cout << "  [2/4] Existing content lane untouched; take gets a new lane... ";
+    std::cout << "  [2/4] Existing content lane untouched; take lands in the track's own lane... ";
     auto tm = makeRecorder();
     Aestra::Tests::ScopedTempDirectory dir{"RecSessionLane"};
     tm->setRecordingProjectPath((dir.path() / "lane.aes").string());
@@ -174,8 +174,8 @@ bool testExistingLaneUntouchedByTake() {
         std::cerr << "FAILED: track creation failed\n";
         return false;
     }
-    // The track's own lane exists before the take; the take must add exactly
-    // one more.
+    // The track's own lane exists before the take, and is free where the take goes, so the
+    // take lands there and adds no lane.
     const size_t lanesBefore = totalLaneCount(*tm);
     tm->setTrackArmed(trackId, true);
     tm->record();
@@ -190,12 +190,49 @@ bool testExistingLaneUntouchedByTake() {
     if (!takeLane.isValid()) {
         return false;
     }
-    check(takeLane != existingLane, "take is NOT on the pre-existing lane");
-    check(totalLaneCount(*tm) == lanesBefore + 1, "exactly one new lane was created");
+    check(takeLane != existingLane, "take is NOT on the pre-existing lane (it is on the track's own)");
+    check(totalLaneCount(*tm) == lanesBefore, "no new lane: the take went where the track already was");
 
     auto* existing = tm->getPlaylistModel().getLane(existingLane);
     check(existing != nullptr && existing->clips.size() == 1, "existing lane keeps its original clip");
 
+    std::cout << "PASSED\n";
+    return true;
+}
+
+// Where the track's own lane already holds something at the take's position, the take must not be placed over it: it
+// gets a take lane of its own, and both clips stay visible.
+bool testTakeFallsBackToATakeLaneWhenTheSpotIsTaken() {
+    std::cout << "  [2b] Own lane occupied at the take's spot: the take gets its own lane... ";
+    auto tm = makeRecorder();
+    Aestra::Tests::ScopedTempDirectory dir{"RecSessionFallback"};
+    tm->setRecordingProjectPath((dir.path() / "fallback.aes").string());
+
+    PlaylistLaneID existingLane{};
+    seedSessionContent(*tm, existingLane);
+    const uint64_t trackId = makeTrack(*tm, "Take");
+    if (trackId == 0) {
+        std::cerr << "FAILED: track creation failed\n";
+        return false;
+    }
+    const size_t lanesBefore = totalLaneCount(*tm);
+    tm->setTrackArmed(trackId, true);
+    tm->record(); // armed once: each play/stop pass commits its own take
+    for (int pass = 0; pass < 2; ++pass) { // the same spot twice
+        tm->setPosition(0.0);
+        tm->onTransportStateApplied(true, 0, static_cast<double>(kSampleRate));
+        feedAt(*tm, 0.0, 0.5);
+        tm->onTransportStateApplied(false, static_cast<uint64_t>(0.5 * kSampleRate), static_cast<double>(kSampleRate));
+    }
+    auto* track = tm->getTrack(trackId);
+    check(track != nullptr && track->laneIds.size() == 2, "the track now has its own lane and one take lane");
+    check(totalLaneCount(*tm) == lanesBefore + 1, "exactly one lane was added, for the second take");
+    if (track && track->laneIds.size() == 2) {
+        const auto* own = tm->getPlaylistModel().getLane(track->laneIds[0]);
+        const auto* take = tm->getPlaylistModel().getLane(track->laneIds[1]);
+        check(own && own->clips.size() == 1, "the first take stays in the track's own lane, alone");
+        check(take && take->clips.size() == 1, "the second take is alone on its lane: nothing overlaps");
+    }
     std::cout << "PASSED\n";
     return true;
 }
@@ -230,16 +267,16 @@ bool testTakeUndoRedo() {
     if (!takeLane.isValid()) {
         return false;
     }
-    check(totalLaneCount(*tm) == lanesBefore + 1, "take lane present after commit");
+    check(totalLaneCount(*tm) == lanesBefore, "the take is in the track's own lane: no extra lane");
 
     check(tm->getCommandHistory().undo(), "undo succeeded");
-    check(totalLaneCount(*tm) == lanesBefore, "take lane removed by undo");
+    check(totalLaneCount(*tm) == lanesBefore, "undo removes the clip and leaves the lane");
     check(!takeLaneOf(*tm, trackId).isValid(), "no take clip remains after undo");
     auto* existing = tm->getPlaylistModel().getLane(existingLane);
     check(existing != nullptr && existing->clips.size() == 1, "existing content survives undo");
 
     check(tm->getCommandHistory().redo(), "redo succeeded");
-    check(totalLaneCount(*tm) == lanesBefore + 1, "take lane restored by redo");
+    check(totalLaneCount(*tm) == lanesBefore, "redo adds no lane");
     check(takeLaneOf(*tm, trackId).isValid(), "take clip restored by redo");
 
     std::cout << "PASSED\n";
@@ -300,6 +337,7 @@ int main() {
     const NamedTest tests[] = {
         {"pattern-mode session take", testRecordLandsTakeInPatternModeSession},
         {"existing lane untouched", testExistingLaneUntouchedByTake},
+        {"take falls back to a take lane when the spot is taken", testTakeFallsBackToATakeLaneWhenTheSpotIsTaken},
         {"take undo/redo", testTakeUndoRedo},
         {"timeline loop take", testRecordInsideTimelineLoopWithContent},
     };

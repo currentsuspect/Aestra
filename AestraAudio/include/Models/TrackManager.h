@@ -2397,6 +2397,38 @@ private:
         clip.sourceId = patternId.value;
         clip.edits.gainLinear = playbackGain;
 
+        // Record where the user armed: on the track's own lane, as a clip you can see land under the playhead. A take lane (a
+        // new row under the track) used to be made every time, so the recording left the lane it was drawn on and the view
+        // followed it. A take lane is now the fallback, for when the lane already has something where the take goes: nothing
+        // is overwritten or hidden underneath.
+        {
+            const PlaylistLaneID ownLaneId = track->activeLaneId;
+            const auto* ownLane = ownLaneId.isValid() ? m_playlistModel.getLane(ownLaneId) : nullptr;
+            const double takeEnd = clip.startBeat + clip.durationBeats;
+            const bool free = ownLane && ownLane->trackId == trackId &&
+                              std::none_of(ownLane->clips.begin(), ownLane->clips.end(), [&](const ClipInstance& other) {
+                                  return other.startBeat < takeEnd - 1e-6 && other.startBeat + other.durationBeats > clip.startBeat + 1e-6;
+                              });
+            if (free) {
+                auto addInPlace = std::make_shared<AddClipCommand>(m_playlistModel, ownLaneId, clip);
+                addInPlace->execute();
+                if (m_playlistModel.getClip(clip.id)) {
+                    auto inPlace = std::make_shared<CommandTransaction>("Record Take");
+                    inPlace->add(addInPlace);
+                    inPlace->markExecuted();
+                    if (m_commandHistory.pushExecuted(inPlace)) {
+                        requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
+                        m_modified.store(true, std::memory_order_relaxed);
+                        Log::info("[TrackManager] Recorded take committed in the track's own lane: " + takePath + " at beat " +
+                                  std::to_string(startBeat));
+                        if (m_onTakeCommitted) m_onTakeCommitted(ownLaneId);
+                        return;
+                    }
+                    addInPlace->undo(); // history refused it: take it back out and use the fallback below
+                }
+            }
+        }
+
         // Recording destination and Playlist placement are separate. Create a
         // lane for the take while the PatternSource retains the armed insert.
         auto createLane = std::make_shared<CreateLaneCommand>(m_playlistModel, takeName);
