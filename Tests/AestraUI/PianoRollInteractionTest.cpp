@@ -1036,7 +1036,7 @@ static void test_alt_drag_copy_is_one_gesture_and_moves_only_the_clone() {
 class NoteBodyRecorder : public Aestra::Testing::NullRenderer {
 public:
     std::vector<NUIRect> strokes;
-    void strokeRoundedRect(const NUIRect& r, float, float, const NUIColor&) override { strokes.push_back(r); }
+    void fillRoundedRect(const NUIRect& r, float, const NUIColor&) override { strokes.push_back(r); } // flat notes are one fill (FD-48)
 };
 
 static void test_alt_drag_clone_is_drawn_while_dragging() {

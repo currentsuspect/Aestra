@@ -257,6 +257,17 @@ void PianoRollToolbar::setupUI() {
     addChild(m_lengthUpBtn);
     addChild(m_followBtn);
     addChild(m_centerBtn);
+
+    // The row draws its own chrome (outline, active fill, glyphs) over these; the buttons only take input, so their own
+    // fills must not show through as purple blocks.
+    for (const auto& btn : {m_menuBtn, m_ptrBtn, m_pencilBtn, m_eraserBtn, m_scaleBtn, m_lengthDownBtn, m_lengthUpBtn, m_followBtn, m_centerBtn}) {
+        if (!btn) continue;
+        const NUIColor clear(0.0f, 0.0f, 0.0f, 0.0f);
+        btn->setBackgroundColor(clear);
+        btn->setHoverColor(clear);
+        btn->setPressedColor(clear);
+        btn->setBorderWidth(0.0f);
+    }
 }
 
 void PianoRollToolbar::openScaleMenu() {
