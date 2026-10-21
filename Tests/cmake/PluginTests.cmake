@@ -440,3 +440,22 @@ add_test(NAME InternalPluginBaseStatePolicyTest COMMAND InternalPluginBaseStateP
 set_tests_properties(InternalPluginBaseStatePolicyTest PROPERTIES
     LABELS "audio;plugins;serialization;contract:durability"
     TIMEOUT 120)
+
+# The oversampler FIR was rewritten to sum with SSE2 instead of a serial
+# accumulator chain. The kernel did not change, only the order of the sums —
+# so the test carries its own copy of the original scalar implementation and
+# compares the two sample by sample, plus the round-trip error figure the
+# kernel was designed for.
+add_executable(OversamplerParityTest
+    AestraAudio/OversamplerParityTest.cpp
+)
+target_link_libraries(OversamplerParityTest PRIVATE AestraAudio)
+target_include_directories(OversamplerParityTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME OversamplerParityTest COMMAND OversamplerParityTest)
+set_tests_properties(OversamplerParityTest PROPERTIES
+    LABELS "audio;dsp;oversampling;regression;contract:audio"
+    TIMEOUT 120)
