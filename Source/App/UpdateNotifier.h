@@ -35,6 +35,7 @@ public:
     void setSettings(const License::UpdateSettings& settings);
     License::UpdateCheckResult lastResult() const;
     bool hasResult() const;
+    uint64_t resultCount() const;
 
     /// The version this build reports (AESTRA_UPDATE_VERSION_STRING).
     static std::string currentVersion();

@@ -4,6 +4,8 @@
 
 #include "UpdateNotifier.h"
 #include "../Core/AestraContent.h"
+#include "../Settings/SettingsDialog.h"
+#include "../Settings/UpdatesSettingsPage.h"
 
 #include <filesystem>
 
@@ -28,4 +30,9 @@ void AestraApp::stopUpdateChecks() {
     if (!m_updateNotifier) return;
     m_updateNotifier->stop(); // joins the checker thread: no result can arrive after this
     m_updateNotifier.reset();
+}
+
+void AestraApp::addUpdatesPage(Aestra::SettingsDialog& dialog) {
+    // The page needs the notifier; if the checks were never started (no content yet) there is nothing for it to talk to.
+    if (m_updateNotifier) dialog.addPage(std::make_shared<UpdatesSettingsPage>(m_updateNotifier));
 }

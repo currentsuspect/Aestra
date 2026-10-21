@@ -197,6 +197,50 @@ int main() {
               "only an available update is announced");
     }
 
+    // What the Settings page says.
+    {
+        using Tone = UpdateStatusText::Tone;
+        UpdateSettings st;
+        UpdateCheckResult none;
+        auto text = describeUpdateStatus(true, false, none, st, "0.8.1");
+        check(text.headline.find("Checking") == 0, "while checking it says so");
+        text = describeUpdateStatus(false, false, none, st, "0.8.1");
+        check(text.headline == "Not checked yet" && text.detail.find("once a day") != std::string::npos, "before the first check: when it will look");
+        st.autoCheck = false;
+        text = describeUpdateStatus(false, false, none, st, "0.8.1");
+        check(text.detail.find("Check now") != std::string::npos, "with automatic checks off it points at the button");
+        st.autoCheck = true;
+
+        UpdateCheckResult r;
+        r.status = UpdateCheckStatus::UpToDate;
+        text = describeUpdateStatus(false, true, r, st, "0.8.1");
+        check(text.headline == "You're up to date" && text.tone == Tone::Good && text.detail.find("0.8.1") != std::string::npos && text.detail.find("stable") != std::string::npos,
+              "up to date names the version and the channel");
+        st.channel = "early";
+        check(describeUpdateStatus(false, true, r, st, "0.8.1").detail.find("early access") != std::string::npos, "and says early access for founders");
+
+        r.status = UpdateCheckStatus::Available;
+        r.manifest.version = "0.8.2";
+        r.manifest.size = 6018061;
+        text = describeUpdateStatus(false, true, r, st, "0.8.1");
+        check(text.headline == "Aestra 0.8.2 is available" && text.detail.find("5.7 MB") != std::string::npos, "available names the version and the download size");
+
+        r = UpdateCheckResult();
+        r.status = UpdateCheckStatus::Unauthorized;
+        text = describeUpdateStatus(false, true, r, st, "0.8.1");
+        check(text.headline == "Enter your founder key" && text.tone == Tone::Warn, "early without a key asks for one");
+        st.founderKey = "aef_x";
+        check(describeUpdateStatus(false, true, r, st, "0.8.1").headline == "The founder key was not accepted", "a refused key is said plainly");
+        r.status = UpdateCheckStatus::NetworkError;
+        r.detail = "update host answered HTTP 500";
+        text = describeUpdateStatus(false, true, r, st, "0.8.1");
+        check(text.headline.find("Couldn't reach") == 0 && text.detail.find("HTTP 500") != std::string::npos && text.detail.find("hour") != std::string::npos,
+              "a network failure says what happened and when it retries");
+        r.status = UpdateCheckStatus::BadFeed;
+        check(describeUpdateStatus(false, true, r, st, "0.8.1").detail.find("Nothing was downloaded") != std::string::npos, "an untrusted feed says nothing was installed");
+        check(describeUpdateStatus(true, true, r, st, "0.8.1").headline.find("Checking") == 0, "checking wins over an old result");
+    }
+
     // The background checker.
     {
         auto transport = std::make_unique<FakeTransport>();

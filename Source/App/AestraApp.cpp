@@ -809,7 +809,7 @@ void AestraApp::buildSettingsAndDialogs() {
         // TODO: Transition app to activation / sign-in screen
     });
     settingsDialog->addPage(membershipPage);
-    settingsDialog->addPage(std::make_shared<AppearanceSettingsPage>());
+    settingsDialog->addPage(std::make_shared<AppearanceSettingsPage>()); addUpdatesPage(*settingsDialog);
     settingsDialog->setBounds(AestraUI::NUIRect(0, 0, 950, 600));
 
     m_windowManager->setSettingsDialog(settingsDialog);
