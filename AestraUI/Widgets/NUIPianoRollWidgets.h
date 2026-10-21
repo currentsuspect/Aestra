@@ -270,6 +270,8 @@ public:
     /** @brief Bind the note layer controlled by the toolbar tools. */
     void setNoteLayer(std::shared_ptr<PianoRollNoteLayer> notes); // To set tools directly
     void setPatternLengthBeats(double beats);
+    /** @brief The editing unit's colour, shown as a chip beside the unit name. */
+    void setUnitColor(const NUIColor& color) { m_unitColor = color; repaint(); }
     void setPatternChoices(const std::vector<PatternChoice>& choices, int selectedValue);
     /** @brief Populate the unit switcher (reuses the PatternChoice value/label shape). */
     void setUnitChoices(const std::vector<PatternChoice>& choices, int selectedValue);
@@ -325,6 +327,8 @@ private:
     std::shared_ptr<NUIButton> m_lengthUpBtn;
     std::shared_ptr<NUIButton> m_followBtn;
     std::shared_ptr<NUIButton> m_centerBtn;
+    std::shared_ptr<NUIButton> m_scaleBtn;   // SCALE value: opens the root/scale/snap-to-scale menu
+    NUIColor m_unitColor = NUIColor(0.55f, 0.6f, 0.7f, 1.0f);
     std::shared_ptr<NUIDropdown> m_patternDropdown;
     std::shared_ptr<NUIDropdown> m_unitDropdown;
     std::shared_ptr<NUIDropdown> m_snapDropdown;
@@ -332,6 +336,7 @@ private:
     GlobalTool activeTool_ = GlobalTool::Pencil;
     bool m_followPlayhead = false;
     void applySnap(SnapGrid snap);
+    void openScaleMenu();
     
     // Icons
     std::shared_ptr<AestraUI::NUIIcon> m_menuIcon;
@@ -456,6 +461,9 @@ class NUIPlatformBridge;
 // -----------------------------------------------------------------------------
 class PianoRollNoteLayer : public NUIComponent {
 public:
+    /// The unit being edited gives its notes their colour (flat and opaque, FD-48).
+    void setNoteColor(const NUIColor& color) { if (noteColor_.r == color.r && noteColor_.g == color.g && noteColor_.b == color.b) return; noteColor_ = color; repaint(); }
+
     struct GhostPattern {
         /** @brief Notes rendered as a ghost overlay. */
         std::vector<MidiNote> notes;
@@ -631,6 +639,9 @@ public:
 private:
     std::vector<MidiNote> notes_;
     std::vector<GhostPattern> ghostPatterns_;
+    NUIColor noteColor_ = NUIColor(0.40f, 0.62f, 0.95f, 1.0f); ///< the unit's colour until the panel says which
+    /// One note, flat: the unit's colour (lifted by state), grips when selected or hovered at an edge, the pitch name inside.
+    void paintNote(NUIRenderer& renderer, const NUIRect& r, const MidiNote& note, bool hovered, bool sounding, float rawWidth);
     float pixelsPerBeat_;
     float keyHeight_;
     float scrollX_;
@@ -913,6 +924,8 @@ public:
     void setDefaultUnitId(uint64_t unitId);
     
     void setGhostPatterns(const std::vector<PianoRollNoteLayer::GhostPattern>& ghosts);
+    /** @brief The editing unit's colour: its notes are drawn flat in it (FD-48). */
+    void setNoteColor(const NUIColor& color);
 
     /** @brief Set callback to check transport playback state (suppress preview when playing). */
     void setIsPlayingCallback(std::function<bool()> cb);

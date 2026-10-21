@@ -3,6 +3,7 @@
 #include "NUIPianoRollWidgets.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
+#include "PianoRollLook.h"
 #include "PianoRollWidgetShared.h"
 #include "../Helpers/TimelineGridRenderer.h"
 #include <algorithm>
@@ -36,11 +37,7 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
     }
 
     const auto gridInk = theme.getCurrentTheme().textPrimary;
-    const auto accidentalRow = gridInk.withAlpha(0.018f);
-    const auto rootRow = theme.getColor("accentPrimary").withAlpha(0.035f);
-    // Out-of-scale rows recede toward the bed's own polarity, not toward black.
-    const auto outOfScaleRow = gridInk.withAlpha(0.025f);
-    const auto rowLine = gridInk.withAlpha(0.020f);
+    const auto rootRow = theme.getColor("accentPrimary").withAlpha(0.05f);
 
     int startPitch = 127 - static_cast<int>(scrollY_ / keyHeight_);
     int endPitch = 127 - static_cast<int>((scrollY_ + bounds.height) / keyHeight_);
@@ -50,18 +47,13 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
     for (int pitch = startPitch; pitch >= endPitch; --pitch) {
         const float y = bounds.y + (127 - pitch) * keyHeight_ - scrollY_;
         const NUIRect row(bounds.x, y, bounds.width, keyHeight_);
-        const int pitchClass = ((pitch % 12) + 12) % 12;
-        const bool isRoot = pitchClass == rootKey_;
-        const bool isInScale =
-            scaleType_ == ScaleType::Chromatic || MusicTheory::isNoteInScale(pitch, rootKey_, scaleType_);
-
-        if (isRoot) {
-            renderer.fillRect(row, rootRow);
-        } else if (isBlackKey(pitch)) {
-            renderer.fillRect(row, accidentalRow);
-        }
-        if (!isInScale) renderer.fillRect(row, outOfScaleRow);
-        renderer.drawLine(NUIPoint(bounds.x, y), NUIPoint(bounds.right(), y), 1.0f, rowLine);
+        // FD-48: rows of the scale lifted, rows outside it recessed (a chromatic roll recesses the accidentals like a
+        // keyboard's black keys), the root marked, and a stronger line under every C so octaves can be counted.
+        const PianoRollLook::RowShade shade = PianoRollLook::rowShade(pitch, rootKey_, scaleType_);
+        if (shade != PianoRollLook::RowShade::Plain) renderer.fillRect(row, PianoRollLook::rowShadeFill(shade));
+        if (scaleType_ != ScaleType::Chromatic && ((pitch % 12) + 12) % 12 == rootKey_) renderer.fillRect(row, rootRow);
+        renderer.drawLine(NUIPoint(bounds.x, row.bottom()), NUIPoint(bounds.right(), row.bottom()), 1.0f,
+                          gridInk.withAlpha(PianoRollLook::rowLineAlpha(pitch)));
     }
 
     TimelineGridStyle gridStyle;

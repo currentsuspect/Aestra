@@ -862,4 +862,13 @@ void PianoRollPanel::updateGhostChannels() {
     }
 
     m_pianoRoll->setGhostPatterns(ghosts);
+
+    // The notes being edited take the unit's colour (a pattern with no unit keeps the view's default).
+    if (m_editingUnitId != 0) {
+        if (const auto* unit = m_trackManager->getUnitManager().getUnit(m_editingUnitId)) {
+            const float scale = 1.0f / 255.0f;
+            m_pianoRoll->setNoteColor(AestraUI::NUIColor(((unit->color >> 16) & 0xff) * scale, ((unit->color >> 8) & 0xff) * scale,
+                                                         (unit->color & 0xff) * scale, 1.0f));
+        }
+    }
 }
