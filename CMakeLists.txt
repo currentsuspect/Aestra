@@ -27,6 +27,10 @@ project(AESTRA VERSION 0.8.1 LANGUAGES C CXX)
 # asking "which build?" could not be answered from the log it came with, which
 # is the one place the answer has to be.
 add_compile_definitions(AESTRA_VERSION_STRING="${PROJECT_VERSION}")
+# What this build tells the updater it is. A release is its PROJECT_VERSION; an early-access build is "0.8.2-preview.16"
+# (CI passes -DAESTRA_UPDATE_VERSION=...), so a build is never offered itself as an update. Defined for one source
+# file only (Source/CMakeLists.txt), so changing it does not rebuild the world.
+set(AESTRA_UPDATE_VERSION "${PROJECT_VERSION}" CACHE STRING "Version this build reports to the update service")
 
 # Ensure CTest discovery/registration works from the build root.
 include(CTest)

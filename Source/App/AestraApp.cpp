@@ -516,7 +516,7 @@ void AestraApp::initializeContent() {
     m_content->setMidiInput(m_audioController->getMidiInput());
     syncRecordingProjectPath(m_content, m_documentState.canonicalPath());
 
-    m_windowManager->setContent(m_content);
+    m_windowManager->setContent(m_content); startUpdateChecks();
     m_audioController->setContent(m_content);
 
     // Forward project dirty state to autosave. TrackManager marks itself modified
@@ -1665,7 +1665,7 @@ void AestraApp::cleanupUnreferencedRecordings(const std::string& keeperProjectPa
 }
 
 void AestraApp::shutdown() {
-    Log::info("[SHUTDOWN] Entering shutdown function...");
+    stopUpdateChecks(); Log::info("[SHUTDOWN] Entering shutdown function...");
     Aestra::AppLifecycle::instance().transitionTo(Aestra::AppState::ShuttingDown);
 
     // Invalidate lifetime token so any async callbacks that fire during teardown

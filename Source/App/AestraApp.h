@@ -32,7 +32,7 @@
  * Refactored to delegate to AestraWindowManager and AestraAudioController.
  */
 #include "../Core/RecoveryInfo.h"
-namespace Aestra { enum class RecoveryResponse; namespace Audio { class TakesPanel; } }
+namespace Aestra { enum class RecoveryResponse; class UpdateNotifier; namespace Audio { class TakesPanel; } }
 
 class AestraApp {
 public:
@@ -236,6 +236,10 @@ private:
     };
     std::shared_ptr<MainThreadQueue> m_mainThreadQueue{std::make_shared<MainThreadQueue>()};
     void startMuseSocketIfConfigured();
+    // Updates (AestraAppUpdates.cpp): the background check and its one notification.
+    void startUpdateChecks();
+    void stopUpdateChecks();
+    std::shared_ptr<Aestra::UpdateNotifier> m_updateNotifier;
 
     // Declared before m_content so it outlives every surface that reads it (reverse destruction order).
     std::unique_ptr<Aestra::UISurfaceStoreFile> m_uiSurfaceStore;
