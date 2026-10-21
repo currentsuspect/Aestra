@@ -481,6 +481,7 @@ if(AESTRA_ENABLE_IPO AND AESTRA_IPO_SUPPORTED)
         AestraUI_Core
         AestraUI_Platform
         AestraUI_OpenGL
+        AestraPluginHost
         Aestra
     )
     foreach(_t IN LISTS _aestra_ipo_targets)
