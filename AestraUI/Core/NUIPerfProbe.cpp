@@ -7,7 +7,9 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <cstdio>
+#include <limits>
 #include <cstdlib>
 #include <map>
 #include <sstream>
@@ -127,8 +129,17 @@ void recordDirtyOrigin(const NUIComponent& component, const NUIComponent* parent
     const std::string who = typeName(component) + "<" + (parent ? typeName(*parent) : std::string("root")) + ">";
     counters().dirtyOrigins[who]++;
     const auto b = component.getBounds();
-    counters().dirtyOriginsAt[who + "@" + std::to_string(static_cast<int>(b.x)) + "," +
-                             std::to_string(static_cast<int>(b.y))]++;
+    // A bound is a float, and a float that is NaN or out of int range makes
+    // the cast below undefined behaviour -- so the position is formatted
+    // defensively. A probe must never be the thing that breaks the app.
+    const auto coordinate = [](float value) -> std::string {
+        if (!std::isfinite(value) || value < static_cast<float>(std::numeric_limits<int>::lowest()) ||
+            value > static_cast<float>(std::numeric_limits<int>::max())) {
+            return "invalid";
+        }
+        return std::to_string(static_cast<int>(value));
+    };
+    counters().dirtyOriginsAt[who + "@" + coordinate(b.x) + "," + coordinate(b.y)]++;
 }
 
 void recordRenderSelf(const NUIComponent& component, double ms) { counters().renderSelfMs[typeName(component)] += ms; }
