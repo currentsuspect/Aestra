@@ -484,6 +484,15 @@ public:
 
     /** @brief Replace the currently edited note list. */
     void setNotes(const std::vector<MidiNote>& notes);
+    /// One note's velocity or pan, edited in place: no copy of the list and no re-sort, so a lane drag costs the same on a
+    /// thousand notes as on ten, and notes that start together (a chord) keep their order under the dragged index.
+    bool setLaneValue(int index, bool pan, float value) {
+        if (index < 0 || static_cast<size_t>(index) >= notes_.size()) return false;
+        (pan ? notes_[index].pan : notes_[index].velocity) = value;
+        lastCommitWasVelocityScrub_ = false;
+        repaint();
+        return true;
+    }
     /** @brief Get the currently edited note list. */
     const std::vector<MidiNote>& getNotes() const { return notes_; }
     

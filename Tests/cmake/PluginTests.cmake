@@ -263,6 +263,20 @@ if(UNIX AND EXISTS ${CMAKE_SOURCE_DIR}/AestraAudio/External/clap/include/clap/cl
     set_tests_properties(ClapAbiMirrorLayoutTest PROPERTIES LABELS "audio;plugins;clap;regression;contract:plugins")
 endif()
 
+# The helper's SCANALL lists every plugin in a CLAP bundle (V82-H6); the fixture bundle holds three.
+if(UNIX AND TARGET AestraPluginHost AND EXISTS ${CMAKE_SOURCE_DIR}/AestraAudio/External/clap/include/clap/clap.h)
+    add_library(ClapMultiPluginFixture MODULE AestraAudio/fixtures/ClapMultiPlugin.cpp)
+    target_include_directories(ClapMultiPluginFixture PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/External/clap/include)
+    set_target_properties(ClapMultiPluginFixture PROPERTIES PREFIX "" SUFFIX ".clap")
+    add_executable(ClapScanAllTest AestraAudio/ClapScanAllTest.cpp)
+    target_compile_definitions(ClapScanAllTest PRIVATE
+        HELPER_PATH="$<TARGET_FILE:AestraPluginHost>"
+        FIXTURE_PATH="$<TARGET_FILE:ClapMultiPluginFixture>")
+    add_dependencies(ClapScanAllTest AestraPluginHost ClapMultiPluginFixture)
+    add_test(NAME ClapScanAllTest COMMAND ClapScanAllTest)
+    set_tests_properties(ClapScanAllTest PROPERTIES LABELS "audio;plugins;clap;regression;contract:plugins")
+endif()
+
 # The road a parameter value takes to a VST3 processor, and back from the plugin's own window (V82-H4/H5).
 if(EXISTS ${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces/base/funknown.cpp)
     add_executable(Vst3ParamBridgeTest AestraAudio/Vst3ParamBridgeTest.cpp)
@@ -439,4 +453,23 @@ target_include_directories(InternalPluginBaseStatePolicyTest PRIVATE
 add_test(NAME InternalPluginBaseStatePolicyTest COMMAND InternalPluginBaseStatePolicyTest)
 set_tests_properties(InternalPluginBaseStatePolicyTest PROPERTIES
     LABELS "audio;plugins;serialization;contract:durability"
+    TIMEOUT 120)
+
+# The oversampler FIR was rewritten to sum with SSE2 instead of a serial
+# accumulator chain. The kernel did not change, only the order of the sums —
+# so the test carries its own copy of the original scalar implementation and
+# compares the two sample by sample, plus the round-trip error figure the
+# kernel was designed for.
+add_executable(OversamplerParityTest
+    AestraAudio/OversamplerParityTest.cpp
+)
+target_link_libraries(OversamplerParityTest PRIVATE AestraAudio)
+target_include_directories(OversamplerParityTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME OversamplerParityTest COMMAND OversamplerParityTest)
+set_tests_properties(OversamplerParityTest PROPERTIES
+    LABELS "audio;dsp;oversampling;regression;contract:audio"
     TIMEOUT 120)
