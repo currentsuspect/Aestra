@@ -753,6 +753,26 @@ struct ClapModule {
         return state->load(plugin, &stream);
     }
 
+    /// Every plugin a bundle holds, not just the first: one .clap file can hold hundreds (LSP holds about 200). The
+    /// descriptors stay valid until close(). Entries without an id are skipped.
+    bool listDescriptors(const std::string& path, std::vector<const ClapPluginDescriptor*>& out, std::string& error) {
+        out.clear();
+        const ClapPluginDescriptor* first = nullptr;
+        if (!scanMetadata(path, first, error)) return false;
+        const auto* factory = static_cast<const ClapPluginFactory*>(entry->getFactory(kClapPluginFactoryId));
+        const uint32_t count = factory->getPluginCount(factory);
+        for (uint32_t i = 0; i < count; ++i) {
+            const ClapPluginDescriptor* d = factory->getPluginDescriptor(factory, i);
+            if (d && d->id && d->id[0] != '\0') out.push_back(d);
+        }
+        if (out.empty()) {
+            error = "invalid-clap-descriptor";
+            close();
+            return false;
+        }
+        return true;
+    }
+
     bool scanMetadata(const std::string& path, const ClapPluginDescriptor*& descriptor, std::string& error) {
         descriptor = nullptr;
         close();
