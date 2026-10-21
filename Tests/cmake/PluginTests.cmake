@@ -263,6 +263,20 @@ if(UNIX AND EXISTS ${CMAKE_SOURCE_DIR}/AestraAudio/External/clap/include/clap/cl
     set_tests_properties(ClapAbiMirrorLayoutTest PROPERTIES LABELS "audio;plugins;clap;regression;contract:plugins")
 endif()
 
+# The helper's SCANALL lists every plugin in a CLAP bundle (V82-H6); the fixture bundle holds three.
+if(UNIX AND TARGET AestraPluginHost AND EXISTS ${CMAKE_SOURCE_DIR}/AestraAudio/External/clap/include/clap/clap.h)
+    add_library(ClapMultiPluginFixture MODULE AestraAudio/fixtures/ClapMultiPlugin.cpp)
+    target_include_directories(ClapMultiPluginFixture PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/External/clap/include)
+    set_target_properties(ClapMultiPluginFixture PROPERTIES PREFIX "" SUFFIX ".clap")
+    add_executable(ClapScanAllTest AestraAudio/ClapScanAllTest.cpp)
+    target_compile_definitions(ClapScanAllTest PRIVATE
+        HELPER_PATH="$<TARGET_FILE:AestraPluginHost>"
+        FIXTURE_PATH="$<TARGET_FILE:ClapMultiPluginFixture>")
+    add_dependencies(ClapScanAllTest AestraPluginHost ClapMultiPluginFixture)
+    add_test(NAME ClapScanAllTest COMMAND ClapScanAllTest)
+    set_tests_properties(ClapScanAllTest PROPERTIES LABELS "audio;plugins;clap;regression;contract:plugins")
+endif()
+
 # The road a parameter value takes to a VST3 processor, and back from the plugin's own window (V82-H4/H5).
 if(EXISTS ${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces/base/funknown.cpp)
     add_executable(Vst3ParamBridgeTest AestraAudio/Vst3ParamBridgeTest.cpp)
