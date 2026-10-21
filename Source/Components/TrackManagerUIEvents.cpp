@@ -260,11 +260,12 @@ void TrackManagerUI::updateToolbarHover(const AestraUI::NUIMouseEvent& event) {
         bool oldMultiSelectHovered = m_multiSelectToolHovered;
         bool oldPaintHovered = m_paintToolHovered;
         bool oldFollowHovered = m_followPlayheadHovered;
-        const bool oldBoardHovered = m_eraseToolHovered || m_snapHovered || m_fitSongHovered;
-        m_eraseToolHovered = m_eraseToolBounds.contains(event.position);
+        const bool oldMuteHovered = m_muteToolHovered;
+        const bool oldBoardHovered = m_muteToolHovered || m_snapHovered || m_fitSongHovered;
+        m_muteToolHovered = m_muteToolBounds.contains(event.position);
         m_snapHovered = m_snapBounds.contains(event.position);
         m_fitSongHovered = m_fitSongBounds.contains(event.position);
-        if (oldBoardHovered != (m_eraseToolHovered || m_snapHovered || m_fitSongHovered)) setDirty(true);
+        if (oldBoardHovered != (m_muteToolHovered || m_snapHovered || m_fitSongHovered)) setDirty(true);
 
         m_menuHovered = m_menuIconBounds.contains(event.position);
         m_selectToolHovered = m_selectToolBounds.contains(event.position);
@@ -275,9 +276,9 @@ void TrackManagerUI::updateToolbarHover(const AestraUI::NUIMouseEvent& event) {
 
         // Toolbar Tooltips
         bool anyToolbarHovered = m_menuHovered || m_selectToolHovered || m_splitToolHovered ||
-                                 m_multiSelectToolHovered || m_paintToolHovered || m_followPlayheadHovered;
+                                 m_multiSelectToolHovered || m_paintToolHovered || m_followPlayheadHovered || m_muteToolHovered;
         bool anyOldHovered = oldMenuHovered || oldSelectHovered || oldSplitHovered ||
-                             oldMultiSelectHovered || oldPaintHovered || oldFollowHovered;
+                             oldMultiSelectHovered || oldPaintHovered || oldFollowHovered || oldMuteHovered;
 
         if (m_toolbarBounds.contains(event.position) && anyToolbarHovered) {
             std::string tooltipText;
@@ -286,11 +287,13 @@ void TrackManagerUI::updateToolbarHover(const AestraUI::NUIMouseEvent& event) {
             else if (m_selectToolHovered && !oldSelectHovered)
                 tooltipText = "Select (1)";
             else if (m_splitToolHovered && !oldSplitHovered)
-                tooltipText = "Split (2)";
+                tooltipText = "Split (3): click a clip to cut it at the line";
+            else if (m_muteToolHovered && !oldMuteHovered)
+                tooltipText = "Mute (4): click a clip to silence it (drag to sweep); Alt+click works with any tool";
             else if (m_multiSelectToolHovered && !oldMultiSelectHovered)
                 tooltipText = "Multi-Select Tool";
             else if (m_paintToolHovered && !oldPaintHovered)
-                tooltipText = "Draw: click empty grid to stamp the copied clip";
+                tooltipText = "Draw (2): click empty grid to stamp the copied clip";
             else if (m_followPlayheadHovered && !oldFollowHovered)
                 tooltipText = "Follow Playhead";
             if (!tooltipText.empty()) {
@@ -539,7 +542,9 @@ void TrackManagerUI::clearRulerSelection() {
 }
 
 bool TrackManagerUI::beginGridMarquee(const AestraUI::NUIMouseEvent& event) {
-    if (m_currentTool != PlaylistTool::Select || !event.pressed || event.button != AestraUI::NUIMouseButton::Left) {
+    // The Select tool's gesture, and Draw's too while Draw has nothing to stamp (the app starts on Draw).
+    const bool bandTool = m_currentTool == PlaylistTool::Select || (m_currentTool == PlaylistTool::Paint && !canPaintClip());
+    if (!bandTool || !event.pressed || event.button != AestraUI::NUIMouseButton::Left) {
         return false;
     }
     // Only a plain press replaces: Shift/Ctrl drag adds to or toggles what is already selected.
@@ -1056,7 +1061,15 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
             return true;
         }
         if (event.keyCode == AestraUI::NUIKeyCode::Num2) {
+            setCurrentTool(PlaylistTool::Paint);
+            return true;
+        }
+        if (event.keyCode == AestraUI::NUIKeyCode::Num3) {
             setCurrentTool(PlaylistTool::Split);
+            return true;
+        }
+        if (event.keyCode == AestraUI::NUIKeyCode::Num4) {
+            setCurrentTool(PlaylistTool::Mute);
             return true;
         }
 
@@ -1119,20 +1132,11 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
                 pasteClipboardAtCursor();
                 return true;
             }
-            // Ctrl+B: duplicate the whole selection (#848; matches the Arsenal grid).
-            if (event.keyCode == AestraUI::NUIKeyCode::B &&
+            // Ctrl+D: duplicate the whole selection, one key in every editor (timeline, piano roll, Arsenal grid). It was
+            // Ctrl+B here and in the Arsenal grid but Ctrl+D in the piano roll and in the clip menu's own label.
+            if (event.keyCode == AestraUI::NUIKeyCode::D &&
                 (m_selectedClipId.isValid() || !m_clipSelection.empty())) {
                 duplicateSelectedClip();
-                return true;
-            }
-            if (event.keyCode == AestraUI::NUIKeyCode::D && m_selectedClipId.isValid()) {
-                duplicateSelectedClip();
-                return true;
-            }
-            // Ctrl+B: Paste-to-right (paste at end of selected clip, select new clip)
-            if (event.keyCode == AestraUI::NUIKeyCode::B &&
-                (m_selectedClipId.isValid() || hasClipboardClip())) {
-                pasteClipToRight();
                 return true;
             }
         }

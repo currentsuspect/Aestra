@@ -1,6 +1,6 @@
 // © 2026 Aestra Studios — All Rights Reserved.
 // Regression coverage for selection-based step editing: click-to-select
-// grammar (no click-to-delete), Ctrl+B span duplication, Delete/Backspace
+// grammar (no click-to-delete), Ctrl+D span duplication, Delete/Backspace
 // removal, and the duplicate-becomes-selection contract.
 
 #include "UnitRow.h"
@@ -158,7 +158,7 @@ void testDuplicateUsesOccupiedSpan() {
     f.row->setOnPatternEdited([&](Aestra::Audio::PatternID) { ++patternEditedCount; });
 
     f.row->setStepSelection({1, 3, 4});
-    check(f.row->onKeyEvent(keyPress(NUIKeyCode::B, NUIModifiers::Ctrl)), "Ctrl+B handled");
+    check(f.row->onKeyEvent(keyPress(NUIKeyCode::D, NUIModifiers::Ctrl)), "Ctrl+D handled");
 
     check(f.stepsForUnit() == std::vector<int>({1, 3, 4, 5, 7, 8}),
           "duplicate lands right after the occupied span (1,3,4 -> 5,7,8)");
@@ -172,10 +172,10 @@ void testRepeatedDuplicateBuildsPhrases() {
     f.addNote(1);
     f.addNote(2);
     f.row->setStepSelection({1, 2});
-    f.row->onKeyEvent(keyPress(NUIKeyCode::B, NUIModifiers::Ctrl)); // -> 3,4
-    f.row->onKeyEvent(keyPress(NUIKeyCode::B, NUIModifiers::Ctrl)); // -> 5,6
+    f.row->onKeyEvent(keyPress(NUIKeyCode::D, NUIModifiers::Ctrl)); // -> 3,4
+    f.row->onKeyEvent(keyPress(NUIKeyCode::D, NUIModifiers::Ctrl)); // -> 5,6
     check(f.stepsForUnit() == std::vector<int>({1, 2, 3, 4, 5, 6}),
-          "repeated Ctrl+B builds the phrase step by step");
+          "repeated Ctrl+D builds the phrase step by step");
 }
 
 void testDuplicateSkipsOccupiedDestination() {
@@ -185,7 +185,7 @@ void testDuplicateSkipsOccupiedDestination() {
     f.addNote(4);
     f.addNote(5); // occupies the would-be duplicate slot
     f.row->setStepSelection({1, 3, 4});
-    f.row->onKeyEvent(keyPress(NUIKeyCode::B, NUIModifiers::Ctrl));
+    f.row->onKeyEvent(keyPress(NUIKeyCode::D, NUIModifiers::Ctrl));
     check(f.stepsForUnit() == std::vector<int>({1, 3, 4, 5, 7, 8}),
           "duplicate skips occupied destinations without clobbering");
 }

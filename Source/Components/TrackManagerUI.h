@@ -28,6 +28,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include "Events/Connection.h"
 #include <mutex>
 #include <unordered_map>
@@ -106,7 +107,7 @@ public:
     // Clipboard & Paint Tool
     void copySelectedClip();
     void pasteClipboardAtCursor(); // Paste at playhead
-    void pasteClipToRight();       // Ctrl+B: Paste at end of selected clip, select new clip
+    void pasteClipToRight();       // Paste at end of selected clip, select new clip (no key: Ctrl+D is Duplicate everywhere)
     void onPaintClip(TrackUIComponent* trackComp, double beat);
     const Audio::ClipInstance& getClipboardClip() const { return m_clipboardClip; }
     bool hasClipboardClip() const { return m_clipboardClip.id.isValid(); }
@@ -124,6 +125,12 @@ public:
     void setActiveTool(PlaylistTool tool) { setCurrentTool(tool); } // Alias
     PlaylistTool getCurrentTool() const { return m_currentTool; }
     PlaylistTool getActiveTool() const { return m_currentTool; } // Alias
+    /// Whether this clip is muted (silent on playback, drawn greyed).
+    bool isClipMuted(ClipInstanceID clipId) const;
+    /// Mute or unmute one clip as one undo step. @p target absent = flip it. Returns the state it is in afterwards.
+    bool toggleClipMute(ClipInstanceID clipId, std::optional<bool> target = std::nullopt);
+    /// Whether the Draw tool has a clip to stamp (copied or selected earlier).
+    bool canPaintClip() const { return m_clipboardClip.id.isValid(); }
 
     // === VIEW MODES ===
     /// Automation shows every lane's automation row; Clips hides them all (V82-T1: rows of their own now, so
@@ -484,6 +491,7 @@ private:
     std::shared_ptr<::AestraUI::NUIIcon> m_splitToolIcon;
     std::shared_ptr<::AestraUI::NUIIcon> m_multiSelectToolIcon;
     std::shared_ptr<::AestraUI::NUIIcon> m_paintToolIcon;  // Paint/stamp tool icon
+    std::shared_ptr<::AestraUI::NUIIcon> m_muteToolIcon;
     std::shared_ptr<::AestraUI::NUIIcon> m_moveCursorIcon; // Move (4-way arrow) cursor for Paint tool hovering clips
     std::shared_ptr<::AestraUI::NUIIcon> m_trimCursorIcon; // Canonical horizontal stretch cursor (registry SVG)
     std::shared_ptr<::AestraUI::NUIIcon> m_resizeCursorIcon; // Canonical ResizeEW registry glyph (minimap resize)
@@ -523,10 +531,10 @@ private:
     bool m_multiSelectToolHovered = false;
     bool m_paintToolHovered = false;
     // FD-50 board 7 toolbar row: Erase, the snap value, Fit song (TrackManagerUIToolbar.cpp).
-    ::AestraUI::NUIRect m_eraseToolBounds;
+    ::AestraUI::NUIRect m_muteToolBounds;
     ::AestraUI::NUIRect m_snapBounds;
     ::AestraUI::NUIRect m_fitSongBounds;
-    bool m_eraseToolHovered = false;
+    bool m_muteToolHovered = false;
     bool m_snapHovered = false;
     bool m_fitSongHovered = false;
     void fitSong();          // zoom so the whole arrangement fills the grid, scrolled to bar 1
@@ -538,7 +546,9 @@ private:
     double m_lastProjectLoopExtentBeats{-1.0};
 
     // Current editing tool
-    PlaylistTool m_currentTool = PlaylistTool::Select;
+    // Starts on Draw (owner, 2026-10-20: "select probably shouldn't be the default"). With nothing to stamp yet, a Draw click falls
+    // through to the usual gestures (select, marquee), so the default never feels dead.
+    PlaylistTool m_currentTool = PlaylistTool::Paint;
     bool m_cursorHidden = false; // Track cursor visibility state
     std::function<void(bool)> m_onCursorVisibilityChanged;
     std::function<void(uint32_t)> m_onShowRoutingGraph;
@@ -780,6 +790,10 @@ private:
     void clearDropPreview();                         // Clear drop preview state
     double snapBeatToGrid(double beat) const;        // Snap beat to nearest grid line
     double snapBeatToGridForward(double beat) const; // Snap beat to next grid line (paste-to-right)
+    // Where a NEW clip starts when placed with the Draw tool: the grid cell the pointer is in (floor), not the nearest line.
+    // Rounding put a clip placed in the right half of a cell on the NEXT cell, to the right of the pointer (the piano roll
+    // had the same bug: SPEC 3 §2.5). Moves and trims keep snapBeatToGrid(): a relative drag lands on the nearest line.
+    double snapPlacementToGrid(double beat) const;
 
     // Resolve a lane to its first pattern's mixer channel position, falling
     // back to fallbackIndex when the lane is missing or unresolved. Shared by
