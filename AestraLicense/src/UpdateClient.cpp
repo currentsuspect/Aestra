@@ -41,6 +41,7 @@ UpdateCheckResult checkForUpdate(IHttpTransport& transport, const UpdateConfig& 
     while (!base.empty() && base.back() == '/') base.pop_back();
     request.url = base + "/" + config.channel + "/" + config.platform + "/latest.json";
     request.timeoutMs = config.timeoutMs;
+    request.followRedirects = false; // the feed lives at one address; a redirect is not followed with a founder key attached
     request.headers["Accept"] = "application/json";
     if (config.channel == "early") request.headers["Authorization"] = "Bearer " + config.founderKey;
 

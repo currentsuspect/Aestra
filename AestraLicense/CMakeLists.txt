@@ -18,6 +18,7 @@ add_library(AestraLicense STATIC
     src/UpdateFeed.cpp
     src/UpdateClient.cpp
     src/UpdateChecker.cpp
+    src/UpdateInstall.cpp
 )
 
 target_include_directories(AestraLicense
@@ -150,3 +151,8 @@ if(NOT AESTRA_UPDATE_PUBLIC_KEY_LENGTH EQUAL 64 OR NOT AESTRA_UPDATE_PUBLIC_KEY_
     message(FATAL_ERROR "The update public key must be exactly 64 hex characters.")
 endif()
 target_compile_definitions(AestraLicense PRIVATE AESTRA_UPDATE_PUBLIC_KEY_HEX="${AESTRA_UPDATE_PUBLIC_KEY_FILE}")
+
+# Windows' own HTTP stack carries the update check, the downloads and the account calls there.
+if(WIN32)
+    target_link_libraries(AestraLicense PRIVATE winhttp)
+endif()
