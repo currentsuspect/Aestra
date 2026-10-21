@@ -45,6 +45,8 @@ public:
     /// The last answer; `status` is NetworkError with an empty detail until the first check has run.
     UpdateCheckResult lastResult() const;
     bool hasResult() const;
+    /// How many checks have finished: a page waiting on "Check now" watches this change.
+    uint64_t resultCount() const;
 
 private:
     void run();
@@ -61,6 +63,7 @@ private:
     bool m_checkRequested = false;
     std::function<bool()> m_automaticAllowed;
     bool m_hasResult = false;
+    uint64_t m_resultCount = 0;
     UpdateCheckResult m_last;
 };
 

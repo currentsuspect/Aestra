@@ -32,7 +32,7 @@
  * Refactored to delegate to AestraWindowManager and AestraAudioController.
  */
 #include "../Core/RecoveryInfo.h"
-namespace Aestra { enum class RecoveryResponse; class UpdateNotifier; namespace Audio { class TakesPanel; } }
+namespace Aestra { enum class RecoveryResponse; class UpdateNotifier; class SettingsDialog; namespace Audio { class TakesPanel; } }
 
 class AestraApp {
 public:
@@ -239,6 +239,7 @@ private:
     // Updates (AestraAppUpdates.cpp): the background check and its one notification.
     void startUpdateChecks();
     void stopUpdateChecks();
+    void addUpdatesPage(Aestra::SettingsDialog& dialog); // Settings > Updates
     std::shared_ptr<Aestra::UpdateNotifier> m_updateNotifier;
 
     // Declared before m_content so it outlives every surface that reads it (reverse destruction order).

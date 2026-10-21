@@ -77,6 +77,7 @@ void UpdateNotifier::setSettings(const UpdateSettings& settings) {
 
 UpdateCheckResult UpdateNotifier::lastResult() const { return m_checker->lastResult(); }
 bool UpdateNotifier::hasResult() const { return m_checker->hasResult(); }
+uint64_t UpdateNotifier::resultCount() const { return m_checker->resultCount(); }
 
 UpdateConfig UpdateNotifier::makeConfig() const {
     const UpdateSettings s = settings();
