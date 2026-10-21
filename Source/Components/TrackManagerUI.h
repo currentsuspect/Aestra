@@ -107,7 +107,7 @@ public:
     // Clipboard & Paint Tool
     void copySelectedClip();
     void pasteClipboardAtCursor(); // Paste at playhead
-    void pasteClipToRight();       // Ctrl+B: Paste at end of selected clip, select new clip
+    void pasteClipToRight();       // Paste at end of selected clip, select new clip (no key: Ctrl+D is Duplicate everywhere)
     void onPaintClip(TrackUIComponent* trackComp, double beat);
     const Audio::ClipInstance& getClipboardClip() const { return m_clipboardClip; }
     bool hasClipboardClip() const { return m_clipboardClip.id.isValid(); }

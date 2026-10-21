@@ -331,7 +331,7 @@ private:
     void applyClickSelection(int step, bool additive); // click / shift-click select
     void applyRangeSelection(int firstStep, int lastStep); // select painted range
     void notifyStepSelectionChanged();
-    void duplicateSelection(); // Ctrl+B: copy selection just after its occupied span
+    void duplicateSelection(); // Ctrl+D: copy selection just after its occupied span
     void deleteSelection();    // Delete/Backspace: remove every selected step
     void moveSelection(int stepDelta);         // Left/Right: move selected notes (per-step, cascading)
     void nudgeSelectionVelocity(float delta);  // Up/Down: velocity nudge on selected notes

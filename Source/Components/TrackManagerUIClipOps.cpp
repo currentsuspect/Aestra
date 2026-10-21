@@ -652,7 +652,7 @@ void TrackManagerUI::pasteClipToRight() {
         std::make_shared<Aestra::Audio::AddClipCommand>(m_trackManager->getPlaylistModel(), targetLaneId, newClip);
     m_trackManager->getCommandHistory().pushAndExecute(cmd);
 
-    // Select the new clip so repeated Ctrl+B continues to the right
+    // Select the new clip so repeated Ctrl+D continues to the right
     m_selectedClipId = newClip.id;
 
     refreshTracks();
@@ -712,8 +712,7 @@ void TrackManagerUI::duplicateSelectedClip() {
     const double blockOffset = blockMaxEnd - blockMinStart;
 
     auto macro = std::make_shared<Aestra::Audio::MacroCommand>("Duplicate Clips");
-    ClipInstanceID lastDuplicateId{};
-    std::vector<ClipInstanceID> newIds;
+    std::vector<std::shared_ptr<Aestra::Audio::DuplicateClipCommand>> duplicates;
     for (const auto& id : targets) {
         const ClipInstance* clip = playlist.getClip(id);
         if (!clip)
@@ -725,8 +724,7 @@ void TrackManagerUI::duplicateSelectedClip() {
         auto cmd = std::make_shared<Aestra::Audio::DuplicateClipCommand>(playlist, id, targetStartBeat,
                                                                          targetLaneId);
         macro->addCommand(cmd);
-        lastDuplicateId = cmd->getDuplicateId();
-        newIds.push_back(lastDuplicateId);
+        duplicates.push_back(cmd);
     }
     if (macro->empty()) {
         Log::warning("[TrackManager] Nothing duplicated — no valid selected clips");
@@ -734,8 +732,19 @@ void TrackManagerUI::duplicateSelectedClip() {
     }
     m_trackManager->getCommandHistory().pushAndExecute(macro);
 
+    // A clone's id is made when its command executes, so it can only be read now. (It was read before, every id came
+    // back invalid, and "the clones become the selection" never happened: a second Ctrl+D had nothing selected.)
+    ClipInstanceID lastDuplicateId{};
+    std::vector<ClipInstanceID> newIds;
+    for (const auto& cmd : duplicates) {
+        if (cmd->getDuplicateId().isValid() && playlist.getClip(cmd->getDuplicateId())) {
+            lastDuplicateId = cmd->getDuplicateId();
+            newIds.push_back(lastDuplicateId);
+        }
+    }
+
     if (!newIds.empty()) {
-        // The clones become the selection, so repeated Ctrl+B keeps appending
+        // The clones become the selection, so repeated Ctrl+D keeps appending
         // the block (and Delete acts on the copies, not the originals).
         selectClips(newIds, TrackSelectionIntent::Replace);
         if (lastDuplicateId.isValid()) {

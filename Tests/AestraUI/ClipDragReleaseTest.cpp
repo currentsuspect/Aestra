@@ -27,6 +27,7 @@
 #include "NUIThemeSystem.h"
 #include "TrackUIComponent.h"
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -287,6 +288,38 @@ void testDropPlacesInTheCellThePointerIsOver() {
     check(dropAt(8.9) == 8.0, "a drop at 8.9 stays in the cell that starts at 8 (it used to land on 9)");
 }
 
+// One Duplicate key everywhere: Ctrl+D on a selected clip, for a single clip and for a multi-selection. Ctrl+B was the
+// timeline's and the Arsenal grid's old spelling; it is gone.
+void testCtrlDDuplicatesTheSelectionAndCtrlBDoesNot() {
+    Fixture f;
+    if (!f.build()) {
+        return;
+    }
+    auto& playlist = f.trackManager->getPlaylistModel();
+    const auto clipCount = [&]() { return playlist.getLane(f.laneId)->clips.size(); };
+    const auto press = [&](AestraUI::NUIKeyCode code) {
+        AestraUI::NUIKeyEvent e;
+        e.keyCode = code;
+        e.pressed = true;
+        e.modifiers = AestraUI::NUIModifiers::Ctrl;
+        return f.manager->onKeyEvent(e);
+    };
+    f.manager->selectClips({f.clipId}, TrackSelectionIntent::Replace);
+    const size_t before = clipCount();
+
+    check(!press(AestraUI::NUIKeyCode::B) && clipCount() == before, "Ctrl+B no longer duplicates");
+    check(press(AestraUI::NUIKeyCode::D), "Ctrl+D is handled");
+    check(clipCount() == before + 1, "and the selected clip is duplicated");
+    // The clone is the selection, so pressing again continues the phrase (it did not: the clone's id was read before
+    // the command ran, came back invalid, and nothing stayed selected).
+    check(press(AestraUI::NUIKeyCode::D), "Ctrl+D again is handled: the clone is selected");
+    check(clipCount() == before + 2, "and appends another copy after it");
+    std::vector<double> starts;
+    for (const auto& clip : playlist.getLane(f.laneId)->clips) starts.push_back(clip.startBeat);
+    std::sort(starts.begin(), starts.end());
+    check(starts.size() == 3 && starts[0] == 0.0 && starts[1] == 4.0 && starts[2] == 8.0, "the phrase is 0, 4, 8: each copy starts where the last ends");
+}
+
 // The tool, its number key, and the default.
 void testMuteToolAndShortcuts() {
     Fixture f;
@@ -319,6 +352,7 @@ int main() {
     testMutingOneClipLeavesTheTrackAndNeighboursAlone();
     testSettingTheStateItAlreadyHasIsNotAChange();
     testMuteToolAndShortcuts();
+    testCtrlDDuplicatesTheSelectionAndCtrlBDoesNot();
     testDrawPlacesInTheCellThePointerIsIn();
     testDropPlacesInTheCellThePointerIsOver();
 

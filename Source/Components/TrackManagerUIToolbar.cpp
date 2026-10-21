@@ -799,10 +799,12 @@ void TrackManagerUI::renderToolCursor(AestraUI::NUIRenderer& renderer, const Aes
         double snappedBeat = snapBeatToGrid(mouseBeat);
         float snappedX = gridStartX + static_cast<float>(snappedBeat * m_pixelsPerBeat - m_timelineScrollOffset);
 
-        float lineX = snappedX;
+        // A hairline: the rest of the app draws its guides one pixel wide, and a 2 px dashed line read as heavy beside them.
+        // Centred on a pixel so it stays crisp instead of smearing across two.
+        float lineX = std::floor(snappedX) + 0.5f;
         float lineY = position.y;
-        AestraUI::NUIColor splitColor(255, 107, 107, 200);
-        float dashLength = 6.0f;
+        AestraUI::NUIColor splitColor(255, 107, 107, 170);
+        float dashLength = 5.0f;
         float gapLength = 4.0f;
 
         for (auto& trackUI : m_trackUIComponents) {
@@ -817,7 +819,7 @@ void TrackManagerUI::renderToolCursor(AestraUI::NUIRenderer& renderer, const Aes
                     float y = lineTop;
                     while (y < lineBottom) {
                         float dashEnd = std::min(y + dashLength, lineBottom);
-                        renderer.drawLine(AestraUI::NUIPoint(lineX, y), AestraUI::NUIPoint(lineX, dashEnd), 2.0f,
+                        renderer.drawLine(AestraUI::NUIPoint(lineX, y), AestraUI::NUIPoint(lineX, dashEnd), 1.0f,
                                           splitColor);
                         y = dashEnd + gapLength;
                     }

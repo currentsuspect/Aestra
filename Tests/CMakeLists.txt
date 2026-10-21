@@ -2963,7 +2963,7 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(BPMEditorPaintTest PROPERTIES LABELS "ui;transport;regression;contract:application")
 endif()
 
-# Selection-based step editing regression: click-to-select grammar, Ctrl+B
+# Selection-based step editing regression: click-to-select grammar, Ctrl+D
 # span duplication, Delete/Backspace removal (2026-08-17).
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(UnitRowStepSelectionTest AestraUI_Core)

@@ -1132,20 +1132,11 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
                 pasteClipboardAtCursor();
                 return true;
             }
-            // Ctrl+B: duplicate the whole selection (#848; matches the Arsenal grid).
-            if (event.keyCode == AestraUI::NUIKeyCode::B &&
+            // Ctrl+D: duplicate the whole selection, one key in every editor (timeline, piano roll, Arsenal grid). It was
+            // Ctrl+B here and in the Arsenal grid but Ctrl+D in the piano roll and in the clip menu's own label.
+            if (event.keyCode == AestraUI::NUIKeyCode::D &&
                 (m_selectedClipId.isValid() || !m_clipSelection.empty())) {
                 duplicateSelectedClip();
-                return true;
-            }
-            if (event.keyCode == AestraUI::NUIKeyCode::D && m_selectedClipId.isValid()) {
-                duplicateSelectedClip();
-                return true;
-            }
-            // Ctrl+B: Paste-to-right (paste at end of selected clip, select new clip)
-            if (event.keyCode == AestraUI::NUIKeyCode::B &&
-                (m_selectedClipId.isValid() || hasClipboardClip())) {
-                pasteClipToRight();
                 return true;
             }
         }
