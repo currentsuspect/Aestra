@@ -1,0 +1,196 @@
+{
+  "schema": "aestra.perf.fixture.capabilities/1",
+  "fixture": "folio-baseline-v1",
+  "description": "Folio performance-baseline session. Declares the workload the fixture MUST satisfy; the validator fails when the loaded project does not meet every claim below.",
+  "evidence": {
+    "engineSha": "e81fd95a",
+    "protocolSha": "42dc4da",
+    "generator": "labs/perf/tools/generate-assets.py",
+    "builder": "labs/perf/tools/build-fixture.cpp"
+  },
+  "project": {
+    "file": "folio-baseline.aes",
+    "requiredVersion": 4,
+    "tempoBPM": 120.0,
+    "sampleRate": 48000.0
+  },
+  "runtime": {
+    "cwdMustBeFixtureRoot": true,
+    "cwdRationale": "Audio sources are resolved against the project file's directory by ProjectSerializer, but the MIDI instrument's sample rides in SamplerPlugin::saveState and is resolved against the PROCESS CWD on reload (isSafeSamplerStatePath hard-rejects absolute paths). Loading from any other working directory leaves the MIDI lanes silent."
+  },
+  "workload": {
+    "laneCount": 8,
+    "minActiveLanes": 8,
+    "mixerChannelCount": 9,
+    "minArrangementSeconds": 120.0,
+    "expectedArrangementBeats": 258.0,
+    "minAudioClips": 500,
+    "minMidiClips": 100,
+    "minSlicedClips": 1,
+    "requireAllLanesUnmuted": true,
+    "requireAllChannelsUnmuted": true,
+    "forbidThirdPartyPlugins": true,
+    "forbidMissingAssets": true
+  },
+  "assets": [
+    {
+      "path": "assets/kick.wav",
+      "sourceId": 9001,
+      "frames": 15360,
+      "sampleRate": 48000,
+      "channels": 2
+    },
+    {
+      "path": "assets/chord.wav",
+      "sourceId": 9002,
+      "frames": 96000,
+      "sampleRate": 48000,
+      "channels": 2
+    },
+    {
+      "path": "assets/texture.wav",
+      "sourceId": 9003,
+      "frames": 72000,
+      "sampleRate": 48000,
+      "channels": 2
+    }
+  ],
+  "slice": {
+    "lane": "Texture",
+    "sourceOffsetSeconds": 0.5,
+    "durationSeconds": 0.75,
+    "sourceDurationSeconds": 1.5,
+    "note": "Both bounds are strictly interior, so the slice is nontrivial in both directions."
+  },
+  "automation": {
+    "lane": "Chord",
+    "channel": "Chord",
+    "name": "Volume",
+    "target": "Volume",
+    "requireDistinctValuesAtDistinctBeats": true,
+    "requireMixerChannelIdSurvives": true,
+    "minValue": 0.6,
+    "points": [
+      {
+        "beat": 0.0,
+        "value": 0.65
+      },
+      {
+        "beat": 84.0,
+        "value": 0.9
+      },
+      {
+        "beat": 168.0,
+        "value": 0.7
+      },
+      {
+        "beat": 252.0,
+        "value": 0.85
+      }
+    ]
+  },
+  "send": {
+    "fromChannel": "Texture",
+    "toChannel": "Return",
+    "gain": 0.35,
+    "pan": 0.0,
+    "postFader": true,
+    "mute": false,
+    "sidechainOnly": false,
+    "requireDirectOutputStillActive": true,
+    "requireReturnRoutesToMaster": true,
+    "expectedSendCount": 1,
+    "expectedSendCountNote": "Exactly one. A count of two would mean the loader applied both the mixerChannels[] and the legacy lanes[] send block, which would silently double the send gain."
+  },
+  "effects": {
+    "channel": "Chord",
+    "chain": [
+      {
+        "slot": 0,
+        "pluginId": "com.Aestrastudios.filter",
+        "requireNotBypassed": true,
+        "nonDefaultParameters": {
+          "1": {
+            "name": "Cutoff",
+            "value": 0.55,
+            "default": 1.0
+          },
+          "2": {
+            "name": "Reso",
+            "value": 0.35,
+            "default": 0.116
+          },
+          "3": {
+            "name": "Drive",
+            "value": 0.2,
+            "default": 0.0
+          }
+        },
+        "neutralParameters": {
+          "4": {
+            "name": "EnvAmount",
+            "value": 0.5,
+            "note": "Centre is modulation-off. Keeps the chain free of signal-dependent behaviour a probe could not reproduce."
+          }
+        }
+      },
+      {
+        "slot": 1,
+        "pluginId": "com.Aestrastudios.sat",
+        "requireNotBypassed": true,
+        "nonDefaultParameters": {
+          "0": {
+            "name": "Drive",
+            "value": 0.45,
+            "default": 0.25
+          },
+          "1": {
+            "name": "Mode",
+            "value": 0.5,
+            "default": 0.0
+          },
+          "2": {
+            "name": "Tone",
+            "value": 0.7,
+            "default": 1.0
+          }
+        }
+      }
+    ]
+  },
+  "probes": {
+    "renderSeconds": 20.0,
+    "expectations": [
+      "canonical render A equals canonical render B",
+      "zeroing the send changes the render",
+      "removing the chord effect chain changes the render",
+      "early and late automation windows differ in the expected gain direction",
+      "all eight intended lanes produce nonzero signal, MIDI included"
+    ],
+    "silenceFloorRms": 1e-05
+  },
+  "midiPlayback": {
+    "structurallyPresent": true,
+    "audibleInSongModeRender": true,
+    "lanes": [
+      "Lead",
+      "Pad"
+    ],
+    "engineSha": "e81fd95a",
+    "renderRequirement": "Arsenal instruments live outside the AudioGraph. A renderer MUST call AudioEngine::setUnitManager() and AudioEngine::setPatternPlaybackEngine(), and TrackManager::scheduleTimelineForOfflineRender() for offline runs. Without the first two, processBlock renders the units with a null MIDI buffer and the MIDI lanes are exactly silent while every audio lane sounds normal.",
+    "informational_observedRmsOnDevBox": {
+      "values": {
+        "Lead": 0.009046804,
+        "Pad": 0.010235251
+      },
+      "contract": "NOT a validation target. The contract is finite output strictly above probes.silenceFloorRms. These figures are one machine, one build, one run \u2014 cross-machine and future-build checks must never depend on them.",
+      "observedOn": "e81fd95a apparatus dev box, 2026-08-05"
+    }
+  },
+  "revision": {
+    "name": "folio-baseline-dev-rev",
+    "builtAgainst": "Aestra develop @ def874133",
+    "reason": "The frozen folio-baseline-v1 predates the keyed-v2 plugin state blob (PR #1024). Its effect chain was written as v1 blobs and develop's InternalPluginBase::loadState accepts v2 only, so the Chord lane's filter+sat were rejected and the slots rendered empty. This revision rebuilds the same declared session against develop so the effect chain is actually in the render. Project format is v4 on develop.",
+    "changeFromFrozen": "rebuilt from the same generator; declared workload unchanged"
+  }
+}
