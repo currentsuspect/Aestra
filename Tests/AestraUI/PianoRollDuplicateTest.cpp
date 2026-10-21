@@ -1,7 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 //
-// V82-PR1 (FD-52): duplicate in the piano roll like FL Studio. The step is the selection's length rounded up to whole
-// bars; a ruler highlight selects its notes and Duplicate copies the highlighted block, moving the highlight onto the
+// V82-PR1 (FD-52): duplicate in the piano roll like FL Studio. The step is the selection's length rounded up to the snap
+// grid (owner, 2026-10-21: "duplicate to snap with respect to the last one"); a ruler highlight selects its notes and Duplicate copies the highlighted block, moving the highlight onto the
 // copy; the copies are selected so the next press goes on. The rules are pure (PianoRollDuplicate.h); the second half
 // drives the real view: a ruler drag, Ctrl+D, the undo step and pattern growth.
 
@@ -41,13 +41,23 @@ size_t selectedCount(const std::vector<MidiNote>& notes) {
 } // namespace
 
 int main() {
-    std::cout << "[1] the step is the selection's length rounded up to whole bars, at least one\n";
+    std::cout << "[1] the step is the selection's length rounded up to the snap grid, at least one unit (a bar here)\n";
     check(near(Dup::selectionStep(1.0, 1.5, 4.0), 4.0), "a selection inside a bar steps one bar");
     check(near(Dup::selectionStep(0.0, 4.0, 4.0), 4.0), "exactly one bar steps one bar");
     check(near(Dup::selectionStep(0.0, 4.01, 4.0), 8.0), "a hair over a bar steps two");
     check(near(Dup::selectionStep(0.5, 5.0, 4.0), 8.0), "a phrase from the middle of bar 1 to bar 2 steps two bars");
     check(near(Dup::selectionStep(2.0, 2.0, 4.0), 4.0), "a zero-length selection still steps one bar");
     check(near(Dup::selectionStep(0.0, 4.0, 3.0), 6.0), "in 3/4 a 4-beat selection spans two bars of 3");
+
+    std::cout << "[1b] the same rule on finer grids: a phrase repeats by its own snap, not by bars\n";
+    check(near(Dup::selectionStep(1.0, 1.5, 1.0), 1.0), "snap Beat: a half-beat note steps one beat");
+    check(near(Dup::selectionStep(1.0, 2.5, 1.0), 2.0), "snap Beat: a beat-and-a-half phrase steps two beats");
+    check(near(Dup::selectionStep(0.0, 0.25, 0.25), 0.25), "snap 16th: one 16th steps one 16th");
+    check(near(Dup::selectionStep(0.0, 1.0, 0.25), 1.0), "snap 16th: four 16ths step exactly one beat, no gap");
+    check(near(Dup::selectionStep(0.0, 0.3, 0.25), 0.5), "snap 16th: 0.3 beats just over one 16th steps two");
+    check(near(Dup::selectionStep(0.0, 2.0 / 3.0, 1.0 / 3.0), 2.0 / 3.0), "triplets: two triplet 8ths step exactly two triplet cells (floating point does not add one)");
+    check(near(Dup::selectionStep(1.0, 2.5, 0.0), 1.5), "snap off: the exact length");
+    check(Dup::selectionStep(2.0, 2.0, 0.0) > 0.0, "snap off: a zero-length selection still moves");
 
     std::cout << "[2] selection: copies land one step on, in the same place in the block, and are selected\n";
     {
@@ -197,7 +207,7 @@ int main() {
         check(growBars == 1 && near(total, 20.0), "which grew the pattern by one bar first");
     }
 
-    std::cout << "[8] in the real view: no highlight, Ctrl+D copies the selection one bar on\n";
+    std::cout << "[8] in the real view: no highlight, Ctrl+D copies the selection on by the snap grid (default snap: Beat)\n";
     {
         PianoRollView view;
         view.setBounds({0.0f, 0.0f, 900.0f, 600.0f});
@@ -215,9 +225,10 @@ int main() {
         view.onKeyEvent(ctrlD);
         const auto& notes = view.getNotes();
         check(notes.size() == 5 && commits == 1, "two copies, one commit");
-        bool at5 = false, at6 = false;
-        for (const auto& n : notes) { at5 = at5 || (near(n.startBeat, 5.0) && n.selected); at6 = at6 || (near(n.startBeat, 6.0) && n.selected); }
-        check(at5 && at6 && selectedCount(notes) == 2, "copies at 5.0 and 6.0, selected; the originals are not");
+        // Notes at 1.0 and 2.0 (0.5 long) span 1.0 to 2.5: 1.5 beats rounds up to 2 on the Beat grid, so the copies start 2 on.
+        bool at3 = false, at4 = false;
+        for (const auto& n : notes) { at3 = at3 || (near(n.startBeat, 3.0) && n.selected); at4 = at4 || (near(n.startBeat, 4.0) && n.selected); }
+        check(at3 && at4 && selectedCount(notes) == 2, "copies at 3.0 and 4.0 (two beats on), selected; the originals are not");
         view.setNotes({note(60, 0.0, 0.5, false)});
         commits = 0;
         view.onKeyEvent(ctrlD);

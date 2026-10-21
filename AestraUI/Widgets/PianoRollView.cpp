@@ -269,7 +269,7 @@ void PianoRollView::renderShortcutHelp(NUIRenderer& renderer) {
         {"Ctrl+L", "connect notes (legato)"},
         {"Ctrl+Z / Y", "undo / redo"},
         {"Ctrl+C / V", "copy / paste"},
-        {"Ctrl+D", "duplicate to next bar / range"},
+        {"Ctrl+D", "duplicate after the selection (snap grid) / ruler range"},
         {"Ctrl+A", "select all"},
         {"Arrows", "nudge / transpose"},
         {"Shift+Left/Right", "resize by grid"},
