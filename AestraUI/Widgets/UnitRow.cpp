@@ -1520,7 +1520,7 @@ bool UnitRow::onKeyEvent(const NUIKeyEvent& event) {
     }
 
     const bool ctrl = (event.modifiers & NUIModifiers::Ctrl) != 0;
-    if (ctrl && event.keyCode == NUIKeyCode::B) {
+    if (ctrl && event.keyCode == NUIKeyCode::D) {
         if (!event.repeat) {
             duplicateSelection();
         }

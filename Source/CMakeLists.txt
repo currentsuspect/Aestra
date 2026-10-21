@@ -13,6 +13,9 @@ set(Aestra_SOURCES
 	App/AestraApp.h
 	App/AestraApp.cpp
 	App/AestraAppVersions.cpp
+	App/AestraAppUpdates.cpp
+	App/UpdateNotifier.cpp
+	App/UpdateNotifier.h
 	App/AestraAppRecovery.cpp
     App/MuseHostVerbs.cpp
     App/MuseProjectLoadReport.h
@@ -125,7 +128,7 @@ set(Aestra_SOURCES
 	Components/TrackUIComponent.cpp
 	Components/TrackUIComponentAutomationClips.cpp
 	Components/TrackUIComponentHeader.cpp
-	Components/TrackUIComponentErase.cpp
+	Components/TrackUIComponentMute.cpp
 	Components/TrackUIComponentAutomationRow.cpp
 	Components/TrackHeaderText.h
 	Components/TimelineClipGeometry.h
@@ -181,6 +184,7 @@ if(AESTRA_ENABLE_TEST_LICENSES)
 	target_compile_definitions(Aestra PRIVATE AESTRA_ENABLE_TEST_LICENSES=1)
 endif()
 
+set_source_files_properties(App/UpdateNotifier.cpp PROPERTIES COMPILE_DEFINITIONS "AESTRA_UPDATE_VERSION_STRING=\"${AESTRA_UPDATE_VERSION}\"")
 if(TARGET AestraLicense)
 	target_link_libraries(Aestra PRIVATE AestraLicense)
 	target_compile_definitions(Aestra PRIVATE AESTRA_HAS_LICENSE_GATE=1)

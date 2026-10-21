@@ -24,6 +24,15 @@ if(TARGET AestraLicense)
     add_test(NAME SecLicenseWorkerFixture COMMAND SecLicenseWorkerFixture)
     add_executable(SecLicenseRefreshClient license_refresh_client_test.cpp)
     add_test(NAME SecLicenseRefreshClient COMMAND SecLicenseRefreshClient)
+    find_package(Python3 COMPONENTS Interpreter QUIET)
+    if(Python3_FOUND)
+        add_test(NAME SecUpdateMakeFeed COMMAND ${Python3_EXECUTABLE} ${REPO_ROOT}/tools/update/make_feed_selftest.py)
+        set_tests_properties(SecUpdateMakeFeed PROPERTIES SKIP_RETURN_CODE 77)
+    endif()
+    add_executable(SecUpdateFeed update_feed_test.cpp)
+    add_test(NAME SecUpdateFeed COMMAND SecUpdateFeed)
+    add_executable(SecUpdateClient update_client_test.cpp)
+    add_test(NAME SecUpdateClient COMMAND SecUpdateClient)
     add_executable(SecAccountApiClient account_api_client_test.cpp)
     add_test(NAME SecAccountApiClient COMMAND SecAccountApiClient)
     add_executable(SecAccountEndToEndSmoke account_end_to_end_smoke.cpp)
@@ -232,6 +241,19 @@ if(TARGET AestraLicense)
         ${REPO_ROOT}/AestraLicense/include
     )
     target_link_libraries(SecLicenseRefreshClient PRIVATE AestraLicense)
+
+    target_include_directories(SecUpdateFeed PRIVATE
+        ${REPO_ROOT}/AestraLicense/include
+        ${CMAKE_CURRENT_LIST_DIR}
+    )
+    target_link_libraries(SecUpdateFeed PRIVATE AestraLicense)
+
+    target_include_directories(SecUpdateClient PRIVATE
+        ${REPO_ROOT}/AestraLicense/include
+        ${REPO_ROOT}/AestraCore/include
+        ${CMAKE_CURRENT_LIST_DIR}
+    )
+    target_link_libraries(SecUpdateClient PRIVATE AestraLicense)
 
     target_include_directories(SecAccountApiClient PRIVATE
         ${REPO_ROOT}/AestraLicense/include

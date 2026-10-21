@@ -120,7 +120,7 @@ AestraUI::DropFeedback TrackManagerUI::onDragOver(const AestraUI::DragData& data
     }
 
     double rawTimeBeats = gridOffsetToBeat(position.x - gridStartX);
-    double snappedBeats = snapBeatToGrid(rawTimeBeats);
+    double snappedBeats = snapPlacementToGrid(rawTimeBeats); // the cell under the pointer, so the preview shows where it lands
     double newTime = m_trackManager->getPlaylistModel().beatToSeconds(snappedBeats);
 
     int trackCount = static_cast<int>(m_trackUIComponents.size());
@@ -170,7 +170,7 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
     double rawTimeBeats = m_trackManager->getPlaylistModel().secondsToBeats(rawTimeSeconds);
 
     // Snap-to-grid logic (Canonical Beat-Space)
-    double timePositionBeats = snapBeatToGrid(rawTimeBeats);
+    double timePositionBeats = snapPlacementToGrid(rawTimeBeats);
 
     auto& playlist = m_trackManager->getPlaylistModel();
     const int displayRows = static_cast<int>(m_trackUIComponents.size());
@@ -670,6 +670,19 @@ double TrackManagerUI::snapBeatToGrid(double beat) const {
     double snappedBeats = std::round(beat / grid) * grid;
 
     return std::max(0.0, snappedBeats);
+}
+
+double TrackManagerUI::snapPlacementToGrid(double beat) const {
+    if (!m_snapEnabled || m_snapSetting == AestraUI::SnapGrid::None) {
+        return beat;
+    }
+    const double grid = AestraUI::MusicTheory::getSnapDuration(m_snapSetting);
+    if (grid <= 0.00001) {
+        return beat;
+    }
+    // The epsilon keeps a pointer sitting exactly on a line (in floating point, a hair under it) in that line's cell
+    // rather than the one before.
+    return std::max(0.0, std::floor(beat / grid + 1e-9) * grid);
 }
 
 double TrackManagerUI::snapBeatToGridForward(double beat) const {
