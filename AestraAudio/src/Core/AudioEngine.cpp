@@ -12,6 +12,7 @@
 #include "GarbageCollector.h"
 #include "IO/AudioExporter.h"
 #include "PathUtils.h" // [NEW] For robust path conversion
+#include "Core/TrackMixKernel.h" // the strip's fader/pan/mix/meter stage
 #include "PatternPlaybackEngine.h"
 #include "Playback/PreviewEngine.h"
 #include "Plugin/SamplerPlugin.h" // [NEW]
@@ -2655,8 +2656,18 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
             float* const ring = desc->buffer;
             double* dOut = buffer.data();
             uint32_t writePos = comp->compensationWritePos;
+            // The ring length is not a power of two, so the wrap is a conditional
+            // subtract rather than a mask. `delay < capacity` is checked above,
+            // so `writePos + capacity - delay` is always in
+            // [capacity - delay, 2 * capacity - delay) and one subtract brings it
+            // back inside the ring. The old `% capacity` cost a real division
+            // sequence twice per sample, in the one loop that runs for every
+            // sample of every track with a delay to compensate.
             for (uint32_t k = 0; k < numFrames; ++k) {
-                const uint32_t readPos = (writePos + capacity - delay) % capacity;
+                uint32_t readPos = writePos + capacity - delay;
+                if (readPos >= capacity) {
+                    readPos -= capacity;
+                }
 
                 ring[writePos * 2] = static_cast<float>(dOut[k * 2]);
                 ring[writePos * 2 + 1] = static_cast<float>(dOut[k * 2 + 1]);
@@ -2664,7 +2675,10 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
                 dOut[k * 2] = static_cast<double>(ring[readPos * 2]);
                 dOut[k * 2 + 1] = static_cast<double>(ring[readPos * 2 + 1]);
 
-                writePos = (writePos + 1) % capacity;
+                ++writePos;
+                if (writePos == capacity) {
+                    writePos = 0;
+                }
             }
             comp->compensationWritePos = writePos;
         }
@@ -2751,49 +2765,22 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
         state.preFaderBuffer.clear();
     }
 
-    for (uint32_t i = 0; i < numFrames; ++i) {
-        // Apply smoothed gain
-        const double leftGain = state.gainL.next();
-        const double rightGain = state.gainR.next();
+    // Where the post-fader output goes, decided once: every one of these is
+    // loop-invariant, and the old code re-tested them per sample.
+    double* const destBuffer = !muted
+                                   ? ((audibleEligible && routesMainToMaster) ? masterBuf
+                                                                              : (mainDestBuffer ? mainDestBuffer : nullptr))
+                                   : nullptr;
 
-        const double preL = trackData[i * 2];
-        const double preR = trackData[i * 2 + 1];
-        const double outL = preL * leftGain;
-        const double outR = preR * rightGain;
+    TrackMeterAccumulators meters;
+    mixTrackStereo(trackData, buffer.data(), destBuffer, numFrames, state.gainL, state.gainR, meters,
+                   lfStateL, lfStateR, m_meterLfCoeff, publishTrackSnapshot, peakTrackL, peakTrackR);
 
-        buffer[i * 2] = outL;
-        buffer[i * 2 + 1] = outR;
-
-        if (!muted) {
-            if (audibleEligible && routesMainToMaster) {
-                masterBuf[i * 2] += outL;
-                masterBuf[i * 2 + 1] += outR;
-            } else if (mainDestBuffer) {
-                mainDestBuffer[i * 2] += outL;
-                mainDestBuffer[i * 2 + 1] += outR;
-            }
-        }
-
-        const double absL = (outL >= 0.0) ? outL : -outL;
-        const double absR = (outR >= 0.0) ? outR : -outR;
-        if (absL > peakTrackL)
-            peakTrackL = absL;
-        if (absR > peakTrackR)
-            peakTrackR = absR;
-
-        if (publishTrackSnapshot) {
-            rmsAccTrackL += outL * outL;
-            rmsAccTrackR += outR * outR;
-
-            const double lpL = *lfStateL + m_meterLfCoeff * (outL - *lfStateL);
-            const double lpR = *lfStateR + m_meterLfCoeff * (outR - *lfStateR);
-            *lfStateL = lpL;
-            *lfStateR = lpR;
-            lowAccTrackL += lpL * lpL;
-            lowAccTrackR += lpR * lpR;
-            sumLRTrack += outL * outR;
-        }
-    }
+    rmsAccTrackL = meters.rmsL;
+    rmsAccTrackR = meters.rmsR;
+    lowAccTrackL = meters.lowL;
+    lowAccTrackR = meters.lowR;
+    sumLRTrack = meters.correlation;
 
     if (m_trackOutputTap.wantsAt(track.trackId, true)) // V8-S1: stems are the strip after fader/pan
         m_trackOutputTap.capture(buffer.data(), numFrames);
