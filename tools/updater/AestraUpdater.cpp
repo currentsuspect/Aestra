@@ -142,7 +142,11 @@ int main(int argc, char** argv) {
         return 2;
     }
 
-    // 3. Start the new version and watch it start.
+    // 3. Say it worked BEFORE the new version starts, so the new version can announce "updated" the moment it opens (the
+    //    watch below can take 20 s). If it then fails to start, the note is overwritten with the failure.
+    writeResultFile(resultFile, from, to, true, false, "updated");
+
+    // 4. Start the new version and watch it start.
     Child fresh;
     int exitCode = 0;
     const bool started = launch(plan.appDir, plan.exeName, fresh);
@@ -161,6 +165,5 @@ int main(int argc, char** argv) {
         return 4;
     }
     release(fresh);
-    writeResultFile(resultFile, from, to, true, false, "updated");
     return 0;
 }

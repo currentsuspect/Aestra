@@ -19,6 +19,7 @@ add_library(AestraLicense STATIC
     src/UpdateClient.cpp
     src/UpdateChecker.cpp
     src/UpdateInstall.cpp
+    src/UpdateSession.cpp
 )
 
 target_include_directories(AestraLicense

@@ -19,6 +19,7 @@ void AestraApp::startUpdateChecks() {
         if (!dir.empty()) hooks.settingsPath = (dir / "updates.json").string();
     }
     hooks.postToMain = [this](std::function<void()> task) { enqueueMainThreadTask(std::move(task)); };
+    hooks.requestQuit = [this]() { requestClose(); }; // the usual way out, so unsaved work is asked about first
     hooks.showMessage = [this](const std::string& text) {
         if (m_content) m_content->showToast(text, 9.0);
     };
@@ -28,6 +29,7 @@ void AestraApp::startUpdateChecks() {
 
 void AestraApp::stopUpdateChecks() {
     if (!m_updateNotifier) return;
+    m_updateNotifier->applyPendingRestart(); // the user chose "Restart and update": hand over to the updater as we exit
     m_updateNotifier->stop(); // joins the checker thread: no result can arrive after this
     m_updateNotifier.reset();
 }
