@@ -12,6 +12,8 @@
 #include "AestraJSON.h"
 #include "UpdateClient.h"
 
+#include <cstdint>
+#include <cstdio>
 #include <string>
 
 namespace Aestra {
@@ -29,6 +31,52 @@ struct UpdateSettings {
 inline bool shouldAnnounceUpdate(UpdateCheckStatus status, const std::string& offeredVersion, const UpdateSettings& settings) {
     return status == UpdateCheckStatus::Available && settings.autoCheck &&
            (settings.lastNotified.empty() || isNewerVersion(offeredVersion, settings.lastNotified));
+}
+
+/// What the Settings > Updates page says about the state of things: a headline, one line of detail, and how to colour it.
+struct UpdateStatusText {
+    enum class Tone { Neutral, Good, Warn };
+    std::string headline;
+    std::string detail;
+    Tone tone = Tone::Neutral;
+};
+
+inline std::string updateSizeText(uint64_t bytes) {
+    char buf[32];
+    std::snprintf(buf, sizeof buf, "%.1f MB", static_cast<double>(bytes) / (1024.0 * 1024.0));
+    return buf;
+}
+
+inline UpdateStatusText describeUpdateStatus(bool checking, bool hasResult, const UpdateCheckResult& result,
+                                             const UpdateSettings& settings, const std::string& currentVersion) {
+    using Tone = UpdateStatusText::Tone;
+    if (checking) return {"Checking for updates...", "", Tone::Neutral};
+    if (!hasResult) {
+        return {"Not checked yet",
+                settings.autoCheck ? "Aestra looks shortly after it starts, then once a day." : "Automatic checks are off. Press Check now.",
+                Tone::Neutral};
+    }
+    const std::string channel = settings.channel == "early" ? "early access" : "stable";
+    switch (result.status) {
+    case UpdateCheckStatus::UpToDate:
+        return {"You're up to date", "Aestra " + currentVersion + ", " + channel + " channel.", Tone::Good};
+    case UpdateCheckStatus::Available: {
+        std::string detail = "You have " + currentVersion + ".";
+        if (result.manifest.size > 0) detail += " Download: " + updateSizeText(result.manifest.size) + ".";
+        return {"Aestra " + result.manifest.version + " is available", detail, Tone::Good};
+    }
+    case UpdateCheckStatus::Unauthorized:
+        if (settings.channel == "early" && settings.founderKey.empty())
+            return {"Enter your founder key", "Early access is for founders. Paste the key you were sent.", Tone::Warn};
+        return {"The founder key was not accepted", "Check that it was pasted whole, or ask for a new one.", Tone::Warn};
+    case UpdateCheckStatus::NetworkError:
+        return {"Couldn't reach the update server", "Aestra will try again in about an hour. " + result.detail, Tone::Warn};
+    case UpdateCheckStatus::BadFeed:
+        return {"The update information could not be trusted", "Nothing was downloaded or installed. " + result.detail, Tone::Warn};
+    case UpdateCheckStatus::BadConfig:
+    default:
+        return {"Updates are not set up correctly", result.detail, Tone::Warn};
+    }
 }
 
 inline UpdateSettings parseUpdateSettings(const std::string& text) {

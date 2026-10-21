@@ -101,6 +101,8 @@ set(Aestra_SOURCES
 	Settings/GeneralSettingsPage.cpp
 	Settings/MembershipSettingsPage.h
 	Settings/MembershipSettingsPage.cpp
+	Settings/UpdatesSettingsPage.cpp
+	Settings/UpdatesSettingsPage.h
 	Settings/AppearanceSettingsPage.h
 	Settings/AppearanceSettingsPage.cpp
 	Settings/ExportDialog.h

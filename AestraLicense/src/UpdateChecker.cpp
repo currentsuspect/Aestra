@@ -43,6 +43,11 @@ UpdateCheckResult UpdateChecker::lastResult() const {
     return m_last;
 }
 
+uint64_t UpdateChecker::resultCount() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_resultCount;
+}
+
 bool UpdateChecker::hasResult() const {
     std::lock_guard<std::mutex> lock(m_mutex);
     return m_hasResult;
@@ -72,6 +77,7 @@ void UpdateChecker::run() {
             std::lock_guard<std::mutex> lock(m_mutex);
             m_last = result;
             m_hasResult = true;
+            ++m_resultCount;
         }
         if (m_onResult) m_onResult(result);
 

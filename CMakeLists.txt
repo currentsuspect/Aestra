@@ -204,6 +204,7 @@ endif()
 # AestraAudio - Audio Engine
 # =============================================================================
 add_subdirectory(AestraAudio)
+add_subdirectory(tools/updater) # AestraUpdater: swaps the installed copy for a verified new one
 
 # =============================================================================
 # AestraHeadless - Offline engine smoke test (no UI/OpenGL)

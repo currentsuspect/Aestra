@@ -11,7 +11,9 @@ namespace AestraUI {
 std::optional<std::pair<double, double>>
 PianoRollNoteLayer::duplicateLikeFl(const std::optional<std::pair<double, double>>& ruler) {
     namespace Dup = PianoRollDuplicate;
-    const auto plan = Dup::plan(notes_, ruler, static_cast<double>(beatsPerBar_));
+    // The step follows the snap grid; with snap off it is the selection's own length.
+    const double snapStep = snap_ == SnapGrid::None ? 0.0 : MusicTheory::getSnapDuration(snap_);
+    const auto plan = Dup::plan(notes_, ruler, snapStep);
     if (!plan) return std::nullopt;
 
     const auto made = Dup::copies(notes_, *plan);

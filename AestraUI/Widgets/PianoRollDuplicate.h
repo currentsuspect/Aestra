@@ -6,8 +6,11 @@
 // it to that next bar", and "that highlight from the ruler too ... that doesn't select notes or do what i wanted".
 //
 //  * Selection: Duplicate copies the selected notes one step on and moves the selection onto the copies, so pressing it
-//    again keeps extending the phrase. The step is the selection's length rounded UP to whole bars (one bar for a
-//    selection inside a bar), so the copy lands in the next bar-aligned block, in the same place within it.
+//    again keeps extending the phrase. The step is the selection's length rounded UP to the SNAP grid (one grid unit
+//    at least), so the copy starts right after the last note on the grid and sits in the same place within its cell:
+//    a phrase of 16ths repeats by 16ths, a bar by bars. (Owner, 2026-10-21: "by default it should duplicate to snap
+//    with respect to the last one". It was whole bars whatever the snap, which threw a one-beat phrase four beats away.)
+//    With snap off the step is the exact length.
 //  * Ruler range: the highlight dragged on the ruler selects the notes inside it. Duplicate then copies that range
 //    into the next block of the SAME length (not rounded: a 6-beat highlight copies into the next 6 beats) and moves
 //    the highlight there. The highlight is still the loop zone, as in FL.
@@ -27,11 +30,13 @@ namespace PianoRollDuplicate {
 
 using Range = std::pair<double, double>; ///< [start, end) in beats
 
-/// The selection's length rounded up to whole bars, never less than one bar.
-inline double selectionStep(double selectionStart, double selectionEnd, double beatsPerBar) {
-    const double bar = std::max(1.0, beatsPerBar);
-    const double bars = std::ceil((std::max(0.0, selectionEnd - selectionStart)) / bar - 1e-9);
-    return std::max(1.0, bars) * bar;
+/// The selection's length rounded up to the snap grid (@p snapStep beats; 0 = snap off), never less than one grid unit.
+/// With snap off the step is the exact length, with a small floor so a zero-length selection still moves.
+inline double selectionStep(double selectionStart, double selectionEnd, double snapStep) {
+    const double span = std::max(0.0, selectionEnd - selectionStart);
+    if (snapStep <= 1e-9) return std::max(span, 0.0625);
+    const double cells = std::ceil(span / snapStep - 1e-9);
+    return std::max(1.0, cells) * snapStep;
 }
 
 /// A note belongs to a ruler range when it STARTS inside it (a long note that began earlier is not cut or copied).
@@ -54,7 +59,7 @@ struct Plan {
 /// the new highlight; and a note clicked inside the highlight is still "in the highlight"). Select something outside
 /// it and the selection is what you mean, so that is copied instead. Esc clears the highlight to copy one note.
 inline std::optional<Plan> plan(const std::vector<MidiNote>& notes, const std::optional<Range>& ruler,
-                                double beatsPerBar) {
+                                double snapStep) {
     std::vector<size_t> selected;
     for (size_t i = 0; i < notes.size(); ++i)
         if (!notes[i].isDeleted && notes[i].selected) selected.push_back(i);
@@ -82,7 +87,7 @@ inline std::optional<Plan> plan(const std::vector<MidiNote>& notes, const std::o
         end = std::max(end, notes[i].startBeat + notes[i].durationBeats);
     }
     Plan p;
-    p.shift = selectionStep(start, end, beatsPerBar);
+    p.shift = selectionStep(start, end, snapStep);
     p.sources = std::move(selected);
     p.from = {start, end};
     p.to = {start + p.shift, end + p.shift};
