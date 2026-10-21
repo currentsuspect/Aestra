@@ -114,13 +114,7 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
                 // Set the value immediately based on click Y (Global)
                 const float newValue = laneValueAtY(event.position.y);
 
-                auto modNotes = layer->getNotes();
-                if (panMode) modNotes[foundIdx].pan = newValue;
-                else modNotes[foundIdx].velocity = newValue;
-
-                // Single Edit Only (Batch removed)
-
-                layer->setNotes(modNotes);
+                layer->setLaneValue(foundIdx, panMode, newValue);
                 repaint();
                 return true;
             }
@@ -156,13 +150,7 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
             const int swept = noteUnderX(localX);
             if (swept != -1) hoveringNoteIndex_ = swept;
 
-            auto modNotes = layer->getNotes();
-            if (hoveringNoteIndex_ >= 0 && static_cast<size_t>(hoveringNoteIndex_) < modNotes.size()) {
-                 if (panMode) modNotes[hoveringNoteIndex_].pan = newValue;
-                 else modNotes[hoveringNoteIndex_].velocity = newValue;
-                 layer->setNotes(modNotes);
-                 repaint();
-            }
+            if (layer->setLaneValue(hoveringNoteIndex_, panMode, newValue)) repaint();
             return true;
         }
     }
