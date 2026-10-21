@@ -24,6 +24,7 @@ constexpr size_t kLineBuffer = 160; // one formatted entry
 struct Counters {
     std::map<std::string, int> presentReasons;
     std::map<std::string, int> dirtyOrigins;
+    std::map<std::string, double> dirtyOriginsAt;
     std::map<std::string, double> renderSelfMs;
     std::array<double, 3> phaseMs{};
 };
@@ -123,7 +124,11 @@ bool presentBecause(const char* reason) {
 }
 
 void recordDirtyOrigin(const NUIComponent& component, const NUIComponent* parent) {
-    counters().dirtyOrigins[typeName(component) + "<" + (parent ? typeName(*parent) : std::string("root")) + ">"]++;
+    const std::string who = typeName(component) + "<" + (parent ? typeName(*parent) : std::string("root")) + ">";
+    counters().dirtyOrigins[who]++;
+    const auto b = component.getBounds();
+    counters().dirtyOriginsAt[who + "@" + std::to_string(static_cast<int>(b.x)) + "," +
+                             std::to_string(static_cast<int>(b.y))]++;
 }
 
 void recordRenderSelf(const NUIComponent& component, double ms) { counters().renderSelfMs[typeName(component)] += ms; }
@@ -137,6 +142,7 @@ std::string takeReport(std::size_t presentedFrames) {
     const double frames = static_cast<double>(std::max<size_t>(1, presentedFrames));
     std::string report = "[FrameWhy]" + topN(c.presentReasons, kTopN, 1.0, " %s=%.0f");
     report += "\n[DirtyWho] per second:" + topN(c.dirtyOrigins, kTopN, 1.0, " %s=%.0f");
+    report += "\n[DirtyAt] per second:" + topN(c.dirtyOriginsAt, kTopN, 1.0, " %s=%.0f");
     report += "\n[RenderSelf] ms/frame:" + topN(c.renderSelfMs, kTopN, frames, " %s=%.2f");
     std::array<char, kLineBuffer> phase{};
     std::snprintf(phase.data(), phase.size(), "\n[Phase] ms/frame: tree=%.2f submit=%.2f swap=%.2f", c.phaseMs[0] / frames,
