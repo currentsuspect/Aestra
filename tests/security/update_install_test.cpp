@@ -5,13 +5,16 @@
 // installed from it. The fake host serves a fixed 100,000-byte package and can misbehave in the ways real ones do.
 
 #include "UpdateInstall.h"
+#include "UpdateSession.h"
 
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <chrono>
 #include <string>
+#include <thread>
 #include <vector>
 
 using namespace Aestra::License;
@@ -112,6 +115,11 @@ struct Dir {
         fs::remove_all(path, ec);
     }
 };
+
+std::string slurpFile(const fs::path& p) {
+    std::ifstream in(p, std::ios::binary);
+    return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+}
 
 void writeFile(const fs::path& p, const std::string& text) {
     fs::create_directories(p.parent_path());
@@ -314,6 +322,133 @@ int main() {
             extractUpdatePackage((d.path / "up.tar.gz").string(), (d.path / "staged6").string(), "Aestra", &err);
             check(!fs::exists(d.path / "escaped-Aestra"), "nothing was written above the staging folder");
         }
+    }
+#endif
+
+
+#ifndef _WIN32
+    // The whole install, on its own thread: download, verify, unpack, Ready.
+    {
+        auto run = [](const std::string& cmd) { return std::system(cmd.c_str()) == 0; };
+        Dir d;
+        // A real package: a wrapped tarball with a program in it, whose size and hash the "feed" will promise.
+        writeFile(d.path / "src" / "pkg" / "Aestra", "#!/bin/sh\nexit 0\n");
+        writeFile(d.path / "src" / "pkg" / "AestraAssets" / "a.txt", "asset");
+        check(run("tar -czf '" + (d.path / "pkg.tar.gz").string() + "' -C '" + (d.path / "src").string() + "' pkg"), "(test setup) made the package");
+        std::string tarBytes;
+        {
+            std::ifstream in(d.path / "pkg.tar.gz", std::ios::binary);
+            tarBytes.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+        }
+        UpdateManifest m = manifest();
+        m.url = "https://update.aestra.studio/early/linux-x64/Aestra-0.8.2.tar.gz";
+        m.size = tarBytes.size();
+        m.sha256 = sha256FileHex((d.path / "pkg.tar.gz").string());
+
+        UpdateLayout layout;
+        layout.appDir = (d.path / "install" / "Aestra").string();
+        layout.downloadDir = (d.path / "downloads").string();
+        layout.executableName = "Aestra";
+        layout.updaterName = "AestraUpdater";
+        writeFile(fs::path(layout.appDir) / "Aestra", "old");
+
+        auto waitUntil = [](UpdateSession& s, auto&& pred) {
+            for (int i = 0; i < 500 && !pred(s.state()); ++i) std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        };
+        auto host = std::make_unique<FakeHost>();
+        host->body = tarBytes;
+        FakeHost* h = host.get();
+        UpdateSession session(std::move(host));
+        check(session.state().phase == InstallPhase::Idle, "a new session is idle");
+        check(session.start(config(), m, layout), "start begins an install");
+        waitUntil(session, [](const InstallState& st) { return st.phase == InstallPhase::Ready || st.phase == InstallPhase::Failed; });
+        const InstallState done = session.state();
+        check(done.phase == InstallPhase::Ready && done.done == done.total && done.total == tarBytes.size() && done.version == "0.8.2", "the install reaches Ready with full progress: " + done.message);
+        check(fs::exists(fs::path(layout.stagedDir()) / "Aestra") && fs::exists(fs::path(layout.stagedDir()) / "AestraAssets" / "a.txt"), "the new version is staged beside the installed one");
+        check(session.stagedDir() == layout.stagedDir(), "stagedDir names it");
+        check(!fs::exists(fs::path(layout.downloadDir) / "Aestra-0.8.2.tar.gz"), "the package is removed once unpacked");
+        check(slurpFile(fs::path(layout.appDir) / "Aestra") == "old", "the installed copy is untouched until the user restarts");
+        const size_t calls = h->seen.size();
+        check(session.start(config(), m, layout) && h->seen.size() == calls, "starting again for the same version, already Ready, does nothing");
+
+        // A failure, then a retry that works.
+        Dir d2;
+        UpdateLayout layout2 = layout;
+        layout2.appDir = (d2.path / "install" / "Aestra").string();
+        layout2.downloadDir = (d2.path / "downloads").string();
+        writeFile(fs::path(layout2.appDir) / "Aestra", "old");
+        auto bad = std::make_unique<FakeHost>();
+        bad->body = tarBytes;
+        bad->body[10] ^= 1;
+        FakeHost* badHost = bad.get();
+        UpdateSession retry(std::move(bad));
+        retry.start(config(), m, layout2);
+        waitUntil(retry, [](const InstallState& st) { return st.phase == InstallPhase::Failed || st.phase == InstallPhase::Ready; });
+        check(retry.state().phase == InstallPhase::Failed && retry.state().message.find("did not match") != std::string::npos, "a corrupted download fails with a plain sentence");
+        check(!fs::exists(layout2.stagedDir()), "and nothing is staged");
+        badHost->body = tarBytes;
+        check(retry.start(config(), m, layout2), "start retries after a failure");
+        waitUntil(retry, [](const InstallState& st) { return st.phase == InstallPhase::Ready || st.phase == InstallPhase::Failed; });
+        check(retry.state().phase == InstallPhase::Ready, "and the retry succeeds");
+
+        // Cancel, then resume.
+        Dir d3;
+        UpdateLayout layout3 = layout;
+        layout3.appDir = (d3.path / "install" / "Aestra").string();
+        layout3.downloadDir = (d3.path / "downloads").string();
+        writeFile(fs::path(layout3.appDir) / "Aestra", "old");
+        auto slow = std::make_unique<FakeHost>();
+        slow->body = tarBytes;
+        slow->cancelAfter = 1; // the fake cancels itself after its first chunk
+        UpdateSession cancelled(std::move(slow));
+        cancelled.start(config(), m, layout3);
+        waitUntil(cancelled, [](const InstallState& st) { return st.phase != InstallPhase::Downloading; });
+        check(cancelled.state().phase == InstallPhase::Cancelled, "a cancelled download says Cancelled");
+        check(!cancelled.busy(), "and the session is free again");
+
+        // An install location that cannot be changed is refused before anything is downloaded.
+        Dir d4;
+        UpdateLayout layout4 = layout;
+        layout4.appDir = (d4.path / "locked" / "Aestra").string();
+        layout4.downloadDir = (d4.path / "downloads").string();
+        writeFile(fs::path(layout4.appDir) / "Aestra", "old");
+        std::error_code ec;
+        fs::permissions(d4.path / "locked", fs::perms::owner_read | fs::perms::owner_exec, fs::perm_options::replace, ec);
+        bool lockable = false;
+        {
+            std::ofstream probe(d4.path / "locked" / "probe");
+            lockable = !probe;
+        }
+        if (lockable) {
+            auto unused = std::make_unique<FakeHost>();
+            FakeHost* unusedHost = unused.get();
+            UpdateSession locked(std::move(unused));
+            locked.start(config(), m, layout4);
+            waitUntil(locked, [](const InstallState& st) { return st.phase != InstallPhase::Downloading; });
+            check(locked.state().phase == InstallPhase::Failed && locked.state().message.find("administrator") != std::string::npos, "a read-only install says why in words a person can act on");
+            check(unusedHost->seen.empty(), "and downloads nothing");
+            fs::permissions(d4.path / "locked", fs::perms::owner_all, fs::perm_options::replace, ec);
+        }
+
+        // Handing over to the updater: it is copied away from the install, and gets everything it needs.
+        Dir d5;
+        UpdateLayout layout5 = layout;
+        layout5.appDir = (d5.path / "install" / "Aestra").string();
+        writeFile(fs::path(layout5.appDir) / "AestraUpdater", "#!/bin/sh\nprintf '%s\\n' \"$0\" \"$@\" > '" + (d5.path / "args.txt").string() + "'\n");
+        fs::permissions(fs::path(layout5.appDir) / "AestraUpdater", fs::perms::owner_exec, fs::perm_options::add, ec);
+        std::string launchError;
+        check(launchUpdater(layout5, (d5.path / "result.json").string(), "0.8.1", "0.8.2", 4242, &launchError), "the updater is launched: " + launchError);
+        for (int i = 0; i < 300 && !fs::exists(d5.path / "args.txt"); ++i) std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        const std::string args = slurpFile(d5.path / "args.txt");
+        check(args.find("aestra-updater-4242") != std::string::npos, "it runs from a temporary copy, not from the install");
+        const std::vector<std::string> wanted = {"--pid\n4242", "--app-dir\n" + layout5.appDir, "--staged\n" + layout5.stagedDir(),
+                                                 "--backup\n" + layout5.backupDir(), "--exe\nAestra", "--from\n0.8.1", "--to\n0.8.2"};
+        for (const auto& w : wanted) check(args.find(w) != std::string::npos, "the updater is given " + w);
+        UpdateLayout missing = layout5;
+        missing.appDir = (d5.path / "nowhere").string();
+        check(!launchUpdater(missing, "x", "a", "b", 1, &launchError) && launchError.find("AestraUpdater") != std::string::npos, "an install with no updater says so");
+        std::error_code cleanup;
+        fs::remove_all(fs::temp_directory_path() / "aestra-updater-4242", cleanup);
     }
 #endif
 

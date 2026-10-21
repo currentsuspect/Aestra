@@ -13,6 +13,7 @@
 #include "UpdateClient.h"
 
 #include <string>
+#include <vector>
 
 namespace Aestra {
 namespace License {
@@ -48,6 +49,36 @@ DownloadOutcome downloadUpdatePackage(IHttpTransport& transport, const UpdateCon
 /// stripped. @p executableName must be there afterwards. False, with @p error set, leaves nothing half-staged.
 bool extractUpdatePackage(const std::string& packagePath, const std::string& stagingDir, const std::string& executableName,
                           std::string* error);
+
+// ---- Where things live, and handing over to the updater -------------------------------------------------------------
+
+/// This process's id: what the updater waits on.
+long currentProcessId();
+
+/// The folder the update replaces, and the sibling folders the swap uses (same disk, so a rename is possible).
+struct UpdateLayout {
+    std::string downloadDir;      ///< where packages are downloaded (any folder the user can write)
+    std::string appDir;           ///< the installed copy: the folder holding the running program
+    std::string executableName;   ///< "Aestra" or "Aestra.exe"
+    std::string updaterName;      ///< "AestraUpdater" or "AestraUpdater.exe", next to the program
+    std::string stagedDir() const { return appDir + ".new"; }
+    std::string backupDir() const { return appDir + ".old"; }
+};
+
+/// Absolute path of the running program (empty if the system will not say).
+std::string currentExecutablePath();
+
+/// Whether this install can replace itself: the folder and the one above it can be written. False sets @p why in words
+/// a person can act on. (No elevation is ever attempted.)
+bool installLocationWritable(const std::string& appDir, std::string* why);
+
+/// Start a program that outlives this one: its own session, no console, no inherited descriptors.
+bool launchDetached(const std::string& program, const std::vector<std::string>& args, std::string* error);
+
+/// Copy the updater to a temporary folder (it must not be one of the files being replaced) and start it. It waits for
+/// process @p pid to exit, swaps the staged copy in, starts the new version and writes @p resultFile.
+bool launchUpdater(const UpdateLayout& layout, const std::string& resultFile, const std::string& fromVersion,
+                   const std::string& toVersion, long pid, std::string* error);
 
 } // namespace License
 } // namespace Aestra

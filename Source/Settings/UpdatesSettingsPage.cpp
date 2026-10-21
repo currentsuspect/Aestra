@@ -62,6 +62,21 @@ void UpdatesSettingsPage::createUI() {
     m_checkButton->setOnClick([this]() { checkNow(); });
     addChild(m_checkButton);
 
+    m_installButton = std::make_shared<AestraUI::NUIButton>();
+    m_installButton->setStyle(AestraUI::NUIButton::Style::Primary);
+    m_installButton->setOnClick([this]() { onInstallClicked(); });
+    m_installButton->setVisible(false);
+    addChild(m_installButton);
+
+    m_cancelButton = std::make_shared<AestraUI::NUIButton>();
+    m_cancelButton->setText("Cancel");
+    m_cancelButton->setStyle(AestraUI::NUIButton::Style::Secondary);
+    m_cancelButton->setOnClick([this]() {
+        if (m_notifier) m_notifier->cancelInstall();
+    });
+    m_cancelButton->setVisible(false);
+    addChild(m_cancelButton);
+
     m_stableButton = std::make_shared<AestraUI::NUIButton>();
     m_stableButton->setText("Stable");
     m_stableButton->setOnClick([this]() { chooseChannel("stable"); });
@@ -145,9 +160,33 @@ void UpdatesSettingsPage::checkNow() {
     repaint();
 }
 
+bool UpdatesSettingsPage::installVisible() const {
+    if (!m_notifier) return false;
+    const InstallPhase phase = m_notifier->installState().phase;
+    if (phase != InstallPhase::Idle) return true;
+    const bool fresh = m_notifier->hasResult() && m_notifier->resultCount() > m_ignoreResultsBefore;
+    return fresh && !m_checking && m_notifier->lastResult().status == UpdateCheckStatus::Available;
+}
+
+void UpdatesSettingsPage::onInstallClicked() {
+    if (!m_notifier) return;
+    const InstallState st = m_notifier->installState();
+    if (st.phase == InstallPhase::Ready) m_notifier->restartToUpdate();
+    else m_notifier->startInstall(); // Idle, Failed ("Try again") and Cancelled all begin (or resume) a download
+    repaint();
+}
+
 void UpdatesSettingsPage::onUpdate(double deltaTime) {
     AestraUI::NUIComponent::onUpdate(deltaTime);
-    if (!m_checking || !m_notifier) return;
+    if (!m_notifier) return;
+    // The install runs on its own thread: follow it, and re-lay the page when its card appears or goes.
+    const InstallPhase phase = m_notifier->installState().phase;
+    if (phase == InstallPhase::Downloading || phase == InstallPhase::Unpacking) repaint();
+    if (installVisible() != m_installShown) {
+        layoutComponents();
+        repaint();
+    }
+    if (!m_checking) return;
     m_checkingFor += deltaTime;
     if (m_notifier->resultCount() != m_resultCountAtCheck || m_checkingFor > kCheckGiveUpSeconds) {
         m_checking = false;
@@ -170,6 +209,19 @@ void UpdatesSettingsPage::layoutComponents() {
     m_statusCard = AestraUI::NUIRect(x, y, cardW, 96.0f);
     m_checkButton->setBounds(AestraUI::NUIRect(m_statusCard.right() - 130.0f, m_statusCard.y + 28.0f, 110.0f, 34.0f));
     y = m_statusCard.bottom() + 14.0f;
+
+    // The install card, only while there is something to install (or an install to follow).
+    m_installShown = installVisible();
+    m_installButton->setVisible(m_installShown);
+    if (m_installShown) {
+        m_installCard = AestraUI::NUIRect(x, y, cardW, 84.0f);
+        m_installButton->setBounds(AestraUI::NUIRect(m_installCard.right() - 200.0f, m_installCard.y + 25.0f, 180.0f, 34.0f));
+        m_cancelButton->setBounds(AestraUI::NUIRect(m_installCard.right() - 290.0f, m_installCard.y + 25.0f, 80.0f, 34.0f));
+        y = m_installCard.bottom() + 14.0f;
+    } else {
+        m_installCard = AestraUI::NUIRect();
+        m_cancelButton->setVisible(false);
+    }
 
     const float channelH = m_early ? 158.0f : 104.0f;
     m_channelCard = AestraUI::NUIRect(x, y, cardW, channelH);
@@ -217,6 +269,62 @@ void UpdatesSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
         const auto lines = wrapText(renderer, status.detail, normal, room, 2);
         for (size_t i = 0; i < lines.size(); ++i)
             renderer.drawText(lines[i], {textX, m_statusCard.y + 46.0f + static_cast<float>(i) * (normal + 4.0f)}, normal, textSecondary);
+    }
+
+    // Install
+    if (m_installShown) {
+        card(renderer, m_installCard);
+        const InstallState st = m_notifier->installState();
+        const float left = m_installCard.x + 18.0f;
+        const float room = m_cancelButton->getBounds().x - left - 14.0f;
+        std::string headline, detail;
+        const bool busy = st.phase == InstallPhase::Downloading || st.phase == InstallPhase::Unpacking;
+        switch (st.phase) {
+        case InstallPhase::Downloading: {
+            headline = "Downloading " + st.version;
+            detail = updateSizeText(st.done) + " of " + updateSizeText(st.total);
+            m_installButton->setText("Downloading...");
+            break;
+        }
+        case InstallPhase::Unpacking:
+            headline = "Getting " + st.version + " ready";
+            detail = "Checking and unpacking the download.";
+            m_installButton->setText("Please wait...");
+            break;
+        case InstallPhase::Ready:
+            headline = st.version + " is ready";
+            detail = "Aestra will ask about unsaved work, close, update and open again.";
+            m_installButton->setText("Restart and update");
+            break;
+        case InstallPhase::Failed:
+            headline = "The update did not install";
+            detail = st.message;
+            m_installButton->setText("Try again");
+            break;
+        case InstallPhase::Cancelled:
+            headline = "Download cancelled";
+            detail = "What was downloaded is kept, so it carries on from there.";
+            m_installButton->setText("Download and install");
+            break;
+        case InstallPhase::Idle:
+        default:
+            headline = "Install " + result.manifest.version;
+            detail = "Downloads " + updateSizeText(result.manifest.size) + ", checks it, then asks you to restart.";
+            m_installButton->setText("Download and install");
+            break;
+        }
+        m_installButton->setEnabled(!busy);
+        m_cancelButton->setVisible(st.phase == InstallPhase::Downloading);
+        renderer.drawText(headline, {left, m_installCard.y + 14.0f}, normal, textPrimary);
+        const auto lines = wrapText(renderer, detail, small, room, 2);
+        for (size_t i = 0; i < lines.size(); ++i)
+            renderer.drawText(lines[i], {left, m_installCard.y + 38.0f + static_cast<float>(i) * (small + 3.0f)}, small, st.phase == InstallPhase::Failed ? theme.getColor("warning") : textSecondary);
+        if (st.phase == InstallPhase::Downloading || st.phase == InstallPhase::Unpacking) {
+            const AestraUI::NUIRect bar(left, m_installCard.bottom() - 16.0f, room, 4.0f);
+            renderer.fillRoundedRect(bar, 2.0f, theme.getColor("borderSubtle"));
+            const float fraction = st.phase == InstallPhase::Unpacking ? 1.0f : (st.total > 0 ? std::min(1.0f, static_cast<float>(static_cast<double>(st.done) / static_cast<double>(st.total))) : 0.0f);
+            renderer.fillRoundedRect(AestraUI::NUIRect(bar.x, bar.y, std::max(4.0f, bar.width * fraction), bar.height), 2.0f, theme.getColor("accentPrimary"));
+        }
     }
 
     // Channel

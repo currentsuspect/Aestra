@@ -16,9 +16,13 @@
 #endif
 #include <windows.h>
 #else
+#include <fcntl.h>
 #include <spawn.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
 extern char** environ;
 #endif
 
@@ -267,6 +271,126 @@ bool extractUpdatePackage(const std::string& packagePath, const std::string& sta
 
     if (!fs::is_regular_file(fs::path(stagingDir) / executableName, ec)) return bad("the update package has no " + executableName);
     return true;
+}
+
+long currentProcessId() {
+#ifdef _WIN32
+    return static_cast<long>(GetCurrentProcessId());
+#else
+    return static_cast<long>(getpid());
+#endif
+}
+
+std::string currentExecutablePath() {
+#ifdef _WIN32
+    wchar_t buf[MAX_PATH * 4] = {};
+    const DWORD n = GetModuleFileNameW(nullptr, buf, static_cast<DWORD>(sizeof(buf) / sizeof(buf[0])));
+    if (n == 0 || n >= sizeof(buf) / sizeof(buf[0])) return {};
+    return fs::path(std::wstring(buf, n)).string();
+#elif defined(__APPLE__)
+    char buf[4096];
+    uint32_t size = sizeof(buf);
+    if (_NSGetExecutablePath(buf, &size) != 0) return {};
+    std::error_code ec;
+    return fs::weakly_canonical(buf, ec).string();
+#else
+    char buf[4096];
+    const ssize_t n = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
+    return n > 0 ? std::string(buf, static_cast<size_t>(n)) : std::string();
+#endif
+}
+
+bool installLocationWritable(const std::string& appDir, std::string* why) {
+    auto canWrite = [](const fs::path& dir) {
+        std::error_code ec;
+        const fs::path probe = dir / ".aestra-write-test";
+        {
+            std::ofstream out(probe);
+            if (!out) return false;
+        }
+        fs::remove(probe, ec);
+        return true;
+    };
+    const fs::path dir(appDir);
+    if (!canWrite(dir) || !canWrite(dir.parent_path())) {
+        if (why) *why = "Aestra is installed somewhere that needs administrator rights to change (" + appDir + "). Move it to a folder you own, or install the update yourself.";
+        return false;
+    }
+    return true;
+}
+
+bool launchDetached(const std::string& program, const std::vector<std::string>& args, std::string* error) {
+#ifdef _WIN32
+    std::string line = "\"" + program + "\"";
+    for (const auto& a : args) line += " \"" + a + "\"";
+    std::wstring wide(line.size() + 1, L'\0');
+    const int n = MultiByteToWideChar(CP_UTF8, 0, line.c_str(), -1, wide.data(), static_cast<int>(wide.size()));
+    if (n <= 0) {
+        if (error) *error = "bad program path";
+        return false;
+    }
+    wide.resize(static_cast<size_t>(n));
+    STARTUPINFOW si{};
+    si.cb = sizeof(si);
+    PROCESS_INFORMATION pi{};
+    if (!CreateProcessW(nullptr, wide.data(), nullptr, nullptr, FALSE, DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi)) {
+        if (error) *error = "could not start " + program;
+        return false;
+    }
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+    return true;
+#else
+    std::vector<char*> argv;
+    argv.push_back(const_cast<char*>(program.c_str()));
+    for (const auto& a : args) argv.push_back(const_cast<char*>(a.c_str()));
+    argv.push_back(nullptr);
+    const pid_t pid = fork();
+    if (pid < 0) {
+        if (error) *error = "could not start " + program;
+        return false;
+    }
+    if (pid == 0) {
+        setsid(); // its own session: closing this one does not take it down
+        const int devnull = open("/dev/null", O_RDWR);
+        if (devnull >= 0) {
+            dup2(devnull, 0);
+            dup2(devnull, 1);
+            dup2(devnull, 2);
+            if (devnull > 2) close(devnull);
+        }
+        for (int fd = 3; fd < 256; ++fd) close(fd); // nothing of ours leaks into it
+        execv(program.c_str(), argv.data());
+        _exit(127);
+    }
+    return true;
+#endif
+}
+
+bool launchUpdater(const UpdateLayout& layout, const std::string& resultFile, const std::string& fromVersion,
+                   const std::string& toVersion, long pid, std::string* error) {
+    std::error_code ec;
+    const fs::path source = fs::path(layout.appDir) / layout.updaterName;
+    if (!fs::is_regular_file(source, ec)) {
+        if (error) *error = "this install has no " + layout.updaterName;
+        return false;
+    }
+    const fs::path home = fs::temp_directory_path(ec) / ("aestra-updater-" + std::to_string(pid));
+    fs::remove_all(home, ec);
+    fs::create_directories(home, ec);
+    const fs::path copy = home / layout.updaterName;
+    fs::copy_file(source, copy, fs::copy_options::overwrite_existing, ec);
+    if (ec) {
+        if (error) *error = "could not copy the updater: " + ec.message();
+        return false;
+    }
+#ifndef _WIN32
+    fs::permissions(copy, fs::perms::owner_exec | fs::perms::group_exec | fs::perms::others_exec, fs::perm_options::add, ec);
+#endif
+    return launchDetached(copy.string(),
+                          {"--pid", std::to_string(pid), "--app-dir", layout.appDir, "--staged", layout.stagedDir(), "--backup",
+                           layout.backupDir(), "--exe", layout.executableName, "--result", resultFile, "--from", fromVersion, "--to", toVersion},
+                          error);
 }
 
 } // namespace License
