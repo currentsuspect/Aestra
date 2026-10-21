@@ -3,6 +3,7 @@
 #include "NUIPianoRollWidgets.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
+#include "PianoRollLook.h"
 #include "PianoRollWidgetShared.h"
 #include <algorithm>
 #include <cmath>
@@ -24,14 +25,15 @@ void PianoRollKeyLane::onRender(NUIRenderer& renderer) {
 
     renderer.setClipRect(b);
 
-    const auto laneBg = themeManager.getColor("backgroundSecondary").darkened(0.02f);
-    const auto naturalKey = themeManager.getColor("surfaceRaised").withAlpha(0.72f);
-    const auto naturalHover = themeManager.getColor("surfaceRaised").lightened(0.08f).withAlpha(0.92f);
-    const auto accidentalKey = themeManager.getColor("backgroundPrimary").darkened(0.08f);
-    const auto accidentalHover = themeManager.getColor("accentPrimary").darkened(0.35f).withAlpha(0.92f);
-    const auto separator = themeManager.getColor("border").withAlpha(0.34f);
-    const auto rootAccent = themeManager.getColor("accentPrimary").withAlpha(0.86f);
-    const auto naturalText = themeManager.getColor("textPrimary").withAlpha(0.72f);
+    // FD-48: ivory naturals and near-black accidentals, every C named.
+    const auto laneBg = themeManager.getColor("backgroundPrimary");
+    const auto naturalKey = PianoRollLook::ivoryKey();
+    const auto naturalHover = PianoRollLook::ivoryKeyHover();
+    const auto accidentalKey = PianoRollLook::blackKey();
+    const auto accidentalHover = PianoRollLook::blackKeyHover();
+    const auto separator = PianoRollLook::keyEdge();
+    const auto rootAccent = themeManager.getColor("accentPrimary");
+    const auto naturalText = PianoRollLook::ivoryKeyLabel();
     // Pressed (SPEC 3 §5.1): the key takes the accent, sinks a little, and its tip glows
     // toward the grid row it plays. Blended by the key's press level, so release eases out.
     const auto accent = themeManager.getColor("accentPrimary");
@@ -67,7 +69,7 @@ void PianoRollKeyLane::onRender(NUIRenderer& renderer) {
         const auto fill =
             press > 0.0f ? NUIColor::lerp(restFill, accidental ? accidentalPressed : naturalPressed, press) : restFill;
         renderer.fillRoundedRect(keyRect, accidental ? 2.0f : 3.0f, fill);
-        renderer.strokeRoundedRect(keyRect, accidental ? 2.0f : 3.0f, 1.0f, separator);
+        if (!accidental) renderer.strokeRoundedRect(keyRect, 3.0f, 1.0f, separator);
         if (press > 0.0f) {
             // The lit tip: a bright edge where the key meets its grid row.
             renderer.fillRoundedRect(NUIRect(keyRect.right() - 3.0f, keyRect.y + 1.0f, 2.0f, keyRect.height - 2.0f),
@@ -100,7 +102,7 @@ void PianoRollKeyLane::onRender(NUIRenderer& renderer) {
             renderer.drawText(label,
                               NUIPoint(textX, textY),
                               fontSize,
-                              naturalText.lightened(0.12f));
+                              naturalText);
         }
 
         if (p % 12 == 0) {

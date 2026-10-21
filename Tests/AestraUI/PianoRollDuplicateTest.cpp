@@ -8,6 +8,7 @@
 #include "Common/MusicHelpers.h"
 #include "Widgets/NUIPianoRollWidgets.h"
 #include "Widgets/PianoRollDuplicate.h"
+#include "Widgets/PianoRollLook.h"
 
 #include <cmath>
 #include <iostream>
@@ -305,6 +306,39 @@ int main() {
         esc.pressed = true;
         view.onKeyEvent(esc);
         check(!view.getLoopZone(), "Esc still clears it too");
+    }
+
+    std::cout << "[10] the look (FD-48, board 6): flat opaque notes in the unit's colour, ivory keys, scale rows\n";
+    {
+        namespace Look = PianoRollLook;
+        const NUIColor teal(0.0f, 0.78f, 0.62f, 0.4f); // the alpha of the source must not leak into a note
+        Look::NoteState idle, hover, selected, sounding;
+        hover.hovered = true;
+        selected.selected = true;
+        sounding.sounding = true;
+        check(Look::noteFill(teal, idle).a == 1.0f && Look::noteFill(teal, selected).a == 1.0f, "a note is always fully opaque");
+        check(near(Look::noteFill(teal, idle).g, 0.78) && near(Look::noteFill(teal, idle).r, 0.0), "at rest it is exactly the unit's colour");
+        check(Look::noteFill(teal, hover).luminance() > Look::noteFill(teal, idle).luminance(), "hovering lifts it");
+        check(Look::noteFill(teal, selected).luminance() > Look::noteFill(teal, hover).luminance(), "selecting lifts it more");
+        check(Look::noteFill(teal, sounding).luminance() > Look::noteFill(teal, selected).luminance(), "a sounding note is the brightest");
+        check(Look::noteLabelColor(NUIColor(0.95f, 0.95f, 0.5f, 1.0f)).luminance() < 0.2f, "a light note gets a dark label");
+        check(Look::noteLabelColor(NUIColor(0.1f, 0.2f, 0.5f, 1.0f)).luminance() > 0.8f, "a dark note gets a light label");
+
+        check(Look::ivoryKey().luminance() > 0.8f && Look::blackKey().luminance() < 0.15f, "keys are ivory and near-black");
+        check(Look::ivoryKeyLabel().luminance() < 0.3f, "an ivory key's label is dark");
+
+        // Rows: a scale lifts its own notes and recesses the rest; chromatic recesses the accidentals.
+        check(Look::rowShade(60, 0, ScaleType::Major) == Look::RowShade::Lifted, "C is in C major: lifted");
+        check(Look::rowShade(61, 0, ScaleType::Major) == Look::RowShade::Recessed, "C# is not in C major: recessed");
+        check(Look::rowShade(62, 0, ScaleType::Major) == Look::RowShade::Lifted, "D is in C major: lifted");
+        check(Look::rowShade(69, 9, ScaleType::Minor) == Look::RowShade::Lifted, "the root of A minor is in its scale");
+        check(Look::rowShade(60, 0, ScaleType::Chromatic) == Look::RowShade::Plain, "chromatic: a natural row is plain");
+        check(Look::rowShade(61, 0, ScaleType::Chromatic) == Look::RowShade::Recessed, "chromatic: an accidental recesses like a black key");
+        check(Look::rowShadeFill(Look::RowShade::Recessed).a > Look::rowShadeFill(Look::RowShade::Lifted).a, "recessed is the stronger shade");
+        check(Look::rowShadeFill(Look::RowShade::Plain).a == 0.0f, "plain adds nothing");
+        check(Look::rowLineAlpha(60) > 3.0f * Look::rowLineAlpha(61), "the line under every C is much stronger");
+        check(Look::rowLineAlpha(72) == Look::rowLineAlpha(0) && Look::rowLineAlpha(61) == Look::rowLineAlpha(62), "every C alike, every other row alike");
+        check(Look::isAccidental(70) && !Look::isAccidental(71) && !Look::isAccidental(0), "accidentals are C# D# F# G# A# in every octave");
     }
 
     std::cout << (g_failures == 0 ? "PianoRollDuplicateTest: all passed\n" : "PianoRollDuplicateTest: FAILURES\n");

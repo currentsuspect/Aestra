@@ -456,6 +456,9 @@ class NUIPlatformBridge;
 // -----------------------------------------------------------------------------
 class PianoRollNoteLayer : public NUIComponent {
 public:
+    /// The unit being edited gives its notes their colour (flat and opaque, FD-48).
+    void setNoteColor(const NUIColor& color) { if (noteColor_.r == color.r && noteColor_.g == color.g && noteColor_.b == color.b) return; noteColor_ = color; repaint(); }
+
     struct GhostPattern {
         /** @brief Notes rendered as a ghost overlay. */
         std::vector<MidiNote> notes;
@@ -631,6 +634,9 @@ public:
 private:
     std::vector<MidiNote> notes_;
     std::vector<GhostPattern> ghostPatterns_;
+    NUIColor noteColor_ = NUIColor(0.40f, 0.62f, 0.95f, 1.0f); ///< the unit's colour until the panel says which
+    /// One note, flat: the unit's colour (lifted by state), grips when selected or hovered at an edge, the pitch name inside.
+    void paintNote(NUIRenderer& renderer, const NUIRect& r, const MidiNote& note, bool hovered, bool sounding, float rawWidth);
     float pixelsPerBeat_;
     float keyHeight_;
     float scrollX_;
@@ -913,6 +919,8 @@ public:
     void setDefaultUnitId(uint64_t unitId);
     
     void setGhostPatterns(const std::vector<PianoRollNoteLayer::GhostPattern>& ghosts);
+    /** @brief The editing unit's colour: its notes are drawn flat in it (FD-48). */
+    void setNoteColor(const NUIColor& color);
 
     /** @brief Set callback to check transport playback state (suppress preview when playing). */
     void setIsPlayingCallback(std::function<bool()> cb);
