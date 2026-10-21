@@ -33,6 +33,16 @@ if(TARGET AestraLicense)
     add_test(NAME SecUpdateFeed COMMAND SecUpdateFeed)
     add_executable(SecUpdateClient update_client_test.cpp)
     add_test(NAME SecUpdateClient COMMAND SecUpdateClient)
+    add_executable(SecUpdateInstall update_install_test.cpp)
+    add_test(NAME SecUpdateInstall COMMAND SecUpdateInstall)
+    add_executable(SecUpdaterApply updater_apply_test.cpp)
+    target_include_directories(SecUpdaterApply PRIVATE ${REPO_ROOT}/tools/updater)
+    target_compile_features(SecUpdaterApply PRIVATE cxx_std_17)
+    add_test(NAME SecUpdaterApply COMMAND SecUpdaterApply)
+    if(Python3_FOUND AND TARGET AestraUpdater)
+        add_test(NAME SecUpdaterEndToEnd COMMAND ${Python3_EXECUTABLE} ${REPO_ROOT}/tools/updater/updater_e2e_test.py $<TARGET_FILE:AestraUpdater>)
+        set_tests_properties(SecUpdaterEndToEnd PROPERTIES SKIP_RETURN_CODE 77)
+    endif()
     add_executable(SecAccountApiClient account_api_client_test.cpp)
     add_test(NAME SecAccountApiClient COMMAND SecAccountApiClient)
     add_executable(SecAccountEndToEndSmoke account_end_to_end_smoke.cpp)
@@ -254,6 +264,12 @@ if(TARGET AestraLicense)
         ${CMAKE_CURRENT_LIST_DIR}
     )
     target_link_libraries(SecUpdateClient PRIVATE AestraLicense)
+
+    target_include_directories(SecUpdateInstall PRIVATE
+        ${REPO_ROOT}/AestraLicense/include
+        ${REPO_ROOT}/AestraCore/include
+    )
+    target_link_libraries(SecUpdateInstall PRIVATE AestraLicense)
 
     target_include_directories(SecAccountApiClient PRIVATE
         ${REPO_ROOT}/AestraLicense/include
