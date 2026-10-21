@@ -2999,8 +2999,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 
 
 void TrackUIComponent::drawLiveWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float controlAreaWidth) {
-    if (!m_trackManager || !m_channel) return;
-    if (!m_trackManager->isRecording()) return;
+    // No mixer channel needed (it used to return when the lane had none, which is always, so the preview never drew).
+    if (!m_trackManager || !m_trackManager->isRecording()) return;
     auto* lane = m_trackManager->getPlaylistModel().getLane(m_laneId);
     auto* track = lane ? m_trackManager->getTrack(lane->trackId) : nullptr;
     if (!track || !track->armed) return;
