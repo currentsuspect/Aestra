@@ -189,6 +189,14 @@ private:
                                              _mm_loadu_ps(&m_polyphaseT[tap][0])));
         }
         // Magnitude of each lane, then the largest of the four.
+        //
+        // On non-finite input this still matches the scalar path exactly, and
+        // not by luck: a NaN in the history makes EVERY lane NaN, the vector
+        // maximum can therefore yield a NaN, and the final `peak > running`
+        // comparison is false for a NaN -- so a NaN cannot raise the peak,
+        // which is what the scalar path's per-phase `if (mag > peak)` did.
+        // (A NaN in only ONE lane would need a NaN coefficient, and the
+        // coefficients are generated, never sampled.)
         const __m128 mag = _mm_andnot_ps(_mm_set1_ps(-0.0f), acc);
         __m128 t = _mm_max_ps(mag, _mm_movehl_ps(mag, mag));
         t = _mm_max_ss(t, _mm_shuffle_ps(t, t, 0x55));

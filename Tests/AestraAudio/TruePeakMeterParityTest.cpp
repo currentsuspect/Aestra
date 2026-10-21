@@ -20,6 +20,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <limits>
 #include <random>
 #include <vector>
 
@@ -196,6 +197,30 @@ Case makeImpulse(size_t frames) {
     return c;
 }
 
+// A block with NaN and infinity in it. The scalar path IGNORED a non-finite
+// magnitude -- `if (mag > peak)` is false for a NaN, so a NaN could never
+// raise the running peak -- so the vector path has to ignore it too, and this
+// is the case that proves it.
+Case makeNonFinite(size_t frames) {
+    Case c{"non-finite", {}};
+    c.samples.assign(frames * 2, 0.0f);
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+    const float inf = std::numeric_limits<float>::infinity();
+    for (size_t i = 0; i < frames; ++i) {
+        if (i % 37 == 0) {
+            c.samples[i * 2] = nan;
+        } else if (i % 41 == 0) {
+            c.samples[i * 2 + 1] = inf;
+        } else if (i % 43 == 0) {
+            c.samples[i * 2 + 1] = -inf;
+        } else {
+            c.samples[i * 2] = 0.25f * static_cast<float>((i % 13) - 6);
+            c.samples[i * 2 + 1] = -0.25f * static_cast<float>((i % 11) - 5);
+        }
+    }
+    return c;
+}
+
 bool compare(const Case& c) {
     TruePeakMeter actual;
     actual.initialize(48000);
@@ -246,6 +271,7 @@ int main() {
         makeSine(4096, 15000.0, 48000.0, 0.8f),
         makeSine(4096, 19000.0, 48000.0, 0.8f),
         makeImpulse(4096),
+        makeNonFinite(4096),
     };
 
     int failures = 0;
