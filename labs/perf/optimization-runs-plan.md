@@ -243,19 +243,98 @@ The budget gate passes on all three metrics.
 
 ---
 
+# RUN 4 — The meter and the mix (PRs #1203, #1204)
+
+Both are the same pattern as Run 1, applied to the two remaining measured
+hotspots.
+
+## The true-peak meter (PR #1203)
+
+It was the second-largest single item in the render — 115,989,881 instructions,
+6.1% — for a meter that cannot touch the sound. The cost was structural: the
+polyphase coefficients were stored phase-major and the hot loop ran **four
+separate 12-tap dot products**, one per phase, each with its own serial
+accumulator. But the four phases read the SAME history, so the whole thing is
+one matrix-vector product that fits in four lanes of a single vector.
+
+Storing the coefficients **transposed** (`m_polyphaseT[tap][phase]`) lets one
+12-iteration loop accumulate all four phase sums at once, and the magnitude
+reduction over the four lanes replaces four separate reductions. The history
+shift goes from twelve scalar copies to three vector moves.
+
+**The tap order is unchanged, so each lane accumulates exactly the same
+products in exactly the same order — the result is BIT-IDENTICAL, not close.**
+`TruePeakMeterParityTest` holds a copy of the original implementation and
+asserts exact equality over noise, sines at 997 Hz / 15 kHz / 19 kHz and an
+impulse.
+
+- meter instructions per 5 s render: **115,989,881 -> 37,457,353 (-67.7%)**
+- render CPU, develop baseline: 0.93 s -> 0.81 s (-13%)
+
+## The strip's mix (PR #1204)
+
+`mixAndMeterTrack` was 138,855,682 instructions, 7.3%. Its line-level profile
+showed three unrelated costs:
+
+1. The magnitude was not `fabs`. `(outL >= 0.0) ? outL : -outL` is a
+   compare-and-select, because for -0.0 the ternary returns -0.0 while `fabs`
+   returns +0.0, so the compiler cannot use a sign-bit clear. Those two lines
+   cost 27.7M instructions on their own.
+2. The delay-compensation ring did **two `%` per sample** — the same defect
+   Run 1 removed from the oversampler. The ring length is not a power of two,
+   so this was a real division sequence, twice, per sample, in the one loop
+   that runs for every sample of every track with a delay to compensate.
+3. The stereo arithmetic was scalar. The strip's samples are interleaved L/R
+   doubles, so one 2-wide vector carries both channels through the gain, the
+   store and the mix, and the peak tracking becomes one vector maximum.
+
+The kernel moved out of `AudioEngine.cpp` into a new
+`AestraAudio/include/Core/TrackMixKernel.h`, so the pinned file **shrank** from
+4393 to 4380 lines and its file-size ratchet row was lowered to match.
+
+**Bit-identical**: the fixture's canonical digest is UNCHANGED at
+`910d3c3e2cc03ee3` — the same digest the develop baseline produces.
+
+- `mixAndMeterTrack` instructions per 5 s render: **138,855,682 -> 97,305,441 (-30%)**
+- render CPU, develop baseline: 0.87 s -> 0.79 s (-9.2%)
+
+## All three audio PRs together
+
+| | develop | after | |
+|---|---:|---:|---|
+| render instructions per 5 s | 1,909,735,597 | **935,405,401** | **-51.0 %** |
+| render CPU (box idle) | 0.865 s | **0.395 s** | **-54.3 %** |
+
+The profile after all three:
+
+| Function | Ir | % |
+|---|---:|---:|
+| `HalfbandStage::dotProduct` | 156,480,000 | 16.7 % |
+| `AestraSat::process` | 151,573,164 | 16.2 % |
+| `SamplerPlugin::process` | 116,321,640 | 12.4 % |
+| `mixAndMeterTrack` | 95,160,449 | 10.2 % |
+| `AestraFilter::process` | 59,609,208 | 6.4 % |
+| `processBlock` | 47,007,495 | 5.0 % |
+| `Sinc64Turbo::resolve` | 39,991,401 | 4.3 % |
+| `TruePeakMeter::processStereo` | 37,457,353 | 4.0 % |
+| `tanhf` | 31,200,000 | 3.3 % |
+
+---
+
 # Candidates — measured, not yet done
 
 Ordered by size in the current profile.
 
 | # | Target | Evidence | Idea |
 |---|---|---|---|
-| 1 | `TruePeakMeter::processStereo` | 115,989,881 Ir (10.5 %) | The same serial-accumulator pattern as the oversampler: 4 polyphase branches x 12 taps + a 12-float history shift per sample. It is a meter, so it cannot touch the sound. |
-| 2 | `AudioEngine::mixAndMeterTrack` | 138,855,682 Ir (12.6 %) | The engine's per-track mix + meter loop. Needs a profile of its own (it is one big function). |
-| 3 | `SamplerPlugin::process` | 116,321,640 Ir (10.5 %) | The sampler voices; likely the same accumulator pattern. |
-| 4 | `AestraFilter::process` | 59,609,208 Ir (5.4 %) | The filter's biquads — a textbook SSE2 case. |
-| 5 | `Sinc64Turbo::resolve` | 39,991,401 Ir (3.6 %) | The resampler's coefficient resolution, called per block. |
-| 6 | `tanhf` | 31,200,000 Ir (2.8 %) | A vectorised tanh would be ~4x faster but changes the waveform by a polynomial's worth of ULP. It needs an **error budget**, not a speed number. |
-| 7 | Remaining `AestraSat` cost | 35 % of the render | The plugin's own per-sample work (DC blocker, tone one-pole, dry-delay tap, mix) and the `shape()` switch, which is loop-invariant and should be hoisted out of the sample loop. |
+| 1 | `TruePeakMeter::processStereo` | 115,989,881 Ir (6.1 %) | **DONE — PR #1203.** 115.9M -> 37.5M, bit-identical peaks. |
+| 2 | `AudioEngine::mixAndMeterTrack` | 138,855,682 Ir (7.3 %) | **DONE — PR #1204.** 138.9M -> 97.3M, bit-identical render. |
+| 3 | `SamplerPlugin::process` | 116,321,640 Ir (12.4 % of the new total) | The sampler voices. Now the THIRD largest item. Needs its own line-level profile. |
+| 4 | `AestraFilter::process` | 59,609,208 Ir (6.4 %) | The filter's biquads. An IIR cannot be vectorised across TIME, but it can be vectorised across the two CHANNELS, which are adjacent in memory — bit-identical, because each channel's recurrence is unchanged. |
+| 5 | `HalfbandStage::dotProduct` | 156,480,000 Ir (16.7 %) | The oversampler's FIR is now the largest single item. It is already SSE2 and already skips the zero taps; what remains is the tap count itself (47 + 29 taps per stage, twice). A different filter design (fewer taps, a different prototype) would change the transfer function, so this is bounded by the -79 dB round-trip figure, not by the code. |
+| 6 | `Sinc64Turbo::resolve` | 39,991,401 Ir (4.3 %) | The resampler's coefficient resolution, called per block. |
+| 7 | `tanhf` | 31,200,000 Ir (3.3 %) | A vectorised tanh would be ~4x faster but changes the waveform by a polynomial's worth of ULP. It needs an **error budget**, not a speed number. |
+| 8 | Remaining `AestraSat` cost | 16.2 % of the render | The plugin's own per-sample work (DC blocker, tone one-pole, dry-delay tap, mix) and the `shape()` switch, which is loop-invariant and should be hoisted out of the sample loop. |
 | 8 | `TrackManagerUI` dynamic pass | 0.78–3.42 ms/frame | Control strips, meters and the playhead are redrawn every frame. Caching them per region would cut the worst case. |
 | 9 | The present gate's transport branch | — | It reads `engine->isTransportPlaying()` and `tm->isPlaying()`. The Muse transport verbs set only the engine's, so an agent-started transport schedules no timeline and moves no playhead (pre-existing; the gate itself predates this work). |
 | 10 | Idle heartbeat | 7.6 % CPU at idle | With the loop gone there is room to drop the heartbeat below 3 fps, or to make the idle rate adaptive to the measured cost. |
