@@ -422,7 +422,18 @@ void TrackManagerUI::revealLane(PlaylistLaneID laneId) {
     refreshTracks();
     for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
         if (m_trackUIComponents[i] && m_trackUIComponents[i]->getLaneId() == laneId) {
-            setVerticalScroll(static_cast<float>(i) * (m_trackHeight + m_trackSpacing));
+            // Bring the row into view only if it is not already, and by the least that does it. It used to put the row at the
+            // top of the screen every time, so finishing a recording threw the whole timeline to that lane (owner,
+            // 2026-10-21: "when recording on a lane it moves to that lane"; it already sits where you were looking).
+            const float rowHeight = static_cast<float>(m_trackHeight + m_trackSpacing);
+            const float rowTop = static_cast<float>(i) * rowHeight;
+            const float rowBottom = rowTop + static_cast<float>(m_trackHeight);
+            const float viewHeight = currentTimelineLayout().rows.height;
+            if (rowTop < m_scrollOffset) {
+                setVerticalScroll(rowTop);
+            } else if (rowBottom > m_scrollOffset + viewHeight) {
+                setVerticalScroll(rowBottom - viewHeight);
+            }
             break;
         }
     }
