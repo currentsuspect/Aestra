@@ -470,6 +470,51 @@ if(AESTRA_BUILD_PERF_APPARATUS)
     add_subdirectory(labs/perf)
 endif()
 
+# =============================================================================
+# Link-time optimisation, Release only, every compiler.
+#
+# The app target used to carry -flto for non-MSVC compilers only, so the
+# Windows release build -- the one private-release.yml ships -- got no LTO at
+# all, and AestraAudio, where the DSP lives, got none on any platform. The
+# DSP kernels are spread across that library and the plugin code, so the
+# cross-boundary inlining LTO buys is exactly the part that was missing.
+#
+# CMake's own property rather than raw flags, because it selects the right
+# spelling per compiler: /GL and /LTCG on MSVC, -flto elsewhere.
+#
+# OFF for Debug, where LTO only makes the build slow.
+# =============================================================================
+include(CheckIPOSupported)
+check_ipo_supported(RESULT AESTRA_IPO_SUPPORTED OUTPUT AESTRA_IPO_ERROR LANGUAGES CXX)
+if(NOT AESTRA_IPO_SUPPORTED)
+    message(STATUS "Link-time optimisation unavailable: ${AESTRA_IPO_ERROR}")
+endif()
+
+option(AESTRA_ENABLE_IPO "Enable link-time optimisation in Release builds" ON)
+
+if(AESTRA_ENABLE_IPO AND AESTRA_IPO_SUPPORTED)
+    set(_aestra_ipo_targets
+        AestraCore
+        AestraPlat
+        AestraAudioCore
+        AestraAudioLinux
+        AestraAudioWin
+        AestraLicense
+        AestraUI_Core
+        AestraUI_Platform
+        AestraUI_OpenGL
+        AestraPluginHost
+        Aestra
+    )
+    foreach(_t IN LISTS _aestra_ipo_targets)
+        if(TARGET ${_t})
+            set_property(TARGET ${_t} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+        endif()
+    endforeach()
+    message(STATUS "Link-time optimisation: ON for Release")
+endif()
+
+
 message(STATUS "")
 message(STATUS "=================================")
 message(STATUS "  Aestra - Pure Native")

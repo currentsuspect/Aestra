@@ -234,10 +234,6 @@ target_link_libraries(Aestra PRIVATE
 if(NOT MSVC)
     target_compile_options(Aestra PRIVATE
         $<$<CONFIG:Release>:-O3>
-        $<$<CONFIG:Release>:-flto>
-    )
-    target_link_options(Aestra PRIVATE
-        $<$<CONFIG:Release>:-flto>
     )
 endif()
 
