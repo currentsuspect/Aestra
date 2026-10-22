@@ -321,6 +321,46 @@ The profile after all three:
 
 ---
 
+# RUN 5 — The sampler (PR #1205)
+
+## What was wrong
+
+A line-level profile of a four-second render put the sampler's voice loop at
+**74 million instructions** for the loop header and the `if (!v.active)` test
+alone, against 90 million for the whole plugin. The render loop walked all 32
+voice slots on every sample to find the one or two that were sounding.
+
+Two smaller pieces of per-sample work that did not change from sample to sample
+went with it:
+
+- The playable window (start, end, loop geometry) was rebuilt per voice per
+  sample — eight double operations and four branches — for a value identical
+  for every sample of a voice in a block. It is cached now, keyed on the
+  voice's frame count **and** the block's loop points.
+- The voice compensation is `1/sqrt(soundingVoices)`: a square root and a
+  division on every sample of every block. It is computed when the count
+  changes.
+
+## Measured
+
+| | before | after | |
+|---|---:|---:|---|
+| `SamplerPlugin::process` per 5 s render | 116,321,640 Ir | **14,097,586 Ir** | **-88 %** |
+| offline render instructions | 1,909,735,597 | 1,807,537,206 | -5.4 % |
+| offline render CPU (median of 5, 15 s runs) | 1.34 s | **1.27 s** | **-5.2 %** |
+
+**Bit-identical**: the fixture's canonical digest is unchanged at
+`910d3c3e2cc03ee3` — the same digest develop produces.
+
+## Two things that were measured and dropped
+
+| Lead | Result |
+|---|---|
+| De-interleave the sampler's stereo samples with two loads and two shuffles instead of gathering them with eight scalar loads | **No change.** A micro-benchmark of the 64-tap kernel in isolation: 42.2 ns with the gather, 42.8 ns with the shuffles. The kernel is latency-bound, not gather-bound. The AVX2 path has always done it the shuffle way; the SSE4.1 path's gather was not the cost. |
+| The window cache on its own | 116,321,640 -> 112,425,360 Ir (-3.4 % of the plugin, 1.2 % of the render). Real, but most of the win was the compact voice list, and the window cache alone was not worth a change on its own. It is in PR #1205 because it rides along with the list and the two share the same reasoning. |
+
+---
+
 # Candidates — measured, not yet done
 
 Ordered by size in the current profile.
@@ -329,7 +369,7 @@ Ordered by size in the current profile.
 |---|---|---|---|
 | 1 | `TruePeakMeter::processStereo` | 115,989,881 Ir (6.1 %) | **DONE — PR #1203.** 115.9M -> 37.5M, bit-identical peaks. |
 | 2 | `AudioEngine::mixAndMeterTrack` | 138,855,682 Ir (7.3 %) | **DONE — PR #1204.** 138.9M -> 97.3M, bit-identical render. |
-| 3 | `SamplerPlugin::process` | 116,321,640 Ir (12.4 % of the new total) | The sampler voices. Now the THIRD largest item. Needs its own line-level profile. |
+| 3 | `SamplerPlugin::process` | 116,321,640 Ir (12.4 % of the new total) | **DONE — PR #1205.** 116.3M -> 14.1M, bit-identical. The cost was walking 32 voice slots per sample to find one or two. |
 | 4 | `AestraFilter::process` | 59,609,208 Ir (6.4 %) | The filter's biquads. An IIR cannot be vectorised across TIME, but it can be vectorised across the two CHANNELS, which are adjacent in memory — bit-identical, because each channel's recurrence is unchanged. |
 | 5 | `HalfbandStage::dotProduct` | 156,480,000 Ir (16.7 %) | The oversampler's FIR is now the largest single item. It is already SSE2 and already skips the zero taps; what remains is the tap count itself (47 + 29 taps per stage, twice). A different filter design (fewer taps, a different prototype) would change the transfer function, so this is bounded by the -79 dB round-trip figure, not by the code. |
 | 6 | `Sinc64Turbo::resolve` | 39,991,401 Ir (4.3 %) | The resampler's coefficient resolution, called per block. |
