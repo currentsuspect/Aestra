@@ -466,6 +466,42 @@ is shipped:
   working branch so the apparatus can measure `develop` without moving the
   frozen apparatus.
 
+## Where it all landed
+
+All six PRs are merged into `develop`.
+
+| PR | What | Render CPU | Instructions |
+|---|---|---|---|
+| baseline | develop @ `def874133` | 1.35 s | 1,909,735,597 Ir |
+| #1199 | the oversampler FIR in SSE2 | | 1,102,829,000 Ir |
+| #1203 | the true-peak meter in one 4-wide accumulator | | |
+| #1204 | the strip's mix in one 2-wide vector | | |
+| #1205 | the sampler's compact voice list | | |
+| #1202 | link-time optimisation for every compiler | | |
+| **develop now** | | **0.63 s (-53.3 %)** | **830,884,104 Ir (-56.5 %)** |
+
+Live playback on the real device (512 frames @ 48 kHz, budget 10.667 ms):
+
+| | before | after |
+|---|---:|---:|
+| callback average | 1.008 / 1.018 ms | **0.423 / 0.443 ms** |
+| callback worst case | 2.716 / 2.749 ms | **1.342 / 1.249 ms** |
+| deadline misses | 0 | 0 |
+| xruns | 0 | 0 |
+
+**The live audio callback is 57 % faster and its worst case is more than
+halved.** On the 4 GB target that is the difference between a callback that
+touches a quarter of its budget and one that touches a twentieth.
+
+### What the sound did
+
+Everything is bit-identical **except** the oversampler's zero-tap snap, which
+changes the kernel by about 1e-17 relative — below one float32 ULP. The
+per-lane RMS values are unchanged to the last digit, the canonical peak is
+identical, and the parity test bounds the difference at 2.98e-07 sample delta
+and -143 dB relative. The canonical *digest* changed, because a digest is a
+hash of the bits and one ULP is one bit.
+
 ## Status
 
 - [x] Baseline build, audio harness, frame harness, baseline numbers
