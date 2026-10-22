@@ -260,6 +260,15 @@ void NUITextInput::setText(const std::string& text)
 
 void NUITextInput::setPlaceholderText(const std::string& placeholder)
 {
+    // Setters invalidate only on a real change (SPEC 3 §4).
+    //
+    // A surface that re-applies the placeholder from its render path used to
+    // dirty the field on EVERY frame with the same string. The dirty flag
+    // propagated to the panel, the panel invalidated its own render cache, the
+    // cache rebuild re-ran the render path, and the field was dirtied again —
+    // a self-sustaining loop that kept the whole window repainting at the
+    // frame rate with nothing on screen changing.
+    if (placeholderText_ == placeholder) return;
     placeholderText_ = placeholder;
     invalidateLayout();
     setDirty(true);

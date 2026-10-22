@@ -31,6 +31,18 @@ public:
     
     // Component interface
     void onRender(NUIRenderer& renderer) override;
+
+    /// Draw the icon at an explicit rect and colour WITHOUT changing the
+    /// component's own bounds or colour.
+    ///
+    /// A surface that draws the same shared icon instance at many positions
+    /// in one frame — the browser's file list draws one shared icon per file
+    /// type, once per visible row — must not move and re-tint the component to
+    /// do it. setBounds() invalidates, so that pattern produced hundreds of
+    /// invalidations a second for a component that was not changing, and it
+    /// is a landmine: the moment such an icon has a parent, every row it is
+    /// drawn in dirties the whole window.
+    void renderAt(NUIRenderer& renderer, const NUIRect& rect, const NUIColor& color);
     void onThemeChanged(const NUIThemeProperties& theme) override;
     
     // Icon management
