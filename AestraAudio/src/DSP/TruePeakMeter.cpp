@@ -92,6 +92,10 @@ void TruePeakMeter::generateCoefficients() noexcept {
     // guarantees unity DC gain at every fractional phase — without it the
     // oversampled signal can drift several percent above/below |x| on DC,
     // which would corrupt the true-peak measurement.
+    //
+    // The coefficients are stored TRANSPOSED (see the header): the hot loop
+    // wants one 4-wide vector per tap, holding that tap's coefficient for
+    // each of the four phases.
     for (uint32_t phase = 0; phase < kOversampleFactor; ++phase) {
         double phaseSum = 0.0;
         for (uint32_t tap = 0; tap < kTapsPerPhase; ++tap) {
@@ -101,7 +105,7 @@ void TruePeakMeter::generateCoefficients() noexcept {
         const double phaseScale = phaseSum != 0.0 ? 1.0 / phaseSum : 1.0;
         for (uint32_t tap = 0; tap < kTapsPerPhase; ++tap) {
             const uint32_t protoIdx = phase + kOversampleFactor * tap;
-            m_polyphase[phase][tap] = static_cast<float>(proto[protoIdx] * phaseScale);
+            m_polyphaseT[tap][phase] = static_cast<float>(proto[protoIdx] * phaseScale);
         }
     }
 }

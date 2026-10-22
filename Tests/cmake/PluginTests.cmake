@@ -473,3 +473,22 @@ add_test(NAME OversamplerParityTest COMMAND OversamplerParityTest)
 set_tests_properties(OversamplerParityTest PROPERTIES
     LABELS "audio;dsp;oversampling;regression;contract:audio"
     TIMEOUT 120)
+
+# The true-peak meter's polyphase coefficients are stored transposed now, so
+# one 4-wide accumulator holds all four phase sums at once. The tap order is
+# unchanged, so the peaks must come out BIT-IDENTICAL -- this test holds a
+# copy of the original scalar implementation and compares them exactly.
+add_executable(TruePeakMeterParityTest
+    AestraAudio/TruePeakMeterParityTest.cpp
+)
+target_link_libraries(TruePeakMeterParityTest PRIVATE AestraAudio)
+target_include_directories(TruePeakMeterParityTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME TruePeakMeterParityTest COMMAND TruePeakMeterParityTest)
+set_tests_properties(TruePeakMeterParityTest PROPERTIES
+    LABELS "audio;dsp;meters;regression;contract:audio"
+    TIMEOUT 120)
+
