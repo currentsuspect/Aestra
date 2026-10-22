@@ -54,7 +54,31 @@ echo "aestra-4gb: cap ${max} MB (soft ${high} MB), cpus ${cpus}, swap $( (( swap
 
 # The scope's accounting disappears when Aestra exits, so sample its peak while it runs.
 peakfile="$(mktemp)"
-trap 'rm -f "$peakfile"' EXIT
+# The EXIT trap must stop the scope as well as delete the temp file. This
+# script runs Aestra inside `systemd-run --user --scope`, and that scope
+# survives the script: killing this wrapper left Aestra running inside the
+# scope, holding a window, a GL context, the audio device and the browser
+# indexer. A handful of those takes the machine down. Stopping the scope
+# takes the whole process tree with it.
+cleanup() {
+  # Kill what is in the scope by its cgroup path, not by unit name: systemd
+  # does not reliably resolve the name systemd-run was given for a scope, and
+  # "stop the unit" silently does nothing when it cannot. The scope's
+  # processes are what must not survive this script.
+  local cg="/sys/fs/cgroup/user.slice/user-$(id -u).slice/user@$(id -u).service/app.slice/${unit}.scope"
+  if [[ -r "$cg/cgroup.procs" ]]; then
+    while read -r pid; do
+      [[ -n "$pid" ]] && kill -KILL "$pid" 2>/dev/null || true
+    done < "$cg/cgroup.procs"
+  fi
+  systemctl --user stop "$unit" 2>/dev/null || true
+  rm -f "$peakfile"
+}
+trap cleanup EXIT
+# An untrapped SIGTERM kills bash outright and the EXIT trap never runs, so
+# the scope would survive the script. Trap it and exit normally instead, so
+# cleanup() actually happens.
+trap 'exit 143' TERM INT
 (
   cg="/sys/fs/cgroup/user.slice/user-$(id -u).slice/user@$(id -u).service/app.slice/${unit}.scope"
   while sleep 1; do
@@ -63,7 +87,14 @@ trap 'rm -f "$peakfile"' EXIT
 ) &
 sampler=$!
 set +e
-systemd-run --user --scope --quiet --unit="$unit" "${props[@]}" "${env_args[@]}" taskset -c "$cpus" "$binary" "$@"
+# Run the scope in the background and `wait` for it, rather than in the
+# foreground. Bash defers a trap until the FOREGROUND command it is waiting on
+# finishes, so a TERM delivered while systemd-run is in the foreground would
+# not run cleanup() until Aestra had already exited -- which is the case the
+# cleanup exists for. `wait` is interruptible, so the trap runs immediately.
+systemd-run --user --scope --quiet --unit="$unit" "${props[@]}" "${env_args[@]}" taskset -c "$cpus" "$binary" "$@" &
+runner=$!
+wait "$runner"
 status=$?
 set -e
 kill "$sampler" 2>/dev/null || true
