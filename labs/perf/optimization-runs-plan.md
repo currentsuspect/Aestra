@@ -361,6 +361,113 @@ went with it:
 
 ---
 
+# RUN 6 — The UI interaction path (not a PR: a diagnosis)
+
+## The measurement was broken
+
+`labs/perf/bench-frames.py` had a `focus_aestra_window()` helper whose own
+docstring warned about the exact trap:
+
+> An unfocused SDL window does not receive pointer events, so a sweep over it
+> changes nothing and the run quietly measures the idle path while claiming to
+> measure interaction.
+
+It was never called. **Every sweep and cycle run measured the idle path.**
+The SPEC 3 trap list already carried this ("verify Aestra has focus before any
+ydotool"), and the harness still got it wrong.
+
+The harness now focuses the window, records `window_focused`, and asserts
+`interaction_reached_app` (an interaction workload that dirties nothing is an
+idle measurement).
+
+## Measured, on the target CPU
+
+This box **is** the Folio's CPU: `Intel Core i5-3337U @ 1.80GHz`, 4 threads.
+So these are the target's numbers, not an extrapolation.
+
+| | idle | mouse sweep (focused) |
+|---|---:|---:|
+| presented | 5.8 fps | **52.2 fps** |
+| **process CPU** | 8.2 % of a core | **59.0 % of a core** |
+| frame work | 10.5 ms | 7.9 ms (p95 30 ms, max 50 ms) |
+| tree phase | ~7 ms | 6.33 ms |
+| TrackManagerUI self | 4.5 ms | 4.16 ms |
+| FileBrowser self | 1.5 ms | 1.42 ms |
+
+**The interaction path costs seven times the idle path.** Idle was the only
+thing that had ever been measured, which is why the UI looked cheap in every
+number we had — and why the machine gets hot when you work.
+
+## Where the frame goes
+
+Per presented frame during a sweep:
+
+| | ms/frame | share |
+|---|---:|---:|
+| widget-tree phase (total) | 6.33 | 80 % |
+| — `TrackManagerUI` | 4.16 | 53 % |
+| — `FileBrowser` | 1.42 | 18 % |
+| — generic traversal | ~0.75 | 9 % |
+| submit | 0.02 | — |
+| swap | 1.18 | 15 % |
+
+## What keeps the app drawing
+
+Dirty origins per frame during a sweep:
+
+| count/frame | who |
+|---:|---|
+| 4.6 | `AudioVisualizer<OverlayLayer>` |
+| 1.5 | `TrackManagerUI<NUIComponent>` |
+| 0.94 | `TimelineMinimapBar<TrackManagerUI>` |
+| 0.5 | `NUIButton<root>` |
+| 0.37 | `UIMixerStrip<root>` |
+
+## The lever: the FBO render cache
+
+`AestraWindowManager.cpp` disables the GL widget cache on Linux
+(`setCachingEnabled(false)`), from decision V8-C2, which measured the cache
+**~35 % slower** on Linux.
+
+That measurement was taken with **playback running**, where the static
+timeline pass changes every frame, so the cache never hits: you pay the
+re-render *and* a draw call outside the batcher.
+
+In the **interaction** workload the cache hits every frame (`cache->valid == 1`
+on every frame, verified by instrumentation), and it is much cheaper:
+
+| | cache OFF (develop today) | cache ON | change |
+|---|---:|---:|---:|
+| frame work | 7.14 / 7.36 ms | **4.36 / 4.32 ms** | **-40 %** |
+| p95 | 16.55 / 12.99 ms | **10.95 / 8.54 ms** | -33 % |
+| tree phase | 5.36 / 5.59 ms | **2.63 / 2.66 ms** | **-52 %** |
+| `TrackManagerUI` | 3.46 / 3.57 ms | 1.98 / 1.99 ms | -44 % |
+| `FileBrowser` | 1.20 / 1.32 ms | **0.09 / 0.09 ms** | **-93 %** |
+
+Two runs each, alternating, same box, same fixture. The FileBrowser drops 93 %
+because its cache hits; the timeline drops 44 % because its static pass is
+static when nothing is playing.
+
+**Both measurements are right.** The cache's value depends on whether the
+static pass is actually static — which is why a single platform-wide boolean
+is the wrong shape for this decision.
+
+## Not shipped, and why
+
+Nothing was flipped. Enabling the cache changes what the timeline draws
+during playback, and V8-C1's measurement was taken there. It needs:
+
+1. the playback workload re-measured with the cache on (the `muse` binary is
+   not built on this box, so that workload cannot run here), and
+2. the 4 GB cgroup run (`aestra-4gb.sh`) on the target configuration.
+
+The enabling work is listed in SPEC 3 §Status, in the order that was already
+written down: a retained-geometry replay of the static timeline pass, then
+memoising the clip waveform point arrays (~0.37 ms of 12 clips), then letting
+meter/visualizer-only dirtiness redraw just their strip.
+
+---
+
 # Candidates — measured, not yet done
 
 Ordered by size in the current profile.
