@@ -85,18 +85,63 @@ def read_cpu_ticks(pid):
     return int(fields[11]) + int(fields[12])
 
 
+def active_window_class():
+    """The class of the window that currently has input focus, or None."""
+    try:
+        out = subprocess.run(["hyprctl", "activewindow", "-j"],
+                             capture_output=True, text=True, timeout=5).stdout
+        return (json.loads(out).get("class") or "").lower()
+    except Exception:
+        return None
+
+
 def focus_aestra_window():
-    """Raise and focus the app.
+    """Raise and focus the app, and REPORT whether it worked.
 
     An unfocused SDL window does not receive pointer events, so a sweep over
     it changes nothing and the run quietly measures the idle path while
     claiming to measure interaction.
+
+    That is not a hypothetical: this function existed, documented the trap in
+    its own docstring, and was never called -- so every "sweep" run measured
+    the idle path. It returns True only when the app really holds input focus.
     """
+    # Focus the workspace the app is on: under the Lua backend the legacy
+    # dispatcher names do not exist.
     try:
-        subprocess.run(["hyprctl", "dispatch", "focuswindow", "class:aestra"],
-                       capture_output=True, timeout=5)
+        clients = json.loads(subprocess.run(
+            ["hyprctl", "clients", "-j"], capture_output=True, text=True, timeout=5).stdout)
+        for c in clients:
+            if (c.get("class") or "").lower().startswith("aestra"):
+                ws = (c.get("workspace") or {}).get("id")
+                if ws is not None:
+                    subprocess.run(["hyprctl", "dispatch", f"hl.dsp.focus({{workspace={ws}}})"],
+                                   capture_output=True, timeout=5)
+                break
     except Exception:
         pass
+    time.sleep(0.6)
+
+    if active_window_class() == "aestra":
+        return True
+
+    # Still not focused: click the title bar. Coordinates are absolute, and the
+    # top strip of the window is the title bar.
+    try:
+        clients = json.loads(subprocess.run(
+            ["hyprctl", "clients", "-j"], capture_output=True, text=True, timeout=5).stdout)
+        for c in clients:
+            if (c.get("class") or "").lower().startswith("aestra"):
+                at = c.get("at") or [0, 0]
+                size = c.get("size") or [0, 0]
+                subprocess.run(["ydotool", "mousemove", "--",
+                                str(at[0] + size[0] // 2), str(at[1] + 5)], check=False)
+                subprocess.run(["ydotool", "click", "0xC0"], check=False)  # left button
+                time.sleep(0.4)
+                break
+    except Exception:
+        pass
+    return active_window_class() == "aestra"
 
 
 def find_aestra_window():
@@ -203,6 +248,13 @@ def main():
             x0, x1, y = int(w * 0.12), int(w * 0.88), int(h * 0.55)
             print("[bench] Aestra window not found; using the requested geometry", flush=True)
 
+        # The app must hold input focus or the workload does nothing: SDL2
+        # only delivers pointer events to the focused window.
+        focused = focus_aestra_window()
+        if args.workload in ("sweep", "cycle") and not focused:
+            print("[bench] WARNING: the Aestra window does not hold input focus; "
+                  "this run will measure the IDLE path, not interaction.", flush=True)
+
         if args.workload == "sweep":
             driver = subprocess.Popen(
                 [sys.executable, __file__, "--__drive", "sweep", str(x0), str(y), str(x1), str(y)],
@@ -295,6 +347,14 @@ def main():
         if m:
             phase.append((float(m.group(1)), float(m.group(2)), float(m.group(3))))
 
+    # Did the workload actually reach the app? An interaction workload that
+    # dirties nothing measured the idle path while claiming to measure
+    # interaction -- the trap that made every sweep run before this lie.
+    interaction_reached = sum(dirty.values()) > 0 if dirty else False
+    if args.workload in ("sweep", "cycle") and not interaction_reached:
+        print("[bench] WARNING: the workload dirtied nothing; this run measured the "
+              "IDLE path, not interaction.", flush=True)
+
     if not frames:
         # No presented frame means the app elided every frame — which is the
         # idle-elision gate doing its job, but only if the app was actually
@@ -321,6 +381,10 @@ def main():
     result = {
         "label": args.label,
         "workload": args.workload,
+        "window_focused": focused,
+        # The proof that the workload reached the app at all: an interaction
+        # workload that dirties nothing measured the idle path.
+        "interaction_reached_app": interaction_reached,
         "project": args.project,
         "seconds_measured": args.seconds,
         "windows": nwin,
