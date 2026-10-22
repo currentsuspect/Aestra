@@ -456,7 +456,7 @@ set_tests_properties(InternalPluginBaseStatePolicyTest PROPERTIES
     TIMEOUT 120)
 
 # The oversampler FIR was rewritten to sum with SSE2 instead of a serial
-# accumulator chain. The kernel did not change, only the order of the sums --
+# accumulator chain. The kernel did not change, only the order of the sums —
 # so the test carries its own copy of the original scalar implementation and
 # compares the two sample by sample, plus the round-trip error figure the
 # kernel was designed for.
@@ -492,4 +492,3 @@ set_tests_properties(TruePeakMeterParityTest PROPERTIES
     LABELS "audio;dsp;meters;regression;contract:audio"
     TIMEOUT 120)
 
-    TIMEOUT 120)
