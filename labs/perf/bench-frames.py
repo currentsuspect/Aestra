@@ -205,6 +205,12 @@ def main():
 
     env = dict(os.environ)
     env["AESTRA_FRAME_STATS"] = "2"
+    # Isolate the app-data directory. Without this a measurement run writes the
+    # founder's real autosave and can leave a crash-recovery marker behind, so
+    # the next run opens a recovery dialog over the project it was supposed to
+    # measure. (A run did exactly that: it measured a recovery dialog.)
+    env["XDG_DATA_HOME"] = str(Path(args.out).parent / "appdata" if args.out
+                                else Path("/tmp/opencode/appdata"))
     env["AESTRA_MUSE_PORT"] = env.get("AESTRA_MUSE_PORT", "41952")
 
     cmd = [str(app)]
@@ -290,6 +296,19 @@ def main():
         cpu_end = read_cpu_ticks(proc.pid)
         wall_end = time.monotonic()
     finally:
+        # A benchmark run must never leave the app alive. A leftover instance
+        # holds a window, a GL context, the audio device and the browser
+        # indexer, and a few of them will take the machine down.
+        leftover = subprocess.run(["pgrep", "-x", "Aestra"], capture_output=True,
+                                  text=True).stdout.split()
+        for pid in leftover:
+            try:
+                os.kill(int(pid), signal.SIGTERM)
+            except (ProcessLookupError, ValueError):
+                pass
+        if leftover:
+            print(f"[bench] WARNING: closed {len(leftover)} leftover Aestra process(es): "
+                  f"{' '.join(leftover)}", flush=True)
         if driver is not None:
             driver.terminate()
             try:
