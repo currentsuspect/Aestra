@@ -151,6 +151,9 @@ private:
 
     double m_sampleRate = 44100.0;
     uint32_t m_maxBlockSize = 512;
+    /// Audio buses the processor is handed each block: an instrument has no input bus.
+    int32_t m_audioInputBuses = 1;
+    int32_t m_audioOutputBuses = 1;
 
     // VST3 SDK objects. ModuleHolder keeps the SDK module type out of this
     // public header while retaining typed RAII ownership in VST3Host.cpp.

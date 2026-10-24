@@ -515,6 +515,12 @@ bool PluginScanner::isScanning() const {
 }
 
 std::vector<PluginInfo> PluginScanner::scanBlocking() {
+    // A cancelled scan leaves the flag set, and only scanAsync cleared it: every
+    // blocking scan after a cancel walked no directory and returned only the
+    // built-ins (V82-H7). Stop any background scan first, as scanAsync does.
+    cancelAndJoin();
+    m_cancelRequested.store(false);
+
     // Get paths
     std::vector<std::filesystem::path> paths;
     {

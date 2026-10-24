@@ -492,3 +492,44 @@ set_tests_properties(TruePeakMeterParityTest PROPERTIES
     LABELS "audio;dsp;meters;regression;contract:audio"
     TIMEOUT 120)
 
+
+# The plugin compatibility set through the sandbox: load, sound, state, editor (V82-H7, FD-04).
+# Needs the set installed, so it only joins ctest when asked; run it directly otherwise:
+#   build/Tests/AestraPluginCompatTest report.md
+if(UNIX AND TARGET AestraPluginHost)
+    add_executable(AestraPluginCompatTest Integration/PluginCompatTest.cpp)
+    target_link_libraries(AestraPluginCompatTest PRIVATE AestraAudio)
+    target_include_directories(AestraPluginCompatTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    target_compile_definitions(AestraPluginCompatTest PRIVATE HELPER_PATH="$<TARGET_FILE:AestraPluginHost>")
+    add_dependencies(AestraPluginCompatTest AestraPluginHost)
+    option(AESTRA_PLUGIN_COMPAT_TESTS "Run the third-party plugin compatibility set under ctest" OFF)
+    if(AESTRA_PLUGIN_COMPAT_TESTS)
+        add_test(NAME AestraPluginCompatTest COMMAND AestraPluginCompatTest)
+        set_tests_properties(AestraPluginCompatTest PROPERTIES LABELS "plugins;compat;runtime;contract:plugins" TIMEOUT 900)
+    endif()
+endif()
+
+# A CLAP plugin's parameters through the sandbox with VST3 built in too, and a blocking scan after a cancel (V82-H7).
+if(UNIX AND TARGET AestraPluginHost AND EXISTS ${CMAKE_SOURCE_DIR}/AestraAudio/External/clap/include/clap/clap.h)
+    add_library(ClapGainFixture MODULE AestraAudio/fixtures/ClapGainPlugin.cpp)
+    target_include_directories(ClapGainFixture PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/External/clap/include)
+    set_target_properties(ClapGainFixture PROPERTIES PREFIX "" SUFFIX ".clap"
+        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/fixtures/clap-gain)
+    add_executable(ClapSandboxParamsTest AestraAudio/ClapSandboxParamsTest.cpp)
+    target_link_libraries(ClapSandboxParamsTest PRIVATE AestraAudio)
+    target_include_directories(ClapSandboxParamsTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    target_compile_definitions(ClapSandboxParamsTest PRIVATE
+        HELPER_PATH="$<TARGET_FILE:AestraPluginHost>"
+        FIXTURE_PATH="$<TARGET_FILE:ClapGainFixture>")
+    add_dependencies(ClapSandboxParamsTest AestraPluginHost ClapGainFixture)
+    add_test(NAME ClapSandboxParamsTest COMMAND ClapSandboxParamsTest)
+    set_tests_properties(ClapSandboxParamsTest PROPERTIES LABELS "audio;plugins;clap;parameters;regression;contract:plugins")
+endif()

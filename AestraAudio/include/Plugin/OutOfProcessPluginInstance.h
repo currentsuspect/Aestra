@@ -82,6 +82,16 @@ public:
     // tests since setParameter itself is void (#238).
     uint64_t parameterDropCount() const { return m_paramDrops.load(std::memory_order_relaxed); }
 
+    // Blocks the helper answered, and blocks played dry because its answer was not
+    // back in time. The second is audible (the plugin drops out for a block), so
+    // the compatibility run reports it per plugin (V82-H7).
+    uint64_t helperBlockCount() const { return m_helperBlocks.load(std::memory_order_relaxed); }
+    uint64_t dryBlockCount() const { return m_dryBlocks.load(std::memory_order_relaxed); }
+
+    // Blocks whose input and MIDI never reached the helper because the previous
+    // block was still with it. A note-on in such a block is lost (V82-H7).
+    uint64_t unsentBlockCount() const { return m_unsentBlocks.load(std::memory_order_relaxed); }
+
 #ifdef AESTRA_ENABLE_TEST_HOOKS
     // Send a raw command to the helper and return its reply. Test-only: used by the
     // #244 CLAP-note e2e test to read the fake plugin's recorded events (TESTNOTES).
@@ -202,6 +212,9 @@ private:
     mutable std::vector<PluginParameter> m_paramList;
     mutable bool m_paramListValid = false;
     std::atomic<uint64_t> m_paramDrops{0};
+    std::atomic<uint64_t> m_helperBlocks{0};
+    std::atomic<uint64_t> m_dryBlocks{0};
+    std::atomic<uint64_t> m_unsentBlocks{0};
 
     void drainParamQueueToChild();
 

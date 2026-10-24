@@ -834,6 +834,7 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
         }
         m_readyState.store(0, std::memory_order_release);
         usedReadyOutput = true;
+        m_helperBlocks.fetch_add(1, std::memory_order_relaxed);
     }
 
     uint8_t pendingEmpty = 0;
@@ -863,9 +864,12 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
         m_pendingMidiBytes.store(midiBytes, std::memory_order_release);
         m_pendingFrames.store(numFrames, std::memory_order_release);
         m_pendingState.store(2, std::memory_order_release);
+    } else {
+        m_unsentBlocks.fetch_add(1, std::memory_order_relaxed);
     }
 
     if (!usedReadyOutput) {
+        m_dryBlocks.fetch_add(1, std::memory_order_relaxed);
         passThrough(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
     }
 }
