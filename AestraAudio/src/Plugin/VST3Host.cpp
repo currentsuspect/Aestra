@@ -455,6 +455,18 @@ bool VST3PluginInstance::initialize(double sampleRate, uint32_t maxBlockSize) {
         return false;
     }
 
+    // The host turns on the buses it feeds (VST3: activateBus before setActive).
+    // Without the event bus a synth never hears a note: Surge XT and Dexed loaded
+    // and played silence (V82-H7). The main audio buses are usually on by default,
+    // which is why effects worked.
+    if (auto* comp = static_cast<IComponent*>(m_component)) {
+        m_audioInputBuses = comp->getBusCount(kAudio, kInput) > 0 ? 1 : 0;
+        m_audioOutputBuses = comp->getBusCount(kAudio, kOutput) > 0 ? 1 : 0;
+        if (m_audioInputBuses) comp->activateBus(kAudio, kInput, 0, true);
+        if (m_audioOutputBuses) comp->activateBus(kAudio, kOutput, 0, true);
+        if (comp->getBusCount(kEvent, kInput) > 0) comp->activateBus(kEvent, kInput, 0, true);
+    }
+
     // Allocate temp buffers
     m_tempBuffer.resize(maxBlockSize * 4); // Extra space for stereo I/O
 
@@ -477,6 +489,8 @@ void VST3PluginInstance::activate() {
     auto comp = static_cast<IComponent*>(m_component);
     if (comp->setActive(true) == kResultOk) {
         m_active = true;
+        // VST3 asks for setProcessing(true) once active, before the first process call.
+        if (auto* processor = static_cast<IAudioProcessor*>(m_processor)) processor->setProcessing(true);
     }
 }
 
@@ -484,6 +498,7 @@ void VST3PluginInstance::deactivate() {
     if (!m_loaded || !m_active)
         return;
 
+    if (auto* processor = static_cast<IAudioProcessor*>(m_processor)) processor->setProcessing(false);
     auto comp = static_cast<IComponent*>(m_component);
     comp->setActive(false);
     m_active = false;
@@ -526,8 +541,8 @@ void VST3PluginInstance::process(const float* const* inputs, float** outputs, ui
     data.processMode = kRealtime;
     data.symbolicSampleSize = kSample32;
     data.numSamples = numFrames;
-    data.numInputs = 1;
-    data.numOutputs = 1;
+    data.numInputs = m_audioInputBuses;
+    data.numOutputs = m_audioOutputBuses;
     data.inputs = &inputBus;
     data.outputs = &outputBus;
     // Parameter values for the processor (host sets and edits from the plugin's window), and its answers back.

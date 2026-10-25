@@ -637,15 +637,9 @@ int main(int argc, char** argv) {
 #else
             reply(sub == "OPEN" ? "ERR no-editor" : "OK EDITOR CLOSED"); // no X11: nothing to open, so nothing is ever open
 #endif
-#ifdef AESTRA_HAS_VST3
-        } else if (command == "PARAMS") {
-            reply(vst3Module.plugin ? AestraHelper::paramsReply(*vst3Module.plugin) : "OK 0");
-        } else if (command == "GETPARAM") {
-            uint32_t paramId = 0;
-            reply(!(input >> paramId) || !vst3Module.plugin ? "ERR no-plugin" : AestraHelper::getParamReply(*vst3Module.plugin, paramId));
-        } else if (command == "EDITS") {
-            reply(editLog.take());
-#endif
+        // One branch per command for both formats. A VST3-only copy above this used
+        // to answer first whenever VST3 was built in, so every CLAP plugin reported
+        // no parameters through the sandbox (V82-H7).
         } else if (command == "PARAMS") {
             std::string list = "OK 0";
 #ifdef AESTRA_HAS_VST3
