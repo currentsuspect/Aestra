@@ -253,8 +253,9 @@ if(UNIX)
     set_tests_properties(EditorLoopPumpTest PROPERTIES LABELS "audio;plugins;editor;regression;contract:plugins")
 endif()
 
-# The helper's hand-copied CLAP ABI against the SDK's own headers: a drift is a build failure here (V82-H1).
-if(UNIX AND EXISTS ${CMAKE_SOURCE_DIR}/AestraAudio/External/clap/include/clap/clap.h)
+# The helper's hand-copied CLAP ABI against the SDK's own headers: a drift is a build failure here (V82-H1). Every
+# platform: Windows' LLP64 is where unsigned long and pointer sizes part (V82-H8).
+if(EXISTS ${CMAKE_SOURCE_DIR}/AestraAudio/External/clap/include/clap/clap.h)
     add_executable(ClapAbiMirrorLayoutTest AestraAudio/ClapAbiMirrorLayoutTest.cpp)
     target_include_directories(ClapAbiMirrorLayoutTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/src/Plugin
@@ -514,7 +515,8 @@ if(UNIX AND TARGET AestraPluginHost)
 endif()
 
 # A CLAP plugin's parameters through the sandbox with VST3 built in too, and a blocking scan after a cancel (V82-H7).
-if(UNIX AND TARGET AestraPluginHost AND EXISTS ${CMAKE_SOURCE_DIR}/AestraAudio/External/clap/include/clap/clap.h)
+# Every platform: on Windows it is the proof a CLAP DLL loads through the helper (V82-H8).
+if(TARGET AestraPluginHost AND EXISTS ${CMAKE_SOURCE_DIR}/AestraAudio/External/clap/include/clap/clap.h)
     add_library(ClapGainFixture MODULE AestraAudio/fixtures/ClapGainPlugin.cpp)
     target_include_directories(ClapGainFixture PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/External/clap/include)
     set_target_properties(ClapGainFixture PROPERTIES PREFIX "" SUFFIX ".clap"
