@@ -1,0 +1,50 @@
+AESTRA v0.8.2 plugin test build
+===============================
+
+Thanks for helping. This build is for one job: checking that third-party plugins
+(VST3 and CLAP) work in Aestra on a real computer. Our automated tests cover a lot,
+but they run on machines with no screen, so nobody has yet seen a plugin's own
+window open on Windows. That is the thing we most need you to look at.
+
+It is a development build, not a release. Expect rough edges anywhere outside plugins.
+
+STARTING IT
+-----------
+Windows: unzip the folder anywhere, then open Aestra.exe.
+         Windows may warn about an unknown publisher ("Windows protected your PC").
+         Click "More info", then "Run anyway". The app is not code-signed yet.
+Linux:   extract the folder, then run ./Aestra from inside it.
+         It needs SDL2, FreeType, ALSA and libsecret, which most desktops already have.
+
+Keep AestraPluginHost(.exe) and the AestraAssets folder next to the app. Aestra runs
+every plugin inside AestraPluginHost, so a plugin that crashes cannot take Aestra down.
+
+PLUGINS TO TRY
+--------------
+Any VST3 or CLAP plugins you already have. If you have none, these are free:
+  Surge XT       https://surge-synthesizer.github.io   (VST3 + CLAP)
+  Vital          https://vital.audio                    (VST3 + CLAP, free account)
+  Dexed          https://asb2m10.github.io/dexed        (VST3 + CLAP)
+  TAL-NoiseMaker https://tal-software.com               (VST3 + CLAP)
+Install them the normal way. Aestra looks in the usual folders
+(Windows: C:\Program Files\Common Files\VST3 and \CLAP).
+
+WHAT TO CHECK, PER PLUGIN
+-------------------------
+1. It shows up in the plugin list after a scan.
+2. It loads onto a track without an error.
+3. Sound: a synth plays when you play notes; an effect changes the sound.
+4. ITS WINDOW: open the plugin's editor. Does its own window appear, once (not an
+   empty extra window next to it)? Can you turn a knob in it, and do you hear it?
+   Does closing the window work?
+5. Save the project, close Aestra, open the project again: is the plugin back with
+   the settings you made?
+6. If you can, set the song's tempo, and check that a tempo-synced effect or arp
+   follows it.
+
+TELLING US WHAT HAPPENED
+------------------------
+Per plugin: name, VST3 or CLAP, and which of the six checks worked. Screenshots of
+anything odd (especially the plugin window) help most. Short notes are fine.
+
+Aestra Studios
