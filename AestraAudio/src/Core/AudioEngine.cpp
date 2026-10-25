@@ -15,7 +15,6 @@
 #include "Core/TrackMixKernel.h" // the strip's fader/pan/mix/meter stage
 #include "PatternPlaybackEngine.h"
 #include "Playback/PreviewEngine.h"
-#include "Plugin/HostTransport.h"
 #include "Plugin/SamplerPlugin.h" // [NEW]
 #include "PluginHost.h"
 #include "RealtimeThreadGuard.h"
@@ -2262,11 +2261,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
     const uint64_t blockStart = m_globalSamplePos.load(std::memory_order_relaxed);
     const uint64_t blockEnd = blockStart + numFrames;
     const bool isPlaying = m_transportPlaying.load(std::memory_order_relaxed); // [NEW] Check transport
-    // Tempo, metre and playhead for hosted VST3/CLAP plugins, read by every plugin host in this block (HostTransport.h).
-    HostTransportClock::publish(HostTransport::at(
-        static_cast<int64_t>(blockStart), static_cast<double>(m_sampleRate.load(std::memory_order_relaxed)), getBPM(),
-        getBeatsPerBar(), isPlaying, m_loopEnabled.load(std::memory_order_relaxed),
-        m_loopStartBeat.load(std::memory_order_relaxed), m_loopEndBeat.load(std::memory_order_relaxed)));
+    publishHostTransport(blockStart, isPlaying);
 
     // Solo state can still change through RT track state, while routing topology
     // is compiled into AudioGraph before publication.
