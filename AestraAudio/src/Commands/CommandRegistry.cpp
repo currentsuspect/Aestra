@@ -23,6 +23,7 @@
 #include "IO/MiniAudioDecoder.h"
 #include "Commands/RemoveClipCommand.h"
 #include "Commands/RoutingCommands.h"
+#include "Commands/SetAudioPatternMixerChannelCommand.h"
 #include "Commands/SetUnitMixerChannelCommand.h"
 #include "Commands/RenderAudioClipCommand.h"
 #include "Commands/RemoveNoteCommand.h"
@@ -1126,6 +1127,30 @@ void CommandRegistry::initialize() {
             channelId = ch->getChannelId();
         }
         return std::make_unique<SetUnitMixerChannelCommand>(*tm, static_cast<UnitID>(*unit), channelId);
+    });
+
+    reg.registerCommand("route_pattern", [trackAt](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
+        auto patternRaw = requireFlag(flags, "pattern");
+        auto trackRaw = requireFlag(flags, "track");
+        if (!patternRaw || !trackRaw) return nullptr;
+        auto patternId = safeStoull(*patternRaw);
+        const PatternSource* pattern =
+            patternId ? tm->getPatternManager().getPattern(PatternID{*patternId}) : nullptr;
+        if (!pattern) return CommandRegistry::fail("no pattern " + std::string(*patternRaw) + " (list_patterns shows them)");
+        if (!pattern->isAudio())
+            return CommandRegistry::fail("pattern " + std::string(*patternRaw) +
+                                         " is a MIDI pattern; its notes follow their units (use route_unit)");
+        uint32_t channelId = MASTER_MIXER_CHANNEL_ID;
+        if (*trackRaw != "-1") {
+            MixerChannel* ch = nullptr;
+            if (auto err = trackAt(*tm, *trackRaw, "track", ch)) return CommandRegistry::fail(*err);
+            channelId = ch->getChannelId();
+        }
+        // The command reports failure by not executing (no throw), and a
+        // non-executed command is not undoable — validated above so it runs.
+        return std::make_unique<SetAudioPatternMixerChannelCommand>(*tm, PatternID{*patternId}, channelId);
     });
 
     reg.registerCommand("set_output", [trackAt](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {

@@ -224,6 +224,11 @@ static const std::vector<CommandSchema> s_schemas = {
         {"track", FlagType::Int, true, -1.0}
     },
      "Send an Arsenal unit's audio to a mixer track (by index), or -1 for straight to the master. Its patterns play there wherever they are arranged, so the track's fader, inserts and sends apply."},
+    {"route_pattern", CommandCategory::Pattern, {
+        {"pattern", FlagType::Int, true, 1.0},
+        {"track", FlagType::Int, true, -1.0}
+    },
+     "Send an audio pattern (an audio clip's source, see list_patterns / list_clips) to a mixer track by index, or -1 for the master. Every clip of that pattern plays through the track's fader, inserts and sends."},
     {"set_output", CommandCategory::Track, {
         {"track", FlagType::Int, true, 0.0},
         {"to", FlagType::Int, true, -1.0}

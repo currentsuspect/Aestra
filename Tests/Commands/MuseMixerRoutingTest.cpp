@@ -207,6 +207,50 @@ int main() {
     a.set("track", JSON(0.0));
     check(statusOf(call(service, req(13, "route_unit", a).toString())) != "ok", "an unknown unit is refused");
 
+    // --- route_pattern: an audio clip's source, proven in audio -----------------
+    {
+        // Silence the kick so only the audio clip is heard.
+        JSON kickToBus = args();
+        kickToBus.set("unit", JSON(1.0));
+        kickToBus.set("track", JSON(0.0));
+        call(service, req(14, "route_unit", kickToBus).toString()); // track 0 is muted
+        JSON lane = args();
+        lane.set("name", JSON("Audio"));
+        call(service, req(15, "add_lane", lane).toString());
+        JSON clip = args();
+        clip.set("track", JSON(1.0));
+        clip.set("file", JSON(sample));
+        clip.set("bar", JSON(1.0));
+        check(statusOf(call(service, req(16, "add_clip", clip).toString())) == "ok", "an audio clip on its own lane");
+        double audioPattern = -1.0;
+        JSON clips = call(service, "{\"id\": 17, \"verb\": \"list_clips\"}");
+        for (size_t li = 0; li < clips["result"]["lanes"].size(); ++li) {
+            JSON l = clips["result"]["lanes"][li];
+            for (size_t ci = 0; ci < l["clips"].size(); ++ci) {
+                if (l["clips"][ci]["name"].asString().find("muse_mixer_routing_sample") != std::string::npos)
+                    audioPattern = l["clips"][ci]["pattern"].asNumber();
+            }
+        }
+        check(audioPattern > 0.0, "the clip's audio pattern id is in list_clips");
+        a = args();
+        a.set("pattern", JSON(audioPattern));
+        a.set("track", JSON(0.0));
+        check(statusOf(call(service, req(18, "route_pattern", a).toString())) == "ok", "route the audio pattern to muted track 0");
+        check(renderPeak(service, out) < -90.0, "the clip is silent: its audio goes through muted track 0");
+        a.set("track", JSON(-1.0));
+        check(statusOf(call(service, req(19, "route_pattern", a).toString())) == "ok" && renderPeak(service, out) > -90.0,
+              "routed to the master, the clip is audible again");
+        a = args();
+        a.set("pattern", JSON(1.0)); // the kick's MIDI pattern
+        a.set("track", JSON(1.0));
+        check(statusOf(call(service, req(20, "route_pattern", a).toString())) != "ok",
+              "a MIDI pattern is refused (its notes follow their units)");
+        JSON kickBack = args();
+        kickBack.set("unit", JSON(1.0));
+        kickBack.set("track", JSON(-1.0));
+        call(service, req(21, "route_unit", kickBack).toString());
+    }
+
     // --- set_output -------------------------------------------------------------
     a = args();
     a.set("track", JSON(0.0));
