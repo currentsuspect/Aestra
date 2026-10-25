@@ -305,7 +305,7 @@ private:
             wc.cbSize = sizeof wc;
             wc.lpfnWndProc = &EditorHost::windowProc;
             wc.hInstance = GetModuleHandleW(nullptr);
-            wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+            wc.hCursor = LoadCursor(nullptr, IDC_ARROW); // IDC_ARROW follows UNICODE; LoadCursor matches it
             wc.hbrBackground = reinterpret_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
             wc.lpszClassName = kClassName;
             return RegisterClassExW(&wc) != 0 || GetLastError() == ERROR_CLASS_ALREADY_EXISTS;
