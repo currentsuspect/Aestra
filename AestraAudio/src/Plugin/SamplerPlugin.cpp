@@ -703,14 +703,11 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
         // before the mono branch so a mono retrigger chokes the held voice
         // instead of gliding into it.
         if (m_cutSelfMode.load(std::memory_order_relaxed)) {
+            // Choked, not cut: each sounding voice fades over kDeclickSeconds.
+            // The old note is still gone almost at once (no audible overlap),
+            // without the step to zero that ticks on low sounds.
             for (auto& v : m_voices) {
-                if (v.active) {
-                    v.active = false;
-                    v.stage = EnvStage::Off;
-                    v.stageTime = 0.0;
-                    v.currentGain = 0.0f;
-                    v.releaseGain = 0.0f;
-                }
+                if (v.active) declickVoice(v);
             }
         }
 
@@ -724,6 +721,18 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
 
             auto& voice = m_voices[0];
             const bool legato = voice.active && voice.stage != EnvStage::Release && voice.stage != EnvStage::Off;
+            if (!legato && voice.active && voice.currentGain > 0.0f) {
+                // A mono restart reuses slot 0. Whatever is still sounding
+                // there (a release tail, a choked voice) moves to a free slot
+                // and fades out, instead of being overwritten mid-waveform.
+                for (size_t i = 1; i < m_voices.size(); ++i) {
+                    if (!m_voices[i].active) {
+                        m_voices[i] = voice;
+                        declickVoice(m_voices[i]);
+                        break;
+                    }
+                }
+            }
             voice.order = m_nextVoiceOrder++;
             voice.noteId = event.noteId; // the previous note no longer owns the voice; its note-off won't match
 
@@ -754,6 +763,7 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
                 voice.stage = EnvStage::Attack;
                 voice.stageTime = 0.0;
                 voice.currentGain = 0.0f;
+                voice.fadeSeconds = 0.0;
             }
             return;
         }
@@ -808,6 +818,7 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
         freeVoice->ownData = keepBuffer;
         freeVoice->held.reset();
         freeVoice->position = startFrameFor(noteStartFrame);
+        freeVoice->fadeSeconds = 0.0;
         freeVoice->playbackRate = targetRate;
         freeVoice->targetPlaybackRate = targetRate;
         freeVoice->playbackDirection = 1;
@@ -839,6 +850,15 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
     }
 }
 
+void SamplerPlugin::declickVoice(Voice& v) {
+    if (!v.active || v.stage == EnvStage::Off) return;
+    // Fade from where the envelope is right now, never from a stale value.
+    v.releaseGain = v.currentGain;
+    v.stage = EnvStage::Release;
+    v.stageTime = 0.0;
+    v.fadeSeconds = kDeclickSeconds;
+}
+
 float SamplerPlugin::getEnvelopeLevel(Voice& v, double dt, float attack, float decay, float sustain, float release) {
     v.stageTime += dt;
 
@@ -864,14 +884,16 @@ float SamplerPlugin::getEnvelopeLevel(Voice& v, double dt, float attack, float d
     case EnvStage::Sustain:
         v.currentGain = sustain;
         break;
-    case EnvStage::Release:
-        if (v.stageTime >= release) {
+    case EnvStage::Release: {
+        const double length = v.fadeSeconds > 0.0 ? v.fadeSeconds : release;
+        if (v.stageTime >= length) {
             v.stage = EnvStage::Off;
             v.currentGain = 0.0f;
         } else {
-            v.currentGain = v.releaseGain * static_cast<float>(1.0 - v.stageTime / release);
+            v.currentGain = v.releaseGain * static_cast<float>(1.0 - v.stageTime / length);
         }
         break;
+    }
     case EnvStage::Off:
         v.currentGain = 0.0f;
         break;
