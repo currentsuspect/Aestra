@@ -2,20 +2,19 @@
 #pragma once
 
 // The sandbox helper's CLAP host: loading a module, the parameter / note / state paths and the host callbacks it hands a
-// plugin. POSIX only (dlopen). Moved out of AestraPluginHostMain.cpp so that file stays a command loop; included by that
+// plugin, on Linux, macOS and Windows (HelperDynLib.h). Moved out of AestraPluginHostMain.cpp so that file stays a command loop; included by that
 // one translation unit only, so the helpers below live in an anonymous namespace.
 
-#ifndef _WIN32
 
 #include "ClapAbiMirror.h"
 #include "HelperFakeClap.h"
 #include "HelperClapHostSupport.h"
+#include "HelperDynLib.h"
 #include "HelperEditorHost.h"
 #include "HelperParamCommands.h"
 #include "Plugin/ClapNoteConversion.h"
 #include "Plugin/HostTransport.h"
 
-#include <dlfcn.h>
 
 #include <algorithm>
 #include <cstdint>
@@ -243,7 +242,7 @@ struct ClapModule {
         }
         entry = nullptr;
         if (library) {
-            dlclose(library);
+            AestraHelper::closeLibrary(library);
             library = nullptr;
         }
         maxBlockSize = 0;
@@ -251,13 +250,13 @@ struct ClapModule {
 
     bool load(const std::string& path, const std::string& pluginId, std::string& error) {
         close();
-        library = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
+        library = AestraHelper::openLibrary(path);
         if (!library) {
-            error = "clap-dlopen-failed";
+            error = "clap-load-failed";
             return false;
         }
 
-        entry = reinterpret_cast<const ClapPluginEntry*>(dlsym(library, "clap_entry"));
+        entry = reinterpret_cast<const ClapPluginEntry*>(AestraHelper::librarySymbol(library, "clap_entry"));
         if (!entry || !isClapVersionCompatible(entry->clapVersion) || !entry->init || !entry->getFactory) {
             error = "invalid-clap-entry";
             close();
@@ -795,13 +794,13 @@ struct ClapModule {
     bool scanMetadata(const std::string& path, const ClapPluginDescriptor*& descriptor, std::string& error) {
         descriptor = nullptr;
         close();
-        library = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
+        library = AestraHelper::openLibrary(path);
         if (!library) {
-            error = "clap-dlopen-failed";
+            error = "clap-load-failed";
             return false;
         }
 
-        entry = reinterpret_cast<const ClapPluginEntry*>(dlsym(library, "clap_entry"));
+        entry = reinterpret_cast<const ClapPluginEntry*>(AestraHelper::librarySymbol(library, "clap_entry"));
         if (!entry || !isClapVersionCompatible(entry->clapVersion) || !entry->init || !entry->getFactory) {
             error = "invalid-clap-entry";
             close();
@@ -849,4 +848,3 @@ inline AestraHelper::EditorBackend clapEditorBackend(ClapModule& module) {
 
 } // namespace
 
-#endif // !_WIN32

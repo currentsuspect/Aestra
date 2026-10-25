@@ -30,12 +30,8 @@
 #include "Plugin/VST3Host.h"
 #endif
 
-// CLAP hosting in this child is POSIX-only (dlopen). The shared note-conversion
-// rules are only needed there, so keep the include off the Windows build, where
-// this header is not on the include path.
-#ifndef _WIN32
+// CLAP hosting in this child: Linux, macOS and Windows (HelperDynLib.h).
 #include "HelperClapModule.h"
-#endif
 
 #if defined(AESTRA_ENABLE_TEST_HOOKS) && !defined(_WIN32)
 #if defined(__linux__)
@@ -340,9 +336,7 @@ int main(int argc, char** argv) {
     echoParams.fill(0.0f);
     echoParams[0] = 1.0f; // unity gain until set
 #endif
-#ifndef _WIN32
     ClapModule clapModule;
-#endif
 #ifdef AESTRA_HAS_VST3
     Vst3Module vst3Module;
 #endif
@@ -351,13 +345,14 @@ int main(int argc, char** argv) {
 #endif
     AestraHelper::EditLog editLog;
 
-#ifndef _WIN32
     AestraHelper::LineReader lineReader;
-#endif
-    // The next command. On POSIX the same thread runs an open plugin editor between commands (HelperLineReader.h).
+    // The next command. The same thread runs the plugin's timers and an open editor between commands
+    // (HelperLineReader.h).
     auto readCommand = [&](std::string& out) -> bool {
 #ifdef _WIN32
-        return static_cast<bool>(std::getline(std::cin, out));
+        return lineReader.next(
+            out, [&](int& timeoutMs) { clapModule.hostContext.limitWait(timeoutMs); },
+            [&] { clapModule.hostContext.service(); });
 #else
         return lineReader.next(
             out,
@@ -404,7 +399,6 @@ int main(int argc, char** argv) {
                 reply("ERR invalid-scan-request");
                 continue;
             }
-#ifndef _WIN32
             std::vector<const ClapPluginDescriptor*> descriptors;
             std::string error;
             if (!clapModule.listDescriptors(path, descriptors, error)) {
@@ -426,9 +420,6 @@ int main(int argc, char** argv) {
                            hexEncodeString(features);
             }
             reply("OK " + records);
-#else
-            reply("ERR unsupported-platform");
-#endif
         } else if (command == "SCAN") {
             std::string format;
             std::string pathHex;
@@ -442,7 +433,6 @@ int main(int argc, char** argv) {
                 reply("ERR invalid-scan-request");
                 continue;
             }
-#ifndef _WIN32
             const ClapPluginDescriptor* descriptor = nullptr;
             std::string error;
             if (!clapModule.scanMetadata(path, descriptor, error)) {
@@ -464,9 +454,6 @@ int main(int argc, char** argv) {
                   hexEncodeString(descriptor->name ? descriptor->name : "") + " " +
                   hexEncodeString(descriptor->vendor ? descriptor->vendor : "") + " " +
                   hexEncodeString(descriptor->version ? descriptor->version : "") + " " + hexEncodeString(features));
-#else
-            reply("ERR unsupported-platform");
-#endif
         } else if (command == "LOAD") {
 #if defined(AESTRA_HAS_VST3) && defined(AESTRA_HAS_X11)
             editorHost.close(); // the old plugin's window must go before its module does
@@ -481,7 +468,6 @@ int main(int argc, char** argv) {
             if (id == "__aestra_test_crash__") {
                 std::abort();
             }
-#ifndef _WIN32
             // Fake CLAP note endpoints (#244): configure the fake's advertised note
             // dialect, then wire it through the REAL ClapModule so the test exercises
             // the production note-conversion boundary. g_state also records events.
@@ -512,7 +498,6 @@ int main(int argc, char** argv) {
                 }
             }
 #endif
-#endif
             if (format != "vst3" && format != "clap") {
                 reply("ERR unsupported-format");
                 continue;
@@ -539,14 +524,7 @@ int main(int argc, char** argv) {
                     continue;
                 }
 #endif
-#ifdef _WIN32
-                if (format == "clap") {
-                    reply("ERR clap-unsupported-on-this-platform");
-                    continue;
-                }
-#endif
             }
-#ifndef _WIN32
             if (format == "clap" && id != "__aestra_test_echo__") {
 #ifdef AESTRA_HAS_VST3
                 vst3Module.close();
@@ -560,12 +538,9 @@ int main(int argc, char** argv) {
             } else {
                 clapModule.close();
             }
-#endif
 #ifdef AESTRA_HAS_VST3
             if (format == "vst3" && id != "__aestra_test_echo__") {
-#ifndef _WIN32
                 clapModule.close();
-#endif
                 std::string error;
                 if (!vst3Module.load(path, id, error)) {
                     reply("ERR " + error);
@@ -593,7 +568,6 @@ int main(int argc, char** argv) {
                 reply("ERR invalid-init");
                 continue;
             }
-#ifndef _WIN32
             if (clapModule.plugin) {
                 std::string error;
                 if (!clapModule.initialize(sampleRate, maxBlockSize, error)) {
@@ -601,7 +575,6 @@ int main(int argc, char** argv) {
                     continue;
                 }
             }
-#endif
 #ifdef AESTRA_HAS_VST3
             if (vst3Module.plugin) {
                 std::string error;
@@ -625,9 +598,7 @@ int main(int argc, char** argv) {
 #ifdef AESTRA_HAS_VST3
                 if (vst3Module.plugin) backend = AestraHelper::vst3EditorBackend(vst3Module.plugin);
 #endif
-#ifndef _WIN32
                 if (clapModule.plugin) backend = clapEditorBackend(clapModule);
-#endif
                 if (!editorHost.open(std::move(backend), hexDecode(titleHex), w, h)) reply("ERR no-editor");
                 else reply("OK EDITOR " + std::to_string(w) + " " + std::to_string(h));
             } else if (sub == "CLOSE") {
@@ -650,9 +621,7 @@ int main(int argc, char** argv) {
 #ifdef AESTRA_HAS_VST3
             if (vst3Module.plugin) list = AestraHelper::paramsReply(*vst3Module.plugin);
 #endif
-#ifndef _WIN32
             if (clapModule.plugin) list = clapModule.paramsReply();
-#endif
             reply(list);
         } else if (command == "GETPARAM") {
             uint32_t paramId = 0;
@@ -661,9 +630,7 @@ int main(int argc, char** argv) {
 #ifdef AESTRA_HAS_VST3
                 if (vst3Module.plugin) answer = AestraHelper::getParamReply(*vst3Module.plugin, paramId);
 #endif
-#ifndef _WIN32
                 if (clapModule.plugin) answer = clapModule.getParamReply(paramId);
-#endif
             }
             reply(answer);
         } else if (command == "EDITS") {
@@ -674,9 +641,7 @@ int main(int argc, char** argv) {
 #ifdef AESTRA_ENABLE_TEST_HOOKS
             if (echoPlugin) pluginLatency = echoHasProcessed ? Aestra::Audio::kEchoTestLatencySamples : 0;
 #endif
-#ifndef _WIN32
             if (clapModule.plugin) pluginLatency = clapModule.latencySamples();
-#endif
 #ifdef AESTRA_HAS_VST3
             if (vst3Module.plugin) pluginLatency = vst3Module.latencySamples();
 #endif
@@ -696,9 +661,7 @@ int main(int argc, char** argv) {
             reply("OK ACTIVE");
         } else if (command == "DEACTIVATE") {
             active = false;
-#ifndef _WIN32
             clapModule.deactivate();
-#endif
 #ifdef AESTRA_HAS_VST3
             vst3Module.deactivate();
 #endif
@@ -729,12 +692,10 @@ int main(int argc, char** argv) {
                 continue;
             }
 #endif
-#ifndef _WIN32
             if (clapModule.plugin) {
                 reply(clapModule.setParameter(paramId, value) ? "OK SETPARAM" : "ERR setparam-failed");
                 continue;
             }
-#endif
 #ifdef AESTRA_HAS_VST3
             if (vst3Module.plugin) {
                 vst3Module.plugin->setParameter(paramId, static_cast<float>(value));
@@ -743,7 +704,7 @@ int main(int argc, char** argv) {
             }
 #endif
             reply("ERR no-plugin");
-#if defined(AESTRA_ENABLE_TEST_HOOKS) && !defined(_WIN32)
+#if defined(AESTRA_ENABLE_TEST_HOOKS)
         } else if (command == "TESTNOTES") {
             // Dump the events the fake CLAP plugin actually received through
             // process.in_events (#244). Format: "OK <n>" then one token per event:
@@ -833,7 +794,6 @@ int main(int argc, char** argv) {
                 reply("ERR not-loaded");
                 continue;
             }
-#ifndef _WIN32
             if (clapModule.plugin) {
                 stateBuffer.clear();
                 if (!clapModule.saveState(stateBuffer)) {
@@ -843,7 +803,6 @@ int main(int argc, char** argv) {
                 reply("OK " + hexEncodeBytes(stateBuffer.data(), stateBuffer.size()));
                 continue;
             }
-#endif
 #ifdef AESTRA_HAS_VST3
             if (vst3Module.plugin) {
                 stateBuffer = vst3Module.saveState();
@@ -863,7 +822,6 @@ int main(int argc, char** argv) {
                 reply("ERR invalid-state");
                 continue;
             }
-#ifndef _WIN32
             if (clapModule.plugin) {
                 if (!clapModule.loadState(stateBuffer)) {
                     reply("ERR state-load-failed");
@@ -872,7 +830,6 @@ int main(int argc, char** argv) {
                 reply("OK STATE");
                 continue;
             }
-#endif
 #ifdef AESTRA_HAS_VST3
             if (vst3Module.plugin) {
                 if (!vst3Module.loadState(stateBuffer)) {
@@ -890,17 +847,13 @@ int main(int argc, char** argv) {
 #endif
             active = false;
             loaded = false;
-#ifndef _WIN32
             clapModule.close();
-#endif
 #ifdef AESTRA_HAS_VST3
             vst3Module.close();
 #endif
             reply("OK SHUTDOWN");
         } else if (command == "EXIT") {
-#ifndef _WIN32
             clapModule.close();
-#endif
 #ifdef AESTRA_HAS_VST3
             vst3Module.close();
 #endif
@@ -991,7 +944,6 @@ int main(int argc, char** argv) {
                 }
             };
 
-#ifndef _WIN32
             if (clapModule.plugin) {
                 const std::vector<uint8_t>* midiData = midiBuffer.empty() ? nullptr : &midiBuffer;
                 if (!clapModule.process(processBuffer, channels, frames, midiData, midiBuffer.size(), processed)) {
@@ -1001,7 +953,6 @@ int main(int argc, char** argv) {
                 answer(processed);
                 continue;
             }
-#endif
 #ifdef AESTRA_HAS_VST3
             if (vst3Module.plugin) {
                 const std::vector<uint8_t>* midiData = midiBuffer.empty() ? nullptr : &midiBuffer;
