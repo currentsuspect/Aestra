@@ -242,6 +242,11 @@ bool AudioDeviceManager::isActiveStreamStalledLocked() const {
     return quiet > kStallMs;
 }
 
+bool AudioDeviceManager::isActiveStreamStalled() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return isActiveStreamStalledLocked();
+}
+
 void AudioDeviceManager::closeStreamLocked() {
     if (m_activeDriver) {
         // A wedged backend can hold the lock its own stop needs (PulseAudio

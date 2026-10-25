@@ -90,6 +90,12 @@ public:
     void stopStream();
 
     /**
+     * @brief The stream is running but its callback has stopped advancing
+     *        (kStallMs): the backend has wedged, and stopping it would block.
+     *        Stop, close and device switches abandon such a stream instead.
+     */
+    bool isActiveStreamStalled() const;
+    /**
      * @brief Check if stream is active
      * @return True while the backend stream is running.
      */

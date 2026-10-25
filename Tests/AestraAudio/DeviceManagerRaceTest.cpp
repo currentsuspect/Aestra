@@ -628,9 +628,14 @@ void testSwitchDeviceWhileWedged() {
     h->mgr.startStream();
     h->primary->wedgeStop();
     h->primary->freezeCallbacks();
-    // Let the monitor observe the frozen count for longer than the stall
-    // threshold (1 s) but less than its own safety switch (2 s).
-    std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+    // Wait until the manager itself judges the stream stalled (the monitor
+    // has seen the count frozen for longer than kStallMs). A fixed sleep was
+    // flaky: under ThreadSanitizer the monitor runs several times slower.
+    const auto stallDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(15);
+    while (!h->mgr.isActiveStreamStalled() && std::chrono::steady_clock::now() < stallDeadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    check(h->mgr.isActiveStreamStalled(), "the manager reports the wedged stream as stalled");
 
     std::atomic<bool> done{false};
     std::atomic<bool> ok{false};
