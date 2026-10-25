@@ -1207,7 +1207,7 @@ bool OutOfProcessPluginInstance::loadState(const std::vector<uint8_t>& state) {
 }
 
 bool OutOfProcessPluginInstance::hasEditor() const {
-#if defined(__linux__)
+#if defined(__linux__) || defined(_WIN32)
     return (m_info.format == PluginFormat::VST3 || m_info.format == PluginFormat::CLAP) &&
            m_loaded.load(std::memory_order_acquire) && !m_crashed.load(std::memory_order_acquire);
 #else

@@ -277,6 +277,7 @@ constexpr const char* kClapExtGui = "clap.gui";
 constexpr const char* kClapExtTimerSupport = "clap.timer-support";
 constexpr const char* kClapExtPosixFdSupport = "clap.posix-fd-support";
 constexpr const char* kClapWindowApiX11 = "x11";
+constexpr const char* kClapWindowApiWin32 = "win32";
 
 struct ClapWindow {
     const char* api;

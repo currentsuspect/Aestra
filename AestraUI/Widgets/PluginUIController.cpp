@@ -808,6 +808,13 @@ bool PluginEditorWindow::open(
     if (height <= 0) height = 600;
     
 #ifdef _WIN32
+    // A sandboxed plugin's window is made by the helper (V82-H8): an app window here would sit empty beside it.
+    if (instance->ownsEditorWindow()) {
+        if (!instance->openEditor(nullptr)) return false;
+        m_isOpen = true;
+        return true;
+    }
+
     // Register window class (once)
     static bool classRegistered = false;
     static const wchar_t* CLASS_NAME = L"AestraPluginEditor";

@@ -62,6 +62,7 @@ public:
     // never gets a window handle, so a plugin that hangs or crashes in its UI takes the helper with it, not the app.
     bool hasEditor() const override;
     bool openEditor(void* parentWindow) override;
+    bool ownsEditorWindow() const override { return true; } // the helper makes the window (V82-H3 / H8)
     void closeEditor() override;
     bool isEditorOpen() const override { return m_editorOpen.load(std::memory_order_acquire); }
     std::pair<int, int> getEditorSize() const override;
