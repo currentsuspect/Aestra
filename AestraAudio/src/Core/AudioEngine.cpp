@@ -2261,6 +2261,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
     const uint64_t blockStart = m_globalSamplePos.load(std::memory_order_relaxed);
     const uint64_t blockEnd = blockStart + numFrames;
     const bool isPlaying = m_transportPlaying.load(std::memory_order_relaxed); // [NEW] Check transport
+    publishHostTransport(blockStart, isPlaying);
 
     // Solo state can still change through RT track state, while routing topology
     // is compiled into AudioGraph before publication.

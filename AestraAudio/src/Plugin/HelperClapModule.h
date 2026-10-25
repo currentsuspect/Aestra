@@ -13,6 +13,7 @@
 #include "HelperEditorHost.h"
 #include "HelperParamCommands.h"
 #include "Plugin/ClapNoteConversion.h"
+#include "Plugin/HostTransport.h"
 
 #include <dlfcn.h>
 
@@ -693,7 +694,25 @@ struct ClapModule {
         ClapProcess processData = {};
         processData.steadyTime = -1;
         processData.framesCount = frames;
-        processData.transport = nullptr;
+        // The app's tempo and playhead for this block, which the PROCESS line carried and main() published.
+        ClapEventTransport transport = {};
+        const auto tv = Aestra::Audio::ClapTransportValues::from(Aestra::Audio::HostTransportClock::current());
+        if (tv.flags != 0) {
+            transport.header = {sizeof(transport), 0, kClapCoreEventSpaceId, kClapEventTransport, 0};
+            transport.flags = tv.flags;
+            transport.songPosBeats = tv.songPosBeats;
+            transport.songPosSeconds = tv.songPosSeconds;
+            transport.tempo = tv.tempo;
+            transport.loopStartBeats = tv.loopStartBeats;
+            transport.loopEndBeats = tv.loopEndBeats;
+            transport.loopStartSeconds = tv.loopStartSeconds;
+            transport.loopEndSeconds = tv.loopEndSeconds;
+            transport.barStart = tv.barStart;
+            transport.barNumber = tv.barNumber;
+            transport.tsigNum = tv.tsigNum;
+            transport.tsigDenom = tv.tsigDenom;
+        }
+        processData.transport = tv.flags != 0 ? &transport : nullptr;
         processData.audioInputs = &inputBuffer;
         processData.audioOutputs = &outputBuffer;
         processData.audioInputsCount = 1;

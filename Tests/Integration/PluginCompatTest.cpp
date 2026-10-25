@@ -13,10 +13,12 @@
 //
 // The report is a markdown table for the vault's compatibility page.
 
+#include "HostTransport.h"
 #include "OutOfProcessPluginInstance.h"
 #include "PluginManager.h"
 
 #include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
@@ -93,6 +95,7 @@ struct Runner {
     float* outPtr[kChannels]{};
     double phase = 0.0;
     std::chrono::steady_clock::time_point next = std::chrono::steady_clock::now();
+    int64_t position = 0; // the song position the engine would publish: playing at 120 bpm, 4/4
 
     Runner() {
         for (uint32_t c = 0; c < kChannels; ++c) {
@@ -111,6 +114,8 @@ struct Runner {
             for (uint32_t c = 0; c < kChannels; ++c)
                 in[c][i] = v;
         }
+        HostTransportClock::publish(HostTransport::at(position, kSampleRate, 120.0, 4, true, false, 0.0, 4.0));
+        position += kBlock;
         p.process(inPtr, outPtr, kChannels, kChannels, kBlock, midi, nullptr);
         float peak = 0.0f;
         for (uint32_t c = 0; c < kChannels; ++c) {
@@ -149,13 +154,31 @@ PluginInstancePtr open(PluginManager& manager, const PluginInfo& info, std::stri
     return p;
 }
 
-/// The first parameter a user could move: automatable, writable, not bypass.
-const PluginParameter* movable(const std::vector<PluginParameter>& params) {
+/// A parameter that mirrors the host's tempo (Vital's "Beats Per Minute"). The plugin sets it from the transport on
+/// every block and after a state load, so it is not state a reload should keep.
+bool followsHostTempo(const std::string& name) {
+    std::string n;
+    for (char c : name)
+        n.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+    return n == "bpm" || n == "tempo" || n == "beats per minute" || n == "host tempo";
+}
+
+/// Parameters a user could move: automatable, writable, not bypass, not the host's tempo. In order, at most [limit].
+std::vector<const PluginParameter*> movable(const std::vector<PluginParameter>& params, std::vector<std::string>& skipped,
+                                            size_t limit = 4) {
+    std::vector<const PluginParameter*> out;
     for (const auto& prm : params) {
-        if (prm.isAutomatable && !prm.isReadOnly && !prm.isBypass)
-            return &prm;
+        if (!prm.isAutomatable || prm.isReadOnly || prm.isBypass)
+            continue;
+        if (followsHostTempo(prm.name)) {
+            skipped.push_back(prm.name);
+            continue;
+        }
+        out.push_back(&prm);
+        if (out.size() == limit)
+            break;
     }
-    return nullptr;
+    return out;
 }
 
 void check(PluginManager& manager, const PluginInfo& info, Result& r) {
@@ -216,7 +239,22 @@ void check(PluginManager& manager, const PluginInfo& info, Result& r) {
 
     // State: move one parameter, save, load into a fresh instance, read it back.
     const auto params = p->getParameters();
-    const PluginParameter* prm = movable(params);
+    std::vector<std::string> skipped;
+    const auto candidates = movable(params, skipped);
+    for (const auto& name : skipped)
+        r.notes.push_back("skipped \"" + name + "\" for state: it follows the host tempo");
+    // The first candidate whose value sticks; one a plugin keeps resetting is not a fault of the host.
+    const PluginParameter* prm = nullptr;
+    float before = 0.0f, set = 0.0f;
+    for (const PluginParameter* c : candidates) {
+        before = p->getParameter(c->id);
+        p->setParameter(c->id, before < 0.5f ? 0.8f : 0.2f);
+        run.run(*p, 20); // CLAP values ride in with process calls
+        set = p->getParameter(c->id);
+        prm = c;
+        if (std::fabs(set - before) >= 1e-4f)
+            break;
+    }
     if (!prm) {
         const auto blob = p->saveState();
         r.state = blob.empty() ? Mark::Fail : Mark::Pass;
@@ -224,11 +262,6 @@ void check(PluginManager& manager, const PluginInfo& info, Result& r) {
     } else {
         const uint32_t id = prm->id;
         const std::string pname = prm->name;
-        const float before = p->getParameter(id);
-        const float target = before < 0.5f ? 0.8f : 0.2f;
-        p->setParameter(id, target);
-        run.run(*p, 20); // CLAP values ride in with process calls
-        const float set = p->getParameter(id);
         const auto blob = p->saveState();
         if (blob.empty()) {
             r.state = Mark::Fail;

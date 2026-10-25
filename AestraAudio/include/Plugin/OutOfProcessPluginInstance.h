@@ -2,6 +2,7 @@
 #pragma once
 
 #include "PluginHost.h"
+#include "Plugin/HostTransport.h"
 
 #include "AestraThreading.h"
 
@@ -133,7 +134,8 @@ private:
     void stopWorker();
     void workerLoop();
     bool processBlockInHelper(const std::vector<float>& input, uint32_t channels, uint32_t frames,
-                              const std::vector<uint8_t>& midiData, size_t midiBytes, std::vector<float>& output);
+                              const std::vector<uint8_t>& midiData, size_t midiBytes, const HostTransport& transport,
+                              std::vector<float>& output);
     void markCrashed();
     void setupSharedBlock();     ///< audio through shared memory when the helper can map it (V82-H7 follow-up)
     static void raiseWorkerPriority();
@@ -177,6 +179,9 @@ private:
     std::vector<float> m_readyOutput;
     std::vector<uint8_t> m_pendingMidiData;
     std::vector<uint8_t> m_workerMidiData;
+    // The block's tempo and playhead, handed over with its input under the same pending-slot protocol.
+    HostTransport m_pendingTransport;
+    HostTransport m_workerTransport;
     std::atomic<size_t> m_pendingMidiBytes{0};
     std::atomic<uint32_t> m_pendingFrames{0};
     std::atomic<uint32_t> m_readyFrames{0};
