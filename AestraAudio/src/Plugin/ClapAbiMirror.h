@@ -280,7 +280,13 @@ constexpr const char* kClapWindowApiX11 = "x11";
 
 struct ClapWindow {
     const char* api;
-    unsigned long x11; // the union's x11 member; every member is pointer-sized or smaller, so this is the whole union
+    // clap_window's union: x11 is an unsigned long, win32 an HWND, the rest pointers. Pointer-sized as a whole: on Windows
+    // unsigned long is 32 bits, so the x11 member alone would carry half an HWND (V82-H8).
+    union {
+        unsigned long x11;
+        void* win32;
+        void* ptr;
+    };
 };
 
 struct ClapGuiResizeHints {

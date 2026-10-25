@@ -194,14 +194,10 @@ bool CLAPPluginInstance::load(const std::filesystem::path& path, int pluginIndex
         return false;
     }
 
-    // Get entry point
-    auto entryFunc =
-        reinterpret_cast<const clap_plugin_entry* (*)()>(GetProcAddress(static_cast<HMODULE>(m_library), "clap_entry"));
-    if (!entryFunc) {
-        // Try direct symbol
-        m_entry =
-            reinterpret_cast<const clap_plugin_entry*>(GetProcAddress(static_cast<HMODULE>(m_library), "clap_entry"));
-    }
+    // clap_entry is a struct the plugin exports, not a function: GetProcAddress returns its address. This used to read
+    // it as a function pointer and only take the struct when the lookup FAILED, so on Windows a valid plugin never
+    // loaded in process (found by ClapSandboxParamsTest's first Windows run, V82-H8).
+    m_entry = reinterpret_cast<const clap_plugin_entry*>(GetProcAddress(static_cast<HMODULE>(m_library), "clap_entry"));
 #else
     m_library = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
     if (!m_library) {

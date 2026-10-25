@@ -559,6 +559,147 @@ jobs:
           EOF
           curl -s -o /dev/null -w "%{http_code}" -H "Content-Type: application/json" --data @discord_payload.json "$DISCORD_WEBHOOK"
 
+  build-plugin-host-windows:
+    name: Plugin hosting (Windows)
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      # V82-H8: the Windows lane above builds without the VST3 SDK and runs the
+      # sandbox only against the helper's built-in fake, so nothing proved a real
+      # plugin loads in the Windows helper. This is the Linux plugin lane
+      # (build-plugin-host) on Windows: VST3 SDK fetched, both formats asserted,
+      # the plugin and sandbox tests run, the CLAP gain fixture loaded as a DLL.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          submodules: false
+          persist-credentials: false
+
+      - name: Classify change scope
+        id: scope
+        uses: ./.github/actions/classify-scope
+        with:
+          lane: plugin-host
+          github-token: ${{ github.token }}
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
+
+      - name: Fetch VST3 SDK submodule
+        if: steps.scope.outputs.run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git submodule update --init --depth 1 AestraAudio/External/vst3sdk
+          git -C AestraAudio/External/vst3sdk submodule update --init --depth 1 \
+            base pluginterfaces public.sdk
+
+      - name: Cache vcpkg artifacts
+        if: steps.scope.outputs.run == 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ runner.temp }}\vcpkg\downloads
+            ${{ runner.temp }}\vcpkg\buildtrees
+            ${{ runner.temp }}\vcpkg\packages
+            ${{ runner.temp }}\vcpkg\installed
+            ${{ runner.temp }}\vcpkg\archives
+          key: windows-vcpkg-${{ env.VCPKG_REF }}-${{ runner.os }}-${{ hashFiles('.github/workflows/ci.yml') }}
+          restore-keys: |
+            windows-vcpkg-${{ env.VCPKG_REF }}-${{ runner.os }}-
+
+      # Same as the Windows lane: libsodium is required by AestraLicense.
+      - name: Setup vcpkg and libsodium
+        if: steps.scope.outputs.run == 'true'
+        shell: pwsh
+        run: |
+          $env:VCPKG_ROOT = "$env:RUNNER_TEMP\vcpkg"
+          $env:VCPKG_BINARY_SOURCES = "clear;files,$env:RUNNER_TEMP\vcpkg\archives,readwrite"
+          # Same as the Windows lane: the cache restores vcpkg's artifact folders
+          # but not its .git, so they are moved aside, vcpkg is cloned, and they
+          # go back. A plain clone into the non-empty folder fails.
+          if (!(Test-Path "$env:VCPKG_ROOT\.git")) {
+            $artifactBackup = Join-Path $env:RUNNER_TEMP "vcpkg-artifacts"
+            $artifactDirs = @("downloads", "buildtrees", "packages", "installed", "archives")
+            if (Test-Path $artifactBackup) { Remove-Item -Recurse -Force $artifactBackup }
+            New-Item -ItemType Directory -Path $artifactBackup | Out-Null
+            if (Test-Path $env:VCPKG_ROOT) {
+              foreach ($dir in $artifactDirs) {
+                $source = Join-Path $env:VCPKG_ROOT $dir
+                if (Test-Path $source) {
+                  Move-Item -Path $source -Destination (Join-Path $artifactBackup $dir)
+                }
+              }
+              Remove-Item -Recurse -Force $env:VCPKG_ROOT
+            }
+            git clone https://github.com/microsoft/vcpkg.git $env:VCPKG_ROOT
+            foreach ($dir in $artifactDirs) {
+              $saved = Join-Path $artifactBackup $dir
+              if (Test-Path $saved) {
+                Move-Item -Path $saved -Destination (Join-Path $env:VCPKG_ROOT $dir)
+              }
+            }
+          }
+          git -C $env:VCPKG_ROOT fetch --depth=1 origin $env:VCPKG_REF
+          git -C $env:VCPKG_ROOT checkout --force $env:VCPKG_REF
+          if (!(Test-Path "$env:VCPKG_ROOT\vcpkg.exe")) {
+            & "$env:VCPKG_ROOT\bootstrap-vcpkg.bat" -disableMetrics
+          }
+          & "$env:VCPKG_ROOT\vcpkg.exe" install libsodium:x64-windows
+
+      - name: Setup MSVC environment
+        if: steps.scope.outputs.run == 'true'
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+
+      - name: Configure and assert both plugin formats are enabled
+        if: steps.scope.outputs.run == 'true'
+        shell: pwsh
+        run: |
+          $env:VCPKG_ROOT = "$env:RUNNER_TEMP\vcpkg"
+          cmake -B build-plugins -S . `
+            -G Ninja `
+            -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} `
+            -DAestra_CORE_MODE=ON `
+            -DAESTRA_HEADLESS_ONLY=ON `
+            -DAESTRA_ENABLE_TESTS=ON `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows `
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache `
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache 2>&1 | Tee-Object -FilePath configure.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (-not (Select-String -Path configure.log -Pattern "VST3 SDK: Found" -Quiet)) {
+            Write-Output "::error::VST3 SDK not detected - this lane would compile nothing"; exit 1
+          }
+          if (-not (Select-String -Path configure.log -Pattern "CLAP SDK: Found" -Quiet)) {
+            Write-Output "::error::CLAP SDK not detected - this lane would compile nothing"; exit 1
+          }
+
+      # Serial, like every full default-target build in this file (see the Linux
+      # plugin lane for the memory story).
+      - name: Build (headless, plugin formats enabled)
+        if: steps.scope.outputs.run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake --build build-plugins --config ${{env.BUILD_TYPE}}
+          test -f build-plugins/bin/AestraPluginHost.exe \
+            || { echo "::error::AestraPluginHost.exe was not produced"; exit 1; }
+
+      - name: Run plugin tests
+        if: steps.scope.outputs.run == 'true'
+        working-directory: build-plugins
+        shell: bash
+        run: ctest -C ${{env.BUILD_TYPE}} -L "plugin|clap" --output-on-failure
+
+      - name: Run sandbox isolation tests
+        if: steps.scope.outputs.run == 'true'
+        working-directory: build-plugins
+        shell: bash
+        run: >-
+          ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R
+          "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecPluginCacheBounds|SecPluginTrustedPath|PluginScannerSigpipeTest"
+
   build-macos:
     name: macOS (Clang)
     runs-on: macos-latest

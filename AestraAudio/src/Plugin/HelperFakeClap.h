@@ -2,7 +2,6 @@
 #pragma once
 
 #ifdef AESTRA_ENABLE_TEST_HOOKS
-#ifndef _WIN32
 
 // Test-only: the fake CLAP plugin the sandbox helper can be told to "load" (the #244 note-conversion tests). It lives in
 // its own header so the helper's main file stays small; nothing here ships in a release build.
@@ -113,5 +112,4 @@ inline ClapPlugin g_plugin = {&g_descriptor, nullptr,        init,
 } // namespace FakeClap
 } // namespace AestraHelper
 
-#endif // !_WIN32
 #endif // AESTRA_ENABLE_TEST_HOOKS
