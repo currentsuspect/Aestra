@@ -340,7 +340,7 @@ int main(int argc, char** argv) {
 #ifdef AESTRA_HAS_VST3
     Vst3Module vst3Module;
 #endif
-#if defined(AESTRA_HAS_X11)
+#if defined(AESTRA_HELPER_HAS_EDITORS)
     AestraHelper::EditorHost editorHost;
 #endif
     AestraHelper::EditLog editLog;
@@ -351,20 +351,27 @@ int main(int argc, char** argv) {
     auto readCommand = [&](std::string& out) -> bool {
 #ifdef _WIN32
         return lineReader.next(
-            out, [&](int& timeoutMs) { clapModule.hostContext.limitWait(timeoutMs); },
-            [&] { clapModule.hostContext.service(); });
+            out,
+            [&](int& timeoutMs) {
+                clapModule.hostContext.limitWait(timeoutMs);
+                editorHost.limitWait(timeoutMs);
+            },
+            [&] {
+                clapModule.hostContext.service();
+                editorHost.service();
+            });
 #else
         return lineReader.next(
             out,
             [&](std::vector<pollfd>& fds, int& timeoutMs) {
                 clapModule.hostContext.pollFds(fds, timeoutMs);
-#if defined(AESTRA_HAS_X11)
+#if defined(AESTRA_HELPER_HAS_EDITORS)
                 editorHost.pollFds(fds, timeoutMs);
 #endif
             },
             [&] {
                 clapModule.hostContext.service();
-#if defined(AESTRA_HAS_X11)
+#if defined(AESTRA_HELPER_HAS_EDITORS)
                 editorHost.service();
 #endif
             }
@@ -455,7 +462,7 @@ int main(int argc, char** argv) {
                   hexEncodeString(descriptor->vendor ? descriptor->vendor : "") + " " +
                   hexEncodeString(descriptor->version ? descriptor->version : "") + " " + hexEncodeString(features));
         } else if (command == "LOAD") {
-#if defined(AESTRA_HAS_VST3) && defined(AESTRA_HAS_X11)
+#if defined(AESTRA_HAS_VST3) && defined(AESTRA_HELPER_HAS_EDITORS)
             editorHost.close(); // the old plugin's window must go before its module does
 #endif
             std::string format;
@@ -589,7 +596,7 @@ int main(int argc, char** argv) {
             // V82-H3: EDITOR OPEN <titleHex> -> OK EDITOR <w> <h> | ERR; EDITOR CLOSE; EDITOR STATE -> OK EDITOR OPEN|CLOSED
             std::string sub;
             input >> sub;
-#if defined(AESTRA_HAS_X11)
+#if defined(AESTRA_HELPER_HAS_EDITORS)
             if (sub == "OPEN") {
                 std::string titleHex;
                 input >> titleHex;
@@ -842,7 +849,7 @@ int main(int argc, char** argv) {
 #endif
             reply(stateBuffer.empty() ? "OK STATE" : "ERR state-unavailable");
         } else if (command == "SHUTDOWN") {
-#if defined(AESTRA_HAS_VST3) && defined(AESTRA_HAS_X11)
+#if defined(AESTRA_HAS_VST3) && defined(AESTRA_HELPER_HAS_EDITORS)
             editorHost.close();
 #endif
             active = false;

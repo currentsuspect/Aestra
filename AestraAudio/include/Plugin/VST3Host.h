@@ -4,6 +4,7 @@
 #include "PluginHost.h"
 
 #include <atomic>
+#include <cstdint>
 #include <filesystem>
 #include <functional>
 #include <memory>
@@ -96,7 +97,8 @@ public:
     bool resizeEditor(int width, int height) override;
 
     /**
-     * @brief Linux (V82-H3): open the editor in an X11 window the caller creates.
+     * @brief Open the editor in a top-level window the caller creates: an X11 window on Linux (V82-H3), an HWND on
+     * Windows (V82-H8). On Windows the plugin runs its own Win32 timers, which the caller's message pump serves.
      *
      * The plugin's view is created first so its preferred size is known; @p makeWindow is then called with that size and
      * whether the plugin can be resized, and returns the X11 window id (0 = could not) the view is attached to
@@ -105,8 +107,8 @@ public:
      * (IPlugFrame::resizeView) @p requestResize runs, then the view is told the size took. Returns false, with nothing
      * left open, if the plugin has no X11 editor. Call on the thread that owns the window and runs the pump.
      */
-    bool openEditorX11(const std::function<unsigned long(int width, int height, bool resizable)>& makeWindow,
-                       EditorLoopPump& pump, std::function<void(int width, int height)> requestResize);
+    bool openEditorEmbedded(const std::function<std::uintptr_t(int width, int height, bool resizable)>& makeWindow,
+                            EditorLoopPump& pump, std::function<void(int width, int height)> requestResize);
     /// Whether the open editor accepts being resized by the host.
     bool canResizeEditor() const;
 

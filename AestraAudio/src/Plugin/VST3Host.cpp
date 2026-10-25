@@ -47,6 +47,54 @@ struct VST3PluginInstance::ModuleHolder {
     VST3::Hosting::Module::Ptr module;
 };
 
+#if defined(_WIN32)
+namespace {
+
+// The host's side of a plugin editor on Windows (V82-H8): only IPlugFrame. A Windows plugin runs its own timers on the
+// window's thread (SetTimer), so there is no run loop to offer; the helper's message pump serves them.
+class WinPlugFrame final : public IPlugFrame {
+public:
+    WinPlugFrame(Aestra::Audio::EditorLoopPump&, std::function<void(int, int)> requestResize)
+        : m_requestResize(std::move(requestResize)) {}
+
+    tresult PLUGIN_API queryInterface(const TUID iid, void** obj) override {
+        if (!obj) return kInvalidArgument;
+        if (FUnknownPrivate::iidEqual(iid, FUnknown::iid) || FUnknownPrivate::iidEqual(iid, IPlugFrame::iid)) {
+            *obj = static_cast<IPlugFrame*>(this);
+            addRef();
+            return kResultOk;
+        }
+        *obj = nullptr;
+        return kNoInterface;
+    }
+    uint32 PLUGIN_API addRef() override { return ++m_refs; }
+    uint32 PLUGIN_API release() override {
+        const uint32 left = --m_refs;
+        if (left == 0) delete this;
+        return left;
+    }
+
+    tresult PLUGIN_API resizeView(IPlugView* view, ViewRect* newSize) override {
+        if (!view || !newSize || m_resizing) return kInvalidArgument;
+        m_resizing = true; // onSize() can make some plugins ask again: answer once
+        if (m_requestResize) m_requestResize(newSize->getWidth(), newSize->getHeight());
+        view->onSize(newSize);
+        m_resizing = false;
+        return kResultOk;
+    }
+
+    void clearRegistrations() {}
+
+private:
+    std::function<void(int, int)> m_requestResize;
+    std::atomic<uint32> m_refs{1};
+    bool m_resizing = false;
+};
+using EmbedPlugFrame = WinPlugFrame;
+
+} // namespace
+#endif
+
 #if defined(__linux__)
 namespace {
 
@@ -160,6 +208,7 @@ private:
     std::atomic<uint32> m_refs{1};
     bool m_resizing = false;
 };
+using EmbedPlugFrame = X11PlugFrame;
 
 } // namespace
 #endif // __linux__
@@ -1030,11 +1079,11 @@ void VST3PluginInstance::closeEditor() {
 
     auto view = static_cast<IPlugView*>(m_plugView);
     view->removed();
-#if defined(__linux__)
+#if defined(__linux__) || defined(_WIN32)
     if (m_plugFrame) {
         view->setFrame(nullptr);
-        static_cast<X11PlugFrame*>(m_plugFrame)->clearRegistrations();
-        static_cast<X11PlugFrame*>(m_plugFrame)->release();
+        static_cast<EmbedPlugFrame*>(m_plugFrame)->clearRegistrations();
+        static_cast<EmbedPlugFrame*>(m_plugFrame)->release();
         m_plugFrame = nullptr;
     }
 #endif
@@ -1070,10 +1119,15 @@ bool VST3PluginInstance::canResizeEditor() const {
     return static_cast<IPlugView*>(m_plugView)->canResize() == kResultTrue;
 }
 
-bool VST3PluginInstance::openEditorX11(const std::function<unsigned long(int, int, bool)>& makeWindow,
-                                       Aestra::Audio::EditorLoopPump& pump,
-                                       std::function<void(int, int)> requestResize) {
-#if defined(__linux__)
+bool VST3PluginInstance::openEditorEmbedded(const std::function<std::uintptr_t(int, int, bool)>& makeWindow,
+                                            Aestra::Audio::EditorLoopPump& pump,
+                                            std::function<void(int, int)> requestResize) {
+#if defined(__linux__) || defined(_WIN32)
+#if defined(_WIN32)
+    const FIDString platformType = kPlatformTypeHWND;
+#else
+    const FIDString platformType = kPlatformTypeX11EmbedWindowID;
+#endif
     if (!m_controller || m_editorOpen || !makeWindow)
         return false;
 
@@ -1081,7 +1135,7 @@ bool VST3PluginInstance::openEditorX11(const std::function<unsigned long(int, in
     IPlugView* view = controller->createView(ViewType::kEditor);
     if (!view)
         return false;
-    if (view->isPlatformTypeSupported(kPlatformTypeX11EmbedWindowID) != kResultTrue) {
+    if (view->isPlatformTypeSupported(platformType) != kResultTrue) {
         view->release();
         return false;
     }
@@ -1092,15 +1146,15 @@ bool VST3PluginInstance::openEditorX11(const std::function<unsigned long(int, in
         width = rect.getWidth();
         height = rect.getHeight();
     }
-    const unsigned long window = makeWindow(width, height, view->canResize() == kResultTrue);
+    const std::uintptr_t window = makeWindow(width, height, view->canResize() == kResultTrue);
     if (window == 0) {
         view->release();
         return false;
     }
 
-    auto* frame = new X11PlugFrame(pump, std::move(requestResize)); // one reference: ours
+    auto* frame = new EmbedPlugFrame(pump, std::move(requestResize)); // one reference: ours
     view->setFrame(frame);
-    if (view->attached(reinterpret_cast<void*>(window), kPlatformTypeX11EmbedWindowID) != kResultOk) {
+    if (view->attached(reinterpret_cast<void*>(window), platformType) != kResultOk) {
         view->setFrame(nullptr);
         frame->clearRegistrations();
         frame->release();
