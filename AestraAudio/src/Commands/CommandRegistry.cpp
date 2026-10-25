@@ -7,6 +7,7 @@
 #include "Commands/ClonePatternCommand.h"
 #include "Commands/EffectCommands.h"
 #include "Commands/SetPatternLengthCommand.h"
+#include "Commands/SetSamplerStateCommand.h"
 #include "Commands/SetUnitGainCommand.h"
 #include "Plugin/PluginManager.h"
 #include "Commands/DuplicateClipCommand.h"
@@ -539,6 +540,48 @@ void CommandRegistry::initialize() {
         if (!tm->getUnitManager().getUnit(*unitOpt))
             return CommandRegistry::fail("no such unit: " + std::string(*unitRaw));
         return std::make_unique<SetUnitGainCommand>(tm->getUnitManager(), *unitOpt, *valueOpt);
+    });
+
+    // The Sample Editor's envelope and play-mode controls, as one undo step. Only
+    // the fields given change; the rest keep their current value.
+    reg.registerCommand("set_sampler", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
+        auto unitRaw = requireFlag(flags, "unit");
+        if (!unitRaw) return nullptr;
+        auto unitOpt = safeStoull(*unitRaw);
+        if (!unitOpt) return nullptr;
+        auto& units = tm->getUnitManager();
+        if (!units.getUnit(*unitOpt)) return CommandRegistry::fail("no such unit: " + std::string(*unitRaw));
+        auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(units.getUnitPlugin(*unitOpt));
+        if (!sampler) return CommandRegistry::fail("unit " + std::string(*unitRaw) + " has no sampler");
+
+        const SamplerEditState before = SamplerEditState::capture(*sampler);
+        SamplerEditState after = before;
+        bool any = false;
+        const auto seconds = [&](const char* key, float maxValue, float& field) -> bool {
+            auto raw = requireFlag(flags, key);
+            if (!raw) return true;
+            auto value = safeStof(*raw);
+            if (!value || *value < 0.0f || *value > maxValue) return false;
+            field = *value;
+            any = true;
+            return true;
+        };
+        if (!seconds("attack", 2.0f, after.attack) || !seconds("decay", 2.0f, after.decay) ||
+            !seconds("sustain", 1.0f, after.sustain) || !seconds("release", 5.0f, after.release))
+            return CommandRegistry::fail("attack/decay are 0..2 s, sustain 0..1, release 0..5 s");
+        if (auto raw = requireFlag(flags, "voices")) {
+            auto value = safeStoi(*raw);
+            // The sampler's voice pool is 32 (SamplerPlugin::kMaxVoices); MuseGrammar declares the same range.
+            if (!value || *value < 1 || *value > 32) return CommandRegistry::fail("voices is 1..32");
+            after.voices = *value;
+            any = true;
+        }
+        if (auto raw = requireFlag(flags, "mono")) { after.mono = parseFlagBool(*raw); any = true; }
+        if (auto raw = requireFlag(flags, "cut_self")) { after.cutSelf = parseFlagBool(*raw); any = true; }
+        if (!any) return CommandRegistry::fail("set_sampler needs at least one of attack, decay, sustain, release, voices, mono, cut_self");
+        return std::make_unique<SetSamplerStateCommand>(units, *unitOpt, before, after);
     });
 
     // ===== Pattern / note (4) =====
