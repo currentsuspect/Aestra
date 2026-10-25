@@ -211,6 +211,7 @@ void SamplerPlugin::retireSample(std::shared_ptr<SampleData> old) {
 }
 
 void SamplerPlugin::activate() {
+    m_voiceCompSmoothed = 1.0f;
     m_active = true;
     for (auto& v : m_voices)
         v.active = false;
@@ -456,6 +457,8 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
     // number of sounding voices does, and it was costing a square root and a
     // division on every sample of every block.
     float voiceComp = 1.0f;
+    const float voiceCompGlideCoeff =
+        static_cast<float>(1.0 - std::exp(-1.0 / std::max(1.0, kVoiceCompGlideSeconds * m_sampleRate)));
 
     // The compact list of sounding voices.
     //
@@ -503,6 +506,9 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
         // Render Voices
         float L = 0.0f;
         float R = 0.0f;
+        // One-pole glide toward the current polyphony compensation (see
+        // kVoiceCompGlideSeconds); per sample, shared by every voice.
+        m_voiceCompSmoothed += (voiceComp - m_voiceCompSmoothed) * voiceCompGlideCoeff;
         if (activeVoiceCountDirty) {
             rebuildActiveVoices();
             activeVoiceCountDirty = false;
@@ -631,7 +637,7 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
                 );
             }
 
-            float gain = (v.velocity * v.velocity) * env * kSamplerOutputHeadroom * voiceComp;
+            float gain = (v.velocity * v.velocity) * env * kSamplerOutputHeadroom * m_voiceCompSmoothed;
             L += outL * gain * v.gainL;
             R += outR * gain * v.gainR;
 

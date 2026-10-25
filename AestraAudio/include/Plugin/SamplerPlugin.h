@@ -240,6 +240,11 @@ private:
     /// long instead of stopping dead: an instant cut jumps the waveform to zero
     /// mid-cycle, which on a sub-bass is an audible tick.
     static constexpr double kDeclickSeconds = 0.004;
+    /// The polyphony gain (1/sqrt(voices)) glides to its new value over about
+    /// this long instead of jumping when a voice starts or ends: a jump scales
+    /// every sounding voice in one sample, which ticks on low sounds.
+    static constexpr double kVoiceCompGlideSeconds = 0.005;
+    float m_voiceCompSmoothed = 1.0f;
     void declickVoice(Voice& v);
 };
 

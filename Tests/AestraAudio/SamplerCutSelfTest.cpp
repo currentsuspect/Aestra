@@ -240,7 +240,7 @@ int main() {
     //    instead of jumping to zero mid-cycle. A hard cut used to step by
     //    ~0.9x peak here and ticked audibly on 808s (owner's session,
     //    2026-10-25); smooth playback never steps that hard.
-    if (cutOn.maxFirstDiff > singleMax * 0.50f) {
+    if (cutOn.maxFirstDiff > singleMax * 0.15f) {
         return fail("cut-self: the choke stepped the waveform (hard cut, audible tick)");
     }
 
@@ -280,7 +280,7 @@ int main() {
     if (!renderRetrigger(wavPath, true, kNote, kNote + 12, kChokeOffset, &differentPitch, &error)) {
         return fail("different-pitch render: " + error);
     }
-    if (differentPitch.maxFirstDiff > singleMax * 0.50f) {
+    if (differentPitch.maxFirstDiff > singleMax * 0.15f) {
         return fail("cut-self: different-pitch choke stepped the waveform (hard cut)");
     }
     if (differentPitch.afterFadeMax > singleMax * 1.10f) {
@@ -302,7 +302,7 @@ int main() {
     if (!renderRetrigger(wavPath, true, kNote, kNote, kChokeOffset, &monoCutSelf, &error, true)) {
         return fail("mono cut-self render: " + error);
     }
-    if (monoCutSelf.maxFirstDiff > singleMax * 0.50f) {
+    if (monoCutSelf.maxFirstDiff > singleMax * 0.15f) {
         return fail("mono cut-self: the choke stepped the waveform (hard cut)");
     }
     if (monoCutSelf.afterFadeMax > singleMax * 1.10f) {
@@ -342,7 +342,9 @@ int main() {
             }
         }
         if (peak <= 0.0f) return fail("mono tail: silent");
-        if (maxStep > singleMax * 0.50f) {
+        // A 220 Hz sine at this level steps ~3% of peak per sample; the tick
+        // measured in the session was ~30%. 10% separates them.
+        if (maxStep > singleMax * 0.10f) {
             return fail("mono retrigger over a release tail stepped the waveform (" + std::to_string(maxStep) +
                         " vs peak " + std::to_string(singleMax) + ")");
         }
