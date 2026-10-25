@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "Plugin/VST3Host.h"
+#include "Plugin/HostTransport.h"
 
 #include "AestraLog.h"
 #include "Plugin/EditorLoopPump.h"
@@ -551,7 +552,31 @@ void VST3PluginInstance::process(const float* const* inputs, float** outputs, ui
     m_params->output.clear();
     data.inputParameterChanges = &m_params->input;
     data.outputParameterChanges = &m_params->output;
-    data.processContext = nullptr;
+    // Tempo, metre and playhead (HostTransport.h): without them tempo-synced plugins have no tempo and some reset
+    // their own (Vital's "Beats Per Minute" came back 0 after a state reload).
+    ProcessContext context{};
+    const HostTransport transport = HostTransportClock::current();
+    if (transport.valid) {
+        context.state = ProcessContext::kTempoValid | ProcessContext::kTimeSigValid |
+                        ProcessContext::kProjectTimeMusicValid | ProcessContext::kBarPositionValid;
+        if (transport.playing)
+            context.state |= ProcessContext::kPlaying;
+        if (transport.looping && transport.loopEndPpq > transport.loopStartPpq) {
+            context.state |= ProcessContext::kCycleActive | ProcessContext::kCycleValid;
+            context.cycleStartMusic = transport.loopStartPpq;
+            context.cycleEndMusic = transport.loopEndPpq;
+        }
+        context.sampleRate = m_sampleRate;
+        context.projectTimeSamples = transport.samplePosition;
+        context.projectTimeMusic = transport.ppqPosition;
+        context.barPositionMusic = transport.barStartPpq;
+        context.tempo = transport.tempo;
+        context.timeSigNumerator = transport.timeSigNumerator;
+        context.timeSigDenominator = transport.timeSigDenominator;
+        data.processContext = &context;
+    } else {
+        data.processContext = nullptr;
+    }
 
     // MIDI input events
     struct EventList : public IEventList {

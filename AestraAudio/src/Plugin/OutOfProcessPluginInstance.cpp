@@ -999,6 +999,7 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
                 midiBytes += 8;
             }
         }
+        m_pendingTransport = HostTransportClock::current();
         m_pendingMidiBytes.store(midiBytes, std::memory_order_release);
         m_pendingFrames.store(numFrames, std::memory_order_release);
         m_pendingState.store(2, std::memory_order_release);
@@ -1362,11 +1363,12 @@ void OutOfProcessPluginInstance::workerLoop() {
         if (midiBytes <= m_workerMidiData.size()) {
             std::copy_n(m_pendingMidiData.data(), midiBytes, m_workerMidiData.data());
         }
+        m_workerTransport = m_pendingTransport;
         m_pendingState.store(0, std::memory_order_release);
 
         if (sampleCount > m_workerInput.size() || midiBytes > m_workerMidiData.size() ||
             !processBlockInHelper(m_workerInput, m_transportChannels, frames, m_workerMidiData, midiBytes,
-                                  m_workerOutput)) {
+                                  m_workerTransport, m_workerOutput)) {
             markCrashed();
             continue;
         }
@@ -1403,7 +1405,8 @@ void OutOfProcessPluginInstance::raiseWorkerPriority() {
 
 bool OutOfProcessPluginInstance::processBlockInHelper(const std::vector<float>& input, uint32_t channels,
                                                       uint32_t frames, const std::vector<uint8_t>& midiData,
-                                                      size_t midiBytes, std::vector<float>& output) {
+                                                      size_t midiBytes, const HostTransport& transport,
+                                                      std::vector<float>& output) {
     const size_t sampleCount = static_cast<size_t>(channels) * frames;
     if (sampleCount > input.size()) {
         return false;
@@ -1414,8 +1417,8 @@ bool OutOfProcessPluginInstance::processBlockInHelper(const std::vector<float>& 
         if (midiBytes > 0) {
             std::copy_n(midiData.data(), midiBytes, m_shm->midi());
         }
-        char command[64];
-        std::snprintf(command, sizeof command, "PROCESSSHM %u %u %zu", channels, frames, midiBytes);
+        const std::string command = "PROCESSSHM " + std::to_string(channels) + " " + std::to_string(frames) + " " +
+                                    std::to_string(midiBytes) + transport.toWire();
         std::string response;
         if (!sendCommand(command, &response) || response != "OK") {
             return false;
@@ -1435,6 +1438,7 @@ bool OutOfProcessPluginInstance::processBlockInHelper(const std::vector<float>& 
         command << "PROCESS " << channels << " " << frames << " "
                 << hexEncodeBytes(input.data(), sampleCount * sizeof(float));
     }
+    command << transport.toWire();
     std::string response;
     if (!sendCommand(command.str(), &response)) {
         return false;

@@ -124,6 +124,26 @@ struct ClapOutputEvents {
     bool (*tryPush)(const ClapOutputEvents* list, const ClapEventHeader* event);
 };
 
+// clap_event_transport ABI (clap/events.h): what process() is told about tempo and the playhead. Times are fixed point
+// (CLAP_BEATTIME_FACTOR, CLAP_SECTIME_FACTOR = 2^31).
+constexpr uint16_t kClapEventTransport = 9;
+struct ClapEventTransport {
+    ClapEventHeader header;
+    uint32_t flags;
+    int64_t songPosBeats;
+    int64_t songPosSeconds;
+    double tempo;
+    double tempoInc;
+    int64_t loopStartBeats;
+    int64_t loopEndBeats;
+    int64_t loopStartSeconds;
+    int64_t loopEndSeconds;
+    int64_t barStart;
+    int32_t barNumber;
+    uint16_t tsigNum;
+    uint16_t tsigDenom;
+};
+
 struct ClapEventMidi {
     ClapEventHeader header;
     uint16_t portIndex;

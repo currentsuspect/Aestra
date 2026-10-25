@@ -4,6 +4,7 @@
 #include "HelperLineReader.h"
 #include "HelperParamCommands.h"
 #include "SharedAudioBlock.h"
+#include "Plugin/HostTransport.h"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -325,6 +326,7 @@ int main(int argc, char** argv) {
     std::vector<uint8_t> stateBuffer;
     std::vector<float> processed; // kept across blocks so a block does not allocate
     Aestra::Audio::SharedAudioBlock sharedBlock;
+    std::array<std::string, 10> transportFields; // kept across blocks so a block does not allocate
     std::string line;
 #ifdef AESTRA_ENABLE_TEST_HOOKS
     // The __aestra_test_echo__ fake plugin has no real module; it records applied
@@ -960,6 +962,22 @@ int main(int argc, char** argv) {
                     reply("ERR invalid-midi-payload");
                     continue;
                 }
+            }
+            // The app's tempo and playhead for this block ("T ..." after the payload, HostTransport.h). The plugin hosts
+            // below read it from the clock; a line without one, or a malformed one, means no transport this block.
+            {
+                using Aestra::Audio::HostTransport;
+                std::string marker;
+                size_t fieldCount = 0;
+                if (input >> marker && marker == "T") {
+                    while (fieldCount < transportFields.size() && input >> transportFields[fieldCount])
+                        ++fieldCount;
+                    std::string extra;
+                    if (input >> extra)
+                        fieldCount = 0;
+                }
+                Aestra::Audio::HostTransportClock::publish(
+                    marker == "T" ? HostTransport::fromWire(transportFields.data(), fieldCount) : HostTransport{});
             }
             auto answer = [&](std::vector<float>& out) {
                 if (out.size() < sampleCount) {

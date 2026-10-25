@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 // A CLAP effect with one parameter, Gain, that the helper can load, play and move: the fixture for
-// parameters through the sandbox (V82-H7). Output = input x gain.
+// parameters through the sandbox (V82-H7). Output = input x gain. Two read-only parameters report the transport the
+// host gave the last block: Host Tempo (bpm / 1000) and Host Playing (1 or 0), so a test can see tempo arrive.
 #include <clap/clap.h>
 #include <cstdio>
 #include <cstdlib>
@@ -8,6 +9,8 @@
 
 namespace {
 constexpr clap_id kGainId = 7;
+constexpr clap_id kTempoId = 8;
+constexpr clap_id kPlayingId = 9;
 const char* const kFeatures[] = {CLAP_PLUGIN_FEATURE_AUDIO_EFFECT, nullptr};
 const clap_plugin_descriptor_t kDescriptor = {
     CLAP_VERSION_INIT, "test.aestra.gain", "Gain Fixture", "Aestra Tests", nullptr, nullptr, nullptr, "1.0.0", "",
@@ -16,6 +19,8 @@ const clap_plugin_descriptor_t kDescriptor = {
 struct Gain {
     clap_plugin_t plugin;
     double gain = 0.5;
+    double hostTempo = 0.0; // 0: no transport yet
+    double hostPlaying = 0.0;
 };
 Gain* self(const clap_plugin_t* p) {
     return static_cast<Gain*>(p->plugin_data);
@@ -36,28 +41,40 @@ void applyEvents(Gain* g, const clap_input_events_t* in) {
 
 // --- params ---
 uint32_t paramCount(const clap_plugin_t*) {
-    return 1;
+    return 3;
 }
 bool paramInfo(const clap_plugin_t*, uint32_t index, clap_param_info_t* info) {
-    if (index != 0)
+    if (index > 2)
         return false;
     std::memset(info, 0, sizeof(*info));
-    info->id = kGainId;
-    info->flags = CLAP_PARAM_IS_AUTOMATABLE;
-    std::snprintf(info->name, sizeof(info->name), "Gain");
     info->min_value = 0.0;
     info->max_value = 1.0;
-    info->default_value = 0.5;
+    if (index == 0) {
+        info->id = kGainId;
+        info->flags = CLAP_PARAM_IS_AUTOMATABLE;
+        std::snprintf(info->name, sizeof(info->name), "Gain");
+        info->default_value = 0.5;
+    } else {
+        info->id = index == 1 ? kTempoId : kPlayingId;
+        info->flags = CLAP_PARAM_IS_READONLY;
+        std::snprintf(info->name, sizeof(info->name), index == 1 ? "Host Tempo" : "Host Playing");
+    }
     return true;
 }
 bool paramValue(const clap_plugin_t* p, clap_id id, double* out) {
-    if (id != kGainId)
+    const Gain* g = self(p);
+    if (id == kGainId)
+        *out = g->gain;
+    else if (id == kTempoId)
+        *out = g->hostTempo / 1000.0;
+    else if (id == kPlayingId)
+        *out = g->hostPlaying;
+    else
         return false;
-    *out = self(p)->gain;
     return true;
 }
 bool valueToText(const clap_plugin_t*, clap_id id, double value, char* out, uint32_t size) {
-    if (id != kGainId)
+    if (id != kGainId && id != kTempoId && id != kPlayingId)
         return false;
     std::snprintf(out, size, "%.2f", value);
     return true;
@@ -110,6 +127,13 @@ void reset(const clap_plugin_t*) {}
 clap_process_status process(const clap_plugin_t* p, const clap_process_t* proc) {
     Gain* g = self(p);
     applyEvents(g, proc->in_events);
+    if (proc->transport && (proc->transport->flags & CLAP_TRANSPORT_HAS_TEMPO)) {
+        g->hostTempo = proc->transport->tempo;
+        g->hostPlaying = (proc->transport->flags & CLAP_TRANSPORT_IS_PLAYING) ? 1.0 : 0.0;
+    } else {
+        g->hostTempo = 0.0;
+        g->hostPlaying = 0.0;
+    }
     if (proc->audio_inputs_count < 1 || proc->audio_outputs_count < 1)
         return CLAP_PROCESS_CONTINUE;
     const auto& in = proc->audio_inputs[0];
