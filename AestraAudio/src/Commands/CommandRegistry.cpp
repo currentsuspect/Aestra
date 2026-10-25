@@ -22,6 +22,8 @@
 #include "Commands/ImportAudioClipCommand.h"
 #include "IO/MiniAudioDecoder.h"
 #include "Commands/RemoveClipCommand.h"
+#include "Commands/RoutingCommands.h"
+#include "Commands/SetUnitMixerChannelCommand.h"
 #include "Commands/RenderAudioClipCommand.h"
 #include "Commands/RemoveNoteCommand.h"
 #include "Commands/SetMuteCommand.h"
@@ -1083,6 +1085,162 @@ void CommandRegistry::initialize() {
         }
         return std::make_unique<UpdateNoteCommand>(tm->getPatternManager(), key->patternId, *note,
                                                    velocity, pan);
+    });
+
+    // ===== Mixer routing (V82-M5, FD-53) =====
+    // Tracks are addressed by index, as every other verb does (list_tracks
+    // shows index and id); -1 names the master. The routing commands throw on
+    // an illegal route and CommandHistory swallows a throwing execute(), so
+    // every illegal request is refused HERE with a reason — never reported ok.
+    const auto trackAt = [](TrackManager& tm, std::string_view raw, const char* what,
+                            MixerChannel*& out) -> std::optional<std::string> {
+        auto idx = safeStoi(raw);
+        if (!idx || *idx < 0) return std::string(what) + " must be a track index >= 0";
+        out = tm.getChannel(static_cast<size_t>(*idx));
+        if (!out) return "no track at index " + std::string(raw);
+        return std::nullopt;
+    };
+    const auto sendRoute = [](MixerChannel& ch, uint64_t sendId, AudioRoute& out) {
+        for (const auto& r : ch.getSends()) {
+            if (r.sendId == sendId) {
+                out = r;
+                return true;
+            }
+        }
+        return false;
+    };
+
+    reg.registerCommand("route_unit", [trackAt](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
+        auto unitRaw = requireFlag(flags, "unit");
+        auto trackRaw = requireFlag(flags, "track");
+        if (!unitRaw || !trackRaw) return nullptr;
+        auto unit = safeStoull(*unitRaw);
+        if (!unit || !tm->getUnitManager().getUnit(static_cast<UnitID>(*unit)))
+            return CommandRegistry::fail("no unit " + std::string(*unitRaw) + " (list_units shows them)");
+        uint32_t channelId = MASTER_MIXER_CHANNEL_ID; // a unit's "master" destination is 0
+        if (*trackRaw != "-1") {
+            MixerChannel* ch = nullptr;
+            if (auto err = trackAt(*tm, *trackRaw, "track", ch)) return CommandRegistry::fail(*err);
+            channelId = ch->getChannelId();
+        }
+        return std::make_unique<SetUnitMixerChannelCommand>(*tm, static_cast<UnitID>(*unit), channelId);
+    });
+
+    reg.registerCommand("set_output", [trackAt](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
+        auto trackRaw = requireFlag(flags, "track");
+        auto toRaw = requireFlag(flags, "to");
+        if (!trackRaw || !toRaw) return nullptr;
+        MixerChannel* src = nullptr;
+        if (auto err = trackAt(*tm, *trackRaw, "track", src)) return CommandRegistry::fail(*err);
+        uint32_t target = kMasterId;
+        if (*toRaw != "-1") {
+            MixerChannel* dst = nullptr;
+            if (auto err = trackAt(*tm, *toRaw, "to", dst)) return CommandRegistry::fail(*err);
+            target = dst->getChannelId();
+            if (target == src->getChannelId()) return CommandRegistry::fail("a track cannot output into itself");
+            if (!tm->canRouteTo(src->getChannelId(), target))
+                return CommandRegistry::fail("that output would make a routing loop");
+        }
+        return std::make_unique<SetMainOutputCommand>(*tm, src->getChannelId(), target);
+    });
+
+    reg.registerCommand("add_send", [trackAt](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
+        auto trackRaw = requireFlag(flags, "track");
+        auto toRaw = requireFlag(flags, "to");
+        if (!trackRaw || !toRaw) return nullptr;
+        MixerChannel* src = nullptr;
+        if (auto err = trackAt(*tm, *trackRaw, "track", src)) return CommandRegistry::fail(*err);
+        MixerChannel* dst = nullptr;
+        if (*toRaw == "-1") return CommandRegistry::fail("a send cannot target the master; use set_output");
+        if (auto err = trackAt(*tm, *toRaw, "to", dst)) return CommandRegistry::fail(*err);
+        if (dst == src) return CommandRegistry::fail("a track cannot send to itself");
+        if (!tm->canRouteTo(src->getChannelId(), dst->getChannelId()))
+            return CommandRegistry::fail("that send would make a routing loop");
+        AudioRoute route;
+        route.targetChannelId = dst->getChannelId();
+        if (auto it = flags.find("level"); it != flags.end()) {
+            auto v = safeStof(it->second);
+            if (!v) return nullptr;
+            route.gain = *v;
+        }
+        if (auto it = flags.find("pan"); it != flags.end()) {
+            auto v = safeStof(it->second);
+            if (!v) return nullptr;
+            route.pan = *v;
+        }
+        if (auto it = flags.find("pre_fader"); it != flags.end()) route.postFader = !parseFlagBool(it->second);
+        if (auto it = flags.find("sidechain"); it != flags.end()) route.sidechainOnly = parseFlagBool(it->second);
+        return std::make_unique<AddSendCommand>(*tm, src->getChannelId(), route);
+    });
+
+    reg.registerCommand("set_send", [trackAt, sendRoute](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
+        auto trackRaw = requireFlag(flags, "track");
+        auto sendRaw = requireFlag(flags, "send");
+        if (!trackRaw || !sendRaw) return nullptr;
+        MixerChannel* src = nullptr;
+        if (auto err = trackAt(*tm, *trackRaw, "track", src)) return CommandRegistry::fail(*err);
+        auto sendId = safeStoull(*sendRaw);
+        AudioRoute route;
+        if (!sendId || !sendRoute(*src, *sendId, route))
+            return CommandRegistry::fail("no send " + std::string(*sendRaw) + " on track " + std::string(*trackRaw) +
+                                         " (get_routing_graph shows sendIds)");
+        if (auto it = flags.find("level"); it != flags.end()) {
+            auto v = safeStof(it->second);
+            if (!v) return nullptr;
+            route.gain = *v;
+        }
+        if (auto it = flags.find("pan"); it != flags.end()) {
+            auto v = safeStof(it->second);
+            if (!v) return nullptr;
+            route.pan = *v;
+        }
+        if (auto it = flags.find("pre_fader"); it != flags.end()) route.postFader = !parseFlagBool(it->second);
+        if (auto it = flags.find("mute"); it != flags.end()) route.mute = parseFlagBool(it->second);
+        if (auto it = flags.find("sidechain"); it != flags.end()) route.sidechainOnly = parseFlagBool(it->second);
+        return std::make_unique<EditSendCommand>(*tm, src->getChannelId(), *sendId, route);
+    });
+
+    reg.registerCommand("remove_send", [trackAt, sendRoute](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
+        auto trackRaw = requireFlag(flags, "track");
+        auto sendRaw = requireFlag(flags, "send");
+        if (!trackRaw || !sendRaw) return nullptr;
+        MixerChannel* src = nullptr;
+        if (auto err = trackAt(*tm, *trackRaw, "track", src)) return CommandRegistry::fail(*err);
+        auto sendId = safeStoull(*sendRaw);
+        AudioRoute route;
+        if (!sendId || !sendRoute(*src, *sendId, route))
+            return CommandRegistry::fail("no send " + std::string(*sendRaw) + " on track " + std::string(*trackRaw));
+        return std::make_unique<RemoveSendCommand>(*tm, src->getChannelId(), *sendId);
+    });
+
+    reg.registerCommand("move_effect", [trackAt](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
+        auto trackRaw = requireFlag(flags, "track");
+        auto fromRaw = requireFlag(flags, "from");
+        auto toRaw = requireFlag(flags, "to");
+        if (!trackRaw || !fromRaw || !toRaw) return nullptr;
+        MixerChannel* ch = nullptr;
+        if (auto err = trackAt(*tm, *trackRaw, "track", ch)) return CommandRegistry::fail(*err);
+        auto from = safeStoi(*fromRaw);
+        auto to = safeStoi(*toRaw);
+        if (!from || !to || *from < 0 || *to < 0) return nullptr;
+        auto& chain = ch->getEffectChain();
+        if (static_cast<size_t>(*from) >= chain.slotCount() || !chain.getPlugin(static_cast<size_t>(*from)))
+            return CommandRegistry::fail("no effect in slot " + std::string(*fromRaw));
+        if (static_cast<size_t>(*to) >= EffectChain::kMaxSlots) return CommandRegistry::fail("slot out of range");
+        if (*from == *to) return CommandRegistry::fail("the effect is already in that slot");
+        return std::make_unique<MovePluginCommand>(*tm, *ch, static_cast<size_t>(*from), static_cast<size_t>(*to));
     });
 }
 
