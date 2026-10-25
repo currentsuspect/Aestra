@@ -193,6 +193,8 @@ void check(PluginManager& manager, const PluginInfo& info, Result& r) {
         r.helperBlocks = oop->helperBlockCount();
         r.dryBlocks = oop->dryBlockCount();
         r.unsentBlocks = oop->unsentBlockCount();
+        if (!oop->usesSharedAudio())
+            r.notes.push_back("audio on the hex transport (no shared block)");
     }
     if (!finite) {
         r.sound = Mark::Fail;

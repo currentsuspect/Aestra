@@ -3,6 +3,7 @@
 #include "HelperEditorHost.h"
 #include "HelperLineReader.h"
 #include "HelperParamCommands.h"
+#include "SharedAudioBlock.h"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -322,6 +323,8 @@ int main(int argc, char** argv) {
     std::vector<float> processBuffer;
     std::vector<uint8_t> midiBuffer;
     std::vector<uint8_t> stateBuffer;
+    std::vector<float> processed; // kept across blocks so a block does not allocate
+    Aestra::Audio::SharedAudioBlock sharedBlock;
     std::string line;
 #ifdef AESTRA_ENABLE_TEST_HOOKS
     // The __aestra_test_echo__ fake plugin has no real module; it records applied
@@ -903,74 +906,107 @@ int main(int argc, char** argv) {
             return 0;
         } else if (command == "STATUS") {
             reply(active ? "OK ACTIVE" : (loaded ? "OK LOADED" : "OK EMPTY"));
-        } else if (command == "PROCESS" || command == "PROCESSMIDI") {
+        } else if (command == "SHM") {
+            // The app's shared block for audio (SharedAudioBlock.h). Saying no is safe: the app stays on hex.
+            std::string nameHex;
+            size_t maxSamples = 0;
+            size_t maxMidiBytes = 0;
+            input >> nameHex >> maxSamples >> maxMidiBytes;
+            const std::string name = hexDecode(nameHex);
+            if (name.empty() || maxSamples == 0 || maxSamples > 2u * 65536u || maxMidiBytes > (1u << 20) ||
+                !sharedBlock.open(name, maxSamples, maxMidiBytes)) {
+                reply("ERR shm");
+                continue;
+            }
+            reply("OK SHM");
+        } else if (command == "PROCESS" || command == "PROCESSMIDI" || command == "PROCESSSHM") {
             if (!loaded || !active) {
                 reply("ERR inactive");
                 continue;
             }
+            // PROCESSSHM carries only the sizes: the samples and the MIDI are in the shared block, and so is the answer.
+            const bool viaShm = command == "PROCESSSHM";
             uint32_t channels = 0;
             uint32_t frames = 0;
-            std::string payloadHex;
-            std::string midiHex;
-            input >> channels >> frames >> payloadHex;
-            if (command == "PROCESSMIDI") {
-                input >> midiHex;
-            }
+            input >> channels >> frames;
             if (channels == 0 || channels > 2 || frames == 0 || frames > maxBlockSize) {
                 reply("ERR invalid-process-size");
                 continue;
             }
-            if (!hexDecodeFloats(payloadHex, processBuffer) ||
-                processBuffer.size() < static_cast<size_t>(channels) * frames) {
-                reply("ERR invalid-process-payload");
-                continue;
-            }
+            const size_t sampleCount = static_cast<size_t>(channels) * frames;
             midiBuffer.clear();
-            if (command == "PROCESSMIDI" && !hexDecodeRaw(midiHex, midiBuffer)) {
-                reply("ERR invalid-midi-payload");
-                continue;
+            if (viaShm) {
+                size_t midiBytes = 0;
+                input >> midiBytes;
+                if (!sharedBlock.isOpen() || sampleCount > sharedBlock.maxSamples() ||
+                    midiBytes > sharedBlock.maxMidiBytes()) {
+                    reply("ERR invalid-shm-process");
+                    continue;
+                }
+                processBuffer.assign(sharedBlock.input(), sharedBlock.input() + sampleCount);
+                midiBuffer.assign(sharedBlock.midi(), sharedBlock.midi() + midiBytes);
+            } else {
+                std::string payloadHex;
+                std::string midiHex;
+                input >> payloadHex;
+                if (command == "PROCESSMIDI") {
+                    input >> midiHex;
+                }
+                if (!hexDecodeFloats(payloadHex, processBuffer) || processBuffer.size() < sampleCount) {
+                    reply("ERR invalid-process-payload");
+                    continue;
+                }
+                if (command == "PROCESSMIDI" && !hexDecodeRaw(midiHex, midiBuffer)) {
+                    reply("ERR invalid-midi-payload");
+                    continue;
+                }
             }
+            auto answer = [&](std::vector<float>& out) {
+                if (out.size() < sampleCount) {
+                    out.resize(sampleCount, 0.0f);
+                }
+                if (viaShm) {
+                    std::copy_n(out.data(), sampleCount, sharedBlock.output());
+                    reply("OK");
+                } else {
+                    reply("OK " + hexEncodeBytes(out.data(), sampleCount * sizeof(float)));
+                }
+            };
 
 #ifndef _WIN32
             if (clapModule.plugin) {
-                std::vector<float> processed;
                 const std::vector<uint8_t>* midiData = midiBuffer.empty() ? nullptr : &midiBuffer;
                 if (!clapModule.process(processBuffer, channels, frames, midiData, midiBuffer.size(), processed)) {
                     reply("ERR clap-process-failed");
                     continue;
                 }
-                const size_t byteCount = static_cast<size_t>(channels) * frames * sizeof(float);
-                reply("OK " + hexEncodeBytes(processed.data(), byteCount));
+                answer(processed);
                 continue;
             }
 #endif
 #ifdef AESTRA_HAS_VST3
             if (vst3Module.plugin) {
-                std::vector<float> processed;
                 const std::vector<uint8_t>* midiData = midiBuffer.empty() ? nullptr : &midiBuffer;
                 if (!vst3Module.process(processBuffer, channels, frames, midiData, midiBuffer.size(), processed)) {
                     reply("ERR vst3-process-failed");
                     continue;
                 }
-                const size_t byteCount = static_cast<size_t>(channels) * frames * sizeof(float);
-                reply("OK " + hexEncodeBytes(processed.data(), byteCount));
+                answer(processed);
                 continue;
             }
 #endif
 
-            const size_t byteCount = static_cast<size_t>(channels) * frames * sizeof(float);
 #ifdef AESTRA_ENABLE_TEST_HOOKS
             // Echo fake plugin: apply parameter 0 as an output gain so a test can
             // observe host->child parameter delivery through the audio itself (#238).
             if (echoPlugin) echoHasProcessed = true;
             if (echoPlugin && echoParams[0] != 1.0f) {
-                const size_t sampleCount = static_cast<size_t>(channels) * frames;
                 for (size_t i = 0; i < sampleCount && i < processBuffer.size(); ++i) {
                     processBuffer[i] *= echoParams[0];
                 }
             }
 #endif
-            reply("OK " + hexEncodeBytes(processBuffer.data(), byteCount));
+            answer(processBuffer);
         } else {
             reply("ERR unknown-command");
         }

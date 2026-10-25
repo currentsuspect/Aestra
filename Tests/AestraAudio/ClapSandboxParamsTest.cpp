@@ -2,16 +2,20 @@
 // V82-H7: a CLAP plugin's parameters through the sandbox, in a build with VST3 too. The helper
 // answered PARAMS and GETPARAM from a VST3-only branch first, so every CLAP plugin reported no
 // parameters once VST3 was built in (every real build). Also: a blocking scan after a cancel used
-// to walk no folder at all.
+// to walk no folder at all. And V82-H7 follow-up: the block's audio goes through shared memory, not hex over the pipe.
 #include "OutOfProcessPluginInstance.h"
 #include "PluginScanner.h"
 
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <filesystem>
 #include <iostream>
 #include <string>
 #include <thread>
+#ifdef __linux__
+#include <unistd.h>
+#endif
 
 #ifndef HELPER_PATH
 #error "HELPER_PATH is set by CMake"
@@ -29,9 +33,19 @@ void check(bool ok, const std::string& what) {
     if (!ok)
         ++failures;
 }
-} // namespace
 
-int main() {
+/// Load the fixture, move its gain and play through it. With shm false the helper is asked for nothing shared, so the
+/// hex transport (the fallback) is what carries the audio.
+void runGain(bool shm) {
+    std::cout << (shm ? "Shared-memory transport\n" : "Hex transport (AESTRA_PLUGIN_SHM=0)\n");
+#ifdef _WIN32
+    _putenv_s("AESTRA_PLUGIN_SHM", shm ? "" : "0");
+#else
+    if (shm)
+        unsetenv("AESTRA_PLUGIN_SHM");
+    else
+        setenv("AESTRA_PLUGIN_SHM", "0", 1);
+#endif
     PluginInfo info;
     info.id = "test.aestra.gain";
     info.name = "Gain Fixture";
@@ -42,6 +56,16 @@ int main() {
     OutOfProcessPluginInstance plugin(info, HELPER_PATH);
     check(plugin.load(), "the helper loads the fixture");
     check(plugin.initialize(48000.0, 256), "it initialises");
+    check(plugin.usesSharedAudio() == shm, shm ? "its audio goes through the shared block" : "its audio goes as hex");
+#ifdef __linux__
+    // The region's name is removed once the helper has it mapped, so nothing else can open it and it cannot outlive
+    // both processes.
+    bool leftover = false;
+    const std::string mine = "aestra-ph-" + std::to_string(getpid()) + "-";
+    for (const auto& e : std::filesystem::directory_iterator("/dev/shm"))
+        leftover = leftover || e.path().filename().string().rfind(mine, 0) == 0;
+    check(!leftover, "no shared-memory name is left in /dev/shm");
+#endif
     plugin.activate();
 
     const auto params = plugin.getParameters();
@@ -71,6 +95,12 @@ int main() {
     }
     plugin.deactivate();
     plugin.shutdown();
+}
+} // namespace
+
+int main() {
+    runGain(true);
+    runGain(false);
 
     // A blocking scan after a cancel still walks the folders.
     PluginScanner scanner;
