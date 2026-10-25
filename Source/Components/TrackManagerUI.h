@@ -327,6 +327,13 @@ public:
 
     // Loop markers (Visual feedback)
     void setLoopRegion(double startBeat, double endBeat, bool enabled);
+    /// What a ruler drag over [startBeat, endBeat) does: loop that range (Selection preset).
+    void selectLoopRange(double startBeat, double endBeat);
+    /// What a ruler click without a drag does: clear the range and turn the loop off.
+    void clearLoopRange();
+    bool isLoopEnabled() const { return m_loopEnabled; }
+    double getLoopStartBeat() const { return m_loopStartBeat; }
+    double getLoopEndBeat() const { return m_loopEndBeat; }
 
     bool onMouseEvent(const ::AestraUI::NUIMouseEvent& event) override;
     bool onKeyEvent(const ::AestraUI::NUIKeyEvent& event) override;

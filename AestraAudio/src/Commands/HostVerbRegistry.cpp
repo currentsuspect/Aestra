@@ -108,6 +108,7 @@ const char* HostVerbRegistry::domainName(HostVerbDomain domain) {
     case HostVerbDomain::View:     return "view";
     case HostVerbDomain::Browser:  return "browser";
     case HostVerbDomain::Dialog:   return "dialog";
+    case HostVerbDomain::Transport: return "transport";
     }
     return "";
 }

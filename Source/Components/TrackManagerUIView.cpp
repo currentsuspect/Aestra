@@ -460,6 +460,29 @@ void TrackManagerUI::setLoopRegion(double startBeat, double endBeat, bool enable
     invalidateCache(); // Redraw to show updated markers
 }
 
+void TrackManagerUI::selectLoopRange(double startBeat, double endBeat) {
+    // The ruler-drag outcome, callable without a mouse: loop markers through the
+    // centralized propagation, the Selection preset, then the same two callbacks
+    // the drag fires (the app moves the engine and transport loop from them).
+    updateSelectionLoopRegion(startBeat, endBeat);
+    m_loopPreset = TimelineLoopPreset::Selection;
+    if (m_onSelectionMade) {
+        m_onSelectionMade(startBeat, endBeat);
+    }
+    if (m_onLoopPresetChanged) {
+        m_onLoopPresetChanged(timelineLoopPresetId(TimelineLoopPreset::Selection));
+    }
+}
+
+void TrackManagerUI::clearLoopRange() {
+    // A ruler click without a drag: no range, loop off.
+    setLoopRegion(0.0, 0.0, false);
+    m_loopPreset = TimelineLoopPreset::Off;
+    if (m_onLoopPresetChanged) {
+        m_onLoopPresetChanged(timelineLoopPresetId(TimelineLoopPreset::Off));
+    }
+}
+
 void TrackManagerUI::updateSelectionLoopRegion(double startBeat, double endBeat) {
     setLoopRegion(startBeat, endBeat, true);
     m_rulerSelectionStartBeat = startBeat;

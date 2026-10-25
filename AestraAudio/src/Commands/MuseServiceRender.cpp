@@ -19,6 +19,7 @@
 #include "Models/TrackManager.h"
 
 #include "AestraJSON.h"
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <fstream>
@@ -77,9 +78,18 @@ bool writeFloat32Wav(const std::string& path, const std::vector<float>& samples,
 // tracks added since the engine was wired, and the audio graph drained — which
 // in the app happens continuously in AestraApp::run() and has to be done by
 // hand here.
+// What part of the song to render, and whose output. The defaults are the whole
+// timeline through the master: render_song as it always was.
+struct SongRenderScope {
+    double startBeat = 0.0;
+    double endBeat = 0.0; // <= startBeat: to the end of the timeline
+    uint32_t channelId = TrackOutputTap::kNoChannel;
+    bool postFader = true;
+};
+
 bool renderFullSong(AudioEngine& engine, TrackManager& trackManager,
                     const std::string& outputPath, double tailSeconds,
-                    AudioExporter::Result& outResult) {
+                    const SongRenderScope& scope, AudioExporter::Result& outResult) {
     // This drives processBlock by hand; the live callback stands down meanwhile.
     ManualRenderLease lease(engine);
     trackManager.buildAndShareSlotMap();
@@ -129,9 +139,80 @@ bool renderFullSong(AudioEngine& engine, TrackManager& trackManager,
         config.bitDepth = AudioExporter::BitDepth::Float_32;
         config.numChannels = 2;
         config.tailSeconds = tailSeconds;
+        config.startBeat = scope.startBeat;
+        config.endBeat = scope.endBeat;
+        config.captureMixerChannelId = scope.channelId;
+        config.captureAfterFader = scope.postFader;
         outResult = exporter.render(config);
     }
     return outResult.success;
+}
+
+// Parse the optional range and channel args shared by render_song and
+// verify_render. Returns an error message, or empty when the args are usable.
+std::string parseSongRenderScope(JSON& args, TrackManager& trackManager, SongRenderScope& out) {
+    const bool hasStart = args.has("start");
+    const bool hasEnd = args.has("end");
+    if (hasStart) {
+        if (!args["start"].isNumber() || !std::isfinite(args["start"].asNumber()) ||
+            args["start"].asNumber() < 0.0) {
+            return "arg 'start' must be a beat position >= 0";
+        }
+        out.startBeat = args["start"].asNumber();
+    }
+    if (hasEnd) {
+        if (!args["end"].isNumber() || !std::isfinite(args["end"].asNumber())) {
+            return "arg 'end' must be a beat position";
+        }
+        out.endBeat = args["end"].asNumber();
+        if (!(out.endBeat > out.startBeat)) {
+            return "arg 'end' must be after 'start'";
+        }
+    } else if (hasStart) {
+        // The exporter reads end <= start as "the whole song", which would
+        // silently drop the start the caller asked for.
+        const double total = trackManager.getPlaylistModel().getTotalDurationBeats();
+        if (!(total > out.startBeat)) {
+            return "arg 'start' is at or past the end of the timeline";
+        }
+        out.endBeat = total;
+    }
+    if (args.has("channel")) {
+        uint64_t channel = 0;
+        if (!args["channel"].isNumber() || !numberToId(args["channel"].asNumber(), channel) ||
+            channel == 0 || channel > 0xFFFFFFFEull) {
+            return "arg 'channel' must be a mixer channel id from list_tracks (0 is the master)";
+        }
+        if (!trackManager.getChannelById(static_cast<uint32_t>(channel))) {
+            return "no mixer channel with id " + std::to_string(channel);
+        }
+        out.channelId = static_cast<uint32_t>(channel);
+    }
+    if (args.has("post_fader")) {
+        if (!args["post_fader"].isBool()) {
+            return "arg 'post_fader' must be true or false";
+        }
+        if (out.channelId == TrackOutputTap::kNoChannel) {
+            return "arg 'post_fader' needs 'channel'";
+        }
+        out.postFader = args["post_fader"].asBool();
+    }
+    return {};
+}
+
+bool isSongScopeArg(const std::string& key) {
+    return key == "start" || key == "end" || key == "channel" || key == "post_fader";
+}
+
+void addSongScopeToResult(JSON& result, const SongRenderScope& scope) {
+    if (scope.endBeat > scope.startBeat) {
+        result.set("startBeat", JSON(scope.startBeat));
+        result.set("endBeat", JSON(scope.endBeat));
+    }
+    if (scope.channelId != TrackOutputTap::kNoChannel) {
+        result.set("channel", JSON(static_cast<double>(scope.channelId)));
+        result.set("postFader", JSON(scope.postFader));
+    }
 }
 
 } // namespace
@@ -168,7 +249,7 @@ std::optional<std::string> handleRenderVerbs(const RequestContext& ctx, const Re
         }
         JSON& args = request["args"];
         for (auto& entry : args.asObject()) {
-            if (entry.first != "file" && entry.first != "tail") {
+            if (entry.first != "file" && entry.first != "tail" && !isSongScopeArg(entry.first)) {
                 return makeError(id, "validation_error",
                                  "unknown arg for render_song: " + entry.first, verb)
                     .toString();
@@ -193,8 +274,13 @@ std::optional<std::string> handleRenderVerbs(const RequestContext& ctx, const Re
             }
         }
 
+        SongRenderScope scope;
+        if (const std::string bad = parseSongRenderScope(args, *m_trackManager, scope); !bad.empty()) {
+            return makeError(id, "validation_error", bad, verb).toString();
+        }
+
         AudioExporter::Result exportResult;
-        renderFullSong(*m_engine, *m_trackManager, args["file"].asString(), tailSeconds,
+        renderFullSong(*m_engine, *m_trackManager, args["file"].asString(), tailSeconds, scope,
                        exportResult);
 
         if (!exportResult.success) {
@@ -208,6 +294,7 @@ std::optional<std::string> handleRenderVerbs(const RequestContext& ctx, const Re
         result.set("frames", JSON(static_cast<double>(exportResult.framesRendered)));
         result.set("sampleRate", JSON(static_cast<double>(m_engine->getSampleRate())));
         result.set("peakDb", JSON(exportResult.peakDb));
+        addSongScopeToResult(result, scope);
         JSON response = makeOk();
         response.set("result", result);
         return finish(response);
@@ -430,7 +517,8 @@ std::optional<std::string> handleRenderVerbs(const RequestContext& ctx, const Re
             const std::string& key = entry.first;
             const bool known = key == "file" || key == "tail" || key == "against" ||
                                key == "expect_peak_min_db" || key == "expect_peak_max_db" ||
-                               key == "expect_not_silent" || key == "expect_no_clipping";
+                               key == "expect_not_silent" || key == "expect_no_clipping" ||
+                               isSongScopeArg(key);
             if (!known) {
                 return makeError(id, "validation_error", "unknown arg for verify_render: " + key,
                                  verb)
@@ -524,8 +612,13 @@ std::optional<std::string> handleRenderVerbs(const RequestContext& ctx, const Re
             }
         }
 
+        SongRenderScope scope;
+        if (const std::string bad = parseSongRenderScope(args, *m_trackManager, scope); !bad.empty()) {
+            return makeError(id, "validation_error", bad, verb).toString();
+        }
+
         AudioExporter::Result exportResult;
-        renderFullSong(*m_engine, *m_trackManager, args["file"].asString(), tailSeconds,
+        renderFullSong(*m_engine, *m_trackManager, args["file"].asString(), tailSeconds, scope,
                        exportResult);
         if (!exportResult.success) {
             // A render that could not happen is not a verdict, so it stays an
@@ -579,6 +672,7 @@ std::optional<std::string> handleRenderVerbs(const RequestContext& ctx, const Re
         // dBTP, so the key reads maxTruePeakDbTp — not maxTruePeakDbTtp.
         result.set("maxTruePeakDbTp", JSON(static_cast<double>(exportResult.maxTruePeakdBTP)));
         result.set("truePeakCeilingExceeded", JSON(exportResult.truePeakCeilingExceeded));
+        addSongScopeToResult(result, scope);
 
         if (!against.empty()) {
             // Byte-for-byte reproducibility: an unchanged session must render

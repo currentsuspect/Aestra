@@ -197,6 +197,9 @@ void registerMuseHostVerbs(Audio::MuseService& service, ::AestraContent& content
     // AestraApp's private save/load path, and because the same operations back the
     // File menu — see ProjectLifecycle.cpp for why there is one implementation.
     app.registerMuseProjectVerbs(service);
+
+    // --- transport.* ---------------------------------------------------------
+    registerMuseTransportVerbs(service, content, app);
 }
 
 } // namespace Aestra
