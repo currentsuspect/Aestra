@@ -23,6 +23,7 @@
 #include "IO/MiniAudioDecoder.h"
 #include "Commands/RemoveClipCommand.h"
 #include "Commands/RoutingCommands.h"
+#include "Commands/MakeClipPatternUniqueCommand.h"
 #include "Commands/SetAudioPatternMixerChannelCommand.h"
 #include "Commands/SetUnitMixerChannelCommand.h"
 #include "Commands/RenderAudioClipCommand.h"
@@ -1151,6 +1152,21 @@ void CommandRegistry::initialize() {
         // The command reports failure by not executing (no throw), and a
         // non-executed command is not undoable — validated above so it runs.
         return std::make_unique<SetAudioPatternMixerChannelCommand>(*tm, PatternID{*patternId}, channelId);
+    });
+
+    reg.registerCommand("make_clip_unique", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
+        auto idRaw = requireFlag(flags, "id");
+        if (!idRaw) return nullptr;
+        auto idOpt = parseObjectId(*idRaw);
+        if (!idOpt) return CommandRegistry::fail("not a clip id: " + std::string(*idRaw));
+        const ClipInstanceID clipId(*idOpt);
+        const auto* clip = tm->getPlaylistModel().getClip(clipId);
+        if (!clip || !clip->patternId.isValid()) return CommandRegistry::fail("no clip " + std::string(*idRaw));
+        if (!tm->getPatternManager().getPattern(clip->patternId))
+            return CommandRegistry::fail("clip " + std::string(*idRaw) + " has no pattern to copy");
+        return std::make_unique<MakeClipPatternUniqueCommand>(*tm, clipId);
     });
 
     reg.registerCommand("set_output", [trackAt](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {

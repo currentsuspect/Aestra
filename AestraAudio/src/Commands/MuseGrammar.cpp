@@ -229,6 +229,10 @@ static const std::vector<CommandSchema> s_schemas = {
         {"track", FlagType::Int, true, -1.0}
     },
      "Send an audio pattern (an audio clip's source, see list_patterns / list_clips) to a mixer track by index, or -1 for the master. Every clip of that pattern plays through the track's fader, inserts and sends."},
+    {"make_clip_unique", CommandCategory::Clip, {
+        {"id", FlagType::Id, true}
+    },
+     "Give a clip its own copy of its pattern, so edits and routing (route_pattern) apply to this clip only; other clips keep the original. list_clips shows the new pattern id. Same as the UI's Make Unique."},
     {"set_output", CommandCategory::Track, {
         {"track", FlagType::Int, true, 0.0},
         {"to", FlagType::Int, true, -1.0}

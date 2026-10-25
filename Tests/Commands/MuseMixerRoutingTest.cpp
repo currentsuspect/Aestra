@@ -240,6 +240,41 @@ int main() {
         a.set("track", JSON(-1.0));
         check(statusOf(call(service, req(19, "route_pattern", a).toString())) == "ok" && renderPeak(service, out) > -90.0,
               "routed to the master, the clip is audible again");
+        // make_clip_unique: a copy of the clip on the same pattern is split off
+        // so routing applies to one clip only.
+        std::string firstClip;
+        double firstPattern = -1.0;
+        clips = call(service, "{\"id\": 22, \"verb\": \"list_clips\"}");
+        for (size_t li = 0; li < clips["result"]["lanes"].size(); ++li) {
+            JSON l = clips["result"]["lanes"][li];
+            for (size_t ci = 0; ci < l["clips"].size(); ++ci) {
+                if (l["clips"][ci]["pattern"].asNumber() == audioPattern) {
+                    firstClip = l["clips"][ci]["id"].asString();
+                    firstPattern = audioPattern;
+                }
+            }
+        }
+        JSON dup = args();
+        dup.set("id", JSON(firstClip));
+        dup.set("bar", JSON(3.0));
+        check(statusOf(call(service, req(23, "duplicate_clip", dup).toString())) == "ok", "duplicate the clip (shares its pattern)");
+        JSON uniq = args();
+        uniq.set("id", JSON(firstClip));
+        check(statusOf(call(service, req(24, "make_clip_unique", uniq).toString())) == "ok", "make the original unique");
+        int onOld = 0, onNew = 0;
+        clips = call(service, "{\"id\": 25, \"verb\": \"list_clips\"}");
+        for (size_t li = 0; li < clips["result"]["lanes"].size(); ++li) {
+            JSON l = clips["result"]["lanes"][li];
+            for (size_t ci = 0; ci < l["clips"].size(); ++ci) {
+                const double p = l["clips"][ci]["pattern"].asNumber();
+                if (l["clips"][ci]["id"].asString() == firstClip && p != firstPattern) ++onNew;
+                if (l["clips"][ci]["id"].asString() != firstClip && p == firstPattern) ++onOld;
+            }
+        }
+        check(onNew == 1 && onOld == 1, "the unique clip has its own pattern; the copy keeps the original");
+        uniq.set("id", JSON("00000000000000000000000000000000"));
+        check(statusOf(call(service, req(26, "make_clip_unique", uniq).toString())) != "ok", "an unknown clip is refused");
+
         a = args();
         a.set("pattern", JSON(1.0)); // the kick's MIDI pattern
         a.set("track", JSON(1.0));
