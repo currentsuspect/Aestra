@@ -1,10 +1,16 @@
 #include "Commands/CommandParser.h"
 
 #include "AestraUUID.h"
+#include "Commands/AddChannelCommand.h"
+#include "Commands/AddUnitCommand.h"
+#include "Commands/ArrangePatternCommand.h"
 #include "Commands/ClonePatternCommand.h"
 #include "Commands/CommandHistory.h"
 #include "Commands/CommandRegistry.h"
+#include "Commands/CreateLaneCommand.h"
+#include "Commands/DuplicateClipCommand.h"
 #include "Commands/EffectCommands.h"
+#include "Commands/ImportAudioClipCommand.h"
 
 #include <algorithm>
 #include <chrono>
@@ -157,40 +163,15 @@ CommandResult CommandParser::execute(const std::string& verb,
         history.pushAndExecute(shared);
         result.undoable = undoable;
 
-        // clone_pattern creates a new object the caller needs to address;
-        // surface its id (structured in createdId, and in the message for
-        // humans) instead of making the agent diff list_patterns.
-        if (const auto* clone = dynamic_cast<const ClonePatternCommand*>(shared.get())) {
-            // CommandHistory::pushAndExecute swallows a throwing execute()
-            // (the command is not recorded); an invalid id here means the
-            // clone did not happen.
-            if (!clone->getClonedPatternId().isValid()) {
-                result.status = CommandStatus::ExecutionError;
-                result.message = "failed to clone pattern";
-                result.undoable = false;
-                return finish(result);
-            }
-            result.status = CommandStatus::Success;
-            result.createdId = clone->getClonedPatternId().value;
-            result.hasCreatedId = true;
-            result.message = "cloned pattern -> " +
-                             std::to_string(clone->getClonedPatternId().value);
+        // Every verb that creates something reports what it created, so an
+        // agent never has to diff a list (or parse the message) to address it.
+        if (!describeCreated(*shared, result)) {
+            result.status = CommandStatus::ExecutionError;
+            result.undoable = false;
             return finish(result);
         }
-        // add_effect: the slot is how the effect is addressed afterwards.
-        // pushAndExecute swallows a throwing execute(), so confirm the insert
-        // actually happened before reporting a slot.
-        if (const auto* addEffect = dynamic_cast<const AddEffectCommand*>(shared.get())) {
-            if (!addEffect->wasExecuted()) {
-                result.status = CommandStatus::ExecutionError;
-                result.message = "failed to add effect";
-                result.undoable = false;
-                return finish(result);
-            }
+        if (result.hasCreatedId) {
             result.status = CommandStatus::Success;
-            result.createdId = static_cast<uint64_t>(addEffect->getSlotIndex());
-            result.hasCreatedId = true;
-            result.message = "added effect in slot " + std::to_string(addEffect->getSlotIndex());
             return finish(result);
         }
     } catch (const std::exception& e) {
@@ -341,6 +322,60 @@ bool CommandParser::convertAndValidateValue(
     }
     }
 
+    return true;
+}
+
+
+bool CommandParser::describeCreated(const ICommand& cmd, CommandResult& out) {
+    // CommandHistory::pushAndExecute swallows a throwing execute(), so each
+    // branch confirms the object exists before reporting it.
+    const auto created = [&](uint64_t numericId, std::string text, const char* kind, std::string message) {
+        out.createdId = numericId;
+        out.createdIdText = std::move(text);
+        out.createdKind = kind;
+        out.hasCreatedId = true;
+        out.message = std::move(message);
+        return true;
+    };
+    const auto failed = [&](std::string message) {
+        out.message = std::move(message);
+        return false;
+    };
+    if (const auto* clone = dynamic_cast<const ClonePatternCommand*>(&cmd)) {
+        if (!clone->getClonedPatternId().isValid()) return failed("failed to clone pattern");
+        const uint64_t pid = clone->getClonedPatternId().value;
+        return created(pid, {}, "pattern", "cloned pattern -> " + std::to_string(pid));
+    }
+    // add_effect: the slot is how the effect is addressed afterwards.
+    if (const auto* addEffect = dynamic_cast<const AddEffectCommand*>(&cmd)) {
+        if (!addEffect->wasExecuted()) return failed("failed to add effect");
+        const auto slot = static_cast<uint64_t>(addEffect->getSlotIndex());
+        return created(slot, {}, "slot", "added effect in slot " + std::to_string(slot));
+    }
+    if (const auto* addUnit = dynamic_cast<const AddUnitCommand*>(&cmd)) {
+        const UnitID unit = addUnit->getCreatedUnitId();
+        if (unit == UnitID{0}) return failed("failed to add unit");
+        return created(static_cast<uint64_t>(unit), {}, "unit", "added unit " + std::to_string(unit));
+    }
+    if (const auto* addChannel = dynamic_cast<const AddChannelCommand*>(&cmd)) {
+        const uint32_t channel = addChannel->getCreatedChannelId();
+        if (channel == 0) return failed("failed to add track");
+        return created(channel, {}, "track", "added track " + std::to_string(channel));
+    }
+    if (const auto* lane = dynamic_cast<const CreateLaneCommand*>(&cmd)) {
+        if (!lane->getLaneId().isValid()) return failed("failed to add lane");
+        return created(0, lane->getLaneId().toString(), "lane", "added lane " + lane->getLaneId().toString());
+    }
+    const auto clip = [&](ClipInstanceID id, const char* what) {
+        if (!id.isValid()) return failed(std::string("failed to ") + what);
+        return created(0, id.toString(), "clip", std::string(what) + " -> " + id.toString());
+    };
+    if (const auto* imported = dynamic_cast<const ImportAudioClipCommand*>(&cmd))
+        return clip(imported->getClipId(), "add clip");
+    if (const auto* dup = dynamic_cast<const DuplicateClipCommand*>(&cmd))
+        return clip(dup->getDuplicateId(), "duplicate clip");
+    if (const auto* arranged = dynamic_cast<const ArrangePatternCommand*>(&cmd))
+        return clip(arranged->getClipId(), "arrange pattern");
     return true;
 }
 

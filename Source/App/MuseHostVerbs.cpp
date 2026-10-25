@@ -5,6 +5,8 @@
 #include "Commands/HostVerbRegistry.h"
 #include "Commands/MuseService.h"
 #include "Core/AestraContent.h"
+#include "Core/AudioDeviceManager.h"
+#include "ServiceLocator.h"
 #include "ViewTypes.h"
 
 #include "AestraLog.h"
@@ -102,6 +104,22 @@ void registerOrLog(Audio::MuseService& service, HostVerbSpec spec, Audio::HostVe
 void registerMuseHostVerbs(Audio::MuseService& service, ::AestraContent& content,
                            ::AestraApp& app) {
     ::AestraContent* c = &content;
+
+    // Offline renders requested over the socket stop the device stream first,
+    // exactly as Export, Bounce and the Versions bounce do; otherwise the
+    // device callback and the render pump the same engine at once.
+    service.setOfflineRenderStreamHooks(
+        [] {
+            auto* deviceManager = ServiceLocator::get<Audio::AudioDeviceManager>();
+            if (!deviceManager || !deviceManager->isStreamRunning()) return false;
+            deviceManager->stopStream();
+            return true;
+        },
+        [] {
+            if (auto* deviceManager = ServiceLocator::get<Audio::AudioDeviceManager>()) {
+                deviceManager->startStream();
+            }
+        });
 
     // --- view.open / view.close ---------------------------------------------
     const auto setOpen = [c](const JSON& args, bool open) -> HostVerbResult {

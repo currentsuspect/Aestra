@@ -140,6 +140,7 @@ std::optional<std::string> handleHistoryVerbs(const RequestContext& ctx, const R
         auto transaction = std::make_shared<CommandTransaction>("Muse Batch");
         std::vector<std::shared_ptr<ICommand>> executed;
         executed.reserve(count);
+        JSON createdList = JSON::array();
         // Unwind the executed prefix in reverse and produce the final
         // error response. A rollback failure must not hide behind the
         // member error: the response then reports execution_error and
@@ -218,6 +219,23 @@ std::optional<std::string> handleHistoryVerbs(const RequestContext& ctx, const R
             } catch (...) {
                 return failBatch("execution_error", prefix + "command threw");
             }
+            CommandResult member;
+            if (!CommandParser::describeCreated(*cmd, member)) {
+                executed.push_back(cmd); // rolled back with the rest
+                return failBatch("execution_error", prefix + member.message);
+            }
+            if (member.hasCreatedId) {
+                JSON entry = JSON::object();
+                entry.set("index", JSON(static_cast<double>(i)));
+                entry.set("verb", JSON(subVerb));
+                if (!member.createdIdText.empty()) {
+                    entry.set("createdId", JSON(member.createdIdText));
+                } else {
+                    entry.set("createdId", JSON(static_cast<double>(member.createdId)));
+                }
+                entry.set("createdKind", JSON(member.createdKind));
+                createdList.push(entry);
+            }
             executed.push_back(cmd);
             transaction->add(cmd);
         }
@@ -233,6 +251,9 @@ std::optional<std::string> handleHistoryVerbs(const RequestContext& ctx, const R
 
         JSON result = JSON::object();
         result.set("count", JSON(static_cast<double>(count)));
+        // What each member created, in member order, so a batch that builds a
+        // unit and then needs its id later is not followed by a list diff.
+        result.set("created", createdList);
         JSON response = makeOk();
         response.set("result", result);
         response.set("undoable", JSON(true));
