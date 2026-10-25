@@ -18,6 +18,8 @@ namespace Aestra {
 namespace Audio {
 
 class PluginHostProcess;
+class SharedAudioBlock;
+class WorkerWake;
 
 class OutOfProcessPluginInstance : public IPluginInstance {
 public:
@@ -91,6 +93,9 @@ public:
     // Blocks whose input and MIDI never reached the helper because the previous
     // block was still with it. A note-on in such a block is lost (V82-H7).
     uint64_t unsentBlockCount() const { return m_unsentBlocks.load(std::memory_order_relaxed); }
+    // True when the block's audio travels through shared memory rather than hex over the pipe (V82-H7 follow-up). Set up by
+    // initialize(); false means the helper could not map the region and the slower path is in use.
+    bool usesSharedAudio() const { return m_shm != nullptr; }
 
 #ifdef AESTRA_ENABLE_TEST_HOOKS
     // Send a raw command to the helper and return its reply. Test-only: used by the
@@ -130,6 +135,8 @@ private:
     bool processBlockInHelper(const std::vector<float>& input, uint32_t channels, uint32_t frames,
                               const std::vector<uint8_t>& midiData, size_t midiBytes, std::vector<float>& output);
     void markCrashed();
+    void setupSharedBlock();     ///< audio through shared memory when the helper can map it (V82-H7 follow-up)
+    static void raiseWorkerPriority();
     void refreshPluginLatency(); ///< asks the helper for the plugin's own latency
     void passThrough(const float* const* inputs, float** outputs, uint32_t numInputChannels, uint32_t numOutputChannels,
                      uint32_t numFrames) const;
@@ -137,6 +144,8 @@ private:
     PluginInfo m_info;
     std::string m_hostExecutablePath;
     std::unique_ptr<PluginHostProcess> m_process;
+    std::unique_ptr<SharedAudioBlock> m_shm; ///< null: the block travels hex-encoded over the pipe
+    std::unique_ptr<WorkerWake> m_wake;
     mutable std::mutex m_ipcMutex;
     std::atomic<bool> m_loaded{false};
     std::atomic<bool> m_active{false};
