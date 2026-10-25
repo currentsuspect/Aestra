@@ -89,6 +89,20 @@ public:
     // Freeze the reported callbackCount so the health monitor detects a "stall".
     void freezeCallbacks() { m_callbacksFrozen.store(true); }
 
+    // Wedge stopStream() the way a real backend can (PulseAudio blocked in its
+    // own write after the device vanished): it blocks until released.
+    std::atomic<int> m_stopCalls{0};
+    std::atomic<int> m_abandonCalls{0};
+    void wedgeStop() {
+        std::lock_guard<std::mutex> l(m_stopMx);
+        m_stopWedged = true;
+    }
+    void releaseStop() {
+        std::lock_guard<std::mutex> l(m_stopMx);
+        m_stopWedged = false;
+        m_stopCv.notify_all();
+    }
+
     // --- IAudioDriver ---
     std::string getDisplayName() const override { return "FakeDriver"; }
     AudioDriverType getDriverType() const override { return m_type; }
@@ -134,7 +148,18 @@ public:
         m_running = true;
         return true;
     }
-    void stopStream() override { m_running = false; }
+    void stopStream() override {
+        m_stopCalls.fetch_add(1);
+        std::unique_lock<std::mutex> l(m_stopMx);
+        m_stopCv.wait(l, [this] { return !m_stopWedged; });
+        m_running = false;
+    }
+    // Like the real driver: let go of the stream without waiting on it.
+    void abandonStream() override {
+        m_abandonCalls.fetch_add(1);
+        m_running = false;
+        m_open = false;
+    }
 
     bool isStreamRunning() const override { return m_running.load(); }
     double getStreamLatency() const override { return 0.01; }
@@ -173,6 +198,10 @@ private:
     std::atomic<bool> m_callbacksFrozen{false};
     uint64_t m_frozenCount = 1;
     std::chrono::steady_clock::time_point m_start = std::chrono::steady_clock::now();
+
+    std::mutex m_stopMx;
+    std::condition_variable m_stopCv;
+    bool m_stopWedged = false;
 
     mutable std::mutex m_barrierMx;
     std::condition_variable m_barrierCv;
@@ -544,6 +573,90 @@ void testPreRestartCallbackRejectionTriggersRollback() {
     h->mgr.shutdown();
 }
 
+// 12. A wedged stream never freezes the manager. The primary's callbacks stop
+//     AND its stopStream() blocks forever, as PulseAudio's did when the output
+//     device vanished mid-write (owner's session, 2026-10-25): the health
+//     monitor used to stop it while holding the manager lock, and the Settings
+//     page froze behind that lock. Getters run on a watcher thread and the
+//     wedge is released at a deadline, so a regression fails instead of hanging.
+void testWedgedStreamDoesNotFreezeManager() {
+    auto h = makeHarness();
+    h->mgr.openStream(baseConfig(), silentCallback, nullptr);
+    h->mgr.startStream();
+    h->primary->wedgeStop();
+    h->primary->freezeCallbacks();
+
+    std::atomic<bool> stop{false};
+    std::atomic<long long> worstGetterMs{0};
+    std::atomic<bool> switched{false};
+    std::thread watcher([&] {
+        while (!stop.load()) {
+            const auto t0 = std::chrono::steady_clock::now();
+            const bool dummy = h->mgr.getActiveDriverType() == AudioDriverType::DUMMY;
+            (void)h->mgr.getCurrentConfig();
+            (void)h->mgr.isStreamRunning();
+            const auto ms =
+                std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
+            if (ms > worstGetterMs.load()) worstGetterMs.store(ms);
+            if (dummy) switched.store(true);
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        }
+    });
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(20);
+    while (!switched.load() && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+    const bool switchedInTime = switched.load();
+    h->primary->releaseStop(); // unwind a regression so the test can report it
+    stop.store(true);
+    watcher.join();
+
+    check(switchedInTime, "a wedged stream is replaced by the safety driver");
+    check(h->primary->m_abandonCalls.load() >= 1, "the wedged stream was abandoned");
+    check(h->primary->m_stopCalls.load() == 0, "the wedged stream was never stopped under the manager lock");
+    check(worstGetterMs.load() < 1000, "manager getters stayed responsive throughout (worst " +
+                                           std::to_string(worstGetterMs.load()) + " ms)");
+    h->mgr.shutdown();
+}
+
+// 13. Switching device while the stream is wedged — what the owner did when
+//     the stream froze — returns promptly and reopens, instead of blocking the
+//     caller (the UI thread, in the app) on the wedged stop.
+void testSwitchDeviceWhileWedged() {
+    auto h = makeHarness();
+    h->mgr.openStream(baseConfig(), silentCallback, nullptr);
+    h->mgr.startStream();
+    h->primary->wedgeStop();
+    h->primary->freezeCallbacks();
+    // Let the monitor observe the frozen count for longer than the stall
+    // threshold (1 s) but less than its own safety switch (2 s).
+    std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+
+    std::atomic<bool> done{false};
+    std::atomic<bool> ok{false};
+    std::atomic<long long> tookMs{-1};
+    std::thread switcher([&] {
+        const auto t0 = std::chrono::steady_clock::now();
+        ok.store(h->mgr.switchDevice(kDeviceB));
+        tookMs.store(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0)
+                         .count());
+        done.store(true);
+    });
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+    while (!done.load() && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+    const bool returnedInTime = done.load();
+    h->primary->releaseStop();
+    switcher.join();
+
+    check(returnedInTime && tookMs.load() < 1000,
+          "switchDevice on a wedged stream returns promptly (" + std::to_string(tookMs.load()) + " ms)");
+    check(h->primary->m_abandonCalls.load() >= 1, "the wedged stream was abandoned, not stopped");
+    check(h->mgr.isStreamRunning(), "audio is running again after the switch");
+    h->mgr.shutdown();
+}
+
 int main() {
     std::cout << "=== AudioDeviceManager race/coherence tests (#391) ===\n";
     testEnumerationBarrierVsTransition();
@@ -557,6 +670,8 @@ int main() {
     testPreRestartConfigHookSkippedOnFailedReopen();
     testPreRestartConfigHookFiresOnInputDeviceSwitch();
     testPreRestartCallbackRejectionTriggersRollback();
+    testWedgedStreamDoesNotFreezeManager();
+    testSwitchDeviceWhileWedged();
 
     std::cout << (g_failures == 0 ? "ALL PASSED\n" : "FAILURES: " + std::to_string(g_failures) + "\n");
     return g_failures == 0 ? 0 : 1;

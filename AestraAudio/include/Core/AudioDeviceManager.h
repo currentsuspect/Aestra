@@ -383,6 +383,9 @@ private:
     uint64_t m_healthLastCallbackCount = 0;
     std::chrono::steady_clock::time_point m_healthLastUpdateTime;
     bool m_healthTrackingInitialized = false;
+    // A running stream whose callback count has not moved for this long is
+    // treated as wedged: it is abandoned, never stopped under m_mutex.
+    static constexpr long long kStallMs = 1000;
 
     // K-002: Driver health monitoring thread.
     // m_healthMonitorMutex serializes the monitor's lifecycle (thread handle +
@@ -413,6 +416,8 @@ private:
     void closeStreamLocked();
     bool startStreamLocked();
     void stopStreamLocked();
+    /// The active stream is running but its callback has not advanced for kStallMs.
+    bool isActiveStreamStalledLocked() const;
     bool firePreRestartConfigCallbackLocked();
     bool validateDeviceConfigLocked(uint32_t deviceId, uint32_t sampleRate) const;
     bool validateStreamConfigLocked(const AudioStreamConfig& config) const;

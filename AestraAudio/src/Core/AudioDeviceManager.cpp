@@ -228,9 +228,32 @@ bool AudioDeviceManager::openStream(const AudioStreamConfig& config, AudioCallba
     return openStreamLocked(config, callback, userData);
 }
 
+bool AudioDeviceManager::isActiveStreamStalledLocked() const {
+    if (!m_activeDriver || !m_healthTrackingInitialized || m_activeDriver->getDriverType() == AudioDriverType::DUMMY ||
+        !m_activeDriver->isStreamRunning()) {
+        return false;
+    }
+    if (m_activeDriver->getStatistics().callbackCount != m_healthLastCallbackCount) {
+        return false;
+    }
+    const auto quiet = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() -
+                                                                             m_healthLastUpdateTime)
+                           .count();
+    return quiet > kStallMs;
+}
+
 void AudioDeviceManager::closeStreamLocked() {
     if (m_activeDriver) {
-        m_activeDriver->closeStream();
+        // A wedged backend can hold the lock its own stop needs (PulseAudio
+        // blocked in pa_simple_write after its device vanished): stopping it
+        // here would hold m_mutex forever, and every caller — the Settings
+        // page included — would freeze behind it. Abandon it instead.
+        if (isActiveStreamStalledLocked()) {
+            AESTRA_LOG_WARNING("[AudioDeviceManager] Active stream is stalled; abandoning it instead of stopping");
+            m_activeDriver->abandonStream();
+        } else {
+            m_activeDriver->closeStream();
+        }
         m_activeDriver = nullptr;
     }
     // Deliberately preserve m_currentCallback/m_currentUserData for reopening.
@@ -248,6 +271,9 @@ bool AudioDeviceManager::startStreamLocked() {
     }
     bool ok = m_activeDriver->startStream();
     if (ok) {
+        // Liveness is judged per stream: a new stream starts with no history,
+        // so the previous stream's last callback count cannot mark it stalled.
+        m_healthTrackingInitialized = false;
         uint32_t actualRate = m_activeDriver->getStreamSampleRate();
         AESTRA_LOG_DEBUG(std::string("Active driver stream started: requested ") +
                          std::to_string(m_currentConfig.sampleRate) + " Hz, actual " +
@@ -274,7 +300,14 @@ bool AudioDeviceManager::startStream() {
 
 void AudioDeviceManager::stopStreamLocked() {
     if (m_activeDriver) {
-        m_activeDriver->stopStream();
+        if (isActiveStreamStalledLocked()) {
+            // See closeStreamLocked(). The stream is gone afterwards, which is
+            // what a stop of a wedged stream can honestly deliver.
+            AESTRA_LOG_WARNING("[AudioDeviceManager] Active stream is stalled; abandoning it instead of stopping");
+            m_activeDriver->abandonStream();
+        } else {
+            m_activeDriver->stopStream();
+        }
     }
 }
 
@@ -874,8 +907,14 @@ bool AudioDeviceManager::switchToSafetyDriverLocked(PendingModeChange& outPendin
 
     if (m_activeDriver) {
         try {
-            m_activeDriver->stopStream();
-            m_activeDriver->closeStream();
+            // Reached from the health monitor when the stream has stalled:
+            // never wait on the wedged backend while holding m_mutex.
+            if (isActiveStreamStalledLocked()) {
+                m_activeDriver->abandonStream();
+            } else {
+                m_activeDriver->stopStream();
+                m_activeDriver->closeStream();
+            }
         } catch (const std::exception& e) {
             AESTRA_LOG_WARNING("Error closing audio driver: " + std::string(e.what()));
         }
