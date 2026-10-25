@@ -160,15 +160,26 @@ CommandResult CommandParser::execute(const std::string& verb,
     // Execute through CommandHistory; only a successful execution is undoable.
     try {
         auto shared = std::shared_ptr<ICommand>(std::move(cmd));
-        history.pushAndExecute(shared);
-        result.undoable = undoable;
-
-        // Every verb that creates something reports what it created, so an
-        // agent never has to diff a list (or parse the message) to address it.
-        if (!describeCreated(*shared, result)) {
-            result.status = CommandStatus::ExecutionError;
-            result.undoable = false;
-            return finish(result);
+        if (history.isTransactionActive()) {
+            // A deferred transaction executes its members at commit, so there
+            // is nothing to execute or describe yet.
+            history.pushAndExecute(shared);
+            result.undoable = undoable;
+        } else {
+            // Execute, then record only what actually happened. A creating
+            // command that returned without creating anything (a vanished
+            // channel, a refused lane) must not reach the undo stack: the next
+            // undo would pop that no-op instead of reverting the user's last
+            // real edit. A throw is an error, not a silent "ok".
+            shared->execute();
+            // Every verb that creates something reports what it created, so an
+            // agent never has to diff a list (or parse the message) to address it.
+            if (!describeCreated(*shared, result)) {
+                result.status = CommandStatus::ExecutionError;
+                result.undoable = false;
+                return finish(result);
+            }
+            result.undoable = history.pushExecuted(shared) && undoable;
         }
         if (result.hasCreatedId) {
             result.status = CommandStatus::Success;

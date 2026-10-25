@@ -137,6 +137,29 @@ int main() {
     MuseService service(trackManager.get(), &engine);
     const std::string sample = writeTestWav();
 
+    // --- offline renders pause and resume the host stream, on every exit path --
+    {
+        int pauses = 0;
+        int resumes = 0;
+        service.setOfflineRenderStreamHooks([&] { ++pauses; return true; }, [&] { ++resumes; });
+        JSON renderArgs = obj();
+        renderArgs.set("file", JSON((std::filesystem::temp_directory_path() / "muse_created_ids_empty.wav").string()));
+        JSON failed = call(service, req(90, "render_song", renderArgs).toString());
+        check(status(failed) == "execution_error", "rendering an empty timeline fails");
+        check(pauses == 1 && resumes == 1, "a failed render still resumes the stream it paused (" +
+                                               std::to_string(pauses) + " pause, " + std::to_string(resumes) +
+                                               " resume)");
+        JSON bpm = obj();
+        bpm.set("value", JSON(120.0));
+        call(service, req(91, "set_bpm", bpm).toString());
+        check(pauses == 1 && resumes == 1, "a non-render verb does not touch the stream");
+        // A stream that was not running is not resumed.
+        service.setOfflineRenderStreamHooks([&] { ++pauses; return false; }, [&] { ++resumes; });
+        call(service, req(92, "render_song", renderArgs).toString());
+        check(pauses == 2 && resumes == 1, "a stream that was not running is left stopped");
+        service.setOfflineRenderStreamHooks(nullptr, nullptr);
+    }
+
     // --- add_unit ---------------------------------------------------------------
     JSON a = obj();
     a.set("name", JSON("Kick"));

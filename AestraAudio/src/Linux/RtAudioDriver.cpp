@@ -247,6 +247,14 @@ void RtAudioDriver::stopStream() {
     if (m_rtAudio && m_rtAudio->isStreamRunning()) {
         m_rtAudio->stopStream();
     }
+    // Quiescence: when this returns, no client callback is running. Callers
+    // rely on that (an offline render pumps the same engine next). The wait is
+    // bounded — one callback is a few milliseconds — so a callback that never
+    // returns cannot hang the caller; that case is the stalled-stream path.
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(250);
+    while (m_callbacksInFlight.load(std::memory_order_acquire) > 0 && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
 }
 
 void RtAudioDriver::abandonStream() {
@@ -343,8 +351,10 @@ int RtAudioDriver::rtAudioCallback(void* outputBuffer, void* inputBuffer, unsign
     }
 
     driver->m_stats.callbackCount++;
+    driver->m_callbacksInFlight.fetch_add(1, std::memory_order_acq_rel);
     int result = callback(static_cast<float*>(outputBuffer), static_cast<const float*>(inputBuffer), numFrames,
                           streamTime, callbackUserData);
+    driver->m_callbacksInFlight.fetch_sub(1, std::memory_order_acq_rel);
 
     // Update telemetry (lock-free, RT-safe)
     if (driver->m_telemetry) {
