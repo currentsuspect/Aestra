@@ -148,8 +148,16 @@ int main() {
     r = call(service, "{\"id\": 2, \"verb\": \"add_unit\", \"args\": {\"name\": \"Silent\"}}");
     check(status(r) == "ok", "add second unit");
     for (int unit = 1; unit <= 2; ++unit) {
-        r = call(service, "{\"id\": 3, \"verb\": \"load_sample\", \"args\": {\"unit\": " +
-                              std::to_string(unit) + ", \"file\": \"" + sample + "\"}}");
+        // Built as JSON, not pasted into text: a Windows temp path has
+        // backslashes that would break a hand-written JSON string.
+        JSON load = JSON::object();
+        load.set("id", JSON(3.0));
+        load.set("verb", JSON("load_sample"));
+        JSON loadArgs = JSON::object();
+        loadArgs.set("unit", JSON(static_cast<double>(unit)));
+        loadArgs.set("file", JSON(sample));
+        load.set("args", loadArgs);
+        r = call(service, load.toString());
         check(status(r) == "ok", "load sample into unit " + std::to_string(unit));
     }
     auto* playingChannel = trackManager->addChannel("Playing");
@@ -191,6 +199,14 @@ int main() {
     r = call(service, renderReq(12, "render_song", out, fromOnly).toString());
     check(status(r) == "ok" && r["result"]["endBeat"].asNumber() == 16.0,
           "start alone runs to the end of the timeline");
+
+    JSON pastEnd = JSON::object();
+    pastEnd.set("start", JSON(8.0));
+    pastEnd.set("end", JSON(64.0));
+    r = call(service, renderReq(13, "render_song", out, pastEnd).toString());
+    check(status(r) == "ok" && r["result"]["endBeat"].asNumber() == 16.0 &&
+              std::abs(r["result"]["durationSeconds"].asNumber() - fullSeconds / 2.0) < 0.01,
+          "an end past the timeline is clamped, and the echoed range is what was rendered");
 
     // --- channel capture -----------------------------------------------------
     JSON playing = JSON::object();

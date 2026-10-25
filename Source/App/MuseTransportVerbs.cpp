@@ -99,6 +99,23 @@ double positionBeats(::AestraContent& content, Audio::TrackManager& tm) {
 // per-frame scrub sync while the button is held; a one-shot seek has no held
 // button, so it moves the engine itself — without that, a seek while playing
 // is overwritten by the engine position on the next frame.
+// Beats past this are not a session position (about 2.5 hours at 400 BPM);
+// refusing them also keeps the sample-position cast below well defined.
+constexpr double kMaxSeekBeat = 60000.0;
+
+// Why a seek to @p beat cannot happen in the current focus, or empty when it can.
+std::string seekRefusal(::AestraContent& content, double beat) {
+    const ViewFocus focus = content.getViewFocus();
+    if (focus != ViewFocus::Timeline && focus != ViewFocus::Arsenal) {
+        return std::string("the ") + WorkspaceFocusModel::workspaceFocusName(focus) +
+               " workspace has no beat transport; use transport.play {in: timeline|arsenal}";
+    }
+    if (!std::isfinite(beat) || beat < 0.0 || beat > kMaxSeekBeat) {
+        return "beat must be between 0 and " + std::to_string(static_cast<int>(kMaxSeekBeat));
+    }
+    return {};
+}
+
 void seekTo(::AestraContent& content, Audio::TrackManager& tm, Audio::AudioEngine* engine, double beat) {
     const double seconds = content.getViewFocus() == ViewFocus::Arsenal
                                ? std::max(0.0, beat * 60.0 / tempoBpm(tm))
@@ -106,7 +123,12 @@ void seekTo(::AestraContent& content, Audio::TrackManager& tm, Audio::AudioEngin
     tm.setPosition(seconds);
     tm.setPlayStartPosition(seconds);
     if (engine) {
-        engine->setGlobalSamplePos(static_cast<uint64_t>(seconds * static_cast<double>(engine->getSampleRate())));
+        // seekRefusal bounds the beat, but a tempo map can still stretch it:
+        // only convert a sample position that fits, never cast past uint64_t.
+        const double samples = seconds * static_cast<double>(engine->getSampleRate());
+        if (std::isfinite(samples) && samples >= 0.0 && samples < 9.0e18) {
+            engine->setGlobalSamplePos(static_cast<uint64_t>(samples));
+        }
     }
 }
 
@@ -168,21 +190,26 @@ void registerMuseTransportVerbs(Audio::MuseService& service, ::AestraContent& co
         registerOrLog(service, std::move(spec), [c, a](const JSON& args) {
             auto tm = c->getTrackManager();
             if (!tm) return noTimeline();
-            if (args.has("in")) {
-                ViewFocus target{};
-                if (!parsePlayTarget(args["in"].asString(), target)) {
-                    return HostVerbResult::failure("invalid_args", "'in' must be 'timeline' or 'arsenal'");
-                }
-                if (c->getViewFocus() != target) {
-                    c->setViewFocus(target);
-                }
+            // Validate everything before changing anything: a refused request
+            // must leave the workspace and playhead as they were.
+            ViewFocus target = c->getViewFocus();
+            if (args.has("in") && !parsePlayTarget(args["in"].asString(), target)) {
+                return HostVerbResult::failure("invalid_args", "'in' must be 'timeline' or 'arsenal'");
             }
-            if (args.has("from")) {
-                const double beat = args["from"].asNumber();
-                if (!std::isfinite(beat) || beat < 0.0) {
-                    return HostVerbResult::failure("invalid_args", "'from' must be a beat >= 0");
-                }
-                seekTo(*c, *tm, a->getAudioEngine(), beat);
+            const bool hasFrom = args.has("from");
+            const double from = hasFrom ? args["from"].asNumber() : 0.0;
+            if (hasFrom && (!std::isfinite(from) || from < 0.0 || from > kMaxSeekBeat)) {
+                return HostVerbResult::failure("invalid_args", "'from' must be a beat between 0 and " +
+                                                                   std::to_string(static_cast<int>(kMaxSeekBeat)));
+            }
+            if (hasFrom && target != ViewFocus::Timeline && target != ViewFocus::Arsenal) {
+                return HostVerbResult::failure("invalid_args", "'from' needs the timeline or the arsenal; pass 'in'");
+            }
+            if (c->getViewFocus() != target) {
+                c->setViewFocus(target);
+            }
+            if (hasFrom) {
+                seekTo(*c, *tm, a->getAudioEngine(), from);
             }
             const bool wasPlaying = tm->isPlaying() || tm->isCountInPending();
             if (!wasPlaying) {
@@ -233,8 +260,8 @@ void registerMuseTransportVerbs(Audio::MuseService& service, ::AestraContent& co
             auto tm = c->getTrackManager();
             if (!tm) return noTimeline();
             const double beat = args["beat"].asNumber();
-            if (!std::isfinite(beat) || beat < 0.0) {
-                return HostVerbResult::failure("invalid_args", "'beat' must be >= 0");
+            if (const std::string refusal = seekRefusal(*c, beat); !refusal.empty()) {
+                return HostVerbResult::failure("invalid_args", refusal);
             }
             seekTo(*c, *tm, a->getAudioEngine(), beat);
             return HostVerbResult::success(transportState(*c, *tm));

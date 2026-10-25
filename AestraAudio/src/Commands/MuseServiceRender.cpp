@@ -19,6 +19,7 @@
 #include "Models/TrackManager.h"
 
 #include "AestraJSON.h"
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -168,6 +169,14 @@ std::string parseSongRenderScope(JSON& args, TrackManager& trackManager, SongRen
         if (!(out.endBeat > out.startBeat)) {
             return "arg 'end' must be after 'start'";
         }
+        // The exporter stops at the end of the timeline, so an end past it
+        // renders less than asked. Clamp here, so the range echoed back is the
+        // range that was rendered.
+        const double total = trackManager.getPlaylistModel().getTotalDurationBeats();
+        if (!(total > out.startBeat)) {
+            return "arg 'start' is at or past the end of the timeline";
+        }
+        out.endBeat = std::min(out.endBeat, total);
     } else if (hasStart) {
         // The exporter reads end <= start as "the whole song", which would
         // silently drop the start the caller asked for.

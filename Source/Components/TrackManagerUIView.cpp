@@ -475,8 +475,13 @@ void TrackManagerUI::selectLoopRange(double startBeat, double endBeat) {
 }
 
 void TrackManagerUI::clearLoopRange() {
-    // A ruler click without a drag: no range, loop off.
+    // A ruler click without a drag: no range, loop off, and no selection left
+    // behind for the next Duplicate or minimap highlight to pick up.
     setLoopRegion(0.0, 0.0, false);
+    m_hasRulerSelection = false;
+    m_rulerSelectionStartBeat = 0.0;
+    m_rulerSelectionEndBeat = 0.0;
+    m_minimapSelectionBeatRange = {};
     m_loopPreset = TimelineLoopPreset::Off;
     if (m_onLoopPresetChanged) {
         m_onLoopPresetChanged(timelineLoopPresetId(TimelineLoopPreset::Off));
