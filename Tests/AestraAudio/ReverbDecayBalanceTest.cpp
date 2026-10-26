@@ -128,7 +128,7 @@ double ringingShare(const std::vector<float>& x) {
     for (size_t i = 0; i < e.size(); ++i)
         if (10.0 * std::log10(e[i] / e[0] + 1e-30) < -50.0) { end = i; break; }
     const size_t start = static_cast<size_t>(0.25 * kSr);
-    if (end <= start + 4096) return 1.0;
+    if (end <= start + 4096) return 100.0; // tail too short to analyse: report it as failing, never as a pass
     size_t n = 1;
     while (n < end - start) n <<= 1;
     std::vector<std::complex<double>> buf(n);

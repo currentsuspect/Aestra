@@ -204,6 +204,7 @@ struct MaterialResult {
     float tailRms = 0.0f;
     // Output-level diagnostics (Session 017a)
     float preSanitizePeak = 0.0f;
+    bool preSanitizeMeasured = true; // false without AESTRA_REVERB_DIAGNOSTICS: only the output is visible
     float postSanitizePeak = 0.0f;
     float wetOutputPeak = 0.0f;
     uint64_t samplesAtOrAboveUnity = 0;
@@ -315,6 +316,14 @@ static MaterialResult analyzeMaterial(const std::string& name, const std::string
 // ============================================================================
 // Report generation
 // ============================================================================
+// The pre-sanitize peak exists only with the lab diagnostics; without them it is reported as unavailable.
+static std::string preSanitizeText(const MaterialResult& r, const char* unavailable = "n/a") {
+    if (!r.preSanitizeMeasured) return unavailable;
+    std::ostringstream o;
+    o << std::fixed << std::setprecision(4) << r.preSanitizePeak;
+    return o.str();
+}
+
 static std::string generateJsonReport(const std::vector<MaterialResult>& results) {
     std::ostringstream j;
     j << "{\n";
@@ -339,7 +348,7 @@ static std::string generateJsonReport(const std::vector<MaterialResult>& results
         j << "      \"metallicPeakDb\": " << r.metallicPeakDb << ",\n";
         j << "      \"metallicSeverity\": \"" << r.metallicSeverity << "\",\n";
         j << "      \"sourcePeak\": " << r.sourcePeak << ",\n";
-        j << "      \"preSanitizePeak\": " << r.preSanitizePeak << ",\n";
+        j << "      \"preSanitizePeak\": " << preSanitizeText(r, "null") << ",\n";
         j << "      \"postSanitizePeak\": " << r.postSanitizePeak << ",\n";
         j << "      \"wetOutputPeak\": " << r.wetOutputPeak << ",\n";
         j << "      \"samplesAtOrAboveUnity\": " << r.samplesAtOrAboveUnity << ",\n";
@@ -387,7 +396,7 @@ static std::string generateMarkdownReport(const std::vector<MaterialResult>& res
             : 0.0f;
         md << "| " << r.name << " | " << r.modeName
            << " | " << std::fixed << std::setprecision(4) << r.sourcePeak
-           << " | " << std::setprecision(4) << r.preSanitizePeak
+           << " | " << preSanitizeText(r)
            << " | " << std::setprecision(4) << r.postSanitizePeak
            << " | " << std::setprecision(4) << r.wetOutputPeak
            << " | " << r.samplesAtOrAboveUnity
@@ -607,7 +616,7 @@ int main() {
                     over += (l >= 1.0f) + (r >= 1.0f);
                 }
                 res.postSanitizePeak = peak;
-                res.preSanitizePeak = peak; // the output is what reaches the host; pre-sanitize needs the diagnostics
+                res.preSanitizeMeasured = false; // sanitize() mutes |x| >= 32, so the output cannot stand in for it
                 res.samplesAtOrAboveUnity = over;
                 res.totalSamples = 2 * static_cast<uint64_t>(outL.size());
                 res.unityStatus = over > 0 ? (src.name == "vocal_phrase" ? "pre-existing vocal over-unity" : "over unity")
@@ -708,14 +717,14 @@ int main() {
                 : 0.0f;
             if (r.name == "vocal_phrase") {
                 std::cout << "KNOWN: " << r.modeName << " " << r.name
-                          << " preSanitizePeak=" << std::fixed << std::setprecision(4) << r.preSanitizePeak
+                          << " preSanitizePeak=" << preSanitizeText(r) << std::fixed << std::setprecision(4)
                           << " wetPrePeak=" << r.wetOutputPeak
                           << " overUnitySamples=" << r.samplesAtOrAboveUnity
                           << " (" << std::setprecision(2) << pct << "%)"
                           << " — pre-existing vocal over-unity (float headroom, not clipped)\n";
             } else {
                 std::cerr << "FAIL: " << r.modeName << " " << r.name
-                          << " preSanitizePeak=" << std::fixed << std::setprecision(4) << r.preSanitizePeak
+                          << " preSanitizePeak=" << preSanitizeText(r) << std::fixed << std::setprecision(4)
                           << " wetPrePeak=" << r.wetOutputPeak
                           << " overUnitySamples=" << r.samplesAtOrAboveUnity
                           << " (" << std::setprecision(2) << pct << "%)"
@@ -724,7 +733,7 @@ int main() {
             }
         } else {
             std::cout << "PASS: " << r.modeName << " " << r.name
-                      << " preSanitizePeak=" << std::fixed << std::setprecision(4) << r.preSanitizePeak
+                      << " preSanitizePeak=" << preSanitizeText(r) << std::fixed << std::setprecision(4)
                       << " — within unity\n";
         }
     }

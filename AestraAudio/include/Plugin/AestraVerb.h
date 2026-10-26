@@ -900,8 +900,8 @@ public:
             // per-mode scalar (updateControlCache). The old "v * 8 smp" text
             // matched neither the previous x7 mapping nor the current one.
             const float scalar = constantsForMode(currentMode()).modDepthScalar;
-            // Includes the always-on floor (3.5 smp at 44.1 kHz), faded in over the first 5% of the control.
-            const float floorSmp = 3.5f * std::min(1.0f, v / 0.05f);
+            // Includes the always-on floor (3.5 smp at 44.1 kHz, scaled to the session rate like the DSP), faded in over 5%.
+            const float floorSmp = 3.5f * static_cast<float>(m_sampleRate) / kReferenceSampleRate * std::min(1.0f, v / 0.05f);
             const float smp = floorSmp + (v <= 0.0f ? 0.0f : std::pow(v, 0.6f)) * 12.5f * scalar;
             return formatCompactFloat(static_cast<int>(smp * 10.0f) / 10.0f, 1) + " smp";
         }
