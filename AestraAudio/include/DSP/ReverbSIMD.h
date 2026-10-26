@@ -87,6 +87,32 @@ inline float cubicHermite(float y0, float y1, float y2, float y3, float t) noexc
 }
 
 // ============================================================================
+// The FDN's feedback mix: a normalized 8x8 Hadamard matrix, as a fast Walsh-Hadamard transform (24 add/sub, one
+// scale). It was a Householder reflection, I - (2/N)·11ᵀ, whose diagonal is 1 - 2/8 = 0.75: each line fed three
+// quarters of its own output straight back to itself, so every line rang at its own loop period. Measured on the
+// impulse responses, that was the metallic sound: ~100x more isolated ringing modes in the tail than a diffuse
+// decay, and a periodic repeat (autocorrelation 0.22-0.31) at the lines' loop times. Every Hadamard entry is
+// ±1/√8, so each line feeds all eight equally and no loop recirculates on its own. Both are orthogonal, so the
+// loop stays lossless: decay is still set only by the feedback gains and damping.
+// ============================================================================
+inline void mixFDNLines(const float* in, float* out) noexcept {
+    static_assert(kFDNLineCount == 8, "mixFDNLines is the 8-point transform");
+    float a[8];
+    for (int i = 0; i < 8; ++i) a[i] = in[i];
+    for (int h = 1; h < 8; h <<= 1) {
+        for (int i = 0; i < 8; i += h << 1) {
+            for (int j = i; j < i + h; ++j) {
+                const float x = a[j], y = a[j + h];
+                a[j] = x + y;
+                a[j + h] = x - y;
+            }
+        }
+    }
+    constexpr float kScale = 0.35355339059327373f; // 1/√8
+    for (int i = 0; i < 8; ++i) out[i] = a[i] * kScale;
+}
+
+// ============================================================================
 // AVX2 — 8-wide FDN feedback + output mixing (256-bit)
 // ============================================================================
 #ifdef AESTRA_REVERB_HAS_AVX2
@@ -110,14 +136,16 @@ inline float cubicHermite(float y0, float y1, float y2, float y3, float t) noexc
  * @param injectR       8 injection coeffs R
  * @param outputL       8 output coeffs L
  * @param outputR       8 output coeffs R
- * @param dampingCoeff  single damping coefficient
- * @param lowDampCoeff  single low-damping coefficient
+ * @param dampingCoeffs  per-line damping coefficients (each line's loss per pass scales with its length)
+ * @param lowDampCoeff   low-damping shelf corner (shared)
+ * @param lowDampAmounts per-line low-shelf amounts (likewise per length)
  * @param wetL          output wet left accumulator (read/write)
  * @param wetR          output wet right accumulator (read/write)
  */
 AESTRA_AVX2_TARGET
 inline void processFDNSampleAVX2(
     const float* lineOut,
+    const float* matrixOut,
     float delayedL,
     float delayedR,
     float* dampingState,
@@ -130,9 +158,9 @@ inline void processFDNSampleAVX2(
     const float* injectR,
     const float* outputL,
     const float* outputR,
-    float dampingCoeff,
+    const float* dampingCoeffs,
     float lowDampCoeff,
-    float lowDampAmount,
+    const float* lowDampAmounts,
     float& wetL,
     float& wetR) noexcept {
 
@@ -145,17 +173,11 @@ inline void processFDNSampleAVX2(
     __m256 vInjectR = _mm256_loadu_ps(injectR);
     __m256 vOutputL = _mm256_loadu_ps(outputL);
     __m256 vOutputR = _mm256_loadu_ps(outputR);
-    __m256 vDampCoeff = _mm256_set1_ps(dampingCoeff);
+    __m256 vDampCoeff = _mm256_loadu_ps(dampingCoeffs);
     __m256 vLowDampCoeff = _mm256_set1_ps(lowDampCoeff);
 
-    // Householder mean: sum * (2/8) = sum * 0.25f
-    __m256 vSum = _mm256_add_ps(vLineOut, _mm256_permute2f128_ps(vLineOut, vLineOut, 1));
-    vSum = _mm256_hadd_ps(vSum, vSum);
-    vSum = _mm256_hadd_ps(vSum, vSum);
-    __m256 vMean = _mm256_mul_ps(vSum, _mm256_set1_ps(0.25f));
-
-    // matrixOut = lineOut - mean
-    __m256 vMatrixOut = _mm256_sub_ps(vLineOut, vMean);
+    // The feedback mix (mixFDNLines) is applied once, by the dispatcher.
+    __m256 vMatrixOut = _mm256_loadu_ps(matrixOut);
 
     // dampingState += dampingCoeff * (matrixOut - dampingState)
     __m256 vNewDampState = _mm256_fmadd_ps(vDampCoeff, _mm256_sub_ps(vMatrixOut, vDampState), vDampState);
@@ -174,7 +196,7 @@ inline void processFDNSampleAVX2(
     _mm256_storeu_ps(lowDampState, vNewLowDampState);
 
     // Mode-aware low trim. Keep enough low/low-mid energy for body without letting sub buildup dominate.
-    __m256 vFinalFeedback = _mm256_fnmadd_ps(vNewLowDampState, _mm256_set1_ps(lowDampAmount), vFeedback);
+    __m256 vFinalFeedback = _mm256_fnmadd_ps(vNewLowDampState, _mm256_loadu_ps(lowDampAmounts), vFeedback);
 
     // delayLines[line][pos] = injected + feedback
     __m256 vWrite = _mm256_add_ps(vInjected, vFinalFeedback);
@@ -268,6 +290,7 @@ inline void normalizeLFOsAVX2(float* lfoSin, float* lfoCos) noexcept {
 
 inline void processFDNSampleSSE(
     const float* lineOut,
+    const float* matrixOut,
     float delayedL,
     float delayedR,
     float* dampingState,
@@ -280,18 +303,12 @@ inline void processFDNSampleSSE(
     const float* injectR,
     const float* outputL,
     const float* outputR,
-    float dampingCoeff,
+    const float* dampingCoeffs,
     float lowDampCoeff,
-    float lowDampAmount,
+    const float* lowDampAmounts,
     float& wetL,
     float& wetR) noexcept {
 
-    const __m128 vLineOut0 = _mm_loadu_ps(lineOut);
-    const __m128 vLineOut1 = _mm_loadu_ps(lineOut + 4);
-    __m128 vSum = _mm_add_ps(vLineOut0, vLineOut1);
-    vSum = _mm_add_ps(vSum, _mm_movehl_ps(vSum, vSum));
-    vSum = _mm_add_ps(vSum, _mm_shuffle_ps(vSum, vSum, _MM_SHUFFLE(1, 1, 1, 1)));
-    const __m128 vHouseholderMean = _mm_set1_ps(_mm_cvtss_f32(vSum) * 0.25f);
 
     for (size_t block = 0; block < 2; ++block) {
         size_t b = block * 4;
@@ -304,9 +321,9 @@ inline void processFDNSampleSSE(
         __m128 vOutputL = _mm_loadu_ps(&outputL[b]);
         __m128 vOutputR = _mm_loadu_ps(&outputR[b]);
 
-        __m128 vMatrixOut = _mm_sub_ps(vLineOut, vHouseholderMean);
+        __m128 vMatrixOut = _mm_loadu_ps(&matrixOut[b]);
 
-        __m128 vDampCoeff = _mm_set1_ps(dampingCoeff);
+        __m128 vDampCoeff = _mm_loadu_ps(&dampingCoeffs[b]);
         __m128 vNewDampState = _mm_add_ps(_mm_mul_ps(vDampCoeff, _mm_sub_ps(vMatrixOut, vDampState)), vDampState);
         _mm_storeu_ps(&dampingState[b], vNewDampState);
 
@@ -319,7 +336,7 @@ inline void processFDNSampleSSE(
         __m128 vNewLowDampState = _mm_add_ps(_mm_mul_ps(vLowDampCoeff, _mm_sub_ps(vFeedback, vLowDampState)), vLowDampState);
         _mm_storeu_ps(&lowDampState[b], vNewLowDampState);
 
-        __m128 vFinalFeedback = _mm_sub_ps(vFeedback, _mm_mul_ps(vNewLowDampState, _mm_set1_ps(lowDampAmount)));
+        __m128 vFinalFeedback = _mm_sub_ps(vFeedback, _mm_mul_ps(vNewLowDampState, _mm_loadu_ps(&lowDampAmounts[b])));
         __m128 vWrite = _mm_add_ps(vInjected, vFinalFeedback);
 
         alignas(16) float writeVals[4];
@@ -363,6 +380,7 @@ inline void updateLFOsSSE(float* lfoSin, float* lfoCos,
 
 inline void processFDNSampleNEON(
     const float* lineOut,
+    const float* matrixOut,
     float delayedL,
     float delayedR,
     float* dampingState,
@@ -375,18 +393,12 @@ inline void processFDNSampleNEON(
     const float* injectR,
     const float* outputL,
     const float* outputR,
-    float dampingCoeff,
+    const float* dampingCoeffs,
     float lowDampCoeff,
-    float lowDampAmount,
+    const float* lowDampAmounts,
     float& wetL,
     float& wetR) noexcept {
 
-    const float32x4_t vLineOut0 = vld1q_f32(&lineOut[0]);
-    const float32x4_t vLineOut1 = vld1q_f32(&lineOut[4]);
-    const float32x4_t vPairSum = vaddq_f32(vLineOut0, vLineOut1);
-    const float32x4_t vRevSum = vaddq_f32(vPairSum, vrev64q_f32(vPairSum));
-    const float total = vgetq_lane_f32(vRevSum, 0) + vgetq_lane_f32(vRevSum, 2);
-    const float32x4_t vMean = vdupq_n_f32(total * 0.25f);
 
     for (size_t block = 0; block < 2; ++block) {
         size_t b = block * 4;
@@ -399,9 +411,9 @@ inline void processFDNSampleNEON(
         float32x4_t vOutputL = vld1q_f32(&outputL[b]);
         float32x4_t vOutputR = vld1q_f32(&outputR[b]);
 
-        float32x4_t vMatrixOut = vsubq_f32(vLineOut, vMean);
+        float32x4_t vMatrixOut = vld1q_f32(&matrixOut[b]);
 
-        float32x4_t vDampCoeff = vdupq_n_f32(dampingCoeff);
+        float32x4_t vDampCoeff = vld1q_f32(&dampingCoeffs[b]);
         float32x4_t vNewDampState = vmlaq_f32(vDampState, vDampCoeff, vsubq_f32(vMatrixOut, vDampState));
         vst1q_f32(&dampingState[b], vNewDampState);
 
@@ -414,7 +426,7 @@ inline void processFDNSampleNEON(
         float32x4_t vNewLowDampState = vmlaq_f32(vLowDampState, vLowDampCoeff, vsubq_f32(vFeedback, vLowDampState));
         vst1q_f32(&lowDampState[b], vNewLowDampState);
 
-        float32x4_t vFinalFeedback = vsubq_f32(vFeedback, vmulq_f32(vNewLowDampState, vdupq_n_f32(lowDampAmount)));
+        float32x4_t vFinalFeedback = vsubq_f32(vFeedback, vmulq_f32(vNewLowDampState, vld1q_f32(&lowDampAmounts[b])));
         float32x4_t vWrite = vaddq_f32(vInjected, vFinalFeedback);
 
         alignas(16) float writeVals[4];
@@ -499,54 +511,52 @@ inline void processFDNSample(
     const float* injectR,
     const float* outputL,
     const float* outputR,
-    float dampingCoeff,
+    const float* dampingCoeffs,
     float lowDampCoeff,
-    float lowDampAmount,
+    const float* lowDampAmounts,
     float& wetL,
     float& wetR) noexcept {
+
+    alignas(32) float matrixOut[kFDNLineCount];
+    mixFDNLines(lineOut, matrixOut);
 
     if (!g_forceScalarFallback) {
 #ifdef AESTRA_REVERB_HAS_AVX2
         if (g_useAVX2) {
-            processFDNSampleAVX2(lineOut, delayedL, delayedR, dampingState, lowDampState,
+            processFDNSampleAVX2(lineOut, matrixOut, delayedL, delayedR, dampingState, lowDampState,
                                  delayLines, delayPos, delayMasks, feedbackGains,
                                  injectL, injectR, outputL, outputR,
-                                 dampingCoeff, lowDampCoeff, lowDampAmount, wetL, wetR);
+                                 dampingCoeffs, lowDampCoeff, lowDampAmounts, wetL, wetR);
             return;
         }
 #endif
 
 #ifdef AESTRA_REVERB_HAS_SSE
         if (g_useSSE41) {
-            processFDNSampleSSE(lineOut, delayedL, delayedR, dampingState, lowDampState,
+            processFDNSampleSSE(lineOut, matrixOut, delayedL, delayedR, dampingState, lowDampState,
                                 delayLines, delayPos, delayMasks, feedbackGains,
                                 injectL, injectR, outputL, outputR,
-                                dampingCoeff, lowDampCoeff, lowDampAmount, wetL, wetR);
+                                dampingCoeffs, lowDampCoeff, lowDampAmounts, wetL, wetR);
             return;
         }
 #endif
 
 #ifdef AESTRA_REVERB_HAS_NEON
-        processFDNSampleNEON(lineOut, delayedL, delayedR, dampingState, lowDampState,
+        processFDNSampleNEON(lineOut, matrixOut, delayedL, delayedR, dampingState, lowDampState,
                              delayLines, delayPos, delayMasks, feedbackGains,
                              injectL, injectR, outputL, outputR,
-                             dampingCoeff, lowDampCoeff, lowDampAmount, wetL, wetR);
+                             dampingCoeffs, lowDampCoeff, lowDampAmounts, wetL, wetR);
         return;
 #endif
     }
 
-    // Scalar fallback (identical to original logic)
-    float sum = 0.0f;
-    for (size_t line = 0; line < kFDNLineCount; ++line) sum += lineOut[line];
-    const float householderMean = sum * (2.0f / static_cast<float>(kFDNLineCount));
-
+    // Scalar fallback (identical to the SIMD paths)
     for (size_t line = 0; line < kFDNLineCount; ++line) {
-        float matrixOut = lineOut[line] - householderMean;
-        dampingState[line] += dampingCoeff * (matrixOut - dampingState[line]);
+        dampingState[line] += dampingCoeffs[line] * (matrixOut[line] - dampingState[line]);
         const float injected = (delayedL * injectL[line] + delayedR * injectR[line]) * 0.115f;
         float feedback = dampingState[line] * feedbackGains[line];
         lowDampState[line] += (feedback - lowDampState[line]) * lowDampCoeff;
-        feedback -= lowDampState[line] * lowDampAmount;
+        feedback -= lowDampState[line] * lowDampAmounts[line];
         delayLines[line][delayPos[line]] = sanitizeFeedbackValue(injected + feedback);
         delayPos[line] = (delayPos[line] + 1) & delayMasks[line];
         wetL += lineOut[line] * outputL[line];
