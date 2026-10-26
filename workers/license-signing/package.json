@@ -19,11 +19,14 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260722.1",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.11",
+    "vitest": "^4.1.12",
     "wrangler": "^4.114.0"
   },
   "overrides": {
-    "sharp": "0.35.4",
-    "undici": "7.29.0"
+    "sharp": "0.35.5",
+    "undici": "7.30.1",
+    "vite": "8.3.3",
+    "@vitest/mocker": "4.1.12",
+    "source-map-js": "1.2.2"
   }
 }
