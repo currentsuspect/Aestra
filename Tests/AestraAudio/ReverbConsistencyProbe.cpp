@@ -346,16 +346,26 @@ void probeModulationSpectralPurity() {
     const size_t lo300 = size_t(300.0 * N / 48000.0), hi13k = size_t(13000.0 * N / 48000.0);
     float specMax = 1e-12f;
     for (size_t i = lo300; i < hi13k; ++i) specMax = std::max(specMax, mag[i]);
+    // A ring is a narrow line standing above the tail around it, so measure each 9-13 kHz bin against the median
+    // of its +/-300 Hz neighbourhood. (This used to be the 9-13 kHz maximum against the whole tail's maximum,
+    // < -55 dB: that measured how much top end the tail had, not whether anything rang. Once the decay became
+    // per-band and the top no longer died almost at once, the band's own slope at 9.0 kHz read -54 dB and failed
+    // without any line in it.) The sr/4 bug this guards produced a discrete line at 12 kHz, far above 20 dB.
     const size_t lo = size_t(9000.0 * N / 48000.0);
+    const size_t half = size_t(300.0 * N / 48000.0);
     float worst = -200.0f;
     double worstHz = 0.0;
+    std::vector<float> window;
     for (size_t i = lo; i < hi13k; ++i) {
-        const float db = 20.0f * std::log10(mag[i] / specMax);
+        window.assign(mag.begin() + (i - half), mag.begin() + std::min(mag.size(), i + half + 1));
+        std::nth_element(window.begin(), window.begin() + window.size() / 2, window.end());
+        const float db = 20.0f * std::log10(mag[i] / window[window.size() / 2]);
         if (db > worst) { worst = db; worstHz = double(i) * 48000.0 / N; }
     }
-    std::cout << "  strongest 9-13 kHz late-tail component: " << worstHz << " Hz at " << worst
-              << " dB (rel late-tail max)\n";
-    check(worst < -55.0f, "no audio-rate modulation ring in the top octaves (< -55 dB)");
+    (void)specMax;
+    std::cout << "  most prominent 9-13 kHz late-tail line: " << worstHz << " Hz, " << worst
+              << " dB over its +/-300 Hz neighbourhood\n";
+    check(worst < 20.0f, "no audio-rate modulation ring in the top octaves (no line > 20 dB over its neighbourhood)");
 }
 
 void diagModeSwitchClick() {

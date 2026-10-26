@@ -110,6 +110,19 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbDormancyTest.cpp")
     set_tests_properties(ReverbDormancyTest PROPERTIES LABELS "audio;dsp;reverb;dormancy;contract:audio")
 endif()
 
+# Reverb decay balance: the tail decays evenly across the spectrum and doesn't ring (owner report, 26 Oct)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbDecayBalanceTest.cpp")
+    add_executable(ReverbDecayBalanceTest AestraAudio/ReverbDecayBalanceTest.cpp)
+    target_link_libraries(ReverbDecayBalanceTest PRIVATE AestraAudio)
+    target_include_directories(ReverbDecayBalanceTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ReverbDecayBalanceTest COMMAND ReverbDecayBalanceTest)
+    set_tests_properties(ReverbDecayBalanceTest PROPERTIES LABELS "audio;dsp;reverb;contract:audio")
+endif()
+
 # Reverb Harmonic-Motion / Tremolo investigation labs — experimental tooling,
 # gated so CI-safe/public test builds stay lean (opt in via AESTRA_ENABLE_EXPERIMENTAL_TESTS).
 if(AESTRA_ENABLE_EXPERIMENTAL_TESTS)

@@ -595,7 +595,24 @@ int main() {
                 }
             }
 #else
-            res.unityStatus = "diagnostics disabled";
+            // Without the lab diagnostics the in-plugin counters don't exist; this branch used to leave every count
+            // at zero, so the audit below printed "PASS ... within unity" for a peak of 0.0000 it never measured.
+            // The output itself is enough to audit over-unity: count it here.
+            {
+                float peak = 0.0f;
+                uint64_t over = 0;
+                for (size_t i = 0; i < outL.size(); ++i) {
+                    const float l = std::abs(outL[i]), r = std::abs(outR[i]);
+                    peak = std::max(peak, std::max(l, r));
+                    over += (l >= 1.0f) + (r >= 1.0f);
+                }
+                res.postSanitizePeak = peak;
+                res.preSanitizePeak = peak; // the output is what reaches the host; pre-sanitize needs the diagnostics
+                res.samplesAtOrAboveUnity = over;
+                res.totalSamples = 2 * static_cast<uint64_t>(outL.size());
+                res.unityStatus = over > 0 ? (src.name == "vocal_phrase" ? "pre-existing vocal over-unity" : "over unity")
+                                           : "within unity";
+            }
 #endif
 
             results.push_back(res);

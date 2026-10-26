@@ -339,11 +339,14 @@ bool runParameterDisplayFormattingCheck() {
     }
     ok &= require(verb.getParameterDisplay(AestraVerb::kSize) == "1.08x",
                   "size display should use compact precision");
-    ok &= require(verb.getParameterDisplay(AestraVerb::kModDepth) == "1.1 smp",
+    // 4.6 = the 3.5-sample modulation floor + 1.1 from the control (was "1.1 smp" before the floor).
+    ok &= require(verb.getParameterDisplay(AestraVerb::kModDepth) == "4.6 smp",
                   "mod-depth display should use compact precision");
     // Decay's leaked precision was ".800000s" (not ".000000"), so the substring
     // check above cannot catch it — assert the exact compact value.
-    ok &= require(verb.getParameterDisplay(AestraVerb::kDecay) == "6.8s",
+    // 3.5s: Room's measured mid-band T60 at these settings is 3.44 s. The old pinned "6.8s" was what the
+    // display claimed while the in-loop filters cut the real tail to about half of it.
+    ok &= require(verb.getParameterDisplay(AestraVerb::kDecay) == "3.5s",
                   "decay display should use compact precision, got '" +
                       verb.getParameterDisplay(AestraVerb::kDecay) + "'");
     if (ok) {
