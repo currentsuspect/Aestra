@@ -746,6 +746,7 @@ void CommandRegistry::initialize() {
         const std::string steps(*stepsRaw);
         if (steps.empty() || steps.size() > 256)
             return CommandRegistry::fail("steps must be 1..256 characters");
+        const double rowLengthBeats = static_cast<double>(steps.size()) * stepBeats;
         std::vector<MidiNote> rowNotes;
         for (size_t i = 0; i < steps.size(); ++i) {
             const char c = steps[i];
@@ -770,12 +771,15 @@ void CommandRegistry::initialize() {
                 note.startBeat += swing * stepBeats * 0.5;
             }
             note.durationBeats = stepBeats * static_cast<double>(gate);
+            // A swung last step must still end inside the row. Its tail used to run past the row end, and the
+            // piano roll grows a pattern to fit its notes in whole bars, so one swung shaker turned a 2-bar
+            // pattern into 3 (and set_pattern_length back to 2 bars was undone on the next edit).
+            note.durationBeats = std::max(0.0, std::min(note.durationBeats, rowLengthBeats - note.startBeat));
             note.velocity = noteVelocity;
             note.unitId = *unitOpt;
             rowNotes.push_back(note);
         }
 
-        const double rowLengthBeats = static_cast<double>(steps.size()) * stepBeats;
         return std::make_unique<SetStepsCommand>(tm->getPatternManager(), patternId,
                                                  std::move(rowNotes), *unitOpt, *pitchOpt,
                                                  rowLengthBeats);

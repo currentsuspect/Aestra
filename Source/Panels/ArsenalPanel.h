@@ -93,7 +93,7 @@ public:
     /** @brief Set the callback used to open a unit editor. */
     void setOnRequestEditor(std::function<void(UnitID)> cb) { m_onRequestEditor = cb; }
     /** @brief Set the callback used to open a pattern in the Piano Roll. */
-    void setOnRequestPatternEditor(std::function<void(PatternID)> cb) { m_onRequestPatternEditor = cb; }
+    void setOnRequestPatternEditor(std::function<void(PatternID, UnitID)> cb) { m_onRequestPatternEditor = cb; }
     /** @brief Set the callback used to request sample loading. */
     void setOnRequestLoadSample(std::function<void(UnitID)> cb) { m_onRequestLoadSample = cb; }
     /** @brief Set the callback used to open the sample editor. */
@@ -226,7 +226,7 @@ private:
     bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override;
     
     std::function<void(UnitID)> m_onRequestEditor;
-    std::function<void(PatternID)> m_onRequestPatternEditor;
+    std::function<void(PatternID, UnitID)> m_onRequestPatternEditor;
     std::function<void(UnitID)> m_onRequestLoadSample;
     std::function<void(UnitID)> m_onRequestSampleEditor;
     std::function<void(const std::string&)> m_onPluginDropped;
