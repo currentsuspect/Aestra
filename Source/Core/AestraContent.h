@@ -467,7 +467,8 @@ public:
     /** @brief Load an instrument plugin into a specific Arsenal unit. */
     void loadInstrumentIntoArsenalUnit(Aestra::Audio::UnitID unitId, const std::string& pluginId);
     /** @brief Open a pattern in the piano-roll editor. */
-    void openPatternInPianoRoll(Aestra::Audio::PatternID patternId);
+    // unitId: the unit to edit (a row's "Open in Piano Roll"); 0 resolves the pattern's own unit.
+    void openPatternInPianoRoll(Aestra::Audio::PatternID patternId, Aestra::Audio::UnitID unitId = 0);
 
     /** @brief Execute a Muse CLI command string through the grammar/parser pipeline. */
     Aestra::Audio::CommandResult executeMuseCommand(const std::string& input);

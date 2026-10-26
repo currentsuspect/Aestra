@@ -93,7 +93,12 @@ void AestraApp::wireAudition() {
                       [this](const std::string& picked) { if (!picked.empty() && m_content) m_content->addAuditionReference(picked); });
     };
     hooks.bounceNow = [this]() {
-        const auto manifest = TakeManager::loadManifest(m_documentState.canonicalPath());
+        const std::string path = m_documentState.canonicalPath();
+        if (path.empty()) return false;
+        auto manifest = TakeManager::loadManifest(path);
+        // A project opened from disk has no Versions manifest until its first save, and the tile did nothing at
+        // all. Bouncing is a save of the current state as the open version, so make that version first.
+        if (!(manifest.ok && manifest.activeTake()) && saveActiveTakeSnapshot()) manifest = TakeManager::loadManifest(path);
         const auto* open = manifest.ok ? manifest.activeTake() : nullptr;
         return open && bounceSavedVersion(m_documentState.canonicalPath(), open->id, [this](std::vector<float>& a, uint32_t& c, uint32_t& r) { return m_content->renderMixToBuffer(a, c, r); });
     };

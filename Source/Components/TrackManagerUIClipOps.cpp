@@ -307,7 +307,7 @@ bool TrackManagerUI::placeFileOnTimeline(const std::string& filePath, const std:
     dragData.type = AestraUI::DragDataType::File;
     dragData.filePath = filePath;
     dragData.displayName = displayName;
-    const auto dropResult = onDrop(dragData, AestraUI::NUIPoint(x, y));
+    const auto dropResult = placeDrop(dragData, AestraUI::NUIPoint(x, y)); // placed from the library: focus stays there
     return dropResult.accepted;
 }
 
@@ -344,7 +344,7 @@ bool TrackManagerUI::placePatternOnTimeline(PatternID patternId) {
     if (const auto* pattern = m_trackManager->getPatternManager().getPattern(patternId)) {
         dragData.displayName = pattern->name;
     }
-    const auto dropResult = onDrop(dragData, AestraUI::NUIPoint(x, y));
+    const auto dropResult = placeDrop(dragData, AestraUI::NUIPoint(x, y)); // placed from the library: focus stays there
     return dropResult.accepted;
 }
 

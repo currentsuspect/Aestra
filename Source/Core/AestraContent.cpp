@@ -1433,7 +1433,7 @@ void AestraContent::setupArsenalPanels() {
             }
         }
     });
-    m_sequencerPanel->setOnRequestPatternEditor([this](PatternID patternId) { openPatternInPianoRoll(patternId); });
+    m_sequencerPanel->setOnRequestPatternEditor([this](PatternID patternId, Aestra::Audio::UnitID unitId) { openPatternInPianoRoll(patternId, unitId); });
 
     m_sequencerPanel->setOnRequestLoadSample([this](UnitID id) {
         if (!m_fileBrowser)
@@ -3611,7 +3611,7 @@ void AestraContent::pauseFromCurrentFocus() {
     }
 }
 
-void AestraContent::openPatternInPianoRoll(PatternID patternId) {
+void AestraContent::openPatternInPianoRoll(PatternID patternId, Aestra::Audio::UnitID unitId) {
     if (!m_pianoRollPanel || !m_trackManager || !patternId.isValid()) {
         return;
     }
@@ -3622,12 +3622,16 @@ void AestraContent::openPatternInPianoRoll(PatternID patternId) {
         return;
     }
 
+    // The unit that asked wins (an Arsenal row's "Open in Piano Roll" on the 808 opened the Kick's notes: the
+    // pattern resolved to its first unit). Otherwise the pattern's own unit.
+    const Aestra::Audio::UnitID editingUnit =
+        (unitId != 0 && m_trackManager->getUnitManager().getUnit(unitId)) ? unitId : resolveEditingUnitForPattern(patternId);
     if (m_sequencerPanel) {
         m_sequencerPanel->setActivePattern(patternId);
-        m_sequencerPanel->setSelectedUnit(resolveEditingUnitForPattern(patternId));
+        m_sequencerPanel->setSelectedUnit(editingUnit);
     }
 
-    m_pianoRollPanel->setEditingUnit(resolveEditingUnitForPattern(patternId));
+    m_pianoRollPanel->setEditingUnit(editingUnit);
 
     // Opening a pattern loads content, not geometry: the panel reopens where
     // the user left it (stored preference, or the per-panel default), via the

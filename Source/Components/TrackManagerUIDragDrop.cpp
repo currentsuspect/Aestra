@@ -160,6 +160,14 @@ void TrackManagerUI::onDragLeave() {
 }
 
 AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
+    AestraUI::DropResult result = placeDrop(data, position);
+    // A drop that lands is the user's attention moving to the timeline. Keyboard focus stayed on the library the
+    // drag came from, so the timeline's keys (1-4 tools, Delete) did nothing until the next click on the grid.
+    if (result.accepted) setFocused(true);
+    return result;
+}
+
+AestraUI::DropResult TrackManagerUI::placeDrop(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
     AestraUI::DropResult result;
 
     // 1. Calculate drop location

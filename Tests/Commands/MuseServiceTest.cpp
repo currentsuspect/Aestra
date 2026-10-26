@@ -508,6 +508,23 @@ int main() {
                               ", \"unit\": " + u + ", \"pitch\": 40, \"steps\": \"x--q\"}}");
         check(status(r) == "execution_error", "invalid step character rejected");
 
+        // Swing pushes the last (odd) step late; its tail must still end inside the row, or the piano roll
+        // grows the pattern a whole bar to fit it.
+        r = call(service, "{\"id\": 1451, \"verb\": \"set_steps\", \"args\": {\"pattern\": " + p +
+                              ", \"unit\": " + u + ", \"pitch\": 43, \"steps\": \"xxxx\", \"step\": 0.25, \"swing\": 0.5, \"gate\": 1}}");
+        check(status(r) == "ok", "a swung row is written");
+        r = call(service, "{\"id\": 1452, \"verb\": \"get_pattern\", \"args\": {\"pattern\": " + p + "}}");
+        double swungEnd = 0.0, swungLastStart = 0.0;
+        for (size_t i = 0; i < r["result"]["notes"].size(); ++i) {
+            const auto& n = r["result"]["notes"][i];
+            if (n["pitch"].asNumber() != 43.0) continue;
+            swungEnd = std::max(swungEnd, n["start"].asNumber() + n["duration"].asNumber());
+            swungLastStart = std::max(swungLastStart, n["start"].asNumber());
+        }
+        check(std::abs(swungLastStart - 0.8125) < 1e-9, "the last step still lands late (swing kept)");
+        check(swungEnd <= 1.0 + 1e-9, "and its tail ends at the row end, not past it");
+        trackManager->getCommandHistory().undo();
+
         // Quantize: drag an off-grid note onto the grid.
         r = call(service, "{\"id\": 146, \"verb\": \"add_note\", \"args\": {\"pattern\": " + p +
                               ", \"unit\": " + u +
