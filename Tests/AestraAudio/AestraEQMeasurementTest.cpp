@@ -114,6 +114,19 @@ double processSilencePeak(AestraEQ& eq) {
     return peak;
 }
 
+// A band switched mid-signal crossfades from its outgoing filters over AestraEQ::kBandFadeSeconds (the outgoing
+// filter's own tail fades out; it was a hard reset that clicked). Stale memory would show in the NEW filter, so
+// measure silence once that fade is over.
+double processSilencePeakAfterFade(AestraEQ& eq) {
+    const uint32_t fadeFrames = static_cast<uint32_t>(std::ceil(AestraEQ::kBandFadeSeconds * kSampleRate));
+    std::vector<float> input(fadeFrames, 0.0f);
+    std::vector<float> output(fadeFrames, 0.0f);
+    const float* inPtr = input.data();
+    float* outPtr = output.data();
+    eq.process(&inPtr, &outPtr, 1, 1, fadeFrames);
+    return processSilencePeak(eq);
+}
+
 void settleSmoothing(AestraEQ& eq, uint32_t numBlocks = 500) {
     std::vector<float> input(kBlockSize, 0.0f);
     std::vector<float> output(kBlockSize, 0.0f);
@@ -615,10 +628,10 @@ bool testBandDisableClearsFilterMemory() {
     processSine(eq, 1000.0);
 
     eq.setParameter(AestraEQ::kParamBell1Enable, 0.0f);
-    const double disabledPeak = processSilencePeak(eq);
+    const double disabledPeak = processSilencePeakAfterFade(eq);
 
     eq.setParameter(AestraEQ::kParamBell1Enable, 1.0f);
-    const double reenabledPeak = processSilencePeak(eq);
+    const double reenabledPeak = processSilencePeakAfterFade(eq);
 
     const bool ok = disabledPeak < 1.0e-7 && reenabledPeak < 1.0e-7;
     return report("Band disable clears stale filter memory before re-enable", ok);
@@ -640,7 +653,7 @@ bool testBandTypeSwitchClearsFilterMemory() {
     processSine(eq, 1000.0);
 
     eq.setParameter(AestraEQ::kParamBell1Type, 1.0f / 3.0f);
-    const double switchedPeak = processSilencePeak(eq);
+    const double switchedPeak = processSilencePeakAfterFade(eq);
 
     const bool ok = switchedPeak < 1.0e-7;
     return report("Band type switches clear stale filter memory", ok);
