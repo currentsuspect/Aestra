@@ -35,7 +35,7 @@ target_include_directories(AestraEQSweepTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME AestraEQSweepTest COMMAND AestraEQSweepTest)
-set_tests_properties(AestraEQSweepTest PROPERTIES LABELS "audio;plugins;eq")
+set_tests_properties(AestraEQSweepTest PROPERTIES LABELS "audio;plugins;eq;contract:audio")
 
 # Aestra EQ Measurement Test
 add_executable(AestraEQMeasurementTest AestraAudio/AestraEQMeasurementTest.cpp)
