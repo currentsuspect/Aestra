@@ -3616,16 +3616,11 @@ void AestraContent::openPatternInPianoRoll(PatternID patternId, Aestra::Audio::U
         return;
     }
 
-    auto& pm = m_trackManager->getPatternManager();
-    auto pattern = pm.getPattern(patternId);
-    if (!pattern || !pattern->isMidi()) {
-        return;
-    }
+    const auto* pattern = m_trackManager->getPatternManager().getPattern(patternId);
+    if (!pattern || !pattern->isMidi()) return;
 
-    // The unit that asked wins (an Arsenal row's "Open in Piano Roll" on the 808 opened the Kick's notes: the
-    // pattern resolved to its first unit). Otherwise the pattern's own unit.
-    const Aestra::Audio::UnitID editingUnit =
-        (unitId != 0 && m_trackManager->getUnitManager().getUnit(unitId)) ? unitId : resolveEditingUnitForPattern(patternId);
+    // The asking unit wins (the 808 row's "Open in Piano Roll" opened the Kick's notes), else the pattern's own.
+    const auto editingUnit = m_trackManager->getUnitManager().getUnit(unitId) ? unitId : resolveEditingUnitForPattern(patternId);
     if (m_sequencerPanel) {
         m_sequencerPanel->setActivePattern(patternId);
         m_sequencerPanel->setSelectedUnit(editingUnit);

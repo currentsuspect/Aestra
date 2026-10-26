@@ -319,20 +319,23 @@ void AuditionHub::renderItemPage(NUIRenderer& r, const AuditionHubLayout::Frame&
             col1 = p.table.x + nameW + 14.0f;
             col2 = std::min(col1 + aW + 16.0f, p.table.right() - bW);
         }
+        // Narrower still (the table can shrink to 120 px): the reference value goes under the mix value.
+        const bool stacked = m_result && col2 < col1 + aW + 8.0f;
+        if (stacked) col2 = col1;
         for (const auto& row : rows)
             if (!row.note.empty() && p.table.right() - r.measureText(row.note, 10.0f).width <
                                          col2 + r.measureText(row.b.empty() ? row.a : row.b, 12.5f).width + 12.0f)
                 narrow = true;
         r.drawText(mixHead, {col1, p.table.y + 24.0f}, 10.0f, violet.withAlpha(0.85f));
-        if (m_result) r.drawText("Ref", {col2, p.table.y + 24.0f}, 10.0f, kRef.withAlpha(0.85f));
+        if (m_result && !stacked) r.drawText("Ref", {col2, p.table.y + 24.0f}, 10.0f, kRef.withAlpha(0.85f));
         float y = p.table.y + 46.0f;
         for (const auto& row : rows) {
             r.fillRect({p.table.x, y - 6.0f, p.table.width, 1.0f}, rule);
             r.drawText(row.name, {p.table.x, y + 8.0f}, 11.5f, muted);
             r.drawText(row.a, {col1, y + 8.0f}, 12.5f, violet);
-            if (!row.b.empty()) r.drawText(row.b, {col2, y + 8.0f}, 12.5f, kRef);
-            float advance = narrow ? 32.0f : 36.0f;
-            if (!row.note.empty()) {
+            if (!row.b.empty()) r.drawText(row.b, {col2, y + (stacked ? 24.0f : 8.0f)}, 12.5f, kRef);
+            float advance = stacked ? 42.0f : narrow ? 32.0f : 36.0f;
+            if (!row.note.empty() && !stacked) {
                 const float nw = r.measureText(row.note, 10.0f).width;
                 if (!narrow) {
                     r.drawText(row.note, {p.table.right() - nw, y + 10.0f}, 10.0f, muted.withAlpha(0.8f));
