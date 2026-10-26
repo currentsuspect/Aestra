@@ -26,6 +26,17 @@ target_include_directories(AestraEQTest PRIVATE
 add_test(NAME AestraEQTest COMMAND AestraEQTest)
 set_tests_properties(AestraEQTest PROPERTIES LABELS "audio;plugins;eq;contract:audio")
 
+# A band swept while audio plays must not spike (owner report, 26 Oct).
+add_executable(AestraEQSweepTest AestraAudio/AestraEQSweepTest.cpp)
+target_link_libraries(AestraEQSweepTest PRIVATE AestraAudio)
+target_include_directories(AestraEQSweepTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraEQSweepTest COMMAND AestraEQSweepTest)
+set_tests_properties(AestraEQSweepTest PROPERTIES LABELS "audio;plugins;eq")
+
 # Aestra EQ Measurement Test
 add_executable(AestraEQMeasurementTest AestraAudio/AestraEQMeasurementTest.cpp)
 target_link_libraries(AestraEQMeasurementTest PRIVATE AestraAudio)
