@@ -19,9 +19,10 @@ and the AestraAssets folder must stay next to the app.
 
 UPDATES
 -------
-You should only need to download Aestra once. Open Settings > Updates and paste the
-early-access key from your email. Aestra then checks for new builds by itself and
-offers "Download and install" when one is ready. Your projects are not touched.
+You should only need to download Aestra once. Open Settings > Updates, choose the
+Early channel, and paste the founder key from your email. Aestra then checks for new
+builds by itself and offers "Download and install" when one is ready. Your projects
+are not touched.
 
 PLUGINS
 -------
