@@ -68,6 +68,7 @@ void writeU16(std::ofstream& f, uint16_t v) { f.write(reinterpret_cast<const cha
 std::string writeLongSine() {
     const std::string path = (std::filesystem::temp_directory_path() / "muse_sampler_verb_sine.wav").string();
     const uint32_t sampleRate = 48000, frames = 96000;
+    constexpr double kPi = 3.14159265358979323846;
     std::ofstream f(path, std::ios::binary);
     f.write("RIFF", 4);
     writeU32(f, 36 + frames * 2);
@@ -82,7 +83,7 @@ std::string writeLongSine() {
     f.write("data", 4);
     writeU32(f, frames * 2);
     for (uint32_t i = 0; i < frames; ++i) {
-        const auto s = static_cast<int16_t>(20000.0 * std::sin(2.0 * M_PI * 55.0 * i / sampleRate));
+        const auto s = static_cast<int16_t>(20000.0 * std::sin(2.0 * kPi * 55.0 * i / sampleRate));
         writeU16(f, static_cast<uint16_t>(s));
     }
     return path;
@@ -222,6 +223,12 @@ int main() {
 
     // --- refusals -----------------------------------------------------------------
     check(status(setSampler(args())) != "ok", "refuses a call that changes nothing");
+    a = args();
+    a.set("release", JSON(0.25));
+    check(status(setSampler(a)) == "ok", "set a release the unit does not have yet");
+    a = args();
+    a.set("release", JSON(0.25));
+    check(status(setSampler(a)) != "ok", "refuses values the unit already has");
     a = args();
     a.set("release", JSON(9.0));
     check(status(setSampler(a)) != "ok", "refuses a release over 5 s");

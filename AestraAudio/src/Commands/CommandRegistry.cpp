@@ -581,6 +581,7 @@ void CommandRegistry::initialize() {
         if (auto raw = requireFlag(flags, "mono")) { after.mono = parseFlagBool(*raw); any = true; }
         if (auto raw = requireFlag(flags, "cut_self")) { after.cutSelf = parseFlagBool(*raw); any = true; }
         if (!any) return CommandRegistry::fail("set_sampler needs at least one of attack, decay, sustain, release, voices, mono, cut_self");
+        if (after == before) return CommandRegistry::fail("set_sampler: the unit already has those values");
         return std::make_unique<SetSamplerStateCommand>(units, *unitOpt, before, after);
     });
 
