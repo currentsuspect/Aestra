@@ -3,6 +3,7 @@
 
 #include "Core/AudioTelemetry.h"
 
+#include <algorithm>
 #include <cerrno>
 #include <chrono>
 #include <iostream>
@@ -141,8 +142,13 @@ bool RtAudioDriver::openStream(const AudioStreamConfig& config, AudioCallback ca
     m_telemetry = config.telemetry;
     m_lastError.clear();
 
-    RtAudioErrorType error = m_rtAudio->openStream(&outputParams, inputParams, RTAUDIO_FLOAT32, sampleRate,
-                                                   &bufferFrames, &RtAudioDriver::rtAudioCallback, this, &options);
+    m_streamContext = std::make_unique<StreamContext>();
+    m_streamContext->driver = this;
+    m_streamContext->outputChannels = config.numOutputChannels;
+
+    RtAudioErrorType error =
+        m_rtAudio->openStream(&outputParams, inputParams, RTAUDIO_FLOAT32, sampleRate, &bufferFrames,
+                              &RtAudioDriver::rtAudioCallback, m_streamContext.get(), &options);
     if (error != RTAUDIO_NO_ERROR) {
         m_lastError = "RtAudio failed to open stream";
         m_userCallback.store(nullptr, std::memory_order_relaxed);
@@ -243,6 +249,47 @@ void RtAudioDriver::stopStream() {
     }
 }
 
+void RtAudioDriver::abandonStream() {
+    if (!m_rtAudio || !m_rtAudio->isStreamOpen()) {
+        closeStream();
+        return;
+    }
+    // From here the old stream reaches nothing: its callback sees live == false.
+    if (m_streamContext) {
+        m_streamContext->live.store(false, std::memory_order_release);
+    }
+#ifdef __linux__
+    stopRealtimePriorityWorker();
+    if (m_memLockWorker.joinable()) {
+        m_memLockWorker.join();
+    }
+#endif
+    // The reaper owns the wedged instance and its context. stopStream() blocks
+    // until the backend lets go (it may never, if the device stays gone); the
+    // thread is detached so nothing waits on it, and the process can exit.
+    std::thread([rt = std::move(m_rtAudio), context = std::move(m_streamContext)]() mutable {
+        try {
+            if (rt->isStreamRunning()) rt->stopStream();
+            if (rt->isStreamOpen()) rt->closeStream();
+        } catch (...) {
+        }
+        rt.reset();
+        context.reset();
+    }).detach();
+
+    m_userCallback.store(nullptr, std::memory_order_relaxed);
+    m_userData.store(nullptr, std::memory_order_relaxed);
+    m_sampleRate.store(0, std::memory_order_relaxed);
+    m_bufferSize.store(0, std::memory_order_relaxed);
+#ifdef __linux__
+    m_audioThreadToken.store(0, std::memory_order_relaxed);
+#endif
+    // A fresh instance on the same API, so the driver can open a stream now.
+    if (!tryInitializeBackend({m_api})) {
+        m_lastError = "RtAudio backend could not be restarted after abandoning a stalled stream";
+    }
+}
+
 bool RtAudioDriver::isStreamRunning() const {
     return m_rtAudio && m_rtAudio->isStreamRunning();
 }
@@ -261,7 +308,18 @@ uint32_t RtAudioDriver::getStreamBufferSize() const {
 
 int RtAudioDriver::rtAudioCallback(void* outputBuffer, void* inputBuffer, unsigned int numFrames, double streamTime,
                                    RtAudioStreamStatus status, void* userData) {
-    auto* driver = static_cast<RtAudioDriver*>(userData);
+    auto* context = static_cast<StreamContext*>(userData);
+    if (!context->live.load(std::memory_order_acquire)) {
+        // An abandoned stream whose backend has let go: play silence until the
+        // reaper stops it. It must not touch the driver, which now serves
+        // another stream, or pump the engine alongside that stream.
+        if (outputBuffer && context->outputChannels > 0) {
+            std::fill_n(static_cast<float*>(outputBuffer),
+                        static_cast<size_t>(numFrames) * context->outputChannels, 0.0f);
+        }
+        return 0;
+    }
+    auto* driver = context->driver;
 #ifdef __linux__
     bool expected = false;
     if (driver &&
@@ -353,6 +411,7 @@ bool RtAudioDriver::tryInitializeBackend(const std::vector<RtAudio::Api>& candid
             auto deviceIds = candidate->getDeviceIds();
             if (!deviceIds.empty()) {
                 m_driverType = apiToDriverType(candidate->getCurrentApi());
+                m_api = candidate->getCurrentApi(); // what abandonStream() restarts
                 m_rtAudio = std::move(candidate);
                 return true;
             }

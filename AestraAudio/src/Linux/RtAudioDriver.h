@@ -43,7 +43,19 @@ public:
     void setDitheringEnabled(bool enabled) override { (void)enabled; }
     bool isDitheringEnabled() const override { return false; }
 
+    /// Hands a wedged stream to a reaper thread and starts a fresh RtAudio instance (see IAudioDriver).
+    void abandonStream() override;
+
 private:
+    // What RtAudio's callback receives as userData. One per opened stream, so a
+    // stream that has been abandoned can be told apart from the current one:
+    // when its stuck write finally returns, it must not reach the engine.
+    struct StreamContext {
+        RtAudioDriver* driver = nullptr;
+        uint32_t outputChannels = 0;
+        std::atomic<bool> live{true};
+    };
+
     static int rtAudioCallback(void* outputBuffer, void* inputBuffer, unsigned int numFrames, double streamTime,
                                RtAudioStreamStatus status, void* userData);
 
@@ -58,6 +70,8 @@ private:
 #endif
 
     std::unique_ptr<RtAudio> m_rtAudio;
+    std::unique_ptr<StreamContext> m_streamContext;
+    RtAudio::Api m_api{RtAudio::UNSPECIFIED};
     AudioDriverType m_driverType{AudioDriverType::UNKNOWN};
     std::atomic<AudioCallback> m_userCallback{nullptr};
     std::atomic<void*> m_userData{nullptr};
