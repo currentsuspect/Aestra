@@ -1,9 +1,10 @@
-AESTRA v0.8.1-alpha (early access)
-==================================
+AESTRA v0.8.2 preview (early access)
+====================================
 
-Thank you for trying Aestra this early. This is the version shown in the video.
-It is an alpha: the main parts work, some parts are rough, and some features are
-still being built. You are one of the first people outside the studio to use it.
+Thank you for trying Aestra this early. This is a preview of the next version: newer
+than the one shown in the videos, with VST3 and CLAP plugin support built in.
+It is an alpha. The main parts work, some parts are rough, and some features are
+still being built.
 
 STARTING IT
 -----------
@@ -13,13 +14,28 @@ Windows: unzip the folder anywhere, then open Aestra.exe.
 Linux:   extract the folder, then run ./Aestra from inside it.
          It needs SDL2, FreeType, ALSA and libsecret, which most desktops already have.
 
-Keep the AestraAssets folder next to the app. The app loads its fonts from there.
+Keep everything in the folder together: AestraPluginHost(.exe), AestraUpdater(.exe)
+and the AestraAssets folder must stay next to the app.
+
+UPDATES
+-------
+You should only need to download Aestra once. Open Settings > Updates and paste the
+early-access key from your email. Aestra then checks for new builds by itself and
+offers "Download and install" when one is ready. Your projects are not touched.
+
+PLUGINS
+-------
+Aestra runs every plugin inside AestraPluginHost, so a plugin that crashes cannot take
+Aestra down. It looks in the usual folders
+(Windows: C:\Program Files\Common Files\VST3 and \CLAP).
+Plugin support is new. Tested so far: Surge XT, Vital, Dexed, TAL-NoiseMaker,
+Airwindows and LSP. Others may load fine or may not; that is exactly what we want
+to hear about. Plugin windows have not yet been seen on a real Windows desktop by
+anyone outside the studio, so you may be the first.
 
 WHAT TO EXPECT
 --------------
-- This is the first Windows build handed out. Windows has had less testing than
-  Linux, so you are more likely to hit problems there.
-- Plugin support is still limited. Some plugins may not load.
+- Windows has had less testing than Linux, so you are more likely to hit problems there.
 - Save often. Projects made with this alpha may not open in later versions.
 - Crashes can happen. If Aestra crashes, the Versions panel offers a recovery card
   the next time you open the project.
@@ -28,6 +44,8 @@ TELLING US WHAT HAPPENED
 ------------------------
 Reply to the email that brought you this download, or write to hello@aestra.studio.
 The most useful report says what you were trying to do, what happened instead, and
-includes a screenshot if you can. Short notes are fine.
+includes a screenshot if you can. For a plugin: its name, VST3 or CLAP, and whether
+it loaded, made sound, opened its window, and came back after save and reopen.
+Short notes are fine.
 
 Aestra Studios
