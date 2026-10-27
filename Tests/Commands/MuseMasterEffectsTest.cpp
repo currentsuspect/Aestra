@@ -14,11 +14,13 @@
 
 #include "AestraJSON.h"
 
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <random>
 #include <string>
 
 using Aestra::JSON;
@@ -44,8 +46,8 @@ JSON call(MuseService& s, const std::string& verb, JSON args) {
 }
 std::string statusOf(JSON r) { return r.has("status") ? r["status"].asString() : "<missing>"; }
 
-std::string writeLoudWav() {
-    const std::string path = (std::filesystem::temp_directory_path() / "muse_master_loud.wav").string();
+std::string writeLoudWav(const std::filesystem::path& dir) {
+    const std::string path = (dir / "loud.wav").string();
     const uint32_t sr = 48000, frames = 24000;
     std::ofstream f(path, std::ios::binary);
     auto u32 = [&](uint32_t v) { f.write(reinterpret_cast<const char*>(&v), 4); };
@@ -74,8 +76,14 @@ int main() {
     CommandRegistry::initialize();
     MuseService service(tm.get(), &engine);
 
-    const std::string wav = writeLoudWav();
-    const std::string out = (std::filesystem::temp_directory_path() / "muse_master_out.wav").string();
+    // One directory per run: two ctest invocations at once must not share, overwrite
+    // or delete each other's renders.
+    const auto runDir = std::filesystem::temp_directory_path() /
+                        ("muse_master_" + std::to_string(std::random_device{}()) + "_" +
+                         std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    std::filesystem::create_directories(runDir);
+    const std::string wav = writeLoudWav(runDir);
+    const std::string out = (runDir / "out.wav").string();
     JSON a = JSON::object();
     a.set("name", JSON("Loud"));
     call(service, "add_unit", a);
@@ -143,8 +151,11 @@ int main() {
         return statusOf(rr) == "ok" ? rr["result"]["peakDb"].asNumber() : 999.0;
     };
     const double limited = render();
-    check(limited <= ceilingDb + 0.3, "with the limiter the master peak holds the ceiling (" + std::to_string(limited) +
-                                          " dBFS vs " + std::to_string(ceilingDb) + ")");
+    // Finite and near the ceiling: a silenced or broken limiter returns -inf, which
+    // the upper bound alone would accept.
+    check(std::isfinite(limited) && limited <= ceilingDb + 0.3 && limited > ceilingDb - 6.0,
+          "with the limiter the master peak holds the ceiling (" + std::to_string(limited) + " dBFS vs " +
+              std::to_string(ceilingDb) + ")");
     a = JSON::object();
     a.set("track", JSON(-1.0));
     a.set("slot", JSON(1.0));
@@ -163,8 +174,7 @@ int main() {
     a.set("effect", JSON("com.Aestrastudios.eq"));
     check(statusOf(call(service, "add_effect", a)) != "ok", "track -2 is refused");
 
-    std::filesystem::remove(out);
-    std::filesystem::remove(wav);
+    std::filesystem::remove_all(runDir);
     if (g_failures == 0) {
         std::cout << "MuseMasterEffectsTest: all checks passed\n";
         return 0;
