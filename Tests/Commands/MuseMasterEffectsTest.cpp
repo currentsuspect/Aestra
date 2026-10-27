@@ -20,6 +20,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <random>
 #include <string>
 
@@ -143,12 +144,16 @@ int main() {
     const double ceilingDb = ceilingDisplay.empty() ? 0.0 : std::stod(ceilingDisplay);
     check(!ceilingDisplay.empty() && ceilingDb < -1.0, "the ceiling reads back (" + ceilingDisplay + ")");
 
+    // NaN on a failed render: no numeric sentinel can satisfy both the
+    // ceiling-holding bound below and the exceeds-the-ceiling bound after bypass,
+    // so a failure is counted instead of silently reading as a passing peak.
     const auto render = [&] {
         JSON ra = JSON::object();
         ra.set("file", JSON(out));
         ra.set("tail", JSON(0.0));
         JSON rr = call(service, "render_song", ra);
-        return statusOf(rr) == "ok" ? rr["result"]["peakDb"].asNumber() : 999.0;
+        return statusOf(rr) == "ok" ? rr["result"]["peakDb"].asNumber()
+                                    : std::numeric_limits<double>::quiet_NaN();
     };
     const double limited = render();
     // Finite and near the ceiling: a silenced or broken limiter returns -inf, which
@@ -162,7 +167,8 @@ int main() {
     a.set("state", JSON(true));
     check(statusOf(call(service, "bypass_effect", a)) == "ok", "bypass the master limiter");
     const double open = render();
-    check(open > limited + 3.0, "bypassed, the boosted master goes over the ceiling (" + std::to_string(open) + " dBFS)");
+    check(std::isfinite(open) && open > limited + 3.0,
+          "bypassed, the boosted master goes over the ceiling (" + std::to_string(open) + " dBFS)");
     a = JSON::object();
     a.set("track", JSON(-1.0));
     a.set("slot", JSON(1.0));
