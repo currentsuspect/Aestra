@@ -489,6 +489,16 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
     rebuildActiveVoices();
 
     for (uint32_t i = 0; i < numFrames; ++i) {
+        // Rebuild before the events of this sample: the count has to describe the
+        // voices that were sounding when they arrived, otherwise a chord that starts
+        // from silence looks like a voice-count increase and the compensation glides
+        // down across its attack instead of being in place for it.
+        if (activeVoiceCountDirty) {
+            rebuildActiveVoices();
+            activeVoiceCountDirty = false;
+        }
+        const bool wasSilent = activeVoiceCount == 0;
+
         // Handle MIDI
         while (midiInput && eventIdx < eventCount) {
             const auto& e = midiInput->getEvent(eventIdx);
@@ -507,11 +517,17 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
         float L = 0.0f;
         float R = 0.0f;
         // One-pole glide toward the current polyphony compensation (see
-        // kVoiceCompGlideSeconds); per sample, shared by every voice.
+        // kVoiceCompGlideSeconds); per sample, shared by every voice. Gliding keeps
+        // a release tail from stepping when the voice count changes under it. It
+        // must NOT glide up from unity when nothing was sounding: a chord's first
+        // samples would then sum uncompensated and overshoot by ~6 dB, so after
+        // silence the compensation snaps to its target.
         m_voiceCompSmoothed += (voiceComp - m_voiceCompSmoothed) * voiceCompGlideCoeff;
         if (activeVoiceCountDirty) {
             rebuildActiveVoices();
             activeVoiceCountDirty = false;
+            if (wasSilent)
+                m_voiceCompSmoothed = voiceComp;
         }
 
         for (uint8_t vi = 0; vi < activeVoiceIndicesCount; ++vi) {
@@ -816,8 +832,11 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
             // Whatever is still sounding there fades out instead of being cut
             // mid-waveform: park it in a spare slot outside the configured polyphony,
             // exactly as a mono restart does. Without this, a one-voice cut-self
-            // retrigger still steps to zero in a single sample and ticks.
-            if (freeVoice->active && freeVoice->stage != EnvStage::Off) {
+            // retrigger still steps to zero in a single sample and ticks. Only for a
+            // voice with gain: a note-on that has not rendered yet would be parked
+            // silent, and it would still count toward the compensation and thin out
+            // the note that replaced it.
+            if (freeVoice->active && freeVoice->stage != EnvStage::Off && freeVoice->currentGain > 0.0f) {
                 for (size_t i = static_cast<size_t>(maxVoices); i < m_voices.size(); ++i) {
                     if (!m_voices[i].active) {
                         m_voices[i] = *freeVoice;
@@ -872,6 +891,11 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
 
 void SamplerPlugin::declickVoice(Voice& v) {
     if (!v.active || v.stage == EnvStage::Off) return;
+    // Already declicking: a second choke (a retrigger faster than the fade) must
+    // not restart the clock, or the tail can outlive its 4 ms window and keep
+    // counting toward the voice compensation. fadeSeconds > 0 only for a declick
+    // fade — an ADSR release leaves it 0 — so those still get converted.
+    if (v.stage == EnvStage::Release && v.fadeSeconds > 0.0) return;
     // Fade from where the envelope is right now, never from a stale value.
     v.releaseGain = v.currentGain;
     v.stage = EnvStage::Release;

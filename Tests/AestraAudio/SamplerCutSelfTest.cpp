@@ -197,6 +197,44 @@ bool renderSingleNote(const std::filesystem::path& wavPath, float* maxAbs, std::
     return true;
 }
 
+// N notes started on the SAME sample after silence: the polyphony compensation
+// must already be at its target when the chord's attack arrives, not glide down
+// from unity across it (that overshoots by ~6 dB for 4 voices).
+bool renderChordPeak(const std::filesystem::path& wavPath, int voices, float* peak, std::string* error) {
+    Plugins::SamplerPlugin sampler;
+    if (!sampler.initialize(kSampleRate, kBlockFrames)) {
+        *error = "sampler initialize failed";
+        return false;
+    }
+    if (!sampler.loadSample(wavPath.string())) {
+        *error = "sampler failed to load mono wav";
+        return false;
+    }
+    sampler.setRootMidiNote(60);
+    sampler.setMaxVoices(16);
+    sampler.setEnvelope(0.001f, 1.5f, 0.5f, 0.05f);
+    sampler.activate();
+
+    std::vector<float> left(kBlockFrames, 0.0f);
+    std::vector<float> right(kBlockFrames, 0.0f);
+    float* outputs[] = {left.data(), right.data()};
+
+    MidiBuffer midi;
+    for (int v = 0; v < voices; ++v) {
+        midi.addNoteOn(1, static_cast<uint8_t>(kNote + v), kVelocity, 0);
+    }
+
+    for (int block = 0; block < kBlocks; ++block) {
+        std::fill(left.begin(), left.end(), 0.0f);
+        std::fill(right.begin(), right.end(), 0.0f);
+        sampler.process(nullptr, outputs, 0, 2, kBlockFrames, block == 0 ? &midi : nullptr, nullptr);
+        for (uint32_t i = 0; i < kBlockFrames; ++i) {
+            *peak = std::max(*peak, std::abs(left[i]));
+        }
+    }
+    return true;
+}
+
 } // namespace
 
 int main() {
@@ -320,11 +358,32 @@ int main() {
     if (oneVoice.maxFirstDiff > singleMax * 0.15f) {
         return fail("one-voice cut-self: the choke stepped the waveform (hard cut)");
     }
-    if (oneVoice.postRetriggerMax < 0.10f * singleMax) {
+    if (oneVoice.afterFadeMax < 0.10f * singleMax) {
         return fail("one-voice cut-self: new voice was silenced by the choke");
     }
     if (oneVoice.afterFadeMax > singleMax * 1.10f) {
         return fail("one-voice cut-self: retrigger output exceeded single-voice amplitude");
+    }
+
+    // 6d. A chord that starts from silence: the polyphony compensation must be in
+    //     place for its attack. Gliding down from unity across the attack summed
+    //     the chord uncompensated and overshot — measured 0.179 against 0.0985
+    //     for four voices, ~5 dB — while the glide is only there for release
+    //     tails that are already sounding.
+    for (int voices = 2; voices <= 4; ++voices) {
+        float peak = 0.0f;
+        if (!renderChordPeak(wavPath, voices, &peak, &error)) {
+            return fail("chord render: " + error);
+        }
+        const float compensated = singleMax * std::sqrt(static_cast<float>(voices));
+        if (peak > compensated * 1.15f) {
+            return fail("polyphony compensation: a " + std::to_string(voices) + "-note chord from silence overshoots (" +
+                        std::to_string(peak) + " vs " + std::to_string(compensated) + " compensated)");
+        }
+        if (peak < compensated * 0.85f) {
+            return fail("polyphony compensation: a " + std::to_string(voices) + "-note chord is too quiet (" +
+                        std::to_string(peak) + " vs " + std::to_string(compensated) + " compensated)");
+        }
     }
 
     // 6b. The 808 case without cut-self: a mono note is released, and the next
