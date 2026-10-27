@@ -546,3 +546,14 @@ if(TARGET AestraPluginHost AND EXISTS ${CMAKE_SOURCE_DIR}/AestraAudio/External/c
     add_test(NAME ClapSandboxParamsTest COMMAND ClapSandboxParamsTest)
     set_tests_properties(ClapSandboxParamsTest PROPERTIES LABELS "audio;plugins;clap;parameters;regression;contract:plugins")
 endif()
+
+# Aestra Comp external sidechain (Sidechain param; key on channels 3-4)
+add_executable(AestraCompSidechainTest AestraAudio/AestraCompSidechainTest.cpp)
+target_link_libraries(AestraCompSidechainTest PRIVATE AestraAudio)
+target_include_directories(AestraCompSidechainTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraCompSidechainTest COMMAND AestraCompSidechainTest)
+set_tests_properties(AestraCompSidechainTest PROPERTIES LABELS "audio;plugins;comp;sidechain;contract:audio")

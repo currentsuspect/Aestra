@@ -34,8 +34,10 @@ bool testPublicParameterSurface() {
 
     const char* expected[] = {
         "Threshold", "Ratio",      "Attack",      "Release",      "Makeup Gain", "Knee",         "Mix",
-        "Bypass",    "Input Gain", "Output Gain", "Detector HPF", "Mode",        "Oversampling",
+        "Bypass",    "Input Gain", "Output Gain", "Detector HPF", "Mode",        "Oversampling", "Sidechain",
     };
+    static_assert(sizeof(expected) / sizeof(expected[0]) == AestraComp::kParamCount,
+                  "the expected public parameter list must name every parameter");
 
     for (uint32_t i = 0; i < AestraComp::kParamCount; ++i) {
         if (params[i].id != i || params[i].name != expected[i]) {

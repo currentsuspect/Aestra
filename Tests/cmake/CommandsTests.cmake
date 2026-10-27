@@ -215,6 +215,16 @@ target_include_directories(LatencyReportTest PRIVATE
 add_test(NAME LatencyReportTest COMMAND LatencyReportTest)
 set_tests_properties(LatencyReportTest PROPERTIES LABELS "commands;muse;latency;pdc;contract:application")
 
+add_executable(CompSidechainEndToEndTest Commands/CompSidechainEndToEndTest.cpp)
+target_link_libraries(CompSidechainEndToEndTest PRIVATE AestraAudioCore)
+target_include_directories(CompSidechainEndToEndTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME CompSidechainEndToEndTest COMMAND CompSidechainEndToEndTest)
+set_tests_properties(CompSidechainEndToEndTest PROPERTIES LABELS "commands;muse;routing;sidechain;contract:application")
+
 # --- Host capabilities -------------------------------------------------------
 # The seam the application registers settings./view./browser. verbs into.
 # Append new targets for this group at the END of this sub-section.
