@@ -59,7 +59,11 @@ private:
     static int rtAudioCallback(void* outputBuffer, void* inputBuffer, unsigned int numFrames, double streamTime,
                                RtAudioStreamStatus status, void* userData);
 
-    bool tryInitializeBackend(const std::vector<RtAudio::Api>& candidates);
+    bool tryInitializeBackend(const std::vector<RtAudio::Api>& candidates, bool keepWithoutDevices = false);
+    /// The APIs an abandoned stream is restarted on, in order: the one that was
+    /// serving it, then auto-detection. Empty-device handling lives in
+    /// tryInitializeBackend(keepWithoutDevices).
+    static std::vector<RtAudio::Api> restartCandidates(RtAudio::Api savedApi);
     static AudioDriverType apiToDriverType(RtAudio::Api api);
     static const char* apiName(RtAudio::Api api);
     std::string getDeviceName(unsigned int deviceId) const;
