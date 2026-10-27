@@ -812,6 +812,20 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
             freeVoice = oldestRelease ? oldestRelease : oldestActive;
             if (!freeVoice)
                 freeVoice = &m_voices[0]; // Fallback
+            // Every configured slot is busy, so this one is about to be overwritten.
+            // Whatever is still sounding there fades out instead of being cut
+            // mid-waveform: park it in a spare slot outside the configured polyphony,
+            // exactly as a mono restart does. Without this, a one-voice cut-self
+            // retrigger still steps to zero in a single sample and ticks.
+            if (freeVoice->active && freeVoice->stage != EnvStage::Off) {
+                for (size_t i = static_cast<size_t>(maxVoices); i < m_voices.size(); ++i) {
+                    if (!m_voices[i].active) {
+                        m_voices[i] = *freeVoice;
+                        declickVoice(m_voices[i]);
+                        break;
+                    }
+                }
+            }
         }
         freeVoice->order = m_nextVoiceOrder++;
         freeVoice->noteId = event.noteId;

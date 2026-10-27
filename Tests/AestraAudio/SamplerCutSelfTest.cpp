@@ -103,7 +103,7 @@ constexpr uint32_t kFadeDoneFrames = static_cast<uint32_t>(0.006 * kSampleRate);
 // mono selects the mono/legato voice path.
 bool renderRetrigger(const std::filesystem::path& wavPath, bool cutSelf, uint8_t firstNote,
                      uint8_t secondNote, int retriggerOffset, RenderMetrics* metrics, std::string* error,
-                     bool mono = false) {
+                     bool mono = false, int maxVoices = 8) {
     Plugins::SamplerPlugin sampler;
     if (!sampler.initialize(kSampleRate, kBlockFrames)) {
         *error = "sampler initialize failed";
@@ -114,7 +114,7 @@ bool renderRetrigger(const std::filesystem::path& wavPath, bool cutSelf, uint8_t
         return false;
     }
     sampler.setRootMidiNote(60);
-    sampler.setMaxVoices(8);
+    sampler.setMaxVoices(maxVoices);
     sampler.setMonoMode(mono);
     sampler.setEnvelope(0.001f, 1.5f, 0.5f, 0.05f);
     sampler.setCutSelfMode(cutSelf);
@@ -307,6 +307,24 @@ int main() {
     }
     if (monoCutSelf.afterFadeMax > singleMax * 1.10f) {
         return fail("mono cut-self: retrigger output exceeded single-voice amplitude");
+    }
+
+    // 6c. One configured voice, cut-self on: the pool has no free slot inside the
+    //     polyphony, so the retrigger reuses the only one. It must still fade the
+    //     old hit — the slot search used to overwrite it and step to zero in a
+    //     single sample, which is the tick this whole change removed.
+    RenderMetrics oneVoice;
+    if (!renderRetrigger(wavPath, true, kNote, kNote, kChokeOffset, &oneVoice, &error, false, 1)) {
+        return fail("one-voice cut-self render: " + error);
+    }
+    if (oneVoice.maxFirstDiff > singleMax * 0.15f) {
+        return fail("one-voice cut-self: the choke stepped the waveform (hard cut)");
+    }
+    if (oneVoice.postRetriggerMax < 0.10f * singleMax) {
+        return fail("one-voice cut-self: new voice was silenced by the choke");
+    }
+    if (oneVoice.afterFadeMax > singleMax * 1.10f) {
+        return fail("one-voice cut-self: retrigger output exceeded single-voice amplitude");
     }
 
     // 6b. The 808 case without cut-self: a mono note is released, and the next
