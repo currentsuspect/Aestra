@@ -35,6 +35,22 @@ public:
     virtual bool startStream() = 0;
     virtual void stopStream() = 0;
 
+    /**
+     * @brief Let go of a stream that has stopped making progress, without waiting on it.
+     *
+     * A backend can wedge inside its own write (PulseAudio's pa_simple_write
+     * waits forever when the graph it feeds stops being clocked) while holding
+     * the lock stopStream() needs, so a plain stop never returns. A driver that
+     * can do better overrides this to hand the wedged stream to a background
+     * thread and return at once, ready to open a new stream; the abandoned
+     * stream must never call the client callback again. The default is the
+     * ordinary stop + close, for drivers that cannot wedge this way.
+     */
+    virtual void abandonStream() {
+        stopStream();
+        closeStream();
+    }
+
     // Stream State
     virtual bool isStreamRunning() const = 0;
     virtual double getStreamLatency() const = 0; // In seconds

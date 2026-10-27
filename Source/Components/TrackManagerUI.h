@@ -322,6 +322,7 @@ public:
                                         const ::AestraUI::NUIPoint& position) override;
     void onDragLeave() override;
     ::AestraUI::DropResult onDrop(const ::AestraUI::DragData& data, const ::AestraUI::NUIPoint& position) override;
+    ::AestraUI::DropResult placeDrop(const ::AestraUI::DragData& data, const ::AestraUI::NUIPoint& position);
     ::AestraUI::NUIRect getDropBounds() const override { return getBounds(); }
 
     // Loop markers (Visual feedback)

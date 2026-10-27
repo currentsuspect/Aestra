@@ -264,6 +264,12 @@ public:
     virtual bool openEditor(void* parentWindow) = 0;
 
     /**
+     * @brief Whether the plugin makes its own top-level window (the sandbox helper does), so the app must not make one
+     * to embed it in. When true, openEditor() ignores its argument: pass nullptr.
+     */
+    virtual bool ownsEditorWindow() const { return false; }
+
+    /**
      * @brief Close the plugin editor window
      */
     virtual void closeEditor() = 0;

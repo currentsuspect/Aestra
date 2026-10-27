@@ -7,6 +7,7 @@
 #include "RealtimeThreadGuard.h"
 #include "Plugin/InternalPluginBase.h"
 #include "Plugin/PluginHost.h"
+#include "Plugin/EQFilters.h"
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -19,208 +20,6 @@
 namespace Aestra {
 namespace Audio {
 namespace Plugins {
-
-// ============================================================================
-// Biquad Filter — Direct Form II Transposed
-// ============================================================================
-
-class BiquadFilter {
-public:
-    BiquadFilter() { reset(); }
-
-    void reset() {
-        m_z1 = 0.0f;
-        m_z2 = 0.0f;
-    }
-
-    void setCoeffs(double b0, double b1, double b2, double a0, double a1, double a2) {
-        if (std::abs(a0) < 1.0e-24) {
-            m_b0 = 1.0; m_b1 = 0.0; m_b2 = 0.0;
-            m_a1 = 0.0; m_a2 = 0.0;
-            return;
-        }
-        const double invA0 = 1.0 / a0;
-        m_b0 = b0 * invA0;
-        m_b1 = b1 * invA0;
-        m_b2 = b2 * invA0;
-        m_a1 = a1 * invA0;
-        m_a2 = a2 * invA0;
-
-        if (!std::isfinite(m_b0) || !std::isfinite(m_a1) || !std::isfinite(m_a2)) {
-            m_b0 = 1.0; m_b1 = 0.0; m_b2 = 0.0;
-            m_a1 = 0.0; m_a2 = 0.0;
-        }
-    }
-
-    float process(float in) {
-        if (!std::isfinite(in)) {
-            m_z1 = m_z2 = 0.0f;
-            return 0.0f;
-        }
-        const double inSample = static_cast<double>(in);
-        const double out = m_b0 * inSample + m_z1;
-        m_z1 = m_b1 * inSample - m_a1 * out + m_z2;
-        m_z2 = m_b2 * inSample - m_a2 * out;
-        if (!std::isfinite(out)) {
-            m_z1 = m_z2 = 0.0;
-            return 0.0f;
-        }
-        m_z1 = zapDenormal(m_z1);
-        m_z2 = zapDenormal(m_z2);
-        return static_cast<float>(zapDenormal(out));
-    }
-
-    void process(float* buffer, uint32_t numFrames) {
-        const double b0 = m_b0, b1 = m_b1, b2 = m_b2;
-        const double a1 = m_a1, a2 = m_a2;
-        double z1 = m_z1, z2 = m_z2;
-        for (uint32_t i = 0; i < numFrames; ++i) {
-            const float in = buffer[i];
-            if (!std::isfinite(in)) {
-                z1 = z2 = 0.0;
-                buffer[i] = 0.0f;
-                continue;
-            }
-            const double inSample = static_cast<double>(in);
-            const double out = b0 * inSample + z1;
-            z1 = b1 * inSample - a1 * out + z2;
-            z2 = b2 * inSample - a2 * out;
-            buffer[i] = static_cast<float>(zapDenormal(out));
-        }
-        m_z1 = zapDenormal(z1);
-        m_z2 = zapDenormal(z2);
-    }
-
-private:
-    static double zapDenormal(double value) {
-        return std::abs(value) < 1.0e-24 ? 0.0 : value;
-    }
-
-    double m_b0 = 1.0, m_b1 = 0.0, m_b2 = 0.0;
-    double m_a1 = 0.0, m_a2 = 0.0;
-    double m_z1 = 0.0, m_z2 = 0.0;
-};
-
-// ============================================================================
-// Filter Type Enum (internal, not all exposed in V1)
-// ============================================================================
-
-enum class FilterType : uint32_t {
-    Bell = 0,
-    LowCut = 1,
-    HighCut = 2,
-    LowShelf = 3,
-    HighShelf = 4,
-    Notch = 5,
-    BandPass = 6,
-    Tilt = 7
-};
-
-struct FilterCoeffs {
-    double b0, b1, b2, a0, a1, a2;
-};
-
-static FilterCoeffs designBiquad(FilterType type, float frequency, float gainDb, float q, float sampleRate) {
-    constexpr double pi = 3.14159265358979323846;
-    const double w0 = 2.0 * pi * static_cast<double>(frequency) / static_cast<double>(sampleRate);
-    const double cos_w0 = std::cos(w0);
-    const double sin_w0 = std::sin(w0);
-    const double A = std::pow(10.0, static_cast<double>(gainDb) / 40.0);
-    const double alpha = sin_w0 / (2.0 * static_cast<double>(q));
-
-    double b0 = 0.0, b1 = 0.0, b2 = 0.0, a0 = 1.0, a1 = 0.0, a2 = 0.0;
-
-    switch (type) {
-    case FilterType::Bell: {
-        b0 = 1 + alpha * A;
-        b1 = -2 * cos_w0;
-        b2 = 1 - alpha * A;
-        a0 = 1 + alpha / A;
-        a1 = -2 * cos_w0;
-        a2 = 1 - alpha / A;
-        break;
-    }
-    case FilterType::LowCut: {
-        b0 =  (1 + cos_w0) / 2;
-        b1 = -(1 + cos_w0);
-        b2 =  (1 + cos_w0) / 2;
-        a0 =   1 + alpha;
-        a1 =  -2 * cos_w0;
-        a2 =   1 - alpha;
-        break;
-    }
-    case FilterType::HighCut: {
-        b0 =  (1 - cos_w0) / 2;
-        b1 =   1 - cos_w0;
-        b2 =  (1 - cos_w0) / 2;
-        a0 =   1 + alpha;
-        a1 =  -2 * cos_w0;
-        a2 =   1 - alpha;
-        break;
-    }
-    case FilterType::LowShelf: {
-        b0 = A * ((A + 1) - (A - 1) * cos_w0 + 2 * std::sqrt(A) * alpha);
-        b1 = 2 * A * ((A - 1) - (A + 1) * cos_w0);
-        b2 = A * ((A + 1) - (A - 1) * cos_w0 - 2 * std::sqrt(A) * alpha);
-        a0 = (A + 1) + (A - 1) * cos_w0 + 2 * std::sqrt(A) * alpha;
-        a1 = -2 * ((A - 1) + (A + 1) * cos_w0);
-        a2 = (A + 1) + (A - 1) * cos_w0 - 2 * std::sqrt(A) * alpha;
-        break;
-    }
-    case FilterType::HighShelf: {
-        b0 = A * ((A + 1) + (A - 1) * cos_w0 + 2 * std::sqrt(A) * alpha);
-        b1 = -2 * A * ((A - 1) + (A + 1) * cos_w0);
-        b2 = A * ((A + 1) + (A - 1) * cos_w0 - 2 * std::sqrt(A) * alpha);
-        a0 = (A + 1) - (A - 1) * cos_w0 + 2 * std::sqrt(A) * alpha;
-        a1 = 2 * ((A - 1) - (A + 1) * cos_w0);
-        a2 = (A + 1) - (A - 1) * cos_w0 - 2 * std::sqrt(A) * alpha;
-        break;
-    }
-    case FilterType::Notch: {
-        b0 = 1;
-        b1 = -2 * cos_w0;
-        b2 = 1;
-        a0 = 1 + alpha;
-        a1 = -2 * cos_w0;
-        a2 = 1 - alpha;
-        break;
-    }
-    case FilterType::BandPass: {
-        b0 = alpha;
-        b1 = 0;
-        b2 = -alpha;
-        a0 = 1 + alpha;
-        a1 = -2 * cos_w0;
-        a2 = 1 - alpha;
-        break;
-    }
-    case FilterType::Tilt:
-        // Tilt is implemented as staged low/high shelf filters by AestraEQ.
-        b0 = 1;
-        b1 = 0;
-        b2 = 0;
-        a0 = 1;
-        a1 = 0;
-        a2 = 0;
-        break;
-    }
-
-    return { b0, b1, b2, a0, a1, a2 };
-}
-
-static FilterCoeffs designFirstOrderCut(FilterType type, float frequency, float sampleRate) {
-    constexpr double pi = 3.14159265358979323846;
-    const double k = std::tan(pi * static_cast<double>(frequency) / static_cast<double>(sampleRate));
-    const double norm = 1.0 / std::max(1.0 + k, 1.0e-24);
-
-    if (type == FilterType::LowCut) {
-        return {norm, -norm, 0.0, 1.0, (k - 1.0) * norm, 0.0};
-    }
-    if (type == FilterType::HighCut) {
-        return {k * norm, k * norm, 0.0, 1.0, (k - 1.0) * norm, 0.0};
-    }
-    return {1.0, 0.0, 0.0, 1.0, 0.0, 0.0};
-}
 
 // ============================================================================
 // EQ Band (internal)
@@ -312,6 +111,7 @@ public:
     static constexpr uint32_t kAnalyzerStereoModeCount = 5;
     static constexpr uint32_t kMaxFilterStages = 8;  // V1 max: 96 dB/oct = 8 stages
     static constexpr uint32_t kBlockSize = 16;       // Smoothing update interval
+    static constexpr double kBandFadeSeconds = 0.010; // a band's on/off/type/slope/placement/solo change crossfades
 
     enum class AnalyzerSource : uint32_t {
         Pre = 0,
@@ -548,6 +348,8 @@ public:
         }
         snapDynamicBandSmoothing();
         snapBandTypes();
+        m_fadesPrimed = false;
+        for (auto& fade : m_bandFades) fade.remaining = 0;
         rebuildAllCoefficients();
         return true;
     }
@@ -630,10 +432,24 @@ public:
             }
 
             for (uint32_t band = 0; band < kMaxDynamicBands; ++band) {
-                if (soloBand >= 0 && band != static_cast<uint32_t>(soloBand)) continue;
-                if (!m_bandEnabled[band].load(std::memory_order_relaxed)) continue;
-                processBandBlock(band, outputs, channelHasInput, channels, sampleOffset, blockFrames);
+                const bool audible = m_bandEnabled[band].load(std::memory_order_relaxed) &&
+                                     !(soloBand >= 0 && band != static_cast<uint32_t>(soloBand));
+                if (!m_fadesPrimed) {
+                    m_bandAudible[band] = audible;
+                } else if (audible != m_bandAudible[band]) {
+                    // Switched on/off or soloed away: crossfade, from wherever the band's filters are.
+                    beginBandFade(band);
+                    if (audible) resetBandFilterStates(band); // its state is stale from when it last ran
+                    m_bandAudible[band] = audible;
+                }
+                if (m_bandFades[band].remaining > 0) {
+                    processBandFadeBlock(band, audible, outputs, channelHasInput, channels, sampleOffset, blockFrames);
+                } else if (audible) {
+                    processBandBlock(band, outputs, channelHasInput, channels, sampleOffset, blockFrames);
+                }
             }
+            m_fadesPrimed = true;
+            ++m_blockCounter;
 
             for (uint32_t ch = 0; ch < channels; ++ch) {
                 if (!channelHasInput[ch] || !outputs[ch]) continue;
@@ -2088,12 +1904,11 @@ private:
         }
     }
 
-    void processBandBuffer(uint32_t band, uint32_t channelSlot, float* buffer, uint32_t numFrames) {
-        if (!buffer || band >= kMaxDynamicBands || channelSlot >= 2) return;
-        const uint32_t stages = m_bandStages[band].load(std::memory_order_relaxed);
-        const uint32_t stageBase = filterStageBase(channelSlot, band);
-        for (uint32_t stage = 0; stage < stages; ++stage) {
-            m_filters[stageBase + stage].process(buffer, numFrames);
+    // One band's filter chain over one buffer. `filters` points at that channel slot's kMaxFilterStages stages.
+    static void processStages(BiquadFilter* filters, uint32_t stages, float* buffer, uint32_t numFrames) {
+        if (!buffer || !filters) return;
+        for (uint32_t stage = 0; stage < std::min(stages, kMaxFilterStages); ++stage) {
+            filters[stage].process(buffer, numFrames);
         }
     }
 
@@ -2103,18 +1918,89 @@ private:
                           uint32_t channels,
                           uint32_t sampleOffset,
                           uint32_t blockFrames) {
-        if (!outputs || band >= kMaxDynamicBands || blockFrames == 0) return;
-        const StereoMode mode = slotStereoMode(band);
+        if (band >= kMaxDynamicBands) return;
+        processBandBlockWith(&m_filters[filterStageBase(0, band)], &m_filters[filterStageBase(1, band)],
+                             m_bandStages[band].load(std::memory_order_relaxed), slotStereoMode(band), outputs,
+                             channelHasInput, channels, sampleOffset, blockFrames);
+    }
+
+    // The outgoing filters (captured with their state) and the band's current ones both run for the fade; the
+    // output moves linearly from one to the other. Linear, not equal-power: the two paths are the same signal,
+    // mostly in phase, so equal-power would bump the level mid-fade.
+    void beginBandFade(uint32_t band) {
+        if (!m_fadesPrimed || band >= kMaxDynamicBands) return;
+        BandFade& fade = m_bandFades[band];
+        if (fade.startedBlock == m_blockCounter) return; // this block's outgoing state is already captured
+        for (uint32_t ch = 0; ch < 2; ++ch) {
+            for (uint32_t stage = 0; stage < kMaxFilterStages; ++stage) {
+                fade.filters[ch * kMaxFilterStages + stage] = m_filters[filterStageBase(ch, band) + stage];
+            }
+        }
+        fade.stages = m_bandStages[band].load(std::memory_order_relaxed);
+        fade.mode = m_runtimeBandModes[band];
+        fade.enabled = m_bandAudible[band];
+        fade.total = std::max<uint32_t>(1u, static_cast<uint32_t>(std::lround(m_sampleRate * kBandFadeSeconds)));
+        fade.remaining = fade.total;
+        fade.startedBlock = m_blockCounter;
+    }
+
+    void processBandFadeBlock(uint32_t band,
+                              bool audible,
+                              float** outputs,
+                              const std::array<bool, 2>& channelHasInput,
+                              uint32_t channels,
+                              uint32_t sampleOffset,
+                              uint32_t blockFrames) {
+        BandFade& fade = m_bandFades[band];
+        std::array<std::array<float, kBlockSize>, 2> outgoing{};
+        float* outgoingPtrs[2] = {outgoing[0].data(), outgoing[1].data()};
+        const uint32_t ch2 = std::min<uint32_t>(channels, 2u);
+        for (uint32_t ch = 0; ch < ch2; ++ch) {
+            if (channelHasInput[ch] && outputs[ch])
+                std::memcpy(outgoing[ch].data(), outputs[ch] + sampleOffset, blockFrames * sizeof(float));
+        }
+        if (fade.enabled) {
+            processBandBlockWith(fade.filters.data(), fade.filters.data() + kMaxFilterStages, fade.stages, fade.mode,
+                                 outgoingPtrs, channelHasInput, channels, 0, blockFrames);
+        }
+        if (audible) processBandBlock(band, outputs, channelHasInput, channels, sampleOffset, blockFrames);
+        const float total = static_cast<float>(fade.total);
+        const uint32_t done = fade.total - fade.remaining;
+        for (uint32_t i = 0; i < blockFrames; ++i) {
+            const float a = std::min(1.0f, static_cast<float>(done + i + 1) / total);
+            for (uint32_t ch = 0; ch < ch2; ++ch) {
+                if (!channelHasInput[ch] || !outputs[ch]) continue;
+                float& out = outputs[ch][sampleOffset + i];
+                out = sanitizeSample(outgoing[ch][i] + (out - outgoing[ch][i]) * a);
+            }
+        }
+        fade.remaining = fade.remaining > blockFrames ? fade.remaining - blockFrames : 0u;
+    }
+
+    void processBandBlockWith(BiquadFilter* leftFilters,
+                              BiquadFilter* rightFilters,
+                              uint32_t stages,
+                              StereoMode mode,
+                              float** outputs,
+                              const std::array<bool, 2>& channelHasInput,
+                              uint32_t channels,
+                              uint32_t sampleOffset,
+                              uint32_t blockFrames) {
+        if (!outputs || blockFrames == 0) return;
+        BiquadFilter* const slotFilters[2] = {leftFilters, rightFilters};
+        const auto processBandBuffer = [&](uint32_t channelSlot, float* buffer, uint32_t numFrames) {
+            processStages(slotFilters[channelSlot < 2 ? channelSlot : 0], stages, buffer, numFrames);
+        };
 
         switch (mode) {
         case StereoMode::Left:
             if (channels > 0 && channelHasInput[0] && outputs[0]) {
-                processBandBuffer(band, 0, outputs[0] + sampleOffset, blockFrames);
+                processBandBuffer(0, outputs[0] + sampleOffset, blockFrames);
             }
             return;
         case StereoMode::Right:
             if (channels > 1 && channelHasInput[1] && outputs[1]) {
-                processBandBuffer(band, 1, outputs[1] + sampleOffset, blockFrames);
+                processBandBuffer(1, outputs[1] + sampleOffset, blockFrames);
             }
             return;
         case StereoMode::Mid:
@@ -2127,7 +2013,7 @@ private:
                     const float r = outputs[1][sampleOffset + i];
                     work[i] = 0.5f * (l + sign * r);
                 }
-                processBandBuffer(band, mode == StereoMode::Mid ? 0u : 1u, work.data(), blockFrames);
+                processBandBuffer(mode == StereoMode::Mid ? 0u : 1u, work.data(), blockFrames);
                 for (uint32_t i = 0; i < blockFrames; ++i) {
                     const uint32_t frame = sampleOffset + i;
                     if (mode == StereoMode::Mid) {
@@ -2143,14 +2029,14 @@ private:
                 return;
             }
             if (channels > 0 && channelHasInput[0] && outputs[0]) {
-                processBandBuffer(band, 0, outputs[0] + sampleOffset, blockFrames);
+                processBandBuffer(0, outputs[0] + sampleOffset, blockFrames);
             }
             return;
         case StereoMode::Stereo:
         default:
             for (uint32_t ch = 0; ch < channels; ++ch) {
                 if (!channelHasInput[ch] || !outputs[ch]) continue;
-                processBandBuffer(band, ch, outputs[ch] + sampleOffset, blockFrames);
+                processBandBuffer(ch, outputs[ch] + sampleOffset, blockFrames);
             }
             return;
         }
@@ -2164,6 +2050,7 @@ private:
 
             if (!enabled) {
                 if (m_runtimeBandEnabled[band]) {
+                    beginBandFade(band);
                     resetBandFilterStates(band);
                 }
                 setDynamicDetectorCoefficients(band, FilterType::BandPass, 0.5f, 0.091f, false);
@@ -2227,6 +2114,7 @@ private:
                 m_runtimeBandStages[band] != stages ||
                 m_runtimeBandModes[band] != slotStereoMode(band) ||
                 m_runtimeBandSoloAudition[band] != soloAudition) {
+                beginBandFade(band);
                 resetBandFilterStates(band);
             }
             m_bandStages[band].store(stages, std::memory_order_relaxed);
@@ -2397,6 +2285,24 @@ private:
     std::array<StereoMode, kMaxDynamicBands> m_runtimeBandModes{};
     std::array<bool, kMaxDynamicBands> m_runtimeBandSoloAudition{};
     std::array<uint32_t, kMaxDynamicBands> m_runtimeBandStages{};
+
+    // A band whose structure changes while audio plays (on/off, type, slope stage count, stereo placement, solo)
+    // used to have its filters reset mid-signal: the output jumped (a Bell type step on music measured an 18 dB
+    // burst of top end, a high-pass slope step 11.6 dB). Instead the outgoing filters, with their state, keep
+    // running for kBandFadeSeconds and the band crossfades from the old sound to the new.
+    struct BandFade {
+        std::array<BiquadFilter, 2 * kMaxFilterStages> filters{};
+        uint32_t stages = 0;
+        StereoMode mode = StereoMode::Stereo;
+        bool enabled = false;   // whether the outgoing band was heard at all
+        uint32_t remaining = 0;
+        uint32_t total = 0;
+        uint64_t startedBlock = ~0ull;
+    };
+    std::array<BandFade, kMaxDynamicBands> m_bandFades{};
+    std::array<bool, kMaxDynamicBands> m_bandAudible{};
+    bool m_fadesPrimed = false;   // the first block after initialize() adopts the state without fading
+    uint64_t m_blockCounter = 0;
     std::atomic<int32_t> m_soloBand{-1};
     int32_t m_runtimeSoloBand = -1;
 

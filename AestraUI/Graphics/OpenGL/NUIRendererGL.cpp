@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIRendererGL.h"
+#include <cassert>
 #include <cstring>
 #include <cmath>
 #include <iostream>
@@ -676,6 +677,11 @@ void NUIRendererGL::shutdown() {
         glDeleteBuffers(1, &ebo_);
         ebo_ = 0;
     }
+    if (quadEbo_) {
+        glDeleteBuffers(1, &quadEbo_);
+        quadEbo_ = 0;
+        quadEboQuads_ = 0;
+    }
     
     if (primitiveShader_.id) {
         glDeleteProgram(primitiveShader_.id);
@@ -716,8 +722,7 @@ void NUIRendererGL::beginFrame() {
     glEnable(GL_BLEND);
     glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
-    vertices_.clear();
-    indices_.clear();
+    clearBatch();
     frameCounter_++;
     drawCallCount_ = 0;  // Reset draw call counter each frame
     submittedQuadCount_ = 0;
@@ -757,11 +762,13 @@ void NUIRendererGL::pushTransform(float tx, float ty, float scale) {
     t.ty = ty;
     t.scale = scale;
     transformStack_.push_back(t);
+    composedTransform_ = composeTransformStack(transformStack_);
 }
 
 void NUIRendererGL::popTransform() {
     if (!transformStack_.empty()) {
         transformStack_.pop_back();
+        composedTransform_ = composeTransformStack(transformStack_);
     }
 }
 
@@ -783,7 +790,7 @@ void NUIRendererGL::setClipRect(const NUIRect& rect) {
     // clip disagreed for every scale != 1. Both now go through one function, so
     // they cannot drift apart again.
     if (!transformStack_.empty()) {
-        composeTransformStack(transformStack_).applyToRect(x1, y1, x2, y2);
+        composedTransform_.applyToRect(x1, y1, x2, y2);
     }
     
     // Normalize if scale was negative (unlikely but safe)
@@ -987,6 +994,7 @@ void NUIRendererGL::drawLine(const NUIPoint& start, const NUIPoint& end, float t
     const float outerNy = dx / len * (halfThickness + featherWidth);
 
     const NUIColor transparent(color.r, color.g, color.b, 0.0f);
+    useExplicitIndices(); // the eight vertices are shared by three quads
     const uint32_t base = static_cast<uint32_t>(vertices_.size());
 
     addVertex(x1 + outerNx, y1 + outerNy, 0.0f, 0.0f, transparent, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 5.0f);
@@ -1030,6 +1038,7 @@ void NUIRendererGL::drawPolyline(const NUIPoint* points, int count, float thickn
 
     const float halfThickness = thickness * 0.5f;
     const float featherWidth = std::max(0.55f, thickness * 0.55f);
+    useExplicitIndices(); // each column of vertices is shared by two segments
     const uint32_t baseIndex = static_cast<uint32_t>(vertices_.size());
     const NUIColor transparent(color.r, color.g, color.b, 0.0f);
 
@@ -1138,6 +1147,7 @@ void NUIRendererGL::fillWaveform(const NUIPoint* topPoints, const NUIPoint* bott
     
     // Build triangle strip: top[0], bottom[0], top[1], bottom[1], ...
     // This creates a filled shape between the top and bottom edges
+    useExplicitIndices(); // a strip: each column is shared by two quads
     uint32_t baseIndex = static_cast<uint32_t>(vertices_.size());
     
     // Add all vertices - addVertex handles transform internally
@@ -1182,6 +1192,7 @@ void NUIRendererGL::fillWaveformGradient(const NUIPoint* topPoints, const NUIPoi
     }
     
     // Build triangle strip with gradient colors (bright at top, darker at bottom)
+    useExplicitIndices(); // a strip: each column is shared by two quads
     uint32_t baseIndex = static_cast<uint32_t>(vertices_.size());
     
     // Add vertices with different colors for top and bottom edges
@@ -1230,17 +1241,15 @@ void NUIRendererGL::fillRectGradient(const NUIRect& rect, const NUIColor& colorS
     }
     
     uint32_t base = static_cast<uint32_t>(vertices_.size()) - 4;
-    indices_.push_back(base + 0);
-    indices_.push_back(base + 1);
-    indices_.push_back(base + 2);
-    indices_.push_back(base + 0);
-    indices_.push_back(base + 2);
-    indices_.push_back(base + 3);
+    pushQuadIndices(base);
 }
 
 void NUIRendererGL::fillCircleGradient(const NUIPoint& center, float radius, const NUIColor& colorInner, const NUIColor& colorOuter) {
     ensureBasicPrimitive();
     // Simple radial gradient
+    // These vertices have never had indices, so they have never drawn. Keep it
+    // that way here: on the quad-only path they would be drawn as quads.
+    useExplicitIndices();
     const int segments = 32;
     const float angleStep = 2.0f * 3.14159f / segments;
     
@@ -2726,7 +2735,9 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
     // This avoids repeated vector resizing for large text blocks
     size_t estimatedGlyphs = text.length();
     vertices_.reserve(vertices_.size() + estimatedGlyphs * 4);
-    indices_.reserve(indices_.size() + estimatedGlyphs * 6);
+    if (!quadOnlyBatch_) {
+        indices_.reserve(indices_.size() + estimatedGlyphs * 6);
+    }
     
     // fontSize is in logical pixels - no DPI scaling needed here
     // Scale factor from atlas size to requested font size
@@ -2844,12 +2855,7 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
         
         // Add indices for quad
         uint32_t base = static_cast<uint32_t>(vertices_.size()) - 4;
-        indices_.push_back(base + 0);
-        indices_.push_back(base + 1);
-        indices_.push_back(base + 2);
-        indices_.push_back(base + 0);
-        indices_.push_back(base + 2);
-        indices_.push_back(base + 3);
+        pushQuadIndices(base);
         
         // Advance cursor with sub-pixel precision to match measurement
         x += (ch.advance / 64.0f) * scale;
@@ -2937,12 +2943,7 @@ void NUIRendererGL::drawTexture(uint32_t textureId, const NUIRect& destRect, con
     addVertex(destRect.x, destRect.bottom(), tx0, ty1, white);
 
     uint32_t base = static_cast<uint32_t>(vertices_.size()) - 4;
-    indices_.push_back(base + 0);
-    indices_.push_back(base + 1);
-    indices_.push_back(base + 2);
-    indices_.push_back(base + 0);
-    indices_.push_back(base + 2);
-    indices_.push_back(base + 3);
+    pushQuadIndices(base);
 }
 
 void NUIRendererGL::drawTexture(const NUIRect& bounds, const unsigned char* rgba, 
@@ -2981,18 +2982,12 @@ void NUIRendererGL::drawTexture(const NUIRect& bounds, const unsigned char* rgba
     addVertex(bounds.x, bounds.bottom(), 0.0f, 1.0f, white);
 
     uint32_t base = static_cast<uint32_t>(vertices_.size()) - 4;
-    indices_.push_back(base + 0);
-    indices_.push_back(base + 1);
-    indices_.push_back(base + 2);
-    indices_.push_back(base + 0);
-    indices_.push_back(base + 2);
-    indices_.push_back(base + 3);
+    pushQuadIndices(base);
 
     glBindVertexArray(vao_);
     glBindBuffer(GL_ARRAY_BUFFER, vbo_);
     glBufferData(GL_ARRAY_BUFFER, vertices_.size() * sizeof(Vertex), vertices_.data(), GL_DYNAMIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices_.size() * sizeof(uint32_t), indices_.data(), GL_DYNAMIC_DRAW);
+    const uint32_t indexCount = bindBatchIndices();
 
     glUseProgram(primitiveShader_.id);
     glUniformMatrix4fv(primitiveShader_.projectionLoc, 1, GL_FALSE, projectionMatrix_);
@@ -3006,16 +3001,15 @@ void NUIRendererGL::drawTexture(const NUIRect& bounds, const unsigned char* rgba
     glUniform1i(primitiveShader_.textureLoc, 0);
     glUniform1i(primitiveShader_.useTextureLoc, 1);
 
-    submittedQuadCount_ += indices_.size() / 6;
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices_.size()), GL_UNSIGNED_INT, 0);
+    submittedQuadCount_ += indexCount / 6;
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indexCount), GL_UNSIGNED_INT, 0);
     drawCallCount_++;
     if (Aestra::Profiler::getInstance().isEnabled()) {
         Aestra::Profiler::getInstance().recordDrawCall();
-        Aestra::Profiler::getInstance().recordTriangles(static_cast<uint32_t>(indices_.size() / 3));
+        Aestra::Profiler::getInstance().recordTriangles(indexCount / 3);
     }
 
-    vertices_.clear();
-    indices_.clear();
+    clearBatch();
 
     glDeleteTextures(1, &texture);
 }
@@ -3056,18 +3050,12 @@ void NUIRendererGL::drawTextureFlippedV(uint32_t textureId, const NUIRect& destR
     addVertex(destRect.x, destRect.bottom(), tx0, ty1, white);
 
     uint32_t base = static_cast<uint32_t>(vertices_.size()) - 4;
-    indices_.push_back(base + 0);
-    indices_.push_back(base + 1);
-    indices_.push_back(base + 2);
-    indices_.push_back(base + 0);
-    indices_.push_back(base + 2);
-    indices_.push_back(base + 3);
+    pushQuadIndices(base);
 
     glBindVertexArray(vao_);
     glBindBuffer(GL_ARRAY_BUFFER, vbo_);
     glBufferData(GL_ARRAY_BUFFER, vertices_.size() * sizeof(Vertex), vertices_.data(), GL_DYNAMIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices_.size() * sizeof(uint32_t), indices_.data(), GL_DYNAMIC_DRAW);
+    const uint32_t indexCount = bindBatchIndices();
 
     glUseProgram(primitiveShader_.id);
     glUniformMatrix4fv(primitiveShader_.projectionLoc, 1, GL_FALSE, projectionMatrix_);
@@ -3078,16 +3066,15 @@ void NUIRendererGL::drawTextureFlippedV(uint32_t textureId, const NUIRect& destR
     glUniform1i(primitiveShader_.textureLoc, 0);
     glUniform1i(primitiveShader_.useTextureLoc, 1);
 
-    submittedQuadCount_ += indices_.size() / 6;
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices_.size()), GL_UNSIGNED_INT, 0);
+    submittedQuadCount_ += indexCount / 6;
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indexCount), GL_UNSIGNED_INT, 0);
     drawCallCount_++;
     if (Aestra::Profiler::getInstance().isEnabled()) {
         Aestra::Profiler::getInstance().recordDrawCall();
-        Aestra::Profiler::getInstance().recordTriangles(static_cast<uint32_t>(indices_.size() / 3));
+        Aestra::Profiler::getInstance().recordTriangles(indexCount / 3);
     }
 
-    vertices_.clear();
-    indices_.clear();
+    clearBatch();
 }
 
 // ============================================================================
@@ -3296,8 +3283,7 @@ void NUIRendererGL::flush() {
     glBindBuffer(GL_ARRAY_BUFFER, vbo_);
     glBufferData(GL_ARRAY_BUFFER, vertices_.size() * sizeof(Vertex), vertices_.data(), GL_DYNAMIC_DRAW);
     
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices_.size() * sizeof(uint32_t), indices_.data(), GL_DYNAMIC_DRAW);
+    const uint32_t indexCount = bindBatchIndices();
     
     // Use shader
     glUseProgram(primitiveShader_.id);
@@ -3357,20 +3343,19 @@ void NUIRendererGL::flush() {
     }
     
     // Draw
-    submittedQuadCount_ += indices_.size() / 6;
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices_.size()), GL_UNSIGNED_INT, 0);
+    submittedQuadCount_ += indexCount / 6;
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indexCount), GL_UNSIGNED_INT, 0);
     drawCallCount_++;  // Track draw call
     // Record with global profiler
     {
         if (Aestra::Profiler::getInstance().isEnabled()) {
             Aestra::Profiler::getInstance().recordDrawCall();
-            Aestra::Profiler::getInstance().recordTriangles(static_cast<uint32_t>(indices_.size() / 3));
+            Aestra::Profiler::getInstance().recordTriangles(indexCount / 3);
         }
     }
 
     // Clear for next batch
-    vertices_.clear();
-    indices_.clear();
+    clearBatch();
     
     // Reset texture state after flush? No, keep it until it changes or frame ends.
     // Actually, if we just flushed, we might want to reset if the next call is a non-textured primitive.
@@ -3446,6 +3431,8 @@ void NUIRendererGL::createBuffers() {
     glGenVertexArrays(1, &vao_);
     glGenBuffers(1, &vbo_);
     glGenBuffers(1, &ebo_);
+    glGenBuffers(1, &quadEbo_);
+    quadEboQuads_ = 0;
     
     glBindVertexArray(vao_);
     
@@ -3570,12 +3557,7 @@ void NUIRendererGL::addQuad(const NUIRect& rect, const NUIColor& color,
     addVertex(rect.x, rect.bottom(), 0.0f, 1.0f, color, rw, rh, qw, qh, radius, blur, strokeWidth, type);
     
     uint32_t base = static_cast<uint32_t>(vertices_.size()) - 4;
-    indices_.push_back(base + 0);
-    indices_.push_back(base + 1);
-    indices_.push_back(base + 2);
-    indices_.push_back(base + 0);
-    indices_.push_back(base + 2);
-    indices_.push_back(base + 3);
+    pushQuadIndices(base);
 }
 
 void NUIRendererGL::applyTransform(float& x, float& y) {
@@ -3586,7 +3568,7 @@ void NUIRendererGL::applyTransform(float& x, float& y) {
     // One composition, shared with setClipRect(). These used to be two separate
     // walks of the same stack in opposite operation orders, so clipped geometry
     // and its clip rectangle landed in different places for any scale != 1.
-    composeTransformStack(transformStack_).applyToPoint(x, y);
+    composedTransform_.applyToPoint(x, y);
 }
 
 void NUIRendererGL::updateProjectionMatrix() {

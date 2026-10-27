@@ -303,9 +303,24 @@ private:
     // Vertex batch
     std::vector<Vertex> vertices_;
     std::vector<uint32_t> indices_;
+
+    // Index source for the pending batch. While every vertex belongs to a quad
+    // emitted in the canonical (0,1,2)(0,2,3) order, no per-quad indices are
+    // written: the batch draws from quadEbo_, built once and grown on demand.
+    // Geometry that shares vertices (lines, polylines, waveforms) calls
+    // useExplicitIndices() first, which writes the pending quads' indices and
+    // leaves the rest of that batch on indices_ exactly as before.
+    bool quadOnlyBatch_ = true;
+    uint32_t quadEbo_ = 0;
+    uint32_t quadEboQuads_ = 0; // quads quadEbo_ can index
+    void pushQuadIndices(uint32_t base);
+    void useExplicitIndices();
+    uint32_t bindBatchIndices(); // binds the batch's EBO (VAO must be bound); returns the index count
+    void clearBatch();
     
-    // Transform stack
+    // Transform stack, and its composition: recomposed on push/pop, not per vertex.
     std::vector<NUITransform2D> transformStack_;
+    NUIComposedTransform composedTransform_;
     
     // Textures
     struct TextureData { uint32_t glId = 0; int width = 0; int height = 0; };

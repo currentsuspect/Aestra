@@ -2,6 +2,7 @@
 #pragma once
 
 #include "PluginHost.h"
+#include "Plugin/HostTransport.h"
 
 #include "AestraThreading.h"
 
@@ -18,6 +19,8 @@ namespace Aestra {
 namespace Audio {
 
 class PluginHostProcess;
+class SharedAudioBlock;
+class WorkerWake;
 
 class OutOfProcessPluginInstance : public IPluginInstance {
 public:
@@ -59,6 +62,7 @@ public:
     // never gets a window handle, so a plugin that hangs or crashes in its UI takes the helper with it, not the app.
     bool hasEditor() const override;
     bool openEditor(void* parentWindow) override;
+    bool ownsEditorWindow() const override { return true; } // the helper makes the window (V82-H3 / H8)
     void closeEditor() override;
     bool isEditorOpen() const override { return m_editorOpen.load(std::memory_order_acquire); }
     std::pair<int, int> getEditorSize() const override;
@@ -81,6 +85,19 @@ public:
     // means setParameter outran the worker's drain — surfaced for diagnostics and
     // tests since setParameter itself is void (#238).
     uint64_t parameterDropCount() const { return m_paramDrops.load(std::memory_order_relaxed); }
+
+    // Blocks the helper answered, and blocks played dry because its answer was not
+    // back in time. The second is audible (the plugin drops out for a block), so
+    // the compatibility run reports it per plugin (V82-H7).
+    uint64_t helperBlockCount() const { return m_helperBlocks.load(std::memory_order_relaxed); }
+    uint64_t dryBlockCount() const { return m_dryBlocks.load(std::memory_order_relaxed); }
+
+    // Blocks whose input and MIDI never reached the helper because the previous
+    // block was still with it. A note-on in such a block is lost (V82-H7).
+    uint64_t unsentBlockCount() const { return m_unsentBlocks.load(std::memory_order_relaxed); }
+    // True when the block's audio travels through shared memory rather than hex over the pipe (V82-H7 follow-up). Set up by
+    // initialize(); false means the helper could not map the region and the slower path is in use.
+    bool usesSharedAudio() const { return m_shm != nullptr; }
 
 #ifdef AESTRA_ENABLE_TEST_HOOKS
     // Send a raw command to the helper and return its reply. Test-only: used by the
@@ -118,8 +135,11 @@ private:
     void stopWorker();
     void workerLoop();
     bool processBlockInHelper(const std::vector<float>& input, uint32_t channels, uint32_t frames,
-                              const std::vector<uint8_t>& midiData, size_t midiBytes, std::vector<float>& output);
+                              const std::vector<uint8_t>& midiData, size_t midiBytes, const HostTransport& transport,
+                              std::vector<float>& output);
     void markCrashed();
+    void setupSharedBlock();     ///< audio through shared memory when the helper can map it (V82-H7 follow-up)
+    static void raiseWorkerPriority();
     void refreshPluginLatency(); ///< asks the helper for the plugin's own latency
     void passThrough(const float* const* inputs, float** outputs, uint32_t numInputChannels, uint32_t numOutputChannels,
                      uint32_t numFrames) const;
@@ -127,6 +147,8 @@ private:
     PluginInfo m_info;
     std::string m_hostExecutablePath;
     std::unique_ptr<PluginHostProcess> m_process;
+    std::unique_ptr<SharedAudioBlock> m_shm; ///< null: the block travels hex-encoded over the pipe
+    std::unique_ptr<WorkerWake> m_wake;
     mutable std::mutex m_ipcMutex;
     std::atomic<bool> m_loaded{false};
     std::atomic<bool> m_active{false};
@@ -158,6 +180,9 @@ private:
     std::vector<float> m_readyOutput;
     std::vector<uint8_t> m_pendingMidiData;
     std::vector<uint8_t> m_workerMidiData;
+    // The block's tempo and playhead, handed over with its input under the same pending-slot protocol.
+    HostTransport m_pendingTransport;
+    HostTransport m_workerTransport;
     std::atomic<size_t> m_pendingMidiBytes{0};
     std::atomic<uint32_t> m_pendingFrames{0};
     std::atomic<uint32_t> m_readyFrames{0};
@@ -202,6 +227,9 @@ private:
     mutable std::vector<PluginParameter> m_paramList;
     mutable bool m_paramListValid = false;
     std::atomic<uint64_t> m_paramDrops{0};
+    std::atomic<uint64_t> m_helperBlocks{0};
+    std::atomic<uint64_t> m_dryBlocks{0};
+    std::atomic<uint64_t> m_unsentBlocks{0};
 
     void drainParamQueueToChild();
 

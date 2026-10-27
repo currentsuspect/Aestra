@@ -163,6 +163,19 @@ private:
     // Voice Architecture
     enum class EnvStage { Attack, Decay, Sustain, Release, Off };
 
+    /// The playable window of a voice's sample: where it starts, where it ends,
+    /// and the loop geometry. A function of the voice's frame count and the
+    /// block's loop points, and therefore the same for every sample of a voice
+    /// in a block.
+    struct SampleWindow {
+        double total = 0.0;
+        double start = 0.0;
+        double end = 0.0;
+        double loopLength = 1.0;
+        double pingPongEnd = 0.0;
+        double pingPongSpan = 0.0;
+    };
+
     struct Voice {
         bool active = false;
         int note = 0;
@@ -186,6 +199,13 @@ private:
         // the audio thread (a refcount copy); the plugin's retired list keeps the buffer alive past the voice, so
         // dropping this reference is never the last one on the audio thread.
         std::shared_ptr<SampleData> held;
+        // The cached window, and the inputs it was computed from. Rebuilt only
+        // when one of them changes, so a voice that changes sample mid-block
+        // or a block whose loop points moved still gets the right window.
+        SampleWindow window{};
+        double windowFrames = -1.0;
+        double windowStartNorm = -1.0;
+        double windowEndNorm = -1.0;
     };
 
     static constexpr int kMaxVoices = 32;

@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "Plugin/VST3Host.h"
+#include "Plugin/HostTransport.h"
 
 #include "AestraLog.h"
 #include "Plugin/EditorLoopPump.h"
@@ -45,6 +46,54 @@ struct VST3PluginInstance::ModuleHolder {
 
     VST3::Hosting::Module::Ptr module;
 };
+
+#if defined(_WIN32)
+namespace {
+
+// The host's side of a plugin editor on Windows (V82-H8): only IPlugFrame. A Windows plugin runs its own timers on the
+// window's thread (SetTimer), so there is no run loop to offer; the helper's message pump serves them.
+class WinPlugFrame final : public IPlugFrame {
+public:
+    WinPlugFrame(Aestra::Audio::EditorLoopPump&, std::function<void(int, int)> requestResize)
+        : m_requestResize(std::move(requestResize)) {}
+
+    tresult PLUGIN_API queryInterface(const TUID iid, void** obj) override {
+        if (!obj) return kInvalidArgument;
+        if (FUnknownPrivate::iidEqual(iid, FUnknown::iid) || FUnknownPrivate::iidEqual(iid, IPlugFrame::iid)) {
+            *obj = static_cast<IPlugFrame*>(this);
+            addRef();
+            return kResultOk;
+        }
+        *obj = nullptr;
+        return kNoInterface;
+    }
+    uint32 PLUGIN_API addRef() override { return ++m_refs; }
+    uint32 PLUGIN_API release() override {
+        const uint32 left = --m_refs;
+        if (left == 0) delete this;
+        return left;
+    }
+
+    tresult PLUGIN_API resizeView(IPlugView* view, ViewRect* newSize) override {
+        if (!view || !newSize || m_resizing) return kInvalidArgument;
+        m_resizing = true; // onSize() can make some plugins ask again: answer once
+        if (m_requestResize) m_requestResize(newSize->getWidth(), newSize->getHeight());
+        view->onSize(newSize);
+        m_resizing = false;
+        return kResultOk;
+    }
+
+    void clearRegistrations() {}
+
+private:
+    std::function<void(int, int)> m_requestResize;
+    std::atomic<uint32> m_refs{1};
+    bool m_resizing = false;
+};
+using EmbedPlugFrame = WinPlugFrame;
+
+} // namespace
+#endif
 
 #if defined(__linux__)
 namespace {
@@ -159,6 +208,7 @@ private:
     std::atomic<uint32> m_refs{1};
     bool m_resizing = false;
 };
+using EmbedPlugFrame = X11PlugFrame;
 
 } // namespace
 #endif // __linux__
@@ -455,6 +505,18 @@ bool VST3PluginInstance::initialize(double sampleRate, uint32_t maxBlockSize) {
         return false;
     }
 
+    // The host turns on the buses it feeds (VST3: activateBus before setActive).
+    // Without the event bus a synth never hears a note: Surge XT and Dexed loaded
+    // and played silence (V82-H7). The main audio buses are usually on by default,
+    // which is why effects worked.
+    if (auto* comp = static_cast<IComponent*>(m_component)) {
+        m_audioInputBuses = comp->getBusCount(kAudio, kInput) > 0 ? 1 : 0;
+        m_audioOutputBuses = comp->getBusCount(kAudio, kOutput) > 0 ? 1 : 0;
+        if (m_audioInputBuses) comp->activateBus(kAudio, kInput, 0, true);
+        if (m_audioOutputBuses) comp->activateBus(kAudio, kOutput, 0, true);
+        if (comp->getBusCount(kEvent, kInput) > 0) comp->activateBus(kEvent, kInput, 0, true);
+    }
+
     // Allocate temp buffers
     m_tempBuffer.resize(maxBlockSize * 4); // Extra space for stereo I/O
 
@@ -477,6 +539,8 @@ void VST3PluginInstance::activate() {
     auto comp = static_cast<IComponent*>(m_component);
     if (comp->setActive(true) == kResultOk) {
         m_active = true;
+        // VST3 asks for setProcessing(true) once active, before the first process call.
+        if (auto* processor = static_cast<IAudioProcessor*>(m_processor)) processor->setProcessing(true);
     }
 }
 
@@ -484,6 +548,7 @@ void VST3PluginInstance::deactivate() {
     if (!m_loaded || !m_active)
         return;
 
+    if (auto* processor = static_cast<IAudioProcessor*>(m_processor)) processor->setProcessing(false);
     auto comp = static_cast<IComponent*>(m_component);
     comp->setActive(false);
     m_active = false;
@@ -526,8 +591,8 @@ void VST3PluginInstance::process(const float* const* inputs, float** outputs, ui
     data.processMode = kRealtime;
     data.symbolicSampleSize = kSample32;
     data.numSamples = numFrames;
-    data.numInputs = 1;
-    data.numOutputs = 1;
+    data.numInputs = m_audioInputBuses;
+    data.numOutputs = m_audioOutputBuses;
     data.inputs = &inputBus;
     data.outputs = &outputBus;
     // Parameter values for the processor (host sets and edits from the plugin's window), and its answers back.
@@ -536,7 +601,31 @@ void VST3PluginInstance::process(const float* const* inputs, float** outputs, ui
     m_params->output.clear();
     data.inputParameterChanges = &m_params->input;
     data.outputParameterChanges = &m_params->output;
-    data.processContext = nullptr;
+    // Tempo, metre and playhead (HostTransport.h): without them tempo-synced plugins have no tempo and some reset
+    // their own (Vital's "Beats Per Minute" came back 0 after a state reload).
+    ProcessContext context{};
+    const HostTransport transport = HostTransportClock::current();
+    if (transport.valid) {
+        context.state = ProcessContext::kTempoValid | ProcessContext::kTimeSigValid |
+                        ProcessContext::kProjectTimeMusicValid | ProcessContext::kBarPositionValid;
+        if (transport.playing)
+            context.state |= ProcessContext::kPlaying;
+        if (transport.looping && transport.loopEndPpq > transport.loopStartPpq) {
+            context.state |= ProcessContext::kCycleActive | ProcessContext::kCycleValid;
+            context.cycleStartMusic = transport.loopStartPpq;
+            context.cycleEndMusic = transport.loopEndPpq;
+        }
+        context.sampleRate = m_sampleRate;
+        context.projectTimeSamples = transport.samplePosition;
+        context.projectTimeMusic = transport.ppqPosition;
+        context.barPositionMusic = transport.barStartPpq;
+        context.tempo = transport.tempo;
+        context.timeSigNumerator = transport.timeSigNumerator;
+        context.timeSigDenominator = transport.timeSigDenominator;
+        data.processContext = &context;
+    } else {
+        data.processContext = nullptr;
+    }
 
     // MIDI input events
     struct EventList : public IEventList {
@@ -990,11 +1079,11 @@ void VST3PluginInstance::closeEditor() {
 
     auto view = static_cast<IPlugView*>(m_plugView);
     view->removed();
-#if defined(__linux__)
+#if defined(__linux__) || defined(_WIN32)
     if (m_plugFrame) {
         view->setFrame(nullptr);
-        static_cast<X11PlugFrame*>(m_plugFrame)->clearRegistrations();
-        static_cast<X11PlugFrame*>(m_plugFrame)->release();
+        static_cast<EmbedPlugFrame*>(m_plugFrame)->clearRegistrations();
+        static_cast<EmbedPlugFrame*>(m_plugFrame)->release();
         m_plugFrame = nullptr;
     }
 #endif
@@ -1030,10 +1119,15 @@ bool VST3PluginInstance::canResizeEditor() const {
     return static_cast<IPlugView*>(m_plugView)->canResize() == kResultTrue;
 }
 
-bool VST3PluginInstance::openEditorX11(const std::function<unsigned long(int, int, bool)>& makeWindow,
-                                       Aestra::Audio::EditorLoopPump& pump,
-                                       std::function<void(int, int)> requestResize) {
-#if defined(__linux__)
+bool VST3PluginInstance::openEditorEmbedded(const std::function<std::uintptr_t(int, int, bool)>& makeWindow,
+                                            Aestra::Audio::EditorLoopPump& pump,
+                                            std::function<void(int, int)> requestResize) {
+#if defined(__linux__) || defined(_WIN32)
+#if defined(_WIN32)
+    const FIDString platformType = kPlatformTypeHWND;
+#else
+    const FIDString platformType = kPlatformTypeX11EmbedWindowID;
+#endif
     if (!m_controller || m_editorOpen || !makeWindow)
         return false;
 
@@ -1041,7 +1135,7 @@ bool VST3PluginInstance::openEditorX11(const std::function<unsigned long(int, in
     IPlugView* view = controller->createView(ViewType::kEditor);
     if (!view)
         return false;
-    if (view->isPlatformTypeSupported(kPlatformTypeX11EmbedWindowID) != kResultTrue) {
+    if (view->isPlatformTypeSupported(platformType) != kResultTrue) {
         view->release();
         return false;
     }
@@ -1052,15 +1146,15 @@ bool VST3PluginInstance::openEditorX11(const std::function<unsigned long(int, in
         width = rect.getWidth();
         height = rect.getHeight();
     }
-    const unsigned long window = makeWindow(width, height, view->canResize() == kResultTrue);
+    const std::uintptr_t window = makeWindow(width, height, view->canResize() == kResultTrue);
     if (window == 0) {
         view->release();
         return false;
     }
 
-    auto* frame = new X11PlugFrame(pump, std::move(requestResize)); // one reference: ours
+    auto* frame = new EmbedPlugFrame(pump, std::move(requestResize)); // one reference: ours
     view->setFrame(frame);
-    if (view->attached(reinterpret_cast<void*>(window), kPlatformTypeX11EmbedWindowID) != kResultOk) {
+    if (view->attached(reinterpret_cast<void*>(window), platformType) != kResultOk) {
         view->setFrame(nullptr);
         frame->clearRegistrations();
         frame->release();

@@ -3,6 +3,8 @@
 #include "HelperEditorHost.h"
 #include "HelperLineReader.h"
 #include "HelperParamCommands.h"
+#include "SharedAudioBlock.h"
+#include "Plugin/HostTransport.h"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -28,12 +30,8 @@
 #include "Plugin/VST3Host.h"
 #endif
 
-// CLAP hosting in this child is POSIX-only (dlopen). The shared note-conversion
-// rules are only needed there, so keep the include off the Windows build, where
-// this header is not on the include path.
-#ifndef _WIN32
+// CLAP hosting in this child: Linux, macOS and Windows (HelperDynLib.h).
 #include "HelperClapModule.h"
-#endif
 
 #if defined(AESTRA_ENABLE_TEST_HOOKS) && !defined(_WIN32)
 #if defined(__linux__)
@@ -322,6 +320,9 @@ int main(int argc, char** argv) {
     std::vector<float> processBuffer;
     std::vector<uint8_t> midiBuffer;
     std::vector<uint8_t> stateBuffer;
+    std::vector<float> processed; // kept across blocks so a block does not allocate
+    Aestra::Audio::SharedAudioBlock sharedBlock;
+    std::array<std::string, 10> transportFields; // kept across blocks so a block does not allocate
     std::string line;
 #ifdef AESTRA_ENABLE_TEST_HOOKS
     // The __aestra_test_echo__ fake plugin has no real module; it records applied
@@ -335,36 +336,42 @@ int main(int argc, char** argv) {
     echoParams.fill(0.0f);
     echoParams[0] = 1.0f; // unity gain until set
 #endif
-#ifndef _WIN32
     ClapModule clapModule;
-#endif
 #ifdef AESTRA_HAS_VST3
     Vst3Module vst3Module;
 #endif
-#if defined(AESTRA_HAS_X11)
+#if defined(AESTRA_HELPER_HAS_EDITORS)
     AestraHelper::EditorHost editorHost;
 #endif
     AestraHelper::EditLog editLog;
 
-#ifndef _WIN32
     AestraHelper::LineReader lineReader;
-#endif
-    // The next command. On POSIX the same thread runs an open plugin editor between commands (HelperLineReader.h).
+    // The next command. The same thread runs the plugin's timers and an open editor between commands
+    // (HelperLineReader.h).
     auto readCommand = [&](std::string& out) -> bool {
 #ifdef _WIN32
-        return static_cast<bool>(std::getline(std::cin, out));
+        return lineReader.next(
+            out,
+            [&](int& timeoutMs) {
+                clapModule.hostContext.limitWait(timeoutMs);
+                editorHost.limitWait(timeoutMs);
+            },
+            [&] {
+                clapModule.hostContext.service();
+                editorHost.service();
+            });
 #else
         return lineReader.next(
             out,
             [&](std::vector<pollfd>& fds, int& timeoutMs) {
                 clapModule.hostContext.pollFds(fds, timeoutMs);
-#if defined(AESTRA_HAS_X11)
+#if defined(AESTRA_HELPER_HAS_EDITORS)
                 editorHost.pollFds(fds, timeoutMs);
 #endif
             },
             [&] {
                 clapModule.hostContext.service();
-#if defined(AESTRA_HAS_X11)
+#if defined(AESTRA_HELPER_HAS_EDITORS)
                 editorHost.service();
 #endif
             }
@@ -385,6 +392,41 @@ int main(int argc, char** argv) {
 
         if (command == "PING") {
             reply("OK PONG");
+        } else if (command == "SCANALL") {
+            // Like SCAN, but every plugin in the bundle: records "id,name,vendor,version,features" (each hex), joined by ';'.
+            std::string format;
+            std::string pathHex;
+            input >> format >> pathHex;
+            const std::string path = hexDecode(pathHex);
+            if (format != "clap") {
+                reply("ERR unsupported-format");
+                continue;
+            }
+            if (path.empty()) {
+                reply("ERR invalid-scan-request");
+                continue;
+            }
+            std::vector<const ClapPluginDescriptor*> descriptors;
+            std::string error;
+            if (!clapModule.listDescriptors(path, descriptors, error)) {
+                reply("ERR " + error);
+                continue;
+            }
+            std::string records;
+            for (const ClapPluginDescriptor* d : descriptors) {
+                std::string features;
+                if (d->features) {
+                    for (const char* const* f = d->features; *f; ++f) {
+                        if (!features.empty()) features += "|";
+                        features += *f;
+                    }
+                }
+                if (!records.empty()) records += ";";
+                records += hexEncodeString(d->id) + "," + hexEncodeString(d->name ? d->name : "") + "," +
+                           hexEncodeString(d->vendor ? d->vendor : "") + "," + hexEncodeString(d->version ? d->version : "") + "," +
+                           hexEncodeString(features);
+            }
+            reply("OK " + records);
         } else if (command == "SCAN") {
             std::string format;
             std::string pathHex;
@@ -398,7 +440,6 @@ int main(int argc, char** argv) {
                 reply("ERR invalid-scan-request");
                 continue;
             }
-#ifndef _WIN32
             const ClapPluginDescriptor* descriptor = nullptr;
             std::string error;
             if (!clapModule.scanMetadata(path, descriptor, error)) {
@@ -420,11 +461,8 @@ int main(int argc, char** argv) {
                   hexEncodeString(descriptor->name ? descriptor->name : "") + " " +
                   hexEncodeString(descriptor->vendor ? descriptor->vendor : "") + " " +
                   hexEncodeString(descriptor->version ? descriptor->version : "") + " " + hexEncodeString(features));
-#else
-            reply("ERR unsupported-platform");
-#endif
         } else if (command == "LOAD") {
-#if defined(AESTRA_HAS_VST3) && defined(AESTRA_HAS_X11)
+#if defined(AESTRA_HAS_VST3) && defined(AESTRA_HELPER_HAS_EDITORS)
             editorHost.close(); // the old plugin's window must go before its module does
 #endif
             std::string format;
@@ -437,7 +475,6 @@ int main(int argc, char** argv) {
             if (id == "__aestra_test_crash__") {
                 std::abort();
             }
-#ifndef _WIN32
             // Fake CLAP note endpoints (#244): configure the fake's advertised note
             // dialect, then wire it through the REAL ClapModule so the test exercises
             // the production note-conversion boundary. g_state also records events.
@@ -468,7 +505,6 @@ int main(int argc, char** argv) {
                 }
             }
 #endif
-#endif
             if (format != "vst3" && format != "clap") {
                 reply("ERR unsupported-format");
                 continue;
@@ -495,14 +531,7 @@ int main(int argc, char** argv) {
                     continue;
                 }
 #endif
-#ifdef _WIN32
-                if (format == "clap") {
-                    reply("ERR clap-unsupported-on-this-platform");
-                    continue;
-                }
-#endif
             }
-#ifndef _WIN32
             if (format == "clap" && id != "__aestra_test_echo__") {
 #ifdef AESTRA_HAS_VST3
                 vst3Module.close();
@@ -516,12 +545,9 @@ int main(int argc, char** argv) {
             } else {
                 clapModule.close();
             }
-#endif
 #ifdef AESTRA_HAS_VST3
             if (format == "vst3" && id != "__aestra_test_echo__") {
-#ifndef _WIN32
                 clapModule.close();
-#endif
                 std::string error;
                 if (!vst3Module.load(path, id, error)) {
                     reply("ERR " + error);
@@ -549,7 +575,6 @@ int main(int argc, char** argv) {
                 reply("ERR invalid-init");
                 continue;
             }
-#ifndef _WIN32
             if (clapModule.plugin) {
                 std::string error;
                 if (!clapModule.initialize(sampleRate, maxBlockSize, error)) {
@@ -557,7 +582,6 @@ int main(int argc, char** argv) {
                     continue;
                 }
             }
-#endif
 #ifdef AESTRA_HAS_VST3
             if (vst3Module.plugin) {
                 std::string error;
@@ -572,7 +596,7 @@ int main(int argc, char** argv) {
             // V82-H3: EDITOR OPEN <titleHex> -> OK EDITOR <w> <h> | ERR; EDITOR CLOSE; EDITOR STATE -> OK EDITOR OPEN|CLOSED
             std::string sub;
             input >> sub;
-#if defined(AESTRA_HAS_X11)
+#if defined(AESTRA_HELPER_HAS_EDITORS)
             if (sub == "OPEN") {
                 std::string titleHex;
                 input >> titleHex;
@@ -581,9 +605,7 @@ int main(int argc, char** argv) {
 #ifdef AESTRA_HAS_VST3
                 if (vst3Module.plugin) backend = AestraHelper::vst3EditorBackend(vst3Module.plugin);
 #endif
-#ifndef _WIN32
                 if (clapModule.plugin) backend = clapEditorBackend(clapModule);
-#endif
                 if (!editorHost.open(std::move(backend), hexDecode(titleHex), w, h)) reply("ERR no-editor");
                 else reply("OK EDITOR " + std::to_string(w) + " " + std::to_string(h));
             } else if (sub == "CLOSE") {
@@ -598,23 +620,15 @@ int main(int argc, char** argv) {
 #else
             reply(sub == "OPEN" ? "ERR no-editor" : "OK EDITOR CLOSED"); // no X11: nothing to open, so nothing is ever open
 #endif
-#ifdef AESTRA_HAS_VST3
-        } else if (command == "PARAMS") {
-            reply(vst3Module.plugin ? AestraHelper::paramsReply(*vst3Module.plugin) : "OK 0");
-        } else if (command == "GETPARAM") {
-            uint32_t paramId = 0;
-            reply(!(input >> paramId) || !vst3Module.plugin ? "ERR no-plugin" : AestraHelper::getParamReply(*vst3Module.plugin, paramId));
-        } else if (command == "EDITS") {
-            reply(editLog.take());
-#endif
+        // One branch per command for both formats. A VST3-only copy above this used
+        // to answer first whenever VST3 was built in, so every CLAP plugin reported
+        // no parameters through the sandbox (V82-H7).
         } else if (command == "PARAMS") {
             std::string list = "OK 0";
 #ifdef AESTRA_HAS_VST3
             if (vst3Module.plugin) list = AestraHelper::paramsReply(*vst3Module.plugin);
 #endif
-#ifndef _WIN32
             if (clapModule.plugin) list = clapModule.paramsReply();
-#endif
             reply(list);
         } else if (command == "GETPARAM") {
             uint32_t paramId = 0;
@@ -623,9 +637,7 @@ int main(int argc, char** argv) {
 #ifdef AESTRA_HAS_VST3
                 if (vst3Module.plugin) answer = AestraHelper::getParamReply(*vst3Module.plugin, paramId);
 #endif
-#ifndef _WIN32
                 if (clapModule.plugin) answer = clapModule.getParamReply(paramId);
-#endif
             }
             reply(answer);
         } else if (command == "EDITS") {
@@ -636,9 +648,7 @@ int main(int argc, char** argv) {
 #ifdef AESTRA_ENABLE_TEST_HOOKS
             if (echoPlugin) pluginLatency = echoHasProcessed ? Aestra::Audio::kEchoTestLatencySamples : 0;
 #endif
-#ifndef _WIN32
             if (clapModule.plugin) pluginLatency = clapModule.latencySamples();
-#endif
 #ifdef AESTRA_HAS_VST3
             if (vst3Module.plugin) pluginLatency = vst3Module.latencySamples();
 #endif
@@ -658,9 +668,7 @@ int main(int argc, char** argv) {
             reply("OK ACTIVE");
         } else if (command == "DEACTIVATE") {
             active = false;
-#ifndef _WIN32
             clapModule.deactivate();
-#endif
 #ifdef AESTRA_HAS_VST3
             vst3Module.deactivate();
 #endif
@@ -691,12 +699,10 @@ int main(int argc, char** argv) {
                 continue;
             }
 #endif
-#ifndef _WIN32
             if (clapModule.plugin) {
                 reply(clapModule.setParameter(paramId, value) ? "OK SETPARAM" : "ERR setparam-failed");
                 continue;
             }
-#endif
 #ifdef AESTRA_HAS_VST3
             if (vst3Module.plugin) {
                 vst3Module.plugin->setParameter(paramId, static_cast<float>(value));
@@ -705,7 +711,7 @@ int main(int argc, char** argv) {
             }
 #endif
             reply("ERR no-plugin");
-#if defined(AESTRA_ENABLE_TEST_HOOKS) && !defined(_WIN32)
+#if defined(AESTRA_ENABLE_TEST_HOOKS)
         } else if (command == "TESTNOTES") {
             // Dump the events the fake CLAP plugin actually received through
             // process.in_events (#244). Format: "OK <n>" then one token per event:
@@ -795,7 +801,6 @@ int main(int argc, char** argv) {
                 reply("ERR not-loaded");
                 continue;
             }
-#ifndef _WIN32
             if (clapModule.plugin) {
                 stateBuffer.clear();
                 if (!clapModule.saveState(stateBuffer)) {
@@ -805,7 +810,6 @@ int main(int argc, char** argv) {
                 reply("OK " + hexEncodeBytes(stateBuffer.data(), stateBuffer.size()));
                 continue;
             }
-#endif
 #ifdef AESTRA_HAS_VST3
             if (vst3Module.plugin) {
                 stateBuffer = vst3Module.saveState();
@@ -825,7 +829,6 @@ int main(int argc, char** argv) {
                 reply("ERR invalid-state");
                 continue;
             }
-#ifndef _WIN32
             if (clapModule.plugin) {
                 if (!clapModule.loadState(stateBuffer)) {
                     reply("ERR state-load-failed");
@@ -834,7 +837,6 @@ int main(int argc, char** argv) {
                 reply("OK STATE");
                 continue;
             }
-#endif
 #ifdef AESTRA_HAS_VST3
             if (vst3Module.plugin) {
                 if (!vst3Module.loadState(stateBuffer)) {
@@ -847,22 +849,18 @@ int main(int argc, char** argv) {
 #endif
             reply(stateBuffer.empty() ? "OK STATE" : "ERR state-unavailable");
         } else if (command == "SHUTDOWN") {
-#if defined(AESTRA_HAS_VST3) && defined(AESTRA_HAS_X11)
+#if defined(AESTRA_HAS_VST3) && defined(AESTRA_HELPER_HAS_EDITORS)
             editorHost.close();
 #endif
             active = false;
             loaded = false;
-#ifndef _WIN32
             clapModule.close();
-#endif
 #ifdef AESTRA_HAS_VST3
             vst3Module.close();
 #endif
             reply("OK SHUTDOWN");
         } else if (command == "EXIT") {
-#ifndef _WIN32
             clapModule.close();
-#endif
 #ifdef AESTRA_HAS_VST3
             vst3Module.close();
 #endif
@@ -870,74 +868,121 @@ int main(int argc, char** argv) {
             return 0;
         } else if (command == "STATUS") {
             reply(active ? "OK ACTIVE" : (loaded ? "OK LOADED" : "OK EMPTY"));
-        } else if (command == "PROCESS" || command == "PROCESSMIDI") {
+        } else if (command == "SHM") {
+            // The app's shared block for audio (SharedAudioBlock.h). Saying no is safe: the app stays on hex.
+            std::string nameHex;
+            size_t maxSamples = 0;
+            size_t maxMidiBytes = 0;
+            input >> nameHex >> maxSamples >> maxMidiBytes;
+            const std::string name = hexDecode(nameHex);
+            if (name.empty() || maxSamples == 0 || maxSamples > 2u * 65536u || maxMidiBytes > (1u << 20) ||
+                !sharedBlock.open(name, maxSamples, maxMidiBytes)) {
+                reply("ERR shm");
+                continue;
+            }
+            reply("OK SHM");
+        } else if (command == "PROCESS" || command == "PROCESSMIDI" || command == "PROCESSSHM") {
             if (!loaded || !active) {
                 reply("ERR inactive");
                 continue;
             }
+            // PROCESSSHM carries only the sizes: the samples and the MIDI are in the shared block, and so is the answer.
+            const bool viaShm = command == "PROCESSSHM";
             uint32_t channels = 0;
             uint32_t frames = 0;
-            std::string payloadHex;
-            std::string midiHex;
-            input >> channels >> frames >> payloadHex;
-            if (command == "PROCESSMIDI") {
-                input >> midiHex;
-            }
+            input >> channels >> frames;
             if (channels == 0 || channels > 2 || frames == 0 || frames > maxBlockSize) {
                 reply("ERR invalid-process-size");
                 continue;
             }
-            if (!hexDecodeFloats(payloadHex, processBuffer) ||
-                processBuffer.size() < static_cast<size_t>(channels) * frames) {
-                reply("ERR invalid-process-payload");
-                continue;
-            }
+            const size_t sampleCount = static_cast<size_t>(channels) * frames;
             midiBuffer.clear();
-            if (command == "PROCESSMIDI" && !hexDecodeRaw(midiHex, midiBuffer)) {
-                reply("ERR invalid-midi-payload");
-                continue;
+            if (viaShm) {
+                size_t midiBytes = 0;
+                input >> midiBytes;
+                if (!sharedBlock.isOpen() || sampleCount > sharedBlock.maxSamples() ||
+                    midiBytes > sharedBlock.maxMidiBytes()) {
+                    reply("ERR invalid-shm-process");
+                    continue;
+                }
+                processBuffer.assign(sharedBlock.input(), sharedBlock.input() + sampleCount);
+                midiBuffer.assign(sharedBlock.midi(), sharedBlock.midi() + midiBytes);
+            } else {
+                std::string payloadHex;
+                std::string midiHex;
+                input >> payloadHex;
+                if (command == "PROCESSMIDI") {
+                    input >> midiHex;
+                }
+                if (!hexDecodeFloats(payloadHex, processBuffer) || processBuffer.size() < sampleCount) {
+                    reply("ERR invalid-process-payload");
+                    continue;
+                }
+                if (command == "PROCESSMIDI" && !hexDecodeRaw(midiHex, midiBuffer)) {
+                    reply("ERR invalid-midi-payload");
+                    continue;
+                }
             }
+            // The app's tempo and playhead for this block ("T ..." after the payload, HostTransport.h). The plugin hosts
+            // below read it from the clock; a line without one, or a malformed one, means no transport this block.
+            {
+                using Aestra::Audio::HostTransport;
+                std::string marker;
+                size_t fieldCount = 0;
+                if (input >> marker && marker == "T") {
+                    while (fieldCount < transportFields.size() && input >> transportFields[fieldCount])
+                        ++fieldCount;
+                    std::string extra;
+                    if (input >> extra)
+                        fieldCount = 0;
+                }
+                Aestra::Audio::HostTransportClock::publish(
+                    marker == "T" ? HostTransport::fromWire(transportFields.data(), fieldCount) : HostTransport{});
+            }
+            auto answer = [&](std::vector<float>& out) {
+                if (out.size() < sampleCount) {
+                    out.resize(sampleCount, 0.0f);
+                }
+                if (viaShm) {
+                    std::copy_n(out.data(), sampleCount, sharedBlock.output());
+                    reply("OK");
+                } else {
+                    reply("OK " + hexEncodeBytes(out.data(), sampleCount * sizeof(float)));
+                }
+            };
 
-#ifndef _WIN32
             if (clapModule.plugin) {
-                std::vector<float> processed;
                 const std::vector<uint8_t>* midiData = midiBuffer.empty() ? nullptr : &midiBuffer;
                 if (!clapModule.process(processBuffer, channels, frames, midiData, midiBuffer.size(), processed)) {
                     reply("ERR clap-process-failed");
                     continue;
                 }
-                const size_t byteCount = static_cast<size_t>(channels) * frames * sizeof(float);
-                reply("OK " + hexEncodeBytes(processed.data(), byteCount));
+                answer(processed);
                 continue;
             }
-#endif
 #ifdef AESTRA_HAS_VST3
             if (vst3Module.plugin) {
-                std::vector<float> processed;
                 const std::vector<uint8_t>* midiData = midiBuffer.empty() ? nullptr : &midiBuffer;
                 if (!vst3Module.process(processBuffer, channels, frames, midiData, midiBuffer.size(), processed)) {
                     reply("ERR vst3-process-failed");
                     continue;
                 }
-                const size_t byteCount = static_cast<size_t>(channels) * frames * sizeof(float);
-                reply("OK " + hexEncodeBytes(processed.data(), byteCount));
+                answer(processed);
                 continue;
             }
 #endif
 
-            const size_t byteCount = static_cast<size_t>(channels) * frames * sizeof(float);
 #ifdef AESTRA_ENABLE_TEST_HOOKS
             // Echo fake plugin: apply parameter 0 as an output gain so a test can
             // observe host->child parameter delivery through the audio itself (#238).
             if (echoPlugin) echoHasProcessed = true;
             if (echoPlugin && echoParams[0] != 1.0f) {
-                const size_t sampleCount = static_cast<size_t>(channels) * frames;
                 for (size_t i = 0; i < sampleCount && i < processBuffer.size(); ++i) {
                     processBuffer[i] *= echoParams[0];
                 }
             }
 #endif
-            reply("OK " + hexEncodeBytes(processBuffer.data(), byteCount));
+            answer(processBuffer);
         } else {
             reply("ERR unknown-command");
         }

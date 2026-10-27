@@ -124,6 +124,26 @@ struct ClapOutputEvents {
     bool (*tryPush)(const ClapOutputEvents* list, const ClapEventHeader* event);
 };
 
+// clap_event_transport ABI (clap/events.h): what process() is told about tempo and the playhead. Times are fixed point
+// (CLAP_BEATTIME_FACTOR, CLAP_SECTIME_FACTOR = 2^31).
+constexpr uint16_t kClapEventTransport = 9;
+struct ClapEventTransport {
+    ClapEventHeader header;
+    uint32_t flags;
+    int64_t songPosBeats;
+    int64_t songPosSeconds;
+    double tempo;
+    double tempoInc;
+    int64_t loopStartBeats;
+    int64_t loopEndBeats;
+    int64_t loopStartSeconds;
+    int64_t loopEndSeconds;
+    int64_t barStart;
+    int32_t barNumber;
+    uint16_t tsigNum;
+    uint16_t tsigDenom;
+};
+
 struct ClapEventMidi {
     ClapEventHeader header;
     uint16_t portIndex;
@@ -257,10 +277,17 @@ constexpr const char* kClapExtGui = "clap.gui";
 constexpr const char* kClapExtTimerSupport = "clap.timer-support";
 constexpr const char* kClapExtPosixFdSupport = "clap.posix-fd-support";
 constexpr const char* kClapWindowApiX11 = "x11";
+constexpr const char* kClapWindowApiWin32 = "win32";
 
 struct ClapWindow {
     const char* api;
-    unsigned long x11; // the union's x11 member; every member is pointer-sized or smaller, so this is the whole union
+    // clap_window's union: x11 is an unsigned long, win32 an HWND, the rest pointers. Pointer-sized as a whole: on Windows
+    // unsigned long is 32 bits, so the x11 member alone would carry half an HWND (V82-H8).
+    union {
+        unsigned long x11;
+        void* win32;
+        void* ptr;
+    };
 };
 
 struct ClapGuiResizeHints {

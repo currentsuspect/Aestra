@@ -3,6 +3,7 @@
 #include "Plugin/OutOfProcessPluginInstance.h"
 
 #include "AestraLog.h"
+#include "SharedAudioBlock.h"
 
 #include <cstdio>
 #include <algorithm>
@@ -21,15 +22,103 @@
 
 #ifndef _WIN32
 #include <fcntl.h>
+#include <poll.h>
+#include <pthread.h>
+#include <sched.h>
 #include <signal.h>
 #include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #endif
+#ifdef __APPLE__
+#include <dispatch/dispatch.h>
+#elif !defined(_WIN32)
+#include <cerrno>
+#include <ctime>
+#include <semaphore.h>
+#endif
 
 namespace Aestra {
 namespace Audio {
+
+// Wakes the worker the moment process() hands it a block, instead of the worker finding it on its next 1 ms nap
+// (V82-H7 follow-up). post() is one atomic and, only when the worker sleeps, one wake syscall: safe from the render thread.
+class WorkerWake {
+public:
+    WorkerWake() {
+#ifdef _WIN32
+        m_sem = CreateSemaphoreA(nullptr, 0, 1, nullptr);
+#elif defined(__APPLE__)
+        m_sem = dispatch_semaphore_create(0);
+#else
+        m_ok = sem_init(&m_sem, 0, 0) == 0;
+#endif
+    }
+    ~WorkerWake() {
+#ifdef _WIN32
+        if (m_sem)
+            CloseHandle(m_sem);
+#elif defined(__APPLE__)
+        if (m_sem)
+            dispatch_release(m_sem);
+#else
+        if (m_ok)
+            sem_destroy(&m_sem);
+#endif
+    }
+    WorkerWake(const WorkerWake&) = delete;
+    WorkerWake& operator=(const WorkerWake&) = delete;
+
+    void post() noexcept {
+#ifdef _WIN32
+        if (m_sem)
+            ReleaseSemaphore(m_sem, 1, nullptr); // at most one pending wake: a full count just fails
+#elif defined(__APPLE__)
+        if (m_sem)
+            dispatch_semaphore_signal(m_sem);
+#else
+        if (m_ok)
+            sem_post(&m_sem);
+#endif
+    }
+    /// Sleeps until post() or the timeout. Spurious wakes are fine: the worker re-checks its state.
+    void wait(std::chrono::microseconds timeout) noexcept {
+#ifdef _WIN32
+        if (m_sem) {
+            WaitForSingleObject(m_sem, static_cast<DWORD>(std::max<long long>(1, timeout.count() / 1000)));
+            return;
+        }
+#elif defined(__APPLE__)
+        if (m_sem) {
+            dispatch_semaphore_wait(m_sem, dispatch_time(DISPATCH_TIME_NOW, timeout.count() * 1000));
+            return;
+        }
+#else
+        if (m_ok) {
+            timespec ts{};
+            clock_gettime(CLOCK_REALTIME, &ts);
+            const long long ns = ts.tv_nsec + static_cast<long long>(timeout.count()) * 1000;
+            ts.tv_sec += static_cast<time_t>(ns / 1000000000);
+            ts.tv_nsec = static_cast<long>(ns % 1000000000);
+            while (sem_timedwait(&m_sem, &ts) != 0 && errno == EINTR) {
+            }
+            return;
+        }
+#endif
+        std::this_thread::sleep_for(timeout);
+    }
+
+private:
+#ifdef _WIN32
+    HANDLE m_sem = nullptr;
+#elif defined(__APPLE__)
+    dispatch_semaphore_t m_sem = nullptr;
+#else
+    sem_t m_sem{};
+    bool m_ok = false;
+#endif
+};
 
 namespace {
 
@@ -603,7 +692,8 @@ bool PluginHostProcess::readLine(std::string& line, std::chrono::milliseconds ti
         return false;
     }
     line.clear();
-    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    const auto waitStart = std::chrono::steady_clock::now();
+    const auto deadline = waitStart + timeout;
     for (;;) {
         // Drained before touching the pipe: a bulk read can cross a response
         // boundary, so the newline this call needs may already be in hand.
@@ -636,7 +726,13 @@ bool PluginHostProcess::readLine(std::string& line, std::chrono::milliseconds ti
             if (!isRunning()) {
                 break;
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            // A block's "OK" usually lands within a couple of milliseconds, and a Windows sleep can last a whole
+            // 15.6 ms tick, longer than the block. So yield for the first 3 ms, then nap (V82-H7 follow-up).
+            if (std::chrono::steady_clock::now() < waitStart + std::chrono::milliseconds(3)) {
+                std::this_thread::yield();
+            } else {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
             continue;
         }
 
@@ -682,7 +778,12 @@ bool PluginHostProcess::readLine(std::string& line, std::chrono::milliseconds ti
             if (!isRunning()) {
                 break;
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            // Sleep until the reply's next byte is there rather than a fixed 1 ms: a block's "OK" back from the
+            // helper used to wait out the rest of a nap every time (V82-H7 follow-up). Capped so a dead child is still noticed.
+            const auto left = std::chrono::duration_cast<std::chrono::milliseconds>(
+                deadline - std::chrono::steady_clock::now());
+            pollfd pfd{m_stdoutFd, POLLIN, 0};
+            ::poll(&pfd, 1, static_cast<int>(std::clamp<long long>(left.count() + 1, 1, 50)));
         }
     }
     // Bytes already taken from the pipe are gone and the rest of this response is
@@ -755,8 +856,44 @@ bool OutOfProcessPluginInstance::initialize(double sampleRate, uint32_t maxBlock
         return false;
     }
     refreshPluginLatency(); // VST3 and CLAP both know it once set up; activation can change it, so activate() asks again
+    setupSharedBlock();
     startWorker();
     return true;
+}
+
+void OutOfProcessPluginInstance::setupSharedBlock() {
+    m_shm.reset();
+    // AESTRA_PLUGIN_SHM=0 keeps the hex transport: a way out if a system's shared memory misbehaves, and how the
+    // tests still cover that path.
+    if (const char* env = std::getenv("AESTRA_PLUGIN_SHM"); env && std::strcmp(env, "0") == 0) {
+        return;
+    }
+    static std::atomic<unsigned long> counter{0};
+#ifdef _WIN32
+    const unsigned long pid = GetCurrentProcessId();
+#else
+    const unsigned long pid = static_cast<unsigned long>(getpid());
+#endif
+    const auto stamp = static_cast<unsigned long long>(std::chrono::steady_clock::now().time_since_epoch().count());
+    const std::string name = SharedAudioBlock::uniqueName(pid, counter.fetch_add(1), stamp);
+    auto block = std::make_unique<SharedAudioBlock>();
+    const size_t maxSamples = m_workerInput.size();
+    const size_t maxMidiBytes = m_workerMidiData.size();
+    if (!block->create(name, maxSamples, maxMidiBytes)) {
+        Log::warning("[PluginHost] No shared audio block; " + m_info.name + " runs on the slower hex transport");
+        return;
+    }
+    std::ostringstream command;
+    command << "SHM " << hexEncode(name) << " " << maxSamples << " " << maxMidiBytes;
+    std::string response;
+    const bool mapped = sendCommand(command.str(), &response) && response == "OK SHM";
+    block->unlinkName(); // mapped or not, the name has done its job
+    if (!mapped) {
+        Log::warning("[PluginHost] Helper could not map the shared audio block; " + m_info.name +
+                     " runs on the slower hex transport");
+        return;
+    }
+    m_shm = std::move(block);
 }
 
 void OutOfProcessPluginInstance::refreshPluginLatency() {
@@ -783,6 +920,7 @@ void OutOfProcessPluginInstance::shutdown() {
         sendCommand("SHUTDOWN", nullptr);
         m_process.reset();
     }
+    m_shm.reset();
     m_loaded.store(false, std::memory_order_release);
 }
 
@@ -834,6 +972,7 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
         }
         m_readyState.store(0, std::memory_order_release);
         usedReadyOutput = true;
+        m_helperBlocks.fetch_add(1, std::memory_order_relaxed);
     }
 
     uint8_t pendingEmpty = 0;
@@ -860,12 +999,19 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
                 midiBytes += 8;
             }
         }
+        m_pendingTransport = HostTransportClock::current();
         m_pendingMidiBytes.store(midiBytes, std::memory_order_release);
         m_pendingFrames.store(numFrames, std::memory_order_release);
         m_pendingState.store(2, std::memory_order_release);
+        if (m_wake) {
+            m_wake->post();
+        }
+    } else {
+        m_unsentBlocks.fetch_add(1, std::memory_order_relaxed);
     }
 
     if (!usedReadyOutput) {
+        m_dryBlocks.fetch_add(1, std::memory_order_relaxed);
         passThrough(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
     }
 }
@@ -1061,7 +1207,7 @@ bool OutOfProcessPluginInstance::loadState(const std::vector<uint8_t>& state) {
 }
 
 bool OutOfProcessPluginInstance::hasEditor() const {
-#if defined(__linux__)
+#if defined(__linux__) || defined(_WIN32)
     return (m_info.format == PluginFormat::VST3 || m_info.format == PluginFormat::CLAP) &&
            m_loaded.load(std::memory_order_acquire) && !m_crashed.load(std::memory_order_acquire);
 #else
@@ -1164,12 +1310,21 @@ void OutOfProcessPluginInstance::startWorker() {
         return;
     }
     m_workerStop.store(false, std::memory_order_release);
-    m_workerThread = std::thread([this] { workerLoop(); });
+    if (!m_wake) {
+        m_wake = std::make_unique<WorkerWake>();
+    }
+    m_workerThread = std::thread([this] {
+        raiseWorkerPriority();
+        workerLoop();
+    });
     m_workerRunning.store(true, std::memory_order_release);
 }
 
 void OutOfProcessPluginInstance::stopWorker() {
     m_workerStop.store(true, std::memory_order_release);
+    if (m_wake) {
+        m_wake->post();
+    }
     if (m_workerThread.joinable()) {
         m_workerThread.join();
     }
@@ -1194,7 +1349,8 @@ void OutOfProcessPluginInstance::workerLoop() {
 
         uint8_t pendingReady = 2;
         if (!m_pendingState.compare_exchange_strong(pendingReady, 3, std::memory_order_acq_rel)) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            // process() posts the moment it hands a block over; the timeout keeps knob moves flowing while stopped.
+            m_wake->wait(std::chrono::milliseconds(2));
             continue;
         }
 
@@ -1207,11 +1363,12 @@ void OutOfProcessPluginInstance::workerLoop() {
         if (midiBytes <= m_workerMidiData.size()) {
             std::copy_n(m_pendingMidiData.data(), midiBytes, m_workerMidiData.data());
         }
+        m_workerTransport = m_pendingTransport;
         m_pendingState.store(0, std::memory_order_release);
 
         if (sampleCount > m_workerInput.size() || midiBytes > m_workerMidiData.size() ||
             !processBlockInHelper(m_workerInput, m_transportChannels, frames, m_workerMidiData, midiBytes,
-                                  m_workerOutput)) {
+                                  m_workerTransport, m_workerOutput)) {
             markCrashed();
             continue;
         }
@@ -1234,12 +1391,43 @@ void OutOfProcessPluginInstance::workerLoop() {
     }
 }
 
+void OutOfProcessPluginInstance::raiseWorkerPriority() {
+    // The worker carries every block to the helper and back, so it runs just below the audio thread
+    // (RtAudioDriver: SCHED_FIFO mid-range). Best effort: without rtprio it stays a normal thread.
+#ifdef _WIN32
+    MMCSS::setProAudio();
+#elif defined(__linux__)
+    sched_param param{};
+    param.sched_priority = (sched_get_priority_max(SCHED_FIFO) + sched_get_priority_min(SCHED_FIFO)) / 2 - 1;
+    pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);
+#endif
+}
+
 bool OutOfProcessPluginInstance::processBlockInHelper(const std::vector<float>& input, uint32_t channels,
                                                       uint32_t frames, const std::vector<uint8_t>& midiData,
-                                                      size_t midiBytes, std::vector<float>& output) {
+                                                      size_t midiBytes, const HostTransport& transport,
+                                                      std::vector<float>& output) {
     const size_t sampleCount = static_cast<size_t>(channels) * frames;
     if (sampleCount > input.size()) {
         return false;
+    }
+    if (m_shm && sampleCount <= m_shm->maxSamples() && midiBytes <= m_shm->maxMidiBytes()) {
+        // The samples go through the shared block; the pipe carries only the sizes and the "OK" (V82-H7 follow-up).
+        std::copy_n(input.data(), sampleCount, m_shm->input());
+        if (midiBytes > 0) {
+            std::copy_n(midiData.data(), midiBytes, m_shm->midi());
+        }
+        const std::string command = "PROCESSSHM " + std::to_string(channels) + " " + std::to_string(frames) + " " +
+                                    std::to_string(midiBytes) + transport.toWire();
+        std::string response;
+        if (!sendCommand(command, &response) || response != "OK") {
+            return false;
+        }
+        if (output.size() < sampleCount) {
+            output.resize(sampleCount);
+        }
+        std::copy_n(m_shm->output(), sampleCount, output.data());
+        return true;
     }
     std::ostringstream command;
     if (midiBytes > 0) {
@@ -1250,6 +1438,7 @@ bool OutOfProcessPluginInstance::processBlockInHelper(const std::vector<float>& 
         command << "PROCESS " << channels << " " << frames << " "
                 << hexEncodeBytes(input.data(), sampleCount * sizeof(float));
     }
+    command << transport.toWire();
     std::string response;
     if (!sendCommand(command.str(), &response)) {
         return false;

@@ -4,6 +4,7 @@
 #include "../Commands/CommandHistory.h"
 #include "../Commands/CommandTransaction.h"
 #include "../Commands/CreateLaneCommand.h"
+#include "../Commands/RecordTakeInPlace.h"
 #include "../Core/AudioCommandQueue.h"
 #include "../Core/AudioTelemetry.h"
 #include "../Core/ChannelSlotMap.h"
@@ -2397,8 +2398,13 @@ private:
         clip.sourceId = patternId.value;
         clip.edits.gainLinear = playbackGain;
 
-        // Recording destination and Playlist placement are separate. Create a
-        // lane for the take while the PatternSource retains the armed insert.
+        if (recordTakeInPlace(m_playlistModel, m_commandHistory, *track, clip)) { // the armed lane, if the span is free
+            requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged); m_modified.store(true, std::memory_order_relaxed);
+            Log::info("[TrackManager] Recorded take committed in the track's own lane: " + takePath);
+            if (m_onTakeCommitted) m_onTakeCommitted(track->activeLaneId);
+            return;
+        }
+        // Recording destination and Playlist placement are separate: a take lane, the PatternSource keeps the armed insert.
         auto createLane = std::make_shared<CreateLaneCommand>(m_playlistModel, takeName);
         createLane->execute();
         const PlaylistLaneID laneId = createLane->getLaneId();
@@ -2417,9 +2423,7 @@ private:
             return;
         }
 
-        // The take lane is owned by the recording Track (FD-14): the lane
-        // joins the track in the same undoable step as its creation, so undo
-        // detaches and removes it atomically.
+        // The take lane is owned by the recording Track (FD-14), joined in the same undoable step as its creation.
         auto attachLane = std::make_shared<AttachLaneToTrackCommand>(*this, trackId, laneId);
         attachLane->execute();
         auto* ownedLane = m_playlistModel.getLane(laneId);
@@ -2445,17 +2449,12 @@ private:
             Log::error("[TrackManager] Failed to add recorded take to command history.");
             return;
         }
-        requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
-        m_modified.store(true, std::memory_order_relaxed);
+        requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged); m_modified.store(true, std::memory_order_relaxed);
+        Log::info("[TrackManager] Recorded take committed: " + takePath + " to mixer insert " + std::to_string(channelId) + " at beat " +
+                  std::to_string(startBeat) + " with raw peak " + std::to_string(rawPeak) + ", conditioned peak " +
+                  std::to_string(conditionedPeak) + ", clip gain " + std::to_string(playbackGain));
 
-        Log::info("[TrackManager] Recorded take committed: " + takePath + " to mixer insert " +
-                  std::to_string(channelId) + " at beat " + std::to_string(startBeat) + " with raw peak " +
-                  std::to_string(rawPeak) + ", conditioned peak " + std::to_string(conditionedPeak) + ", clip gain " +
-                  std::to_string(playbackGain));
-
-        if (m_onTakeCommitted) {
-            m_onTakeCommitted(laneId);
-        }
+        if (m_onTakeCommitted) m_onTakeCommitted(laneId);
     }
 
     /**

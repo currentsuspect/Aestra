@@ -80,13 +80,26 @@ SAME_OFFSET(ClapHostParams, requestFlush, clap_host_params_t, request_flush);
 SAME_OFFSET(ClapHost, requestCallback, clap_host_t, request_callback);
 SAME_OFFSET(ClapPlugin, onMainThread, clap_plugin_t, on_main_thread);
 SAME_OFFSET(ClapProcess, outEvents, clap_process_t, out_events);
+SAME_SIZE(ClapEventTransport, clap_event_transport_t);
+SAME_OFFSET(ClapWindow, x11, clap_window_t, x11);
+SAME_OFFSET(ClapWindow, win32, clap_window_t, win32);
+static_assert(sizeof(M::ClapWindow::win32) == sizeof(clap_window_t::win32), "ClapWindow carries a whole HWND");
+SAME_OFFSET(ClapEventTransport, flags, clap_event_transport_t, flags);
+SAME_OFFSET(ClapEventTransport, songPosBeats, clap_event_transport_t, song_pos_beats);
+SAME_OFFSET(ClapEventTransport, tempo, clap_event_transport_t, tempo);
+SAME_OFFSET(ClapEventTransport, loopStartBeats, clap_event_transport_t, loop_start_beats);
+SAME_OFFSET(ClapEventTransport, barStart, clap_event_transport_t, bar_start);
+SAME_OFFSET(ClapEventTransport, barNumber, clap_event_transport_t, bar_number);
+SAME_OFFSET(ClapEventTransport, tsigNum, clap_event_transport_t, tsig_num);
+SAME_OFFSET(ClapEventTransport, tsigDenom, clap_event_transport_t, tsig_denom);
 
 static_assert(M::kClapParamIsStepped == CLAP_PARAM_IS_STEPPED && M::kClapParamIsHidden == CLAP_PARAM_IS_HIDDEN &&
                   M::kClapParamIsReadOnly == CLAP_PARAM_IS_READONLY && M::kClapParamIsBypass == CLAP_PARAM_IS_BYPASS &&
                   M::kClapParamIsAutomatable == CLAP_PARAM_IS_AUTOMATABLE,
               "parameter flag values differ from the SDK");
 static_assert(M::kClapEventParamValue == CLAP_EVENT_PARAM_VALUE && M::kClapEventNoteOn == CLAP_EVENT_NOTE_ON &&
-                  M::kClapEventNoteOff == CLAP_EVENT_NOTE_OFF && M::kClapEventMidi == CLAP_EVENT_MIDI,
+                  M::kClapEventNoteOff == CLAP_EVENT_NOTE_OFF && M::kClapEventMidi == CLAP_EVENT_MIDI &&
+                  M::kClapEventTransport == CLAP_EVENT_TRANSPORT,
               "event type ids differ from the SDK");
 
 int main() {

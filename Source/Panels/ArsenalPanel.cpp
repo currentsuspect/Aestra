@@ -330,7 +330,7 @@ void ArsenalPanel::refreshUnits() {
                 if (m_onRequestEditor) m_onRequestEditor(id);
             } else if (unit->defaultPatternId.isValid()) {
                 // Unit has a default pattern — open Piano Roll
-                if (m_onRequestPatternEditor) m_onRequestPatternEditor(unit->defaultPatternId);
+                if (m_onRequestPatternEditor) m_onRequestPatternEditor(unit->defaultPatternId, id);
             } else if ((unit->type == UnitType::Sampler ||
                         unit->type == UnitType::PitchedSampler) &&
                        !unit->audioClipPath.empty()) {
@@ -376,9 +376,9 @@ void ArsenalPanel::refreshUnits() {
                 }
             }
         });
-        row->setOnOpenPatternEditor([this](PatternID patternId) {
+        row->setOnOpenPatternEditor([this](PatternID patternId, UnitID unitId) {
             if (m_onRequestPatternEditor) {
-                m_onRequestPatternEditor(patternId);
+                m_onRequestPatternEditor(patternId, unitId);
             }
         });
         row->setOnRenameUnit([this](UnitID id, const std::string& name) {

@@ -320,6 +320,40 @@ void testCtrlDDuplicatesTheSelectionAndCtrlBDoesNot() {
     check(starts.size() == 3 && starts[0] == 0.0 && starts[1] == 4.0 && starts[2] == 8.0, "the phrase is 0, 4, 8: each copy starts where the last ends");
 }
 
+// Revealing a lane (what a finished recording does) moves the view only when the lane is out of sight, and by the least
+// that brings it in. It used to put the lane at the top of the screen every time.
+void testRevealingALaneDoesNotThrowTheViewAround() {
+    Fixture f;
+    if (!f.build()) {
+        return;
+    }
+    auto& playlist = f.trackManager->getPlaylistModel();
+    std::vector<PlaylistLaneID> lanes{f.laneId};
+    for (int i = 0; i < 29; ++i) lanes.push_back(playlist.createLane("Lane " + std::to_string(i)));
+    f.manager->refreshTracks();
+    f.manager->setVerticalScroll(0.0f);
+
+    f.manager->revealLane(lanes[1]); // already on screen
+    check(f.manager->getVerticalScroll() == 0.0f, "a lane that is already visible does not move the view");
+
+    const float before = f.manager->getVerticalScroll();
+    f.manager->revealLane(lanes[25]); // far below the fold
+    const float after = f.manager->getVerticalScroll();
+    check(after > before, "a lane below the screen scrolls down to it");
+    f.manager->setVerticalScroll(after);
+    f.manager->revealLane(lanes[25]);
+    check(f.manager->getVerticalScroll() == after, "and revealing it again changes nothing");
+    // It arrives at the bottom edge (the least movement), not at the top of the screen.
+    f.manager->setVerticalScroll(0.0f);
+    f.manager->revealLane(lanes[25]);
+    const float atBottom = f.manager->getVerticalScroll();
+    check(atBottom > 0.0f && atBottom < after + 1.0f, "the lane is brought in at the bottom edge (the least movement), not placed at the top");
+
+    f.manager->setVerticalScroll(1000.0f);
+    f.manager->revealLane(lanes[0]); // above the screen
+    check(f.manager->getVerticalScroll() == 0.0f, "a lane above the screen scrolls up to it");
+}
+
 // The tool, its number key, and the default.
 void testMuteToolAndShortcuts() {
     Fixture f;
@@ -352,6 +386,7 @@ int main() {
     testMutingOneClipLeavesTheTrackAndNeighboursAlone();
     testSettingTheStateItAlreadyHasIsNotAChange();
     testMuteToolAndShortcuts();
+    testRevealingALaneDoesNotThrowTheViewAround();
     testCtrlDDuplicatesTheSelectionAndCtrlBDoesNot();
     testDrawPlacesInTheCellThePointerIsIn();
     testDropPlacesInTheCellThePointerIsOver();

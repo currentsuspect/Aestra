@@ -21,6 +21,7 @@
 #include "MasterSafetyLimiter.h"
 #include "MeterSnapshot.h"
 #include "MetronomeEngine.h"     // [NEW]
+#include "Plugin/HostTransport.h"
 #include "Models/TrackManager.h" // [NEW] For headless rendering
 #include "Playback/LiveMidiQueue.h"
 #include "PluginHost.h" // For MidiBuffer [NEW]
@@ -947,6 +948,15 @@ private:
     EngineState m_state;
 
     std::atomic<uint32_t> m_sampleRate{48000};
+
+    /// Tempo, metre and playhead for hosted VST3/CLAP plugins, read by every plugin host in this block
+    /// (HostTransport.h). Called once per render block from renderGraph.
+    void publishHostTransport(uint64_t blockStart, bool playing) noexcept {
+        HostTransportClock::publish(HostTransport::at(
+            static_cast<int64_t>(blockStart), static_cast<double>(m_sampleRate.load(std::memory_order_relaxed)),
+            getBPM(), getBeatsPerBar(), playing, m_loopEnabled.load(std::memory_order_relaxed),
+            m_loopStartBeat.load(std::memory_order_relaxed), m_loopEndBeat.load(std::memory_order_relaxed)));
+    }
     std::atomic<uint32_t> m_maxBufferFrames{4096}; // Larger default for safety
     // Test-only fault injection: makes setBufferConfig throw std::bad_alloc
     // at the first allocation, deterministically (sanitizer-safe: no

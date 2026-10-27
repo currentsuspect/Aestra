@@ -9,7 +9,7 @@
 //                        on its own: its parameter output arrives with the next block
 //  * clap.latency/state  noted and ignored: the app re-reads latency every 64 blocks and saves state on request
 //  * clap.gui            the plugin asks for another size
-//  * clap.timer-support, clap.posix-fd-support
+//  * clap.timer-support, clap.posix-fd-support (POSIX only)
 //                        what an X11 editor needs to run (and what some plugins use with no editor at all): an
 //                        EditorLoopPump the helper's command loop services between commands.
 
@@ -20,7 +20,9 @@
 #include <cstring>
 #include <functional>
 #include <mutex>
+#ifndef _WIN32
 #include <poll.h>
+#endif
 #include <utility>
 #include <vector>
 
@@ -60,19 +62,27 @@ struct ClapHostContext {
         plugin = nullptr;
     }
 
-    /// Descriptors to wait on and when the next timer is due (lowers @p timeoutMs, never raises it).
-    void pollFds(std::vector<pollfd>& out, int& timeoutMs) {
-        for (const int fd : pump.fds()) out.push_back({fd, POLLIN, 0});
+    /// When the next timer is due, in ms (lowers @p timeoutMs, never raises it; -1 means no limit).
+    void limitWait(int& timeoutMs) {
         const int wait = pump.msUntilNextTimer();
         if (wait >= 0 && (timeoutMs < 0 || wait < timeoutMs)) timeoutMs = wait;
     }
+#ifndef _WIN32
+    /// Descriptors to wait on and when the next timer is due (lowers @p timeoutMs, never raises it).
+    void pollFds(std::vector<pollfd>& out, int& timeoutMs) {
+        for (const int fd : pump.fds()) out.push_back({fd, POLLIN, 0});
+        limitWait(timeoutMs);
+    }
+#endif
     /// Run due timers and ready descriptors. Never blocks.
     void service() {
+#ifndef _WIN32
         std::vector<pollfd> ready;
         for (const int fd : pump.fds()) ready.push_back({fd, POLLIN, 0});
         if (!ready.empty() && poll(ready.data(), static_cast<nfds_t>(ready.size()), 0) > 0)
             for (const auto& p : ready)
                 if (p.revents & (POLLIN | POLLHUP)) pump.dispatchFd(p.fd);
+#endif
         pump.fireDueTimers();
     }
 };
@@ -191,7 +201,10 @@ const void* hostGetExtension(const ClapHost* host, const char* id) {
     if (!std::strcmp(id, kClapExtHostState)) return &kHostState;
     if (!std::strcmp(id, kClapExtGui)) return &kHostGui;
     if (!std::strcmp(id, kClapExtTimerSupport)) return &kHostTimerSupport;
+#ifndef _WIN32
+    // File descriptors are a POSIX idea: CLAP offers posix-fd-support only there.
     if (!std::strcmp(id, kClapExtPosixFdSupport)) return &kHostPosixFdSupport;
+#endif
     (void)host;
     return nullptr;
 }

@@ -34,6 +34,11 @@ void NUIIcon::onRender(NUIRenderer& renderer) {
     }
 }
 
+void NUIIcon::renderAt(NUIRenderer& renderer, const NUIRect& rect, const NUIColor& color) {
+    if (!svgDoc_) return;
+    NUISVGRenderer::render(renderer, *svgDoc_, rect, color);
+}
+
 void NUIIcon::loadSVG(const std::string& svgContent) {
     // Re-loading the same artwork (a widget re-applying its icon every frame) must neither
     // re-parse nor invalidate (SPEC 3 §4).
@@ -69,11 +74,18 @@ void NUIIcon::setIconSize(float width, float height) {
 }
 
 void NUIIcon::setColor(const NUIColor& color) {
-    if (hasCustomColor_ && themeColorName_.empty() && color_ == color) return;
+    // Setters invalidate only on a real change (SPEC 3 §4). The old guard
+    // required themeColorName_ to be empty, so an icon that had been given a
+    // theme colour re-dirtied every time a surface re-applied the same
+    // resolved colour explicitly — the pixels were identical and nothing
+    // changed, yet the component claimed otherwise.
+    const bool changed = !(hasCustomColor_ && color_ == color);
     color_ = color;
     hasCustomColor_ = true;
     themeColorName_.clear();
-    setDirty(true);
+    if (changed) {
+        setDirty(true);
+    }
 }
 
 void NUIIcon::setColorFromTheme(const std::string& colorName) {

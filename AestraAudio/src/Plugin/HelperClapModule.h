@@ -2,19 +2,19 @@
 #pragma once
 
 // The sandbox helper's CLAP host: loading a module, the parameter / note / state paths and the host callbacks it hands a
-// plugin. POSIX only (dlopen). Moved out of AestraPluginHostMain.cpp so that file stays a command loop; included by that
+// plugin, on Linux, macOS and Windows (HelperDynLib.h). Moved out of AestraPluginHostMain.cpp so that file stays a command loop; included by that
 // one translation unit only, so the helpers below live in an anonymous namespace.
 
-#ifndef _WIN32
 
 #include "ClapAbiMirror.h"
 #include "HelperFakeClap.h"
 #include "HelperClapHostSupport.h"
+#include "HelperDynLib.h"
 #include "HelperEditorHost.h"
 #include "HelperParamCommands.h"
 #include "Plugin/ClapNoteConversion.h"
+#include "Plugin/HostTransport.h"
 
-#include <dlfcn.h>
 
 #include <algorithm>
 #include <cstdint>
@@ -242,7 +242,7 @@ struct ClapModule {
         }
         entry = nullptr;
         if (library) {
-            dlclose(library);
+            AestraHelper::closeLibrary(library);
             library = nullptr;
         }
         maxBlockSize = 0;
@@ -250,13 +250,13 @@ struct ClapModule {
 
     bool load(const std::string& path, const std::string& pluginId, std::string& error) {
         close();
-        library = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
+        library = AestraHelper::openLibrary(path);
         if (!library) {
-            error = "clap-dlopen-failed";
+            error = "clap-load-failed";
             return false;
         }
 
-        entry = reinterpret_cast<const ClapPluginEntry*>(dlsym(library, "clap_entry"));
+        entry = reinterpret_cast<const ClapPluginEntry*>(AestraHelper::librarySymbol(library, "clap_entry"));
         if (!entry || !isClapVersionCompatible(entry->clapVersion) || !entry->init || !entry->getFactory) {
             error = "invalid-clap-entry";
             close();
@@ -518,28 +518,39 @@ struct ClapModule {
         return std::string(buf) + AestraHelper::hexOf(text);
     }
 
-    // ---- The plugin's window (V82-H3, CLAP side) ----
+    // ---- The plugin's window (V82-H3 X11, V82-H8 Win32; CLAP side) ----
 
-    bool openGuiX11(const std::function<unsigned long(int, int, bool)>& makeWindow,
-                    Aestra::Audio::EditorLoopPump& pump, std::function<void(int, int)> requestResize) {
+    bool openGuiEmbedded(const std::function<std::uintptr_t(int, int, bool)>& makeWindow,
+                         Aestra::Audio::EditorLoopPump& pump, std::function<void(int, int)> requestResize) {
+#ifdef _WIN32
+        const char* const api = kClapWindowApiWin32;
+#else
+        const char* const api = kClapWindowApiX11;
+#endif
         if (!plugin || !guiExt || guiOpen || !makeWindow || !guiExt->isApiSupported || !guiExt->create ||
             !guiExt->getSize || !guiExt->setParent || !guiExt->show)
             return false;
-        if (!guiExt->isApiSupported(plugin, kClapWindowApiX11, false)) return false;
+        if (!guiExt->isApiSupported(plugin, api, false)) return false;
         (void)pump; // a CLAP plugin's timers and descriptors run on the module's own pump, serviced with the window
         {
             std::lock_guard<std::mutex> lock(hostContext.mutex);
             hostContext.requestResize = std::move(requestResize);
         }
-        if (!guiExt->create(plugin, kClapWindowApiX11, false)) return false;
+        if (!guiExt->create(plugin, api, false)) return false;
         uint32_t width = 0, height = 0;
         if (!guiExt->getSize(plugin, &width, &height) || width == 0 || height == 0) {
             width = 800;
             height = 600;
         }
         const bool resizable = guiExt->canResize && guiExt->canResize(plugin);
-        const unsigned long window = makeWindow(static_cast<int>(width), static_cast<int>(height), resizable);
-        const ClapWindow parent = {kClapWindowApiX11, window};
+        const std::uintptr_t window = makeWindow(static_cast<int>(width), static_cast<int>(height), resizable);
+        ClapWindow parent{};
+        parent.api = api;
+#ifdef _WIN32
+        parent.win32 = reinterpret_cast<void*>(window);
+#else
+        parent.x11 = static_cast<unsigned long>(window);
+#endif
         if (window == 0 || !guiExt->setParent(plugin, &parent)) {
             guiExt->destroy(plugin);
             return false;
@@ -693,7 +704,25 @@ struct ClapModule {
         ClapProcess processData = {};
         processData.steadyTime = -1;
         processData.framesCount = frames;
-        processData.transport = nullptr;
+        // The app's tempo and playhead for this block, which the PROCESS line carried and main() published.
+        ClapEventTransport transport = {};
+        const auto tv = Aestra::Audio::ClapTransportValues::from(Aestra::Audio::HostTransportClock::current());
+        if (tv.flags != 0) {
+            transport.header = {sizeof(transport), 0, kClapCoreEventSpaceId, kClapEventTransport, 0};
+            transport.flags = tv.flags;
+            transport.songPosBeats = tv.songPosBeats;
+            transport.songPosSeconds = tv.songPosSeconds;
+            transport.tempo = tv.tempo;
+            transport.loopStartBeats = tv.loopStartBeats;
+            transport.loopEndBeats = tv.loopEndBeats;
+            transport.loopStartSeconds = tv.loopStartSeconds;
+            transport.loopEndSeconds = tv.loopEndSeconds;
+            transport.barStart = tv.barStart;
+            transport.barNumber = tv.barNumber;
+            transport.tsigNum = tv.tsigNum;
+            transport.tsigDenom = tv.tsigDenom;
+        }
+        processData.transport = tv.flags != 0 ? &transport : nullptr;
         processData.audioInputs = &inputBuffer;
         processData.audioOutputs = &outputBuffer;
         processData.audioInputsCount = 1;
@@ -753,16 +782,36 @@ struct ClapModule {
         return state->load(plugin, &stream);
     }
 
+    /// Every plugin a bundle holds, not just the first: one .clap file can hold hundreds (LSP holds about 200). The
+    /// descriptors stay valid until close(). Entries without an id are skipped.
+    bool listDescriptors(const std::string& path, std::vector<const ClapPluginDescriptor*>& out, std::string& error) {
+        out.clear();
+        const ClapPluginDescriptor* first = nullptr;
+        if (!scanMetadata(path, first, error)) return false;
+        const auto* factory = static_cast<const ClapPluginFactory*>(entry->getFactory(kClapPluginFactoryId));
+        const uint32_t count = factory->getPluginCount(factory);
+        for (uint32_t i = 0; i < count; ++i) {
+            const ClapPluginDescriptor* d = factory->getPluginDescriptor(factory, i);
+            if (d && d->id && d->id[0] != '\0') out.push_back(d);
+        }
+        if (out.empty()) {
+            error = "invalid-clap-descriptor";
+            close();
+            return false;
+        }
+        return true;
+    }
+
     bool scanMetadata(const std::string& path, const ClapPluginDescriptor*& descriptor, std::string& error) {
         descriptor = nullptr;
         close();
-        library = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
+        library = AestraHelper::openLibrary(path);
         if (!library) {
-            error = "clap-dlopen-failed";
+            error = "clap-load-failed";
             return false;
         }
 
-        entry = reinterpret_cast<const ClapPluginEntry*>(dlsym(library, "clap_entry"));
+        entry = reinterpret_cast<const ClapPluginEntry*>(AestraHelper::librarySymbol(library, "clap_entry"));
         if (!entry || !isClapVersionCompatible(entry->clapVersion) || !entry->init || !entry->getFactory) {
             error = "invalid-clap-entry";
             close();
@@ -795,12 +844,12 @@ struct ClapModule {
     }
 };
 
-#if defined(AESTRA_HAS_X11)
+#if defined(AESTRA_HELPER_HAS_EDITORS)
 /// The CLAP plugin's editor, for EditorHost. The module outlives the window (the helper closes the window first).
 inline AestraHelper::EditorBackend clapEditorBackend(ClapModule& module) {
     AestraHelper::EditorBackend b;
     b.open = [&module](const AestraHelper::EditorBackend::MakeWindow& makeWindow, Aestra::Audio::EditorLoopPump& pump,
-                       std::function<void(int, int)> resize) { return module.openGuiX11(makeWindow, pump, std::move(resize)); };
+                       std::function<void(int, int)> resize) { return module.openGuiEmbedded(makeWindow, pump, std::move(resize)); };
     b.close = [&module] { module.closeGui(); };
     b.canResize = [&module] { return module.canResizeGui(); };
     b.resize = [&module](int w, int h) { module.resizeGui(w, h); };
@@ -810,4 +859,3 @@ inline AestraHelper::EditorBackend clapEditorBackend(ClapModule& module) {
 
 } // namespace
 
-#endif // !_WIN32

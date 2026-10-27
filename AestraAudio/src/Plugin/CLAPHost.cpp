@@ -18,6 +18,7 @@
 
 // Shared note-dialect rules (also used by the OOP child) — must agree (#244).
 #include "Plugin/ClapNoteConversion.h"
+#include "Plugin/HostTransport.h"
 
 #include <algorithm>
 #include <array>
@@ -193,14 +194,10 @@ bool CLAPPluginInstance::load(const std::filesystem::path& path, int pluginIndex
         return false;
     }
 
-    // Get entry point
-    auto entryFunc =
-        reinterpret_cast<const clap_plugin_entry* (*)()>(GetProcAddress(static_cast<HMODULE>(m_library), "clap_entry"));
-    if (!entryFunc) {
-        // Try direct symbol
-        m_entry =
-            reinterpret_cast<const clap_plugin_entry*>(GetProcAddress(static_cast<HMODULE>(m_library), "clap_entry"));
-    }
+    // clap_entry is a struct the plugin exports, not a function: GetProcAddress returns its address. This used to read
+    // it as a function pointer and only take the struct when the lookup FAILED, so on Windows a valid plugin never
+    // loaded in process (found by ClapSandboxParamsTest's first Windows run, V82-H8).
+    m_entry = reinterpret_cast<const clap_plugin_entry*>(GetProcAddress(static_cast<HMODULE>(m_library), "clap_entry"));
 #else
     m_library = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
     if (!m_library) {
@@ -495,7 +492,25 @@ void CLAPPluginInstance::process(const float* const* inputs, float** outputs, ui
     clap_process process = {};
     process.steady_time = -1;
     process.frames_count = numFrames;
-    process.transport = nullptr;
+    // Tempo, metre and playhead (HostTransport.h); null when no engine has published, as before.
+    clap_event_transport transport = {};
+    const ClapTransportValues tv = ClapTransportValues::from(HostTransportClock::current());
+    if (tv.flags != 0) {
+        transport.header = {sizeof(transport), 0, CLAP_CORE_EVENT_SPACE_ID, CLAP_EVENT_TRANSPORT, 0};
+        transport.flags = tv.flags;
+        transport.song_pos_beats = tv.songPosBeats;
+        transport.song_pos_seconds = tv.songPosSeconds;
+        transport.tempo = tv.tempo;
+        transport.loop_start_beats = tv.loopStartBeats;
+        transport.loop_end_beats = tv.loopEndBeats;
+        transport.loop_start_seconds = tv.loopStartSeconds;
+        transport.loop_end_seconds = tv.loopEndSeconds;
+        transport.bar_start = tv.barStart;
+        transport.bar_number = tv.barNumber;
+        transport.tsig_num = tv.tsigNum;
+        transport.tsig_denom = tv.tsigDenom;
+    }
+    process.transport = tv.flags != 0 ? &transport : nullptr;
     process.audio_inputs = &inputBuffer;
     process.audio_outputs = &outputBuffer;
     process.audio_inputs_count = 1;
