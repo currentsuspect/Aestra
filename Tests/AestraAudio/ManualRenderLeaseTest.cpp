@@ -11,6 +11,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstdio>
+#include <chrono>
 #include <thread>
 #include <vector>
 
@@ -71,16 +72,23 @@ int main() {
         std::vector<float> out(kFrames * 2);
         engine.processBlock(out.data(), nullptr, kFrames, 0.0);
         assert(anyNonZero(out) && "the outer lease still belongs to this thread after the nested one ends");
-        while (blocksDuringLease.load() < 50) {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        while (blocksDuringLease.load() < 50 && std::chrono::steady_clock::now() < deadline) {
             std::this_thread::yield();
         }
     }
     phase.store(2);
-    while (loudAfter.load() < 10) {
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+    while (loudAfter.load() < 10 && std::chrono::steady_clock::now() < deadline) {
         std::this_thread::yield();
     }
     phase.store(3);
     live.join();
+    if (blocksDuringLease.load() < 50 || loudAfter.load() < 10) {
+        std::printf("[FAIL] the live thread did not render enough blocks (under lease: %d, after: %d)\n",
+                    blocksDuringLease.load(), loudAfter.load());
+        return 1;
+    }
 
     assert(loudDuringLease.load() == 0 && "the live callback plays silence while another thread renders");
     std::printf("[PASS] live blocks under the lease: %d, all silent; the engine plays again once released\n",

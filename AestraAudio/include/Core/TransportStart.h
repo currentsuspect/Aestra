@@ -13,6 +13,7 @@ struct TransportStartState {
     std::atomic<bool> stopCutsSound{false};   ///< preference: stop = hard stop (cut), not release
     std::atomic<bool> releaseRequested{false}; ///< audio thread: send note releases to instrument units
     uint32_t holdFramesLeft{0};                ///< audio thread: hold budget left for the current start
+    float requestedBpm{0.0f}; ///< control thread: the tempo last sent to the audio thread while playing
 };
 
 } // namespace Audio

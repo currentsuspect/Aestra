@@ -6,6 +6,7 @@
 #include "Plugin/PluginHostTestHooks.h"
 
 #include <algorithm>
+#include <iterator>
 #include <cassert>
 #include <chrono>
 #include <cmath>
@@ -326,11 +327,18 @@ int main(int argc, char** argv) {
     // Each stage: sample the completed-block count, submit, then wait for the
     // worker to publish. The block submitted here is read back on the NEXT call.
     uint64_t blocksBefore = oopInstance->processedBlockCountForTest();
+    // Safe output for the first block is one chunk of silence: the sandbox plays exactly one chunk
+    // behind from the start (it used to play this block dry and undelayed, then jump to the delayed
+    // wet signal on the next one).
+    std::fill(std::begin(outL), std::end(outL), 9.0f);
+    std::fill(std::begin(outR), std::end(outR), 9.0f);
     instance->process(inputs, outputs, 2, 2, 4);
 
-    if (std::memcmp(inL, outL, sizeof(inL)) != 0 || std::memcmp(inR, outR, sizeof(inR)) != 0) {
-        std::cerr << "isolated plugin proxy did not pass through audio safely\n";
-        return 1;
+    for (int i = 0; i < 4; ++i) {
+        if (outL[i] != 0.0f || outR[i] != 0.0f) {
+            std::cerr << "isolated plugin proxy did not output one chunk of silence on its first block\n";
+            return 1;
+        }
     }
 
     if (!waitForWorkerBlock(instance, blocksBefore)) {

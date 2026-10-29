@@ -12,8 +12,9 @@ namespace Audio {
  * Export, bounce and Muse renders call processBlock() themselves. Run while the device
  * stream is live, that put two threads inside the same engine at once — the master and
  * track buffers, the note queue and every plugin shared between them. Holding a lease
- * makes the live callback play silence for its duration; it is taken only after any
- * live block in flight has finished.
+ * makes the live callback play silence for its duration. The lease waits for any live
+ * block in flight to finish, for up to 2 s; if a block is still running after that, the
+ * wait is abandoned (and logged), and exclusion is not guaranteed.
  */
 class ManualRenderLease {
 public:

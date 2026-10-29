@@ -112,18 +112,30 @@ double AudioEngine::setTempoKeepingBeat(float bpm) {
     if (!std::isfinite(bpm) || bpm <= 0.0f) {
         return 1.0;
     }
-    const float previous = getBPM();
+    // While playing, the audio thread applies tempo changes in order, so each one is measured from the
+    // tempo last SENT, not the one the metronome shows: it may not have taken the previous command yet.
+    // Measured from getBPM(), two edits in one block both rescaled from the same base, and a quick
+    // 120 -> 140 -> 120 hit the "unchanged" shortcut and left the engine at 140.
+    float& requested = m_transportStart.requestedBpm;
+    const bool playing = isTransportPlaying();
+    if (!playing) {
+        requested = 0.0f; // nothing in flight: the metronome is current
+    }
+    const float previous = requested > 0.0f ? requested : getBPM();
     if (!(previous > 0.0f) || previous == bpm) {
-        setBPM(bpm);
+        if (!playing) {
+            setBPM(bpm);
+        }
         return 1.0;
     }
     const double factor = static_cast<double>(previous) / static_cast<double>(bpm);
-    if (isTransportPlaying()) {
+    if (playing) {
         AudioQueueCommand cmd;
         cmd.type = AudioQueueCommandType::SetTempoKeepingBeat;
         cmd.value1 = bpm;
         cmd.value2 = previous;
         if (m_commandQueue.pushReliable(cmd)) {
+            requested = bpm;
             return factor;
         }
         Aestra::Log::error("[AudioEngine] tempo change could not reach the audio thread; applying it directly");

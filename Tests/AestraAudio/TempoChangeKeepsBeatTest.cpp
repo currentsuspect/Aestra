@@ -67,11 +67,41 @@ void testInvalidTempoIsIgnored() {
     std::printf("[PASS] a zero or NaN tempo changes nothing\n");
 }
 
+// Several edits before the audio thread drains any of them (a tempo drag, a large buffer): each is
+// measured from the tempo last sent, so the playhead lands on the same beat as one direct edit, and
+// a quick there-and-back leaves the engine where the UI says it is.
+void testEditsQueuedInOneBlockChain() {
+    AudioEngine engine;
+    configure(engine);
+    std::vector<float> out(kBlock * 2, 0.0f);
+    engine.setGlobalSamplePos(static_cast<uint64_t>(32.0 * 60.0 / 120.0 * kRate)); // beat 32
+    engine.setTransportPlaying(true);
+    engine.processBlock(out.data(), nullptr, kBlock, 0.0);
+    const double beatBefore = beatAt(engine.getGlobalSamplePos(), 120.0);
+
+    const double f1 = engine.setTempoKeepingBeat(140.0f);
+    const double f2 = engine.setTempoKeepingBeat(160.0f);
+    assert(std::fabs(f1 * f2 - 120.0 / 160.0) < 1e-12 && "the UI-side factors compose to old/new");
+    engine.processBlock(out.data(), nullptr, kBlock, 0.0);
+    assert(engine.getBPM() == 160.0f);
+    const double expected = beatBefore + beatAt(kBlock, 160.0);
+    assert(std::fabs(beatAt(engine.getGlobalSamplePos(), 160.0) - expected) < 1e-3);
+
+    engine.setTempoKeepingBeat(120.0f);
+    engine.setTempoKeepingBeat(160.0f); // back again before the audio thread saw the first
+    engine.processBlock(out.data(), nullptr, kBlock, 0.0);
+    assert(engine.getBPM() == 160.0f && "a there-and-back ends at the last tempo asked for");
+    const double expectedAgain = expected + beatAt(kBlock, 160.0);
+    assert(std::fabs(beatAt(engine.getGlobalSamplePos(), 160.0) - expectedAgain) < 1e-3);
+    std::printf("[PASS] edits queued in one block chain: the beat and the final tempo hold\n");
+}
+
 } // namespace
 
 int main() {
     testWhilePlaying();
     testWhileStopped();
     testInvalidTempoIsIgnored();
+    testEditsQueuedInOneBlockChain();
     return 0;
 }
