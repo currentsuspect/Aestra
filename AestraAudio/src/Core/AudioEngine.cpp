@@ -1119,8 +1119,11 @@ int AudioEngine::processBlockWithinCapacity(float* outputBuffer, const float* in
         }
     }
 
-    // Fast path: silent (only for normal DAW mode, not audition)
-    if (m_fadeState.load(std::memory_order_relaxed) == FadeState::Silent) {
+    // Fast path: silent (only for normal DAW mode, not audition). Not on the hard-stop block itself:
+    // that block still renders (and is silenced below) so instrument plugins receive the panic.
+    // Skipped, the panic waited for the next play while the plugins kept their notes held, and
+    // the next thing to wake the engine (auditioning a pad) brought the hung note back.
+    if (m_fadeState.load(std::memory_order_relaxed) == FadeState::Silent && !transportHardStop) {
         std::memset(outputBuffer, 0, static_cast<size_t>(numFrames) * numOutputChannels * sizeof(float));
         // Clear meters so UI doesn't freeze on the last loud block.
         m_peakL.store(0.0f, std::memory_order_relaxed);
@@ -1595,7 +1598,11 @@ int AudioEngine::processBlockWithinCapacity(float* outputBuffer, const float* in
         }
     }
 
-    mixMetronomeClicks(outputBuffer, numFrames);
+    if (transportHardStop && !isPlaying) { // a stop+play in one block is a restart: it plays
+        std::memset(outputBuffer, 0, static_cast<size_t>(numFrames) * numOutputChannels * sizeof(float));
+    } else {
+        mixMetronomeClicks(outputBuffer, numFrames);
+    }
 
     // Advance position (Atomic update to pre-calculated next position)
     if (m_transportPlaying.load(std::memory_order_relaxed) ||

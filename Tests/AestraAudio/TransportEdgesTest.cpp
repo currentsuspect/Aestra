@@ -97,6 +97,7 @@ struct Rig {
         auto& units = tm->getUnitManager();
         const UnitID unit = units.createUnit("synth", UnitType::Instrument);
         units.attachPlugin(unit, "aestra.test.recording", synth);
+        units.setUnitEnabled(unit, true); // new units start disabled and are not rendered
         MidiPayload payload;
         MidiNote note; // a long note exactly on beat 1: the play position below
         note.pitch = 60;
@@ -164,8 +165,13 @@ void testStopCutsSoundPreference() {
     for (int i = 0; i < 40; ++i) rig.block();
     const size_t mark = rig.synth->log.size();
     rig.engine.setTransportPlaying(false);
-    for (int i = 0; i < 4; ++i) rig.block();
-    check(rig.synth->sawController(120, mark), "D: with 'stop cuts sound', stop sends All Sound Off");
+    bool silent = true;
+    for (int i = 0; i < 4; ++i) {
+        rig.block();
+        for (float v : rig.out) silent = silent && v == 0.0f;
+    }
+    check(rig.synth->sawController(120, mark), "D: with 'stop cuts sound', stop sends All Sound Off to the plugin");
+    check(silent, "D: and the output is silent from the stop block on");
 }
 
 } // namespace

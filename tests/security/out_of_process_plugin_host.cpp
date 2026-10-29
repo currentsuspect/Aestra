@@ -261,9 +261,12 @@ int main(int argc, char** argv) {
     // too little and landed late against every other track. The helper's echo fake behaves like LSP's limiters: it
     // reports no latency until it has processed a block, then kEchoTestLatencySamples. The instance asks again after
     // the first block and every so often, so the value has to arrive without anyone calling anything.
-    if (oopInstance->getLatencySamples() != 64u) {
-        std::cerr << "before any audio the plugin reports no latency of its own: expected one 64-sample block, got "
-                  << oopInstance->getLatencySamples() << "\n";
+    // The sandbox's own part is the chunk it actually delays by: the callback size, learned from the first block.
+    // It used to be initialize()'s maximum block, which in the engine is the 4096+ capacity, not the callback.
+    // Before any audio neither part is known, so the report is zero.
+    if (oopInstance->getLatencySamples() != 0u) {
+        std::cerr << "before any audio the sandbox reports no latency yet, got " << oopInstance->getLatencySamples()
+                  << "\n";
         return 1;
     }
     {
@@ -278,8 +281,8 @@ int main(int argc, char** argv) {
         std::vector<float> in(2 * 64, 0.25f), out(2 * 64, 0.0f);
         const float* inPlanes[2] = {in.data(), in.data() + 64};
         float* outPlanes[2] = {out.data(), out.data() + 64};
-        if (lateOop->getLatencySamples() != 64u) {
-            std::cerr << "latency probe: expected only the block before any audio, got " << lateOop->getLatencySamples()
+        if (lateOop->getLatencySamples() != 0u) {
+            std::cerr << "latency probe: expected nothing before any audio, got " << lateOop->getLatencySamples()
                       << "\n";
             return 1;
         }

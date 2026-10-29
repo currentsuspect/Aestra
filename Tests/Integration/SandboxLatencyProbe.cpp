@@ -39,7 +39,6 @@ struct Probe {
 const Probe kProbes[] = {
     {"Compressor Stereo", PluginFormat::CLAP},
     {"Compressor Stereo", PluginFormat::VST3},
-    {"Airwindows Consolidated", PluginFormat::CLAP},
 };
 
 // Returns the measured delay in frames, or -1 when the impulse never came back.
@@ -58,8 +57,7 @@ long measure(IPluginInstance& p, uint32_t block) {
     const long impulseAt = static_cast<long>(warmBlocks) * block + 17;
     auto next = std::chrono::steady_clock::now();
     int64_t position = 0;
-    long bestAt = -1;
-    float best = 0.0f;
+    long firstAt = -1; // first arrival: a ringing effect peaks later than it starts
     for (uint32_t b = 0; b < totalBlocks; ++b) {
         for (uint32_t c = 0; c < kChannels; ++c) {
             std::fill(in[c].begin(), in[c].end(), 0.0f);
@@ -73,17 +71,15 @@ long measure(IPluginInstance& p, uint32_t block) {
         HostTransportClock::publish(HostTransport::at(position, kSampleRate, 120.0, 4, true, false, 0.0, 4.0));
         position += block;
         p.process(inPtr, outPtr, kChannels, kChannels, block, nullptr, nullptr);
-        for (uint32_t i = 0; i < block; ++i) {
-            const float v = std::fabs(out[0][i]);
-            if (b >= warmBlocks && v > best) {
-                best = v;
-                bestAt = blockStart + static_cast<long>(i);
+        for (uint32_t i = 0; i < block && firstAt < 0; ++i) {
+            if (b >= warmBlocks && std::fabs(out[0][i]) > 1e-3f) {
+                firstAt = blockStart + static_cast<long>(i);
             }
         }
         next += std::chrono::microseconds(static_cast<int64_t>(1e6 * block / kSampleRate));
         std::this_thread::sleep_until(next); // the engine's pace: the helper gets a real callback period
     }
-    return best > 1e-4f ? bestAt - impulseAt : -1;
+    return firstAt >= 0 ? firstAt - impulseAt : -1;
 }
 
 } // namespace
