@@ -193,6 +193,9 @@ endif()
 set(AESTRA_AUDIO_CORE_SOURCES
     # Core
     src/Core/AudioEngine.cpp
+    src/Core/AudioEngineBlockSplit.cpp
+    src/Core/AudioEngineScheduling.cpp
+    src/Core/ProjectTempo.cpp
     src/Core/ClipRenderKernel.cpp
     src/Core/AudioDeviceManager.cpp
     src/Core/AutosaveManager.cpp
@@ -302,6 +305,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Plugin/PluginManager.cpp
     src/Plugin/PluginFactory.cpp
     src/Plugin/OutOfProcessPluginInstance.cpp
+    src/Plugin/OutOfProcessPluginInstanceRt.cpp
     src/Plugin/InternalPluginRegistry.cpp
     src/Plugin/BuiltInPlugins.cpp
     src/Plugin/SamplerPlugin.cpp

@@ -84,10 +84,13 @@ public:
      * @return A move-only handle whose get() returns the active AudioGraph.
      */
     GraphReadHandle activeGraphRead() const noexcept {
+        // Same store-then-load handshake as a hazard pointer (the reader bumps a count then
+        // re-reads the index; swapGraph stores the index, then later reads the counts), so
+        // the count bump, the re-read and swapGraph's index store and count reads are seq_cst.
         for (;;) {
             const int index = m_activeIndex.load(std::memory_order_acquire);
-            m_readers[static_cast<size_t>(index)].fetch_add(1, std::memory_order_acquire);
-            if (index == m_activeIndex.load(std::memory_order_acquire)) {
+            m_readers[static_cast<size_t>(index)].fetch_add(1, std::memory_order_seq_cst);
+            if (index == m_activeIndex.load(std::memory_order_seq_cst)) {
                 return GraphReadHandle(this, index);
             }
             m_readers[static_cast<size_t>(index)].fetch_sub(1, std::memory_order_release);
@@ -102,7 +105,7 @@ public:
         while (target < 0) {
             const int active = m_activeIndex.load(std::memory_order_acquire);
             for (int i = 0; i < kGraphSlots; ++i) {
-                if (i != active && m_readers[static_cast<size_t>(i)].load(std::memory_order_acquire) == 0) {
+                if (i != active && m_readers[static_cast<size_t>(i)].load(std::memory_order_seq_cst) == 0) {
                     target = i;
                     break;
                 }
@@ -112,7 +115,7 @@ public:
             }
         }
         m_graphs[static_cast<size_t>(target)] = next; // copy/move from builder thread
-        m_activeIndex.store(target, std::memory_order_release);
+        m_activeIndex.store(target, std::memory_order_seq_cst);
     }
 
     // Non-RT access for initialization or inspection.

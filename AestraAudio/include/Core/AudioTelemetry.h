@@ -31,6 +31,8 @@ struct AudioTelemetry {
     std::atomic<uint64_t> xruns{0};
     std::atomic<uint64_t> underruns{0};
     std::atomic<uint64_t> overruns{0};
+    // Driver callbacks larger than the configured block, rendered in chunks.
+    std::atomic<uint64_t> oversizedBlocks{0};
     std::atomic<uint64_t> maxCallbackNs{0};
     std::atomic<uint64_t> lastCallbackNs{0};
     // Running total + count of timed callbacks, for average callback time.
@@ -86,6 +88,7 @@ struct AudioTelemetry {
     void incrementBlocksProcessed() noexcept { blocksProcessed.fetch_add(1, std::memory_order_relaxed); }
     void incrementXruns() noexcept { xruns.fetch_add(1, std::memory_order_relaxed); }
     void incrementOverruns() noexcept { overruns.fetch_add(1, std::memory_order_relaxed); }
+    void incrementOversizedBlocks() noexcept { oversizedBlocks.fetch_add(1, std::memory_order_relaxed); }
     void incrementSrcActiveBlocks() noexcept { srcActiveBlocks.fetch_add(1, std::memory_order_relaxed); }
     void incrementRtMisuseViolations() noexcept {
         rtMisuseViolations.fetch_add(1, std::memory_order_relaxed);
@@ -224,6 +227,7 @@ struct AudioTelemetry {
     uint64_t getXruns() const noexcept { return xruns.load(std::memory_order_relaxed); }
     uint64_t getUnderruns() const noexcept { return underruns.load(std::memory_order_relaxed); }
     uint64_t getOverruns() const noexcept { return overruns.load(std::memory_order_relaxed); }
+    uint64_t getOversizedBlocks() const noexcept { return oversizedBlocks.load(std::memory_order_relaxed); }
     uint64_t getMaxCallbackNs() const noexcept { return maxCallbackNs.load(std::memory_order_relaxed); }
     uint64_t getLastCallbackNs() const noexcept { return lastCallbackNs.load(std::memory_order_relaxed); }
     uint64_t getTimedCallbackCount() const noexcept { return timedCallbackCount.load(std::memory_order_relaxed); }

@@ -787,6 +787,20 @@ target_include_directories(RealtimeObjectPublisherTest PRIVATE
 add_test(NAME RealtimeObjectPublisherTest COMMAND RealtimeObjectPublisherTest)
 set_tests_properties(RealtimeObjectPublisherTest PROPERTIES LABELS "audio;rt-safety;reclamation;regression;contract:realtime")
 
+add_executable(SandboxBlockFifoTest AestraAudio/SandboxBlockFifoTest.cpp)
+target_include_directories(SandboxBlockFifoTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
+add_test(NAME SandboxBlockFifoTest COMMAND SandboxBlockFifoTest)
+set_tests_properties(SandboxBlockFifoTest PROPERTIES LABELS "audio;plugins;rt-safety;regression;contract:plugins")
+
+add_executable(RealtimeSharedSlotTest AestraAudio/RealtimeSharedSlotTest.cpp)
+target_link_libraries(RealtimeSharedSlotTest PRIVATE Threads::Threads)
+target_include_directories(RealtimeSharedSlotTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME RealtimeSharedSlotTest COMMAND RealtimeSharedSlotTest)
+set_tests_properties(RealtimeSharedSlotTest PROPERTIES LABELS "audio;rt-safety;reclamation;regression;contract:realtime")
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerStereoParityTest.cpp")
     add_executable(SamplerStereoParityTest AestraAudio/SamplerStereoParityTest.cpp)
     target_link_libraries(SamplerStereoParityTest PRIVATE AestraAudio)
@@ -884,6 +898,16 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternLateRefillTest.cpp")
     set_tests_properties(PatternLateRefillTest
         PROPERTIES LABELS "audio;playback;regression;contract:audio")
 endif()
+
+add_executable(TimelineLoopSchedulingTest AestraAudio/TimelineLoopSchedulingTest.cpp)
+target_link_libraries(TimelineLoopSchedulingTest PRIVATE AestraAudio)
+target_include_directories(TimelineLoopSchedulingTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME TimelineLoopSchedulingTest COMMAND TimelineLoopSchedulingTest)
+set_tests_properties(TimelineLoopSchedulingTest PROPERTIES LABELS "audio;playback;timeline;regression;contract:audio")
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternRepeatPlaybackTest.cpp")
     add_executable(PatternRepeatPlaybackTest AestraAudio/PatternRepeatPlaybackTest.cpp)
@@ -1265,6 +1289,75 @@ target_include_directories(AestraAudioEngineOutputChannelTest PRIVATE
 )
 add_test(NAME AestraAudioEngineOutputChannelTest COMMAND AestraAudioEngineOutputChannelTest)
 set_tests_properties(AestraAudioEngineOutputChannelTest PROPERTIES LABELS "audio;rt-safety;regression;contract:audio")
+
+# Short loop: a block that wraps several times renders every pass from the loop start
+add_executable(AestraShortLoopMultiWrapTest AestraAudio/ShortLoopMultiWrapTest.cpp)
+target_link_libraries(AestraShortLoopMultiWrapTest PRIVATE AestraAudio)
+target_include_directories(AestraShortLoopMultiWrapTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraShortLoopMultiWrapTest COMMAND AestraShortLoopMultiWrapTest)
+set_tests_properties(AestraShortLoopMultiWrapTest PROPERTIES LABELS "audio;timeline;regression;contract:audio")
+
+# Tempo change keeps the playhead on its beat (playing and stopped)
+add_executable(AestraTempoChangeKeepsBeatTest AestraAudio/TempoChangeKeepsBeatTest.cpp)
+target_link_libraries(AestraTempoChangeKeepsBeatTest PRIVATE AestraAudioCore)
+target_include_directories(AestraTempoChangeKeepsBeatTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraTempoChangeKeepsBeatTest COMMAND AestraTempoChangeKeepsBeatTest)
+set_tests_properties(AestraTempoChangeKeepsBeatTest PROPERTIES LABELS "audio;transport;regression;contract:audio")
+
+# Sends added while the audio thread renders: send-gain storage never reallocates under it
+add_executable(AestraSendGrowthDuringPlaybackTest AestraAudio/SendGrowthDuringPlaybackTest.cpp)
+target_link_libraries(AestraSendGrowthDuringPlaybackTest PRIVATE AestraAudio Threads::Threads)
+target_include_directories(AestraSendGrowthDuringPlaybackTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraSendGrowthDuringPlaybackTest COMMAND AestraSendGrowthDuringPlaybackTest)
+set_tests_properties(AestraSendGrowthDuringPlaybackTest PROPERTIES LABELS "audio;routing;rt-safety;regression;contract:audio" TIMEOUT 120)
+
+# Manual renders (export, bounce, Muse) never run alongside the live callback
+add_executable(AestraManualRenderLeaseTest AestraAudio/ManualRenderLeaseTest.cpp)
+target_link_libraries(AestraManualRenderLeaseTest PRIVATE AestraAudioCore Threads::Threads)
+target_include_directories(AestraManualRenderLeaseTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraManualRenderLeaseTest COMMAND AestraManualRenderLeaseTest)
+set_tests_properties(AestraManualRenderLeaseTest PROPERTIES LABELS "audio;rt-safety;export;regression;contract:audio" TIMEOUT 60)
+
+# Transport edges: sample-accurate play start, stop releases plugin notes, play starts clean
+add_executable(AestraTransportEdgesTest AestraAudio/TransportEdgesTest.cpp)
+target_link_libraries(AestraTransportEdgesTest PRIVATE AestraAudio)
+target_include_directories(AestraTransportEdgesTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Tests
+)
+add_test(NAME AestraTransportEdgesTest COMMAND AestraTransportEdgesTest)
+set_tests_properties(AestraTransportEdgesTest PROPERTIES LABELS "audio;transport;playback;regression;contract:audio" TIMEOUT 120)
+
+# Oversized driver block: processBlock splits it into capacity-sized chunks
+add_executable(AestraOversizedDriverBlockTest AestraAudio/OversizedDriverBlockTest.cpp)
+target_link_libraries(AestraOversizedDriverBlockTest PRIVATE AestraAudio)
+target_include_directories(AestraOversizedDriverBlockTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraOversizedDriverBlockTest COMMAND AestraOversizedDriverBlockTest)
+set_tests_properties(AestraOversizedDriverBlockTest PROPERTIES LABELS "audio;rt-safety;regression;contract:audio")
 
 # Watchdog Test (requires VST3 SDK headers)
 if(EXISTS "${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces/vst/ivstaudioprocessor.h")

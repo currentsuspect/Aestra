@@ -138,6 +138,8 @@ private:
     
     std::shared_ptr<AestraUI::NUILabel> m_dcRemovalLabel;
     std::shared_ptr<AestraUI::NUIToggle> m_dcRemovalToggle; // Toggle button
+    std::shared_ptr<AestraUI::NUILabel> m_stopCutsSoundLabel;
+    std::shared_ptr<AestraUI::NUIToggle> m_stopCutsSoundToggle; // off: stop lets notes release; on: stop cuts
     
     std::shared_ptr<AestraUI::NUILabel> m_softClippingLabel;
     std::shared_ptr<AestraUI::NUIToggle> m_softClippingToggle;

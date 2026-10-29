@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "AudioExporter.h"
+#include "Core/ManualRenderLease.h"
 #include "AudioGraphBuilder.h"
 #include "AestraFile.h"
 #include "AestraLog.h"
@@ -82,6 +83,8 @@ AudioExporter::Result AudioExporter::bounceToWav(AudioEngine& engine, TrackManag
 }
 
 AudioExporter::Result AudioExporter::render(const Config& config) {
+    // The render below drives processBlock by hand: a live device callback stands down for it.
+    ManualRenderLease lease(m_engine);
     Result result;
     result.outputPath = config.outputPath;
 

@@ -18,6 +18,7 @@
 #include <functional>
 #include <memory>
 #include "AestraAtomicSharedPtr.h"
+#include "Core/RealtimeSharedSlot.h"
 #include <mutex>
 #include <optional>
 #include <string>
@@ -323,6 +324,20 @@ private:
     // NOTE: C++20+ has std::atomic<std::shared_ptr<T>> with member .load()/.store()
     //       C++17 requires free functions std::atomic_load_explicit/std::atomic_store_explicit
     AtomicSharedPtr<ClipSource> m_currentSource;
+    // What processBlock reads. AtomicSharedPtr::load takes a pooled mutex in this C++17
+    // build, and the copy it returned could become the last reference when the decoder
+    // swapped the source mid-block, freeing a whole decoded file on the audio thread.
+    // The slot pins instead of copying; replaced sources die on the publishing thread.
+    RealtimeSharedSlot<ClipSource> m_rtCurrentSource;
+    RealtimeSharedSlot<ClipSource> m_rtReferenceSource;
+    void setCurrentSource(std::shared_ptr<ClipSource> source) {
+        m_currentSource.store(source, std::memory_order_release);
+        m_rtCurrentSource.publish(std::move(source));
+    }
+    void setReferenceSourcePtr(std::shared_ptr<ClipSource> source) {
+        m_referenceSource.store(source, std::memory_order_release);
+        m_rtReferenceSource.publish(std::move(source));
+    }
 
     // DSP
     AuditionDSPPreset m_currentPreset{AuditionDSPPreset::Bypass()};

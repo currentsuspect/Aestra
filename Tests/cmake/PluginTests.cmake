@@ -525,6 +525,20 @@ if(UNIX AND TARGET AestraPluginHost)
     endif()
 endif()
 
+# Does a sandboxed plugin delay audio by exactly what it reports to PDC? Needs installed plugins; run directly:
+#   build/Tests/AestraSandboxLatencyProbe [callbackFrames]
+if(UNIX AND TARGET AestraPluginHost)
+    add_executable(AestraSandboxLatencyProbe Integration/SandboxLatencyProbe.cpp)
+    target_link_libraries(AestraSandboxLatencyProbe PRIVATE AestraAudio)
+    target_include_directories(AestraSandboxLatencyProbe PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    target_compile_definitions(AestraSandboxLatencyProbe PRIVATE HELPER_PATH="$<TARGET_FILE:AestraPluginHost>")
+    add_dependencies(AestraSandboxLatencyProbe AestraPluginHost)
+endif()
+
 # A CLAP plugin's parameters through the sandbox with VST3 built in too, and a blocking scan after a cancel (V82-H7).
 # Every platform: on Windows it is the proof a CLAP DLL loads through the helper (V82-H8).
 if(TARGET AestraPluginHost AND EXISTS ${CMAKE_SOURCE_DIR}/AestraAudio/External/clap/include/clap/clap.h)

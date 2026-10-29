@@ -34,6 +34,7 @@
 #include "VersionsPanelWiring.h"
 #include "../Panels/TakesPanel.h"
 #include "../../AestraAudio/include/Core/PlaybackGraphController.h"
+#include "../../AestraAudio/include/Core/ProjectTempo.h"
 #include "../../AestraAudio/include/IO/AudioExporter.h"
 #include "../../AestraAudio/include/IO/MiniAudioDecoder.h"
 
@@ -1207,16 +1208,12 @@ void AestraApp::connectAudioToUI() {
         // Tempo change — re-resolve the engine inside the callback to avoid capturing
         // a raw pointer that could dangle if the audio controller is destroyed.
         m_content->getTransportBar()->setOnTempoChange([this](float bpm) {
+            // Engine, playlist, clock and playhead together, holding the playhead on its beat.
             if (auto* engine = m_audioController ? m_audioController->getEngine() : nullptr) {
-                engine->setBPM(bpm);
+                Aestra::Audio::changeProjectTempo(*engine, m_content ? m_content->getTrackManager().get() : nullptr, bpm);
             }
             if (m_content) {
                 m_content->setPluginTempo(bpm);
-                if (auto trackManager = m_content->getTrackManager()) {
-                    trackManager->getPlaylistModel().setBPM(bpm);
-                    trackManager->getTimelineClock().setTempo(bpm);
-                    trackManager->getPatternPlaybackEngine().rewindScheduledInstances();
-                }
                 if (auto trackManagerUI = m_content->getTrackManagerUI()) {
                     trackManagerUI->invalidateCache();
                 }
@@ -1288,6 +1285,7 @@ void AestraApp::applyPersistedEngineSettings() {
     if (Aestra::isSet(saved.dcRemoval)) {
         engine->setDCRemovalEnabled(saved.dcRemoval != 0);
     }
+    if (Aestra::isSet(saved.stopCutsSound)) engine->setStopCutsSound(saved.stopCutsSound != 0); // default: off
     if (Aestra::isSet(saved.dithering)) {
         if (Aestra::isPlausibleDitheringMode(saved.dithering)) {
             engine->setDitheringMode(static_cast<Aestra::Audio::DitheringMode>(saved.dithering));

@@ -5,13 +5,13 @@
 2851 AestraAudio/include/Models/TrackManager.h
 2328 AestraAudio/include/Plugin/AestraEQ.h
 1984 AestraAudio/include/Plugin/AestraVerb.h
-4381 AestraAudio/src/Core/AudioEngine.cpp
+4336 AestraAudio/src/Core/AudioEngine.cpp
 3631 AestraUI/Graphics/OpenGL/NUIRendererGL.cpp
 5646 AestraUI/Widgets/AestraEQEditor.cpp
 1618 AestraUI/Widgets/AestraVerbEditor.cpp
 1927 AestraUI/Widgets/PianoRollNoteLayer.cpp
 1861 AestraUI/Widgets/UnitRow.cpp
-2538 Source/App/AestraApp.cpp
+2536 Source/App/AestraApp.cpp
 3918 Source/Components/FileBrowser.cpp
 3139 Source/Components/TrackUIComponent.cpp
 4760 Source/Core/AestraContent.cpp

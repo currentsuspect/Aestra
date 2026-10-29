@@ -38,6 +38,9 @@ enum class AudioQueueCommandType : uint8_t {
     // samplePos = context generation. Applied in the same drain as SetTransportState,
     // so a block can never render one transition's transport with another's context.
     SetPlaybackContext,
+    // Tempo change that keeps the playhead on its beat: value1 = new BPM, value2 = old BPM.
+    // The audio thread rescales the playhead by old/new in the same block it switches tempo.
+    SetTempoKeepingBeat,
 };
 
 /**

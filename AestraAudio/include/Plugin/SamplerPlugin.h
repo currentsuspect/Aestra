@@ -8,6 +8,7 @@
 #include <atomic>
 #include <memory>
 #include "AestraAtomicSharedPtr.h"
+#include "Core/RealtimeSharedSlot.h"
 #include <mutex>
 #include <string>
 #include <vector>
@@ -132,6 +133,10 @@ private:
     // Shared Ptr accessed atomically (C++11/17 free functions)
     // No mutex needed for access anymore!
     AtomicSharedPtr<SampleData> m_data;
+    // The same sample for process(): AtomicSharedPtr::load takes a pooled mutex in this C++17
+    // build. Every m_data swap publishes here too (publishSample).
+    RealtimeSharedSlot<SampleData> m_rtData;
+    void publishSample(const std::shared_ptr<SampleData>& data) { m_rtData.publish(data); }
 
     // Gap-free swap: the sample the audio thread last rendered (audio thread only), and the swapped-out buffers that
     // sounding voices may still be reading (non-RT, under m_retiredMutex).

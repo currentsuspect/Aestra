@@ -2,6 +2,7 @@
 #pragma once
 
 #include "PluginHost.h"
+#include "Plugin/SandboxBlockFifo.h"
 #include "Plugin/HostTransport.h"
 
 #include "AestraThreading.h"
@@ -69,10 +70,12 @@ public:
     bool resizeEditor(int width, int height) override;
 
     const PluginInfo& getInfo() const override { return m_info; }
-    // One block of transport delay (the sandbox hands audio over through a single-slot double buffer) plus the
+    // One chunk of transport delay (the sandbox hands audio over a chunk at a time, one chunk behind) plus the
     // plugin's own latency, which the helper reports (LATENCY) once the plugin is set up and active. PDC reads this.
+    // The chunk is the callback size the engine actually runs at, learned from process(); it was reported as the
+    // engine's block CAPACITY (4096+), which put every sandboxed track thousands of samples early against the rest.
     uint32_t getLatencySamples() const override {
-        return m_maxBlockSize + m_pluginLatency.load(std::memory_order_acquire);
+        return m_chunkFrames.load(std::memory_order_acquire) + m_pluginLatency.load(std::memory_order_acquire);
     }
     uint32_t getTailSamples() const override { return 0; }
 
@@ -140,6 +143,7 @@ private:
     void markCrashed();
     void setupSharedBlock();     ///< audio through shared memory when the helper can map it (V82-H7 follow-up)
     static void raiseWorkerPriority();
+    void wakeWorker() noexcept; // posts m_wake (WorkerWake is defined in the main .cpp)
     void refreshPluginLatency(); ///< asks the helper for the plugin's own latency
     void passThrough(const float* const* inputs, float** outputs, uint32_t numInputChannels, uint32_t numOutputChannels,
                      uint32_t numFrames) const;
@@ -188,6 +192,17 @@ private:
     std::atomic<uint32_t> m_readyFrames{0};
     std::atomic<uint8_t> m_pendingState{0};
     std::atomic<uint8_t> m_readyState{0};
+
+    // Audio-thread side of the hand-over (process(), OutOfProcessPluginInstanceRt.cpp). The helper is fed chunks
+    // of one constant size and the output plays exactly one chunk behind, however the engine cuts its callbacks
+    // (a loop wrap splits one in two). Feeding the helper each callback as it came dropped the second half of a
+    // split callback and the unused tail of every ready block. Reset (allocated) in initialize().
+    InterleavedFifo m_inFifo;
+    InterleavedFifo m_outFifo;
+    ChunkMidiQueue m_midiQueue;
+    uint64_t m_inFifoEnd{0};                ///< frames ever queued into m_inFifo: the MIDI queue's timeline
+    std::atomic<uint32_t> m_chunkFrames{0}; ///< chunk size: the largest callback seen, 0 before the first
+    std::atomic<uint64_t> m_midiDrops{0};
 
     // Host->child parameter changes. setParameter() only pushes onto this
     // lock-free queue (no IPC, no lock, no allocation, never blocks); the worker

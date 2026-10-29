@@ -258,6 +258,7 @@ void AudioSettingsPage::createUI() {
     m_dcRemovalLabel = createLabel("DC Removal:");
     m_softClippingLabel = createLabel("Master Limiter:");
     m_previewDuckingLabel = createLabel("Preview Ducking:");
+    m_stopCutsSoundLabel = createLabel("Stop Cuts Sound:");
     m_multiThreadingLabel = createLabel("Multi-threading:");
     m_threadCountLabel = createLabel("Thread Count:");
     
@@ -432,6 +433,8 @@ void AudioSettingsPage::createUI() {
     
     m_dcRemovalToggle = createCheck([this](bool v) { m_dirty = true; });
     m_softClippingToggle = createCheck([this](bool v) { m_dirty = true; });
+    // Off (default): stop releases notes and tails ring; a new play always starts clean.
+    m_stopCutsSoundToggle = createCheck([this](bool v) { m_dirty = true; });
     m_multiThreadingToggle = createCheck([this](bool v) { 
         m_dirty = true; 
         layoutComponents(); // Update layout to show/hide thread count
@@ -537,6 +540,7 @@ void AudioSettingsPage::applyEngineSettings() {
         m_audioEngine->setDCRemovalEnabled(m_dcRemovalToggle->isOn());
 
         m_audioEngine->setSafetyLimiterEnabled(m_softClippingToggle->isOn());
+        m_audioEngine->setStopCutsSound(m_stopCutsSoundToggle->isOn());
         m_audioEngine->setPreviewDuckingAttenuationDb(static_cast<float>(m_previewDuckingDropdown->getSelectedValue()));
     }
     
@@ -644,6 +648,7 @@ void AudioSettingsPage::layoutComponents() {
     layRow(m_dcRemovalLabel, m_dcRemovalToggle, x2); y += rowHeight + gap;
     layRow(m_softClippingLabel, m_softClippingToggle, x2); y += rowHeight + gap;
     layRow(m_previewDuckingLabel, m_previewDuckingDropdown, x2); y += rowHeight + gap;
+    layRow(m_stopCutsSoundLabel, m_stopCutsSoundToggle, x2); y += rowHeight + gap;
     layRow(m_multiThreadingLabel, m_multiThreadingToggle, x2); y += rowHeight + gap;
     
     // Conditionally show thread count if multithreading is enabled. Hidden, not just left unplaced: an unplaced
@@ -777,6 +782,7 @@ bool AudioSettingsPage::saveSettings() {
         file << "master_limiter=" << (m_softClippingToggle->isOn() ? "1" : "0") << "\n";
         file << "preview_ducking_db=" << m_previewDuckingDropdown->getSelectedValue() << "\n";
         file << "multi_threading=" << (m_multiThreadingToggle->isOn() ? "1" : "0") << "\n";
+        file << "stop_cuts_sound=" << (m_stopCutsSoundToggle->isOn() ? "1" : "0") << "\n";
         file.close();
         m_savedDriverType = driverValue;
         m_savedDeviceId = deviceValue;
@@ -877,6 +883,9 @@ void AudioSettingsPage::loadSettings() {
         }
         else if (key == "dc_removal") {
             m_dcRemovalToggle->setOn(val == 1);
+        }
+        else if (key == "stop_cuts_sound") {
+            m_stopCutsSoundToggle->setOn(val == 1);
         }
         else if (key == "master_limiter") {
             m_softClippingToggle->setOn(val == 1);
