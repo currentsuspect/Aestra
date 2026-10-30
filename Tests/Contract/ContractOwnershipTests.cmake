@@ -87,7 +87,7 @@ aestra_contract_test(ContractSourceIdWidthTest ContractUnitSourceTest source-id-
 # guards: F25 — audio clip beat-domain sourceOffset is re-derived on load in another domain. Fix: Pass 3 (owner to confirm).
 aestra_contract_test(ContractRoundTripStableTest ContractUnitSourceTest roundtrip-stable GUARDS F25 KNOWN_VIOLATION)
 # guards: F26 — type defaults override saved mono/glide on load. Fix: Pass 4.
-aestra_contract_test(ContractSamplerParamsPersistTest ContractUnitSourceTest sampler-params-persist GUARDS F26 KNOWN_VIOLATION)
+aestra_contract_test(ContractSamplerParamsPersistTest ContractUnitSourceTest sampler-params-persist GUARDS F26)
 
 # ---------------------------------------------------------------------------
 # Structural proxies for app-shell rules no harness can drive yet
