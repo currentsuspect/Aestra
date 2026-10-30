@@ -217,6 +217,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     
     # Models
     src/Models/TrackManager.cpp
+    src/Models/RecordingTakeStream.cpp
     src/Models/ClipPrefilterService.cpp
     src/Models/PlaylistModel.cpp
     src/Models/UnitManager.cpp

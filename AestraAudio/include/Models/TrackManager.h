@@ -20,6 +20,7 @@
 #include "MeterSnapshot.h"
 #include "PatternManager.h"
 #include "PlaylistModel.h"
+#include "RecordingTakeStream.h"
 #include "SourceManager.h"
 #include "Track.h"
 #include "UnitManager.h"
@@ -29,7 +30,9 @@
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <condition_variable>
 #include <cstdlib>
+#include <cstring>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -66,6 +69,8 @@ public:
         std::atomic<bool> hasStarted{false};
         int inputIndex{-1};
         uint64_t trackId{0};
+        /** Off the audio thread: carries the take to memory and a .partial file as it records. */
+        std::unique_ptr<RecordingTakeStream> stream;
     };
 
     struct RtInputMonitorRoute {
@@ -690,7 +695,16 @@ public:
      * @param rate Input device sample rate in Hz.
      */
     void setInputSampleRate(double rate) { m_inputSampleRate = rate; }
+    /** @brief Seconds of audio the capture ring holds between take-stream drains (not a take length limit). */
     void setMaxRecordingSeconds(double seconds) { m_maxRecordingSeconds = std::max(1.0, seconds); }
+
+    /**
+     * @brief Move every frame recorded so far into each take's stream (memory
+     *        + .partial file). The drain thread calls this every 50 ms while
+     *        recording; tests call it to stand in for that thread. Never on the
+     *        audio thread.
+     */
+    void drainRecordingCaptures();
 
     /**
      * @brief Device latency to compensate on the record path (T-6).
@@ -1043,8 +1057,6 @@ public:
 
             size_t head = capture->headIndex.load(std::memory_order_relaxed);
             size_t size = capture->size.load(std::memory_order_relaxed);
-            double startBeat = capture->startBeat.load(std::memory_order_relaxed);
-            uint64_t droppedFrames = 0;
             uint32_t startFrame = 0;
             double effectiveCaptureBeat = captureBeat;
 
@@ -1072,8 +1084,9 @@ public:
                 if (size < capacity) {
                     ++size;
                 } else {
+                    // Wrapping is normal: the take stream has already drained
+                    // these frames to memory and disk (RecordingTakeStream).
                     head = (head + 1) % capacity;
-                    ++droppedFrames;
                 }
             };
 
@@ -1106,13 +1119,10 @@ public:
                     startedDeferredCapture = true;
                 }
             }
-            if (droppedFrames > 0) {
-                startBeat += framesToBeats(static_cast<double>(droppedFrames));
-                capture->startBeat.store(startBeat, std::memory_order_release);
-            }
             capture->headIndex.store(head, std::memory_order_release);
             capture->size.store(size, std::memory_order_release);
-            capture->totalCapturedFrames.fetch_add(frames - startFrame, std::memory_order_relaxed);
+            // Release: the take stream reads the samples after acquiring this count.
+            capture->totalCapturedFrames.fetch_add(frames - startFrame, std::memory_order_release);
             capturedAnyChannel = true;
         }
 
@@ -2218,6 +2228,9 @@ private:
             capture->hasStarted.store(false, std::memory_order_relaxed);
             capture->inputIndex = requestedInput;
             capture->trackId = trackId;
+            capture->stream = std::make_unique<RecordingTakeStream>(
+                buildRecordingTakePath(track.channelId) + RecordingTakeStream::kPartialExtension,
+                static_cast<uint32_t>(std::max(1.0, m_inputSampleRate > 0.0 ? m_inputSampleRate : m_outputSampleRate)));
             m_recordingCaptures[trackId] = std::move(capture);
         }
         m_recordingSessionStartBeat = getCurrentTransportBeat();
@@ -2237,6 +2250,7 @@ private:
         m_recordingCaptureAccepting.store(true, std::memory_order_release);
         m_isCapturing.store(true, std::memory_order_relaxed);
         publishRecordingCaptureSnapshot();
+        startTakeDrainThread();
         Log::info("[TrackManager] Recording session started. Armed tracks: " + std::to_string(getTrackArmedCount()) +
                   ", input channels: " + std::to_string(m_inputChannelCount));
     }
@@ -2259,6 +2273,7 @@ private:
         }
 
         m_isCapturing.store(false, std::memory_order_relaxed);
+        stopTakeDrainThread();
 
         // Publish empty snapshot so RT thread stops referencing captures.
         m_recordingCaptureRouteCounts[0].store(0, std::memory_order_release);
@@ -2285,6 +2300,9 @@ private:
 
         for (const auto& [channelId, capture] : captures) {
             (void)channelId;
+            if (capture && capture->stream) {
+                capture->stream->drain(capture->samples.get(), capture->capacity, capture->totalCapturedFrames);
+            }
             if (capture) {
                 commitRecordingTake(capture->trackId, *capture, sessionStartBeat, sessionUsesPlacementOverride);
             }
@@ -2292,170 +2310,7 @@ private:
     }
 
     void commitRecordingTake(uint64_t trackId, const RecordingCapture& capture, double fallbackStartBeat,
-                             bool forcePlacementStartBeat) {
-        auto* track = getTrack(trackId);
-        if (!track) {
-            Log::warning("[TrackManager] Could not resolve Track for recorded take: " + std::to_string(trackId));
-            return;
-        }
-        const uint32_t channelId = track->channelId;
-        std::vector<float> capturedSamples = copyCaptureSamples(capture);
-        if (capturedSamples.empty()) {
-            // Silent no-op here made "record produced nothing" undiagnosable
-            // (deferred-capture beat unreachable, #845). Say something.
-            Log::warning("[TrackManager] Recorded take on track " + std::to_string(trackId) +
-                         " captured zero samples — capture start was never reached during the take.");
-            return;
-        }
-
-        if (!getChannelById(channelId)) {
-            Log::warning("[TrackManager] Could not resolve mixer insert for recorded take " +
-                         std::to_string(channelId) + " (track " + std::to_string(trackId) + ")");
-            return;
-        }
-
-        std::vector<float> conditionedSamples = std::move(capturedSamples);
-        const float rawPeak = analyzePeak(conditionedSamples);
-        conditionRecordedTakeSamples(conditionedSamples);
-        const float conditionedPeak = analyzePeak(conditionedSamples);
-
-        const double captureStartBeat = capture.startBeat.load(std::memory_order_acquire);
-        double startBeat = forcePlacementStartBeat
-                               ? fallbackStartBeat
-                               : (captureStartBeat > 0.0 ? captureStartBeat : fallbackStartBeat);
-        // T-6: compensate device latency. The captured signal arrived late by
-        // the input latency and was performed against backing heard late by
-        // the output latency, so the take as placed sounds late by the sum.
-        // Shift placement earlier (samples intact); clamp at zero — a take
-        // starting at the very top can only keep a small residual lateness.
-        // Values are pulled live through the provider so buffer/device/rate
-        // reconfigures from any path are reflected at commit time.
-        const double bpm = std::max(1.0, m_playlistModel.getBPM());
-        double latencyInMs = 0.0, latencyOutMs = 0.0;
-        if (m_recordLatencyProvider) {
-            m_recordLatencyProvider(latencyInMs, latencyOutMs);
-        }
-        const double recordLatencyBeats = (std::max(0.0, latencyInMs) + std::max(0.0, latencyOutMs)) / 1000.0 *
-                                          bpm / 60.0;
-        startBeat = std::max(0.0, startBeat - recordLatencyBeats);
-        const double durationBeats = framesToBeats(static_cast<double>(conditionedSamples.size()));
-        if (durationBeats <= 0.0) {
-            return;
-        }
-        const double durationSeconds =
-            static_cast<double>(conditionedSamples.size()) / std::max(1.0, m_inputSampleRate);
-        const float playbackGain = computeRecordedTakeGain(conditionedSamples);
-
-        auto buffer = std::make_shared<AudioBufferData>();
-        buffer->sampleRate = static_cast<uint32_t>(std::max(1.0, m_inputSampleRate));
-        buffer->numChannels = 2;
-        buffer->numFrames = conditionedSamples.size();
-        buffer->interleavedData.resize(conditionedSamples.size() * 2);
-        for (size_t i = 0; i < conditionedSamples.size(); ++i) {
-            const float sample = conditionedSamples[i];
-            buffer->interleavedData[i * 2] = sample;
-            buffer->interleavedData[i * 2 + 1] = sample;
-        }
-
-        const std::string takePath = buildRecordingTakePath(channelId);
-        if (!writeRecordedTakeWav(takePath, *buffer)) {
-            Log::error("[TrackManager] Failed to write recorded take: " + takePath);
-            return;
-        }
-
-        const std::string takeName = std::filesystem::path(takePath).stem().string();
-        ClipSourceID sourceId = m_sourceManager.createRecordedSource(takePath, takeName, buffer);
-        if (!sourceId.isValid()) {
-            Log::error("[TrackManager] Failed to register recorded source for: " + takePath);
-            return;
-        }
-
-        AudioSlicePayload payload;
-        payload.audioSourceId = sourceId;
-        payload.durationSeconds = durationSeconds;
-        // Populate the sample-domain fields the serializer persists
-        // (startSamples/lengthSamples). The old {0.0, numFrames} form set
-        // startOffset/duration instead, so the slice saved as start:0 length:0.
-        AudioSlice fullSlice;
-        fullSlice.startSamples = 0.0;
-        fullSlice.lengthSamples = static_cast<double>(buffer->numFrames);
-        payload.slices.push_back(fullSlice);
-
-        PatternID patternId = m_patternManager.createAudioPattern(takeName, durationBeats, payload);
-        if (!patternId.isValid()) {
-            Log::error("[TrackManager] Failed to create audio pattern for recorded take.");
-            return;
-        }
-        m_patternManager.setPatternMixerChannel(patternId, channelId);
-
-        ClipInstance clip;
-        clip.id = ClipInstanceID::generate();
-        clip.name = takeName;
-        clip.startBeat = startBeat;
-        clip.durationBeats = durationBeats;
-        clip.durationSeconds = durationSeconds;
-        clip.patternId = patternId;
-        clip.sourceId = patternId.value;
-        clip.edits.gainLinear = playbackGain;
-
-        if (recordTakeInPlace(m_playlistModel, m_commandHistory, *track, clip)) { // the armed lane, if the span is free
-            requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged); m_modified.store(true, std::memory_order_relaxed);
-            Log::info("[TrackManager] Recorded take committed in the track's own lane: " + takePath);
-            if (m_onTakeCommitted) m_onTakeCommitted(track->activeLaneId);
-            return;
-        }
-        // Recording destination and Playlist placement are separate: a take lane, the PatternSource keeps the armed insert.
-        auto createLane = std::make_shared<CreateLaneCommand>(m_playlistModel, takeName);
-        createLane->execute();
-        const PlaylistLaneID laneId = createLane->getLaneId();
-        if (!laneId.isValid()) {
-            m_patternManager.removePattern(patternId);
-            Log::error("[TrackManager] Failed to create a Playlist lane for recorded take.");
-            return;
-        }
-
-        auto addClip = std::make_shared<AddClipCommand>(m_playlistModel, laneId, clip);
-        addClip->execute();
-        if (!m_playlistModel.getClip(clip.id)) {
-            createLane->undo();
-            m_patternManager.removePattern(patternId);
-            Log::error("[TrackManager] Failed to place recorded take on its Playlist lane.");
-            return;
-        }
-
-        // The take lane is owned by the recording Track (FD-14), joined in the same undoable step as its creation.
-        auto attachLane = std::make_shared<AttachLaneToTrackCommand>(*this, trackId, laneId);
-        attachLane->execute();
-        auto* ownedLane = m_playlistModel.getLane(laneId);
-        if (!ownedLane || ownedLane->trackId != trackId) {
-            attachLane->undo();
-            addClip->undo();
-            createLane->undo();
-            m_patternManager.removePattern(patternId);
-            Log::error("[TrackManager] Failed to attach recorded take lane to track " + std::to_string(trackId));
-            return;
-        }
-
-        auto transaction = std::make_shared<CommandTransaction>("Record Take");
-        transaction->add(createLane);
-        transaction->add(addClip);
-        transaction->add(attachLane);
-        transaction->markExecuted();
-        if (!m_commandHistory.pushExecuted(transaction)) {
-            attachLane->undo();
-            addClip->undo();
-            createLane->undo();
-            m_patternManager.removePattern(patternId);
-            Log::error("[TrackManager] Failed to add recorded take to command history.");
-            return;
-        }
-        requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged); m_modified.store(true, std::memory_order_relaxed);
-        Log::info("[TrackManager] Recorded take committed: " + takePath + " to mixer insert " + std::to_string(channelId) + " at beat " +
-                  std::to_string(startBeat) + " with raw peak " + std::to_string(rawPeak) + ", conditioned peak " +
-                  std::to_string(conditionedPeak) + ", clip gain " + std::to_string(playbackGain));
-
-        if (m_onTakeCommitted) m_onTakeCommitted(laneId);
-    }
+                             bool forcePlacementStartBeat); // TrackManager.cpp
 
     /**
      * @brief Remove recording files that no session can reference anymore.
@@ -2820,6 +2675,12 @@ private:
     std::array<std::atomic<uint32_t>, 2> m_recordingCaptureRouteCounts{};
     std::atomic<uint32_t> m_activeRecordingCaptureSnapshot{0};
     double m_maxRecordingSeconds{15.0};
+    std::thread m_takeDrainThread;
+    std::mutex m_takeDrainWakeMutex;
+    std::condition_variable m_takeDrainWake;
+    bool m_takeDrainStop{false};
+    void startTakeDrainThread();
+    void stopTakeDrainThread();
     std::function<void(double& inputMs, double& outputMs)> m_recordLatencyProvider;
     double m_recordingSessionStartBeat{0.0};
     bool m_recordingSessionUsesPlacementOverride{false};
