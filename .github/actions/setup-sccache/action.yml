@@ -55,6 +55,10 @@ runs:
       run: |
         echo "SCCACHE_CACHE_SIZE=2G" >> "$GITHUB_ENV"
         echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
+        # A cache outage must cost speed, never a red build: when the client cannot reach a working server it
+        # compiles directly. 2026-10-30 the GHA cache answered "Egress is over the account limit", the server
+        # failed to start, and every compile in every lane failed with it.
+        echo "SCCACHE_IGNORE_SERVER_IO_ERROR=1" >> "$GITHUB_ENV"
     - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
       with:
         version: v0.17.0
