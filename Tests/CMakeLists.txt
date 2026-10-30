@@ -792,6 +792,17 @@ target_include_directories(SandboxBlockFifoTest PRIVATE ${CMAKE_SOURCE_DIR}/Aest
 add_test(NAME SandboxBlockFifoTest COMMAND SandboxBlockFifoTest)
 set_tests_properties(SandboxBlockFifoTest PROPERTIES LABELS "audio;plugins;rt-safety;regression;contract:plugins")
 
+# #1229: a missed helper deadline must not leave the sandbox a chunk late for good.
+add_executable(SandboxStallResyncTest AestraAudio/SandboxStallResyncTest.cpp)
+target_link_libraries(SandboxStallResyncTest PRIVATE AestraAudioCore)
+target_include_directories(SandboxStallResyncTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include)
+target_compile_definitions(SandboxStallResyncTest PRIVATE AESTRA_ENABLE_TEST_HOOKS)
+add_test(NAME SandboxStallResyncTest COMMAND SandboxStallResyncTest)
+set_tests_properties(SandboxStallResyncTest PROPERTIES LABELS "audio;plugins;rt-safety;regression;contract:plugins")
+
 add_executable(RealtimeSharedSlotTest AestraAudio/RealtimeSharedSlotTest.cpp)
 target_link_libraries(RealtimeSharedSlotTest PRIVATE Threads::Threads)
 target_include_directories(RealtimeSharedSlotTest PRIVATE
