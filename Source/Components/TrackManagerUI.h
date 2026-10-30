@@ -836,8 +836,9 @@ private:
     bool handleRulerPress(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos,
                           bool isInRuler);
     bool handleRulerSelectionDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
-    bool handleRulerSelectionMenu(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos,
-                                  bool isInRuler);
+    /// #544: "Send Selection to Audition" lives in the timeline's right-click and toolbar menus; a left press on the
+    /// ruler always scrubs, so a menu there could never open. Adds the item when a ruler selection exists.
+    void addSendSelectionToAudition(::AestraUI::NUIContextMenu& menu);
     bool handleLoopMarkerDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
     bool handlePlayheadDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
     bool handleSplitToolClick(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);

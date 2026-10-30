@@ -178,9 +178,6 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (handleRulerSelectionDrag(event, localPos)) {
         return true;
     }
-    if (handleRulerSelectionMenu(event, localPos, isInRuler)) {
-        return true;
-    }
     if (handleLoopMarkerDrag(event, localPos)) {
         return true;
     }
@@ -863,40 +860,6 @@ bool TrackManagerUI::handleRulerSelectionDrag(const AestraUI::NUIMouseEvent& eve
         }
 
         return true;
-    }
-    return false;
-}
-
-bool TrackManagerUI::handleRulerSelectionMenu(const AestraUI::NUIMouseEvent& event, const AestraUI::NUIPoint& localPos, bool isInRuler) {
-    // === RULER SELECTION CONTEXT MENU (Click on active range) ===
-    if (isInRuler && event.pressed && event.button == AestraUI::NUIMouseButton::Left && m_hasRulerSelection &&
-        !m_hoveringLoopStart && !m_hoveringLoopEnd) {
-        auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-        const auto& layout = themeManager.getLayoutDimensions();
-        float gridStartX = layout.trackControlsWidth + kTimelineGridInsetX;
-
-        float loopStartX =
-            gridStartX + (static_cast<float>(m_loopStartBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-        float loopEndX = gridStartX + (static_cast<float>(m_loopEndBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-        float minX = std::min(loopStartX, loopEndX);
-        float maxX = std::max(loopStartX, loopEndX);
-
-        if (localPos.x >= minX && localPos.x <= maxX) {
-            if (m_activeContextMenu) {
-                detachContextMenu(m_activeContextMenu);
-            }
-            m_activeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
-            auto menu = m_activeContextMenu;
-
-            menu->addItem("Send Selection to Audition", [this]() {
-                if (m_onSendSelectionToAudition) {
-                    m_onSendSelectionToAudition(m_loopStartBeat, m_loopEndBeat);
-                }
-            });
-
-            attachAndShowContextMenu(this, menu, event.position);
-            return true;
-        }
     }
     return false;
 }
