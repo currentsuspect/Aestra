@@ -96,6 +96,24 @@ void testEditsQueuedInOneBlockChain() {
     std::printf("[PASS] edits queued in one block chain: the beat and the final tempo hold\n");
 }
 
+// A project load replaces the tempo with setBPM() (transport stopped, but the stop may not have
+// reached the audio thread yet). The next edit must measure from the loaded tempo, not from the
+// last one sent for the old project: 140 retained, load at 100, edit to 110 rescaled by 140/110.
+void testDirectSetBpmEndsTheChain() {
+    AudioEngine engine;
+    configure(engine);
+    std::vector<float> out(kBlock * 2, 0.0f);
+    engine.setTransportPlaying(true);
+    engine.processBlock(out.data(), nullptr, kBlock, 0.0);
+    engine.setTempoKeepingBeat(140.0f);
+    engine.processBlock(out.data(), nullptr, kBlock, 0.0);
+
+    engine.setBPM(100.0f); // the loaded project's tempo
+    const double factor = engine.setTempoKeepingBeat(110.0f);
+    assert(std::fabs(factor - 100.0 / 110.0) < 1e-12 && "measured from the loaded tempo");
+    std::printf("[PASS] a direct setBPM ends the tempo chain: next edit is 100 -> 110\n");
+}
+
 } // namespace
 
 int main() {
@@ -103,5 +121,6 @@ int main() {
     testWhileStopped();
     testInvalidTempoIsIgnored();
     testEditsQueuedInOneBlockChain();
+    testDirectSetBpmEndsTheChain();
     return 0;
 }

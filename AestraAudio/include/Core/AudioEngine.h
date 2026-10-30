@@ -432,7 +432,7 @@ public:
     /** @brief Get metronome output volume. */
     float getMetronomeVolume() const { return m_metronomeEngine.getVolume(); }
     /** @brief Set transport tempo in beats per minute. */
-    void setBPM(float bpm) { m_metronomeEngine.setBPM(bpm); }
+    void setBPM(float bpm) { m_transportStart.requestedBpm = 0.0f; m_metronomeEngine.setBPM(bpm); } // replaces any in-flight tempo chain
     double setTempoKeepingBeat(float bpm); // non-RT; returns old/new for UI-held positions (changeProjectTempo())
     /** @brief Get transport tempo in beats per minute. */
     float getBPM() const { return m_metronomeEngine.getBPM(); }
