@@ -1117,22 +1117,24 @@ jobs:
           if-no-files-found: ignore
 
   tsan-linux:
-    # Required, and deliberately NOT scope-gated (P6).
+    # Required, and scope-gated only on FACTS (#620's classifier, FD-61).
     #
-    # This lane was advisory with a classify-scope step, which made it cheap: a
-    # change the classifier judged irrelevant skipped the build. But a skipped
-    # step still leaves the JOB reporting success, so promoting it to required
-    # unchanged would buy a green tick on exactly the PRs least likely to
-    # contain a race — a no-op gate, which is worse than an advisory one because
-    # people stop reading it. That is the failure mode the contract-coverage
-    # job's comment calls "reportable-sometimes ... false green rather than a
-    # block".
+    # This lane was once gated by a heuristic classify-scope step that judged
+    # changes "irrelevant", which bought a green tick on exactly the PRs least
+    # likely to contain a race; that is why it ran on every PR for a while. The
+    # current classifier does not judge relevance. It skips on two facts only:
     #
-    # So the classifier is gone and this lane runs on every PR. The runner cost
-    # is real and was accepted deliberately: the lane was green on 30
-    # consecutive develop runs before promotion, and the two audio-thread
-    # races another project shipped through an equivalent gap are the reason it
-    # is worth having.
+    #   skip-cxx     every changed path is documentation or prose on a fixed
+    #                allowlist (scripts/ci/classify-changes.sh); nothing compiles.
+    #   ui-app-only  every changed path is a .cpp under AestraUI/ or Source/ that
+    #                no headless target names; ci-tsan builds with AESTRA_CI=ON,
+    #                which force-disables the UI, so those files are not in this
+    #                build at all.
+    #
+    # Anything else, an oversized or truncated list, a push, or a PR into main
+    # runs the full lane. The job itself always runs and reports, so the required
+    # context never hangs; only the build and test steps are conditional. The
+    # cost it removes: a full TSan build on every docs-only PR.
     name: ThreadSanitizer (TSan)
     runs-on: ubuntu-latest
     env:
@@ -1143,25 +1145,36 @@ jobs:
           submodules: false
           persist-credentials: false
 
+      - name: Classify change scope
+        id: scope
+        uses: ./.github/actions/classify-scope
+        with:
+          lane: tsan
+          github-token: ${{ github.token }}
       - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
         uses: ./.github/actions/setup-sccache
       - name: Install Dependencies
+        if: steps.scope.outputs.run == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev cmake
 
       - name: Configure
+        if: steps.scope.outputs.run == 'true'
         run: cmake --preset ci-tsan -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
+        if: steps.scope.outputs.run == 'true'
         run: cmake --build --preset ci-tsan --parallel 2
 
       - name: Test
+        if: steps.scope.outputs.run == 'true'
         working-directory: build/ci-tsan
         run: ctest --parallel 2 --output-on-failure --output-junit ctest-results-tsan.xml
 
       - name: Upload TSan test report
-        if: always()
+        if: always() && steps.scope.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ctest-results-tsan
