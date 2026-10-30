@@ -18,6 +18,7 @@ set(Aestra_SOURCES
 	App/UpdateNotifier.h
 	App/AestraAppRecovery.cpp
     App/MuseHostVerbs.cpp
+    App/MuseTransportVerbs.cpp
     App/MuseProjectLoadReport.h
     App/MuseProjectLoadReport.cpp
     App/ProjectLifecycle.h

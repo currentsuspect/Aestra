@@ -38,4 +38,12 @@ namespace Audio { class MuseService; }
 void registerMuseHostVerbs(Audio::MuseService& service, ::AestraContent& content,
                            ::AestraApp& app);
 
+/**
+ * @brief Register the transport.* verbs (V82-M1): play, stop, pause, seek and loop
+ *        through the app's own focus-aware transport, so the playhead moves and
+ *        the count-in applies exactly as with the transport bar. Called from
+ *        registerMuseHostVerbs; defined in MuseTransportVerbs.cpp.
+ */
+void registerMuseTransportVerbs(Audio::MuseService& service, ::AestraContent& content, ::AestraApp& app);
+
 } // namespace Aestra

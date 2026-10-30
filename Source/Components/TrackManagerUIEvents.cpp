@@ -848,34 +848,13 @@ bool TrackManagerUI::handleRulerSelectionDrag(const AestraUI::NUIMouseEvent& eve
                 double selStartBeat = std::min(m_rulerSelectionStartBeat, m_rulerSelectionEndBeat);
                 double selEndBeat = std::max(m_rulerSelectionStartBeat, m_rulerSelectionEndBeat);
 
-                // Update loop markers to match selection through centralized propagation.
-                updateSelectionLoopRegion(selStartBeat, selEndBeat);
-                m_loopPreset = TimelineLoopPreset::Selection;
-
-                // Call selection callback - this will jump playhead and set loop region
-                if (m_onSelectionMade) {
-                    m_onSelectionMade(selStartBeat, selEndBeat);
-                }
-
-                // Also notify loop preset changed to selection mode
-                if (m_onLoopPresetChanged) {
-                    m_onLoopPresetChanged(timelineLoopPresetId(TimelineLoopPreset::Selection));
-                }
+                selectLoopRange(selStartBeat, selEndBeat);
 
                 Log::info("[TrackManagerUI] Ruler selection: " + std::to_string(selStartBeat) + " to " +
                           std::to_string(selEndBeat) + " beats");
             } else {
                 // Click without drag - clear selection and disable loop
-                setLoopRegion(0.0, 0.0, false);
-                m_loopPreset = TimelineLoopPreset::Off;
-
-                // SPECIAL: If we clicked on an EXISTNG range on ruler, show menu
-                // (Wait, this is handled in the isInRuler block if it's an instant click)
-
-                // Trigger loop OFF callback
-                if (m_onLoopPresetChanged) {
-                    m_onLoopPresetChanged(timelineLoopPresetId(TimelineLoopPreset::Off));
-                }
+                clearLoopRange();
             }
 
             return true;
