@@ -1,5 +1,5 @@
 // © 2026 Aestra Studios — All Rights Reserved.
-// SEC-004: SamplerPlugin must reject path traversal in loadState()
+// SEC-004: SamplerPlugin::loadState() must never open a traversal, absolute or UNC sample path
 
 #include "Plugin/SamplerPlugin.h"
 
@@ -89,11 +89,19 @@ int main() {
         "\\absolute\\windows\\path.wav",
     };
 
+    // The property is that the path is never opened. loadState() still restores the rest of the state (#998: every
+    // save writes an absolute sample path, and failing the whole state reset every unit's settings on reopen), so the
+    // check is on what the sampler holds afterwards, from a fresh instance per path.
     bool blockedAll = true;
     for (const auto& attack : attackPaths) {
-        const bool allowed = plugin.loadState(makeState(attack));
-        std::cout << "  " << attack << " -> " << (allowed ? "ALLOWED" : "BLOCKED") << std::endl;
-        if (allowed) {
+        SamplerPlugin fresh;
+        fresh.initialize(44100.0, 512);
+        fresh.loadState(makeState(attack));
+        const auto after = fresh.saveState();
+        const bool opened = fresh.hasSample() ||
+                            std::string(after.begin(), after.end()).find("samplePath") != std::string::npos;
+        std::cout << "  " << attack << " -> " << (opened ? "OPENED" : "BLOCKED") << std::endl;
+        if (opened) {
             blockedAll = false;
         }
     }
@@ -102,7 +110,7 @@ int main() {
     fs::remove_all(tempDir);
 
     if (!blockedAll) {
-        std::cout << "\n[FAIL] One or more traversal paths were accepted by SamplerPlugin::loadState()." << std::endl;
+        std::cout << "\n[FAIL] One or more traversal paths were opened by SamplerPlugin::loadState()." << std::endl;
         return 1;
     }
 

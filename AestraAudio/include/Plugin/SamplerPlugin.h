@@ -95,6 +95,8 @@ public:
     float getLoopEndNorm() const noexcept { return m_loopEndNorm.load(std::memory_order_relaxed); }
     LoopMode getLoopMode() const noexcept;
     bool isLoopEnabled() const noexcept { return getLoopMode() != LoopMode::OneShot; }
+    /// True once a sample is loaded (a project restore checks this before falling back to the unit's file).
+    bool hasSample() const noexcept { return m_data.load(std::memory_order_acquire) != nullptr; }
     int getMaxVoices() const noexcept { return m_maxVoices.load(std::memory_order_relaxed); }
     int getRootMidiNote() const noexcept { return m_rootMidiNote.load(std::memory_order_relaxed); }
     bool isMonoMode() const noexcept { return m_monoMode.load(std::memory_order_relaxed); }
