@@ -46,12 +46,12 @@ bool hasExplicitFeature(const EntitlementProfile& profile, ProductFeature featur
 bool tierAllows(MembershipTier tier, ProductFeature feature) {
     switch (feature) {
     case ProductFeature::CoreDAW:
-        return true;
     case ProductFeature::Rumble:
+    case ProductFeature::RumbleHeadless:
     case ProductFeature::PremiumPluginBundle:
+        return true; // FD-57: free
     case ProductFeature::SupporterBadge:
         return tier == MembershipTier::Supporter || tier == MembershipTier::Founder;
-    case ProductFeature::RumbleHeadless:
     case ProductFeature::FounderBadge:
         return tier == MembershipTier::Founder;
     case ProductFeature::CloudSync:
@@ -78,8 +78,15 @@ EntitlementProfile EntitlementStore::currentProfile() const {
     return profile;
 }
 
+// FD-57: Aestra's own plugins are free for everyone, signed in or not. Only features that cost
+// something to run (cloud sync) or a membership badge stay behind a verified membership.
+static bool isFreeFeature(ProductFeature feature) {
+    return feature == ProductFeature::CoreDAW || feature == ProductFeature::Rumble ||
+           feature == ProductFeature::RumbleHeadless || feature == ProductFeature::PremiumPluginBundle;
+}
+
 bool EntitlementStore::canAccess(ProductFeature feature) const {
-    if (feature == ProductFeature::CoreDAW) {
+    if (isFreeFeature(feature)) {
         return true;
     }
 
@@ -95,6 +102,9 @@ bool EntitlementStore::canAccess(ProductFeature feature) const {
 }
 
 bool EntitlementStore::canUsePlugin(std::string_view pluginId) const {
+    if (pluginId == kRumblePluginId) {
+        return canAccess(ProductFeature::Rumble);
+    }
     const EntitlementProfile profile = currentProfile();
     if (!profile.verified || !isVerifiedStatus(profile.status)) {
         return false;
@@ -102,9 +112,6 @@ bool EntitlementStore::canUsePlugin(std::string_view pluginId) const {
 
     if (containsToken(profile.rawPlugins, pluginId) || containsToken(profile.rawPlugins, "*")) {
         return true;
-    }
-    if (pluginId == kRumblePluginId) {
-        return canAccess(ProductFeature::Rumble);
     }
     return false;
 }

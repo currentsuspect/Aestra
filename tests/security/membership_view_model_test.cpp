@@ -93,7 +93,7 @@ bool testCoreSignedOut() {
     ok &= expect(state.statusLabel == "Signed out", "Core signed-out status label");
     ok &= expect(!state.signedIn, "Core signed-out should not be signed in");
     ok &= expect(featureEnabled(state, "Core DAW"), "Core DAW must remain enabled");
-    ok &= expect(!featureEnabled(state, "Aestra Rumble"), "Rumble disabled without entitlement");
+    ok &= expect(featureEnabled(state, "Aestra Rumble"), "Rumble is free without an entitlement (FD-57)");
     ok &= expect(state.detailMessage.find("Core access remains available") != std::string::npos,
                  "Core fallback message should be calm and clear");
     return ok;
@@ -115,7 +115,7 @@ bool testSupporterDisplay() {
     ok &= expect(state.statusLabel == "Verified", "Supporter status label");
     ok &= expect(state.signedIn, "Supporter cached identity should be signed in");
     ok &= expect(featureEnabled(state, "Aestra Rumble"), "Supporter enables Rumble");
-    ok &= expect(!featureEnabled(state, "Rumble Headless"), "Supporter does not enable Rumble Headless");
+    ok &= expect(!featureEnabled(state, "Founder Badge"), "Supporter does not enable the Founder badge");
     ok &= expect(featureEnabled(state, "Supporter Badge"), "Supporter badge enabled");
     return ok;
 }
@@ -134,7 +134,7 @@ bool testFounderDisplay() {
     bool ok = true;
     ok &= expect(state.tierLabel == "Aestra Founder", "Founder tier label");
     ok &= expect(featureEnabled(state, "Aestra Rumble"), "Founder enables Rumble");
-    ok &= expect(featureEnabled(state, "Rumble Headless"), "Founder enables Rumble Headless");
+    ok &= expect(featureEnabled(state, "Founder Badge"), "Founder enables the Founder badge");
     ok &= expect(featureEnabled(state, "Founder Badge"), "Founder badge enabled");
     return ok;
 }
@@ -158,8 +158,8 @@ bool testForgedLocalAccountCacheDoesNotGrantAccess() {
 
     bool ok = true;
     ok &= expect(state.tierLabel == "Aestra Core", "forged cache must still display Core");
-    ok &= expect(!featureEnabled(state, "Rumble Headless"), "forged cache must not enable Founder features");
-    ok &= expect(featureReason(state, "Rumble Headless").find("verified signed membership") != std::string::npos,
+    ok &= expect(!featureEnabled(state, "Founder Badge"), "forged cache must not enable Founder features");
+    ok &= expect(featureReason(state, "Founder Badge").find("verified signed membership") != std::string::npos,
                  "forged cache should explain missing signed entitlement");
     return ok;
 }
@@ -177,7 +177,8 @@ bool testInvalidState(EntitlementStatus status, const std::string& expectedStatu
     bool ok = true;
     ok &= expect(state.tierLabel == "Aestra Core", expectedStatusLabel + " falls back to Core");
     ok &= expect(state.statusLabel == expectedStatusLabel, expectedStatusLabel + " status label");
-    ok &= expect(!featureEnabled(state, "Aestra Rumble"), expectedStatusLabel + " does not enable Rumble");
+    ok &= expect(!featureEnabled(state, "Supporter Badge"), expectedStatusLabel + " does not enable paid features");
+    ok &= expect(featureEnabled(state, "Aestra Rumble"), expectedStatusLabel + " still has free Rumble");
     ok &= expect(featureEnabled(state, "Core DAW"), expectedStatusLabel + " keeps Core DAW enabled");
     return ok;
 }
