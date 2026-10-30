@@ -131,7 +131,7 @@ static const std::vector<CommandSchema> s_schemas = {
     },
      "Set a unit sampler's envelope (seconds; sustain 0..1) and play modes, as one undo step. Only the fields given change. A short release stops a held note when it ends instead of letting it ring into the next hit. list_units shows the current values."},
 
-    // === Pattern (4) ===
+    // === Pattern ===
     // Notes are identified by (pattern, unit, pitch, start) — the same key
     // the piano-roll note commands match on.
     {"add_note", CommandCategory::Pattern, {
@@ -160,6 +160,37 @@ static const std::vector<CommandSchema> s_schemas = {
         {"to_pitch", FlagType::Int, false, 0.0, 127.0}
     },
      "Move a note to a new start and optionally a new pitch."},
+    // V82-M3 (FD-53): the piano roll in bulk. Each is one undo step.
+    {"add_notes", CommandCategory::Pattern, {
+        {"pattern", FlagType::Int, true, 1.0},
+        {"unit", FlagType::Int, true, 1.0},
+        {"notes", FlagType::String, true}
+    },
+     "Add many notes for one unit in one step: notes is start,pitch,duration[,velocity] entries separated by semicolons, e.g. 0,60,1; 1,64,0.5,0.9 (beats; velocity 0..1, default 0.8). A bad entry rejects the whole batch. The pattern grows by whole bars to hold notes past its end."},
+    {"set_note_length", CommandCategory::Pattern, {
+        {"pattern", FlagType::Int, true, 1.0},
+        {"unit", FlagType::Int, true, 1.0},
+        {"pitch", FlagType::Int, true, 0.0, 127.0},
+        {"start", FlagType::Float, true, 0.0},
+        {"duration", FlagType::Float, true, 0.001}
+    },
+     "Set the length (beats) of the note identified by (pattern, unit, pitch, start)."},
+    {"delete_notes", CommandCategory::Pattern, {
+        {"pattern", FlagType::Int, true, 1.0},
+        {"from", FlagType::Float, true, 0.0},
+        {"to", FlagType::Float, true, 0.0},
+        {"unit", FlagType::Int, false, 1.0},
+        {"pitch_low", FlagType::Int, false, 0.0, 127.0},
+        {"pitch_high", FlagType::Int, false, 0.0, 127.0}
+    },
+     "Delete every note that starts in beats [from, to), optionally only one unit's and only pitches pitch_low..pitch_high. An error when nothing matches."},
+    {"duplicate_notes", CommandCategory::Pattern, {
+        {"pattern", FlagType::Int, true, 1.0},
+        {"from", FlagType::Float, true, 0.0},
+        {"to", FlagType::Float, true, 0.0},
+        {"unit", FlagType::Int, false, 1.0}
+    },
+     "Duplicate like the piano-roll ruler (FL style): the notes that start in [from, to) are copied into the next block of the same length, [to, 2*to - from). Call it again with that block to keep extending the phrase. The pattern grows by whole bars when the copy runs past its end."},
     {"arrange_pattern", CommandCategory::Pattern, {
         {"pattern", FlagType::Int, true, 1.0},
         {"track", FlagType::Int, true, 0.0},
@@ -294,6 +325,20 @@ const std::vector<CommandSchema>& allCommands() {
     return s_schemas;
 }
 
+namespace {
+// Descriptions are prose and may quote things; the schema is hand-built JSON text, so escape them.
+std::string jsonEscaped(const std::string& text) {
+    std::string out;
+    out.reserve(text.size());
+    for (char c : text) {
+        if (c == '"' || c == '\\')
+            out.push_back('\\');
+        out.push_back(c == '\n' ? ' ' : c);
+    }
+    return out;
+}
+} // namespace
+
 std::string schemaToJsonString() {
     std::ostringstream out;
     out << "{\n\"commands\": [\n";
@@ -302,7 +347,7 @@ std::string schemaToJsonString() {
         out << "  {\n";
         out << "    \"verb\": \"" << cmd.verb << "\",\n";
         if (!cmd.description.empty())
-            out << "    \"description\": \"" << cmd.description << "\",\n";
+            out << "    \"description\": \"" << jsonEscaped(cmd.description) << "\",\n";
 
         const char* catStr = "unknown";
         switch (cmd.category) {

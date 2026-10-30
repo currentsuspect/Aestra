@@ -424,3 +424,13 @@ if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/MuseS
 endif()
 
 message(STATUS "Commands tests added - Phase 2 undo/redo system")
+
+# V82-M3 (FD-53): the piano-roll Muse verbs — bulk notes, note length, delete a range, FL-style duplicate.
+add_executable(MusePianoRollVerbsTest Commands/MusePianoRollVerbsTest.cpp)
+target_link_libraries(MusePianoRollVerbsTest PRIVATE AestraAudioCore)
+target_include_directories(MusePianoRollVerbsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MusePianoRollVerbsTest COMMAND MusePianoRollVerbsTest)
+set_tests_properties(MusePianoRollVerbsTest PROPERTIES LABELS "commands;muse;contract:application")
