@@ -829,10 +829,7 @@ bool OutOfProcessPluginInstance::load() {
     return true;
 }
 
-bool OutOfProcessPluginInstance::initialize(double sampleRate, uint32_t maxBlockSize) {
-    if (!load()) {
-        return false;
-    }
+void OutOfProcessPluginInstance::resetHandOff(double sampleRate, uint32_t maxBlockSize) {
     m_sampleRate = sampleRate;
     m_maxBlockSize = maxBlockSize;
     const size_t capacity = static_cast<size_t>(std::max<uint32_t>(1, maxBlockSize)) * m_transportChannels;
@@ -853,6 +850,14 @@ bool OutOfProcessPluginInstance::initialize(double sampleRate, uint32_t maxBlock
     m_midiQueue.clear();
     m_inFifoEnd = 0;
     m_chunkFrames.store(0, std::memory_order_release);
+    m_outStart = 0;
+}
+
+bool OutOfProcessPluginInstance::initialize(double sampleRate, uint32_t maxBlockSize) {
+    if (!load()) {
+        return false;
+    }
+    resetHandOff(sampleRate, maxBlockSize);
 
     std::ostringstream command;
     command << "INIT " << sampleRate << " " << maxBlockSize;
@@ -1300,6 +1305,7 @@ void OutOfProcessPluginInstance::workerLoop() {
             std::copy_n(m_pendingMidiData.data(), midiBytes, m_workerMidiData.data());
         }
         m_workerTransport = m_pendingTransport;
+        m_workerStart = m_pendingStart;
         m_pendingState.store(0, std::memory_order_release);
 
         if (sampleCount > m_workerInput.size() || midiBytes > m_workerMidiData.size() ||
@@ -1313,6 +1319,7 @@ void OutOfProcessPluginInstance::workerLoop() {
         if (m_readyState.compare_exchange_strong(readyEmpty, 1, std::memory_order_acq_rel)) {
             const size_t outputSamples = std::min(sampleCount, m_workerOutput.size());
             std::copy_n(m_workerOutput.data(), outputSamples, m_readyOutput.data());
+            m_readyStart = m_workerStart;
             m_readyFrames.store(frames, std::memory_order_release);
             m_readyState.store(2, std::memory_order_release);
             // Published last, so an observer that sees this advance is guaranteed

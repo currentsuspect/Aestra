@@ -129,6 +129,32 @@ public:
     uint64_t processedBlockCountForTest() const {
         return m_processedBlocks.load(std::memory_order_acquire);
     }
+
+    // Stand in for the helper, so a test decides when each result comes back (#1229): set up the hand-off
+    // without a process, take the chunk process() sent, hand a result back. Same protocol as workerLoop().
+    void prepareHandOffForTest(double sampleRate, uint32_t maxBlockSize) { resetHandOff(sampleRate, maxBlockSize); }
+    bool takeChunkForTest(std::vector<float>& interleaved, uint32_t& frames) {
+        uint8_t posted = 2;
+        if (!m_pendingState.compare_exchange_strong(posted, 3, std::memory_order_acq_rel)) {
+            return false;
+        }
+        frames = m_pendingFrames.load(std::memory_order_acquire);
+        interleaved.assign(m_pendingInput.begin(), m_pendingInput.begin() + size_t(frames) * m_transportChannels);
+        m_workerStart = m_pendingStart;
+        m_pendingState.store(0, std::memory_order_release);
+        return true;
+    }
+    bool postResultForTest(const std::vector<float>& interleaved, uint32_t frames) {
+        uint8_t empty = 0;
+        if (!m_readyState.compare_exchange_strong(empty, 1, std::memory_order_acq_rel)) {
+            return false; // the audio thread has not taken the last one: the result is lost, as in workerLoop()
+        }
+        std::copy_n(interleaved.data(), size_t(frames) * m_transportChannels, m_readyOutput.data());
+        m_readyStart = m_workerStart;
+        m_readyFrames.store(frames, std::memory_order_release);
+        m_readyState.store(2, std::memory_order_release);
+        return true;
+    }
 #endif
 
 private:
@@ -142,6 +168,7 @@ private:
                               std::vector<float>& output);
     void markCrashed();
     void setupSharedBlock();     ///< audio through shared memory when the helper can map it (V82-H7 follow-up)
+    void resetHandOff(double sampleRate, uint32_t maxBlockSize); ///< the hand-off buffers and timeline, before INIT
     static void raiseWorkerPriority();
     void wakeWorker() noexcept; // posts m_wake (WorkerWake is defined in the main .cpp)
     void refreshPluginLatency(); ///< asks the helper for the plugin's own latency
@@ -187,6 +214,11 @@ private:
     // The block's tempo and playhead, handed over with its input under the same pending-slot protocol.
     HostTransport m_pendingTransport;
     HostTransport m_workerTransport;
+    // Where each chunk starts on the input timeline (m_inFifoEnd's), carried with it to the helper and back, so
+    // its result plays at exactly that place one chunk later (#1229). Same slot protocol as the transport.
+    uint64_t m_pendingStart{0};
+    uint64_t m_workerStart{0};
+    uint64_t m_readyStart{0};
     std::atomic<size_t> m_pendingMidiBytes{0};
     std::atomic<uint32_t> m_pendingFrames{0};
     std::atomic<uint32_t> m_readyFrames{0};
@@ -201,6 +233,7 @@ private:
     InterleavedFifo m_outFifo;
     ChunkMidiQueue m_midiQueue;
     uint64_t m_inFifoEnd{0};                ///< frames ever queued into m_inFifo: the MIDI queue's timeline
+    uint64_t m_outStart{0};                 ///< timeline position of m_outFifo's first frame
     std::atomic<uint32_t> m_chunkFrames{0}; ///< chunk size: the largest callback seen, 0 before the first
     std::atomic<uint64_t> m_midiDrops{0};
 
