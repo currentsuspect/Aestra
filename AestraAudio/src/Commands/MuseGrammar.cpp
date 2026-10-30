@@ -316,9 +316,33 @@ static const std::vector<CommandSchema> s_schemas = {
         {"pitch", FlagType::Int, true, 0.0, 127.0},
         {"start", FlagType::Float, true, 0.0},
         {"velocity", FlagType::Float, false, 0.0, 1.0},
+        {"pan", FlagType::Float, false, -1.0, 1.0},
+        {"chance", FlagType::Float, false, 0.0, 1.0},
+        {"ratchet", FlagType::Int, false, 1.0, 4.0}
+    },
+     "Update velocity, pan, chance (0..1, the share of passes it plays) and/or ratchet (1..4 hits) of the note identified by (pattern, unit, pitch, start)."},
+    // V82-M2 (FD-53): per-step expression over a range, and the pattern menu.
+    {"set_notes", CommandCategory::Pattern, {
+        {"pattern", FlagType::Int, true, 1.0},
+        {"from", FlagType::Float, true, 0.0},
+        {"to", FlagType::Float, true, 0.0},
+        {"unit", FlagType::Int, false, 1.0},
+        {"pitch", FlagType::Int, false, 0.0, 127.0},
+        {"velocity", FlagType::Float, false, 0.0, 1.0},
+        {"chance", FlagType::Float, false, 0.0, 1.0},
+        {"ratchet", FlagType::Int, false, 1.0, 4.0},
         {"pan", FlagType::Float, false, -1.0, 1.0}
     },
-     "Update velocity and/or pan of the note identified by (pattern, unit, pitch, start)."}
+     "Set velocity, chance, ratchet and/or pan on every note that starts in beats [from, to), optionally one unit and one pitch (a drum row's steps). One undo step; an error when nothing matches."},
+    {"rename_pattern", CommandCategory::Pattern, {
+        {"pattern", FlagType::Int, true, 1.0},
+        {"name", FlagType::String, true}
+    },
+     "Rename a MIDI pattern."},
+    {"delete_pattern", CommandCategory::Pattern, {
+        {"pattern", FlagType::Int, true, 1.0}
+    },
+     "Delete a MIDI pattern. Refused while it plays in the timeline or when it is the only pattern, as in the Arsenal menu. Undo restores it with its notes and id."}
 };
 
 const std::vector<CommandSchema>& allCommands() {
@@ -408,7 +432,7 @@ std::string schemaToJsonString() {
   {"verb": "get_routing_graph", "args": "none", "description": "Read-only audio topology: stable Arsenal-unit and audio-pattern sources, Master/mixer destinations, main paths, sends/sidechains, unresolved destinations, and explicit positional identity for insert slots and sends."},
   {"verb": "get_latency_report", "args": "none", "description": "The latest published PDC solve: per-node intrinsic/downstream/path latency, node and edge compensation, graph maximum, uncompensated sidechain paths, solver warnings, pending recalculation, and solved-vs-applied mismatches."},
   {"verb": "list_samples", "args": "{\"dir\": <path>}", "description": "audio files under a directory (recursive, depth 3, max 500): path, name, sizeBytes. Feed paths to load_sample."},
-  {"verb": "get_pattern", "args": "{\"pattern\": <id>}", "description": "one pattern with its notes (pitch, start, duration, velocity, pan, unit)."},
+  {"verb": "get_pattern", "args": "{\"pattern\": <id>}", "description": "one pattern with its notes (pitch, start, duration, velocity, pan, chance, ratchet, unit)."},
   {"verb": "get_session_state", "args": "none", "description": "transport + tracks + laneCount + unitCount + canUndo in one call."},
   {"verb": "get_schema", "args": "none", "description": "this manifest, over the wire — socket clients bootstrap without the --schema flag."}
 ],
