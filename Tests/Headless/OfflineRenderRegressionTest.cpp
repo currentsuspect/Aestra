@@ -62,7 +62,8 @@ bool addAudioClipToLane(TrackManager& trackManager,
                         const std::string& stem,
                         PlaylistLaneID laneId,
                         double frequencyHz,
-                        float amplitude = kAmplitude) {
+                        float amplitude = kAmplitude,
+                        double startBeat = 0.0) {
     auto buffer = makeToneBuffer(frequencyHz, amplitude);
     const auto sourcePath = (tempRoot / (stem + ".wav")).string();
     const ClipSourceID sourceId = trackManager.getSourceManager().createRecordedSource(
@@ -83,7 +84,7 @@ bool addAudioClipToLane(TrackManager& trackManager,
     }
 
     const ClipInstanceID clipId =
-        trackManager.getPlaylistModel().addClipFromPattern(laneId, patternId, 0.0, kDurationBeats);
+        trackManager.getPlaylistModel().addClipFromPattern(laneId, patternId, startBeat, kDurationBeats);
     return clipId.isValid();
 }
 
@@ -322,9 +323,68 @@ bool runExportParityTest(FixtureMode mode, const char* label) {
 
 } // namespace
 
+// #996: the Arsenal puts the engine in pattern mode, which forces a loop over [0, pattern length) whatever the
+// transport loop says. A Full Song export started while it was on rendered that loop instead of the song. The clip
+// here starts at beat 8, past a 4-beat pattern, so a looped render never reaches it and comes back silent.
+bool runExportIgnoresPatternModeTest() {
+    namespace fs = std::filesystem;
+    const fs::path tempRoot = fs::temp_directory_path() / "aestra_export_pattern_mode";
+    std::error_code ec;
+    fs::create_directories(tempRoot, ec);
+
+    auto trackManager = std::make_shared<TrackManager>();
+    trackManager->setOutputSampleRate(static_cast<double>(kSampleRate));
+    trackManager->getPlaylistModel().setBPM(kBpm);
+    trackManager->addChannel("Song");
+    const PlaylistLaneID lane = trackManager->getPlaylistModel().createLane("Song");
+    constexpr double kClipStartBeat = 8.0;
+    if (!addAudioClipToLane(*trackManager, tempRoot, "pattern_mode_song", lane, kFrequencyHz, kAmplitude,
+                            kClipStartBeat)) {
+        std::cerr << "Failed to build the pattern-mode fixture.\n";
+        return false;
+    }
+
+    AudioEngine engine;
+    configureEngineFixture(engine, trackManager);
+    engine.setPatternPlaybackMode(true, 4.0); // the Arsenal was the last thing played
+
+    const fs::path exportPath = tempRoot / "export_while_pattern_mode.wav";
+    fs::remove(exportPath, ec);
+    AudioExporter exporter(engine, *trackManager);
+    AudioExporter::Config config;
+    config.outputPath = exportPath.string();
+    config.sampleRate = kSampleRate;
+    config.numChannels = kChannels;
+    config.bitDepth = AudioExporter::BitDepth::Float_32;
+    config.scope = AudioExporter::RenderScope::FullSong;
+    config.tailSeconds = 0.0;
+    const auto result = exporter.render(config);
+    if (!result.success) {
+        std::cerr << "Exporter failed: " << result.errorMessage << "\n";
+        return false;
+    }
+
+    DecodedAudio exported;
+    if (!decodeWav(exportPath, exported)) {
+        std::cerr << "Failed to decode the pattern-mode export.\n";
+        return false;
+    }
+    const size_t clipStartFrame = static_cast<size_t>(kClipStartBeat * 60.0 / kBpm * kSampleRate);
+    float peak = 0.0f;
+    for (size_t i = clipStartFrame * kChannels; i < exported.samples.size(); ++i)
+        peak = std::max(peak, std::abs(exported.samples[i]));
+    const bool heard = peak > kAmplitude * 0.1f; // silence vs the tone, not its exact level
+    const bool restored = engine.isPatternPlaybackMode();
+    std::cout << (heard ? "PASS" : "FAIL") << ": a Full Song export in pattern mode reaches the clip at beat 8 (peak "
+              << peak << ")\n";
+    std::cout << (restored ? "PASS" : "FAIL") << ": pattern mode is back on after the export\n";
+    return heard && restored;
+}
+
 int main() {
     const bool baselineOk = runExportParityTest(FixtureMode::Baseline, "baseline");
     const bool sendOk = runExportParityTest(FixtureMode::AudibleSend, "audible_send");
     const bool sidechainOk = runExportParityTest(FixtureMode::SidechainComp, "sidechain_comp");
-    return (baselineOk && sendOk && sidechainOk) ? 0 : 1;
+    const bool patternModeOk = runExportIgnoresPatternModeTest();
+    return (baselineOk && sendOk && sidechainOk && patternModeOk) ? 0 : 1;
 }
