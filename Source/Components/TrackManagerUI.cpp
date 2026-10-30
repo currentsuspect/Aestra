@@ -907,6 +907,7 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
         if (onSendToAudition)
             onSendToAudition();
     });
+    addSendSelectionToAudition(*menu);
     if (routingChannel != 0 && m_onShowRoutingGraph)
         menu->addItem("Show in Routing Graph", [this, routingChannel]() { m_onShowRoutingGraph(routingChannel); });
     menu->addSeparator();
@@ -922,6 +923,13 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
     }
 
     attachAndShowContextMenu(this, menu, position);
+}
+
+void TrackManagerUI::addSendSelectionToAudition(AestraUI::NUIContextMenu& menu) {
+    if (!m_hasRulerSelection || !m_onSendSelectionToAudition) return;
+    menu.addItem("Send Selection to Audition", [this]() {
+        if (m_onSendSelectionToAudition) m_onSendSelectionToAudition(m_loopStartBeat, m_loopEndBeat);
+    });
 }
 
 void TrackManagerUI::deleteLane(PlaylistLaneID laneId) {

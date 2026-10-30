@@ -667,6 +667,7 @@ bool TrackManagerUI::handleToolbarClick(const AestraUI::NUIPoint& position) {
                 }
             }
         });
+        addSendSelectionToAudition(*menu);
 
         // Show menu below the icon
         menu->showAt(m_menuIconBounds.x, m_menuIconBounds.y + m_menuIconBounds.height);
