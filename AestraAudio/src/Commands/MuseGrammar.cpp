@@ -194,24 +194,24 @@ static const std::vector<CommandSchema> s_schemas = {
 
     // === Effects (4) ===
     {"add_effect", CommandCategory::Track, {
-        {"track", FlagType::Int, true, 0.0},
+        {"track", FlagType::Int, true, -1.0},
         {"effect", FlagType::String, true},
         {"slot", FlagType::Int, false, 0.0, 9.0}
     },
-     "Insert an effect on a track (first empty slot unless given). effect = id or name from list_plugins. result.createdId carries the slot."},
+     "Insert an effect on a track (first empty slot unless given); track -1 is the master channel, for mastering. effect = id or name from list_plugins. result.createdId carries the slot."},
     {"remove_effect", CommandCategory::Track, {
-        {"track", FlagType::Int, true, 0.0},
+        {"track", FlagType::Int, true, -1.0},
         {"slot", FlagType::Int, true, 0.0, 9.0}
     },
      "Remove the effect in a slot of a track's chain."},
     {"bypass_effect", CommandCategory::Track, {
-        {"track", FlagType::Int, true, 0.0},
+        {"track", FlagType::Int, true, -1.0},
         {"slot", FlagType::Int, true, 0.0, 9.0},
         {"state", FlagType::Bool, true}
     },
      "Bypass (true) or re-enable (false) an effect slot."},
     {"set_effect_param", CommandCategory::Track, {
-        {"track", FlagType::Int, true, 0.0},
+        {"track", FlagType::Int, true, -1.0},
         {"slot", FlagType::Int, true, 0.0, 9.0},
         {"param", FlagType::String, true},
         {"value", FlagType::Float, true, 0.0, 1.0}
@@ -345,7 +345,7 @@ std::string schemaToJsonString() {
   {"verb": "list_clips", "args": "none", "description": "playlist lanes with clips (id, name, startBeat, durationBeats, pattern; pattern 0 = not a pattern clip)."},
   {"verb": "list_patterns", "args": "none", "description": "id, name, lengthBeats, noteCount and type; audio sources also include mixerChannelId."},
   {"verb": "list_plugins", "args": "none", "description": "available effect plugins: id, name, category. Use id or name with add_effect."},
-  {"verb": "get_effects", "args": "{\"track\": <index>}", "description": "a track's effect chain: slot, id, name, bypassed, and every parameter (id, name, value 0..1, display, unit)."},
+  {"verb": "get_effects", "args": "{\"track\": <index, or -1 for the master>}", "description": "a track's (or the master's) effect chain: slot, id, name, bypassed, and every parameter (id, name, value 0..1, display, unit)."},
   {"verb": "get_meters", "args": "none", "description": "master + per-track meters from the most recently processed audio block: peakDb, rmsDb, lufs, clip flags. Headless this reflects the last render; in-app it is live."},
   {"verb": "get_audio_health", "args": "none", "description": "A read-only snapshot of published engine telemetry: callback timing and budget, xruns/underruns, RT violations, recovery, command-queue drops, scheduling status, signal sanitization, resampling, and patternScheduling (lateRefills, missedHits, maxLateMs: pattern hits skipped because a main-loop refill came after the playhead, a stutter that counts no xrun). Counters have engine-lifetime scope."},
   {"verb": "get_project_load_report", "args": "none", "description": "The currently loaded project's or latest load attempt's format, migration/recovery state, missing plugins/assets, unrestored state, and structured warnings/errors. A blank project or no observed load returns status unobserved."},

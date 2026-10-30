@@ -239,13 +239,15 @@ std::optional<std::string> handleLibraryVerbs(const RequestContext& ctx, const R
             }
         }
         uint64_t trackIndex = 0;
-        if (!args.has("track") || !args["track"].isNumber() ||
-            !numberToId(args["track"].asNumber(), trackIndex)) {
+        const bool master = args.has("track") && args["track"].isNumber() && args["track"].asNumber() == -1.0;
+        if (!master && (!args.has("track") || !args["track"].isNumber() ||
+                        !numberToId(args["track"].asNumber(), trackIndex))) {
             return makeError(id, "validation_error",
-                             "arg 'track' must be a non-negative integer", verb)
+                             "arg 'track' must be a track index, or -1 for the master", verb)
                 .toString();
         }
-        MixerChannel* channel = m_trackManager->getChannel(static_cast<size_t>(trackIndex));
+        MixerChannel* channel = master ? m_trackManager->getMasterChannel()
+                                       : m_trackManager->getChannel(static_cast<size_t>(trackIndex));
         if (!channel) {
             return makeError(id, "execution_error",
                              "no such track: " + std::to_string(trackIndex), verb)

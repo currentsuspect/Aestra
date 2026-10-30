@@ -886,8 +886,9 @@ void CommandRegistry::initialize() {
         auto trackRaw = requireFlag(flags, "track");
         if (!trackRaw) return nullptr;
         auto trackOpt = safeStoi(*trackRaw);
-        if (!trackOpt || *trackOpt < 0) return nullptr;
-        MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
+        if (!trackOpt || *trackOpt < -1) return nullptr;
+        // -1 names the master channel (mastering inserts), as in the routing verbs.
+        MixerChannel* ch = *trackOpt == -1 ? tm->getMasterChannel() : tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
         auto effectRaw = requireFlag(flags, "effect");
         if (!effectRaw) return nullptr;
@@ -939,8 +940,9 @@ void CommandRegistry::initialize() {
         auto trackRaw = requireFlag(flags, "track");
         if (!trackRaw) return nullptr;
         auto trackOpt = safeStoi(*trackRaw);
-        if (!trackOpt || *trackOpt < 0) return nullptr;
-        MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
+        if (!trackOpt || *trackOpt < -1) return nullptr;
+        // -1 names the master channel (mastering inserts), as in the routing verbs.
+        MixerChannel* ch = *trackOpt == -1 ? tm->getMasterChannel() : tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
         auto slotRaw = requireFlag(flags, "slot");
         if (!slotRaw) return nullptr;
@@ -958,8 +960,9 @@ void CommandRegistry::initialize() {
         auto trackRaw = requireFlag(flags, "track");
         if (!trackRaw) return nullptr;
         auto trackOpt = safeStoi(*trackRaw);
-        if (!trackOpt || *trackOpt < 0) return nullptr;
-        MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
+        if (!trackOpt || *trackOpt < -1) return nullptr;
+        // -1 names the master channel (mastering inserts), as in the routing verbs.
+        MixerChannel* ch = *trackOpt == -1 ? tm->getMasterChannel() : tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
         auto slotRaw = requireFlag(flags, "slot");
         if (!slotRaw) return nullptr;
@@ -980,8 +983,9 @@ void CommandRegistry::initialize() {
         auto trackRaw = requireFlag(flags, "track");
         if (!trackRaw) return nullptr;
         auto trackOpt = safeStoi(*trackRaw);
-        if (!trackOpt || *trackOpt < 0) return nullptr;
-        MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
+        if (!trackOpt || *trackOpt < -1) return nullptr;
+        // -1 names the master channel (mastering inserts), as in the routing verbs.
+        MixerChannel* ch = *trackOpt == -1 ? tm->getMasterChannel() : tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
         auto slotRaw = requireFlag(flags, "slot");
         if (!slotRaw) return nullptr;
