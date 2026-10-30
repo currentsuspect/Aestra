@@ -454,8 +454,14 @@ void CommandRegistry::initialize() {
         auto barOpt = safeStoi(*barRaw);
         if (!barOpt) return nullptr;
 
+        if (*barOpt < 1) return CommandRegistry::fail("bar is 1-based: " + std::string(*barRaw));
+
+        // A bar, as the flag says and as add_clip reads it: bar 1 is beat 0.
+        // Passing the bar number straight through placed the copy at BEAT N,
+        // on top of the clips it was meant to follow.
         ClipInstanceID clipId(*idOpt);
-        return std::make_unique<DuplicateClipCommand>(*pm, clipId, static_cast<double>(*barOpt));
+        const double startBeat = (*barOpt - 1) * 4.0;
+        return std::make_unique<DuplicateClipCommand>(*pm, clipId, startBeat);
     });
 
     reg.registerCommand("trim_clip", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {

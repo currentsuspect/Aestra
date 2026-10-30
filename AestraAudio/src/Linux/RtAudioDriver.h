@@ -78,6 +78,11 @@ private:
     std::atomic<uint32_t> m_sampleRate{0};
     std::atomic<uint32_t> m_bufferSize{0};
     std::atomic<bool> m_callbackRtPriorityAttempted{false};
+    // Client callbacks currently running. RtAudio's PulseAudio backend calls
+    // the client callback outside its stream lock, so RtAudio::stopStream()
+    // can return while a callback is still pumping the engine; stopStream()
+    // waits for this to reach zero.
+    std::atomic<int> m_callbacksInFlight{0};
 #ifdef __linux__
     std::atomic<uintptr_t> m_audioThreadToken{0};
     std::atomic<bool> m_rtPriorityWorkerStop{false};

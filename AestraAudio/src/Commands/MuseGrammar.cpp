@@ -86,7 +86,7 @@ static const std::vector<CommandSchema> s_schemas = {
         {"id", FlagType::Id, true},
         {"bar", FlagType::Int, true, 1.0}
     },
-     "Duplicate a clip to a bar position."},
+     "Duplicate a clip so the copy starts at a bar (1-based, 4/4: bar 1 is beat 0), on the source clip's lane."},
     {"trim_clip", CommandCategory::Clip, {
         {"id", FlagType::Id, true},
         {"start", FlagType::Float, true},
