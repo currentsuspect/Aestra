@@ -1,20 +1,22 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "NUIComponent.h"
-#include "NUIButton.h"
-#include "NUIProgressBar.h"
-#include "NUIDropdown.h"
-#include "NUICheckbox.h"
-#include "NUILabel.h"
-#include "NUITextInput.h"
 #include "AestraFileDialog.h"
-#include <string>
-#include <functional>
+#include "IO/EncodedAudioWriter.h"
+#include "NUIButton.h"
+#include "NUICheckbox.h"
+#include "NUIComponent.h"
+#include "NUIDropdown.h"
+#include "NUILabel.h"
+#include "NUIProgressBar.h"
+#include "NUITextInput.h"
+
 #include <atomic>
-#include <thread>
+#include <functional>
 #include <future>
 #include <optional>
+#include <string>
+#include <thread>
 #include <vector>
 
 namespace Aestra { namespace Audio { class AudioEngine; class TrackManager; } }
@@ -108,6 +110,7 @@ private:
     void layoutDialog();
     void applyPanelState();
     void startExport();
+    Aestra::Audio::ExportFormat formatOf(int optionIndex) const; ///< WAV, FLAC or MP3 for a Format menu entry
     ExportJobResult exportThreadFn(std::string outputPath, int selectedBitDepth, int selectedSampleRate, int selectedScope, double tailSeconds, bool stems);
     void openBrowse();
     bool parseTailInput(double& outTailSeconds) const;
@@ -134,7 +137,9 @@ private:
     double m_tailSeconds = 2.0;
     std::string m_tailInput;
 
-    std::vector<std::string> m_bitDepthOptions = { "16-bit PCM", "24-bit PCM", "32-bit Float" };
+    // The Format menu: the three WAV depths keep indices 0-2 (saved settings still mean the same), then FLAC and MP3
+    // when their encoders are on this computer (EncodedAudioWriter, FD-61).
+    std::vector<std::string> m_bitDepthOptions = {"WAV 16-bit", "WAV 24-bit", "WAV 32-bit float"};
     std::vector<std::string> m_sampleRateOptions = { "44100 Hz", "48000 Hz", "88200 Hz", "96000 Hz" };
     std::vector<std::string> m_scopeOptions = { "Full Song", "Loop Region", "Selection" };
 

@@ -1,24 +1,26 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "ExportDialog.h"
-#include "../AestraUI/Widgets/AestraPanelWindow.h"
-#include "AudioDeviceManager.h"
-#include "AudioExporter.h"
-#include "IO/StemExport.h"
-#include "../App/ServiceLocator.h"
-#include "../Core/ExportDialogPreferences.h"
-#include "../Core/UISurfaceStore.h"
+
 #include "../../AestraPlat/include/AestraPlatform.h"
+#include "../AestraCore/include/AestraLog.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "../AestraUI/Layout/NUILayoutAlgorithms.h"
-#include "../AestraCore/include/AestraLog.h"
+#include "../AestraUI/Widgets/AestraPanelWindow.h"
+#include "../App/ServiceLocator.h"
+#include "../Core/ExportDialogPreferences.h"
+#include "../Core/UISurfaceStore.h"
+#include "AudioDeviceManager.h"
+#include "AudioExporter.h"
+#include "IO/EncodedAudioWriter.h"
+#include "IO/StemExport.h"
 
 #include <algorithm>
-#include <cmath>
 #include <chrono>
-#include <filesystem>
+#include <cmath>
 #include <cstdio>
+#include <filesystem>
 #include <utility>
 
 namespace {
@@ -88,7 +90,13 @@ void ExportDialog::buildControls() {
     m_scopeDropdown = makeDropdown(m_scopeOptions, [this](int i) { m_selectedScope = i; });
     m_rateLabel = makeLabel("Sample Rate");
     m_rateDropdown = makeDropdown(m_sampleRateOptions, [this](int i) { m_selectedSampleRate = i; });
-    m_depthLabel = makeLabel("Bit Depth");
+    m_depthLabel = makeLabel("Format");
+    if (const auto& encoders = Aestra::Audio::probeEncoders(); encoders.flac || encoders.mp3) {
+        if (encoders.flac)
+            m_bitDepthOptions.insert(m_bitDepthOptions.end(), {"FLAC 16-bit", "FLAC 24-bit"});
+        if (encoders.mp3)
+            m_bitDepthOptions.push_back("MP3 320 kbps");
+    }
     m_depthDropdown = makeDropdown(m_bitDepthOptions, [this](int i) { m_selectedBitDepth = i; });
 
     m_tailLabel = makeLabel("Tail (seconds)");
@@ -539,14 +547,27 @@ bool ExportDialog::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     return true; // Modal
 }
 
+Aestra::Audio::ExportFormat ExportDialog::formatOf(int optionIndex) const {
+    if (optionIndex < 0 || static_cast<size_t>(optionIndex) >= m_bitDepthOptions.size())
+        return Aestra::Audio::ExportFormat::Wav;
+    const std::string& option = m_bitDepthOptions[static_cast<size_t>(optionIndex)];
+    if (option.rfind("FLAC", 0) == 0)
+        return Aestra::Audio::ExportFormat::Flac;
+    if (option.rfind("MP3", 0) == 0)
+        return Aestra::Audio::ExportFormat::Mp3;
+    return Aestra::Audio::ExportFormat::Wav;
+}
+
 void ExportDialog::openBrowse() {
     if (m_fileDialog.isPending())
         return;
     Aestra::IPlatformUtils::SaveFileDialogOptions options;
     options.title = "Export Audio";
-    options.filter = std::string("WAV Files\0*.wav\0All Files\0*.*\0", sizeof("WAV Files\0*.wav\0All Files\0*.*\0") - 1);
+    const char* ext = Aestra::Audio::exportFormatExtension(formatOf(m_selectedBitDepth));
+    options.filter = std::string("Audio Files\0*.wav;*.flac;*.mp3\0All Files\0*.*\0",
+                                 sizeof("Audio Files\0*.wav;*.flac;*.mp3\0All Files\0*.*\0") - 1);
     options.defaultPath = m_outputPath;
-    options.defaultExtension = "wav";
+    options.defaultExtension = ext;
     // Result arrives in onUpdate(); the UI keeps painting meanwhile.
     m_fileDialog.start([options = std::move(options)](Aestra::IPlatformUtils& utils) {
         return utils.saveFileDialog(options);
@@ -638,10 +659,17 @@ ExportDialog::ExportJobResult ExportDialog::exportThreadFn(std::string outputPat
     config.numChannels = 2;
     config.tailSeconds = tailSeconds;
 
+    const auto format = stems ? Aestra::Audio::ExportFormat::Wav : formatOf(selectedBitDepth); // stems stay WAV
     switch (selectedBitDepth) {
-        case 0: config.bitDepth = Aestra::Audio::AudioExporter::BitDepth::PCM_16; break;
-        case 1: config.bitDepth = Aestra::Audio::AudioExporter::BitDepth::PCM_24; break;
-        case 2: config.bitDepth = Aestra::Audio::AudioExporter::BitDepth::Float_32; break;
+    case 0:
+        config.bitDepth = Aestra::Audio::AudioExporter::BitDepth::PCM_16;
+        break;
+    case 2:
+        config.bitDepth = Aestra::Audio::AudioExporter::BitDepth::Float_32;
+        break;
+    default:
+        config.bitDepth = Aestra::Audio::AudioExporter::BitDepth::PCM_24;
+        break;
     }
 
     switch (selectedScope) {
@@ -669,6 +697,30 @@ ExportDialog::ExportJobResult ExportDialog::exportThreadFn(std::string outputPat
         return job;
     }
 
+    // FLAC and MP3: the same render, handed block by block to the encoder instead of the WAV writer.
+    std::unique_ptr<Aestra::Audio::EncodedAudioWriter> encoder;
+    if (format != Aestra::Audio::ExportFormat::Wav) {
+        config.outputPath = std::filesystem::path(config.outputPath)
+                                .replace_extension(Aestra::Audio::exportFormatExtension(format))
+                                .string();
+        Aestra::Audio::EncodedAudioWriter::Settings settings;
+        settings.format = format;
+        settings.sampleRate = config.sampleRate;
+        settings.channels = config.numChannels;
+        settings.bitsPerSample =
+            m_bitDepthOptions[static_cast<size_t>(selectedBitDepth)].find("16") != std::string::npos ? 16 : 24;
+        std::string error;
+        encoder = Aestra::Audio::EncodedAudioWriter::open(config.outputPath, settings, error);
+        if (!encoder) {
+            ExportJobResult job;
+            job.errorMessage = error;
+            return job;
+        }
+        config.blockSink = [&encoder](const float* interleaved, uint32_t frames, uint32_t) {
+            return encoder->write(interleaved, frames);
+        };
+    }
+
     Aestra::Audio::AudioExporter exporter(*m_engine, *m_trackManager);
     exporter.setProgressCallback([this](float pct) {
         m_progress.store(pct, std::memory_order_relaxed);
@@ -678,6 +730,18 @@ ExportDialog::ExportJobResult ExportDialog::exportThreadFn(std::string outputPat
     });
 
     auto result = exporter.render(config);
+    if (encoder) {
+        const bool finished = encoder->finish();
+        if (result.success && !finished) {
+            result.success = false;
+            result.errorMessage = "the encoded file could not be finished at " + config.outputPath;
+        }
+        if (!result.success) {
+            std::error_code ec;
+            std::filesystem::remove(config.outputPath, ec); // no half-written file left behind
+        }
+        result.outputPath = config.outputPath;
+    }
     ExportJobResult job;
     job.success = result.success;
     job.outputPath = result.outputPath;
