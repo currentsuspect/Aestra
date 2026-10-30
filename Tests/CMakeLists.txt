@@ -129,6 +129,37 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripTest.cpp")
     set_tests_properties(ProjectRoundTripTest AutosaveRoundTripTest PROPERTIES LABELS "integration;serialization;contract:durability")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectDamageSweepTest.cpp")
+    add_executable(ProjectDamageSweepTest
+        Integration/ProjectDamageSweepTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+    )
+    target_link_libraries(ProjectDamageSweepTest PRIVATE AestraAudio)
+    target_include_directories(ProjectDamageSweepTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+    )
+    target_compile_definitions(ProjectDamageSweepTest PRIVATE
+        $<$<CONFIG:Debug>:AESTRA_ENABLE_PROJECT_LOAD_LOGS>
+    )
+    # Registered unconditionally: exercises ProjectSerializer + TrackManager only —
+    # no audio device or host runtime needed (verified headless). Serialization is
+    # AGENTS.md §12 high-risk; roundtrip coverage must run on every CI build.
+    add_test(NAME ProjectDamageSweepTest COMMAND ProjectDamageSweepTest)
+    # The TIMEOUT is part of the test: before #1243 one bad byte in an array made load loop until memory ran out.
+    set_tests_properties(ProjectDamageSweepTest PROPERTIES TIMEOUT 120 LABELS "integration;serialization;durability;regression;contract:durability")
+endif()
+
 # Fit-to-bars persistence: the fit writes the serializer-canonical
 # durationSeconds (preferred over beats), so the fitted pitch+rate state and
 # the #746 invariant must survive save -> load.
@@ -4518,6 +4549,13 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraCore/JSONLocaleIndependenceTest.cpp
     set_tests_properties(JSONLocaleIndependenceTest PROPERTIES LABELS "core;json;locale;regression;contract:core")
     message(STATUS "JSONLocaleIndependenceTest added - JSON decimal separator locale independence")
 endif()
+
+# A malformed array ends the parse instead of appending empty values until memory runs out (2026-10-30: one quote in
+# a Muse verb description took MuseVerifyRenderTest to 12 GB). The TIMEOUT is part of the test: the old code hangs.
+add_executable(JSONMalformedArrayTest AestraCore/JSONMalformedArrayTest.cpp)
+target_include_directories(JSONMalformedArrayTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraCore/include)
+add_test(NAME JSONMalformedArrayTest COMMAND JSONMalformedArrayTest)
+set_tests_properties(JSONMalformedArrayTest PROPERTIES TIMEOUT 20 LABELS "core;json;regression;contract:core")
 
 # JSON::asArray() const / asObject() const return real data (they returned an
 # always-empty static from #179 on, silently hiding every const read).
