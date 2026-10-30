@@ -830,6 +830,12 @@ target_link_libraries(EncodedAudioWriterTest PRIVATE AestraAudioCore)
 target_include_directories(EncodedAudioWriterTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include ${CMAKE_SOURCE_DIR}/AestraCore/include)
 add_test(NAME EncodedAudioWriterTest COMMAND EncodedAudioWriterTest)
 set_tests_properties(EncodedAudioWriterTest PROPERTIES SKIP_RETURN_CODE 77 LABELS "audio;export;regression;contract:audio")
+# V82-T2: which timeline tracks fold into "N empty tracks · show" (header-only rule, runs on every lane).
+add_executable(TimelineFoldTest AestraUI/TimelineFoldTest.cpp)
+target_link_libraries(TimelineFoldTest PRIVATE AestraAudioCore)
+target_include_directories(TimelineFoldTest PRIVATE ${CMAKE_SOURCE_DIR}/Source ${CMAKE_SOURCE_DIR}/AestraAudio/include ${CMAKE_SOURCE_DIR}/AestraCore/include)
+add_test(NAME TimelineFoldTest COMMAND TimelineFoldTest)
+set_tests_properties(TimelineFoldTest PROPERTIES LABELS "ui;timeline;regression;contract:application")
 
 add_executable(SandboxBlockFifoTest AestraAudio/SandboxBlockFifoTest.cpp)
 target_include_directories(SandboxBlockFifoTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
@@ -3686,6 +3692,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIFold.cpp
         # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
         # compiles in.
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
@@ -3746,6 +3753,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIFold.cpp
         # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
         # compiles in.
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
@@ -3808,6 +3816,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIFold.cpp
         # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
         # compiles in.
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
@@ -3871,6 +3880,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIFold.cpp
         # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
         # compiles in.
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
@@ -3933,6 +3943,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIFold.cpp
         # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
         # compiles in.
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
@@ -3993,6 +4004,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIFold.cpp
         # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
         # compiles in.
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp

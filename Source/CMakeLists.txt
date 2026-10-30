@@ -152,6 +152,8 @@ set(Aestra_SOURCES
 	Components/TrackManagerUIRender.cpp
 	Components/TrackManagerUIEvents.cpp
 	Components/TrackManagerUIView.cpp
+	Components/TrackManagerUIFold.cpp
+	Components/TimelineFold.h
 	Components/TrackManagerUIDragDrop.cpp
 	Components/MixerView.h
 	Components/MixerView.cpp
