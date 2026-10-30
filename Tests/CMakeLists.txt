@@ -787,6 +787,12 @@ target_include_directories(RealtimeObjectPublisherTest PRIVATE
 add_test(NAME RealtimeObjectPublisherTest COMMAND RealtimeObjectPublisherTest)
 set_tests_properties(RealtimeObjectPublisherTest PROPERTIES LABELS "audio;rt-safety;reclamation;regression;contract:realtime")
 
+# V82: the transport bar's DSP load readout (pure header, runs on every lane).
+add_executable(DspLoadReadoutTest AestraUI/DspLoadReadoutTest.cpp)
+target_include_directories(DspLoadReadoutTest PRIVATE ${CMAKE_SOURCE_DIR}/Source)
+add_test(NAME DspLoadReadoutTest COMMAND DspLoadReadoutTest)
+set_tests_properties(DspLoadReadoutTest PROPERTIES LABELS "ui;transport;regression;contract:application")
+
 add_executable(SandboxBlockFifoTest AestraAudio/SandboxBlockFifoTest.cpp)
 target_include_directories(SandboxBlockFifoTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
 add_test(NAME SandboxBlockFifoTest COMMAND SandboxBlockFifoTest)
