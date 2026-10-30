@@ -1,4 +1,5 @@
 #include "Commands/CommandRegistry.h"
+#include "CommandRegistryFlags.h"
 #include "Commands/AddChannelCommand.h"
 #include "Commands/AddClipCommand.h"
 #include "Commands/AddNoteCommand.h"
@@ -55,69 +56,7 @@ namespace Aestra {
 namespace Audio {
 
 namespace {
-// Mirror of CommandParser bool spellings — keep in sync with
-// CommandParser::convertAndValidateValue (FlagType::Bool).
-bool parseFlagBool(std::string_view s) {
-    std::string lower;
-    lower.reserve(s.size());
-    for (char c : s) {
-        lower.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
-    }
-    return lower == "true" || lower == "1" || lower == "yes";
-}
-
-// Safe flag lookup — returns nullopt if key is missing
-std::optional<std::string_view> requireFlag(const std::unordered_map<std::string, std::string>& flags, const char* key) {
-    auto it = flags.find(key);
-    if (it == flags.end()) return std::nullopt;
-    return it->second;
-}
-
-// Safe parsing helpers that return std::nullopt on malformed input
-// Reject leading/trailing whitespace, non-finite floats, and negative unsigned strings
-std::optional<int> safeStoi(std::string_view s) {
-    if (s.empty()) return std::nullopt;
-    if (std::isspace(static_cast<unsigned char>(s.front())) ||
-        std::isspace(static_cast<unsigned char>(s.back()))) return std::nullopt;
-    try {
-        size_t pos = 0;
-        int val = std::stoi(std::string(s), &pos);
-        if (pos != s.size()) return std::nullopt;
-        return val;
-    } catch (const std::exception&) {
-        return std::nullopt;
-    }
-}
-
-std::optional<float> safeStof(std::string_view s) {
-    if (s.empty()) return std::nullopt;
-    if (std::isspace(static_cast<unsigned char>(s.front())) ||
-        std::isspace(static_cast<unsigned char>(s.back()))) return std::nullopt;
-    try {
-        size_t pos = 0;
-        float val = std::stof(std::string(s), &pos);
-        if (pos != s.size()) return std::nullopt;
-        if (!std::isfinite(val)) return std::nullopt;
-        return val;
-    } catch (const std::exception&) {
-        return std::nullopt;
-    }
-}
-
-std::optional<uint64_t> safeStoull(std::string_view s) {
-    if (s.empty()) return std::nullopt;
-    if (std::isspace(static_cast<unsigned char>(s.front())) ||
-        std::isspace(static_cast<unsigned char>(s.back()))) return std::nullopt;
-    if (s.front() == '-') return std::nullopt; // std::stoull wraps negatives to huge values
-    try {
-        size_t pos = 0;
-        uint64_t val = std::stoull(std::string(s), &pos);
-        if (pos != s.size()) return std::nullopt;
-        return val;
-    } catch (const std::exception&) {
-        return std::nullopt;
-    }
-}
+using namespace RegistryFlags; // parseFlagBool, requireFlag, safeStoi/Stof/Stoull
 
 /**
  * Parse the canonical 32-hex-char object id the list_* queries print.
@@ -135,6 +74,8 @@ std::optional<AestraUUID> parseObjectId(std::string_view s) {
 // Reason recorded by the most recent factory refusal (see CommandRegistry::fail).
 thread_local std::string t_lastBuildError;
 } // namespace
+
+void registerPianoRollVerbs(CommandRegistry& reg); // PianoRollVerbs.cpp (V82-M3)
 
 CommandRegistry& CommandRegistry::instance() {
     static CommandRegistry s_instance;
@@ -170,6 +111,7 @@ std::unique_ptr<ICommand> CommandRegistry::build(
 
 void CommandRegistry::initialize() {
     auto& reg = instance();
+    registerPianoRollVerbs(reg);
 
     // ===== Transport (3) =====
     reg.registerCommand("set_bpm", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {

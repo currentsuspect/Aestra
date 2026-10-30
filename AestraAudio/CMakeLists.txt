@@ -279,6 +279,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/MuseGrammar.cpp
     src/Commands/CommandParser.cpp
     src/Commands/CommandRegistry.cpp
+    src/Commands/PianoRollVerbs.cpp
     src/Commands/SessionLog.cpp
     src/Commands/MuseStubs.cpp
     src/Commands/HostVerbRegistry.cpp
