@@ -101,7 +101,7 @@ static const std::vector<CommandSchema> s_schemas = {
         {"id", FlagType::Id, true}
     },
      "Bake an audio clip's own gain and fades into a new source file and reset those edits to unity. Clip-local only: this does not render the track's plugins, automation, sends or routing."},
-    // === Unit (2) ===
+    // === Unit (4) ===
     // "type" accepts: sampler (default), 808. The schema format cannot
     // express enums yet; the factory rejects anything else.
     {"add_unit", CommandCategory::Unit, {
@@ -119,6 +119,17 @@ static const std::vector<CommandSchema> s_schemas = {
         {"value", FlagType::Float, true, 0.0, 2.0}
     },
      "Set a unit's linear output gain (1 = unity, applied at its mix point). The per-drum balance knob for multi-unit tracks."},
+    {"set_sampler", CommandCategory::Unit, {
+        {"unit", FlagType::Int, true, 1.0},
+        {"attack", FlagType::Float, false, 0.0, 2.0},
+        {"decay", FlagType::Float, false, 0.0, 2.0},
+        {"sustain", FlagType::Float, false, 0.0, 1.0},
+        {"release", FlagType::Float, false, 0.0, 5.0},
+        {"voices", FlagType::Int, false, 1.0, 32.0},
+        {"mono", FlagType::Bool, false},
+        {"cut_self", FlagType::Bool, false}
+    },
+     "Set a unit sampler's envelope (seconds; sustain 0..1) and play modes, as one undo step. Only the fields given change. A short release stops a held note when it ends instead of letting it ring into the next hit. list_units shows the current values."},
 
     // === Pattern (4) ===
     // Notes are identified by (pattern, unit, pitch, start) — the same key
@@ -341,7 +352,7 @@ std::string schemaToJsonString() {
     out << R"("queries": [
   {"verb": "get_transport", "args": "none", "description": "bpm, playing, positionSeconds."},
   {"verb": "list_tracks", "args": "none", "description": "mixer inserts: index, stable id, name, volume, pan, muted, soloed. These are independent from Playlist lanes."},
-  {"verb": "list_units", "args": "none", "description": "id, name, type, defaultPatternId, mixerChannelId (0 = Master), legacy timelineLane, samplePath per unit."},
+  {"verb": "list_units", "args": "none", "description": "id, name, type, defaultPatternId, mixerChannelId (0 = Master), legacy timelineLane, samplePath per unit; units with a sampler also carry sampler {attack, decay, sustain, release, voices, mono, cutSelf}."},
   {"verb": "list_clips", "args": "none", "description": "playlist lanes with clips (id, name, startBeat, durationBeats, pattern; pattern 0 = not a pattern clip)."},
   {"verb": "list_patterns", "args": "none", "description": "id, name, lengthBeats, noteCount and type; audio sources also include mixerChannelId."},
   {"verb": "list_plugins", "args": "none", "description": "available effect plugins: id, name, category. Use id or name with add_effect."},

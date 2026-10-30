@@ -412,4 +412,15 @@ if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/Cl
     set_tests_properties(ClipSrcTelemetryTest PROPERTIES LABELS "audio;clip-render;telemetry;contract:audio")
 endif()
 
+if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/MuseSamplerVerbTest.cpp")
+    add_executable(MuseSamplerVerbTest Commands/MuseSamplerVerbTest.cpp)
+    target_link_libraries(MuseSamplerVerbTest PRIVATE AestraAudioCore)
+    target_include_directories(MuseSamplerVerbTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME MuseSamplerVerbTest COMMAND MuseSamplerVerbTest)
+    set_tests_properties(MuseSamplerVerbTest PROPERTIES LABELS "commands;muse;sampler;contract:application")
+endif()
+
 message(STATUS "Commands tests added - Phase 2 undo/redo system")
