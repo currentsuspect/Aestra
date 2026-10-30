@@ -1,119 +1,52 @@
-# Aestra Philosophy
+# Aestra's Philosophy
 
----
+Aestra is a digital audio workstation. This page says why it exists and what it will and will not do. When a decision about Aestra is hard, this is what we check it against.
 
-## Core Belief
+## Why Aestra exists
 
-A DAW is not merely software. It is a creative environment.
+Making music should not mean fighting your tools first. Most music software assumes a powerful computer, money to spend, and time to learn a complicated interface. Many people have none of these.
 
-The job of the environment is to reduce the distance between intention and sound.
+Free DAWs are no longer rare, and that is good for everyone who makes music. So being free is not our reason to exist. **Aestra exists to care for and protect the people who make music, and the music they make**, especially people working on modest computers and modest budgets.
 
-Friction kills experimentation. Experimentation is where art is born.
+## What we promise
 
-Aestra exists to make creation feel immediate, stable, expressive, and emotionally alive.
+**Your work is yours.**
+We do not claim it, sell it, or mine it, and we never use it to train AI models. Your projects stay on your computer unless you choose to share them.
 
----
+**Your work is never trapped.**
+You can always export your music as audio and stems, and we are documenting the project format and building a complete export, so your work can leave whole. We help you bring work in from the tools you used before, wherever that is technically and legally sound.
 
-## Who We Build For
+**Your work is protected.**
+Saving, recovery and version history on your own computer are free and always will be. When something threatens a project, Aestra keeps the earlier state first, tells you what happened, and never stops you saving or exporting.
 
-The producer on a 4 GB RAM laptop. The artist working late in a city where music gear costs a month's salary. The person who has real ideas and no margin for software that fights them.
+**You stay in charge.**
+Aestra may notice something that looks unintended, a clip that clips or an odd route, and ask once. If you say it is on purpose, it remembers and stays quiet. Aestra advises; it does not decide. It does not interrupt you while you play or record.
 
-Aestra does not assume elite hardware. Aestra does not assume a studio. Aestra assumes a person with something to say.
+**It runs on the computer you have.**
+If Aestra is slow or unstable on a modest machine, that is our failure, not yours. Simple by default, deep when you want it.
 
----
+## What is free, and what costs money
 
-## The Three Pillars
+Aestra is free: the whole DAW, every plugin Aestra makes, and Aestra's assistant, Muse, when it runs on your own computer. Nothing that runs on your machine is held back to push you to pay. Aestra's own plugins will also be available as plugins for other DAWs.
 
-### 1. Sound First
+We ask for money only for things that cost us money each time they are used, such as hosting shared projects, storing copies of your work online, or running Muse on our servers. When something needs support, Aestra tells you what it costs us to run, not just that you need to upgrade. We never use guilt, countdowns or the threat of losing your work to make you pay.
 
-Audio integrity is sacred.
+## How we behave
 
-The engine must feel trustworthy under pressure: stable timing, deterministic rendering, accurate latency behavior, responsive monitoring, predictable automation, realtime-safe execution, graceful degradation under load.
+**We are honest about limits.**
+We say when something is unfinished, when it cannot do what you asked, and when a recovery attempt failed. Where Aestra uses AI, a guess is marked as a guess.
 
-**We care about:** realtime correctness, timing consistency, low-latency responsiveness.
+**We underpromise.**
+We describe Aestra by what it does today. We do not market it by running down other tools, or by playing on the fear of losing work.
 
-**We do not care about:** audio marketing, analog mythology, placebo DSP claims, spec-sheet theater.
+**We own our mistakes.**
+If a release breaks something, we say what went wrong, who it affects, what you can do now, and when the fix comes. Anything that loses or damages your work comes before everything else. Each fix comes with a test, so the same mistake cannot quietly return.
 
----
+**We show our work.**
+The changelog is in plain words. Known issues are tracked in the open. When a decision changes what you experience, we explain it.
 
-### 2. Flow Above Features
+## How this page changes
 
-Creative momentum matters more than feature count. A fast incomplete idea is more valuable than a perfect interrupted one.
+This philosophy is the highest authority for decisions about Aestra, within the law and our duty to keep people safe. Popular demand, commercial pressure and the preference of the moment do not override it on their own.
 
-**We care about:** iteration speed, intelligent defaults, low cognitive load, keyboard fluency, fast recovery from mistakes.
-
-**We do not care about:** feature bloat, menu labyrinths, modal overload, legacy workflows preserved at the cost of coherence.
-
----
-
-### 3. Beauty With Purpose
-
-Visual design is cognitive design. Beauty shapes emotion, focus, fatigue, and trust.
-
-**We care about:** visual clarity, motion with meaning, hierarchy and readability, coherent interaction language.
-
-**We do not care about:** visual noise, flashy motion for its own sake, gamer UI, clutter, inconsistent interaction patterns. Aestra must not feel enterprise-y, hostile to beginners, or creatively interruptive.
-
----
-
-## On Trust
-
-Work should never disappear. Session loss is not a bug. It is a betrayal.
-
-Autosave, versioning, and state restoration are obligations, not features. Recovery from failure must be fast, automatic, and complete. Rendering must be deterministic — export sounds like the session, every time.
-
-**Session files must open correctly across versions. Backwards compatibility of project data is non-negotiable.** Everything else — UI, API, internals, workflow — may evolve.
-
----
-
-## Engineering Doctrine
-
-### Realtime Safety Is Non-Negotiable
-No locks, allocations, blocking I/O, or hidden synchronization in realtime audio paths. Violations are architectural failures, not small issues.
-
-### Third-Party Plugins Are Guests
-Aestra isolates, disables, or warns about plugins that violate realtime safety or memory constraints. The host's integrity comes first.
-
-### Performance Is a Feature
-Every subsystem must justify its memory, CPU, latency, and complexity cost. Optimization is accessibility — a tool that runs well on weak hardware is available to more people.
-
-### Complexity Must Earn Its Place
-Complexity is acceptable only when capability gained is substantial or workflow becomes meaningfully better. No subsystem should be complicated because it is technically interesting.
-
-### Defaults Matter More Than Options
-Good defaults reduce decision fatigue. Configuration empowers edge cases — it does not replace design clarity. Prefer progressive disclosure over "advanced" tabs.
-
-### Portability Matters
-Creativity should not require elite hardware. Aestra must scale across weak CPUs, low memory, and varied OS conditions. Optimization is how we make the tool available to more people.
-
----
-
-## UX Philosophy
-
-Every interaction should answer:
-
-1. Is this faster?
-2. Is this clearer?
-3. Does this preserve flow?
-4. Would a musician understand this instinctively?
-5. Is the system behavior predictable?
-6. Is this worth the cognitive load it introduces?
-
-If any answer is no, the interaction needs to change.
-
----
-
-## On Muse
-
-Muse is the AI layer inside Aestra. It assists — it does not redirect. It reduces friction without imposing creative direction.
-
-The measure of Muse is invisibility — whether the user felt helped or handled.
-
-**Non-negotiable rules:**
-- No modal AI dialogs.
-- No "AI mode" toggle.
-- Every suggestion can be dismissed with a single keystroke or click, and the system remembers that preference per context.
-
----
-
-*This document is the root for product direction. For safety constraints, follow `AGENTS.md`.*
+It can change, rarely and on purpose. A change that strengthens a promise can be made readily. A change that weakens one, above all on protection, privacy or what is free, needs real evidence and a deliberate decision. Every change is dated and published with what changed and why.
