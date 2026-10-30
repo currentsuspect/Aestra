@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios - All Rights Reserved. Licensed for personal & educational use only.
 #include "AestraApp.h"
+#include "RunLog.h"
 #include "MuseHostVerbs.h"
 #include "MuseProjectLoadReport.h"
 #include "ProjectLifecycle.h"
@@ -103,10 +104,9 @@ AestraApp::AestraApp()
     : m_running(false)
     , m_aliveToken(std::make_shared<bool>(true))
 {
-    // Initialize unified logging
     auto multiLogger = std::make_shared<MultiLogger>(LogLevel::Info);
     multiLogger->addLogger(std::make_shared<ConsoleLogger>(LogLevel::Info));
-    std::string logPath = (std::filesystem::current_path() / "aestra_debug.log").string();
+    const std::string logPath = RunLog::path().string(); // the same per-run file main() opened (#889)
     auto fileLogger = std::make_shared<FileLogger>(logPath, LogLevel::Info);
     multiLogger->addLogger(fileLogger);
     m_asyncLogger = std::make_shared<AsyncLogger>(multiLogger);

@@ -4590,6 +4590,13 @@ target_include_directories(JSONMalformedArrayTest PRIVATE ${CMAKE_SOURCE_DIR}/Ae
 add_test(NAME JSONMalformedArrayTest COMMAND JSONMalformedArrayTest)
 set_tests_properties(JSONMalformedArrayTest PROPERTIES TIMEOUT 20 LABELS "core;json;regression;contract:core")
 
+# #889: one log file per run in the per-user state folder, falling back to the working directory only when it
+# cannot be created; old runs pruned (header-only rule in Source/App/RunLog.h).
+add_executable(RunLogLocationTest AestraCore/RunLogLocationTest.cpp)
+target_include_directories(RunLogLocationTest PRIVATE ${CMAKE_SOURCE_DIR}/Source)
+add_test(NAME RunLogLocationTest COMMAND RunLogLocationTest)
+set_tests_properties(RunLogLocationTest PROPERTIES LABELS "core;logging;regression;contract:application")
+
 # JSON::asArray() const / asObject() const return real data (they returned an
 # always-empty static from #179 on, silently hiding every const read).
 add_executable(JSONConstAccessTest AestraCore/JSONConstAccessTest.cpp)
