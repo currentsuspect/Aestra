@@ -612,6 +612,7 @@ private:
     /// AudioEngine::bounceRangeToWav with the live stream paused around it (AestraContentBounce.cpp).
     bool bounceRangeWithStreamPaused(double startBeat, double endBeat, const std::string& path, int32_t trackId);
     void syncSampleEditorToUnit(Aestra::Audio::UnitID unitId);
+    void wireEditorActions(); ///< normalize, reverse, Preview in both editors (AestraContentEditorPreview.cpp)
     Aestra::SamplerEditHistory m_samplerEdits; ///< undo for the Sample Editor's controls
     void enqueueMainThreadTask(std::function<void()> task);
     // AestraContentImport.cpp: the sample decodes on a worker thread, the clip is placed on the main one.
