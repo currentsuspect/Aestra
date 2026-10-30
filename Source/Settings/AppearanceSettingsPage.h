@@ -2,8 +2,9 @@
 #pragma once
 
 #include "ISettingsPage.h"
-#include "NUILabel.h"
 #include "NUIDropdown.h"
+#include "NUILabel.h"
+#include "SettingsForm.h"
 
 namespace Aestra {
 
@@ -13,7 +14,7 @@ public:
     ~AppearanceSettingsPage() override = default;
 
     std::string getPageID() const override { return "appearance"; }
-    std::string getTitle() const override { return "Appearance"; }
+    std::string getTitle() const override { return "Look"; }
 
     void applyChanges() override;
     void cancelChanges() override;
@@ -24,6 +25,7 @@ public:
     void onResize(int width, int height) override;
     
 private:
+    SettingsForm m_form;
     void createUI();
     void layoutComponents();
     void selectTheme(const std::string& themeName);

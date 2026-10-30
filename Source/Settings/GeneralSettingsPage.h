@@ -2,10 +2,12 @@
 #pragma once
 
 #include "ISettingsPage.h"
-#include "NUILabel.h"
-#include "NUITextInput.h"
 #include "NUIButton.h"
 #include "NUICoreWidgets.h"
+#include "NUILabel.h"
+#include "NUITextInput.h"
+#include "SettingsForm.h"
+
 #include <functional>
 
 namespace Aestra {
@@ -28,6 +30,7 @@ public:
     void setOnAutoSaveToggled(std::function<void(bool)> callback) { m_onAutoSaveToggled = std::move(callback); }
     
 private:
+    SettingsForm m_form;
     void createUI();
     void layoutComponents();
 

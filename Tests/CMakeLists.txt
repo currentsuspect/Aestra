@@ -3591,6 +3591,17 @@ if(AESTRA_ENABLE_UI)
     )
     add_test(NAME NUIWidgetHiddenInputTest COMMAND NUIWidgetHiddenInputTest)
     set_tests_properties(NUIWidgetHiddenInputTest PROPERTIES LABELS "ui;dispatch;regression;contract:application")
+
+    # V82-P12: the one layout every Settings page uses (canvas-2 board 2).
+    aestra_require_ui_targets(SettingsFormTest AestraUI_Core)
+    add_executable(SettingsFormTest AestraUI/SettingsFormTest.cpp ${CMAKE_SOURCE_DIR}/Source/Settings/SettingsForm.cpp)
+    target_link_libraries(SettingsFormTest PRIVATE AestraUI_Core)
+    target_include_directories(SettingsFormTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+    )
+    add_test(NAME SettingsFormTest COMMAND SettingsFormTest)
+    set_tests_properties(SettingsFormTest PROPERTIES LABELS "ui;settings;regression;contract:application")
 endif()
 
 # V8-W2: the clip context menu shipped with no test at all, so the checklist read
@@ -4096,6 +4107,7 @@ if(AESTRA_ENABLE_UI)
         NUIComponentTooltipTest
         NUIHiddenChildDispatchTest
         NUIWidgetHiddenInputTest
+        SettingsFormTest
         ContractPianoRollOneEntryPerGestureTest
         ContractPianoRollUndoStaysInPatternTest
         ContractPianoRollReachesGlobalUndoTest

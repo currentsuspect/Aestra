@@ -85,6 +85,8 @@ set(Aestra_SOURCES
 	Panels/AudioClipEditorPanel.cpp
 	
 	# Settings
+	Settings/SettingsForm.h
+	Settings/SettingsForm.cpp
 	Settings/ConfirmationDialog.h
 	Settings/ConfirmationDialog.cpp
 	Settings/RecoveryDialog.h
