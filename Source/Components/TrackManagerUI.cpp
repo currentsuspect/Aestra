@@ -184,6 +184,7 @@ void TrackManagerUI::refreshTracks() {
     // row first, then (when expanded) the track's owned lanes nested directly
     // under it. Collapsed tracks show only the primary row; unowned lanes
     // stay in playlist order.
+    m_foldedEmptyTracks = 0;
     std::vector<PlaylistLaneID> orderedLaneIds;
     orderedLaneIds.reserve(laneCount);
     std::unordered_set<uint64_t> seenTracks;
@@ -205,6 +206,10 @@ void TrackManagerUI::refreshTracks() {
             continue;
         }
         seenTracks.insert(track->trackId);
+        if (!m_showEmptyTracks && isFoldableEmptyLane(*lane, track->laneIds.size())) {
+            ++m_foldedEmptyTracks; // V82-T2: folded into the last row
+            continue;
+        }
         orderedLaneIds.push_back(laneId);
         if (!isTrackCollapsed(track->trackId)) {
             for (const auto& owned : track->laneIds) {
@@ -372,6 +377,9 @@ void TrackManagerUI::refreshTracks() {
     invalidateCache(); // Invalidate cache when tracks refreshed
 
     Log::info("refreshTracks: completed, created " + std::to_string(m_trackUIComponents.size()) + " TrackUIs");
+    // The row count just changed (and with it where the folded empty-track row sits, V82-T2): place the rows now
+    // rather than on the next resize, which a refresh from paint may never get.
+    layoutTracks();
 }
 
 uint32_t TrackManagerUI::resolveLaneToChannelIndex(const Audio::PlaylistLane* lane, uint32_t fallbackIndex) const {
@@ -592,6 +600,13 @@ void TrackManagerUI::layoutTracks() {
                                           static_cast<float>(m_trackSpacing), m_trackUIComponents.size(),
                                           m_scrollOffset, trace);
     AestraUI::Layout::finishLayoutPass(trace);
+    // V82-T2: the folded empty tracks take the row after the last track, the row where a drop makes a new track.
+    {
+        const auto withFold =
+            arrangeTimelineRows(layout, static_cast<float>(m_trackHeight), static_cast<float>(m_trackSpacing),
+                                m_trackUIComponents.size() + 1, m_scrollOffset, nullptr);
+        m_foldedRowRect = withFold.empty() ? AestraUI::NUIRect{} : toWindow(withFold.back().rect);
+    }
     for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
         auto trackUI = m_trackUIComponents[i];
         if (!trackUI)

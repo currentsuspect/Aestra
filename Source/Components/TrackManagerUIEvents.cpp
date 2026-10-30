@@ -54,6 +54,8 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (m_marquee.active()) {
         return handleSelectionBoxMouse(event, localPos);
     }
+    if (handleFoldedRowMouse(event))
+        return true; // V82-T2: "show" / "hide" on the folded empty tracks
 
     // Fix for "Sticky Drag": Route events to any track that is currently dragging automation
     // regardless of whether the mouse is inside its bounds.

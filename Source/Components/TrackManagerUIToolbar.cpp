@@ -448,8 +448,11 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
             if (row && row->isPrimaryForLane() && !row->isAutomationRow()) ++tracks;
         }
         const AestraUI::NUIRect corner(bounds.x + 10.0f, bounds.y + kTimelineRulerTop, 160.0f, kTimelineRulerHeight);
-        renderer.drawText(std::to_string(tracks) + (tracks == 1 ? " TRACK" : " TRACKS"),
-                          {corner.x, renderer.calculateTextY(corner, smallSize)}, smallSize, text.withAlpha(0.4f));
+        std::string count = std::to_string(tracks) + (tracks == 1 ? " TRACK" : " TRACKS");
+        if (m_foldedEmptyTracks > 0)
+            count += " \xc2\xb7 " + std::to_string(m_foldedEmptyTracks) + " EMPTY";
+        renderer.drawText(count, {corner.x, renderer.calculateTextY(corner, smallSize)}, smallSize,
+                          text.withAlpha(0.4f));
     }
 
     // Follow playhead: the existing icon toggle, filled while on.

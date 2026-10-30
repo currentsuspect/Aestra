@@ -639,6 +639,14 @@ private:
 
     // Playlist View State
     bool m_playlistVisible{true};
+    // V82-T2 (TrackManagerUIFold.cpp): untouched tracks fold into one row under the last track; "show" unfolds them.
+    bool m_showEmptyTracks{false};
+    size_t m_foldedEmptyTracks{0};
+    AestraUI::NUIRect m_foldedRowRect{};
+    AestraUI::NUIRect m_foldedToggleRect{};
+    bool isFoldableEmptyLane(const Audio::PlaylistLane& lane, size_t laneCountOfItsTrack) const;
+    void renderFoldedEmptyRow(AestraUI::NUIRenderer& renderer);
+    bool handleFoldedRowMouse(const AestraUI::NUIMouseEvent& event);
 
     // ⚡ MULTI-LAYER CACHING SYSTEM for 60+ FPS
 
