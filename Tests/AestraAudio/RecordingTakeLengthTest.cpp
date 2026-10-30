@@ -14,7 +14,6 @@
 
 #include <cmath>
 #include <cstdint>
-#include <cstdlib>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -39,11 +38,15 @@ void check(bool condition, const std::string& label) {
     }
 }
 
+// Every recorder in this file writes takes under one temp project folder.
+std::filesystem::path g_projectDir;
+
 std::shared_ptr<TrackManager> makeRecorder() {
     auto tm = std::make_shared<TrackManager>();
     tm->setOutputSampleRate(static_cast<double>(kSampleRate));
     tm->getPlaylistModel().setBPM(kBpm);
     tm->setInputChannelCount(2);
+    tm->setRecordingProjectPath(g_projectDir.string());
     // Deliberately no setMaxRecordingSeconds(): this test is about the app's
     // defaults, and nothing in Source/ sets a limit.
     return tm;
@@ -219,9 +222,9 @@ void testCrashMidTakeKeepsAudioOnDisk(const std::filesystem::path& home) {
 } // namespace
 
 int main() {
-    // Recordings with no project path go under $HOME; keep them in a temp dir.
+    // Takes go to <project>/Recordings; keep the project in a temp dir.
     Aestra::Tests::ScopedTempDirectory home("recording-take-length");
-    setenv("HOME", home.path().string().c_str(), 1);
+    g_projectDir = home.path();
 
     testLongTakeKeepsEverySecond();
     testFinishedTakeLeavesNoPartialFile(home.path());
