@@ -311,6 +311,30 @@ int main() {
         check(!extractUpdatePackage((d.path / "linked.tar.gz").string(), (d.path / "staged4").string(), "Aestra", &err) && err.find("link") != std::string::npos && !fs::exists(d.path / "staged4"),
               "a symlink in the package is refused");
 
+        // #1267: the environment must not choose or steer the tar that unpacks a signed update.
+        {
+            const fs::path marker = d.path / "tar-options-ran";
+            const fs::path hook = d.path / "hook.sh";
+            writeFile(hook, "#!/bin/sh\ntouch '" + marker.string() + "'\ncat >/dev/null\n");
+            fs::permissions(hook, fs::perms::owner_all, fs::perm_options::replace);
+            setenv("TAR_OPTIONS", ("--to-command=" + hook.string()).c_str(), 1);
+            const bool ok = extractUpdatePackage((d.path / "wrapped.tar.gz").string(), (d.path / "staged6").string(), "Aestra", &err);
+            unsetenv("TAR_OPTIONS");
+            check(ok && fs::exists(d.path / "staged6" / "Aestra") && !fs::exists(marker),
+                  "a hostile TAR_OPTIONS in the environment does not run or reach the unpacking tar: " + err);
+
+            const fs::path fakeBin = d.path / "fakebin";
+            const fs::path marker2 = d.path / "fake-tar-ran";
+            writeFile(fakeBin / "tar", "#!/bin/sh\ntouch '" + marker2.string() + "'\nexit 0\n");
+            fs::permissions(fakeBin / "tar", fs::perms::owner_all, fs::perm_options::replace);
+            const std::string oldPath = std::getenv("PATH") ? std::getenv("PATH") : "";
+            setenv("PATH", (fakeBin.string() + ":" + oldPath).c_str(), 1);
+            const bool ok2 = extractUpdatePackage((d.path / "wrapped.tar.gz").string(), (d.path / "staged7").string(), "Aestra", &err);
+            setenv("PATH", oldPath.c_str(), 1);
+            check(ok2 && fs::exists(d.path / "staged7" / "Aestra") && !fs::exists(marker2),
+                  "a tar earlier on PATH is never the one that runs: " + err);
+        }
+
         writeFile(d.path / "notatar.tar.gz", "this is not an archive");
         check(!extractUpdatePackage((d.path / "notatar.tar.gz").string(), (d.path / "staged5").string(), "Aestra", &err) && !fs::exists(d.path / "staged5"), "garbage is refused");
 
