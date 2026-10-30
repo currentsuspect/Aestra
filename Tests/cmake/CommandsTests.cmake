@@ -434,3 +434,13 @@ target_include_directories(MusePianoRollVerbsTest PRIVATE
 )
 add_test(NAME MusePianoRollVerbsTest COMMAND MusePianoRollVerbsTest)
 set_tests_properties(MusePianoRollVerbsTest PROPERTIES LABELS "commands;muse;contract:application")
+
+# #1042 / #1000: Muse says which value to pass back as `track`, and that plain `play` is not the UI's Play button.
+add_executable(MuseTrackAddressingTest Commands/MuseTrackAddressingTest.cpp)
+target_link_libraries(MuseTrackAddressingTest PRIVATE AestraAudioCore)
+target_include_directories(MuseTrackAddressingTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MuseTrackAddressingTest COMMAND MuseTrackAddressingTest)
+set_tests_properties(MuseTrackAddressingTest PROPERTIES TIMEOUT 60 LABELS "commands;muse;contract:application")

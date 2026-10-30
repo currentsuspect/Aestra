@@ -17,10 +17,10 @@ static const std::vector<CommandSchema> s_schemas = {
      "Set the session tempo in BPM."},
     {"play", CommandCategory::Transport, {
     },
-     "Start transport playback."},
+     "Start the engine's transport (headless sessions). In the running app use transport.play, which presses Play as the transport bar does: the playhead and clock move and the focused workspace decides what plays."},
     {"stop", CommandCategory::Transport, {
     },
-     "Stop transport playback."},
+     "Stop the engine's transport (headless sessions). In the running app use transport.stop."},
 
     // === Track (8) ===
     // NOTE: no "type" flag until the factory consumes one — advertising a
@@ -396,13 +396,13 @@ std::string schemaToJsonString() {
     // sync with its isQueryVerb()/isActionVerb().
     out << R"("queries": [
   {"verb": "get_transport", "args": "none", "description": "bpm, playing, positionSeconds."},
-  {"verb": "list_tracks", "args": "none", "description": "mixer inserts: index, stable id, name, volume, pan, muted, soloed. These are independent from Playlist lanes."},
+  {"verb": "list_tracks", "args": "none", "description": "mixer inserts: track (the value every track verb takes), index (the same), id (the mixer channel id, for routing; never pass it as track), name, volume, pan, muted, soloed. These are independent from Playlist lanes."},
   {"verb": "list_units", "args": "none", "description": "id, name, type, defaultPatternId, mixerChannelId (0 = Master), legacy timelineLane, samplePath per unit; units with a sampler also carry sampler {attack, decay, sustain, release, voices, mono, cutSelf}."},
   {"verb": "list_clips", "args": "none", "description": "playlist lanes with clips (id, name, startBeat, durationBeats, pattern; pattern 0 = not a pattern clip)."},
   {"verb": "list_patterns", "args": "none", "description": "id, name, lengthBeats, noteCount and type; audio sources also include mixerChannelId."},
   {"verb": "list_plugins", "args": "none", "description": "available effect plugins: id, name, category. Use id or name with add_effect."},
   {"verb": "get_effects", "args": "{\"track\": <index, or -1 for the master>}", "description": "a track's (or the master's) effect chain: slot, id, name, bypassed, and every parameter (id, name, value 0..1, display, unit)."},
-  {"verb": "get_meters", "args": "none", "description": "master + per-track meters from the most recently processed audio block: peakDb, rmsDb, lufs, clip flags. Headless this reflects the last render; in-app it is live."},
+  {"verb": "get_meters", "args": "none", "description": "master + per-track meters (each with track, the value track verbs take, and id, the mixer channel id) from the most recently processed audio block: peakDb, rmsDb, lufs, clip flags. Headless this reflects the last render; in-app it is live."},
   {"verb": "get_audio_health", "args": "none", "description": "A read-only snapshot of published engine telemetry: callback timing and budget, xruns/underruns, RT violations, recovery, command-queue drops, scheduling status, signal sanitization, resampling, and patternScheduling (lateRefills, missedHits, maxLateMs: pattern hits skipped because a main-loop refill came after the playhead, a stutter that counts no xrun). Counters have engine-lifetime scope."},
   {"verb": "get_project_load_report", "args": "none", "description": "The currently loaded project's or latest load attempt's format, migration/recovery state, missing plugins/assets, unrestored state, and structured warnings/errors. A blank project or no observed load returns status unobserved."},
   {"verb": "get_routing_graph", "args": "none", "description": "Read-only audio topology: stable Arsenal-unit and audio-pattern sources, Master/mixer destinations, main paths, sends/sidechains, unresolved destinations, and explicit positional identity for insert slots and sends."},

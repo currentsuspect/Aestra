@@ -30,6 +30,9 @@ namespace {
 
 JSON trackToJson(const MixerChannel& channel, size_t index) {
     JSON t = JSON::object();
+    // `track` is what every track verb takes; `id` is the mixer channel id (routing, meters), never a `track`
+    // argument. Agents echoed `id` and edited the neighbouring track (#1042).
+    t.set("track", JSON(static_cast<double>(index)));
     t.set("index", JSON(static_cast<double>(index)));
     t.set("id", JSON(static_cast<double>(channel.getChannelId())));
     t.set("name", JSON(channel.getName()));

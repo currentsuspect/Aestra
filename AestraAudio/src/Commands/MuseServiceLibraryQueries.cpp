@@ -85,6 +85,7 @@ std::optional<std::string> handleLibraryVerbs(const RequestContext& ctx, const R
             const uint32_t slot = slotMap->getSlotIndex(channel->getChannelId());
             if (slot == ChannelSlotMap::INVALID_SLOT) continue;
             JSON entry = readoutToJson(meters->readMeter(static_cast<int>(slot)));
+            entry.set("track", JSON(static_cast<double>(i))); // what track verbs take (#1042)
             entry.set("index", JSON(static_cast<double>(i)));
             entry.set("id", JSON(static_cast<double>(channel->getChannelId())));
             tracks.push(entry);
