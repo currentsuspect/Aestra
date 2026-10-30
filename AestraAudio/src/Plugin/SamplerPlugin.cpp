@@ -1090,12 +1090,12 @@ bool SamplerPlugin::loadState(const std::vector<uint8_t>& state) {
         setGlideTimeMs(static_cast<float>(json["glideTimeMs"].asNumber()));
     }
 
+    // A path the check refuses (absolute, traversal, URL) is not opened, but it no longer fails the whole state:
+    // every save writes the sample as an absolute path, so failing here reset every unit's settings on reopen (#998).
+    // The unit's own audioClipPath restores the sample instead (UnitManager::loadFromJSON).
     if (json.has("samplePath")) {
         std::string path = json["samplePath"].asString();
-        if (!path.empty()) {
-            if (!isSafeSamplerStatePath(path)) {
-                return false;
-            }
+        if (!path.empty() && isSafeSamplerStatePath(path)) {
             loadSample(path);
         }
     }

@@ -9,6 +9,7 @@
 #include "Models/TrackManager.h"
 #include "Plugin/PluginHost.h"
 #include "Plugin/PluginManager.h"
+#include "Plugin/SamplerPlugin.h"
 
 #include <cassert>
 #include <cmath>
@@ -940,6 +941,94 @@ void testAutomationRegionsAndMutedRoundTrip() {
            serializeProject(*tm2, result.tempo, result.playhead).find("\"regions\"") != std::string::npos);
 }
 
+// #998: every save writes the sampler's sample as an ABSOLUTE path inside its state (saveState), and the loader's
+// path check refused every absolute path, so loadState failed and each unit reopened with default settings. The
+// sample itself still came back through audioClipPath, which is why it was easy to miss.
+std::string hexOf(const std::string& text) {
+    static const char* digits = "0123456789abcdef";
+    std::string out;
+    for (unsigned char c : text) {
+        out.push_back(digits[c >> 4]);
+        out.push_back(digits[c & 15]);
+    }
+    return out;
+}
+
+std::shared_ptr<Aestra::Audio::Plugins::SamplerPlugin> loadSamplerUnit(const std::filesystem::path& project,
+                                                                       const std::string& wavPath,
+                                                                       const std::string& stateSamplePath) {
+    const std::string state = R"({"cutSelfMode":true,"glideTimeMs":120,"maxVoices":8,"monoMode":true,)"
+                              R"("params":[0.01,0.1,1,0.5,0.5],"rootMidiNote":48,"samplePath":")" +
+                              stateSamplePath + R"("})";
+    const std::string projectJson = R"({
+        "version": 2, "tempo": 120.0, "playhead": 0.0, "sources": [],
+        "patterns": [{"id": 1, "name": "P", "type": "midi", "length": 8.0, "notes": []}],
+        "lanes": [],
+        "arsenal": {"nextId": 2, "units": [{
+            "id": 1, "name": "Kick", "enabled": true, "targetMixerRoute": 0, "timelineLaneAssignment": 0,
+            "color": "4286611584", "muted": false, "solo": false, "armed": false,
+            "audioClipPath": ")" + wavPath + R"(", "audioDurationSeconds": 0.1, "defaultPatternId": 1,
+            "pluginId": "com.Aestrastudios.sampler", "pluginStateHex": ")" + hexOf(state) + R"(",
+            "group": {"id": 2, "name": "Drums"}, "type": {"id": 1, "name": "Sampler"}}]}
+    })";
+    std::ofstream out(project);
+    out << projectJson;
+    out.close();
+    auto tm = std::make_shared<Aestra::Audio::TrackManager>();
+    static std::vector<std::shared_ptr<Aestra::Audio::TrackManager>> keepAlive;
+    keepAlive.push_back(tm);
+    auto result = ProjectSerializer::load(project.string(), tm);
+    if (!result.ok) return nullptr;
+    return std::dynamic_pointer_cast<Aestra::Audio::Plugins::SamplerPlugin>(tm->getUnitManager().getUnitPlugin(1));
+}
+
+float peakOfOneNote(Aestra::Audio::Plugins::SamplerPlugin& plugin) {
+    constexpr uint32_t kFrames = 256;
+    std::vector<float> left(kFrames, 0.0f), right(kFrames, 0.0f);
+    float* outputs[2] = {left.data(), right.data()};
+    Aestra::Audio::MidiBuffer midi;
+    const uint8_t noteOn[3] = {0x90, 48, 127};
+    midi.addEvent(0, noteOn, 3);
+    plugin.process(nullptr, outputs, 0, 2, kFrames, &midi, nullptr);
+    float peak = 0.0f;
+    for (uint32_t i = 0; i < kFrames; ++i) peak = std::max({peak, std::abs(left[i]), std::abs(right[i])});
+    return peak;
+}
+
+void testSamplerSettingsSurviveAbsoluteSamplePath() {
+    std::cout << "[TEST] Sampler settings survive the absolute sample path every save writes (#998)..." << std::endl;
+    auto& pluginManager = Aestra::Audio::PluginManager::getInstance();
+    assert(pluginManager.initialize());
+    const Aestra::Tests::ScopedTempDirectory dir{"SamplerAbsolutePath"};
+    const std::filesystem::path wav = dir.path() / "kick.wav";
+    assert(writeMinimalWavMono16(wav, 48000, 4800));
+    const std::string wavPath = wav.generic_string();
+
+    auto sampler = loadSamplerUnit(dir.path() / "abs.aes", wavPath, wavPath);
+    if (!sampler) { std::cerr << "[FAIL] sampler unit did not load\n"; std::exit(1); }
+    const bool restored = sampler->getMaxVoices() == 8 && sampler->isMonoMode() && sampler->isCutSelfMode() &&
+                          sampler->getRootMidiNote() == 48;
+    if (!restored) {
+        std::cerr << "[FAIL] settings fell back to defaults: voices " << sampler->getMaxVoices() << ", mono "
+                  << sampler->isMonoMode() << ", cut-self " << sampler->isCutSelfMode() << ", root "
+                  << sampler->getRootMidiNote() << "\n";
+        std::exit(1);
+    }
+    if (!(peakOfOneNote(*sampler) > 1.0e-5f)) { std::cerr << "[FAIL] the unit is silent\n"; std::exit(1); }
+
+    // The path check still holds: a traversal path in the state is never opened, yet the settings load and the
+    // sample still comes from audioClipPath.
+    auto guarded = loadSamplerUnit(dir.path() / "dots.aes", wavPath, "../../../../etc/passwd");
+    if (!guarded || guarded->getMaxVoices() != 8) { std::cerr << "[FAIL] traversal state lost settings\n"; std::exit(1); }
+    const std::vector<uint8_t> saved = guarded->saveState();
+    if (std::string(saved.begin(), saved.end()).find("passwd") != std::string::npos) {
+        std::cerr << "[FAIL] a traversal sample path was loaded\n";
+        std::exit(1);
+    }
+    if (!(peakOfOneNote(*guarded) > 1.0e-5f)) { std::cerr << "[FAIL] guarded unit is silent\n"; std::exit(1); }
+    std::cout << "[PASS] Sampler settings survive the absolute sample path every save writes (#998)" << std::endl;
+}
+
 int main() {
     std::cout << "=== Project Round-Trip Integrity Tests ===" << std::endl;
 
@@ -950,6 +1039,7 @@ int main() {
     testSoundSetNameRoundTrips();
     testNoteExpressionRoundTrips();
     testArsenalSamplerAudioClipPathRehydratesPluginAfterLoad();
+    testSamplerSettingsSurviveAbsoluteSamplePath();
     testMissingPatternReferenceDoesNotCompound();
     testMultipleRoundTripCycles();
     testAutomationRoundTrip();
