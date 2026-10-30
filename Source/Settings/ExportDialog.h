@@ -67,6 +67,8 @@ public:
      * @return True when the dialog is shown.
      */
     bool isVisible() const { return m_visible; }
+    /** @brief True when the board is set to stems + master. */
+    bool exportsStems() const { return m_stems; }
 
     using ExportCallback = std::function<void(bool success, const std::string& path, double duration, double peakDb)>;
     /**
