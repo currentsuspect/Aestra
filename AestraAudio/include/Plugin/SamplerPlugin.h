@@ -196,6 +196,9 @@ private:
         double stageTime = 0.0; // Seconds in current stage
         float currentGain = 0.0f;
         float releaseGain = 0.0f; // Gain at start of release
+        // > 0: this release is a declick fade of that many seconds (a choked or
+        // stolen voice), not the user's Release time.
+        double fadeSeconds = 0.0;
         uint64_t order = 0;       // Trigger order: an id-less note-off ends the oldest held voice of its pitch
         uint32_t noteId = 0;      // The scheduler's note identity (0 = none, e.g. live MIDI)
         // Keep-length voices play their own stretched copy; null plays the shared sample.
@@ -233,6 +236,16 @@ private:
                          const std::shared_ptr<SampleData>& currentData);
     void renderVoice(Voice& voice, float* outL, float* outR, uint32_t frames);
     float getEnvelopeLevel(Voice& voice, double dt, float attack, float decay, float sustain, float release);
+    /// A voice cut off by a new note (cut-self, a mono retrigger) fades over this
+    /// long instead of stopping dead: an instant cut jumps the waveform to zero
+    /// mid-cycle, which on a sub-bass is an audible tick.
+    static constexpr double kDeclickSeconds = 0.004;
+    /// The polyphony gain (1/sqrt(voices)) glides to its new value over about
+    /// this long instead of jumping when a voice starts or ends: a jump scales
+    /// every sounding voice in one sample, which ticks on low sounds.
+    static constexpr double kVoiceCompGlideSeconds = 0.005;
+    float m_voiceCompSmoothed = 1.0f;
+    void declickVoice(Voice& v);
 };
 
 } // namespace Plugins

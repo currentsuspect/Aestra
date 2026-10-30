@@ -211,6 +211,7 @@ void SamplerPlugin::retireSample(std::shared_ptr<SampleData> old) {
 }
 
 void SamplerPlugin::activate() {
+    m_voiceCompSmoothed = 1.0f;
     m_active = true;
     for (auto& v : m_voices)
         v.active = false;
@@ -456,6 +457,8 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
     // number of sounding voices does, and it was costing a square root and a
     // division on every sample of every block.
     float voiceComp = 1.0f;
+    const float voiceCompGlideCoeff =
+        static_cast<float>(1.0 - std::exp(-1.0 / std::max(1.0, kVoiceCompGlideSeconds * m_sampleRate)));
 
     // The compact list of sounding voices.
     //
@@ -486,6 +489,16 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
     rebuildActiveVoices();
 
     for (uint32_t i = 0; i < numFrames; ++i) {
+        // Rebuild before the events of this sample: the count has to describe the
+        // voices that were sounding when they arrived, otherwise a chord that starts
+        // from silence looks like a voice-count increase and the compensation glides
+        // down across its attack instead of being in place for it.
+        if (activeVoiceCountDirty) {
+            rebuildActiveVoices();
+            activeVoiceCountDirty = false;
+        }
+        const bool wasSilent = activeVoiceCount == 0;
+
         // Handle MIDI
         while (midiInput && eventIdx < eventCount) {
             const auto& e = midiInput->getEvent(eventIdx);
@@ -503,9 +516,18 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
         // Render Voices
         float L = 0.0f;
         float R = 0.0f;
+        // One-pole glide toward the current polyphony compensation (see
+        // kVoiceCompGlideSeconds); per sample, shared by every voice. Gliding keeps
+        // a release tail from stepping when the voice count changes under it. It
+        // must NOT glide up from unity when nothing was sounding: a chord's first
+        // samples would then sum uncompensated and overshoot by ~6 dB, so after
+        // silence the compensation snaps to its target.
+        m_voiceCompSmoothed += (voiceComp - m_voiceCompSmoothed) * voiceCompGlideCoeff;
         if (activeVoiceCountDirty) {
             rebuildActiveVoices();
             activeVoiceCountDirty = false;
+            if (wasSilent)
+                m_voiceCompSmoothed = voiceComp;
         }
 
         for (uint8_t vi = 0; vi < activeVoiceIndicesCount; ++vi) {
@@ -631,7 +653,7 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
                 );
             }
 
-            float gain = (v.velocity * v.velocity) * env * kSamplerOutputHeadroom * voiceComp;
+            float gain = (v.velocity * v.velocity) * env * kSamplerOutputHeadroom * m_voiceCompSmoothed;
             L += outL * gain * v.gainL;
             R += outR * gain * v.gainR;
 
@@ -703,14 +725,11 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
         // before the mono branch so a mono retrigger chokes the held voice
         // instead of gliding into it.
         if (m_cutSelfMode.load(std::memory_order_relaxed)) {
+            // Choked, not cut: each sounding voice fades over kDeclickSeconds.
+            // The old note is still gone almost at once (no audible overlap),
+            // without the step to zero that ticks on low sounds.
             for (auto& v : m_voices) {
-                if (v.active) {
-                    v.active = false;
-                    v.stage = EnvStage::Off;
-                    v.stageTime = 0.0;
-                    v.currentGain = 0.0f;
-                    v.releaseGain = 0.0f;
-                }
+                if (v.active) declickVoice(v);
             }
         }
 
@@ -724,6 +743,18 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
 
             auto& voice = m_voices[0];
             const bool legato = voice.active && voice.stage != EnvStage::Release && voice.stage != EnvStage::Off;
+            if (!legato && voice.active && voice.currentGain > 0.0f) {
+                // A mono restart reuses slot 0. Whatever is still sounding
+                // there (a release tail, a choked voice) moves to a free slot
+                // and fades out, instead of being overwritten mid-waveform.
+                for (size_t i = 1; i < m_voices.size(); ++i) {
+                    if (!m_voices[i].active) {
+                        m_voices[i] = voice;
+                        declickVoice(m_voices[i]);
+                        break;
+                    }
+                }
+            }
             voice.order = m_nextVoiceOrder++;
             voice.noteId = event.noteId; // the previous note no longer owns the voice; its note-off won't match
 
@@ -754,6 +785,7 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
                 voice.stage = EnvStage::Attack;
                 voice.stageTime = 0.0;
                 voice.currentGain = 0.0f;
+                voice.fadeSeconds = 0.0;
             }
             return;
         }
@@ -796,6 +828,23 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
             freeVoice = oldestRelease ? oldestRelease : oldestActive;
             if (!freeVoice)
                 freeVoice = &m_voices[0]; // Fallback
+            // Every configured slot is busy, so this one is about to be overwritten.
+            // Whatever is still sounding there fades out instead of being cut
+            // mid-waveform: park it in a spare slot outside the configured polyphony,
+            // exactly as a mono restart does. Without this, a one-voice cut-self
+            // retrigger still steps to zero in a single sample and ticks. Only for a
+            // voice with gain: a note-on that has not rendered yet would be parked
+            // silent, and it would still count toward the compensation and thin out
+            // the note that replaced it.
+            if (freeVoice->active && freeVoice->stage != EnvStage::Off && freeVoice->currentGain > 0.0f) {
+                for (size_t i = static_cast<size_t>(maxVoices); i < m_voices.size(); ++i) {
+                    if (!m_voices[i].active) {
+                        m_voices[i] = *freeVoice;
+                        declickVoice(m_voices[i]);
+                        break;
+                    }
+                }
+            }
         }
         freeVoice->order = m_nextVoiceOrder++;
         freeVoice->noteId = event.noteId;
@@ -808,6 +857,7 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
         freeVoice->ownData = keepBuffer;
         freeVoice->held.reset();
         freeVoice->position = startFrameFor(noteStartFrame);
+        freeVoice->fadeSeconds = 0.0;
         freeVoice->playbackRate = targetRate;
         freeVoice->targetPlaybackRate = targetRate;
         freeVoice->playbackDirection = 1;
@@ -839,6 +889,20 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
     }
 }
 
+void SamplerPlugin::declickVoice(Voice& v) {
+    if (!v.active || v.stage == EnvStage::Off) return;
+    // Already declicking: a second choke (a retrigger faster than the fade) must
+    // not restart the clock, or the tail can outlive its 4 ms window and keep
+    // counting toward the voice compensation. fadeSeconds > 0 only for a declick
+    // fade — an ADSR release leaves it 0 — so those still get converted.
+    if (v.stage == EnvStage::Release && v.fadeSeconds > 0.0) return;
+    // Fade from where the envelope is right now, never from a stale value.
+    v.releaseGain = v.currentGain;
+    v.stage = EnvStage::Release;
+    v.stageTime = 0.0;
+    v.fadeSeconds = kDeclickSeconds;
+}
+
 float SamplerPlugin::getEnvelopeLevel(Voice& v, double dt, float attack, float decay, float sustain, float release) {
     v.stageTime += dt;
 
@@ -864,14 +928,16 @@ float SamplerPlugin::getEnvelopeLevel(Voice& v, double dt, float attack, float d
     case EnvStage::Sustain:
         v.currentGain = sustain;
         break;
-    case EnvStage::Release:
-        if (v.stageTime >= release) {
+    case EnvStage::Release: {
+        const double length = v.fadeSeconds > 0.0 ? v.fadeSeconds : release;
+        if (v.stageTime >= length) {
             v.stage = EnvStage::Off;
             v.currentGain = 0.0f;
         } else {
-            v.currentGain = v.releaseGain * static_cast<float>(1.0 - v.stageTime / release);
+            v.currentGain = v.releaseGain * static_cast<float>(1.0 - v.stageTime / length);
         }
         break;
+    }
     case EnvStage::Off:
         v.currentGain = 0.0f;
         break;
