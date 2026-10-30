@@ -17,6 +17,7 @@
 
 #include "AgentLoop.h"
 #include "AnthropicProvider.h"
+#include "CliArgs.h"
 #include "MuseSocketClient.h"
 #include "OpenAICompatProvider.h"
 
@@ -28,6 +29,10 @@
 using namespace Aestra::MuseAgent;
 
 namespace {
+
+// Generous ceilings: they exist to reject typos and overflow, not to tune policy.
+constexpr int kMaxCountLimit = 1000000;
+constexpr int kMaxSecondsLimit = 7 * 24 * 3600;
 
 void printUsage() {
     std::cout <<
@@ -84,9 +89,19 @@ int main(int argc, char** argv) {
             else if (mode == "auto") options.mode = AgentLoop::Mode::Autonomous;
             else { std::cerr << "unknown mode: " << mode << "\n"; return 2; }
         }
-        else if (arg == "--max-iterations") options.maxIterations = std::stoi(next(arg.c_str()));
-        else if (arg == "--max-tool-calls") options.maxToolCalls = std::stoi(next(arg.c_str()));
-        else if (arg == "--max-seconds") options.maxSeconds = std::stoi(next(arg.c_str()));
+        else if (arg == "--max-iterations" || arg == "--max-tool-calls" || arg == "--max-seconds") {
+            const std::string text = next(arg.c_str());
+            const int upper = (arg == "--max-seconds") ? kMaxSecondsLimit : kMaxCountLimit;
+            const auto value = parseBoundedInt(text, 1, upper);
+            if (!value) {
+                std::cerr << "invalid " << arg << ": " << text << " (expected a whole number from 1 to "
+                          << upper << ")\n";
+                return 2;
+            }
+            if (arg == "--max-iterations") options.maxIterations = *value;
+            else if (arg == "--max-tool-calls") options.maxToolCalls = *value;
+            else options.maxSeconds = *value;
+        }
         else if (arg == "--verbose") options.verbose = true;
         else if (arg == "--help" || arg == "-h") { printUsage(); return 0; }
         else { std::cerr << "unknown argument: " << arg << "\n"; return 2; }
@@ -105,11 +120,13 @@ int main(int argc, char** argv) {
         host = connect.substr(0, colon);
         portText = connect.substr(colon + 1);
     }
-    const int port = std::atoi(portText.c_str());
-    if (port <= 0 || port > 65535) {
+    const auto parsedPort = parseBoundedInt(portText, 1, 65535);
+    if (!parsedPort) {
         std::cerr << "invalid port in --connect: " << connect << "\n";
         return 2;
     }
+
+    const int port = *parsedPort;
 
     MuseSocketClient client;
     std::string error;
