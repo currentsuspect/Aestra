@@ -243,6 +243,15 @@ target_include_directories(MuseCreatedIdsTest PRIVATE
 add_test(NAME MuseCreatedIdsTest COMMAND MuseCreatedIdsTest)
 set_tests_properties(MuseCreatedIdsTest PROPERTIES LABELS "commands;muse;contract:application")
 
+add_executable(MuseMixerRoutingTest Commands/MuseMixerRoutingTest.cpp)
+target_link_libraries(MuseMixerRoutingTest PRIVATE AestraAudioCore)
+target_include_directories(MuseMixerRoutingTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MuseMixerRoutingTest COMMAND MuseMixerRoutingTest)
+set_tests_properties(MuseMixerRoutingTest PROPERTIES LABELS "commands;muse;routing;contract:application")
+
 # --- Host capabilities -------------------------------------------------------
 # The seam the application registers settings./view./browser. verbs into.
 # Append new targets for this group at the END of this sub-section.

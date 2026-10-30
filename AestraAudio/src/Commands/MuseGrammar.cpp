@@ -217,6 +217,57 @@ static const std::vector<CommandSchema> s_schemas = {
         {"value", FlagType::Float, true, 0.0, 1.0}
     },
      "Set an effect parameter, normalized 0..1. param = name (case-insensitive) or numeric id from get_effects; get_effects shows the resulting display value."},
+
+    // === Mixer routing (V82-M5) === tracks by index as list_tracks shows them; -1 = master
+    {"route_unit", CommandCategory::Unit, {
+        {"unit", FlagType::Int, true, 1.0},
+        {"track", FlagType::Int, true, -1.0}
+    },
+     "Send an Arsenal unit's audio to a mixer track (by index), or -1 for straight to the master. Its patterns play there wherever they are arranged, so the track's fader, inserts and sends apply."},
+    {"route_pattern", CommandCategory::Pattern, {
+        {"pattern", FlagType::Int, true, 1.0},
+        {"track", FlagType::Int, true, -1.0}
+    },
+     "Send an audio pattern (an audio clip's source, see list_patterns / list_clips) to a mixer track by index, or -1 for the master. Every clip of that pattern plays through the track's fader, inserts and sends."},
+    {"make_clip_unique", CommandCategory::Clip, {
+        {"id", FlagType::Id, true}
+    },
+     "Give a clip its own copy of its pattern, so edits and routing (route_pattern) apply to this clip only; other clips keep the original. list_clips shows the new pattern id. Same as the UI's Make Unique."},
+    {"set_output", CommandCategory::Track, {
+        {"track", FlagType::Int, true, 0.0},
+        {"to", FlagType::Int, true, -1.0}
+    },
+     "Route a track's main output into another track (a bus), or -1 for the master. Refused if it would make a loop."},
+    {"add_send", CommandCategory::Track, {
+        {"track", FlagType::Int, true, 0.0},
+        {"to", FlagType::Int, true, 0.0},
+        {"level", FlagType::Float, false, 0.0, 2.0},
+        {"pan", FlagType::Float, false, -1.0, 1.0},
+        {"pre_fader", FlagType::Bool, false},
+        {"sidechain", FlagType::Bool, false}
+    },
+     "Add a send from a track to another track (an FX return or bus). level is linear (1 = unity, default), post-fader unless pre_fader. sidechain=true feeds the target's sidechain input only, not its audible mix. get_routing_graph shows the new sendId. Sends to the master are refused (use set_output); so are loops."},
+    {"set_send", CommandCategory::Track, {
+        {"track", FlagType::Int, true, 0.0},
+        {"send", FlagType::Int, true, 1.0},
+        {"level", FlagType::Float, false, 0.0, 2.0},
+        {"pan", FlagType::Float, false, -1.0, 1.0},
+        {"pre_fader", FlagType::Bool, false},
+        {"mute", FlagType::Bool, false},
+        {"sidechain", FlagType::Bool, false}
+    },
+     "Change a send by its sendId (from get_routing_graph): level, pan, pre/post fader, mute, sidechain-only. Flags left out keep their value."},
+    {"remove_send", CommandCategory::Track, {
+        {"track", FlagType::Int, true, 0.0},
+        {"send", FlagType::Int, true, 1.0}
+    },
+     "Remove a send by its sendId. Undo puts it back with the same id."},
+    {"move_effect", CommandCategory::Track, {
+        {"track", FlagType::Int, true, 0.0},
+        {"from", FlagType::Int, true, 0.0, 9.0},
+        {"to", FlagType::Int, true, 0.0, 9.0}
+    },
+     "Move an insert effect to another slot in the same track's chain (order matters: EQ before or after compression)."},
     {"set_note", CommandCategory::Pattern, {
         {"pattern", FlagType::Int, true, 1.0},
         {"unit", FlagType::Int, true, 1.0},
@@ -317,7 +368,7 @@ std::string schemaToJsonString() {
   "samplerPitch": "The sampler root is MIDI pitch 60: notes at 60 play the loaded sample unshifted, other pitches resample relative to 60. Put drum hits at pitch 60; write melodies around 60.",
   "unitTypes": "sampler = polyphonic sampler; 808 = mono pitched sampler with glide.",
   "patterns": "Every non-audio unit gets a default MIDI pattern at creation (list_units.defaultPatternId). A pattern is just a container: notes carry their unit, so one pattern can hold a whole multi-unit groove.",
-  "routing": "Each unit has one stable mixer destination (mixerChannelId; 0 = Master). Timeline arrangement is independent, so the same pattern may be placed on multiple lanes without changing its audio destination.",
+  "routing": "Each unit has one stable mixer destination (mixerChannelId; 0 = Master); route_unit changes it. Timeline arrangement is independent, so the same pattern may be placed on multiple lanes without changing its audio destination. Mixer verbs address tracks by index (list_tracks); -1 means the master. Sends are addressed by the sendId get_routing_graph shows.",
   "steps": "Step strings: 'x' hit at the row velocity, 'X' accented hit (+0.2), digits '1'-'9' hit at velocity n/9, '-', '.', ' ' rest. Default step is 0.25 beats (16ths). swing (0..0.9) delays every second step by swing * step/2 for shuffle feels.",
   "ids": "Track, unit, pattern and clip ids are stable across edits; indexes shift when items are deleted.",
   "units_of_measure": "velocity 0..1, pan -1..1, volume 0..1 linear, positions and durations in beats.",
