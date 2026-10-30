@@ -20,6 +20,7 @@
 #include "MeterSnapshot.h"
 #include "PatternManager.h"
 #include "PlaylistModel.h"
+#include "RecordingTakeStream.h"
 #include "SourceManager.h"
 #include "Track.h"
 #include "UnitManager.h"
@@ -29,7 +30,9 @@
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <condition_variable>
 #include <cstdlib>
+#include <cstring>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -66,6 +69,8 @@ public:
         std::atomic<bool> hasStarted{false};
         int inputIndex{-1};
         uint64_t trackId{0};
+        /** Off the audio thread: carries the take to memory and a .partial file as it records. */
+        std::unique_ptr<RecordingTakeStream> stream;
     };
 
     struct RtInputMonitorRoute {
@@ -690,7 +695,16 @@ public:
      * @param rate Input device sample rate in Hz.
      */
     void setInputSampleRate(double rate) { m_inputSampleRate = rate; }
+    /** @brief Seconds of audio the capture ring holds between take-stream drains (not a take length limit). */
     void setMaxRecordingSeconds(double seconds) { m_maxRecordingSeconds = std::max(1.0, seconds); }
+
+    /**
+     * @brief Move every frame recorded so far into each take's stream (memory
+     *        + .partial file). The drain thread calls this every 50 ms while
+     *        recording; tests call it to stand in for that thread. Never on the
+     *        audio thread.
+     */
+    void drainRecordingCaptures();
 
     /**
      * @brief Device latency to compensate on the record path (T-6).
@@ -1043,8 +1057,6 @@ public:
 
             size_t head = capture->headIndex.load(std::memory_order_relaxed);
             size_t size = capture->size.load(std::memory_order_relaxed);
-            double startBeat = capture->startBeat.load(std::memory_order_relaxed);
-            uint64_t droppedFrames = 0;
             uint32_t startFrame = 0;
             double effectiveCaptureBeat = captureBeat;
 
@@ -1072,8 +1084,9 @@ public:
                 if (size < capacity) {
                     ++size;
                 } else {
+                    // Wrapping is normal: the take stream has already drained
+                    // these frames to memory and disk (RecordingTakeStream).
                     head = (head + 1) % capacity;
-                    ++droppedFrames;
                 }
             };
 
@@ -1106,13 +1119,10 @@ public:
                     startedDeferredCapture = true;
                 }
             }
-            if (droppedFrames > 0) {
-                startBeat += framesToBeats(static_cast<double>(droppedFrames));
-                capture->startBeat.store(startBeat, std::memory_order_release);
-            }
             capture->headIndex.store(head, std::memory_order_release);
             capture->size.store(size, std::memory_order_release);
-            capture->totalCapturedFrames.fetch_add(frames - startFrame, std::memory_order_relaxed);
+            // Release: the take stream reads the samples after acquiring this count.
+            capture->totalCapturedFrames.fetch_add(frames - startFrame, std::memory_order_release);
             capturedAnyChannel = true;
         }
 
@@ -2218,6 +2228,9 @@ private:
             capture->hasStarted.store(false, std::memory_order_relaxed);
             capture->inputIndex = requestedInput;
             capture->trackId = trackId;
+            capture->stream = std::make_unique<RecordingTakeStream>(
+                buildRecordingTakePath(track.channelId) + RecordingTakeStream::kPartialExtension,
+                static_cast<uint32_t>(std::max(1.0, m_inputSampleRate > 0.0 ? m_inputSampleRate : m_outputSampleRate)));
             m_recordingCaptures[trackId] = std::move(capture);
         }
         m_recordingSessionStartBeat = getCurrentTransportBeat();
@@ -2237,6 +2250,7 @@ private:
         m_recordingCaptureAccepting.store(true, std::memory_order_release);
         m_isCapturing.store(true, std::memory_order_relaxed);
         publishRecordingCaptureSnapshot();
+        startTakeDrainThread();
         Log::info("[TrackManager] Recording session started. Armed tracks: " + std::to_string(getTrackArmedCount()) +
                   ", input channels: " + std::to_string(m_inputChannelCount));
     }
@@ -2259,6 +2273,7 @@ private:
         }
 
         m_isCapturing.store(false, std::memory_order_relaxed);
+        stopTakeDrainThread();
 
         // Publish empty snapshot so RT thread stops referencing captures.
         m_recordingCaptureRouteCounts[0].store(0, std::memory_order_release);
@@ -2285,6 +2300,9 @@ private:
 
         for (const auto& [channelId, capture] : captures) {
             (void)channelId;
+            if (capture && capture->stream) {
+                capture->stream->drain(capture->samples.get(), capture->capacity, capture->totalCapturedFrames);
+            }
             if (capture) {
                 commitRecordingTake(capture->trackId, *capture, sessionStartBeat, sessionUsesPlacementOverride);
             }
@@ -2299,8 +2317,16 @@ private:
             return;
         }
         const uint32_t channelId = track->channelId;
-        std::vector<float> capturedSamples = copyCaptureSamples(capture);
+        std::vector<float> capturedSamples = capture.stream ? capture.stream->samples() : copyCaptureSamples(capture);
+        if (capture.stream && capture.stream->lostFrames() > 0) {
+            Log::warning("[TrackManager] Recorded take on track " + std::to_string(trackId) + " lost " +
+                         std::to_string(capture.stream->lostFrames()) +
+                         " frame(s) the disk writer could not keep up with; they are silence in the take.");
+        }
         if (capturedSamples.empty()) {
+            if (capture.stream) {
+                capture.stream->discardPartialFile();
+            }
             // Silent no-op here made "record produced nothing" undiagnosable
             // (deferred-capture beat unreachable, #845). Say something.
             Log::warning("[TrackManager] Recorded take on track " + std::to_string(trackId) +
@@ -2357,10 +2383,18 @@ private:
             buffer->interleavedData[i * 2 + 1] = sample;
         }
 
-        const std::string takePath = buildRecordingTakePath(channelId);
+        std::string takePath = buildRecordingTakePath(channelId);
+        if (capture.stream && !capture.stream->partialPath().empty()) {
+            const std::string& partial = capture.stream->partialPath();
+            takePath = partial.substr(0, partial.size() - std::strlen(RecordingTakeStream::kPartialExtension));
+        }
         if (!writeRecordedTakeWav(takePath, *buffer)) {
+            // The partial file stays: it is now the only copy of this take.
             Log::error("[TrackManager] Failed to write recorded take: " + takePath);
             return;
+        }
+        if (capture.stream) {
+            capture.stream->discardPartialFile();
         }
 
         const std::string takeName = std::filesystem::path(takePath).stem().string();
@@ -2820,6 +2854,12 @@ private:
     std::array<std::atomic<uint32_t>, 2> m_recordingCaptureRouteCounts{};
     std::atomic<uint32_t> m_activeRecordingCaptureSnapshot{0};
     double m_maxRecordingSeconds{15.0};
+    std::thread m_takeDrainThread;
+    std::mutex m_takeDrainWakeMutex;
+    std::condition_variable m_takeDrainWake;
+    bool m_takeDrainStop{false};
+    void startTakeDrainThread();
+    void stopTakeDrainThread();
     std::function<void(double& inputMs, double& outputMs)> m_recordLatencyProvider;
     double m_recordingSessionStartBeat{0.0};
     bool m_recordingSessionUsesPlacementOverride{false};

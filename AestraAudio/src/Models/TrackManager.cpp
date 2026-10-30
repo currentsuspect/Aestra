@@ -15,7 +15,52 @@ namespace Audio {
 // forward-declared in the header. It is the LAST declared member, so it is
 // destroyed FIRST here — the worker joins while the graph-dirty atomics its
 // completion callback touches are still alive.
-TrackManager::~TrackManager() = default;
+TrackManager::~TrackManager() { stopTakeDrainThread(); }
+
+void TrackManager::drainRecordingCaptures() {
+    if (reportRealtimeMisuse("TrackManager::drainRecordingCaptures")) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(m_recordingMutex);
+    for (auto& [trackId, capture] : m_recordingCaptures) {
+        (void)trackId;
+        if (capture && capture->stream) {
+            capture->stream->drain(capture->samples.get(), capture->capacity, capture->totalCapturedFrames);
+        }
+    }
+}
+
+void TrackManager::startTakeDrainThread() {
+    if (m_takeDrainThread.joinable()) {
+        return;
+    }
+    {
+        std::lock_guard<std::mutex> lock(m_takeDrainWakeMutex);
+        m_takeDrainStop = false;
+    }
+    // The capture ring holds m_maxRecordingSeconds; draining every 50 ms
+    // leaves that whole span as headroom for a stalled disk.
+    m_takeDrainThread = std::thread([this]() {
+        std::unique_lock<std::mutex> lock(m_takeDrainWakeMutex);
+        while (!m_takeDrainStop) {
+            m_takeDrainWake.wait_for(lock, std::chrono::milliseconds(50), [this]() { return m_takeDrainStop; });
+            lock.unlock();
+            drainRecordingCaptures();
+            lock.lock();
+        }
+    });
+}
+
+void TrackManager::stopTakeDrainThread() {
+    {
+        std::lock_guard<std::mutex> lock(m_takeDrainWakeMutex);
+        m_takeDrainStop = true;
+    }
+    m_takeDrainWake.notify_all();
+    if (m_takeDrainThread.joinable()) {
+        m_takeDrainThread.join();
+    }
+}
 
 void TrackManager::rebuildAndPushSnapshot() {
     // Effect chain snapshots are retrieved during graph building (AudioGraphBuilder::buildFromTrackManager)
