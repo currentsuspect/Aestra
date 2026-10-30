@@ -120,7 +120,7 @@ jobs:
 
       - name: Upload test report
         if: always() && steps.scope.outputs.run == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ctest-results-linux
           path: build/ctest-results-linux.xml
@@ -441,7 +441,7 @@ jobs:
         uses: ./.github/actions/setup-sccache
       - name: Cache vcpkg artifacts
         if: steps.scope.outputs.run == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             ${{ runner.temp }}\vcpkg\downloads
@@ -538,7 +538,7 @@ jobs:
 
       - name: Upload test report
         if: always() && steps.scope.outputs.run == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ctest-results-windows
           path: build/ctest-results-windows.xml
@@ -604,7 +604,7 @@ jobs:
 
       - name: Cache vcpkg artifacts
         if: steps.scope.outputs.run == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             ${{ runner.temp }}\vcpkg\downloads
@@ -770,7 +770,7 @@ jobs:
 
       - name: Upload test report
         if: always() && steps.scope.outputs.run == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ctest-results-macos
           path: build/ctest-results-macos.xml
@@ -1123,7 +1123,7 @@ jobs:
 
       - name: Upload sanitizer test report
         if: always() && steps.scope.outputs.run == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ctest-results-asan
           path: build-asan/ctest-results-asan.xml
@@ -1189,7 +1189,7 @@ jobs:
 
       - name: Upload TSan test report
         if: always() && steps.scope.outputs.run == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ctest-results-tsan
           path: build/ci-tsan/ctest-results-tsan.xml
@@ -1246,7 +1246,7 @@ jobs:
 
       - name: Upload LSan test report
         if: always() && steps.scope.outputs.run == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ctest-results-lsan
           path: build/ci-lsan/ctest-results-lsan.xml
