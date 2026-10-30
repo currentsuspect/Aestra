@@ -7,6 +7,7 @@
 //      and grows the pattern by whole bars when the copy runs past its end.
 
 #include "Commands/CommandRegistry.h"
+#include "Commands/MuseGrammar.h"
 #include "Commands/MuseService.h"
 #include "Core/AudioEngine.h"
 #include "Models/TrackManager.h"
@@ -89,6 +90,18 @@ int main() {
     const std::string p =
         std::to_string(static_cast<long long>(units["result"]["units"][0]["defaultPatternId"].asNumber()));
     const double startLength = lengthOf(s, p);
+
+    std::cout << "[0] the schema is valid JSON\n";
+    {
+        // Descriptions are free text written into hand-built JSON. A raw quote in one (add_notes, 2026-10-30) broke
+        // the whole manifest: every verb after it, and the trailing "notes" object, went missing.
+        JSON schema = JSON::parse(Aestra::Audio::MuseGrammar::schemaToJsonString());
+        const size_t declared = Aestra::Audio::MuseGrammar::allCommands().size();
+        check(schema.has("commands") && schema["commands"].size() == declared,
+              "every declared command parses (" + std::to_string(schema.has("commands") ? schema["commands"].size() : 0) +
+                  " of " + std::to_string(declared) + ")");
+        check(schema.has("notes"), "and the document parses to its end (the trailing notes object)");
+    }
 
     std::cout << "[1] add_notes\n";
     JSON r = call(s, "add_notes", "\"pattern\": " + p + ", \"unit\": " + keys +
