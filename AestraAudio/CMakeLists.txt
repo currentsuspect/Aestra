@@ -195,6 +195,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Core/AudioEngine.cpp
     src/Core/AudioEngineBlockSplit.cpp
     src/Core/AudioEngineScheduling.cpp
+    src/Core/AudioEngineAudition.cpp
     src/Core/ProjectTempo.cpp
     src/Core/ClipRenderKernel.cpp
     src/Core/AudioDeviceManager.cpp

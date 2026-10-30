@@ -1252,7 +1252,7 @@ private:
     std::vector<float> m_waveformHistory;
     std::atomic<uint32_t> m_waveformWriteIndex{0};
     std::atomic<uint32_t> m_waveformHistoryFrames{0};
-
+    void applyAuditionUnitRt(const AudioQueueCommand& cmd); // AuditionUnit, audio thread (AudioEngineAudition.cpp)
     // Fade state machine
     enum class FadeState { None, FadingIn, FadingOut, Silent };
     std::atomic<FadeState> m_fadeState{FadeState::None};

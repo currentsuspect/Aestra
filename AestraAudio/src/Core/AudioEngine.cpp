@@ -456,41 +456,9 @@ void AudioEngine::applyPendingCommands() {
             state.solo = (cmd.value1 != 0.0f);
             break;
         }
-        case AudioQueueCommandType::AuditionUnit: {
-            // Claim a slot from the pool: a free one when possible, otherwise
-            // the one closest to its note-off. A chord stamp sends one command
-            // per pitch, so simultaneous triad tones each get their own slot.
-            UnitAuditionState* slot = nullptr;
-            for (auto& s : m_unitAuditionStates) {
-                if (!s.active) {
-                    slot = &s;
-                    break;
-                }
-            }
-            if (!slot) {
-                slot = &m_unitAuditionStates[0];
-                for (auto& s : m_unitAuditionStates) {
-                    if (s.noteOffSamplesRemaining < slot->noteOffSamplesRemaining) {
-                        slot = &s;
-                    }
-                }
-            }
-            slot->unitId = static_cast<UnitID>(cmd.trackIndex);
-            slot->note = static_cast<uint8_t>(std::clamp(static_cast<int>(cmd.value1), 0, 127));
-            slot->velocity = static_cast<uint8_t>(std::clamp(static_cast<int>(cmd.value2 * 127.0f), 1, 127));
-            slot->noteOffSamplesRemaining = std::max<uint32_t>(1, m_sampleRate.load(std::memory_order_relaxed) / 8);
-            slot->noteOnPending = true;
-            slot->active = true;
-            // Wake the master out of the post-stop Silent fast path so the
-            // audition is actually rendered. After the transport stops the fade
-            // settles to Silent, whose early-return drops everything before the
-            // unit-audition MIDI is injected — mirrors the metronome count-in
-            // recovery, and matches the pre-first-play (None) state.
-            if (m_fadeState.load(std::memory_order_relaxed) == FadeState::Silent) {
-                m_fadeState.store(FadeState::None, std::memory_order_relaxed);
-            }
+        case AudioQueueCommandType::AuditionUnit:
+            applyAuditionUnitRt(cmd); // AudioEngineAudition.cpp
             break;
-        }
         // MUSE-WIRING: LoadProjectState / UpdateClipState / StartPreview / StopPreview
         // must never be handled on the RT audio thread — they involve I/O, allocation,
         // thread joins, or async decode. They are intentionally dropped here; route them
