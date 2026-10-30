@@ -193,6 +193,17 @@ void testGrowingCallbackFollows() {
     std::printf("[PASS] callback grows 256 -> 512: delay follows to exactly 512\n");
 }
 
+// A callback with no frames before any audio (chunk still 0) must return, not spin trimming a 0-frame backlog.
+void testEmptyFirstCallback() {
+    Rig rig;
+    assert(rig.callback(0) == kSilence);
+    assert(rig.callback(256) == kSilence);
+    for (int i = 0; i < 5; ++i) {
+        assert(rig.callback(256) == 256);
+    }
+    std::printf("[PASS] a 0-frame first callback returns, and the delay starts normally after it\n");
+}
+
 } // namespace
 
 int main() {
@@ -201,5 +212,6 @@ int main() {
     testRecoversAfterStall(3);
     testSplitCallbacksStayExact();
     testGrowingCallbackFollows();
+    testEmptyFirstCallback();
     return 0;
 }

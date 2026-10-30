@@ -81,7 +81,7 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
     // 3. One chunk goes to the helper when its slot is free. Two chunks or more waiting means
     //    the helper fell behind: their time has passed (they played dry), so only the newest
     //    goes. Their MIDI is kept and lands at the start of the chunk that does go.
-    if (m_inFifo.frames() >= chunk) {
+    if (chunk > 0 && m_inFifo.frames() >= chunk) { // no chunk before the first frames (a 0-frame callback)
         uint8_t pendingEmpty = 0;
         if (m_pendingState.compare_exchange_strong(pendingEmpty, 1, std::memory_order_acq_rel)) {
             while (m_inFifo.frames() >= 2 * static_cast<size_t>(chunk)) {
