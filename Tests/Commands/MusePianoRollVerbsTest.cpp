@@ -68,7 +68,7 @@ double lengthOf(MuseService& s, const std::string& pattern) {
             return r["result"]["patterns"][i]["lengthBeats"].asNumber();
     return -1.0;
 }
-bool near(double a, double b) { return std::abs(a - b) < 1e-6; }
+bool approxEq(double a, double b) { return std::abs(a - b) < 1e-6; }
 double lastDuration(const std::vector<Note>& n) { return n.empty() ? -1.0 : n.back().duration; }
 } // namespace
 
@@ -109,7 +109,7 @@ int main() {
     check(status(r) == "ok", "add_notes ok");
     auto n = notesOf(s, p);
     check(n.size() == 4, "four notes written (" + std::to_string(n.size()) + ")");
-    check(n.size() == 4 && n[1].pitch == 64 && near(n[1].duration, 0.5), "the second note is 64 for half a beat");
+    check(n.size() == 4 && n[1].pitch == 64 && approxEq(n[1].duration, 0.5), "the second note is 64 for half a beat");
     history.undo();
     check(notesOf(s, p).empty(), "one undo removes the whole batch");
     history.redo();
@@ -129,9 +129,9 @@ int main() {
              "\"pattern\": " + p + ", \"unit\": " + keys + ", \"pitch\": 72, \"start\": 3, \"duration\": 1.5");
     check(status(r) == "ok", "set_note_length ok");
     n = notesOf(s, p);
-    check(near(lastDuration(n), 1.5), "the note is 1.5 beats long");
+    check(approxEq(lastDuration(n), 1.5), "the note is 1.5 beats long");
     history.undo();
-    check(near(lastDuration(notesOf(s, p)), 0.25), "undo restores 0.25");
+    check(approxEq(lastDuration(notesOf(s, p)), 0.25), "undo restores 0.25");
     r = call(s, "set_note_length",
              "\"pattern\": " + p + ", \"unit\": " + keys + ", \"pitch\": 71, \"start\": 3, \"duration\": 1");
     check(status(r) != "ok", "a note that is not there is an error");
@@ -169,9 +169,9 @@ int main() {
     r = call(s, "duplicate_notes",
              "\"pattern\": " + p + ", \"from\": " + std::to_string(last) + ", \"to\": " + std::to_string(startLength));
     check(status(r) == "ok", "a copy past the end is allowed");
-    check(near(lengthOf(s, p), startLength + 4.0), "and the pattern grows by one bar (" + std::to_string(lengthOf(s, p)) + ")");
+    check(approxEq(lengthOf(s, p), startLength + 4.0), "and the pattern grows by one bar (" + std::to_string(lengthOf(s, p)) + ")");
     history.undo();
-    check(near(lengthOf(s, p), startLength), "undo shrinks it back in the same step");
+    check(approxEq(lengthOf(s, p), startLength), "undo shrinks it back in the same step");
 
     std::cout << (g_failures == 0 ? "ALL PASS\n" : "FAILURES\n");
     return g_failures == 0 ? 0 : 1;
