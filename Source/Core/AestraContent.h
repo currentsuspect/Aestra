@@ -609,6 +609,8 @@ private:
     void openAudioClipEditor(Aestra::Audio::ClipInstanceID clipId);
     /** V8-W5: render the clips' track output, replace them with it, tell the user the outcome. */
     void bounceClipsInPlace(const std::vector<Aestra::Audio::ClipInstanceID>& clipIds);
+    /// AudioEngine::bounceRangeToWav with the live stream paused around it (AestraContentBounce.cpp).
+    bool bounceRangeWithStreamPaused(double startBeat, double endBeat, const std::string& path, int32_t trackId);
     void syncSampleEditorToUnit(Aestra::Audio::UnitID unitId);
     Aestra::SamplerEditHistory m_samplerEdits; ///< undo for the Sample Editor's controls
     void enqueueMainThreadTask(std::function<void()> task);

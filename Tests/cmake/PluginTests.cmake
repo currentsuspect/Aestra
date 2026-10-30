@@ -557,3 +557,17 @@ target_include_directories(AestraCompSidechainTest PRIVATE
 )
 add_test(NAME AestraCompSidechainTest COMMAND AestraCompSidechainTest)
 set_tests_properties(AestraCompSidechainTest PROPERTIES LABELS "audio;plugins;comp;sidechain;contract:audio")
+
+# Does a sandboxed plugin delay audio by exactly what it reports to PDC? Needs installed plugins; run directly:
+#   build/Tests/AestraSandboxLatencyProbe [callbackFrames]
+if(UNIX AND TARGET AestraPluginHost)
+    add_executable(AestraSandboxLatencyProbe Integration/SandboxLatencyProbe.cpp)
+    target_link_libraries(AestraSandboxLatencyProbe PRIVATE AestraAudio)
+    target_include_directories(AestraSandboxLatencyProbe PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    target_compile_definitions(AestraSandboxLatencyProbe PRIVATE HELPER_PATH="$<TARGET_FILE:AestraPluginHost>")
+    add_dependencies(AestraSandboxLatencyProbe AestraPluginHost)
+endif()

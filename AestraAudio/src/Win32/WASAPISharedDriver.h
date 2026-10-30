@@ -69,7 +69,12 @@ public:
     bool isStreamRunning() const override { return m_isRunning; }
     double getStreamLatency() const override;
     uint32_t getStreamSampleRate() const override;
-    uint32_t getStreamBufferSize() const override { return isStreamRunning() ? m_bufferFrameCount : 0; }
+    // Reported once the stream is OPEN, not only while running: the engine is
+    // configured from this between open and start, and the render loop can hand
+    // it up to m_bufferFrameCount frames per callback.
+    uint32_t getStreamBufferSize() const override {
+        return (m_state == DriverState::STREAM_OPEN || m_state == DriverState::STREAM_RUNNING) ? m_bufferFrameCount : 0;
+    }
 
     // Device notification hooks used by the local IMMNotificationClient adapter.
     void onDeviceStateChanged(const std::string& deviceId, uint32_t newState);

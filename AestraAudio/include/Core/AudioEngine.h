@@ -24,6 +24,8 @@
 #include "Plugin/HostTransport.h"
 #include "Models/TrackManager.h" // [NEW] For headless rendering
 #include "Playback/LiveMidiQueue.h"
+#include "Playback/ScheduleSnapshot.h"
+#include "Core/TransportStart.h"
 #include "PluginHost.h" // For MidiBuffer [NEW]
 
 #include <cstring>
@@ -105,6 +107,12 @@ public:
      * without doing that work, because a red gate teaches people to skip gates.
      */
     int processBlock(float* outputBuffer, const float* inputBuffer, uint32_t numFrames, double streamTime);
+    void beginManualRender(); // non-RT; see ManualRenderLease (Core/ManualRenderLease.h)
+    void endManualRender();
+    // Live app only: park a play start (silent, <= ~50 ms) until its notes are queued (AudioEngineScheduling.cpp).
+    void setHoldStartForSchedule(bool hold) { m_transportStart.holdForSchedule.store(hold, std::memory_order_relaxed); }
+    /** @brief Preference: a stop cuts all sound (like pressing stop twice) instead of letting notes release. */
+    void setStopCutsSound(bool cut) { m_transportStart.stopCutsSound.store(cut, std::memory_order_relaxed); }
 
     /**
      * @brief Non-real-time maintenance hook for deferred resource reclamation.
@@ -424,7 +432,8 @@ public:
     /** @brief Get metronome output volume. */
     float getMetronomeVolume() const { return m_metronomeEngine.getVolume(); }
     /** @brief Set transport tempo in beats per minute. */
-    void setBPM(float bpm) { m_metronomeEngine.setBPM(bpm); }
+    void setBPM(float bpm) { m_transportStart.requestedBpm = 0.0f; m_metronomeEngine.setBPM(bpm); } // replaces any in-flight tempo chain
+    double setTempoKeepingBeat(float bpm); // non-RT; returns old/new for UI-held positions (changeProjectTempo())
     /** @brief Get transport tempo in beats per minute. */
     float getBPM() const { return m_metronomeEngine.getBPM(); }
     /** @brief Set the time-signature numerator used by the metronome. */
@@ -891,6 +900,10 @@ private:
     void renderTrack(const AudioGraph& graph, size_t orderedIndex, const RenderContext& ctx, bool& srcActiveThisBlock);
     void prepareTrackStateForGraph(const AudioGraph& graph);
     void applyPendingCommands();
+    // One block no larger than m_maxBufferFrames. processBlock() splits an oversized
+    // driver block into these (AudioEngineBlockSplit.cpp).
+    int processBlockWithinCapacity(float* outputBuffer, const float* inputBuffer, uint32_t numFrames,
+                                   double streamTime);
     void applyPendingMetronomeCountInRt();
     void clearMetronomeCountInRt();
     void processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset, uint64_t startFrame,
@@ -1288,21 +1301,24 @@ private:
     // Drain carry-over (applyPendingCommands): audio thread only. See the pair rule there.
     AudioQueueCommand m_carriedCommand{};
     bool m_hasCarriedCommand{false};
-    // Completed pattern-loop passes (audio thread writes at each wrap, reset
-    // while stopped). Gives pattern scheduling a MONOTONIC frame domain
-    // (iteration * loopLen + wrapped pos) so the next iteration's events are
-    // queued before the wrap instead of after a UI maintenance tick.
+    // Completed loop passes, pattern or timeline (audio thread writes at each wrap, reset
+    // while stopped). Gives note scheduling a MONOTONIC frame domain (ScheduleLoop) so the
+    // next pass is queued before the wrap instead of after a UI maintenance tick.
     std::atomic<uint64_t> m_patternLoopIteration{0};
-    // Coherent (iteration * loopLen + wrapped pos) snapshot for maintenance,
-    // published in ONE store at the end of each callback alongside
-    // m_globalSamplePos. Reading iteration and position as separate atomics
-    // could pair a new iteration with a stale position (they are written at
-    // different points in the callback) and schedule an epoch ahead.
-    std::atomic<uint64_t> m_patternMonotonicFrame{0};
-    // Last loop length (samples) used for a maintenance refill. Only touched
-    // on the maintenance thread; a change (BPM / sample-rate) means queued
-    // timestamps are in a stale domain and the pattern engine must rewind.
-    uint64_t m_lastRefillLoopLenSamples{0};
+    // {queue epoch, monotonic frame, loop} as one tuple, published by every playing block.
+    ScheduleSnapshotPublisher m_schedulePublication;
+    std::atomic<size_t> m_manualRenderOwner{0}; // thread tag holding the manual-render lease; 0 = none
+    uint32_t m_manualRenderNesting{0};          // owner thread only
+    std::atomic<uint32_t> m_processBlocksInFlight{0};
+    TransportStartState m_transportStart; // Core/TransportStart.h
+    bool holdStartForScheduleRt(bool transportRestart, float* output, uint32_t numFrames, uint32_t channels);
+    ScheduleLoop m_lastRefillLoop; // maintenance thread: the loop and epoch the last refill planned under
+    uint16_t m_lastRefillEpoch{0};
+    void refillNoteSchedule(); // performNonRealtimeMaintenance, AudioEngineScheduling.cpp
+    uint64_t applyTempoKeepingBeatRt(float bpm, float previousBpm, uint64_t position); // audio thread
+    // Audio thread: the loop this block's notes are planned across (AudioEngineScheduling.cpp).
+    ScheduleLoop resolveScheduleLoopRt(bool patternMode, uint64_t loopStart, uint64_t loopEnd, uint64_t position,
+                                       bool transportRestart);
 
     // Test Tone State
     std::atomic<bool> m_testToneEnabled{false};

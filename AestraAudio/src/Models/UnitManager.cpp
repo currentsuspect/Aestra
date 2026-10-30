@@ -274,6 +274,7 @@ void UnitManager::publishSnapshot() {
         snapshot->units.push_back(state);
     }
 
+    m_realtimeSnapshot.publish(snapshot);
     // Retire old snapshot through GC so the audio thread never dereferences freed memory.
     auto old = m_publishedSnapshot.exchange(snapshot, std::memory_order_acq_rel);
     if (old) {

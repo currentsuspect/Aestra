@@ -220,7 +220,7 @@ int main() {
         all.sampleRate = 44100; all.bufferSize = 128; all.qualityPreset = 1;
         all.resampling = 2; all.dithering = 1; all.threads = 4;
         all.previewDuckingDb = 12; all.dcRemoval = 1; all.masterLimiter = 1;
-        all.multiThreading = 0;
+        all.multiThreading = 0; all.stopCutsSound = 1;
 
         const AudioSettings back = parseText(serializeText(all));
         expectEq(back.driver, 1, "rw driver");
@@ -236,6 +236,7 @@ int main() {
         expectEq(back.dcRemoval, 1, "rw dc_removal");
         expectEq(back.masterLimiter, 1, "rw master_limiter");
         expectEq(back.multiThreading, 0, "rw multi_threading");
+        expectEq(back.stopCutsSound, 1, "rw stop_cuts_sound");
     }
 
     // --- presence is not sanity (review finding, #660) --------------------------

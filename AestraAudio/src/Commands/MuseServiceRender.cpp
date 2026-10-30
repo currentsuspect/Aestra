@@ -10,6 +10,7 @@
 // The body below is the text it was before the move, dedented by four spaces
 // and otherwise untouched. If you change a verb's behaviour, change it here.
 
+#include "Core/ManualRenderLease.h"
 #include "Commands/MuseServiceInternal.h"
 #include "Commands/MuseFileDigest.h"
 #include "Core/AudioEngine.h"
@@ -79,6 +80,8 @@ bool writeFloat32Wav(const std::string& path, const std::vector<float>& samples,
 bool renderFullSong(AudioEngine& engine, TrackManager& trackManager,
                     const std::string& outputPath, double tailSeconds,
                     AudioExporter::Result& outResult) {
+    // This drives processBlock by hand; the live callback stands down meanwhile.
+    ManualRenderLease lease(engine);
     trackManager.buildAndShareSlotMap();
     if (auto slotMap = trackManager.getChannelSlotMapShared()) {
         engine.setChannelSlotMap(slotMap);
@@ -311,6 +314,7 @@ std::optional<std::string> handleRenderVerbs(const RequestContext& ctx, const Re
                 .toString();
         }
 
+        ManualRenderLease lease(*m_engine); // drives processBlock by hand; the live callback stands down
         std::vector<float> rendered;
         rendered.reserve(static_cast<size_t>(totalFrames) * 2u);
         std::vector<float> block(static_cast<size_t>(kBlockFrames) * 2u, 0.0f);

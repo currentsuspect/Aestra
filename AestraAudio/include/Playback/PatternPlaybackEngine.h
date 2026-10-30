@@ -4,6 +4,7 @@
 #include "../Models/PatternManager.h"
 #include "../Models/PatternSource.h"
 #include "../Plugin/PluginHost.h" // For MidiBuffer
+#include "ScheduleLoop.h"
 #include "TimelineClock.h"
 #include "../Models/UnitManager.h"
 
@@ -40,6 +41,8 @@ struct ScheduledEvent {
     uint8_t data2;        // 1 byte (velocity)
     /** @brief Event priority inside a frame. */
     uint8_t priority;     // 1 byte (0=note-off, 1=per-note pan, 2=note-on)
+    /** @brief Queue epoch the event was scheduled in; stale epochs are dropped unplayed. */
+    uint16_t epoch;       // 2 bytes (fills the former padding before noteId)
     /** @brief Note identity shared by a note's on and off (0 = none). 4 bytes, aligned -> Total 32. */
     uint32_t noteId;
 };
@@ -95,18 +98,6 @@ public:
     void pop() {
         uint32_t tail = m_tail.load(std::memory_order_relaxed);
         m_tail.store((tail + 1) % Capacity, std::memory_order_release);
-    }
-
-    /**
-     * @brief Drain all items from the producer side (RT-safe).
-     *
-     * Resets the write head to the current read tail, discarding all queued
-     * items.  Only safe to call from the producer thread when the consumer
-     * thread is known to be idle or tolerant of an empty queue.
-     */
-    void forceDrain() {
-        uint32_t tail = m_tail.load(std::memory_order_acquire);
-        m_head.store(tail, std::memory_order_release);
     }
 
     /**
@@ -221,6 +212,27 @@ public:
      */
     void refillWindow(uint64_t currentFrame, int sampleRate, int lookaheadSamples = 4096,
                       uint64_t loopLengthSamples = 0);
+
+    /**
+     * @brief Refill against an explicit loop and an epoch ticket (the live caller).
+     *
+     * @param ticket refillTicket(), taken BEFORE @p currentFrame was read. A rewind
+     *        landing between the two (a seek on the audio thread) would otherwise get
+     *        events planned from the old position stamped with the new epoch, and they
+     *        would all fire at the top of the next block.
+     * @param loop The loop to plan across (see ScheduleLoop); @p currentFrame is in
+     *        its monotonic domain.
+     */
+    void refillWindow(uint16_t ticket, uint64_t currentFrame, int sampleRate, int lookaheadSamples,
+                      const ScheduleLoop& loop);
+
+    /** @brief Epoch ticket for refillWindow(); take it before reading the playhead. Any thread. */
+    uint16_t refillTicket() const { return m_queueEpoch.load(std::memory_order_acquire); }
+    /** @brief The epoch the last completed refill queued under. Equal to refillTicket() once the
+     *  queue holds notes planned from the current playhead. Any thread. */
+    uint16_t plannedEpoch() const { return m_plannedEpoch.load(std::memory_order_acquire); }
+    /** @brief Whether any pattern instance is scheduled. Any thread. */
+    bool hasScheduledInstances() const { return m_instanceCount.load(std::memory_order_acquire) > 0; }
 
     /**
      * Process audio callback (RT-safe, audio thread only)
@@ -344,8 +356,27 @@ private:
     std::atomic<uint32_t> m_processedCounter;
     uint64_t m_lastRefillFrame{0}; // Detect loop wraps
 
-    // RT-safe flush: audio thread sets this flag, non-RT maintenance drains the queue.
-    std::atomic<bool> m_flushRequested{false};
+    // Queue epoch. Discarding queued events is a counter bump, never an index
+    // reset: each SPSC index keeps exactly one writer (head: the scheduler,
+    // tail: the audio thread). Any thread may bump it (rewindScheduledInstances);
+    // processAudio() drops events stamped with an older epoch, and refillWindow()
+    // treats a bump it did not make as a rewind request.
+    std::atomic<uint16_t> m_queueEpoch{0};
+    // The epoch the scheduler stamps onto new events (scheduler thread, under m_mutex).
+    uint16_t m_scheduledEpoch{0};
+    std::atomic<uint16_t> m_plannedEpoch{0xFFFF}; // see plannedEpoch(); no refill yet
+    std::atomic<size_t> m_instanceCount{0};        // m_activeInstances.size(), for hasScheduledInstances()
+    // Scheduler side: discard everything queued so far and stamp from a fresh epoch.
+    // Bumps only from the epoch this refill planned under: if a rewind landed since, this
+    // refill's events are already dead, and adopting the bumped epoch would revive them.
+    void invalidateQueuedEventsLocked() {
+        uint16_t expected = m_scheduledEpoch;
+        if (m_queueEpoch.compare_exchange_strong(expected, static_cast<uint16_t>(expected + 1),
+                                                 std::memory_order_acq_rel)) {
+            m_scheduledEpoch = static_cast<uint16_t>(expected + 1);
+        }
+    }
+    void pushScheduledLocked(ScheduledEvent event);
 
     // RT-safe content-edit notification: set by editors (Arsenal grid, Piano Roll)
     // when pattern notes change during playback. refillWindow pulls each instance's

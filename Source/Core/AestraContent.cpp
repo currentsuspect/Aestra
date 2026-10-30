@@ -642,7 +642,7 @@ void AestraContent::setupTrackManagerUI() {
         // 4. Perform bounce (Offline rendering)
         AESTRA_LOG_DEBUG("[AestraContent] Bouncing track " + std::to_string(trackId) + " to " + tempPath);
         bool success =
-            m_audioEngine->bounceRangeToWav(0.0, projectDurationBeats, tempPath, static_cast<int32_t>(trackId));
+            bounceRangeWithStreamPaused(0.0, projectDurationBeats, tempPath, static_cast<int32_t>(trackId));
 
         if (success) {
             m_tempFiles.push_back(tempPath);
@@ -674,7 +674,7 @@ void AestraContent::setupTrackManagerUI() {
 
         // 2. Perform bounce (trackId -1 means Master Output)
         AESTRA_LOG_DEBUG("[AestraContent] Bouncing selection to " + tempPath);
-        bool success = m_audioEngine->bounceRangeToWav(startBeat, endBeat, tempPath, -1);
+        bool success = bounceRangeWithStreamPaused(startBeat, endBeat, tempPath, -1);
 
         if (success) {
             m_tempFiles.push_back(tempPath);

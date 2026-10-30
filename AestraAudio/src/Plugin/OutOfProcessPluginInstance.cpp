@@ -847,6 +847,12 @@ bool OutOfProcessPluginInstance::initialize(double sampleRate, uint32_t maxBlock
     m_readyFrames.store(0, std::memory_order_release);
     m_pendingState.store(0, std::memory_order_release);
     m_readyState.store(0, std::memory_order_release);
+    // Room for a chunk in flight plus two callbacks either side (see process()).
+    m_inFifo.reset(static_cast<size_t>(std::max<uint32_t>(1, maxBlockSize)) * 3, m_transportChannels);
+    m_outFifo.reset(static_cast<size_t>(std::max<uint32_t>(1, maxBlockSize)) * 3, m_transportChannels);
+    m_midiQueue.clear();
+    m_inFifoEnd = 0;
+    m_chunkFrames.store(0, std::memory_order_release);
 
     std::ostringstream command;
     command << "INIT " << sampleRate << " " << maxBlockSize;
@@ -939,80 +945,10 @@ void OutOfProcessPluginInstance::deactivate() {
     m_active.store(false, std::memory_order_release);
 }
 
-void OutOfProcessPluginInstance::process(const float* const* inputs, float** outputs, uint32_t numInputChannels,
-                                         uint32_t numOutputChannels, uint32_t numFrames, const MidiBuffer* midiInput,
-                                         MidiBuffer* midiOutput) {
-    if (midiOutput) {
-        midiOutput->clear();
-    }
-
-    if (m_crashed.load(std::memory_order_acquire) || m_maxBlockSize == 0 || numFrames > m_maxBlockSize) {
-        passThrough(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
-        return;
-    }
-
-    uint8_t readyEmpty = 2;
-    bool usedReadyOutput = false;
-    if (m_readyState.compare_exchange_strong(readyEmpty, 3, std::memory_order_acq_rel)) {
-        const uint32_t frames = std::min<uint32_t>(m_readyFrames.load(std::memory_order_acquire), numFrames);
-        for (uint32_t ch = 0; ch < numOutputChannels; ++ch) {
-            if (!outputs || !outputs[ch]) {
-                continue;
-            }
-            if (ch < m_transportChannels) {
-                for (uint32_t frame = 0; frame < frames; ++frame) {
-                    outputs[ch][frame] = m_readyOutput[static_cast<size_t>(frame) * m_transportChannels + ch];
-                }
-                if (frames < numFrames) {
-                    std::memset(outputs[ch] + frames, 0, static_cast<size_t>(numFrames - frames) * sizeof(float));
-                }
-            } else {
-                std::memset(outputs[ch], 0, static_cast<size_t>(numFrames) * sizeof(float));
-            }
-        }
-        m_readyState.store(0, std::memory_order_release);
-        usedReadyOutput = true;
-        m_helperBlocks.fetch_add(1, std::memory_order_relaxed);
-    }
-
-    uint8_t pendingEmpty = 0;
-    if (m_pendingState.compare_exchange_strong(pendingEmpty, 1, std::memory_order_acq_rel)) {
-        for (uint32_t frame = 0; frame < numFrames; ++frame) {
-            for (uint32_t ch = 0; ch < m_transportChannels; ++ch) {
-                const size_t index = static_cast<size_t>(frame) * m_transportChannels + ch;
-                m_pendingInput[index] = (inputs && ch < numInputChannels && inputs[ch]) ? inputs[ch][frame] : 0.0f;
-            }
-        }
-        size_t midiBytes = 0;
-        if (midiInput) {
-            const size_t maxEvents = m_pendingMidiData.size() / 8;
-            const size_t eventCount = std::min(midiInput->getEventCount(), maxEvents);
-            for (size_t i = 0; i < eventCount; ++i) {
-                const auto& event = midiInput->getEvent(i);
-                if (event.size != 3 || midiBytes + 8 > m_pendingMidiData.size()) {
-                    continue;
-                }
-                const uint32_t sampleOffset = std::min<uint32_t>(event.sampleOffset, numFrames > 0 ? numFrames - 1 : 0);
-                std::memcpy(m_pendingMidiData.data() + midiBytes, &sampleOffset, sizeof(sampleOffset));
-                m_pendingMidiData[midiBytes + 4] = event.size;
-                std::memcpy(m_pendingMidiData.data() + midiBytes + 5, event.data, 3);
-                midiBytes += 8;
-            }
-        }
-        m_pendingTransport = HostTransportClock::current();
-        m_pendingMidiBytes.store(midiBytes, std::memory_order_release);
-        m_pendingFrames.store(numFrames, std::memory_order_release);
-        m_pendingState.store(2, std::memory_order_release);
-        if (m_wake) {
-            m_wake->post();
-        }
-    } else {
-        m_unsentBlocks.fetch_add(1, std::memory_order_relaxed);
-    }
-
-    if (!usedReadyOutput) {
-        m_dryBlocks.fetch_add(1, std::memory_order_relaxed);
-        passThrough(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
+// process() — the audio-thread side of the hand-over — lives in OutOfProcessPluginInstanceRt.cpp.
+void OutOfProcessPluginInstance::wakeWorker() noexcept {
+    if (m_wake) {
+        m_wake->post();
     }
 }
 

@@ -188,6 +188,7 @@ void SamplerPlugin::shutdown() {
     m_active = false;
     // Force release of data to ensure cleanup
     auto old = m_data.exchange(std::shared_ptr<SampleData>(nullptr), std::memory_order_acq_rel);
+    publishSample(nullptr);
     publishToKeepLength(nullptr);
     GarbageCollector::instance().release(old, "SamplerPlugin::SampleData shutdown");
     std::lock_guard<std::mutex> lock(m_retiredMutex);
@@ -270,6 +271,7 @@ bool SamplerPlugin::loadSampleData(const std::string& path, std::vector<float> d
     // Atomic Swap (Thread-Safe, Lock-Free-ish)
     // std::atomic_exchange uses standard atomics for shared_ptr
     auto oldData = m_data.exchange(newData, std::memory_order_acq_rel);
+    publishSample(newData);
     publishToKeepLength(newData);
 
     // Voices still sounding finish on the old sample (gap-free swap); it is collected once none read it.
@@ -299,6 +301,7 @@ bool SamplerPlugin::normalizeSample(float targetPeak) {
     }
 
     auto oldData = m_data.exchange(edited, std::memory_order_acq_rel);
+    publishSample(edited);
     publishToKeepLength(edited);
     retireSample(std::move(oldData));
     return true;
@@ -326,6 +329,7 @@ bool SamplerPlugin::reverseSample() {
     }
 
     auto oldData = m_data.exchange(edited, std::memory_order_acq_rel);
+    publishSample(edited);
     publishToKeepLength(edited);
     retireSample(std::move(oldData));
     return true;
@@ -372,8 +376,9 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
         if (!v.active && v.held) v.held.reset(); // a refcount drop: the retired list owns the buffer
     }
 
-    // Thread-safe access to sample data
-    auto currentData = m_data.load(std::memory_order_acquire);
+    // Thread-safe access to sample data: a lock-free pin held for the whole block.
+    const auto samplePin = m_rtData.readRealtime();
+    const std::shared_ptr<SampleData>& currentData = samplePin.shared();
     if (!currentData || currentData->data.empty())
         return;
 
