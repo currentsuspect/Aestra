@@ -4518,6 +4518,13 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraCore/JSONLocaleIndependenceTest.cpp
     message(STATUS "JSONLocaleIndependenceTest added - JSON decimal separator locale independence")
 endif()
 
+# A malformed array ends the parse instead of appending empty values until memory runs out (2026-10-30: one quote in
+# a Muse verb description took MuseVerifyRenderTest to 12 GB). The TIMEOUT is part of the test: the old code hangs.
+add_executable(JSONMalformedArrayTest AestraCore/JSONMalformedArrayTest.cpp)
+target_include_directories(JSONMalformedArrayTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraCore/include)
+add_test(NAME JSONMalformedArrayTest COMMAND JSONMalformedArrayTest)
+set_tests_properties(JSONMalformedArrayTest PROPERTIES TIMEOUT 20 LABELS "core;json;regression;contract:core")
+
 # JSON::asArray() const / asObject() const return real data (they returned an
 # always-empty static from #179 on, silently hiding every const read).
 add_executable(JSONConstAccessTest AestraCore/JSONConstAccessTest.cpp)
