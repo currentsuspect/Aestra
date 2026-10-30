@@ -441,18 +441,18 @@ void AudioSettingsPage::createUI() {
     });
 
     m_testSoundButton = std::make_shared<AestraUI::NUIButton>();
-    m_testSoundButton->setText("Test Sound");
+    m_testSoundButton->setText("Test sound");
     m_testSoundButton->setStyle(AestraUI::NUIButton::Style::Secondary);
     m_testSoundButton->setOnClick([this]() {
         bool playing = m_audioEngine->isTestToneEnabled();
         playing = !playing;
         m_audioEngine->setTestToneEnabled(playing);
-        
-        m_testSoundButton->setText(playing ? "Stop Test Sound" : "Test Sound");
-        
+
+        m_testSoundButton->setText(playing ? "Stop sound" : "Test sound");
+
         // NOTE: No stream restore needed - test tone uses existing audio callback
     });
-    addChild(m_testSoundButton);
+    // Not a child: the Settings dialog shows it in its footer (footerAction()).
     Log::info("[AudioSettingsPage] Test sound button created");
 
     // Initial Population
@@ -497,6 +497,8 @@ void AudioSettingsPage::applyChanges() {
     // settings were stored when they were not (engineering-health §4).
     if (saveSettings()) {
         m_dirty = false;
+        m_baselineBuffer = m_bufferSizeDropdown->getSelectedValue();
+        updateLatencyEstimate();
     }
 }
 
@@ -569,6 +571,8 @@ bool AudioSettingsPage::hasUnsavedChanges() const {
 }
 
 void AudioSettingsPage::onShow() {
+    m_baselineBuffer = m_bufferSizeDropdown ? m_bufferSizeDropdown->getSelectedValue() : 0;
+    updateLatencyEstimate();
     // Refresh device lists in case hardware changed — off the UI thread (#256)
     startAsyncDeviceLoad();
 }
@@ -577,88 +581,73 @@ void AudioSettingsPage::onHide() {
     // Stop test sound if playing
     if (m_audioEngine->isTestToneEnabled()) {
         m_audioEngine->setTestToneEnabled(false);
-        m_testSoundButton->setText("Test Sound");
+        m_testSoundButton->setText("Test sound");
         if (m_onStreamRestore) m_onStreamRestore();
     }
 }
 
+// The buffer row's hint: what it costs in milliseconds, and what it was before this visit (board 2).
 void AudioSettingsPage::updateLatencyEstimate() {
-    // Calculate and set label text based on current selection
-    int srVal = m_sampleRateDropdown->getSelectedValue();
-    int bufVal = m_bufferSizeDropdown->getSelectedValue();
-    
+    const int srVal = m_sampleRateDropdown->getSelectedValue();
+    const int bufVal = m_bufferSizeDropdown->getSelectedValue();
+    std::string hint;
     if (srVal > 0 && bufVal > 0) {
-        double latMs = (double)bufVal / (double)srVal * 1000.0;
-        // Add safety buffer estimate (usually 2x or 3x depending on buffering)
-        // For UI estimate, simple buffer latency is fine, maybe * 2 for roundtrip visual
         std::stringstream ss;
-        ss << "Est. Latency: " << (int)latMs << " ms (" << bufVal << " spl)";
-        m_latencyLabel->setText(ss.str());
-    } else {
-        m_latencyLabel->setText("Est. Latency: -- ms");
+        ss.setf(std::ios::fixed);
+        ss.precision(1);
+        ss << static_cast<double>(bufVal) / static_cast<double>(srVal) * 1000.0 << " ms";
+        if (m_baselineBuffer > 0 && bufVal != m_baselineBuffer) {
+            ss << " \u00b7 was " << m_baselineBuffer;
+        }
+        hint = ss.str();
     }
+    m_latencyLabel->setText(hint);
+    m_form.setHint(m_bufferSizeDropdown.get(), hint);
+    setDirty(true);
 }
 
-// Layout
 void AudioSettingsPage::layoutComponents() {
-    auto b = getBounds();
-    const auto& theme = AestraUI::NUIThemeManager::getInstance().getCurrentTheme();
-    float padding = theme.spacingM;
-    float colWidth = (b.width - padding * 3) / 2.0f;
-    float rowHeight = theme.layout.standardControlHeight;
-    float gap = theme.spacingS;
-    
-    float x1 = b.x + padding;
-    float x2 = b.x + padding * 2 + colWidth;
-    float y = b.y + padding;
-    
-    auto layRow = [&](auto& label, auto& comp, float x) {
-        label->setBounds(AestraUI::NUIRect(x, y, 100, rowHeight));
-        comp->setBounds(AestraUI::NUIRect(x + 110, y, colWidth - 110, rowHeight));
-    };
-    
-    // Left Column: Device
-    layRow(m_driverLabel, m_driverDropdown, x1); y += rowHeight + gap;
-    layRow(m_deviceLabel, m_deviceDropdown, x1); y += rowHeight + gap;
-    layRow(m_inputDeviceLabel, m_inputDeviceDropdown, x1); y += rowHeight + gap;
-    layRow(m_sampleRateLabel, m_sampleRateDropdown, x1); y += rowHeight + gap;
-    layRow(m_bufferSizeLabel, m_bufferSizeDropdown, x1); y += rowHeight + gap;
-    m_latencyLabel->setBounds(AestraUI::NUIRect(x1 + 110, y, colWidth - 110,
-                                                theme.layout.compactControlHeight));
-    y += theme.layout.standardControlHeight;
-    
-    // Test Sound Button (below left column)
-    m_testSoundButton->setBounds(AestraUI::NUIRect(x1, y, colWidth, theme.layout.standardControlHeight));
-    
-    // Loading indicator (centered in left column)
-    if (m_loadingLabel) {
-        m_loadingLabel->setBounds(AestraUI::NUIRect(x1, y + theme.spacingXL, colWidth,
-                                                    theme.layout.compactControlHeight));
+    // The form draws every label itself; the old label components stay only as state.
+    for (auto* label :
+         {&m_driverLabel, &m_deviceLabel, &m_inputDeviceLabel, &m_sampleRateLabel, &m_bufferSizeLabel, &m_latencyLabel,
+          &m_qualityPresetLabel, &m_resamplingLabel, &m_ditheringLabel, &m_dcRemovalLabel, &m_softClippingLabel,
+          &m_previewDuckingLabel, &m_stopCutsSoundLabel, &m_multiThreadingLabel, &m_threadCountLabel}) {
+        if (*label)
+            (*label)->setVisible(false);
     }
+    const bool loading = m_isLoadingDevices.load();
+    if (m_loadingLabel)
+        m_loadingLabel->setVisible(false); // shown as the Driver row's hint instead
+    constexpr float kToggle = 36.0f;
+    const std::string presetHint = "set by the preset";
 
-    // Right Column: Processing (reset Y)
-    y = b.y + padding;
-    layRow(m_qualityPresetLabel, m_qualityPresetDropdown, x2); y += rowHeight + gap;
-    layRow(m_resamplingLabel, m_resamplingDropdown, x2); y += rowHeight + gap;
-    layRow(m_ditheringLabel, m_ditheringDropdown, x2); y += rowHeight + gap;
-    
-    // Toggles need smaller height to look good centered in row, but bounds handled by component
-    // Assuming NUIToggle sizes itself or centers content. 
-    // We'll give it the row height.
-    layRow(m_dcRemovalLabel, m_dcRemovalToggle, x2); y += rowHeight + gap;
-    layRow(m_softClippingLabel, m_softClippingToggle, x2); y += rowHeight + gap;
-    layRow(m_previewDuckingLabel, m_previewDuckingDropdown, x2); y += rowHeight + gap;
-    layRow(m_stopCutsSoundLabel, m_stopCutsSoundToggle, x2); y += rowHeight + gap;
-    layRow(m_multiThreadingLabel, m_multiThreadingToggle, x2); y += rowHeight + gap;
-    
-    // Conditionally show thread count if multithreading is enabled. Hidden, not just left unplaced: an unplaced
-    // row still drew at the window's corner, over the File menu.
-    m_threadCountLabel->setVisible(m_multiThreadingToggle->isOn());
-    m_threadCountInput->setVisible(m_multiThreadingToggle->isOn());
-    if (m_multiThreadingToggle->isOn()) {
-         layRow(m_threadCountLabel, m_threadCountInput, x2);
-         y += rowHeight + gap; // Fix: Increment Y so subsequent elements (if any) don't overlap
+    m_form.clear();
+    m_form.section("DEVICE");
+    m_form.row("Driver", m_driverDropdown, loading ? m_loadingLabel->getText() : std::string());
+    m_form.row("Output", m_deviceDropdown);
+    m_form.row("Input", m_inputDeviceDropdown);
+    m_form.section("FORMAT");
+    m_form.row("Sample rate", m_sampleRateDropdown);
+    m_form.row("Buffer", m_bufferSizeDropdown, m_latencyLabel ? m_latencyLabel->getText() : std::string());
+    m_form.section("QUALITY");
+    m_form.row("Preset", m_qualityPresetDropdown);
+    m_form.row("Resampling", m_resamplingDropdown, presetHint);
+    m_form.row("Dithering", m_ditheringDropdown, presetHint);
+    m_form.section("PLAYBACK");
+    m_form.row("Master limiter", m_softClippingToggle, "", kToggle);
+    m_form.row("Remove DC offset", m_dcRemovalToggle, "", kToggle);
+    m_form.row("Duck while previewing", m_previewDuckingDropdown);
+    m_form.row("Stop cuts sound", m_stopCutsSoundToggle, "plugin tails end when you stop", kToggle);
+    m_form.section("PERFORMANCE");
+    m_form.row("Use several cores", m_multiThreadingToggle, "", kToggle);
+    const bool threads = m_multiThreadingToggle->isOn();
+    m_threadCountInput->setVisible(threads);
+    if (threads) {
+        m_form.row("Threads", m_threadCountInput, "", 120.0f);
     }
+    m_form.layout(getBounds());
+    if (!threads)
+        m_threadCountInput->setVisible(false);
 }
 
 void AudioSettingsPage::applyQualityPreset(int preset) {
@@ -672,22 +661,16 @@ void AudioSettingsPage::applyQualityPreset(int preset) {
 }
 
 void AudioSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
-    // Render all children normally
+    m_form.paint(renderer);
+    renderer.setClipRect(m_form.area());
     renderChildren(renderer);
-    
-    // Z-Order Fix: Render open dropdown list ON TOP of everything else
-    // Iterate children to find open dropdowns
+    renderer.clearClipRect();
+
+    // An open dropdown list draws over everything, outside the clip.
     for (const auto& child : getChildren()) {
-        if (!child->isVisible()) continue;
-        
+        if (!child->isVisible())
+            continue;
         if (auto dd = std::dynamic_pointer_cast<AestraUI::NUIDropdown>(child)) {
-            // Because getChildren returns const shared_ptrs, and renderDropdownList is non-const,
-            // we might need to cast away constness or ensure renderDropdownList is const.
-            // Actually getChildren returns vector of shared_ptrs. The pointers themselves are not const to the object.
-            // But iteration 'const auto& child' means child is 'const shared_ptr<NUIComponent>&'.
-            // Accessing the object child-> is fine (returns NUIComponent* / NUIDropdown*).
-            // dynamic_pointer_cast returns shared_ptr<NUIDropdown>.
-            
             if (dd->isOpen()) {
                 dd->renderDropdownList(renderer);
             }
@@ -724,11 +707,19 @@ void AudioSettingsPage::onUpdate(double deltaTime) {
         std::string text = "Loading audio devices";
         for (int i = 0; i < dots; ++i) text += ".";
         m_loadingLabel->setText(text);
+        m_form.setHint(m_driverDropdown.get(), text);
+        setDirty(true);
     }
 }
 
 bool AudioSettingsPage::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
-    return AestraUI::NUIComponent::onMouseEvent(event);
+    if (AestraUI::NUIComponent::onMouseEvent(event))
+        return true;
+    if (m_form.onMouseWheel(event)) {
+        setDirty(true);
+        return true;
+    }
+    return false;
 }
 
 
@@ -936,7 +927,7 @@ void AudioSettingsPage::setPlayingTestSound(bool playing) {
     if (m_audioEngine) {
         m_audioEngine->setTestToneEnabled(playing);
         if (m_testSoundButton) {
-            m_testSoundButton->setText(playing ? "Stop Test Sound" : "Test Sound");
+            m_testSoundButton->setText(playing ? "Stop sound" : "Test sound");
         }
     }
 }
@@ -1139,7 +1130,8 @@ void AudioSettingsPage::onDeviceLoadComplete() {
     if (m_loadingLabel) {
         m_loadingLabel->setVisible(false);
     }
-    
+    m_form.setHint(m_driverDropdown.get(), "");
+
     // Re-enable dropdowns
     if (m_driverDropdown) m_driverDropdown->setEnabled(true);
     if (m_deviceDropdown) m_deviceDropdown->setEnabled(true);

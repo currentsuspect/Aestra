@@ -42,12 +42,6 @@ std::vector<std::string> wrapText(AestraUI::NUIRenderer& renderer, const std::st
     return lines;
 }
 
-void card(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& r) {
-    auto& theme = AestraUI::NUIThemeManager::getInstance();
-    renderer.fillRoundedRect(r, 10.0f, theme.getColor("surfaceTertiary"));
-    renderer.strokeRoundedRect(r, 10.0f, 0.5f, theme.getColor("borderSubtle"));
-}
-
 } // namespace
 
 UpdatesSettingsPage::UpdatesSettingsPage(std::shared_ptr<UpdateNotifier> notifier) : m_notifier(std::move(notifier)) {
@@ -58,7 +52,7 @@ UpdatesSettingsPage::UpdatesSettingsPage(std::shared_ptr<UpdateNotifier> notifie
 void UpdatesSettingsPage::createUI() {
     m_checkButton = std::make_shared<AestraUI::NUIButton>();
     m_checkButton->setText("Check now");
-    m_checkButton->setStyle(AestraUI::NUIButton::Style::Primary);
+    m_checkButton->setStyle(AestraUI::NUIButton::Style::Secondary);
     m_checkButton->setOnClick([this]() { checkNow(); });
     addChild(m_checkButton);
 
@@ -89,7 +83,7 @@ void UpdatesSettingsPage::createUI() {
 
     m_keyInput = std::make_shared<AestraUI::NUITextInput>();
     m_keyInput->setInputType(AestraUI::NUITextInput::InputType::Password); // a key is not for shoulder surfers
-    m_keyInput->setPlaceholderText("Founder key");
+    m_keyInput->setPlaceholderText("Early access key");
     m_keyInput->setMaxLength(128);
     m_keyInput->setOnReturnKey([this]() { commitKey(true); });
     m_keyInput->setOnFocusLost([this]() { commitKey(true); });
@@ -199,43 +193,48 @@ void UpdatesSettingsPage::onResize(int width, int height) {
     layoutComponents();
 }
 
+// Board 2's form: the status (with Check now) and an install in progress are blocks this page draws; channel,
+// key and the automatic check are ordinary rows.
 void UpdatesSettingsPage::layoutComponents() {
-    const AestraUI::NUIRect b = getBounds();
-    const float pad = 20.0f;
-    const float cardW = std::min(b.width - 2.0f * pad, 640.0f);
-    const float x = b.x + pad;
-    float y = b.y + pad;
-
-    m_statusCard = AestraUI::NUIRect(x, y, cardW, 96.0f);
-    m_checkButton->setBounds(AestraUI::NUIRect(m_statusCard.right() - 130.0f, m_statusCard.y + 28.0f, 110.0f, 34.0f));
-    y = m_statusCard.bottom() + 14.0f;
-
-    // The install card, only while there is something to install (or an install to follow).
+    const bool fresh = m_notifier && m_notifier->hasResult() && m_notifier->resultCount() > m_ignoreResultsBefore;
+    const bool notes = fresh && !m_checking && m_notifier->lastResult().status == UpdateCheckStatus::Available;
     m_installShown = installVisible();
     m_installButton->setVisible(m_installShown);
-    if (m_installShown) {
-        m_installCard = AestraUI::NUIRect(x, y, cardW, 84.0f);
-        m_installButton->setBounds(AestraUI::NUIRect(m_installCard.right() - 200.0f, m_installCard.y + 25.0f, 180.0f, 34.0f));
-        m_cancelButton->setBounds(AestraUI::NUIRect(m_installCard.right() - 290.0f, m_installCard.y + 25.0f, 80.0f, 34.0f));
-        y = m_installCard.bottom() + 14.0f;
-    } else {
-        m_installCard = AestraUI::NUIRect();
+    if (!m_installShown)
         m_cancelButton->setVisible(false);
+
+    m_form.clear();
+    m_form.section("THIS COPY");
+    m_statusItem = m_form.block(nullptr, 64.0f);
+    m_installItem = m_installShown ? m_form.block(nullptr, 72.0f) : SIZE_MAX;
+    m_form.section("CHANNEL");
+    m_form.row("Builds", m_stableButton,
+               m_early ? "Early builds, before they reach everyone" : "Tested builds for everyone", 96.0f);
+    if (m_early) {
+        m_form.row("Early access key", m_keyInput, "", 300.0f);
     }
+    m_keyInput->setVisible(m_early);
+    m_form.section("AUTOMATIC");
+    m_form.row("Check for updates", m_autoToggle, "after Aestra starts, then daily; nothing installs by itself", 40.0f);
+    m_notesItem = notes ? m_form.block(nullptr, 150.0f) : SIZE_MAX;
+    m_form.layout(getBounds());
 
-    const float channelH = m_early ? 158.0f : 104.0f;
-    m_channelCard = AestraUI::NUIRect(x, y, cardW, channelH);
-    m_stableButton->setBounds(AestraUI::NUIRect(m_channelCard.x + 16.0f, m_channelCard.y + 40.0f, 120.0f, 32.0f));
-    m_earlyButton->setBounds(AestraUI::NUIRect(m_channelCard.x + 142.0f, m_channelCard.y + 40.0f, 140.0f, 32.0f));
-    m_keyRowY = m_channelCard.y + 106.0f;
-    m_keyInput->setBounds(AestraUI::NUIRect(m_channelCard.x + 16.0f, m_keyRowY, cardW - 32.0f, 34.0f));
-    y = m_channelCard.bottom() + 14.0f;
+    // Early access sits beside Stable, as one choice; the hint moves past both.
+    const auto& stable = m_stableButton->getBounds();
+    m_earlyButton->setBounds(AestraUI::NUIRect(stable.right() + 6.0f, stable.y, 112.0f, stable.height));
+    m_earlyButton->setVisible(m_stableButton->isVisible());
+    m_form.setHint(m_stableButton.get(), "");
+    m_channelHint = m_early ? "Early builds, before they reach everyone" : "Tested builds for everyone";
+    m_channelHintX = m_earlyButton->getBounds().right() + 12.0f;
 
-    m_autoCard = AestraUI::NUIRect(x, y, cardW, 64.0f);
-    m_autoToggle->setBounds(AestraUI::NUIRect(m_autoCard.right() - 16.0f - 44.0f, m_autoCard.y + 22.0f, 44.0f, 22.0f));
-    y = m_autoCard.bottom() + 14.0f;
-
-    m_notesCard = AestraUI::NUIRect(x, y, cardW, std::max(0.0f, b.bottom() - y - pad));
+    const auto status = m_form.boundsOf(m_statusItem);
+    m_checkButton->setBounds(
+        AestraUI::NUIRect(status.right() - 110.0f, status.y + (status.height - 28.0f) * 0.5f, 110.0f, 28.0f));
+    if (m_installShown) {
+        const auto install = m_form.boundsOf(m_installItem);
+        m_installButton->setBounds(AestraUI::NUIRect(install.right() - 170.0f, install.y + 12.0f, 170.0f, 28.0f));
+        m_cancelButton->setBounds(AestraUI::NUIRect(install.right() - 254.0f, install.y + 12.0f, 76.0f, 28.0f));
+    }
 }
 
 void UpdatesSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
@@ -243,9 +242,10 @@ void UpdatesSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
     if (getBounds().isEmpty() || !m_notifier) return;
     const auto textPrimary = theme.getColor("textPrimary");
     const auto textSecondary = theme.getColor("textSecondary");
-    const float big = theme.getFontSize("l");
-    const float normal = theme.getFontSize("m");
-    const float small = theme.getFontSize("s");
+    const auto textMuted = theme.getColor("textMuted");
+    const float title = 14.0f;
+    const float normal = 13.0f;
+    const float small = 11.5f;
     const UpdateSettings settings = m_notifier->settings();
     const UpdateCheckResult result = m_notifier->lastResult();
     const std::string current = UpdateNotifier::currentVersion();
@@ -257,35 +257,37 @@ void UpdatesSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
     const bool haveAnswer = fresh || (settings.channel == "early" && settings.founderKey.empty());
     const UpdateStatusText status = describeUpdateStatus(m_checking, haveAnswer, shown, settings, current);
 
+    m_form.paint(renderer);
+    renderer.setClipRect(m_form.area());
+
     // Status
-    card(renderer, m_statusCard);
+    const auto statusRect = m_form.boundsOf(m_statusItem);
     const auto tone = status.tone == UpdateStatusText::Tone::Good   ? theme.getColor("success")
                       : status.tone == UpdateStatusText::Tone::Warn ? theme.getColor("warning")
                                                                     : textPrimary;
-    const float textX = m_statusCard.x + 18.0f;
-    renderer.drawText(status.headline, {textX, m_statusCard.y + 18.0f}, big, tone);
+    renderer.drawText(status.headline, {statusRect.x, statusRect.y + 12.0f}, title, tone);
     if (!status.detail.empty()) {
-        const float room = m_checkButton->getBounds().x - textX - 14.0f;
-        const auto lines = wrapText(renderer, status.detail, normal, room, 2);
+        const float room = m_checkButton->getBounds().x - statusRect.x - 14.0f;
+        const auto lines = wrapText(renderer, status.detail, small, room, 2);
         for (size_t i = 0; i < lines.size(); ++i)
-            renderer.drawText(lines[i], {textX, m_statusCard.y + 46.0f + static_cast<float>(i) * (normal + 4.0f)}, normal, textSecondary);
+            renderer.drawText(lines[i], {statusRect.x, statusRect.y + 34.0f + static_cast<float>(i) * (small + 4.0f)},
+                              small, textMuted);
     }
 
     // Install
     if (m_installShown) {
-        card(renderer, m_installCard);
+        const auto installRect = m_form.boundsOf(m_installItem);
         const InstallState st = m_notifier->installState();
-        const float left = m_installCard.x + 18.0f;
+        const float left = installRect.x;
         const float room = m_cancelButton->getBounds().x - left - 14.0f;
         std::string headline, detail;
         const bool busy = st.phase == InstallPhase::Downloading || st.phase == InstallPhase::Unpacking;
         switch (st.phase) {
-        case InstallPhase::Downloading: {
+        case InstallPhase::Downloading:
             headline = "Downloading " + st.version;
             detail = updateSizeText(st.done) + " of " + updateSizeText(st.total);
             m_installButton->setText("Downloading...");
             break;
-        }
         case InstallPhase::Unpacking:
             headline = "Getting " + st.version + " ready";
             detail = "Checking and unpacking the download.";
@@ -315,44 +317,43 @@ void UpdatesSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
         }
         m_installButton->setEnabled(!busy);
         m_cancelButton->setVisible(st.phase == InstallPhase::Downloading);
-        renderer.drawText(headline, {left, m_installCard.y + 14.0f}, normal, textPrimary);
+        renderer.drawText(headline, {left, installRect.y + 12.0f}, normal, textPrimary);
         const auto lines = wrapText(renderer, detail, small, room, 2);
         for (size_t i = 0; i < lines.size(); ++i)
-            renderer.drawText(lines[i], {left, m_installCard.y + 38.0f + static_cast<float>(i) * (small + 3.0f)}, small, st.phase == InstallPhase::Failed ? theme.getColor("warning") : textSecondary);
-        if (st.phase == InstallPhase::Downloading || st.phase == InstallPhase::Unpacking) {
-            const AestraUI::NUIRect bar(left, m_installCard.bottom() - 16.0f, room, 4.0f);
-            renderer.fillRoundedRect(bar, 2.0f, theme.getColor("borderSubtle"));
+            renderer.drawText(lines[i], {left, installRect.y + 32.0f + static_cast<float>(i) * (small + 3.0f)}, small,
+                              st.phase == InstallPhase::Failed ? theme.getColor("warning") : textMuted);
+        if (busy) {
+            const AestraUI::NUIRect bar(left, installRect.bottom() - 10.0f, installRect.width, 3.0f);
+            renderer.fillRect(bar, theme.getColor("border"));
             const float fraction = st.phase == InstallPhase::Unpacking ? 1.0f : (st.total > 0 ? std::min(1.0f, static_cast<float>(static_cast<double>(st.done) / static_cast<double>(st.total))) : 0.0f);
-            renderer.fillRoundedRect(AestraUI::NUIRect(bar.x, bar.y, std::max(4.0f, bar.width * fraction), bar.height), 2.0f, theme.getColor("accentPrimary"));
+            renderer.fillRect(AestraUI::NUIRect(bar.x, bar.y, std::max(3.0f, bar.width * fraction), bar.height),
+                              theme.getColor("primary"));
         }
     }
 
-    // Channel
-    card(renderer, m_channelCard);
-    renderer.drawText("CHANNEL", {m_channelCard.x + 16.0f, m_channelCard.y + 14.0f}, small, textSecondary.withAlpha(0.8f));
-    renderer.drawText(m_early ? "Early builds for founders, before they reach everyone." : "Tested builds for everyone.",
-                      {m_channelCard.x + 296.0f, m_channelCard.y + 47.0f}, small, textSecondary);
-    if (m_early) renderer.drawText("FOUNDER KEY", {m_channelCard.x + 16.0f, m_channelCard.y + 86.0f}, small, textSecondary.withAlpha(0.8f));
-
-    // Automatic
-    card(renderer, m_autoCard);
-    renderer.drawText("Check for updates automatically", {m_autoCard.x + 16.0f, m_autoCard.y + 14.0f}, normal, textPrimary);
-    renderer.drawText("Shortly after Aestra starts, then once a day. Nothing installs by itself.",
-                      {m_autoCard.x + 16.0f, m_autoCard.y + 36.0f}, small, textSecondary);
+    // Stable and Early access are one choice (the chosen one is filled); its hint follows both.
+    if (m_stableButton->isVisible()) {
+        renderer.drawText(m_channelHint, {m_channelHintX, renderer.calculateTextY(m_stableButton->getBounds(), small)},
+                          small, textMuted);
+    }
 
     // What's new, when there is something
-    if (fresh && result.status == UpdateCheckStatus::Available && !m_checking && m_notesCard.height > 60.0f) {
-        card(renderer, m_notesCard);
-        renderer.drawText("WHAT'S NEW IN " + result.manifest.version, {m_notesCard.x + 16.0f, m_notesCard.y + 14.0f}, small, textSecondary.withAlpha(0.8f));
+    if (m_notesItem != SIZE_MAX) {
+        const auto notesRect = m_form.boundsOf(m_notesItem);
+        renderer.drawText("WHAT'S NEW IN " + result.manifest.version, {notesRect.x, notesRect.y + 12.0f},
+                          theme.getCurrentTheme().fontSizeXS, textMuted);
         const float lineH = normal + 5.0f;
-        const size_t fit = static_cast<size_t>(std::max(1.0f, (m_notesCard.height - 52.0f) / lineH));
-        const auto lines = wrapText(renderer, result.manifest.notes.empty() ? "No notes for this build." : result.manifest.notes, normal,
-                                    m_notesCard.width - 32.0f, fit);
+        const size_t fit = static_cast<size_t>(std::max(1.0f, (notesRect.height - 40.0f) / lineH));
+        const auto lines =
+            wrapText(renderer, result.manifest.notes.empty() ? "No notes for this build." : result.manifest.notes,
+                     normal, notesRect.width, fit);
         for (size_t i = 0; i < lines.size(); ++i)
-            renderer.drawText(lines[i], {m_notesCard.x + 16.0f, m_notesCard.y + 38.0f + static_cast<float>(i) * lineH}, normal, textPrimary);
+            renderer.drawText(lines[i], {notesRect.x, notesRect.y + 32.0f + static_cast<float>(i) * lineH}, normal,
+                              textSecondary);
     }
 
     renderChildren(renderer);
+    renderer.clearClipRect();
 }
 
 } // namespace Aestra

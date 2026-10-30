@@ -7,8 +7,9 @@
 
 #include "ISettingsPage.h"
 #include "NUIButton.h"
-#include "NUITextInput.h"
 #include "NUICoreWidgets.h"
+#include "NUITextInput.h"
+#include "SettingsForm.h"
 
 #include <cstdint>
 #include <memory>
@@ -60,9 +61,11 @@ private:
     uint64_t m_ignoreResultsBefore = 0; ///< results older than the last channel switch are about another channel
     bool m_early = false;
 
-    AestraUI::NUIRect m_statusCard, m_installCard, m_channelCard, m_autoCard, m_notesCard;
+    SettingsForm m_form;
+    std::string m_channelHint;
+    float m_channelHintX = 0.0f;
+    size_t m_statusItem = 0, m_installItem = SIZE_MAX, m_notesItem = SIZE_MAX; ///< form blocks this page draws
     bool m_installShown = false;
-    float m_keyRowY = 0.0f;
 };
 
 } // namespace Aestra

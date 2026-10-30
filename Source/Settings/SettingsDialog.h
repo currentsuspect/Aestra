@@ -47,6 +47,9 @@ private:
     /// is always live — unlike show(), which can run before it exists.
     void syncToViewport();
     void updateSidebar();
+    int pendingChangeCount() const;
+    void saveAll();
+    void discardAll();
 
     bool m_visible;
     AestraUI::NUIRect m_dialogBounds;
@@ -71,10 +74,12 @@ private:
 
     std::string m_activePageId;
 
-    // Footer buttons
-    std::shared_ptr<AestraUI::NUIButton> m_applyButton;
-    std::shared_ptr<AestraUI::NUIButton> m_cancelButton;
-    std::shared_ptr<AestraUI::NUIButton> m_okButton;
+    // Footer: the page's own action on the left, Discard and Save changes on the right (V82-P12 board 2)
+    std::shared_ptr<AestraUI::NUIComponent> m_footerAction;
+    AestraUI::NUIRect m_footerBounds;
+    AestraUI::NUIRect m_titleBounds;
+    std::shared_ptr<AestraUI::NUIButton> m_cancelButton; // Discard
+    std::shared_ptr<AestraUI::NUIButton> m_okButton;     // Save changes
 
     // State
     std::function<void()> m_onClose;
