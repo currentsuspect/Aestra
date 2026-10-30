@@ -831,6 +831,11 @@ target_include_directories(EncodedAudioWriterTest PRIVATE ${CMAKE_SOURCE_DIR}/Ae
 add_test(NAME EncodedAudioWriterTest COMMAND EncodedAudioWriterTest)
 set_tests_properties(EncodedAudioWriterTest PROPERTIES SKIP_RETURN_CODE 77 LABELS "audio;export;regression;contract:audio")
 # V82-T2: which timeline tracks fold into "N empty tracks · show" (header-only rule, runs on every lane).
+# #999: with nothing on show, the Arsenal and piano roll open a pattern with notes (header-only rule).
+add_executable(ArsenalPatternPickTest AestraUI/ArsenalPatternPickTest.cpp)
+target_include_directories(ArsenalPatternPickTest PRIVATE ${CMAKE_SOURCE_DIR}/Source)
+add_test(NAME ArsenalPatternPickTest COMMAND ArsenalPatternPickTest)
+set_tests_properties(ArsenalPatternPickTest PROPERTIES LABELS "ui;arsenal;regression;contract:application")
 add_executable(TimelineFoldTest AestraUI/TimelineFoldTest.cpp)
 target_link_libraries(TimelineFoldTest PRIVATE AestraAudioCore)
 target_include_directories(TimelineFoldTest PRIVATE ${CMAKE_SOURCE_DIR}/Source ${CMAKE_SOURCE_DIR}/AestraAudio/include ${CMAKE_SOURCE_DIR}/AestraCore/include)
