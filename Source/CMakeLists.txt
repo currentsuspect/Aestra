@@ -112,6 +112,7 @@ set(Aestra_SOURCES
 	Settings/AppearanceSettingsPage.cpp
 	Settings/ExportDialog.h
 	Settings/ExportDialog.cpp
+	Settings/ExportDialogBoard.cpp
 	
 	# Components
 	Components/TransportInfoContainer.h

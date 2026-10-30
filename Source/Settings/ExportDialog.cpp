@@ -153,6 +153,7 @@ void ExportDialog::buildControls() {
     m_doneButton->setOnClick([this]() { finish(); });
     addChild(m_doneButton);
 
+    buildBoardControls();
     applyPanelState();
 }
 
@@ -220,8 +221,8 @@ void ExportDialog::show(const std::string& projectPath, Aestra::Audio::AudioEngi
 
     m_scopeDropdown->setSelectedIndex(m_selectedScope);
     m_rateDropdown->setSelectedIndex(m_selectedSampleRate);
-    m_depthDropdown->setSelectedIndex(m_selectedBitDepth);
-    m_outputInput->setText(m_outputPath);
+    syncFormatChips();
+    setOutputFromPath(m_outputPath);
     m_tailField->setText(m_tailInput);
     m_stems = false;
     m_stemsCheckbox->setChecked(false);
@@ -249,15 +250,16 @@ void ExportDialog::applyPanelState() {
     const bool settings = m_panelState == PanelState::Settings;
     const bool progress = m_panelState == PanelState::Progress;
     const bool complete = m_panelState == PanelState::Complete;
-    for (const auto& c : {m_outputLabel, m_scopeLabel, m_rateLabel, m_depthLabel, m_tailLabel})
-        c->setVisible(settings);
+    // Board 3: the old label rows, scope menu and stems checkbox are replaced by the painted board.
+    for (const auto& c : {m_outputLabel, m_scopeLabel, m_rateLabel, m_depthLabel, m_tailLabel, m_stemsHint})
+        c->setVisible(false);
+    m_scopeDropdown->setVisible(false);
+    m_stemsCheckbox->setVisible(false);
     for (const auto& c : {m_outputInput, m_tailField})
         c->setVisible(settings);
-    for (const auto& c : {m_scopeDropdown, m_rateDropdown, m_depthDropdown})
+    for (const auto& c : {m_rateDropdown, m_depthDropdown, m_formatDropdown})
         c->setVisible(settings);
     m_browseButton->setVisible(settings);
-    m_stemsCheckbox->setVisible(settings);
-    m_stemsHint->setVisible(settings && m_stems);
     m_exportButton->setVisible(settings);
     m_cancelButton->setVisible(settings || progress);
     m_doneButton->setVisible(complete);
@@ -310,7 +312,6 @@ void ExportDialog::layoutDialog() {
     const float pad = theme.spacingL;
     const float rowH = theme.layout.standardControlHeight;
     const float gap = theme.spacingS;
-    const float labelW = 110.0f;
     const float btnW = 110.0f;
     const float btnH = theme.layout.dialogActionHeight;
 
@@ -322,30 +323,9 @@ void ExportDialog::layoutDialog() {
         column = L::splitVertical(split.trailing, gap).trailing;
         return split.leading;
     };
-    const auto place = [&](const std::shared_ptr<AestraUI::NUILabel>& label, const auto& control, float controlW) {
-        const NUILocalRect row = nextRow(rowH);
-        const auto parts = L::splitHorizontal(row, labelW);
-        label->setBounds(toRect(parts.leading));
-        control->setBounds(NUIRect(parts.trailing.x, parts.trailing.y,
-                                   controlW > 0.0f ? controlW : parts.trailing.width, rowH));
-    };
 
     if (m_panelState == PanelState::Settings) {
-        const NUILocalRect outputRow = nextRow(rowH);
-        const auto labelSplit = L::splitHorizontal(outputRow, labelW);
-        const auto browseSplit = L::splitHorizontal(labelSplit.trailing, labelSplit.trailing.width - 82.0f);
-        m_outputLabel->setBounds(toRect(labelSplit.leading));
-        m_outputInput->setBounds(NUIRect(browseSplit.leading.x, browseSplit.leading.y, browseSplit.leading.width - 10.0f, rowH));
-        m_browseButton->setBounds(toRect(browseSplit.trailing));
-        place(m_scopeLabel, m_scopeDropdown, 0.0f);
-        place(m_rateLabel, m_rateDropdown, 0.0f);
-        place(m_depthLabel, m_depthDropdown, 0.0f);
-        place(m_tailLabel, m_tailField, 80.0f);
-        const NUILocalRect stemsRow = nextRow(rowH);
-        m_stemsCheckbox->setBounds(toRect(stemsRow));
-        if (m_stems) {
-            m_stemsHint->setBounds(toRect(nextRow(rowH * 1.4f)));
-        }
+        layoutSettingsBoard();
     } else if (m_panelState == PanelState::Progress) {
         m_statusLabel->setBounds(toRect(nextRow(rowH)));
         m_progressBar->setBounds(toRect(nextRow(20.0f)));
@@ -359,10 +339,10 @@ void ExportDialog::layoutDialog() {
     // Buttons, centred at the bottom.
     const float btnY = m_dialogRect.bottom() - btnH - theme.spacingM;
     if (m_panelState == PanelState::Settings) {
-        const float total = btnW * 2.0f + theme.spacingS;
-        const float x0 = m_dialogRect.x + (m_dialogRect.width - total) * 0.5f;
-        m_exportButton->setBounds(NUIRect(x0, btnY, btnW, btnH));
-        m_cancelButton->setBounds(NUIRect(x0 + btnW + theme.spacingS, btnY, btnW, btnH));
+        // Board 3: Cancel then Export, at the right of the footer.
+        const float exportW = 92.0f, cancelW = 80.0f, h = 28.0f, y = m_dialogRect.bottom() - 14.0f - h;
+        m_exportButton->setBounds(NUIRect(m_dialogRect.right() - 14.0f - exportW, y, exportW, h));
+        m_cancelButton->setBounds(NUIRect(m_dialogRect.right() - 14.0f - exportW - 8.0f - cancelW, y, cancelW, h));
     } else {
         const NUIRect centred(m_dialogRect.x + (m_dialogRect.width - btnW) * 0.5f, btnY, btnW, btnH);
         m_cancelButton->setBounds(centred);
@@ -388,8 +368,7 @@ void ExportDialog::onUpdate(double deltaTime) {
 
     if (auto pickedPath = m_fileDialog.takeResult()) {
         if (!pickedPath->empty()) {
-            m_outputPath = *pickedPath;
-            m_outputInput->setText(m_outputPath);
+            setOutputFromPath(*pickedPath);
             applyPanelState();
         }
         m_browseButton->setText("Browse");
@@ -496,15 +475,22 @@ void ExportDialog::onRender(AestraUI::NUIRenderer& renderer) {
     // Surface and title bar come from the shared dialog chrome (spec 2 §5).
     AestraUI::DialogChrome chrome;
     chrome.panel = m_dialogRect;
-    chrome.title = (m_panelState == PanelState::Settings)   ? "Export Audio"
+    chrome.title = (m_panelState == PanelState::Settings)   ? "Export"
                    : (m_panelState == PanelState::Progress) ? "Rendering..."
                                                             : "Export Complete";
     chrome.showClose = false; // The panel's own Cancel/Close button is the dismissal.
     AestraUI::drawDialogChrome(renderer, chrome);
+    if (m_panelState == PanelState::Settings) {
+        paintSettingsBoard(renderer);
+        const float footerY = m_dialogRect.bottom() - 56.0f;
+        renderer.drawLine({m_dialogRect.x, footerY}, {m_dialogRect.right(), footerY}, 1.0f, theme.getColor("border"));
+    }
 
     renderChildren(renderer);
+    if (m_panelState == PanelState::Settings)
+        paintSettingsBoardOverlay(renderer);
     // An open dropdown's list paints over the controls below it.
-    for (const auto& dropdown : {m_scopeDropdown, m_rateDropdown, m_depthDropdown}) {
+    for (const auto& dropdown : {m_formatDropdown, m_rateDropdown, m_depthDropdown}) {
         if (dropdown->isVisible() && dropdown->isOpen())
             dropdown->renderDropdownList(renderer);
     }
@@ -512,6 +498,8 @@ void ExportDialog::onRender(AestraUI::NUIRenderer& renderer) {
 
 bool ExportDialog::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (!m_visible) return false;
+    if (m_panelState == PanelState::Settings && handleBoardClick(event))
+        return true;
     NUIComponent::onMouseEvent(event);
     return true; // Modal
 }
@@ -588,7 +576,7 @@ void ExportDialog::startExport() {
     }
 
     m_tailInput = m_tailField->getText();
-    m_outputPath = m_outputInput->getText();
+    refreshOutputPath();
 
     double parsedTail = 0.0;
     if (!parseTailInput(parsedTail)) {
@@ -655,7 +643,7 @@ void ExportDialog::startExport() {
 ExportDialog::ExportJobResult ExportDialog::exportThreadFn(std::string outputPath, int selectedBitDepth, int selectedSampleRate, int selectedScope, double tailSeconds, bool stems) {
     Aestra::Audio::AudioExporter::Config config;
     config.outputPath = std::move(outputPath);
-    config.sampleRate = std::stoi(m_sampleRateOptions[selectedSampleRate]);
+    config.sampleRate = kSampleRates[std::clamp(selectedSampleRate, 0, 3)];
     config.numChannels = 2;
     config.tailSeconds = tailSeconds;
 

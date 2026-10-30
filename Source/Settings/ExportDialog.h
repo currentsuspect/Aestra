@@ -11,6 +11,7 @@
 #include "NUIProgressBar.h"
 #include "NUITextInput.h"
 
+#include <array>
 #include <atomic>
 #include <functional>
 #include <future>
@@ -124,8 +125,8 @@ private:
 
     bool m_visible = false;
     AestraUI::NUIRect m_dialogRect;
-    static constexpr float DIALOG_WIDTH = 520.0f;
-    static constexpr float DIALOG_HEIGHT = 400.0f;
+    static constexpr float DIALOG_WIDTH = 560.0f; // canvas-2 board 3
+    static constexpr float DIALOG_HEIGHT = 392.0f;
 
     // Settings
     std::string m_outputPath;
@@ -140,7 +141,8 @@ private:
     // The Format menu: the three WAV depths keep indices 0-2 (saved settings still mean the same), then FLAC and MP3
     // when their encoders are on this computer (EncodedAudioWriter, FD-61).
     std::vector<std::string> m_bitDepthOptions = {"WAV 16-bit", "WAV 24-bit", "WAV 32-bit float"};
-    std::vector<std::string> m_sampleRateOptions = { "44100 Hz", "48000 Hz", "88200 Hz", "96000 Hz" };
+    std::vector<std::string> m_sampleRateOptions = {"44.1 kHz", "48 kHz", "88.2 kHz", "96 kHz"};
+    static constexpr uint32_t kSampleRates[4] = {44100, 48000, 88200, 96000}; ///< what each rate entry renders at
     std::vector<std::string> m_scopeOptions = { "Full Song", "Loop Region", "Selection" };
 
     // Progress
@@ -175,4 +177,24 @@ private:
     std::shared_ptr<AestraUI::NUIButton> m_exportButton, m_cancelButton, m_doneButton;
 
     ExportCallback m_onExportComplete;
+
+    // Board 3 (V82-P12, ExportDialogBoard.cpp): what (scope, one file or stems), where (name + folder), format chips,
+    // and a summary line worked out before Export.
+    std::array<AestraUI::NUIRect, 3> m_scopeSegments{};
+    std::array<AestraUI::NUIRect, 2> m_stemsSegments{};
+    AestraUI::NUIRect m_whatCaption, m_whereCaption, m_formatCaption, m_pathLine, m_summaryLine;
+    std::shared_ptr<AestraUI::NUIDropdown> m_formatDropdown;
+    std::vector<Aestra::Audio::ExportFormat> m_formats; ///< the Format menu's entries, in order
+    Aestra::Audio::ExportFormat m_format = Aestra::Audio::ExportFormat::Wav;
+    std::string m_outputFolder;
+    void buildBoardControls();
+    void layoutSettingsBoard();
+    void paintSettingsBoard(AestraUI::NUIRenderer& renderer);
+    void paintSettingsBoardOverlay(AestraUI::NUIRenderer& renderer);
+    bool handleBoardClick(const AestraUI::NUIMouseEvent& event);
+    void setFormat(Aestra::Audio::ExportFormat format, int depthChoice);
+    void syncFormatChips();
+    void setOutputFromPath(const std::string& path);
+    void refreshOutputPath();
+    std::string summaryText() const;
 };
