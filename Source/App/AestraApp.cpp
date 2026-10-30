@@ -896,7 +896,7 @@ void AestraApp::buildMenuBar() {
         saveItem->setShortcut("Ctrl+S"); saveItem->setOnClick([this]() { saveCurrentProject(); }); menu->addItem(saveItem);
 
         menu->addItem("Save As...", [this]() { saveProjectAs(); });
-
+        menu->addItem("Save a Copy...", [this]() { saveProjectCopy(); }); // ProjectLifecycle.cpp
         menu->addSeparator();
 
         // Versions = every saved state of the song and the steps inside it (Takes and History, merged: V81-V1).
