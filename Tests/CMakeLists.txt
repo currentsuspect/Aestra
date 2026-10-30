@@ -2940,6 +2940,7 @@ if(AESTRA_ENABLE_UI)
     add_executable(ExportDialogWidgetsTest
         AestraUI/ExportDialogWidgetsTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Settings/ExportDialog.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Settings/ExportDialogBoard.cpp
         ${CMAKE_SOURCE_DIR}/Source/Core/UISurfaceStore.cpp
     )
     target_link_libraries(ExportDialogWidgetsTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio AestraPlat)

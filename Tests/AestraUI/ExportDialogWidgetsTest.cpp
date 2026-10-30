@@ -2,7 +2,7 @@
 // ExportDialogWidgetsTest — V8-S1. The export dialog is built from NUI widgets, not hand-placed rects.
 //   1. every control sits inside the dialog and no two controls in a state overlap;
 //   2. each state shows only its own controls (nothing hidden can take a click);
-//   3. the stems checkbox reveals its explanation and the layout still fits;
+//   3. the stems segment turns stems on and locks the format to WAV, and the layout still fits;
 //   4. a bad request lands on the failure screen with its reason, and Close reports it.
 
 #include "ExportDialog.h"
@@ -80,30 +80,45 @@ int main() {
     std::cout << "[1] settings screen\n";
     std::vector<std::shared_ptr<NUIComponent>> shown;
     visibleControls(std::shared_ptr<NUIComponent>(&dialog, [](NUIComponent*) {}), shown);
-    check(shown.size() >= 12, "output, browse, three dropdowns, tail, stems, export and cancel are shown (" +
-                                  std::to_string(shown.size()) + ")");
-    const NUIRect dialogRect(1280 * 0.5f - 260.0f, 400.0f - 200.0f, 520.0f, 400.0f);
+    check(shown.size() == 8, "name, folder, format, depth, rate, tail, export and cancel are shown (" +
+                                 std::to_string(shown.size()) + ")");
+    // Board 3: 560 x 392, centred.
+    const NUIRect dialogRect(1280 * 0.5f - 280.0f, 400.0f - 196.0f, 560.0f, 392.0f);
     check(allInside(shown, dialogRect), "every control is inside the dialog");
     check(noOverlap(shown), "no two controls overlap");
 
     std::cout << "[2] stems\n";
-    std::shared_ptr<NUICheckbox> stems;
-    for (const auto& c : dialog.getChildren())
-        if (auto cb = std::dynamic_pointer_cast<NUICheckbox>(c))
-            stems = cb;
-    check(stems != nullptr, "the stems checkbox exists");
-    if (stems) {
-        const size_t before = shown.size();
-        click(stems);
-        check(stems->isChecked(), "clicking it checks it");
+    // Stems are a painted segmented control above the name field. Walk up from the field on the right half
+    // ("Stems + master") until a click turns stems on.
+    std::shared_ptr<NUITextInput> nameField;
+    std::shared_ptr<NUIDropdown> formatMenu;
+    for (const auto& c : dialog.getChildren()) {
+        if (auto t = std::dynamic_pointer_cast<NUITextInput>(c); t && !nameField)
+            nameField = t;
+        if (auto d = std::dynamic_pointer_cast<NUIDropdown>(c); d && d->isVisible()) // the format menu is added last
+            formatMenu = d;
+    }
+    check(nameField && formatMenu, "found the name field and the format menu");
+    if (nameField && formatMenu) {
+        const NUIRect field = nameField->getBounds();
+        NUIMouseEvent down;
+        down.type = NUIMouseEventType::Down;
+        down.button = NUIMouseButton::Left;
+        down.pressed = true;
+        for (float y = field.y - 1.0f; y > dialogRect.y && !dialog.exportsStems(); y -= 2.0f) {
+            down.position = {dialogRect.x + dialogRect.width * 0.75f, y};
+            dialog.onMouseEvent(down);
+        }
+        check(dialog.exportsStems(), "clicking Stems + master turns stems on");
+        check(!formatMenu->isEnabled(), "and locks the format to WAV");
+        dialog.onResize(1280, 800);
         std::vector<std::shared_ptr<NUIComponent>> after;
         visibleControls(std::shared_ptr<NUIComponent>(&dialog, [](NUIComponent*) {}), after);
-        dialog.onResize(1280, 800);
-        after.clear();
-        visibleControls(std::shared_ptr<NUIComponent>(&dialog, [](NUIComponent*) {}), after);
-        check(after.size() == before + 1, "its explanation appears");
+        check(after.size() == shown.size(), "the same controls stay shown");
         check(allInside(after, dialogRect) && noOverlap(after), "the layout still fits and does not overlap");
-        click(stems);
+        down.position.x = dialogRect.x + dialogRect.width * 0.25f;
+        dialog.onMouseEvent(down);
+        check(!dialog.exportsStems() && formatMenu->isEnabled(), "One file turns stems off again");
     }
 
     std::cout << "[3] a bad request ends on the failure screen\n";
@@ -112,11 +127,12 @@ int main() {
         callbackFired = true;
         callbackOk = ok;
     });
-    std::shared_ptr<NUITextInput> output;
+    // An empty name now becomes "Untitled", so the bad request is a tail that is not a number.
+    std::shared_ptr<NUITextInput> tail;
     std::shared_ptr<NUIButton> exportButton, doneButton;
     for (const auto& c : dialog.getChildren()) {
-        if (auto t = std::dynamic_pointer_cast<NUITextInput>(c); t && !output)
-            output = t;
+        if (auto t = std::dynamic_pointer_cast<NUITextInput>(c))
+            tail = t; // the tail field is the last text input
         if (auto b = std::dynamic_pointer_cast<NUIButton>(c)) {
             if (b->getText() == "Export")
                 exportButton = b;
@@ -124,9 +140,9 @@ int main() {
                 doneButton = b;
         }
     }
-    check(output && exportButton && doneButton, "found the output field and buttons");
-    if (output && exportButton && doneButton) {
-        output->setText("");
+    check(tail && exportButton && doneButton, "found the tail field and buttons");
+    if (tail && exportButton && doneButton) {
+        tail->setText("not a number");
         click(exportButton);
         check(!exportButton->isVisible() && doneButton->isVisible(), "Export gives way to Close");
         check(doneButton->getText() == "Close", "the button says Close after a failure");
