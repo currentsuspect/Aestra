@@ -53,6 +53,9 @@ env:
 jobs:
   build-linux:
     name: Linux (GCC)
+    # Job timeouts (2026-10-31): GitHub's default is 6 hours, so a job hung on a dead compile cache
+    # held its PR for hours. Each limit is about twice that lane's uncached time (Windows ~47 min).
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -151,6 +154,7 @@ jobs:
   # it would turn this lane back into a headless build.
   build-linux-app:
     name: Linux (UI/App compile)
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -255,6 +259,7 @@ jobs:
 
   build-plugin-host:
     name: Plugin hosting (VST3 + CLAP compile)
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     # Least privilege, declared rather than inherited, matching the classifier
     # self-test job below. This one only reads the repo and lets classify-scope read
@@ -408,6 +413,7 @@ jobs:
 
   build-windows:
     name: Windows (MSVC)
+    timeout-minutes: 100
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -561,6 +567,7 @@ jobs:
 
   build-plugin-host-windows:
     name: Plugin hosting (Windows)
+    timeout-minutes: 100
     runs-on: windows-latest
     permissions:
       contents: read
@@ -702,6 +709,7 @@ jobs:
 
   build-macos:
     name: macOS (Clang)
+    timeout-minutes: 75
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -790,6 +798,7 @@ jobs:
 
   classifier-selftest:
     name: CI classifier self-test
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     # Least privilege, declared rather than inherited. This job shells out and
     # queries two historical pull requests, so it reads repo contents and PR
@@ -916,6 +925,7 @@ jobs:
 
   contract-coverage:
     name: Test contract coverage
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     # No `if:`, no `continue-on-error`, no `needs:`. A required context must
     # always report. Gating this on a change classifier, or on another job whose
@@ -1002,6 +1012,7 @@ jobs:
 
   format-check:
     name: Formatting (advisory)
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -1022,6 +1033,7 @@ jobs:
 
   static-analysis:
     name: Static Analysis (clang-tidy, advisory)
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -1057,6 +1069,7 @@ jobs:
 
   sanitizer-linux:
     name: Sanitizers (ASan/UBSan, advisory)
+    timeout-minutes: 90
     runs-on: ubuntu-latest
     continue-on-error: true
     env:
@@ -1136,6 +1149,7 @@ jobs:
     # context never hangs; only the build and test steps are conditional. The
     # cost it removes: a full TSan build on every docs-only PR.
     name: ThreadSanitizer (TSan)
+    timeout-minutes: 90
     runs-on: ubuntu-latest
     env:
       TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1:suppress_equal_stacks=1
@@ -1186,6 +1200,7 @@ jobs:
     # unbounded or accidental allocations. LSan is informational
     # only; failure is expected to be non-blocking.
     name: LeakSanitizer (LSan, advisory)
+    timeout-minutes: 90
     runs-on: ubuntu-latest
     continue-on-error: true
     env:
