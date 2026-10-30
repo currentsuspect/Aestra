@@ -3661,6 +3661,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIFold.cpp
         # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
         # compiles in.
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
@@ -3721,6 +3722,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIFold.cpp
         # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
         # compiles in.
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
@@ -3783,6 +3785,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIFold.cpp
         # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
         # compiles in.
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
@@ -3846,6 +3849,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIFold.cpp
         # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
         # compiles in.
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
@@ -3908,6 +3912,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIFold.cpp
         # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
         # compiles in.
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
@@ -3968,6 +3973,7 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIFold.cpp
         # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
         # compiles in.
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
