@@ -793,6 +793,13 @@ target_include_directories(DspLoadReadoutTest PRIVATE ${CMAKE_SOURCE_DIR}/Source
 add_test(NAME DspLoadReadoutTest COMMAND DspLoadReadoutTest)
 set_tests_properties(DspLoadReadoutTest PROPERTIES LABELS "ui;transport;regression;contract:application")
 
+# FLAC and MP3 export (v0.8.2, FD-61): round trip through the runtime-loaded encoders; skips (77) without them.
+add_executable(EncodedAudioWriterTest AestraAudio/EncodedAudioWriterTest.cpp)
+target_link_libraries(EncodedAudioWriterTest PRIVATE AestraAudioCore)
+target_include_directories(EncodedAudioWriterTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include ${CMAKE_SOURCE_DIR}/AestraCore/include)
+add_test(NAME EncodedAudioWriterTest COMMAND EncodedAudioWriterTest)
+set_tests_properties(EncodedAudioWriterTest PROPERTIES SKIP_RETURN_CODE 77 LABELS "audio;export;regression;contract:audio")
+
 add_executable(SandboxBlockFifoTest AestraAudio/SandboxBlockFifoTest.cpp)
 target_include_directories(SandboxBlockFifoTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
 add_test(NAME SandboxBlockFifoTest COMMAND SandboxBlockFifoTest)

@@ -240,6 +240,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/IO/AudioExporter.cpp
     src/IO/BounceInPlace.cpp
     src/IO/StemExport.cpp
+    src/IO/EncodedAudioWriter.cpp
     src/IO/MiniAudioDecoder.cpp
     src/IO/StreamingDecoder.cpp
     src/IO/WaveformCache.cpp
