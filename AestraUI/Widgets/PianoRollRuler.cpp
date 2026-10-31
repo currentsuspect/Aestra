@@ -166,9 +166,19 @@ void PianoRollRuler::onRender(NUIRenderer& renderer) {
         const float bx = bounds.x + static_cast<float>(museMarkBeat_ * pixelsPerBeat_) - scrollX_;
         const int barNo = static_cast<int>(museMarkBeat_ / std::max(1, beatsPerBar_)) + 1;
         const float cx = bx + 8.0f + renderer.measureText(std::to_string(barNo), 12.0f).width + 10.0f;
+        const auto violet = NUIColor::fromHex(0xa78bfa);
         if (cx > bounds.x && cx < bounds.right()) {
-            renderer.fillCircle(NUIPoint(cx, bounds.y + 13.0f), 7.0f, NUIColor::fromHex(0xa78bfa).withAlpha(0.18f));
-            renderer.fillCircle(NUIPoint(cx, bounds.y + 13.0f), 4.0f, NUIColor::fromHex(0xa78bfa));
+            renderer.fillCircle(NUIPoint(cx, bounds.y + 13.0f), 7.0f, violet.withAlpha(0.18f));
+            renderer.fillCircle(NUIPoint(cx, bounds.y + 13.0f), 4.0f, violet);
+        } else if (bx >= bounds.right()) {
+            // The bar is past the right edge (the usual case: Muse writes the bar after your last note), so the dot
+            // waits at the edge with the bar's number, where the eye can find it.
+            const std::string label = std::to_string(barNo);
+            const float lw = renderer.measureText(label, 11.0f).width;
+            const float ex = bounds.right() - 14.0f;
+            renderer.fillCircle(NUIPoint(ex, bounds.y + 13.0f), 7.0f, violet.withAlpha(0.18f));
+            renderer.fillCircle(NUIPoint(ex, bounds.y + 13.0f), 4.0f, violet);
+            renderer.drawText(label, NUIPoint(ex - 12.0f - lw, bounds.y + 7.0f), 11.0f, violet);
         }
     }
 

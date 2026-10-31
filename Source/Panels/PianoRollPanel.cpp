@@ -18,6 +18,7 @@
 #include "Music/ScaleContext.h"
 #include "Harmony/HarmonyAnalysis.h"
 #include "Harmony/HarmonyGather.h"
+#include "Muse/MuseIdeas.h"
 #include <cmath>
 #include <unordered_map>
 #include <random>
@@ -658,6 +659,15 @@ void PianoRollPanel::rebuildUnitSwitcher() {
 
 void PianoRollPanel::onUpdate(double deltaTime) {
     WindowPanel::onUpdate(deltaTime);
+    // Muse Quiet (FD-63): ideas come after a short pause in the writing, never while playing.
+    if (m_museWanted && isVisible() && m_pianoRoll && m_pianoRoll->getMuseMode() != AestraUI::MuseMode::Off) {
+        m_museIdle += deltaTime;
+        const bool playing = m_trackManager && m_trackManager->isPlaying();
+        if (!playing && m_museIdle >= 1.2) {
+            m_museWanted = false;
+            refreshMuseIdeas();
+        }
+    }
     if (isVisible() && !m_wasVisible) {
         rebuildPatternSwitcher();
         rebuildUnitSwitcher();
@@ -903,7 +913,13 @@ void PianoRollPanel::refreshHarmony() {
         return;
     }
     namespace H = Aestra::Audio::Harmony;
-    const H::HarmonyTimeline timeline = H::analyzeHarmony(H::gatherPatternNotes(*pattern), m_pianoRoll->getBeatsPerBar());
+    m_harmony = H::analyzeHarmony(H::gatherPatternNotes(*pattern), m_pianoRoll->getBeatsPerBar());
+    const H::HarmonyTimeline& timeline = m_harmony;
+    // The notes changed: ideas for the old notes are stale (typing over an idea ignores it, FD-63); new ones come
+    // after a pause.
+    m_pianoRoll->clearMuseIdeas();
+    m_museWanted = true;
+    m_museIdle = 0.0;
     std::vector<AestraUI::PianoRollChord> chords;
     chords.reserve(timeline.chords.size());
     for (const auto& span : timeline.chords) {
@@ -923,4 +939,33 @@ void PianoRollPanel::refreshHarmony() {
     key.tonic = std::max(0, timeline.key.tonic);
     key.minor = timeline.key.mode == H::KeyMode::Minor;
     m_pianoRoll->setHarmony(std::move(chords), key);
+}
+
+// V83-MU1 (FD-63 Quiet): ideas for the bar after the editing unit's last note, from the rules engine (local, no
+// network, no learning yet). Shown as a dot on the ruler; nothing lands until the producer keeps one.
+void PianoRollPanel::refreshMuseIdeas() {
+    if (!m_trackManager || !m_pianoRoll || !m_currentPatternId.isValid()) return;
+    const auto* pattern = m_trackManager->getPatternManager().getPattern(m_currentPatternId);
+    if (!pattern || !pattern->isMidi()) return;
+    std::vector<Aestra::Audio::Harmony::HarmonyNote> mine;
+    for (const auto& n : std::get<MidiPayload>(pattern->payload).notes) {
+        if (m_editingUnitId != 0 && n.unitId != 0 && n.unitId != m_editingUnitId) continue;
+        mine.push_back({n.startBeat, n.durationBeats, n.pitch, n.velocity});
+    }
+    namespace M = Aestra::Audio::Muse;
+    const double bpb = m_pianoRoll->getBeatsPerBar();
+    const double bar = M::nextBarStart(mine, bpb);
+    if (bar < 0.0) return;
+    std::vector<AestraUI::PianoRollIdea> ideas;
+    for (const auto& idea : M::nextBarIdeas(mine, m_harmony, bpb, bar)) {
+        AestraUI::PianoRollIdea out;
+        out.label = idea.label;
+        for (const auto& n : idea.notes) {
+            AestraUI::MidiNote ui{n.pitch, n.startBeat, n.durationBeats, n.velocity};
+            ui.unitId = m_editingUnitId;
+            out.notes.push_back(ui);
+        }
+        ideas.push_back(std::move(out));
+    }
+    m_pianoRoll->setMuseIdeas(bar, std::move(ideas));
 }

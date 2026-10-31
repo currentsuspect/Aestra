@@ -872,6 +872,18 @@ void PianoRollView::previewIdea(int index) {
     if (m_ideas.empty()) return;
     const int n = static_cast<int>(m_ideas.size());
     m_previewIdea = ((index % n) + n) % n;
+    // The idea's bar comes into view: it is usually the bar just past the right edge.
+    if (m_grid) {
+        const float visibleW = m_grid->getWidth();
+        const float barX = static_cast<float>(m_ideaBar) * m_pixelsPerBeat;
+        const float barEndX = barX + static_cast<float>(m_beatsPerBar) * m_pixelsPerBeat;
+        if (barEndX > m_scrollX + visibleW || barX < m_scrollX) {
+            m_scrollX = std::clamp(barEndX - visibleW + 24.0f, 0.0f, std::max(0.0f, barX));
+            m_targetScrollX = m_scrollX;
+            updateScrollbars();
+            syncChildren();
+        }
+    }
     syncMuseSurfaces();
     repaint();
 }
