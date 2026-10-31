@@ -92,6 +92,9 @@ bool parseChordName(const std::string& text, int& root, ChordQuality& quality, i
 /** Name a chord; flats are used for the pitch-class spelling when useFlats. */
 std::string chordName(int root, ChordQuality quality, int bass, bool useFlats);
 
+/** The chord's tones as pitch classes (0..11), root first; empty for N.C. The same table detection scores against. */
+std::vector<int> chordTones(int root, ChordQuality quality);
+
 /** Roman numeral of a chord in a key ("i7", "VI", "bVII"); empty when the key is not valid or root < 0. */
 std::string romanNumeral(const Key& key, int root, ChordQuality quality);
 

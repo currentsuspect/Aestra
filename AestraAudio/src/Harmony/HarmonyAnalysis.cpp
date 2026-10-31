@@ -12,8 +12,10 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <limits>
+#include <map>
 
 namespace Aestra {
 namespace Audio {
@@ -110,6 +112,8 @@ struct Window {
     bool empty = true;
     std::array<double, 12> pcv{};
     int bass = -1;
+    uint16_t struck = 0; // pitch classes of a block chord struck in this window (3+ notes starting together)
+    int pitchClasses = 0; // how many pitch classes sound in the window at all
 };
 
 constexpr double kBassBoost = 0.18;       // added to the bass pitch class (the pcv sums to 1 before it)
@@ -118,6 +122,9 @@ constexpr double kDiatonicBonus = 0.02;   // every chord tone is in the detected
 constexpr double kBarChangePenalty = 0.12;
 constexpr double kMidBarChangePenalty = 0.30;
 constexpr double kBassMinShare = 0.30;    // a bass note must sound for this share of the window to count
+constexpr double kStruckBonus = 0.08;     // what is struck together is the chord: its notes are all chord tones
+constexpr double kThinChangePenalty = 0.25; // a window of one or two pitch classes (a melody fragment) rarely
+                                            // starts a new chord: changing into one costs this much more
 
 double scoreChord(const Window& w, int root, int q, const Key& key) {
     const auto& tpl = templates()[q];
@@ -131,6 +138,16 @@ double scoreChord(const Window& w, int root, int q, const Key& key) {
     double s = pn > 0 ? dot / pn : 0.0;
     if (w.bass == root)
         s += kBassIsRootBonus;
+    if (w.struck) {
+        uint16_t tones = 0;
+        for (int i : kQualities[q].intervals) {
+            if (i < 0)
+                break;
+            tones |= static_cast<uint16_t>(1u << ((root + i) % 12));
+        }
+        if ((w.struck & tones) == w.struck)
+            s += kStruckBonus;
+    }
     s -= kQualities[q].complexity;
     if (key.valid()) {
         bool all = true;
@@ -340,6 +357,17 @@ const ChordSpan& noChordSpan() noexcept {
     return kNone;
 }
 
+std::vector<int> chordTones(int root, ChordQuality quality) {
+    std::vector<int> tones;
+    const int q = static_cast<int>(quality);
+    if (root < 0 || q < 0 || q >= kQualityCount) return tones;
+    for (int i : kQualities[q].intervals) {
+        if (i < 0) break;
+        tones.push_back((root + i) % 12);
+    }
+    return tones;
+}
+
 const ChordSpan& HarmonyTimeline::chordAt(double beat) const noexcept {
     // First span starting after the beat; the one before it is the only candidate.
     auto it = std::upper_bound(chords.begin(), chords.end(), beat,
@@ -412,6 +440,8 @@ std::vector<Window> buildWindows(const std::vector<HarmonyNote>& notes, double w
                 if (o.amount >= longest - 1e-9)
                     lowest = std::min(lowest, o.pitch);
         w.bass = lowest % 12;
+        for (double v : w.pcv)
+            w.pitchClasses += v > 1e-9 ? 1 : 0;
         // Compress, so a doubled root (octaves are everywhere) does not outweigh the colour tones.
         double sum = 0;
         for (double& v : w.pcv) {
@@ -421,6 +451,37 @@ std::vector<Window> buildWindows(const std::vector<HarmonyNote>& notes, double w
         for (double& v : w.pcv)
             v /= sum;
         w.pcv[w.bass] += kBassBoost;
+    }
+    // Block chords: three or more pitch classes struck together (within a 32nd), each held for a real share of the
+    // window. A short melody note starting on the same beat is not part of it. Scoring prefers a chord that contains
+    // all of them, since that is what the player struck.
+    struct Struck { uint16_t mask = 0; int count = 0; };
+    std::map<long long, Struck> byOnset;
+    for (const auto& n : notes) {
+        if (n.durationBeats < kBassMinShare * windowBeats || n.pitch < 0 || n.pitch > 127)
+            continue;
+        Struck& g = byOnset[std::llround(n.startBeat * 32.0)];
+        const uint16_t bit = static_cast<uint16_t>(1u << (n.pitch % 12));
+        if (!(g.mask & bit))
+            ++g.count;
+        g.mask |= bit;
+    }
+    for (const auto& [onset, g] : byOnset) {
+        if (g.count < 3)
+            continue;
+        const long k = static_cast<long>(std::floor(static_cast<double>(onset) / 32.0 / windowBeats + 1e-9)) - first;
+        if (k >= 0 && k < count)
+            windows[static_cast<size_t>(k)].struck |= g.mask;
+    }
+    // A chord struck on the bar holds for the bar: the second half (windows are half a bar) counts it as struck too,
+    // unless something new is struck there. A melody note over it (often the chord's fifth) must not re-name it.
+    for (size_t k = 1; k < windows.size(); ++k) {
+        Window& w = windows[k];
+        const Window& prev = windows[k - 1];
+        const double barIndex = prev.start / (2.0 * windowBeats);
+        const bool prevOnBar = std::fabs(barIndex - std::round(barIndex)) < 1e-6;
+        if (!w.empty && w.struck == 0 && prev.struck != 0 && prevOnBar)
+            w.struck = prev.struck;
     }
     return windows;
 }
@@ -478,7 +539,9 @@ HarmonyTimeline analyzeHarmony(const std::vector<HarmonyNote>& notes, double bea
             const double start = windows[live[t]].start;
             const double bars = start / beatsPerBar;
             const bool barLine = std::fabs(bars - std::round(bars)) < 1e-6;
-            const float penalty = static_cast<float>(barLine ? kBarChangePenalty : kMidBarChangePenalty);
+            const bool thin = windows[live[t]].pitchClasses < 3;
+            const float penalty = static_cast<float>((barLine ? kBarChangePenalty : kMidBarChangePenalty) +
+                                                     (thin ? kThinChangePenalty : 0.0));
             int bestPrev = 0;
             for (int s = 1; s < S; ++s)
                 if (score[s] > score[bestPrev])
@@ -514,7 +577,7 @@ HarmonyTimeline analyzeHarmony(const std::vector<HarmonyNote>& notes, double bea
             double start, end;
             double confSum;
             int n;
-            std::array<int, 12> bassVotes;
+            std::array<double, 12> bassVotes;
         };
         std::vector<Raw> raws;
         for (size_t t = 0; t < T; ++t) {
@@ -531,8 +594,10 @@ HarmonyTimeline analyzeHarmony(const std::vector<HarmonyNote>& notes, double bea
             r.end = winEnd;
             r.confSum += cos;
             r.n += 1;
+            // The bass at the chord's start counts a little more, so a tie between two half-bars goes to the
+            // onset's bass (what sounds lowest when the chord arrives), not to the lower pitch-class number.
             if (w.bass >= 0)
-                r.bassVotes[w.bass] += 1;
+                r.bassVotes[w.bass] += (r.n == 1) ? 1.25 : 1.0;
         }
         // A run of silence between two equal states: extend through it (end was set per window; patch gaps).
         for (size_t i = 0; i + 1 < raws.size(); ++i)
@@ -545,7 +610,8 @@ HarmonyTimeline analyzeHarmony(const std::vector<HarmonyNote>& notes, double bea
             c.root = r.state / kQualityCount;
             c.quality = static_cast<ChordQuality>(r.state % kQualityCount);
             // Slash chord: the most-voted bass, when it is a chord tone other than the root.
-            int bestBass = -1, bestVotes = 0;
+            int bestBass = -1;
+            double bestVotes = 0.0;
             for (int pc = 0; pc < 12; ++pc)
                 if (r.bassVotes[pc] > bestVotes) {
                     bestVotes = r.bassVotes[pc];
