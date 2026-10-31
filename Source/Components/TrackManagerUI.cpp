@@ -443,8 +443,11 @@ void TrackManagerUI::revealLane(PlaylistLaneID laneId) {
             const float viewHeight = currentTimelineLayout().rows.height;
             if (rowTop < m_scrollOffset) {
                 setVerticalScroll(rowTop);
-            } else if (rowBottom > m_scrollOffset + viewHeight) {
-                setVerticalScroll(rowBottom - viewHeight);
+            } else if (rowBottom > m_scrollOffset + viewHeight + 0.5f) {
+                // Whole rows, no more than it takes: the top row slides out and every other row stays where the
+                // producer left it (owner, 2026-10-31: the screen is full, so move one down, do not focus the take).
+                const float rows = std::ceil((rowBottom - viewHeight - m_scrollOffset) / rowHeight);
+                setVerticalScroll(m_scrollOffset + rows * rowHeight);
             }
             break;
         }
