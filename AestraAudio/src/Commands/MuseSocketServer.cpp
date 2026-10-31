@@ -11,6 +11,8 @@ using SocketHandle = SOCKET;
 static constexpr SocketHandle kInvalidSocket = INVALID_SOCKET;
 #else
 #include <arpa/inet.h>
+#include <cerrno>
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <sys/select.h>
 #include <sys/socket.h>
@@ -32,6 +34,8 @@ namespace Audio {
 
 namespace {
 
+constexpr size_t kMaxRequestsPerFrame = 64;       // processPending() bound
+
 void closeSocket(SocketHandle socket) {
     if (socket == kInvalidSocket) return;
 #ifdef _WIN32
@@ -40,6 +44,36 @@ void closeSocket(SocketHandle socket) {
     ::close(socket);
 #endif
 }
+
+// Every accepted socket is non-blocking so no send()/recv() can park the IO thread.
+bool setNonBlocking(SocketHandle socket) {
+#ifdef _WIN32
+    u_long enable = 1;
+    return ::ioctlsocket(socket, FIONBIO, &enable) == 0;
+#else
+    const int flags = ::fcntl(socket, F_GETFL, 0);
+    return flags >= 0 && ::fcntl(socket, F_SETFL, flags | O_NONBLOCK) == 0;
+#endif
+}
+
+// True when the last socket call failed only because it would have blocked.
+bool wouldBlock() {
+#ifdef _WIN32
+    return ::WSAGetLastError() == WSAEWOULDBLOCK;
+#else
+    return errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR;
+#endif
+}
+
+#if defined(MSG_NOSIGNAL)
+constexpr int kSendFlags = MSG_NOSIGNAL; // a vanished client must not raise SIGPIPE
+#else
+constexpr int kSendFlags = 0;
+#endif
+
+constexpr size_t kMaxLineBytes = 1 << 20;         // one request line
+constexpr size_t kMaxClientWriteBytes = 1 << 20;  // unsent responses per client
+constexpr size_t kMaxInboxRequests = 256;         // queued, not yet executed
 
 bool initSockets(std::string& outError) {
 #ifdef _WIN32
@@ -84,21 +118,36 @@ struct MuseSocketServer::Impl {
 
     void ioLoop() {
         while (running.load(std::memory_order_relaxed)) {
+            // Backpressure (#1271): while the inbox is full, stop reading from
+            // every client. Unread bytes stay in the kernel receive buffer, so
+            // a flooding client is slowed by TCP rather than by our memory.
+            bool inboxHasRoom;
+            {
+                std::lock_guard<std::mutex> lock(mutex);
+                inboxHasRoom = inbox.size() < kMaxInboxRequests;
+            }
+
             fd_set readSet;
+            fd_set writeSet;
             FD_ZERO(&readSet);
+            FD_ZERO(&writeSet);
             FD_SET(listenSocket, &readSet);
             SocketHandle maxFd = listenSocket;
             for (const auto& [clientId, client] : clients) {
-                FD_SET(client.socket, &readSet);
+                if (inboxHasRoom) FD_SET(client.socket, &readSet);
+                // Wake as soon as a client with pending output can take more.
+                if (!client.writeBuffer.empty()) FD_SET(client.socket, &writeSet);
                 if (client.socket > maxFd) maxFd = client.socket;
             }
 
             // Short timeout so queued responses and stop() are picked up
-            // promptly even when no traffic arrives.
+            // promptly even when no traffic arrives. Every socket is
+            // non-blocking, so nothing below can park the thread and stop()
+            // is always observed within one timeout.
             timeval timeout{};
             timeout.tv_usec = 50 * 1000;
             const int ready =
-                ::select(static_cast<int>(maxFd + 1), &readSet, nullptr, nullptr, &timeout);
+                ::select(static_cast<int>(maxFd + 1), &readSet, &writeSet, nullptr, &timeout);
             if (!running.load(std::memory_order_relaxed)) break;
 
             if (ready > 0 && FD_ISSET(listenSocket, &readSet)) {
@@ -111,38 +160,44 @@ struct MuseSocketServer::Impl {
                 SocketHandle accepted =
                     ::accept(listenSocket, reinterpret_cast<sockaddr*>(&remote), &remoteLen);
                 if (accepted != kInvalidSocket) {
-                    Client client;
-                    client.socket = accepted;
-                    clients.emplace(nextClientId++, std::move(client));
+                    if (setNonBlocking(accepted)) {
+                        Client client;
+                        client.socket = accepted;
+                        clients.emplace(nextClientId++, std::move(client));
+                    } else {
+                        closeSocket(accepted);
+                    }
                 }
             }
 
             std::vector<uint64_t> disconnected;
-            if (ready > 0) {
-                for (auto& [clientId, client] : clients) {
-                    if (!FD_ISSET(client.socket, &readSet)) continue;
+            for (auto& [clientId, client] : clients) {
+                if (inboxHasRoom && ready > 0 && FD_ISSET(client.socket, &readSet)) {
                     char chunk[4096];
                     const auto received = ::recv(client.socket, chunk, sizeof(chunk), 0);
-                    if (received <= 0) {
+                    if (received == 0 || (received < 0 && !wouldBlock())) {
                         disconnected.push_back(clientId);
                         continue;
                     }
-                    client.readBuffer.append(chunk, static_cast<size_t>(received));
+                    if (received > 0) client.readBuffer.append(chunk, static_cast<size_t>(received));
+                }
 
-                    // A runaway line without a newline must not grow forever.
-                    constexpr size_t kMaxLineBytes = 1 << 20;
-                    size_t newline;
-                    while ((newline = client.readBuffer.find('\n')) != std::string::npos) {
+                // Move complete lines to the inbox while it has room; any left
+                // over stay in readBuffer (bounded below) for a later pass.
+                size_t newline;
+                while ((newline = client.readBuffer.find('\n')) != std::string::npos) {
+                    {
+                        std::lock_guard<std::mutex> lock(mutex);
+                        if (inbox.size() >= kMaxInboxRequests) break;
                         std::string line = client.readBuffer.substr(0, newline);
                         client.readBuffer.erase(0, newline + 1);
                         if (!line.empty() && line.back() == '\r') line.pop_back();
-                        if (line.empty()) continue;
-                        std::lock_guard<std::mutex> lock(mutex);
-                        inbox.emplace_back(clientId, std::move(line));
+                        if (!line.empty()) inbox.emplace_back(clientId, std::move(line));
                     }
-                    if (client.readBuffer.size() > kMaxLineBytes) {
-                        disconnected.push_back(clientId);
-                    }
+                }
+                // A runaway line without a newline must not grow forever.
+                if (client.readBuffer.size() > kMaxLineBytes) {
+                    disconnected.push_back(clientId);
                 }
             }
 
@@ -157,6 +212,10 @@ struct MuseSocketServer::Impl {
                     auto it = clients.find(clientId);
                     if (it == clients.end()) continue; // client already gone
                     it->second.writeBuffer += response;
+                    // A client that will not read must not grow memory forever.
+                    if (it->second.writeBuffer.size() > kMaxClientWriteBytes) {
+                        disconnected.push_back(clientId);
+                    }
                 }
             }
             for (auto& [clientId, client] : clients) {
@@ -167,7 +226,8 @@ struct MuseSocketServer::Impl {
 #else
                                              client.writeBuffer.size(),
 #endif
-                                             0);
+                                             kSendFlags);
+                    if (sent < 0 && wouldBlock()) break; // keep the rest for next time
                     if (sent <= 0) {
                         disconnected.push_back(clientId);
                         break;
@@ -270,10 +330,15 @@ bool MuseSocketServer::isRunning() const {
 }
 
 size_t MuseSocketServer::processPending(MuseService& service) {
+    // At most kMaxRequestsPerFrame per call; the rest wait for the next frame,
+    // so a backlog can never monopolise one frame. Order per client is kept.
     std::deque<std::pair<uint64_t, std::string>> requests;
     {
         std::lock_guard<std::mutex> lock(m_impl->mutex);
-        requests.swap(m_impl->inbox);
+        while (!m_impl->inbox.empty() && requests.size() < kMaxRequestsPerFrame) {
+            requests.push_back(std::move(m_impl->inbox.front()));
+            m_impl->inbox.pop_front();
+        }
     }
     for (auto& [clientId, line] : requests) {
         std::string response = service.handleRequest(line);
