@@ -491,3 +491,13 @@ target_include_directories(HarmonyAnalysisTest PRIVATE
 )
 add_test(NAME HarmonyAnalysisTest COMMAND HarmonyAnalysisTest)
 set_tests_properties(HarmonyAnalysisTest PROPERTIES TIMEOUT 120 LABELS "commands;muse;contract:application")
+
+# V83-MU1 (FD-63): the Muse Quiet idea engine — next-bar ideas from rules.
+add_executable(MuseIdeasTest Commands/MuseIdeasTest.cpp)
+target_link_libraries(MuseIdeasTest PRIVATE AestraAudioCore)
+target_include_directories(MuseIdeasTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MuseIdeasTest COMMAND MuseIdeasTest)
+set_tests_properties(MuseIdeasTest PROPERTIES TIMEOUT 120 LABELS "commands;muse;contract:application")
