@@ -93,7 +93,7 @@ ModelResponse OpenAICompatProvider::complete(const ModelRequest& request) {
             parsed["error"]["message"].isString()) {
             detail = parsed["error"]["message"].asString();
         }
-        response.error = "HTTP " + std::to_string(http.status) + ": " + detail;
+        response.error = "HTTP " + std::to_string(http.status) + ": " + truncateForMessage(detail);
         return response;
     }
 
