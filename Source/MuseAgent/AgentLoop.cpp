@@ -63,11 +63,26 @@ const char* schemaTypeName(const std::string& museType) {
 
 AgentLoop::AgentLoop(ModelProvider& provider, Transport transport, Options options)
     : m_provider(provider), m_transport(std::move(transport)), m_options(options) {
-    m_askUser = [](const std::string& question) {
+    // Default relay: the terminal, but bounded by the run's time budget so an
+    // absent user cannot hold the process open, and honest when nobody can answer.
+    m_askUser = [this](const std::string& question) {
         std::cerr << "\n[muse-agent asks] " << question << "\n> " << std::flush;
+        const auto left = std::chrono::duration_cast<std::chrono::milliseconds>(
+                              m_deadline - std::chrono::steady_clock::now())
+                              .count();
         std::string answer;
-        std::getline(std::cin, answer);
-        return answer;
+        switch (m_lineReader.readLine(answer, std::max<long long>(0, left))) {
+        case LineReader::Result::Line:
+            return answer;
+        case LineReader::Result::Eof:
+            return std::string("No interactive user is available (input is closed). Do not ask "
+                               "again; make the creative choice yourself and say so in your "
+                               "finish summary.");
+        case LineReader::Result::TimedOut:
+            break;
+        }
+        return std::string("The user did not answer before the time budget ran out. Wrap up "
+                           "and call finish.");
     };
 }
 
@@ -215,10 +230,21 @@ AgentLoop::Outcome AgentLoop::run(const std::string& brief) {
     Outcome outcome;
     const auto deadline = std::chrono::steady_clock::now() +
                           std::chrono::seconds(m_options.maxSeconds);
+    m_deadline = deadline;
+    // Tell the transport how long it may block before every Muse request.
+    const auto sendToMuse = [&](const std::string& line) {
+        if (m_budgetHook) {
+            const auto left = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                  deadline - std::chrono::steady_clock::now())
+                                  .count();
+            m_budgetHook(std::max<long long>(1, left));
+        }
+        return m_transport(line);
+    };
 
     // Bootstrap the tool manifest over the wire.
     const std::string schemaResponse =
-        m_transport("{\"id\": 0, \"verb\": \"get_schema\"}");
+        sendToMuse("{\"id\": 0, \"verb\": \"get_schema\"}");
     std::string manifestJson;
     try {
         JSON parsed = JSON::parse(schemaResponse);
@@ -389,7 +415,7 @@ AgentLoop::Outcome AgentLoop::run(const std::string& brief) {
                 museRequest.set("args", arguments);
             }
             const std::string museLine = museRequest.toString();
-            const std::string museResponse = m_transport(museLine);
+            const std::string museResponse = sendToMuse(museLine);
             if (m_options.verbose) {
                 std::cerr << "[muse] " << museLine << "\n       " << museResponse << "\n";
             }
@@ -403,6 +429,14 @@ AgentLoop::Outcome AgentLoop::run(const std::string& brief) {
                 result.isError = true;
             }
             request.messages.push_back(result);
+
+            // A slow call can spend the whole budget; do not start the next one.
+            if (std::chrono::steady_clock::now() >= deadline) {
+                outcome.stopReason = "max_seconds";
+                outcome.summary = "time budget exhausted during turn " +
+                                  std::to_string(outcome.iterations);
+                return outcome;
+            }
         }
     }
 
