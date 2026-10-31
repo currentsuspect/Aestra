@@ -4601,6 +4601,12 @@ add_executable(RunLogLocationTest AestraCore/RunLogLocationTest.cpp)
 target_include_directories(RunLogLocationTest PRIVATE ${CMAKE_SOURCE_DIR}/Source)
 add_test(NAME RunLogLocationTest COMMAND RunLogLocationTest)
 set_tests_properties(RunLogLocationTest PROPERTIES LABELS "core;logging;regression;contract:application")
+# #1268: AsyncLogger takes log() from every thread; 8 producers x 800 lines must all arrive once and intact.
+add_executable(AsyncLoggerMultiProducerTest AestraCore/AsyncLoggerMultiProducerTest.cpp)
+target_include_directories(AsyncLoggerMultiProducerTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraCore/include)
+target_link_libraries(AsyncLoggerMultiProducerTest PRIVATE Threads::Threads)
+add_test(NAME AsyncLoggerMultiProducerTest COMMAND AsyncLoggerMultiProducerTest)
+set_tests_properties(AsyncLoggerMultiProducerTest PROPERTIES TIMEOUT 120 LABELS "core;logging;threading;regression;contract:core")
 
 # JSON::asArray() const / asObject() const return real data (they returned an
 # always-empty static from #179 on, silently hiding every const read).
