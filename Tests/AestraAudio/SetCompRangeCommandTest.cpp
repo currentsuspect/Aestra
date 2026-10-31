@@ -28,7 +28,7 @@ void check(bool ok, const char* name) {
         ++g_failures;
 }
 
-bool near(double a, double b) {
+bool closeTo(double a, double b) {
     return std::fabs(a - b) < 1e-9;
 }
 
@@ -72,7 +72,7 @@ void testFirstSwipeMakesTheMasterLane() {
     check(master.isValid() && r.lane(master) && r.lane(master)->trackId == r.trackId,
           "FirstSwipeCreatesAnOwnedMasterLane");
     check(r.track().comp.ranges().size() == 1 && r.track().comp.laneAt(5) == r.take2, "CompRecordsTheSwipe");
-    check(r.lane(master)->clips.size() == 1 && near(r.lane(master)->clips[0].startBeat, 4) &&
+    check(r.lane(master)->clips.size() == 1 && closeTo(r.lane(master)->clips[0].startBeat, 4) &&
               r.lane(master)->clips[0].sourceId == 2,
           "MasterPlaysTheChosenTakeAcrossTheSwipe");
     check(r.lane(r.take1)->muted && r.lane(r.take2)->muted && !r.lane(master)->muted, "TakesGoSilentMasterPlays");
@@ -88,7 +88,7 @@ void testSecondSwipeReusesTheMaster() {
     check(r.track().compLaneId == master && r.track().laneIds.size() == lanes, "SecondSwipeDoesNotMakeAnotherLane");
     const auto& clips = r.lane(master)->clips;
     check(clips.size() == 3 && clips[0].sourceId == 1 && clips[1].sourceId == 2 && clips[2].sourceId == 1 &&
-              near(clips[2].startBeat, 8),
+              closeTo(clips[2].startBeat, 8),
           "MasterNowReadsTake1Take2Take1");
 }
 

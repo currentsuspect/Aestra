@@ -24,7 +24,7 @@ void check(bool ok, const char* name) {
     if (!ok)
         ++g_failures;
 }
-bool near(double a, double b) {
+bool closeTo(double a, double b) {
     return std::fabs(a - b) < 1e-9;
 }
 } // namespace
@@ -66,7 +66,7 @@ int main() {
     check(t && t->compLaneId == master, "MasterLaneSurvives");
     check(t && t->comp.ranges().size() == 3 && t->comp.laneAt(1) == c1->getLaneId() &&
               t->comp.laneAt(5) == c2->getLaneId() && t->comp.laneAt(10) == c1->getLaneId() &&
-              near(t->comp.ranges()[1].startBeat, 4) && near(t->comp.ranges()[1].endBeat, 8),
+              closeTo(t->comp.ranges()[1].startBeat, 4) && closeTo(t->comp.ranges()[1].endBeat, 8),
           "WhichTakePlaysWhereSurvives");
     const PlaylistLane* m = tm2->getPlaylistModel().getLane(master);
     check(m && m->clips.size() == 3, "MasterLaneClipsSurvive");
