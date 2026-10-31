@@ -50,7 +50,7 @@ void printUsage() {
         "\n"
         "Options:\n"
         "  --port <port>        Muse socket port (default: $AESTRA_MUSE_PORT)\n"
-        "  --host <host>        default 127.0.0.1\n"
+        "  --host <host>        name or IPv4/IPv6 address, default 127.0.0.1\n"
         "  --args-json <json>   args object verbatim; for verbs flat flags cannot\n"
         "                       express (batch takes an array of commands)\n"
         "  --result             print only the result field, not the envelope\n"

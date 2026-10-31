@@ -37,7 +37,7 @@ constexpr int kMaxSecondsLimit = 7 * 24 * 3600;
 void printUsage() {
     std::cout <<
         "muse-agent: drive a Muse session with a model.\n"
-        "  --connect <port|host:port>  Muse socket (default host 127.0.0.1)\n"
+        "  --connect <port|host:port|[v6]:port>  Muse socket (default host 127.0.0.1)\n"
         "  --brief \"...\"               the production brief (required)\n"
         "  --provider anthropic|openai (default openai — local-first)\n"
         "  --model <id>                model id (defaults: claude-opus-4-8 / server default)\n"
@@ -114,12 +114,14 @@ int main(int argc, char** argv) {
     }
 
     // Resolve the Muse endpoint.
-    std::string host = "127.0.0.1";
-    std::string portText = connect;
-    if (const auto colon = connect.find(':'); colon != std::string::npos) {
-        host = connect.substr(0, colon);
-        portText = connect.substr(colon + 1);
+    const HostPort endpoint = splitHostPort(connect, "127.0.0.1");
+    if (!endpoint.ok) {
+        std::cerr << "invalid --connect: " << connect
+                  << " (expected <port>, <host>:<port> or [<ipv6>]:<port>)\n";
+        return 2;
     }
+    const std::string host = endpoint.host;
+    const std::string portText = endpoint.portText;
     const auto parsedPort = parseBoundedInt(portText, 1, 65535);
     if (!parsedPort) {
         std::cerr << "invalid port in --connect: " << connect << "\n";
