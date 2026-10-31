@@ -15,7 +15,6 @@ Enables tests that depend on host runtime conditions (audio device availability,
 Enables tests currently under investigation for consistency/portability:
 - `AestraWaveformLockTest`
 - `AestraAudioCallbackTest`
-- `AestraFilterTest`
 - `AestraSampleRateConverterTest`
 
 These tests are still compiled by default, but they are not registered in CTest unless explicitly enabled.

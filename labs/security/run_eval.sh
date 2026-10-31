@@ -264,23 +264,14 @@ fi
 # ============================================================
 log "=== Lane 3: Regression Tests ==="
 
-# Try to locate MathTests and AestraFilterTest
+# Try to locate MathTests
 MATH_BIN=""
-FILTER_BIN=""
 for candidate in \
   "$BUILD_DIR/MathTests" "$BUILD_DIR/AestraCore/MathTests" "$BUILD_DIR/bin/MathTests"; do
   [ -x "$candidate" ] && MATH_BIN="$candidate" && break
 done
-for candidate in \
-  "$BUILD_DIR/AestraFilterTest" \
-  "$BUILD_DIR/tests/AestraFilterTest" \
-  "$BUILD_DIR/Tests/AestraFilterTest" \
-  "$BUILD_DIR/bin/AestraFilterTest"; do
-  [ -x "$candidate" ] && FILTER_BIN="$candidate" && break
-done
 
 MATH_EXIT=0; MATH_OUT="${RESULTS_DIR}/${RID}_regression_math.txt"
-FILTER_EXIT=0; FILTER_OUT="${RESULTS_DIR}/${RID}_regression_filter.txt"
 
 if [ -n "$MATH_BIN" ]; then
   set +e
@@ -290,16 +281,6 @@ if [ -n "$MATH_BIN" ]; then
   log "  MathTests exit code: $MATH_EXIT"
 else
   log "  MathTests binary not found, skipping"
-fi
-
-if [ -n "$FILTER_BIN" ]; then
-  set +e
-  printf 'n\n' | "$FILTER_BIN" > "$FILTER_OUT" 2>&1
-  FILTER_EXIT=$?
-  set -e
-  log "  AestraFilterTest exit code: $FILTER_EXIT"
-else
-  log "  AestraFilterTest binary not found, skipping"
 fi
 
 # ============================================================
@@ -337,11 +318,6 @@ fi
 if [ "$MATH_EXIT" -ne 0 ]; then
   DECISION="reject"
   HARD_FAILURES="[\"MathTests regression (exit $MATH_EXIT)\"]"
-fi
-
-if [ "$FILTER_EXIT" -ne 0 ]; then
-  DECISION="reject"
-  HARD_FAILURES="[\"AestraFilterTest regression (exit $FILTER_EXIT)\"]"
 fi
 
 if $GIT_DIRTY; then
@@ -400,8 +376,7 @@ cat > "$SUMMARY_FILE" <<EOJSON
       "total_count": ${#POC_NAMES[@]}
     },
     "regression": {
-      "math_tests": { "exit_code": $MATH_EXIT, "output_file": "$MATH_OUT" },
-      "filter_tests": { "exit_code": $FILTER_EXIT, "output_file": "$FILTER_OUT" }
+      "math_tests": { "exit_code": $MATH_EXIT, "output_file": "$MATH_OUT" }
     }
   },
   "decision": { "status": "$DECISION", "reason": "$REASON", "hard_gate_failures": $HARD_FAILURES, "advisory_flags": $ADVISORY_FLAGS }

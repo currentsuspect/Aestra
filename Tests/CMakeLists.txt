@@ -782,10 +782,14 @@ endif()
 # Performance Stress Test
 add_executable(AestraAudioPerformanceTest
     AestraAudio/PerformanceStressTest.cpp
-    ${CMAKE_SOURCE_DIR}/AestraAudio/src/DSP/Filter.cpp
     ${CMAKE_SOURCE_DIR}/AestraAudio/src/DSP/Oscillator.cpp
 )
 target_link_libraries(AestraAudioPerformanceTest PRIVATE AestraAudio)
+target_include_directories(AestraAudioPerformanceTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
 add_test(NAME AestraAudioPerformanceTest COMMAND AestraAudioPerformanceTest)
 set_tests_properties(AestraAudioPerformanceTest PROPERTIES LABELS "contract:realtime")
 if(WIN32)
@@ -1527,16 +1531,6 @@ if(AESTRA_ENABLE_EXPERIMENTAL_TESTS)
     set_tests_properties(AestraAudioCallbackTest PROPERTIES LABELS "experimental;unstable;contract:core")
 else()
     message(STATUS "AestraAudioCallbackTest built but not registered (set AESTRA_ENABLE_EXPERIMENTAL_TESTS=ON to enable)")
-endif()
-
-# Filter Test
-add_executable(AestraFilterTest AestraAudio/FilterTest.cpp)
-target_link_libraries(AestraFilterTest PRIVATE AestraAudio)
-if(AESTRA_ENABLE_EXPERIMENTAL_TESTS)
-    add_test(NAME AestraFilterTest COMMAND AestraFilterTest)
-    set_tests_properties(AestraFilterTest PROPERTIES LABELS "experimental;unstable;contract:audio")
-else()
-    message(STATUS "AestraFilterTest built but not registered (set AESTRA_ENABLE_EXPERIMENTAL_TESTS=ON to enable)")
 endif()
 
 # Oscillator Test

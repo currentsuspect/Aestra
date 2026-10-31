@@ -3,7 +3,7 @@
 
 #include "AudioEngine.h"
 #include "AudioGraph.h"
-#include "Filter.h"
+#include "Plugin/AestraFilter.h"
 #include "SamplePool.h"
 
 #include <atomic>
@@ -170,25 +170,31 @@ void runPolyphonyBenchmark() {
 void runDSPBenchmark() {
     std::cout << "\n[Running DSP Density Benchmark]..." << std::endl;
     setHighPriority();
-    std::cout << "  Simulating 2x Oversampled Ladder Filters per track" << std::endl;
+    std::cout << "  Simulating stereo AestraFilter instances (ZDF state-variable filter + envelope follower)"
+              << std::endl;
 
     const int kBlockSize = 128; // Tighter deadline for DSP test
     const int kSampleRate = 48000;
 
-    // Create filters
-    std::vector<std::unique_ptr<Aestra::Audio::DSP::Filter>> filters;
+    std::vector<std::unique_ptr<Plugins::AestraFilter>> filters;
 
-    // Input/Output buffers
-    std::vector<float> buffer(kBlockSize); // Mono processing for density
-    for (auto& s : buffer)
-        s = 0.5f; // DC offset to avoid denormals
+    std::vector<float> bufferL(kBlockSize);
+    std::vector<float> bufferR(kBlockSize);
+    for (int i = 0; i < kBlockSize; ++i) {
+        // A real signal, not DC: the envelope follower and drive stage have to do work.
+        bufferL[i] = 0.5f * std::sin(0.05f * static_cast<float>(i));
+        bufferR[i] = bufferL[i];
+    }
+    std::vector<float> outL(kBlockSize);
+    std::vector<float> outR(kBlockSize);
+    const float* inputs[] = {bufferL.data(), bufferR.data()};
+    float* outputs[] = {outL.data(), outR.data()};
 
     auto addFilters = [&](int count) {
         for (int i = 0; i < count; ++i) {
-            auto f = std::make_unique<Aestra::Audio::DSP::Filter>(static_cast<float>(kSampleRate));
-            f->setType(Aestra::Audio::DSP::FilterType::LowPass);
-            f->setOversampling(Aestra::Audio::DSP::OversamplingFactor::TwoX);
-            f->setCutoff(1000.0f);
+            auto f = std::make_unique<Plugins::AestraFilter>();
+            f->initialize(static_cast<double>(kSampleRate), static_cast<uint32_t>(kBlockSize));
+            f->activate();
             filters.push_back(std::move(f));
         }
     };
@@ -206,7 +212,7 @@ void runDSPBenchmark() {
         auto t0 = std::chrono::high_resolution_clock::now();
         for (int b = 0; b < 100; ++b) {
             for (auto& f : filters) {
-                f->processBlock(buffer.data(), kBlockSize);
+                f->process(inputs, outputs, 2, 2, static_cast<uint32_t>(kBlockSize));
             }
         }
         auto t1 = std::chrono::high_resolution_clock::now();
