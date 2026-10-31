@@ -940,6 +940,20 @@ jobs:
           submodules: false
           persist-credentials: false
 
+      # FD-64 / #936: the census must include the SDK-gated tests. With
+      # submodules: false, AestraWatchdogTest and AestraCrashTest are never
+      # registered (AESTRA_HAS_VST3 is off), so their contract labels went
+      # unchecked and the gate was green for a policy it could not evaluate.
+      # Same fetch as "Plugin hosting (VST3 + CLAP compile)": two levels, the
+      # three nested submodules the build compiles from, shallow, anonymous
+      # (steinbergmedia/vst3sdk is public). Keep the two in step.
+      - name: Fetch VST3 SDK submodule
+        run: |
+          set -euo pipefail
+          git submodule update --init --depth 1 AestraAudio/External/vst3sdk
+          git -C AestraAudio/External/vst3sdk submodule update --init --depth 1 \
+            base pluginterfaces public.sdk
+
       # Level 1: the verifier in isolation. A green baseline plus every
       # prohibited state, each asserted to be rejected with its specific
       # diagnostic — because a crash also exits non-zero, and exit-code-only
