@@ -22,6 +22,9 @@ Saving, recovery and version history on your own computer are free and always wi
 **You stay in charge.**
 Aestra may notice something that looks unintended, a clip that clips or an odd route, and ask once. If you say it is on purpose, it remembers and stays quiet. Aestra advises; it does not decide. It does not interrupt you while you play or record.
 
+**It understands you.**
+Aestra does not ask you for what it can already tell from what you are doing: zooming in already says you want a finer grid, and the notes you write already suggest the key. Where it acts on a guess, it shows the guess, one undo removes it, and your choice wins. The aim is that you stay with the music, not with the tool.
+
 **It runs on the computer you have.**
 If Aestra is slow or unstable on a modest machine, that is our failure, not yours. Simple by default, deep when you want it.
 
@@ -50,3 +53,7 @@ The changelog is in plain words. Known issues are tracked in the open. When a de
 This philosophy is the highest authority for decisions about Aestra, within the law and our duty to keep people safe. Popular demand, commercial pressure and the preference of the moment do not override it on their own.
 
 It can change, rarely and on purpose. A change that strengthens a promise can be made readily. A change that weakens one, above all on protection, privacy or what is free, needs real evidence and a deliberate decision. Every change is dated and published with what changed and why.
+
+## Changes
+
+- **31 October 2026:** added "It understands you". It is the principle our features kept coming back to without a name; naming it lets us check every change against it. It strengthens what Aestra owes you.
