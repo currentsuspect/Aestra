@@ -26,6 +26,21 @@ class MuseService;
  *    execution is serialized with the UI exactly like user edits.
  *
  * Opt-in: the app only starts a server when AESTRA_MUSE_PORT is set.
+ *
+ * Authentication (FD-64, #1266). Loopback limits the network, not the user, so
+ * start() makes a random 256-bit token, hex-encoded, and writes it to a file only
+ * the current user can read (mode 0600 in a 0700 folder on POSIX; the per-user
+ * LOCALAPPDATA folder on Windows); see MuseSocketToken.h for the folders. stop()
+ * deletes it. start() fails rather than serve without one.
+ *
+ * Protocol: the first line a client sends must be  {"auth":"<token>"}.
+ *   - right token: {"status":"ok","result":{"authenticated":true}}, and the
+ *     session is then the plain JSONL protocol above;
+ *   - anything else before that (wrong token, a request, garbage):
+ *     {"status":"unauthorized","message":...}. Nothing reaches MuseService.
+ *     The client is dropped after 3 such lines, or 10 s without authenticating.
+ * Tokens are compared in constant time. MuseRepl's stdin mode has no socket and
+ * needs no token.
  */
 class MuseSocketServer {
 public:

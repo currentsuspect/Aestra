@@ -137,6 +137,9 @@ int main() {
         const CliInvocation inv = parseOrDie({"--port", "41952", "--host", "10.0.0.2", "list_units"});
         check(inv.portText == "41952", "--port is captured");
         check(inv.host == "10.0.0.2", "--host is captured");
+        const CliInvocation withToken = parseOrDie({"--token-file", "/tmp/t.token", "list_units"});
+        check(withToken.tokenFile == "/tmp/t.token", "--token-file is captured");
+        check(inv.tokenFile.empty(), "no --token-file means the per-user default");
 
         // After the verb, --port belongs to the verb; nothing else would let a
         // verb legitimately own a flag named port.

@@ -1,6 +1,9 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "MuseSocketClient.h"
 
+#include "AestraJSON.h"
+#include "MuseSocketToken.h"
+
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -191,6 +194,19 @@ std::string MuseSocketClient::request(const std::string& line, Outcome* outOutco
 
 bool MuseSocketClient::isConnected() const {
     return m_impl->socket != kInvalidSocket;
+}
+
+bool MuseSocketClient::authenticate(const std::string& token, std::string& outError) {
+    Outcome outcome{};
+    const std::string reply = request(MuseToken::authLine(token), &outcome);
+    if (outcome != Outcome::Ok) {
+        outError = "the Muse socket closed during authentication";
+        return false;
+    }
+    const JSON parsed = JSON::parse(reply);
+    if (parsed.isObject() && parsed["status"].isString() && parsed["status"].asString() == "ok") return true;
+    outError = "the Muse socket refused the token (is the token file from this session?)";
+    return false;
 }
 
 } // namespace MuseAgent

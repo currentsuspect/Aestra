@@ -83,6 +83,14 @@ public:
 
     bool isConnected() const;
 
+    /**
+     * @brief Present the session token (FD-64): the first line every client must send.
+     *
+     * The server refuses everything else until it has seen the right token, so call this right
+     * after connect() and before any request(). On failure the connection is spent.
+     */
+    bool authenticate(const std::string& token, std::string& outError);
+
 private:
     struct Impl;
     std::unique_ptr<Impl> m_impl;

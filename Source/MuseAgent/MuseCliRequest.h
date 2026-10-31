@@ -16,6 +16,7 @@ namespace MuseAgent {
 struct CliInvocation {
     std::string host = "127.0.0.1";
     std::string portText;    // empty = fall back to $AESTRA_MUSE_PORT
+    std::string tokenFile;   // empty = the per-user token file for the port (FD-64)
     std::string verb;
     JSON args = JSON::object();
     bool haveArgs = false;
@@ -75,7 +76,7 @@ inline bool parseMuseCli(const std::vector<std::string>& tokens, CliInvocation& 
 
         if (out.verb.empty() && museCliIsFlag(arg)) {
             const bool wantsValue =
-                (arg == "--port" || arg == "--host" || arg == "--args-json" || arg == "--timeout");
+                (arg == "--port" || arg == "--host" || arg == "--token-file" || arg == "--args-json" || arg == "--timeout");
             std::string value;
             if (wantsValue) {
                 if (i + 1 >= tokens.size()) {
@@ -86,6 +87,7 @@ inline bool parseMuseCli(const std::vector<std::string>& tokens, CliInvocation& 
             }
             if (arg == "--port") { out.portText = value; continue; }
             if (arg == "--host") { out.host = value; continue; }
+            if (arg == "--token-file") { out.tokenFile = value; continue; }
             if (arg == "--args-json") {
                 bool consumedAll = false;
                 JSON parsed = JSON::parseStrict(value, consumedAll);

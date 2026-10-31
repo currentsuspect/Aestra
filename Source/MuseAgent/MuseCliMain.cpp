@@ -24,6 +24,7 @@
 
 #include "MuseCliRequest.h"
 #include "MuseSocketClient.h"
+#include "MuseSocketToken.h"
 
 #include "AestraJSON.h"
 
@@ -51,6 +52,9 @@ void printUsage() {
         "Options:\n"
         "  --port <port>        Muse socket port (default: $AESTRA_MUSE_PORT)\n"
         "  --host <host>        name or IPv4/IPv6 address, default 127.0.0.1\n"
+        "  --token-file <path>  session token file (default: the per-user file the\n"
+        "                       app wrote for this port; the socket refuses any\n"
+        "                       client that does not present it)\n"
         "  --args-json <json>   args object verbatim; for verbs flat flags cannot\n"
         "                       express (batch takes an array of commands)\n"
         "  --result             print only the result field, not the envelope\n"
@@ -121,6 +125,13 @@ int main(int argc, char** argv) {
         return EXIT_USAGE;
     }
 
+    // The socket is guarded by a per-session token in a file only this user can read (FD-64).
+    std::string token;
+    if (!Aestra::MuseToken::loadToken(port, invocation.tokenFile, token, error)) {
+        std::cerr << error << "\n";
+        return EXIT_USAGE;
+    }
+
     Aestra::MuseAgent::MuseSocketClient client;
     if (!client.connect(invocation.host, port, error)) {
         std::cerr << "cannot reach a Muse socket at " << invocation.host << ":" << port
@@ -129,6 +140,11 @@ int main(int argc, char** argv) {
         return EXIT_USAGE;
     }
 
+    client.setReadTimeoutMs(10 * 1000); // authentication is instant; a silent peer is not a Muse socket
+    if (!client.authenticate(token, error)) {
+        std::cerr << error << "\n";
+        return EXIT_USAGE;
+    }
     client.setReadTimeoutMs(invocation.timeoutSeconds * 1000);
 
     Aestra::MuseAgent::MuseSocketClient::Outcome outcome{};
