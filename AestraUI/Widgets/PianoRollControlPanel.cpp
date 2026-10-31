@@ -3,6 +3,7 @@
 #include "NUIPianoRollWidgets.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
+#include "PianoRollLook.h"
 #include "PianoRollWidgetShared.h"
 #include "../Helpers/TimelineGridRenderer.h"
 #include "../Helpers/PianoRollInteraction.h"
@@ -41,10 +42,17 @@ void PianoRollControlPanel::setNoteLayer(std::shared_ptr<PianoRollNoteLayer> lay
 }
 
 namespace {
-// The Velocity | Pan segment in the lane's sidebar (FD-48 board 6): two stacked cells, one per lane.
+// The lane picker in the sidebar (FD-48 board 6, FD-63 board A + C): Velocity, Chance, Ratchet and Pan stacked, one cell
+// each, shrinking to fit a short lane.
+constexpr int kLaneCount = 4;
+const char* const kLaneNames[kLaneCount] = {"Velocity", "Chance", "Ratchet", "Pan"};
+
+float laneCellHeight(const NUIRect& b) { return std::clamp((b.height - 10.0f) / kLaneCount, 12.0f, 20.0f); }
+
 NUIRect laneSegmentCell(const NUIRect& b, float sidebarW, int index) {
     const float w = std::max(24.0f, sidebarW - 12.0f);
-    return NUIRect(b.x + (sidebarW - w) * 0.5f, b.y + 6.0f + 20.0f * static_cast<float>(index), w, 20.0f);
+    const float h = laneCellHeight(b);
+    return NUIRect(b.x + (sidebarW - w) * 0.5f, b.y + 6.0f + h * static_cast<float>(index), w, h);
 }
 } // namespace
 
@@ -64,12 +72,11 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
     auto layer = noteLayer_.lock();
     if (layer) {
         auto b = getBounds();
-        // Sidebar: clicking it flips the lane between velocity and pan.
+        // Sidebar: clicking a cell shows that lane.
         if (!isDragging_ && event.position.x < b.x + sidebarW) {
              if (event.pressed && event.button == NUIMouseButton::Left) {
-                 if (laneSegmentCell(b, sidebarW, 0).contains(event.position)) laneMode_ = LaneMode::Velocity;
-                 else if (laneSegmentCell(b, sidebarW, 1).contains(event.position)) laneMode_ = LaneMode::Pan;
-                 else laneMode_ = (laneMode_ == LaneMode::Velocity) ? LaneMode::Pan : LaneMode::Velocity;
+                 for (int i = 0; i < kLaneCount; ++i)
+                     if (laneSegmentCell(b, sidebarW, i).contains(event.position)) laneMode_ = static_cast<LaneMode>(i);
                  repaint();
                  return true;
              }
@@ -77,6 +84,7 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
         }
 
         const bool panMode = laneMode_ == LaneMode::Pan;
+        const LaneMode field = laneMode_;
         float localX = event.position.x - b.x + scrollX_ - sidebarW;
 
         // Find the note whose velocity stem sits under a given lane-x, preferring
@@ -112,7 +120,8 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
                     const float centerY = bottomY - availH * 0.5f;
                     return std::clamp((centerY - y) / std::max(1.0f, availH * 0.5f), -1.0f, 1.0f);
                 }
-                return velocityFromPanelPosition(y, bottomY, availH);
+                if (field == LaneMode::Ratchet) return static_cast<float>(ratchetFromPanelPosition(y, bottomY, availH));
+                return velocityFromPanelPosition(y, bottomY, availH); // velocity and chance are both 0..1
             };
 
             if (foundIdx != -1) {
@@ -124,7 +133,7 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
                 // Set the value immediately based on click Y (Global)
                 const float newValue = laneValueAtY(event.position.y);
 
-                layer->setLaneValue(foundIdx, panMode, newValue);
+                layer->setLaneValue(foundIdx, field, newValue);
                 repaint();
                 return true;
             }
@@ -136,7 +145,7 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
                  hoveringNoteIndex_ = -1;
                  // Fold the whole lane drag into a single undo step.
                  if (!dragUndoSnapshot_.empty()) {
-                     layer->pushExternalEdit(dragUndoSnapshot_, panMode ? "Pan" : "Velocity");
+                     layer->pushExternalEdit(dragUndoSnapshot_, kLaneNames[static_cast<int>(field)]);
                      dragUndoSnapshot_.clear();
                  }
                  return true;
@@ -153,6 +162,8 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
                 const float centerY = bottomY - availH * 0.5f;
                 newValue = std::clamp((centerY - event.position.y) / std::max(1.0f, availH * 0.5f),
                                       -1.0f, 1.0f);
+            } else if (field == LaneMode::Ratchet) {
+                newValue = static_cast<float>(ratchetFromPanelPosition(event.position.y, bottomY, availH));
             } else {
                 newValue = velocityFromPanelPosition(event.position.y, bottomY, availH);
             }
@@ -160,7 +171,7 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
             const int swept = noteUnderX(localX);
             if (swept != -1) hoveringNoteIndex_ = swept;
 
-            if (layer->setLaneValue(hoveringNoteIndex_, panMode, newValue)) repaint();
+            if (layer->setLaneValue(hoveringNoteIndex_, field, newValue)) repaint();
             return true;
         }
     }
@@ -187,17 +198,19 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
                       1.0f,
                       border);
 
-    // A Velocity | Pan segment: the active cell filled, the other quiet. Below it, the lane's scale at the guide lines.
+    // The lane picker: the active cell filled, the others quiet. Below it, the lane's scale at the guide lines.
     const bool panMode = laneMode_ == LaneMode::Pan;
+    const LaneMode field = laneMode_;
     const float labelSize = themeManager.getFontSize("xs");
     const auto accent = themeManager.getColor("accentPrimary");
     const auto textColor = themeManager.getColor("textPrimary");
-    const char* names[2] = {"Velocity", "Pan"};
-    const NUIRect segment(laneSegmentCell(b, sidebarW, 0).x, laneSegmentCell(b, sidebarW, 0).y, laneSegmentCell(b, sidebarW, 0).width, 40.0f);
+    const NUIRect first = laneSegmentCell(b, sidebarW, 0);
+    const NUIRect segment(first.x, first.y, first.width, first.height * kLaneCount);
     renderer.strokeRoundedRect(segment, 5.0f, 1.0f, themeManager.getColor("border").withAlpha(0.4f));
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < kLaneCount; ++i) {
         const NUIRect cell = laneSegmentCell(b, sidebarW, i);
-        const bool active = (i == 1) == panMode;
+        const bool active = static_cast<int>(field) == i;
+        const char* const* names = kLaneNames;
         const NUIRect inner(cell.x + 2.0f, cell.y + 2.0f, cell.width - 4.0f, cell.height - 4.0f);
         if (active) renderer.fillRoundedRect(inner, 3.0f, accent.withAlpha(0.28f));
         const auto dim = renderer.measureText(names[i], labelSize);
@@ -208,10 +221,12 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
         // 127 / 64 / 0 for velocity, R / C / L for pan, each beside its guide line; skipped where the segment is in the way.
         const float availHScale = std::max(1.0f, b.height - 28.0f);
         const float bottom = b.bottom() - 8.0f;
-        const char* marks[3] = {panMode ? "R" : "127", panMode ? "C" : "64", panMode ? "L" : "0"};
+        const char* const markSets[kLaneCount][3] = {{"127", "64", "0"}, {"100%", "50%", "0%"}, {"\xC3\x974", "", "\xC3\x971"},
+                                                     {"R", "C", "L"}};
+        const char* const* marks = markSets[static_cast<int>(field)];
         const float ys[3] = {bottom - availHScale, bottom - availHScale * 0.5f, bottom};
         for (int i = 0; i < 3; ++i) {
-            if (ys[i] < segment.bottom() + 10.0f) continue;
+            if (ys[i] < segment.bottom() + 10.0f || marks[i][0] == '\0') continue;
             const auto dim = renderer.measureText(marks[i], 9.0f);
             renderer.drawText(marks[i], NUIPoint(sidebarRect.right() - 6.0f - dim.width, ys[i] - dim.height * 0.5f), 9.0f,
                               themeManager.getColor("textSecondary").withAlpha(0.6f));
@@ -286,11 +301,14 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
             stemH = std::max(2.0f, std::abs(y - centerY));
             intensity = std::abs(pv);
         } else {
-            const float h = velocityToPanelHeight(normalizedVelocity, availH);
+            // Velocity and chance rise from the floor by their 0..1 value; a ratchet by its step, a quarter per hit.
+            const float v = field == LaneMode::Chance ? std::clamp(n.chance, 0.0f, 1.0f) : normalizedVelocity;
+            const float h = field == LaneMode::Ratchet ? ratchetToPanelHeight(n.ratchet, availH)
+                                                       : velocityToPanelHeight(v, availH);
             y = bottomY - h;
             stemTop = y;
             stemH = std::max(2.0f, h);
-            intensity = normalizedVelocity;
+            intensity = field == LaneMode::Ratchet ? h / availH : v;
         }
 
         float alpha = 0.48f + intensity * 0.48f;
@@ -318,6 +336,10 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
                 const int panSteps = static_cast<int>(std::lround(std::abs(n.pan) * 100.0f));
                 if (panSteps == 0) value = "C";
                 else value = (n.pan < 0.0f ? "L " : "R ") + std::to_string(panSteps);
+            } else if (field == LaneMode::Chance || field == LaneMode::Ratchet) {
+                value = PianoRollLook::expressionTag(field == LaneMode::Chance ? n.chance : 1.0f,
+                                                     field == LaneMode::Ratchet ? n.ratchet : 1);
+                if (value.empty()) value = field == LaneMode::Chance ? "100%" : "\xC3\x97" "1";
             } else {
                 value = std::to_string(static_cast<int>(std::lround(normalizedVelocity * 127.0f)));
             }

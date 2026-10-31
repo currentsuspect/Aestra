@@ -341,6 +341,59 @@ int main() {
         check(Look::isAccidental(70) && !Look::isAccidental(71) && !Look::isAccidental(0), "accidentals are C# D# F# G# A# in every octave");
     }
 
+    std::cout << "[11] the A + C look (FD-63): velocity shade, chance stripes, ratchet ticks, scale degrees\n";
+    {
+        namespace Look = PianoRollLook;
+        const NUIColor amber(0.95f, 0.64f, 0.37f, 0.3f);
+        check(Look::velocityFill(amber, 0.2f).a == 1.0f, "a soft note is still opaque");
+        check(near(Look::velocityFill(amber, 1.0f).r, 0.95), "a full-velocity note is the unit's colour");
+        check(near(Look::velocityFill(amber, 0.0f).r, 0.95 * 0.45), "velocity 0 is 45% of it");
+        check(Look::velocityFill(amber, 0.3f).luminance() < Look::velocityFill(amber, 0.8f).luminance(), "softer reads darker");
+        check(near(Look::velocityFill(amber, 7.0f).r, 0.95) && near(Look::velocityFill(amber, -1.0f).r, 0.95 * 0.45),
+              "velocity outside 0..1 is clamped");
+        check(Look::chanceStripe(amber).luminance() < amber.luminance() * 0.5f, "the stripe is the dark one");
+
+        const NUIRect note(100.0f, 50.0f, 40.0f, 14.0f);
+        const auto stripes = Look::chanceStripes(note);
+        check(stripes.size() >= 6, "a 40 px note carries several stripes");
+        bool inside = true, upRight = true;
+        for (const auto& s : stripes) {
+            for (const auto& p : {s.a, s.b})
+                inside = inside && p.x >= note.x - 0.01f && p.x <= note.right() + 0.01f && p.y >= note.y - 0.01f &&
+                         p.y <= note.bottom() + 0.01f;
+            upRight = upRight && s.b.x > s.a.x && s.b.y < s.a.y;
+        }
+        check(inside, "every stripe is cut to the note (the grid holds the only clip rect)");
+        check(upRight, "stripes run up to the right");
+        const auto moved = Look::chanceStripes(NUIRect(107.0f, 50.0f, 40.0f, 14.0f));
+        check(!moved.empty() && near(moved.front().a.x + moved.front().a.y - (stripes.front().a.x + stripes.front().a.y), 7.0),
+              "stripes are anchored to the period, so scrolling one period moves them exactly one stripe");
+        check(Look::chanceStripes(NUIRect(0, 0, 0, 14)).empty(), "an empty note has no stripes");
+
+        check(Look::ratchetTicks(note, 1).empty(), "a single hit has no ticks");
+        const auto t3 = Look::ratchetTicks(note, 3);
+        check(t3.size() == 2 && std::abs(t3[0] - (100.0 + 40.0 / 3.0)) < 1e-3 && std::abs(t3[1] - (100.0 + 80.0 / 3.0)) < 1e-3,
+              "x3 splits the note in thirds");
+        check(Look::ratchetTicks(note, 9).size() == 3, "a ratchet is at most x4");
+
+        check(Look::expressionTag(1.0f, 1).empty(), "a plain note has no tag");
+        check(Look::expressionTag(0.6f, 1) == "60%", "chance reads as a percentage");
+        check(Look::expressionTag(1.0f, 3) == "\xC3\x97" "3", "a ratchet reads as x3");
+        check(Look::expressionTag(0.4f, 2) == "40% \xC3\x97" "2", "both, chance first");
+
+        // D minor reads 1 2 b3 4 5 b6 b7 (the board), off-scale keys and chromatic rolls read nothing.
+        const char* dMinor[7] = {"1", "2", "\xE2\x99\xAD" "3", "4", "5", "\xE2\x99\xAD" "6", "\xE2\x99\xAD" "7"};
+        const int dMinorPitches[7] = {62, 64, 65, 67, 69, 70, 72};
+        bool degreesOk = true;
+        for (int i = 0; i < 7; ++i) degreesOk = degreesOk && Look::scaleDegreeLabel(dMinorPitches[i], 2, ScaleType::Minor) == dMinor[i];
+        check(degreesOk, "D minor's keys read 1 2 b3 4 5 b6 b7");
+        check(Look::scaleDegreeLabel(63, 2, ScaleType::Minor).empty(), "an off-scale key reads nothing");
+        check(Look::scaleDegreeLabel(60, 0, ScaleType::Chromatic).empty(), "a chromatic roll has no degrees");
+        check(Look::scaleDegreeLabel(66, 0, ScaleType::Lydian) == "\xE2\x99\xAF" "4", "Lydian's tritone is #4");
+        check(Look::scaleDegreeLabel(66, 0, ScaleType::Locrian) == "\xE2\x99\xAD" "5", "Locrian's tritone is b5");
+        check(Look::scaleDegreeLabel(50, 2, ScaleType::Minor) == "1", "every octave of the root is 1");
+    }
+
     std::cout << (g_failures == 0 ? "PianoRollDuplicateTest: all passed\n" : "PianoRollDuplicateTest: FAILURES\n");
     return g_failures == 0 ? 0 : 1;
 }

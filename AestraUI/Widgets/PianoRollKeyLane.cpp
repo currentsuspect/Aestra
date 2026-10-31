@@ -105,6 +105,18 @@ void PianoRollKeyLane::onRender(NUIRenderer& renderer) {
                               naturalText);
         }
 
+        // FD-63: a key in the scale shows its degree at its free end, the root's in the accent.
+        if (keyHeight_ >= 12.0f) {
+            if (const std::string degree = PianoRollLook::scaleDegreeLabel(p, rootKey_, scaleType_); !degree.empty()) {
+                const float fontSize = 9.0f;
+                const auto textSize = renderer.measureText(degree, fontSize);
+                const bool root = degree == "1";
+                const auto ink = root ? accent : (accidental ? naturalKey.withAlpha(0.7f) : naturalText.withAlpha(0.62f));
+                renderer.drawText(degree, NUIPoint(keyRect.x + 6.0f, keyRect.y + (keyRect.height - textSize.height) * 0.5f),
+                                  fontSize, ink);
+            }
+        }
+
         if (p % 12 == 0) {
             renderer.fillRoundedRect(NUIRect(b.x + 3.0f, y + 4.0f, 2.0f, std::max(2.0f, keyHeight_ - 8.0f)),
                                      1.0f,

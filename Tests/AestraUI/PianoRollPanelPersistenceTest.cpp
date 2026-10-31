@@ -183,7 +183,49 @@ void testTimelinePlaybackMovesThePanelPlayhead() {
     trackManager->stop();
 }
 
+// FD-63 (V83-PR1): the piano roll carries a note's chance and ratchet. Before, its note type had neither, so a note it
+// wrote back (a duplicate, a paste) came out at 100% and x1: duplicating a 60% note made a copy that always played.
+void testDuplicateKeepsChanceAndRatchet() {
+    auto trackManager = std::make_shared<TrackManager>();
+    auto& patternManager = trackManager->getPatternManager();
+
+    MidiPayload payload;
+    Aestra::Audio::MidiNote n;
+    n.pitch = 62; n.startBeat = 0.0; n.durationBeats = 1.0; n.velocity = 0.8f;
+    n.chance = 0.6f; n.ratchet = 3;
+    payload.notes = {n};
+    const PatternID patternId = patternManager.createMidiPattern("Expression Duplicate", 8.0, payload);
+
+    PianoRollPanel editor(trackManager);
+    editor.loadPattern(patternId);
+
+    AestraUI::NUIKeyEvent ctrlA;
+    ctrlA.keyCode = AestraUI::NUIKeyCode::A;
+    ctrlA.modifiers = AestraUI::NUIModifiers::Ctrl;
+    ctrlA.pressed = true;
+    editor.handleKeyEvent(ctrlA);
+    AestraUI::NUIKeyEvent ctrlD = ctrlA;
+    ctrlD.keyCode = AestraUI::NUIKeyCode::D;
+    editor.handleKeyEvent(ctrlD);
+
+    const PatternSource* stored = patternManager.getPattern(patternId);
+    expect(stored != nullptr && stored->isMidi(), "duplicated pattern should remain available");
+    if (!stored || !stored->isMidi()) return;
+    const auto& notes = std::get<MidiPayload>(stored->payload).notes;
+    expect(notes.size() == 2, "Ctrl+D should add one copy");
+    for (const auto& note : notes) {
+        expect(std::abs(note.chance - 0.6f) < 1e-6f, "every note, original and copy, should keep its 60% chance");
+        expect(note.ratchet == 3, "every note, original and copy, should keep its x3 ratchet");
+    }
+
+    // And the editor shows it: what it paints is what plays.
+    for (const auto& ui : editor.getNotes()) {
+        expect(std::abs(ui.chance - 0.6f) < 1e-6f && ui.ratchet == 3, "the editor's notes should carry chance and ratchet");
+    }
+}
+
 int main() {
+    testDuplicateKeepsChanceAndRatchet();
     testTimelinePlaybackMovesThePanelPlayhead();
     testHarmonyContextRoundtripThroughPanel();
     testSelectionSurvivesCommittedEditRoundTrip();

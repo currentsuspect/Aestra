@@ -11,15 +11,19 @@ namespace Aestra {
 namespace Audio {
 
 /**
- * @brief Command to update a MIDI note's expression (velocity/pan) in place (undoable)
+ * @brief Command to update a MIDI note's expression (velocity, pan, chance, ratchet) in place (undoable)
  *
  * Identifies the target note by pitch + startBeat + unitId, like
  * ResizeNoteCommand — position and duration are unchanged by this command.
  */
 class UpdateNoteCommand : public ICommand {
 public:
+    /// Velocity and pan; chance and ratchet stay as the note has them.
     UpdateNoteCommand(PatternManager& patternManager, PatternID patternId,
                       const MidiNote& originalNote, float newVelocity, float newPan);
+    /// All four (FD-63: the piano roll edits chance and ratchet in its lanes).
+    UpdateNoteCommand(PatternManager& patternManager, PatternID patternId, const MidiNote& originalNote,
+                      float newVelocity, float newPan, float newChance, uint8_t newRatchet);
 
     void execute() override;
     void undo() override;
@@ -39,6 +43,8 @@ private:
     // New expression values
     float m_newVelocity;
     float m_newPan;
+    float m_newChance;
+    uint8_t m_newRatchet;
 
     bool m_executed = false;
 };
