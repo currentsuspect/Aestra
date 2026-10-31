@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "AudioExporter.h"
+#include "Core/ManualRenderLease.h"
 #include "AudioGraphBuilder.h"
 #include "AestraFile.h"
 #include "AestraLog.h"
@@ -82,6 +83,8 @@ AudioExporter::Result AudioExporter::bounceToWav(AudioEngine& engine, TrackManag
 }
 
 AudioExporter::Result AudioExporter::render(const Config& config) {
+    // The render below drives processBlock by hand: a live device callback stands down for it.
+    ManualRenderLease lease(m_engine);
     Result result;
     result.outputPath = config.outputPath;
 
@@ -218,6 +221,9 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     // once. Left on, rendering past the loop end (the tail) wrapped back to the
     // loop start and played the arrangement again (#992).
     const bool wasLoopEnabled = m_engine.isLoopEnabled();
+    // Pattern mode forces a loop over [0, pattern length) regardless of the transport loop (#996).
+    const bool wasPatternMode = m_engine.isPatternPlaybackMode();
+    const double wasPatternLength = m_engine.getPatternLengthBeats();
     // Offline export should follow the exact live engine path to avoid render-path
     // mismatches between playback and export.
     const bool wasMetronomeEnabled = m_engine.isMetronomeEnabled();
@@ -233,6 +239,8 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         uint64_t savedSamplePos;
         float savedPreviewDuckDb;
         bool savedLoopEnabled;
+        bool savedPatternMode;
+        double savedPatternLength;
         bool savedMetronomeEnabled;
         bool savedAuditionEnabled;
         bool wasPlaying;
@@ -248,6 +256,7 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
             self.m_engine.setMetronomeEnabled(savedMetronomeEnabled);
             self.m_engine.setAuditionModeEnabled(savedAuditionEnabled);
             self.m_engine.setLoopEnabled(savedLoopEnabled);
+            self.m_engine.setPatternPlaybackMode(savedPatternMode, savedPatternLength);
             // Restore the configured duck depth only; live playback re-smooths the
             // duck gain naturally from the current preview state.
             self.m_engine.setPreviewDuckingAttenuationDb(savedPreviewDuckDb);
@@ -257,7 +266,7 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
             }
         }
     } engineStateGuard{*this, originalSampleRate, savedSamplePos, wasPreviewDuckDb,
-                       wasLoopEnabled, wasMetronomeEnabled, wasAuditionEnabled, wasPlaying};
+                       wasLoopEnabled, wasPatternMode, wasPatternLength, wasMetronomeEnabled, wasAuditionEnabled, wasPlaying};
 
     // Stop transport for safe offline rendering
     if (wasPlaying) {
@@ -276,6 +285,8 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     m_engine.setGraph(AudioGraphBuilder::buildFromTrackManager(m_trackManager));
 
     m_engine.setLoopEnabled(false);
+    // The Arsenal leaves the engine in pattern mode; a song export must render the song, not that loop (#996).
+    m_engine.setPatternPlaybackMode(false, wasPatternLength);
     m_engine.setMetronomeEnabled(false);
     m_engine.setAuditionModeEnabled(false);
     m_engine.setPreviewDuckingAttenuationDb(0.0f);

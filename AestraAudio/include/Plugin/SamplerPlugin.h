@@ -8,6 +8,7 @@
 #include <atomic>
 #include <memory>
 #include "AestraAtomicSharedPtr.h"
+#include "Core/RealtimeSharedSlot.h"
 #include <mutex>
 #include <string>
 #include <vector>
@@ -94,6 +95,8 @@ public:
     float getLoopEndNorm() const noexcept { return m_loopEndNorm.load(std::memory_order_relaxed); }
     LoopMode getLoopMode() const noexcept;
     bool isLoopEnabled() const noexcept { return getLoopMode() != LoopMode::OneShot; }
+    /// True once a sample is loaded (a project restore checks this before falling back to the unit's file).
+    bool hasSample() const noexcept { return m_data.load(std::memory_order_acquire) != nullptr; }
     int getMaxVoices() const noexcept { return m_maxVoices.load(std::memory_order_relaxed); }
     int getRootMidiNote() const noexcept { return m_rootMidiNote.load(std::memory_order_relaxed); }
     bool isMonoMode() const noexcept { return m_monoMode.load(std::memory_order_relaxed); }
@@ -132,6 +135,10 @@ private:
     // Shared Ptr accessed atomically (C++11/17 free functions)
     // No mutex needed for access anymore!
     AtomicSharedPtr<SampleData> m_data;
+    // The same sample for process(): AtomicSharedPtr::load takes a pooled mutex in this C++17
+    // build. Every m_data swap publishes here too (publishSample).
+    RealtimeSharedSlot<SampleData> m_rtData;
+    void publishSample(const std::shared_ptr<SampleData>& data) { m_rtData.publish(data); }
 
     // Gap-free swap: the sample the audio thread last rendered (audio thread only), and the swapped-out buffers that
     // sounding voices may still be reading (non-RT, under m_retiredMutex).
@@ -163,6 +170,19 @@ private:
     // Voice Architecture
     enum class EnvStage { Attack, Decay, Sustain, Release, Off };
 
+    /// The playable window of a voice's sample: where it starts, where it ends,
+    /// and the loop geometry. A function of the voice's frame count and the
+    /// block's loop points, and therefore the same for every sample of a voice
+    /// in a block.
+    struct SampleWindow {
+        double total = 0.0;
+        double start = 0.0;
+        double end = 0.0;
+        double loopLength = 1.0;
+        double pingPongEnd = 0.0;
+        double pingPongSpan = 0.0;
+    };
+
     struct Voice {
         bool active = false;
         int note = 0;
@@ -178,6 +198,9 @@ private:
         double stageTime = 0.0; // Seconds in current stage
         float currentGain = 0.0f;
         float releaseGain = 0.0f; // Gain at start of release
+        // > 0: this release is a declick fade of that many seconds (a choked or
+        // stolen voice), not the user's Release time.
+        double fadeSeconds = 0.0;
         uint64_t order = 0;       // Trigger order: an id-less note-off ends the oldest held voice of its pitch
         uint32_t noteId = 0;      // The scheduler's note identity (0 = none, e.g. live MIDI)
         // Keep-length voices play their own stretched copy; null plays the shared sample.
@@ -186,6 +209,13 @@ private:
         // the audio thread (a refcount copy); the plugin's retired list keeps the buffer alive past the voice, so
         // dropping this reference is never the last one on the audio thread.
         std::shared_ptr<SampleData> held;
+        // The cached window, and the inputs it was computed from. Rebuilt only
+        // when one of them changes, so a voice that changes sample mid-block
+        // or a block whose loop points moved still gets the right window.
+        SampleWindow window{};
+        double windowFrames = -1.0;
+        double windowStartNorm = -1.0;
+        double windowEndNorm = -1.0;
     };
 
     static constexpr int kMaxVoices = 32;
@@ -208,6 +238,16 @@ private:
                          const std::shared_ptr<SampleData>& currentData);
     void renderVoice(Voice& voice, float* outL, float* outR, uint32_t frames);
     float getEnvelopeLevel(Voice& voice, double dt, float attack, float decay, float sustain, float release);
+    /// A voice cut off by a new note (cut-self, a mono retrigger) fades over this
+    /// long instead of stopping dead: an instant cut jumps the waveform to zero
+    /// mid-cycle, which on a sub-bass is an audible tick.
+    static constexpr double kDeclickSeconds = 0.004;
+    /// The polyphony gain (1/sqrt(voices)) glides to its new value over about
+    /// this long instead of jumping when a voice starts or ends: a jump scales
+    /// every sounding voice in one sample, which ticks on low sounds.
+    static constexpr double kVoiceCompGlideSeconds = 0.005;
+    float m_voiceCompSmoothed = 1.0f;
+    void declickVoice(Voice& v);
 };
 
 } // namespace Plugins

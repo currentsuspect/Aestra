@@ -615,7 +615,7 @@ static void test_minimap_drag_released_outside_the_editor_ends() {
 
 // SPEC 3 §5.2 (owner ruling): a right-drag, or Ctrl+left-drag, on the piano-roll ruler makes a
 // loop zone; a plain left press still scrubs. Esc, or a Select-tool press on empty grid, clears
-// it. The zone never selects notes (a separate, future interaction).
+// it. Since V82-PR1 the drag also selects the notes inside the zone (PianoRollDuplicateTest).
 static void test_ruler_draws_and_clears_a_loop_zone() {
     PianoRollView view;
     view.setBounds({0.0f, 0.0f, 900.0f, 600.0f});
@@ -1036,7 +1036,7 @@ static void test_alt_drag_copy_is_one_gesture_and_moves_only_the_clone() {
 class NoteBodyRecorder : public Aestra::Testing::NullRenderer {
 public:
     std::vector<NUIRect> strokes;
-    void strokeRoundedRect(const NUIRect& r, float, float, const NUIColor&) override { strokes.push_back(r); }
+    void fillRoundedRect(const NUIRect& r, float, const NUIColor&) override { strokes.push_back(r); } // flat notes are one fill (FD-48)
 };
 
 static void test_alt_drag_clone_is_drawn_while_dragging() {
@@ -1185,10 +1185,34 @@ static void test_drag_painted_notes_keep_the_dragged_length() {
     PASS("drag-painted notes keep the dragged length");
 }
 
+// A lane drag edits one note in place. It used to copy the list and re-sort it on every mouse move; the sort is not stable,
+// so for notes that start together (a chord) the dragged index could land on a different note.
+static void test_lane_value_edits_in_place_and_keeps_chord_order() {
+    PianoRollNoteLayer layer;
+    std::vector<MidiNote> chord;
+    for (int pitch : {60, 64, 67, 72}) chord.push_back({pitch, 0.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f});
+    layer.setNotes(chord);
+    const auto before = layer.getNotes();
+
+    ASSERT(layer.setLaneValue(2, false, 0.25f), "an in-range index is edited");
+    ASSERT(layer.setLaneValue(1, true, -0.5f), "pan is edited the same way");
+    ASSERT(!layer.setLaneValue(9, false, 0.1f) && !layer.setLaneValue(-1, false, 0.1f), "an out-of-range index is refused");
+
+    const auto& after = layer.getNotes();
+    bool sameOrder = after.size() == before.size();
+    for (size_t i = 0; sameOrder && i < after.size(); ++i) sameOrder = after[i].pitch == before[i].pitch;
+    ASSERT(sameOrder, "the notes keep their order: the index still means the same note");
+    ASSERT(after[2].velocity == 0.25f && after[2].pan == 0.0f, "the dragged note's velocity changed and nothing else on it");
+    ASSERT(after[1].pan == -0.5f && after[1].velocity == 0.8f, "pan changed on its own note only");
+    ASSERT(after[0].velocity == 0.8f && after[3].velocity == 0.8f, "the other notes are untouched");
+    PASS("a lane edit is in place and keeps chord order");
+}
+
 int main() {
     std::cout << "=== PianoRollInteraction Unit Tests ===\n\n";
 
     test_alt_drag_clone_is_drawn_while_dragging();
+    test_lane_value_edits_in_place_and_keeps_chord_order();
 
     test_alt_drag_copy_is_one_gesture_and_moves_only_the_clone();
     test_drag_painted_notes_keep_the_dragged_length();

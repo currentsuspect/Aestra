@@ -7,7 +7,10 @@
 #include "RtMidi.h"
 #endif
 
+#include <algorithm>
+#include <iterator>
 #include <mutex>
+#include <set>
 #include <utility>
 
 namespace Aestra {
@@ -28,6 +31,8 @@ struct MidiInputService::Impl {
     // sees one producer at a time. MIDI callback threads only — the audio
     // thread never touches this lock.
     std::mutex sinkMutex;
+    std::set<std::string> warnedPorts; ///< ports whose open failed and was already reported
+    bool backendWarned = false;
 
     static void rtCallback(double /*deltaTime*/, std::vector<unsigned char>* message, void* userData) {
         auto* self = static_cast<MidiInputService*>(userData);
@@ -45,11 +50,35 @@ struct MidiInputService::Impl {
         }
     }
 
+    // Called again every few seconds by the UI (#456), so it also closes ports whose device has gone (a replugged
+    // controller would otherwise match by name and keep its dead handle) and warns once per problem, not per poll.
     size_t openAllPorts(MidiInputService* service) {
         size_t opened = 0;
         try {
             RtMidiIn probe;
             const unsigned int count = probe.getPortCount();
+            backendWarned = false;
+            std::vector<std::string> present;
+            for (unsigned int i = 0; i < count; ++i) {
+                try {
+                    present.push_back(probe.getPortName(i));
+                } catch (const RtMidiError&) {
+                }
+            }
+            for (auto it = ports.begin(); it != ports.end();) {
+                if (std::find(present.begin(), present.end(), it->name) == present.end()) {
+                    Log::info("[MidiInput] MIDI input gone: " + it->name);
+                    if (it->in) {
+                        it->in->cancelCallback();
+                        it->in->closePort();
+                    }
+                    it = ports.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+            for (auto w = warnedPorts.begin(); w != warnedPorts.end();)
+                w = std::find(present.begin(), present.end(), *w) == present.end() ? warnedPorts.erase(w) : std::next(w);
             for (unsigned int i = 0; i < count; ++i) {
                 std::string name;
                 try {
@@ -75,15 +104,19 @@ struct MidiInputService::Impl {
                     in->ignoreTypes(true, true, true); // sysex, timecode, active sensing
                     in->setCallback(&rtCallback, service);
                 } catch (const RtMidiError& e) {
-                    Log::warning("[MidiInput] Failed to open port '" + name + "': " + e.getMessage());
+                    if (warnedPorts.insert(name).second)
+                        Log::warning("[MidiInput] Failed to open port '" + name + "': " + e.getMessage());
                     continue;
                 }
+                warnedPorts.erase(name);
                 Log::info("[MidiInput] Opened MIDI input: " + name);
                 ports.push_back(Port{std::move(in), name});
                 ++opened;
             }
         } catch (const RtMidiError& e) {
-            Log::warning(std::string("[MidiInput] MIDI backend unavailable: ") + e.getMessage());
+            if (!backendWarned)
+                Log::warning(std::string("[MidiInput] MIDI backend unavailable: ") + e.getMessage());
+            backendWarned = true;
         }
         return opened;
     }

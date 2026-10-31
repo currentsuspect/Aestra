@@ -32,7 +32,7 @@
  * Refactored to delegate to AestraWindowManager and AestraAudioController.
  */
 #include "../Core/RecoveryInfo.h"
-namespace Aestra { enum class RecoveryResponse; namespace Audio { class TakesPanel; } }
+namespace Aestra { enum class RecoveryResponse; class UpdateNotifier; class SettingsDialog; namespace Audio { class TakesPanel; } }
 
 class AestraApp {
 public:
@@ -155,6 +155,8 @@ private:
     /// (true = written) on the UI thread, possibly frames later.
     void saveCurrentProject(std::function<void(bool)> onDone = {});
     void saveProjectAs(std::function<void(bool)> onDone = {});
+    /// Writes the project to a new file and stays on the open one (its saved state unchanged).
+    void saveProjectCopy();
     /// Show a native picker without blocking the UI thread; @p onPicked runs on
     /// the UI thread (empty = cancelled). One picker at a time: returns false,
     /// without calling @p onPicked, if one is already open.
@@ -236,6 +238,11 @@ private:
     };
     std::shared_ptr<MainThreadQueue> m_mainThreadQueue{std::make_shared<MainThreadQueue>()};
     void startMuseSocketIfConfigured();
+    // Updates (AestraAppUpdates.cpp): the background check and its one notification.
+    void startUpdateChecks();
+    void stopUpdateChecks();
+    void addUpdatesPage(Aestra::SettingsDialog& dialog); // Settings > Updates
+    std::shared_ptr<Aestra::UpdateNotifier> m_updateNotifier;
 
     // Declared before m_content so it outlives every surface that reads it (reverse destruction order).
     std::unique_ptr<Aestra::UISurfaceStoreFile> m_uiSurfaceStore;

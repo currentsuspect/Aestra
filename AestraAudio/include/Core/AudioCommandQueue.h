@@ -32,12 +32,16 @@ enum class AudioQueueCommandType : uint8_t {
     SetMetronomeEnabled,
     MetronomeCountInStart, // value1 = beats to count
     MetronomeCountInStop,
-    AuditionUnit, // trackIndex = unitId, value1 = velocity
+    AuditionUnit, // trackIndex = unitId, value1 = note (< 0: stop this unit's auditions), value2 = velocity 0..1,
+                  // samplePos = note length in frames (0: an eighth of a second, the piano roll's click)
     // Playback context (PlaybackContextController, PR 3): value1 = pattern mode (0/1),
     // value2 = pattern loop length in beats, trackIndex = audition mode (0/1),
     // samplePos = context generation. Applied in the same drain as SetTransportState,
     // so a block can never render one transition's transport with another's context.
     SetPlaybackContext,
+    // Tempo change that keeps the playhead on its beat: value1 = new BPM, value2 = old BPM.
+    // The audio thread rescales the playhead by old/new in the same block it switches tempo.
+    SetTempoKeepingBeat,
 };
 
 /**

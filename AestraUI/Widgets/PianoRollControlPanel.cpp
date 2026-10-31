@@ -40,6 +40,14 @@ void PianoRollControlPanel::setNoteLayer(std::shared_ptr<PianoRollNoteLayer> lay
     repaint();
 }
 
+namespace {
+// The Velocity | Pan segment in the lane's sidebar (FD-48 board 6): two stacked cells, one per lane.
+NUIRect laneSegmentCell(const NUIRect& b, float sidebarW, int index) {
+    const float w = std::max(24.0f, sidebarW - 12.0f);
+    return NUIRect(b.x + (sidebarW - w) * 0.5f, b.y + 6.0f + 20.0f * static_cast<float>(index), w, 20.0f);
+}
+} // namespace
+
 bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
     // Note: If dropdown consumes event, we return true above.
     // Else check sidebar/velocity area.
@@ -59,7 +67,9 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
         // Sidebar: clicking it flips the lane between velocity and pan.
         if (!isDragging_ && event.position.x < b.x + sidebarW) {
              if (event.pressed && event.button == NUIMouseButton::Left) {
-                 laneMode_ = (laneMode_ == LaneMode::Velocity) ? LaneMode::Pan : LaneMode::Velocity;
+                 if (laneSegmentCell(b, sidebarW, 0).contains(event.position)) laneMode_ = LaneMode::Velocity;
+                 else if (laneSegmentCell(b, sidebarW, 1).contains(event.position)) laneMode_ = LaneMode::Pan;
+                 else laneMode_ = (laneMode_ == LaneMode::Velocity) ? LaneMode::Pan : LaneMode::Velocity;
                  repaint();
                  return true;
              }
@@ -114,13 +124,7 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
                 // Set the value immediately based on click Y (Global)
                 const float newValue = laneValueAtY(event.position.y);
 
-                auto modNotes = layer->getNotes();
-                if (panMode) modNotes[foundIdx].pan = newValue;
-                else modNotes[foundIdx].velocity = newValue;
-
-                // Single Edit Only (Batch removed)
-
-                layer->setNotes(modNotes);
+                layer->setLaneValue(foundIdx, panMode, newValue);
                 repaint();
                 return true;
             }
@@ -156,13 +160,7 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
             const int swept = noteUnderX(localX);
             if (swept != -1) hoveringNoteIndex_ = swept;
 
-            auto modNotes = layer->getNotes();
-            if (hoveringNoteIndex_ >= 0 && static_cast<size_t>(hoveringNoteIndex_) < modNotes.size()) {
-                 if (panMode) modNotes[hoveringNoteIndex_].pan = newValue;
-                 else modNotes[hoveringNoteIndex_].velocity = newValue;
-                 layer->setNotes(modNotes);
-                 repaint();
-            }
+            if (layer->setLaneValue(hoveringNoteIndex_, panMode, newValue)) repaint();
             return true;
         }
     }
@@ -189,30 +187,37 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
                       1.0f,
                       border);
 
-    // Stacked mode tabs — the active lane reads accent, the other dim; a click
-    // anywhere on the sidebar swaps them (handled in onMouseEvent).
+    // A Velocity | Pan segment: the active cell filled, the other quiet. Below it, the lane's scale at the guide lines.
     const bool panMode = laneMode_ == LaneMode::Pan;
     const float labelSize = themeManager.getFontSize("xs");
-    const auto activeColor = themeManager.getColor("accentPrimary").withAlpha(0.95f);
-    const auto inactiveColor = themeManager.getColor("textSecondary").withAlpha(0.42f);
-    const auto velDim = renderer.measureText("VELOCITY", labelSize);
-    renderer.drawText("VELOCITY",
-                      NUIPoint(b.x + (sidebarW - velDim.width) * 0.5f, b.y + 13.0f),
-                      labelSize,
-                      panMode ? inactiveColor : activeColor);
-    const auto panDim = renderer.measureText("PAN", labelSize);
-    renderer.drawText("PAN",
-                      NUIPoint(b.x + (sidebarW - panDim.width) * 0.5f, b.y + 31.0f),
-                      labelSize,
-                      panMode ? activeColor : inactiveColor);
-    // Short enough for the 58 px key lane: "MIDI 0 - 127" was 61 px and ran into the lane.
-    const char* rangeText = panMode ? "L - C - R" : "0 - 127";
-    const auto rangeDim = renderer.measureText(rangeText, 8.0f);
-    renderer.drawText(rangeText,
-                      NUIPoint(b.x + (sidebarW - rangeDim.width) * 0.5f, b.y + 49.0f),
-                      8.0f,
-                      themeManager.getColor("textSecondary").withAlpha(0.48f));
-    
+    const auto accent = themeManager.getColor("accentPrimary");
+    const auto textColor = themeManager.getColor("textPrimary");
+    const char* names[2] = {"Velocity", "Pan"};
+    const NUIRect segment(laneSegmentCell(b, sidebarW, 0).x, laneSegmentCell(b, sidebarW, 0).y, laneSegmentCell(b, sidebarW, 0).width, 40.0f);
+    renderer.strokeRoundedRect(segment, 5.0f, 1.0f, themeManager.getColor("border").withAlpha(0.4f));
+    for (int i = 0; i < 2; ++i) {
+        const NUIRect cell = laneSegmentCell(b, sidebarW, i);
+        const bool active = (i == 1) == panMode;
+        const NUIRect inner(cell.x + 2.0f, cell.y + 2.0f, cell.width - 4.0f, cell.height - 4.0f);
+        if (active) renderer.fillRoundedRect(inner, 3.0f, accent.withAlpha(0.28f));
+        const auto dim = renderer.measureText(names[i], labelSize);
+        renderer.drawText(names[i], NUIPoint(cell.x + (cell.width - dim.width) * 0.5f, renderer.calculateTextY(cell, labelSize)),
+                          labelSize, textColor.withAlpha(active ? 1.0f : 0.55f));
+    }
+    {
+        // 127 / 64 / 0 for velocity, R / C / L for pan, each beside its guide line; skipped where the segment is in the way.
+        const float availHScale = std::max(1.0f, b.height - 28.0f);
+        const float bottom = b.bottom() - 8.0f;
+        const char* marks[3] = {panMode ? "R" : "127", panMode ? "C" : "64", panMode ? "L" : "0"};
+        const float ys[3] = {bottom - availHScale, bottom - availHScale * 0.5f, bottom};
+        for (int i = 0; i < 3; ++i) {
+            if (ys[i] < segment.bottom() + 10.0f) continue;
+            const auto dim = renderer.measureText(marks[i], 9.0f);
+            renderer.drawText(marks[i], NUIPoint(sidebarRect.right() - 6.0f - dim.width, ys[i] - dim.height * 0.5f), 9.0f,
+                              themeManager.getColor("textSecondary").withAlpha(0.6f));
+        }
+    }
+
     auto layer = noteLayer_.lock();
     if (!layer || !isVisible()) return;
 

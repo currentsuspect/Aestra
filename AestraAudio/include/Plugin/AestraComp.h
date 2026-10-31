@@ -66,6 +66,7 @@ public:
         kDetectorHPF,  // Off, then 20 Hz to 500 Hz
         kCompMode,     // 0=Clean, 1=Classic, 2=Optical
         kOversampling, // 0=Off, 1=2x, 2=4x (nonlinear stage anti-aliasing)
+        kSidechain,    // 0=Off, 1=On: the detector follows the external key (channels 3-4)
         kParamCount,
 
         // Deprecated aliases. These names are kept so older tests and helpers still
@@ -154,6 +155,16 @@ public:
             -1.0f / std::max(1.0f, static_cast<float>(m_sampleRate) * 0.005f));
         const uint32_t channels = std::min<uint32_t>(2, numOutputChannels);
         const bool stereo = channels >= 2;
+        // External sidechain: the effect chain hands the key in after the main
+        // channels (EffectChain::process, isBuiltInComp). With Sidechain on,
+        // the detector follows the key while gain reduction still applies to
+        // this track. In the engine the key channels are always present and
+        // silent until a sidechain send feeds them, so Sidechain on with
+        // nothing routed compresses nothing — a hardware compressor with an
+        // empty key input. A host that passes no key channels at all gets the
+        // compressor's own input as the key.
+        const bool useKey = paramValue(kSidechain) > 0.5f && numInputChannels > 2 && inputs[2] != nullptr;
+        const uint32_t keyRight = numInputChannels > 3 && inputs[3] != nullptr ? 3u : 2u;
 
         if (m_detectorHPFDirty.exchange(false, std::memory_order_acq_rel)) {
             updateDetectorHPF();
@@ -208,6 +219,8 @@ public:
             const float dryR = sanitizeSample(rawR);
             const float inL = dryL * inputLinear;
             const float inR = dryR * inputLinear;
+            const float keyL = useKey ? sanitizeSample(readInput(inputs, numInputChannels, 2, i)) : 0.0f;
+            const float keyR = useKey ? sanitizeSample(readInput(inputs, numInputChannels, keyRight, i)) : 0.0f;
             blockInputPeak = std::max(blockInputPeak, std::max(std::abs(inL), std::abs(inR)));
 
             float wetL = 0.0f;
@@ -215,8 +228,8 @@ public:
             float outL;
             float outR;
             if (osFactor <= 1u) {
-                processCore(inL, inR, attackCoeff, releaseCoeff, thresholdDb, ratio, kneeDb, makeupLinear, env, hpfXL,
-                            hpfYL, hpfXR, hpfYR, blockGainReductionDb, wetL, wetR);
+                processCore(inL, inR, useKey, keyL, keyR, attackCoeff, releaseCoeff, thresholdDb, ratio, kneeDb,
+                            makeupLinear, env, hpfXL, hpfYL, hpfXR, hpfYR, blockGainReductionDb, wetL, wetR);
                 outL = (dryL * (1.0f - mix) + wetL * mix) * outputLinear;
                 outR = (dryR * (1.0f - mix) + wetR * mix) * outputLinear;
                 if (m_mode == kModeClassic) {
@@ -234,9 +247,11 @@ public:
                 m_osL.upsample(inL, osInL);
                 m_osR.upsample(inR, osInR);
                 for (uint32_t sub = 0; sub < osFactor; ++sub) {
-                    processCore(osInL[sub], osInR[sub], attackCoeff, releaseCoeff, thresholdDb, ratio, kneeDb,
-                                makeupLinear, env, hpfXL, hpfYL, hpfXR, hpfYR, blockGainReductionDb, osWetL[sub],
-                                osWetR[sub]);
+                    // The key is held across subsamples: it only drives the
+                    // envelope, which smooths far below the oversampled rate.
+                    processCore(osInL[sub], osInR[sub], useKey, keyL, keyR, attackCoeff, releaseCoeff, thresholdDb,
+                                ratio, kneeDb, makeupLinear, env, hpfXL, hpfYL, hpfXR, hpfYR, blockGainReductionDb,
+                                osWetL[sub], osWetR[sub]);
                     if (m_mode == kModeClassic) {
                         // Feedback topology needs an output estimate per subsample;
                         // synthesize it from the oversampled dry/wet pair.
@@ -340,6 +355,7 @@ public:
         {kDetectorHPF, "Detector HPF", "HPF", "Hz", 0.0f, 0.0f, 1.0f, true},
         {kCompMode, "Mode", "MODE", "", 0.0f, 0.0f, 1.0f, true},
         {kOversampling, "Oversampling", "OS", "", 0.0f, 0.0f, 1.0f, true, false, false, 2},
+        {kSidechain, "Sidechain", "SC", "", 0.0f, 0.0f, 1.0f, true, false, false, 1},
     };
 
     const ParamSpec* paramSpecs() const override { return kSpecs; }
@@ -364,6 +380,7 @@ public:
         case kKnee: return formatDb(kneeDbFromNorm(v));
         case kMix: return std::to_string(static_cast<int>(std::round(v * 100.0f))) + "%";
         case kBypass: return v > 0.5f ? "ON" : "OFF";
+        case kSidechain: return v > 0.5f ? "ON" : "OFF";
         case kInputGain: return formatDb(bipolarGainDbFromNorm(v));
         case kOutputGain: return formatDb(bipolarGainDbFromNorm(v));
         case kDetectorHPF:
@@ -470,11 +487,18 @@ private:
     inline static constexpr float K_OPTICAL_WINDOW_MAX = 0.030f;
     inline static constexpr float K_OPTICAL_ENVELOPE_REF = 0.1f;
 
-    void processCore(float inL, float inR, float attackCoeff, float releaseCoeff, float thresholdDb, float ratio,
-                     float kneeDb, float makeupLinear, float& env, float& hpfXL, float& hpfYL, float& hpfXR,
-                     float& hpfYR, float& blockGainReductionDb, float& wetL, float& wetR)  AESTRA_RT_NONBLOCKING {
+    void processCore(float inL, float inR, bool useKey, float keyL, float keyR, float attackCoeff, float releaseCoeff,
+                     float thresholdDb, float ratio, float kneeDb, float makeupLinear, float& env, float& hpfXL,
+                     float& hpfYL, float& hpfXR, float& hpfYR, float& blockGainReductionDb, float& wetL,
+                     float& wetR)  AESTRA_RT_NONBLOCKING {
         float detInputL, detInputR;
-        if (m_mode == kModeClassic) {
+        if (useKey) {
+            // External key: feed-forward from the key in every mode. A
+            // feedback (Classic) detector listens to this track's own output,
+            // which cannot follow another signal.
+            detInputL = keyL;
+            detInputR = keyR;
+        } else if (m_mode == kModeClassic) {
             detInputL = m_feedbackL;
             detInputR = m_feedbackR;
         } else {

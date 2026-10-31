@@ -78,7 +78,11 @@ int AppearanceSettingsPage::indexForTheme(const std::string& themeName) const {
 }
 
 void AppearanceSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
+    m_form.paint(renderer);
     renderChildren(renderer);
+    if (m_themeDropdown && m_themeDropdown->isOpen()) {
+        m_themeDropdown->renderDropdownList(renderer);
+    }
 }
 
 void AppearanceSettingsPage::onResize(int width, int height) {
@@ -87,15 +91,11 @@ void AppearanceSettingsPage::onResize(int width, int height) {
 }
 
 void AppearanceSettingsPage::layoutComponents() {
-    auto b = getBounds();
-    const auto& theme = AestraUI::NUIThemeManager::getInstance().getCurrentTheme();
-    float padding = theme.spacingM;
-    float rowHeight = theme.layout.standardControlHeight;
-    float x = b.x + padding;
-    float y = b.y + padding;
-    
-    m_themeLabel->setBounds(AestraUI::NUIRect(x, y, 100, rowHeight));
-    m_themeDropdown->setBounds(AestraUI::NUIRect(x + 110, y, 200, rowHeight));
+    m_themeLabel->setVisible(false);
+    m_form.clear();
+    m_form.section("THEME");
+    m_form.row("Colours", m_themeDropdown);
+    m_form.layout(getBounds());
 }
 
 } // namespace Aestra

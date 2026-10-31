@@ -73,7 +73,7 @@ jobs:
       # records that it passed.
       - name: Upload failure diagnostics
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: nightly-linux-${{ github.run_id }}
           path: |
@@ -92,7 +92,7 @@ jobs:
 
     steps:
       - name: Open issue on failure
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         with:
           script: |
             const date = new Date().toISOString().split('T')[0];

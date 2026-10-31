@@ -89,6 +89,7 @@ namespace AestraUI {
 // ViewFocus and the workspace-focus model (segment mapping, transition
 // classification, visibility derivation) live in WorkspaceFocus.h — a pure,
 // headless-constructible module shared by the app and the table-driven tests.
+#include "../Panels/DspLoadReadout.h"
 #include "WorkspaceFocus.h"
 
 /**
@@ -467,7 +468,8 @@ public:
     /** @brief Load an instrument plugin into a specific Arsenal unit. */
     void loadInstrumentIntoArsenalUnit(Aestra::Audio::UnitID unitId, const std::string& pluginId);
     /** @brief Open a pattern in the piano-roll editor. */
-    void openPatternInPianoRoll(Aestra::Audio::PatternID patternId);
+    // unitId: the unit to edit (a row's "Open in Piano Roll"); 0 resolves the pattern's own unit.
+    void openPatternInPianoRoll(Aestra::Audio::PatternID patternId, Aestra::Audio::UnitID unitId = 0);
 
     /** @brief Execute a Muse CLI command string through the grammar/parser pipeline. */
     Aestra::Audio::CommandResult executeMuseCommand(const std::string& input);
@@ -608,7 +610,16 @@ private:
     void openAudioClipEditor(Aestra::Audio::ClipInstanceID clipId);
     /** V8-W5: render the clips' track output, replace them with it, tell the user the outcome. */
     void bounceClipsInPlace(const std::vector<Aestra::Audio::ClipInstanceID>& clipIds);
+    /// AudioEngine::bounceRangeToWav with the live stream paused around it (AestraContentBounce.cpp).
+    bool bounceRangeWithStreamPaused(double startBeat, double endBeat, const std::string& path, int32_t trackId);
     void syncSampleEditorToUnit(Aestra::Audio::UnitID unitId);
+    void wireEditorActions(); ///< normalize, reverse, Preview in both editors (AestraContentEditorPreview.cpp)
+    void updateDspLoadReadout(double dt); ///< feeds the transport's DSP load (AestraContentMeters.cpp)
+    /// Per-frame services that live outside this (size-pinned) file: the DSP load readout and, every two seconds, a
+    /// MIDI port rescan so a controller plugged in after startup is picked up (#456). AestraContentMeters.cpp.
+    void updateFrameServices(double dt);
+    double m_midiPortPollSeconds = 0.0;
+    Aestra::DspLoadReadout m_dspLoad;
     Aestra::SamplerEditHistory m_samplerEdits; ///< undo for the Sample Editor's controls
     void enqueueMainThreadTask(std::function<void()> task);
     // AestraContentImport.cpp: the sample decodes on a worker thread, the clip is placed on the main one.

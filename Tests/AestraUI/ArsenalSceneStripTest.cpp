@@ -3,6 +3,7 @@
 // FD-27 point 1, "patterns as one-click scenes": every MIDI pattern is a chip in id order, the active one is
 // kept in view when they overflow, a click names the scene, and "+" gets the next free "Pattern N".
 
+#include "ArsenalSceneMenu.h"
 #include "ArsenalSceneStrip.h"
 
 #include <iostream>
@@ -120,6 +121,46 @@ int main() {
         e.button = AestraUI::NUIMouseButton::Left;
         ArsenalSceneStrip::Action act;
         check(strip.onMouse(e, pm, b.value, act) && act.kind == ArsenalSceneStrip::Action::Kind::PlaceInTimeline && act.id == b.value, "pressing it asks to place the active pattern");
+    }
+
+    std::cout << "[6b] right-click a chip asks for its menu (V82-AR1, FD-52)\n";
+    {
+        using Kind = ArsenalSceneStrip::Action::Kind;
+        AestraUI::NUIMouseEvent e;
+        const auto r1 = strip.chipRect(strip.placed()[1]);
+        e.position = {r1.x + 6, r1.y + 6};
+        e.pressed = true;
+        e.button = AestraUI::NUIMouseButton::Right;
+        ArsenalSceneStrip::Action act;
+        check(strip.onMouse(e, pm, b.value, act) && act.kind == Kind::Menu && act.id == b.value && act.at.x == e.position.x && act.at.y == e.position.y,
+              "a right-press on the second chip is a menu request for that pattern, at the click");
+        check(strip.chipRectOf(a.value).width > 0.0f && strip.chipRectOf(a.value).x == strip.chipRect(strip.placed()[0]).x && strip.chipRectOf(12345).width == 0.0f,
+              "chipRectOf finds a pattern's chip, and nothing for one that is not shown");
+        act = {};
+        e.position = {strip.addRect().x + 2, strip.addRect().y + 2};
+        check(strip.onMouse(e, pm, b.value, act) && act.kind == Kind::None, "right-clicking + or empty space opens nothing");
+        act = {};
+        e.position = {r1.x + 6, r1.y + 6};
+        e.pressed = false;
+        check(strip.onMouse(e, pm, b.value, act) && act.kind == Kind::None, "the release is not a second request");
+        act = {};
+        e.pressed = true;
+        e.button = AestraUI::NUIMouseButton::Left;
+        strip.onMouse(e, pm, b.value, act);
+        check(act.kind == Kind::Select && act.id == b.value, "left-click still selects");
+    }
+
+    std::cout << "[6c] what may be deleted, and what is selected after\n";
+    {
+        std::string why;
+        check(ArsenalSceneMenu::canDelete(false, 3), "an unplaced pattern, with others left, may go");
+        check(!ArsenalSceneMenu::canDelete(true, 3, &why) && why.find("timeline") != std::string::npos, "one that plays in the timeline stays, and says why");
+        check(!ArsenalSceneMenu::canDelete(false, 1, &why) && why.find("only") != std::string::npos, "the last pattern stays, and says why");
+        const std::vector<ArsenalSceneStrip::Scene> three{{1, "A", {}}, {2, "B", {}}, {3, "C", {}}};
+        check(ArsenalSceneMenu::selectAfterDelete(three, 1) == 2, "deleting the first selects the next");
+        check(ArsenalSceneMenu::selectAfterDelete(three, 2) == 3, "deleting a middle one selects the next");
+        check(ArsenalSceneMenu::selectAfterDelete(three, 3) == 2, "deleting the last selects the one before");
+        check(ArsenalSceneMenu::selectAfterDelete(three, 99) == 0 && ArsenalSceneMenu::selectAfterDelete({{1, "A", {}}}, 1) == 0, "nothing to select when it is unknown or the only one");
     }
 
     std::cout << "[7] a unit's own empty pattern is plumbing, not a scene (a kit must not bring a card per sound)\n";

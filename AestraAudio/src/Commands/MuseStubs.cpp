@@ -1,4 +1,5 @@
 #include "Commands/MuseStubs.h"
+#include "Core/ProjectTempo.h"
 
 #include <algorithm>
 #include <string>
@@ -11,12 +12,7 @@ SetBpmCommand::SetBpmCommand(AudioEngine& engine, float bpm, TrackManager* track
     : m_engine(engine), m_bpm(bpm), m_trackManager(trackManager) {}
 
 void SetBpmCommand::apply(float bpm) {
-    m_engine.setBPM(bpm);
-    if (!m_trackManager)
-        return;
-    m_trackManager->getPlaylistModel().setBPM(bpm);
-    m_trackManager->getTimelineClock().setTempo(bpm);
-    m_trackManager->getPatternPlaybackEngine().rewindScheduledInstances();
+    changeProjectTempo(m_engine, m_trackManager, bpm); // keeps the playhead on its beat
 }
 
 void SetBpmCommand::execute() {

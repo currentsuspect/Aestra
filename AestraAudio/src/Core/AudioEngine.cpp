@@ -3,6 +3,7 @@
 #include "Core/RTConfigAdmission.h"
 
 #include "../../AestraCore/include/AestraLog.h"
+#include "Core/ManualRenderLease.h"
 #include "../../AestraCore/include/AestraMath.h"
 #include "AuditionEngine.h"
 #include "Core/ClipRenderKernel.h"
@@ -12,6 +13,7 @@
 #include "GarbageCollector.h"
 #include "IO/AudioExporter.h"
 #include "PathUtils.h" // [NEW] For robust path conversion
+#include "Core/TrackMixKernel.h" // the strip's fader/pan/mix/meter stage
 #include "PatternPlaybackEngine.h"
 #include "Playback/PreviewEngine.h"
 #include "Plugin/SamplerPlugin.h" // [NEW]
@@ -101,13 +103,14 @@ bool AudioEngine::isPreviewDuckingEnabled() const {
 }
 
 namespace {
-std::atomic<AudioTelemetry*> g_misuseTelemetry{nullptr};
-std::atomic<const char*> g_rtMisuseLastApi{nullptr};
-
+// Process-wide dispatch, per-engine accounting (#885): the handler pointer is
+// one per process, but each engine publishes its telemetry as the misuse
+// context for the duration of its processBlock, so a violation lands on the
+// engine whose audio thread committed it. Outside any engine scope there is
+// no owner and nothing is counted.
 void recordRealtimeMisuse(const char* apiName) noexcept {
-    g_rtMisuseLastApi.store(apiName, std::memory_order_relaxed);
-    if (auto* telemetry = g_misuseTelemetry.load(std::memory_order_acquire)) {
-        telemetry->incrementRtMisuseViolations();
+    if (auto* telemetry = static_cast<AudioTelemetry*>(g_realtimeMisuseContext)) {
+        telemetry->recordRtMisuse(apiName);
     }
 }
 
@@ -145,6 +148,17 @@ inline void fastPanGainsD(double pan, double vol, double& gainL, double& gainR) 
 
 inline void fastStereoBalanceGainsD(double pan, double vol, double& gainL, double& gainR) {
     PanLaw::stereoBalance(pan, vol, gainL, gainR);
+}
+
+// Stop: let every held note go the way a key-up would (sustain pedal up, all notes off), so
+// instruments release through their own envelopes. Unlike the panic, no sound is cut.
+inline void addMidiRelease(Aestra::Audio::MidiBuffer& buf) {
+    for (uint8_t ch = 0; ch < 16; ++ch) {
+        const uint8_t sustainOff[3] = {static_cast<uint8_t>(0xB0u | ch), 64u, 0u};
+        const uint8_t allNotesOff[3] = {static_cast<uint8_t>(0xB0u | ch), 123u, 0u};
+        buf.addEvent(0, sustainOff, 3);
+        buf.addEvent(0, allNotesOff, 3);
+    }
 }
 
 inline void addMidiPanic(Aestra::Audio::MidiBuffer& buf) {
@@ -392,6 +406,9 @@ void AudioEngine::applyPendingCommands() {
         case AudioQueueCommandType::MetronomeCountInStop:
             stopMetronomeCountIn();
             break;
+        case AudioQueueCommandType::SetTempoKeepingBeat:
+            transportPos = applyTempoKeepingBeatRt(cmd.value1, cmd.value2, transportPos);
+            break;
         case AudioQueueCommandType::SetTrackVolume: {
             const uint32_t trackIndex = resolveTrackIndex(cmd);
             if (trackIndex == ChannelSlotMap::INVALID_SLOT)
@@ -440,41 +457,9 @@ void AudioEngine::applyPendingCommands() {
             state.solo = (cmd.value1 != 0.0f);
             break;
         }
-        case AudioQueueCommandType::AuditionUnit: {
-            // Claim a slot from the pool: a free one when possible, otherwise
-            // the one closest to its note-off. A chord stamp sends one command
-            // per pitch, so simultaneous triad tones each get their own slot.
-            UnitAuditionState* slot = nullptr;
-            for (auto& s : m_unitAuditionStates) {
-                if (!s.active) {
-                    slot = &s;
-                    break;
-                }
-            }
-            if (!slot) {
-                slot = &m_unitAuditionStates[0];
-                for (auto& s : m_unitAuditionStates) {
-                    if (s.noteOffSamplesRemaining < slot->noteOffSamplesRemaining) {
-                        slot = &s;
-                    }
-                }
-            }
-            slot->unitId = static_cast<UnitID>(cmd.trackIndex);
-            slot->note = static_cast<uint8_t>(std::clamp(static_cast<int>(cmd.value1), 0, 127));
-            slot->velocity = static_cast<uint8_t>(std::clamp(static_cast<int>(cmd.value2 * 127.0f), 1, 127));
-            slot->noteOffSamplesRemaining = std::max<uint32_t>(1, m_sampleRate.load(std::memory_order_relaxed) / 8);
-            slot->noteOnPending = true;
-            slot->active = true;
-            // Wake the master out of the post-stop Silent fast path so the
-            // audition is actually rendered. After the transport stops the fade
-            // settles to Silent, whose early-return drops everything before the
-            // unit-audition MIDI is injected — mirrors the metronome count-in
-            // recovery, and matches the pre-first-play (None) state.
-            if (m_fadeState.load(std::memory_order_relaxed) == FadeState::Silent) {
-                m_fadeState.store(FadeState::None, std::memory_order_relaxed);
-            }
+        case AudioQueueCommandType::AuditionUnit:
+            applyAuditionUnitRt(cmd); // AudioEngineAudition.cpp
             break;
-        }
         // MUSE-WIRING: LoadProjectState / UpdateClipState / StartPreview / StopPreview
         // must never be handled on the RT audio thread — they involve I/O, allocation,
         // thread joins, or async decode. They are intentionally dropped here; route them
@@ -768,75 +753,13 @@ void AudioEngine::performNonRealtimeMaintenance() {
     const uint64_t rtMisuseCount = m_telemetry.getRtMisuseViolations();
     if (rtMisuseCount != m_reportedMisuseCount.load(std::memory_order_relaxed)) {
         m_reportedMisuseCount.store(rtMisuseCount, std::memory_order_relaxed);
-        const char* apiName = g_rtMisuseLastApi.load(std::memory_order_relaxed);
+        const char* apiName = m_telemetry.getLastRtMisuseApi();
         Aestra::Log::warning(
             "[RTGuard] Non-real-time API reached audio thread: " + std::string(apiName ? apiName : "unknown") +
             " (count=" + std::to_string(rtMisuseCount) + ")");
     }
 
-    // Pattern engine lookahead refill (non-RT, runs every main loop iteration)
-    auto* patEng = m_patternEngine.load(std::memory_order_acquire);
-    if (patEng && m_transportPlaying.load(std::memory_order_relaxed)) {
-        uint64_t currentFrame = m_globalSamplePos.load(std::memory_order_relaxed);
-        uint32_t sr = m_sampleRate.load(std::memory_order_relaxed);
-        const int LOOKAHEAD_SAMPLES = std::max(4096, static_cast<int>(sr / 4)); // 250 ms: see refillWindow() docs
-        if (sr > 0) {
-            uint64_t loopLenSamples = 0;
-            bool deferRefill = false;
-            if (m_patternPlaybackMode.load(std::memory_order_relaxed)) {
-                // Same formula as the audio callback so both agree on the
-                // monotonic domain (iteration * loopLen + wrapped position).
-                const double bpm = std::max(1.0, static_cast<double>(m_metronomeEngine.getBPM()));
-                const double samplesPerBeat = static_cast<double>(sr) * 60.0 / bpm;
-                loopLenSamples =
-                    static_cast<uint64_t>(m_patternLengthBeats.load(std::memory_order_relaxed) * samplesPerBeat);
-                if (loopLenSamples > 0) {
-                    // BPM or sample-rate changes re-scale the sample domain:
-                    // queued event timestamps and scheduledThroughFrame were
-                    // computed against the old loopLenSamples — rewind so they
-                    // re-queue in the new domain (length-in-beats changes are
-                    // already rewound by setPatternPlaybackMode).
-                    if (m_lastRefillLoopLenSamples != 0 && m_lastRefillLoopLenSamples != loopLenSamples) {
-                        // m_patternMonotonicFrame is still encoded in the OLD
-                        // loop-length domain until the audio callback republishes
-                        // it (which it does every block, from the same BPM /
-                        // length source). Refilling now with the new loopLen but
-                        // the stale frame would schedule an epoch ahead, so rewind
-                        // and DEFER this refill one maintenance tick — the next
-                        // tick reads a coherent new-domain frame. The lookahead
-                        // (~85ms) dwarfs one tick (~16ms), so no underrun.
-                        patEng->rewindScheduledInstances();
-                        m_lastRefillLoopLenSamples = loopLenSamples;
-                        deferRefill = true; // skip the refill below this tick
-                    } else {
-                        m_lastRefillLoopLenSamples = loopLenSamples;
-                        // One coherent snapshot published by the audio callback.
-                        // Loading iteration and position as separate atomics could
-                        // pair a new iteration with a stale position (the callback
-                        // writes them at different points) and schedule an epoch
-                        // ahead, starving legitimate events.
-                        currentFrame = m_patternMonotonicFrame.load(std::memory_order_acquire);
-                        // A transport restart cued mid-pattern (scrubbed piano-roll
-                        // playhead, pause→resume) leaves the monotonic frame at 0 —
-                        // it was reset while stopped and is only republished by the
-                        // first playing block. Refilling from that stale 0 would queue
-                        // the loop-top events, which a playhead past the loop top
-                        // would fire at the buffer edge ("starts from beat 1"). The
-                        // cued global position IS the monotonic domain start here
-                        // (iteration is 0), so refill from it instead.
-                        if (currentFrame == 0) {
-                            const uint64_t cuedPos = m_globalSamplePos.load(std::memory_order_relaxed);
-                            if (cuedPos > 0) {
-                                currentFrame = cuedPos;
-                            }
-                        }
-                    }
-                }
-            }
-            if (!deferRefill)
-                patEng->refillWindow(currentFrame, static_cast<int>(sr), LOOKAHEAD_SAMPLES, loopLenSamples);
-        }
-    }
+    refillNoteSchedule(); // lookahead refill of the note queue (AudioEngineScheduling.cpp)
 
     constexpr uint64_t kCollectionIntervalNs = 500000000ull;
     const uint64_t nowNs = static_cast<uint64_t>(
@@ -969,8 +892,10 @@ void AudioEngine::syncCachedSamplerSampleRatesRt(uint32_t sampleRate) noexcept {
  * - Meter snapshots are published if a snapshot buffer is available; clipping flags are set when peaks >= 1.0.
  * - Dithering mode, safety processing, metronome, and LUFS accumulation are all controlled by engine state flags.
  */
-int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uint32_t numFrames, double streamTime) {
+int AudioEngine::processBlockWithinCapacity(float* outputBuffer, const float* inputBuffer, uint32_t numFrames,
+                                           double /*streamTime*/) {
     ScopedRealtimeAudioThread realtimeScope;
+    ScopedRealtimeMisuseContext misuseContext(&m_telemetry);
     // Admission guard for the setBufferConfig contract (#731): if a config
     // transaction owns the admission gate, refuse to enter and return early.
     ProcessBlockAdmissionGuard admissionGuard(m_admissionGate);
@@ -983,15 +908,6 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
             std::memset(outputBuffer, 0, static_cast<size_t>(numFrames) * silenceChannels * sizeof(float));
         }
         return 0;
-    }
-    (void)streamTime;
-
-    // Process Input (Recording)
-    if (inputBuffer) {
-        auto cb = m_inputCallback.load(std::memory_order_relaxed);
-        if (cb) {
-            cb(inputBuffer, numFrames, m_inputCallbackData.load(std::memory_order_relaxed));
-        }
     }
 
     if (!outputBuffer || numFrames == 0) {
@@ -1034,7 +950,9 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     // Consume transport edge flags (set inside applyPendingCommands)
     const bool transportStop = m_transportStopRequested.exchange(false, std::memory_order_acq_rel);
     const bool transportRestart = m_transportRestartRequested.exchange(false, std::memory_order_acq_rel);
-    const bool transportHardStop = m_transportHardStopRequested.exchange(false, std::memory_order_acq_rel);
+    // "Stop cuts sound" (preference) makes every stop a hard stop, as pressing stop twice does.
+    const bool transportHardStop = m_transportHardStopRequested.exchange(false, std::memory_order_acq_rel) ||
+                                   (transportStop && m_transportStart.stopCutsSound.load(std::memory_order_relaxed));
 
     // Pattern mode: honor a cued playhead (a scrubbed piano-roll position, or the
     // position preserved by a pause) instead of resetting to the pattern top on every
@@ -1091,19 +1009,23 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         if (pe)
             pe->rewindScheduledInstances();
         resetCachedSamplerVoicesRt(true);
+        // The rewind drops the queued note-offs, so plugin instruments get theirs explicitly
+        // (sustain up + all notes off): they release through their own envelopes. Without
+        // this a note held at stop kept sounding until the next play.
+        m_transportStart.releaseRequested.store(true, std::memory_order_release);
     }
 
     // On transport restart (play start or seek):
     // - rewind pattern queue
-    // - in pattern mode, cut any still-playing one-shots so the loop restarts audibly
+    // - cut anything still ringing from before (release tails of the last run): a new play
+    //   starts clean. Timeline plays used to skip this, so the last stop's tails bled into it.
+    //   Plugins get the same cut through the restart panic below; the fade-in masks the cut.
     if (transportRestart) {
         auto* pe = m_patternEngine.load(std::memory_order_relaxed);
         if (pe)
             pe->rewindScheduledInstances();
-
-        if (patternModeNow) {
-            resetCachedSamplerVoicesRt();
-        }
+        resetCachedSamplerVoicesRt();
+        m_transportStart.releaseRequested.store(false, std::memory_order_relaxed); // the panic supersedes it
     }
 
     // When starting playback, always ensure we're fading in (or already fading in)
@@ -1115,6 +1037,24 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
             m_fadeState.store(FadeState::FadingIn, std::memory_order_relaxed);
             m_fadeSamplesRemaining = FADE_IN_SAMPLES;
         }
+    }
+
+    // A play start waits (silent, playhead parked) until its notes are queued, so the first
+    // note lands on its sample instead of a UI frame late (AudioEngineScheduling.cpp).
+    const bool heldForSchedule = holdStartForScheduleRt(transportRestart, outputBuffer, numFrames, numOutputChannels);
+
+    // Process Input (Recording). After the transport commands, so a take started by this block
+    // is placed at the new playhead; skipped while a start is held, since that input precedes
+    // the moment playback actually begins.
+    if (inputBuffer && !heldForSchedule) {
+        if (auto cb = m_inputCallback.load(std::memory_order_relaxed)) {
+            cb(inputBuffer, numFrames, m_inputCallbackData.load(std::memory_order_relaxed));
+        }
+    }
+    if (heldForSchedule) {
+        m_telemetry.incrementBlocksProcessed();
+        RESTORE_DENORMALS
+        return 0;
     }
 
     // === Audition Mode Override (Exclusive) ===
@@ -1149,8 +1089,11 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         }
     }
 
-    // Fast path: silent (only for normal DAW mode, not audition)
-    if (m_fadeState.load(std::memory_order_relaxed) == FadeState::Silent) {
+    // Fast path: silent (only for normal DAW mode, not audition). Not on the hard-stop block itself:
+    // that block still renders (and is silenced below) so instrument plugins receive the panic.
+    // Skipped, the panic waited for the next play while the plugins kept their notes held, and
+    // the next thing to wake the engine (auditioning a pad) brought the hung note back.
+    if (m_fadeState.load(std::memory_order_relaxed) == FadeState::Silent && !transportHardStop) {
         std::memset(outputBuffer, 0, static_cast<size_t>(numFrames) * numOutputChannels * sizeof(float));
         // Clear meters so UI doesn't freeze on the last loud block.
         m_peakL.store(0.0f, std::memory_order_relaxed);
@@ -1197,16 +1140,14 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     uint64_t nextGlobalPos = currentGlobalPos;
     uint32_t loopSplitFrame = numFrames; // Default: no split
     uint64_t loopStartSample = 0;
-    uint64_t patternLoopLenSamples = 0; // Pattern-mode loop length (loop start == 0)
+    uint64_t wrapLength = 0; // loop length when this block wraps
+    ScheduleLoop scheduleLoop; // the loop notes are planned across: pattern, or an engaged timeline loop
 
     if (!playing && m_fadeState.load(std::memory_order_relaxed) != FadeState::FadingOut) {
         // Stopped: pattern playback restarts from the loop top, so the
         // monotonic iteration counter restarts with it.
         if (m_patternLoopIteration.load(std::memory_order_relaxed) != 0) {
             m_patternLoopIteration.store(0, std::memory_order_relaxed);
-        }
-        if (m_patternMonotonicFrame.load(std::memory_order_relaxed) != 0) {
-            m_patternMonotonicFrame.store(0, std::memory_order_relaxed);
         }
     }
 
@@ -1220,9 +1161,8 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
                 (static_cast<double>(currentSampleRate) * 60.0) / std::max(static_cast<double>(bpm), 1.0);
             uint64_t loopEndSample = static_cast<uint64_t>(loopEndBeat * samplesPerBeat);
             loopStartSample = static_cast<uint64_t>(loopStartBeat * samplesPerBeat);
-            if (patternMode && loopEndSample > loopStartSample) {
-                patternLoopLenSamples = loopEndSample - loopStartSample;
-            }
+            scheduleLoop = resolveScheduleLoopRt(patternMode, loopStartSample, loopEndSample, currentGlobalPos,
+                                                 transportRestart);
 
             // Check for loop crossing.
             // Pattern mode: we might start WAY past the loop end (a stale timeline
@@ -1247,6 +1187,7 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
                 // Case 2: Way outside -> further outside (Pattern toggle)
 
                 uint64_t loopLength = loopEndSample - loopStartSample;
+                wrapLength = loopLength;
                 if (loopLength > 0) {
                     // Normalize position to loop range
                     // Calculate "linear" next pos relative to start
@@ -1271,6 +1212,8 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
                     }
                 }
             }
+        } else {
+            scheduleLoop = resolveScheduleLoopRt(patternMode, 0, 0, currentGlobalPos, transportRestart);
         }
     }
 
@@ -1279,29 +1222,33 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         // suppresses Timeline clips in pattern mode while units continue through
         // their assigned mixer channels, inserts, faders, sends, and Master.
         const auto patternFrame = [&](uint64_t wrappedPosition) {
-            if (!patternMode || patternLoopLenSamples == 0) {
+            if (!scheduleLoop.active()) {
                 return wrappedPosition;
             }
-            return m_patternLoopIteration.load(std::memory_order_relaxed) * patternLoopLenSamples + wrappedPosition;
+            return m_patternLoopIteration.load(std::memory_order_relaxed) * scheduleLoop.length + wrappedPosition;
         };
         if (loopSplitFrame < numFrames) {
             if (loopSplitFrame > 0) {
                 renderGraph(graph, loopSplitFrame, 0, patternFrame(currentGlobalPos));
             }
 
-            if (patternMode) {
-                // Pattern events are scheduled in a monotonic loop domain, so
-                // advance the epoch instead of rewinding pre-scheduled events.
-                m_patternLoopIteration.fetch_add(1, std::memory_order_release);
-            } else if (isPlaying) {
-                // Timeline loops keep the rewind-on-wrap behavior.
-                auto* pe = m_patternEngine.load(std::memory_order_relaxed);
-                if (pe)
-                    pe->rewindScheduledInstances();
-                resetCachedSamplerVoicesRt(true); // notes held at the wrap must not ring into the loop top
+            // A loop shorter than the block wraps more than once in it: every pass starts at the
+            // loop start and runs at most one loop length (it used to run on past the end).
+            for (uint32_t offset = loopSplitFrame; offset < numFrames;) {
+                // Notes are planned in a monotonic loop domain (ScheduleLoop), pattern and timeline
+                // alike: the next pass is already queued, so advance the pass instead of rewinding.
+                if (patternMode || isPlaying) {
+                    m_patternLoopIteration.fetch_add(1, std::memory_order_release);
+                }
+                if (!patternMode && isPlaying) {
+                    resetCachedSamplerVoicesRt(true); // notes held at the wrap must not ring into the loop top
+                }
+                const uint32_t passFrames = static_cast<uint32_t>(std::min<uint64_t>(numFrames - offset, wrapLength));
+                m_globalSamplePos.store(loopStartSample, std::memory_order_relaxed);
+                renderGraph(graph, passFrames, offset, patternFrame(loopStartSample));
+                nextGlobalPos = loopStartSample + passFrames; // where the last pass left the playhead
+                offset += passFrames;
             }
-            m_globalSamplePos.store(loopStartSample, std::memory_order_relaxed);
-            renderGraph(graph, numFrames - loopSplitFrame, loopSplitFrame, patternFrame(loopStartSample));
             m_globalSamplePos.store(currentGlobalPos, std::memory_order_relaxed);
         } else {
             renderGraph(graph, numFrames, 0, patternFrame(currentGlobalPos));
@@ -1621,20 +1568,26 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         }
     }
 
-    mixMetronomeClicks(outputBuffer, numFrames);
+    if (transportHardStop && !isPlaying) { // a stop+play in one block is a restart: it plays
+        std::memset(outputBuffer, 0, static_cast<size_t>(numFrames) * numOutputChannels * sizeof(float));
+    } else {
+        mixMetronomeClicks(outputBuffer, numFrames);
+    }
 
     // Advance position (Atomic update to pre-calculated next position)
     if (m_transportPlaying.load(std::memory_order_relaxed) ||
         m_fadeState.load(std::memory_order_relaxed) == FadeState::FadingOut) {
         m_globalSamplePos.store(nextGlobalPos, std::memory_order_relaxed);
-        if (patternMode && patternLoopLenSamples > 0) {
-            // Single-store coherent snapshot: iteration was bumped earlier in
-            // THIS callback if this block wrapped, so the pair is consistent
-            // here — maintenance reads one atomic instead of two.
-            m_patternMonotonicFrame.store(
-                m_patternLoopIteration.load(std::memory_order_relaxed) * patternLoopLenSamples + nextGlobalPos,
-                std::memory_order_release);
-        }
+        // One coherent tuple for the scheduler: the pass was bumped earlier in THIS
+        // callback if this block wrapped, so pass, position, loop and epoch agree.
+        ScheduleSnapshot snapshot;
+        snapshot.loop = scheduleLoop;
+        snapshot.frame = scheduleLoop.active()
+                             ? m_patternLoopIteration.load(std::memory_order_relaxed) * scheduleLoop.length + nextGlobalPos
+                             : nextGlobalPos;
+        auto* scheduler = m_patternEngine.load(std::memory_order_relaxed);
+        snapshot.epoch = scheduler ? scheduler->refillTicket() : 0;
+        m_schedulePublication.publish(snapshot);
 
         // Handle Loop Metronome Reset. skipCurrentBeat: the boundary beat
         // already clicked in the pre-wrap part of this block.
@@ -2055,7 +2008,6 @@ AudioEngine::BiquadCoeff AudioEngine::computeKWeightRLB(double sampleRate) {
  */
 AudioEngine::AudioEngine() {
     installRealtimeMisuseHandler();
-    g_misuseTelemetry.store(&m_telemetry, std::memory_order_release);
     Aestra::Log::info("[AudioEngine] Created (Original Ctor). Ptr: " +
                       std::to_string(reinterpret_cast<uintptr_t>(this)));
 
@@ -2079,8 +2031,6 @@ AudioEngine::AudioEngine() {
 }
 
 AudioEngine::~AudioEngine() {
-    AudioTelemetry* expected = &m_telemetry;
-    g_misuseTelemetry.compare_exchange_strong(expected, nullptr, std::memory_order_acq_rel);
     if (auto trackMgr = m_trackManager.lock()) {
         trackMgr->setChannelPrepareCallback(nullptr);
         for (size_t i = 0; i < trackMgr->getChannelCount(); ++i) {
@@ -2260,6 +2210,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
     const uint64_t blockStart = m_globalSamplePos.load(std::memory_order_relaxed);
     const uint64_t blockEnd = blockStart + numFrames;
     const bool isPlaying = m_transportPlaying.load(std::memory_order_relaxed); // [NEW] Check transport
+    publishHostTransport(blockStart, isPlaying);
 
     // Solo state can still change through RT track state, while routing topology
     // is compiled into AudioGraph before publication.
@@ -2338,13 +2289,13 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
 
     // === ANTIGRAVITY UNIT PRE-PROCESSING (v3.1) ===
     UnitManager* unitMgr = m_unitManager.load(std::memory_order_acquire);
-    std::shared_ptr<const AudioArsenalSnapshot> unitSnapshot;
+    UnitManager::AudioSnapshotRead unitSnapshot; // lock-free pin, released at the end of the block
     std::array<PatternPlaybackEngine::UnitMidiRoute, 256> unitMidiRoutes{};
     size_t unitMidiRouteCount = 0;
     bool anyUnitSolo = false;
 
     if (unitMgr) {
-        unitSnapshot = unitMgr->getAudioSnapshot();
+        unitSnapshot = unitMgr->readAudioSnapshotRt();
         if (unitSnapshot && !unitSnapshot->units.empty()) {
             anyUnitSolo =
                 std::any_of(unitSnapshot->units.begin(), unitSnapshot->units.end(),
@@ -2366,9 +2317,16 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
 
             // Optional: inject MIDI panic before pattern events are scheduled.
             if (m_transportMidiPanicRequested.exchange(false, std::memory_order_acq_rel)) {
+                m_transportStart.releaseRequested.store(false, std::memory_order_relaxed);
                 for (size_t r = 0; r < unitMidiRouteCount; ++r) {
                     if (unitMidiRoutes[r].midiBuffer) {
                         addMidiPanic(*unitMidiRoutes[r].midiBuffer);
+                    }
+                }
+            } else if (m_transportStart.releaseRequested.exchange(false, std::memory_order_acq_rel)) {
+                for (size_t r = 0; r < unitMidiRouteCount; ++r) {
+                    if (unitMidiRoutes[r].midiBuffer) {
+                        addMidiRelease(*unitMidiRoutes[r].midiBuffer);
                     }
                 }
             }
@@ -2655,8 +2613,18 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
             float* const ring = desc->buffer;
             double* dOut = buffer.data();
             uint32_t writePos = comp->compensationWritePos;
+            // The ring length is not a power of two, so the wrap is a conditional
+            // subtract rather than a mask. `delay < capacity` is checked above,
+            // so `writePos + capacity - delay` is always in
+            // [capacity - delay, 2 * capacity - delay) and one subtract brings it
+            // back inside the ring. The old `% capacity` cost a real division
+            // sequence twice per sample, in the one loop that runs for every
+            // sample of every track with a delay to compensate.
             for (uint32_t k = 0; k < numFrames; ++k) {
-                const uint32_t readPos = (writePos + capacity - delay) % capacity;
+                uint32_t readPos = writePos + capacity - delay;
+                if (readPos >= capacity) {
+                    readPos -= capacity;
+                }
 
                 ring[writePos * 2] = static_cast<float>(dOut[k * 2]);
                 ring[writePos * 2 + 1] = static_cast<float>(dOut[k * 2 + 1]);
@@ -2664,7 +2632,10 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
                 dOut[k * 2] = static_cast<double>(ring[readPos * 2]);
                 dOut[k * 2 + 1] = static_cast<double>(ring[readPos * 2 + 1]);
 
-                writePos = (writePos + 1) % capacity;
+                ++writePos;
+                if (writePos == capacity) {
+                    writePos = 0;
+                }
             }
             comp->compensationWritePos = writePos;
         }
@@ -2751,49 +2722,22 @@ void AudioEngine::mixAndMeterTrack(const TrackRenderState& track, uint32_t track
         state.preFaderBuffer.clear();
     }
 
-    for (uint32_t i = 0; i < numFrames; ++i) {
-        // Apply smoothed gain
-        const double leftGain = state.gainL.next();
-        const double rightGain = state.gainR.next();
+    // Where the post-fader output goes, decided once: every one of these is
+    // loop-invariant, and the old code re-tested them per sample.
+    double* const destBuffer = !muted
+                                   ? ((audibleEligible && routesMainToMaster) ? masterBuf
+                                                                              : (mainDestBuffer ? mainDestBuffer : nullptr))
+                                   : nullptr;
 
-        const double preL = trackData[i * 2];
-        const double preR = trackData[i * 2 + 1];
-        const double outL = preL * leftGain;
-        const double outR = preR * rightGain;
+    TrackMeterAccumulators meters;
+    mixTrackStereo(trackData, buffer.data(), destBuffer, numFrames, state.gainL, state.gainR, meters,
+                   lfStateL, lfStateR, m_meterLfCoeff, publishTrackSnapshot, peakTrackL, peakTrackR);
 
-        buffer[i * 2] = outL;
-        buffer[i * 2 + 1] = outR;
-
-        if (!muted) {
-            if (audibleEligible && routesMainToMaster) {
-                masterBuf[i * 2] += outL;
-                masterBuf[i * 2 + 1] += outR;
-            } else if (mainDestBuffer) {
-                mainDestBuffer[i * 2] += outL;
-                mainDestBuffer[i * 2 + 1] += outR;
-            }
-        }
-
-        const double absL = (outL >= 0.0) ? outL : -outL;
-        const double absR = (outR >= 0.0) ? outR : -outR;
-        if (absL > peakTrackL)
-            peakTrackL = absL;
-        if (absR > peakTrackR)
-            peakTrackR = absR;
-
-        if (publishTrackSnapshot) {
-            rmsAccTrackL += outL * outL;
-            rmsAccTrackR += outR * outR;
-
-            const double lpL = *lfStateL + m_meterLfCoeff * (outL - *lfStateL);
-            const double lpR = *lfStateR + m_meterLfCoeff * (outR - *lfStateR);
-            *lfStateL = lpL;
-            *lfStateR = lpR;
-            lowAccTrackL += lpL * lpL;
-            lowAccTrackR += lpR * lpR;
-            sumLRTrack += outL * outR;
-        }
-    }
+    rmsAccTrackL = meters.rmsL;
+    rmsAccTrackR = meters.rmsR;
+    lowAccTrackL = meters.lowL;
+    lowAccTrackR = meters.lowR;
+    sumLRTrack = meters.correlation;
 
     if (m_trackOutputTap.wantsAt(track.trackId, true)) // V8-S1: stems are the strip after fader/pan
         m_trackOutputTap.capture(buffer.data(), numFrames);
@@ -3059,9 +3003,9 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
     const bool processActive = !anySolo || m_trackOutputTap.wants(track.trackId) ||
                                (static_cast<size_t>(trackIdx) < availableTracks && m_rtProcessActive[trackIdx]);
 
-    // Initialize send gain smoothers when send count changes.
-    // Vectors are pre-sized to kMaxSendsPerTrack in setBufferConfig(),
-    // so we never resize here — only update the active entries.
+    // Initialize send gain smoothers when send count changes. The vectors are
+    // sized off the audio thread (prepareTrackStateForGraph, before the graph that
+    // needs them is published), so we never resize here — only update entries.
     const size_t sendCount = std::min(track.sends.size(), static_cast<size_t>(kMaxSendsPerTrack));
     if (state.lastActiveSendCount != sendCount) {
         state.lastActiveSendCount = sendCount;
@@ -3255,12 +3199,18 @@ void AudioEngine::prepareTrackStateForGraph(const AudioGraph& graph) {
         }
 
         auto& state = m_trackState[track.trackIndex];
+        // The audio thread writes through pointers into these while it renders the CURRENT
+        // graph, so growing them must never reallocate. Full capacity is reserved the first
+        // time a track gets a send — while the vector is still empty, which means the current
+        // graph has no sends here and nothing points into it. Later growth constructs in place.
         const size_t sendCount = std::min(track.sends.size(), kMaxSendsPerTrack);
-        if (state.sendGainL.size() < sendCount) {
-            state.sendGainL.resize(sendCount);
-        }
-        if (state.sendGainR.size() < sendCount) {
-            state.sendGainR.resize(sendCount);
+        for (auto* gains : {&state.sendGainL, &state.sendGainR}) {
+            if (sendCount > 0 && gains->empty() && gains->capacity() < kMaxSendsPerTrack) {
+                gains->reserve(kMaxSendsPerTrack);
+            }
+            if (gains->size() < sendCount) {
+                gains->resize(sendCount);
+            }
         }
         if (state.preFaderBuffer.capacity() < preFaderSize) {
             state.preFaderBuffer.reserve(preFaderSize);
@@ -3506,7 +3456,7 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
     const uint64_t currentFrame = startFrame;
 
     // Get Arsenal snapshot for RT-safe unit iteration
-    auto snapshot = unitManager->getAudioSnapshot();
+    auto snapshot = unitManager->readAudioSnapshotRt();
     if (!snapshot || snapshot->units.empty()) {
         // No routable units: drain-and-drop live events (see note above).
         if (targetBuffer == nullptr)
@@ -3627,6 +3577,7 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
 bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::string& outputPath, int32_t trackId) {
     if (!std::isfinite(startBeat) || !std::isfinite(endBeat) || endBeat <= startBeat)
         return false;
+    ManualRenderLease lease(*this); // renders by hand below: the live callback stands down
     m_lastBounceWroteAnyFramesForTests.store(false, std::memory_order_relaxed);
 
     // Delegate to AudioExporter for master bounce (trackId == -1) to use authoritative offline path

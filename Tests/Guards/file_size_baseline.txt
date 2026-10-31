@@ -2,19 +2,18 @@
 # pinned at their exact line count. They may shrink, never grow. See
 # Tests/Guards/file_size_ratchet.cmake for the rules and the regeneration command.
 # <lines> <repo-relative path>
-2852 AestraAudio/include/Models/TrackManager.h
-2422 AestraAudio/include/Plugin/AestraEQ.h
+2712 AestraAudio/include/Models/TrackManager.h
+2328 AestraAudio/include/Plugin/AestraEQ.h
 1984 AestraAudio/include/Plugin/AestraVerb.h
-4393 AestraAudio/src/Core/AudioEngine.cpp
-1724 AestraAudio/src/Plugin/AestraPluginHostMain.cpp
-3649 AestraUI/Graphics/OpenGL/NUIRendererGL.cpp
+4344 AestraAudio/src/Core/AudioEngine.cpp
+3631 AestraUI/Graphics/OpenGL/NUIRendererGL.cpp
 5646 AestraUI/Widgets/AestraEQEditor.cpp
 1618 AestraUI/Widgets/AestraVerbEditor.cpp
-2023 AestraUI/Widgets/PianoRollNoteLayer.cpp
+1927 AestraUI/Widgets/PianoRollNoteLayer.cpp
 1861 AestraUI/Widgets/UnitRow.cpp
-2538 Source/App/AestraApp.cpp
+2493 Source/App/AestraApp.cpp
 3918 Source/Components/FileBrowser.cpp
-3630 Source/Components/TrackUIComponent.cpp
-4761 Source/Core/AestraContent.cpp
-2833 Source/Core/ProjectSerializer.cpp
+3139 Source/Components/TrackUIComponent.cpp
+4739 Source/Core/AestraContent.cpp
+2838 Source/Core/ProjectSerializer.cpp
 1575 Source/Panels/ArsenalPanel.cpp

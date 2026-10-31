@@ -63,6 +63,24 @@ public:
     void setIsNestedLane(bool nested) { m_isNestedLane = nested; }
     bool isNestedLane() const { return m_isNestedLane; }
     void setTrackCollapsed(bool collapsed) { m_trackCollapsed = collapsed; }
+
+    // V82-T1 (FD-50 board 8): a row of its own under the track that shows one automation curve, instead of the
+    // old view that drew every curve over every track's clips. Same lane as the track row above it; it draws no
+    // clips, and its header names the parameter (▾ switches it), shows its value at the playhead, and × hides it.
+    void setAutomationRow(AutomationTarget target, std::function<void(AutomationTarget)> onSwitch,
+                          std::function<void()> onHide);
+    bool isAutomationRow() const { return m_isAutomationRow; }
+    /// Called when the curve this lane edits changes (picked in the header, or a press on another curve's point).
+    void setOnEditedAutomationTargetChanged(std::function<void(AutomationTarget)> callback) {
+        m_onEditedAutomationTargetChanged = std::move(callback);
+    }
+    /// The track row marks a lane whose automation lane is hidden but still holds points (board 8).
+    void setHasHiddenAutomation(bool hidden) { m_hasHiddenAutomation = hidden; }
+    bool hasHiddenAutomation() const { return m_hasHiddenAutomation; }
+    void setOnShowAutomationRequested(std::function<void()> callback) { m_onShowAutomation = std::move(callback); }
+    /// Where the header's × and the track's hidden-automation mark were last drawn (hit areas; tests point at them).
+    const AestraUI::NUIRect& automationHideRect() const { return m_automationHideRect; }
+    const AestraUI::NUIRect& hiddenAutomationMarkRect() const { return m_hiddenAutomationMarkRect; }
     void setOnExpandToggled(std::function<void()> callback) { m_onExpandToggled = std::move(callback); }
     
     // Callback for when solo is toggled (so parent can update all track UIs)
@@ -152,6 +170,7 @@ public:
         if (m_editedAutomationTarget != target) {
             m_editedAutomationTarget = target;
             setDirty(true);
+            if (m_onEditedAutomationTargetChanged) m_onEditedAutomationTargetChanged(target);
         }
     }
     AutomationTarget getEditedAutomationTarget() const { return m_editedAutomationTarget; }
@@ -216,6 +235,16 @@ private:
     ClipInstanceID m_hoveredClipId; // Clip under the pointer (hamburger affordance)
     bool m_isPrimaryForLane = true; // Primary draws control area, secondary only draws clip
     bool m_isNestedLane = false; // Owned non-primary lane row (FD-14 §10 nesting)
+    bool m_isAutomationRow = false; // V82-T1: the automation lane under a track (setAutomationRow)
+    bool m_hasHiddenAutomation = false;
+    std::function<void(AutomationTarget)> m_onAutomationRowSwitch;
+    std::function<void()> m_onAutomationRowHide;
+    std::function<void(AutomationTarget)> m_onEditedAutomationTargetChanged;
+    std::function<void()> m_onShowAutomation;
+    AestraUI::NUIRect m_automationTargetRect; // header hit areas, set when the header is drawn
+    AestraUI::NUIRect m_automationHideRect;
+    AestraUI::NUIRect m_hiddenAutomationMarkRect;
+    std::shared_ptr<AestraUI::NUIContextMenu> m_automationTargetMenu;
     bool m_trackCollapsed = false; // Owning track's collapse state (chevron glyph)
     std::function<void()> m_onExpandToggled;
     bool m_anyPlaylistLaneSoloed = false;
@@ -270,9 +299,9 @@ private:
     std::map<ClipInstanceID, AestraUI::NUIRect> m_clipMenuGlyphRects;
     ClipInstanceID m_hoveredClipMenuId;  // the clip whose menu glyph is under the pointer
     bool m_clipMenuCursorClaimed = false; // hand the pointing-hand cursor back once on leaving
-    /** The clip-menu glyph's generous hit zone (the painted glyph, inflated). */
+    /** The clip-menu hit zone: the glyph's slot, reaching 2 px right and 3 px down into the clip (never outside it). */
     static AestraUI::NUIRect clipMenuHitRect(const AestraUI::NUIRect& glyph) {
-        return {glyph.x - 4.0f, glyph.y - 3.0f, glyph.width + 8.0f, glyph.height + 6.0f};
+        return {glyph.x, glyph.y, glyph.width + 2.0f, glyph.height + 3.0f};
     }
     /** The clip whose menu glyph contains @p point, or an invalid id. */
     ClipInstanceID clipMenuAt(const AestraUI::NUIPoint& point) const;
@@ -490,12 +519,32 @@ private:
 
     // Automation Layer (v3.1)
     void renderAutomationLayer(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float gridStartX);
+    // V82-T1, in TrackUIComponentAutomationRow.cpp.
+    void renderAutomationRowHeader(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& controlArea);
+    bool handleAutomationRowHeaderMouse(const AestraUI::NUIMouseEvent& event);
+    void hideTrackControlsForAutomationRow();
+    void showAutomationTargetMenu(const AestraUI::NUIPoint& anchor);
     // Automation clips (V8-A7): glue to AutomationClipLayer, in TrackUIComponentAutomationClips.cpp.
     void renderAutomationClips(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float gridStartX,
                                int editedIndex);
     bool handleAutomationClipMouse(const AestraUI::NUIMouseEvent& event, const AestraUI::NUIRect& bounds,
                                    float gridStartX);
     AutomationClipLayer m_clipLayer{*this};
+
+    // Header identity (FD-50 board 8), in TrackUIComponentHeader.cpp: the colour bar, the 3 px level meter at the
+    // header's right edge, and the "what plays it → where it goes" line under the name.
+    void paintHeaderIdentity(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& controlAreaBounds);
+    const std::string& headerSourceLine();
+    std::string m_headerSourceLine;
+    double m_headerSourceLineAt{-1.0};
+
+    // Mute tool (TrackUIComponentMute.cpp): click mutes or unmutes a clip; holding the button sets every clip crossed to
+    // the same state. Alt+click does the same once, whatever tool is active.
+    bool handleMuteTool(const AestraUI::NUIMouseEvent& event);
+    bool m_muteStroke{false};
+    bool m_muteStrokeTarget{true};
+    std::vector<ClipInstanceID> m_muteStrokeDone;
+    uint32_t m_headerMeterChannelId{0}; // the channel every unit on the lane plays into; 0 = none to meter
 
 
     // UI state

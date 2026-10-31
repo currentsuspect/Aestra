@@ -144,35 +144,42 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             return false;
         }
 
-#if defined(__linux__)
-        // V8-C1 (2026-09-13): this used to read "an optimization-sensitive
-        // failure that can leave the window blank" — that claim was never
-        // reproduced when checked. Every FBO the cache creates completes
-        // cleanly, glGetError() is silent through the full render/blit cycle,
-        // and a pixel read back immediately after each on-screen blit matches
-        // the pixel a screenshot shows at that same coordinate, every time —
-        // real project, real clips, active playback, several resizes.
+        // The GL widget cache is enabled on every platform. The Linux
+        // divergence that used to sit here was V8-C2, and its blocker was
+        // V8-C1's measurement: on this machine, with playback running, the
+        // cache cost more than it saved (13.59 vs 10.07 ms/frame).
         //
-        // What IS measured: on this machine, caching these three consumers
-        // (mixer strip, timeline, file browser) costs more than it saves.
-        // Steady-state, a cache hit still does its own full immediate draw —
-        // program switch, uniform sets, a texture bind, a 4-vertex buffer
-        // upload, one draw call — separate from the batching system that
-        // would otherwise fold the widget's mostly-flat content into the
-        // frame's shared draw calls. Measured render-build time, same real
-        // project, real clips, continuous rendering forced by playback:
+        // That number no longer reproduces. Re-measured 2026-10-22 on the
+        // TARGET CPU (this box is the i5-3337U), the 12-track fixture, two
+        // runs each, alternating, same box:
         //
-        //   cache on:   13.59 ms/frame avg (σ 2.03), 22 one-second samples
-        //   cache off:  10.07 ms/frame avg (σ 0.93), 50 one-second samples
+        //   interaction   cache off: 7.14 / 7.36 ms per frame
+        //                cache on:  4.36 / 4.32 ms per frame   (-40 %)
+        //   playback      cache off: 8.46 / 7.68 ms per frame
+        //                cache on:  5.50 / 4.81 ms per frame   (-36 %)
+        //   FileBrowser   1.20 / 1.32 ms  ->  0.09 / 0.09 ms    (-93 %)
+        //   process CPU   35.2 / 33.6 %   ->  28.2 / 21.8 %
         //
-        // ~35% slower with the cache on, and less consistent. See V8-C1 in
-        // Aestra-Internals/13 Agent Work/ for the full methodology and the
-        // per-platform matrix — this default is Linux-specific evidence, not
-        // a claim about the cache mechanism itself, which Windows keeps.
-        glRenderer->setCachingEnabled(false);
-#else
+        // The two measurements disagree, and the reason is the cache's value
+        // depends on whether the static pass is ACTUALLY static: a cache that
+        // never hits is pure overhead (a re-render plus a draw call outside
+        // the batcher), and a cache that hits replaces the whole static pass
+        // with one blit. In this build it hits, in both workloads — verified
+        // by instrumenting `cache->valid` on every frame.
+        //
+        // The render is unchanged to the eye: a screenshot A/B of the same
+        // window state is 99.04 % bit-identical, and the remainder is
+        // sub-pixel antialiasing on text and edges, because the cached region
+        // is snapped to whole pixels while a direct draw rasterises at the
+        // component's fractional position. That is the behaviour Windows and
+        // macOS have always shipped; the Linux default was the outlier.
+        //
+        // The "optimization-sensitive failure that can leave the window
+        // blank" that the original comment described was never reproduced when
+        // checked (V8-C1): every FBO completes cleanly, glGetError() is
+        // silent through the full render/blit cycle, and a pixel read back
+        // immediately after each on-screen blit matches the screenshot.
         glRenderer->setCachingEnabled(true);
-#endif
 
         // Transfer ownership to member
         m_renderer = std::move(glRenderer);

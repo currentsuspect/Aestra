@@ -129,6 +129,37 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripTest.cpp")
     set_tests_properties(ProjectRoundTripTest AutosaveRoundTripTest PROPERTIES LABELS "integration;serialization;contract:durability")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectDamageSweepTest.cpp")
+    add_executable(ProjectDamageSweepTest
+        Integration/ProjectDamageSweepTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+    )
+    target_link_libraries(ProjectDamageSweepTest PRIVATE AestraAudio)
+    target_include_directories(ProjectDamageSweepTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+    )
+    target_compile_definitions(ProjectDamageSweepTest PRIVATE
+        $<$<CONFIG:Debug>:AESTRA_ENABLE_PROJECT_LOAD_LOGS>
+    )
+    # Registered unconditionally: exercises ProjectSerializer + TrackManager only —
+    # no audio device or host runtime needed (verified headless). Serialization is
+    # AGENTS.md §12 high-risk; roundtrip coverage must run on every CI build.
+    add_test(NAME ProjectDamageSweepTest COMMAND ProjectDamageSweepTest)
+    # The TIMEOUT is part of the test: before #1243 one bad byte in an array made load loop until memory ran out.
+    set_tests_properties(ProjectDamageSweepTest PROPERTIES TIMEOUT 120 LABELS "integration;serialization;durability;regression;contract:durability")
+endif()
+
 # Fit-to-bars persistence: the fit writes the serializer-canonical
 # durationSeconds (preferred over beats), so the fitted pitch+rate state and
 # the #746 invariant must survive save -> load.
@@ -787,6 +818,55 @@ target_include_directories(RealtimeObjectPublisherTest PRIVATE
 add_test(NAME RealtimeObjectPublisherTest COMMAND RealtimeObjectPublisherTest)
 set_tests_properties(RealtimeObjectPublisherTest PROPERTIES LABELS "audio;rt-safety;reclamation;regression;contract:realtime")
 
+# V82: the transport bar's DSP load readout (pure header, runs on every lane).
+add_executable(DspLoadReadoutTest AestraUI/DspLoadReadoutTest.cpp)
+target_include_directories(DspLoadReadoutTest PRIVATE ${CMAKE_SOURCE_DIR}/Source)
+add_test(NAME DspLoadReadoutTest COMMAND DspLoadReadoutTest)
+set_tests_properties(DspLoadReadoutTest PROPERTIES LABELS "ui;transport;regression;contract:application")
+
+# FLAC and MP3 export (v0.8.2, FD-61): round trip through the runtime-loaded encoders; skips (77) without them.
+add_executable(EncodedAudioWriterTest AestraAudio/EncodedAudioWriterTest.cpp)
+target_link_libraries(EncodedAudioWriterTest PRIVATE AestraAudioCore)
+target_include_directories(EncodedAudioWriterTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include ${CMAKE_SOURCE_DIR}/AestraCore/include)
+add_test(NAME EncodedAudioWriterTest COMMAND EncodedAudioWriterTest)
+set_tests_properties(EncodedAudioWriterTest PROPERTIES SKIP_RETURN_CODE 77 LABELS "audio;export;regression;contract:audio")
+# V82-T2: which timeline tracks fold into "N empty tracks · show" (header-only rule, runs on every lane).
+# #999: with nothing on show, the Arsenal and piano roll open a pattern with notes (header-only rule).
+add_executable(ArsenalPatternPickTest AestraUI/ArsenalPatternPickTest.cpp)
+target_include_directories(ArsenalPatternPickTest PRIVATE ${CMAKE_SOURCE_DIR}/Source)
+add_test(NAME ArsenalPatternPickTest COMMAND ArsenalPatternPickTest)
+set_tests_properties(ArsenalPatternPickTest PROPERTIES LABELS "ui;arsenal;regression;contract:application")
+add_executable(TimelineFoldTest AestraUI/TimelineFoldTest.cpp)
+target_link_libraries(TimelineFoldTest PRIVATE AestraAudioCore)
+target_include_directories(TimelineFoldTest PRIVATE ${CMAKE_SOURCE_DIR}/Source ${CMAKE_SOURCE_DIR}/AestraAudio/include ${CMAKE_SOURCE_DIR}/AestraCore/include)
+add_test(NAME TimelineFoldTest COMMAND TimelineFoldTest)
+set_tests_properties(TimelineFoldTest PROPERTIES LABELS "ui;timeline;regression;contract:application")
+
+add_executable(SandboxBlockFifoTest AestraAudio/SandboxBlockFifoTest.cpp)
+target_include_directories(SandboxBlockFifoTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
+add_test(NAME SandboxBlockFifoTest COMMAND SandboxBlockFifoTest)
+set_tests_properties(SandboxBlockFifoTest PROPERTIES LABELS "audio;plugins;rt-safety;regression;contract:plugins")
+
+# #1229: a missed helper deadline must not leave the sandbox a chunk late for good.
+add_executable(SandboxStallResyncTest AestraAudio/SandboxStallResyncTest.cpp)
+target_link_libraries(SandboxStallResyncTest PRIVATE AestraAudioCore)
+target_include_directories(SandboxStallResyncTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include)
+target_compile_definitions(SandboxStallResyncTest PRIVATE AESTRA_ENABLE_TEST_HOOKS)
+add_test(NAME SandboxStallResyncTest COMMAND SandboxStallResyncTest)
+set_tests_properties(SandboxStallResyncTest PROPERTIES LABELS "audio;plugins;rt-safety;regression;contract:plugins")
+
+add_executable(RealtimeSharedSlotTest AestraAudio/RealtimeSharedSlotTest.cpp)
+target_link_libraries(RealtimeSharedSlotTest PRIVATE Threads::Threads)
+target_include_directories(RealtimeSharedSlotTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME RealtimeSharedSlotTest COMMAND RealtimeSharedSlotTest)
+set_tests_properties(RealtimeSharedSlotTest PROPERTIES LABELS "audio;rt-safety;reclamation;regression;contract:realtime")
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerStereoParityTest.cpp")
     add_executable(SamplerStereoParityTest AestraAudio/SamplerStereoParityTest.cpp)
     target_link_libraries(SamplerStereoParityTest PRIVATE AestraAudio)
@@ -885,6 +965,29 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternLateRefillTest.cpp")
         PROPERTIES LABELS "audio;playback;regression;contract:audio")
 endif()
 
+add_executable(TimelineLoopSchedulingTest AestraAudio/TimelineLoopSchedulingTest.cpp)
+target_link_libraries(TimelineLoopSchedulingTest PRIVATE AestraAudio)
+target_include_directories(TimelineLoopSchedulingTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME TimelineLoopSchedulingTest COMMAND TimelineLoopSchedulingTest)
+set_tests_properties(TimelineLoopSchedulingTest PROPERTIES LABELS "audio;playback;timeline;regression;contract:audio")
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternRepeatPlaybackTest.cpp")
+    add_executable(PatternRepeatPlaybackTest AestraAudio/PatternRepeatPlaybackTest.cpp)
+    target_link_libraries(PatternRepeatPlaybackTest PRIVATE AestraAudio)
+    target_include_directories(PatternRepeatPlaybackTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PatternRepeatPlaybackTest COMMAND PatternRepeatPlaybackTest)
+    set_tests_properties(PatternRepeatPlaybackTest
+        PROPERTIES LABELS "audio;playback;regression;contract:audio")
+endif()
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternPlacementTest.cpp")
     add_executable(PatternPlacementTest AestraAudio/PatternPlacementTest.cpp)
     target_include_directories(PatternPlacementTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
@@ -914,6 +1017,18 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerLoopModeTest.cpp")
     )
     add_test(NAME SamplerLoopModeTest COMMAND SamplerLoopModeTest)
     set_tests_properties(SamplerLoopModeTest PROPERTIES LABELS "audio;sampler;loop;regression;contract:audio")
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerVelocityCurveTest.cpp")
+    add_executable(SamplerVelocityCurveTest AestraAudio/SamplerVelocityCurveTest.cpp)
+    target_link_libraries(SamplerVelocityCurveTest PRIVATE AestraAudio)
+    target_include_directories(SamplerVelocityCurveTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME SamplerVelocityCurveTest COMMAND SamplerVelocityCurveTest)
+    set_tests_properties(SamplerVelocityCurveTest PROPERTIES LABELS "audio;sampler;velocity;regression;contract:audio")
 endif()
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternPlaybackTempoChangeTest.cpp")
@@ -1253,6 +1368,75 @@ target_include_directories(AestraAudioEngineOutputChannelTest PRIVATE
 add_test(NAME AestraAudioEngineOutputChannelTest COMMAND AestraAudioEngineOutputChannelTest)
 set_tests_properties(AestraAudioEngineOutputChannelTest PROPERTIES LABELS "audio;rt-safety;regression;contract:audio")
 
+# Short loop: a block that wraps several times renders every pass from the loop start
+add_executable(AestraShortLoopMultiWrapTest AestraAudio/ShortLoopMultiWrapTest.cpp)
+target_link_libraries(AestraShortLoopMultiWrapTest PRIVATE AestraAudio)
+target_include_directories(AestraShortLoopMultiWrapTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraShortLoopMultiWrapTest COMMAND AestraShortLoopMultiWrapTest)
+set_tests_properties(AestraShortLoopMultiWrapTest PROPERTIES LABELS "audio;timeline;regression;contract:audio")
+
+# Tempo change keeps the playhead on its beat (playing and stopped)
+add_executable(AestraTempoChangeKeepsBeatTest AestraAudio/TempoChangeKeepsBeatTest.cpp)
+target_link_libraries(AestraTempoChangeKeepsBeatTest PRIVATE AestraAudioCore)
+target_include_directories(AestraTempoChangeKeepsBeatTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraTempoChangeKeepsBeatTest COMMAND AestraTempoChangeKeepsBeatTest)
+set_tests_properties(AestraTempoChangeKeepsBeatTest PROPERTIES LABELS "audio;transport;regression;contract:audio")
+
+# Sends added while the audio thread renders: send-gain storage never reallocates under it
+add_executable(AestraSendGrowthDuringPlaybackTest AestraAudio/SendGrowthDuringPlaybackTest.cpp)
+target_link_libraries(AestraSendGrowthDuringPlaybackTest PRIVATE AestraAudio Threads::Threads)
+target_include_directories(AestraSendGrowthDuringPlaybackTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraSendGrowthDuringPlaybackTest COMMAND AestraSendGrowthDuringPlaybackTest)
+set_tests_properties(AestraSendGrowthDuringPlaybackTest PROPERTIES LABELS "audio;routing;rt-safety;regression;contract:audio" TIMEOUT 120)
+
+# Manual renders (export, bounce, Muse) never run alongside the live callback
+add_executable(AestraManualRenderLeaseTest AestraAudio/ManualRenderLeaseTest.cpp)
+target_link_libraries(AestraManualRenderLeaseTest PRIVATE AestraAudioCore Threads::Threads)
+target_include_directories(AestraManualRenderLeaseTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraManualRenderLeaseTest COMMAND AestraManualRenderLeaseTest)
+set_tests_properties(AestraManualRenderLeaseTest PROPERTIES LABELS "audio;rt-safety;export;regression;contract:audio" TIMEOUT 60)
+
+# Transport edges: sample-accurate play start, stop releases plugin notes, play starts clean
+add_executable(AestraTransportEdgesTest AestraAudio/TransportEdgesTest.cpp)
+target_link_libraries(AestraTransportEdgesTest PRIVATE AestraAudio)
+target_include_directories(AestraTransportEdgesTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Tests
+)
+add_test(NAME AestraTransportEdgesTest COMMAND AestraTransportEdgesTest)
+set_tests_properties(AestraTransportEdgesTest PROPERTIES LABELS "audio;transport;playback;regression;contract:audio" TIMEOUT 120)
+
+# Oversized driver block: processBlock splits it into capacity-sized chunks
+add_executable(AestraOversizedDriverBlockTest AestraAudio/OversizedDriverBlockTest.cpp)
+target_link_libraries(AestraOversizedDriverBlockTest PRIVATE AestraAudio)
+target_include_directories(AestraOversizedDriverBlockTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraOversizedDriverBlockTest COMMAND AestraOversizedDriverBlockTest)
+set_tests_properties(AestraOversizedDriverBlockTest PROPERTIES LABELS "audio;rt-safety;regression;contract:audio")
+
 # Watchdog Test (requires VST3 SDK headers)
 if(EXISTS "${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces/vst/ivstaudioprocessor.h")
     add_executable(AestraWatchdogTest AestraAudio/WatchdogTest.cpp)
@@ -1262,7 +1446,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces/vst/i
     # the tree gated on the VST3 SDK, and they were unlabelled — so the plugin-host
     # lane compiled them and then never ran them, because its `ctest -L "plugin|clap"`
     # had nothing to match on. Compiled is not executed.
-    set_tests_properties(AestraWatchdogTest PROPERTIES LABELS "plugin;vst3;watchdog")
+    set_tests_properties(AestraWatchdogTest PROPERTIES LABELS "plugin;vst3;watchdog;contract:plugins")
     target_include_directories(AestraWatchdogTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk
         ${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces
@@ -1278,7 +1462,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces/vst/i
     add_executable(AestraCrashTest AestraAudio/CrashTest.cpp)
     target_link_libraries(AestraCrashTest PRIVATE AestraAudio)
     add_test(NAME AestraCrashTest COMMAND AestraCrashTest)
-    set_tests_properties(AestraCrashTest PROPERTIES LABELS "plugin;vst3;crash")
+    set_tests_properties(AestraCrashTest PROPERTIES LABELS "plugin;vst3;crash;contract:plugins")
     target_include_directories(AestraCrashTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk
         ${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces
@@ -1674,6 +1858,27 @@ target_include_directories(RecordingBaselineTest PRIVATE
 add_test(NAME RecordingBaselineTest COMMAND RecordingBaselineTest)
 set_tests_properties(RecordingBaselineTest PROPERTIES LABELS "audio;recording;baseline;contract:audio")
 
+add_executable(RecordingTakeLengthTest
+    AestraAudio/RecordingTakeLengthTest.cpp
+)
+target_link_libraries(RecordingTakeLengthTest PRIVATE AestraAudio)
+target_include_directories(RecordingTakeLengthTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+)
+add_test(NAME RecordingTakeLengthTest COMMAND RecordingTakeLengthTest)
+set_tests_properties(RecordingTakeLengthTest PROPERTIES LABELS "audio;recording;regression;durability;contract:audio")
+
 # FD-14 phase-5: lane deletion is undoable and identity-stable (DeleteLaneCommand).
 add_executable(DeleteLaneCommandTest
     AestraAudio/DeleteLaneCommandTest.cpp
@@ -1947,6 +2152,18 @@ target_include_directories(AudioEngineOwnershipTest PRIVATE
 )
 add_test(NAME AudioEngineOwnershipTest COMMAND AudioEngineOwnershipTest)
 set_tests_properties(AudioEngineOwnershipTest PROPERTIES LABELS "audio;engine;integrity;contract:core" TIMEOUT 120)
+
+# RT-misuse accounting is per-engine (#885): a violation committed under one
+# engine's audio thread is counted on that engine and no other.
+add_executable(RtMisusePerEngineTest AestraAudio/RtMisusePerEngineTest.cpp)
+target_link_libraries(RtMisusePerEngineTest PRIVATE AestraAudio)
+target_include_directories(RtMisusePerEngineTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME RtMisusePerEngineTest COMMAND RtMisusePerEngineTest)
+set_tests_properties(RtMisusePerEngineTest PROPERTIES LABELS "audio;engine;integrity;rt-safety;contract:core" TIMEOUT 120)
 
 # Buffer Config Exception Safety Test (#731) — pins the exception-safety
 # contract of AudioEngine::setBufferConfig: the RTConfigAdmission gate is
@@ -2345,6 +2562,23 @@ target_include_directories(TimelineGeometryTest PRIVATE
 add_test(NAME TimelineGeometryTest COMMAND TimelineGeometryTest)
 set_tests_properties(TimelineGeometryTest PROPERTIES LABELS "ui;timeline;geometry;regression;contract:application")
 
+# FD-50 clip look: notes drawn where they sound, the pattern-end mark, the header band's size.
+add_executable(TimelineClipGeometryTest AestraUI/TimelineClipGeometryTest.cpp)
+target_include_directories(TimelineClipGeometryTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Components
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+)
+add_test(NAME TimelineClipGeometryTest COMMAND TimelineClipGeometryTest)
+set_tests_properties(TimelineClipGeometryTest PROPERTIES LABELS "ui;timeline;geometry;regression;contract:application")
+
+# FD-50 board 8: the track header's second line (what plays the track, where it goes).
+add_executable(TrackHeaderTextTest AestraUI/TrackHeaderTextTest.cpp)
+target_include_directories(TrackHeaderTextTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Components
+)
+add_test(NAME TrackHeaderTextTest COMMAND TrackHeaderTextTest)
+set_tests_properties(TrackHeaderTextTest PROPERTIES LABELS "ui;timeline;regression;contract:application")
+
 # V8-X2b phase 4: the timeline's regions and track rows come from the layout
 # system (TrackManagerUILayout.h); proven equal to the hand-written arithmetic
 # they replaced. Header-only, so AESTRA_CI=ON cannot skip it.
@@ -2544,6 +2778,19 @@ if(AESTRA_ENABLE_UI)
     )
     add_test(NAME PianoRollInteractionTest COMMAND PianoRollInteractionTest)
     set_tests_properties(PianoRollInteractionTest PROPERTIES LABELS "ui;interaction;contract:application")
+endif()
+
+# Duplicate in the piano roll like FL (V82-PR1, FD-52): whole-bar step, ruler highlight selects and duplicates.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(PianoRollDuplicateTest AestraUI_Core AestraUI_Platform)
+    add_executable(PianoRollDuplicateTest AestraUI/PianoRollDuplicateTest.cpp)
+    target_link_libraries(PianoRollDuplicateTest PRIVATE AestraUI_Core AestraUI_Platform)
+    target_include_directories(PianoRollDuplicateTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Common
+    )
+    add_test(NAME PianoRollDuplicateTest COMMAND PianoRollDuplicateTest)
+    set_tests_properties(PianoRollDuplicateTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
 
 # Piano Roll harmony edits must traverse the real panel/view callback into
@@ -2752,6 +2999,8 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Panels/AudioClipEditorPanel.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/SampleEditorPanel.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/ArsenalPanel.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/ArsenalPanelScenes.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/ArsenalSceneMenu.cpp
         ${CMAKE_SOURCE_DIR}/Source/Panels/PatternBrowserPanel.cpp
     )
     target_link_libraries(PanelResizeLayoutTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
@@ -2778,6 +3027,7 @@ if(AESTRA_ENABLE_UI)
     add_executable(ExportDialogWidgetsTest
         AestraUI/ExportDialogWidgetsTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Settings/ExportDialog.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Settings/ExportDialogBoard.cpp
         ${CMAKE_SOURCE_DIR}/Source/Core/UISurfaceStore.cpp
     )
     target_link_libraries(ExportDialogWidgetsTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio AestraPlat)
@@ -2918,7 +3168,7 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(BPMEditorPaintTest PROPERTIES LABELS "ui;transport;regression;contract:application")
 endif()
 
-# Selection-based step editing regression: click-to-select grammar, Ctrl+B
+# Selection-based step editing regression: click-to-select grammar, Ctrl+D
 # span duplication, Delete/Backspace removal (2026-08-17).
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(UnitRowStepSelectionTest AestraUI_Core)
@@ -3453,6 +3703,17 @@ if(AESTRA_ENABLE_UI)
     )
     add_test(NAME NUIWidgetHiddenInputTest COMMAND NUIWidgetHiddenInputTest)
     set_tests_properties(NUIWidgetHiddenInputTest PROPERTIES LABELS "ui;dispatch;regression;contract:application")
+
+    # V82-P12: the one layout every Settings page uses (canvas-2 board 2).
+    aestra_require_ui_targets(SettingsFormTest AestraUI_Core)
+    add_executable(SettingsFormTest AestraUI/SettingsFormTest.cpp ${CMAKE_SOURCE_DIR}/Source/Settings/SettingsForm.cpp)
+    target_link_libraries(SettingsFormTest PRIVATE AestraUI_Core)
+    target_include_directories(SettingsFormTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+    )
+    add_test(NAME SettingsFormTest COMMAND SettingsFormTest)
+    set_tests_properties(SettingsFormTest PROPERTIES LABELS "ui;settings;regression;contract:application")
 endif()
 
 # V8-W2: the clip context menu shipped with no test at all, so the checklist read
@@ -3468,6 +3729,10 @@ if(AESTRA_ENABLE_UI)
         AestraUI/ClipContextMenuReachabilityTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentHeader.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentMute.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationRow.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
@@ -3475,7 +3740,9 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIFold.cpp
         # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
         # compiles in.
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
@@ -3523,6 +3790,10 @@ if(AESTRA_ENABLE_UI)
         AestraUI/ClipGroupOpsTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentHeader.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentMute.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationRow.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
@@ -3530,7 +3801,9 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIFold.cpp
         # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
         # compiles in.
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
@@ -3580,6 +3853,10 @@ if(AESTRA_ENABLE_UI)
         AestraUI/ClipDragReleaseTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentHeader.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentMute.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationRow.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
@@ -3587,7 +3864,9 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIFold.cpp
         # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
         # compiles in.
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
@@ -3638,6 +3917,10 @@ if(AESTRA_ENABLE_UI)
         AestraUI/UIScenarioTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentHeader.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentMute.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationRow.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
@@ -3645,7 +3928,9 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIFold.cpp
         # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
         # compiles in.
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
@@ -3695,6 +3980,10 @@ if(AESTRA_ENABLE_UI)
         AestraUI/TimelineFollowPreferenceTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentHeader.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentMute.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationRow.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
@@ -3702,7 +3991,9 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIFold.cpp
         # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
         # compiles in.
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
@@ -3750,6 +4041,10 @@ if(AESTRA_ENABLE_UI)
         AestraUI/TimelineGridSelectionTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentHeader.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentMute.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationRow.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
@@ -3757,7 +4052,9 @@ if(AESTRA_ENABLE_UI)
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
         ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIFold.cpp
         # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
         # compiles in.
         ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
@@ -3880,6 +4177,7 @@ if(AESTRA_ENABLE_UI)
         TimelineGridSelectionTest
         ModalDialogInteractionTest
         PianoRollInteractionTest
+        PianoRollDuplicateTest
         PianoRollPanelPersistenceTest
         PianoRollStrokeInteractionTest
         PianoRollExternalEditCommitTest
@@ -3927,6 +4225,7 @@ if(AESTRA_ENABLE_UI)
         NUIComponentTooltipTest
         NUIHiddenChildDispatchTest
         NUIWidgetHiddenInputTest
+        SettingsFormTest
         ContractPianoRollOneEntryPerGestureTest
         ContractPianoRollUndoStaysInPatternTest
         ContractPianoRollReachesGlobalUndoTest
@@ -4312,6 +4611,26 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraCore/JSONLocaleIndependenceTest.cpp
     set_tests_properties(JSONLocaleIndependenceTest PROPERTIES LABELS "core;json;locale;regression;contract:core")
     message(STATUS "JSONLocaleIndependenceTest added - JSON decimal separator locale independence")
 endif()
+
+# A malformed array ends the parse instead of appending empty values until memory runs out (2026-10-30: one quote in
+# a Muse verb description took MuseVerifyRenderTest to 12 GB). The TIMEOUT is part of the test: the old code hangs.
+add_executable(JSONMalformedArrayTest AestraCore/JSONMalformedArrayTest.cpp)
+target_include_directories(JSONMalformedArrayTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraCore/include)
+add_test(NAME JSONMalformedArrayTest COMMAND JSONMalformedArrayTest)
+set_tests_properties(JSONMalformedArrayTest PROPERTIES TIMEOUT 20 LABELS "core;json;regression;contract:core")
+
+# #889: one log file per run in the per-user state folder, falling back to the working directory only when it
+# cannot be created; old runs pruned (header-only rule in Source/App/RunLog.h).
+add_executable(RunLogLocationTest AestraCore/RunLogLocationTest.cpp)
+target_include_directories(RunLogLocationTest PRIVATE ${CMAKE_SOURCE_DIR}/Source)
+add_test(NAME RunLogLocationTest COMMAND RunLogLocationTest)
+set_tests_properties(RunLogLocationTest PROPERTIES LABELS "core;logging;regression;contract:application")
+# #1268: AsyncLogger takes log() from every thread; 8 producers x 800 lines must all arrive once and intact.
+add_executable(AsyncLoggerMultiProducerTest AestraCore/AsyncLoggerMultiProducerTest.cpp)
+target_include_directories(AsyncLoggerMultiProducerTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraCore/include)
+target_link_libraries(AsyncLoggerMultiProducerTest PRIVATE Threads::Threads)
+add_test(NAME AsyncLoggerMultiProducerTest COMMAND AsyncLoggerMultiProducerTest)
+set_tests_properties(AsyncLoggerMultiProducerTest PROPERTIES TIMEOUT 120 LABELS "core;logging;threading;regression;contract:core")
 
 # JSON::asArray() const / asObject() const return real data (they returned an
 # always-empty static from #179 on, silently hiding every const read).

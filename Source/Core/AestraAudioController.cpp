@@ -390,6 +390,8 @@ bool AestraAudioController::startStream() {
         m_audioEngine->setSampleRate(m_streamConfig.sampleRate);
         m_audioEngine->setBufferConfig(m_streamConfig.bufferSize, m_streamConfig.numOutputChannels);
         
+        // Live playback parks a play start until its notes are queued (sample-accurate starts).
+        m_audioEngine->setHoldStartForSchedule(true);
         // Register input callback wrapper
         m_audioEngine->setInputCallback([](const float* input, uint32_t n, void* user) {
             auto* controller = static_cast<AestraAudioController*>(user);

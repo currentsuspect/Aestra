@@ -5,6 +5,8 @@
 #include "Commands/HostVerbRegistry.h"
 #include "Commands/MuseService.h"
 #include "Core/AestraContent.h"
+#include "Core/AudioDeviceManager.h"
+#include "ServiceLocator.h"
 #include "ViewTypes.h"
 
 #include "AestraLog.h"
@@ -103,6 +105,22 @@ void registerMuseHostVerbs(Audio::MuseService& service, ::AestraContent& content
                            ::AestraApp& app) {
     ::AestraContent* c = &content;
 
+    // Offline renders requested over the socket stop the device stream first,
+    // exactly as Export, Bounce and the Versions bounce do; otherwise the
+    // device callback and the render pump the same engine at once.
+    service.setOfflineRenderStreamHooks(
+        [] {
+            auto* deviceManager = ServiceLocator::get<Audio::AudioDeviceManager>();
+            if (!deviceManager || !deviceManager->isStreamRunning()) return false;
+            deviceManager->stopStream();
+            return true;
+        },
+        [] {
+            if (auto* deviceManager = ServiceLocator::get<Audio::AudioDeviceManager>()) {
+                deviceManager->startStream();
+            }
+        });
+
     // --- view.open / view.close ---------------------------------------------
     const auto setOpen = [c](const JSON& args, bool open) -> HostVerbResult {
         ViewType view{};
@@ -197,6 +215,9 @@ void registerMuseHostVerbs(Audio::MuseService& service, ::AestraContent& content
     // AestraApp's private save/load path, and because the same operations back the
     // File menu — see ProjectLifecycle.cpp for why there is one implementation.
     app.registerMuseProjectVerbs(service);
+
+    // --- transport.* ---------------------------------------------------------
+    registerMuseTransportVerbs(service, content, app);
 }
 
 } // namespace Aestra

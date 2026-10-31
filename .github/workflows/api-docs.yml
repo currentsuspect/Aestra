@@ -91,14 +91,14 @@ jobs:
       # copy of something already published — 245 live copies at ~22 MB, 5.4 GB, when
       # this was measured. 7 days is long enough to pull a preview off a PR.
       - name: Upload Documentation Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: api-documentation
           path: docs/api-reference/html/
           retention-days: 7
 
       - name: Upload XML Output (for integration)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: api-documentation-xml
           path: docs/api-reference/xml/
@@ -107,7 +107,7 @@ jobs:
       # Only deploy on main branch
       - name: Deploy to GitHub Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@373f7f263a76c20808c831209c920827a82a2847 # v3.9.3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs/api-reference/html
@@ -222,7 +222,7 @@ jobs:
           
       - name: Comment on PR
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         with:
           script: |
             const undoc = '${{ steps.doc_check.outputs.undocumented }}';

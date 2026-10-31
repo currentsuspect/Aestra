@@ -61,33 +61,45 @@ bool MuseSocketClient::connect(const std::string& host, uint16_t port, std::stri
         ::WSAStartup(MAKEWORD(2, 2), &data);
     });
 #endif
-    m_impl->socket = ::socket(AF_INET, SOCK_STREAM, 0);
-    if (m_impl->socket == kInvalidSocket) {
-        outError = "socket() failed";
+    // Numeric addresses parse without touching the resolver; names like
+    // "localhost" go through getaddrinfo. AF_UNSPEC so "::1" works too, and
+    // every returned address is tried in order (localhost often lists ::1
+    // before 127.0.0.1 while the server listens on only one of them).
+    addrinfo hints{};
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    addrinfo* results = nullptr;
+    const std::string portText = std::to_string(port);
+    const int resolveStatus = ::getaddrinfo(host.c_str(), portText.c_str(), &hints, &results);
+    if (resolveStatus != 0 || results == nullptr) {
+        outError = "cannot resolve host '" + host + "': " + ::gai_strerror(resolveStatus);
         return false;
     }
+
+    bool socketCreated = false;
+    for (const addrinfo* candidate = results; candidate != nullptr; candidate = candidate->ai_next) {
+        const SocketHandle handle =
+            ::socket(candidate->ai_family, candidate->ai_socktype, candidate->ai_protocol);
+        if (handle == kInvalidSocket) continue;
+        socketCreated = true;
 #ifdef SO_NOSIGPIPE
-    {
-        const int enable = 1;
-        ::setsockopt(m_impl->socket, SOL_SOCKET, SO_NOSIGPIPE, &enable, sizeof(enable));
-    }
+        {
+            const int enable = 1;
+            ::setsockopt(handle, SOL_SOCKET, SO_NOSIGPIPE, &enable, sizeof(enable));
+        }
 #endif
-    sockaddr_in address{};
-    address.sin_family = AF_INET;
-    address.sin_port = htons(port);
-    if (::inet_pton(AF_INET, host.c_str(), &address.sin_addr) != 1) {
-        outError = "invalid host address: " + host;
-        closeSocket(m_impl->socket);
-        m_impl->socket = kInvalidSocket;
-        return false;
+        if (::connect(handle, candidate->ai_addr, static_cast<int>(candidate->ai_addrlen)) == 0) {
+            closeSocket(m_impl->socket);
+            m_impl->socket = handle;
+            ::freeaddrinfo(results);
+            return true;
+        }
+        closeSocket(handle);
     }
-    if (::connect(m_impl->socket, reinterpret_cast<sockaddr*>(&address), sizeof(address)) != 0) {
-        outError = "connect to " + host + ":" + std::to_string(port) + " failed";
-        closeSocket(m_impl->socket);
-        m_impl->socket = kInvalidSocket;
-        return false;
-    }
-    return true;
+    ::freeaddrinfo(results);
+    outError = socketCreated ? "connect to " + host + ":" + std::to_string(port) + " failed"
+                             : "socket() failed";
+    return false;
 }
 
 void MuseSocketClient::setReadTimeoutMs(int milliseconds) {

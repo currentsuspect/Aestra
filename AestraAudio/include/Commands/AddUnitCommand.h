@@ -42,6 +42,8 @@ public:
     }
 
     std::string getName() const override { return "Add Unit"; }
+    /// The unit this command created; invalid (0) until it has executed.
+    UnitID getCreatedUnitId() const { return m_executed ? m_createdUnitId : UnitID{0}; }
     size_t getSizeInBytes() const override { return sizeof(*this); }
     bool changesProjectState() const override { return true; }
 

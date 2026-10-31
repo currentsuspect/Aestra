@@ -13,8 +13,12 @@ set(Aestra_SOURCES
 	App/AestraApp.h
 	App/AestraApp.cpp
 	App/AestraAppVersions.cpp
+	App/AestraAppUpdates.cpp
+	App/UpdateNotifier.cpp
+	App/UpdateNotifier.h
 	App/AestraAppRecovery.cpp
     App/MuseHostVerbs.cpp
+    App/MuseTransportVerbs.cpp
     App/MuseProjectLoadReport.h
     App/MuseProjectLoadReport.cpp
     App/ProjectLifecycle.h
@@ -30,6 +34,9 @@ set(Aestra_SOURCES
 	Core/AestraContent.h
 	Core/AestraContent.cpp
 	Core/AestraContentBounce.cpp
+	Core/AestraContentEditorPreview.cpp
+	Core/AestraContentMeters.cpp
+	Panels/DspLoadReadout.h
 	Core/AestraContentImport.cpp
 	Core/AestraContentPanelMode.cpp
 	Core/AestraContentPlacement.cpp
@@ -61,6 +68,8 @@ set(Aestra_SOURCES
 	Panels/MixerPanel.cpp
 	Panels/ArsenalPanel.h
 	Panels/ArsenalPanel.cpp
+	Panels/ArsenalPanelScenes.cpp
+	Panels/ArsenalSceneMenu.cpp
 	# Panels/StepSequencerPanel removed
 	Panels/PatternBrowserPanel.h
 	Panels/PatternBrowserPanel.cpp
@@ -80,6 +89,8 @@ set(Aestra_SOURCES
 	Panels/AudioClipEditorPanel.cpp
 	
 	# Settings
+	Settings/SettingsForm.h
+	Settings/SettingsForm.cpp
 	Settings/ConfirmationDialog.h
 	Settings/ConfirmationDialog.cpp
 	Settings/RecoveryDialog.h
@@ -95,10 +106,13 @@ set(Aestra_SOURCES
 	Settings/GeneralSettingsPage.cpp
 	Settings/MembershipSettingsPage.h
 	Settings/MembershipSettingsPage.cpp
+	Settings/UpdatesSettingsPage.cpp
+	Settings/UpdatesSettingsPage.h
 	Settings/AppearanceSettingsPage.h
 	Settings/AppearanceSettingsPage.cpp
 	Settings/ExportDialog.h
 	Settings/ExportDialog.cpp
+	Settings/ExportDialogBoard.cpp
 	
 	# Components
 	Components/TransportInfoContainer.h
@@ -121,15 +135,25 @@ set(Aestra_SOURCES
 	Components/TrackUIComponent.h
 	Components/TrackUIComponent.cpp
 	Components/TrackUIComponentAutomationClips.cpp
+	Components/TrackUIComponentHeader.cpp
+	Components/TrackUIComponentMute.cpp
+	Components/TrackUIComponentAutomationRow.cpp
+	Components/TrackHeaderText.h
+	Components/TimelineClipGeometry.h
+	Components/TimelineClipPaint.h
+	Components/TimelineClipPaint.cpp
 	Components/AutomationClipLayer.cpp
 	Components/TrackManagerUI.h
 	Components/TrackManagerUI.cpp
 	Components/TrackManagerUIInternal.h
 	Components/TrackManagerUIToolbar.cpp
+	Components/TrackManagerUIAutomation.cpp
 	Components/TrackManagerUIClipOps.cpp
 	Components/TrackManagerUIRender.cpp
 	Components/TrackManagerUIEvents.cpp
 	Components/TrackManagerUIView.cpp
+	Components/TrackManagerUIFold.cpp
+	Components/TimelineFold.h
 	Components/TrackManagerUIDragDrop.cpp
 	Components/MixerView.h
 	Components/MixerView.cpp
@@ -170,6 +194,7 @@ if(AESTRA_ENABLE_TEST_LICENSES)
 	target_compile_definitions(Aestra PRIVATE AESTRA_ENABLE_TEST_LICENSES=1)
 endif()
 
+set_source_files_properties(App/UpdateNotifier.cpp PROPERTIES COMPILE_DEFINITIONS "AESTRA_UPDATE_VERSION_STRING=\"${AESTRA_UPDATE_VERSION}\"")
 if(TARGET AestraLicense)
 	target_link_libraries(Aestra PRIVATE AestraLicense)
 	target_compile_definitions(Aestra PRIVATE AESTRA_HAS_LICENSE_GATE=1)
@@ -218,10 +243,6 @@ target_link_libraries(Aestra PRIVATE
 if(NOT MSVC)
     target_compile_options(Aestra PRIVATE
         $<$<CONFIG:Release>:-O3>
-        $<$<CONFIG:Release>:-flto>
-    )
-    target_link_options(Aestra PRIVATE
-        $<$<CONFIG:Release>:-flto>
     )
 endif()
 

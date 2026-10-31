@@ -3,8 +3,10 @@
 
 #include "Plugin/PluginFactory.h"
 #include "Plugin/OutOfProcessPluginInstance.h"
+#include "Plugin/PluginHostTestHooks.h"
 
 #include <algorithm>
+#include <iterator>
 #include <cassert>
 #include <chrono>
 #include <cmath>
@@ -255,6 +257,50 @@ int main(int argc, char** argv) {
 
     auto* oopInstance = static_cast<OutOfProcessPluginInstance*>(instance.get());
 
+    // --- V82-H2: the latency PDC compensates is the sandbox's block plus the plugin's own -------------------------
+    // It used to be the block alone, so a plugin with lookahead (a limiter, a linear-phase EQ) was compensated by
+    // too little and landed late against every other track. The helper's echo fake behaves like LSP's limiters: it
+    // reports no latency until it has processed a block, then kEchoTestLatencySamples. The instance asks again after
+    // the first block and every so often, so the value has to arrive without anyone calling anything.
+    // The sandbox's own part is the chunk it actually delays by: the callback size, learned from the first block.
+    // It used to be initialize()'s maximum block, which in the engine is the 4096+ capacity, not the callback.
+    // Before any audio neither part is known, so the report is zero.
+    if (oopInstance->getLatencySamples() != 0u) {
+        std::cerr << "before any audio the sandbox reports no latency yet, got " << oopInstance->getLatencySamples()
+                  << "\n";
+        return 1;
+    }
+    {
+        // A separate instance, so this audio does not disturb the pass-through checks below on the main one.
+        auto late = create(factory, makeInfo("__aestra_test_echo__"));
+        if (!late || !late->initialize(48000.0, 64)) {
+            std::cerr << "failed to create the latency probe instance\n";
+            return 1;
+        }
+        late->activate();
+        auto* lateOop = static_cast<OutOfProcessPluginInstance*>(late.get());
+        std::vector<float> in(2 * 64, 0.25f), out(2 * 64, 0.0f);
+        const float* inPlanes[2] = {in.data(), in.data() + 64};
+        float* outPlanes[2] = {out.data(), out.data() + 64};
+        if (lateOop->getLatencySamples() != 0u) {
+            std::cerr << "latency probe: expected nothing before any audio, got " << lateOop->getLatencySamples()
+                      << "\n";
+            return 1;
+        }
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+        while (lateOop->getLatencySamples() != 64u + kEchoTestLatencySamples &&
+               std::chrono::steady_clock::now() < deadline) {
+            late->process(inPlanes, outPlanes, 2, 2, 64);
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+        if (lateOop->getLatencySamples() != 64u + kEchoTestLatencySamples) {
+            std::cerr << "after the first block the sandbox latency should be one 64-sample block plus the plugin's "
+                      << "own " << kEchoTestLatencySamples << ", got " << lateOop->getLatencySamples() << "\n";
+            return 1;
+        }
+        late->shutdown();
+    }
+
 #ifndef _WIN32
     // --- #710: the fork child must hold exactly fds 0, 1, 2 ------------------
     // Anything else is a parent descriptor (project file, socket, device)
@@ -281,11 +327,18 @@ int main(int argc, char** argv) {
     // Each stage: sample the completed-block count, submit, then wait for the
     // worker to publish. The block submitted here is read back on the NEXT call.
     uint64_t blocksBefore = oopInstance->processedBlockCountForTest();
+    // Safe output for the first block is one chunk of silence: the sandbox plays exactly one chunk
+    // behind from the start (it used to play this block dry and undelayed, then jump to the delayed
+    // wet signal on the next one).
+    std::fill(std::begin(outL), std::end(outL), 9.0f);
+    std::fill(std::begin(outR), std::end(outR), 9.0f);
     instance->process(inputs, outputs, 2, 2, 4);
 
-    if (std::memcmp(inL, outL, sizeof(inL)) != 0 || std::memcmp(inR, outR, sizeof(inR)) != 0) {
-        std::cerr << "isolated plugin proxy did not pass through audio safely\n";
-        return 1;
+    for (int i = 0; i < 4; ++i) {
+        if (outL[i] != 0.0f || outR[i] != 0.0f) {
+            std::cerr << "isolated plugin proxy did not output one chunk of silence on its first block\n";
+            return 1;
+        }
     }
 
     if (!waitForWorkerBlock(instance, blocksBefore)) {
@@ -365,6 +418,24 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    // Automation (V82-H5): the render thread hands a value over every block; it reaches the child through its own
+    // queue and takes effect, and a value that did not change is not sent again.
+    if (!instance->supportsRealtimeAutomation()) {
+        std::cerr << "a sandboxed VST3 must accept realtime automation\n";
+        return 1;
+    }
+    instance->applyAutomation(0, 0.5f);
+    instance->applyAutomation(0, 0.5f);
+    if (!pumpUntilGain(instance, paramIn, 0.5f)) {
+        std::cerr << "automated value did not reach the child plugin\n";
+        return 1;
+    }
+    instance->applyAutomation(0, 0.8f);
+    if (!pumpUntilGain(instance, paramIn, 0.8f)) {
+        std::cerr << "automation did not follow the curve to its next value\n";
+        return 1;
+    }
+
     // An out-of-range parameter id is rejected by the child but must not crash the
     // proxy, and the instance keeps working (unity gain restores cleanly after).
     instance->setParameter(99999u, 0.5f);
@@ -394,6 +465,13 @@ int main(int argc, char** argv) {
         // not a broken fixture.
         if (oopFraming->sendRawCommandForTest("PING").find("OK") != 0) {
             std::cerr << "framing-loss fixture: helper did not answer PING\n";
+            return 1;
+        }
+
+        // V82-H3: a plugin with no editor (the fake) is refused a window cleanly, and the helper stays responsive.
+        if (oopFraming->sendRawCommandForTest("EDITOR OPEN 74657374").find("ERR") != 0 ||
+            oopFraming->sendRawCommandForTest("EDITOR STATE").find("OK EDITOR CLOSED") != 0) {
+            std::cerr << "EDITOR commands on a plugin without an editor misbehaved\n";
             return 1;
         }
 

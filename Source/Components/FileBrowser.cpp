@@ -2445,9 +2445,9 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             constexpr float ROW_ICON_SIZE = 14.0f;
             NUIRect iconRect(contentX, std::round(itemRect.y + (itemRect.height - ROW_ICON_SIZE) * 0.5f), ROW_ICON_SIZE,
                              ROW_ICON_SIZE);
-            icon->setBounds(iconRect);
-            icon->setColor(item->isDirectory ? NUIColor::fromHex(0xffc9a46a) : themeManager.getColor("secondary")); // folders sand, audio violet
-            icon->onRender(renderer);
+            // renderAt: the shared per-file-type icon was re-tinted per row, invalidating it per frame.
+            icon->renderAt(renderer, iconRect, item->isDirectory ? NUIColor::fromHex(0xffc9a46a)
+                                                                : themeManager.getColor("secondary"));
         }
         contentX += 20.0f;
 

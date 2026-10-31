@@ -2,12 +2,15 @@
 #pragma once
 
 #include "PluginHost.h"
+#include "Plugin/SandboxBlockFifo.h"
+#include "Plugin/HostTransport.h"
 
 #include "AestraThreading.h"
 
 #include <atomic>
 #include <chrono>
 #include <memory>
+#include <array>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -17,6 +20,8 @@ namespace Aestra {
 namespace Audio {
 
 class PluginHostProcess;
+class SharedAudioBlock;
+class WorkerWake;
 
 class OutOfProcessPluginInstance : public IPluginInstance {
 public:
@@ -34,24 +39,44 @@ public:
     void process(const float* const* inputs, float** outputs, uint32_t numInputChannels, uint32_t numOutputChannels,
                  uint32_t numFrames, const MidiBuffer* midiInput = nullptr, MidiBuffer* midiOutput = nullptr) override;
 
-    std::vector<PluginParameter> getParameters() const override { return {}; }
-    uint32_t getParameterCount() const override { return 0; }
+    // Parameters (V82-H5). The list and the live values are asked of the helper (IPC), so these belong to the UI side,
+    // never the render thread; the render thread hands automation over through applyAutomation().
+    std::vector<PluginParameter> getParameters() const override;
+    uint32_t getParameterCount() const override { return static_cast<uint32_t>(getParameters().size()); }
     float getParameter(uint32_t id) const override;
     void setParameter(uint32_t id, float value) override;
     std::string getParameterDisplay(uint32_t id) const override;
+    bool supportsRealtimeAutomation() const noexcept override;
+    void applyAutomation(uint32_t id, float normalizedValue) noexcept override;
+
+    struct ParameterEdit {
+        uint32_t id{0};
+        float value{0.0f};
+    };
+    /// Knobs moved in the plugin's own window since the last call (newest value per parameter). UI thread.
+    std::vector<ParameterEdit> takeEditedParameters();
 
     std::vector<uint8_t> saveState() const override;
     bool loadState(const std::vector<uint8_t>& state) override;
 
-    bool hasEditor() const override { return false; }
+    // The plugin's own window (V82-H3). The helper owns it (Linux, VST3): the app only asks for it to open or close and
+    // never gets a window handle, so a plugin that hangs or crashes in its UI takes the helper with it, not the app.
+    bool hasEditor() const override;
     bool openEditor(void* parentWindow) override;
-    void closeEditor() override {}
-    bool isEditorOpen() const override { return false; }
-    std::pair<int, int> getEditorSize() const override { return {0, 0}; }
+    bool ownsEditorWindow() const override { return true; } // the helper makes the window (V82-H3 / H8)
+    void closeEditor() override;
+    bool isEditorOpen() const override { return m_editorOpen.load(std::memory_order_acquire); }
+    std::pair<int, int> getEditorSize() const override;
     bool resizeEditor(int width, int height) override;
 
     const PluginInfo& getInfo() const override { return m_info; }
-    uint32_t getLatencySamples() const override { return m_maxBlockSize; }
+    // One chunk of transport delay (the sandbox hands audio over a chunk at a time, one chunk behind) plus the
+    // plugin's own latency, which the helper reports (LATENCY) once the plugin is set up and active. PDC reads this.
+    // The chunk is the callback size the engine actually runs at, learned from process(); it was reported as the
+    // engine's block CAPACITY (4096+), which put every sandboxed track thousands of samples early against the rest.
+    uint32_t getLatencySamples() const override {
+        return m_chunkFrames.load(std::memory_order_acquire) + m_pluginLatency.load(std::memory_order_acquire);
+    }
     uint32_t getTailSamples() const override { return 0; }
 
     WatchdogStats getWatchdogStats() const override;
@@ -63,6 +88,19 @@ public:
     // means setParameter outran the worker's drain — surfaced for diagnostics and
     // tests since setParameter itself is void (#238).
     uint64_t parameterDropCount() const { return m_paramDrops.load(std::memory_order_relaxed); }
+
+    // Blocks the helper answered, and blocks played dry because its answer was not
+    // back in time. The second is audible (the plugin drops out for a block), so
+    // the compatibility run reports it per plugin (V82-H7).
+    uint64_t helperBlockCount() const { return m_helperBlocks.load(std::memory_order_relaxed); }
+    uint64_t dryBlockCount() const { return m_dryBlocks.load(std::memory_order_relaxed); }
+
+    // Blocks whose input and MIDI never reached the helper because the previous
+    // block was still with it. A note-on in such a block is lost (V82-H7).
+    uint64_t unsentBlockCount() const { return m_unsentBlocks.load(std::memory_order_relaxed); }
+    // True when the block's audio travels through shared memory rather than hex over the pipe (V82-H7 follow-up). Set up by
+    // initialize(); false means the helper could not map the region and the slower path is in use.
+    bool usesSharedAudio() const { return m_shm != nullptr; }
 
 #ifdef AESTRA_ENABLE_TEST_HOOKS
     // Send a raw command to the helper and return its reply. Test-only: used by the
@@ -91,6 +129,32 @@ public:
     uint64_t processedBlockCountForTest() const {
         return m_processedBlocks.load(std::memory_order_acquire);
     }
+
+    // Stand in for the helper, so a test decides when each result comes back (#1229): set up the hand-off
+    // without a process, take the chunk process() sent, hand a result back. Same protocol as workerLoop().
+    void prepareHandOffForTest(double sampleRate, uint32_t maxBlockSize) { resetHandOff(sampleRate, maxBlockSize); }
+    bool takeChunkForTest(std::vector<float>& interleaved, uint32_t& frames) {
+        uint8_t posted = 2;
+        if (!m_pendingState.compare_exchange_strong(posted, 3, std::memory_order_acq_rel)) {
+            return false;
+        }
+        frames = m_pendingFrames.load(std::memory_order_acquire);
+        interleaved.assign(m_pendingInput.begin(), m_pendingInput.begin() + size_t(frames) * m_transportChannels);
+        m_workerStart = m_pendingStart;
+        m_pendingState.store(0, std::memory_order_release);
+        return true;
+    }
+    bool postResultForTest(const std::vector<float>& interleaved, uint32_t frames) {
+        uint8_t empty = 0;
+        if (!m_readyState.compare_exchange_strong(empty, 1, std::memory_order_acq_rel)) {
+            return false; // the audio thread has not taken the last one: the result is lost, as in workerLoop()
+        }
+        std::copy_n(interleaved.data(), size_t(frames) * m_transportChannels, m_readyOutput.data());
+        m_readyStart = m_workerStart;
+        m_readyFrames.store(frames, std::memory_order_release);
+        m_readyState.store(2, std::memory_order_release);
+        return true;
+    }
 #endif
 
 private:
@@ -100,14 +164,22 @@ private:
     void stopWorker();
     void workerLoop();
     bool processBlockInHelper(const std::vector<float>& input, uint32_t channels, uint32_t frames,
-                              const std::vector<uint8_t>& midiData, size_t midiBytes, std::vector<float>& output);
+                              const std::vector<uint8_t>& midiData, size_t midiBytes, const HostTransport& transport,
+                              std::vector<float>& output);
     void markCrashed();
+    void setupSharedBlock();     ///< audio through shared memory when the helper can map it (V82-H7 follow-up)
+    void resetHandOff(double sampleRate, uint32_t maxBlockSize); ///< the hand-off buffers and timeline, before INIT
+    static void raiseWorkerPriority();
+    void wakeWorker() noexcept; // posts m_wake (WorkerWake is defined in the main .cpp)
+    void refreshPluginLatency(); ///< asks the helper for the plugin's own latency
     void passThrough(const float* const* inputs, float** outputs, uint32_t numInputChannels, uint32_t numOutputChannels,
                      uint32_t numFrames) const;
 
     PluginInfo m_info;
     std::string m_hostExecutablePath;
     std::unique_ptr<PluginHostProcess> m_process;
+    std::unique_ptr<SharedAudioBlock> m_shm; ///< null: the block travels hex-encoded over the pipe
+    std::unique_ptr<WorkerWake> m_wake;
     mutable std::mutex m_ipcMutex;
     std::atomic<bool> m_loaded{false};
     std::atomic<bool> m_active{false};
@@ -116,6 +188,10 @@ private:
     std::atomic<uint64_t> m_watchdogAvgExecutionTimeNs{0};
     std::atomic<uint64_t> m_watchdogViolationCount{0};
     std::atomic<bool> m_watchdogBypassed{false};
+    std::atomic<bool> m_editorOpen{false};
+    std::atomic<int> m_editorWidth{0};
+    std::atomic<int> m_editorHeight{0};
+    std::atomic<uint32_t> m_pluginLatency{0}; ///< the plugin's own latency in samples, from the helper
 
     double m_sampleRate = 44100.0;
     uint32_t m_maxBlockSize = 0;
@@ -135,11 +211,31 @@ private:
     std::vector<float> m_readyOutput;
     std::vector<uint8_t> m_pendingMidiData;
     std::vector<uint8_t> m_workerMidiData;
+    // The block's tempo and playhead, handed over with its input under the same pending-slot protocol.
+    HostTransport m_pendingTransport;
+    HostTransport m_workerTransport;
+    // Where each chunk starts on the input timeline (m_inFifoEnd's), carried with it to the helper and back, so
+    // its result plays at exactly that place one chunk later (#1229). Same slot protocol as the transport.
+    uint64_t m_pendingStart{0};
+    uint64_t m_workerStart{0};
+    uint64_t m_readyStart{0};
     std::atomic<size_t> m_pendingMidiBytes{0};
     std::atomic<uint32_t> m_pendingFrames{0};
     std::atomic<uint32_t> m_readyFrames{0};
     std::atomic<uint8_t> m_pendingState{0};
     std::atomic<uint8_t> m_readyState{0};
+
+    // Audio-thread side of the hand-over (process(), OutOfProcessPluginInstanceRt.cpp). The helper is fed chunks
+    // of one constant size and the output plays exactly one chunk behind, however the engine cuts its callbacks
+    // (a loop wrap splits one in two). Feeding the helper each callback as it came dropped the second half of a
+    // split callback and the unused tail of every ready block. Reset (allocated) in initialize().
+    InterleavedFifo m_inFifo;
+    InterleavedFifo m_outFifo;
+    ChunkMidiQueue m_midiQueue;
+    uint64_t m_inFifoEnd{0};                ///< frames ever queued into m_inFifo: the MIDI queue's timeline
+    uint64_t m_outStart{0};                 ///< timeline position of m_outFifo's first frame
+    std::atomic<uint32_t> m_chunkFrames{0}; ///< chunk size: the largest callback seen, 0 before the first
+    std::atomic<uint64_t> m_midiDrops{0};
 
     // Host->child parameter changes. setParameter() only pushes onto this
     // lock-free queue (no IPC, no lock, no allocation, never blocks); the worker
@@ -164,9 +260,30 @@ private:
     // audible passThrough). The remainder stays queued for the next pass.
     static constexpr size_t kMaxParamDrainPerPass = 64;
     LockFreeRingBuffer<ParamChange, kParamQueueCapacity> m_paramQueue;
+    // Automation (V82-H5) has its own single producer, the render thread, so it gets its own ring; the worker drains
+    // both. A curve hands over its value every block, so only a value that changed is queued (recent[] remembers the
+    // last one sent per parameter; a miss in it just sends once more).
+    LockFreeRingBuffer<ParamChange, 1024> m_autoQueue;
+    struct RecentAutomation {
+        uint32_t id{0};
+        float value{0.0f};
+        bool valid{false};
+    };
+    std::array<RecentAutomation, 16> m_recentAutomation{};
+    size_t m_recentAutomationNext = 0;
+    mutable std::mutex m_paramListMutex;
+    mutable std::vector<PluginParameter> m_paramList;
+    mutable bool m_paramListValid = false;
     std::atomic<uint64_t> m_paramDrops{0};
+    std::atomic<uint64_t> m_helperBlocks{0};
+    std::atomic<uint64_t> m_dryBlocks{0};
+    std::atomic<uint64_t> m_unsentBlocks{0};
 
     void drainParamQueueToChild();
+
+    // How often the worker re-reads the plugin's own latency from the helper, in blocks: about 0.7 s at 512 frames,
+    // 48 kHz. One tiny command; the answer lands in m_pluginLatency, which EffectChain::refreshLatency() watches.
+    static constexpr uint64_t kLatencyCheckEveryBlocks = 64;
 };
 
 } // namespace Audio

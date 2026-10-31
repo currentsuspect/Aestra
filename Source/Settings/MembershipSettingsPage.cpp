@@ -225,7 +225,7 @@ void MembershipSettingsPage::createUI() {
     addChild(m_codeInput);
 
     m_startLoginButton = std::make_shared<AestraUI::NUIButton>();
-    m_startLoginButton->setText("Send Code");
+    m_startLoginButton->setText("Send code");
     m_startLoginButton->setStyle(AestraUI::NUIButton::Style::Secondary);
     m_startLoginButton->setOnClick([this]() { startLogin(); });
     addChild(m_startLoginButton);
@@ -243,9 +243,9 @@ void MembershipSettingsPage::createUI() {
     addChild(m_refreshButton);
 
     m_signOutButton = std::make_shared<AestraUI::NUIButton>();
-    m_signOutButton->setText("Sign Out");
+    m_signOutButton->setText("Sign out");
     m_signOutButton->setStyle(AestraUI::NUIButton::Style::Secondary);
-    m_signOutButton->setOnClick([this]() { signOut(); });
+    m_signOutButton->setOnClick([this]() { confirmSignOut(); });
     addChild(m_signOutButton);
 }
 
@@ -261,7 +261,7 @@ void MembershipSettingsPage::refreshDisplay() {
     Aestra::License::MembershipViewModel viewModel(accountSession, entitlements);
     const Aestra::License::MembershipViewState state = viewModel.current();
 
-    m_accountLabel->setText("Account: " + state.accountLabel);
+    m_accountLabel->setText(state.accountLabel);
     m_tierLabel->setText(compactTierLabel(state.tierLabel));
     m_statusLabel->setText(state.statusLabel);
     m_verificationLabel->setText(std::string("Verification: ") +
@@ -329,7 +329,7 @@ void MembershipSettingsPage::refreshDisplay() {
     m_startLoginButton->setEnabled(showSignIn);
     m_verifyLoginButton->setEnabled(showSignIn && !m_pendingChallengeId.empty());
 #else
-    m_accountLabel->setText("Account: Signed out");
+    m_accountLabel->setText("Signed out");
     m_tierLabel->setText("Core");
     m_statusLabel->setText("License services unavailable");
     m_verificationLabel->setText("Verification: Core or unverified local state");
@@ -512,243 +512,48 @@ void MembershipSettingsPage::onUpdate(double deltaTime) {
     }
 }
 
+// Board 2's form. FD-57: Aestra and its plugins are free, so this page is about the account, not a tier card.
 void MembershipSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
     auto& theme = AestraUI::NUIThemeManager::getInstance();
     const auto& props = theme.getCurrentTheme();
     const AestraUI::NUIRect b = getBounds();
-    if (b.isEmpty()) return;
-
-    // --- Theme aliases ---
-    const auto bgPrimary = theme.getColor("backgroundPrimary");
-    const auto bgSecondary = theme.getColor("backgroundSecondary");
-    const auto bgTertiary = theme.getColor("surfaceTertiary");
-    const auto borderFaint = theme.getColor("borderSubtle");
-    const auto borderSecondary = theme.getColor("border");
+    if (b.isEmpty())
+        return;
     const auto textPrimary = theme.getColor("textPrimary");
     const auto textSecondary = theme.getColor("textSecondary");
-    const auto textTertiary = theme.getColor("textDisabled");
+    const auto textMuted = theme.getColor("textMuted");
     const auto textSuccess = theme.getColor("success");
     const auto textDanger = theme.getColor("error");
 
-    // --- 1. FOUNDER CARD ---
-    {
-        const auto& cb = m_founderCardBounds;
-        const float r = 12.0f;
-        renderer.fillRoundedRect(cb, r, bgTertiary);
-        renderer.strokeRoundedRect(cb, r, 0.5f, borderFaint);
+    m_form.paint(renderer);
+    renderer.setClipRect(m_form.area());
+    renderChildren(renderer);
 
-        // Decorative circles (bottom-right, clipped by card bounds)
-        renderer.strokeCircle({cb.right() + 28.0f, cb.bottom() + 28.0f}, 50.0f, 0.5f,
-                              borderFaint.withAlpha(0.3f));
-        renderer.strokeCircle({cb.right() + 48.0f, cb.bottom() + 48.0f}, 70.0f, 0.5f,
-                              borderFaint.withAlpha(0.2f));
-
-        float cx = cb.x + 24.0f;
-        float cy = cb.y + 20.0f;
-
-        // Tier label
-        renderer.drawText("MEMBERSHIP TIER", {cx, cy}, props.fontSizeS, textTertiary);
-        cy += 16.0f;
-
-        // Tier name
-        renderer.drawText(m_tierLabel->getText(), {cx, cy}, props.fontSizeDisplayS, textPrimary);
-        cy += 38.0f;
-
-        // Account status pill (top-right)
-        {
-            const std::string statusText = m_signedIn ? "Verified" : "Signed out";
-            const AestraUI::NUIColor statusColor = m_signedIn ? textSuccess : textTertiary;
-            const char* statusIcon = m_signedIn ? "shield-check" : "log-out";
-            const float pillW = std::max(78.0f,
-                                         renderer.measureText(statusText, props.fontSizeS).width + 40.0f);
-            const float pillH = 22.0f;
-            const float px = cb.right() - pillW - 20.0f;
-            const float py = cb.y + 20.0f;
-            renderer.fillRoundedRect(AestraUI::NUIRect(px, py, pillW, pillH), 999.0f,
-                                     statusColor.withAlpha(m_signedIn ? 0.14f : 0.08f));
-            renderer.strokeRoundedRect(AestraUI::NUIRect(px, py, pillW, pillH), 999.0f, 0.5f,
-                                       statusColor.withAlpha(m_signedIn ? 0.35f : 0.22f));
-            drawIconLabel(renderer, statusIcon, statusText, px + 14.0f, px + 24.0f,
-                          py + pillH * 0.5f, 14.0f, props.fontSizeS, statusColor, statusColor);
-        }
-
-        // Account meta rows. Icon + label share one centre line via drawIconLabel
-        // so they sit level; the old {cx+20, cy+2} text offset rendered ~5px low.
-        const AestraUI::NUIColor metaIcon = textSecondary.withAlpha(0.6f);
-        drawIconLabel(renderer, "mail",
-                      m_accountLabel->getText().empty() ? "Account unavailable" : m_accountLabel->getText(),
-                      cx + 7.0f, cx + 20.0f, cy + 7.0f, 15.0f, props.fontSizeM, metaIcon, textSecondary);
-        cy += 22.0f;
-        drawIconLabel(renderer, "file-badge",
-                      m_verificationLabel->getText().empty() ? "Signed lease \u00b7 verified locally"
-                                                             : m_verificationLabel->getText(),
-                      cx + 7.0f, cx + 20.0f, cy + 7.0f, 15.0f, props.fontSizeM, metaIcon, textSecondary);
-        cy += 22.0f;
-        drawIconLabel(renderer, "clock", "Last refresh: this session",
-                      cx + 7.0f, cx + 20.0f, cy + 7.0f, 15.0f, props.fontSizeM, metaIcon, textSecondary);
-    }
-
-    // --- 2. FEATURES CARD ---
-    {
-        const auto& cb = m_featuresCardBounds;
-        const float r = 12.0f;
-        renderer.fillRoundedRect(cb, r, bgPrimary);
-        renderer.strokeRoundedRect(cb, r, 0.5f, borderFaint);
-
-        float fx = cb.x + 18.0f;
-        float fy = cb.y + 16.0f;
-        renderer.drawText("FEATURES", {fx, fy}, props.fontSizeS, textTertiary);
-        fy += 24.0f;
-
-        struct FeatureChip { const char* label; const char* iconName; const char* statusIcon; bool unlocked; };
-        FeatureChip chips[] = {
-            {"Core DAW", "monitor", "check", true},
-            {"Aestra Rumble", "activity", "check", true},
-            {"Rumble Headless", "headphones", "check", true},
-            {"Plugin Bundle", "layers", "check", true},
-            {"Supporter Badge", "award", "check", true},
-            {"Founder Badge", "crown", "check", true},
-            {"Cloud Sync", "cloud", "lock", false},
-            {"Early Access", "zap", "lock", false},
+    // What membership means today, in plain words.
+    if (m_aboutItem != SIZE_MAX) {
+        const auto about = m_form.boundsOf(m_aboutItem);
+        const char* lines[] = {
+            "Aestra, every plugin it makes, and Muse on your own computer are free for everyone.",
+            "Supporter, when it opens, pays for what costs us money to run: shared projects,",
+            "online storage and the parts of Muse that run on our servers.",
         };
-        const float chipH = 30.0f;
-        const float chipGap = 8.0f;
-        const float colW = (cb.width - 36.0f - chipGap) * 0.5f;
-
-        for (int i = 0; i < 8; ++i) {
-            float col = i % 2;
-            float row = i / 2;
-            float chipX = fx + col * (colW + chipGap);
-            float chipY = fy + row * (chipH + chipGap);
-            AestraUI::NUIRect chipRect(chipX, chipY, colW, chipH);
-
-            // Entire locked chip at 0.45 opacity
-            auto chipBg = chips[i].unlocked ? bgTertiary : bgTertiary.withAlpha(0.45f);
-            auto chipBorder = chips[i].unlocked ? borderFaint : borderFaint.withAlpha(0.45f);
-            renderer.fillRoundedRect(chipRect, 8.0f, chipBg);
-            renderer.strokeRoundedRect(chipRect, 8.0f, 0.5f, chipBorder);
-
-            auto chipTextCol = chips[i].unlocked ? textPrimary : textPrimary.withAlpha(0.45f);
-            float midY = chipY + chipH * 0.5f;
-            float ix = chipX + 10.0f;
-
-            if (chips[i].unlocked) {
-                drawMembershipIcon(renderer, chips[i].statusIcon, ix, midY, 14.0f, textSuccess);
-            } else {
-                drawMembershipIcon(renderer, chips[i].statusIcon, ix, midY, 14.0f, textTertiary.withAlpha(0.45f));
-            }
-
-            auto iconCol = chips[i].unlocked ? textSecondary : textSecondary.withAlpha(0.45f);
-            drawMembershipIcon(renderer, chips[i].iconName, ix + 20.0f, midY, 14.0f, iconCol);
-            renderer.drawText(chips[i].label,
-                              {ix + 36.0f, renderer.calculateTextY(chipRect, props.fontSizeM)},
-                              props.fontSizeM, chipTextCol);
-        }
-
-        // Footer note
-        float footY = fy + 4.0f * (chipH + chipGap) + 10.0f;
-        drawIconLabel(renderer, "info", "Locked features require verified membership",
-                      fx + 7.0f, fx + 22.0f, footY + 7.0f, 14.0f, props.fontSizeS, textTertiary, textTertiary);
-    }
-
-    // --- 3. SYNC & SESSION CARD ---
-    // Hidden on narrow dialogs (layoutComponents collapses it to a zero rect so
-    // Features can take the full width).
-    if (m_syncCardBounds.width > 0.0f) {
-        const auto& cb = m_syncCardBounds;
-        const float r = 12.0f;
-        renderer.fillRoundedRect(cb, r, bgPrimary);
-        renderer.strokeRoundedRect(cb, r, 0.5f, borderFaint);
-
-        float sx = cb.x + 18.0f;
-        float sy = cb.y + 16.0f;
-        renderer.drawText("SYNC & SESSION", {sx, sy}, props.fontSizeS, textTertiary);
-        sy += 28.0f;
-
-        struct SyncRow { const char* iconName; const char* label; const char* value; bool muted; };
-        SyncRow rows[] = {
-            {"refresh", "Last refresh", m_lastRefreshValue.c_str(), true},
-            {"database", "Sync mode", "Local / offline cache", false},
-            {"key", "License type", "Signed lease", false},
-            {"laptop", "Machine", "This device", false},
-        };
-        const float rowH = 36.0f;
-        for (int i = 0; i < 4; ++i) {
-            float ry = sy + i * rowH;
-            if (i < 3) {
-                renderer.drawLine({sx, ry + rowH}, {cb.right() - 18.0f, ry + rowH}, 0.5f, borderFaint);
-            }
-            drawMembershipIcon(renderer, rows[i].iconName, sx + 7.0f, ry + rowH * 0.5f, 15.0f, textSecondary.withAlpha(0.6f));
-            const AestraUI::NUIRect rowRect(sx, ry, cb.right() - 18.0f - sx, rowH);
-            renderer.drawText(rows[i].label, {sx + 22.0f, renderer.calculateTextY(rowRect, props.fontSizeM)},
-                              props.fontSizeM, textSecondary);
-            auto valCol = (i == 0 && m_lastRefreshFailed) ? textDanger
-                          : rows[i].muted               ? textTertiary
-                                                        : textPrimary;
-            auto valSize = renderer.measureText(rows[i].value, props.fontSizeM);
-            renderer.drawText(rows[i].value,
-                              {cb.right() - 18.0f - valSize.width,
-                               renderer.calculateTextY(rowRect, props.fontSizeM)},
-                              props.fontSizeM, valCol);
-        }
-        // TODO: bind Sync mode row to actual sync state when Cloud Sync is implemented
-    }
-
-    // --- 4. ACTIONS ROW ---
-    // Refresh / Manage / Sign out only make sense for an active account. Drawing
-    // them while signed out put a nonsensical "Sign out" beside the sign-in form.
-    if (m_signedIn) {
-        const auto drawActionBtn = [&](const AestraUI::NUIRect& rect, bool hovered,
-                                        const char* label, const char* iconName, bool danger) {
-            auto borderCol = danger ? textDanger.withAlpha(0.35f) : borderSecondary.withAlpha(0.45f);
-            auto textCol = danger ? textDanger : textSecondary;
-            auto bg = danger ? AestraUI::NUIColor::transparent() : bgSecondary.withAlpha(0.5f);
-            if (hovered) {
-                bg = danger ? textDanger.withAlpha(0.12f) : bgSecondary.withAlpha(0.85f);
-                borderCol = danger ? textDanger.withAlpha(0.55f) : borderSecondary.withAlpha(0.65f);
-            }
-            if (!danger || hovered) {
-                renderer.fillRoundedRect(rect, 8.0f, bg);
-            }
-            renderer.strokeRoundedRect(rect, 8.0f, 0.5f, borderCol);
-
-            // Measure content block width (icon + gap + text)
-            auto textSize = renderer.measureText(label, props.fontSizeM);
-            float contentW = 15.0f + 6.0f + textSize.width;
-            float contentX = rect.x + (rect.width - contentW) * 0.5f;
-            float midY = rect.y + rect.height * 0.5f;
-            drawMembershipIcon(renderer, iconName, contentX + 7.5f, midY, 15.0f, textCol);
-            renderer.drawText(label, {contentX + 21.0f, renderer.calculateTextY(rect, props.fontSizeM)},
-                              props.fontSizeM, textCol);
-        };
-
-        const char* refreshLabel = m_isRefreshing ? "Refreshing\u2026" : "Refresh license";
-        drawActionBtn(m_btnRefreshBounds, m_btnRefreshHovered, refreshLabel, "refresh", false);
-        drawActionBtn(m_btnManageBounds, m_btnManageHovered, "Manage account", "external-link", false);
-        drawActionBtn(m_btnSignOutBounds, m_btnSignOutHovered, "Sign out", "log-out", true);
-
-        // Inline error below actions row
-        if (!m_actionErrorMessage.empty()) {
-            float errY = m_actionsRowBounds.bottom() + 8.0f;
-            renderer.drawText(m_actionErrorMessage, {m_actionsRowBounds.x, errY}, props.fontSizeM, textDanger);
+        float y = about.y + 12.0f;
+        for (const char* line : lines) {
+            renderer.drawText(line, {about.x, y}, 12.5f, textSecondary);
+            y += 18.0f;
         }
     }
-
-    // --- 5. SIGN-IN UI (if needed, rendered above the new design) ---
-    if (m_signInTitleLabel && m_signInTitleLabel->isVisible()) {
-        renderChildren(renderer);
-
-        // Sign-in feedback (Send Code / Verify) on its own line under the form,
-        // left-aligned so it can't overflow like it did in the SYNC card. "Sent"/
-        // "Signed in" reads as positive; everything else is a plain notice.
-        if (!m_signInMessage.empty()) {
-            const bool positive = m_signInMessage.find("sent") != std::string::npos ||
-                                  m_signInMessage.find("Signed in") != std::string::npos;
-            const auto msgColor = positive ? theme.getColor("success") : textSecondary;
-            renderer.drawText(m_signInMessage, {b.x + 20.0f, m_signInFormBottomY + 10.0f},
-                              props.fontSizeM, msgColor);
-        }
+    // Feedback from Send code / Verify / Refresh, under the rows it came from.
+    const std::string& message = !m_signInMessage.empty() ? m_signInMessage : m_actionErrorMessage;
+    if (!message.empty() && m_messageItem != SIZE_MAX) {
+        const auto row = m_form.boundsOf(m_messageItem);
+        const bool positive =
+            message.find("sent") != std::string::npos || message.find("Signed in") != std::string::npos;
+        renderer.drawText(message, {row.x, renderer.calculateTextY(row, 12.0f)}, 12.0f,
+                          positive ? textSuccess : (m_actionErrorMessage == message ? textDanger : textMuted));
     }
+    renderer.clearClipRect();
+    (void)textPrimary;
 
     // --- 6. SIGN-OUT CONFIRMATION OVERLAY ---
     if (m_showingSignOutConfirm) {
@@ -844,146 +649,65 @@ bool MembershipSettingsPage::onMouseEvent(const AestraUI::NUIMouseEvent& event) 
         return true; // Consume all mouse events while modal is open
     }
 
-    // Update hover states for redesigned action buttons on every event
-    bool oldRefresh = m_btnRefreshHovered;
-    bool oldManage = m_btnManageHovered;
-    bool oldSignOut = m_btnSignOutHovered;
-    m_btnRefreshHovered = m_btnRefreshBounds.contains(mx, my);
-    m_btnManageHovered = m_btnManageBounds.contains(mx, my);
-    m_btnSignOutHovered = m_btnSignOutBounds.contains(mx, my);
-    if (oldRefresh != m_btnRefreshHovered || oldManage != m_btnManageHovered ||
-        oldSignOut != m_btnSignOutHovered) {
+    if (AestraUI::NUIComponent::onMouseEvent(event))
+        return true;
+    if (m_form.onMouseWheel(event)) {
         repaint();
+        return true;
     }
-
-    // Action buttons only exist (and only hit-test) while signed in — mirrors the
-    // render gate so a signed-out click can't trigger an invisible button.
-    if (event.pressed && m_signedIn) {
-        if (m_btnRefreshBounds.contains(mx, my)) {
-            if (!m_isRefreshing) {
-                refreshAccount();
-            }
-            return true;
-        }
-        if (m_btnManageBounds.contains(mx, my)) {
-            // Open account management URL in default browser
-            std::system("xdg-open https://aestra.studio/account &");
-            return true;
-        }
-        if (m_btnSignOutBounds.contains(mx, my)) {
-            confirmSignOut();
-            return true;
-        }
-    }
-    return AestraUI::NUIComponent::onMouseEvent(event);
+    return false;
 }
 
 void MembershipSettingsPage::layoutComponents() {
-    const AestraUI::NUIRect b = getBounds();
-    const float hPad = 20.0f;
-    const float vPad = 16.0f;
-    const float cardGap = 16.0f;
-    const float x = b.x + hPad;
-    const float contentW = b.width - hPad * 2.0f;
-    float y = b.y + vPad;
+    // The form draws every label; these components only carry state now.
+    for (auto* label : {&m_titleLabel, &m_verificationLabel, &m_syncLabel, &m_lastRefreshLabel, &m_detailLabel,
+                        &m_featuresTitleLabel, &m_signInTitleLabel}) {
+        if (*label)
+            (*label)->setVisible(false);
+    }
+    for (auto& f : m_featureLabels) {
+        if (f)
+            f->setVisible(false);
+    }
+    const bool signedIn = m_signedIn;
+    for (auto& c : std::initializer_list<std::shared_ptr<AestraUI::NUIComponent>>{
+             m_emailInput, m_codeInput, m_startLoginButton, m_verifyLoginButton}) {
+        c->setVisible(!signedIn);
+    }
+    for (auto& c : std::initializer_list<std::shared_ptr<AestraUI::NUIComponent>>{
+             m_accountLabel, m_tierLabel, m_statusLabel, m_refreshButton, m_signOutButton}) {
+        c->setVisible(signedIn);
+    }
 
-    // Founder card (full width)
-    const float founderH = 142.0f;
-    m_founderCardBounds = AestraUI::NUIRect(x, y, contentW, founderH);
-    y += founderH + cardGap;
-
-    // Features + Sync cards. Side by side when there's room; on a narrow dialog the
-    // two-column feature chips clip badly, so give Features the full width and hide
-    // the secondary Sync & Session card instead of squeezing both. (Height is
-    // unchanged either way — the dialog can't scroll and has no vertical slack.)
-    const float sideCardW = (contentW - cardGap) * 0.5f;
-    const float chipH = 30.0f;
-    const float chipGap = 8.0f;
-    const float chipRows = 4.0f;
-    const float featuresCardH = 16.0f + 24.0f + (chipRows * chipH + (chipRows - 1.0f) * chipGap) + 10.0f + 14.0f + 16.0f;
-    const float syncCardH = 16.0f + 28.0f + 4.0f * 36.0f + 16.0f;
-    const bool narrowCards = sideCardW < 300.0f;
-    float cardsBlockH;
-    if (narrowCards) {
-        m_featuresCardBounds = AestraUI::NUIRect(x, y, contentW, featuresCardH);
-        m_syncCardBounds = AestraUI::NUIRect(0.0f, 0.0f, 0.0f, 0.0f); // hidden — see onRender guard
-        cardsBlockH = featuresCardH;
+    m_form.clear();
+    m_form.section("ACCOUNT");
+    if (signedIn) {
+        m_form.row("Signed in as", m_accountLabel, "", 320.0f);
+        m_form.row("Membership", m_tierLabel, "", 220.0f);
+        m_form.row("Status", m_statusLabel, "last refresh: " + m_lastRefreshValue, 220.0f);
+        m_form.row("", m_refreshButton, "", 96.0f);
     } else {
-        const float cardH = std::max(featuresCardH, syncCardH);
-        m_featuresCardBounds = AestraUI::NUIRect(x, y, sideCardW, cardH);
-        m_syncCardBounds = AestraUI::NUIRect(x + sideCardW + cardGap, y, sideCardW, cardH);
-        cardsBlockH = cardH;
+        m_form.row("Email", m_emailInput, "", 260.0f);
+        m_form.row("Code", m_codeInput, "", 260.0f);
     }
-    y += cardsBlockH + cardGap;
+    m_messageItem = m_form.block(nullptr, 30.0f);
+    m_form.section("WHAT IS FREE");
+    m_aboutItem = m_form.block(nullptr, 70.0f);
+    m_form.layout(getBounds());
 
-    // Actions row
-    const float actionH = 36.0f;
-    m_actionsRowBounds = AestraUI::NUIRect(x, y, contentW, actionH);
-
-    const float btnGap = 8.0f;
-    const float btnW = (contentW - btnGap * 2.0f) / 3.0f;
-    m_btnRefreshBounds = AestraUI::NUIRect(x, y, btnW, actionH);
-    m_btnManageBounds = AestraUI::NUIRect(x + btnW + btnGap, y, btnW, actionH);
-    // Last button fills exactly to the right edge
-    float lastX = x + 2.0f * (btnW + btnGap);
-    m_btnSignOutBounds = AestraUI::NUIRect(lastX, y, (x + contentW) - lastX, actionH);
-
-    // Position sign-in UI below the action row when visible
-    const bool showSignIn = m_signInTitleLabel && m_signInTitleLabel->isVisible();
-    if (showSignIn) {
-        const float rowHeight = 19.0f;
-        const float buttonHeight = 32.0f;
-        const float sBtnGap = 8.0f;
-        const float buttonWidth = 110.0f;
-        // The sign-in form and the account Actions row are mutually exclusive
-        // (sign-in shows only while signed out, when the Actions row is hidden), so
-        // the form takes the Actions row's slot instead of sitting a whole row
-        // below the now-empty space — which left it hanging too low. The small
-        // lift seats the "Sign in" heading just under the cards.
-        float signY = b.y + vPad + founderH + cardGap + cardsBlockH + cardGap - 10.0f;
-        const float inputWidth = std::max(180.0f, contentW - buttonWidth - sBtnGap);
-        m_signInTitleLabel->setBounds(AestraUI::NUIRect(x, signY, contentW, rowHeight));
-        m_signInTitleLabel->setVisible(true);
-        signY += rowHeight + 4.0f;
-        m_emailInput->setBounds(AestraUI::NUIRect(x, signY, inputWidth, buttonHeight));
-        m_emailInput->setVisible(true);
-        m_startLoginButton->setBounds(AestraUI::NUIRect(x + inputWidth + sBtnGap, signY, buttonWidth, buttonHeight));
-        m_startLoginButton->setVisible(true);
-        signY += buttonHeight + sBtnGap;
-        m_codeInput->setBounds(AestraUI::NUIRect(x, signY, inputWidth, buttonHeight));
-        m_codeInput->setVisible(true);
-        m_verifyLoginButton->setBounds(AestraUI::NUIRect(x + inputWidth + sBtnGap, signY, buttonWidth, buttonHeight));
-        m_verifyLoginButton->setVisible(true);
-        m_signInFormBottomY = signY + buttonHeight; // status line renders below this
+    // Second buttons beside their row's control.
+    const auto place = [](const std::shared_ptr<AestraUI::NUIComponent>& beside,
+                          const std::shared_ptr<AestraUI::NUIComponent>& button, float width) {
+        const auto& r = beside->getBounds();
+        button->setBounds(AestraUI::NUIRect(r.right() + 8.0f, r.y, width, r.height));
+        button->setVisible(beside->isVisible());
+    };
+    if (signedIn) {
+        place(m_refreshButton, m_signOutButton, 96.0f);
     } else {
-        if (m_signInTitleLabel) m_signInTitleLabel->setVisible(false);
-        if (m_emailInput) m_emailInput->setVisible(false);
-        if (m_startLoginButton) m_startLoginButton->setVisible(false);
-        if (m_codeInput) m_codeInput->setVisible(false);
-        if (m_verifyLoginButton) m_verifyLoginButton->setVisible(false);
+        place(m_emailInput, m_startLoginButton, 104.0f);
+        place(m_codeInput, m_verifyLoginButton, 104.0f);
     }
-
-    // Legacy: hide old children that are no longer visually used. The panel draws
-    // its header/info/features/actions itself; these child widgets predate that and
-    // are only kept for state plumbing. Any left visible get drawn by
-    // renderChildren() at their default (0,0) bounds — that stray "Account: Signed
-    // out" was leaking into the window's top-left corner.
-    m_titleLabel->setVisible(false);
-    m_accountLabel->setVisible(false);
-    m_tierLabel->setVisible(false);
-    m_statusLabel->setVisible(false);
-    m_verificationLabel->setVisible(false);
-    m_syncLabel->setVisible(false);
-    m_lastRefreshLabel->setVisible(false);
-    m_detailLabel->setVisible(false);
-    m_featuresTitleLabel->setVisible(false);
-    for (auto& fl : m_featureLabels) {
-        if (fl) fl->setVisible(false);
-    }
-    m_refreshButton->setVisible(false);
-    m_signOutButton->setVisible(false);
-    m_featuresTitleLabel->setVisible(false);
-    for (auto& f : m_featureLabels) f->setVisible(false);
 }
 
 } // namespace Aestra

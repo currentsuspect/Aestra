@@ -100,7 +100,7 @@ constexpr long STRETCH_SEED = 0x5eed; // fixed: the same project must render the
 
 KeepLengthCache::~KeepLengthCache() {
     for (auto& slot : m_slots) {
-        retire(slot.buffer.exchange(nullptr, std::memory_order_acq_rel));
+        retire(swapBuffer(slot, nullptr));
     }
 }
 
@@ -123,7 +123,7 @@ void KeepLengthCache::setSource(std::shared_ptr<const std::vector<float>> interl
     ++m_generation; // renders in flight for the old source are discarded on completion
     for (auto& slot : m_slots) {
         slot.state.store(Empty, std::memory_order_release);
-        retire(slot.buffer.exchange(nullptr, std::memory_order_acq_rel));
+        retire(swapBuffer(slot, nullptr));
     }
     m_bytes.store(0, std::memory_order_relaxed);
     m_settled.notify_all();
@@ -153,7 +153,9 @@ bool KeepLengthCache::waitUntilSettled(const std::vector<int>& semitones, std::c
 std::shared_ptr<const KeepLengthCache::Buffer> KeepLengthCache::tryGet(int semitones) noexcept {
     if (!inRange(semitones)) return nullptr;
     Slot& slot = m_slots[slotIndex(semitones)];
-    auto buffer = slot.buffer.load(std::memory_order_acquire);
+    // Copying the pinned owner is a refcount bump; the retire list keeps the last reference
+    // off the audio thread.
+    std::shared_ptr<const Buffer> buffer = slot.rtBuffer.readRealtime().shared();
     if (buffer) {
         slot.lastUsed.store(m_useClock.fetch_add(1, std::memory_order_relaxed), std::memory_order_relaxed);
     }
@@ -190,7 +192,7 @@ bool KeepLengthCache::renderOnePending() {
                 m_bytes.fetch_add(rendered->interleaved.size() * sizeof(float), std::memory_order_relaxed);
                 m_slots[idx].lastUsed.store(m_useClock.fetch_add(1, std::memory_order_relaxed),
                                             std::memory_order_relaxed);
-                retire(m_slots[idx].buffer.exchange(std::move(rendered), std::memory_order_acq_rel));
+                retire(swapBuffer(m_slots[idx], std::move(rendered)));
             }
             m_slots[idx].state.store(state, std::memory_order_release);
             evictToBudget(idx);
@@ -248,7 +250,7 @@ void KeepLengthCache::evictToBudget(size_t keepIndex) {
             }
         }
         if (victim == m_slots.size()) return; // only the newest remains; keep it even over budget
-        auto old = m_slots[victim].buffer.exchange(nullptr, std::memory_order_acq_rel);
+        auto old = swapBuffer(m_slots[victim], nullptr);
         m_slots[victim].state.store(Empty, std::memory_order_release);
         if (old) {
             m_bytes.fetch_sub(old->interleaved.size() * sizeof(float), std::memory_order_relaxed);

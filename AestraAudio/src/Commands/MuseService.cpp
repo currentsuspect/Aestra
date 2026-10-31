@@ -230,7 +230,22 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
         if (auto handled = MuseInternal::handleRoutingVerbs(museCtx, envelope)) return *handled;
         if (auto handled = MuseInternal::handleLibraryVerbs(museCtx, envelope)) return *handled;
         if (auto handled = MuseInternal::handleHistoryVerbs(museCtx, envelope)) return *handled;
-        if (auto handled = MuseInternal::handleRenderVerbs(museCtx, envelope)) return *handled;
+        {
+            // Render actions pump the engine on this thread; the host's live
+            // stream must not pump it at the same time (see
+            // setOfflineRenderStreamHooks). Resumed on every exit path.
+            struct StreamPause {
+                const std::function<void()>& resume;
+                bool paused;
+                ~StreamPause() {
+                    if (paused && resume) resume();
+                }
+            };
+            const bool isRender = verb == "render_song" || verb == "render_pattern" || verb == "verify_render";
+            StreamPause pause{m_resumeStreamAfterRender,
+                              isRender && m_pauseStreamForRender && m_pauseStreamForRender()};
+            if (auto handled = MuseInternal::handleRenderVerbs(museCtx, envelope)) return *handled;
+        }
 
         // ------------------------------------------------------------------
         // Mutation verbs: JSON args -> flag map -> the same schema
@@ -268,7 +283,12 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             // Structured id of the object the command created (e.g. the new
             // pattern from clone_pattern) — agents must not parse the message.
             JSON result = JSON::object();
-            result.set("createdId", JSON(static_cast<double>(cmdResult.createdId)));
+            if (!cmdResult.createdIdText.empty()) {
+                result.set("createdId", JSON(cmdResult.createdIdText));
+            } else {
+                result.set("createdId", JSON(static_cast<double>(cmdResult.createdId)));
+            }
+            if (!cmdResult.createdKind.empty()) result.set("createdKind", JSON(cmdResult.createdKind));
             response.set("result", result);
         }
         response.set("executionMs", JSON(cmdResult.executionMs));

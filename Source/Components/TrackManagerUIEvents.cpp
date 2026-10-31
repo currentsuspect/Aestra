@@ -54,6 +54,8 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (m_marquee.active()) {
         return handleSelectionBoxMouse(event, localPos);
     }
+    if (handleFoldedRowMouse(event))
+        return true; // V82-T2: "show" / "hide" on the folded empty tracks
 
     // Fix for "Sticky Drag": Route events to any track that is currently dragging automation
     // regardless of whether the mouse is inside its bounds.
@@ -151,8 +153,7 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 
     // Layout constants — the time band is minimap row + ruler row.
     float rulerHeight = kTimelineRulerHeight;
-    float minimapHeight = kTimelineMinimapHeight;
-    AestraUI::NUIRect rulerRect(0, minimapHeight, bounds.width, rulerHeight);
+    AestraUI::NUIRect rulerRect(0, kTimelineRulerTop, bounds.width, rulerHeight);
 
     // Track area (below ruler)
     float trackAreaTop = kTimelineTimeBandHeight;
@@ -175,9 +176,6 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         return true;
     }
     if (handleRulerSelectionDrag(event, localPos)) {
-        return true;
-    }
-    if (handleRulerSelectionMenu(event, localPos, isInRuler)) {
         return true;
     }
     if (handleLoopMarkerDrag(event, localPos)) {
@@ -261,6 +259,12 @@ void TrackManagerUI::updateToolbarHover(const AestraUI::NUIMouseEvent& event) {
         bool oldMultiSelectHovered = m_multiSelectToolHovered;
         bool oldPaintHovered = m_paintToolHovered;
         bool oldFollowHovered = m_followPlayheadHovered;
+        const bool oldMuteHovered = m_muteToolHovered;
+        const bool oldBoardHovered = m_muteToolHovered || m_snapHovered || m_fitSongHovered;
+        m_muteToolHovered = m_muteToolBounds.contains(event.position);
+        m_snapHovered = m_snapBounds.contains(event.position);
+        m_fitSongHovered = m_fitSongBounds.contains(event.position);
+        if (oldBoardHovered != (m_muteToolHovered || m_snapHovered || m_fitSongHovered)) setDirty(true);
 
         m_menuHovered = m_menuIconBounds.contains(event.position);
         m_selectToolHovered = m_selectToolBounds.contains(event.position);
@@ -271,22 +275,24 @@ void TrackManagerUI::updateToolbarHover(const AestraUI::NUIMouseEvent& event) {
 
         // Toolbar Tooltips
         bool anyToolbarHovered = m_menuHovered || m_selectToolHovered || m_splitToolHovered ||
-                                 m_multiSelectToolHovered || m_paintToolHovered || m_followPlayheadHovered;
+                                 m_multiSelectToolHovered || m_paintToolHovered || m_followPlayheadHovered || m_muteToolHovered;
         bool anyOldHovered = oldMenuHovered || oldSelectHovered || oldSplitHovered ||
-                             oldMultiSelectHovered || oldPaintHovered || oldFollowHovered;
+                             oldMultiSelectHovered || oldPaintHovered || oldFollowHovered || oldMuteHovered;
 
         if (m_toolbarBounds.contains(event.position) && anyToolbarHovered) {
             std::string tooltipText;
             if (m_menuHovered && !oldMenuHovered)
                 tooltipText = "Menu";
             else if (m_selectToolHovered && !oldSelectHovered)
-                tooltipText = "Select Tool";
+                tooltipText = "Select (1)";
             else if (m_splitToolHovered && !oldSplitHovered)
-                tooltipText = "Split Tool";
+                tooltipText = "Split (3): click a clip to cut it at the line";
+            else if (m_muteToolHovered && !oldMuteHovered)
+                tooltipText = "Mute (4): click a clip to silence it (drag to sweep); Alt+click works with any tool";
             else if (m_multiSelectToolHovered && !oldMultiSelectHovered)
                 tooltipText = "Multi-Select Tool";
             else if (m_paintToolHovered && !oldPaintHovered)
-                tooltipText = "Paint Tool";
+                tooltipText = "Draw (2): click empty grid to stamp the copied clip";
             else if (m_followPlayheadHovered && !oldFollowHovered)
                 tooltipText = "Follow Playhead";
             if (!tooltipText.empty()) {
@@ -535,7 +541,9 @@ void TrackManagerUI::clearRulerSelection() {
 }
 
 bool TrackManagerUI::beginGridMarquee(const AestraUI::NUIMouseEvent& event) {
-    if (m_currentTool != PlaylistTool::Select || !event.pressed || event.button != AestraUI::NUIMouseButton::Left) {
+    // The Select tool's gesture, and Draw's too while Draw has nothing to stamp (the app starts on Draw).
+    const bool bandTool = m_currentTool == PlaylistTool::Select || (m_currentTool == PlaylistTool::Paint && !canPaintClip());
+    if (!bandTool || !event.pressed || event.button != AestraUI::NUIMouseButton::Left) {
         return false;
     }
     // Only a plain press replaces: Shift/Ctrl drag adds to or toggles what is already selected.
@@ -658,7 +666,7 @@ bool TrackManagerUI::handleRulerPress(const AestraUI::NUIMouseEvent& event, cons
     // dead zone). They stay hoverable/grabbable anywhere in the ruler row;
     // scrub, selection, and click-seek remain confined to right of that edge.
     const bool inRulerRow =
-        localPos.y >= kTimelineMinimapHeight && localPos.y < kTimelineTimeBandHeight;
+        localPos.y >= kTimelineRulerTop && localPos.y < kTimelineTimeBandHeight;
     if (isInRuler || (inRulerRow && m_hasRulerSelection)) {
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
@@ -780,7 +788,7 @@ bool TrackManagerUI::tryBeginLoopHandleDrag(const AestraUI::NUIMouseEvent& event
     if (!m_playlistVisible || !m_hasRulerSelection) {
         return false;
     }
-    if (localPos.y < kTimelineMinimapHeight || localPos.y >= kTimelineTimeBandHeight) {
+    if (localPos.y < kTimelineRulerTop || localPos.y >= kTimelineTimeBandHeight) {
         return false;
     }
 
@@ -839,74 +847,19 @@ bool TrackManagerUI::handleRulerSelectionDrag(const AestraUI::NUIMouseEvent& eve
                 double selStartBeat = std::min(m_rulerSelectionStartBeat, m_rulerSelectionEndBeat);
                 double selEndBeat = std::max(m_rulerSelectionStartBeat, m_rulerSelectionEndBeat);
 
-                // Update loop markers to match selection through centralized propagation.
-                updateSelectionLoopRegion(selStartBeat, selEndBeat);
-                m_loopPreset = TimelineLoopPreset::Selection;
-
-                // Call selection callback - this will jump playhead and set loop region
-                if (m_onSelectionMade) {
-                    m_onSelectionMade(selStartBeat, selEndBeat);
-                }
-
-                // Also notify loop preset changed to selection mode
-                if (m_onLoopPresetChanged) {
-                    m_onLoopPresetChanged(timelineLoopPresetId(TimelineLoopPreset::Selection));
-                }
+                selectLoopRange(selStartBeat, selEndBeat);
 
                 Log::info("[TrackManagerUI] Ruler selection: " + std::to_string(selStartBeat) + " to " +
                           std::to_string(selEndBeat) + " beats");
             } else {
                 // Click without drag - clear selection and disable loop
-                setLoopRegion(0.0, 0.0, false);
-                m_loopPreset = TimelineLoopPreset::Off;
-
-                // SPECIAL: If we clicked on an EXISTNG range on ruler, show menu
-                // (Wait, this is handled in the isInRuler block if it's an instant click)
-
-                // Trigger loop OFF callback
-                if (m_onLoopPresetChanged) {
-                    m_onLoopPresetChanged(timelineLoopPresetId(TimelineLoopPreset::Off));
-                }
+                clearLoopRange();
             }
 
             return true;
         }
 
         return true;
-    }
-    return false;
-}
-
-bool TrackManagerUI::handleRulerSelectionMenu(const AestraUI::NUIMouseEvent& event, const AestraUI::NUIPoint& localPos, bool isInRuler) {
-    // === RULER SELECTION CONTEXT MENU (Click on active range) ===
-    if (isInRuler && event.pressed && event.button == AestraUI::NUIMouseButton::Left && m_hasRulerSelection &&
-        !m_hoveringLoopStart && !m_hoveringLoopEnd) {
-        auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-        const auto& layout = themeManager.getLayoutDimensions();
-        float gridStartX = layout.trackControlsWidth + kTimelineGridInsetX;
-
-        float loopStartX =
-            gridStartX + (static_cast<float>(m_loopStartBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-        float loopEndX = gridStartX + (static_cast<float>(m_loopEndBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-        float minX = std::min(loopStartX, loopEndX);
-        float maxX = std::max(loopStartX, loopEndX);
-
-        if (localPos.x >= minX && localPos.x <= maxX) {
-            if (m_activeContextMenu) {
-                detachContextMenu(m_activeContextMenu);
-            }
-            m_activeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
-            auto menu = m_activeContextMenu;
-
-            menu->addItem("Send Selection to Audition", [this]() {
-                if (m_onSendSelectionToAudition) {
-                    m_onSendSelectionToAudition(m_loopStartBeat, m_loopEndBeat);
-                }
-            });
-
-            attachAndShowContextMenu(this, menu, event.position);
-            return true;
-        }
     }
     return false;
 }
@@ -1040,9 +993,9 @@ bool TrackManagerUI::handleSplitToolClick(const AestraUI::NUIMouseEvent& event, 
 }
 bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     if (event.pressed) {
-        // Hotkey 'A' toggles Automation Mode (FL/Ableton style)
+        // Hotkey 'A' opens or closes the selected tracks' automation rows (V82-T1)
         if (event.keyCode == AestraUI::NUIKeyCode::A && !(event.modifiers & AestraUI::NUIModifiers::Ctrl)) {
-            setPlaylistMode(m_playlistMode == PlaylistMode::Clips ? PlaylistMode::Automation : PlaylistMode::Clips);
+            toggleAutomationForSelectedTracks();
             return true;
         }
 
@@ -1052,7 +1005,15 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
             return true;
         }
         if (event.keyCode == AestraUI::NUIKeyCode::Num2) {
+            setCurrentTool(PlaylistTool::Paint);
+            return true;
+        }
+        if (event.keyCode == AestraUI::NUIKeyCode::Num3) {
             setCurrentTool(PlaylistTool::Split);
+            return true;
+        }
+        if (event.keyCode == AestraUI::NUIKeyCode::Num4) {
+            setCurrentTool(PlaylistTool::Mute);
             return true;
         }
 
@@ -1115,20 +1076,11 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
                 pasteClipboardAtCursor();
                 return true;
             }
-            // Ctrl+B: duplicate the whole selection (#848; matches the Arsenal grid).
-            if (event.keyCode == AestraUI::NUIKeyCode::B &&
+            // Ctrl+D: duplicate the whole selection, one key in every editor (timeline, piano roll, Arsenal grid). It was
+            // Ctrl+B here and in the Arsenal grid but Ctrl+D in the piano roll and in the clip menu's own label.
+            if (event.keyCode == AestraUI::NUIKeyCode::D &&
                 (m_selectedClipId.isValid() || !m_clipSelection.empty())) {
                 duplicateSelectedClip();
-                return true;
-            }
-            if (event.keyCode == AestraUI::NUIKeyCode::D && m_selectedClipId.isValid()) {
-                duplicateSelectedClip();
-                return true;
-            }
-            // Ctrl+B: Paste-to-right (paste at end of selected clip, select new clip)
-            if (event.keyCode == AestraUI::NUIKeyCode::B &&
-                (m_selectedClipId.isValid() || hasClipboardClip())) {
-                pasteClipToRight();
                 return true;
             }
         }

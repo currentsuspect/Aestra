@@ -15,6 +15,11 @@ add_library(AestraLicense STATIC
     src/LicenseRefreshClient.cpp
     src/LocalAccountCache.cpp
     src/MembershipViewModel.cpp
+    src/UpdateFeed.cpp
+    src/UpdateClient.cpp
+    src/UpdateChecker.cpp
+    src/UpdateInstall.cpp
+    src/UpdateSession.cpp
 )
 
 target_include_directories(AestraLicense
@@ -132,4 +137,23 @@ else()
         ${LIBSODIUM_CFLAGS_OTHER}
         ${LIBSECRET_CFLAGS_OTHER}
     )
+endif()
+
+# The key update feeds must be signed with (the public half; the private half is a CI secret, see tools/update/README.md).
+# update_public_key.hex holds 64 hex characters; AESTRA_UPDATE_PUBLIC_KEY_HEX in the environment overrides it for test builds.
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/update_public_key.hex" AESTRA_UPDATE_PUBLIC_KEY_FILE)
+string(STRIP "${AESTRA_UPDATE_PUBLIC_KEY_FILE}" AESTRA_UPDATE_PUBLIC_KEY_FILE)
+if(NOT "$ENV{AESTRA_UPDATE_PUBLIC_KEY_HEX}" STREQUAL "")
+    set(AESTRA_UPDATE_PUBLIC_KEY_FILE "$ENV{AESTRA_UPDATE_PUBLIC_KEY_HEX}")
+endif()
+string(TOLOWER "${AESTRA_UPDATE_PUBLIC_KEY_FILE}" AESTRA_UPDATE_PUBLIC_KEY_FILE)
+string(LENGTH "${AESTRA_UPDATE_PUBLIC_KEY_FILE}" AESTRA_UPDATE_PUBLIC_KEY_LENGTH)
+if(NOT AESTRA_UPDATE_PUBLIC_KEY_LENGTH EQUAL 64 OR NOT AESTRA_UPDATE_PUBLIC_KEY_FILE MATCHES "^[0-9a-f]+$")
+    message(FATAL_ERROR "The update public key must be exactly 64 hex characters.")
+endif()
+target_compile_definitions(AestraLicense PRIVATE AESTRA_UPDATE_PUBLIC_KEY_HEX="${AESTRA_UPDATE_PUBLIC_KEY_FILE}")
+
+# Windows' own HTTP stack carries the update check, the downloads and the account calls there.
+if(WIN32)
+    target_link_libraries(AestraLicense PRIVATE winhttp)
 endif()

@@ -169,3 +169,16 @@ add_executable(TerminationSignalTest App/TerminationSignalTest.cpp)
 target_include_directories(TerminationSignalTest PRIVATE ${CMAKE_SOURCE_DIR}/Source/App)
 add_test(NAME TerminationSignalTest COMMAND TerminationSignalTest)
 set_tests_properties(TerminationSignalTest PROPERTIES LABELS "app;recovery;regression;contract:durability")
+
+# #865: a recorded source at 2x trimmed to 1 beat consumes span x speed on the live path, with no wrap.
+add_executable(VarispeedTrimLiveTest AestraAudio/VarispeedTrimLiveTest.cpp)
+target_link_libraries(VarispeedTrimLiveTest PRIVATE AestraAudioCore)
+target_include_directories(VarispeedTrimLiveTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include ${CMAKE_SOURCE_DIR}/AestraCore/include)
+add_test(NAME VarispeedTrimLiveTest COMMAND VarispeedTrimLiveTest)
+set_tests_properties(VarispeedTrimLiveTest PROPERTIES TIMEOUT 60 LABELS "audio;varispeed;regression;contract:audio")
+# #866: doubled track records from pre-#864 saves are merged or dropped on load (header-only rule).
+add_executable(LegacyTrackRepairTest AestraAudio/LegacyTrackRepairTest.cpp)
+target_link_libraries(LegacyTrackRepairTest PRIVATE AestraAudioCore)
+target_include_directories(LegacyTrackRepairTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include ${CMAKE_SOURCE_DIR}/AestraCore/include)
+add_test(NAME LegacyTrackRepairTest COMMAND LegacyTrackRepairTest)
+set_tests_properties(LegacyTrackRepairTest PROPERTIES LABELS "project;serialization;regression;contract:durability")

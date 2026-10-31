@@ -28,6 +28,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include "Events/Connection.h"
 #include <mutex>
 #include <unordered_map>
@@ -106,7 +107,7 @@ public:
     // Clipboard & Paint Tool
     void copySelectedClip();
     void pasteClipboardAtCursor(); // Paste at playhead
-    void pasteClipToRight();       // Ctrl+B: Paste at end of selected clip, select new clip
+    void pasteClipToRight();       // Paste at end of selected clip, select new clip (no key: Ctrl+D is Duplicate everywhere)
     void onPaintClip(TrackUIComponent* trackComp, double beat);
     const Audio::ClipInstance& getClipboardClip() const { return m_clipboardClip; }
     bool hasClipboardClip() const { return m_clipboardClip.id.isValid(); }
@@ -124,10 +125,27 @@ public:
     void setActiveTool(PlaylistTool tool) { setCurrentTool(tool); } // Alias
     PlaylistTool getCurrentTool() const { return m_currentTool; }
     PlaylistTool getActiveTool() const { return m_currentTool; } // Alias
+    /// Whether this clip is muted (silent on playback, drawn greyed).
+    bool isClipMuted(ClipInstanceID clipId) const;
+    /// Mute or unmute one clip as one undo step. @p target absent = flip it. Returns the state it is in afterwards.
+    bool toggleClipMute(ClipInstanceID clipId, std::optional<bool> target = std::nullopt);
+    /// Whether the Draw tool has a clip to stamp (copied or selected earlier).
+    bool canPaintClip() const { return m_clipboardClip.id.isValid(); }
 
     // === VIEW MODES ===
+    /// Automation shows every lane's automation row; Clips hides them all (V82-T1: rows of their own now, so
+    /// this no longer dims every track's clips). Per lane: showAutomationLane / hideAutomationLane.
     void setPlaylistMode(PlaylistMode mode);
     PlaylistMode getPlaylistMode() const { return m_playlistMode; }
+
+    // V82-T1 (FD-50 board 8): one automation row under a track's lane, opened by "Automate Volume/Pan", hidden by
+    // its ×. Session-local, like lane collapse. @p deferred rebuilds the rows on the next paint, for requests that
+    // come from inside a row (its own handler must not destroy it). TrackManagerUIAutomation.cpp.
+    void showAutomationLane(PlaylistLaneID laneId, AutomationTarget target, bool deferred = false);
+    void hideAutomationLane(PlaylistLaneID laneId, bool deferred = false);
+    bool isAutomationLaneShown(PlaylistLaneID laneId) const;
+    /// The curve the lane's automation edits: the last one chosen, Volume until one is.
+    AutomationTarget automationLaneTarget(PlaylistLaneID laneId) const;
 
     // Pattern Playback Mode (Arsenal) - Hides playhead/playline
     void setPatternMode(bool enabled);
@@ -304,10 +322,18 @@ public:
                                         const ::AestraUI::NUIPoint& position) override;
     void onDragLeave() override;
     ::AestraUI::DropResult onDrop(const ::AestraUI::DragData& data, const ::AestraUI::NUIPoint& position) override;
+    ::AestraUI::DropResult placeDrop(const ::AestraUI::DragData& data, const ::AestraUI::NUIPoint& position);
     ::AestraUI::NUIRect getDropBounds() const override { return getBounds(); }
 
     // Loop markers (Visual feedback)
     void setLoopRegion(double startBeat, double endBeat, bool enabled);
+    /// What a ruler drag over [startBeat, endBeat) does: loop that range (Selection preset).
+    void selectLoopRange(double startBeat, double endBeat);
+    /// What a ruler click without a drag does: clear the range and turn the loop off.
+    void clearLoopRange();
+    bool isLoopEnabled() const { return m_loopEnabled; }
+    double getLoopStartBeat() const { return m_loopStartBeat; }
+    double getLoopEndBeat() const { return m_loopEndBeat; }
 
     bool onMouseEvent(const ::AestraUI::NUIMouseEvent& event) override;
     bool onKeyEvent(const ::AestraUI::NUIKeyEvent& event) override;
@@ -382,6 +408,18 @@ public:
     void expandTrack(uint64_t trackId) { m_collapsedTrackIds.erase(trackId); }
     /** Expand the lane's owning track, rebuild rows, and scroll it into view. */
     void revealLane(PlaylistLaneID laneId);
+    // V82-T1: the row under @p trackRow showing its lane's automation (refreshTracks), and the per-lane state.
+    std::shared_ptr<TrackUIComponent> makeAutomationRow(const std::shared_ptr<TrackUIComponent>& trackRow,
+                                                        AutomationTarget target);
+    struct AutomationLaneView {
+        PlaylistLaneID laneId;
+        AutomationTarget target{AutomationTarget::Volume};
+        bool chosen{false}; // until a curve is picked, the lane shows the curve it already has
+        bool shown{false};
+    };
+    AutomationLaneView& automationLaneView(PlaylistLaneID laneId);
+    const AutomationLaneView* findAutomationLaneView(PlaylistLaneID laneId) const;
+    void toggleAutomationForSelectedTracks();
 
 protected:
     void onRender(::AestraUI::NUIRenderer& renderer) override;
@@ -410,13 +448,14 @@ private:
     // Spec 2 §8: 42 -> 38. Controls are 24px tall, so this keeps 7px of clear
     // space above and below them — compact without becoming cramped — and puts
     // another lane on screen at a typical window height.
-    int m_trackHeight{38};
+    int m_trackHeight{46}; // FD-50 board 8: two-line headers (name, then what plays it → where it goes)
     // Contiguous rows (2026-08 plane redesign): the grid plane is continuous,
     // so rows carry no seam — a quiet separator line marks each boundary.
     int m_trackSpacing{0};
     float m_scrollOffset{0.0f};
     float m_targetScrollOffset{0.0f};
     std::unordered_set<uint64_t> m_collapsedTrackIds;
+    std::vector<AutomationLaneView> m_automationLanes; // V82-T1, session-local
     PlaylistMode m_playlistMode{PlaylistMode::Clips};
     bool m_patternMode = false; // True when Pattern (Arsenal) playback is active
 
@@ -460,6 +499,7 @@ private:
     std::shared_ptr<::AestraUI::NUIIcon> m_splitToolIcon;
     std::shared_ptr<::AestraUI::NUIIcon> m_multiSelectToolIcon;
     std::shared_ptr<::AestraUI::NUIIcon> m_paintToolIcon;  // Paint/stamp tool icon
+    std::shared_ptr<::AestraUI::NUIIcon> m_muteToolIcon;
     std::shared_ptr<::AestraUI::NUIIcon> m_moveCursorIcon; // Move (4-way arrow) cursor for Paint tool hovering clips
     std::shared_ptr<::AestraUI::NUIIcon> m_trimCursorIcon; // Canonical horizontal stretch cursor (registry SVG)
     std::shared_ptr<::AestraUI::NUIIcon> m_resizeCursorIcon; // Canonical ResizeEW registry glyph (minimap resize)
@@ -498,6 +538,15 @@ private:
     bool m_splitToolHovered = false;
     bool m_multiSelectToolHovered = false;
     bool m_paintToolHovered = false;
+    // FD-50 board 7 toolbar row: Erase, the snap value, Fit song (TrackManagerUIToolbar.cpp).
+    ::AestraUI::NUIRect m_muteToolBounds;
+    ::AestraUI::NUIRect m_snapBounds;
+    ::AestraUI::NUIRect m_fitSongBounds;
+    bool m_muteToolHovered = false;
+    bool m_snapHovered = false;
+    bool m_fitSongHovered = false;
+    void fitSong();          // zoom so the whole arrangement fills the grid, scrolled to bar 1
+    void showSnapMenuAt(const ::AestraUI::NUIPoint& anchor);
     bool m_followPlayheadHovered = false;
 
     // Loop state
@@ -505,7 +554,9 @@ private:
     double m_lastProjectLoopExtentBeats{-1.0};
 
     // Current editing tool
-    PlaylistTool m_currentTool = PlaylistTool::Select;
+    // Starts on Draw (owner, 2026-10-20: "select probably shouldn't be the default"). With nothing to stamp yet, a Draw click falls
+    // through to the usual gestures (select, marquee), so the default never feels dead.
+    PlaylistTool m_currentTool = PlaylistTool::Paint;
     bool m_cursorHidden = false; // Track cursor visibility state
     std::function<void(bool)> m_onCursorVisibilityChanged;
     std::function<void(uint32_t)> m_onShowRoutingGraph;
@@ -588,6 +639,14 @@ private:
 
     // Playlist View State
     bool m_playlistVisible{true};
+    // V82-T2 (TrackManagerUIFold.cpp): untouched tracks fold into one row under the last track; "show" unfolds them.
+    bool m_showEmptyTracks{false};
+    size_t m_foldedEmptyTracks{0};
+    AestraUI::NUIRect m_foldedRowRect{};
+    AestraUI::NUIRect m_foldedToggleRect{};
+    bool isFoldableEmptyLane(const Audio::PlaylistLane& lane, size_t laneCountOfItsTrack) const;
+    void renderFoldedEmptyRow(AestraUI::NUIRenderer& renderer);
+    bool handleFoldedRowMouse(const AestraUI::NUIMouseEvent& event);
 
     // ⚡ MULTI-LAYER CACHING SYSTEM for 60+ FPS
 
@@ -747,6 +806,10 @@ private:
     void clearDropPreview();                         // Clear drop preview state
     double snapBeatToGrid(double beat) const;        // Snap beat to nearest grid line
     double snapBeatToGridForward(double beat) const; // Snap beat to next grid line (paste-to-right)
+    // Where a NEW clip starts when placed with the Draw tool: the grid cell the pointer is in (floor), not the nearest line.
+    // Rounding put a clip placed in the right half of a cell on the NEXT cell, to the right of the pointer (the piano roll
+    // had the same bug: SPEC 3 §2.5). Moves and trims keep snapBeatToGrid(): a relative drag lands on the nearest line.
+    double snapPlacementToGrid(double beat) const;
 
     // Resolve a lane to its first pattern's mixer channel position, falling
     // back to fallbackIndex when the lane is missing or unresolved. Shared by
@@ -773,8 +836,9 @@ private:
     bool handleRulerPress(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos,
                           bool isInRuler);
     bool handleRulerSelectionDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
-    bool handleRulerSelectionMenu(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos,
-                                  bool isInRuler);
+    /// #544: "Send Selection to Audition" lives in the timeline's right-click and toolbar menus; a left press on the
+    /// ruler always scrubs, so a menu there could never open. Adds the item when a ruler selection exists.
+    void addSendSelectionToAudition(::AestraUI::NUIContextMenu& menu);
     bool handleLoopMarkerDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
     bool handlePlayheadDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
     bool handleSplitToolClick(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);

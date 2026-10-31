@@ -3,7 +3,9 @@
 #include "Plugin/OutOfProcessPluginInstance.h"
 
 #include "AestraLog.h"
+#include "SharedAudioBlock.h"
 
+#include <cstdio>
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
@@ -20,15 +22,103 @@
 
 #ifndef _WIN32
 #include <fcntl.h>
+#include <poll.h>
+#include <pthread.h>
+#include <sched.h>
 #include <signal.h>
 #include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #endif
+#ifdef __APPLE__
+#include <dispatch/dispatch.h>
+#elif !defined(_WIN32)
+#include <cerrno>
+#include <ctime>
+#include <semaphore.h>
+#endif
 
 namespace Aestra {
 namespace Audio {
+
+// Wakes the worker the moment process() hands it a block, instead of the worker finding it on its next 1 ms nap
+// (V82-H7 follow-up). post() is one atomic and, only when the worker sleeps, one wake syscall: safe from the render thread.
+class WorkerWake {
+public:
+    WorkerWake() {
+#ifdef _WIN32
+        m_sem = CreateSemaphoreA(nullptr, 0, 1, nullptr);
+#elif defined(__APPLE__)
+        m_sem = dispatch_semaphore_create(0);
+#else
+        m_ok = sem_init(&m_sem, 0, 0) == 0;
+#endif
+    }
+    ~WorkerWake() {
+#ifdef _WIN32
+        if (m_sem)
+            CloseHandle(m_sem);
+#elif defined(__APPLE__)
+        if (m_sem)
+            dispatch_release(m_sem);
+#else
+        if (m_ok)
+            sem_destroy(&m_sem);
+#endif
+    }
+    WorkerWake(const WorkerWake&) = delete;
+    WorkerWake& operator=(const WorkerWake&) = delete;
+
+    void post() noexcept {
+#ifdef _WIN32
+        if (m_sem)
+            ReleaseSemaphore(m_sem, 1, nullptr); // at most one pending wake: a full count just fails
+#elif defined(__APPLE__)
+        if (m_sem)
+            dispatch_semaphore_signal(m_sem);
+#else
+        if (m_ok)
+            sem_post(&m_sem);
+#endif
+    }
+    /// Sleeps until post() or the timeout. Spurious wakes are fine: the worker re-checks its state.
+    void wait(std::chrono::microseconds timeout) noexcept {
+#ifdef _WIN32
+        if (m_sem) {
+            WaitForSingleObject(m_sem, static_cast<DWORD>(std::max<long long>(1, timeout.count() / 1000)));
+            return;
+        }
+#elif defined(__APPLE__)
+        if (m_sem) {
+            dispatch_semaphore_wait(m_sem, dispatch_time(DISPATCH_TIME_NOW, timeout.count() * 1000));
+            return;
+        }
+#else
+        if (m_ok) {
+            timespec ts{};
+            clock_gettime(CLOCK_REALTIME, &ts);
+            const long long ns = ts.tv_nsec + static_cast<long long>(timeout.count()) * 1000;
+            ts.tv_sec += static_cast<time_t>(ns / 1000000000);
+            ts.tv_nsec = static_cast<long>(ns % 1000000000);
+            while (sem_timedwait(&m_sem, &ts) != 0 && errno == EINTR) {
+            }
+            return;
+        }
+#endif
+        std::this_thread::sleep_for(timeout);
+    }
+
+private:
+#ifdef _WIN32
+    HANDLE m_sem = nullptr;
+#elif defined(__APPLE__)
+    dispatch_semaphore_t m_sem = nullptr;
+#else
+    sem_t m_sem{};
+    bool m_ok = false;
+#endif
+};
 
 namespace {
 
@@ -602,7 +692,8 @@ bool PluginHostProcess::readLine(std::string& line, std::chrono::milliseconds ti
         return false;
     }
     line.clear();
-    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    const auto waitStart = std::chrono::steady_clock::now();
+    const auto deadline = waitStart + timeout;
     for (;;) {
         // Drained before touching the pipe: a bulk read can cross a response
         // boundary, so the newline this call needs may already be in hand.
@@ -635,7 +726,13 @@ bool PluginHostProcess::readLine(std::string& line, std::chrono::milliseconds ti
             if (!isRunning()) {
                 break;
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            // A block's "OK" usually lands within a couple of milliseconds, and a Windows sleep can last a whole
+            // 15.6 ms tick, longer than the block. So yield for the first 3 ms, then nap (V82-H7 follow-up).
+            if (std::chrono::steady_clock::now() < waitStart + std::chrono::milliseconds(3)) {
+                std::this_thread::yield();
+            } else {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
             continue;
         }
 
@@ -681,7 +778,12 @@ bool PluginHostProcess::readLine(std::string& line, std::chrono::milliseconds ti
             if (!isRunning()) {
                 break;
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            // Sleep until the reply's next byte is there rather than a fixed 1 ms: a block's "OK" back from the
+            // helper used to wait out the rest of a nap every time (V82-H7 follow-up). Capped so a dead child is still noticed.
+            const auto left = std::chrono::duration_cast<std::chrono::milliseconds>(
+                deadline - std::chrono::steady_clock::now());
+            pollfd pfd{m_stdoutFd, POLLIN, 0};
+            ::poll(&pfd, 1, static_cast<int>(std::clamp<long long>(left.count() + 1, 1, 50)));
         }
     }
     // Bytes already taken from the pipe are gone and the rest of this response is
@@ -727,10 +829,7 @@ bool OutOfProcessPluginInstance::load() {
     return true;
 }
 
-bool OutOfProcessPluginInstance::initialize(double sampleRate, uint32_t maxBlockSize) {
-    if (!load()) {
-        return false;
-    }
+void OutOfProcessPluginInstance::resetHandOff(double sampleRate, uint32_t maxBlockSize) {
     m_sampleRate = sampleRate;
     m_maxBlockSize = maxBlockSize;
     const size_t capacity = static_cast<size_t>(std::max<uint32_t>(1, maxBlockSize)) * m_transportChannels;
@@ -745,6 +844,20 @@ bool OutOfProcessPluginInstance::initialize(double sampleRate, uint32_t maxBlock
     m_readyFrames.store(0, std::memory_order_release);
     m_pendingState.store(0, std::memory_order_release);
     m_readyState.store(0, std::memory_order_release);
+    // Room for a chunk in flight plus two callbacks either side (see process()).
+    m_inFifo.reset(static_cast<size_t>(std::max<uint32_t>(1, maxBlockSize)) * 3, m_transportChannels);
+    m_outFifo.reset(static_cast<size_t>(std::max<uint32_t>(1, maxBlockSize)) * 3, m_transportChannels);
+    m_midiQueue.clear();
+    m_inFifoEnd = 0;
+    m_chunkFrames.store(0, std::memory_order_release);
+    m_outStart = 0;
+}
+
+bool OutOfProcessPluginInstance::initialize(double sampleRate, uint32_t maxBlockSize) {
+    if (!load()) {
+        return false;
+    }
+    resetHandOff(sampleRate, maxBlockSize);
 
     std::ostringstream command;
     command << "INIT " << sampleRate << " " << maxBlockSize;
@@ -753,17 +866,72 @@ bool OutOfProcessPluginInstance::initialize(double sampleRate, uint32_t maxBlock
         markCrashed();
         return false;
     }
+    refreshPluginLatency(); // VST3 and CLAP both know it once set up; activation can change it, so activate() asks again
+    setupSharedBlock();
     startWorker();
     return true;
 }
 
+void OutOfProcessPluginInstance::setupSharedBlock() {
+    m_shm.reset();
+    // AESTRA_PLUGIN_SHM=0 keeps the hex transport: a way out if a system's shared memory misbehaves, and how the
+    // tests still cover that path.
+    if (const char* env = std::getenv("AESTRA_PLUGIN_SHM"); env && std::strcmp(env, "0") == 0) {
+        return;
+    }
+    static std::atomic<unsigned long> counter{0};
+#ifdef _WIN32
+    const unsigned long pid = GetCurrentProcessId();
+#else
+    const unsigned long pid = static_cast<unsigned long>(getpid());
+#endif
+    const auto stamp = static_cast<unsigned long long>(std::chrono::steady_clock::now().time_since_epoch().count());
+    const std::string name = SharedAudioBlock::uniqueName(pid, counter.fetch_add(1), stamp);
+    auto block = std::make_unique<SharedAudioBlock>();
+    const size_t maxSamples = m_workerInput.size();
+    const size_t maxMidiBytes = m_workerMidiData.size();
+    if (!block->create(name, maxSamples, maxMidiBytes)) {
+        Log::warning("[PluginHost] No shared audio block; " + m_info.name + " runs on the slower hex transport");
+        return;
+    }
+    std::ostringstream command;
+    command << "SHM " << hexEncode(name) << " " << maxSamples << " " << maxMidiBytes;
+    std::string response;
+    const bool mapped = sendCommand(command.str(), &response) && response == "OK SHM";
+    block->unlinkName(); // mapped or not, the name has done its job
+    if (!mapped) {
+        Log::warning("[PluginHost] Helper could not map the shared audio block; " + m_info.name +
+                     " runs on the slower hex transport");
+        return;
+    }
+    m_shm = std::move(block);
+}
+
+void OutOfProcessPluginInstance::refreshPluginLatency() {
+    std::string response;
+    uint32_t latency = 0;
+    if (sendCommand("LATENCY", &response) && response.rfind("OK LATENCY ", 0) == 0) {
+        try {
+            // A hostile or broken helper must not be able to claim an absurd delay: more than ten seconds at 192 kHz
+            // is not a latency, it is garbage, and PDC would delay every other track by it.
+            const unsigned long parsed = std::stoul(response.substr(11));
+            latency = static_cast<uint32_t>(std::min<unsigned long>(parsed, 1920000UL));
+        } catch (const std::exception&) {
+            latency = 0;
+        }
+    }
+    m_pluginLatency.store(latency, std::memory_order_release);
+}
+
 void OutOfProcessPluginInstance::shutdown() {
     m_active.store(false, std::memory_order_release);
+    m_editorOpen.store(false, std::memory_order_release); // the helper closes its window with it
     stopWorker();
     if (m_process) {
         sendCommand("SHUTDOWN", nullptr);
         m_process.reset();
     }
+    m_shm.reset();
     m_loaded.store(false, std::memory_order_release);
 }
 
@@ -771,6 +939,7 @@ void OutOfProcessPluginInstance::activate() {
     std::string response;
     if (sendCommand("ACTIVATE", &response) && response.find("OK") == 0) {
         m_active.store(true, std::memory_order_release);
+        refreshPluginLatency();
     } else {
         markCrashed();
     }
@@ -781,78 +950,117 @@ void OutOfProcessPluginInstance::deactivate() {
     m_active.store(false, std::memory_order_release);
 }
 
-void OutOfProcessPluginInstance::process(const float* const* inputs, float** outputs, uint32_t numInputChannels,
-                                         uint32_t numOutputChannels, uint32_t numFrames, const MidiBuffer* midiInput,
-                                         MidiBuffer* midiOutput) {
-    if (midiOutput) {
-        midiOutput->clear();
-    }
-
-    if (m_crashed.load(std::memory_order_acquire) || m_maxBlockSize == 0 || numFrames > m_maxBlockSize) {
-        passThrough(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
-        return;
-    }
-
-    uint8_t readyEmpty = 2;
-    bool usedReadyOutput = false;
-    if (m_readyState.compare_exchange_strong(readyEmpty, 3, std::memory_order_acq_rel)) {
-        const uint32_t frames = std::min<uint32_t>(m_readyFrames.load(std::memory_order_acquire), numFrames);
-        for (uint32_t ch = 0; ch < numOutputChannels; ++ch) {
-            if (!outputs || !outputs[ch]) {
-                continue;
-            }
-            if (ch < m_transportChannels) {
-                for (uint32_t frame = 0; frame < frames; ++frame) {
-                    outputs[ch][frame] = m_readyOutput[static_cast<size_t>(frame) * m_transportChannels + ch];
-                }
-                if (frames < numFrames) {
-                    std::memset(outputs[ch] + frames, 0, static_cast<size_t>(numFrames - frames) * sizeof(float));
-                }
-            } else {
-                std::memset(outputs[ch], 0, static_cast<size_t>(numFrames) * sizeof(float));
-            }
-        }
-        m_readyState.store(0, std::memory_order_release);
-        usedReadyOutput = true;
-    }
-
-    uint8_t pendingEmpty = 0;
-    if (m_pendingState.compare_exchange_strong(pendingEmpty, 1, std::memory_order_acq_rel)) {
-        for (uint32_t frame = 0; frame < numFrames; ++frame) {
-            for (uint32_t ch = 0; ch < m_transportChannels; ++ch) {
-                const size_t index = static_cast<size_t>(frame) * m_transportChannels + ch;
-                m_pendingInput[index] = (inputs && ch < numInputChannels && inputs[ch]) ? inputs[ch][frame] : 0.0f;
-            }
-        }
-        size_t midiBytes = 0;
-        if (midiInput) {
-            const size_t maxEvents = m_pendingMidiData.size() / 8;
-            const size_t eventCount = std::min(midiInput->getEventCount(), maxEvents);
-            for (size_t i = 0; i < eventCount; ++i) {
-                const auto& event = midiInput->getEvent(i);
-                if (event.size != 3 || midiBytes + 8 > m_pendingMidiData.size()) {
-                    continue;
-                }
-                const uint32_t sampleOffset = std::min<uint32_t>(event.sampleOffset, numFrames > 0 ? numFrames - 1 : 0);
-                std::memcpy(m_pendingMidiData.data() + midiBytes, &sampleOffset, sizeof(sampleOffset));
-                m_pendingMidiData[midiBytes + 4] = event.size;
-                std::memcpy(m_pendingMidiData.data() + midiBytes + 5, event.data, 3);
-                midiBytes += 8;
-            }
-        }
-        m_pendingMidiBytes.store(midiBytes, std::memory_order_release);
-        m_pendingFrames.store(numFrames, std::memory_order_release);
-        m_pendingState.store(2, std::memory_order_release);
-    }
-
-    if (!usedReadyOutput) {
-        passThrough(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
+// process() — the audio-thread side of the hand-over — lives in OutOfProcessPluginInstanceRt.cpp.
+void OutOfProcessPluginInstance::wakeWorker() noexcept {
+    if (m_wake) {
+        m_wake->post();
     }
 }
 
+namespace {
+bool hexToText(const std::string& hex, std::string& out) {
+    out.clear();
+    if (hex.size() % 2 != 0) return false;
+    auto nibble = [](char c) -> int {
+        if (c >= '0' && c <= '9') return c - '0';
+        if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+        if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+        return -1;
+    };
+    for (size_t i = 0; i < hex.size(); i += 2) {
+        const int hi = nibble(hex[i]), lo = nibble(hex[i + 1]);
+        if (hi < 0 || lo < 0) return false;
+        out.push_back(static_cast<char>(hi * 16 + lo));
+    }
+    return true;
+}
+} // namespace
+
+std::vector<PluginParameter> OutOfProcessPluginInstance::getParameters() const {
+    std::lock_guard<std::mutex> lock(m_paramListMutex);
+    if (m_paramListValid) return m_paramList;
+    if (!m_loaded.load(std::memory_order_acquire) || m_crashed.load(std::memory_order_acquire)) return {};
+
+    std::string response;
+    auto* self = const_cast<OutOfProcessPluginInstance*>(this);
+    if (!self->sendCommand("PARAMS", &response, std::chrono::seconds(10)) || response.rfind("OK ", 0) != 0) return {};
+    std::istringstream in(response.substr(3));
+    size_t count = 0;
+    in >> count;
+    std::vector<PluginParameter> list;
+    list.reserve(std::min<size_t>(count, 100000));
+    std::string token;
+    while (in >> token && list.size() < 100000) {
+        // id:flags:steps:default:name:short:unit
+        std::vector<std::string> field;
+        size_t start = 0;
+        for (size_t at; (at = token.find(':', start)) != std::string::npos; start = at + 1)
+            field.push_back(token.substr(start, at - start));
+        field.push_back(token.substr(start));
+        if (field.size() != 7) continue;
+        PluginParameter p;
+        try {
+            p.id = static_cast<uint32_t>(std::stoul(field[0]));
+            const int flags = std::stoi(field[1]);
+            p.isAutomatable = (flags & 1) != 0;
+            p.isBypass = (flags & 2) != 0;
+            p.isReadOnly = (flags & 4) != 0;
+            p.stepCount = static_cast<uint32_t>(std::stoul(field[2]));
+            p.defaultValue = std::stof(field[3]);
+        } catch (const std::exception&) {
+            continue;
+        }
+        if (!hexToText(field[4], p.name) || !hexToText(field[5], p.shortName) || !hexToText(field[6], p.unit)) continue;
+        list.push_back(std::move(p));
+    }
+    m_paramList = std::move(list);
+    m_paramListValid = true;
+    return m_paramList;
+}
+
 float OutOfProcessPluginInstance::getParameter(uint32_t id) const {
-    (void)id;
-    return 0.0f;
+    if (!m_loaded.load(std::memory_order_acquire) || m_crashed.load(std::memory_order_acquire)) return 0.0f;
+    std::string response;
+    auto* self = const_cast<OutOfProcessPluginInstance*>(this);
+    if (!self->sendCommand("GETPARAM " + std::to_string(id), &response) || response.rfind("OK GETPARAM ", 0) != 0)
+        return 0.0f;
+    return std::strtof(response.c_str() + 12, nullptr);
+}
+
+bool OutOfProcessPluginInstance::supportsRealtimeAutomation() const noexcept {
+    return m_info.format == PluginFormat::VST3 || m_info.format == PluginFormat::CLAP;
+}
+
+void OutOfProcessPluginInstance::applyAutomation(uint32_t id, float normalizedValue) noexcept {
+    // Render thread: no lock, no allocation, no IPC. Unchanged values are not sent again.
+    for (auto& r : m_recentAutomation)
+        if (r.valid && r.id == id) {
+            if (r.value == normalizedValue) return;
+            r.value = normalizedValue;
+            m_autoQueue.push(ParamChange{id, normalizedValue}); // a full ring loses a step the next block repeats
+            return;
+        }
+    RecentAutomation& slot = m_recentAutomation[m_recentAutomationNext++ % m_recentAutomation.size()];
+    slot = {id, normalizedValue, true};
+    m_autoQueue.push(ParamChange{id, normalizedValue});
+}
+
+std::vector<OutOfProcessPluginInstance::ParameterEdit> OutOfProcessPluginInstance::takeEditedParameters() {
+    std::vector<ParameterEdit> edits;
+    if (!m_editorOpen.load(std::memory_order_acquire)) return edits; // edits only come from the window
+    std::string response;
+    if (!sendCommand("EDITS", &response) || response.rfind("OK EDITS", 0) != 0) return edits;
+    std::istringstream in(response.substr(8));
+    std::string token;
+    while (in >> token) {
+        const size_t colon = token.find(':');
+        if (colon == std::string::npos) continue;
+        ParameterEdit e;
+        e.id = static_cast<uint32_t>(std::strtoul(token.c_str(), nullptr, 10));
+        e.value = std::strtof(token.c_str() + colon + 1, nullptr);
+        edits.push_back(e);
+    }
+    return edits;
 }
 
 void OutOfProcessPluginInstance::setParameter(uint32_t id, float value) {
@@ -876,7 +1084,8 @@ void OutOfProcessPluginInstance::drainParamQueueToChild() {
     // burst against a slow child cannot starve PROCESS; the remainder drains on
     // the next worker iteration, in order.
     ParamChange change;
-    for (size_t drained = 0; drained < kMaxParamDrainPerPass && m_paramQueue.pop(change); ++drained) {
+    for (size_t drained = 0;
+         drained < kMaxParamDrainPerPass && (m_autoQueue.pop(change) || m_paramQueue.pop(change)); ++drained) {
         std::ostringstream command;
         command << "SETPARAM " << change.id << " " << change.value;
         std::string response;
@@ -894,8 +1103,15 @@ void OutOfProcessPluginInstance::drainParamQueueToChild() {
 }
 
 std::string OutOfProcessPluginInstance::getParameterDisplay(uint32_t id) const {
-    (void)id;
-    return {};
+    if (!m_loaded.load(std::memory_order_acquire) || m_crashed.load(std::memory_order_acquire)) return {};
+    std::string response;
+    auto* self = const_cast<OutOfProcessPluginInstance*>(this);
+    if (!self->sendCommand("GETPARAM " + std::to_string(id), &response) || response.rfind("OK GETPARAM ", 0) != 0)
+        return {};
+    const size_t space = response.find(' ', 12);
+    std::string text;
+    if (space == std::string::npos || !hexToText(response.substr(space + 1), text)) return {};
+    return text;
 }
 
 std::vector<uint8_t> OutOfProcessPluginInstance::saveState() const {
@@ -931,9 +1147,35 @@ bool OutOfProcessPluginInstance::loadState(const std::vector<uint8_t>& state) {
     return sendCommand(command.str(), &response, std::chrono::seconds(5)) && response.find("OK") == 0;
 }
 
-bool OutOfProcessPluginInstance::openEditor(void* parentWindow) {
-    (void)parentWindow;
+bool OutOfProcessPluginInstance::hasEditor() const {
+#if defined(__linux__) || defined(_WIN32)
+    return (m_info.format == PluginFormat::VST3 || m_info.format == PluginFormat::CLAP) &&
+           m_loaded.load(std::memory_order_acquire) && !m_crashed.load(std::memory_order_acquire);
+#else
     return false;
+#endif
+}
+
+bool OutOfProcessPluginInstance::openEditor(void* parentWindow) {
+    (void)parentWindow; // the helper makes the window; there is nothing of the app's to embed into
+    if (!hasEditor()) return false;
+    std::string response;
+    if (!sendCommand("EDITOR OPEN " + hexEncode(m_info.name), &response, std::chrono::seconds(15))) return false;
+    int width = 0, height = 0;
+    if (std::sscanf(response.c_str(), "OK EDITOR %d %d", &width, &height) != 2) return false;
+    m_editorWidth.store(width, std::memory_order_relaxed);
+    m_editorHeight.store(height, std::memory_order_relaxed);
+    m_editorOpen.store(true, std::memory_order_release);
+    return true;
+}
+
+void OutOfProcessPluginInstance::closeEditor() {
+    if (!m_editorOpen.exchange(false, std::memory_order_acq_rel)) return;
+    sendCommand("EDITOR CLOSE", nullptr, std::chrono::seconds(5));
+}
+
+std::pair<int, int> OutOfProcessPluginInstance::getEditorSize() const {
+    return {m_editorWidth.load(std::memory_order_relaxed), m_editorHeight.load(std::memory_order_relaxed)};
 }
 
 bool OutOfProcessPluginInstance::resizeEditor(int width, int height) {
@@ -1009,12 +1251,21 @@ void OutOfProcessPluginInstance::startWorker() {
         return;
     }
     m_workerStop.store(false, std::memory_order_release);
-    m_workerThread = std::thread([this] { workerLoop(); });
+    if (!m_wake) {
+        m_wake = std::make_unique<WorkerWake>();
+    }
+    m_workerThread = std::thread([this] {
+        raiseWorkerPriority();
+        workerLoop();
+    });
     m_workerRunning.store(true, std::memory_order_release);
 }
 
 void OutOfProcessPluginInstance::stopWorker() {
     m_workerStop.store(true, std::memory_order_release);
+    if (m_wake) {
+        m_wake->post();
+    }
     if (m_workerThread.joinable()) {
         m_workerThread.join();
     }
@@ -1039,7 +1290,8 @@ void OutOfProcessPluginInstance::workerLoop() {
 
         uint8_t pendingReady = 2;
         if (!m_pendingState.compare_exchange_strong(pendingReady, 3, std::memory_order_acq_rel)) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            // process() posts the moment it hands a block over; the timeout keeps knob moves flowing while stopped.
+            m_wake->wait(std::chrono::milliseconds(2));
             continue;
         }
 
@@ -1052,11 +1304,13 @@ void OutOfProcessPluginInstance::workerLoop() {
         if (midiBytes <= m_workerMidiData.size()) {
             std::copy_n(m_pendingMidiData.data(), midiBytes, m_workerMidiData.data());
         }
+        m_workerTransport = m_pendingTransport;
+        m_workerStart = m_pendingStart;
         m_pendingState.store(0, std::memory_order_release);
 
         if (sampleCount > m_workerInput.size() || midiBytes > m_workerMidiData.size() ||
             !processBlockInHelper(m_workerInput, m_transportChannels, frames, m_workerMidiData, midiBytes,
-                                  m_workerOutput)) {
+                                  m_workerTransport, m_workerOutput)) {
             markCrashed();
             continue;
         }
@@ -1065,21 +1319,58 @@ void OutOfProcessPluginInstance::workerLoop() {
         if (m_readyState.compare_exchange_strong(readyEmpty, 1, std::memory_order_acq_rel)) {
             const size_t outputSamples = std::min(sampleCount, m_workerOutput.size());
             std::copy_n(m_workerOutput.data(), outputSamples, m_readyOutput.data());
+            m_readyStart = m_workerStart;
             m_readyFrames.store(frames, std::memory_order_release);
             m_readyState.store(2, std::memory_order_release);
             // Published last, so an observer that sees this advance is guaranteed
             // to find the result readable rather than half-written.
-            m_processedBlocks.fetch_add(1, std::memory_order_acq_rel);
+            const uint64_t blocks = m_processedBlocks.fetch_add(1, std::memory_order_acq_rel) + 1;
+            // A plugin may only know its own latency once it has processed a block (LSP's limiters report theirs
+            // then), and it can change later: ask after the first block and every kLatencyCheckEveryBlocks after.
+            if (blocks == 1 || blocks % kLatencyCheckEveryBlocks == 0) {
+                refreshPluginLatency();
+            }
         }
     }
 }
 
+void OutOfProcessPluginInstance::raiseWorkerPriority() {
+    // The worker carries every block to the helper and back, so it runs just below the audio thread
+    // (RtAudioDriver: SCHED_FIFO mid-range). Best effort: without rtprio it stays a normal thread.
+#ifdef _WIN32
+    MMCSS::setProAudio();
+#elif defined(__linux__)
+    sched_param param{};
+    param.sched_priority = (sched_get_priority_max(SCHED_FIFO) + sched_get_priority_min(SCHED_FIFO)) / 2 - 1;
+    pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);
+#endif
+}
+
 bool OutOfProcessPluginInstance::processBlockInHelper(const std::vector<float>& input, uint32_t channels,
                                                       uint32_t frames, const std::vector<uint8_t>& midiData,
-                                                      size_t midiBytes, std::vector<float>& output) {
+                                                      size_t midiBytes, const HostTransport& transport,
+                                                      std::vector<float>& output) {
     const size_t sampleCount = static_cast<size_t>(channels) * frames;
     if (sampleCount > input.size()) {
         return false;
+    }
+    if (m_shm && sampleCount <= m_shm->maxSamples() && midiBytes <= m_shm->maxMidiBytes()) {
+        // The samples go through the shared block; the pipe carries only the sizes and the "OK" (V82-H7 follow-up).
+        std::copy_n(input.data(), sampleCount, m_shm->input());
+        if (midiBytes > 0) {
+            std::copy_n(midiData.data(), midiBytes, m_shm->midi());
+        }
+        const std::string command = "PROCESSSHM " + std::to_string(channels) + " " + std::to_string(frames) + " " +
+                                    std::to_string(midiBytes) + transport.toWire();
+        std::string response;
+        if (!sendCommand(command, &response) || response != "OK") {
+            return false;
+        }
+        if (output.size() < sampleCount) {
+            output.resize(sampleCount);
+        }
+        std::copy_n(m_shm->output(), sampleCount, output.data());
+        return true;
     }
     std::ostringstream command;
     if (midiBytes > 0) {
@@ -1090,6 +1381,7 @@ bool OutOfProcessPluginInstance::processBlockInHelper(const std::vector<float>& 
         command << "PROCESS " << channels << " " << frames << " "
                 << hexEncodeBytes(input.data(), sampleCount * sizeof(float));
     }
+    command << transport.toWire();
     std::string response;
     if (!sendCommand(command.str(), &response)) {
         return false;

@@ -169,13 +169,15 @@ void testRecordingIsOneUndoableTransaction() {
     tm->record();
     recordTake(*tm, 1.0);
     check(tm->getCommandHistory().canUndo(), "take committed before undo");
-    check(laneCount(*tm) == 2, "setup lane plus one take lane");
+    // The take lands in the track's own lane (a free spot), so no lane is added.
+    check(laneCount(*tm) == 1, "the take is recorded in the track's own lane: no extra lane");
+    check(takeLaneOf(*tm, trackId).isValid(), "the take is on the track's lane");
     check(tm->getCommandHistory().undo(), "undo of the take succeeds");
-    check(laneCount(*tm) == 1, "undo removes the take's lane");
-    check(!takeLaneOf(*tm, trackId).isValid(), "undo leaves no take lane on the track");
+    check(laneCount(*tm) == 1, "undo leaves the lane (it was the track's own)");
+    check(!takeLaneOf(*tm, trackId).isValid(), "undo leaves no take clip on the track");
     check(tm->getCommandHistory().redo(), "redo restores the take");
-    check(laneCount(*tm) == 2, "redo restores the take's lane");
-    check(takeLaneOf(*tm, trackId).isValid(), "redo restores the take lane on the track");
+    check(laneCount(*tm) == 1, "redo adds no lane either");
+    check(takeLaneOf(*tm, trackId).isValid(), "redo restores the take clip on the track");
 }
 
 void testDirtyStateUpdated() {
@@ -205,14 +207,14 @@ void testMultipleArmedTracksCaptureIndependently() {
     auto* t1 = tm->getTrack(track1);
     auto* t2 = tm->getTrack(track2);
     check(t1 && t2, "both tracks resolvable");
-    check(t1 && t1->laneIds.size() == 2, "track 1 owns its setup lane plus one take lane");
-    check(t2 && t2->laneIds.size() == 2, "track 2 owns its setup lane plus one take lane");
-    if (t1 && t2 && t1->laneIds.size() == 2 && t2->laneIds.size() == 2) {
+    check(t1 && t1->laneIds.size() == 1, "track 1 still owns just its own lane");
+    check(t2 && t2->laneIds.size() == 1, "track 2 still owns just its own lane");
+    if (t1 && t2 && t1->laneIds.size() == 1 && t2->laneIds.size() == 1) {
         const PlaylistLaneID take1 = takeLaneOf(*tm, track1);
         const PlaylistLaneID take2 = takeLaneOf(*tm, track2);
         check(take1.isValid() && take2.isValid(), "each armed track captured a take");
-        check(take1 != take2, "each take lane is distinct");
-        check(t1->laneIds[1] == take1 && t2->laneIds[1] == take2, "each take landed on its own track's lane");
+        check(take1 != take2, "each take is on its own lane");
+        check(t1->laneIds[0] == take1 && t2->laneIds[0] == take2, "each take landed in its own track's lane");
     }
 }
 
@@ -238,9 +240,9 @@ void testTwoArmedTracksSharingChannelCaptureIndependently() {
     auto* t1 = tm->getTrack(track1);
     auto* t2 = tm->getTrack(track2);
     check(t1 && t2, "both tracks resolvable");
-    check(t1 && t1->laneIds.size() == 2, "track 1 owns setup lane plus its take");
-    check(t2 && t2->laneIds.size() == 2, "track 2 owns setup lane plus its take");
-    if (t1 && t2 && t1->laneIds.size() == 2 && t2->laneIds.size() == 2) {
+    check(t1 && t1->laneIds.size() == 1, "track 1 keeps its one lane: the take is recorded in it");
+    check(t2 && t2->laneIds.size() == 1, "track 2 keeps its one lane: the take is recorded in it");
+    if (t1 && t2 && t1->laneIds.size() == 1 && t2->laneIds.size() == 1) {
         const PlaylistLaneID take1 = takeLaneOf(*tm, track1);
         const PlaylistLaneID take2 = takeLaneOf(*tm, track2);
         check(take1.isValid() && take2.isValid(), "both tracks got their own take despite the shared channel");
@@ -249,7 +251,7 @@ void testTwoArmedTracksSharingChannelCaptureIndependently() {
 }
 
 void testEachTakeCreatesALane() {
-    std::cout << "[A] each take creates a track-local lane\n";
+    std::cout << "[A] takes are recorded in the track's lane, one after another\n";
     auto tm = makeRecorder();
     const uint64_t trackId = armTrack(*tm, "Ch 1", 0);
     check(trackId != 0, "track created and armed");
@@ -257,8 +259,7 @@ void testEachTakeCreatesALane() {
         return;
     }
 
-    // Arm ONCE: the app keeps record-armed across takes; each play/stop
-    // pass captures and commits its own take.
+    // Arm ONCE: the app keeps record-armed across takes; each play/stop pass captures and commits its own take.
     tm->record();
     for (int pass = 1; pass <= 2; ++pass) {
         recordTake(*tm, 1.0);
@@ -266,13 +267,11 @@ void testEachTakeCreatesALane() {
     auto* track = tm->getTrack(trackId);
     check(track != nullptr, "track still resolvable");
     if (track) {
-        check(track->laneIds.size() == 3, "two recording passes create two take lanes");
-        const PlaylistLaneID take1 = takeLaneOf(*tm, trackId);
-        check(take1.isValid(), "first take lane exists");
-        if (take1.isValid()) {
-            check(track->laneNumber(take1) == 2, "first take lane is track-local lane 2");
-            check(track->laneIds.size() == 3, "take lanes accumulate track-locally");
-        }
+        check(track->laneIds.size() == 1, "two takes, no new lane: they sit in the track's own lane");
+        const auto* lane = tm->getPlaylistModel().getLane(track->laneIds[0]);
+        check(lane && lane->clips.size() == 2, "both takes are clips on that lane");
+        check(lane && lane->clips.size() == 2 && lane->clips[1].startBeat >= lane->clips[0].startBeat + lane->clips[0].durationBeats - 1e-6,
+              "the second take starts where the first ended: nothing overlaps");
     }
 }
 
@@ -344,7 +343,7 @@ void testRecordingIdentityIsTrackBased() {
     auto* track = tm->getTrack(trackId);
     check(track != nullptr, "recording track resolvable");
     if (track) {
-        check(track->laneNumber(lane->id) == 2, "take lane is track-local lane 2 (after the born-with lane)");
+        check(track->laneNumber(lane->id) == 1, "the take is in the track's own lane (track-local lane 1)");
     }
     check(tm->getTrackForLane(lane->id) == track, "lane resolves to its track");
 }
@@ -359,7 +358,7 @@ void testLanesOwnedAndGrouped() {
     }
 
     tm->record();
-    for (int pass = 1; pass <= 2; ++pass) {
+    for (int pass = 1; pass <= 3; ++pass) { // the third take lands on the second one's spot, so it gets a take lane
         recordTake(*tm, 1.0);
     }
 
@@ -368,16 +367,21 @@ void testLanesOwnedAndGrouped() {
     if (!track) {
         return;
     }
-    check(track->laneIds.size() == 3, "all three lanes group under the same track");
+    check(track->laneIds.size() == 2, "the track's lane and one take lane group under the same track");
     const auto laneIds = tm->getPlaylistModel().getLaneIDs();
-    check(laneIds.size() == 3, "playlist holds the same three lanes");
+    check(laneIds.size() == 2, "playlist holds the same two lanes");
     for (const auto& laneId : laneIds) {
         auto* lane = tm->getPlaylistModel().getLane(laneId);
         check(lane && lane->trackId == trackId, "every lane carries the track's stable id");
     }
-    check(track->laneNumber(track->laneIds[0]) == 1 && track->laneNumber(track->laneIds[1]) == 2 &&
-              track->laneNumber(track->laneIds[2]) == 3,
-          "lanes have consecutive track-local numbers");
+    if (track->laneIds.size() == 2) {
+        const auto* own = tm->getPlaylistModel().getLane(track->laneIds[0]);
+        const auto* take = tm->getPlaylistModel().getLane(track->laneIds[1]);
+        check(own && own->clips.size() == 2, "the track's lane holds the two takes that fit");
+        check(take && take->clips.size() == 1, "the take that would overlap is on the take lane");
+        check(track->laneNumber(track->laneIds[0]) == 1 && track->laneNumber(track->laneIds[1]) == 2,
+              "lanes have consecutive track-local numbers");
+    }
 }
 
 void testTrackEntityHoldsArm() {
@@ -417,20 +421,23 @@ void testTakeLaneOwnershipRoundTrips() {
         return;
     }
 
+    // Two takes in the same place: the first lands in the track's own lane; the second finds that spot taken and gets a
+    // take lane of its own, which is the lane whose numbering has to survive save and load.
     tm->record();
+    recordTake(*tm, 1.0);
     recordTake(*tm, 1.0);
     auto* track = tm->getTrack(trackId);
     check(track != nullptr, "track resolvable before save");
     if (!track) {
         return;
     }
-    check(track->laneIds.size() == 2, "setup lane plus one take lane before save");
-    const PlaylistLaneID takeLaneId = takeLaneOf(*tm, trackId);
-    check(takeLaneId.isValid(), "take lane exists before save");
+    check(track->laneIds.size() == 1, "one lane before save: the takes are recorded in it");
+    const PlaylistLaneID takeLaneId = track->laneIds.size() > 0 ? track->laneIds[0] : PlaylistLaneID{};
+    check(takeLaneId.isValid(), "the track lane exists before save");
     if (!takeLaneId.isValid()) {
         return;
     }
-    check(track->laneNumber(takeLaneId) == 2, "take lane is track-local lane 2 before save");
+    check(track->laneNumber(takeLaneId) == 1, "it is track-local lane 1 before save");
 
     Aestra::Tests::ScopedTempDirectory dir{"RecordingBaselineRoundTrip"};
     const std::string path = (dir.path() / "roundtrip.aes").string();
@@ -453,15 +460,15 @@ void testTakeLaneOwnershipRoundTrips() {
     if (!loadedTrack) {
         return;
     }
-    check(loadedTrack->laneIds.size() == 2, "loaded track owns setup lane plus take lane");
-    const PlaylistLaneID loadedTakeLaneId = takeLaneOf(*tm2, trackId);
-    check(loadedTakeLaneId.isValid(), "take lane resolves after load");
+    check(loadedTrack->laneIds.size() == 1, "loaded track owns its one lane");
+    const PlaylistLaneID loadedTakeLaneId = loadedTrack->laneIds.size() > 0 ? loadedTrack->laneIds[0] : PlaylistLaneID{};
+    check(loadedTakeLaneId.isValid(), "the lane resolves after load");
     if (loadedTakeLaneId.isValid()) {
-        check(loadedTrack->laneNumber(loadedTakeLaneId) == 2, "take lane keeps track-local lane 2 after load");
+        check(loadedTrack->laneNumber(loadedTakeLaneId) == 1, "the lane keeps track-local lane 1 after load");
         check(tm2->getTrackForLane(loadedTakeLaneId) == loadedTrack, "loaded lane resolves to its track");
     }
     const auto loadedLaneIds = tm2->getPlaylistModel().getLaneIDs();
-    check(loadedLaneIds.size() == 2, "playlist holds the same two lanes after load");
+    check(loadedLaneIds.size() == 1, "playlist holds the same lane after load");
 }
 
 void testLaneChannelStateFollowsTrackIdentity() {

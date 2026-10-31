@@ -1075,7 +1075,7 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
 
     if (shouldUseNoteRoll()) {
         if (m_onOpenPatternEditor && m_patternId.isValid()) {
-            m_onOpenPatternEditor(m_patternId);
+            m_onOpenPatternEditor(m_patternId, m_unitId);
         }
         return;
     }
@@ -1520,7 +1520,7 @@ bool UnitRow::onKeyEvent(const NUIKeyEvent& event) {
     }
 
     const bool ctrl = (event.modifiers & NUIModifiers::Ctrl) != 0;
-    if (ctrl && event.keyCode == NUIKeyCode::B) {
+    if (ctrl && event.keyCode == NUIKeyCode::D) {
         if (!event.repeat) {
             duplicateSelection();
         }
@@ -1786,7 +1786,7 @@ void UnitRow::showRowContextMenu(const NUIPoint& pos) {
             if (!m_manager.getUnit(m_unitId))
                 return;
             if (m_onOpenPatternEditor && m_patternId.isValid()) {
-                m_onOpenPatternEditor(m_patternId);
+                m_onOpenPatternEditor(m_patternId, m_unitId);
             }
         });
     }

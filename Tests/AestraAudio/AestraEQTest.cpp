@@ -1685,9 +1685,11 @@ bool testBandSoloUnsoloRebuildsWithoutParameterNudge() {
     eq.setSoloBandSlot(-1);
     processBlocks(eq, input.data(), unsoloOut.data(), frames, kBlockSize);
 
-    const float inputRms = calculateRMS(input.data(), frames);
-    const float soloRms = calculateRMS(soloOut.data(), frames);
-    const float unsoloRms = calculateRMS(unsoloOut.data(), frames);
+    // Solo and unsolo crossfade over kBandFadeSeconds; judge each state once its fade is over.
+    const uint32_t fade = static_cast<uint32_t>(std::ceil(AestraEQ::kBandFadeSeconds * kSampleRate));
+    const float inputRms = calculateRMS(input.data() + fade, frames - fade);
+    const float soloRms = calculateRMS(soloOut.data() + fade, frames - fade);
+    const float unsoloRms = calculateRMS(unsoloOut.data() + fade, frames - fade);
     const bool rebuilt = soloRms < inputRms * 0.45f && unsoloRms > inputRms * 0.92f;
     return report("Band solo/unsolo rebuilds without parameter nudge", rebuilt);
 }

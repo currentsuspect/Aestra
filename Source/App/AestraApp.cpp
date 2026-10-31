@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios - All Rights Reserved. Licensed for personal & educational use only.
 #include "AestraApp.h"
+#include "RunLog.h"
 #include "MuseHostVerbs.h"
 #include "MuseProjectLoadReport.h"
 #include "ProjectLifecycle.h"
@@ -34,6 +35,7 @@
 #include "VersionsPanelWiring.h"
 #include "../Panels/TakesPanel.h"
 #include "../../AestraAudio/include/Core/PlaybackGraphController.h"
+#include "../../AestraAudio/include/Core/ProjectTempo.h"
 #include "../../AestraAudio/include/IO/AudioExporter.h"
 #include "../../AestraAudio/include/IO/MiniAudioDecoder.h"
 
@@ -102,10 +104,9 @@ AestraApp::AestraApp()
     : m_running(false)
     , m_aliveToken(std::make_shared<bool>(true))
 {
-    // Initialize unified logging
     auto multiLogger = std::make_shared<MultiLogger>(LogLevel::Info);
     multiLogger->addLogger(std::make_shared<ConsoleLogger>(LogLevel::Info));
-    std::string logPath = (std::filesystem::current_path() / "aestra_debug.log").string();
+    const std::string logPath = RunLog::path().string(); // the same per-run file main() opened (#889)
     auto fileLogger = std::make_shared<FileLogger>(logPath, LogLevel::Info);
     multiLogger->addLogger(fileLogger);
     m_asyncLogger = std::make_shared<AsyncLogger>(multiLogger);
@@ -516,7 +517,7 @@ void AestraApp::initializeContent() {
     m_content->setMidiInput(m_audioController->getMidiInput());
     syncRecordingProjectPath(m_content, m_documentState.canonicalPath());
 
-    m_windowManager->setContent(m_content);
+    m_windowManager->setContent(m_content); startUpdateChecks();
     m_audioController->setContent(m_content);
 
     // Forward project dirty state to autosave. TrackManager marks itself modified
@@ -809,7 +810,7 @@ void AestraApp::buildSettingsAndDialogs() {
         // TODO: Transition app to activation / sign-in screen
     });
     settingsDialog->addPage(membershipPage);
-    settingsDialog->addPage(std::make_shared<AppearanceSettingsPage>());
+    settingsDialog->addPage(std::make_shared<AppearanceSettingsPage>()); addUpdatesPage(*settingsDialog);
     settingsDialog->setBounds(AestraUI::NUIRect(0, 0, 950, 600));
 
     m_windowManager->setSettingsDialog(settingsDialog);
@@ -895,7 +896,7 @@ void AestraApp::buildMenuBar() {
         saveItem->setShortcut("Ctrl+S"); saveItem->setOnClick([this]() { saveCurrentProject(); }); menu->addItem(saveItem);
 
         menu->addItem("Save As...", [this]() { saveProjectAs(); });
-
+        menu->addItem("Save a Copy...", [this]() { saveProjectCopy(); }); // ProjectLifecycle.cpp
         menu->addSeparator();
 
         // Versions = every saved state of the song and the steps inside it (Takes and History, merged: V81-V1).
@@ -1207,16 +1208,12 @@ void AestraApp::connectAudioToUI() {
         // Tempo change — re-resolve the engine inside the callback to avoid capturing
         // a raw pointer that could dangle if the audio controller is destroyed.
         m_content->getTransportBar()->setOnTempoChange([this](float bpm) {
+            // Engine, playlist, clock and playhead together, holding the playhead on its beat.
             if (auto* engine = m_audioController ? m_audioController->getEngine() : nullptr) {
-                engine->setBPM(bpm);
+                Aestra::Audio::changeProjectTempo(*engine, m_content ? m_content->getTrackManager().get() : nullptr, bpm);
             }
             if (m_content) {
                 m_content->setPluginTempo(bpm);
-                if (auto trackManager = m_content->getTrackManager()) {
-                    trackManager->getPlaylistModel().setBPM(bpm);
-                    trackManager->getTimelineClock().setTempo(bpm);
-                    trackManager->getPatternPlaybackEngine().rewindScheduledInstances();
-                }
                 if (auto trackManagerUI = m_content->getTrackManagerUI()) {
                     trackManagerUI->invalidateCache();
                 }
@@ -1288,6 +1285,7 @@ void AestraApp::applyPersistedEngineSettings() {
     if (Aestra::isSet(saved.dcRemoval)) {
         engine->setDCRemovalEnabled(saved.dcRemoval != 0);
     }
+    if (Aestra::isSet(saved.stopCutsSound)) engine->setStopCutsSound(saved.stopCutsSound != 0); // default: off
     if (Aestra::isSet(saved.dithering)) {
         if (Aestra::isPlausibleDitheringMode(saved.dithering)) {
             engine->setDitheringMode(static_cast<Aestra::Audio::DitheringMode>(saved.dithering));
@@ -1373,49 +1371,6 @@ void AestraApp::run() {
     // Complete heavy audio init after window is already showing,
     // so the UI feels instant even if the stream takes a second.
     finalizeAudioSetup();
-
-    // TEMP DEBUG PROBE (#845) — env-gated live record-path driver. REMOVE BEFORE PR.
-    if (std::getenv("AESTRA_RECORD_PROBE") && m_content && m_content->getTrackManager()) {
-        auto* tm = m_content->getTrackManager().get();
-        std::thread([tm]() {
-            using namespace std::chrono_literals;
-            std::this_thread::sleep_for(4s); // let session + audio settle
-            Log::info("[RecordProbe] === START ===");
-            const auto tracks = tm->getTracks();
-            Log::info("[RecordProbe] tracks=" + std::to_string(tracks.size()));
-            if (!tracks.empty()) {
-                tm->setTrackArmed(tracks.front()->trackId, true);
-                Log::info("[RecordProbe] armed track " + std::to_string(tracks.front()->trackId) +
-                          " hasArmed=" + std::to_string(tm->hasArmedTracks() ? 1 : 0));
-            }
-            tm->record();
-            std::this_thread::sleep_for(500ms);
-            const double cue = tm->getPosition();
-            const bool countingIn = tm->beginCountIn(4, cue);
-            Log::info("[RecordProbe] cue=" + std::to_string(cue) + "s countInStarted=" +
-                      std::to_string(countingIn ? 1 : 0));
-            if (countingIn) {
-                const double bpm = std::max(1.0, tm->getPlaylistModel().getBPM());
-                std::this_thread::sleep_for(std::chrono::milliseconds(
-                    static_cast<long long>(4 * 60000.0 / bpm) + 500)); // metronome lead-in
-                tm->completeCountIn();
-            } else {
-                tm->play();
-            }
-            Log::info("[RecordProbe] rolling=" + std::to_string(tm->isPlaying() ? 1 : 0));
-            for (int i = 1; i <= 8; ++i) {
-                std::this_thread::sleep_for(1s);
-                Log::info("[RecordProbe] t+" + std::to_string(i) + "s recording=" +
-                          std::to_string(tm->isRecording() ? 1 : 0) + " pos=" +
-                          std::to_string(tm->getPosition()));
-            }
-            Log::info("[RecordProbe] stopping");
-            tm->stop();
-            std::this_thread::sleep_for(800ms);
-            Log::info("[RecordProbe] === END ===");
-        }).detach();
-    }
-
 
     while (m_running && m_windowManager->processEvents()) {
         // A logout or `kill` never waits on a dialog nobody will answer; shutdown() autosaves (SPEC 3 §6.7).
@@ -1665,7 +1620,7 @@ void AestraApp::cleanupUnreferencedRecordings(const std::string& keeperProjectPa
 }
 
 void AestraApp::shutdown() {
-    Log::info("[SHUTDOWN] Entering shutdown function...");
+    stopUpdateChecks(); Log::info("[SHUTDOWN] Entering shutdown function...");
     Aestra::AppLifecycle::instance().transitionTo(Aestra::AppState::ShuttingDown);
 
     // Invalidate lifetime token so any async callbacks that fire during teardown

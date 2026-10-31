@@ -47,8 +47,9 @@ public:
     };
     /// What a pointer event asks the panel to do (the strip changes swing itself).
     struct Action {
-        enum class Kind { None, Select, PatternAdded, SwingEdited, PlaceInTimeline } kind{Kind::None};
+        enum class Kind { None, Select, PatternAdded, SwingEdited, PlaceInTimeline, Menu } kind{Kind::None};
         uint64_t id{0};
+        AestraUI::NUIPoint at{}; ///< Menu: where the right-click landed
     };
 
     /// Every scene card is the same width, so a row of scenes reads as a row of cards, whatever they are called.
@@ -157,6 +158,11 @@ public:
     float swing() const { return m_swing; }
     /// How much swing, 0 to 100% (100% = every odd sixteenth half a step late), as the mock shows it.
     static int swingPercent(float swing) { return static_cast<int>(std::lround(std::clamp(swing, 0.0f, 1.0f) * 100.0f)); }
+    /// Where a scene's chip is right now (the inline rename sits exactly on it); empty when it is scrolled out.
+    AestraUI::NUIRect chipRectOf(uint64_t id) const {
+        for (const auto& p : m_placed) if (m_scenes[p.index].id == id) return chipRect(p);
+        return {};
+    }
     AestraUI::NUIRect chipRect(const Placed& p) const { return {m_rect.x + p.x, m_rect.y, p.w, m_rect.height}; }
     void scrollBy(float dx) { m_offset += dx; m_followActive = false; }
 
@@ -230,6 +236,10 @@ public:
         }
         if (!m_rect.contains(e.position)) return false;
         if (std::abs(e.wheelDelta) > 0.001f) { scrollBy(-e.wheelDelta * 40.0f); return true; }
+        if (e.pressed && e.button == AestraUI::NUIMouseButton::Right) { // a chip's menu (V82-AR1, FD-52)
+            if (const Hit h = hitTest(e.position); h.kind == Hit::Kind::Scene) out = {Action::Kind::Menu, h.id, e.position};
+            return true;
+        }
         if (!e.pressed || !left) return true;
         const Hit hit = hitTest(e.position);
         if (hit.kind == Hit::Kind::Scene) out = {Action::Kind::Select, hit.id};

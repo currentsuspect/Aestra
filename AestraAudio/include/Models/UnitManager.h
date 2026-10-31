@@ -9,6 +9,7 @@
 #include <functional>
 #include <memory>
 #include "AestraAtomicSharedPtr.h"
+#include "Core/RealtimeSharedSlot.h"
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -210,6 +211,10 @@ public:
      */
     std::shared_ptr<const AudioArsenalSnapshot> getAudioSnapshot() const;
 
+    /** @brief Audio-thread read of the published snapshot: no lock, no allocation, never the last reference. */
+    using AudioSnapshotRead = RealtimeSharedSlot<const AudioArsenalSnapshot>::ReadHandle;
+    AudioSnapshotRead readAudioSnapshotRt() const noexcept { return m_realtimeSnapshot.readRealtime(); }
+
     /**
      * @brief Get a mutable unit by identifier.
      * @param id Unit identifier.
@@ -368,6 +373,9 @@ private:
      * Release semantics on store ensures the audio thread never sees a partial snapshot.
      */
     mutable AtomicSharedPtr<AudioArsenalSnapshot> m_publishedSnapshot{std::make_shared<AudioArsenalSnapshot>()};
+    // The same snapshot for the audio thread (readAudioSnapshotRt). AtomicSharedPtr::load
+    // takes a pooled mutex in this C++17 build, which the audio thread must not.
+    RealtimeSharedSlot<const AudioArsenalSnapshot> m_realtimeSnapshot{std::make_shared<const AudioArsenalSnapshot>()};
 
 public:
     void setSampleRate(double rate) { m_sampleRate.store(rate, std::memory_order_relaxed); }

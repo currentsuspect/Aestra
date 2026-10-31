@@ -196,6 +196,8 @@ public:
      *        makes no zone and does not call.
      */
     std::function<void(double startBeat, double endBeat)> onLoopZoneDrawn;
+    /** @brief A zone gesture (right-click, Ctrl+click) that ended without dragging out a range: the owner clears the zone. */
+    std::function<void()> onLoopZoneCleared;
     /** @brief Whether a right-drag (or Ctrl+left-drag) draws a loop zone; off for hosts that only want numbers, ticks and scrub. */
     void setLoopZoneEnabled(bool enabled) { allowLoopZone_ = enabled; }
     /** @brief The zone to draw (the view owns it). */
@@ -268,10 +270,14 @@ public:
     /** @brief Bind the note layer controlled by the toolbar tools. */
     void setNoteLayer(std::shared_ptr<PianoRollNoteLayer> notes); // To set tools directly
     void setPatternLengthBeats(double beats);
+    /** @brief The editing unit's colour, shown as a chip beside the unit name. */
+    void setUnitColor(const NUIColor& color) { m_unitColor = color; repaint(); }
     void setPatternChoices(const std::vector<PatternChoice>& choices, int selectedValue);
     /** @brief Populate the unit switcher (reuses the PatternChoice value/label shape). */
     void setUnitChoices(const std::vector<PatternChoice>& choices, int selectedValue);
     void setOnAdjustPatternLength(std::function<void(int barsDelta)> cb) { onAdjustPatternLength_ = std::move(cb); }
+    /** @brief Ask the owner to change the pattern length by whole bars, as the toolbar buttons do. */
+    void requestPatternBars(int barsDelta) { if (onAdjustPatternLength_) onAdjustPatternLength_(barsDelta); }
     void setOnPatternChoiceSelected(std::function<void(int patternValue)> cb) {
         onPatternChoiceSelected_ = std::move(cb);
     }
@@ -321,6 +327,8 @@ private:
     std::shared_ptr<NUIButton> m_lengthUpBtn;
     std::shared_ptr<NUIButton> m_followBtn;
     std::shared_ptr<NUIButton> m_centerBtn;
+    std::shared_ptr<NUIButton> m_scaleBtn;   // SCALE value: opens the root/scale/snap-to-scale menu
+    NUIColor m_unitColor = NUIColor(0.55f, 0.6f, 0.7f, 1.0f);
     std::shared_ptr<NUIDropdown> m_patternDropdown;
     std::shared_ptr<NUIDropdown> m_unitDropdown;
     std::shared_ptr<NUIDropdown> m_snapDropdown;
@@ -328,6 +336,7 @@ private:
     GlobalTool activeTool_ = GlobalTool::Pencil;
     bool m_followPlayhead = false;
     void applySnap(SnapGrid snap);
+    void openScaleMenu();
     
     // Icons
     std::shared_ptr<AestraUI::NUIIcon> m_menuIcon;
@@ -452,6 +461,9 @@ class NUIPlatformBridge;
 // -----------------------------------------------------------------------------
 class PianoRollNoteLayer : public NUIComponent {
 public:
+    /// The unit being edited gives its notes their colour (flat and opaque, FD-48).
+    void setNoteColor(const NUIColor& color) { if (noteColor_.r == color.r && noteColor_.g == color.g && noteColor_.b == color.b) return; noteColor_ = color; repaint(); }
+
     struct GhostPattern {
         /** @brief Notes rendered as a ghost overlay. */
         std::vector<MidiNote> notes;
@@ -472,6 +484,15 @@ public:
 
     /** @brief Replace the currently edited note list. */
     void setNotes(const std::vector<MidiNote>& notes);
+    /// One note's velocity or pan, edited in place: no copy of the list and no re-sort, so a lane drag costs the same on a
+    /// thousand notes as on ten, and notes that start together (a chord) keep their order under the dragged index.
+    bool setLaneValue(int index, bool pan, float value) {
+        if (index < 0 || static_cast<size_t>(index) >= notes_.size()) return false;
+        (pan ? notes_[index].pan : notes_[index].velocity) = value;
+        lastCommitWasVelocityScrub_ = false;
+        repaint();
+        return true;
+    }
     /** @brief Get the currently edited note list. */
     const std::vector<MidiNote>& getNotes() const { return notes_; }
     
@@ -577,6 +598,21 @@ public:
     void quantizeSelectedNotes();
 
     /**
+     * @brief Duplicate like FL Studio (V82-PR1, FD-52; rules in PianoRollDuplicate.h): copy into the next block and
+     * select the copies, as one undo step.
+     *
+     * With a ruler range that holds the selection (or nothing is selected) the range's notes are copied into the next
+     * block of the same length and the new range is returned, for the caller to move the highlight there. Otherwise
+     * the selection moves one whole-bar-rounded step on, and nothing is returned. The pattern is grown first when the
+     * copies would run past its end.
+     */
+    std::optional<std::pair<double, double>> duplicateLikeFl(const std::optional<std::pair<double, double>>& ruler);
+    /** @brief Select exactly the notes that start in [startBeat, endBeat) (what a ruler drag leaves selected). */
+    void selectStartingIn(double startBeat, double endBeat);
+    /** @brief Asked to make the pattern at least this long (in beats) before notes past its end are added. */
+    void setOnNeedPatternEnd(std::function<void(double endBeat)> cb) { onNeedPatternEnd_ = std::move(cb); }
+
+    /**
      * @brief Commit an edit applied externally (e.g. the velocity lane) as one step.
      *
      * The layer keeps no undo history (the owner's CommandHistory is the only
@@ -612,6 +648,9 @@ public:
 private:
     std::vector<MidiNote> notes_;
     std::vector<GhostPattern> ghostPatterns_;
+    NUIColor noteColor_ = NUIColor(0.40f, 0.62f, 0.95f, 1.0f); ///< the unit's colour until the panel says which
+    /// One note, flat: the unit's colour (lifted by state), grips when selected or hovered at an edge, the pitch name inside.
+    void paintNote(NUIRenderer& renderer, const NUIRect& r, const MidiNote& note, bool hovered, bool sounding, float rawWidth);
     float pixelsPerBeat_;
     float keyHeight_;
     float scrollX_;
@@ -622,6 +661,7 @@ private:
     int beatsPerBar_ = 4;
 
     std::function<void(const std::vector<MidiNote>&)> onNotesChanged_;
+    std::function<void(double)> onNeedPatternEnd_;
     std::function<void(int pitch)> onHoveredPitchChanged_;
     std::function<void()> onEmptyGridPress_;
     std::function<void(int pitch, int velocity)> onPreviewNote_;
@@ -893,6 +933,8 @@ public:
     void setDefaultUnitId(uint64_t unitId);
     
     void setGhostPatterns(const std::vector<PianoRollNoteLayer::GhostPattern>& ghosts);
+    /** @brief The editing unit's colour: its notes are drawn flat in it (FD-48). */
+    void setNoteColor(const NUIColor& color);
 
     /** @brief Set callback to check transport playback state (suppress preview when playing). */
     void setIsPlayingCallback(std::function<bool()> cb);

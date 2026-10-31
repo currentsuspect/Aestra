@@ -1,4 +1,5 @@
 #include "Commands/CommandRegistry.h"
+#include "CommandRegistryFlags.h"
 #include "Commands/AddChannelCommand.h"
 #include "Commands/AddClipCommand.h"
 #include "Commands/AddNoteCommand.h"
@@ -7,6 +8,7 @@
 #include "Commands/ClonePatternCommand.h"
 #include "Commands/EffectCommands.h"
 #include "Commands/SetPatternLengthCommand.h"
+#include "Commands/SetSamplerStateCommand.h"
 #include "Commands/SetUnitGainCommand.h"
 #include "Plugin/PluginManager.h"
 #include "Commands/DuplicateClipCommand.h"
@@ -22,8 +24,13 @@
 #include "Commands/ImportAudioClipCommand.h"
 #include "IO/MiniAudioDecoder.h"
 #include "Commands/RemoveClipCommand.h"
+#include "Commands/RoutingCommands.h"
+#include "Commands/MakeClipPatternUniqueCommand.h"
+#include "Commands/SetAudioPatternMixerChannelCommand.h"
+#include "Commands/SetUnitMixerChannelCommand.h"
 #include "Commands/RenderAudioClipCommand.h"
 #include "Commands/RemoveNoteCommand.h"
+#include "Commands/ReplacePatternNotesCommand.h"
 #include "Commands/SetMuteCommand.h"
 #include "Commands/SetPanCommand.h"
 #include "Commands/SetSoloCommand.h"
@@ -50,69 +57,7 @@ namespace Aestra {
 namespace Audio {
 
 namespace {
-// Mirror of CommandParser bool spellings — keep in sync with
-// CommandParser::convertAndValidateValue (FlagType::Bool).
-bool parseFlagBool(std::string_view s) {
-    std::string lower;
-    lower.reserve(s.size());
-    for (char c : s) {
-        lower.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
-    }
-    return lower == "true" || lower == "1" || lower == "yes";
-}
-
-// Safe flag lookup — returns nullopt if key is missing
-std::optional<std::string_view> requireFlag(const std::unordered_map<std::string, std::string>& flags, const char* key) {
-    auto it = flags.find(key);
-    if (it == flags.end()) return std::nullopt;
-    return it->second;
-}
-
-// Safe parsing helpers that return std::nullopt on malformed input
-// Reject leading/trailing whitespace, non-finite floats, and negative unsigned strings
-std::optional<int> safeStoi(std::string_view s) {
-    if (s.empty()) return std::nullopt;
-    if (std::isspace(static_cast<unsigned char>(s.front())) ||
-        std::isspace(static_cast<unsigned char>(s.back()))) return std::nullopt;
-    try {
-        size_t pos = 0;
-        int val = std::stoi(std::string(s), &pos);
-        if (pos != s.size()) return std::nullopt;
-        return val;
-    } catch (const std::exception&) {
-        return std::nullopt;
-    }
-}
-
-std::optional<float> safeStof(std::string_view s) {
-    if (s.empty()) return std::nullopt;
-    if (std::isspace(static_cast<unsigned char>(s.front())) ||
-        std::isspace(static_cast<unsigned char>(s.back()))) return std::nullopt;
-    try {
-        size_t pos = 0;
-        float val = std::stof(std::string(s), &pos);
-        if (pos != s.size()) return std::nullopt;
-        if (!std::isfinite(val)) return std::nullopt;
-        return val;
-    } catch (const std::exception&) {
-        return std::nullopt;
-    }
-}
-
-std::optional<uint64_t> safeStoull(std::string_view s) {
-    if (s.empty()) return std::nullopt;
-    if (std::isspace(static_cast<unsigned char>(s.front())) ||
-        std::isspace(static_cast<unsigned char>(s.back()))) return std::nullopt;
-    if (s.front() == '-') return std::nullopt; // std::stoull wraps negatives to huge values
-    try {
-        size_t pos = 0;
-        uint64_t val = std::stoull(std::string(s), &pos);
-        if (pos != s.size()) return std::nullopt;
-        return val;
-    } catch (const std::exception&) {
-        return std::nullopt;
-    }
-}
+using namespace RegistryFlags; // parseFlagBool, requireFlag, safeStoi/Stof/Stoull
 
 /**
  * Parse the canonical 32-hex-char object id the list_* queries print.
@@ -130,6 +75,8 @@ std::optional<AestraUUID> parseObjectId(std::string_view s) {
 // Reason recorded by the most recent factory refusal (see CommandRegistry::fail).
 thread_local std::string t_lastBuildError;
 } // namespace
+
+void registerPianoRollVerbs(CommandRegistry& reg); // PianoRollVerbs.cpp (V82-M3)
 
 CommandRegistry& CommandRegistry::instance() {
     static CommandRegistry s_instance;
@@ -165,6 +112,7 @@ std::unique_ptr<ICommand> CommandRegistry::build(
 
 void CommandRegistry::initialize() {
     auto& reg = instance();
+    registerPianoRollVerbs(reg);
 
     // ===== Transport (3) =====
     reg.registerCommand("set_bpm", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
@@ -454,8 +402,14 @@ void CommandRegistry::initialize() {
         auto barOpt = safeStoi(*barRaw);
         if (!barOpt) return nullptr;
 
+        if (*barOpt < 1) return CommandRegistry::fail("bar is 1-based: " + std::string(*barRaw));
+
+        // A bar, as the flag says and as add_clip reads it: bar 1 is beat 0.
+        // Passing the bar number straight through placed the copy at BEAT N,
+        // on top of the clips it was meant to follow.
         ClipInstanceID clipId(*idOpt);
-        return std::make_unique<DuplicateClipCommand>(*pm, clipId, static_cast<double>(*barOpt));
+        const double startBeat = (*barOpt - 1) * 4.0;
+        return std::make_unique<DuplicateClipCommand>(*pm, clipId, startBeat);
     });
 
     reg.registerCommand("trim_clip", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
@@ -529,6 +483,49 @@ void CommandRegistry::initialize() {
         if (!tm->getUnitManager().getUnit(*unitOpt))
             return CommandRegistry::fail("no such unit: " + std::string(*unitRaw));
         return std::make_unique<SetUnitGainCommand>(tm->getUnitManager(), *unitOpt, *valueOpt);
+    });
+
+    // The Sample Editor's envelope and play-mode controls, as one undo step. Only
+    // the fields given change; the rest keep their current value.
+    reg.registerCommand("set_sampler", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
+        auto unitRaw = requireFlag(flags, "unit");
+        if (!unitRaw) return nullptr;
+        auto unitOpt = safeStoull(*unitRaw);
+        if (!unitOpt) return nullptr;
+        auto& units = tm->getUnitManager();
+        if (!units.getUnit(*unitOpt)) return CommandRegistry::fail("no such unit: " + std::string(*unitRaw));
+        auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(units.getUnitPlugin(*unitOpt));
+        if (!sampler) return CommandRegistry::fail("unit " + std::string(*unitRaw) + " has no sampler");
+
+        const SamplerEditState before = SamplerEditState::capture(*sampler);
+        SamplerEditState after = before;
+        bool any = false;
+        const auto seconds = [&](const char* key, float maxValue, float& field) -> bool {
+            auto raw = requireFlag(flags, key);
+            if (!raw) return true;
+            auto value = safeStof(*raw);
+            if (!value || *value < 0.0f || *value > maxValue) return false;
+            field = *value;
+            any = true;
+            return true;
+        };
+        if (!seconds("attack", 2.0f, after.attack) || !seconds("decay", 2.0f, after.decay) ||
+            !seconds("sustain", 1.0f, after.sustain) || !seconds("release", 5.0f, after.release))
+            return CommandRegistry::fail("attack/decay are 0..2 s, sustain 0..1, release 0..5 s");
+        if (auto raw = requireFlag(flags, "voices")) {
+            auto value = safeStoi(*raw);
+            // The sampler's voice pool is 32 (SamplerPlugin::kMaxVoices); MuseGrammar declares the same range.
+            if (!value || *value < 1 || *value > 32) return CommandRegistry::fail("voices is 1..32");
+            after.voices = *value;
+            any = true;
+        }
+        if (auto raw = requireFlag(flags, "mono")) { after.mono = parseFlagBool(*raw); any = true; }
+        if (auto raw = requireFlag(flags, "cut_self")) { after.cutSelf = parseFlagBool(*raw); any = true; }
+        if (!any) return CommandRegistry::fail("set_sampler needs at least one of attack, decay, sustain, release, voices, mono, cut_self");
+        if (after == before) return CommandRegistry::fail("set_sampler: the unit already has those values");
+        return std::make_unique<SetSamplerStateCommand>(units, *unitOpt, before, after);
     });
 
     // ===== Pattern / note (4) =====
@@ -746,6 +743,7 @@ void CommandRegistry::initialize() {
         const std::string steps(*stepsRaw);
         if (steps.empty() || steps.size() > 256)
             return CommandRegistry::fail("steps must be 1..256 characters");
+        const double rowLengthBeats = static_cast<double>(steps.size()) * stepBeats;
         std::vector<MidiNote> rowNotes;
         for (size_t i = 0; i < steps.size(); ++i) {
             const char c = steps[i];
@@ -770,12 +768,15 @@ void CommandRegistry::initialize() {
                 note.startBeat += swing * stepBeats * 0.5;
             }
             note.durationBeats = stepBeats * static_cast<double>(gate);
+            // A swung last step must still end inside the row. Its tail used to run past the row end, and the
+            // piano roll grows a pattern to fit its notes in whole bars, so one swung shaker turned a 2-bar
+            // pattern into 3 (and set_pattern_length back to 2 bars was undone on the next edit).
+            note.durationBeats = std::max(0.0, std::min(note.durationBeats, rowLengthBeats - note.startBeat));
             note.velocity = noteVelocity;
             note.unitId = *unitOpt;
             rowNotes.push_back(note);
         }
 
-        const double rowLengthBeats = static_cast<double>(steps.size()) * stepBeats;
         return std::make_unique<SetStepsCommand>(tm->getPatternManager(), patternId,
                                                  std::move(rowNotes), *unitOpt, *pitchOpt,
                                                  rowLengthBeats);
@@ -872,8 +873,9 @@ void CommandRegistry::initialize() {
         auto trackRaw = requireFlag(flags, "track");
         if (!trackRaw) return nullptr;
         auto trackOpt = safeStoi(*trackRaw);
-        if (!trackOpt || *trackOpt < 0) return nullptr;
-        MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
+        if (!trackOpt || *trackOpt < -1) return nullptr;
+        // -1 names the master channel (mastering inserts), as in the routing verbs.
+        MixerChannel* ch = *trackOpt == -1 ? tm->getMasterChannel() : tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
         auto effectRaw = requireFlag(flags, "effect");
         if (!effectRaw) return nullptr;
@@ -925,8 +927,9 @@ void CommandRegistry::initialize() {
         auto trackRaw = requireFlag(flags, "track");
         if (!trackRaw) return nullptr;
         auto trackOpt = safeStoi(*trackRaw);
-        if (!trackOpt || *trackOpt < 0) return nullptr;
-        MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
+        if (!trackOpt || *trackOpt < -1) return nullptr;
+        // -1 names the master channel (mastering inserts), as in the routing verbs.
+        MixerChannel* ch = *trackOpt == -1 ? tm->getMasterChannel() : tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
         auto slotRaw = requireFlag(flags, "slot");
         if (!slotRaw) return nullptr;
@@ -944,8 +947,9 @@ void CommandRegistry::initialize() {
         auto trackRaw = requireFlag(flags, "track");
         if (!trackRaw) return nullptr;
         auto trackOpt = safeStoi(*trackRaw);
-        if (!trackOpt || *trackOpt < 0) return nullptr;
-        MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
+        if (!trackOpt || *trackOpt < -1) return nullptr;
+        // -1 names the master channel (mastering inserts), as in the routing verbs.
+        MixerChannel* ch = *trackOpt == -1 ? tm->getMasterChannel() : tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
         auto slotRaw = requireFlag(flags, "slot");
         if (!slotRaw) return nullptr;
@@ -966,8 +970,9 @@ void CommandRegistry::initialize() {
         auto trackRaw = requireFlag(flags, "track");
         if (!trackRaw) return nullptr;
         auto trackOpt = safeStoi(*trackRaw);
-        if (!trackOpt || *trackOpt < 0) return nullptr;
-        MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
+        if (!trackOpt || *trackOpt < -1) return nullptr;
+        // -1 names the master channel (mastering inserts), as in the routing verbs.
+        MixerChannel* ch = *trackOpt == -1 ? tm->getMasterChannel() : tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
         auto slotRaw = requireFlag(flags, "slot");
         if (!slotRaw) return nullptr;
@@ -1071,8 +1076,231 @@ void CommandRegistry::initialize() {
             if (!p) return nullptr;
             pan = *p;
         }
-        return std::make_unique<UpdateNoteCommand>(tm->getPatternManager(), key->patternId, *note,
-                                                   velocity, pan);
+        // V82-M2: per-step chance and ratchet (FD-27's engine fields).
+        float chance = note->chance;
+        if (auto it = flags.find("chance"); it != flags.end()) {
+            auto c = safeStof(it->second);
+            if (!c || *c < 0.0f || *c > 1.0f) return CommandRegistry::fail("chance is 0..1");
+            chance = *c;
+        }
+        uint8_t ratchet = note->ratchet;
+        if (auto it = flags.find("ratchet"); it != flags.end()) {
+            auto r = safeStoi(it->second);
+            if (!r || *r < 1 || *r > 4) return CommandRegistry::fail("ratchet is 1..4");
+            ratchet = static_cast<uint8_t>(*r);
+        }
+        if (chance == note->chance && ratchet == note->ratchet)
+            return std::make_unique<UpdateNoteCommand>(tm->getPatternManager(), key->patternId, *note,
+                                                       velocity, pan);
+        // Chance or ratchet changed: replace the note in one step (UpdateNoteCommand carries velocity and pan only).
+        const PatternSource* pattern = tm->getPatternManager().getPattern(key->patternId);
+        std::vector<MidiNote> after = std::get<MidiPayload>(pattern->payload).notes;
+        for (MidiNote& n : after) {
+            if (n.pitch == note->pitch && n.unitId == note->unitId && n.startBeat == note->startBeat) {
+                n.velocity = velocity;
+                n.pan = pan;
+                n.chance = chance;
+                n.ratchet = ratchet;
+                break;
+            }
+        }
+        return std::make_unique<ReplacePatternNotesCommand>(tm->getPatternManager(), key->patternId, std::move(after),
+                                                            0.0, "Update Note");
+    });
+
+    // ===== Mixer routing (V82-M5, FD-53) =====
+    // Tracks are addressed by index, as every other verb does (list_tracks
+    // shows index and id); -1 names the master. The routing commands throw on
+    // an illegal route and CommandHistory swallows a throwing execute(), so
+    // every illegal request is refused HERE with a reason — never reported ok.
+    const auto trackAt = [](TrackManager& tm, std::string_view raw, const char* what,
+                            MixerChannel*& out) -> std::optional<std::string> {
+        auto idx = safeStoi(raw);
+        if (!idx || *idx < 0) return std::string(what) + " must be a track index >= 0";
+        out = tm.getChannel(static_cast<size_t>(*idx));
+        if (!out) return "no track at index " + std::string(raw);
+        return std::nullopt;
+    };
+    const auto sendRoute = [](MixerChannel& ch, uint64_t sendId, AudioRoute& out) {
+        for (const auto& r : ch.getSends()) {
+            if (r.sendId == sendId) {
+                out = r;
+                return true;
+            }
+        }
+        return false;
+    };
+
+    reg.registerCommand("route_unit", [trackAt](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
+        auto unitRaw = requireFlag(flags, "unit");
+        auto trackRaw = requireFlag(flags, "track");
+        if (!unitRaw || !trackRaw) return nullptr;
+        auto unit = safeStoull(*unitRaw);
+        if (!unit || !tm->getUnitManager().getUnit(static_cast<UnitID>(*unit)))
+            return CommandRegistry::fail("no unit " + std::string(*unitRaw) + " (list_units shows them)");
+        uint32_t channelId = MASTER_MIXER_CHANNEL_ID; // a unit's "master" destination is 0
+        if (*trackRaw != "-1") {
+            MixerChannel* ch = nullptr;
+            if (auto err = trackAt(*tm, *trackRaw, "track", ch)) return CommandRegistry::fail(*err);
+            channelId = ch->getChannelId();
+        }
+        return std::make_unique<SetUnitMixerChannelCommand>(*tm, static_cast<UnitID>(*unit), channelId);
+    });
+
+    reg.registerCommand("route_pattern", [trackAt](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
+        auto patternRaw = requireFlag(flags, "pattern");
+        auto trackRaw = requireFlag(flags, "track");
+        if (!patternRaw || !trackRaw) return nullptr;
+        auto patternId = safeStoull(*patternRaw);
+        const PatternSource* pattern =
+            patternId ? tm->getPatternManager().getPattern(PatternID{*patternId}) : nullptr;
+        if (!pattern) return CommandRegistry::fail("no pattern " + std::string(*patternRaw) + " (list_patterns shows them)");
+        if (!pattern->isAudio())
+            return CommandRegistry::fail("pattern " + std::string(*patternRaw) +
+                                         " is a MIDI pattern; its notes follow their units (use route_unit)");
+        uint32_t channelId = MASTER_MIXER_CHANNEL_ID;
+        if (*trackRaw != "-1") {
+            MixerChannel* ch = nullptr;
+            if (auto err = trackAt(*tm, *trackRaw, "track", ch)) return CommandRegistry::fail(*err);
+            channelId = ch->getChannelId();
+        }
+        // The command reports failure by not executing (no throw), and a
+        // non-executed command is not undoable — validated above so it runs.
+        return std::make_unique<SetAudioPatternMixerChannelCommand>(*tm, PatternID{*patternId}, channelId);
+    });
+
+    reg.registerCommand("make_clip_unique", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
+        auto idRaw = requireFlag(flags, "id");
+        if (!idRaw) return nullptr;
+        auto idOpt = parseObjectId(*idRaw);
+        if (!idOpt) return CommandRegistry::fail("not a clip id: " + std::string(*idRaw));
+        const ClipInstanceID clipId(*idOpt);
+        const auto* clip = tm->getPlaylistModel().getClip(clipId);
+        if (!clip || !clip->patternId.isValid()) return CommandRegistry::fail("no clip " + std::string(*idRaw));
+        if (!tm->getPatternManager().getPattern(clip->patternId))
+            return CommandRegistry::fail("clip " + std::string(*idRaw) + " has no pattern to copy");
+        return std::make_unique<MakeClipPatternUniqueCommand>(*tm, clipId);
+    });
+
+    reg.registerCommand("set_output", [trackAt](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
+        auto trackRaw = requireFlag(flags, "track");
+        auto toRaw = requireFlag(flags, "to");
+        if (!trackRaw || !toRaw) return nullptr;
+        MixerChannel* src = nullptr;
+        if (auto err = trackAt(*tm, *trackRaw, "track", src)) return CommandRegistry::fail(*err);
+        uint32_t target = kMasterId;
+        if (*toRaw != "-1") {
+            MixerChannel* dst = nullptr;
+            if (auto err = trackAt(*tm, *toRaw, "to", dst)) return CommandRegistry::fail(*err);
+            target = dst->getChannelId();
+            if (target == src->getChannelId()) return CommandRegistry::fail("a track cannot output into itself");
+            if (!tm->canRouteTo(src->getChannelId(), target))
+                return CommandRegistry::fail("that output would make a routing loop");
+        }
+        return std::make_unique<SetMainOutputCommand>(*tm, src->getChannelId(), target);
+    });
+
+    reg.registerCommand("add_send", [trackAt](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
+        auto trackRaw = requireFlag(flags, "track");
+        auto toRaw = requireFlag(flags, "to");
+        if (!trackRaw || !toRaw) return nullptr;
+        MixerChannel* src = nullptr;
+        if (auto err = trackAt(*tm, *trackRaw, "track", src)) return CommandRegistry::fail(*err);
+        MixerChannel* dst = nullptr;
+        if (*toRaw == "-1") return CommandRegistry::fail("a send cannot target the master; use set_output");
+        if (auto err = trackAt(*tm, *toRaw, "to", dst)) return CommandRegistry::fail(*err);
+        if (dst == src) return CommandRegistry::fail("a track cannot send to itself");
+        if (!tm->canRouteTo(src->getChannelId(), dst->getChannelId()))
+            return CommandRegistry::fail("that send would make a routing loop");
+        AudioRoute route;
+        route.targetChannelId = dst->getChannelId();
+        if (auto it = flags.find("level"); it != flags.end()) {
+            auto v = safeStof(it->second);
+            if (!v) return nullptr;
+            route.gain = *v;
+        }
+        if (auto it = flags.find("pan"); it != flags.end()) {
+            auto v = safeStof(it->second);
+            if (!v) return nullptr;
+            route.pan = *v;
+        }
+        if (auto it = flags.find("pre_fader"); it != flags.end()) route.postFader = !parseFlagBool(it->second);
+        if (auto it = flags.find("sidechain"); it != flags.end()) route.sidechainOnly = parseFlagBool(it->second);
+        return std::make_unique<AddSendCommand>(*tm, src->getChannelId(), route);
+    });
+
+    reg.registerCommand("set_send", [trackAt, sendRoute](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
+        auto trackRaw = requireFlag(flags, "track");
+        auto sendRaw = requireFlag(flags, "send");
+        if (!trackRaw || !sendRaw) return nullptr;
+        MixerChannel* src = nullptr;
+        if (auto err = trackAt(*tm, *trackRaw, "track", src)) return CommandRegistry::fail(*err);
+        auto sendId = safeStoull(*sendRaw);
+        AudioRoute route;
+        if (!sendId || !sendRoute(*src, *sendId, route))
+            return CommandRegistry::fail("no send " + std::string(*sendRaw) + " on track " + std::string(*trackRaw) +
+                                         " (get_routing_graph shows sendIds)");
+        if (auto it = flags.find("level"); it != flags.end()) {
+            auto v = safeStof(it->second);
+            if (!v) return nullptr;
+            route.gain = *v;
+        }
+        if (auto it = flags.find("pan"); it != flags.end()) {
+            auto v = safeStof(it->second);
+            if (!v) return nullptr;
+            route.pan = *v;
+        }
+        if (auto it = flags.find("pre_fader"); it != flags.end()) route.postFader = !parseFlagBool(it->second);
+        if (auto it = flags.find("mute"); it != flags.end()) route.mute = parseFlagBool(it->second);
+        if (auto it = flags.find("sidechain"); it != flags.end()) route.sidechainOnly = parseFlagBool(it->second);
+        return std::make_unique<EditSendCommand>(*tm, src->getChannelId(), *sendId, route);
+    });
+
+    reg.registerCommand("remove_send", [trackAt, sendRoute](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
+        auto trackRaw = requireFlag(flags, "track");
+        auto sendRaw = requireFlag(flags, "send");
+        if (!trackRaw || !sendRaw) return nullptr;
+        MixerChannel* src = nullptr;
+        if (auto err = trackAt(*tm, *trackRaw, "track", src)) return CommandRegistry::fail(*err);
+        auto sendId = safeStoull(*sendRaw);
+        AudioRoute route;
+        if (!sendId || !sendRoute(*src, *sendId, route))
+            return CommandRegistry::fail("no send " + std::string(*sendRaw) + " on track " + std::string(*trackRaw));
+        return std::make_unique<RemoveSendCommand>(*tm, src->getChannelId(), *sendId);
+    });
+
+    reg.registerCommand("move_effect", [trackAt](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
+        auto trackRaw = requireFlag(flags, "track");
+        auto fromRaw = requireFlag(flags, "from");
+        auto toRaw = requireFlag(flags, "to");
+        if (!trackRaw || !fromRaw || !toRaw) return nullptr;
+        MixerChannel* ch = nullptr;
+        if (auto err = trackAt(*tm, *trackRaw, "track", ch)) return CommandRegistry::fail(*err);
+        auto from = safeStoi(*fromRaw);
+        auto to = safeStoi(*toRaw);
+        if (!from || !to || *from < 0 || *to < 0) return nullptr;
+        auto& chain = ch->getEffectChain();
+        if (static_cast<size_t>(*from) >= chain.slotCount() || !chain.getPlugin(static_cast<size_t>(*from)))
+            return CommandRegistry::fail("no effect in slot " + std::string(*fromRaw));
+        if (static_cast<size_t>(*to) >= EffectChain::kMaxSlots) return CommandRegistry::fail("slot out of range");
+        if (*from == *to) return CommandRegistry::fail("the effect is already in that slot");
+        return std::make_unique<MovePluginCommand>(*tm, *ch, static_cast<size_t>(*from), static_cast<size_t>(*to));
     });
 }
 

@@ -4,6 +4,7 @@
 #include "RealtimeThreadGuard.h"
 #include "../../AestraCore/include/AestraLog.h"
 #include "Playback/NoteExpression.h"
+#include "Playback/PatternRepeat.h"
 #include "Plugin/SamplerPlugin.h"
 
 #include <algorithm>
@@ -82,6 +83,14 @@ struct NoteOffTiming {
     bool suppressNoteOff; // pitched-sampler slide into the next step holds the voice
 };
 
+// How far past its own start one repeat of a pattern can still ring: its longest note, plus a beat for swing
+// delay and pitched-sampler gates. Bounds the repeats a window walks (PatternRepeat::inWindow).
+double repeatReachBeats(const std::vector<MidiNote>& notes, double patternLengthBeats) {
+    double reach = patternLengthBeats;
+    for (const auto& n : notes) reach = std::max(reach, n.startBeat + n.durationBeats);
+    return reach + 1.0;
+}
+
 NoteOffTiming calculateNoteOffTiming(const MidiPayload& midi, const MidiNote& note, double instanceStartBeat,
                                      double sourceEndBeatAbsolute, bool isPitchedSampler) {
     const double noteBeat = instanceStartBeat + note.startBeat;
@@ -119,7 +128,7 @@ PatternPlaybackEngine::PatternPlaybackEngine(TimelineClock* clock, PatternManage
 }
 
 void PatternPlaybackEngine::schedulePatternInstance(PatternID pid, double startBeat, uint32_t instanceId,
-                                                    double sourceStartBeat, double durationBeats) {
+                                                    double sourceStartBeat, double durationBeats, bool repeatPattern) {
     if (instanceId >= 256) {
         Aestra::Log::error("[PatternPlayback] Instance ID must be < 256");
         return;
@@ -137,6 +146,7 @@ void PatternPlaybackEngine::schedulePatternInstance(PatternID pid, double startB
         inst.sourceStartBeat = std::max(0.0, sourceStartBeat);
         inst.sourceEndBeat =
             durationBeats > 0.0 ? (inst.sourceStartBeat + durationBeats) : std::numeric_limits<double>::infinity();
+        inst.repeatPattern = repeatPattern;
         inst.scheduledThroughFrame = 0;
 
         // An instanceId identifies a SLOT, not an occurrence — cancellation is keyed on
@@ -154,16 +164,17 @@ void PatternPlaybackEngine::schedulePatternInstance(PatternID pid, double startB
         } else {
             m_activeInstances.push_back(inst);
         }
+        m_instanceCount.store(m_activeInstances.size(), std::memory_order_release);
     }
 
     Aestra::Log::info("[PatternPlayback] Scheduled instance " + std::to_string(instanceId) + " pattern " +
                       std::to_string(pid.value) + " at beat " + std::to_string(startBeat) +
                       " sourceStart=" + std::to_string(sourceStartBeat) +
-                      " duration=" + std::to_string(durationBeats));
+                      " duration=" + std::to_string(durationBeats) + (repeatPattern ? " repeats" : ""));
 }
 
 void PatternPlaybackEngine::updatePatternInstance(PatternID pid, double startBeat, uint32_t instanceId,
-                                                  double sourceStartBeat, double durationBeats) {
+                                                  double sourceStartBeat, double durationBeats, bool repeatPattern) {
     if (instanceId >= 256) {
         Aestra::Log::error("[PatternPlayback] Instance ID must be < 256");
         return;
@@ -178,11 +189,12 @@ void PatternPlaybackEngine::updatePatternInstance(PatternID pid, double startBea
             existing->sourceStartBeat = std::max(0.0, sourceStartBeat);
             existing->sourceEndBeat = durationBeats > 0.0 ? (existing->sourceStartBeat + durationBeats)
                                                           : std::numeric_limits<double>::infinity();
+            existing->repeatPattern = repeatPattern;
             // scheduledThroughFrame deliberately kept: see the header.
             return;
         }
     }
-    schedulePatternInstance(pid, startBeat, instanceId, sourceStartBeat, durationBeats);
+    schedulePatternInstance(pid, startBeat, instanceId, sourceStartBeat, durationBeats, repeatPattern);
 }
 
 void PatternPlaybackEngine::removePatternInstance(uint32_t instanceId) {
@@ -193,6 +205,7 @@ void PatternPlaybackEngine::removePatternInstance(uint32_t instanceId) {
         std::remove_if(m_activeInstances.begin(), m_activeInstances.end(),
                        [instanceId](const PatternInstance& inst) { return inst.instanceId == instanceId; }),
         m_activeInstances.end());
+    m_instanceCount.store(m_activeInstances.size(), std::memory_order_release);
 }
 
 void PatternPlaybackEngine::cancelPatternInstance(uint32_t instanceId) {
@@ -209,6 +222,7 @@ void PatternPlaybackEngine::cancelPatternInstance(uint32_t instanceId) {
             std::remove_if(m_activeInstances.begin(), m_activeInstances.end(),
                            [instanceId](const PatternInstance& inst) { return inst.instanceId == instanceId; }),
             m_activeInstances.end());
+        m_instanceCount.store(m_activeInstances.size(), std::memory_order_release);
     }
 }
 
@@ -222,6 +236,13 @@ uint16_t PatternPlaybackEngine::getChannelForUnit(UnitID unitId) const {
 
 void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, int lookaheadSamples,
                                          uint64_t loopLengthSamples) {
+    ScheduleLoop loop;
+    loop.length = loopLengthSamples;
+    refillWindow(refillTicket(), currentFrame, sampleRate, lookaheadSamples, loop);
+}
+
+void PatternPlaybackEngine::refillWindow(uint16_t ticket, uint64_t currentFrame, int sampleRate,
+                                         int lookaheadSamples, const ScheduleLoop& loop) {
     // RT safety: this method must NOT be called from the audio callback.
     // It acquires a mutex, allocates from scratch buffer, and calls pattern lookup.
     // See performNonRealtimeMaintenance() for the correct call site.
@@ -233,12 +254,17 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
 
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    // Process deferred flush from audio thread
-    if (m_flushRequested.exchange(false, std::memory_order_acq_rel)) {
+    // A rewind requested since the last refill (from the audio thread or the UI) bumped the
+    // queue epoch; everything queued under the old one is already dead to processAudio().
+    // The ticket predates the caller's playhead read, so a rewind after that read leaves
+    // this refill stamping an epoch that is already stale: its events drop unplayed and
+    // the next refill replans from the new position.
+    if (ticket != m_scheduledEpoch) {
         for (auto& inst : m_activeInstances) {
             inst.scheduledThroughFrame = 0;
         }
         m_lastRefillFrame = 0;
+        m_scheduledEpoch = ticket;
     }
 
     if (currentFrame < m_lastRefillFrame) {
@@ -248,9 +274,9 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
         // The frame domain jumped backwards (bounce restart, stop→locate):
         // events already queued for the old, higher frames — including the
         // next loop iteration pre-scheduled before a wrap — would sit at the
-        // queue head and block everything queued below them. Drain; the
+        // queue head and block everything queued below them. Discard them; the
         // window below re-queues whatever is actually due.
-        m_rtQueue.forceDrain();
+        invalidateQueuedEventsLocked();
     }
     m_lastRefillFrame = currentFrame;
 
@@ -295,8 +321,8 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
         };
 
         std::vector<ScheduledEvent> deletedOffs;
-        const uint64_t loopBase =
-            (loopLengthSamples > 0) ? (currentFrame / loopLengthSamples) * loopLengthSamples : 0;
+        const uint64_t playheadPass = loop.passOf(currentFrame);
+        const uint64_t loopBase = loop.baseOf(playheadPass);
         for (const auto& gated : m_gatedNotes)
         {
             continue;
@@ -326,12 +352,22 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
             if (!instPtr || !pattern || !pattern->isMidi()) return;
             const auto& patternNotes = std::get<MidiPayload>(pattern->payload).notes;
             const bool expressive = needsExpression(patternNotes, pattern->swing);
+            // The repeats that can be sounding at the playhead (V82-T3); just repeat 0 when the clip doesn't repeat.
+            const double repeatLength = instPtr->repeatPattern ? pattern->lengthBeats : 0.0;
+            const double playheadBeat =
+                m_clock->beatAtSampleFrame(currentFrame > loopBase ? currentFrame - loopBase : 0, sampleRate);
+            const PatternRepeat::Range repeatsHere = PatternRepeat::inWindow(
+                repeatLength, instPtr->sourceStartBeat, instPtr->sourceEndBeat, instPtr->startBeat, playheadBeat,
+                playheadBeat, instPtr->repeatPattern ? repeatReachBeats(patternNotes, repeatLength) : 0.0);
+            for (int64_t repeat = repeatsHere.first; repeat <= repeatsHere.last; ++repeat) {
+            const double repeatStartBeat = instPtr->startBeat + static_cast<double>(repeat) * repeatLength;
             const std::vector<MidiNote> expandedNotes =
                 expressive ? expandForPlayback(patternNotes, pattern->swing, pattern->id.value, instPtr->instanceId,
-                                               loopLengthSamples > 0 ? currentFrame / loopLengthSamples : 0)
+                                               PatternRepeat::passSeed(
+                                                   playheadPass, repeat))
                            : std::vector<MidiNote>{};
             for (const auto& note : (expressive ? expandedNotes : patternNotes)) {
-                if (note.unitId != gated.unitId)
+                if (note.unitId != gated.unitId || (repeatLength > 0.0 && note.startBeat >= repeatLength))
                     continue;
                 const UnitInfo* unit = m_unitManager->getUnit(note.unitId);
                 const bool isPitchedSampler = unit && unit->type == UnitType::PitchedSampler;
@@ -343,21 +379,24 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                 }
                 if (resolved != static_cast<int>(gated.noteNumber))
                     continue;
-                const double onBeat = instPtr->startBeat + note.startBeat;
-                const uint64_t onFrame = loopBase + m_clock->sampleFrameAtBeat(onBeat, sampleRate);
+                const double onBeat = repeatStartBeat + note.startBeat;
+                uint64_t onFrame = loopBase + m_clock->sampleFrameAtBeat(onBeat, sampleRate);
                 // The note must still SPAN the playhead at its current placement. Started
                 // before the playhead is not enough: a clip moved (or a note shortened) so the
                 // note has already ended there gets no re-queued off, so the old voice would hang.
                 const NoteOffTiming offTiming =
-                    calculateNoteOffTiming(std::get<MidiPayload>(pattern->payload), note, instPtr->startBeat,
+                    calculateNoteOffTiming(std::get<MidiPayload>(pattern->payload), note, repeatStartBeat,
                                            instPtr->startBeat + instPtr->sourceEndBeat, isPitchedSampler);
-                const uint64_t offFrame = loopBase + m_clock->sampleFrameAtBeat(offTiming.offBeat, sampleRate);
+                uint64_t offFrame = loopBase + m_clock->sampleFrameAtBeat(offTiming.offBeat, sampleRate);
+                if (!loop.placeInPass(playheadPass, onFrame, offFrame))
+                    continue;
                 if (onFrame < currentFrame && (offTiming.suppressNoteOff || offFrame > currentFrame)) {
                     const uint32_t id =
                         noteOccurrenceId(gated.instanceId, onFrame, offFrame, static_cast<uint8_t>(resolved));
                     if (visit(id, offFrame)) return;
                 }
             }
+            } // repeat
         };
         const auto claimed = [&](uint32_t id) {
             return std::find(claimedIds.begin(), claimedIds.end(), id) != claimedIds.end();
@@ -413,10 +452,9 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
         for (auto& inst : m_activeInstances) {
             inst.scheduledThroughFrame = std::min(inst.scheduledThroughFrame, currentFrame);
         }
-        m_rtQueue.forceDrain();
+        invalidateQueuedEventsLocked();
         for (const auto& ev : deletedOffs) {
-            if (!m_rtQueue.push(ev))
-                m_overflowCounter.fetch_add(1, std::memory_order_relaxed);
+            pushScheduledLocked(ev);
         }
     }
 
@@ -460,19 +498,34 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
         // (downbeat included) are queued BEFORE the wrap, sample-accurately.
         uint64_t iterBegin = 0;
         uint64_t iterEnd = 0;
-        if (loopLengthSamples > 0) {
-            iterBegin = scheduleFromFrame / loopLengthSamples;
-            iterEnd = (windowEnd - 1) / loopLengthSamples;
+        if (loop.active()) {
+            iterBegin = loop.passOf(scheduleFromFrame);
+            iterEnd = loop.passOf(windowEnd - 1);
         }
 
+        // A clip longer than its pattern plays it again every pattern length (V82-T3). Only the repeats that
+        // can sound in this window are walked; repeat r sits r * length later, in source and on the timeline.
+        // Without repeats the range is the single repeat 0 and nothing below moves.
+        const double repeatLength = inst.repeatPattern ? pattern->lengthBeats : 0.0;
+        const double repeatReach = inst.repeatPattern ? repeatReachBeats(midi.notes, repeatLength) : 0.0;
         for (uint64_t loopIter = iterBegin; loopIter <= iterEnd; ++loopIter) {
-        const uint64_t loopBase = loopIter * loopLengthSamples;
+        const uint64_t loopBase = loop.baseOf(loopIter);
+        const PatternRepeat::Range repeatsHere = PatternRepeat::inWindow(
+            repeatLength, inst.sourceStartBeat, inst.sourceEndBeat, inst.startBeat,
+            m_clock->beatAtSampleFrame(scheduleFromFrame > loopBase ? scheduleFromFrame - loopBase : 0, sampleRate),
+            m_clock->beatAtSampleFrame(windowEnd - loopBase, sampleRate), repeatReach);
+        for (int64_t repeat = repeatsHere.first; repeat <= repeatsHere.last; ++repeat) {
+        const double repeatOffset = static_cast<double>(repeat) * repeatLength;
+        const double repeatStartBeat = inst.startBeat + repeatOffset;
         std::vector<MidiNote> expandedNotes;
         const bool expressive = needsExpression(midi.notes, pattern->swing);
-        if (expressive) expandedNotes = expandForPlayback(midi.notes, pattern->swing, pattern->id.value, inst.instanceId, loopIter);
+        if (expressive) expandedNotes = expandForPlayback(midi.notes, pattern->swing, pattern->id.value, inst.instanceId, PatternRepeat::passSeed(loopIter, repeat));
         for (const auto& note : (expressive ? expandedNotes : midi.notes)) {
-            const double noteStartInSource = note.startBeat;
-            const double noteEndInSource = note.startBeat + note.durationBeats;
+            if (repeatLength > 0.0 && note.startBeat >= repeatLength) {
+                continue; // past the pattern's end: a repeating clip wraps there, so the note never plays
+            }
+            const double noteStartInSource = repeatOffset + note.startBeat;
+            const double noteEndInSource = noteStartInSource + note.durationBeats;
             if (noteEndInSource <= inst.sourceStartBeat || noteStartInSource >= inst.sourceEndBeat) {
                 continue;
             }
@@ -484,7 +537,7 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                                              ? resolvePitchedSamplerMidiNote(note,
                                                                              sampler ? sampler->getRootMidiNote() : 60)
                                              : std::clamp(note.pitch, 0, 127);
-            double noteBeat = inst.startBeat + note.startBeat;
+            double noteBeat = repeatStartBeat + note.startBeat;
             uint64_t noteFrame = loopBase + m_clock->sampleFrameAtBeat(noteBeat, sampleRate);
             // A one-shot sample may continue to its natural endpoint when no
             // note gate is present, but a Piano Roll note still owns an ADSR
@@ -493,11 +546,14 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
             // exception because they intentionally hold the voice across the
             // next step.
             const NoteOffTiming offTiming =
-                calculateNoteOffTiming(midi, note, inst.startBeat, inst.startBeat + inst.sourceEndBeat, isPitchedSampler);
+                calculateNoteOffTiming(midi, note, repeatStartBeat, inst.startBeat + inst.sourceEndBeat, isPitchedSampler);
             const double offBeat = offTiming.offBeat;
             const bool suppressNoteOff = offTiming.suppressNoteOff;
 
             uint64_t offFrame = loopBase + m_clock->sampleFrameAtBeat(offBeat, sampleRate);
+            if (!loop.placeInPass(loopIter, noteFrame, offFrame)) {
+                continue; // a timeline loop pass this note does not sound in
+            }
             const uint32_t noteId =
                 noteOccurrenceId(inst.instanceId, noteFrame, offFrame, static_cast<uint8_t>(resolvedMidiNote));
 
@@ -598,6 +654,7 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                 m_scratchEvents.push_back(offEvent);
             }
         }
+        } // repeat
         } // loopIter
 
         inst.scheduledThroughFrame = windowEnd;
@@ -612,9 +669,16 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
 
     std::sort(m_scratchEvents.begin(), m_scratchEvents.end(), eventComesBefore);
     for (const auto& event : m_scratchEvents) {
-        if (!m_rtQueue.push(event)) {
-            m_overflowCounter.fetch_add(1, std::memory_order_relaxed);
-        }
+        pushScheduledLocked(event);
+    }
+    // Published last: once this equals the live epoch, the queue holds this playhead's notes.
+    m_plannedEpoch.store(m_scheduledEpoch, std::memory_order_release);
+}
+
+void PatternPlaybackEngine::pushScheduledLocked(ScheduledEvent event) {
+    event.epoch = m_scheduledEpoch;
+    if (!m_rtQueue.push(event)) {
+        m_overflowCounter.fetch_add(1, std::memory_order_relaxed);
     }
 }
 
@@ -625,8 +689,20 @@ void PatternPlaybackEngine::processAudio(uint64_t currentFrame, int bufferSize, 
     }
 
     ScheduledEvent ev;
+    uint16_t epoch = m_queueEpoch.load(std::memory_order_acquire);
 
     while (m_rtQueue.peek(ev)) {
+        // Queued before the last rewind: drop it unplayed. A mismatch re-reads the epoch
+        // once, because an event published after a bump on another thread can be newer
+        // than the value loaded above.
+        if (ev.epoch != epoch) {
+            epoch = m_queueEpoch.load(std::memory_order_acquire);
+            if (ev.epoch != epoch) {
+                m_rtQueue.pop();
+                continue;
+            }
+        }
+
         // Check if event is in current buffer
         if (ev.sampleFrame >= currentFrame + static_cast<uint64_t>(bufferSize)) {
             break; // Event is in the future
@@ -683,17 +759,16 @@ void PatternPlaybackEngine::clearScheduledInstances() {
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_activeInstances.clear();
+        m_instanceCount.store(0, std::memory_order_release);
         m_lastRefillFrame = 0;
+        // Discards every queued event; adopting the new epoch also retires any pending rewind.
+        invalidateQueuedEventsLocked();
     }
     m_gatedNotes.clear();
 
     for (auto& flag : m_instanceCancelled) {
         flag.store(false, std::memory_order_release);
     }
-
-    // A pending rewind is moot once the instances are gone.
-    m_flushRequested.store(false, std::memory_order_release);
-    m_rtQueue.forceDrain();
 }
 
 PatternPlaybackEngine::SchedulingStats PatternPlaybackEngine::getSchedulingStats() const {
@@ -740,15 +815,12 @@ size_t PatternPlaybackEngine::getActiveInstanceCount() const {
 }
 
 void PatternPlaybackEngine::rewindScheduledInstances() {
-    // RT-safe: set atomic flag for deferred processing by non-RT maintenance.
-    // The SPSC queue and m_activeInstances are only safely mutable from the
-    // control thread, so actual drain/reset happens in refillWindow().
-    m_flushRequested.store(true, std::memory_order_release);
-
-    // Drain the RT queue lock-free from the producer side.
-    // Resetting m_head to m_tail is safe because the consumer (audio thread)
-    // only reads m_tail, and any events pushed after this reset are legitimate.
-    m_rtQueue.forceDrain();
+    // Callable from any thread, the audio thread included. Bumping the epoch both
+    // discards every queued event (processAudio drops older epochs unplayed) and asks
+    // the next refillWindow() to rewind the scheduling frontiers. It used to reset the
+    // queue's write index from here, which made the audio thread a second writer of an
+    // index the scheduler owns: a reset racing a push resurrected events it meant to drop.
+    m_queueEpoch.fetch_add(1, std::memory_order_acq_rel);
 }
 
 void PatternPlaybackEngine::patternContentEdited() {

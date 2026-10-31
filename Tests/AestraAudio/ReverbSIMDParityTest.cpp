@@ -65,6 +65,11 @@ int main() {
     std::array<float, kLines> injectR{{0.29f, 0.88f, -0.73f, -0.19f, 0.96f, -0.44f, 0.57f, -0.82f}};
     std::array<float, kLines> outputL{{0.42f, -0.31f, 0.37f, 0.23f, -0.36f, 0.29f, 0.33f, -0.27f}};
     std::array<float, kLines> outputR{{0.24f, 0.39f, -0.28f, 0.35f, 0.31f, -0.34f, 0.26f, 0.41f}};
+    // Damping is per line (scaled to each line's length): distinct values, so a lane mix-up shows.
+    std::array<float, kLines> damping{{0.62f, 0.58f, 0.66f, 0.55f, 0.70f, 0.60f, 0.52f, 0.64f}};
+    std::array<float, kLines> lowDampAmounts{{0.45f, 0.41f, 0.48f, 0.39f, 0.50f, 0.43f, 0.37f, 0.46f}};
+    std::array<float, kLines> matrixOut{};
+    ReverbSIMD::mixFDNLines(lineOut.data(), matrixOut.data());
 
     FDNState scalar;
     FDNState sse;
@@ -80,15 +85,15 @@ int main() {
                                  scalar.ptrs.data(), scalar.pos.data(), scalar.masks.data(),
                                  feedback.data(), injectL.data(), injectR.data(),
                                  outputL.data(), outputR.data(),
-                                 0.62f, 0.014f, 0.45f, scalarWetL, scalarWetR);
+                                 damping.data(), 0.014f, lowDampAmounts.data(), scalarWetL, scalarWetR);
     ReverbSIMD::g_forceScalarFallback = previousForceScalar;
 
-    ReverbSIMD::processFDNSampleSSE(lineOut.data(), 0.2f, -0.13f,
+    ReverbSIMD::processFDNSampleSSE(lineOut.data(), matrixOut.data(), 0.2f, -0.13f,
                                     sse.damping.data(), sse.lowDamp.data(),
                                     sse.ptrs.data(), sse.pos.data(), sse.masks.data(),
                                     feedback.data(), injectL.data(), injectR.data(),
                                     outputL.data(), outputR.data(),
-                                    0.62f, 0.014f, 0.45f, sseWetL, sseWetR);
+                                    damping.data(), 0.014f, lowDampAmounts.data(), sseWetL, sseWetR);
 
     if (!nearlyEqual(scalarWetL, sseWetL) || !nearlyEqual(scalarWetR, sseWetR) ||
         !compareStates(scalar, sse)) {

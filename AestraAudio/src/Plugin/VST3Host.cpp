@@ -1,8 +1,11 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "Plugin/VST3Host.h"
+#include "Plugin/HostTransport.h"
 
 #include "AestraLog.h"
+#include "Plugin/EditorLoopPump.h"
+#include "Plugin/Vst3ParamBridge.h"
 
 #include <chrono>
 
@@ -25,9 +28,12 @@
 #include "public.sdk/source/vst/hosting/module.h"
 #include "public.sdk/source/vst/hosting/plugprovider.h"
 
+#include <atomic>
 #include <codecvt>
 #include <cstring>
 #include <locale>
+#include <mutex>
+#include <vector>
 
 using namespace Steinberg;
 using namespace Steinberg::Vst;
@@ -40,6 +46,172 @@ struct VST3PluginInstance::ModuleHolder {
 
     VST3::Hosting::Module::Ptr module;
 };
+
+#if defined(_WIN32)
+namespace {
+
+// The host's side of a plugin editor on Windows (V82-H8): only IPlugFrame. A Windows plugin runs its own timers on the
+// window's thread (SetTimer), so there is no run loop to offer; the helper's message pump serves them.
+class WinPlugFrame final : public IPlugFrame {
+public:
+    WinPlugFrame(Aestra::Audio::EditorLoopPump&, std::function<void(int, int)> requestResize)
+        : m_requestResize(std::move(requestResize)) {}
+
+    tresult PLUGIN_API queryInterface(const TUID iid, void** obj) override {
+        if (!obj) return kInvalidArgument;
+        if (FUnknownPrivate::iidEqual(iid, FUnknown::iid) || FUnknownPrivate::iidEqual(iid, IPlugFrame::iid)) {
+            *obj = static_cast<IPlugFrame*>(this);
+            addRef();
+            return kResultOk;
+        }
+        *obj = nullptr;
+        return kNoInterface;
+    }
+    uint32 PLUGIN_API addRef() override { return ++m_refs; }
+    uint32 PLUGIN_API release() override {
+        const uint32 left = --m_refs;
+        if (left == 0) delete this;
+        return left;
+    }
+
+    tresult PLUGIN_API resizeView(IPlugView* view, ViewRect* newSize) override {
+        if (!view || !newSize || m_resizing) return kInvalidArgument;
+        m_resizing = true; // onSize() can make some plugins ask again: answer once
+        if (m_requestResize) m_requestResize(newSize->getWidth(), newSize->getHeight());
+        view->onSize(newSize);
+        m_resizing = false;
+        return kResultOk;
+    }
+
+    void clearRegistrations() {}
+
+private:
+    std::function<void(int, int)> m_requestResize;
+    std::atomic<uint32> m_refs{1};
+    bool m_resizing = false;
+};
+using EmbedPlugFrame = WinPlugFrame;
+
+} // namespace
+#endif
+
+#if defined(__linux__)
+namespace {
+
+// The host's side of a plugin editor on Linux (V82-H3). One object, owned by the instance, answers both questions the
+// editor asks: IPlugFrame ("make my window this big") and Linux::IRunLoop ("call me when this descriptor is readable /
+// every so many milliseconds"). The run loop only records the requests in the EditorLoopPump; the GUI thread that owns
+// the window does the polling. Handlers are held by IPtr inside the pump's callbacks, so one a plugin unregisters from
+// inside another handler is never called after it is gone.
+class X11PlugFrame final : public IPlugFrame, public Linux::IRunLoop {
+public:
+    X11PlugFrame(Aestra::Audio::EditorLoopPump& pump, std::function<void(int, int)> requestResize)
+        : m_pump(pump), m_requestResize(std::move(requestResize)) {}
+    ~X11PlugFrame() { clearRegistrations(); }
+
+    tresult PLUGIN_API queryInterface(const TUID iid, void** obj) override {
+        if (!obj) return kInvalidArgument;
+        if (FUnknownPrivate::iidEqual(iid, FUnknown::iid) || FUnknownPrivate::iidEqual(iid, IPlugFrame::iid)) {
+            *obj = static_cast<IPlugFrame*>(this);
+            addRef();
+            return kResultOk;
+        }
+        if (FUnknownPrivate::iidEqual(iid, Linux::IRunLoop::iid)) {
+            *obj = static_cast<Linux::IRunLoop*>(this);
+            addRef();
+            return kResultOk;
+        }
+        *obj = nullptr;
+        return kNoInterface;
+    }
+    uint32 PLUGIN_API addRef() override { return ++m_refs; }
+    uint32 PLUGIN_API release() override {
+        const uint32 left = --m_refs;
+        if (left == 0) delete this;
+        return left;
+    }
+
+    tresult PLUGIN_API resizeView(IPlugView* view, ViewRect* newSize) override {
+        if (!view || !newSize || m_resizing) return kInvalidArgument;
+        m_resizing = true; // onSize() can make some plugins ask again: answer once
+        if (m_requestResize) m_requestResize(newSize->getWidth(), newSize->getHeight());
+        view->onSize(newSize); // the host window now has this size
+        m_resizing = false;
+        return kResultOk;
+    }
+
+    tresult PLUGIN_API registerEventHandler(Linux::IEventHandler* handler, Linux::FileDescriptor fd) override {
+        if (!handler) return kInvalidArgument;
+        IPtr<Linux::IEventHandler> keep(handler); // addRefs
+        const int token = m_pump.addFd(fd, [keep, fd]() { keep->onFDIsSet(fd); });
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_fdTokens.push_back({handler, token});
+        return kResultOk;
+    }
+    tresult PLUGIN_API unregisterEventHandler(Linux::IEventHandler* handler) override {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        for (auto it = m_fdTokens.begin(); it != m_fdTokens.end();) {
+            if (it->handler == handler) {
+                m_pump.removeFd(it->token);
+                it = m_fdTokens.erase(it);
+            } else {
+                ++it;
+            }
+        }
+        return kResultOk;
+    }
+    tresult PLUGIN_API registerTimer(Linux::ITimerHandler* handler, Linux::TimerInterval milliseconds) override {
+        if (!handler) return kInvalidArgument;
+        IPtr<Linux::ITimerHandler> keep(handler);
+        const int token = m_pump.addTimer(std::chrono::milliseconds(static_cast<long long>(milliseconds)),
+                                          [keep]() { keep->onTimer(); });
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_timerTokens.push_back({handler, token});
+        return kResultOk;
+    }
+    tresult PLUGIN_API unregisterTimer(Linux::ITimerHandler* handler) override {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        for (auto it = m_timerTokens.begin(); it != m_timerTokens.end();) {
+            if (it->handler == handler) {
+                m_pump.removeTimer(it->token);
+                it = m_timerTokens.erase(it);
+            } else {
+                ++it;
+            }
+        }
+        return kResultOk;
+    }
+
+    /// Drop everything the plugin registered (it should have, in removed(); this makes a careless one harmless).
+    void clearRegistrations() {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        for (const auto& entry : m_fdTokens) m_pump.removeFd(entry.token);
+        for (const auto& entry : m_timerTokens) m_pump.removeTimer(entry.token);
+        m_fdTokens.clear();
+        m_timerTokens.clear();
+    }
+
+private:
+    struct FdToken {
+        Linux::IEventHandler* handler;
+        int token;
+    };
+    struct TimerToken {
+        Linux::ITimerHandler* handler;
+        int token;
+    };
+    Aestra::Audio::EditorLoopPump& m_pump;
+    std::function<void(int, int)> m_requestResize;
+    std::mutex m_mutex;
+    std::vector<FdToken> m_fdTokens;
+    std::vector<TimerToken> m_timerTokens;
+    std::atomic<uint32> m_refs{1};
+    bool m_resizing = false;
+};
+using EmbedPlugFrame = X11PlugFrame;
+
+} // namespace
+#endif // __linux__
 
 // Helper for UTF-16 (VST3) to UTF-8 (Aestra) conversion
 static std::string utf16_to_utf8(const Steinberg::Vst::TChar* str) {
@@ -102,7 +274,27 @@ static uint32_t countAudioBusChannels(IComponent* component, BusDirection direct
 // VST3PluginInstance Implementation
 // ============================================================================
 
-VST3PluginInstance::VST3PluginInstance() = default;
+/// What one VST3 instance needs to move parameter values between host, controller and processor.
+struct Vst3ParamState {
+    ParamBridge toProcessor;     ///< values the processor must hear (host sets, window edits)
+    ParamBridge toController;    ///< values the processor reported, for the controller to show
+    HostParameterChanges input;  ///< this block's IParameterChanges, rebuilt every block
+    OutputParameterChanges output;
+    std::mutex listenerMutex;
+    std::function<void(uint32_t, double)> listener;
+    std::unique_ptr<HostComponentHandler> handler;
+    Vst3ParamState()
+        : handler(std::make_unique<HostComponentHandler>(toProcessor, [this](uint32_t id, double v) {
+              std::function<void(uint32_t, double)> call;
+              {
+                  std::lock_guard<std::mutex> lock(listenerMutex);
+                  call = listener;
+              }
+              if (call) call(id, v);
+          })) {}
+};
+
+VST3PluginInstance::VST3PluginInstance() : m_params(std::make_unique<Vst3ParamState>()) {}
 
 VST3PluginInstance::~VST3PluginInstance() {
     unload();
@@ -207,9 +399,20 @@ bool VST3PluginInstance::load(const std::filesystem::path& path, int classIndex)
                     m_controller = editController.take();
                     auto ctrl = static_cast<IEditController*>(m_controller);
                     ctrl->initialize(hostApplication);
+                    // A split plugin's two halves find each other through IConnectionPoint; many (clap-wrapper ones,
+                    // like Surge XT) cannot build an editor until they have been introduced.
+                    auto compPoint = FUnknownPtr<Vst::IConnectionPoint>(comp);
+                    auto ctrlPoint = FUnknownPtr<Vst::IConnectionPoint>(ctrl);
+                    if (compPoint && ctrlPoint) {
+                        compPoint->connect(ctrlPoint);
+                        ctrlPoint->connect(compPoint);
+                    }
                 }
             }
         }
+
+        // The controller's host: edits made in the plugin's window come back through this and reach the processor.
+        if (m_controller) static_cast<IEditController*>(m_controller)->setComponentHandler(m_params->handler.get());
 
         // Get I/O configuration from the real component buses.
         const uint32_t discoveredInputs = countAudioBusChannels(comp, kInput);
@@ -302,6 +505,18 @@ bool VST3PluginInstance::initialize(double sampleRate, uint32_t maxBlockSize) {
         return false;
     }
 
+    // The host turns on the buses it feeds (VST3: activateBus before setActive).
+    // Without the event bus a synth never hears a note: Surge XT and Dexed loaded
+    // and played silence (V82-H7). The main audio buses are usually on by default,
+    // which is why effects worked.
+    if (auto* comp = static_cast<IComponent*>(m_component)) {
+        m_audioInputBuses = comp->getBusCount(kAudio, kInput) > 0 ? 1 : 0;
+        m_audioOutputBuses = comp->getBusCount(kAudio, kOutput) > 0 ? 1 : 0;
+        if (m_audioInputBuses) comp->activateBus(kAudio, kInput, 0, true);
+        if (m_audioOutputBuses) comp->activateBus(kAudio, kOutput, 0, true);
+        if (comp->getBusCount(kEvent, kInput) > 0) comp->activateBus(kEvent, kInput, 0, true);
+    }
+
     // Allocate temp buffers
     m_tempBuffer.resize(maxBlockSize * 4); // Extra space for stereo I/O
 
@@ -324,6 +539,8 @@ void VST3PluginInstance::activate() {
     auto comp = static_cast<IComponent*>(m_component);
     if (comp->setActive(true) == kResultOk) {
         m_active = true;
+        // VST3 asks for setProcessing(true) once active, before the first process call.
+        if (auto* processor = static_cast<IAudioProcessor*>(m_processor)) processor->setProcessing(true);
     }
 }
 
@@ -331,6 +548,7 @@ void VST3PluginInstance::deactivate() {
     if (!m_loaded || !m_active)
         return;
 
+    if (auto* processor = static_cast<IAudioProcessor*>(m_processor)) processor->setProcessing(false);
     auto comp = static_cast<IComponent*>(m_component);
     comp->setActive(false);
     m_active = false;
@@ -373,13 +591,41 @@ void VST3PluginInstance::process(const float* const* inputs, float** outputs, ui
     data.processMode = kRealtime;
     data.symbolicSampleSize = kSample32;
     data.numSamples = numFrames;
-    data.numInputs = 1;
-    data.numOutputs = 1;
+    data.numInputs = m_audioInputBuses;
+    data.numOutputs = m_audioOutputBuses;
     data.inputs = &inputBus;
     data.outputs = &outputBus;
-    data.inputParameterChanges = nullptr;
-    data.outputParameterChanges = nullptr;
-    data.processContext = nullptr;
+    // Parameter values for the processor (host sets and edits from the plugin's window), and its answers back.
+    ParamChange pending[kMaxParamChangesPerBlock];
+    m_params->input.fill(pending, m_params->toProcessor.drain(pending, kMaxParamChangesPerBlock));
+    m_params->output.clear();
+    data.inputParameterChanges = &m_params->input;
+    data.outputParameterChanges = &m_params->output;
+    // Tempo, metre and playhead (HostTransport.h): without them tempo-synced plugins have no tempo and some reset
+    // their own (Vital's "Beats Per Minute" came back 0 after a state reload).
+    ProcessContext context{};
+    const HostTransport transport = HostTransportClock::current();
+    if (transport.valid) {
+        context.state = ProcessContext::kTempoValid | ProcessContext::kTimeSigValid |
+                        ProcessContext::kProjectTimeMusicValid | ProcessContext::kBarPositionValid;
+        if (transport.playing)
+            context.state |= ProcessContext::kPlaying;
+        if (transport.looping && transport.loopEndPpq > transport.loopStartPpq) {
+            context.state |= ProcessContext::kCycleActive | ProcessContext::kCycleValid;
+            context.cycleStartMusic = transport.loopStartPpq;
+            context.cycleEndMusic = transport.loopEndPpq;
+        }
+        context.sampleRate = m_sampleRate;
+        context.projectTimeSamples = transport.samplePosition;
+        context.projectTimeMusic = transport.ppqPosition;
+        context.barPositionMusic = transport.barStartPpq;
+        context.tempo = transport.tempo;
+        context.timeSigNumerator = transport.timeSigNumerator;
+        context.timeSigDenominator = transport.timeSigDenominator;
+        data.processContext = &context;
+    } else {
+        data.processContext = nullptr;
+    }
 
     // MIDI input events
     struct EventList : public IEventList {
@@ -487,6 +733,12 @@ void VST3PluginInstance::process(const float* const* inputs, float** outputs, ui
         return;
     }
 
+    if (m_params->output.getParameterCount() > 0) {
+        ParamChange reported[kMaxParamChangesPerBlock];
+        const size_t n = m_params->output.collect(reported, kMaxParamChangesPerBlock);
+        for (size_t i = 0; i < n; ++i) m_params->toController.push(reported[i].id, reported[i].value);
+    }
+
     auto endTime = std::chrono::high_resolution_clock::now();
     double durationNs = std::chrono::duration<double, std::nano>(endTime - startTime).count();
     const auto durationNsU64 = durationNs > 0.0 ? static_cast<uint64_t>(durationNs) : 0;
@@ -577,6 +829,23 @@ void VST3PluginInstance::setParameter(uint32_t id, float value) {
         return;
     auto ctrl = static_cast<IEditController*>(m_controller);
     ctrl->setParamNormalized(id, value);
+    // The controller alone changes nothing audible: the processor only hears what process() is handed.
+    m_params->toProcessor.push(id, value);
+}
+
+void VST3PluginInstance::setEditListener(std::function<void(uint32_t, double)> listener) {
+    std::lock_guard<std::mutex> lock(m_params->listenerMutex);
+    m_params->listener = std::move(listener);
+}
+
+void VST3PluginInstance::pumpControllerSync() {
+    if (!m_controller) return;
+    auto ctrl = static_cast<IEditController*>(m_controller);
+    ParamChange reported[kMaxParamChangesPerBlock];
+    size_t n;
+    while ((n = m_params->toController.drain(reported, kMaxParamChangesPerBlock)) > 0)
+        for (size_t i = 0; i < n; ++i) ctrl->setParamNormalized(reported[i].id, reported[i].value);
+    if (m_params->handler->takeRestartFlags() & kParamValuesChanged) m_parameterCacheValid = false;
 }
 
 std::string VST3PluginInstance::getParameterDisplay(uint32_t id) const {
@@ -767,7 +1036,13 @@ bool VST3PluginInstance::loadState(const std::vector<uint8_t>& state) {
     } stream(state);
 
     auto component = static_cast<IComponent*>(m_component);
-    return component->setState(&stream) == kResultOk;
+    const bool ok = component->setState(&stream) == kResultOk;
+    // A split plugin's controller (and so its window) learns the processor's state from the same bytes.
+    if (ok && m_controller && m_controller != m_component) {
+        stream.pos = 0;
+        static_cast<IEditController*>(m_controller)->setComponentState(&stream);
+    }
+    return ok;
 }
 
 bool VST3PluginInstance::hasEditor() const {
@@ -804,6 +1079,14 @@ void VST3PluginInstance::closeEditor() {
 
     auto view = static_cast<IPlugView*>(m_plugView);
     view->removed();
+#if defined(__linux__) || defined(_WIN32)
+    if (m_plugFrame) {
+        view->setFrame(nullptr);
+        static_cast<EmbedPlugFrame*>(m_plugFrame)->clearRegistrations();
+        static_cast<EmbedPlugFrame*>(m_plugFrame)->release();
+        m_plugFrame = nullptr;
+    }
+#endif
     view->release();
     m_plugView = nullptr;
     m_editorOpen = false;
@@ -828,6 +1111,66 @@ bool VST3PluginInstance::resizeEditor(int width, int height) {
     auto view = static_cast<IPlugView*>(m_plugView);
     ViewRect rect(0, 0, width, height);
     return view->onSize(&rect) == kResultOk;
+}
+
+bool VST3PluginInstance::canResizeEditor() const {
+    if (!m_plugView)
+        return false;
+    return static_cast<IPlugView*>(m_plugView)->canResize() == kResultTrue;
+}
+
+bool VST3PluginInstance::openEditorEmbedded(const std::function<std::uintptr_t(int, int, bool)>& makeWindow,
+                                            Aestra::Audio::EditorLoopPump& pump,
+                                            std::function<void(int, int)> requestResize) {
+#if defined(__linux__) || defined(_WIN32)
+#if defined(_WIN32)
+    const FIDString platformType = kPlatformTypeHWND;
+#else
+    const FIDString platformType = kPlatformTypeX11EmbedWindowID;
+#endif
+    if (!m_controller || m_editorOpen || !makeWindow)
+        return false;
+
+    auto* controller = static_cast<IEditController*>(m_controller);
+    IPlugView* view = controller->createView(ViewType::kEditor);
+    if (!view)
+        return false;
+    if (view->isPlatformTypeSupported(platformType) != kResultTrue) {
+        view->release();
+        return false;
+    }
+
+    ViewRect rect;
+    int width = 800, height = 600; // only if the plugin will not say
+    if (view->getSize(&rect) == kResultOk && rect.getWidth() > 0 && rect.getHeight() > 0) {
+        width = rect.getWidth();
+        height = rect.getHeight();
+    }
+    const std::uintptr_t window = makeWindow(width, height, view->canResize() == kResultTrue);
+    if (window == 0) {
+        view->release();
+        return false;
+    }
+
+    auto* frame = new EmbedPlugFrame(pump, std::move(requestResize)); // one reference: ours
+    view->setFrame(frame);
+    if (view->attached(reinterpret_cast<void*>(window), platformType) != kResultOk) {
+        view->setFrame(nullptr);
+        frame->clearRegistrations();
+        frame->release();
+        view->release();
+        return false; // the caller made the window, so the caller takes it down
+    }
+    m_plugView = view;
+    m_plugFrame = frame;
+    m_editorOpen = true;
+    return true;
+#else
+    (void)makeWindow;
+    (void)pump;
+    (void)requestResize;
+    return false;
+#endif
 }
 
 uint32_t VST3PluginInstance::getLatencySamples() const {

@@ -9,6 +9,7 @@
 #include "MiniAudioDecoder.h"
 #include "PluginManager.h"
 #include "Music/ScaleContext.h"
+#include "Models/LegacyTrackRepair.h"
 #include <array>
 #include <atomic>
 #include <algorithm>
@@ -2640,16 +2641,15 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             }
         }
 
-        // PHASE 7c: Restore Track ownership (FD-14). The "tracks" section
-        // restores exact stable ids; legacy files (no section) migrate
-        // deterministically — one Track per lane in lane order, channel =
-        // the lane's OWN stored channel id (an explicit per-lane file field,
-        // never a positional inference), master when none exists.
+        // PHASE 7c: Restore Track ownership (FD-14). The "tracks" section restores exact stable ids, after the #866
+        // repair of pre-#864 doubled records (LegacyTrackRepair.h). Files with no section migrate one Track per lane,
+        // channel = the lane's OWN stored channel id (never positional), master when none exists.
         {
             const auto laneIds = trackManager->getPlaylistModel().getLaneIDs();
 
             if (root.has("tracks") && root["tracks"].isArray()) {
                 const JSON& tj = root["tracks"];
+                std::vector<Track> records;
                 for (size_t t = 0; t < tj.size(); ++t) {
                     if (!tj[t].isObject()) {
                         continue;
@@ -2682,13 +2682,18 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             }
                         }
                     }
-                    if (!trackManager->restoreTrack(track)) {
-                        warningLimiter.warning(
-                            ProjectLoadWarningCategory::EffectChain,
-                            "[ProjectLoad] Failed to restore track '" + track.name + "' — skipped.",
-                            "[ProjectLoad] Additional track restore failures suppressed.");
-                    }
+                    records.push_back(std::move(track));
                 }
+                const auto fixed = repairLegacyTrackRecords(records, [&](const PlaylistLaneID& id) {
+                    return trackManager->getPlaylistModel().getLane(id) != nullptr;
+                });
+                if (fixed.channelsMerged + fixed.deadDropped > 0) // saving keeps the repair, so ask for a save
+                    result.migrationOutcome = combineMigrationOutcome(result.migrationOutcome, MigrationOutcome::Transformed);
+                for (const Track& track : records)
+                    if (!trackManager->restoreTrack(track))
+                        warningLimiter.warning(ProjectLoadWarningCategory::EffectChain,
+                                               "[ProjectLoad] Failed to restore track '" + track.name + "' — skipped.",
+                                               "[ProjectLoad] Additional track restore failures suppressed.");
             }
 
             // Migration: lanes without ownership get one deterministic Track

@@ -63,7 +63,7 @@ struct Fixture {
 
     // A right-drag in the ruler: the ruler zone, as a user makes it.
     void makeRulerZone() {
-        const float y = kTimelineMinimapHeight + 6.0f;
+        const float y = kTimelineRulerTop + 6.0f;
         using T = AestraUI::NUIMouseEventType;
         const auto right = AestraUI::NUIMouseButton::Right;
         ui->onMouseEvent(mouse(T::Down, right, gridX + 100.0f, y));
@@ -114,6 +114,18 @@ void testOtherToolsDoNotStartTheGridMarquee() {
     check(f.ui->hasRulerSelection(), "and it leaves the zone alone");
 }
 
+// The app starts on Draw, not Select. With nothing to stamp, Draw does what Select does on empty grid; with a clip in hand
+// it keeps the click for stamping.
+void testDrawIsTheDefaultAndFallsBackToTheBandWhenItHasNothingToStamp() {
+    Fixture f;
+    check(f.ui->getCurrentTool() == PlaylistTool::Paint, "the Track Manager starts on Draw");
+    check(!f.ui->canPaintClip(), "a fresh project has nothing to stamp");
+    check(f.ui->beginGridMarquee(f.gridPress()), "so a press on empty grid still starts the selection band");
+    Fixture g; // a band is already running in f, so Select gets its own
+    g.ui->setCurrentTool(PlaylistTool::Select);
+    check(g.ui->beginGridMarquee(g.gridPress()), "and Select still does");
+}
+
 // Esc is the other exit. It used to require a clip or lane selection, so a lone zone survived it.
 void testEscClearsALoneRulerZone() {
     Fixture f;
@@ -132,6 +144,7 @@ int main() {
     testClickOnEmptyGridClearsTheRulerZone();
     testModifiedPressKeepsTheZone();
     testOtherToolsDoNotStartTheGridMarquee();
+    testDrawIsTheDefaultAndFallsBackToTheBandWhenItHasNothingToStamp();
     testEscClearsALoneRulerZone();
     if (g_failures == 0) {
         std::cout << "Timeline grid selection tests passed\n";

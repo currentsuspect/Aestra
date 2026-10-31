@@ -127,6 +127,7 @@ if(EXISTS "${VST3_SDK_DIR}/pluginterfaces/base/funknown.cpp"
         ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/pluginterfacesupport.cpp
         ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/plugprovider.cpp
         ${VST3_SDK_DIR}/public.sdk/source/common/memorystream.cpp
+        ${VST3_SDK_DIR}/public.sdk/source/common/commoniids.cpp
         ${VST3_SDK_DIR}/public.sdk/source/vst/utility/stringconvert.cpp
         ${VST3_SDK_DIR}/public.sdk/source/common/commonstringconvert.cpp
         ${VST3_SDK_DIR}/public.sdk/source/vst/vstinitiids.cpp
@@ -192,6 +193,10 @@ endif()
 set(AESTRA_AUDIO_CORE_SOURCES
     # Core
     src/Core/AudioEngine.cpp
+    src/Core/AudioEngineBlockSplit.cpp
+    src/Core/AudioEngineScheduling.cpp
+    src/Core/AudioEngineAudition.cpp
+    src/Core/ProjectTempo.cpp
     src/Core/ClipRenderKernel.cpp
     src/Core/AudioDeviceManager.cpp
     src/Core/AutosaveManager.cpp
@@ -212,6 +217,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     
     # Models
     src/Models/TrackManager.cpp
+    src/Models/RecordingTakeStream.cpp
     src/Models/ClipPrefilterService.cpp
     src/Models/PlaylistModel.cpp
     src/Models/UnitManager.cpp
@@ -235,6 +241,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/IO/AudioExporter.cpp
     src/IO/BounceInPlace.cpp
     src/IO/StemExport.cpp
+    src/IO/EncodedAudioWriter.cpp
     src/IO/MiniAudioDecoder.cpp
     src/IO/StreamingDecoder.cpp
     src/IO/WaveformCache.cpp
@@ -273,6 +280,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/MuseGrammar.cpp
     src/Commands/CommandParser.cpp
     src/Commands/CommandRegistry.cpp
+    src/Commands/PianoRollVerbs.cpp
     src/Commands/SessionLog.cpp
     src/Commands/MuseStubs.cpp
     src/Commands/HostVerbRegistry.cpp
@@ -301,6 +309,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Plugin/PluginManager.cpp
     src/Plugin/PluginFactory.cpp
     src/Plugin/OutOfProcessPluginInstance.cpp
+    src/Plugin/OutOfProcessPluginInstanceRt.cpp
     src/Plugin/InternalPluginRegistry.cpp
     src/Plugin/BuiltInPlugins.cpp
     src/Plugin/SamplerPlugin.cpp
@@ -630,6 +639,16 @@ endif()
 if(AESTRA_HAS_VST3)
     target_compile_definitions(AestraPluginHost PRIVATE AESTRA_HAS_VST3)
     target_link_libraries(AestraPluginHost PRIVATE AestraAudioCore)
+endif()
+
+# V82-H3: plugin editor windows on Linux are X11 windows the helper owns (see HelperEditorHost.h), VST3 and CLAP alike.
+if(UNIX AND NOT APPLE)
+    find_package(X11)
+    if(X11_FOUND)
+        target_compile_definitions(AestraPluginHost PRIVATE AESTRA_HAS_X11)
+        target_include_directories(AestraPluginHost PRIVATE ${X11_INCLUDE_DIR})
+        target_link_libraries(AestraPluginHost PRIVATE ${X11_LIBRARIES})
+    endif()
 endif()
 
 # ENFORCEMENT: AestraAudioCore MUST NOT link Windows libraries

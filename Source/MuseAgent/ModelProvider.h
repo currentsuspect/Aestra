@@ -73,6 +73,11 @@ struct ModelResponse {
     Usage usage;
     StopReason stopReason = StopReason::Error;
     std::string error; // set when stopReason == Error
+    // Structured failure detail, so the loop can decide about retrying without
+    // parsing the message string.
+    int httpStatus = 0;           // non-200 status, 0 if none
+    int retryAfterSeconds = -1;   // server's Retry-After in seconds, -1 if absent
+    bool transportFailure = false; // never got an HTTP response (connect, DNS, timeout)
 };
 
 class ModelProvider {

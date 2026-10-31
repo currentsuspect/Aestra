@@ -42,6 +42,7 @@ struct Rig {
     std::shared_ptr<UnitRow> row;
     Aestra::Audio::PatternID patternId{};
     Aestra::Audio::PatternID opened{};
+    Aestra::Audio::UnitID openedUnit = 0;
     bool openedCalled = false;
 
     explicit Rig(Aestra::Audio::UnitType type) {
@@ -56,7 +57,7 @@ struct Rig {
         if (auto* u = units.getUnit(id)) u->defaultPatternId = patternId;
         row = std::make_shared<UnitRow>(tm, units, id, patternId);
         row->setStepCount(16);
-        row->setOnOpenPatternEditor([this](Aestra::Audio::PatternID pid) { opened = pid; openedCalled = true; });
+        row->setOnOpenPatternEditor([this](Aestra::Audio::PatternID pid, Aestra::Audio::UnitID uid) { opened = pid; openedUnit = uid; openedCalled = true; });
         row->updateState();
         root->setBounds({0, 0, 700, 400});
         root->addChild(row);
@@ -94,6 +95,7 @@ int main() {
         if (menu && idx >= 0) {
             if (auto cb = menu->getItem(idx)->getOnClick()) cb();
             check(r.openedCalled && r.opened == r.patternId, "choosing it opens the unit's own pattern in the piano roll");
+            check(r.openedUnit == r.row->getUnitId(), "and names the row's unit, so the piano roll edits that unit's notes");
         }
     }
     {

@@ -184,6 +184,7 @@ void TrackManagerUI::refreshTracks() {
     // row first, then (when expanded) the track's owned lanes nested directly
     // under it. Collapsed tracks show only the primary row; unowned lanes
     // stay in playlist order.
+    m_foldedEmptyTracks = 0;
     std::vector<PlaylistLaneID> orderedLaneIds;
     orderedLaneIds.reserve(laneCount);
     std::unordered_set<uint64_t> seenTracks;
@@ -205,6 +206,10 @@ void TrackManagerUI::refreshTracks() {
             continue;
         }
         seenTracks.insert(track->trackId);
+        if (!m_showEmptyTracks && isFoldableEmptyLane(*lane, track->laneIds.size())) {
+            ++m_foldedEmptyTracks; // V82-T2: folded into the last row
+            continue;
+        }
         orderedLaneIds.push_back(laneId);
         if (!isTrackCollapsed(track->trackId)) {
             for (const auto& owned : track->laneIds) {
@@ -317,8 +322,27 @@ void TrackManagerUI::refreshTracks() {
         // Pass platform bridge for cursor capture (volume knob)
         trackUI->setPlatformBridge(m_window);
 
+        // V82-T1: the lane's automation row sits directly under it when shown; when hidden, a lane that holds
+        // points marks its name, and a click on the mark brings the row back.
+        const bool automationShown = isAutomationLaneShown(laneId);
+        const bool hasPoints = std::any_of(lane->automationCurves.begin(), lane->automationCurves.end(),
+                                           [](const AutomationCurve& c) { return !c.getPoints().empty(); });
+        trackUI->setHasHiddenAutomation(!automationShown && hasPoints);
+        trackUI->setOnShowAutomationRequested(
+            [this, laneId]() { showAutomationLane(laneId, automationLaneTarget(laneId), true); });
+        trackUI->setOnEditedAutomationTargetChanged([this, laneId](AutomationTarget changed) {
+            auto& view = automationLaneView(laneId);
+            view.target = changed;
+            view.chosen = true;
+        });
+
         m_trackUIComponents.push_back(trackUI);
         addChild(trackUI);
+        if (automationShown) {
+            auto automationRow = makeAutomationRow(trackUI, automationLaneTarget(laneId));
+            m_trackUIComponents.push_back(automationRow);
+            addChild(automationRow);
+        }
     } // Close lane loop
 
     std::vector<PlaylistLaneID> validLaneIds;
@@ -353,6 +377,9 @@ void TrackManagerUI::refreshTracks() {
     invalidateCache(); // Invalidate cache when tracks refreshed
 
     Log::info("refreshTracks: completed, created " + std::to_string(m_trackUIComponents.size()) + " TrackUIs");
+    // The row count just changed (and with it where the folded empty-track row sits, V82-T2): place the rows now
+    // rather than on the next resize, which a refresh from paint may never get.
+    layoutTracks();
 }
 
 uint32_t TrackManagerUI::resolveLaneToChannelIndex(const Audio::PlaylistLane* lane, uint32_t fallbackIndex) const {
@@ -403,7 +430,18 @@ void TrackManagerUI::revealLane(PlaylistLaneID laneId) {
     refreshTracks();
     for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
         if (m_trackUIComponents[i] && m_trackUIComponents[i]->getLaneId() == laneId) {
-            setVerticalScroll(static_cast<float>(i) * (m_trackHeight + m_trackSpacing));
+            // Bring the row into view only if it is not already, and by the least that does it. It used to put the row at the
+            // top of the screen every time, so finishing a recording threw the whole timeline to that lane (owner,
+            // 2026-10-21: "when recording on a lane it moves to that lane"; it already sits where you were looking).
+            const float rowHeight = static_cast<float>(m_trackHeight + m_trackSpacing);
+            const float rowTop = static_cast<float>(i) * rowHeight;
+            const float rowBottom = rowTop + static_cast<float>(m_trackHeight);
+            const float viewHeight = currentTimelineLayout().rows.height;
+            if (rowTop < m_scrollOffset) {
+                setVerticalScroll(rowTop);
+            } else if (rowBottom > m_scrollOffset + viewHeight) {
+                setVerticalScroll(rowBottom - viewHeight);
+            }
             break;
         }
     }
@@ -562,6 +600,13 @@ void TrackManagerUI::layoutTracks() {
                                           static_cast<float>(m_trackSpacing), m_trackUIComponents.size(),
                                           m_scrollOffset, trace);
     AestraUI::Layout::finishLayoutPass(trace);
+    // V82-T2: the folded empty tracks take the row after the last track, the row where a drop makes a new track.
+    {
+        const auto withFold =
+            arrangeTimelineRows(layout, static_cast<float>(m_trackHeight), static_cast<float>(m_trackSpacing),
+                                m_trackUIComponents.size() + 1, m_scrollOffset, nullptr);
+        m_foldedRowRect = withFold.empty() ? AestraUI::NUIRect{} : toWindow(withFold.back().rect);
+    }
     for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
         auto trackUI = m_trackUIComponents[i];
         if (!trackUI)
@@ -580,23 +625,6 @@ void TrackManagerUI::layoutTracks() {
 
 void TrackManagerUI::updateTrackPositions() {
     layoutTracks();
-}
-void TrackManagerUI::setPlaylistMode(PlaylistMode mode) {
-    if (m_playlistMode != mode) {
-        m_playlistMode = mode;
-
-        // Propagate to all tracks
-        for (auto& trackUI : m_trackUIComponents) {
-            trackUI->setPlaylistMode(mode);
-        }
-
-        // Invalidate cache since rendering changes significantly
-        invalidateCache();
-        setDirty(true);
-
-        Log::info("[TrackManagerUI] Mode changed to: " +
-                  std::string(mode == PlaylistMode::Clips ? "Clips" : "Automation"));
-    }
 }
 
 // Pattern Playback Mode (Arsenal)
@@ -850,17 +878,13 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
         });
         menu->addSeparator();
 
-        // V8-A3: choose what this lane's automation edits. Choosing shows the
-        // automation view; the curve itself is created by its first point.
+        // V8-A3 / V82-T1: choose what this lane's automation edits. Choosing opens its automation row under
+        // the track (other tracks stay as they are); the curve itself is created by its first point.
         for (const auto& [label, target] : {std::pair{"Automate Volume", AutomationTarget::Volume},
                                             std::pair{"Automate Pan", AutomationTarget::Pan}}) {
-            const bool current =
-                m_playlistMode == PlaylistMode::Automation && selectedTrack->getEditedAutomationTarget() == target;
+            const bool current = isAutomationLaneShown(laneId) && automationLaneTarget(laneId) == target;
             menu->addRadioItem(label, "automationTarget", current, [this, laneId, target = target]() {
-                for (const auto& trackUI : m_trackUIComponents) {
-                    if (trackUI && trackUI->getLaneId() == laneId) trackUI->setEditedAutomationTarget(target);
-                }
-                setPlaylistMode(PlaylistMode::Automation);
+                showAutomationLane(laneId, target);
                 invalidateCache();
             });
         }
@@ -883,6 +907,7 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
         if (onSendToAudition)
             onSendToAudition();
     });
+    addSendSelectionToAudition(*menu);
     if (routingChannel != 0 && m_onShowRoutingGraph)
         menu->addItem("Show in Routing Graph", [this, routingChannel]() { m_onShowRoutingGraph(routingChannel); });
     menu->addSeparator();
@@ -898,6 +923,13 @@ void TrackManagerUI::openTrackContextMenu(const ::AestraUI::NUIPoint& position,
     }
 
     attachAndShowContextMenu(this, menu, position);
+}
+
+void TrackManagerUI::addSendSelectionToAudition(AestraUI::NUIContextMenu& menu) {
+    if (!m_hasRulerSelection || !m_onSendSelectionToAudition) return;
+    menu.addItem("Send Selection to Audition", [this]() {
+        if (m_onSendSelectionToAudition) m_onSendSelectionToAudition(m_loopStartBeat, m_loopEndBeat);
+    });
 }
 
 void TrackManagerUI::deleteLane(PlaylistLaneID laneId) {

@@ -24,7 +24,9 @@ using SocketHandle = int;
 static constexpr SocketHandle kInvalidSocket = -1;
 #endif
 
+#include <atomic>
 #include <chrono>
+#include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -37,6 +39,12 @@ using Aestra::Audio::TrackManager;
 using Aestra::JSON;
 
 namespace {
+
+#if defined(MSG_NOSIGNAL)
+constexpr int kNoSignal = MSG_NOSIGNAL; // sending to a server-closed client must not kill the test
+#else
+constexpr int kNoSignal = 0;
+#endif
 
 int g_failures = 0;
 
@@ -80,7 +88,7 @@ void sendAll(SocketHandle sock, const std::string& data) {
 #else
                               data.size() - sent,
 #endif
-                              0);
+                              kNoSignal);
         if (n <= 0) return;
         sent += static_cast<size_t>(n);
     }
@@ -114,6 +122,81 @@ std::string pumpAndRead(MuseSocketServer& server, MuseService& service, SocketHa
         }
     }
     return received;
+}
+
+void closeClient(SocketHandle sock) {
+#ifdef _WIN32
+    ::closesocket(sock);
+#else
+    ::close(sock);
+#endif
+}
+
+// A client with a tiny receive buffer, so a handful of unread responses fill
+// the kernel path and the server's send() has nowhere to go.
+SocketHandle connectLoopbackSmallRcvBuf(uint16_t port) {
+#ifdef _WIN32
+    WSADATA data{};
+    ::WSAStartup(MAKEWORD(2, 2), &data);
+#endif
+    SocketHandle sock = ::socket(AF_INET, SOCK_STREAM, 0);
+    if (sock == kInvalidSocket) return kInvalidSocket;
+    int rcvbuf = 4096;
+    ::setsockopt(sock, SOL_SOCKET, SO_RCVBUF, reinterpret_cast<const char*>(&rcvbuf),
+                 sizeof(rcvbuf));
+    sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_port = htons(port);
+    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    if (::connect(sock, reinterpret_cast<sockaddr*>(&address), sizeof(address)) != 0) {
+        closeClient(sock);
+        return kInvalidSocket;
+    }
+    return sock;
+}
+
+// Non-blocking send of as much as the kernel takes; never parks the test.
+size_t trySend(SocketHandle sock, const std::string& data) {
+#ifdef _WIN32
+    u_long nonBlocking = 1;
+    ::ioctlsocket(sock, FIONBIO, &nonBlocking);
+    const auto n = ::send(sock, data.data(), static_cast<int>(data.size()), 0);
+#else
+    const auto n = ::send(sock, data.data(), data.size(), MSG_DONTWAIT | MSG_NOSIGNAL);
+#endif
+    return n > 0 ? static_cast<size_t>(n) : 0;
+}
+
+// True once the server has closed this client (recv returns 0 or an error
+// other than "would block").
+bool serverClosed(SocketHandle sock) {
+    char chunk[4096];
+#ifdef _WIN32
+    u_long nonBlocking = 1;
+    ::ioctlsocket(sock, FIONBIO, &nonBlocking);
+    const auto n = ::recv(sock, chunk, sizeof(chunk), 0);
+    if (n == 0) return true;
+    return n < 0 && ::WSAGetLastError() != WSAEWOULDBLOCK;
+#else
+    const auto n = ::recv(sock, chunk, sizeof(chunk), MSG_DONTWAIT);
+    if (n == 0) return true;
+    return n < 0 && errno != EAGAIN && errno != EWOULDBLOCK;
+#endif
+}
+
+// Run stop() on a helper thread. A hang must fail the test, not hang it.
+bool stopsWithin(MuseSocketServer& server, int timeoutMs) {
+    auto done = std::make_shared<std::atomic<bool>>(false);
+    std::thread([&server, done]() {
+        server.stop();
+        done->store(true);
+    }).detach();
+    const auto deadline =
+        std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
+    while (std::chrono::steady_clock::now() < deadline && !done->load()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    return done->load();
 }
 
 } // namespace
@@ -178,14 +261,89 @@ int main() {
               second.find("\"id\": 9") != std::string::npos,
           "second client gets its own response");
 
-#ifdef _WIN32
-    ::closesocket(client);
-    ::closesocket(client2);
-#else
-    ::close(client);
-    ::close(client2);
-#endif
-    server.stop();
+    // --- Backpressure (#1271): a flood never runs in one frame, order holds. ---
+    SocketHandle flooder = connectLoopback(server.port());
+    constexpr int kFlood = 200;
+    std::string flood;
+    for (int i = 1; i <= kFlood; ++i) {
+        flood += "{\"id\":" + std::to_string(1000 + i) + ",\"verb\":\"list_tracks\"}\n";
+    }
+    sendAll(flooder, flood);
+    std::this_thread::sleep_for(std::chrono::milliseconds(400)); // let the IO thread queue it
+    const size_t firstFrame = server.processPending(service);
+    check(firstFrame > 0 && firstFrame <= 64, "one frame handles at most 64 requests (got " +
+                                                  std::to_string(firstFrame) + ")");
+    const std::string floodReplies = pumpAndRead(server, service, flooder, kFlood, 10000);
+    {
+        int next = 1001;
+        bool ordered = true;
+        size_t pos = 0;
+        while (pos < floodReplies.size()) {
+            const size_t nl = floodReplies.find('\n', pos);
+            if (nl == std::string::npos) break;
+            JSON line = JSON::parse(floodReplies.substr(pos, nl - pos));
+            if (static_cast<int>(line["id"].asNumber()) != next++) ordered = false;
+            pos = nl + 1;
+        }
+        check(ordered && next == 1001 + kFlood, "every flooded request answered, in order");
+    }
+    closeClient(flooder);
+
+    // --- Backpressure (#1265): a client that never reads cannot wedge the server. ---
+    // Make responses sizeable so unread output outgrows the 1 MiB backlog cap.
+    for (int i = 0; i < 40; ++i) {
+        sendAll(client2, "{\"id\":" + std::to_string(50 + i) +
+                             ",\"verb\":\"add_track\",\"args\":{\"name\":\"Padding track " +
+                             std::to_string(i) + "\"}}\n");
+    }
+    pumpAndRead(server, service, client2, 40);
+
+    SocketHandle stuck = connectLoopbackSmallRcvBuf(server.port());
+    check(stuck != kInvalidSocket, "non-reading client connects");
+    std::string stuckRequest = "{\"id\":7,\"verb\":\"list_tracks\"}\n";
+    bool stuckDropped = false;
+    bool otherClientServed = true;
+    const auto stuckDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(20);
+    int probeId = 5000;
+    while (std::chrono::steady_clock::now() < stuckDeadline && !stuckDropped) {
+        for (int i = 0; i < 20; ++i) trySend(stuck, stuckRequest);
+        server.processPending(service);
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        // Probe: the well-behaved client must keep getting answers meanwhile.
+        if (probeId % 5 == 0) {
+            const std::string probe = "{\"id\":" + std::to_string(probeId) +
+                                      ",\"verb\":\"get_session_state\"}\n";
+            sendAll(client2, probe);
+            const std::string reply = pumpAndRead(server, service, client2, 1, 3000);
+            if (reply.find(std::to_string(probeId)) == std::string::npos) otherClientServed = false;
+        }
+        ++probeId;
+        // serverClosed() reads, which would also drain the buffer; that is the
+        // point: only a server-side close ends the stream with 0/error, and
+        // the reader below only runs once the backlog has been given time to build.
+        if (probeId > 5000 + 60) {
+            // Stop sending, then drain: a capped-and-dropped client sees EOF.
+            const auto drainDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+            while (std::chrono::steady_clock::now() < drainDeadline) {
+                server.processPending(service);
+                if (serverClosed(stuck)) { stuckDropped = true; break; }
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            }
+            break;
+        }
+    }
+    check(otherClientServed, "other client keeps being served while one never reads");
+    check(stuckDropped, "client whose unread output exceeds the backlog cap is disconnected");
+
+    // The stuck client is still connected (and not reading) when stop() runs.
+    check(stopsWithin(server, 3000), "stop() returns promptly with a non-reading client attached");
+    closeClient(stuck);
+    closeClient(client);
+    closeClient(client2);
+    if (server.isRunning()) {
+        std::cout << "stop() hung; aborting\n";
+        std::_Exit(1);
+    }
     check(!server.isRunning(), "server stops cleanly");
 
     std::cout << (g_failures == 0 ? "ALL PASSED" : "FAILURES: " + std::to_string(g_failures))

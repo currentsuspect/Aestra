@@ -1079,7 +1079,7 @@ void AestraEQEditor::syncBandsFromPlugin() {
         if (disabledBand == m_bands.end())
             return;
 
-        constexpr uint32_t kInvalidBandSlot = static_cast<uint32_t>(-1);
+        static constexpr uint32_t kInvalidBandSlot = static_cast<uint32_t>(-1); // static: MSVC will not capture it
         const auto slotForBandIndex = [this](int bandIndex) {
             return bandIndex >= 0 && bandIndex < static_cast<int>(m_bands.size())
                        ? m_bands[static_cast<size_t>(bandIndex)].slotIndex
@@ -3312,7 +3312,7 @@ void AestraEQEditor::analyzerWorkerMain() {
         auto eq = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraEQ>(m_instance);
         const double sr = eq ? std::max(1.0, eq->getAnalyzerSampleRate()) : 48000.0;
         const float analyzerTilt = analyzerTiltDbPerOct();
-        constexpr size_t kBins = 160;
+        static constexpr size_t kBins = 160; // static: MSVC will not capture it as a template argument
         const auto computeMagnitudes =
             [&](const std::array<float, Aestra::Audio::Plugins::AestraEQ::kAnalyzerWindowSize>& input) {
                 std::array<float, kBins> mags{};

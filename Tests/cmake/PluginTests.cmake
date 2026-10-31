@@ -26,6 +26,17 @@ target_include_directories(AestraEQTest PRIVATE
 add_test(NAME AestraEQTest COMMAND AestraEQTest)
 set_tests_properties(AestraEQTest PROPERTIES LABELS "audio;plugins;eq;contract:audio")
 
+# A band swept while audio plays must not spike (owner report, 26 Oct).
+add_executable(AestraEQSweepTest AestraAudio/AestraEQSweepTest.cpp)
+target_link_libraries(AestraEQSweepTest PRIVATE AestraAudio)
+target_include_directories(AestraEQSweepTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraEQSweepTest COMMAND AestraEQSweepTest)
+set_tests_properties(AestraEQSweepTest PROPERTIES LABELS "audio;plugins;eq;contract:audio")
+
 # Aestra EQ Measurement Test
 add_executable(AestraEQMeasurementTest AestraAudio/AestraEQMeasurementTest.cpp)
 target_link_libraries(AestraEQMeasurementTest PRIVATE AestraAudio)
@@ -245,6 +256,61 @@ target_include_directories(EffectChainCrashedPluginStateTest PRIVATE
 add_test(NAME EffectChainCrashedPluginStateTest COMMAND EffectChainCrashedPluginStateTest)
 set_tests_properties(EffectChainCrashedPluginStateTest PROPERTIES LABELS "audio;plugins;serialization;regression;contract:durability")
 
+# The run loop bookkeeping behind plugin editors on Linux (V82-H3): fds and timers a VST3/CLAP editor asks the host for.
+if(UNIX)
+    add_executable(EditorLoopPumpTest AestraAudio/EditorLoopPumpTest.cpp)
+    target_include_directories(EditorLoopPumpTest PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/include)
+    add_test(NAME EditorLoopPumpTest COMMAND EditorLoopPumpTest)
+    set_tests_properties(EditorLoopPumpTest PROPERTIES LABELS "audio;plugins;editor;regression;contract:plugins")
+endif()
+
+# The helper's hand-copied CLAP ABI against the SDK's own headers: a drift is a build failure here (V82-H1). Every
+# platform: Windows' LLP64 is where unsigned long and pointer sizes part (V82-H8).
+if(EXISTS ${CMAKE_SOURCE_DIR}/AestraAudio/External/clap/include/clap/clap.h)
+    add_executable(ClapAbiMirrorLayoutTest AestraAudio/ClapAbiMirrorLayoutTest.cpp)
+    target_include_directories(ClapAbiMirrorLayoutTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/src/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraAudio/External/clap/include)
+    add_test(NAME ClapAbiMirrorLayoutTest COMMAND ClapAbiMirrorLayoutTest)
+    set_tests_properties(ClapAbiMirrorLayoutTest PROPERTIES LABELS "audio;plugins;clap;regression;contract:plugins")
+endif()
+
+# The helper's SCANALL lists every plugin in a CLAP bundle (V82-H6); the fixture bundle holds three.
+if(UNIX AND TARGET AestraPluginHost AND EXISTS ${CMAKE_SOURCE_DIR}/AestraAudio/External/clap/include/clap/clap.h)
+    add_library(ClapMultiPluginFixture MODULE AestraAudio/fixtures/ClapMultiPlugin.cpp)
+    target_include_directories(ClapMultiPluginFixture PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/External/clap/include)
+    set_target_properties(ClapMultiPluginFixture PROPERTIES PREFIX "" SUFFIX ".clap")
+    add_executable(ClapScanAllTest AestraAudio/ClapScanAllTest.cpp)
+    target_compile_definitions(ClapScanAllTest PRIVATE
+        HELPER_PATH="$<TARGET_FILE:AestraPluginHost>"
+        FIXTURE_PATH="$<TARGET_FILE:ClapMultiPluginFixture>")
+    add_dependencies(ClapScanAllTest AestraPluginHost ClapMultiPluginFixture)
+    add_test(NAME ClapScanAllTest COMMAND ClapScanAllTest)
+    set_tests_properties(ClapScanAllTest PROPERTIES LABELS "audio;plugins;clap;regression;contract:plugins")
+endif()
+
+# The road a parameter value takes to a VST3 processor, and back from the plugin's own window (V82-H4/H5).
+if(EXISTS ${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces/base/funknown.cpp)
+    add_executable(Vst3ParamBridgeTest AestraAudio/Vst3ParamBridgeTest.cpp)
+    target_link_libraries(Vst3ParamBridgeTest PRIVATE AestraAudioCore)
+    target_include_directories(Vst3ParamBridgeTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk)
+    add_test(NAME Vst3ParamBridgeTest COMMAND Vst3ParamBridgeTest)
+    set_tests_properties(Vst3ParamBridgeTest PROPERTIES LABELS "audio;plugins;parameters;regression;contract:plugins")
+endif()
+
+# A plugin's own latency can change after it loads (V82-H2): the chain announces it so delay compensation is re-solved.
+add_executable(EffectChainLatencyRefreshTest AestraAudio/EffectChainLatencyRefreshTest.cpp)
+target_link_libraries(EffectChainLatencyRefreshTest PRIVATE AestraAudio)
+target_include_directories(EffectChainLatencyRefreshTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME EffectChainLatencyRefreshTest COMMAND EffectChainLatencyRefreshTest)
+set_tests_properties(EffectChainLatencyRefreshTest PROPERTIES LABELS "audio;plugins;pdc;regression;contract:plugins")
+
 # Plugin-instance identity must survive chain reordering (#667) — automation
 # addresses the instance a curve was drawn for, never the position it occupied.
 add_executable(EffectChainInstanceIdentityTest AestraAudio/EffectChainInstanceIdentityTest.cpp)
@@ -400,3 +466,108 @@ add_test(NAME InternalPluginBaseStatePolicyTest COMMAND InternalPluginBaseStateP
 set_tests_properties(InternalPluginBaseStatePolicyTest PROPERTIES
     LABELS "audio;plugins;serialization;contract:durability"
     TIMEOUT 120)
+
+# The oversampler FIR was rewritten to sum with SSE2 instead of a serial
+# accumulator chain. The kernel did not change, only the order of the sums —
+# so the test carries its own copy of the original scalar implementation and
+# compares the two sample by sample, plus the round-trip error figure the
+# kernel was designed for.
+add_executable(OversamplerParityTest
+    AestraAudio/OversamplerParityTest.cpp
+)
+target_link_libraries(OversamplerParityTest PRIVATE AestraAudio)
+target_include_directories(OversamplerParityTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME OversamplerParityTest COMMAND OversamplerParityTest)
+set_tests_properties(OversamplerParityTest PROPERTIES
+    LABELS "audio;dsp;oversampling;regression;contract:audio"
+    TIMEOUT 120)
+
+# The true-peak meter's polyphase coefficients are stored transposed now, so
+# one 4-wide accumulator holds all four phase sums at once. The tap order is
+# unchanged, so the peaks must come out BIT-IDENTICAL -- this test holds a
+# copy of the original scalar implementation and compares them exactly.
+add_executable(TruePeakMeterParityTest
+    AestraAudio/TruePeakMeterParityTest.cpp
+)
+target_link_libraries(TruePeakMeterParityTest PRIVATE AestraAudio)
+target_include_directories(TruePeakMeterParityTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME TruePeakMeterParityTest COMMAND TruePeakMeterParityTest)
+set_tests_properties(TruePeakMeterParityTest PROPERTIES
+    LABELS "audio;dsp;meters;regression;contract:audio"
+    TIMEOUT 120)
+
+
+# The plugin compatibility set through the sandbox: load, sound, state, editor (V82-H7, FD-04).
+# Needs the set installed, so it only joins ctest when asked; run it directly otherwise:
+#   build/Tests/AestraPluginCompatTest report.md
+if(UNIX AND TARGET AestraPluginHost)
+    add_executable(AestraPluginCompatTest Integration/PluginCompatTest.cpp)
+    target_link_libraries(AestraPluginCompatTest PRIVATE AestraAudio)
+    target_include_directories(AestraPluginCompatTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    target_compile_definitions(AestraPluginCompatTest PRIVATE HELPER_PATH="$<TARGET_FILE:AestraPluginHost>")
+    add_dependencies(AestraPluginCompatTest AestraPluginHost)
+    option(AESTRA_PLUGIN_COMPAT_TESTS "Run the third-party plugin compatibility set under ctest" OFF)
+    if(AESTRA_PLUGIN_COMPAT_TESTS)
+        add_test(NAME AestraPluginCompatTest COMMAND AestraPluginCompatTest)
+        set_tests_properties(AestraPluginCompatTest PROPERTIES LABELS "plugins;compat;runtime;contract:plugins" TIMEOUT 900)
+    endif()
+endif()
+
+# A CLAP plugin's parameters through the sandbox with VST3 built in too, and a blocking scan after a cancel (V82-H7).
+# Every platform: on Windows it is the proof a CLAP DLL loads through the helper (V82-H8).
+if(TARGET AestraPluginHost AND EXISTS ${CMAKE_SOURCE_DIR}/AestraAudio/External/clap/include/clap/clap.h)
+    add_library(ClapGainFixture MODULE AestraAudio/fixtures/ClapGainPlugin.cpp)
+    target_include_directories(ClapGainFixture PRIVATE ${CMAKE_SOURCE_DIR}/AestraAudio/External/clap/include)
+    set_target_properties(ClapGainFixture PROPERTIES PREFIX "" SUFFIX ".clap"
+        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/fixtures/clap-gain)
+    add_executable(ClapSandboxParamsTest AestraAudio/ClapSandboxParamsTest.cpp)
+    target_link_libraries(ClapSandboxParamsTest PRIVATE AestraAudio)
+    target_include_directories(ClapSandboxParamsTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    target_compile_definitions(ClapSandboxParamsTest PRIVATE
+        HELPER_PATH="$<TARGET_FILE:AestraPluginHost>"
+        FIXTURE_PATH="$<TARGET_FILE:ClapGainFixture>")
+    add_dependencies(ClapSandboxParamsTest AestraPluginHost ClapGainFixture)
+    add_test(NAME ClapSandboxParamsTest COMMAND ClapSandboxParamsTest)
+    set_tests_properties(ClapSandboxParamsTest PROPERTIES LABELS "audio;plugins;clap;parameters;regression;contract:plugins")
+endif()
+
+# Aestra Comp external sidechain (Sidechain param; key on channels 3-4)
+add_executable(AestraCompSidechainTest AestraAudio/AestraCompSidechainTest.cpp)
+target_link_libraries(AestraCompSidechainTest PRIVATE AestraAudio)
+target_include_directories(AestraCompSidechainTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraCompSidechainTest COMMAND AestraCompSidechainTest)
+set_tests_properties(AestraCompSidechainTest PROPERTIES LABELS "audio;plugins;comp;sidechain;contract:audio")
+
+# Does a sandboxed plugin delay audio by exactly what it reports to PDC? Needs installed plugins; run directly:
+#   build/Tests/AestraSandboxLatencyProbe [callbackFrames]
+if(UNIX AND TARGET AestraPluginHost)
+    add_executable(AestraSandboxLatencyProbe Integration/SandboxLatencyProbe.cpp)
+    target_link_libraries(AestraSandboxLatencyProbe PRIVATE AestraAudio)
+    target_include_directories(AestraSandboxLatencyProbe PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    target_compile_definitions(AestraSandboxLatencyProbe PRIVATE HELPER_PATH="$<TARGET_FILE:AestraPluginHost>")
+    add_dependencies(AestraSandboxLatencyProbe AestraPluginHost)
+endif()

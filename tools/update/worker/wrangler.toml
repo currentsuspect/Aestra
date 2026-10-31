@@ -1,0 +1,22 @@
+name = "aestra-update"
+main = "src/index.mjs"
+compatibility_date = "2026-10-01"
+workers_dev = false
+
+# update.aestra.studio. A custom domain makes Cloudflare create the DNS record itself.
+routes = [{ pattern = "update.aestra.studio", custom_domain = true }]
+
+# Nothing about who updates leaves this Worker: no request logs, no analytics.
+[observability]
+enabled = false
+
+[[r2_buckets]]
+binding = "RELEASES"
+bucket_name = "aestra-releases"
+
+# Founder keys (hashes only). `kv namespace create` writes the id here; see README.md.
+[[kv_namespaces]]
+binding = "FOUNDERS"
+id = "9bb181babcf04721aff480469be036d4"
+
+# Secret (never in the repo): UPLOAD_KEY, set with `wrangler secret put UPLOAD_KEY`.

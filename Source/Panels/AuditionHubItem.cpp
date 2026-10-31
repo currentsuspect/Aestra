@@ -286,9 +286,7 @@ void AuditionHub::renderItemPage(NUIRenderer& r, const AuditionHubLayout::Frame&
     r.drawText("COMPARE", {p.table.x, p.table.y}, 9.5f, muted.withAlpha(0.8f));
     if (mixSide) {
         const std::string mixHead = ref ? m_item.title : (m_item.badge.empty() ? "Mix" : "Mix " + m_item.badge);
-        const float col1 = p.table.x + p.table.width * 0.46f, col2 = p.table.x + p.table.width * 0.68f;
-        r.drawText(mixHead, {col1, p.table.y + 24.0f}, 10.0f, violet.withAlpha(0.85f));
-        if (m_result) r.drawText("Ref", {col2, p.table.y + 24.0f}, 10.0f, kRef.withAlpha(0.85f));
+        float col1 = p.table.x + p.table.width * 0.46f, col2 = p.table.x + p.table.width * 0.68f;
         struct Row { const char* name; std::string a, b; std::string note; };
         const auto width = [](const AuditionCompare::Side& s) { double sum = 0; for (double w : s.stereo.bandWidth) sum += w; return sum / s.stereo.bandWidth.size(); };
         std::vector<Row> rows;
@@ -305,17 +303,48 @@ void AuditionHub::renderItemPage(NUIRenderer& r, const AuditionHubLayout::Frame&
         rows.push_back({"Stereo width", fmt("%.2f", width(*mixSide)), refSide ? fmt("%.2f", width(*refSide)) : "", ""});
         rows.push_back({"Below 120 Hz", fmt("%.0f%%", A.bandShare[0] * 100.0), refSide ? fmt("%.0f%%", refSide->analysis.bandShare[0] * 100.0) : "",
                         refSide ? (A.bandShare[0] > refSide->analysis.bandShare[0] ? "yours heavier" : "yours lighter") : ""});
+        // Narrow (a 1280 px window): notes can't sit beside the numbers, so they go under them and the rows
+        // tighten to keep the six of them inside the table's 280 px.
+        bool narrow = false;
+        float nameW = 0.0f, aW = 0.0f, bW = 0.0f;
+        for (const auto& row : rows) {
+            nameW = std::max(nameW, r.measureText(row.name, 11.5f).width);
+            aW = std::max(aW, r.measureText(row.a, 12.5f).width);
+            bW = std::max(bW, r.measureText(row.b, 12.5f).width);
+        }
+        // The fixed columns also collided with each other when narrow ("-13.3 LUFS" ran into "-11.3 LUFS"):
+        // there, the columns follow the measured widths instead.
+        if (col2 - col1 < aW + 12.0f || col1 - p.table.x < nameW + 12.0f) {
+            narrow = true;
+            col1 = p.table.x + nameW + 14.0f;
+            col2 = std::min(col1 + aW + 16.0f, p.table.right() - bW);
+        }
+        // Narrower still (the table can shrink to 120 px): the reference value goes under the mix value.
+        const bool stacked = m_result && col2 < col1 + aW + 8.0f;
+        if (stacked) col2 = col1;
+        for (const auto& row : rows)
+            if (!row.note.empty() && p.table.right() - r.measureText(row.note, 10.0f).width <
+                                         col2 + r.measureText(row.b.empty() ? row.a : row.b, 12.5f).width + 12.0f)
+                narrow = true;
+        r.drawText(mixHead, {col1, p.table.y + 24.0f}, 10.0f, violet.withAlpha(0.85f));
+        if (m_result && !stacked) r.drawText("Ref", {col2, p.table.y + 24.0f}, 10.0f, kRef.withAlpha(0.85f));
         float y = p.table.y + 46.0f;
         for (const auto& row : rows) {
             r.fillRect({p.table.x, y - 6.0f, p.table.width, 1.0f}, rule);
             r.drawText(row.name, {p.table.x, y + 8.0f}, 11.5f, muted);
             r.drawText(row.a, {col1, y + 8.0f}, 12.5f, violet);
-            if (!row.b.empty()) r.drawText(row.b, {col2, y + 8.0f}, 12.5f, kRef);
-            if (!row.note.empty()) {
+            if (!row.b.empty()) r.drawText(row.b, {col2, y + (stacked ? 24.0f : 8.0f)}, 12.5f, kRef);
+            float advance = stacked ? 42.0f : narrow ? 32.0f : 36.0f;
+            if (!row.note.empty() && !stacked) {
                 const float nw = r.measureText(row.note, 10.0f).width;
-                r.drawText(row.note, {p.table.right() - nw, y + 10.0f}, 10.0f, muted.withAlpha(0.8f));
+                if (!narrow) {
+                    r.drawText(row.note, {p.table.right() - nw, y + 10.0f}, 10.0f, muted.withAlpha(0.8f));
+                } else {
+                    r.drawText(row.note, {col1, y + 24.0f}, 10.0f, muted.withAlpha(0.8f));
+                    advance = 42.0f;
+                }
             }
-            y += 36.0f;
+            y += advance;
         }
     }
     if (m_ref && !m_result) r.drawText(m_sideShared->working.load() > 0 ? "Measuring both..." : "Could not compare these two", {p.table.x, p.table.bottom() + 8.0f}, 11.5f, muted);

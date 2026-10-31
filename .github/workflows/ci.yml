@@ -53,6 +53,9 @@ env:
 jobs:
   build-linux:
     name: Linux (GCC)
+    # Job timeouts (2026-10-31): GitHub's default is 6 hours, so a job hung on a dead compile cache
+    # held its PR for hours. Each limit is about twice that lane's uncached time (Windows ~47 min).
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -117,7 +120,7 @@ jobs:
 
       - name: Upload test report
         if: always() && steps.scope.outputs.run == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ctest-results-linux
           path: build/ctest-results-linux.xml
@@ -151,6 +154,7 @@ jobs:
   # it would turn this lane back into a headless build.
   build-linux-app:
     name: Linux (UI/App compile)
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -217,7 +221,7 @@ jobs:
           cmake --build build-app --config ${{env.BUILD_TYPE}}
           --target NUIThemeConsistencyTest NUIContextMenuInteractionTest ClipContextMenuReachabilityTest ClipDragReleaseTest TimelineFollowPreferenceTest TimelineGridSelectionTest
           ModalDialogInteractionTest
-          PianoRollInteractionTest PianoRollPanelPersistenceTest PianoRollStrokeInteractionTest
+          PianoRollInteractionTest PianoRollDuplicateTest PianoRollPanelPersistenceTest PianoRollStrokeInteractionTest
           PianoRollExternalEditCommitTest EditorCloseDeferredTest PanelWindowClickSwallowTest
           MixerViewModelAutomationPresenceTest MixerViewModelMasterLoudnessTest MixerViewModelDynamicInsertsTest MasterInsertParityTest MixerDropdownKeyboardTest
           BPMEditorPaintTest TransportClockFormatTest PanelResizeLayoutTest ExportDialogWidgetsTest AutomationClipLayerTest PanelModeBehaviourTest
@@ -230,7 +234,7 @@ jobs:
           PluginRackBindingLifecycleTest WindowPanelRaiseTest TakesHistoryPanelTest
           PluginBrowserSelectionTest UIInsertRoutePickerTest NUITextInputLayoutTest
           NUITextInputEditingTest NUIDropdownInteractionTest NUIComponentTooltipTest
-          NUIHiddenChildDispatchTest NUIWidgetHiddenInputTest
+          NUIHiddenChildDispatchTest NUIWidgetHiddenInputTest SettingsFormTest
           ContractPianoRollOneEntryPerGestureTest ContractPianoRollUndoStaysInPatternTest
           ContractPianoRollReachesGlobalUndoTest ContractPianoRollPasteTargetsEditingUnitTest
           FileBrowserLibraryTest
@@ -243,7 +247,7 @@ jobs:
         # broken selector runs zero tests and ctest still exits 0. A step that
         # silently runs nothing is worse than no step, because it reports
         # success (same precedent as the security contract steps).
-        run: ctest --test-dir build-app -C ${{env.BUILD_TYPE}} -R '^(NUIThemeConsistencyTest|NUIContextMenuInteractionTest|ClipContextMenuReachabilityTest|ClipDragReleaseTest|TimelineFollowPreferenceTest|TimelineGridSelectionTest|ModalDialogInteractionTest|PianoRollInteractionTest|PianoRollPanelPersistenceTest|PianoRollStrokeInteractionTest|PianoRollExternalEditCommitTest|EditorCloseDeferredTest|PanelWindowClickSwallowTest|MixerViewModelAutomationPresenceTest|MixerViewModelMasterLoudnessTest|MixerViewModelDynamicInsertsTest|MasterInsertParityTest|MixerDropdownKeyboardTest|BPMEditorPaintTest|TransportClockFormatTest|PanelResizeLayoutTest|ExportDialogWidgetsTest|AutomationClipLayerTest|PanelModeBehaviourTest|UnitRowStepSelectionTest|UIMixerKnobDragReadoutTest|UIMixerStripContentTest|MixerGroupingTest|ArsenalRackLayoutTest|ArsenalSceneStripTest|ArsenalStepLanesTest|ArsenalSoundStripTest|ArsenalSoundDrawerTest|ArsenalSoundSetTest|VersionsTimelineTest|AuditionHubLayoutTest|ArsenalKitTest|UIMixerPanelGroupingTest|UIRoutingMapGraphTest|UIMixerInspectorColumnTest|UIMixerNavigatorTest|UIMixerKitTest|ClipGroupOpsTest|UnitRowContextMenuTest|PluginRackBindingLifecycleTest|WindowPanelRaiseTest|TakesHistoryPanelTest|PluginBrowserSelectionTest|UIInsertRoutePickerTest|NUITextInputLayoutTest|NUITextInputEditingTest|NUIDropdownInteractionTest|NUIComponentTooltipTest|NUIHiddenChildDispatchTest|NUIWidgetHiddenInputTest|ContractPianoRollOneEntryPerGestureTest|ContractPianoRollUndoStaysInPatternTest|ContractPianoRollReachesGlobalUndoTest|ContractPianoRollPasteTargetsEditingUnitTest|FileBrowserLibraryTest|PanelWindowKnobDragTest|UIScenarioTest|TextCentringTest|AdaptiveFPSIdleTest)$' --no-tests=error --output-on-failure
+        run: ctest --test-dir build-app -C ${{env.BUILD_TYPE}} -R '^(NUIThemeConsistencyTest|NUIContextMenuInteractionTest|ClipContextMenuReachabilityTest|ClipDragReleaseTest|TimelineFollowPreferenceTest|TimelineGridSelectionTest|ModalDialogInteractionTest|PianoRollInteractionTest|PianoRollDuplicateTest|PianoRollPanelPersistenceTest|PianoRollStrokeInteractionTest|PianoRollExternalEditCommitTest|EditorCloseDeferredTest|PanelWindowClickSwallowTest|MixerViewModelAutomationPresenceTest|MixerViewModelMasterLoudnessTest|MixerViewModelDynamicInsertsTest|MasterInsertParityTest|MixerDropdownKeyboardTest|BPMEditorPaintTest|TransportClockFormatTest|PanelResizeLayoutTest|ExportDialogWidgetsTest|AutomationClipLayerTest|PanelModeBehaviourTest|UnitRowStepSelectionTest|UIMixerKnobDragReadoutTest|UIMixerStripContentTest|MixerGroupingTest|ArsenalRackLayoutTest|ArsenalSceneStripTest|ArsenalStepLanesTest|ArsenalSoundStripTest|ArsenalSoundDrawerTest|ArsenalSoundSetTest|VersionsTimelineTest|AuditionHubLayoutTest|ArsenalKitTest|UIMixerPanelGroupingTest|UIRoutingMapGraphTest|UIMixerInspectorColumnTest|UIMixerNavigatorTest|UIMixerKitTest|ClipGroupOpsTest|UnitRowContextMenuTest|PluginRackBindingLifecycleTest|WindowPanelRaiseTest|TakesHistoryPanelTest|PluginBrowserSelectionTest|UIInsertRoutePickerTest|NUITextInputLayoutTest|NUITextInputEditingTest|NUIDropdownInteractionTest|NUIComponentTooltipTest|NUIHiddenChildDispatchTest|NUIWidgetHiddenInputTest|SettingsFormTest|ContractPianoRollOneEntryPerGestureTest|ContractPianoRollUndoStaysInPatternTest|ContractPianoRollReachesGlobalUndoTest|ContractPianoRollPasteTargetsEditingUnitTest|FileBrowserLibraryTest|PanelWindowKnobDragTest|UIScenarioTest|TextCentringTest|AdaptiveFPSIdleTest)$' --no-tests=error --output-on-failure
 
       - name: Verify desktop font bundle
         if: steps.scope.outputs.run == 'true'
@@ -255,6 +259,7 @@ jobs:
 
   build-plugin-host:
     name: Plugin hosting (VST3 + CLAP compile)
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     # Least privilege, declared rather than inherited, matching the classifier
     # self-test job below. This one only reads the repo and lets classify-scope read
@@ -408,6 +413,7 @@ jobs:
 
   build-windows:
     name: Windows (MSVC)
+    timeout-minutes: 100
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -435,7 +441,7 @@ jobs:
         uses: ./.github/actions/setup-sccache
       - name: Cache vcpkg artifacts
         if: steps.scope.outputs.run == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             ${{ runner.temp }}\vcpkg\downloads
@@ -532,7 +538,7 @@ jobs:
 
       - name: Upload test report
         if: always() && steps.scope.outputs.run == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ctest-results-windows
           path: build/ctest-results-windows.xml
@@ -559,8 +565,151 @@ jobs:
           EOF
           curl -s -o /dev/null -w "%{http_code}" -H "Content-Type: application/json" --data @discord_payload.json "$DISCORD_WEBHOOK"
 
+  build-plugin-host-windows:
+    name: Plugin hosting (Windows)
+    timeout-minutes: 100
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      # V82-H8: the Windows lane above builds without the VST3 SDK and runs the
+      # sandbox only against the helper's built-in fake, so nothing proved a real
+      # plugin loads in the Windows helper. This is the Linux plugin lane
+      # (build-plugin-host) on Windows: VST3 SDK fetched, both formats asserted,
+      # the plugin and sandbox tests run, the CLAP gain fixture loaded as a DLL.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          submodules: false
+          persist-credentials: false
+
+      - name: Classify change scope
+        id: scope
+        uses: ./.github/actions/classify-scope
+        with:
+          lane: plugin-host
+          github-token: ${{ github.token }}
+      - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/setup-sccache
+
+      - name: Fetch VST3 SDK submodule
+        if: steps.scope.outputs.run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git submodule update --init --depth 1 AestraAudio/External/vst3sdk
+          git -C AestraAudio/External/vst3sdk submodule update --init --depth 1 \
+            base pluginterfaces public.sdk
+
+      - name: Cache vcpkg artifacts
+        if: steps.scope.outputs.run == 'true'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ${{ runner.temp }}\vcpkg\downloads
+            ${{ runner.temp }}\vcpkg\buildtrees
+            ${{ runner.temp }}\vcpkg\packages
+            ${{ runner.temp }}\vcpkg\installed
+            ${{ runner.temp }}\vcpkg\archives
+          key: windows-vcpkg-${{ env.VCPKG_REF }}-${{ runner.os }}-${{ hashFiles('.github/workflows/ci.yml') }}
+          restore-keys: |
+            windows-vcpkg-${{ env.VCPKG_REF }}-${{ runner.os }}-
+
+      # Same as the Windows lane: libsodium is required by AestraLicense.
+      - name: Setup vcpkg and libsodium
+        if: steps.scope.outputs.run == 'true'
+        shell: pwsh
+        run: |
+          $env:VCPKG_ROOT = "$env:RUNNER_TEMP\vcpkg"
+          $env:VCPKG_BINARY_SOURCES = "clear;files,$env:RUNNER_TEMP\vcpkg\archives,readwrite"
+          # Same as the Windows lane: the cache restores vcpkg's artifact folders
+          # but not its .git, so they are moved aside, vcpkg is cloned, and they
+          # go back. A plain clone into the non-empty folder fails.
+          if (!(Test-Path "$env:VCPKG_ROOT\.git")) {
+            $artifactBackup = Join-Path $env:RUNNER_TEMP "vcpkg-artifacts"
+            $artifactDirs = @("downloads", "buildtrees", "packages", "installed", "archives")
+            if (Test-Path $artifactBackup) { Remove-Item -Recurse -Force $artifactBackup }
+            New-Item -ItemType Directory -Path $artifactBackup | Out-Null
+            if (Test-Path $env:VCPKG_ROOT) {
+              foreach ($dir in $artifactDirs) {
+                $source = Join-Path $env:VCPKG_ROOT $dir
+                if (Test-Path $source) {
+                  Move-Item -Path $source -Destination (Join-Path $artifactBackup $dir)
+                }
+              }
+              Remove-Item -Recurse -Force $env:VCPKG_ROOT
+            }
+            git clone https://github.com/microsoft/vcpkg.git $env:VCPKG_ROOT
+            foreach ($dir in $artifactDirs) {
+              $saved = Join-Path $artifactBackup $dir
+              if (Test-Path $saved) {
+                Move-Item -Path $saved -Destination (Join-Path $env:VCPKG_ROOT $dir)
+              }
+            }
+          }
+          git -C $env:VCPKG_ROOT fetch --depth=1 origin $env:VCPKG_REF
+          git -C $env:VCPKG_ROOT checkout --force $env:VCPKG_REF
+          if (!(Test-Path "$env:VCPKG_ROOT\vcpkg.exe")) {
+            & "$env:VCPKG_ROOT\bootstrap-vcpkg.bat" -disableMetrics
+          }
+          & "$env:VCPKG_ROOT\vcpkg.exe" install libsodium:x64-windows
+
+      - name: Setup MSVC environment
+        if: steps.scope.outputs.run == 'true'
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+
+      - name: Configure and assert both plugin formats are enabled
+        if: steps.scope.outputs.run == 'true'
+        shell: pwsh
+        run: |
+          $env:VCPKG_ROOT = "$env:RUNNER_TEMP\vcpkg"
+          cmake -B build-plugins -S . `
+            -G Ninja `
+            -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} `
+            -DAestra_CORE_MODE=ON `
+            -DAESTRA_HEADLESS_ONLY=ON `
+            -DAESTRA_ENABLE_TESTS=ON `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows `
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache `
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache 2>&1 | Tee-Object -FilePath configure.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (-not (Select-String -Path configure.log -Pattern "VST3 SDK: Found" -Quiet)) {
+            Write-Output "::error::VST3 SDK not detected - this lane would compile nothing"; exit 1
+          }
+          if (-not (Select-String -Path configure.log -Pattern "CLAP SDK: Found" -Quiet)) {
+            Write-Output "::error::CLAP SDK not detected - this lane would compile nothing"; exit 1
+          }
+
+      # Serial, like every full default-target build in this file (see the Linux
+      # plugin lane for the memory story).
+      - name: Build (headless, plugin formats enabled)
+        if: steps.scope.outputs.run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake --build build-plugins --config ${{env.BUILD_TYPE}}
+          test -f build-plugins/bin/AestraPluginHost.exe \
+            || { echo "::error::AestraPluginHost.exe was not produced"; exit 1; }
+
+      - name: Run plugin tests
+        if: steps.scope.outputs.run == 'true'
+        working-directory: build-plugins
+        shell: bash
+        run: ctest -C ${{env.BUILD_TYPE}} -L "plugin|clap" --output-on-failure
+
+      - name: Run sandbox isolation tests
+        if: steps.scope.outputs.run == 'true'
+        working-directory: build-plugins
+        shell: bash
+        run: >-
+          ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R
+          "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecPluginCacheBounds|SecPluginTrustedPath|PluginScannerSigpipeTest"
+
   build-macos:
     name: macOS (Clang)
+    timeout-minutes: 75
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -621,7 +770,7 @@ jobs:
 
       - name: Upload test report
         if: always() && steps.scope.outputs.run == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ctest-results-macos
           path: build/ctest-results-macos.xml
@@ -649,6 +798,7 @@ jobs:
 
   classifier-selftest:
     name: CI classifier self-test
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     # Least privilege, declared rather than inherited. This job shells out and
     # queries two historical pull requests, so it reads repo contents and PR
@@ -775,6 +925,7 @@ jobs:
 
   contract-coverage:
     name: Test contract coverage
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     # No `if:`, no `continue-on-error`, no `needs:`. A required context must
     # always report. Gating this on a change classifier, or on another job whose
@@ -788,6 +939,20 @@ jobs:
         with:
           submodules: false
           persist-credentials: false
+
+      # FD-64 / #936: the census must include the SDK-gated tests. With
+      # submodules: false, AestraWatchdogTest and AestraCrashTest are never
+      # registered (AESTRA_HAS_VST3 is off), so their contract labels went
+      # unchecked and the gate was green for a policy it could not evaluate.
+      # Same fetch as "Plugin hosting (VST3 + CLAP compile)": two levels, the
+      # three nested submodules the build compiles from, shallow, anonymous
+      # (steinbergmedia/vst3sdk is public). Keep the two in step.
+      - name: Fetch VST3 SDK submodule
+        run: |
+          set -euo pipefail
+          git submodule update --init --depth 1 AestraAudio/External/vst3sdk
+          git -C AestraAudio/External/vst3sdk submodule update --init --depth 1 \
+            base pluginterfaces public.sdk
 
       # Level 1: the verifier in isolation. A green baseline plus every
       # prohibited state, each asserted to be rejected with its specific
@@ -861,6 +1026,7 @@ jobs:
 
   format-check:
     name: Formatting (advisory)
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -881,6 +1047,7 @@ jobs:
 
   static-analysis:
     name: Static Analysis (clang-tidy, advisory)
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -916,6 +1083,7 @@ jobs:
 
   sanitizer-linux:
     name: Sanitizers (ASan/UBSan, advisory)
+    timeout-minutes: 90
     runs-on: ubuntu-latest
     continue-on-error: true
     env:
@@ -969,30 +1137,33 @@ jobs:
 
       - name: Upload sanitizer test report
         if: always() && steps.scope.outputs.run == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ctest-results-asan
           path: build-asan/ctest-results-asan.xml
           if-no-files-found: ignore
 
   tsan-linux:
-    # Required, and deliberately NOT scope-gated (P6).
+    # Required, and scope-gated only on FACTS (#620's classifier, FD-61).
     #
-    # This lane was advisory with a classify-scope step, which made it cheap: a
-    # change the classifier judged irrelevant skipped the build. But a skipped
-    # step still leaves the JOB reporting success, so promoting it to required
-    # unchanged would buy a green tick on exactly the PRs least likely to
-    # contain a race — a no-op gate, which is worse than an advisory one because
-    # people stop reading it. That is the failure mode the contract-coverage
-    # job's comment calls "reportable-sometimes ... false green rather than a
-    # block".
+    # This lane was once gated by a heuristic classify-scope step that judged
+    # changes "irrelevant", which bought a green tick on exactly the PRs least
+    # likely to contain a race; that is why it ran on every PR for a while. The
+    # current classifier does not judge relevance. It skips on two facts only:
     #
-    # So the classifier is gone and this lane runs on every PR. The runner cost
-    # is real and was accepted deliberately: the lane was green on 30
-    # consecutive develop runs before promotion, and the two audio-thread
-    # races another project shipped through an equivalent gap are the reason it
-    # is worth having.
+    #   skip-cxx     every changed path is documentation or prose on a fixed
+    #                allowlist (scripts/ci/classify-changes.sh); nothing compiles.
+    #   ui-app-only  every changed path is a .cpp under AestraUI/ or Source/ that
+    #                no headless target names; ci-tsan builds with AESTRA_CI=ON,
+    #                which force-disables the UI, so those files are not in this
+    #                build at all.
+    #
+    # Anything else, an oversized or truncated list, a push, or a PR into main
+    # runs the full lane. The job itself always runs and reports, so the required
+    # context never hangs; only the build and test steps are conditional. The
+    # cost it removes: a full TSan build on every docs-only PR.
     name: ThreadSanitizer (TSan)
+    timeout-minutes: 90
     runs-on: ubuntu-latest
     env:
       TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1:suppress_equal_stacks=1
@@ -1002,26 +1173,37 @@ jobs:
           submodules: false
           persist-credentials: false
 
+      - name: Classify change scope
+        id: scope
+        uses: ./.github/actions/classify-scope
+        with:
+          lane: tsan
+          github-token: ${{ github.token }}
       - name: Setup sccache
+        if: steps.scope.outputs.run == 'true'
         uses: ./.github/actions/setup-sccache
       - name: Install Dependencies
+        if: steps.scope.outputs.run == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev cmake
 
       - name: Configure
+        if: steps.scope.outputs.run == 'true'
         run: cmake --preset ci-tsan -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build
+        if: steps.scope.outputs.run == 'true'
         run: cmake --build --preset ci-tsan --parallel 2
 
       - name: Test
+        if: steps.scope.outputs.run == 'true'
         working-directory: build/ci-tsan
         run: ctest --parallel 2 --output-on-failure --output-junit ctest-results-tsan.xml
 
       - name: Upload TSan test report
-        if: always()
-        uses: actions/upload-artifact@v4
+        if: always() && steps.scope.outputs.run == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ctest-results-tsan
           path: build/ci-tsan/ctest-results-tsan.xml
@@ -1032,6 +1214,7 @@ jobs:
     # unbounded or accidental allocations. LSan is informational
     # only; failure is expected to be non-blocking.
     name: LeakSanitizer (LSan, advisory)
+    timeout-minutes: 90
     runs-on: ubuntu-latest
     continue-on-error: true
     env:
@@ -1077,7 +1260,7 @@ jobs:
 
       - name: Upload LSan test report
         if: always() && steps.scope.outputs.run == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ctest-results-lsan
           path: build/ci-lsan/ctest-results-lsan.xml

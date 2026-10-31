@@ -19,6 +19,7 @@
 #include "Commands/MacroCommand.h"
 #include "Commands/MoveClipCommand.h"
 #include "Commands/RemoveClipCommand.h"
+#include "Commands/SetClipEditsCommand.h"
 #include "Commands/SplitClipCommand.h"
 #include "MiniAudioDecoder.h"
 #include "MixerChannel.h"
@@ -306,7 +307,7 @@ bool TrackManagerUI::placeFileOnTimeline(const std::string& filePath, const std:
     dragData.type = AestraUI::DragDataType::File;
     dragData.filePath = filePath;
     dragData.displayName = displayName;
-    const auto dropResult = onDrop(dragData, AestraUI::NUIPoint(x, y));
+    const auto dropResult = placeDrop(dragData, AestraUI::NUIPoint(x, y)); // placed from the library: focus stays there
     return dropResult.accepted;
 }
 
@@ -343,7 +344,7 @@ bool TrackManagerUI::placePatternOnTimeline(PatternID patternId) {
     if (const auto* pattern = m_trackManager->getPatternManager().getPattern(patternId)) {
         dragData.displayName = pattern->name;
     }
-    const auto dropResult = onDrop(dragData, AestraUI::NUIPoint(x, y));
+    const auto dropResult = placeDrop(dragData, AestraUI::NUIPoint(x, y)); // placed from the library: focus stays there
     return dropResult.accepted;
 }
 
@@ -651,7 +652,7 @@ void TrackManagerUI::pasteClipToRight() {
         std::make_shared<Aestra::Audio::AddClipCommand>(m_trackManager->getPlaylistModel(), targetLaneId, newClip);
     m_trackManager->getCommandHistory().pushAndExecute(cmd);
 
-    // Select the new clip so repeated Ctrl+B continues to the right
+    // Select the new clip so repeated Ctrl+D continues to the right
     m_selectedClipId = newClip.id;
 
     refreshTracks();
@@ -711,8 +712,7 @@ void TrackManagerUI::duplicateSelectedClip() {
     const double blockOffset = blockMaxEnd - blockMinStart;
 
     auto macro = std::make_shared<Aestra::Audio::MacroCommand>("Duplicate Clips");
-    ClipInstanceID lastDuplicateId{};
-    std::vector<ClipInstanceID> newIds;
+    std::vector<std::shared_ptr<Aestra::Audio::DuplicateClipCommand>> duplicates;
     for (const auto& id : targets) {
         const ClipInstance* clip = playlist.getClip(id);
         if (!clip)
@@ -724,8 +724,7 @@ void TrackManagerUI::duplicateSelectedClip() {
         auto cmd = std::make_shared<Aestra::Audio::DuplicateClipCommand>(playlist, id, targetStartBeat,
                                                                          targetLaneId);
         macro->addCommand(cmd);
-        lastDuplicateId = cmd->getDuplicateId();
-        newIds.push_back(lastDuplicateId);
+        duplicates.push_back(cmd);
     }
     if (macro->empty()) {
         Log::warning("[TrackManager] Nothing duplicated — no valid selected clips");
@@ -733,8 +732,19 @@ void TrackManagerUI::duplicateSelectedClip() {
     }
     m_trackManager->getCommandHistory().pushAndExecute(macro);
 
+    // A clone's id is made when its command executes, so it can only be read now. (It was read before, every id came
+    // back invalid, and "the clones become the selection" never happened: a second Ctrl+D had nothing selected.)
+    ClipInstanceID lastDuplicateId{};
+    std::vector<ClipInstanceID> newIds;
+    for (const auto& cmd : duplicates) {
+        if (cmd->getDuplicateId().isValid() && playlist.getClip(cmd->getDuplicateId())) {
+            lastDuplicateId = cmd->getDuplicateId();
+            newIds.push_back(lastDuplicateId);
+        }
+    }
+
     if (!newIds.empty()) {
-        // The clones become the selection, so repeated Ctrl+B keeps appending
+        // The clones become the selection, so repeated Ctrl+D keeps appending
         // the block (and Delete acts on the copies, not the originals).
         selectClips(newIds, TrackSelectionIntent::Replace);
         if (lastDuplicateId.isValid()) {
@@ -761,7 +771,7 @@ void TrackManagerUI::onPaintClip(TrackUIComponent* trackComp, double beat) {
 
     ClipInstance newClip = m_clipboardClip;
     newClip.id = ClipInstanceID::generate();
-    newClip.startBeat = snapBeatToGrid(beat);
+    newClip.startBeat = snapPlacementToGrid(beat); // the cell the pointer is in, not the nearest line
 
     // Create Command
     auto cmd = std::make_shared<Aestra::Audio::AddClipCommand>(m_trackManager->getPlaylistModel(),
@@ -780,6 +790,35 @@ void TrackManagerUI::onPaintClip(TrackUIComponent* trackComp, double beat) {
 // =============================================================================
 // Clip Manipulation Methods
 // =============================================================================
+
+bool TrackManagerUI::isClipMuted(ClipInstanceID clipId) const {
+    if (!m_trackManager || !clipId.isValid()) return false;
+    const ClipInstance* clip = m_trackManager->getPlaylistModel().getClip(clipId);
+    return clip && clip->edits.muted;
+}
+
+bool TrackManagerUI::toggleClipMute(ClipInstanceID clipId, std::optional<bool> target) {
+    if (!m_trackManager || !clipId.isValid()) return false;
+    auto& model = m_trackManager->getPlaylistModel();
+    const ClipInstance* clip = model.getClip(clipId);
+    if (!clip) return false;
+    const bool before = clip->edits.muted;
+    const bool next = target.value_or(!before);
+    if (next == before) return next; // already there: no undo step for nothing
+
+    ClipEdits edits = clip->edits;
+    edits.muted = next;
+    auto change = std::make_shared<SetClipEditsCommand>(model, clipId, edits);
+    change->named(next ? "Mute Clip" : "Unmute Clip");
+    m_trackManager->getCommandHistory().pushAndExecute(change);
+
+    // A muted clip must go quiet (or come back) while the timeline is playing, the same refresh paint and duplicate use.
+    m_trackManager->refreshTimelinePatternInstances();
+    refreshTracks();
+    invalidateCache();
+    scheduleTimelineMinimapRebuild();
+    return next;
+}
 
 TrackUIComponent* TrackManagerUI::getSelectedTrackUI() const {
     for (const auto& trackUI : m_trackUIComponents) {

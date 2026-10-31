@@ -595,8 +595,7 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
     // CLIP TO BOUNDS
     renderer.setClipRect(b);
     
-    const auto noteColor = themeManager.getColor("accentPrimary").lightened(0.04f);
-    const auto noteColorSelected = themeManager.getColor("accentSecondary").lightened(0.12f);
+    const auto noteColor = noteColor_; // the unit's colour: the phantom below borrows it
     
     // 1. GHOST NOTES (Read-only backgrounds)
     for (const auto& ghost : ghostPatterns_) {
@@ -641,74 +640,9 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
         
         NUIRect r(x + 1.0f, y + 2.0f, std::max(6.0f, w - 2.0f), std::max(5.0f, h - 4.0f));
 
-        const float normalizedVelocity = std::clamp(n.velocity, 0.0f, 1.0f);
-        const bool isHovered = static_cast<int>(noteIndex) == hoveredNoteIndex_;
-        // A note "sounds" while the playhead sits within its span during
-        // playback — it briefly lifts so the ear and eye stay in sync.
-        const bool isSounding = isPlaying_ && playheadBeat_ >= n.startBeat &&
-                                playheadBeat_ < n.startBeat + n.durationBeats;
-        const NUIColor baseColor = n.selected ? noteColorSelected : noteColor;
-        NUIColor coreColor = baseColor.withAlpha(0.68f + normalizedVelocity * 0.28f);
-        NUIColor edgeColor = n.selected ? NUIColor::white().withAlpha(0.78f)
-                                        : (isHovered ? NUIColor::white().withAlpha(0.38f)
-                                                     : baseColor.lightened(0.16f).withAlpha(0.74f));
-        if (isSounding) {
-            coreColor = baseColor.lightened(0.30f).withAlpha(1.0f);
-            edgeColor = NUIColor::white().withAlpha(0.88f);
-        }
-
-        if (isSounding) {
-            renderer.drawShadow(r, 0.0f, 0.0f, 9.0f, baseColor.withAlpha(0.55f));
-        }
-        renderer.drawShadow(NUIRect(r.x, r.y + 1.0f, r.width, r.height),
-                            0.0f,
-                            2.0f,
-                            5.0f,
-                            NUIColor(0, 0, 0, n.selected ? 0.22f : 0.14f));
-        renderer.fillRoundedRect(r, 3.0f, coreColor);
-        renderer.strokeRoundedRect(r, 3.0f, n.selected ? 1.5f : (isHovered ? 1.25f : 1.0f), edgeColor);
-        renderer.fillRoundedRect(NUIRect(r.x + 1.0f, r.y + 2.0f, 2.5f, std::max(2.0f, r.height - 4.0f)),
-                                 1.0f,
-                                 NUIColor::white().withAlpha(n.selected ? 0.68f : 0.42f));
-
-        if (isHovered && !hoverOnRightEdge_ && !hoverOnLeftEdge_) {
-            renderer.fillRoundedRect(NUIRect(r.x + 4.0f, r.y + 1.0f, std::max(2.0f, r.width - 8.0f), 1.0f),
-                                     0.5f,
-                                     NUIColor::white().withAlpha(0.24f));
-        }
-
-        // Selected notes retain subtle resize handles; hovered edges intensify them.
-        if (n.selected || (isHovered && (hoverOnRightEdge_ || hoverOnLeftEdge_))) {
-            // White, like the resize cursor they pair with: 72% white read as a
-            // grey, disabled-looking grip. The edge under the pointer goes full.
-            const NUIColor idleGrip = NUIColor::white().withAlpha(0.9f);
-            const NUIColor activeGrip = NUIColor::white();
-            if (n.selected || hoverOnRightEdge_) {
-                const NUIColor grip = (isHovered && hoverOnRightEdge_) ? activeGrip : idleGrip;
-                renderer.fillRoundedRect(NUIRect(r.right() - 3.0f, r.y + 3.0f, 2.0f, r.height - 6.0f), 1.0f, grip);
-            }
-            if (n.selected || hoverOnLeftEdge_) {
-                const NUIColor grip = (isHovered && hoverOnLeftEdge_) ? activeGrip : idleGrip;
-                renderer.fillRoundedRect(NUIRect(r.x + 1.0f, r.y + 3.0f, 2.0f, r.height - 6.0f), 1.0f, grip);
-            }
-        }
-
-        // [FEATURE] Render pitch name label inside the note block
-        // Minimum width threshold: hide label if note is too narrow to avoid overflow
-        constexpr float kMinWidthForLabel = 22.0f;
-        if (w >= kMinWidthForLabel) {
-            std::string pitchLabel = MusicTheory::getPitchName(n.pitch);
-            constexpr float kFontSize = 10.0f;
-            auto measured = renderer.measureText(pitchLabel, kFontSize);
-            // Left-align with padding, vertically centered
-            float labelX = r.x + 7.0f;
-            float labelY = r.y + (r.height - measured.height) * 0.5f;
-            // Clip label to note bounds (renderer should handle this, but extra safety)
-            if (labelX + measured.width < r.x + r.width) {
-                NUIColor labelColor = NUIColor::white().withAlpha(0.88f);
-                renderer.drawText(pitchLabel, NUIPoint(labelX, labelY), kFontSize, labelColor);
-            }
-        }
+        // A note "sounds" while the playhead sits within its span during playback, so the ear and eye stay in sync.
+        paintNote(renderer, r, n, static_cast<int>(noteIndex) == hoveredNoteIndex_,
+                  isPlaying_ && playheadBeat_ >= n.startBeat && playheadBeat_ < n.startBeat + n.durationBeats, w);
     }
 
     // A multi-note selection exposes one time-transform frame. Dragging the
@@ -1776,40 +1710,10 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
             return true;
         }
         else if (ctrl && event.keyCode == NUIKeyCode::D) {
-            // Duplicate (Ctrl+D)
-            double minStart = 100000.0;
-            double maxEnd = -1.0;
-            bool hasSelection = false;
-            
-            for (const auto& n : notes_) {
-                if (n.selected && !n.isDeleted) {
-                    hasSelection = true;
-                    minStart = std::min(minStart, n.startBeat);
-                    maxEnd = std::max(maxEnd, n.startBeat + n.durationBeats);
-                }
-            }
-            
-            if (hasSelection && maxEnd > 0) {
-                double shift = maxEnd - minStart;
-                if (shift < 0.25) shift = 0.25;
-                
-                
-                auto oldNotes = notes_; // Snapshot
-                
-                for (auto& n : notes_) n.selected = false;
-
-                for (const auto& n : oldNotes) {
-                    if (n.selected && !n.isDeleted) {
-                        MidiNote clone = n;
-                        clone.startBeat += shift;
-                        clone.selected = true; 
-                        clone.isDeleted = false;
-                        notes_.push_back(clone);
-                    }
-                }
-                
-                commitNotes();
-                repaint();
+            // Duplicate (Ctrl+D), FL style: next whole-bar block, selection follows (duplicateLikeFl). A ruler
+            // highlight is the view's to handle first, since it owns the highlight.
+            if (std::any_of(notes_.begin(), notes_.end(), [](const MidiNote& n) { return n.selected && !n.isDeleted; })) {
+                duplicateLikeFl(std::nullopt);
                 return true;
             }
         }

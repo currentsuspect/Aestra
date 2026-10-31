@@ -4,7 +4,9 @@
 #include "PluginHost.h"
 
 #include <atomic>
+#include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -21,6 +23,9 @@ class IEditController;
 
 namespace Aestra {
 namespace Audio {
+
+class EditorLoopPump;
+struct Vst3ParamState; // pending parameter values and the controller's host (Vst3ParamBridge.h)
 
 /**
  * @brief VST3 plugin instance implementation
@@ -91,6 +96,34 @@ public:
     std::pair<int, int> getEditorSize() const override;
     bool resizeEditor(int width, int height) override;
 
+    /**
+     * @brief Open the editor in a top-level window the caller creates: an X11 window on Linux (V82-H3), an HWND on
+     * Windows (V82-H8). On Windows the plugin runs its own Win32 timers, which the caller's message pump serves.
+     *
+     * The plugin's view is created first so its preferred size is known; @p makeWindow is then called with that size and
+     * whether the plugin can be resized, and returns the X11 window id (0 = could not) the view is attached to
+     * ("X11EmbedWindowID"). The plugin drives itself through Linux::IRunLoop, which feeds @p pump: the caller's GUI
+     * thread polls the descriptors and timers the pump holds. When the plugin asks for another size
+     * (IPlugFrame::resizeView) @p requestResize runs, then the view is told the size took. Returns false, with nothing
+     * left open, if the plugin has no X11 editor. Call on the thread that owns the window and runs the pump.
+     */
+    bool openEditorEmbedded(const std::function<std::uintptr_t(int width, int height, bool resizable)>& makeWindow,
+                            EditorLoopPump& pump, std::function<void(int width, int height)> requestResize);
+    /// Whether the open editor accepts being resized by the host.
+    bool canResizeEditor() const;
+
+    /**
+     * @brief Hear about knobs moved in the plugin's own window (IComponentHandler::performEdit), normalized 0..1.
+     * Called on the thread that runs the editor, so the listener must be quick and thread-safe. The value has already
+     * been queued for the processor; this is for telling the rest of the app (automation recording, parameter UI).
+     */
+    void setEditListener(std::function<void(uint32_t id, double normalized)> listener);
+    /**
+     * @brief Bring the controller up to date with what the processor reported (its own parameter moves) and act on
+     * restartComponent() flags. Call from the UI side (the editor loop), not the audio thread.
+     */
+    void pumpControllerSync();
+
     const PluginInfo& getInfo() const override { return m_info; }
     uint32_t getLatencySamples() const override;
     uint32_t getTailSamples() const override;
@@ -120,6 +153,9 @@ private:
 
     double m_sampleRate = 44100.0;
     uint32_t m_maxBlockSize = 512;
+    /// Audio buses the processor is handed each block: an instrument has no input bus.
+    int32_t m_audioInputBuses = 1;
+    int32_t m_audioOutputBuses = 1;
 
     // VST3 SDK objects. ModuleHolder keeps the SDK module type out of this
     // public header while retaining typed RAII ownership in VST3Host.cpp.
@@ -130,6 +166,7 @@ private:
     void* m_processor = nullptr;       // IAudioProcessor*
     void* m_controller = nullptr;      // IEditController*
     void* m_plugView = nullptr;        // IPlugView* (editor)
+    void* m_plugFrame = nullptr;       // host frame + run loop handed to the editor (Linux)
 
     // Audio buffers for VST3 ProcessData
     std::vector<float*> m_inputBuffers;
@@ -139,6 +176,7 @@ private:
     // Parameter cache
     mutable std::vector<PluginParameter> m_parameterCache;
     mutable bool m_parameterCacheValid = false;
+    std::unique_ptr<Vst3ParamState> m_params;
 
     // Internal helpers
     void buildParameterCache() const;

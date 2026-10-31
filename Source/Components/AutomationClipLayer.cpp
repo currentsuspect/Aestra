@@ -74,20 +74,30 @@ void AutomationClipLayer::closeMenu() {
 void AutomationClipLayer::render(AestraUI::NUIRenderer& renderer, const PlaylistLane& lane, int editedCurve,
                                  const Geometry& g) const {
     auto& theme = AestraUI::NUIThemeManager::getInstance();
-    const auto accent = theme.getColor("accentCyan");
+    // V82-T1: regions take the track's colour, like its curve; an unset (white/grey) lane colour keeps the accent.
+    const uint32_t argb = lane.colorRGBA;
+    const auto r8 = static_cast<uint8_t>(argb >> 16), g8 = static_cast<uint8_t>(argb >> 8), b8 = static_cast<uint8_t>(argb);
+    const auto accent = (r8 == g8 && g8 == b8) ? theme.getColor("accentCyan")
+                                               : AestraUI::NUIColor(r8 / 255.0f, g8 / 255.0f, b8 / 255.0f, 1.0f);
+    // Everything is kept inside the lane (right of the row's header): a clip that starts off-screen to the left, or
+    // at beat 0, used to draw its box across the track header.
+    const AestraUI::NUIRect laneArea{g.gridStartX, g.bounds.y, std::max(0.0f, g.bounds.right() - g.gridStartX), g.bounds.height};
     for (size_t c = 0; c < lane.automationCurves.size(); ++c) {
         const bool edited = static_cast<int>(c) == editedCurve;
         for (const auto& region : visibleRegions(lane.automationCurves[c])) {
             const bool selected = static_cast<int>(c) == m_selectedCurve && region.id == m_selectedRegion;
-            const AestraUI::NUIRect head = headerRect(region, g);
+            const AestraUI::NUIRect head = AestraUI::intersectRects(headerRect(region, g), laneArea);
+            if (head.isEmpty()) continue; // scrolled out of view
             const AestraUI::NUIRect body(head.x, g.bounds.y, head.width, g.bounds.height);
             renderer.fillRect(body, accent.withAlpha(edited ? 0.07f : 0.03f));
             renderer.fillRect(head, accent.withAlpha(selected ? 0.40f : (edited ? 0.20f : 0.10f)));
             const AestraUI::NUIRect grip = gripRect(region, g);
-            renderer.fillRect(grip, accent.withAlpha(selected ? 0.90f : (edited ? 0.60f : 0.35f)));
-            for (int dot = 0; dot < 3; ++dot) // three dots: a grip
-                renderer.fillRect({grip.x + 4.0f + 4.0f * static_cast<float>(dot), grip.y + 5.0f, 2.0f, 2.0f},
-                                  theme.getColor("background").withAlpha(0.7f));
+            if (laneArea.contains({grip.x, grip.y}) && laneArea.contains({grip.right(), grip.y})) {
+                renderer.fillRect(grip, accent.withAlpha(selected ? 0.90f : (edited ? 0.60f : 0.35f)));
+                for (int dot = 0; dot < 3; ++dot) // three dots: a grip
+                    renderer.fillRect({grip.x + 4.0f + 4.0f * static_cast<float>(dot), grip.y + 5.0f, 2.0f, 2.0f},
+                                      theme.getColor("background").withAlpha(0.7f));
+            }
             renderer.strokeRect(body, selected ? 1.5f : 1.0f,
                                 selected ? theme.getColor("primary") : accent.withAlpha(edited ? 0.55f : 0.25f));
         }

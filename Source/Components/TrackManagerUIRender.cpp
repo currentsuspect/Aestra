@@ -307,7 +307,7 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
         // through the ruler row itself — numbers read as labels attached to
         // the grid, not a separate strip. The minimap row above stays its own
         // surface.
-        const float planeTop = bounds.y + kTimelineMinimapHeight;
+        const float planeTop = bounds.y + kTimelineRulerTop;
         const float planeHeight = viewportBottom - planeTop;
         // Same quiet arrangement grammar the per-track grid used, with bars
         // carrying the continuity: majors obvious, beats/subdivisions whispers.
@@ -366,6 +366,8 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
                           {bounds.x + trackWidth, trackBounds.bottom()}, 1.0f,
                           themeManager.getCurrentTheme().textPrimary.withAlpha(0.139f));
     }
+    if (m_playlistVisible)
+        renderFoldedEmptyRow(renderer); // V82-T2, TrackManagerUIFold.cpp
 
     // Clear clip rect before drawing the time band (it should draw fully)
     if (clipEnabled) {
@@ -376,7 +378,7 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
     // coherent strip. The band's bottom hairline is the single "everything
     // below this is the timeline" cue.
     if (m_playlistVisible) {
-        AestraUI::NUIRect rulerRect(bounds.x, bounds.y + kTimelineMinimapHeight, bounds.width,
+        AestraUI::NUIRect rulerRect(bounds.x, bounds.y + kTimelineRulerTop, bounds.width,
                                     kTimelineRulerHeight);
         renderTimeRuler(renderer, rulerRect);
         renderLoopMarkers(renderer, rulerRect);
@@ -968,6 +970,20 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
         }
     }
 
+    // Song end (FD-50 board 8, V82-T3): a thin full-height line where the last clip ends. Export, Fit song,
+    // bounce and the Project loop all stop at this beat (PlaylistModel::getTotalDurationBeats), so the line
+    // shows where they agree the song stops. Full height so it never reads as a bar tick.
+    if (m_trackManager) {
+        const double songEndBeat = m_trackManager->getPlaylistModel().getTotalDurationBeats();
+        if (songEndBeat > 0.001) {
+            const float endX =
+                std::round(gridStartX + static_cast<float>(songEndBeat * m_pixelsPerBeat) - m_timelineScrollOffset) + 0.5f;
+            renderer.drawLine(AestraUI::NUIPoint(endX, rulerBounds.y + 2.0f),
+                              AestraUI::NUIPoint(endX, rulerBounds.bottom()), 1.0f,
+                              themeManager.getColor("textPrimary").withAlpha(0.55f));
+        }
+    }
+
     // === RULER SELECTION HIGHLIGHT ===
     // Draw selection highlight if active (either dragging or confirmed)
     if (m_isDraggingRulerSelection || m_hasRulerSelection) {
@@ -1223,7 +1239,7 @@ void TrackManagerUI::updateBackgroundCache(AestraUI::NUIRenderer& renderer) {
     // Draw time ruler (no header strip — the time band starts with the
     // minimap row, cropped to the plane column, then the ruler)
     float rulerHeight = kTimelineRulerHeight;
-    AestraUI::NUIRect rulerRect(0, kTimelineMinimapHeight, static_cast<float>(width), rulerHeight);
+    AestraUI::NUIRect rulerRect(0, kTimelineRulerTop, static_cast<float>(width), rulerHeight);
 
     // Render ruler ticks (static part only - no moving elements)
     double bpm = std::max(m_trackManager->getPlaylistModel().getBPM(), 1.0);

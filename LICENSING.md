@@ -111,9 +111,10 @@ stated plainly so you can reach it early rather than late.
 The Aestra application itself is free for personal use, and intended to stay that way
 ([LICENSE §7.1](LICENSE)).
 
-Separately from the repository license, the product has paid tiers — currently
-**Core**, **Supporter** and **Founder** — which unlock premium modules. Those tiers
-govern the *application*, not this source repository, and are documented in
+Separately from the repository license, the application has one optional paid tier,
+**Supporter**, which pays for services that cost money to run (hosting shared projects,
+online storage, hosted computing). Aestra's own plugins are free. The tiers govern the
+*application*, not this source repository, and are documented in
 [docs/about/license-reference.md](docs/about/license-reference.md).
 
 For any use beyond personal — embedding Aestra in a product, offering it as a paid

@@ -6,6 +6,8 @@ This file defines how AI agents, bots, and automation tools should work inside t
 
 Before working on Aestra, read [`philosophy.md`](philosophy.md). It defines the product vision, the people we build for, and the engineering values that underpin every decision here. When this policy and philosophy conflict on direction, philosophy wins. When this policy and philosophy conflict on safety, this policy wins.
 
+Scope and direction are decided by the founder and recorded as founder decisions (`FD-NN`) in the private **Aestra-Internals** vault (`11 Decisions and Tradeoffs/Founder Decisions 2026-08-04.md`). Work cites the decision it serves (§21). If you have vault access, check it before deciding what a feature should be; if you do not, ask.
+
 ---
 
 ## 1. Scope
@@ -19,8 +21,8 @@ Agents must keep changes small, reviewable, factual, and aligned with the real r
 ## 2. Non-Negotiable Rules
 
 - Do not delete, rename, reset, force-push, or rewrite `main` or `develop`.
-- Do not commit or push unless explicitly asked.
-- Do not merge pull requests automatically.
+- Do not commit or push unless explicitly asked. When the owner asks for a pull request, commit and push on the task branch.
+- Do not merge pull requests unless the owner has said to. When the owner has authorized merging (FD-61), merge once every required check is green; review may come after the merge, and its findings are fixed in follow-up PRs.
 - Do not blindly accept bot-generated code.
 - Do not fabricate test results, SHAs, benchmark numbers, or validation claims.
 - Do not add global AVX, AVX2, or AVX512 compiler flags.
@@ -59,6 +61,28 @@ git status --short
 git branch --show-current
 git rev-parse --short HEAD
 ```
+
+### Working practices (learned the hard way)
+
+* **A search that finds nothing is not proof that something is missing.** Before reporting a feature, file or
+  dependency as absent, trace it: callers, vendored libraries under `*/External/`, merged PRs and the git log. In one
+  session three "missing" features (time-stretch, editor undo, clip reverse) turned out to exist under names the search
+  did not try.
+* **Test first for bug fixes and for engine, DSP and real-time changes.** Write the test, watch it fail on the
+  unchanged code, then fix. That failing run is the negative control: it proves the test measures the change. It costs
+  nothing extra, whereas reverting an engine file afterwards to check costs a full rebuild. Layout-only UI changes and
+  docs do not need one.
+* **A test can be wrong too.** When one fails, read why before changing the code; when one passes, ask whether it
+  would have failed without your change.
+* **UI changes need eyes.** Screenshot the result (a private Xvfb display works, see §7) and compare it with the
+  approved design. Report what a screenshot did not cover (states you could not reach, the real display) as unchecked.
+* **Worktrees.** The repository is usually checked out in several git worktrees at once. A branch checked out in
+  another worktree cannot be switched to; work on it in that worktree. Before any `reset --hard` or forced rebase,
+  confirm `git branch --show-current` is the branch you mean.
+* **Stacked pull requests and stale approvals.** `develop` dismisses approvals when a pull request's diff changes, and
+  merging the PR below a stacked one changes its diff. Expect to re-request approval after each merge in a stack.
+* **Never `pkill -f` or `pgrep -f` a pattern that appears in your own command line.** It matches the shell running it
+  and kills your own command. Find the process by port, PID file or exact name instead.
 
 ### Branching
 
@@ -113,7 +137,7 @@ Aestra
 ├── AestraPlat        — Platform abstraction: windowing, OpenGL, input
 ├── AestraAudio       — Real-time audio engine, DSP, mixer, plugin hosting
 ├── AestraUI          — Custom GPU-accelerated UI framework
-├── AestraPlugins     — Premium/internal plugins where available
+├── AestraPlugins     — Aestra's own plugins: free for everyone (FD-57); some sources are private
 ├── AestraSDK         — Plugin/extension API, currently limited/planned
 ├── Source            — Main DAW application
 ├── Tests             — Centralized test suite
@@ -151,13 +175,15 @@ External dependencies may be present as submodules or local vendor trees.
 | miniaudio  | `AestraAudio/External/miniaudio`   | Audio decoding        |
 | FreeType   | `AestraUI/External/freetype_local` | Text rendering        |
 | SDL2       | `external/SDL2`                    | Linux windowing/input |
+| Signalsmith Stretch + Linear | `AestraAudio/External/signalsmith` | Time-stretch (MIT); used by the sampler's keep-length mode, and the engine for warp (FD-61) |
+| libsodium  | system package                     | Signature checks: licence leases and the updater |
 
 Important:
 
 * CI may not check out all submodules.
 * VST3-dependent code must be conditional on SDK presence.
 * Do not make public/core builds depend on premium/private modules.
-* Do not vendor new dependencies without explicit approval.
+* Do not vendor new dependencies without explicit approval. Look in `*/External/` first: what you need may already be there.
 
 ---
 
@@ -220,7 +246,7 @@ cmake -S . -B build-ui \
   -DAESTRA_HEADLESS_ONLY=OFF \
   -DAESTRA_ENABLE_UI=ON \
   -DAESTRA_ENABLE_TESTS=ON \
-  -DAESTRA_ALLOW_LICENSE_GATE_OFF=ON \
+  -DAESTRA_ALLOW_LICENSE_GATE_OFF=OFF \
   -DCMAKE_BUILD_TYPE=Release
 
 cmake --build build-ui --parallel
@@ -231,6 +257,11 @@ cmake --build build-ui --parallel
 # catches the whole Source/ tree.
 cmake --build build-ui --target Aestra --parallel
 ```
+
+`AESTRA_ALLOW_LICENSE_GATE_OFF` must stay **OFF** for the app: the in-app updater (`Source/App/UpdateNotifier.h`)
+includes `UpdateChecker.h` from `AestraLicense`, so a gate-off tree fails to compile it. Like the other flags it is
+cached, so an old `build-ui/` configured with `ON` needs reconfiguring with `OFF`. The licence library needs
+`libsodium` installed.
 
 > [!gotcha] Two builds, for two kinds of change
 > An agent that verifies UI work with the headless recipe has verified **nothing**,
@@ -443,20 +474,33 @@ Do not add hardware-dependent tests to the always-on CI tier.
 
 CI is part of the product contract.
 
-Typical workflows may include:
+Workflows in `.github/workflows/`:
 
-| Workflow                           | Purpose                          |
-| ---------------------------------- | -------------------------------- |
-| `ci.yml`                           | Main build/test gate (push/PR)   |
-| `nightly.yml`                      | Scheduled nightly build + tests  |
-| `public-ci.yml`                    | Public branch guard (Windows)    |
-| `docs-check.yml`                   | Documentation validation         |
-| `deploy-docs.yml`                  | Public docs deployment           |
-| `gitleaks.yml` / `gitleaks-pr.yml` | Secret scanning                  |
-| `api-docs.yml`                     | Doxygen/API docs                 |
-| `aestra-reverb-simd-lab.yml`       | Reverb SIMD lab (develop/audio)  |
-| `dsp-benchmark.yml`                | DSP benchmark (develop/DSP)      |
-| `private-release.yml`              | Manual/private release flow      |
+| Workflow                           | Purpose                                         |
+| ---------------------------------- | ----------------------------------------------- |
+| `ci.yml`                           | Main build/test gate (push/PR)                  |
+| `decision-citation.yml`            | Every PR cites its founder decision (FD-12)     |
+| `nightly.yml`                      | Scheduled nightly build + tests                 |
+| `public-ci.yml`                    | Public branch guard (Windows)                   |
+| `rt-effects.yml`                   | Real-time effects checks                        |
+| `script-layer.yml`                 | Script-layer checks                             |
+| `worker-ci.yml`                    | Worker checks                                   |
+| `docs-check.yml` / `deploy-docs.yml` | Documentation validation and deployment       |
+| `api-docs.yml`                     | Doxygen/API docs                                |
+| `gitleaks.yml` / `gitleaks-pr.yml` | Secret scanning                                 |
+| `aestra-reverb-simd-lab.yml`       | Reverb SIMD lab (develop/audio)                 |
+| `dsp-benchmark.yml`                | DSP benchmark (develop/DSP)                     |
+| `artifact-retention.yml`           | Artifact clean-up                               |
+| `release-changelog-reminder.yml`   | Changelog reminder at release                   |
+| `private-release.yml`              | Manual/private release flow                     |
+
+Required to merge into `develop`: `Linux (GCC)`, `Windows (MSVC)`, `macOS (Clang)`, `Linux (UI/App compile)`,
+`Plugin hosting (VST3 + CLAP compile)`, `ThreadSanitizer (TSan)`, `Test contract coverage`, `license-signing` and
+`Decision citation`, plus one approving review. Approvals are dismissed when the diff changes.
+
+`ci.yml` runs on every pull request, including documentation-only ones. Do not fix that with `paths-ignore`: the
+required checks above would then never report and the pull request would block forever. Skipping has to happen
+inside the jobs, so they still report.
 
 General CI rules:
 
@@ -673,12 +717,27 @@ Always report whether live/export parity was affected.
 
 PRs should include:
 
+* The decision citation block (below)
 * Summary
 * Why
 * Testing performed
 * Producer note
 * Docs updated?
 * Risk/rollback notes
+
+### Decision citation — required (FD-12)
+
+The `Decision citation` check reads this block from the PR description (template:
+`.github/pull_request_template.md`):
+
+```text
+Objective:  <what this advances, or — when Kind is corrective>
+Decision:   FD-NN @ <vault commit SHA>
+Kind:       planned | corrective | unparked
+Reversal:   <the FD entry authorising it — unparked only, else —>
+```
+
+The SHA is the Aestra-Internals commit the decision lives in, so a stale citation is visible in review.
 
 ### Producer note — required, defaults to `None`
 
@@ -702,11 +761,16 @@ Write one sentence a producer would understand, or `None`.
 
 ---
 
-## 22. CodeRabbit and Review Tools
+## 22. Review: CodeRabbit and the reviewer agent
 
-CodeRabbit is expected to be assertive.
+Reviews come from CodeRabbit and from the owner's reviewer agent. Both are expected to be assertive. Do not override
+or dismiss their findings without technical justification.
 
-Do not override or dismiss its findings without technical justification.
+* CodeRabbit does not review this repository automatically. Request a review with a PR comment `@coderabbitai review`;
+  its included allowance is about one review an hour. `@coderabbitai approve` files its approving review once its
+  findings are dispositioned.
+* When the owner has authorized merging before review (FD-61), findings that arrive after the merge are fixed in a
+  follow-up PR that links the finding, not argued away.
 
 Acceptable responses to review findings:
 
@@ -732,7 +796,7 @@ Aestra uses semantic versioning with phase suffixes.
 
 ```text
 v0.MINOR.PATCH-alpha    — active development (current phase)
-v0.MINOR.PATCH-beta     — public beta (target: Dec 2026)
+v0.MINOR.PATCH-beta     — public beta (25 December 2026, FD-56)
 v1.0.0                  — initial public release
 ```
 

@@ -46,7 +46,13 @@ public:
         m_executed = m_model.setClipEdits(m_clipId, m_newEdits);
     }
 
-    std::string getName() const override { return "Edit Audio Clip"; }
+    /// The undo-history label ("Mute Clip", "Unmute Clip"): the same command edits more than audio clips' sound.
+    SetClipEditsCommand& named(std::string name) {
+        m_name = std::move(name);
+        return *this;
+    }
+
+    std::string getName() const override { return m_name; }
     size_t getSizeInBytes() const override { return sizeof(*this); }
     bool changesProjectState() const override { return true; }
 
@@ -57,6 +63,7 @@ private:
     ClipEdits m_newEdits;
     bool m_hasOriginal{false};
     bool m_executed{false};
+    std::string m_name{"Edit Audio Clip"};
 };
 
 } // namespace Audio

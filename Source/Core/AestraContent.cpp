@@ -642,7 +642,7 @@ void AestraContent::setupTrackManagerUI() {
         // 4. Perform bounce (Offline rendering)
         AESTRA_LOG_DEBUG("[AestraContent] Bouncing track " + std::to_string(trackId) + " to " + tempPath);
         bool success =
-            m_audioEngine->bounceRangeToWav(0.0, projectDurationBeats, tempPath, static_cast<int32_t>(trackId));
+            bounceRangeWithStreamPaused(0.0, projectDurationBeats, tempPath, static_cast<int32_t>(trackId));
 
         if (success) {
             m_tempFiles.push_back(tempPath);
@@ -674,7 +674,7 @@ void AestraContent::setupTrackManagerUI() {
 
         // 2. Perform bounce (trackId -1 means Master Output)
         AESTRA_LOG_DEBUG("[AestraContent] Bouncing selection to " + tempPath);
-        bool success = m_audioEngine->bounceRangeToWav(startBeat, endBeat, tempPath, -1);
+        bool success = bounceRangeWithStreamPaused(startBeat, endBeat, tempPath, -1);
 
         if (success) {
             m_tempFiles.push_back(tempPath);
@@ -1342,28 +1342,6 @@ void AestraContent::setupArsenalPanels() {
                                          : Aestra::Audio::Plugins::SamplerPlugin::PitchMode::Resample);
         m_trackManager->prewarmSamplerKeepLength(false); // render the unit's notes before they play
     };
-    m_sampleEditorPanel->onNormalizeRequested = [this]() {
-        if (!m_trackManager || !m_sampleEditorUnitId) {
-            return;
-        }
-        auto plugin = m_trackManager->getUnitManager().getUnitPlugin(m_sampleEditorUnitId);
-        auto sampler = std::dynamic_pointer_cast<Aestra::Audio::Plugins::SamplerPlugin>(plugin);
-        if (!sampler) {
-            return;
-        }
-        sampler->normalizeSample();
-    };
-    m_sampleEditorPanel->onReverseRequested = [this]() {
-        if (!m_trackManager || !m_sampleEditorUnitId) {
-            return;
-        }
-        auto plugin = m_trackManager->getUnitManager().getUnitPlugin(m_sampleEditorUnitId);
-        auto sampler = std::dynamic_pointer_cast<Aestra::Audio::Plugins::SamplerPlugin>(plugin);
-        if (!sampler) {
-            return;
-        }
-        sampler->reverseSample();
-    };
     m_sampleEditorPanel->onControlCommitRequested = [this]() {
         if (!m_trackManager || !m_sampleEditorUnitId) return;
         const auto unit = m_sampleEditorUnitId; // an undo or redo shows the restored values in the editor, if it is still on this unit
@@ -1373,6 +1351,7 @@ void AestraContent::setupArsenalPanels() {
 
     m_audioClipEditorPanel = std::make_shared<AudioClipEditorPanel>(m_trackManager);
     m_audioClipEditorPanel->setVisible(false);
+    wireEditorActions(); // both editors exist now: normalize, reverse, Preview (AestraContentEditorPreview.cpp)
     m_audioClipEditorPanel->setOnClipEditsCommitted([this]() {
         if (m_trackManagerUI)
             m_trackManagerUI->invalidateCache();
@@ -1433,7 +1412,7 @@ void AestraContent::setupArsenalPanels() {
             }
         }
     });
-    m_sequencerPanel->setOnRequestPatternEditor([this](PatternID patternId) { openPatternInPianoRoll(patternId); });
+    m_sequencerPanel->setOnRequestPatternEditor([this](PatternID patternId, Aestra::Audio::UnitID unitId) { openPatternInPianoRoll(patternId, unitId); });
 
     m_sequencerPanel->setOnRequestLoadSample([this](UnitID id) {
         if (!m_fileBrowser)
@@ -1704,7 +1683,7 @@ void AestraContent::onUpdate(double dt) {
     closeContextualPanels();
     updatePendingCountIn();
     logModeStateIfChanged();
-
+    updateFrameServices(dt); // DSP load readout, MIDI hot-plug poll (AestraContentMeters.cpp)
     // Heal dropped mixer-state pushes: cheap when clean (one atomic per
     // channel), converges when a queue flood ends (#913).
     if (m_trackManager) {
@@ -3611,23 +3590,22 @@ void AestraContent::pauseFromCurrentFocus() {
     }
 }
 
-void AestraContent::openPatternInPianoRoll(PatternID patternId) {
+void AestraContent::openPatternInPianoRoll(PatternID patternId, Aestra::Audio::UnitID unitId) {
     if (!m_pianoRollPanel || !m_trackManager || !patternId.isValid()) {
         return;
     }
 
-    auto& pm = m_trackManager->getPatternManager();
-    auto pattern = pm.getPattern(patternId);
-    if (!pattern || !pattern->isMidi()) {
-        return;
-    }
+    const auto* pattern = m_trackManager->getPatternManager().getPattern(patternId);
+    if (!pattern || !pattern->isMidi()) return;
 
+    // The asking unit wins (the 808 row's "Open in Piano Roll" opened the Kick's notes), else the pattern's own.
+    const auto editingUnit = m_trackManager->getUnitManager().getUnit(unitId) ? unitId : resolveEditingUnitForPattern(patternId);
     if (m_sequencerPanel) {
         m_sequencerPanel->setActivePattern(patternId);
-        m_sequencerPanel->setSelectedUnit(resolveEditingUnitForPattern(patternId));
+        m_sequencerPanel->setSelectedUnit(editingUnit);
     }
 
-    m_pianoRollPanel->setEditingUnit(resolveEditingUnitForPattern(patternId));
+    m_pianoRollPanel->setEditingUnit(editingUnit);
 
     // Opening a pattern loads content, not geometry: the panel reopens where
     // the user left it (stored preference, or the per-panel default), via the

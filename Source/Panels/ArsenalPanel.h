@@ -7,6 +7,7 @@
 #include "../AestraUI/Widgets/NUIPianoRollWidgets.h"
 #include "ArsenalRowLanes.h"
 #include "ArsenalSceneStrip.h"
+#include "ArsenalSceneMenu.h"
 #include "WindowPanel.h"
 #include "TrackManager.h"
 #include <chrono>
@@ -92,7 +93,7 @@ public:
     /** @brief Set the callback used to open a unit editor. */
     void setOnRequestEditor(std::function<void(UnitID)> cb) { m_onRequestEditor = cb; }
     /** @brief Set the callback used to open a pattern in the Piano Roll. */
-    void setOnRequestPatternEditor(std::function<void(PatternID)> cb) { m_onRequestPatternEditor = cb; }
+    void setOnRequestPatternEditor(std::function<void(PatternID, UnitID)> cb) { m_onRequestPatternEditor = cb; }
     /** @brief Set the callback used to request sample loading. */
     void setOnRequestLoadSample(std::function<void(UnitID)> cb) { m_onRequestLoadSample = cb; }
     /** @brief Set the callback used to open the sample editor. */
@@ -103,7 +104,8 @@ public:
     void setOnPluginDroppedToUnit(std::function<void(UnitID, const std::string&)> cb) { m_onPluginDroppedToUnit = cb; }
     /** @brief Set the callback used when an audio sample is dropped onto a unit. */
     /// While a sound drawer is open the app routes typing here first, before global shortcuts and musical typing.
-    bool handleDrawerKey(const AestraUI::NUIKeyEvent& event) { return m_lanes.drawerOpen() && onKeyEvent(event); }
+    /// Typing the sound drawer or a pattern rename owns: the app asks here before its global shortcuts (Space plays!).
+    bool handleDrawerKey(const AestraUI::NUIKeyEvent& event) { return m_sceneMenu.key(event) || (m_lanes.drawerOpen() && onKeyEvent(event)); }
     /// Sound sets (V81-AR2): the collections a row's drawer can walk, a collection's members, and a unit's choice.
     void setSoundSetProviders(std::function<std::vector<std::string>()> names, std::function<std::vector<std::string>(const std::string&)> members,
                               std::function<void(UnitID, const std::string&)> chosen) { m_lanes.setSoundSetProviders(std::move(names), std::move(members), std::move(chosen)); }
@@ -140,6 +142,11 @@ private:
     Aestra::ArsenalRowLanes m_lanes; ///< which rows are open into step lanes (FD-27 point 4)
     Aestra::ArsenalSceneStrip m_scenes; ///< pattern chips under the command header (FD-27 point 1)
     AestraUI::NUIRect m_sceneRect{};
+    Aestra::ArsenalSceneMenu m_sceneMenu; ///< right-click a pattern: Rename, Duplicate, Delete (V82-AR1, FD-52)
+    void showSceneMenu(uint64_t patternId, const AestraUI::NUIPoint& at); ///< ArsenalPanelScenes.cpp
+    void sceneMenuChanged(uint64_t select);                                ///< ArsenalPanelScenes.cpp
+    void reconcilePatterns();                                              ///< ArsenalPanelScenes.cpp: after undo/redo, a vanished active pattern and a stale browser
+    size_t m_patternSignature{0};                                          ///< ids + names the browser was last refreshed for
     Aestra::ArsenalRackLayout m_rack; ///< groups, headers and row positions (one answer for layout, scroll and drop)
     
     // Header controls
@@ -219,7 +226,7 @@ private:
     bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override;
     
     std::function<void(UnitID)> m_onRequestEditor;
-    std::function<void(PatternID)> m_onRequestPatternEditor;
+    std::function<void(PatternID, UnitID)> m_onRequestPatternEditor;
     std::function<void(UnitID)> m_onRequestLoadSample;
     std::function<void(UnitID)> m_onRequestSampleEditor;
     std::function<void(const std::string&)> m_onPluginDropped;

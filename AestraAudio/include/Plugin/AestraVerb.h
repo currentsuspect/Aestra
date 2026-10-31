@@ -183,18 +183,19 @@ public:
     // float headroom, not clipping — the path never clamps at +/-1. See
     // Aestra-Internals: aestra-docs/design/aestra-verb-gain-staging.md (N4).
     static constexpr float kWetMakeupGain = 4.2f;
-    // Session 004: per-mode wet compensation for box-cut/air reductions (linear gain).
     // Index: 0=Room, 1=Hall, 2=Plate, 3=Cathedral, 4=Chamber, 5=BrightHall, 6=Ambience, 7=Scoring, 8=SmoothPlate.
+    // Per-mode wet level, re-matched to the old wet loudness (pink noise, LUFS) when the decay became per band
+    // and came out 2.2-4.2 dB hotter. Old value x correction in each comment.
     static constexpr std::array<float, kModeCount> kWetCompGain = {
-        1.096f,   // Room +0.8 dB
-        0.96f,    // Hall -0.35 dB
-        1.122f,   // Plate +1.0 dB
-        0.92f,    // Cathedral -0.7 dB (long tail, compensate for density)
-        1.04f,    // Chamber +0.3 dB
-        1.15f,    // Bright Hall +1.2 dB (bright, needs lift)
-        1.20f,    // Ambience +1.6 dB (short, needs presence)
-        0.98f,    // Scoring -0.2 dB (cinematic, slightly pulled back)
-        1.10f     // Smooth Plate +0.8 dB (smooth variant)
+        0.834f,   // Room (1.096 x 0.761)
+        0.739f,   // Hall (0.96 x 0.77)
+        0.691f,   // Plate (1.122 x 0.616)
+        0.692f,   // Cathedral (0.92 x 0.752)
+        0.795f,   // Chamber (1.04 x 0.764)
+        0.89f,   // Bright Hall (1.15 x 0.774)
+        0.882f,   // Ambience (1.2 x 0.735)
+        0.745f,   // Scoring (0.98 x 0.76)
+        0.696f   // Smooth Plate (1.1 x 0.633)
     };
     static constexpr float kTwoPi = 6.28318530718f;
     static constexpr uint32_t kControlInterval = 64;
@@ -210,8 +211,14 @@ public:
     static constexpr std::array<float, kFDNLineCount> kLfoBaseRates = {
         0.158f, 0.278f, 0.398f, 0.533f, 0.668f, 0.803f, 0.923f, 1.058f
     };
+    // Input diffusers: Dattorro's plate diffusers ("Effect Design Part 1", 1997), converted to this table's
+    // 44.1 kHz reference. His published lengths, 142/107/379/277, are samples at 29761 Hz; this table used them
+    // as-is at 44.1 kHz, so every diffuser ran at 0.67x its intended delay (2.4-8.6 ms instead of 3.6-12.7 ms).
+    // Shorter allpass chains ring at higher, more audible periods: the early part of every mode measured twice the
+    // short-lag periodicity of a reference Dattorro plate. 142·44100/29761 = 210.4 -> 211, 158.6 -> 157,
+    // 561.6 -> 563, 410.5 -> 409 (nearest primes).
     static constexpr std::array<uint32_t, kDiffuserCount> kBaseDiffuserLengths = {
-        142, 107, 379, 277
+        211, 157, 563, 409
     };
     static constexpr std::array<uint32_t, kPlatePostAllpassCount> kPlatePostAllpassLengths = {
         89, 67
@@ -482,16 +489,20 @@ public:
         const float mudAlpha = m_mudHpCoeff[static_cast<size_t>(modeIdx)];
         const float mudBlend = kMudHpBlend[static_cast<size_t>(modeIdx)];
         const bool isPlateMode = (mode == Mode::Plate || mode == Mode::SmoothPlate);
+        // Late-tail width boost, per mode. Scaled x0.75 when the feedback matrix became Hadamard: its lines are
+        // mutually independent, so the tail is wider before the boost, and the old amounts (tuned against the
+        // Householder lines' correlation) overshot: width 1.22-1.38 and mono fold-down down to -4.8 dB. At x0.75
+        // width and fold-down land back on their pre-change values (ReverbStereoTest).
         float kDecorr = 0.0f;
         switch (mode) {
-            case Mode::Room:       kDecorr = 0.22f; break;
-            case Mode::Plate:      kDecorr = 0.26f; break;
-            case Mode::Cathedral:  kDecorr = 0.20f; break;
-            case Mode::Chamber:    kDecorr = 0.24f; break;
-            case Mode::BrightHall: kDecorr = 0.18f; break;
-            case Mode::Ambience:   kDecorr = 0.28f; break;
-            case Mode::Scoring:    kDecorr = 0.19f; break;
-            case Mode::SmoothPlate:kDecorr = 0.25f; break;
+            case Mode::Room:       kDecorr = 0.165f; break;
+            case Mode::Plate:      kDecorr = 0.195f; break;
+            case Mode::Cathedral:  kDecorr = 0.15f; break;
+            case Mode::Chamber:    kDecorr = 0.18f; break;
+            case Mode::BrightHall: kDecorr = 0.135f; break;
+            case Mode::Ambience:   kDecorr = 0.21f; break;
+            case Mode::Scoring:    kDecorr = 0.143f; break;
+            case Mode::SmoothPlate:kDecorr = 0.188f; break;
             default:               break;
         }
 
@@ -706,7 +717,7 @@ public:
                     control.feedbackGains.data(),
                     kInjectL.data(), kInjectR.data(),
                     kOutputL.data(), kOutputR.data(),
-                    control.dampingCoeff, lowDampCoeff, control.lowDampAmount,
+                    control.lineDampingCoeffs.data(), lowDampCoeff, control.lineLowDampAmounts.data(),
                     wetL, wetR);
             }
             AESTRA_PROFILE_STAGE_END(kFDNFeedbackMatrix);
@@ -743,18 +754,6 @@ public:
                 processPlatePostAllpass(wetL, wetR, platePostPos);
                 AESTRA_PROFILE_STAGE_END(kPlatePostAllpass);
 
-                // Session 012: gentle peaking cut at ~562 Hz to tame metallic ringing.
-                // Direct Form 2 (transposed) biquad — 2 states per channel.
-                const auto& c = m_platePeakCoeff;
-                const float inL = wetL, inR = wetR;
-                wetL = c[0] * inL + m_platePeakZ1L;
-                m_platePeakZ1L = c[1] * inL - c[3] * wetL + m_platePeakZ2L;
-                m_platePeakZ2L = c[2] * inL - c[4] * wetL;
-                wetR = c[0] * inR + m_platePeakZ1R;
-                m_platePeakZ1R = c[1] * inR - c[3] * wetR + m_platePeakZ2R;
-                m_platePeakZ2R = c[2] * inR - c[4] * wetR;
-                wetL = sanitize(wetL);
-                wetR = sanitize(wetR);
             }
 
             processWetVoicing(wetL, wetR, mode, control);
@@ -879,9 +878,9 @@ public:
         const float v = getParameter(id);
         switch (id) {
         case kDecay: {
-            // Truthful display: include the current mode's decay scalar
-            // (0.90-1.60) — the DSP uses (0.3 + v*9.7) * decayScalar, so a
-            // Cathedral "7.1s" was actually 11.4s before this was applied.
+            // Truthful display: include the current mode's decay scalar. Since the decay became per-band
+            // (26 Oct) this is the measured mid-band T60; before, the in-loop filters cut every tail to about
+            // half of what this read (Room "6.8s" measured 3.6 s at 500 Hz, 3.0 s full-band).
             const float scalar = constantsForMode(currentMode()).decayScalar;
             return formatCompactFloat(static_cast<int>((0.3f + v * 9.7f) * scalar * 10.0f) / 10.0f, 1) + "s";
         }
@@ -901,7 +900,9 @@ public:
             // per-mode scalar (updateControlCache). The old "v * 8 smp" text
             // matched neither the previous x7 mapping nor the current one.
             const float scalar = constantsForMode(currentMode()).modDepthScalar;
-            const float smp = (v <= 0.0f ? 0.0f : std::pow(v, 0.6f)) * 12.5f * scalar;
+            // Includes the always-on floor (3.5 smp at 44.1 kHz, scaled to the session rate like the DSP), faded in over 5%.
+            const float floorSmp = 3.5f * static_cast<float>(m_sampleRate) / kReferenceSampleRate * std::min(1.0f, v / 0.05f);
+            const float smp = floorSmp + (v <= 0.0f ? 0.0f : std::pow(v, 0.6f)) * 12.5f * scalar;
             return formatCompactFloat(static_cast<int>(smp * 10.0f) / 10.0f, 1) + " smp";
         }
         case kMode: {
@@ -1156,8 +1157,12 @@ private:
     };
 
     struct ControlCache {
-        float dampingCoeff{0.7f};
+        float dampingCoeff{0.7f};   // unused by the loop since per-line damping; kept for freeze/diagnostics
         float lowDampAmount{0.45f};
+        float highDecayRatio{0.5f}; // 8 kHz decay time / mid decay time, from Damping
+        float lowDecayRatio{0.9f};  // decay time below ~110 Hz / mid decay time, per mode
+        std::array<float, kFDNLineCount> lineDampingCoeffs{};   // each line's, scaled to its length
+        std::array<float, kFDNLineCount> lineLowDampAmounts{};
         float diffusionG{0.7f};
         float modDepthSamples{2.5f};
         float wetToneCoeff{0.6f};
@@ -1195,29 +1200,31 @@ private:
         std::array<float, kEarlyTapCount> earlyGains{};
     };
 
+    // decayScalar (last field) was rescaled when the decay became per band, so each mode's full-band T30 at the
+    // default Decay matches the old one (the old in-loop filters silently shortened every tail by 0.39-0.65x).
     static ModeConstants constantsForMode(Mode mode) {
         switch (mode) {
         case Mode::Hall:
-            return {{{2557, 2617, 2491, 2422, 2277, 2356, 2188, 2116}}, 1.18f, 0.64f, 0.96f, 1.36f};
+            return {{{2557, 2617, 2491, 2422, 2277, 2356, 2188, 2116}}, 1.18f, 0.64f, 0.96f, 0.857f};
         case Mode::Plate:
-            return {{{1313, 1451, 1247, 1163, 1123, 1219, 1043, 977}}, 1.38f, 0.50f, 0.98f, 1.45f};
+            return {{{1313, 1451, 1247, 1163, 1123, 1219, 1043, 977}}, 1.38f, 0.50f, 0.98f, 0.566f};
         case Mode::Cathedral:
-            return {{{3117, 3217, 2991, 2882, 2777, 2856, 2688, 2616}}, 1.25f, 0.58f, 0.88f, 1.60f};
+            return {{{3117, 3217, 2991, 2882, 2777, 2856, 2688, 2616}}, 1.25f, 0.58f, 0.88f, 0.989f};
         case Mode::Chamber:
-            return {{{1817, 1877, 1751, 1682, 1577, 1656, 1488, 1416}}, 1.15f, 0.52f, 0.90f, 1.28f};
+            return {{{1817, 1877, 1751, 1682, 1577, 1656, 1488, 1416}}, 1.15f, 0.52f, 0.90f, 0.71f};
         case Mode::BrightHall:
-            return {{{2417, 2477, 2351, 2282, 2177, 2256, 2088, 2016}}, 1.10f, 0.70f, 1.02f, 1.30f};
+            return {{{2417, 2477, 2351, 2282, 2177, 2256, 2088, 2016}}, 1.10f, 0.70f, 1.02f, 0.849f};
         case Mode::Ambience:
-            return {{{917, 977, 851, 782, 737, 816, 688, 616}}, 1.05f, 0.40f, 0.78f, 0.90f};
+            return {{{917, 977, 851, 782, 737, 816, 688, 616}}, 1.05f, 0.40f, 0.78f, 0.452f};
         case Mode::Scoring:
-            return {{{2817, 2917, 2691, 2582, 2477, 2556, 2388, 2316}}, 1.22f, 0.62f, 0.92f, 1.50f};
+            return {{{2817, 2917, 2691, 2582, 2477, 2556, 2388, 2316}}, 1.22f, 0.62f, 0.92f, 0.931f};
         case Mode::SmoothPlate:
-            return {{{1413, 1551, 1347, 1263, 1223, 1319, 1143, 1077}}, 1.42f, 0.48f, 0.94f, 1.40f};
+            return {{{1413, 1551, 1347, 1263, 1223, 1319, 1143, 1077}}, 1.42f, 0.48f, 0.94f, 0.561f};
         case Mode::Room:
         default:
             // Session 006: restore modDepthScalar from 0.15 to 0.45.
             // 0.15 made Room modulation effectively inaudible.
-            return {{{1557, 1617, 1491, 1422, 1277, 1356, 1188, 1116}}, 1.22f, 0.45f, 0.82f, 1.20f};
+            return {{{1557, 1617, 1491, 1422, 1277, 1356, 1188, 1116}}, 1.22f, 0.45f, 0.82f, 0.612f};
         }
     }
 
@@ -1278,18 +1285,20 @@ private:
         const float dampingPole =
             damping <= 0.0f ? 0.0f : std::pow(damping, kReferenceSampleRate / sr);
         cache.dampingCoeff = 1.0f - dampingPole;
+        // Damping sets how much faster the top decays than the mids: 0 -> same (1.0), 0.98 -> ~0.13x at 8 kHz.
+        cache.highDecayRatio = std::pow(0.12f, damping);
 
-        // Per-mode low damp amount
+        // Per-mode low-end decay, as a ratio of the mid decay time (see the per-line damping below).
         switch (mode) {
-            case Mode::Hall:       cache.lowDampAmount = 0.43f; break;
-            case Mode::Plate:      cache.lowDampAmount = 0.42f; break;
-            case Mode::Cathedral:  cache.lowDampAmount = 0.44f; break;
-            case Mode::Chamber:    cache.lowDampAmount = 0.46f; break;
-            case Mode::BrightHall: cache.lowDampAmount = 0.40f; break;
-            case Mode::Ambience:   cache.lowDampAmount = 0.50f; break;
-            case Mode::Scoring:    cache.lowDampAmount = 0.42f; break;
-            case Mode::SmoothPlate:cache.lowDampAmount = 0.41f; break;
-            default:               cache.lowDampAmount = 0.48f; break;
+            case Mode::Hall:       cache.lowDecayRatio = 0.95f; break;
+            case Mode::Plate:      cache.lowDecayRatio = 0.90f; break;
+            case Mode::Cathedral:  cache.lowDecayRatio = 1.00f; break;
+            case Mode::Chamber:    cache.lowDecayRatio = 0.90f; break;
+            case Mode::BrightHall: cache.lowDecayRatio = 0.90f; break;
+            case Mode::Ambience:   cache.lowDecayRatio = 0.80f; break;
+            case Mode::Scoring:    cache.lowDecayRatio = 0.95f; break;
+            case Mode::SmoothPlate:cache.lowDecayRatio = 0.90f; break;
+            default:               cache.lowDecayRatio = 0.85f; break;
         }
 
         // Per-mode tone cutoff
@@ -1356,7 +1365,13 @@ private:
         // available for anyone who wants overt motion.
         const float depthParam = std::clamp(smoothedParams[kModDepth], 0.0f, 1.0f);
         const float depthCurve = depthParam <= 0.0f ? 0.0f : std::pow(depthParam, 0.6f);
-        cache.modDepthSamples = depthCurve * 12.5f * constants.modDepthScalar;
+        // A floor of slow delay movement under Mod Depth: eight lines can't hold enough resonances to overlap
+        // (Hall ~0.4/Hz, each ~0.7 Hz wide), so a still network rings at each. 3.5 samples (~1 cent at most)
+        // smears them; it fades in over the first 5% of the control, so Depth 0 is still fully static.
+        constexpr float kModFloorSamples = 3.5f;
+        const float floorAmount = std::min(1.0f, depthParam / 0.05f);
+        cache.modDepthSamples =
+            kModFloorSamples * sampleScale * floorAmount + depthCurve * 12.5f * constants.modDepthScalar;
         cache.modulationEnabled = cache.modDepthSamples > 0.0001f && modRateScalar > 0.0001f;
 
         const float width = std::clamp(smoothedParams[kWidth], 0.0f, 1.0f);
@@ -1382,6 +1397,39 @@ private:
             cache.lfoCosInc2[line] = std::cos(inc2);
         }
 
+        // Frequency-dependent decay, per line (Jot). The damping low-pass and low shelf used to remove a FIXED
+        // amount every pass (the shelf -5 dB a pass) whatever Decay or line length: the decay peaked at 500 Hz
+        // (lows 0.33-0.49x, 2 kHz 0.31-0.60x, 8 kHz ~0.1x), so long tails collapsed into a metallic mid ring.
+        // Now mid decay = Decay, lows = lowDecayRatio of it, 8 kHz = highDecayRatio of it, each line's per-pass
+        // loss derived from its own length so all eight decay alike (ReverbDecayBalanceTest).
+        {
+            const float t60 = std::max(0.1f, decayTime);
+            const float hfFreq = std::min(8000.0f, 0.45f * sr);
+            const float w = kTwoPi * hfFreq / sr;
+            const float cosW = std::cos(w);
+            for (size_t line = 0; line < kFDNLineCount; ++line) {
+                const float lineSeconds = static_cast<float>(cache.lineLengths[line]) / sr;
+                // Extra loss per pass beyond the broadband feedback gain, for a band whose decay is ratio * t60.
+                const auto extraGain = [&](float ratio) {
+                    if (ratio >= 1.0f) return 1.0f;
+                    return std::pow(10.0f, -3.0f * lineSeconds * (1.0f / (std::max(0.02f, ratio) * t60) - 1.0f / t60));
+                };
+                // One-pole low-pass y += c(x - y), unity at DC; choose its pole p = 1 - c so |H| = a at hfFreq:
+                // a²(1 - 2p·cos w + p²) = (1 - p)²  ->  (a²-1)p² + 2(1 - a²cos w)p + (a²-1) = 0, root in [0, 1).
+                const float a = extraGain(cache.highDecayRatio);
+                float pole = 0.0f;
+                if (a < 0.9999f) {
+                    const float qa = a * a - 1.0f;
+                    const float qb = 2.0f * (1.0f - a * a * cosW);
+                    const float disc = std::max(0.0f, qb * qb - 4.0f * qa * qa);
+                    pole = std::clamp((-qb + std::sqrt(disc)) / (2.0f * qa), 0.0f, 0.999f);
+                }
+                cache.lineDampingCoeffs[line] = 1.0f - pole;
+                // Low shelf: feedback - amount·LP110(feedback), so its gain below ~110 Hz is 1 - amount.
+                cache.lineLowDampAmounts[line] = 1.0f - extraGain(cache.lowDecayRatio);
+            }
+        }
+
         // Chaotic-character oscillator: three incommensurate low-frequency
         // components, base rate scaled by Mod Rate and normalized by sample rate.
         // Advanced once per sample (not once per line) so the frequency is
@@ -1397,12 +1445,14 @@ private:
         // bleed energy every pass (measured ~22 dB decay over 6 s). Damping
         // coeff 1.0 makes the LP transparent (state snaps to input) and
         // lowDampAmount 0 disables the shelf, leaving only the orthogonal
-        // Householder matrix in the loop.
+        // feedback matrix in the loop.
         cache.freezeActive = smoothedParams[kFreeze] > 0.5f;
         if (cache.freezeActive) {
             cache.feedbackGains.fill(1.0f);
             cache.dampingCoeff = 1.0f;
             cache.lowDampAmount = 0.0f;
+            cache.lineDampingCoeffs.fill(1.0f);
+            cache.lineLowDampAmounts.fill(0.0f);
             // Freeze the modulation as well: with modulation active the
             // fractional cubic-Hermite delay reads are not energy-exact and
             // the unity loop slowly GROWS (~+1 dB/s measured). Zero modulation
@@ -1547,18 +1597,6 @@ private:
         m_earlyMask = static_cast<int>(earlyPow2) - 1;
 
         const float sr = static_cast<float>(m_sampleRate);
-        m_platePeakCoeff = peakingCoefficients(-5.5f, 620.0f, sr, 1.15f);
-        // Session 006: reduce box-cut depth — Session 004 values removed too much body.
-        // Room: -4.6→-3.3 dB, Hall: -3.0→-2.8 dB, Plate: -4.2→-3.3 dB
-        m_boxCutCoeff[0] = peakingCoefficients(-3.3f, 430.0f, sr, 0.85f);  // Room
-        m_boxCutCoeff[1] = peakingCoefficients(-2.8f, 520.0f, sr, 0.75f);  // Hall
-        m_boxCutCoeff[2] = peakingCoefficients(-3.3f, 1250.0f, sr, 1.10f); // Plate
-        m_boxCutCoeff[3] = peakingCoefficients(-2.5f, 400.0f, sr, 0.80f);  // Cathedral
-        m_boxCutCoeff[4] = peakingCoefficients(-3.0f, 460.0f, sr, 0.82f);  // Chamber
-        m_boxCutCoeff[5] = peakingCoefficients(-2.6f, 550.0f, sr, 0.78f);  // Bright Hall
-        m_boxCutCoeff[6] = peakingCoefficients(-3.5f, 480.0f, sr, 0.88f);  // Ambience
-        m_boxCutCoeff[7] = peakingCoefficients(-2.7f, 420.0f, sr, 0.80f);  // Scoring
-        m_boxCutCoeff[8] = peakingCoefficients(-3.2f, 1100.0f, sr, 1.05f); // Smooth Plate
 
         // Session 004: precompute per-mode mud HP filter coefficients (one-pole)
         for (size_t m = 0; m < kModeCount; ++m) {
@@ -1627,10 +1665,6 @@ private:
         m_randomTarget.fill(0.0f);
         m_randomCounter.fill(0);
 
-        m_platePeakZ1L = m_platePeakZ2L = 0.0f;
-        m_platePeakZ1R = m_platePeakZ2R = 0.0f;
-        m_boxCutZ1L = m_boxCutZ2L = 0.0f;
-        m_boxCutZ1R = m_boxCutZ2R = 0.0f;
         m_wetToneStateL = 0.0f;
         m_wetToneStateR = 0.0f;
         m_mudHpStateL = 0.0f;
@@ -1775,17 +1809,11 @@ private:
         }
     }
 
+    // The per-mode "box cut" peaking EQs (-2.5..-3.5 dB at 400-550 Hz, 1.1-1.25 kHz on the plates) and plate's
+    // -5.5 dB cut at 620 Hz "to tame metallic ringing" are gone: they treated the mid-peaked decay (see the
+    // per-line damping), which no longer exists, and on a balanced tail they only carved a hole in the mids.
     void processWetVoicing(float& left, float& right, Mode mode, const ControlCache& control) {
-        const auto& c = m_boxCutCoeff[static_cast<size_t>(mode)];
-        const float inL = left;
-        const float inR = right;
-        left = c[0] * inL + m_boxCutZ1L;
-        m_boxCutZ1L = c[1] * inL - c[3] * left + m_boxCutZ2L;
-        m_boxCutZ2L = c[2] * inL - c[4] * left;
-        right = c[0] * inR + m_boxCutZ1R;
-        m_boxCutZ1R = c[1] * inR - c[3] * right + m_boxCutZ2R;
-        m_boxCutZ2R = c[2] * inR - c[4] * right;
-
+        (void)mode;
         m_wetToneStateL += control.wetToneCoeff * (left - m_wetToneStateL);
         m_wetToneStateR += control.wetToneCoeff * (right - m_wetToneStateR);
         left = m_wetToneStateL + (left - m_wetToneStateL) * control.wetAirBlend;
@@ -1832,24 +1860,6 @@ private:
     // Compute peaking EQ coefficients (b0,b1,b2,a1,a2 with a0 normalized to 1).
     // dbGain: positive = boost, negative = cut.  Q: bandwidth at -3dB (or -dBgain/2 for peaking).
     // Uses standard RBJ Audio EQ Cookbook formula (same equation works for boost and cut).
-    static std::array<float, 5> peakingCoefficients(float dbGain, float freqHz, float sampleRate, float Q) {
-        const float A = std::sqrt(std::pow(10.0f, dbGain / 20.0f));
-        const float w0 = 2.0f * static_cast<float>(M_PI) * freqHz / sampleRate;
-        const float cosw0 = std::cos(w0);
-        const float sinw0 = std::sin(w0);
-        const float alpha = sinw0 / (2.0f * Q);
-
-        const float b0 = 1.0f + alpha * A;
-        const float b1 = -2.0f * cosw0;
-        const float b2 = 1.0f - alpha * A;
-        const float a0 = 1.0f + alpha / A;
-        const float a1 = -2.0f * cosw0;
-        const float a2 = 1.0f - alpha / A;
-
-        const float invA0 = 1.0f / a0;
-        return {b0 * invA0, b1 * invA0, b2 * invA0, a1 * invA0, a2 * invA0};
-    }
-
     PluginInfo m_info;
     double m_sampleRate = 48000.0;
 
@@ -1912,16 +1922,6 @@ private:
 
     // Session 012: gentle peaking EQ to tame Plate metallic ringing (~562 Hz).
     // Coefficients precomputed at init; only applied in Plate/SmoothPlate mode.
-    std::array<float, 5> m_platePeakCoeff{}; // b0, b1, b2, a1, a2 (a0 normalized to 1)
-    std::array<std::array<float, 5>, kModeCount> m_boxCutCoeff{};
-    float m_platePeakZ1L = 0.0f;
-    float m_platePeakZ2L = 0.0f;
-    float m_platePeakZ1R = 0.0f;
-    float m_platePeakZ2R = 0.0f;
-    float m_boxCutZ1L = 0.0f;
-    float m_boxCutZ2L = 0.0f;
-    float m_boxCutZ1R = 0.0f;
-    float m_boxCutZ2R = 0.0f;
     float m_wetToneStateL = 0.0f;
     float m_wetToneStateR = 0.0f;
     // Session 004: mud cleanup one-pole HP filter state

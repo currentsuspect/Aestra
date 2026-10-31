@@ -188,6 +188,7 @@ void SamplerPlugin::shutdown() {
     m_active = false;
     // Force release of data to ensure cleanup
     auto old = m_data.exchange(std::shared_ptr<SampleData>(nullptr), std::memory_order_acq_rel);
+    publishSample(nullptr);
     publishToKeepLength(nullptr);
     GarbageCollector::instance().release(old, "SamplerPlugin::SampleData shutdown");
     std::lock_guard<std::mutex> lock(m_retiredMutex);
@@ -210,6 +211,7 @@ void SamplerPlugin::retireSample(std::shared_ptr<SampleData> old) {
 }
 
 void SamplerPlugin::activate() {
+    m_voiceCompSmoothed = 1.0f;
     m_active = true;
     for (auto& v : m_voices)
         v.active = false;
@@ -270,6 +272,7 @@ bool SamplerPlugin::loadSampleData(const std::string& path, std::vector<float> d
     // Atomic Swap (Thread-Safe, Lock-Free-ish)
     // std::atomic_exchange uses standard atomics for shared_ptr
     auto oldData = m_data.exchange(newData, std::memory_order_acq_rel);
+    publishSample(newData);
     publishToKeepLength(newData);
 
     // Voices still sounding finish on the old sample (gap-free swap); it is collected once none read it.
@@ -299,6 +302,7 @@ bool SamplerPlugin::normalizeSample(float targetPeak) {
     }
 
     auto oldData = m_data.exchange(edited, std::memory_order_acq_rel);
+    publishSample(edited);
     publishToKeepLength(edited);
     retireSample(std::move(oldData));
     return true;
@@ -326,6 +330,7 @@ bool SamplerPlugin::reverseSample() {
     }
 
     auto oldData = m_data.exchange(edited, std::memory_order_acq_rel);
+    publishSample(edited);
     publishToKeepLength(edited);
     retireSample(std::move(oldData));
     return true;
@@ -372,8 +377,9 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
         if (!v.active && v.held) v.held.reset(); // a refcount drop: the retired list owns the buffer
     }
 
-    // Thread-safe access to sample data
-    auto currentData = m_data.load(std::memory_order_acquire);
+    // Thread-safe access to sample data: a lock-free pin held for the whole block.
+    const auto samplePin = m_rtData.readRealtime();
+    const std::shared_ptr<SampleData>& currentData = samplePin.shared();
     if (!currentData || currentData->data.empty())
         return;
 
@@ -414,11 +420,8 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
     const float endNorm = std::clamp(m_loopEndNorm.load(std::memory_order_relaxed), startNorm + 0.001f, 1.0f);
     // The sample window in frames. A keep-length voice plays a stretched copy of a
     // different length, so each voice takes the window of the buffer it plays.
-    struct Window {
-        double total, start, end, loopLength, pingPongEnd, pingPongSpan;
-    };
     const auto windowFor = [&](double frames) {
-        Window w{};
+        SampleWindow w{};
         w.total = frames;
         w.start = startNorm * (frames - 1.0);
         w.end = std::max(w.start + 1.0, endNorm * frames);
@@ -427,18 +430,75 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
         w.pingPongSpan = w.pingPongEnd - w.start;
         return w;
     };
-    const Window sharedWindow = windowFor(totalFrames);
+    // The window is a function of the voice's frame count and the block's loop
+    // points, so it is the SAME for every sample of a voice in a block. It was
+    // being rebuilt per voice per sample -- eight double operations and four
+    // branches, for a value that did not change -- which was about a third of
+    // this plugin's cost.
+    //
+    // The cache is keyed on everything the window depends on, including the
+    // block's loop points, so a voice that changes sample mid-block (a note-on
+    // with its own buffer) gets a new window and a voice whose loop points
+    // moved gets a new window.
+    const auto windowForVoice = [&](Voice& v, double frames) -> const SampleWindow& {
+        if (v.windowFrames != frames || v.windowStartNorm != startNorm || v.windowEndNorm != endNorm) {
+            v.window = windowFor(frames);
+            v.windowFrames = frames;
+            v.windowStartNorm = startNorm;
+            v.windowEndNorm = endNorm;
+        }
+        return v.window;
+    };
     const LoopMode loopMode = getLoopMode();
     const bool loopEnabled = loopMode != LoopMode::OneShot;
     int activeVoiceCount = 0;
-    for (const auto& v : m_voices) {
-        if (v.active) {
-            ++activeVoiceCount;
-        }
-    }
     bool activeVoiceCountDirty = false;
+    // The voice compensation is 1/sqrt(activeVoices): it changes only when the
+    // number of sounding voices does, and it was costing a square root and a
+    // division on every sample of every block.
+    float voiceComp = 1.0f;
+    const float voiceCompGlideCoeff =
+        static_cast<float>(1.0 - std::exp(-1.0 / std::max(1.0, kVoiceCompGlideSeconds * m_sampleRate)));
+
+    // The compact list of sounding voices.
+    //
+    // The render loop used to walk all 32 voice slots on every sample and skip
+    // the inactive ones. At one or two sounding voices that is thirty wasted
+    // iterations per sample, and it was most of this plugin's cost: the loop
+    // header and the `if (!v.active)` test together were about 74 million
+    // instructions in a four-second render, against 90 million for the whole
+    // plugin.
+    //
+    // The list is rebuilt in voice-index order whenever the sounding set
+    // changes, so the voices are still summed in exactly the same order and the
+    // output is bit-identical.
+    std::array<uint8_t, kMaxVoices> activeVoiceIndices{};
+    uint8_t activeVoiceIndicesCount = 0;
+    const auto rebuildActiveVoices = [&]() {
+        activeVoiceIndicesCount = 0;
+        for (uint8_t vi = 0; vi < static_cast<uint8_t>(kMaxVoices); ++vi) {
+            if (m_voices[vi].active) {
+                activeVoiceIndices[activeVoiceIndicesCount++] = vi;
+            }
+        }
+        activeVoiceCount = activeVoiceIndicesCount;
+        voiceComp = 1.0f / std::sqrt(static_cast<float>(std::max(1, activeVoiceCount)));
+    };
+    // The voices that are already sounding when this block starts are in the
+    // list from the first sample, exactly as the old full walk had them.
+    rebuildActiveVoices();
 
     for (uint32_t i = 0; i < numFrames; ++i) {
+        // Rebuild before the events of this sample: the count has to describe the
+        // voices that were sounding when they arrived, otherwise a chord that starts
+        // from silence looks like a voice-count increase and the compensation glides
+        // down across its attack instead of being in place for it.
+        if (activeVoiceCountDirty) {
+            rebuildActiveVoices();
+            activeVoiceCountDirty = false;
+        }
+        const bool wasSilent = activeVoiceCount == 0;
+
         // Handle MIDI
         while (midiInput && eventIdx < eventCount) {
             const auto& e = midiInput->getEvent(eventIdx);
@@ -456,26 +516,32 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
         // Render Voices
         float L = 0.0f;
         float R = 0.0f;
+        // One-pole glide toward the current polyphony compensation (see
+        // kVoiceCompGlideSeconds); per sample, shared by every voice. Gliding keeps
+        // a release tail from stepping when the voice count changes under it. It
+        // must NOT glide up from unity when nothing was sounding: a chord's first
+        // samples would then sum uncompensated and overshoot by ~6 dB, so after
+        // silence the compensation snaps to its target.
+        m_voiceCompSmoothed += (voiceComp - m_voiceCompSmoothed) * voiceCompGlideCoeff;
         if (activeVoiceCountDirty) {
-            activeVoiceCount = 0;
-            for (const auto& v : m_voices) {
-                if (v.active) {
-                    ++activeVoiceCount;
-                }
-            }
+            rebuildActiveVoices();
             activeVoiceCountDirty = false;
+            if (wasSilent)
+                m_voiceCompSmoothed = voiceComp;
         }
-        const float voiceComp = 1.0f / std::sqrt(static_cast<float>(std::max(1, activeVoiceCount)));
 
-        for (auto& v : m_voices) {
+        for (uint8_t vi = 0; vi < activeVoiceIndicesCount; ++vi) {
+            Voice& v = m_voices[activeVoiceIndices[vi]];
+            // A voice can end inside this very sample (its sample ran out), so
+            // the list can still name a voice that is no longer sounding.
             if (!v.active)
                 continue;
 
-            const Window w = v.ownData ? windowFor(static_cast<double>(v.ownData->frames()))
-                             : v.held  ? windowFor(static_cast<double>(v.held->data.size() / 2))
-                                       : sharedWindow;
+            const double voiceFrames = v.ownData ? static_cast<double>(v.ownData->frames())
+                                 : v.held  ? static_cast<double>(v.held->data.size() / 2)
+                                           : totalFrames;
+            const SampleWindow& w = windowForVoice(v, voiceFrames);
             const std::vector<float>& voiceSamples = v.ownData ? v.ownData->interleaved : (v.held ? v.held->data : sampleVec);
-            const double voiceFrames = w.total;
             const double startFrame = w.start;
             const double endFrame = w.end;
             const double loopLength = w.loopLength;
@@ -587,7 +653,12 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
                 );
             }
 
-            float gain = (v.velocity * v.velocity) * env * kSamplerOutputHeadroom * voiceComp;
+            // Velocity policy (#462, FD-64): gain = (velocity/127)^2, deliberately.
+            // The square gives a wider, more natural dynamic range than linear
+            // (vel 64 is 0.25x, -12 dB; vel 32 is 0.06x). It is a kept
+            // decision, not a leftover: changing it shifts the balance of every
+            // existing project. Pinned by SamplerVelocityCurveTest.
+            float gain = (v.velocity * v.velocity) * env * kSamplerOutputHeadroom * m_voiceCompSmoothed;
             L += outL * gain * v.gainL;
             R += outR * gain * v.gainR;
 
@@ -659,14 +730,11 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
         // before the mono branch so a mono retrigger chokes the held voice
         // instead of gliding into it.
         if (m_cutSelfMode.load(std::memory_order_relaxed)) {
+            // Choked, not cut: each sounding voice fades over kDeclickSeconds.
+            // The old note is still gone almost at once (no audible overlap),
+            // without the step to zero that ticks on low sounds.
             for (auto& v : m_voices) {
-                if (v.active) {
-                    v.active = false;
-                    v.stage = EnvStage::Off;
-                    v.stageTime = 0.0;
-                    v.currentGain = 0.0f;
-                    v.releaseGain = 0.0f;
-                }
+                if (v.active) declickVoice(v);
             }
         }
 
@@ -680,6 +748,18 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
 
             auto& voice = m_voices[0];
             const bool legato = voice.active && voice.stage != EnvStage::Release && voice.stage != EnvStage::Off;
+            if (!legato && voice.active && voice.currentGain > 0.0f) {
+                // A mono restart reuses slot 0. Whatever is still sounding
+                // there (a release tail, a choked voice) moves to a free slot
+                // and fades out, instead of being overwritten mid-waveform.
+                for (size_t i = 1; i < m_voices.size(); ++i) {
+                    if (!m_voices[i].active) {
+                        m_voices[i] = voice;
+                        declickVoice(m_voices[i]);
+                        break;
+                    }
+                }
+            }
             voice.order = m_nextVoiceOrder++;
             voice.noteId = event.noteId; // the previous note no longer owns the voice; its note-off won't match
 
@@ -710,6 +790,7 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
                 voice.stage = EnvStage::Attack;
                 voice.stageTime = 0.0;
                 voice.currentGain = 0.0f;
+                voice.fadeSeconds = 0.0;
             }
             return;
         }
@@ -752,6 +833,23 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
             freeVoice = oldestRelease ? oldestRelease : oldestActive;
             if (!freeVoice)
                 freeVoice = &m_voices[0]; // Fallback
+            // Every configured slot is busy, so this one is about to be overwritten.
+            // Whatever is still sounding there fades out instead of being cut
+            // mid-waveform: park it in a spare slot outside the configured polyphony,
+            // exactly as a mono restart does. Without this, a one-voice cut-self
+            // retrigger still steps to zero in a single sample and ticks. Only for a
+            // voice with gain: a note-on that has not rendered yet would be parked
+            // silent, and it would still count toward the compensation and thin out
+            // the note that replaced it.
+            if (freeVoice->active && freeVoice->stage != EnvStage::Off && freeVoice->currentGain > 0.0f) {
+                for (size_t i = static_cast<size_t>(maxVoices); i < m_voices.size(); ++i) {
+                    if (!m_voices[i].active) {
+                        m_voices[i] = *freeVoice;
+                        declickVoice(m_voices[i]);
+                        break;
+                    }
+                }
+            }
         }
         freeVoice->order = m_nextVoiceOrder++;
         freeVoice->noteId = event.noteId;
@@ -764,6 +862,7 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
         freeVoice->ownData = keepBuffer;
         freeVoice->held.reset();
         freeVoice->position = startFrameFor(noteStartFrame);
+        freeVoice->fadeSeconds = 0.0;
         freeVoice->playbackRate = targetRate;
         freeVoice->targetPlaybackRate = targetRate;
         freeVoice->playbackDirection = 1;
@@ -795,6 +894,20 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
     }
 }
 
+void SamplerPlugin::declickVoice(Voice& v) {
+    if (!v.active || v.stage == EnvStage::Off) return;
+    // Already declicking: a second choke (a retrigger faster than the fade) must
+    // not restart the clock, or the tail can outlive its 4 ms window and keep
+    // counting toward the voice compensation. fadeSeconds > 0 only for a declick
+    // fade — an ADSR release leaves it 0 — so those still get converted.
+    if (v.stage == EnvStage::Release && v.fadeSeconds > 0.0) return;
+    // Fade from where the envelope is right now, never from a stale value.
+    v.releaseGain = v.currentGain;
+    v.stage = EnvStage::Release;
+    v.stageTime = 0.0;
+    v.fadeSeconds = kDeclickSeconds;
+}
+
 float SamplerPlugin::getEnvelopeLevel(Voice& v, double dt, float attack, float decay, float sustain, float release) {
     v.stageTime += dt;
 
@@ -820,14 +933,16 @@ float SamplerPlugin::getEnvelopeLevel(Voice& v, double dt, float attack, float d
     case EnvStage::Sustain:
         v.currentGain = sustain;
         break;
-    case EnvStage::Release:
-        if (v.stageTime >= release) {
+    case EnvStage::Release: {
+        const double length = v.fadeSeconds > 0.0 ? v.fadeSeconds : release;
+        if (v.stageTime >= length) {
             v.stage = EnvStage::Off;
             v.currentGain = 0.0f;
         } else {
-            v.currentGain = v.releaseGain * static_cast<float>(1.0 - v.stageTime / release);
+            v.currentGain = v.releaseGain * static_cast<float>(1.0 - v.stageTime / length);
         }
         break;
+    }
     case EnvStage::Off:
         v.currentGain = 0.0f;
         break;
@@ -980,12 +1095,12 @@ bool SamplerPlugin::loadState(const std::vector<uint8_t>& state) {
         setGlideTimeMs(static_cast<float>(json["glideTimeMs"].asNumber()));
     }
 
+    // A path the check refuses (absolute, traversal, URL) is not opened, but it no longer fails the whole state:
+    // every save writes the sample as an absolute path, so failing here reset every unit's settings on reopen (#998).
+    // The unit's own audioClipPath restores the sample instead (UnitManager::loadFromJSON).
     if (json.has("samplePath")) {
         std::string path = json["samplePath"].asString();
-        if (!path.empty()) {
-            if (!isSafeSamplerStatePath(path)) {
-                return false;
-            }
+        if (!path.empty() && isSafeSamplerStatePath(path)) {
             loadSample(path);
         }
     }

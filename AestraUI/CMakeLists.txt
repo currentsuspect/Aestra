@@ -97,6 +97,8 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/PianoRollToolbar.cpp
     Widgets/PianoRollGrid.cpp
     Widgets/PianoRollNoteLayer.cpp
+    Widgets/PianoRollNoteLayerDuplicate.cpp
+    Widgets/PianoRollNotePaint.cpp
     Widgets/PianoRollControlPanel.cpp
     Widgets/PianoRollView.cpp
     Widgets/NUIVisualWidgets.h
@@ -328,6 +330,7 @@ if(AESTRAUI_BUILD_OPENGL)
     set(AESTRAUI_OPENGL_SOURCES
         Graphics/OpenGL/NUIRendererGL.h
         Graphics/OpenGL/NUIRendererGL.cpp
+        Graphics/OpenGL/NUIRendererGLBatch.cpp
         Graphics/OpenGL/NUIRenderCache.h
         Graphics/OpenGL/NUIRenderCache.cpp
     )
