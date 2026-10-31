@@ -433,6 +433,7 @@ std::string schemaToJsonString() {
   {"verb": "get_latency_report", "args": "none", "description": "The latest published PDC solve: per-node intrinsic/downstream/path latency, node and edge compensation, graph maximum, uncompensated sidechain paths, solver warnings, pending recalculation, and solved-vs-applied mismatches."},
   {"verb": "list_samples", "args": "{\"dir\": <path>}", "description": "audio files under a directory (recursive, depth 3, max 500): path, name, sizeBytes. Feed paths to load_sample."},
   {"verb": "get_pattern", "args": "{\"pattern\": <id>}", "description": "one pattern with its notes (pitch, start, duration, velocity, pan, chance, ratchet, unit)."},
+  {"verb": "get_harmony", "args": "{\"pattern\": <id, optional>, \"from\": <beat, optional>, \"to\": <beat, optional>, \"beatsPerBar\": <default 4>}", "description": "The key and the chords detected from the MIDI: the whole arrangement (every pattern clip at its arranged position), or one pattern alone when pattern is given; from/to limit it to a beat range. Returns key (name, tonic, mode, confidence) and chords (startBeat, endBeat, name such as Dm7 or F/A, roman numeral in the key, root, bass, confidence, userSet). Silence continues the previous chord."},
   {"verb": "get_session_state", "args": "none", "description": "transport + tracks + laneCount + unitCount + canUndo in one call."},
   {"verb": "get_schema", "args": "none", "description": "this manifest, over the wire — socket clients bootstrap without the --schema flag."}
 ],
