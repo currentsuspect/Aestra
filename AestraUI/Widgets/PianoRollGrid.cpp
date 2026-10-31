@@ -52,6 +52,22 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
                           PianoRollLook::rowLine(pitch));
     }
 
+    // FD-63 chord-tone rows: over each chord's span, the rows of its tones are banded in the warm accent (board A + C).
+    if (chords_) {
+        const auto band = NUIColor::fromHex(0xf2a35e).withAlpha(0.075f);
+        for (const auto& c : *chords_) {
+            if (c.root < 0 || c.toneMask == 0) continue;
+            const float x1 = std::max(bounds.x, bounds.x + static_cast<float>(c.startBeat * pixelsPerBeat_) - scrollX_);
+            const float x2 = std::min(bounds.right(), bounds.x + static_cast<float>(c.endBeat * pixelsPerBeat_) - scrollX_);
+            if (x2 <= x1) continue;
+            for (int pitch = startPitch; pitch >= endPitch; --pitch) {
+                if (!(c.toneMask & (1u << (pitch % 12)))) continue;
+                const float y = bounds.y + (127 - pitch) * keyHeight_ - scrollY_;
+                renderer.fillRect(NUIRect(x1, y, x2 - x1, keyHeight_ - 1.0f), band);
+            }
+        }
+    }
+
     TimelineGridStyle gridStyle;
     // Gamma-space alphas (F3): converted from linear-era tuning, which inflated
     // low-alpha light-on-dark roughly 6x before compositing was unified. Same

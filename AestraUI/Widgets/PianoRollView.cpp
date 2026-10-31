@@ -812,6 +812,32 @@ void PianoRollView::setPixelsPerBeat(float ppb) {
     syncChildren();
 }
 
+std::string chordToneRole(int pitch, const PianoRollChord& chord) {
+    if (chord.root < 0 || pitch < 0 || pitch > 127) return {};
+    const int pc = pitch % 12;
+    if (!(chord.toneMask & (1u << pc))) return {};
+    switch ((pc - chord.root + 12) % 12) {
+    case 0: return "root";
+    case 2: return "9th";
+    case 3: case 4: return "3rd";
+    case 5: return "4th";
+    case 6: return "\xE2\x99\xAD" "5th";
+    case 7: return "5th";
+    case 8: return "\xE2\x99\xAF" "5th";
+    case 9: return "6th";
+    case 10: case 11: return "7th";
+    default: return {};
+    }
+}
+
+void PianoRollView::setHarmony(std::vector<PianoRollChord> chords, const PianoRollKeyGuess& key) {
+    m_chords = std::move(chords);
+    if (m_ruler) m_ruler->setChords(&m_chords);
+    if (m_grid) m_grid->setChords(&m_chords);
+    if (m_toolbar) m_toolbar->setDetectedKey(key);
+    repaint();
+}
+
 void PianoRollView::setSnap(SnapGrid snap) {
     if (m_toolbar) m_toolbar->chooseSnap(snap);
 }
@@ -932,8 +958,16 @@ void PianoRollView::renderStatusLine(NUIRenderer& renderer) {
     float x = strip.x + 14.0f;
     renderer.drawText(left, NUIPoint(x, renderer.calculateTextY(strip, fs)), fs, ink);
     x += renderer.measureText(left, fs).width + 18.0f;
-    if (m_statusPitch >= 0 && m_statusPitch <= 127)
-        renderer.drawText(MusicTheory::getPitchName(m_statusPitch), NUIPoint(x, renderer.calculateTextY(strip, fs)), fs, ink);
+    if (m_statusPitch >= 0 && m_statusPitch <= 127) {
+        // "A4 = 3rd of F" when the key is a tone of the chord at the playhead (board A + C).
+        std::string pitch = MusicTheory::getPitchName(m_statusPitch);
+        for (const auto& c : m_chords) {
+            if (beat < c.startBeat || beat >= c.endBeat) continue;
+            if (const std::string role = chordToneRole(m_statusPitch, c); !role.empty()) pitch += " = " + role + " of " + c.name;
+            break;
+        }
+        renderer.drawText(pitch, NUIPoint(x, renderer.calculateTextY(strip, fs)), fs, ink);
+    }
     const std::string hints = "Ctrl+D duplicate \xC2\xB7 Q quantize \xC2\xB7 Alt+Wheel velocity";
     const float hw = renderer.measureText(hints, fs).width;
     renderer.drawText(hints, NUIPoint(strip.right() - 14.0f - hw, renderer.calculateTextY(strip, fs)), fs, ink);

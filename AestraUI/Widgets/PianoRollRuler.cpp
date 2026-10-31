@@ -139,6 +139,28 @@ void PianoRollRuler::onRender(NUIRenderer& renderer) {
         renderer.drawText(std::to_string(bar + 1), NUIPoint(x + 8.0f, bounds.y + 6.0f), 12.0f, number);
     }
 
+    // The chords under the numbers: the name, then its numeral. The one under the playhead is lit in the warm accent,
+    // a chord the producer named is underlined, and a chord that starts mid-bar gets a short tick (board A + C).
+    if (chords_) {
+        const auto lit = NUIColor::fromHex(0xf2a35e);
+        const auto name = theme.getColor("textPrimary");
+        for (const auto& c : *chords_) {
+            if (c.root < 0) continue;
+            const float x1 = bounds.x + static_cast<float>(c.startBeat * pixelsPerBeat_) - scrollX_;
+            const float x2 = bounds.x + static_cast<float>(c.endBeat * pixelsPerBeat_) - scrollX_;
+            if (x2 < bounds.x || x1 > bounds.right() || x2 - x1 < 24.0f) continue;
+            const bool now = playheadBeat_ >= c.startBeat && playheadBeat_ < c.endBeat;
+            const float tx = x1 + 8.0f, ty = bounds.y + 22.0f;
+            if (std::fmod(c.startBeat, static_cast<double>(beatsPerBar)) > 1e-6)
+                renderer.drawLine(NUIPoint(x1, ty), NUIPoint(x1, bounds.bottom()), 1.0f, rule);
+            renderer.drawText(c.name, NUIPoint(tx, ty), 15.0f, now ? lit : name);
+            const float nw = renderer.measureText(c.name, 15.0f).width;
+            if (c.userSet) renderer.fillRect(NUIRect(tx, ty + 17.0f, nw, 1.0f), now ? lit : name);
+            if (!c.roman.empty() && tx + nw + 8.0f + renderer.measureText(c.roman, 12.0f).width < x2 - 4.0f)
+                renderer.drawText(c.roman, NUIPoint(tx + nw + 8.0f, ty + 3.0f), 12.0f, number);
+        }
+    }
+
     const float playheadX =
         snapVerticalLineX(beatToScreenX(playheadBeat_, pixelsPerBeat_, scrollX_, bounds.x));
     if (playheadX >= bounds.x && playheadX <= bounds.right()) {

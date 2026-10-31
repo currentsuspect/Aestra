@@ -226,8 +226,57 @@ void testDuplicateKeepsChanceAndRatchet() {
     }
 }
 
+// V83-HS1 (FD-63): the panel names the pattern's chords for the ruler and re-reads them after an edit.
+void testChordsReachTheRulerAndFollowEdits() {
+    auto trackManager = std::make_shared<TrackManager>();
+    auto& patternManager = trackManager->getPatternManager();
+    MidiPayload payload;
+    const int bars[4][3] = {{50, 53, 57}, {46, 50, 53}, {53, 57, 60}, {55, 58, 62}}; // Dm  Bb  F  Gm
+    for (int bar = 0; bar < 4; ++bar)
+        for (int pitch : bars[bar]) {
+            Aestra::Audio::MidiNote n;
+            n.pitch = pitch; n.startBeat = bar * 4.0; n.durationBeats = 3.5; n.velocity = 0.8f;
+            payload.notes.push_back(n);
+        }
+    const PatternID patternId = patternManager.createMidiPattern("Harmony", 16.0, payload);
+
+    PianoRollPanel editor(trackManager);
+    editor.loadPattern(patternId);
+    const auto& chords = editor.getChords();
+    const auto nameAt = [&](double beat) -> std::string {
+        for (const auto& c : editor.getChords())
+            if (beat >= c.startBeat && beat < c.endBeat) return c.name;
+        return "";
+    };
+    expect(!chords.empty(), "a pattern of triads gives the ruler chords");
+    expect(nameAt(1.0) == "Dm" && nameAt(5.0) == "B\xE2\x99\xAD" && nameAt(9.0) == "F" && nameAt(13.0) == "Gm",
+           "bars 1-4 read Dm, B\xE2\x99\xAD, F, Gm (the ruler spells flats with the flat sign)");
+    bool romanOk = false;
+    for (const auto& c : chords)
+        if (c.name == "Dm") romanOk = c.roman == "i";
+    expect(romanOk, "Dm is i in the detected D minor");
+    bool tonesOk = false;
+    for (const auto& c : chords)
+        if (c.name == "F") tonesOk = c.toneMask == ((1u << 5) | (1u << 9) | (1u << 0));
+    expect(tonesOk, "F's chord-tone rows are F, A and C");
+
+    // Select all and move everything up a whole step: Dm becomes Em, and the ruler follows the committed edit.
+    AestraUI::NUIKeyEvent ctrlA;
+    ctrlA.keyCode = AestraUI::NUIKeyCode::A;
+    ctrlA.modifiers = AestraUI::NUIModifiers::Ctrl;
+    ctrlA.pressed = true;
+    editor.handleKeyEvent(ctrlA);
+    AestraUI::NUIKeyEvent up;
+    up.keyCode = AestraUI::NUIKeyCode::Up;
+    up.pressed = true;
+    editor.handleKeyEvent(up);
+    editor.handleKeyEvent(up);
+    expect(nameAt(1.0) == "Em", "after transposing up two semitones bar 1 reads Em");
+}
+
 int main() {
     testDuplicateKeepsChanceAndRatchet();
+    testChordsReachTheRulerAndFollowEdits();
     testTimelinePlaybackMovesThePanelPlayhead();
     testHarmonyContextRoundtripThroughPanel();
     testSelectionSurvivesCommittedEditRoundTrip();

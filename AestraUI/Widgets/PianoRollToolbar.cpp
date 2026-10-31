@@ -449,17 +449,36 @@ void PianoRollToolbar::setHarmonyContext(int rootKey, ScaleType scaleType, bool 
     m_scaleType = static_cast<ScaleType>(scaleIndex);
     m_snapToScale = snapToScale;
 
-    if (auto grid = grid_.lock()) {
-        grid->setRootKey(m_rootKey);
-        grid->setScaleType(m_scaleType);
-    }
     if (auto notes = notes_.lock()) {
         notes->setRootKey(m_rootKey);
         notes->setScaleType(m_scaleType);
         notes->setSnapToScale(m_snapToScale);
     }
-    if (auto keys = keys_.lock()) keys->setScale(m_rootKey, m_scaleType);
+    pushDisplayScale();
     repaint();
+}
+
+void PianoRollToolbar::setDetectedKey(const PianoRollKeyGuess& key) {
+    if (key.valid == m_detectedKey.valid && key.tonic == m_detectedKey.tonic && key.minor == m_detectedKey.minor) return;
+    m_detectedKey = key;
+    pushDisplayScale();
+    repaint();
+}
+
+// The rows and the degrees follow the key the producer set; with none set they follow the detected key, so the notes
+// already say what they would have been asked (FD-67). Snapping only ever follows a key the producer set.
+void PianoRollToolbar::pushDisplayScale() {
+    int root = m_rootKey;
+    ScaleType scale = m_scaleType;
+    if (scale == ScaleType::Chromatic && m_detectedKey.valid) {
+        root = m_detectedKey.tonic;
+        scale = m_detectedKey.minor ? ScaleType::Minor : ScaleType::Major;
+    }
+    if (auto grid = grid_.lock()) {
+        grid->setRootKey(root);
+        grid->setScaleType(scale);
+    }
+    if (auto keys = keys_.lock()) keys->setScale(root, scale);
 }
 
 void PianoRollToolbar::applyHarmonyContextEdit(int rootKey, ScaleType scaleType, bool snapToScale) {
@@ -582,10 +601,18 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
     valueBox("Snap", m_smartSnap ? "Smart \xC2\xB7 " + MusicTheory::getSnapName(m_currentSnap) : MusicTheory::getSnapName(m_currentSnap),
              m_snapBtn, text);
     const bool keyed = m_scaleType != ScaleType::Chromatic;
+    const bool detected = !keyed && m_detectedKey.valid;
     const std::string key = keyed ? MusicTheory::getRootNames()[std::clamp(m_rootKey, 0, 11)] + " " +
                                         MusicTheory::getScales()[static_cast<size_t>(m_scaleType)].name
-                                  : std::string("None");
-    valueBox("Key", key, m_scaleBtn, keyed ? text : muted);
+                            : detected ? MusicTheory::getRootNames()[std::clamp(m_detectedKey.tonic, 0, 11)] +
+                                             (m_detectedKey.minor ? " minor" : " major")
+                                       : std::string("None");
+    valueBox("Key", key, m_scaleBtn, keyed || detected ? text : muted);
+    if (detected) { // the guess says it is one (board A + C: "D minor  detected")
+        x -= 8.0f;
+        renderer.drawText("detected", NUIPoint(x, textY(NUIRect(x, y, 1.0f, hRow), fs)), fs, themeManager.getColor("textDisabled"));
+        x += renderer.measureText("detected", fs).width + 14.0f;
+    }
 
     // ---- More, at the right edge (the panel's close box is beyond it) ----
     {
