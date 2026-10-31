@@ -445,9 +445,114 @@ listen and compare, and Versions replaces the history list.
 - The browser's In tempo preview, per-row waveforms and key column need the analysis service.
 - Checked on the 1366x768 laptop for the Arsenal and the panels; the rest was seen on a virtual display and in tests.
 
+## v0.8.2-alpha — Plugins in the sandbox, export formats, the everyday fixes (2026-10-31)
+
+106 merges since v0.8.1-alpha. Third-party plugins now run in Aestra's sandbox on Linux and Windows with their own
+windows, you can export FLAC and MP3, Aestra updates itself, and a long list of things that got in the way while
+making music is fixed.
+
+### Plugins (VST3 and CLAP)
+
+- **Plugin windows.** A VST3 or CLAP plugin's own editor opens from the sandbox on Linux and on Windows.
+  (#1182, #1212)
+- **Parameters and automation through the sandbox,** for VST3 and CLAP, and every plugin in a CLAP bundle is
+  scanned. (#1183, #1184, #1197)
+- **Plugins know the song.** Tempo, time signature, play state and the playhead reach every plugin, so synced
+  delays and LFOs lock to your BPM and arpeggiators follow play and stop. (#1210)
+- **No more dropouts in the sandbox,** and a plugin that misses a deadline snaps back into time within a few
+  blocks instead of staying late. (#1209, #1231)
+- **Lookahead plugins stay in time** with the rest of your tracks. (#1181)
+- **Plugins on Windows:** CLAP loads in the sandbox there, and a Windows plugin CI lane builds and tests real
+  VST3 and CLAP hosting. (#1211)
+- **Every plugin Aestra makes is free,** Rumble included, with no account needed. (#1230)
+
+### Export and files
+
+- **FLAC and MP3 export,** alongside WAV, when the encoders are installed. (#1239)
+- **A simpler Export window:** what, where and the format in that order, with the length and size before you
+  export. (#1240)
+- **Exporting right after playing a pattern in the Arsenal renders the song,** not the pattern on a loop.
+  (#1252)
+- **Save a copy** of your project under a new name and keep working on the original. (#1237)
+- **Sampler settings** (mono, glide, voices) come back exactly as saved when you reopen a project. (#998, #1248)
+- **Projects from older versions** reopen with each track on its own mixer channel instead of everything on
+  the master. (#866, #1278)
+
+### Updates
+
+- **Aestra updates itself:** a signed update feed, a background check, Settings > Updates, and Download and
+  install / Restart and update. Updates are verified, resumable, and unpacked safely. (#1185, #1187, #1188,
+  #1191, #1192, #1193, #1277)
+
+### Editing
+
+- **Hear a sample or audio clip from its editor** with Preview. (#1234)
+- **Piano roll Duplicate builds phrases:** drag a stretch of the ruler and press Ctrl+D to copy it into the next
+  stretch, again and again. (#1178, #1190)
+- **Arsenal pattern menu:** right-click a pattern to rename, duplicate or delete it; Ctrl+Z undoes it. (#1177)
+- **The Arsenal and piano roll open a pattern with notes,** not an empty Pattern 1. (#999, #1247)
+
+### Timeline
+
+- **A toolbar row:** Select, Draw, Split, Mute; snap; follow the playhead; fit the song in one click. (#1173,
+  #1189)
+- **Clips in their track's colour,** with the notes inside a pattern clip where they actually play; track
+  headers show what each track plays and where it goes, with a meter. (#1171, #1172)
+- **Stretch a pattern clip** and it keeps playing the pattern, snapping to whole repeats. (#1174)
+- **Automation lanes** open right under their track, and a node shows its level and the dB to its neighbour.
+  (#1175, #1180)
+- **Untouched tracks fold into one row,** so a new project no longer opens on a wall of empty tracks. (#1241)
+- **Send Selection to Audition** from the timeline's right-click menu. (#544, #1253)
+
+### Mixing and sound
+
+- **Sidechain Aestra's compressor** from a sidechain send. (#1217)
+- **A smoother reverb tail,** and EQ band changes while playing no longer click. (#1222, #1223)
+- **Back-to-back 808s and cut-off notes no longer tick.** (#1219)
+- **Stopping no longer leaves plugin notes hanging,** loops and play starts land on time, and a tempo change
+  keeps you on the same bar. (#1228)
+
+### Settings, devices and the interface
+
+- **Settings rebuilt:** one form on every page, each change says what it does, one Save or Discard. (#1232)
+- **DSP load beside OUTPUT,** amber when busy and red before the audio would drop out. (#1236)
+- **Audio devices:** unplugging and replugging an interface, or switching off the output while playing, no
+  longer needs a restart or freezes Aestra. (#1215, #1227)
+- **Plug in a MIDI keyboard while Aestra is open** and play it straight away. (#456, #1287)
+- **One log file per session,** in your system's per-user folder, printed at startup. (#889, #1272)
+- **Less work per frame:** the interface redraws only when something changed and does about a third less work
+  when it does; saturation costs a third less CPU. (#1199, #1200, #1206, #1207)
+- **Menus near the right edge** open their submenus to the left. (#1179)
+
+### For agents (Muse)
+
+- **The whole piano roll and Arsenal through Muse:** bulk notes, note length, delete a range, the FL-style
+  duplicate, per-step chance and ratchet, pattern rename and delete, sampler envelopes. (#1220, #1244, #1246)
+- **Clearer addressing:** `list_tracks` says which value to pass back as `track`, and `play` points at
+  `transport.play`. (#1042, #1000, #1249)
+- **A sturdier socket and agent:** bounded queues, no shutdown hang when a client stops reading, strict
+  argument parsing, `localhost` and IPv6, capped responses, retry with backoff, and a time budget that bounds
+  blocking reads. (#1258, #1260, #1261, #1262, #1265, #1271, #1275, #1276, #1281, #1284, #1286, #1288)
+
+### Reliability and safety
+
+- **Project load** no longer hangs on a damaged file (a malformed array ended the parse in a loop). (#1243)
+- **The logger** keeps every line when many threads log at once. (#1268, #1280)
+- **Audio-thread safety** in preview ducking, and real-time misuse is counted per engine. (#939, #885, #1251,
+  #1283)
+- **Windows autosave** replaces its file atomically. (#668, #1269)
+- **CI:** a compile-cache outage no longer fails every PR, jobs time out within hours, and every third-party
+  Action is pinned to a commit. (#1250, #1254, #1255)
+
+### Moved to v0.8.3
+
+- The new piano roll (FD-63: Instrument with Harmony, chord detection, Muse in Quiet mode), presets, in-app
+  documentation, the second half of Audition (band solo, Mono/Sides, blind tests) and Versions' compare with the
+  current mix.
+
 ## [Unreleased]
 
-Nothing yet — v0.8.1-alpha was cut on 2026-10-19. v0.8.2 work lands here.
+Nothing yet — v0.8.2-alpha was cut on 2026-10-31. v0.8.3 work lands here.
 
 ## Unfiled — shipped before v0.7.0, never assigned to a release
 
