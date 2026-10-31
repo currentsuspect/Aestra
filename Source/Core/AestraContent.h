@@ -615,6 +615,10 @@ private:
     void syncSampleEditorToUnit(Aestra::Audio::UnitID unitId);
     void wireEditorActions(); ///< normalize, reverse, Preview in both editors (AestraContentEditorPreview.cpp)
     void updateDspLoadReadout(double dt); ///< feeds the transport's DSP load (AestraContentMeters.cpp)
+    /// Per-frame services that live outside this (size-pinned) file: the DSP load readout and, every two seconds, a
+    /// MIDI port rescan so a controller plugged in after startup is picked up (#456). AestraContentMeters.cpp.
+    void updateFrameServices(double dt);
+    double m_midiPortPollSeconds = 0.0;
     Aestra::DspLoadReadout m_dspLoad;
     Aestra::SamplerEditHistory m_samplerEdits; ///< undo for the Sample Editor's controls
     void enqueueMainThreadTask(std::function<void()> task);
