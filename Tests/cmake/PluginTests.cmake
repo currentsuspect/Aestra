@@ -587,3 +587,17 @@ add_test(NAME OversamplerBlockTest COMMAND OversamplerBlockTest)
 set_tests_properties(OversamplerBlockTest PROPERTIES
     LABELS "audio;dsp;oversampling;regression;contract:audio"
     TIMEOUT 120)
+
+# CompRangesTest: comping (SPEC-022) slice 1, the comp model and the clips it plays.
+add_executable(CompRangesTest
+    AestraAudio/CompRangesTest.cpp
+)
+target_link_libraries(CompRangesTest PRIVATE AestraAudio)
+target_include_directories(CompRangesTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME CompRangesTest COMMAND CompRangesTest)
+set_tests_properties(CompRangesTest PROPERTIES
+    LABELS "audio;comping;regression;contract:audio"
+    TIMEOUT 120)
