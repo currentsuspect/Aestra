@@ -378,7 +378,8 @@ public:
      * region is degenerate (nothing is moved then).
      */
     AestraUI::NUIRect applyPanelPreference(Aestra::Audio::ViewType view);
-    /// A full-window editor (FD-63) takes the whole content area, over everything, and ignores stored geometry.
+    /// A full-area editor (FD-63) takes everything under the transport, over the browser (which it does not use), and
+    /// ignores stored geometry.
     /// Returns false for an ordinary floating panel.
     bool placeFullWindowPanel(Aestra::Audio::WindowPanel& panel);
 

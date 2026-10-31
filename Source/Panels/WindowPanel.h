@@ -83,11 +83,11 @@ public:
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
 
     /**
-     * @brief Full-window editor (FD-63: the piano roll fills the window).
+     * @brief Full-area editor (FD-63): the piano roll fills the workspace under the transport, over the browser.
      *
      * The panel stops being a window: no title text, no minimize/maximize, no drag or edge resize, square corners.
      * The title bar becomes the editor's header: the accessory spans it from the left edge, and the close button
-     * is a boxed X at its right. The owner sets the bounds (the whole content area).
+     * is a boxed X at its right. The owner sets the bounds (everything under the transport, over the browser).
      */
     void setFullWindow(bool fullWindow);
     bool isFullWindow() const { return m_fullWindow; }
