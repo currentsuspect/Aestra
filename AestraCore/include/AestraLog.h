@@ -4,6 +4,7 @@
 #include "AestraThreading.h"
 
 #include <atomic>
+#include <cstddef>
 #include <cstring>
 #include <ctime>
 #include <fstream>
@@ -374,11 +375,13 @@ public:
         std::memcpy(msg.message, message.c_str(), len);
         msg.message[len] = '\0';
 
-        if (!queue_.push(msg)) {
-            // Drop or fallback? For audio thread safety, we drop.
-            // printf("Log dropped!\n");
-        }
+        // #1268: every thread logs, so the queue is multi-producer (MpscQueue below). Lock-free: no caller waits,
+        // and a line is dropped only when the queue is full.
+        if (!queue_.push(msg)) dropped_.fetch_add(1, std::memory_order_relaxed);
     }
+
+    /// Lines dropped because the queue was full.
+    uint64_t droppedCount() const { return dropped_.load(std::memory_order_relaxed); }
 
     void setLevel(LogLevel level) override {
         if (target_)
@@ -389,7 +392,58 @@ public:
 
 private:
     std::shared_ptr<ILogger> target_;
-    Aestra::LockFreeRingBuffer<LogMessage, 1024> queue_;
+    // Bounded multi-producer, single-consumer queue (Vyukov's bounded queue, one consumer): each slot carries a
+    // sequence number, a producer claims a slot by CAS on the enqueue position and publishes it by advancing the
+    // slot's sequence, so a slot is never read before its message is written. The worker (and the destructor's final
+    // drain, after the worker has joined) is the only consumer.
+    template <typename T, size_t N> class MpscQueue {
+        static_assert((N & (N - 1)) == 0, "N must be a power of two");
+        struct Cell {
+            std::atomic<size_t> sequence;
+            T data;
+        };
+
+    public:
+        MpscQueue() {
+            for (size_t i = 0; i < N; ++i) cells_[i].sequence.store(i, std::memory_order_relaxed);
+        }
+        bool push(const T& item) {
+            size_t pos = enqueuePos_.load(std::memory_order_relaxed);
+            for (;;) {
+                Cell& cell = cells_[pos & (N - 1)];
+                const size_t seq = cell.sequence.load(std::memory_order_acquire);
+                const auto diff = static_cast<std::ptrdiff_t>(seq) - static_cast<std::ptrdiff_t>(pos);
+                if (diff == 0) {
+                    if (enqueuePos_.compare_exchange_weak(pos, pos + 1, std::memory_order_relaxed)) {
+                        cell.data = item;
+                        cell.sequence.store(pos + 1, std::memory_order_release);
+                        return true;
+                    }
+                } else if (diff < 0) {
+                    return false; // full
+                } else {
+                    pos = enqueuePos_.load(std::memory_order_relaxed);
+                }
+            }
+        }
+        bool pop(T& out) {
+            Cell& cell = cells_[dequeuePos_ & (N - 1)];
+            const size_t seq = cell.sequence.load(std::memory_order_acquire);
+            if (static_cast<std::ptrdiff_t>(seq) - static_cast<std::ptrdiff_t>(dequeuePos_ + 1) < 0) return false;
+            out = cell.data;
+            cell.sequence.store(dequeuePos_ + N, std::memory_order_release);
+            ++dequeuePos_;
+            return true;
+        }
+
+    private:
+        Cell cells_[N];
+        std::atomic<size_t> enqueuePos_{0};
+        size_t dequeuePos_ = 0;
+    };
+
+    MpscQueue<LogMessage, 1024> queue_;
+    std::atomic<uint64_t> dropped_{0};
     std::thread worker_;
     std::atomic<bool> running_;
 
