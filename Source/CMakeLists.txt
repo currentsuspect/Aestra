@@ -137,6 +137,7 @@ set(Aestra_SOURCES
 	Components/TrackUIComponentAutomationClips.cpp
 	Components/TrackUIComponentHeader.cpp
 	Components/TrackUIComponentMute.cpp
+	Components/TrackUIComponentComp.cpp
 	Components/TrackUIComponentAutomationRow.cpp
 	Components/TrackHeaderText.h
 	Components/TimelineClipGeometry.h

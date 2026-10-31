@@ -541,6 +541,18 @@ private:
     // Mute tool (TrackUIComponentMute.cpp): click mutes or unmutes a clip; holding the button sets every clip crossed to
     // the same state. Alt+click does the same once, whatever tool is active.
     bool handleMuteTool(const AestraUI::NUIMouseEvent& event);
+    // Comping (TrackUIComponentComp.cpp, SPEC-022 CT-3): swipe a take onto the comp; the unused part of a take dims.
+    bool isCompTakeLane() const;
+    bool handleCompSwipe(const AestraUI::NUIMouseEvent& event);
+    double beatAtX(float x) const;
+    bool compSpanForClick(double beat, bool wholeTake, double& start, double& end) const;
+    void commitCompSpan(double start, double end);
+    void drawCompOverlay(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float controlAreaWidth);
+    bool m_compPressed{false};
+    bool m_compDragging{false};
+    float m_compPressX{0.0f};
+    double m_compAnchorBeat{0.0};
+    double m_compEndBeat{0.0};
     bool m_muteStroke{false};
     bool m_muteStrokeTarget{true};
     std::vector<ClipInstanceID> m_muteStrokeDone;
