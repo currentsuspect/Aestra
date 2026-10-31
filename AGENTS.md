@@ -722,6 +722,7 @@ PRs should include:
 * Why
 * Testing performed
 * Producer note
+* Flow check, for UI, editor and Muse changes (FD-67): does it ask the producer for anything it could already tell?
 * Docs updated?
 * Risk/rollback notes
 
