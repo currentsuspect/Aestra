@@ -274,9 +274,60 @@ void testChordsReachTheRulerAndFollowEdits() {
     expect(nameAt(1.0) == "Em", "after transposing up two semitones bar 1 reads Em");
 }
 
+// V83-MU1 (FD-63 Quiet): ideas come after a pause, for the bar after the last note; an edit clears them; Off is off.
+void testMuseIdeasAfterAPause() {
+    auto trackManager = std::make_shared<TrackManager>();
+    auto& patternManager = trackManager->getPatternManager();
+    MidiPayload payload;
+    const double mel[][3] = {{69, 0, 0.5}, {72, 0.5, 0.5}, {70, 1, 1}, {69, 2, 0.5}, {67, 2.5, 0.5}, {65, 3, 1}};
+    for (const auto& m : mel) {
+        Aestra::Audio::MidiNote n;
+        n.pitch = static_cast<int>(m[0]); n.startBeat = m[1]; n.durationBeats = m[2]; n.velocity = 0.8f;
+        payload.notes.push_back(n);
+    }
+    for (int pitch : {50, 53, 57}) {
+        Aestra::Audio::MidiNote n;
+        n.pitch = pitch; n.startBeat = 0.0; n.durationBeats = 1.75; n.velocity = 0.6f;
+        payload.notes.push_back(n);
+    }
+    const PatternID patternId = patternManager.createMidiPattern("Muse", 8.0, payload);
+
+    PianoRollPanel editor(trackManager);
+    editor.setVisible(true);
+    editor.loadPattern(patternId);
+    expect(editor.getMuseIdeas().empty(), "no ideas the moment the pattern opens");
+    editor.onUpdate(0.5);
+    expect(editor.getMuseIdeas().empty(), "none before the pause is long enough");
+    editor.onUpdate(0.5);
+    editor.onUpdate(0.5);
+    const auto& ideas = editor.getMuseIdeas();
+    expect(ideas.size() == 3, "three ideas after a pause");
+    bool inBar2 = !ideas.empty();
+    for (const auto& idea : ideas)
+        for (const auto& n : idea.notes) inBar2 = inBar2 && n.startBeat >= 4.0 && n.startBeat < 8.0;
+    expect(inBar2, "every idea is for bar 2, the bar after the last note");
+    expect(!ideas.empty() && ideas[0].label == "Answer bar 1, a step up", "the first is the answer a step up");
+
+    AestraUI::NUIKeyEvent ctrlA;
+    ctrlA.keyCode = AestraUI::NUIKeyCode::A;
+    ctrlA.modifiers = AestraUI::NUIModifiers::Ctrl;
+    ctrlA.pressed = true;
+    editor.handleKeyEvent(ctrlA);
+    AestraUI::NUIKeyEvent up;
+    up.keyCode = AestraUI::NUIKeyCode::Up;
+    up.pressed = true;
+    editor.handleKeyEvent(up);
+    expect(editor.getMuseIdeas().empty(), "an edit clears ideas for the old notes");
+
+    editor.setMuseMode(AestraUI::MuseMode::Off);
+    for (int i = 0; i < 5; ++i) editor.onUpdate(0.5);
+    expect(editor.getMuseIdeas().empty(), "Off: no ideas, however long the pause");
+}
+
 int main() {
     testDuplicateKeepsChanceAndRatchet();
     testChordsReachTheRulerAndFollowEdits();
+    testMuseIdeasAfterAPause();
     testTimelinePlaybackMovesThePanelPlayhead();
     testHarmonyContextRoundtripThroughPanel();
     testSelectionSurvivesCommittedEditRoundTrip();

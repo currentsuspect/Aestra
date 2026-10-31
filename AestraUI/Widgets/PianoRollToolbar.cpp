@@ -279,6 +279,26 @@ void PianoRollToolbar::setupUI() {
     m_snapBtn->setTooltip("Snap");
     m_snapBtn->setOnClick([this]() { openSnapMenu(); });
 
+    // FD-63 Muse switch. v0.8.3 has Quiet and Off; On joins when it ships (FD-68: first-timers move to it then).
+    m_museQuietBtn = std::make_shared<NUIButton>("");
+    m_museQuietBtn->setTooltip("Muse listens; a dot on the ruler when an idea is ready, Tab to see it");
+    m_museQuietBtn->setOnClick([this]() {
+        if (m_museMode == MuseMode::Quiet) return;
+        m_museMode = MuseMode::Quiet;
+        if (onMuseModeChanged_) onMuseModeChanged_(m_museMode);
+        repaint();
+    });
+    m_museOffBtn = std::make_shared<NUIButton>("");
+    m_museOffBtn->setTooltip("Muse off: nothing drawn, nothing computed");
+    m_museOffBtn->setOnClick([this]() {
+        if (m_museMode == MuseMode::Off) return;
+        m_museMode = MuseMode::Off;
+        if (onMuseModeChanged_) onMuseModeChanged_(m_museMode);
+        repaint();
+    });
+    addChild(m_museQuietBtn);
+    addChild(m_museOffBtn);
+
     addChild(m_menuBtn);
     addChild(m_patternCrumbBtn);
     addChild(m_unitCrumbBtn);
@@ -291,7 +311,8 @@ void PianoRollToolbar::setupUI() {
     // The row draws its own chrome (outline, active fill, glyphs) over these; the buttons only take input, so their own
     // fills must not show through as purple blocks.
     for (const auto& btn : {m_menuBtn, m_patternCrumbBtn, m_unitCrumbBtn, m_ptrBtn, m_pencilBtn, m_eraserBtn, m_snapBtn,
-                            m_scaleBtn, m_lengthDownBtn, m_lengthUpBtn, m_followBtn, m_centerBtn}) {
+                            m_scaleBtn, m_lengthDownBtn, m_lengthUpBtn, m_followBtn, m_centerBtn, m_museQuietBtn,
+                            m_museOffBtn}) {
         if (!btn) continue;
         const NUIColor clear(0.0f, 0.0f, 0.0f, 0.0f);
         btn->setBackgroundColor(clear);
@@ -612,6 +633,37 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
         x -= 8.0f;
         renderer.drawText("detected", NUIPoint(x, textY(NUIRect(x, y, 1.0f, hRow), fs)), fs, themeManager.getColor("textDisabled"));
         x += renderer.measureText("detected", fs).width + 14.0f;
+    }
+
+    // ---- Muse switch, left of More (board A + C): "Muse" in violet, then the modes, the active one filled ----
+    {
+        const float segH = 30.0f;
+        const float sy = std::round(y + (hRow - segH) * 0.5f);
+        const char* const names[2] = {"Quiet", "Off"};
+        const std::shared_ptr<NUIButton> buttons[2] = {m_museQuietBtn, m_museOffBtn};
+        const MuseMode modes[2] = {MuseMode::Quiet, MuseMode::Off};
+        const float labelW = renderer.measureText("Muse", fs).width + 16.0f;
+        float widths[2];
+        float segW = 4.0f + labelW;
+        for (int i = 0; i < 2; ++i) {
+            widths[i] = renderer.measureText(names[i], fs).width + 16.0f;
+            segW += widths[i] + 2.0f;
+        }
+        const NUIRect seg(b.right() - 28.0f - 10.0f - segW, sy, segW, segH);
+        renderer.fillRect(seg, bed);
+        renderer.strokeRect(seg, 1.0f, NUIColor::fromHex(0x4c1d95));
+        renderer.drawText("Muse", NUIPoint(seg.x + 10.0f, textY(seg, fs)), fs, NUIColor::fromHex(0xa78bfa));
+        float mx = seg.x + 2.0f + labelW;
+        for (int i = 0; i < 2; ++i) {
+            const NUIRect r(mx, sy + 2.0f, widths[i], segH - 4.0f);
+            buttons[i]->setBounds(r);
+            buttons[i]->setText("");
+            const bool active = m_museMode == modes[i];
+            if (active) renderer.fillRect(r, modes[i] == MuseMode::Off ? raised : NUIColor::fromHex(0x7c3aed));
+            renderer.drawText(names[i], NUIPoint(r.x + 8.0f, textY(r, fs)), fs,
+                              active ? text : (buttons[i]->isHovered() ? text : secondary));
+            mx += widths[i] + 2.0f;
+        }
     }
 
     // ---- More, at the right edge (the panel's close box is beyond it) ----

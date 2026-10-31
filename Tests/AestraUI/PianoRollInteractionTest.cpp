@@ -1343,6 +1343,50 @@ static void test_chord_tone_role() {
     PASS("chord-tone roles read as the board's status line");
 }
 
+// FD-63 Muse Quiet: ideas wait behind the ruler's dot; Tab previews, Tab keeps (one commit), Shift+Tab next, Esc drops.
+static void test_muse_quiet_keys() {
+    PianoRollView view;
+    view.setBounds({0.0f, 0.0f, 1200.0f, 600.0f});
+    view.onResize(1200, 600);
+    view.setNotes({{69, 0.0, 0.5, 0.9f, 0.0f, 0, false, false, 1.0f}});
+    int commits = 0;
+    view.setOnNotesChanged([&](const std::vector<MidiNote>&) { ++commits; });
+    auto idea = [](const char* label, int pitch) {
+        PianoRollIdea i;
+        i.label = label;
+        i.notes = {{pitch, 4.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f}, {pitch + 2, 5.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f}};
+        return i;
+    };
+    auto key = [&](NUIKeyCode code, NUIModifiers mods = NUIModifiers::None) {
+        NUIKeyEvent e;
+        e.keyCode = code;
+        e.modifiers = mods;
+        e.pressed = true;
+        return view.onKeyEvent(e);
+    };
+    ASSERT(view.getMuseMode() == MuseMode::Quiet, "Muse starts Quiet (FD-68: never Off by default)");
+    view.setMuseIdeas(4.0, {idea("A", 70), idea("B", 62), idea("C", 65)});
+    ASSERT(view.getMuseIdeas().size() == 3 && view.getPreviewedIdea() == -1, "ideas wait unshown");
+    ASSERT(view.getNotes().size() == 1, "nothing lands in the pattern while an idea waits");
+    ASSERT(key(NUIKeyCode::Tab) && view.getPreviewedIdea() == 0, "Tab shows the first idea");
+    ASSERT(key(NUIKeyCode::Tab, NUIModifiers::Shift) && view.getPreviewedIdea() == 1, "Shift+Tab shows the next");
+    key(NUIKeyCode::Tab, NUIModifiers::Shift);
+    key(NUIKeyCode::Tab, NUIModifiers::Shift);
+    ASSERT(view.getPreviewedIdea() == 0, "and wraps round");
+    ASSERT(view.getNotes().size() == 1 && commits == 0, "previewing writes nothing");
+    ASSERT(key(NUIKeyCode::Tab) && view.getNotes().size() == 3, "Tab again keeps it: its two notes join the pattern");
+    ASSERT(commits == 1, "a kept idea is one commit, so one undo step");
+    ASSERT(view.getMuseIdeas().empty(), "and the ideas are done");
+    view.setMuseIdeas(8.0, {idea("D", 60)});
+    key(NUIKeyCode::Tab);
+    ASSERT(key(NUIKeyCode::Escape) && view.getMuseIdeas().empty() && view.getNotes().size() == 3, "Esc drops them, writing nothing");
+    view.setMuseMode(MuseMode::Off);
+    view.setMuseIdeas(8.0, {idea("E", 60)});
+    ASSERT(view.getMuseIdeas().empty(), "Off: no ideas are shown");
+    ASSERT(!key(NUIKeyCode::Tab) || view.getNotes().size() == 3, "and Tab does nothing to the pattern");
+    PASS("Muse Quiet: Tab previews, Tab keeps as one step, Shift+Tab next, Esc drops, Off is off");
+}
+
 int main() {
     std::cout << "=== PianoRollInteraction Unit Tests ===\n\n";
 
@@ -1351,6 +1395,7 @@ int main() {
     test_ratchet_lane_bands();
     test_smart_snap_follows_zoom();
     test_chord_tone_role();
+    test_muse_quiet_keys();
     test_view_smart_snap_default_and_override();
     test_inspector_summarizes_and_edits_the_selection();
 
