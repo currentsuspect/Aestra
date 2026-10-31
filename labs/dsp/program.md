@@ -4,11 +4,6 @@
 
 This lab targets the core DSP algorithms in `AestraAudio`. It covers:
 
-### Filter Pipeline
-- `AestraAudio/include/DSP/Filter.h` / `.cpp` — biquad filter, oversampling, saturation
-- `AestraAudio/include/DSP/FilterSIMD.h` — SIMD-accelerated filter ops
-- `Tests/AestraAudio/FilterTest.cpp`
-
 ### Oscillator
 - `AestraAudio/include/DSP/Oscillator.h` / `.cpp` — waveform generation, BLEP
 - `Tests/AestraAudio/OscillatorTest.cpp`
@@ -74,7 +69,6 @@ A change is **accepted** only if ALL of the following are true:
 
 | Gate | Target |
 |------|--------|
-| `AestraFilterTest` | Exit code 0 (experimental-gated) |
 | `SincBenchmark` | MFrame/sec within 10% of baseline |
 | `ResamplerBenchmark` | No >10% regression |
 

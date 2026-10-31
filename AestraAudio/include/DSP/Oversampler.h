@@ -126,6 +126,10 @@ public:
 
     uint32_t numTaps() const { return m_numTaps; }
 
+    /// Kernel coefficient n, in the design order (the block oversampler reads
+    /// the same taps rather than redesigning them).
+    float coeff(uint32_t n) const { return m_coeffs[n]; }
+
     /// One input sample -> two output samples at 2x rate.
     /// out[p] = 2 * sum_j h[2j + p] * x[n - j]  (zero-stuff + FIR, gain 2)
     void upsample(float in, float* out2) {

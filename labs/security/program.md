@@ -60,7 +60,7 @@ An autonomous agent may modify:
 | All security tests pass | Every test in `tests/security/` exits 0 |
 | All red team PoCs are mitigated | PoCs that previously crashed now return error gracefully |
 | Build compiles cleanly | No new warnings in security-critical code |
-| No regressions in existing tests | `MathTests`, `AestraFilterTest` still pass |
+| No regressions in existing tests | `MathTests` still passes |
 | Proof-of-fix for every new vulnerability | Each new vuln fix has a corresponding test |
 
 ### Advisory Gates (tracked, non-blocking)

@@ -114,7 +114,6 @@ else
     "$REPO_ROOT/AestraCore/src/AestraMemory.cpp" \
     "$REPO_ROOT/AestraCore/CMakeLists.txt" \
     "$REPO_ROOT/AestraAudio/src/DSP/AudioProcessor.cpp" \
-    "$REPO_ROOT/AestraAudio/src/DSP/Filter.cpp" \
     "$REPO_ROOT/AestraAudio/include/GarbageCollector.h" \
     "$REPO_ROOT/AestraAudio/src/DSP/SampleRateConverter.cpp" \
     "$REPO_ROOT/Tests/CMakeLists.txt"; do

@@ -161,9 +161,7 @@ target_include_directories(AestraSatTest PRIVATE
 add_test(NAME AestraSatTest COMMAND AestraSatTest)
 set_tests_properties(AestraSatTest PROPERTIES LABELS "audio;plugins;saturation;contract:audio")
 
-# Aestra Filter plugin test. Not to be confused with AestraFilterTest, which is
-# the DSP::Filter lab (AestraAudio/FilterTest.cpp, registered in Tests/CMakeLists.txt
-# and gated on AESTRA_ENABLE_EXPERIMENTAL_TESTS).
+# Aestra Filter plugin test.
 add_executable(AestraFilterPluginTest AestraAudio/AestraFilterPluginTest.cpp)
 target_link_libraries(AestraFilterPluginTest PRIVATE AestraAudio)
 target_include_directories(AestraFilterPluginTest PRIVATE
@@ -571,3 +569,21 @@ if(UNIX AND TARGET AestraPluginHost)
     target_compile_definitions(AestraSandboxLatencyProbe PRIVATE HELPER_PATH="$<TARGET_FILE:AestraPluginHost>")
     add_dependencies(AestraSandboxLatencyProbe AestraPluginHost)
 endif()
+
+# The block oversampler runs DSP::Oversampler's kernels over a whole block so
+# the compiler can vectorise across samples (AestraSat uses it). The test holds
+# it to the per-sample oversampler sample by sample, at every block size, plus
+# the latency and reset contracts.
+add_executable(OversamplerBlockTest
+    AestraAudio/OversamplerBlockTest.cpp
+)
+target_link_libraries(OversamplerBlockTest PRIVATE AestraAudio)
+target_include_directories(OversamplerBlockTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME OversamplerBlockTest COMMAND OversamplerBlockTest)
+set_tests_properties(OversamplerBlockTest PROPERTIES
+    LABELS "audio;dsp;oversampling;regression;contract:audio"
+    TIMEOUT 120)
