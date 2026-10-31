@@ -2952,17 +2952,17 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
 
     double volTarget = static_cast<double>(track.volume) * gain;
     double panTarget = clampD(static_cast<double>(track.pan), -1.0, 1.0);
-    // Apply Automation Override (v3.1). Beat-domain evaluation: the curve
-    // interpolates on point beats directly, so tempo changes and UI point
-    // drags (which edit beats) stay musically aligned.
+    // Automation COMPOSES with the strip (FD-64 item 4, #466): volume = curve x
+    // fader x trim, pan = curve + fader pan clamped. Beat-domain: tempo changes
+    // and point drags (which edit beats) stay musically aligned.
     if (!track.automationCurves.empty() && cachedSampleRate > 0) {
         uint64_t globalPos = m_globalSamplePos.load(std::memory_order_relaxed);
         double currentBeat = (static_cast<double>(globalPos) / cachedSampleRate) * (graph.bpm / 60.0);
         for (const auto& curve : track.automationCurves) {
             if (curve.getAutomationTarget() == AutomationTarget::Volume) {
-                volTarget = curve.getValueAtBeat(currentBeat);
+                volTarget *= curve.getValueAtBeat(currentBeat);
             } else if (curve.getAutomationTarget() == AutomationTarget::Pan) {
-                panTarget = clampD(curve.getValueAtBeat(currentBeat), -1.0, 1.0);
+                panTarget = clampD(panTarget + curve.getValueAtBeat(currentBeat), -1.0, 1.0);
             } else if (curve.getAutomationTarget() == AutomationTarget::Custom) {
                 // Plugin-parameter automation through the render-thread
                 // contract (V8-A5, PluginHost.h): the engine asks the plugin,

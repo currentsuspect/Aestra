@@ -28,6 +28,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -200,7 +201,7 @@ struct Rendered {
 Rendered renderWithAutomation(const std::vector<AutomationCurve>& curves, double renderBpm, double beats,
                               std::shared_ptr<IPluginInstance> slot1Fx = nullptr,
                               std::function<void(AutomationCurve&, MixerChannel&)> fixup = nullptr,
-                              size_t fxSlot = 1) {
+                              size_t fxSlot = 1, float trimDb = 0.0f) {
     auto trackManager = std::make_shared<TrackManager>();
     trackManager->setOutputSampleRate(static_cast<double>(kSampleRate));
 
@@ -232,6 +233,11 @@ Rendered renderWithAutomation(const std::vector<AutomationCurve>& curves, double
     trackManager->buildAndShareSlotMap();
     if (auto slotMap = trackManager->getChannelSlotMapShared()) {
         engine.setChannelSlotMap(slotMap);
+        // Trim reaches the RT side through the continuous-param store (SetTrimCommand's path).
+        if (auto continuous = trackManager->getContinuousParams()) {
+            continuous->setTrimDb(slotMap->getSlotIndex(src->getChannelId()), trimDb);
+            engine.setContinuousParams(continuous);
+        }
     }
     engine.setGraph(AudioGraphBuilder::buildFromTrackManager(*trackManager));
     engine.setSafetyLimiterEnabled(false);
@@ -472,6 +478,63 @@ int main() {
         std::cout << "empty volume curve (default 1.0): rms=" << level << " baseline=" << baseLevel << "\n";
         require(level > 1.0e-3, "empty-curve: default-1.0 volume curve silenced the channel");
         require(level > 0.95 * baseLevel, "empty-curve: default-1.0 volume curve attenuated the channel");
+    }
+
+    // ---------------- 8. Automation COMPOSES with the fader (FD-64 item 4, #466):
+    // the curve sets the level, the fader and trim trim on top of it. Flat
+    // curves, steady-state windows (not peaks), compared to an unautomated
+    // unity render of the same signal.
+    {
+        auto flat = [](double v) { return volumeCurve({{0.0, static_cast<float>(v)}, {8.0, static_cast<float>(v)}}, kSpbAt120); };
+        const auto unity = renderWithAutomation({}, 120.0, 6.0);
+        const double ref = rmsWindow(unity.left, 2.0, 5.0, 120.0);
+        require(ref > 1.0e-3, "compose: reference render is silent");
+        auto level = [&](double curveValue, float fader, float trimDb) {
+            const auto r = renderWithAutomation({flat(curveValue)}, 120.0, 6.0, nullptr,
+                                                [&](AutomationCurve&, MixerChannel& ch) { ch.setVolume(fader); },
+                                                1, trimDb);
+            require(!r.hasInvalid, "compose: output contains NaN/Inf");
+            return rmsWindow(r.left, 2.0, 5.0, 120.0) / ref;
+        };
+        // 8a: curve 0.5 with the fader at -6 dB (0.5) -> 0.25, not 0.5.
+        const double a = level(0.5, 0.5f, 0.0f);
+        std::cout << "compose curve*fader: " << a << " (want 0.25)\n";
+        require(std::abs(a - 0.25) < 0.02, "8a: volume curve discarded the fader (override, not compose)");
+        // 8b: fader at unity -> the curve alone (regression pin of the old behaviour).
+        const double b = level(0.5, 1.0f, 0.0f);
+        require(std::abs(b - 0.5) < 0.02, "8b: curve at unity fader is not the curve level");
+        // 8c: curve * fader * trim (-6.0206 dB trim = x0.5).
+        const double c = level(0.5, 1.0f, -6.0206f);
+        std::cout << "compose curve*trim: " << c << " (want 0.25)\n";
+        require(std::abs(c - 0.25) < 0.02, "8c: volume curve discarded the trim");
+    }
+
+    // ---------------- 8d. Pan: automation pan + fader pan are summed, then
+    // clamped to [-1, 1].
+    {
+        auto flatPan = [](float v) {
+            AutomationCurve pan("Pan", AutomationTarget::Pan);
+            pan.setDefaultValue(0.0f);
+            pan.addPoint(0.0, v, kSpbAt120, 0.0f);
+            pan.addPoint(8.0, v, kSpbAt120, 0.0f);
+            return pan;
+        };
+        auto pans = [&](float curveValue, float faderPan) {
+            return renderWithAutomation({flatPan(curveValue)}, 120.0, 6.0, nullptr,
+                                        [&](AutomationCurve&, MixerChannel& ch) { ch.setPan(faderPan); });
+        };
+        // +0.5 curve and -0.5 fader cancel to centre: L == R.
+        const auto centre = pans(0.5f, -0.5f);
+        const double cl = rmsWindow(centre.left, 2.0, 5.0, 120.0);
+        const double cr = rmsWindow(centre.right, 2.0, 5.0, 120.0);
+        std::cout << "pan sum cancel: L=" << cl << " R=" << cr << "\n";
+        require(cl > 1.0e-3 && std::abs(cl - cr) < 0.02 * cl, "8d: pan curve and fader pan did not sum to centre");
+        // 0.8 + 0.6 clamps to hard right: left is silent.
+        const auto hard = pans(0.8f, 0.6f);
+        const double hl = rmsWindow(hard.left, 2.0, 5.0, 120.0);
+        const double hr = rmsWindow(hard.right, 2.0, 5.0, 120.0);
+        std::cout << "pan sum clamp: L=" << hl << " R=" << hr << "\n";
+        require(hr > 1.0e-3 && hl < 0.02 * hr, "8d: summed pan was not clamped to hard right");
     }
 
     std::cout << "[PASS] AutomationPlaybackTest\n";
