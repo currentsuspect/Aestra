@@ -1683,7 +1683,7 @@ void AestraContent::onUpdate(double dt) {
     closeContextualPanels();
     updatePendingCountIn();
     logModeStateIfChanged();
-    updateDspLoadReadout(dt); // the transport's DSP load (AestraContentMeters.cpp)
+    updateFrameServices(dt); // DSP load readout, MIDI hot-plug poll (AestraContentMeters.cpp)
     // Heal dropped mixer-state pushes: cheap when clean (one atomic per
     // channel), converges when a queue flood ends (#913).
     if (m_trackManager) {
