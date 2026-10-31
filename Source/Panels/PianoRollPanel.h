@@ -87,6 +87,8 @@ public:
     void setBeatsPerBar(int bpb);
     /** @brief A fixed snap (Smart Snap steps aside, FD-66). */
     void setSnap(AestraUI::SnapGrid snap) { if (m_pianoRoll) m_pianoRoll->setSnap(snap); }
+    /** @brief The chords the ruler shows (V83-HS1). */
+    const std::vector<AestraUI::PianoRollChord>& getChords() const { return m_pianoRoll->getChords(); }
     /** @brief Apply one complete harmony edit through the editor view. */
     void applyHarmonyContextEdit(int rootKey, AestraUI::ScaleType scaleType, bool snapToScale);
     /** @brief Return the complete harmony context currently shown by the editor. */
@@ -111,6 +113,7 @@ private:
     void rebuildUnitSwitcher();
     void updateGhostChannels();
     void rebuildTimelineMinimap();
+    void refreshHarmony(); ///< V83-HS1: chords and key for the ruler, grid, Key box and status line (FD-63)
     void layoutTimelineMinimap();
 
     std::shared_ptr<TrackManager> m_trackManager;

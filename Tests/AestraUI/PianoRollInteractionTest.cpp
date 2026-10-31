@@ -1331,6 +1331,18 @@ static void test_view_smart_snap_default_and_override() {
     PASS("Smart Snap is the default, follows zoom, and steps aside for a picked snap");
 }
 
+// FD-63 status line: what a key is in the chord at the playhead ("A4 = 3rd of F").
+static void test_chord_tone_role() {
+    PianoRollChord f;
+    f.name = "F"; f.root = 5; f.toneMask = (1u << 5) | (1u << 9) | (1u << 0);
+    ASSERT(chordToneRole(69, f) == "3rd", "A is the 3rd of F");
+    ASSERT(chordToneRole(65, f) == "root" && chordToneRole(72, f) == "5th", "F is the root, C the 5th");
+    ASSERT(chordToneRole(67, f).empty(), "G is not a tone of F");
+    PianoRollChord none;
+    ASSERT(chordToneRole(60, none).empty(), "no chord, no role");
+    PASS("chord-tone roles read as the board's status line");
+}
+
 int main() {
     std::cout << "=== PianoRollInteraction Unit Tests ===\n\n";
 
@@ -1338,6 +1350,7 @@ int main() {
     test_lane_value_edits_in_place_and_keeps_chord_order();
     test_ratchet_lane_bands();
     test_smart_snap_follows_zoom();
+    test_chord_tone_role();
     test_view_smart_snap_default_and_override();
     test_inspector_summarizes_and_edits_the_selection();
 

@@ -16,6 +16,8 @@
 #include "Commands/SetPatternLengthCommand.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "Music/ScaleContext.h"
+#include "Harmony/HarmonyAnalysis.h"
+#include "Harmony/HarmonyGather.h"
 #include <cmath>
 #include <unordered_map>
 #include <random>
@@ -362,6 +364,7 @@ void PianoRollPanel::loadPattern(PatternID patternId) {
 
         m_pianoRoll->setDefaultUnitId(m_editingUnitId);
         m_pianoRoll->setNotes(uiNotes);
+        refreshHarmony();
         if (switchedPattern) m_pianoRoll->frameNotesVertically(); // FD-63: open on the notes, not a fixed octave
         double longestBeat = pattern->lengthBeats;
         for (const auto& note : midiPayload.notes) {
@@ -542,6 +545,7 @@ void PianoRollPanel::savePattern() {
     // Only notify when something actually changed: unconditional notification
     // caused an Arsenal-refresh/refreshTracks storm on every no-op save and
     // fed the setEditingUnit recursion.
+    if (!diff.empty()) refreshHarmony(); // the chords follow every committed edit
     if (!diff.empty() && m_onPatternEdited) {
         m_onPatternEdited(m_currentPatternId);
     }
@@ -872,4 +876,51 @@ void PianoRollPanel::updateGhostChannels() {
                                                          (unit->color & 0xff) * scale, 1.0f));
         }
     }
+}
+
+namespace {
+// The service spells flats in ASCII ("Bb", "bVII") for Muse and the verbs; the ruler shows real flat signs ("B♭",
+// "♭VII"). A "b" is a flat after a note letter (names) or before a numeral (romans); "dim", "sus" and "add" stay.
+std::string withFlatSigns(const std::string& s, bool roman) {
+    std::string out;
+    for (size_t i = 0; i < s.size(); ++i) {
+        const bool flat = s[i] == 'b' && (roman ? (i + 1 < s.size() && (s[i + 1] == 'I' || s[i + 1] == 'V' ||
+                                                                         s[i + 1] == 'i' || s[i + 1] == 'v'))
+                                                : (i > 0 && s[i - 1] >= 'A' && s[i - 1] <= 'G'));
+        out += flat ? std::string("\xE2\x99\xAD") : std::string(1, s[i]);
+    }
+    return out;
+}
+} // namespace
+
+// V83-HS1 (FD-63): the harmony of the whole pattern, every unit, re-read after each load and committed edit. The
+// analysis is a few hundred notes of arithmetic, so it runs here on the UI thread; the audio thread never sees it.
+void PianoRollPanel::refreshHarmony() {
+    if (!m_trackManager || !m_pianoRoll || !m_currentPatternId.isValid()) return;
+    const auto* pattern = m_trackManager->getPatternManager().getPattern(m_currentPatternId);
+    if (!pattern || !pattern->isMidi()) {
+        m_pianoRoll->setHarmony({}, {});
+        return;
+    }
+    namespace H = Aestra::Audio::Harmony;
+    const H::HarmonyTimeline timeline = H::analyzeHarmony(H::gatherPatternNotes(*pattern), m_pianoRoll->getBeatsPerBar());
+    std::vector<AestraUI::PianoRollChord> chords;
+    chords.reserve(timeline.chords.size());
+    for (const auto& span : timeline.chords) {
+        if (span.isNoChord()) continue;
+        AestraUI::PianoRollChord c;
+        c.startBeat = span.startBeat;
+        c.endBeat = span.endBeat;
+        c.name = withFlatSigns(span.name, false);
+        c.roman = withFlatSigns(span.roman, true);
+        c.root = span.root;
+        c.userSet = span.userSet;
+        for (const int pc : H::chordTones(span.root, span.quality)) c.toneMask |= static_cast<uint16_t>(1u << pc);
+        chords.push_back(std::move(c));
+    }
+    AestraUI::PianoRollKeyGuess key;
+    key.valid = timeline.key.valid();
+    key.tonic = std::max(0, timeline.key.tonic);
+    key.minor = timeline.key.mode == H::KeyMode::Minor;
+    m_pianoRoll->setHarmony(std::move(chords), key);
 }

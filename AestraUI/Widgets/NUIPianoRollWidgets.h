@@ -27,6 +27,28 @@ using PianoRollTool = GlobalTool;
 // -----------------------------------------------------------------------------
 // PianoRollKeyLane: The vertical keyboard on the left
 // -----------------------------------------------------------------------------
+/// One chord the harmony service found (FD-63, V83-HS1), as the piano roll draws it. AestraUI does not depend on the
+/// audio library, so the panel converts its timeline into these.
+struct PianoRollChord {
+    double startBeat = 0.0;
+    double endBeat = 0.0;
+    std::string name;     ///< "Dm", "F/A"
+    std::string roman;    ///< "i", "VI"; empty without a key
+    int root = -1;        ///< pitch class
+    uint16_t toneMask = 0; ///< bit n set when pitch class n is a chord tone
+    bool userSet = false;
+};
+
+/// The key the harmony service detected, shown when the producer has not set one.
+struct PianoRollKeyGuess {
+    bool valid = false;
+    int tonic = 0;
+    bool minor = false;
+};
+
+/// "A4 = 3rd of F": what a pitch is in a chord, or empty when it is not one of its tones.
+std::string chordToneRole(int pitch, const PianoRollChord& chord);
+
 class PianoRollKeyLane : public NUIComponent {
 public:
     /** @brief Create the vertical piano-key lane. */
@@ -223,7 +245,10 @@ public:
         repaint();
     }
 
+    /** @brief The chords to name under the bar numbers (FD-63 harmony ruler). */
+    void setChords(const std::vector<PianoRollChord>* chords) { chords_ = chords; repaint(); }
 private:
+    const std::vector<PianoRollChord>* chords_ = nullptr; ///< owned by the view
     float scrollX_; // REORDERED
     float pixelsPerBeat_; // REORDERED
     int beatsPerBar_;
@@ -355,6 +380,8 @@ private:
     // FD-66 Smart Snap: on by default; the view reports every zoom, and the snap follows it until the producer picks
     // a fixed snap from the menu. Picking Smart again hands it back to the zoom.
     bool m_smartSnap = true;
+    PianoRollKeyGuess m_detectedKey;
+    void pushDisplayScale(); ///< grid and keys show the set key, or the detected one when none is set
     float m_smartPixelsPerBeat = 66.0f;
     int m_smartBeatsPerBar = 4;
     void setSnapNow(SnapGrid snap); ///< grid, notes and display, without changing who chose it
@@ -363,6 +390,8 @@ public:
     bool isSmartSnap() const { return m_smartSnap; }
     void setSmartSnap(bool on);
     SnapGrid getSnap() const { return m_currentSnap; }
+    /** @brief The key the notes suggest; shown, and used for the rows and degrees, while no key is set (FD-67). */
+    void setDetectedKey(const PianoRollKeyGuess& key);
     /** @brief A fixed snap, as if picked from the menu: Smart Snap steps aside. */
     void chooseSnap(SnapGrid snap) { applySnap(snap); }
 private:
@@ -469,7 +498,10 @@ public:
     /** @brief Beat span the grid renders subdivisions at for the active snap. */
     double getSnapSubdivisionBeats() const { return MusicTheory::getSnapDuration(snap_); }
 
+    /** @brief The chords whose tones are banded across their span (FD-63 chord-tone rows). */
+    void setChords(const std::vector<PianoRollChord>* chords) { chords_ = chords; repaint(); }
 private:
+    const std::vector<PianoRollChord>* chords_ = nullptr; ///< owned by the view
     float pixelsPerBeat_;
     float keyHeight_;
     float scrollX_;
@@ -1007,6 +1039,10 @@ public:
     void frameNotesVertically();
 
     void setPixelsPerBeat(float ppb);
+    /** @brief What the harmony service found in this pattern: chords for the ruler and the grid, and the key. */
+    void setHarmony(std::vector<PianoRollChord> chords, const PianoRollKeyGuess& key);
+    const std::vector<PianoRollChord>& getChords() const { return m_chords; }
+    int getBeatsPerBar() const { return m_beatsPerBar; }
     /** @brief A fixed snap, as if picked from the menu (Smart Snap steps aside); see FD-66. */
     void setSnap(SnapGrid snap);
     /** @brief Hand the snap back to the zoom (FD-66 Smart Snap, the default). */
@@ -1038,6 +1074,7 @@ private:
     std::shared_ptr<PianoRollControlPanel> m_controls;
     std::shared_ptr<class PianoRollInspector> m_inspector; // FD-63: the selection column at the right
     int m_statusPitch = -1; ///< the key under the pointer, for the status line
+    std::vector<PianoRollChord> m_chords; ///< the ruler and grid point at this
     void renderStatusLine(NUIRenderer& renderer);
     std::shared_ptr<PianoRollMinimap> m_minimap;
     std::optional<std::pair<double, double>> m_loopZone;
