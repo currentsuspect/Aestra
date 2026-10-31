@@ -501,3 +501,12 @@ target_include_directories(MuseIdeasTest PRIVATE
 )
 add_test(NAME MuseIdeasTest COMMAND MuseIdeasTest)
 set_tests_properties(MuseIdeasTest PROPERTIES TIMEOUT 120 LABELS "commands;muse;contract:application")
+# PresetCoreTest — V83-S2 (FD-72): preset files, capture/apply, the library, Save's name, one-undo apply.
+add_executable(PresetCoreTest Commands/PresetCoreTest.cpp)
+target_link_libraries(PresetCoreTest PRIVATE AestraAudioCore)
+target_include_directories(PresetCoreTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME PresetCoreTest COMMAND PresetCoreTest)
+set_tests_properties(PresetCoreTest PROPERTIES TIMEOUT 120 LABELS "commands;plugins;presets;contract:application")
