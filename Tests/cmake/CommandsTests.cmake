@@ -169,6 +169,13 @@ target_include_directories(MuseCliRequestTest PRIVATE
 add_test(NAME MuseCliRequestTest COMMAND MuseCliRequestTest)
 set_tests_properties(MuseCliRequestTest PROPERTIES LABELS "commands;muse;contract:application")
 
+add_executable(MuseAgentCliArgsTest Commands/MuseAgentCliArgsTest.cpp)
+target_include_directories(MuseAgentCliArgsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/MuseAgent
+)
+add_test(NAME MuseAgentCliArgsTest COMMAND MuseAgentCliArgsTest)
+set_tests_properties(MuseAgentCliArgsTest PROPERTIES LABELS "commands;muse;contract:application")
+
 add_executable(ProjectLoadReportTest
     Commands/ProjectLoadReportTest.cpp
     ${CMAKE_SOURCE_DIR}/Source/App/MuseProjectLoadReport.cpp
