@@ -1,0 +1,13 @@
+<map id="Aestra::Audio::ClapTransportValues" name="Aestra::Audio::ClapTransportValues">
+<area shape="rect" id="Node000001" title="The numbers a CLAP clap_event_transport carries for a snapshot, worked out once for the in&#45;process ho..." alt="" coords="110,181,317,221"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,72,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="42,44,51,100,62,130,81,156,97,169,115,179,113,184,94,173,77,159,58,132,46,101,36,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="96,5,171,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="138,44,147,98,156,128,169,156,189,179,185,183,164,159,151,130,141,99,132,45"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="195,5,261,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="220,44,217,55,212,124,214,181,209,181,206,124,212,54,215,43"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="324,5,391,31"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="358,45,348,108,340,139,330,159,315,173,297,183,294,179,312,169,326,156,335,137,343,107,352,44"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="428,5,503,31"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="470,45,470,71,466,102,456,133,438,159,418,171,389,181,318,194,317,189,388,176,416,166,434,155,451,130,461,101,465,71,465,45"/>
+</map>

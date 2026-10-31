@@ -12,7 +12,7 @@
 <area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="488,171,528,166,529,171,488,176"/>
 <area shape="rect" id="Node000007" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a" title="Get a pattern by ID (returns nullptr if not found)" alt="" coords="549,197,769,237"/>
 <area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="488,195,536,200,535,206,488,200"/>
-<area shape="rect" id="Node000008" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a4a8cd3c7804784b829d93cc5556ddda5" title="Schedule new pattern instance (non&#45;RT thread)" alt="" coords="543,261,776,301"/>
+<area shape="rect" id="Node000008" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#aabca685e25a6dec33629e1b860d31671" title="Schedule new pattern instance (non&#45;RT thread)" alt="" coords="543,261,776,301"/>
 <area shape="poly" id="edge7_Node000002_Node000008" title=" " alt="" coords="429,203,537,247,563,255,561,260,535,252,427,208"/>
 <area shape="rect" id="Node000005" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a14e806e03276c9b4ea16c838fab092d8" title="Get or create a pattern." alt="" coords="831,69,1051,109"/>
 <area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="770,87,817,87,817,92,770,92"/>

@@ -1,0 +1,5 @@
+<map id="Aestra::ArsenalSceneMenu::key" name="Aestra::ArsenalSceneMenu::key">
+<area shape="rect" id="Node000001" title="While renaming every key press belongs to the box (Space must not start the transport)...." alt="" coords="255,13,481,38"/>
+<area shape="rect" id="Node000002" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a1a36038cf0df7ebe839d4211af079b3c" title="Set the callback used when an audio sample is dropped onto a unit." alt="" coords="5,5,207,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="241,28,207,28,207,23,241,23"/>
+</map>

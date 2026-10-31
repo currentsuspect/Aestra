@@ -9,6 +9,7 @@ var searchData=
   ['outofprocesspluginfactory_6',['OutOfProcessPluginFactory',['../d2/d86/classAestra_1_1Audio_1_1OutOfProcessPluginFactory.html',1,'Aestra::Audio']]],
   ['outofprocessplugininstance_7',['OutOfProcessPluginInstance',['../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html',1,'Aestra::Audio']]],
   ['outputgroup_8',['OutputGroup',['../de/d89/structAestra_1_1Audio_1_1RoutingModel_1_1OutputGroup.html',1,'Aestra::Audio::RoutingModel']]],
-  ['overlaylayer_9',['OverlayLayer',['../d7/d46/classOverlayLayer.html',1,'']]],
-  ['oversampler_10',['Oversampler',['../d5/d6c/classAestra_1_1Audio_1_1DSP_1_1Oversampler.html',1,'Aestra::Audio::DSP']]]
+  ['outputparameterchanges_9',['OutputParameterChanges',['../da/d3d/classAestra_1_1Audio_1_1OutputParameterChanges.html',1,'Aestra::Audio']]],
+  ['overlaylayer_10',['OverlayLayer',['../d7/d46/classOverlayLayer.html',1,'']]],
+  ['oversampler_11',['Oversampler',['../d5/d6c/classAestra_1_1Audio_1_1DSP_1_1Oversampler.html',1,'Aestra::Audio::DSP']]]
 ];

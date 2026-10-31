@@ -1,7 +1,11 @@
 <map id="Aestra::registerMuseHostVerbs" name="Aestra::registerMuseHostVerbs">
-<area shape="rect" id="Node000001" title="Register the application&#39;s capabilities into a MuseService." alt="" coords="5,69,192,109"/>
+<area shape="rect" id="Node000001" title="Register the application&#39;s capabilities into a MuseService." alt="" coords="5,133,192,173"/>
 <area shape="rect" id="Node000002" href="$d6/d43/classAestraApp.html#a7743bbbc5d14fb854b47f079e444720a" title="Register the project." alt="" coords="240,69,467,109"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="192,87,226,87,226,92,192,92"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="178,131,259,110,261,115,180,136"/>
+<area shape="rect" id="Node000007" href="$d8/d94/namespaceAestra.html#a28859de903ad2d8f0a35a11e74132f03" title="Register the transport." alt="" coords="245,133,462,173"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="192,151,231,151,231,156,192,156"/>
+<area shape="rect" id="Node000008" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a29cb30da8219c0167b4ae7ea38750eb2" title="Let the host pause its live audio stream around offline renders." alt="" coords="240,197,467,237"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="180,171,261,191,259,197,178,176"/>
 <area shape="rect" id="Node000003" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#ad026cd99c7a20e8f5f097c14ede90e90" title="The seam the application registers its capabilities into." alt="" coords="530,5,730,45"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="440,67,529,46,530,51,441,72"/>
 <area shape="rect" id="Node000004" href="$d4/d8f/classAestra_1_1Audio_1_1HostVerbRegistry.html#a38e5bb4a60b68bf42c03dd94c4921d81" title=" " alt="" coords="515,69,745,109"/>

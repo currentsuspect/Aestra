@@ -1,0 +1,17 @@
+<map id="AestraUI::PianoRollDuplicate::Plan" name="AestraUI::PianoRollDuplicate::Plan">
+<area shape="rect" id="Node000001" title=" " alt="" coords="81,284,290,324"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,181,56,207"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="41,219,51,240,66,258,84,271,105,281,103,286,82,276,62,262,46,242,36,221"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="92,181,159,207"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="141,218,177,282,172,285,136,220"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="183,181,342,207"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="249,219,201,285,197,282,244,216"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="179,93,239,119"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="215,132,224,156,247,179,243,183,219,159,210,133"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="263,93,393,119"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="313,131,274,182,270,179,309,128"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="309,5,347,31"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="331,45,331,93,325,93,325,45"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="367,181,540,207"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="414,214,296,262,235,286,233,281,294,258,412,209"/>
+</map>

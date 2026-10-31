@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::ReplacePatternNotesCommand::undo" name="Aestra::Audio::ReplacePatternNotesCommand::undo">
+<area shape="rect" id="Node000001" title="Undo the command." alt="" coords="5,5,220,45"/>
+<area shape="rect" id="Node000002" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#abee9e6cbed1f10357d030516169e842d" title="Apply a mutation lambda to a pattern, creating it on demand." alt="" coords="268,5,488,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="220,23,254,23,254,28,220,28"/>
+<area shape="rect" id="Node000003" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a14e806e03276c9b4ea16c838fab092d8" title="Get or create a pattern." alt="" coords="536,5,756,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="488,23,522,23,522,28,488,28"/>
+</map>

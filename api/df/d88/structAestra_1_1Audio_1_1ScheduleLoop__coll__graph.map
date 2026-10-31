@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::ScheduleLoop" name="Aestra::Audio::ScheduleLoop">
+<area shape="rect" id="Node000001" title="The loop the note scheduler plans across, in the monotonic frame domain." alt="" coords="5,108,212,133"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="29,5,103,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="70,44,80,83,98,106,93,109,76,85,65,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="127,5,178,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="144,45,116,109,111,107,140,42"/>
+</map>

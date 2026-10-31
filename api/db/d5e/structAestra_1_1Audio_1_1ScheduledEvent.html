@@ -119,6 +119,9 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:a706a91739974eabc6e7ae7f39517cc8f" id="r_a706a91739974eabc6e7ae7f39517cc8f"><td class="memItemLeft" align="right" valign="top">uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d5e/structAestra_1_1Audio_1_1ScheduledEvent.html#a706a91739974eabc6e7ae7f39517cc8f">priority</a></td></tr>
 <tr class="memdesc:a706a91739974eabc6e7ae7f39517cc8f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Event priority inside a frame.  <br /></td></tr>
 <tr class="separator:a706a91739974eabc6e7ae7f39517cc8f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1de80053cebe01664d1d49ee48cf6ff1" id="r_a1de80053cebe01664d1d49ee48cf6ff1"><td class="memItemLeft" align="right" valign="top">uint16_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d5e/structAestra_1_1Audio_1_1ScheduledEvent.html#a1de80053cebe01664d1d49ee48cf6ff1">epoch</a></td></tr>
+<tr class="memdesc:a1de80053cebe01664d1d49ee48cf6ff1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Queue epoch the event was scheduled in; stale epochs are dropped unplayed.  <br /></td></tr>
+<tr class="separator:a1de80053cebe01664d1d49ee48cf6ff1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a10e05ba42b9bc0590fb6e57e0044bec9" id="r_a10e05ba42b9bc0590fb6e57e0044bec9"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d5e/structAestra_1_1Audio_1_1ScheduledEvent.html#a10e05ba42b9bc0590fb6e57e0044bec9">noteId</a></td></tr>
 <tr class="memdesc:a10e05ba42b9bc0590fb6e57e0044bec9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Note identity shared by a note's on and off (0 = none).  <br /></td></tr>
 <tr class="separator:a10e05ba42b9bc0590fb6e57e0044bec9"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -126,7 +129,7 @@ Public Attributes</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Compact, cache-aligned scheduled MIDI event (32 bytes) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00026">26</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00027">27</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 </div><h2 class="groupheader">Member Data Documentation</h2>
 <a id="a913ed408a2ff3856b90e941f5187b074" name="a913ed408a2ff3856b90e941f5187b074"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a913ed408a2ff3856b90e941f5187b074">&#9670;&#160;</a></span>channelIdx</h2>
@@ -142,7 +145,7 @@ Public Attributes</h2></td></tr>
 
 <p>Resolved MIDI channel index. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00034">34</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00035">35</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 
 </div>
 </div>
@@ -160,9 +163,9 @@ Public Attributes</h2></td></tr>
 
 <p>First MIDI data byte, usually note number. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00038">38</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00039">39</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00621">Aestra::Audio::PatternPlaybackEngine::processAudio()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00685">Aestra::Audio::PatternPlaybackEngine::processAudio()</a>.</p>
 
 </div>
 </div>
@@ -180,9 +183,29 @@ Public Attributes</h2></td></tr>
 
 <p>Second MIDI data byte, usually velocity. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00040">40</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00041">41</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00621">Aestra::Audio::PatternPlaybackEngine::processAudio()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00685">Aestra::Audio::PatternPlaybackEngine::processAudio()</a>.</p>
+
+</div>
+</div>
+<a id="a1de80053cebe01664d1d49ee48cf6ff1" name="a1de80053cebe01664d1d49ee48cf6ff1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1de80053cebe01664d1d49ee48cf6ff1">&#9670;&#160;</a></span>epoch</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint16_t Aestra::Audio::ScheduledEvent::epoch</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Queue epoch the event was scheduled in; stale epochs are dropped unplayed. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00045">45</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00685">Aestra::Audio::PatternPlaybackEngine::processAudio()</a>.</p>
 
 </div>
 </div>
@@ -200,9 +223,9 @@ Public Attributes</h2></td></tr>
 
 <p>Pattern-instance identifier used for cancellation. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00032">32</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00033">33</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00621">Aestra::Audio::PatternPlaybackEngine::processAudio()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00685">Aestra::Audio::PatternPlaybackEngine::processAudio()</a>.</p>
 
 </div>
 </div>
@@ -221,9 +244,9 @@ Public Attributes</h2></td></tr>
 <p>Note identity shared by a note's on and off (0 = none). </p>
 <p>4 bytes, aligned -&gt; Total 32. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00044">44</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00047">47</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00621">Aestra::Audio::PatternPlaybackEngine::processAudio()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00685">Aestra::Audio::PatternPlaybackEngine::processAudio()</a>.</p>
 
 </div>
 </div>
@@ -241,7 +264,7 @@ Public Attributes</h2></td></tr>
 
 <p>Event priority inside a frame. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00042">42</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00043">43</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 
 </div>
 </div>
@@ -259,9 +282,9 @@ Public Attributes</h2></td></tr>
 
 <p>Absolute sample frame at which the event should fire. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00028">28</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00029">29</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00621">Aestra::Audio::PatternPlaybackEngine::processAudio()</a>, and <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00223">Aestra::Audio::PatternPlaybackEngine::refillWindow()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00685">Aestra::Audio::PatternPlaybackEngine::processAudio()</a>, and <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00244">Aestra::Audio::PatternPlaybackEngine::refillWindow()</a>.</p>
 
 </div>
 </div>
@@ -279,9 +302,9 @@ Public Attributes</h2></td></tr>
 
 <p>MIDI status byte. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00036">36</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00037">37</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00621">Aestra::Audio::PatternPlaybackEngine::processAudio()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00685">Aestra::Audio::PatternPlaybackEngine::processAudio()</a>.</p>
 
 </div>
 </div>
@@ -299,9 +322,9 @@ Public Attributes</h2></td></tr>
 
 <p>Destination unit identifier. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00030">30</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00031">31</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00621">Aestra::Audio::PatternPlaybackEngine::processAudio()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00685">Aestra::Audio::PatternPlaybackEngine::processAudio()</a>.</p>
 
 </div>
 </div>

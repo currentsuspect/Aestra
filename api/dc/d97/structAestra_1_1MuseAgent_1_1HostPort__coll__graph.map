@@ -1,0 +1,9 @@
+<map id="Aestra::MuseAgent::HostPort" name="Aestra::MuseAgent::HostPort">
+<area shape="rect" id="Node000001" title="An endpoint spec split into host and port text (port is not validated here)." alt="" coords="5,197,159,237"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="31,95,82,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="65,133,80,196,75,198,60,134"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="107,95,193,120"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="138,133,96,198,92,196,133,130"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="81,5,219,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="153,59,153,94,147,94,147,59"/>
+</map>

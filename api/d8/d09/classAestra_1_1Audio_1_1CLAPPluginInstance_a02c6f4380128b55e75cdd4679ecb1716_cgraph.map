@@ -1,4 +1,6 @@
 <map id="Aestra::Audio::CLAPPluginInstance::process" name="Aestra::Audio::CLAPPluginInstance::process">
 <area shape="rect" id="Node000001" title="Process audio through the plugin." alt="" coords="5,29,196,69"/>
-<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="65,30,63,20,68,11,81,5,101,3,123,6,135,13,132,17,121,11,101,8,83,10,72,15,68,21,70,28"/>
+<area shape="poly" id="edge2_Node000001_Node000001" title=" " alt="" coords="55,30,52,20,60,10,76,5,101,3,129,6,145,13,142,18,128,11,101,8,77,10,63,15,57,21,60,28"/>
+<area shape="rect" id="Node000002" href="$d6/d19/classAestra_1_1Audio_1_1HostTransportClock.html#ad57774184ccad5b1ca5f1596e85f41af" title="Any thread. A snapshot that kept moving under the reader comes back !valid." alt="" coords="244,29,451,69"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="196,47,230,47,230,52,196,52"/>
 </map>

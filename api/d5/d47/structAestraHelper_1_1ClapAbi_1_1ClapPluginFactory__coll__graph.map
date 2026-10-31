@@ -1,0 +1,21 @@
+<map id="AestraHelper::ClapAbi::ClapPluginFactory" name="AestraHelper::ClapAbi::ClapPluginFactory">
+<area shape="rect" id="Node000001" title=" " alt="" coords="1089,52,1255,92"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,39,80,65"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="93,38,172,24,263,17,875,17,934,20,993,28,1098,49,1097,55,992,33,933,26,875,23,263,23,173,29,94,43"/>
+<area shape="rect" id="Node000004" href="$de/dc9/structAestraHelper_1_1ClapAbi_1_1ClapVersion.html" title=" " alt="" coords="181,64,347,104"/>
+<area shape="poly" id="edge4_Node000004_Node000002" title=" " alt="" coords="77,69,105,80,143,86,181,88,181,93,142,92,103,85,75,74"/>
+<area shape="rect" id="Node000003" href="$de/d04/structAestraHelper_1_1ClapAbi_1_1ClapPluginDescriptor.html" title=" " alt="" coords="475,77,641,117"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="655,91,1089,73,1089,78,655,96"/>
+<area shape="rect" id="Node000006" href="$d9/d10/structAestraHelper_1_1ClapAbi_1_1ClapPlugin.html" title=" " alt="" coords="791,220,956,260"/>
+<area shape="poly" id="edge7_Node000006_Node000003" title=" " alt="" coords="656,107,721,119,768,134,796,152,822,175,860,218,856,222,818,178,793,156,766,138,720,124,655,112"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="360,86,475,91,475,96,360,91"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="239,234,289,259"/>
+<area shape="poly" id="edge5_Node000003_Node000005" title=" " alt="" coords="303,249,374,249,413,242,449,228,482,204,509,174,545,116,550,119,513,177,486,208,452,233,414,247,375,254,303,254"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="921,211,1134,90,1137,94,923,215"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="533,227,583,253"/>
+<area shape="poly" id="edge8_Node000006_Node000007" title=" " alt="" coords="597,237,790,237,790,243,597,243"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="533,302,583,327"/>
+<area shape="poly" id="edge9_Node000006_Node000008" title=" " alt="" coords="597,311,676,304,766,287,802,274,835,258,838,262,804,278,767,292,676,310,597,316"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="525,351,591,377"/>
+<area shape="poly" id="edge10_Node000006_Node000009" title=" " alt="" coords="605,360,682,351,725,341,766,326,791,311,814,294,852,258,856,262,818,298,794,316,768,330,726,346,683,356,606,365"/>
+</map>

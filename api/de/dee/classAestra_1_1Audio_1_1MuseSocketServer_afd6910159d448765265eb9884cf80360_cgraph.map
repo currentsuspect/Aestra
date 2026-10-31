@@ -1,13 +1,19 @@
 <map id="Aestra::Audio::MuseSocketServer::processPending" name="Aestra::Audio::MuseSocketServer::processPending">
-<area shape="rect" id="Node000001" title="Execute every fully received request line on the caller&#39;s thread." alt="" coords="5,37,200,77"/>
-<area shape="rect" id="Node000002" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a59ffe55e7bb9da7a1f78a89225b896e3" title="Process one JSON request line and return the JSON response." alt="" coords="248,37,448,77"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="200,55,234,55,234,60,200,60"/>
-<area shape="rect" id="Node000003" href="$de/dea/classAestra_1_1Audio_1_1CommandParser.html#a3766cdeeec079d0796e5f982c9aea8df" title="Execute a verb from an already&#45;tokenised flag map." alt="" coords="496,37,720,77"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="448,55,482,55,482,60,448,60"/>
+<area shape="rect" id="Node000001" title="Execute received request lines on the caller&#39;s thread, at most 64 per call." alt="" coords="5,133,200,173"/>
+<area shape="rect" id="Node000002" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a59ffe55e7bb9da7a1f78a89225b896e3" title="Process one JSON request line and return the JSON response." alt="" coords="248,133,448,173"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="200,151,234,151,234,156,200,156"/>
+<area shape="rect" id="Node000003" href="$de/dea/classAestra_1_1Audio_1_1CommandParser.html#a3766cdeeec079d0796e5f982c9aea8df" title="Execute a verb from an already&#45;tokenised flag map." alt="" coords="496,133,720,173"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="448,151,482,151,482,156,448,156"/>
 <area shape="rect" id="Node000004" href="$de/dea/classAestra_1_1Audio_1_1CommandParser.html#a867df74f8159bfbf8ef7db8366f59012" title="Validate and build a command without executing it." alt="" coords="771,5,995,45"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="720,42,757,37,758,43,721,47"/>
-<area shape="rect" id="Node000006" href="$df/d31/classAestra_1_1Audio_1_1CommandHistory.html#a0494915f3f25d5561f652ef5fb4067e5" title="Execute a command and push it to the undo stack Clears the redo stack." alt="" coords="768,69,999,109"/>
-<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="721,68,755,72,754,77,720,73"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="636,131,695,93,767,55,786,47,788,52,769,60,697,97,639,135"/>
+<area shape="rect" id="Node000006" href="$de/dea/classAestra_1_1Audio_1_1CommandParser.html#af2d5bd28c6bc8ee14df564c64d45ddeb" title="If cmd is a verb that creates something (unit, track, lane, clip, pattern, effect slot),..." alt="" coords="771,69,995,109"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="694,131,783,110,784,115,695,136"/>
+<area shape="rect" id="Node000007" href="$df/d31/classAestra_1_1Audio_1_1CommandHistory.html#a3c8561b6bcb69509c1f8a34bbad31e1d" title="Check if a transaction is currently active." alt="" coords="768,133,999,173"/>
+<area shape="poly" id="edge6_Node000003_Node000007" title=" " alt="" coords="720,151,754,151,754,156,720,156"/>
+<area shape="rect" id="Node000008" href="$df/d31/classAestra_1_1Audio_1_1CommandHistory.html#a0494915f3f25d5561f652ef5fb4067e5" title="Execute a command and push it to the undo stack Clears the redo stack." alt="" coords="768,197,999,237"/>
+<area shape="poly" id="edge7_Node000003_Node000008" title=" " alt="" coords="695,171,784,192,783,197,694,176"/>
+<area shape="rect" id="Node000009" href="$df/d31/classAestra_1_1Audio_1_1CommandHistory.html#a3dc3b072f240d017cdf83e69175ffbc8" title="Push a command that the caller already executed." alt="" coords="768,261,999,301"/>
+<area shape="poly" id="edge8_Node000003_Node000009" title=" " alt="" coords="639,171,697,209,769,247,788,254,786,259,767,252,695,214,636,176"/>
 <area shape="rect" id="Node000005" href="$db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#ad7b2a4074b0b099b6b8879f5374d971b" title="Take the reason recorded by the most recent failed build." alt="" coords="1047,5,1285,45"/>
 <area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="996,23,1033,23,1033,28,996,28"/>
 </map>

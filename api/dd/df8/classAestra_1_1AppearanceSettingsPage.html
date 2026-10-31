@@ -123,6 +123,14 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:aeceef6c2e231406c80b24126f55f516a inherit pub_methods_classAestra_1_1ISettingsPage" id="r_aeceef6c2e231406c80b24126f55f516a"><td class="memItemLeft" align="right" valign="top">virtual std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d9f/classAestra_1_1ISettingsPage.html#aeceef6c2e231406c80b24126f55f516a">getIcon</a> () const</td></tr>
 <tr class="memdesc:aeceef6c2e231406c80b24126f55f516a inherit pub_methods_classAestra_1_1ISettingsPage"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the icon name (if supported by sidebar)  <br /></td></tr>
 <tr class="separator:aeceef6c2e231406c80b24126f55f516a inherit pub_methods_classAestra_1_1ISettingsPage"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaa7d44d7cc0354d8a53180b83705e7df inherit pub_methods_classAestra_1_1ISettingsPage" id="r_aaa7d44d7cc0354d8a53180b83705e7df"><td class="memItemLeft" align="right" valign="top">virtual int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d9f/classAestra_1_1ISettingsPage.html#aaa7d44d7cc0354d8a53180b83705e7df">pendingChangeCount</a> () const</td></tr>
+<tr class="memdesc:aaa7d44d7cc0354d8a53180b83705e7df inherit pub_methods_classAestra_1_1ISettingsPage"><td class="mdescLeft">&#160;</td><td class="mdescRight">How many settings on this page differ from what is saved (the sidebar badge and the "N changes not saved" note).  <br /></td></tr>
+<tr class="separator:aaa7d44d7cc0354d8a53180b83705e7df inherit pub_methods_classAestra_1_1ISettingsPage"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad8c38fe3d105b0be6ce24737a2a45c5a inherit pub_methods_classAestra_1_1ISettingsPage" id="r_ad8c38fe3d105b0be6ce24737a2a45c5a"><td class="memItemLeft" align="right" valign="top">virtual std::shared_ptr&lt; <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d9f/classAestra_1_1ISettingsPage.html#ad8c38fe3d105b0be6ce24737a2a45c5a">footerAction</a> ()</td></tr>
+<tr class="memdesc:ad8c38fe3d105b0be6ce24737a2a45c5a inherit pub_methods_classAestra_1_1ISettingsPage"><td class="mdescLeft">&#160;</td><td class="mdescRight">A page's own action for the dialog footer's left side (Audio: Test sound), and the muted note beside it.  <br /></td></tr>
+<tr class="separator:ad8c38fe3d105b0be6ce24737a2a45c5a inherit pub_methods_classAestra_1_1ISettingsPage"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8294c5ba19e133beb592c7d2971d39d7 inherit pub_methods_classAestra_1_1ISettingsPage" id="r_a8294c5ba19e133beb592c7d2971d39d7"><td class="memItemLeft" align="right" valign="top">virtual std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d9f/classAestra_1_1ISettingsPage.html#a8294c5ba19e133beb592c7d2971d39d7">footerNote</a> () const</td></tr>
+<tr class="separator:a8294c5ba19e133beb592c7d2971d39d7 inherit pub_methods_classAestra_1_1ISettingsPage"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9a50a1ca6cef97a1982312d57b17956f inherit pub_methods_classAestra_1_1ISettingsPage" id="r_a9a50a1ca6cef97a1982312d57b17956f"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d9f/classAestra_1_1ISettingsPage.html#a9a50a1ca6cef97a1982312d57b17956f">onHide</a> ()</td></tr>
 <tr class="memdesc:a9a50a1ca6cef97a1982312d57b17956f inherit pub_methods_classAestra_1_1ISettingsPage"><td class="mdescLeft">&#160;</td><td class="mdescRight">Called when the page is hidden/inactive.  <br /></td></tr>
 <tr class="separator:a9a50a1ca6cef97a1982312d57b17956f inherit pub_methods_classAestra_1_1ISettingsPage"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -307,7 +315,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="../../d3/db3/AppearanceSettingsPage_8h_source.html#l00010">10</a> of file <a class="el" href="../../d3/db3/AppearanceSettingsPage_8h_source.html">AppearanceSettingsPage.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db3/AppearanceSettingsPage_8h_source.html#l00011">11</a> of file <a class="el" href="../../d3/db3/AppearanceSettingsPage_8h_source.html">AppearanceSettingsPage.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="aab89a39de7980b05a54f1539a6e6ebef" name="aab89a39de7980b05a54f1539a6e6ebef"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aab89a39de7980b05a54f1539a6e6ebef">&#9670;&#160;</a></span>AppearanceSettingsPage()</h2>
@@ -418,7 +426,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../da/d9f/classAestra_1_1ISettingsPage.html#a528b24fe6c0f1b49e0764e87377bddaa">Aestra::ISettingsPage</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db3/AppearanceSettingsPage_8h_source.html#l00015">15</a> of file <a class="el" href="../../d3/db3/AppearanceSettingsPage_8h_source.html">AppearanceSettingsPage.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db3/AppearanceSettingsPage_8h_source.html#l00016">16</a> of file <a class="el" href="../../d3/db3/AppearanceSettingsPage_8h_source.html">AppearanceSettingsPage.h</a>.</p>
 
 </div>
 </div>
@@ -449,7 +457,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../da/d9f/classAestra_1_1ISettingsPage.html#a9b32ed516f63f0e7c0f7f27e1ac83573">Aestra::ISettingsPage</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db3/AppearanceSettingsPage_8h_source.html#l00016">16</a> of file <a class="el" href="../../d3/db3/AppearanceSettingsPage_8h_source.html">AppearanceSettingsPage.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db3/AppearanceSettingsPage_8h_source.html#l00017">17</a> of file <a class="el" href="../../d3/db3/AppearanceSettingsPage_8h_source.html">AppearanceSettingsPage.h</a>.</p>
 
 </div>
 </div>
@@ -480,7 +488,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../da/d9f/classAestra_1_1ISettingsPage.html#ad4ac3417e9ee1eaa43de124c80383b01">Aestra::ISettingsPage</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db3/AppearanceSettingsPage_8h_source.html#l00020">20</a> of file <a class="el" href="../../d3/db3/AppearanceSettingsPage_8h_source.html">AppearanceSettingsPage.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db3/AppearanceSettingsPage_8h_source.html#l00021">21</a> of file <a class="el" href="../../d3/db3/AppearanceSettingsPage_8h_source.html">AppearanceSettingsPage.h</a>.</p>
 
 </div>
 </div>
@@ -550,7 +558,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/dee/AppearanceSettingsPage_8cpp_source.html#l00084">84</a> of file <a class="el" href="../../d8/dee/AppearanceSettingsPage_8cpp_source.html">AppearanceSettingsPage.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/dee/AppearanceSettingsPage_8cpp_source.html#l00088">88</a> of file <a class="el" href="../../d8/dee/AppearanceSettingsPage_8cpp_source.html">AppearanceSettingsPage.cpp</a>.</p>
 
 </div>
 </div>

@@ -113,7 +113,7 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:ae882733cbdd508d8d13c9ae0510b3c93"><td class="mdescLeft">&#160;</td><td class="mdescRight">True between a successful start() and <a class="el" href="../../de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#ab14db19502b1ab9cf8c4ba283d61dfc6" title="Stop the IO thread and close every socket.">stop()</a>.  <br /></td></tr>
 <tr class="separator:ae882733cbdd508d8d13c9ae0510b3c93"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afd6910159d448765265eb9884cf80360" id="r_afd6910159d448765265eb9884cf80360"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#afd6910159d448765265eb9884cf80360">processPending</a> (<a class="el" href="../../da/dfd/classAestra_1_1Audio_1_1MuseService.html">MuseService</a> &amp;service)</td></tr>
-<tr class="memdesc:afd6910159d448765265eb9884cf80360"><td class="mdescLeft">&#160;</td><td class="mdescRight">Execute every fully received request line on the caller's thread.  <br /></td></tr>
+<tr class="memdesc:afd6910159d448765265eb9884cf80360"><td class="mdescLeft">&#160;</td><td class="mdescRight">Execute received request lines on the caller's thread, at most 64 per call.  <br /></td></tr>
 <tr class="separator:afd6910159d448765265eb9884cf80360"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
@@ -121,7 +121,7 @@ Public Member Functions</h2></td></tr>
 <p>Listens on 127.0.0.1 only (never exposed to the network) and speaks the exact MuseRepl protocol: one <a class="el" href="../../df/dee/classAestra_1_1JSON.html">JSON</a> request per line in, one <a class="el" href="../../df/dee/classAestra_1_1JSON.html">JSON</a> response per line out, over the same <a class="el" href="../../da/dfd/classAestra_1_1Audio_1_1MuseService.html" title="Muse&#39;s structured machine interface: one JSON request in, one JSON response out.">MuseService</a> the UI's command system uses — agent edits land in the user's undo stack.</p>
 <p>Threading contract:</p><ul>
 <li>A background IO thread accepts clients, reads lines, and writes queued responses. It never touches the service.</li>
-<li>The owner calls <a class="el" href="../../de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#afd6910159d448765265eb9884cf80360" title="Execute every fully received request line on the caller&#39;s thread.">processPending()</a> from the MAIN thread (the app pumps it once per frame); that is the only place requests execute, so command execution is serialized with the UI exactly like user edits.</li>
+<li>The owner calls <a class="el" href="../../de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#afd6910159d448765265eb9884cf80360" title="Execute received request lines on the caller&#39;s thread, at most 64 per call.">processPending()</a> from the MAIN thread (the app pumps it once per frame); that is the only place requests execute, so command execution is serialized with the UI exactly like user edits.</li>
 </ul>
 <p>Opt-in: the app only starts a server when AESTRA_MUSE_PORT is set. </p>
 
@@ -142,7 +142,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html#l00195">195</a> of file <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html">MuseSocketServer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html#l00255">255</a> of file <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html">MuseSocketServer.cpp</a>.</p>
 
 </div>
 </div>
@@ -161,7 +161,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html#l00197">197</a> of file <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html">MuseSocketServer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html#l00257">257</a> of file <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html">MuseSocketServer.cpp</a>.</p>
 
 </div>
 </div>
@@ -183,7 +183,7 @@ Public Member Functions</h2></td></tr>
 
 <p>True between a successful start() and <a class="el" href="../../de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#ab14db19502b1ab9cf8c4ba283d61dfc6" title="Stop the IO thread and close every socket.">stop()</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html#l00268">268</a> of file <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html">MuseSocketServer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html#l00328">328</a> of file <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html">MuseSocketServer.cpp</a>.</p>
 
 </div>
 </div>
@@ -204,9 +204,9 @@ Public Member Functions</h2></td></tr>
 
 <p>The bound port (resolved when start() was given 0). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html#l00264">264</a> of file <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html">MuseSocketServer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html#l00324">324</a> of file <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html">MuseSocketServer.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html#l00201">start()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html#l00261">start()</a>.</p>
 <div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-0-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
@@ -233,10 +233,10 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Execute every fully received request line on the caller's thread. </p>
-<p>Runs each through the service and queues the responses for the IO thread to deliver. Call from the main thread only. </p><dl class="section return"><dt>Returns</dt><dd>Number of requests processed. </dd></dl>
+<p>Execute received request lines on the caller's thread, at most 64 per call. </p>
+<p>Runs each through the service and queues the responses for the IO thread to deliver. Requests beyond the per-call bound stay queued for the next call. Call from the main thread only. </p><dl class="section return"><dt>Returns</dt><dd>Number of requests processed. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html#l00272">272</a> of file <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html">MuseSocketServer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html#l00332">332</a> of file <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html">MuseSocketServer.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00064">Aestra::Audio::MuseService::handleRequest()</a>.</p>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -244,7 +244,7 @@ Public Member Functions</h2></td></tr>
 <div id="dynsection-1-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-1-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dee/classAestra_1_1Audio_1_1MuseSocketServer_afd6910159d448765265eb9884cf80360_cgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dee/classAestra_1_1Audio_1_1MuseSocketServer_afd6910159d448765265eb9884cf80360_cgraph.svg" width="100%" height="530"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -284,9 +284,9 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html#l00201">201</a> of file <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html">MuseSocketServer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html#l00261">261</a> of file <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html">MuseSocketServer.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html#l00264">port()</a>.</p>
+<p class="reference">References <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html#l00324">port()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">
@@ -315,7 +315,7 @@ Public Member Functions</h2></td></tr>
 <p>Stop the IO thread and close every socket. </p>
 <p>Safe to call twice. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html#l00257">257</a> of file <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html">MuseSocketServer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html#l00317">317</a> of file <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html">MuseSocketServer.cpp</a>.</p>
 
 </div>
 </div>

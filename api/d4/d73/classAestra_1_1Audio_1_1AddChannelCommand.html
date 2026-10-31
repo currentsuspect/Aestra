@@ -118,6 +118,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a8c6dba9671ab356e962ea20f8012b2f6" id="r_a8c6dba9671ab356e962ea20f8012b2f6"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d73/classAestra_1_1Audio_1_1AddChannelCommand.html#a8c6dba9671ab356e962ea20f8012b2f6">getName</a> () const override</td></tr>
 <tr class="memdesc:a8c6dba9671ab356e962ea20f8012b2f6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the display name used by command history.  <br /></td></tr>
 <tr class="separator:a8c6dba9671ab356e962ea20f8012b2f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4e57eec1f7df532e5dc02c74db8e1cb0" id="r_a4e57eec1f7df532e5dc02c74db8e1cb0"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d73/classAestra_1_1Audio_1_1AddChannelCommand.html#a4e57eec1f7df532e5dc02c74db8e1cb0">getCreatedChannelId</a> () const</td></tr>
+<tr class="memdesc:a4e57eec1f7df532e5dc02c74db8e1cb0"><td class="mdescLeft">&#160;</td><td class="mdescRight">The mixer channel this command created; 0 until it has executed.  <br /></td></tr>
+<tr class="separator:a4e57eec1f7df532e5dc02c74db8e1cb0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aaef746734ed2d7ff26559ab7b6b44a1f" id="r_aaef746734ed2d7ff26559ab7b6b44a1f"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d73/classAestra_1_1Audio_1_1AddChannelCommand.html#aaef746734ed2d7ff26559ab7b6b44a1f">getSizeInBytes</a> () const override</td></tr>
 <tr class="memdesc:aaef746734ed2d7ff26559ab7b6b44a1f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Estimate the in-memory footprint of this command.  <br /></td></tr>
 <tr class="separator:aaef746734ed2d7ff26559ab7b6b44a1f"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -219,7 +222,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#a22e8a4fe943a30ec50ff3d83d3bff9ee">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00099">99</a> of file <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html">AddChannelCommand.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00101">101</a> of file <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html">AddChannelCommand.h</a>.</p>
 
 </div>
 </div>
@@ -252,7 +255,7 @@ Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00029">29</a> of file <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html">AddChannelCommand.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00143">Aestra::Audio::TrackManager::addChannel()</a>.</p>
+<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00149">Aestra::Audio::TrackManager::addChannel()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">
@@ -260,6 +263,35 @@ Public Member Functions</h2></td></tr>
 <div id="dynsection-2-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d4/d73/classAestra_1_1Audio_1_1AddChannelCommand_a4439b06fc72f0560a8277aed0e34eda9_cgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
+
+</div>
+</div>
+<a id="a4e57eec1f7df532e5dc02c74db8e1cb0" name="a4e57eec1f7df532e5dc02c74db8e1cb0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4e57eec1f7df532e5dc02c74db8e1cb0">&#9670;&#160;</a></span>getCreatedChannelId()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint32_t Aestra::Audio::AddChannelCommand::getCreatedChannelId </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The mixer channel this command created; 0 until it has executed. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00091">91</a> of file <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html">AddChannelCommand.h</a>.</p>
 
 </div>
 </div>
@@ -323,7 +355,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#a75361941c8c0630fb345a45d2e36eb1d">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00094">94</a> of file <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html">AddChannelCommand.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00096">96</a> of file <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html">AddChannelCommand.h</a>.</p>
 
 </div>
 </div>
@@ -356,7 +388,7 @@ Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00066">66</a> of file <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html">AddChannelCommand.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00143">Aestra::Audio::TrackManager::addChannel()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00322">Aestra::Audio::TrackManager::reinsertChannel()</a>.</p>
+<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00149">Aestra::Audio::TrackManager::addChannel()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00328">Aestra::Audio::TrackManager::reinsertChannel()</a>.</p>
 <div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-3-summary" class="dynsummary" style="display:block;">
@@ -398,7 +430,7 @@ Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html#l00051">51</a> of file <a class="el" href="../../d0/d79/AddChannelCommand_8h_source.html">AddChannelCommand.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00283">Aestra::Audio::TrackManager::detachChannelById()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00244">Aestra::Audio::TrackManager::resetMixerRoutingDestination()</a>.</p>
+<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00289">Aestra::Audio::TrackManager::detachChannelById()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00250">Aestra::Audio::TrackManager::resetMixerRoutingDestination()</a>.</p>
 <div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-4-summary" class="dynsummary" style="display:block;">

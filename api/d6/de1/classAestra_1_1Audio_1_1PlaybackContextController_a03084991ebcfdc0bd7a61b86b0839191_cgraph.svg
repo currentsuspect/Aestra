@@ -181,7 +181,7 @@ var sectionId = 'dynsection-14';
 <!-- Node8 -->
 <g id="Node000008" class="node">
 <title>Node8</title>
-<g id="a_Node000008"><a xlink:href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a4a8cd3c7804784b829d93cc5556ddda5" target="_top" xlink:title="Schedule new pattern instance (non&#45;RT thread)">
+<g id="a_Node000008"><a xlink:href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#aabca685e25a6dec33629e1b860d31671" target="_top" xlink:title="Schedule new pattern instance (non&#45;RT thread)">
 <polygon fill="white" stroke="#666666" points="578,-78 403,-78 403,-48 578,-48 578,-78"/>
 <text text-anchor="start" x="411" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::PatternPlayback</text>
 <text text-anchor="middle" x="490.5" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">Engine::schedulePatternInstance</text>

@@ -155,7 +155,7 @@ Static Public Member Functions</h2></td></tr>
 <div class="textblock"><p>Real-time sample rate converter. </p>
 <p>Converts audio between sample rates using high-quality polyphase sinc interpolation. Designed for real-time audio with:</p>
 <ul>
-<li>Zero dynamic allocation in <a class="el" href="../../da/d42/classAestra_1_1Audio_1_1SampleRateConverter.html#a7a4886e23b4f7e4a064408c1ef70d57f" title="Process audio through the rate converter.">process()</a></li>
+<li>Zero dynamic allocation in process()</li>
 <li>Precomputed filter coefficients</li>
 <li>Configurable quality/CPU tradeoff</li>
 <li>Multi-channel interleaved audio support</li>
@@ -210,7 +210,7 @@ Static Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Configure the converter for a specific rate conversion. </p>
-<p>This precomputes the polyphase filter bank. Should be called before <a class="el" href="../../da/d42/classAestra_1_1Audio_1_1SampleRateConverter.html#a7a4886e23b4f7e4a064408c1ef70d57f" title="Process audio through the rate converter.">process()</a>, and can be called again to reconfigure.</p>
+<p>This precomputes the polyphase filter bank. Should be called before process(), and can be called again to reconfigure.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">srcRate</td><td>Source sample rate (Hz) </td></tr>
@@ -222,7 +222,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>NOT real-time safe (allocates filter tables). Call from main thread. </dd>
 <dd>
-If srcRate == dstRate, <a class="el" href="../../da/d42/classAestra_1_1Audio_1_1SampleRateConverter.html#a7a4886e23b4f7e4a064408c1ef70d57f" title="Process audio through the rate converter.">process()</a> becomes a simple passthrough. </dd></dl>
+If srcRate == dstRate, process() becomes a simple passthrough. </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="../../d7/dd2/SampleRateConverter_8cpp_source.html#l00176">176</a> of file <a class="el" href="../../d7/dd2/SampleRateConverter_8cpp_source.html">SampleRateConverter.cpp</a>.</p>
 

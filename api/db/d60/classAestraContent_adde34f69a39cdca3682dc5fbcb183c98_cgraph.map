@@ -2,7 +2,7 @@
 <area shape="rect" id="Node000001" title="Create TrackManagerUI and wire its toggles, loop and audition callbacks." alt="" coords="5,475,199,515"/>
 <area shape="rect" id="Node000002" href="$d9/d36/classAestra_1_1Events_1_1ScopedConnections.html#a67a32a3e73e32731f600b04790131001" title="Add a connection to be managed." alt="" coords="247,252,529,277"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="114,473,166,402,203,360,245,323,287,298,331,279,333,284,290,303,248,328,207,364,170,405,118,476"/>
-<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#abc3ee4861acd0c5986598b967bb00e79" title="Open a pattern in the piano&#45;roll editor." alt="" coords="583,278,785,318"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a6cb6b5e62b9a7a547d2631ea4c350934" title="Open a pattern in the piano&#45;roll editor." alt="" coords="583,278,785,318"/>
 <area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="135,472,186,443,246,415,330,385,416,358,572,318,573,323,417,363,331,390,248,420,188,448,137,477"/>
 <area shape="rect" id="Node000014" href="$db/d60/classAestraContent.html#afbf0a48523732326319bb02e131fbd24" title="The app&#45;owned surface store, or nullptr before AestraApp provides it." alt="" coords="1927,406,2133,432"/>
 <area shape="poly" id="edge30_Node000001_Node000014" title=" " alt="" coords="199,499,420,511,683,518,1465,518,1537,515,1610,508,1752,486,1878,458,1973,433,1974,438,1879,463,1753,491,1611,514,1538,520,1465,523,683,523,420,516,199,504"/>

@@ -1,7 +1,10 @@
 <map id="Aestra::Audio::MixerChannel::getChannelId" name="Aestra::Audio::MixerChannel::getChannelId">
-<area shape="rect" id="Node000001" title="Get the dense numeric channel identifier." alt="" coords="260,37,467,77"/>
-<area shape="rect" id="Node000002" href="$d1/dfb/classAestra_1_1Audio_1_1RoutingModel.html#a13b26edb012330fa689e2354da9a7802" title="Snapshot the manager&#39;s channels. Master is included as a target only." alt="" coords="5,5,212,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="246,45,212,41,213,36,247,40"/>
-<area shape="rect" id="Node000003" href="$da/d55/classAestra_1_1Audio_1_1DeleteTrackCommand.html#af90a9908fac33e06940460d03ddd9436" title="Execute the command (first time)" alt="" coords="11,69,206,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="247,75,207,80,206,74,246,69"/>
+<area shape="rect" id="Node000001" title="Get the dense numeric channel identifier." alt="" coords="292,69,499,109"/>
+<area shape="rect" id="Node000002" href="$d1/dfb/classAestra_1_1Audio_1_1RoutingModel.html#a13b26edb012330fa689e2354da9a7802" title="Snapshot the manager&#39;s channels. Master is included as a target only." alt="" coords="21,5,228,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="296,69,209,48,210,43,297,63"/>
+<area shape="rect" id="Node000003" href="$da/d55/classAestra_1_1Audio_1_1DeleteTrackCommand.html#af90a9908fac33e06940460d03ddd9436" title="Execute the command (first time)" alt="" coords="27,69,222,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="278,92,222,92,222,87,278,87"/>
+<area shape="rect" id="Node000004" href="$db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#a98f09f72ec0a8d2493880dc6f7b4d081" title="Register every Muse command factory once." alt="" coords="5,157,244,197"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="321,116,188,160,187,155,319,111"/>
+<area shape="poly" id="edge4_Node000004_Node000004" title=" " alt="" coords="171,146,155,139,125,136,99,138,83,143,77,149,80,156,75,158,72,148,80,138,98,133,125,131,156,133,173,141"/>
 </map>

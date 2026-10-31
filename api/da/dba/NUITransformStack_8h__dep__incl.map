@@ -1,11 +1,13 @@
 <map id="AestraUI/Graphics/NUITransformStack.h" name="AestraUI/Graphics/NUITransformStack.h">
-<area shape="rect" id="Node000001" title="The one place a renderer transform stack is composed into an affine map." alt="" coords="205,5,437,45"/>
-<area shape="rect" id="Node000002" href="$dd/df3/NUIRendererGL_8h_source.html" title=" " alt="" coords="224,93,419,133"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="324,59,324,93,319,93,319,59"/>
+<area shape="rect" id="Node000001" title="The one place a renderer transform stack is composed into an affine map." alt="" coords="315,5,547,45"/>
+<area shape="rect" id="Node000002" href="$dd/df3/NUIRendererGL_8h_source.html" title=" " alt="" coords="333,93,528,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="433,59,433,93,428,93,428,59"/>
 <area shape="rect" id="Node000003" href="$d9/df0/NUIRenderCache_8cpp_source.html" title=" " alt="" coords="5,181,200,221"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="261,141,152,184,150,179,260,136"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="346,139,175,184,174,179,345,134"/>
 <area shape="rect" id="Node000004" href="$dd/dd5/NUIRendererGL_8cpp_source.html" title=" " alt="" coords="224,181,419,221"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="324,147,324,181,319,181,319,147"/>
-<area shape="rect" id="Node000005" href="$d8/d0b/AestraWindowManager_8cpp_source.html" title=" " alt="" coords="443,181,642,221"/>
-<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="383,136,495,179,493,184,382,141"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="397,144,347,183,344,179,394,140"/>
+<area shape="rect" id="Node000005" href="$dd/dd2/NUIRendererGLBatch_8cpp_source.html" title=" " alt="" coords="443,181,637,221"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="467,140,517,179,514,183,464,144"/>
+<area shape="rect" id="Node000006" href="$d8/d0b/AestraWindowManager_8cpp_source.html" title=" " alt="" coords="662,181,861,221"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="517,134,690,179,688,184,516,139"/>
 </map>

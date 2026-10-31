@@ -1,0 +1,17 @@
+<map id="Aestra::Audio::DuplicatePatternCommand::redo" name="Aestra::Audio::DuplicatePatternCommand::redo">
+<area shape="rect" id="Node000001" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,92,184,132"/>
+<area shape="rect" id="Node000002" href="$de/d7a/classAestra_1_1Audio_1_1DuplicatePatternCommand.html#ac894d869a239181170279f7ce85c7500" title="Execute the command (first time)" alt="" coords="232,92,427,132"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="184,109,218,109,218,115,184,115"/>
+<area shape="rect" id="Node000003" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#af099c463dfaefc7d884bb200b597b537" title="Clone an existing pattern and return the new ID." alt="" coords="475,5,695,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="388,89,511,47,513,52,390,94"/>
+<area shape="rect" id="Node000004" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a" title="Get a pattern by ID (returns nullptr if not found)" alt="" coords="743,63,963,103"/>
+<area shape="poly" id="edge6_Node000002_Node000004" title=" " alt="" coords="427,104,729,87,729,92,427,109"/>
+<area shape="rect" id="Node000005" href="$de/d7a/classAestra_1_1Audio_1_1DuplicatePatternCommand.html#a649a7ffa999c9b77b2900a38227316ce" title="&quot;&lt;name&gt; copy&quot;, then &quot;&lt;name&gt; copy 2&quot;, ... the first one no pattern already has." alt="" coords="478,184,691,224"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="377,130,476,169,499,177,497,182,474,175,375,135"/>
+<area shape="rect" id="Node000007" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a72a2dd4a0e71f33f0303d44664ccbf14" title="Reinsert a detached pattern with the same stable identity." alt="" coords="475,120,695,160"/>
+<area shape="poly" id="edge7_Node000002_Node000007" title=" " alt="" coords="427,120,461,124,461,129,427,125"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="679,43,746,57,745,62,678,48"/>
+<area shape="rect" id="Node000006" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#ab7952e458feafdb9709f3d4ed9f215b3" title="Visit every pattern (read&#45;only), in no particular order." alt="" coords="743,184,963,224"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="692,201,729,201,729,207,692,207"/>
+<area shape="poly" id="edge8_Node000007_Node000004" title=" " alt="" coords="678,117,745,103,746,108,679,123"/>
+</map>

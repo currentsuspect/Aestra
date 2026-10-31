@@ -39,7 +39,7 @@
 <!-- Node4 -->
 <g id="Node000004" class="node">
 <title>Node4</title>
-<g id="a_Node000004"><a xlink:href="../../db/d60/classAestraContent.html#abc3ee4861acd0c5986598b967bb00e79" target="_top" xlink:title="Open a pattern in the piano&#45;roll editor.">
+<g id="a_Node000004"><a xlink:href="../../db/d60/classAestraContent.html#a6cb6b5e62b9a7a547d2631ea4c350934" target="_top" xlink:title="Open a pattern in the piano&#45;roll editor.">
 <polygon fill="white" stroke="#666666" points="584.5,-288 433.5,-288 433.5,-258 584.5,-258 584.5,-288"/>
 <text text-anchor="start" x="441.5" y="-276" font-family="Helvetica,sans-Serif" font-size="10.00">AestraContent::openPattern</text>
 <text text-anchor="middle" x="509" y="-265" font-family="Helvetica,sans-Serif" font-size="10.00">InPianoRoll</text>

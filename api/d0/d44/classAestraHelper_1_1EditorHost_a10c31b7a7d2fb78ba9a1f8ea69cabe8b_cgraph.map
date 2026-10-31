@@ -1,0 +1,5 @@
+<map id="AestraHelper::EditorHost::service" name="AestraHelper::EditorHost::service">
+<area shape="rect" id="Node000001" title="Acts on what the window procedure noted, runs due timers and syncs the editor. Never blocks." alt="" coords="5,5,188,45"/>
+<area shape="rect" id="Node000002" href="$df/d1b/classAestra_1_1Audio_1_1EditorLoopPump.html#a3801aa6c448284c50edc6d24a4465a6a" title="Run every timer that is due at now, then schedule each one interval later (from now,..." alt="" coords="236,5,423,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="188,23,222,23,222,28,188,28"/>
+</map>

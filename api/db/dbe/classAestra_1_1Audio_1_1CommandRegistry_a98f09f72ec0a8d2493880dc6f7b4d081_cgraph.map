@@ -1,35 +1,50 @@
 <map id="Aestra::Audio::CommandRegistry::initialize" name="Aestra::Audio::CommandRegistry::initialize">
-<area shape="rect" id="Node000001" title="Register every Muse command factory once." alt="" coords="5,421,244,461"/>
-<area shape="poly" id="edge16_Node000001_Node000001" title=" " alt="" coords="72,422,69,412,77,402,96,397,125,395,158,397,176,405,174,410,156,403,125,400,97,402,80,407,74,413,77,420"/>
-<area shape="rect" id="Node000002" href="$db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#ae5a2648a9167e92cf4875d8bbdb5b977" title="Record why a factory refused to build, then return nullptr." alt="" coords="292,5,531,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="126,421,139,351,167,252,189,199,216,147,250,98,290,55,296,51,299,55,294,59,254,101,221,149,194,201,172,254,144,352,131,422"/>
-<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aef9478cbb19fa91eb0bcc60d51b77b77" title="Get a channel by index." alt="" coords="307,69,515,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="128,421,145,361,176,280,197,236,224,193,254,154,290,119,297,114,300,119,294,123,258,157,228,196,202,239,181,282,150,363,133,422"/>
-<area shape="rect" id="Node000004" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a107c869111f74c0e34ea921eabea4e63" title="Access the insert&#45;effect chain." alt="" coords="308,133,515,173"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="131,420,151,372,185,307,231,240,259,210,290,183,299,177,302,182,294,187,263,214,235,244,189,310,156,374,136,422"/>
-<area shape="rect" id="Node000005" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a48a747105d0ed9e3067393d4516291b2" title="Get first empty slot index." alt="" coords="316,197,507,237"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="136,420,160,382,195,336,239,288,291,247,302,241,305,245,293,252,243,292,199,339,164,386,140,422"/>
-<area shape="rect" id="Node000007" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a2b16ad3e0f43d5b9a12690af12156878" title="Get the singleton instance." alt="" coords="304,261,519,301"/>
-<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="145,419,207,365,248,336,291,311,307,304,310,308,293,316,250,341,210,369,148,423"/>
-<area shape="rect" id="Node000008" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ac7bf8357c38fed0864cb609623bed1bb" title="Get the number of playlist lanes." alt="" coords="309,325,514,365"/>
-<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="173,419,291,375,318,367,319,372,293,380,175,424"/>
-<area shape="rect" id="Node000009" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ae281a5a791e75389bf62885d939f1866" title="Get lane ID by index." alt="" coords="309,389,514,429"/>
-<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="244,425,295,420,296,425,245,431"/>
-<area shape="rect" id="Node000010" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a" title="Get a pattern by ID (returns nullptr if not found)" alt="" coords="301,453,521,493"/>
-<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="245,452,288,457,287,462,244,457"/>
-<area shape="rect" id="Node000011" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#af01fa49b38f12155c47b1917bad27ea4" title="Get the pattern manager." alt="" coords="307,517,515,557"/>
-<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="175,459,293,503,319,511,318,516,291,508,173,464"/>
-<area shape="rect" id="Node000012" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aacc633d4302bc413e6aead5df052520b" title="Get the playlist model." alt="" coords="307,581,515,621"/>
-<area shape="poly" id="edge11_Node000001_Node000012" title=" " alt="" coords="148,460,210,513,250,542,293,567,310,574,307,579,291,572,248,547,207,517,145,464"/>
-<area shape="rect" id="Node000013" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a75a3b9245de1b918055973941eb00244" title="Get plugin in slot." alt="" coords="316,645,507,685"/>
-<area shape="poly" id="edge12_Node000001_Node000013" title=" " alt="" coords="140,460,164,497,199,543,243,591,293,631,305,637,302,642,291,636,239,595,195,547,160,500,136,463"/>
-<area shape="rect" id="Node000014" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="311,709,512,749"/>
-<area shape="poly" id="edge14_Node000001_Node000014" title=" " alt="" coords="136,461,156,509,189,573,235,639,263,669,294,695,302,701,299,705,290,699,259,673,231,642,185,575,151,511,131,463"/>
-<area shape="rect" id="Node000015" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae644fa1ba9f25586fd7d597ed08d651f" title="Get the unit manager (Arsenal)" alt="" coords="307,773,515,813"/>
-<area shape="poly" id="edge15_Node000001_Node000015" title=" " alt="" coords="133,461,150,520,181,601,202,644,228,686,258,725,294,759,300,764,297,768,290,763,254,729,224,689,197,647,176,603,145,521,128,462"/>
-<area shape="rect" id="Node000016" href="$db/d96/structAestra_1_1Audio_1_1AestraUUID.html#a12ee8bd7d482dfdca1f71c67a8ef5991" title="Parse the toString() representation (32 lowercase/uppercase hex chars)." alt="" coords="315,837,508,877"/>
-<area shape="poly" id="edge17_Node000001_Node000016" title=" " alt="" coords="131,461,144,531,172,629,194,681,221,733,254,782,294,823,304,831,301,835,290,827,250,785,216,736,189,684,167,630,139,532,126,462"/>
-<area shape="rect" id="Node000006" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#aae4750ff03b629d7895c64fc62066bf7" title="How many slots the chain currently has (&gt;= kInitialSlots)." alt="" coords="579,421,769,461"/>
-<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="508,234,532,247,575,284,610,327,639,370,660,407,655,410,634,373,606,330,571,287,529,252,505,239"/>
-<area shape="poly" id="edge13_Node000013_Node000006" title=" " alt="" coords="505,644,529,631,571,595,606,553,634,510,655,473,660,475,639,513,610,556,575,599,532,636,508,649"/>
+<area shape="rect" id="Node000001" title="Register every Muse command factory once." alt="" coords="5,636,244,676"/>
+<area shape="poly" id="edge24_Node000001_Node000001" title=" " alt="" coords="72,637,69,626,77,617,96,611,125,609,158,612,176,619,174,624,156,617,125,615,97,617,80,622,74,627,77,635"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a8e8a0ddb09f99d50dd977579c3a73086" title="Whether routing source &#45;&gt; target is legal (Routing Contract D1)." alt="" coords="307,72,515,112"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="124,635,130,545,138,481,152,410,173,336,202,262,241,192,290,130,307,117,310,121,294,134,245,195,207,264,178,337,158,412,144,482,135,546,129,636"/>
+<area shape="rect" id="Node000005" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a8d71d598a1c2a2cfac6df269776ee594" title="Get a copy of the current send list." alt="" coords="579,133,786,173"/>
+<area shape="poly" id="edge21_Node000001_Node000005" title=" " alt="" coords="123,635,128,548,135,487,149,420,169,352,199,285,239,224,263,198,290,174,311,163,338,155,407,145,487,142,565,144,565,149,487,148,407,151,339,160,313,168,294,178,267,201,243,228,204,287,174,353,154,422,141,488,133,548,128,636"/>
+<area shape="rect" id="Node000006" href="$db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#ae5a2648a9167e92cf4875d8bbdb5b977" title="Record why a factory refused to build, then return nullptr." alt="" coords="292,188,531,228"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="125,636,136,561,163,454,185,395,212,338,247,285,290,238,296,233,299,238,294,242,252,288,217,341,190,398,168,455,142,562,130,636"/>
+<area shape="rect" id="Node000007" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aef9478cbb19fa91eb0bcc60d51b77b77" title="Get a channel by index." alt="" coords="307,252,515,292"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="127,635,142,571,172,481,193,432,220,385,252,340,290,302,296,297,299,302,294,306,256,344,224,387,198,434,176,483,147,572,132,636"/>
+<area shape="rect" id="Node000008" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#aa8dcc69c79ea17dbdda639e14771608c" title="Get the dense numeric channel identifier." alt="" coords="308,316,515,356"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="129,635,148,581,180,508,202,469,227,431,257,396,290,366,298,361,301,365,294,370,261,400,232,435,206,472,185,510,153,583,134,637"/>
+<area shape="rect" id="Node000009" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a451289f1d5433a3c8793fb18b649b8fb" title="Get a clip by ID." alt="" coords="309,380,514,420"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="133,634,155,592,189,536,235,479,262,453,290,430,300,424,303,428,294,434,265,457,239,482,194,539,160,594,138,637"/>
+<area shape="rect" id="Node000010" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a107c869111f74c0e34ea921eabea4e63" title="Access the insert&#45;effect chain." alt="" coords="308,444,515,484"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="139,634,200,565,243,527,291,494,304,487,307,492,293,498,246,531,204,569,143,638"/>
+<area shape="rect" id="Node000011" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a48a747105d0ed9e3067393d4516291b2" title="Get first empty slot index." alt="" coords="316,508,507,548"/>
+<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="154,634,216,595,291,558,312,550,314,555,293,562,218,600,157,638"/>
+<area shape="rect" id="Node000013" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a2b16ad3e0f43d5b9a12690af12156878" title="Get the singleton instance." alt="" coords="304,572,519,612"/>
+<area shape="poly" id="edge12_Node000001_Node000013" title=" " alt="" coords="214,633,307,612,309,618,216,639"/>
+<area shape="rect" id="Node000014" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ac7bf8357c38fed0864cb609623bed1bb" title="Get the number of playlist lanes." alt="" coords="309,636,514,676"/>
+<area shape="poly" id="edge13_Node000001_Node000014" title=" " alt="" coords="244,653,295,653,295,659,244,659"/>
+<area shape="rect" id="Node000015" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ae281a5a791e75389bf62885d939f1866" title="Get lane ID by index." alt="" coords="309,700,514,740"/>
+<area shape="poly" id="edge14_Node000001_Node000015" title=" " alt="" coords="216,673,309,694,307,700,214,679"/>
+<area shape="rect" id="Node000016" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a653ee5f8eb05faa264a54e339a258233" title="Access the Master strip&#39;s mixer channel (id 0)." alt="" coords="307,764,515,804"/>
+<area shape="poly" id="edge15_Node000001_Node000016" title=" " alt="" coords="157,674,218,712,293,750,314,757,312,762,291,754,216,717,154,678"/>
+<area shape="rect" id="Node000017" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a" title="Get a pattern by ID (returns nullptr if not found)" alt="" coords="301,828,521,868"/>
+<area shape="poly" id="edge16_Node000001_Node000017" title=" " alt="" coords="143,674,204,743,246,781,293,814,307,820,304,825,291,818,243,785,200,747,139,678"/>
+<area shape="rect" id="Node000018" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#af01fa49b38f12155c47b1917bad27ea4" title="Get the pattern manager." alt="" coords="307,892,515,932"/>
+<area shape="poly" id="edge17_Node000001_Node000018" title=" " alt="" coords="138,675,160,718,194,773,239,830,265,855,294,878,303,884,300,888,290,882,262,859,235,833,189,776,155,720,133,678"/>
+<area shape="rect" id="Node000019" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aacc633d4302bc413e6aead5df052520b" title="Get the playlist model." alt="" coords="307,956,515,996"/>
+<area shape="poly" id="edge18_Node000001_Node000019" title=" " alt="" coords="134,675,153,729,185,802,206,840,232,877,261,912,294,942,301,947,298,951,290,946,257,916,227,881,202,843,180,804,148,731,129,677"/>
+<area shape="rect" id="Node000020" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a75a3b9245de1b918055973941eb00244" title="Get plugin in slot." alt="" coords="316,1020,507,1060"/>
+<area shape="poly" id="edge19_Node000001_Node000020" title=" " alt="" coords="132,676,147,740,176,829,198,878,224,925,256,968,294,1006,305,1014,302,1019,290,1010,252,972,220,927,193,880,172,831,142,741,127,677"/>
+<area shape="rect" id="Node000021" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="311,1084,512,1124"/>
+<area shape="poly" id="edge22_Node000001_Node000021" title=" " alt="" coords="130,676,142,750,168,857,190,914,217,971,252,1024,294,1070,300,1075,297,1079,290,1074,247,1027,212,974,185,917,163,858,136,751,125,676"/>
+<area shape="rect" id="Node000022" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae644fa1ba9f25586fd7d597ed08d651f" title="Get the unit manager (Arsenal)" alt="" coords="307,1148,515,1188"/>
+<area shape="poly" id="edge23_Node000001_Node000022" title=" " alt="" coords="129,676,137,761,146,819,161,884,181,952,210,1018,247,1080,294,1134,298,1138,295,1142,290,1138,243,1083,205,1021,176,953,155,885,141,820,132,761,124,677"/>
+<area shape="rect" id="Node000023" href="$db/d96/structAestra_1_1Audio_1_1AestraUUID.html#a12ee8bd7d482dfdca1f71c67a8ef5991" title="Parse the toString() representation (32 lowercase/uppercase hex chars)." alt="" coords="315,1212,508,1252"/>
+<area shape="poly" id="edge25_Node000001_Node000023" title=" " alt="" coords="128,676,132,770,140,837,153,911,173,988,203,1064,242,1136,266,1168,294,1198,305,1207,301,1211,290,1202,262,1172,238,1139,198,1067,168,990,148,912,134,837,127,771,123,676"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a53fe3e0e1b269690efd09c6a74f467c0" title="Get a track by zero&#45;based index." alt="" coords="579,5,787,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="493,69,587,46,588,51,494,75"/>
+<area shape="rect" id="Node000004" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a4eaa8ccdd051c3f5c8d56f58ce8193fb" title="Get the primary output destination identifier." alt="" coords="579,69,786,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="515,88,566,88,566,93,515,94"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="501,109,581,128,580,133,500,115"/>
+<area shape="rect" id="Node000012" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#aae4750ff03b629d7895c64fc62066bf7" title="How many slots the chain currently has (&gt;= kInitialSlots)." alt="" coords="587,764,778,804"/>
+<area shape="poly" id="edge11_Node000011_Node000012" title=" " alt="" coords="508,544,532,558,580,602,620,654,650,706,671,750,666,752,645,709,615,657,576,606,529,562,506,549"/>
+<area shape="poly" id="edge20_Node000020_Node000012" title=" " alt="" coords="506,1019,529,1006,576,962,615,911,645,859,666,816,671,818,650,862,620,914,580,966,532,1010,508,1024"/>
 </map>

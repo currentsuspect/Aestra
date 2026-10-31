@@ -1,6 +1,7 @@
 var searchData=
 [
-  ['favoritesloader_0',['FavoritesLoader',['../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#a3e032c16e34ab726777ccc527573b929',1,'AestraUI::PluginBrowserPanel']]],
-  ['filedialogcall_1',['FileDialogCall',['../d8/d94/namespaceAestra.html#a84d81af9bb718a974478d358aec6c43d',1,'Aestra']]],
-  ['firstloadwarningcallback_2',['FirstLoadWarningCallback',['../d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#add44b17e75a6007d63ee2781010dbe58',1,'Aestra::Audio::PluginScanner']]]
+  ['editoranchorgetter_0',['EditorAnchorGetter',['../da/d71/classAestraUI_1_1PluginUIController.html#a98d01a92768563edd917d6ac425d0fab',1,'AestraUI::PluginUIController']]],
+  ['editormodegetter_1',['EditorModeGetter',['../da/d71/classAestraUI_1_1PluginUIController.html#ae00932372548ea55699185cb025ead9b',1,'AestraUI::PluginUIController']]],
+  ['errorcallback_2',['ErrorCallback',['../d2/d68/classAestra_1_1Audio_1_1NativeAudioDriver.html#a0da90d893e76a548e34e73c6b3d43a01',1,'Aestra::Audio::NativeAudioDriver']]],
+  ['eventsink_3',['EventSink',['../dc/dbd/classAestra_1_1Audio_1_1MidiInputService.html#ac337a999a25c4c3f45893f19703bb59b',1,'Aestra::Audio::MidiInputService']]]
 ];

@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::TrackManagerUI::canPaintClip" name="Aestra::Audio::TrackManagerUI::canPaintClip">
+<area shape="rect" id="Node000001" title="Whether the Draw tool has a clip to stamp (copied or selected earlier)." alt="" coords="261,5,469,45"/>
+<area shape="rect" id="Node000002" href="$d1/d11/classAestra_1_1Audio_1_1TrackManagerUI.html#a444e0cabb5e2d70130cb5aeb6c483cff" title="A left press on empty grid in the Select tool (SPEC 3 §1.2): the default marquee." alt="" coords="5,5,213,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="248,28,213,28,213,23,248,23"/>
+</map>

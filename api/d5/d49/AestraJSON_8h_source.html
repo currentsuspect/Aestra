@@ -579,9 +579,9 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00505" name="l00505"></a><span class="lineno">  505</span>                pos++;</div>
 <div class="line"><a id="l00506" name="l00506"></a><span class="lineno">  506</span>                <span class="keywordflow">break</span>;</div>
 <div class="line"><a id="l00507" name="l00507"></a><span class="lineno">  507</span>            }</div>
-<div class="line"><a id="l00508" name="l00508"></a><span class="lineno">  508</span>            <span class="keywordflow">if</span> (str[pos] == <span class="charliteral">&#39;,&#39;</span>) {</div>
-<div class="line"><a id="l00509" name="l00509"></a><span class="lineno">  509</span>                pos++;</div>
-<div class="line"><a id="l00510" name="l00510"></a><span class="lineno">  510</span>            }</div>
+<div class="line"><a id="l00508" name="l00508"></a><span class="lineno">  508</span>            <span class="keywordflow">if</span> (str[pos] != <span class="charliteral">&#39;,&#39;</span>)</div>
+<div class="line"><a id="l00509" name="l00509"></a><span class="lineno">  509</span>                <span class="keywordflow">break</span>; <span class="comment">// malformed: anything else would be re-read forever, appending an empty value each turn</span></div>
+<div class="line"><a id="l00510" name="l00510"></a><span class="lineno">  510</span>            pos++;</div>
 <div class="line"><a id="l00511" name="l00511"></a><span class="lineno">  511</span>        }</div>
 <div class="line"><a id="l00512" name="l00512"></a><span class="lineno">  512</span> </div>
 <div class="line"><a id="l00513" name="l00513"></a><span class="lineno">  513</span>        <span class="keywordflow">return</span> arr;</div>

@@ -129,6 +129,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a035f837c1320901be122e30661f72bb3" id="r_a035f837c1320901be122e30661f72bb3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a035f837c1320901be122e30661f72bb3">stopStream</a> ()</td></tr>
 <tr class="memdesc:a035f837c1320901be122e30661f72bb3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stop audio processing.  <br /></td></tr>
 <tr class="separator:a035f837c1320901be122e30661f72bb3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9103708a89a40186daa813c3226c50fd" id="r_a9103708a89a40186daa813c3226c50fd"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a9103708a89a40186daa813c3226c50fd">isActiveStreamStalled</a> () const</td></tr>
+<tr class="memdesc:a9103708a89a40186daa813c3226c50fd"><td class="mdescLeft">&#160;</td><td class="mdescRight">The stream is running but its callback has stopped advancing (kStallMs): the backend has wedged, and stopping it would block.  <br /></td></tr>
+<tr class="separator:a9103708a89a40186daa813c3226c50fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aee6ca4d0f38d2c11024f3888e09b1ac2" id="r_aee6ca4d0f38d2c11024f3888e09b1ac2"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#aee6ca4d0f38d2c11024f3888e09b1ac2">isStreamRunning</a> () const</td></tr>
 <tr class="memdesc:aee6ca4d0f38d2c11024f3888e09b1ac2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if stream is active.  <br /></td></tr>
 <tr class="separator:aee6ca4d0f38d2c11024f3888e09b1ac2"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -249,7 +252,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/ded/AudioDeviceManager_8h_source.html#l00245">245</a> of file <a class="el" href="../../d2/ded/AudioDeviceManager_8h_source.html">AudioDeviceManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/ded/AudioDeviceManager_8h_source.html#l00251">251</a> of file <a class="el" href="../../d2/ded/AudioDeviceManager_8h_source.html">AudioDeviceManager.h</a>.</p>
 
 </div>
 </div>
@@ -352,9 +355,9 @@ Public Member Functions</h2></td></tr>
 <p>Check underrun rate and auto-scale buffer if needed Call this periodically (e.g., every second) to monitor performance. </p>
 <p>Check underrun rate and auto-scale buffer if needed Call this periodically (e.g., every second) to monitor performance </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00791">791</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00829">829</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d2/d19/AudioDriver_8h_source.html#l00044">Aestra::Audio::AudioStreamConfig::bufferSize</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00291">isStreamRunning()</a>, and <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00993">stopHealthMonitor()</a>.</p>
+<p class="reference">References <a class="el" href="../../d2/d19/AudioDriver_8h_source.html#l00044">Aestra::Audio::AudioStreamConfig::bufferSize</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00329">isStreamRunning()</a>, and <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l01037">stopHealthMonitor()</a>.</p>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-1-summary" class="dynsummary" style="display:block;">
@@ -382,7 +385,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Monitor active driver health and perform safety fallback if stalled. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00941">941</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00985">985</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -403,9 +406,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Close current audio stream. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00239">239</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00267">267</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00993">stopHealthMonitor()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l01037">stopHealthMonitor()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">
@@ -434,7 +437,7 @@ Public Member Functions</h2></td></tr>
 <p>Get active driver type. </p>
 <dl class="section return"><dt>Returns</dt><dd>Driver type currently servicing the stream. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00679">679</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00717">717</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -456,7 +459,7 @@ Public Member Functions</h2></td></tr>
 <p>Get list of available driver types. </p>
 <dl class="section return"><dt>Returns</dt><dd>Driver types available on the current platform. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00755">755</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00793">793</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -478,7 +481,7 @@ Public Member Functions</h2></td></tr>
 <p>Get current configuration. </p>
 <dl class="section return"><dt>Returns</dt><dd>A value snapshot of the current stream configuration. Never a reference into mutable shared state — the returned copy stays coherent even as another thread reconfigures the stream (#391). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00330">330</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00368">368</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d5/d10/MixerViewModel_8cpp_source.html#l00029">Aestra::MixerViewModel::refreshInputs()</a>.</p>
 <div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -575,7 +578,7 @@ Public Member Functions</h2></td></tr>
 <p>Get active driver statistics. </p>
 <dl class="section return"><dt>Returns</dt><dd>Driver telemetry snapshot. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00684">684</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00722">722</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -597,7 +600,7 @@ Public Member Functions</h2></td></tr>
 <p>Get reason for current fallback (if any) </p>
 <dl class="section return"><dt>Returns</dt><dd>Human-readable reason, or empty string if using preferred driver </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l01017">1017</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l01061">1061</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -637,7 +640,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <p>Call this after opening a stream to get latency compensation values. These should be passed to Track::setLatencyCompensation() for recording. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00311">311</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00349">349</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d2/d19/AudioDriver_8h_source.html#l00046">Aestra::Audio::AudioStreamConfig::numInputChannels</a>.</p>
 
@@ -661,7 +664,7 @@ Public Member Functions</h2></td></tr>
 <p>Get the actual stream buffer size (post-backend) </p>
 <p>Returns 0 if no active stream. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00306">306</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00344">344</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -683,7 +686,7 @@ Public Member Functions</h2></td></tr>
 <p>Get current stream latency. </p>
 <dl class="section return"><dt>Returns</dt><dd>Stream latency in seconds. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00296">296</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00334">334</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -705,7 +708,7 @@ Public Member Functions</h2></td></tr>
 <p>Get the actual stream sample rate (post-backend) </p>
 <p>Returns 0 if no active stream. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00301">301</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00339">339</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -738,6 +741,28 @@ Public Member Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="a9103708a89a40186daa813c3226c50fd" name="a9103708a89a40186daa813c3226c50fd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9103708a89a40186daa813c3226c50fd">&#9670;&#160;</a></span>isActiveStreamStalled()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::AudioDeviceManager::isActiveStreamStalled </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>The stream is running but its callback has stopped advancing (kStallMs): the backend has wedged, and stopping it would block. </p>
+<p>Stop, close and device switches abandon such a stream instead. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00245">245</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+
+</div>
+</div>
 <a id="a651ac710a00e993cc0af64ada8af3e23" name="a651ac710a00e993cc0af64ada8af3e23"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a651ac710a00e993cc0af64ada8af3e23">&#9670;&#160;</a></span>isDitheringEnabled()</h2>
 
@@ -755,7 +780,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Check if dithering is enabled (preference) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l01012">1012</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l01056">1056</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -785,7 +810,7 @@ Public Member Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>true if the driver can be opened (not blocked by another app)</dd></dl>
 <p>This performs a quick test-open to check availability without changing the active stream. Useful for UI to grey out unavailable options. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00742">742</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00780">780</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -807,9 +832,9 @@ Public Member Functions</h2></td></tr>
 <p>Check if stream is active. </p>
 <dl class="section return"><dt>Returns</dt><dd>True while the backend stream is running. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00291">291</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00329">329</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00791">checkAndAutoScaleBuffer()</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00514">setBufferSize()</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00689">setPreferredDriverType()</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00449">setSampleRate()</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00345">switchDevice()</a>, and <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00391">switchInputDevice()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00829">checkAndAutoScaleBuffer()</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00552">setBufferSize()</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00727">setPreferredDriverType()</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00487">setSampleRate()</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00383">switchDevice()</a>, and <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00429">switchInputDevice()</a>.</p>
 <div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-4-summary" class="dynsummary" style="display:block;">
@@ -839,7 +864,7 @@ Public Member Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>true if active driver differs from preferred driver</dd></dl>
 <p>This is useful for showing warnings in the UI when Exclusive mode was requested but Shared mode is active (e.g., due to conflicts). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00766">766</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00804">804</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -925,7 +950,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00778">778</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00816">816</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -955,9 +980,9 @@ Public Member Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>true if buffer size was updated successfully</dd></dl>
 <p>This will restart the stream with the new buffer size. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00514">514</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00552">552</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d2/d19/AudioDriver_8h_source.html#l00044">Aestra::Audio::AudioStreamConfig::bufferSize</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00291">isStreamRunning()</a>, and <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00993">stopHealthMonitor()</a>.</p>
+<p class="reference">References <a class="el" href="../../d2/d19/AudioDriver_8h_source.html#l00044">Aestra::Audio::AudioStreamConfig::bufferSize</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00329">isStreamRunning()</a>, and <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l01037">stopHealthMonitor()</a>.</p>
 <div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-5-summary" class="dynsummary" style="display:block;">
@@ -992,7 +1017,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l01004">1004</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l01048">1048</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/d78/classAestra_1_1Audio_1_1IAudioDriver.html#a9c537d04d6a82a840fca6e3e7e9435e2">Aestra::Audio::IAudioDriver::setDitheringEnabled()</a>.</p>
 <div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -1034,7 +1059,7 @@ Public Member Functions</h2></td></tr>
 </ul>
 <p>Use this to show info bars or notifications in the UI. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l01022">1022</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l01066">1066</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -1064,9 +1089,9 @@ Public Member Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>true if driver type was set successfully</dd></dl>
 <p>This will attempt to reopen the stream with the specified driver. Falls back to next best driver if the preferred one fails. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00689">689</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00727">727</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00291">isStreamRunning()</a>, and <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00993">stopHealthMonitor()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00329">isStreamRunning()</a>, and <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l01037">stopHealthMonitor()</a>.</p>
 <div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-7-summary" class="dynsummary" style="display:block;">
@@ -1102,7 +1127,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <p>Fires after openStream succeeds and before startStream for device switches, input-device switches, sample-rate and buffer-size changes, and driver-type changes. The callback runs on the calling thread while the stream callback is stopped, so hosts can safely reconfigure their engine (buffer size, sample rate, channel counts) against the real granted values instead of the requested ones. The callback must not call back into <a class="el" href="../../df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html" title="Manages audio devices and streams.">AudioDeviceManager</a> — the reconfiguration lock is held while it runs. It is not invoked on failed reopens or rollbacks. When the callback returns false or throws, the stream is rolled back to its previous configuration instead of restarting with the new settings. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00570">570</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00608">608</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -1132,9 +1157,9 @@ Public Member Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>true if sample rate was updated successfully</dd></dl>
 <p>This will restart the stream with the new sample rate. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00449">449</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00487">487</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d2/d19/AudioDriver_8h_source.html#l00038">Aestra::Audio::AudioStreamConfig::deviceId</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00291">isStreamRunning()</a>, <a class="el" href="../../d2/d19/AudioDriver_8h_source.html#l00042">Aestra::Audio::AudioStreamConfig::sampleRate</a>, and <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00993">stopHealthMonitor()</a>.</p>
+<p class="reference">References <a class="el" href="../../d2/d19/AudioDriver_8h_source.html#l00038">Aestra::Audio::AudioStreamConfig::deviceId</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00329">isStreamRunning()</a>, <a class="el" href="../../d2/d19/AudioDriver_8h_source.html#l00042">Aestra::Audio::AudioStreamConfig::sampleRate</a>, and <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l01037">stopHealthMonitor()</a>.</p>
 <div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-8-summary" class="dynsummary" style="display:block;">
@@ -1164,7 +1189,7 @@ Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00080">80</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00993">stopHealthMonitor()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l01037">stopHealthMonitor()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00025">~AudioDeviceManager()</a>.</p>
 <div id="dynsection-9" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -1202,7 +1227,7 @@ Public Member Functions</h2></td></tr>
 <p>Start the automatic driver health monitoring thread. </p>
 <p>Called after a stream is opened successfully. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00989">989</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l01033">1033</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -1224,7 +1249,7 @@ Public Member Functions</h2></td></tr>
 <p>Start audio processing. </p>
 <dl class="section return"><dt>Returns</dt><dd>True when the stream started successfully. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00260">260</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00291">291</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -1246,9 +1271,9 @@ Public Member Functions</h2></td></tr>
 <p>Stop the automatic driver health monitoring thread. </p>
 <p>Called when the stream is closed or the manager is shut down. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00993">993</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l01037">1037</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00791">checkAndAutoScaleBuffer()</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00239">closeStream()</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00514">setBufferSize()</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00689">setPreferredDriverType()</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00449">setSampleRate()</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00080">shutdown()</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00281">stopStream()</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00345">switchDevice()</a>, and <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00391">switchInputDevice()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00829">checkAndAutoScaleBuffer()</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00267">closeStream()</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00552">setBufferSize()</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00727">setPreferredDriverType()</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00487">setSampleRate()</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00080">shutdown()</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00319">stopStream()</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00383">switchDevice()</a>, and <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00429">switchInputDevice()</a>.</p>
 <div id="dynsection-11" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-11-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-11-summary" class="dynsummary" style="display:block;">
@@ -1276,9 +1301,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Stop audio processing. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00281">281</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00319">319</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00993">stopHealthMonitor()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l01037">stopHealthMonitor()</a>.</p>
 <div id="dynsection-12" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-12-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-12-summary" class="dynsummary" style="display:block;">
@@ -1315,9 +1340,9 @@ Public Member Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>true if device switch was successful</dd></dl>
 <p>This will stop the current stream, reconfigure with the new device, and restart the stream if it was running. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00345">345</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00383">383</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d2/d19/AudioDriver_8h_source.html#l00038">Aestra::Audio::AudioStreamConfig::deviceId</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00291">isStreamRunning()</a>, <a class="el" href="../../d2/d19/AudioDriver_8h_source.html#l00042">Aestra::Audio::AudioStreamConfig::sampleRate</a>, and <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00993">stopHealthMonitor()</a>.</p>
+<p class="reference">References <a class="el" href="../../d2/d19/AudioDriver_8h_source.html#l00038">Aestra::Audio::AudioStreamConfig::deviceId</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00329">isStreamRunning()</a>, <a class="el" href="../../d2/d19/AudioDriver_8h_source.html#l00042">Aestra::Audio::AudioStreamConfig::sampleRate</a>, and <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l01037">stopHealthMonitor()</a>.</p>
 <div id="dynsection-13" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-13-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-13-summary" class="dynsummary" style="display:block;">
@@ -1346,9 +1371,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Switch to a different input device while preserving the current output device. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00391">391</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00429">429</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d2/d19/AudioDriver_8h_source.html#l00040">Aestra::Audio::AudioStreamConfig::inputDeviceId</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00291">isStreamRunning()</a>, <a class="el" href="../../d2/d19/AudioDriver_8h_source.html#l00046">Aestra::Audio::AudioStreamConfig::numInputChannels</a>, and <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00993">stopHealthMonitor()</a>.</p>
+<p class="reference">References <a class="el" href="../../d2/d19/AudioDriver_8h_source.html#l00040">Aestra::Audio::AudioStreamConfig::inputDeviceId</a>, <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00329">isStreamRunning()</a>, <a class="el" href="../../d2/d19/AudioDriver_8h_source.html#l00046">Aestra::Audio::AudioStreamConfig::numInputChannels</a>, and <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l01037">stopHealthMonitor()</a>.</p>
 <div id="dynsection-14" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-14-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-14-summary" class="dynsummary" style="display:block;">
@@ -1377,7 +1402,7 @@ Public Member Functions</h2></td></tr>
 <p>Force switch to the internal dummy driver (e.g. </p>
 <p>after a crash/disconnect). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00906">906</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00950">950</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -1417,7 +1442,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true if the device supports the configuration </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00638">638</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html#l00676">676</a> of file <a class="el" href="../../d0/de9/AudioDeviceManager_8cpp_source.html">AudioDeviceManager.cpp</a>.</p>
 
 </div>
 </div>

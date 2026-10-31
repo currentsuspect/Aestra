@@ -6,7 +6,7 @@
 <area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="755,88,691,97,691,92,754,83"/>
 <area shape="rect" id="Node000003" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a59ffe55e7bb9da7a1f78a89225b896e3" title="Process one JSON request line and return the JSON response." alt="" coords="248,5,448,45"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="482,28,448,28,448,23,482,23"/>
-<area shape="rect" id="Node000004" href="$de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#afd6910159d448765265eb9884cf80360" title="Execute every fully received request line on the caller&#39;s thread." alt="" coords="5,5,200,45"/>
+<area shape="rect" id="Node000004" href="$de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#afd6910159d448765265eb9884cf80360" title="Execute received request lines on the caller&#39;s thread, at most 64 per call." alt="" coords="5,5,200,45"/>
 <area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="235,28,200,28,200,23,235,23"/>
 <area shape="poly" id="edge5_Node000005_Node000005" title=" " alt="" coords="654,85,651,80,643,76,608,73,580,75,565,80,562,85,570,92,566,96,557,86,562,76,579,69,608,67,645,71,655,76,659,82"/>
 </map>

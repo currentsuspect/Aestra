@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::ReplacePatternNotesCommand::execute" name="Aestra::Audio::ReplacePatternNotesCommand::execute">
+<area shape="rect" id="Node000001" title="Execute the command (first time)" alt="" coords="268,5,483,45"/>
+<area shape="rect" id="Node000002" href="$d5/deb/classAestra_1_1Audio_1_1ReplacePatternNotesCommand.html#ab9feacb943cf205408e1465ae46e4b71" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,220,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="255,28,220,28,220,23,255,23"/>
+</map>

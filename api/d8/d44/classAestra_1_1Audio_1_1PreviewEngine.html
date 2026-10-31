@@ -110,8 +110,9 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a57280a19eee903ea2e5abd0bfaffc6c3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a532b7704f45a5135653a4e1ab2ea7419" id="r_a532b7704f45a5135653a4e1ab2ea7419"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d44/classAestra_1_1Audio_1_1PreviewEngine.html#a532b7704f45a5135653a4e1ab2ea7419">isPlaying</a> () const</td></tr>
 <tr class="separator:a532b7704f45a5135653a4e1ab2ea7419"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab02fdb855c4d52df61185fb09caba9f0" id="r_ab02fdb855c4d52df61185fb09caba9f0"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d44/classAestra_1_1Audio_1_1PreviewEngine.html#ab02fdb855c4d52df61185fb09caba9f0">isAudiblyPlaying</a> () const</td></tr>
-<tr class="separator:ab02fdb855c4d52df61185fb09caba9f0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad24191481ab68037205df5121f90ac80" id="r_ad24191481ab68037205df5121f90ac80"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d44/classAestra_1_1Audio_1_1PreviewEngine.html#ad24191481ab68037205df5121f90ac80">isAudiblyPlaying</a> () const noexcept</td></tr>
+<tr class="memdesc:ad24191481ab68037205df5121f90ac80"><td class="mdescLeft">&#160;</td><td class="mdescRight">Called from the audio callback (preview ducking), so it must not touch a shared_ptr (#939).  <br /></td></tr>
+<tr class="separator:ad24191481ab68037205df5121f90ac80"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a82aded29b04c7b720defc8ee636abc04" id="r_a82aded29b04c7b720defc8ee636abc04"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d44/classAestra_1_1Audio_1_1PreviewEngine.html#a82aded29b04c7b720defc8ee636abc04">getLastOutputPeak</a> () const</td></tr>
 <tr class="separator:a82aded29b04c7b720defc8ee636abc04"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac3ba1b614382cb5c10f495b9af242df0" id="r_ac3ba1b614382cb5c10f495b9af242df0"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d44/classAestra_1_1Audio_1_1PreviewEngine.html#ac3ba1b614382cb5c10f495b9af242df0">isBufferReady</a> () const</td></tr>
@@ -135,7 +136,7 @@ Public Member Functions</h2></td></tr>
 <div class="textblock"><p>Handles file auditioning and previewing. </p>
 <p>Manages asynchronous decoding, sample rate conversion, and playback of audio files for browser preview and scrubbing. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d1a/PreviewEngine_8h_source.html#l00032">32</a> of file <a class="el" href="../../d6/d1a/PreviewEngine_8h_source.html">PreviewEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d1a/PreviewEngine_8h_source.html#l00033">33</a> of file <a class="el" href="../../d6/d1a/PreviewEngine_8h_source.html">PreviewEngine.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a5bc250c2f782756c0343b5eff39008ac" name="a5bc250c2f782756c0343b5eff39008ac"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a5bc250c2f782756c0343b5eff39008ac">&#9670;&#160;</a></span>PreviewEngine()</h2>
@@ -199,7 +200,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d1a/PreviewEngine_8h_source.html#l00069">69</a> of file <a class="el" href="../../d6/d1a/PreviewEngine_8h_source.html">PreviewEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d1a/PreviewEngine_8h_source.html#l00071">71</a> of file <a class="el" href="../../d6/d1a/PreviewEngine_8h_source.html">PreviewEngine.h</a>.</p>
 
 </div>
 </div>
@@ -218,7 +219,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00652">652</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00660">660</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -237,7 +238,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00636">636</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00644">644</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -264,7 +265,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d1a/PreviewEngine_8h_source.html#l00061">61</a> of file <a class="el" href="../../d6/d1a/PreviewEngine_8h_source.html">PreviewEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d1a/PreviewEngine_8h_source.html#l00063">63</a> of file <a class="el" href="../../d6/d1a/PreviewEngine_8h_source.html">PreviewEngine.h</a>.</p>
 
 </div>
 </div>
@@ -283,7 +284,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00647">647</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00655">655</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -302,15 +303,18 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00657">657</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00665">665</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
 
 </div>
 </div>
-<a id="ab02fdb855c4d52df61185fb09caba9f0" name="ab02fdb855c4d52df61185fb09caba9f0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab02fdb855c4d52df61185fb09caba9f0">&#9670;&#160;</a></span>isAudiblyPlaying()</h2>
+<a id="ad24191481ab68037205df5121f90ac80" name="ad24191481ab68037205df5121f90ac80"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad24191481ab68037205df5121f90ac80">&#9670;&#160;</a></span>isAudiblyPlaying()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">bool Aestra::Audio::PreviewEngine::isAudiblyPlaying </td>
@@ -319,9 +323,16 @@ Public Member Functions</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00614">614</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
+<p>Called from the audio callback (preview ducking), so it must not touch a shared_ptr (#939). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00627">627</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -340,7 +351,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00623">623</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00631">631</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -359,7 +370,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00609">609</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00620">620</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -401,7 +412,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00199">199</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00200">200</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -431,7 +442,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00246">246</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00248">248</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -478,7 +489,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00250">250</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00252">252</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -498,7 +509,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00640">640</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00648">648</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -518,7 +529,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00632">632</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00640">640</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -538,7 +549,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00628">628</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00636">636</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -558,7 +569,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00240">240</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00242">242</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -577,7 +588,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00231">231</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html#l00232">232</a> of file <a class="el" href="../../d4/dff/PreviewEngine_8cpp_source.html">PreviewEngine.cpp</a>.</p>
 
 </div>
 </div>

@@ -180,7 +180,7 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:aebc8833dfbce43605e71b0fed4056c17"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialize the plugin for processing.  <br /></td></tr>
 <tr class="separator:aebc8833dfbce43605e71b0fed4056c17"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afa2132609f97cd176b51731a9297a856" id="r_afa2132609f97cd176b51731a9297a856"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#afa2132609f97cd176b51731a9297a856">resolveSimdCapabilities</a> ()</td></tr>
-<tr class="memdesc:afa2132609f97cd176b51731a9297a856"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolves CPU feature flags on the preparing thread and stores them as plain members, so <a class="el" href="../../d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#ab5bccaf6db83bb8a1d1eac383d1889c2" title="Process audio through the plugin.">process()</a> never has to ask.  <br /></td></tr>
+<tr class="memdesc:afa2132609f97cd176b51731a9297a856"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolves CPU feature flags on the preparing thread and stores them as plain members, so process() never has to ask.  <br /></td></tr>
 <tr class="separator:afa2132609f97cd176b51731a9297a856"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7961a491893823a7d032606292a40c9c" id="r_a7961a491893823a7d032606292a40c9c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#a7961a491893823a7d032606292a40c9c">shutdown</a> () override</td></tr>
 <tr class="memdesc:a7961a491893823a7d032606292a40c9c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Shutdown the plugin, releasing all resources.  <br /></td></tr>
@@ -349,6 +349,10 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:aa2f172712d45fc8e2945fd223ceddb73 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_aa2f172712d45fc8e2945fd223ceddb73"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#aa2f172712d45fc8e2945fd223ceddb73">isCrashed</a> () const override</td></tr>
 <tr class="memdesc:aa2f172712d45fc8e2945fd223ceddb73 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if plugin has crashed (fatal exception caught)  <br /></td></tr>
 <tr class="separator:aa2f172712d45fc8e2945fd223ceddb73 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pub_methods_classAestra_1_1Audio_1_1IPluginInstance"><td colspan="2" onclick="javascript:toggleInherit('pub_methods_classAestra_1_1Audio_1_1IPluginInstance')"><img src="../../closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html">Aestra::Audio::IPluginInstance</a></td></tr>
+<tr class="memitem:aa31a55f7d6636219b307170826b91fd9 inherit pub_methods_classAestra_1_1Audio_1_1IPluginInstance" id="r_aa31a55f7d6636219b307170826b91fd9"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aa31a55f7d6636219b307170826b91fd9">ownsEditorWindow</a> () const</td></tr>
+<tr class="memdesc:aa31a55f7d6636219b307170826b91fd9 inherit pub_methods_classAestra_1_1Audio_1_1IPluginInstance"><td class="mdescLeft">&#160;</td><td class="mdescRight">Whether the plugin makes its own top-level window (the sandbox helper does), so the app must not make one to embed it in.  <br /></td></tr>
+<tr class="separator:aa31a55f7d6636219b307170826b91fd9 inherit pub_methods_classAestra_1_1Audio_1_1IPluginInstance"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
@@ -372,8 +376,6 @@ Static Public Member Functions</h2></td></tr>
 <tr class="separator:a9d17734728949d69624346c52c23baa7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a61b56541a1f086ad7424be9f2cd43c2a" id="r_a61b56541a1f086ad7424be9f2cd43c2a"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#a61b56541a1f086ad7424be9f2cd43c2a">normalizeOscillator</a> (float &amp;s, float &amp;c)</td></tr>
 <tr class="separator:a61b56541a1f086ad7424be9f2cd43c2a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a315c68cf4f07b705ffeb85380d60587f" id="r_a315c68cf4f07b705ffeb85380d60587f"><td class="memItemLeft" align="right" valign="top">static std::array&lt; float, 5 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#a315c68cf4f07b705ffeb85380d60587f">peakingCoefficients</a> (float dbGain, float freqHz, float sampleRate, float Q)</td></tr>
-<tr class="separator:a315c68cf4f07b705ffeb85380d60587f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
@@ -455,26 +457,6 @@ Public Attributes</h2></td></tr>
 <tr class="separator:a9244c25e345542827a7f0fa4b9c51132"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1fa00b7c081b939febada73ef4ad103b" id="r_a1fa00b7c081b939febada73ef4ad103b"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#a1fa00b7c081b939febada73ef4ad103b">m_predelayPos</a> = 0</td></tr>
 <tr class="separator:a1fa00b7c081b939febada73ef4ad103b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0493293b1bf4b09dc9fcdbe0d8ba15db" id="r_a0493293b1bf4b09dc9fcdbe0d8ba15db"><td class="memItemLeft" align="right" valign="top">std::array&lt; float, 5 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#a0493293b1bf4b09dc9fcdbe0d8ba15db">m_platePeakCoeff</a> {}</td></tr>
-<tr class="separator:a0493293b1bf4b09dc9fcdbe0d8ba15db"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6401c3c6ba67bae1b958210a7e3437eb" id="r_a6401c3c6ba67bae1b958210a7e3437eb"><td class="memItemLeft" align="right" valign="top">std::array&lt; std::array&lt; float, 5 &gt;, kModeCount &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#a6401c3c6ba67bae1b958210a7e3437eb">m_boxCutCoeff</a> {}</td></tr>
-<tr class="separator:a6401c3c6ba67bae1b958210a7e3437eb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6d48bff86a1a63608eb2ec886def8b63" id="r_a6d48bff86a1a63608eb2ec886def8b63"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#a6d48bff86a1a63608eb2ec886def8b63">m_platePeakZ1L</a> = 0.0f</td></tr>
-<tr class="separator:a6d48bff86a1a63608eb2ec886def8b63"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0712f6899e55e8d29d168306f0db42eb" id="r_a0712f6899e55e8d29d168306f0db42eb"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#a0712f6899e55e8d29d168306f0db42eb">m_platePeakZ2L</a> = 0.0f</td></tr>
-<tr class="separator:a0712f6899e55e8d29d168306f0db42eb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5790c47a3e7e89e858047dd232d8327e" id="r_a5790c47a3e7e89e858047dd232d8327e"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#a5790c47a3e7e89e858047dd232d8327e">m_platePeakZ1R</a> = 0.0f</td></tr>
-<tr class="separator:a5790c47a3e7e89e858047dd232d8327e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a16f124d2a48407b6d530442b19625c6a" id="r_a16f124d2a48407b6d530442b19625c6a"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#a16f124d2a48407b6d530442b19625c6a">m_platePeakZ2R</a> = 0.0f</td></tr>
-<tr class="separator:a16f124d2a48407b6d530442b19625c6a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac5ffa086db0c26c517ba7f9c835d1723" id="r_ac5ffa086db0c26c517ba7f9c835d1723"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#ac5ffa086db0c26c517ba7f9c835d1723">m_boxCutZ1L</a> = 0.0f</td></tr>
-<tr class="separator:ac5ffa086db0c26c517ba7f9c835d1723"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a588b40b0c4a828e67913655de62447be" id="r_a588b40b0c4a828e67913655de62447be"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#a588b40b0c4a828e67913655de62447be">m_boxCutZ2L</a> = 0.0f</td></tr>
-<tr class="separator:a588b40b0c4a828e67913655de62447be"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adbc20c1a63123fa813fde5349bd93e99" id="r_adbc20c1a63123fa813fde5349bd93e99"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#adbc20c1a63123fa813fde5349bd93e99">m_boxCutZ1R</a> = 0.0f</td></tr>
-<tr class="separator:adbc20c1a63123fa813fde5349bd93e99"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5082b665a2a56edabee8c98430a4ed61" id="r_a5082b665a2a56edabee8c98430a4ed61"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#a5082b665a2a56edabee8c98430a4ed61">m_boxCutZ2R</a> = 0.0f</td></tr>
-<tr class="separator:a5082b665a2a56edabee8c98430a4ed61"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acd9594fce007423e903736b80484e9df" id="r_acd9594fce007423e903736b80484e9df"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#acd9594fce007423e903736b80484e9df">m_wetToneStateL</a> = 0.0f</td></tr>
 <tr class="separator:acd9594fce007423e903736b80484e9df"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5c1f490234cc6ba0bda7d44c8afc4b4f" id="r_a5c1f490234cc6ba0bda7d44c8afc4b4f"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#a5c1f490234cc6ba0bda7d44c8afc4b4f">m_wetToneStateR</a> = 0.0f</td></tr>
@@ -718,7 +700,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01077">1077</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01078">1078</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -750,7 +732,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a8c5884486cf915aecc040ed47579f137">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00328">328</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00335">335</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -778,7 +760,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01572">1572</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01610">1610</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -809,7 +791,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#abbbd61d2c9b8113b4fa8842ac1ea025b">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01007">1007</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01008">1008</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -837,7 +819,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01198">1198</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01205">1205</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -893,7 +875,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01644">1644</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01678">1678</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -920,7 +902,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01228">1228</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01235">1235</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -951,7 +933,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ae8873fee63c09979fd8235b66cf82b74">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00334">334</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00341">341</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -989,7 +971,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00957">957</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00958">958</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -1016,7 +998,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00327">327</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00334">334</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -1048,7 +1030,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a4e9c8e50888e323296ad29ce7465b030">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01009">1009</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01010">1010</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -1079,7 +1061,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a0416678fedc43a77f2e208d999559acb">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01012">1012</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01013">1013</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -1110,7 +1092,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ab213ce811c289ca2c97d1135cc5f2785">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01013">1013</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01014">1014</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -1149,7 +1131,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a93980dfb9c9c5baf9830e57bda018067">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00877">877</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00876">876</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d40/InternalPluginBase_8h_source.html#l00202">Aestra::Audio::InternalPluginBase::getParameter()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -1189,7 +1171,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ae30ed96e97c3ee9f6e0b67ca02456c30">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01014">1014</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01015">1015</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -1220,7 +1202,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aff2c900e33f79f27430b9fc27751d3aa">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01015">1015</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01016">1016</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -1251,7 +1233,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a3493c6f26130010549f41db956f476f7">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01005">1005</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01006">1006</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -1293,7 +1275,7 @@ Additional Inherited Members</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">sampleRate</td><td>Audio sample rate in Hz </td></tr>
-    <tr><td class="paramname">maxBlockSize</td><td>Maximum frames per <a class="el" href="../../d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#ab5bccaf6db83bb8a1d1eac383d1889c2" title="Process audio through the plugin.">process()</a> call </td></tr>
+    <tr><td class="paramname">maxBlockSize</td><td>Maximum frames per process() call </td></tr>
   </table>
   </dd>
 </dl>
@@ -1301,9 +1283,9 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a3f57ac8a0a89a69c6358a74e6fb0eec8">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00284">284</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00291">291</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00998">paramSpecCount()</a>, <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00997">paramSpecs()</a>, <a class="el" href="../../d9/d40/InternalPluginBase_8h_source.html#l00438">Aestra::Audio::InternalPluginBase::paramValue()</a>, <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00310">resolveSimdCapabilities()</a>, and <a class="el" href="../../d9/d40/InternalPluginBase_8h_source.html#l00431">Aestra::Audio::InternalPluginBase::seedDefaultsOnce()</a>.</p>
+<p class="reference">References <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00999">paramSpecCount()</a>, <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00998">paramSpecs()</a>, <a class="el" href="../../d9/d40/InternalPluginBase_8h_source.html#l00438">Aestra::Audio::InternalPluginBase::paramValue()</a>, <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00317">resolveSimdCapabilities()</a>, and <a class="el" href="../../d9/d40/InternalPluginBase_8h_source.html#l00431">Aestra::Audio::InternalPluginBase::seedDefaultsOnce()</a>.</p>
 <div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-3-summary" class="dynsummary" style="display:block;">
@@ -1341,7 +1323,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aaf189f5b44c01bf9af82e3e4cc389449">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00335">335</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00342">342</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -1372,7 +1354,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a4dd1d460cb57e7eebbdf7562638a5388">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01017">1017</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01018">1018</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -1403,7 +1385,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a0d662ab4e5e2206e4118d6ba4ea1ee33">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01018">1018</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01019">1019</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -1434,7 +1416,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a4ca73e835125be8f4c1057c16104f19a">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01008">1008</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01009">1009</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -1478,7 +1460,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01697">1697</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01731">1731</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -1528,7 +1510,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01684">1684</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01718">1718</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -1556,7 +1538,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01236">1236</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01243">1243</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -1583,7 +1565,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01224">1224</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01231">1231</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -1667,7 +1649,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00271">271</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00278">278</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -1695,7 +1677,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01814">1814</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01842">1842</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -1733,7 +1715,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01820">1820</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01848">1848</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -1777,7 +1759,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#aab2b659d581559924c8a2f9ead2d8612">Aestra::Audio::InternalPluginBase</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00871">871</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00870">870</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -1816,7 +1798,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aa054540a8ed06135b947ea3c71d6cc42">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01006">1006</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01007">1007</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -1847,9 +1829,9 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a7dec060338b713ecd42311bc7439b820">Aestra::Audio::InternalPluginBase</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00998">998</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00999">999</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00284">initialize()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00291">initialize()</a>.</p>
 <div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-4-summary" class="dynsummary" style="display:block;">
@@ -1887,9 +1869,9 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a853525e44b013bf858624c0683d2dfac">Aestra::Audio::InternalPluginBase</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00997">997</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00998">998</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00284">initialize()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00291">initialize()</a>.</p>
 <div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-5-summary" class="dynsummary" style="display:block;">
@@ -1897,56 +1879,6 @@ Additional Inherited Members</h2></td></tr>
 <div id="dynsection-5-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb_a8d3699fb172c9b287183afe226736ec0_icgraph.svg" width="414" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
-
-</div>
-</div>
-<a id="a315c68cf4f07b705ffeb85380d60587f" name="a315c68cf4f07b705ffeb85380d60587f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a315c68cf4f07b705ffeb85380d60587f">&#9670;&#160;</a></span>peakingCoefficients()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">static std::array&lt; float, 5 &gt; Aestra::Audio::Plugins::AestraVerb::peakingCoefficients </td>
-          <td>(</td>
-          <td class="paramtype">float&#160;</td>
-          <td class="paramname"><em>dbGain</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float&#160;</td>
-          <td class="paramname"><em>freqHz</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float&#160;</td>
-          <td class="paramname"><em>sampleRate</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float&#160;</td>
-          <td class="paramname"><em>Q</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01835">1835</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -1974,7 +1906,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01499">1499</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01549">1549</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -2063,7 +1995,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ad68239e36c4c06b2f56e9ef03c6efb99">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00337">337</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00344">344</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d5/df1/FastMath_8h_source.html#l00039">Aestra::Audio::FastMath::fastSin()</a>, <a class="el" href="../../d9/d40/InternalPluginBase_8h_source.html#l00441">Aestra::Audio::InternalPluginBase::isBypassed()</a>, and <a class="el" href="../../d9/d40/InternalPluginBase_8h_source.html#l00438">Aestra::Audio::InternalPluginBase::paramValue()</a>.</p>
 <div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -2122,7 +2054,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01729">1729</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01763">1763</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -2184,7 +2116,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01706">1706</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01740">1740</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -2228,7 +2160,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01753">1753</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01787">1787</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -2278,7 +2210,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01778">1778</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01815">1815</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -2328,7 +2260,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01655">1655</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01689">1689</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -2359,7 +2291,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a6d96b47bc0a727596e2a2e80dcdb2240">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01016">1016</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01017">1017</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -2409,7 +2341,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#abf06171c7364cfe62ebcc23fe1cabc1f">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01010">1010</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01011">1011</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -2436,13 +2368,13 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Resolves CPU feature flags on the preparing thread and stores them as plain members, so <a class="el" href="../../d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#ab5bccaf6db83bb8a1d1eac383d1889c2" title="Process audio through the plugin.">process()</a> never has to ask. </p>
+<p>Resolves CPU feature flags on the preparing thread and stores them as plain members, so process() never has to ask. </p>
 <p>The #ifdefs mirror the ones guarding the call sites, which is what keeps a non-x86 build unchanged: on ARM neither macro is defined, no SIMD path is compiled, and these stay false.</p>
 <p>CPUID is a VM exit on virtualised hosts. Called from the audio thread it was unbounded work inside a callback; called from here it is once, on a thread with no deadline. Issue #1009. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00310">310</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00317">317</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00284">initialize()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00291">initialize()</a>.</p>
 <div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-7-summary" class="dynsummary" style="display:block;">
@@ -2477,7 +2409,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01805">1805</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01833">1833</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -2505,7 +2437,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00326">326</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00333">333</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -2533,7 +2465,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01020">1020</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01021">1021</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -2564,7 +2496,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#afbdcfe0566bdc5d54de9cc4c3f82e0c7">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00324">324</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00331">331</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -2591,7 +2523,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01232">1232</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01239">1239</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -2623,7 +2555,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#abd1a758de5cf5298a30d9b56c5790f4e">Aestra::Audio::InternalPluginBase</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01000">1000</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01001">1001</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -2679,7 +2611,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01263">1263</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01270">1270</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -2717,7 +2649,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01798">1798</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01826">1826</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -2742,10 +2674,10 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 <b>Initial value:</b><div class="fragment"><div class="line">= {</div>
-<div class="line">        142, 107, 379, 277</div>
+<div class="line">        211, 157, 563, 409</div>
 <div class="line">    }</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00213">213</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00220">220</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -2769,7 +2701,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00228">228</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00235">235</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -2796,7 +2728,7 @@ Additional Inherited Members</h2></td></tr>
 <div class="line">        0.00f, 0.79f, 1.57f, 2.36f, 3.14f, 3.93f, 4.71f, 5.50f</div>
 <div class="line">    }</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00231">231</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00238">238</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -2823,7 +2755,7 @@ Additional Inherited Members</h2></td></tr>
 <div class="line">        1.27f, 2.58f, 3.94f, 5.21f, 0.43f, 1.72f, 3.05f, 4.33f</div>
 <div class="line">    }</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00234">234</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00241">241</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -2850,7 +2782,7 @@ Additional Inherited Members</h2></td></tr>
 <div class="line">        2.71f, 0.94f, 4.52f, 1.13f, 5.02f, 2.24f, 0.31f, 3.63f</div>
 <div class="line">    }</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00237">237</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00244">244</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -2874,7 +2806,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00229">229</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00236">236</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -2898,7 +2830,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00230">230</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00237">237</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -2922,7 +2854,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00200">200</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00201">201</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -2970,7 +2902,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00209">209</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00210">210</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3045,7 +2977,7 @@ Additional Inherited Members</h2></td></tr>
 <div class="line">        0.93f, -0.37f, 0.61f, -0.79f, 0.23f, 0.84f, -0.51f, 0.42f</div>
 <div class="line">    }</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00250">250</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00257">257</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3072,7 +3004,7 @@ Additional Inherited Members</h2></td></tr>
 <div class="line">        0.29f, 0.88f, -0.73f, -0.19f, 0.96f, -0.44f, 0.57f, -0.82f</div>
 <div class="line">    }</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00253">253</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00260">260</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3099,7 +3031,7 @@ Additional Inherited Members</h2></td></tr>
 <div class="line">        0.158f, 0.278f, 0.398f, 0.533f, 0.668f, 0.803f, 0.923f, 1.058f</div>
 <div class="line">    }</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00210">210</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00211">211</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3126,7 +3058,7 @@ Additional Inherited Members</h2></td></tr>
 <div class="line">        0.062f, 0.095f, 0.130f, 0.172f, 0.211f, 0.253f, 0.292f, 0.332f</div>
 <div class="line">    }</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00219">219</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00226">226</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3225,7 +3157,7 @@ Additional Inherited Members</h2></td></tr>
 <div class="line">        0.40f, 0.36f, 0.35f, 0.34f, 0.38f, 0.36f, 0.42f, 0.35f, 0.37f</div>
 <div class="line">    }</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00247">247</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00254">254</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3252,7 +3184,7 @@ Additional Inherited Members</h2></td></tr>
 <div class="line">        110.0f, 86.0f, 100.0f, 80.0f, 105.0f, 92.0f, 120.0f, 85.0f, 95.0f</div>
 <div class="line">    }</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00242">242</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00249">249</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3279,7 +3211,7 @@ Additional Inherited Members</h2></td></tr>
 <div class="line">        0.42f, -0.31f, 0.37f, 0.23f, -0.36f, 0.29f, 0.33f, -0.27f</div>
 <div class="line">    }</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00256">256</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00263">263</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3306,7 +3238,7 @@ Additional Inherited Members</h2></td></tr>
 <div class="line">        0.347f, 0.294f, -0.241f, 0.411f, 0.191f, -0.331f, 0.342f, 0.328f</div>
 <div class="line">    }</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00267">267</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00274">274</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3357,7 +3289,7 @@ Additional Inherited Members</h2></td></tr>
 <div class="line">        89, 67</div>
 <div class="line">    }</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00216">216</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00223">223</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3429,7 +3361,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00208">208</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00209">209</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3453,7 +3385,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01254">1254</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01261">1261</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3497,7 +3429,7 @@ Additional Inherited Members</h2></td></tr>
 <div class="line">        {kModCharacter, <span class="stringliteral">&quot;Mod Char&quot;</span>, <span class="stringliteral">&quot;MCHR&quot;</span>, <span class="stringliteral">&quot;&quot;</span>, 0.0f, 0.0f, 1.0f, <span class="keyword">true</span>, <span class="keyword">false</span>, <span class="keyword">false</span>, kModCharacterCount - 1},</div>
 <div class="line">    }</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00976">976</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00977">977</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3548,7 +3480,7 @@ Additional Inherited Members</h2></td></tr>
 <div class="line">        0.34f, -0.24f, 0.21f, 0.18f, -0.16f, 0.14f, -0.12f, 0.105f, 0.092f, -0.078f, 0.062f, -0.052f</div>
 <div class="line">    }</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01259">1259</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01266">1266</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3575,7 +3507,7 @@ Additional Inherited Members</h2></td></tr>
 <div class="line">        5.1f, 7.9f, 11.3f, 13.7f, 17.1f, 19.9f, 23.5f, 29.7f, 34.1f, 41.9f, 53.3f, 67.7f</div>
 <div class="line">    }</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01256">1256</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01263">1263</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3599,7 +3531,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00199">199</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00200">200</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3623,18 +3555,18 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 <b>Initial value:</b><div class="fragment"><div class="line">= {</div>
-<div class="line">        1.096f,   </div>
-<div class="line">        0.96f,    </div>
-<div class="line">        1.122f,   </div>
-<div class="line">        0.92f,    </div>
-<div class="line">        1.04f,    </div>
-<div class="line">        1.15f,    </div>
-<div class="line">        1.20f,    </div>
-<div class="line">        0.98f,    </div>
-<div class="line">        1.10f     </div>
+<div class="line">        0.834f,   </div>
+<div class="line">        0.739f,   </div>
+<div class="line">        0.691f,   </div>
+<div class="line">        0.692f,   </div>
+<div class="line">        0.795f,   </div>
+<div class="line">        0.89f,   </div>
+<div class="line">        0.882f,   </div>
+<div class="line">        0.745f,   </div>
+<div class="line">        0.696f   </div>
 <div class="line">    }</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00188">188</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l00189">189</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3674,87 +3606,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01872">1872</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
-
-</div>
-</div>
-<a id="a6401c3c6ba67bae1b958210a7e3437eb" name="a6401c3c6ba67bae1b958210a7e3437eb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6401c3c6ba67bae1b958210a7e3437eb">&#9670;&#160;</a></span>m_boxCutCoeff</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::array&lt;std::array&lt;float, 5&gt;, kModeCount&gt; Aestra::Audio::Plugins::AestraVerb::m_boxCutCoeff {}</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01916">1916</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
-
-</div>
-</div>
-<a id="ac5ffa086db0c26c517ba7f9c835d1723" name="ac5ffa086db0c26c517ba7f9c835d1723"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac5ffa086db0c26c517ba7f9c835d1723">&#9670;&#160;</a></span>m_boxCutZ1L</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float Aestra::Audio::Plugins::AestraVerb::m_boxCutZ1L = 0.0f</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01921">1921</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
-
-</div>
-</div>
-<a id="adbc20c1a63123fa813fde5349bd93e99" name="adbc20c1a63123fa813fde5349bd93e99"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#adbc20c1a63123fa813fde5349bd93e99">&#9670;&#160;</a></span>m_boxCutZ1R</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float Aestra::Audio::Plugins::AestraVerb::m_boxCutZ1R = 0.0f</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01923">1923</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
-
-</div>
-</div>
-<a id="a588b40b0c4a828e67913655de62447be" name="a588b40b0c4a828e67913655de62447be"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a588b40b0c4a828e67913655de62447be">&#9670;&#160;</a></span>m_boxCutZ2L</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float Aestra::Audio::Plugins::AestraVerb::m_boxCutZ2L = 0.0f</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01922">1922</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
-
-</div>
-</div>
-<a id="a5082b665a2a56edabee8c98430a4ed61" name="a5082b665a2a56edabee8c98430a4ed61"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5082b665a2a56edabee8c98430a4ed61">&#9670;&#160;</a></span>m_boxCutZ2R</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float Aestra::Audio::Plugins::AestraVerb::m_boxCutZ2R = 0.0f</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01924">1924</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01882">1882</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3834,7 +3686,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01879">1879</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01889">1889</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3850,7 +3702,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01877">1877</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01887">1887</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3866,7 +3718,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01876">1876</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01886">1886</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3882,7 +3734,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01875">1875</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01885">1885</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3898,7 +3750,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01878">1878</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01888">1888</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3914,7 +3766,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01890">1890</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01900">1900</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3930,7 +3782,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01892">1892</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01902">1902</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3946,7 +3798,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01893">1893</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01903">1903</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3962,7 +3814,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01894">1894</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01904">1904</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3978,7 +3830,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01891">1891</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01901">1901</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -3994,7 +3846,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01902">1902</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01912">1912</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4010,7 +3862,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01904">1904</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01914">1914</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4026,7 +3878,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01905">1905</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01915">1915</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4042,7 +3894,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01903">1903</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01913">1913</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4090,7 +3942,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01853">1853</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01863">1863</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4106,7 +3958,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01882">1882</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01892">1892</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4122,7 +3974,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01884">1884</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01894">1894</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4138,7 +3990,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01881">1881</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01891">1891</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4154,7 +4006,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01883">1883</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01893">1893</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4202,7 +4054,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01880">1880</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01890">1890</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4218,7 +4070,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01909">1909</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01919">1919</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4270,86 +4122,6 @@ Additional Inherited Members</h2></td></tr>
 
 </div>
 </div>
-<a id="a0493293b1bf4b09dc9fcdbe0d8ba15db" name="a0493293b1bf4b09dc9fcdbe0d8ba15db"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0493293b1bf4b09dc9fcdbe0d8ba15db">&#9670;&#160;</a></span>m_platePeakCoeff</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::array&lt;float, 5&gt; Aestra::Audio::Plugins::AestraVerb::m_platePeakCoeff {}</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01915">1915</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
-
-</div>
-</div>
-<a id="a6d48bff86a1a63608eb2ec886def8b63" name="a6d48bff86a1a63608eb2ec886def8b63"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6d48bff86a1a63608eb2ec886def8b63">&#9670;&#160;</a></span>m_platePeakZ1L</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float Aestra::Audio::Plugins::AestraVerb::m_platePeakZ1L = 0.0f</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01917">1917</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
-
-</div>
-</div>
-<a id="a5790c47a3e7e89e858047dd232d8327e" name="a5790c47a3e7e89e858047dd232d8327e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5790c47a3e7e89e858047dd232d8327e">&#9670;&#160;</a></span>m_platePeakZ1R</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float Aestra::Audio::Plugins::AestraVerb::m_platePeakZ1R = 0.0f</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01919">1919</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
-
-</div>
-</div>
-<a id="a0712f6899e55e8d29d168306f0db42eb" name="a0712f6899e55e8d29d168306f0db42eb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0712f6899e55e8d29d168306f0db42eb">&#9670;&#160;</a></span>m_platePeakZ2L</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float Aestra::Audio::Plugins::AestraVerb::m_platePeakZ2L = 0.0f</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01918">1918</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
-
-</div>
-</div>
-<a id="a16f124d2a48407b6d530442b19625c6a" name="a16f124d2a48407b6d530442b19625c6a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a16f124d2a48407b6d530442b19625c6a">&#9670;&#160;</a></span>m_platePeakZ2R</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">float Aestra::Audio::Plugins::AestraVerb::m_platePeakZ2R = 0.0f</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01920">1920</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
-
-</div>
-</div>
 <a id="a945a965a482148cb84fc1780d7ba04a3" name="a945a965a482148cb84fc1780d7ba04a3"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a945a965a482148cb84fc1780d7ba04a3">&#9670;&#160;</a></span>m_platePostDelayLengths</h2>
 
@@ -4362,7 +4134,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01898">1898</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01908">1908</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4378,7 +4150,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01896">1896</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01906">1906</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4394,7 +4166,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01899">1899</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01909">1909</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4410,7 +4182,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01900">1900</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01910">1910</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4426,7 +4198,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01897">1897</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01907">1907</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4442,7 +4214,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01907">1907</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01917">1917</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4458,7 +4230,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01910">1910</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01920">1920</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4474,7 +4246,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01911">1911</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01921">1921</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4490,7 +4262,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01908">1908</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01918">1918</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4506,7 +4278,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01887">1887</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01897">1897</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4522,7 +4294,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01885">1885</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01895">1895</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4538,7 +4310,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01888">1888</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01898">1898</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4554,7 +4326,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01886">1886</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01896">1896</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4570,7 +4342,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01854">1854</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01864">1864</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4618,7 +4390,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01873">1873</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01883">1883</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4650,7 +4422,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01869">1869</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01879">1879</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>
@@ -4666,7 +4438,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01870">1870</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d19/AestraVerb_8h_source.html#l01880">1880</a> of file <a class="el" href="../../d2/d19/AestraVerb_8h_source.html">AestraVerb.h</a>.</p>
 
 </div>
 </div>

@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['inputcallback_0',['InputCallback',['../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad09c3baea3585c3f023b9e92701b7263',1,'Aestra::Audio::AudioEngine']]],
-  ['itemtab_1',['ItemTab',['../da/d9c/classAestra_1_1AuditionHub.html#a4d8bfacfda674b554be0ec406a793f9f',1,'Aestra::AuditionHub']]]
+  ['favoritesloader_0',['FavoritesLoader',['../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#a3e032c16e34ab726777ccc527573b929',1,'AestraUI::PluginBrowserPanel']]],
+  ['filedialogcall_1',['FileDialogCall',['../d8/d94/namespaceAestra.html#a84d81af9bb718a974478d358aec6c43d',1,'Aestra']]],
+  ['firstloadwarningcallback_2',['FirstLoadWarningCallback',['../d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#add44b17e75a6007d63ee2781010dbe58',1,'Aestra::Audio::PluginScanner']]]
 ];

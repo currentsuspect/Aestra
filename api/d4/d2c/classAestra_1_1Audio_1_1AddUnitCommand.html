@@ -116,6 +116,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a7c359fc879d51314bb69d281c8deca33" id="r_a7c359fc879d51314bb69d281c8deca33"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d2c/classAestra_1_1Audio_1_1AddUnitCommand.html#a7c359fc879d51314bb69d281c8deca33">getName</a> () const override</td></tr>
 <tr class="memdesc:a7c359fc879d51314bb69d281c8deca33"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a human-readable name for the command (for UI)  <br /></td></tr>
 <tr class="separator:a7c359fc879d51314bb69d281c8deca33"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3cc7de273d2ac4b01e383dfe48fa5da8" id="r_a3cc7de273d2ac4b01e383dfe48fa5da8"><td class="memItemLeft" align="right" valign="top">UnitID&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d2c/classAestra_1_1Audio_1_1AddUnitCommand.html#a3cc7de273d2ac4b01e383dfe48fa5da8">getCreatedUnitId</a> () const</td></tr>
+<tr class="memdesc:a3cc7de273d2ac4b01e383dfe48fa5da8"><td class="mdescLeft">&#160;</td><td class="mdescRight">The unit this command created; invalid (0) until it has executed.  <br /></td></tr>
+<tr class="separator:a3cc7de273d2ac4b01e383dfe48fa5da8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a431e6d0dbb2ac27e8b3396cf27ef6974" id="r_a431e6d0dbb2ac27e8b3396cf27ef6974"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d2c/classAestra_1_1Audio_1_1AddUnitCommand.html#a431e6d0dbb2ac27e8b3396cf27ef6974">getSizeInBytes</a> () const override</td></tr>
 <tr class="memdesc:a431e6d0dbb2ac27e8b3396cf27ef6974"><td class="mdescLeft">&#160;</td><td class="mdescRight">Memory size approximation for this command (for history limits)  <br /></td></tr>
 <tr class="separator:a431e6d0dbb2ac27e8b3396cf27ef6974"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -214,7 +217,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#a22e8a4fe943a30ec50ff3d83d3bff9ee">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/df0/AddUnitCommand_8h_source.html#l00046">46</a> of file <a class="el" href="../../d8/df0/AddUnitCommand_8h_source.html">AddUnitCommand.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/df0/AddUnitCommand_8h_source.html#l00048">48</a> of file <a class="el" href="../../d8/df0/AddUnitCommand_8h_source.html">AddUnitCommand.h</a>.</p>
 
 </div>
 </div>
@@ -247,7 +250,7 @@ Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d8/df0/AddUnitCommand_8h_source.html#l00025">25</a> of file <a class="el" href="../../d8/df0/AddUnitCommand_8h_source.html">AddUnitCommand.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00299">Aestra::Audio::UnitManager::createUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00442">Aestra::Audio::UnitManager::setUnitEnabled()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00300">Aestra::Audio::UnitManager::createUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00443">Aestra::Audio::UnitManager::setUnitEnabled()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d8/df0/AddUnitCommand_8h_source.html#l00039">redo()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -264,6 +267,35 @@ Public Member Functions</h2></td></tr>
 <div id="dynsection-3-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d4/d2c/classAestra_1_1Audio_1_1AddUnitCommand_a21a6a1496e0ca0426c7b248fdb26d98e_icgraph.svg" width="531" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
+
+</div>
+</div>
+<a id="a3cc7de273d2ac4b01e383dfe48fa5da8" name="a3cc7de273d2ac4b01e383dfe48fa5da8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3cc7de273d2ac4b01e383dfe48fa5da8">&#9670;&#160;</a></span>getCreatedUnitId()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">UnitID Aestra::Audio::AddUnitCommand::getCreatedUnitId </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The unit this command created; invalid (0) until it has executed. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/df0/AddUnitCommand_8h_source.html#l00046">46</a> of file <a class="el" href="../../d8/df0/AddUnitCommand_8h_source.html">AddUnitCommand.h</a>.</p>
 
 </div>
 </div>
@@ -325,7 +357,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#a75361941c8c0630fb345a45d2e36eb1d">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/df0/AddUnitCommand_8h_source.html#l00045">45</a> of file <a class="el" href="../../d8/df0/AddUnitCommand_8h_source.html">AddUnitCommand.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/df0/AddUnitCommand_8h_source.html#l00047">47</a> of file <a class="el" href="../../d8/df0/AddUnitCommand_8h_source.html">AddUnitCommand.h</a>.</p>
 
 </div>
 </div>
@@ -398,7 +430,7 @@ Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d8/df0/AddUnitCommand_8h_source.html#l00032">32</a> of file <a class="el" href="../../d8/df0/AddUnitCommand_8h_source.html">AddUnitCommand.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00415">Aestra::Audio::UnitManager::removeUnit()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00416">Aestra::Audio::UnitManager::removeUnit()</a>.</p>
 <div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-5-summary" class="dynsummary" style="display:block;">

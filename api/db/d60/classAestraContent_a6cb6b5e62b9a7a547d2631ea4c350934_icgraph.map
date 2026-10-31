@@ -1,0 +1,9 @@
+<map id="AestraContent::openPatternInPianoRoll" name="AestraContent::openPatternInPianoRoll">
+<area shape="rect" id="Node000001" title="Open a pattern in the piano&#45;roll editor." alt="" coords="265,69,467,109"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#ab90c78e0fe24a2ff739817b3c4a4440d" title="Create the Arsenal and sample&#45;editor overlays." alt="" coords="7,5,215,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="272,68,191,48,192,43,273,63"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#af214284a167c0d4485e8c7849733eee2" title="Create the file/plugin/preview/pattern browser panels." alt="" coords="5,69,217,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="252,92,217,92,217,87,252,87"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#adde34f69a39cdca3682dc5fbcb183c98" title="Create TrackManagerUI and wire its toggles, loop and audition callbacks." alt="" coords="15,133,208,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="273,115,192,136,191,131,272,110"/>
+</map>

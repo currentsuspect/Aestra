@@ -26,32 +26,32 @@
 <area shape="poly" id="edge34_Node000001_Node000028" title=" " alt="" coords="1173,928,1122,979,1090,1004,1056,1026,1029,1038,1027,1033,1053,1022,1087,1000,1119,975,1169,924"/>
 <area shape="rect" id="Node000029" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a2f31a21c152b2992436c1c66224004df" title="Get total chain latency in samples." alt="" coords="833,1100,1024,1140"/>
 <area shape="poly" id="edge35_Node000001_Node000029" title=" " alt="" coords="1184,930,1163,967,1135,1011,1099,1054,1056,1090,1025,1106,1023,1101,1053,1086,1095,1050,1130,1008,1159,965,1179,927"/>
-<area shape="rect" id="Node000030" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a871b0ffa96ec2073201f8b80a960ecbb" title="Check if slot is bypassed." alt="" coords="833,588,1024,628"/>
-<area shape="poly" id="edge36_Node000001_Node000030" title=" " alt="" coords="1185,864,1168,814,1141,754,1103,693,1079,666,1053,642,1023,626,1026,621,1056,638,1083,662,1107,690,1145,751,1173,812,1190,862"/>
-<area shape="rect" id="Node000033" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#ad3d64d4092a82321d954487d102aa432" title="Check if a slot was automatically bypassed after unsafe non&#45;finite output." alt="" coords="803,460,1055,500"/>
-<area shape="poly" id="edge40_Node000001_Node000033" title=" " alt="" coords="1192,863,1182,790,1159,696,1141,646,1118,598,1089,553,1053,514,1037,502,1040,498,1056,510,1093,550,1122,595,1146,644,1164,694,1187,789,1197,862"/>
-<area shape="rect" id="Node000034" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#aa697c82aadcaae14cb7caa3bbb8e3356" title="Check if slot is empty." alt="" coords="833,1164,1024,1204"/>
-<area shape="poly" id="edge42_Node000001_Node000034" title=" " alt="" coords="1190,930,1173,980,1145,1041,1107,1102,1083,1130,1056,1154,1026,1171,1023,1166,1053,1150,1079,1126,1103,1099,1141,1038,1168,978,1185,928"/>
-<area shape="rect" id="Node000035" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#aa21da120d1fdbebdb8c0d35dacab5f67" title="Load entire chain state." alt="" coords="833,1228,1024,1268"/>
-<area shape="poly" id="edge43_Node000001_Node000035" title=" " alt="" coords="1194,930,1181,992,1155,1070,1137,1110,1115,1150,1088,1186,1056,1218,1026,1236,1023,1231,1053,1214,1084,1183,1110,1147,1132,1108,1150,1068,1175,990,1189,929"/>
-<area shape="rect" id="Node000036" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a085e2b0a27406629a2dd14ccd02f1223" title="Move plugin from one slot to another." alt="" coords="833,1292,1024,1332"/>
-<area shape="poly" id="edge44_Node000001_Node000036" title=" " alt="" coords="1197,930,1187,1003,1164,1098,1146,1148,1122,1197,1093,1242,1056,1282,1026,1301,1023,1296,1053,1278,1089,1239,1118,1194,1141,1146,1159,1096,1182,1002,1192,929"/>
-<area shape="rect" id="Node000037" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a437fca489c56905d913c32e2215e2a85" title="Prepare for processing." alt="" coords="833,1356,1024,1396"/>
-<area shape="poly" id="edge45_Node000001_Node000037" title=" " alt="" coords="1199,930,1193,1013,1185,1067,1173,1126,1155,1185,1130,1244,1098,1298,1056,1346,1026,1365,1023,1361,1053,1342,1093,1295,1125,1241,1150,1184,1167,1124,1180,1066,1188,1013,1194,929"/>
-<area shape="rect" id="Node000040" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a2e3651b1109e292f881fc3d8a7d11b92" title="Process audio through the effect chain." alt="" coords="833,1420,1024,1460"/>
-<area shape="poly" id="edge47_Node000001_Node000040" title=" " alt="" coords="1194,930,1176,1039,1146,1183,1127,1255,1106,1320,1082,1373,1057,1410,1026,1430,1023,1425,1053,1406,1078,1371,1101,1318,1122,1253,1141,1181,1171,1038,1189,930"/>
-<area shape="rect" id="Node000041" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a05ca8fc22e7be0358516ecb73098996e" title="Remove plugin from slot." alt="" coords="833,391,1024,431"/>
-<area shape="poly" id="edge48_Node000001_Node000041" title=" " alt="" coords="1193,862,1187,779,1179,726,1166,668,1148,609,1124,551,1092,497,1053,450,1023,430,1026,426,1056,446,1097,494,1129,549,1153,608,1171,667,1184,725,1192,779,1199,862"/>
-<area shape="rect" id="Node000045" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a90194fa45ef946130b2a299134aa01e1" title="Reset all plugins in the chain (Panic/Double&#45;Stop)" alt="" coords="833,1484,1024,1524"/>
-<area shape="poly" id="edge54_Node000001_Node000045" title=" " alt="" coords="1196,930,1179,1051,1151,1214,1132,1296,1110,1371,1085,1432,1057,1474,1026,1494,1023,1489,1053,1470,1080,1429,1105,1369,1127,1295,1145,1213,1174,1050,1190,929"/>
-<area shape="rect" id="Node000047" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a29767f73e5388a91ef921ebe08176b62" title="Save entire chain state." alt="" coords="833,1548,1024,1588"/>
-<area shape="poly" id="edge56_Node000001_Node000047" title=" " alt="" coords="1196,930,1182,1063,1155,1245,1136,1337,1114,1421,1087,1491,1072,1517,1057,1538,1042,1550,1025,1558,1023,1554,1039,1545,1053,1534,1068,1514,1082,1488,1109,1420,1131,1336,1150,1244,1177,1062,1191,930"/>
-<area shape="rect" id="Node000048" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#af9cffe835ebac825b10b033f7faf06b0" title="Set bypass state for a slot." alt="" coords="833,716,1024,756"/>
-<area shape="poly" id="edge57_Node000001_Node000048" title=" " alt="" coords="1169,868,1119,817,1087,792,1053,770,1023,757,1025,753,1056,766,1090,788,1122,813,1173,864"/>
-<area shape="rect" id="Node000050" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a8858379f5dd644c64ac190fa07922e6d" title="Set dry/wet mix for a slot (0.0 = dry, 1.0 = wet)" alt="" coords="833,1612,1024,1652"/>
-<area shape="poly" id="edge60_Node000001_Node000050" title=" " alt="" coords="1197,930,1185,1074,1159,1275,1141,1378,1118,1472,1090,1549,1074,1579,1057,1602,1042,1614,1025,1623,1023,1618,1039,1609,1053,1598,1069,1576,1085,1547,1112,1470,1135,1377,1154,1275,1180,1073,1192,929"/>
-<area shape="rect" id="Node000051" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#ad0f1f308393df82bbcac445dd54da823" title="Swap plugins between two slots." alt="" coords="833,1676,1024,1716"/>
-<area shape="poly" id="edge61_Node000001_Node000051" title=" " alt="" coords="1198,930,1187,1085,1163,1306,1145,1419,1121,1523,1092,1608,1075,1641,1057,1666,1042,1678,1026,1687,1023,1682,1039,1674,1053,1662,1071,1638,1087,1605,1116,1521,1140,1418,1158,1305,1182,1085,1192,929"/>
+<area shape="rect" id="Node000031" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a871b0ffa96ec2073201f8b80a960ecbb" title="Check if slot is bypassed." alt="" coords="833,588,1024,628"/>
+<area shape="poly" id="edge37_Node000001_Node000031" title=" " alt="" coords="1185,864,1168,814,1141,754,1103,693,1079,666,1053,642,1023,626,1026,621,1056,638,1083,662,1107,690,1145,751,1173,812,1190,862"/>
+<area shape="rect" id="Node000034" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#ad3d64d4092a82321d954487d102aa432" title="Check if a slot was automatically bypassed after unsafe non&#45;finite output." alt="" coords="803,460,1055,500"/>
+<area shape="poly" id="edge40_Node000001_Node000034" title=" " alt="" coords="1192,863,1182,790,1159,696,1141,646,1118,598,1089,553,1053,514,1037,502,1040,498,1056,510,1093,550,1122,595,1146,644,1164,694,1187,789,1197,862"/>
+<area shape="rect" id="Node000035" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#aa697c82aadcaae14cb7caa3bbb8e3356" title="Check if slot is empty." alt="" coords="833,1164,1024,1204"/>
+<area shape="poly" id="edge42_Node000001_Node000035" title=" " alt="" coords="1190,930,1173,980,1145,1041,1107,1102,1083,1130,1056,1154,1026,1171,1023,1166,1053,1150,1079,1126,1103,1099,1141,1038,1168,978,1185,928"/>
+<area shape="rect" id="Node000036" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#aa21da120d1fdbebdb8c0d35dacab5f67" title="Load entire chain state." alt="" coords="833,1228,1024,1268"/>
+<area shape="poly" id="edge43_Node000001_Node000036" title=" " alt="" coords="1194,930,1181,992,1155,1070,1137,1110,1115,1150,1088,1186,1056,1218,1026,1236,1023,1231,1053,1214,1084,1183,1110,1147,1132,1108,1150,1068,1175,990,1189,929"/>
+<area shape="rect" id="Node000037" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a085e2b0a27406629a2dd14ccd02f1223" title="Move plugin from one slot to another." alt="" coords="833,1292,1024,1332"/>
+<area shape="poly" id="edge44_Node000001_Node000037" title=" " alt="" coords="1197,930,1187,1003,1164,1098,1146,1148,1122,1197,1093,1242,1056,1282,1026,1301,1023,1296,1053,1278,1089,1239,1118,1194,1141,1146,1159,1096,1182,1002,1192,929"/>
+<area shape="rect" id="Node000038" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a437fca489c56905d913c32e2215e2a85" title="Prepare for processing." alt="" coords="833,1356,1024,1396"/>
+<area shape="poly" id="edge45_Node000001_Node000038" title=" " alt="" coords="1199,930,1193,1013,1185,1067,1173,1126,1155,1185,1130,1244,1098,1298,1056,1346,1026,1365,1023,1361,1053,1342,1093,1295,1125,1241,1150,1184,1167,1124,1180,1066,1188,1013,1194,929"/>
+<area shape="rect" id="Node000041" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a2e3651b1109e292f881fc3d8a7d11b92" title="Process audio through the effect chain." alt="" coords="833,1420,1024,1460"/>
+<area shape="poly" id="edge47_Node000001_Node000041" title=" " alt="" coords="1194,930,1176,1039,1146,1183,1127,1255,1106,1320,1082,1373,1057,1410,1026,1430,1023,1425,1053,1406,1078,1371,1101,1318,1122,1253,1141,1181,1171,1038,1189,930"/>
+<area shape="rect" id="Node000042" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a05ca8fc22e7be0358516ecb73098996e" title="Remove plugin from slot." alt="" coords="833,391,1024,431"/>
+<area shape="poly" id="edge48_Node000001_Node000042" title=" " alt="" coords="1193,862,1187,779,1179,726,1166,668,1148,609,1124,551,1092,497,1053,450,1023,430,1026,426,1056,446,1097,494,1129,549,1153,608,1171,667,1184,725,1192,779,1199,862"/>
+<area shape="rect" id="Node000046" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a90194fa45ef946130b2a299134aa01e1" title="Reset all plugins in the chain (Panic/Double&#45;Stop)" alt="" coords="833,1484,1024,1524"/>
+<area shape="poly" id="edge54_Node000001_Node000046" title=" " alt="" coords="1196,930,1179,1051,1151,1214,1132,1296,1110,1371,1085,1432,1057,1474,1026,1494,1023,1489,1053,1470,1080,1429,1105,1369,1127,1295,1145,1213,1174,1050,1190,929"/>
+<area shape="rect" id="Node000048" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a29767f73e5388a91ef921ebe08176b62" title="Save entire chain state." alt="" coords="833,1548,1024,1588"/>
+<area shape="poly" id="edge56_Node000001_Node000048" title=" " alt="" coords="1196,930,1182,1063,1155,1245,1136,1337,1114,1421,1087,1491,1072,1517,1057,1538,1042,1550,1025,1558,1023,1554,1039,1545,1053,1534,1068,1514,1082,1488,1109,1420,1131,1336,1150,1244,1177,1062,1191,930"/>
+<area shape="rect" id="Node000049" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#af9cffe835ebac825b10b033f7faf06b0" title="Set bypass state for a slot." alt="" coords="833,716,1024,756"/>
+<area shape="poly" id="edge57_Node000001_Node000049" title=" " alt="" coords="1169,868,1119,817,1087,792,1053,770,1023,757,1025,753,1056,766,1090,788,1122,813,1173,864"/>
+<area shape="rect" id="Node000051" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a8858379f5dd644c64ac190fa07922e6d" title="Set dry/wet mix for a slot (0.0 = dry, 1.0 = wet)" alt="" coords="833,1612,1024,1652"/>
+<area shape="poly" id="edge60_Node000001_Node000051" title=" " alt="" coords="1197,930,1185,1074,1159,1275,1141,1378,1118,1472,1090,1549,1074,1579,1057,1602,1042,1614,1025,1623,1023,1618,1039,1609,1053,1598,1069,1576,1085,1547,1112,1470,1135,1377,1154,1275,1180,1073,1192,929"/>
+<area shape="rect" id="Node000052" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#ad0f1f308393df82bbcac445dd54da823" title="Swap plugins between two slots." alt="" coords="833,1676,1024,1716"/>
+<area shape="poly" id="edge61_Node000001_Node000052" title=" " alt="" coords="1198,930,1187,1085,1163,1306,1145,1419,1121,1523,1092,1608,1075,1641,1057,1666,1042,1678,1026,1687,1023,1682,1039,1674,1053,1662,1071,1638,1087,1605,1116,1521,1140,1418,1158,1305,1182,1085,1192,929"/>
 <area shape="rect" id="Node000005" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a00a6a69855aeed72bf72a3cd390a75dd" title="Insert plugin into slot." alt="" coords="540,136,731,176"/>
 <area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="833,218,802,209,699,179,701,173,803,204,835,213"/>
 <area shape="rect" id="Node000006" href="$de/dfe/classAestra_1_1Audio_1_1AddEffectCommand.html#a794e34f0289c458918b257cc9e07e358" title="Execute the command (first time)" alt="" coords="273,5,452,45"/>
@@ -89,25 +89,25 @@
 <area shape="poly" id="edge30_Node000024_Node000025" title=" " alt="" coords="518,278,467,280,467,275,518,273"/>
 <area shape="rect" id="Node000027" href="$d8/dee/classAestra_1_1Audio_1_1RemovePluginCommand.html#adbe1f47b96a9e9c970a036268a67959f" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="257,325,468,365"/>
 <area shape="poly" id="edge33_Node000026_Node000027" title=" " alt="" coords="517,342,469,344,468,339,517,337"/>
-<area shape="poly" id="edge39_Node000030_Node000020" title=" " alt="" coords="819,604,737,599,738,594,820,599"/>
-<area shape="rect" id="Node000031" href="$d0/d9a/classAestra_1_1Audio_1_1SetEffectBypassCommand.html#a3db908d65982c10891f49a41c1e9f8d7" title="Execute the command (first time)" alt="" coords="538,723,733,763"/>
-<area shape="poly" id="edge37_Node000030_Node000031" title=" " alt="" coords="822,632,804,642,789,659,781,676,773,695,756,713,734,725,731,721,753,709,769,692,776,674,784,656,801,638,819,627"/>
-<area shape="rect" id="Node000032" href="$d0/d9a/classAestra_1_1Audio_1_1SetEffectBypassCommand.html#a432e4bf7538aea50531284f1eb1a5257" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="275,723,450,763"/>
-<area shape="poly" id="edge38_Node000031_Node000032" title=" " alt="" coords="524,745,450,745,450,740,524,740"/>
-<area shape="poly" id="edge41_Node000033_Node000020" title=" " alt="" coords="817,508,804,514,790,525,781,537,771,549,756,561,730,573,728,568,753,556,768,545,777,534,786,521,801,510,815,503"/>
-<area shape="rect" id="Node000038" href="$db/d60/classAestraContent.html#a9274902c21392bdc5757a71c146978fe" title="Load an effect plugin onto the selected track." alt="" coords="541,1356,729,1396"/>
-<area shape="poly" id="edge46_Node000037_Node000038" title=" " alt="" coords="820,1379,730,1379,730,1373,820,1373"/>
-<area shape="poly" id="edge49_Node000041_Node000024" title=" " alt="" coords="880,386,801,337,778,320,753,305,723,293,724,288,756,300,781,315,804,332,883,381"/>
-<area shape="poly" id="edge50_Node000041_Node000026" title=" " alt="" coords="837,390,713,357,714,352,838,385"/>
-<area shape="rect" id="Node000042" href="$da/d71/classAestraUI_1_1PluginUIController.html#a57489bb781858bb33a3298c1bad028de" title="Remove plugin from slot." alt="" coords="533,379,737,419"/>
-<area shape="poly" id="edge51_Node000041_Node000042" title=" " alt="" coords="819,409,737,405,738,400,820,404"/>
-<area shape="rect" id="Node000043" href="$de/dfe/classAestra_1_1Audio_1_1AddEffectCommand.html#af15265d98a2401649a20b830f7916acf" title="Undo the command." alt="" coords="546,443,725,483"/>
-<area shape="poly" id="edge52_Node000041_Node000043" title=" " alt="" coords="820,433,726,449,725,444,819,427"/>
-<area shape="rect" id="Node000044" href="$df/dad/classAestra_1_1Audio_1_1AddPluginCommand.html#a31b8869ba1984f43a80ac18aedfe2a6d" title="Undo the command." alt="" coords="544,507,727,547"/>
-<area shape="poly" id="edge53_Node000041_Node000044" title=" " alt="" coords="829,438,804,450,790,461,781,473,771,485,756,497,728,510,726,505,753,492,768,481,777,470,786,458,801,446,827,433"/>
-<area shape="rect" id="Node000046" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#ae3ec436385410d376d4a27487c2cd195" title="Reset all plugins in the effect chain (panic/hard reset)." alt="" coords="532,1484,739,1524"/>
-<area shape="poly" id="edge55_Node000045_Node000046" title=" " alt="" coords="819,1507,739,1507,739,1501,819,1501"/>
-<area shape="poly" id="edge58_Node000048_Node000031" title=" " alt="" coords="819,741,733,743,733,738,819,736"/>
-<area shape="rect" id="Node000049" href="$d0/d9a/classAestra_1_1Audio_1_1SetEffectBypassCommand.html#ad2d2eaeeabad423eb6152ad65ff9972d" title="Undo the command." alt="" coords="547,787,723,827"/>
-<area shape="poly" id="edge59_Node000048_Node000049" title=" " alt="" coords="832,762,720,789,719,784,831,757"/>
+<area shape="rect" id="Node000030" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#aaf55ccc606bbe0798bf8d3d93b4b9ec7" title="Tell the owner when the chain&#39;s total latency is not what it last announced." alt="" coords="540,1100,731,1140"/>
+<area shape="poly" id="edge36_Node000029_Node000030" title=" " alt="" coords="819,1123,731,1123,731,1117,819,1117"/>
+<area shape="poly" id="edge39_Node000031_Node000020" title=" " alt="" coords="819,604,737,599,738,594,820,599"/>
+<area shape="rect" id="Node000032" href="$d0/d9a/classAestra_1_1Audio_1_1SetEffectBypassCommand.html#a3db908d65982c10891f49a41c1e9f8d7" title="Execute the command (first time)" alt="" coords="538,723,733,763"/>
+<area shape="poly" id="edge38_Node000031_Node000032" title=" " alt="" coords="822,632,804,642,789,659,781,676,773,695,756,713,734,725,731,721,753,709,769,692,776,674,784,656,801,638,819,627"/>
+<area shape="poly" id="edge41_Node000034_Node000020" title=" " alt="" coords="817,508,804,514,790,525,781,537,771,549,756,561,730,573,728,568,753,556,768,545,777,534,786,521,801,510,815,503"/>
+<area shape="rect" id="Node000039" href="$db/d60/classAestraContent.html#a9274902c21392bdc5757a71c146978fe" title="Load an effect plugin onto the selected track." alt="" coords="541,1356,729,1396"/>
+<area shape="poly" id="edge46_Node000038_Node000039" title=" " alt="" coords="820,1379,730,1379,730,1373,820,1373"/>
+<area shape="poly" id="edge49_Node000042_Node000024" title=" " alt="" coords="880,386,801,337,778,320,753,305,723,293,724,288,756,300,781,315,804,332,883,381"/>
+<area shape="poly" id="edge50_Node000042_Node000026" title=" " alt="" coords="837,390,713,357,714,352,838,385"/>
+<area shape="rect" id="Node000043" href="$da/d71/classAestraUI_1_1PluginUIController.html#a57489bb781858bb33a3298c1bad028de" title="Remove plugin from slot." alt="" coords="533,379,737,419"/>
+<area shape="poly" id="edge51_Node000042_Node000043" title=" " alt="" coords="819,409,737,405,738,400,820,404"/>
+<area shape="rect" id="Node000044" href="$de/dfe/classAestra_1_1Audio_1_1AddEffectCommand.html#af15265d98a2401649a20b830f7916acf" title="Undo the command." alt="" coords="546,443,725,483"/>
+<area shape="poly" id="edge52_Node000042_Node000044" title=" " alt="" coords="820,433,726,449,725,444,819,427"/>
+<area shape="rect" id="Node000045" href="$df/dad/classAestra_1_1Audio_1_1AddPluginCommand.html#a31b8869ba1984f43a80ac18aedfe2a6d" title="Undo the command." alt="" coords="544,507,727,547"/>
+<area shape="poly" id="edge53_Node000042_Node000045" title=" " alt="" coords="829,438,804,450,790,461,781,473,771,485,756,497,728,510,726,505,753,492,768,481,777,470,786,458,801,446,827,433"/>
+<area shape="rect" id="Node000047" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#ae3ec436385410d376d4a27487c2cd195" title="Reset all plugins in the effect chain (panic/hard reset)." alt="" coords="532,1484,739,1524"/>
+<area shape="poly" id="edge55_Node000046_Node000047" title=" " alt="" coords="819,1507,739,1507,739,1501,819,1501"/>
+<area shape="poly" id="edge58_Node000049_Node000032" title=" " alt="" coords="819,741,733,743,733,738,819,736"/>
+<area shape="rect" id="Node000050" href="$d0/d9a/classAestra_1_1Audio_1_1SetEffectBypassCommand.html#ad2d2eaeeabad423eb6152ad65ff9972d" title="Undo the command." alt="" coords="547,787,723,827"/>
+<area shape="poly" id="edge59_Node000049_Node000050" title=" " alt="" coords="832,762,720,789,719,784,831,757"/>
 </map>

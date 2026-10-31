@@ -116,6 +116,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a2cfd4fa38cac26a9267538acb0ad1369" id="r_a2cfd4fa38cac26a9267538acb0ad1369"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d11/classAestra_1_1Audio_1_1ArrangePatternCommand.html#a2cfd4fa38cac26a9267538acb0ad1369">getName</a> () const override</td></tr>
 <tr class="memdesc:a2cfd4fa38cac26a9267538acb0ad1369"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a human-readable name for the command (for UI)  <br /></td></tr>
 <tr class="separator:a2cfd4fa38cac26a9267538acb0ad1369"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a662cb196d448d466c16852e0caa15fe7" id="r_a662cb196d448d466c16852e0caa15fe7"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/da9/structAestra_1_1Audio_1_1ClipInstanceID.html">ClipInstanceID</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d11/classAestra_1_1Audio_1_1ArrangePatternCommand.html#a662cb196d448d466c16852e0caa15fe7">getClipId</a> () const</td></tr>
+<tr class="memdesc:a662cb196d448d466c16852e0caa15fe7"><td class="mdescLeft">&#160;</td><td class="mdescRight">The timeline clip this command placed; invalid until it has executed.  <br /></td></tr>
+<tr class="separator:a662cb196d448d466c16852e0caa15fe7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8953e5881385bf9db0fc44dbbae2edd9" id="r_a8953e5881385bf9db0fc44dbbae2edd9"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d11/classAestra_1_1Audio_1_1ArrangePatternCommand.html#a8953e5881385bf9db0fc44dbbae2edd9">getSizeInBytes</a> () const override</td></tr>
 <tr class="memdesc:a8953e5881385bf9db0fc44dbbae2edd9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Memory size approximation for this command (for history limits)  <br /></td></tr>
 <tr class="separator:a8953e5881385bf9db0fc44dbbae2edd9"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -224,7 +227,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#a22e8a4fe943a30ec50ff3d83d3bff9ee">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html#l00097">97</a> of file <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html">ArrangePatternCommand.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html#l00099">99</a> of file <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html">ArrangePatternCommand.h</a>.</p>
 
 </div>
 </div>
@@ -257,7 +260,7 @@ Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html#l00032">32</a> of file <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html">ArrangePatternCommand.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00026">Aestra::Audio::PatternManager::getPattern()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00643">Aestra::Audio::TrackManager::getPatternManager()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00636">Aestra::Audio::TrackManager::getPlaylistModel()</a>.</p>
+<p class="reference">References <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00026">Aestra::Audio::PatternManager::getPattern()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00649">Aestra::Audio::TrackManager::getPatternManager()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00642">Aestra::Audio::TrackManager::getPlaylistModel()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html#l00090">redo()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -274,6 +277,35 @@ Public Member Functions</h2></td></tr>
 <div id="dynsection-3-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d11/classAestra_1_1Audio_1_1ArrangePatternCommand_ad4b9c78f82e9865b469af4bd109f6643_icgraph.svg" width="488" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
+
+</div>
+</div>
+<a id="a662cb196d448d466c16852e0caa15fe7" name="a662cb196d448d466c16852e0caa15fe7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a662cb196d448d466c16852e0caa15fe7">&#9670;&#160;</a></span>getClipId()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../dd/da9/structAestra_1_1Audio_1_1ClipInstanceID.html">ClipInstanceID</a> Aestra::Audio::ArrangePatternCommand::getClipId </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The timeline clip this command placed; invalid until it has executed. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html#l00097">97</a> of file <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html">ArrangePatternCommand.h</a>.</p>
 
 </div>
 </div>
@@ -335,7 +367,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#a75361941c8c0630fb345a45d2e36eb1d">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html#l00096">96</a> of file <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html">ArrangePatternCommand.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html#l00098">98</a> of file <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html">ArrangePatternCommand.h</a>.</p>
 
 </div>
 </div>
@@ -408,7 +440,7 @@ Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html#l00079">79</a> of file <a class="el" href="../../d3/d39/ArrangePatternCommand_8h_source.html">ArrangePatternCommand.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00636">Aestra::Audio::TrackManager::getPlaylistModel()</a>, and <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00292">Aestra::Audio::PlaylistModel::removeClip()</a>.</p>
+<p class="reference">References <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00642">Aestra::Audio::TrackManager::getPlaylistModel()</a>, and <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00296">Aestra::Audio::PlaylistModel::removeClip()</a>.</p>
 <div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-5-summary" class="dynsummary" style="display:block;">

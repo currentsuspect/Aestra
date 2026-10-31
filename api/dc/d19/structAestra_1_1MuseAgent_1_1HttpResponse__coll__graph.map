@@ -1,9 +1,13 @@
 <map id="Aestra::MuseAgent::HttpResponse" name="Aestra::MuseAgent::HttpResponse">
-<area shape="rect" id="Node000001" title="Minimal blocking HTTPS POST via libcurl — all a provider adapter needs." alt="" coords="5,197,159,237"/>
-<area shape="rect" id="Node000002" title=" " alt="" coords="19,95,70,120"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="48,133,57,172,69,196,65,198,51,174,43,134"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="95,95,181,120"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="128,133,94,198,90,196,123,131"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="69,5,207,45"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="141,59,141,94,135,94,135,59"/>
+<area shape="rect" id="Node000001" title="Minimal blocking HTTPS POST via libcurl — all a provider adapter needs." alt="" coords="106,197,259,237"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,95,56,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="33,133,37,154,47,172,74,192,107,204,105,209,72,197,43,175,32,156,28,134"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="87,95,126,120"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="101,133,100,153,105,172,116,185,130,195,126,199,112,189,100,175,94,154,96,133"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="202,95,289,120"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="245,134,240,155,232,175,211,199,207,195,227,172,235,153,240,133"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="176,5,315,45"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="248,59,248,94,243,94,243,59"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="313,95,364,120"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="325,133,307,155,284,176,240,200,238,195,281,171,303,151,321,129"/>
 </map>

@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::VST3PluginInstance::process" name="Aestra::Audio::VST3PluginInstance::process">
+<area shape="rect" id="Node000001" title="Process audio through the plugin." alt="" coords="5,5,196,45"/>
+<area shape="rect" id="Node000002" href="$d6/d19/classAestra_1_1Audio_1_1HostTransportClock.html#ad57774184ccad5b1ca5f1596e85f41af" title="Any thread. A snapshot that kept moving under the reader comes back !valid." alt="" coords="244,5,451,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="196,23,230,23,230,28,196,28"/>
+</map>

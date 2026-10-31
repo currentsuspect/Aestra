@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::PluginScanner::scanBlocking" name="Aestra::Audio::PluginScanner::scanBlocking">
+<area shape="rect" id="Node000001" title="Perform blocking scan." alt="" coords="5,5,215,45"/>
+<area shape="rect" id="Node000002" href="$d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#ad5fe1de8792d45ba78a8cbe5588a1cbd" title="Cancel scan and join the scanner thread." alt="" coords="263,5,472,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="215,23,249,23,249,28,215,28"/>
+</map>

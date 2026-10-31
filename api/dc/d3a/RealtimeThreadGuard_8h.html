@@ -110,6 +110,9 @@ $(function() {
 Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dce/classAestra_1_1Audio_1_1ScopedRealtimeAudioThread.html">Aestra::Audio::ScopedRealtimeAudioThread</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d86/classAestra_1_1Audio_1_1ScopedRealtimeMisuseContext.html">Aestra::Audio::ScopedRealtimeMisuseContext</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Marks <code>owner</code> as the accountable owner of misuse reported on this thread while in scope.  <a href="../../dc/d86/classAestra_1_1Audio_1_1ScopedRealtimeMisuseContext.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
 Namespaces</h2></td></tr>
@@ -146,6 +149,8 @@ Variables</h2></td></tr>
 <tr class="separator:a1aeceb675c84130d7b6eedbee91e0965"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a963783e3afb683ddd03c84d7452ec3b3" id="r_a963783e3afb683ddd03c84d7452ec3b3"><td class="memItemLeft" align="right" valign="top">std::atomic&lt; RealtimeMisuseHandler &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d3a/RealtimeThreadGuard_8h.html#a963783e3afb683ddd03c84d7452ec3b3">Aestra::Audio::g_realtimeMisuseHandler</a> {nullptr}</td></tr>
 <tr class="separator:a963783e3afb683ddd03c84d7452ec3b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a943bf320542b72e6b2288038cfd9c3d7" id="r_a943bf320542b72e6b2288038cfd9c3d7"><td class="memItemLeft" align="right" valign="top">thread_local void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/d3a/RealtimeThreadGuard_8h.html#a943bf320542b72e6b2288038cfd9c3d7">Aestra::Audio::g_realtimeMisuseContext</a> = nullptr</td></tr>
+<tr class="separator:a943bf320542b72e6b2288038cfd9c3d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>The single source of truth for real-time thread state and misuse reporting (B-004 threading model, B-005 constraints). </p>
@@ -289,7 +294,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d3a/RealtimeThreadGuard_8h_source.html#l00201">201</a> of file <a class="el" href="../../dc/d3a/RealtimeThreadGuard_8h_source.html">RealtimeThreadGuard.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d3a/RealtimeThreadGuard_8h_source.html#l00209">209</a> of file <a class="el" href="../../dc/d3a/RealtimeThreadGuard_8h_source.html">RealtimeThreadGuard.h</a>.</p>
 
 </div>
 </div>
@@ -317,7 +322,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d3a/RealtimeThreadGuard_8h_source.html#l00205">205</a> of file <a class="el" href="../../dc/d3a/RealtimeThreadGuard_8h_source.html">RealtimeThreadGuard.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d3a/RealtimeThreadGuard_8h_source.html#l00213">213</a> of file <a class="el" href="../../dc/d3a/RealtimeThreadGuard_8h_source.html">RealtimeThreadGuard.h</a>.</p>
 
 </div>
 </div>
@@ -345,7 +350,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d3a/RealtimeThreadGuard_8h_source.html#l00185">185</a> of file <a class="el" href="../../dc/d3a/RealtimeThreadGuard_8h_source.html">RealtimeThreadGuard.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d3a/RealtimeThreadGuard_8h_source.html#l00193">193</a> of file <a class="el" href="../../dc/d3a/RealtimeThreadGuard_8h_source.html">RealtimeThreadGuard.h</a>.</p>
 
 </div>
 </div>
@@ -371,6 +376,30 @@ Variables</h2></td></tr>
 </div><div class="memdoc">
 
 <p class="definition">Definition at line <a class="el" href="../../dc/d3a/RealtimeThreadGuard_8h_source.html#l00180">180</a> of file <a class="el" href="../../dc/d3a/RealtimeThreadGuard_8h_source.html">RealtimeThreadGuard.h</a>.</p>
+
+</div>
+</div>
+<a id="a943bf320542b72e6b2288038cfd9c3d7" name="a943bf320542b72e6b2288038cfd9c3d7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a943bf320542b72e6b2288038cfd9c3d7">&#9670;&#160;</a></span>g_realtimeMisuseContext</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">thread_local void* Aestra::Audio::g_realtimeMisuseContext = nullptr</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../dc/d3a/RealtimeThreadGuard_8h_source.html#l00189">189</a> of file <a class="el" href="../../dc/d3a/RealtimeThreadGuard_8h_source.html">RealtimeThreadGuard.h</a>.</p>
 
 </div>
 </div>

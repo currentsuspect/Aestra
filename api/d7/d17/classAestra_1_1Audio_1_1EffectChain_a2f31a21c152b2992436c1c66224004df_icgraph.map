@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::EffectChain::getTotalLatency" name="Aestra::Audio::EffectChain::getTotalLatency">
+<area shape="rect" id="Node000001" title="Get total chain latency in samples." alt="" coords="244,5,435,45"/>
+<area shape="rect" id="Node000002" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#aaf55ccc606bbe0798bf8d3d93b4b9ec7" title="Tell the owner when the chain&#39;s total latency is not what it last announced." alt="" coords="5,5,196,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="230,28,196,28,196,23,230,23"/>
+</map>

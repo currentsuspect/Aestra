@@ -1,0 +1,288 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="Node000000" title=" " alt="" coords="5,1386,151,1426"/>
+<area shape="rect" id="Node000001" href="$d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html" title="Pre&#45;rendered, length&#45;preserving versions of one sampler source, one per semitone." alt="" coords="209,109,373,149"/>
+<area shape="poly" id="edge115_Node000000_Node000001" title=" " alt="" coords="78,1372,88,1117,110,732,127,537,146,365,169,233,182,188,197,159,210,147,213,151,201,163,187,190,174,234,151,365,132,538,116,732,93,1117,83,1372"/>
+<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="199,2647,384,2672"/>
+<area shape="poly" id="edge116_Node000000_Node000002" title=" " alt="" coords="88,1440,290,2646,285,2647,82,1441"/>
+<area shape="rect" id="Node000003" href="$d0/d4b/classAestra_1_1Audio_1_1ADSRDisplayComponent.html" title="ADSR envelope visualization component." alt="" coords="452,618,655,658"/>
+<area shape="poly" id="edge117_Node000002_Node000003" title=" " alt="" coords="290,2633,294,2254,300,1955,311,1627,328,1301,352,1012,368,891,386,790,406,715,418,688,430,669,450,652,453,656,434,672,422,691,411,717,391,792,373,892,358,1013,333,1302,316,1627,305,1955,299,2254,295,2633"/>
+<area shape="rect" id="Node000004" href="$d9/d47/classAestra_1_1Audio_1_1ChannelStrip.html" title="Channel strip component &#45; represents one track in the mixer Shows volume fader, pan control,..." alt="" coords="453,683,653,708"/>
+<area shape="poly" id="edge118_Node000002_Node000004" title=" " alt="" coords="290,2633,293,2262,299,1970,310,1650,327,1333,352,1051,367,933,385,835,406,763,418,737,430,718,451,702,455,706,434,722,422,739,411,764,391,837,373,934,357,1051,332,1333,315,1650,305,1970,299,2262,295,2633"/>
+<area shape="rect" id="Node000005" href="$df/d62/classAestra_1_1Audio_1_1MixerView.html" title="Mixer view &#45; shows all tracks as channel strips Similar to a traditional mixing console." alt="" coords="461,732,646,758"/>
+<area shape="poly" id="edge119_Node000002_Node000005" title=" " alt="" coords="290,2633,294,2270,300,1986,311,1674,329,1365,353,1091,369,976,386,882,407,811,418,785,430,767,444,756,459,748,462,752,447,760,434,771,423,788,412,813,392,883,374,977,358,1092,334,1366,317,1674,306,1986,299,2271,295,2633"/>
+<area shape="rect" id="Node000006" href="$d6/de5/classAestra_1_1Audio_1_1PatternBrowserPanel.html" title=" " alt="" coords="445,60,661,100"/>
+<area shape="poly" id="edge120_Node000002_Node000006" title=" " alt="" coords="291,2633,303,2142,331,1312,350,885,373,512,400,238,414,154,422,126,430,110,443,98,447,101,434,113,427,128,419,155,405,239,378,512,355,885,336,1312,308,2142,296,2633"/>
+<area shape="rect" id="Node000015" href="$d1/d11/classAestra_1_1Audio_1_1TrackManagerUI.html" title="UI wrapper for TrackManager." alt="" coords="442,124,665,150"/>
+<area shape="poly" id="edge121_Node000002_Node000015" title=" " alt="" coords="291,2633,303,2150,330,1336,349,917,372,552,385,403,399,284,414,202,422,175,430,159,443,148,447,152,434,163,427,177,419,203,404,285,391,404,378,552,355,918,335,1336,308,2150,296,2633"/>
+<area shape="rect" id="Node000019" href="$dd/ddd/classAestra_1_1Audio_1_1TrackUIComponent.html" title="UI wrapper for Track class." alt="" coords="433,831,673,856"/>
+<area shape="poly" id="edge122_Node000002_Node000019" title=" " alt="" coords="290,2633,296,2288,303,2019,315,1724,332,1432,356,1173,371,1065,389,975,408,908,430,867,445,854,449,859,434,871,413,910,394,977,377,1066,362,1174,338,1433,320,1724,308,2019,301,2288,296,2633"/>
+<area shape="rect" id="Node000020" href="$dd/d01/classAestra_1_1Audio_1_1WaveformDisplayComponent.html" title="Waveform display component with zoom and loop point overlays." alt="" coords="437,881,670,921"/>
+<area shape="poly" id="edge123_Node000002_Node000020" title=" " alt="" coords="290,2633,297,2299,306,2040,318,1756,336,1476,360,1227,375,1122,391,1036,409,971,430,931,443,919,446,923,434,935,414,973,396,1037,380,1123,365,1227,341,1476,324,1757,311,2040,303,2299,296,2633"/>
+<area shape="rect" id="Node000009" href="$dc/d3e/classAestra_1_1Audio_1_1WindowPanel.html" title="WindowPanel &#45; A dockable window panel with title bar." alt="" coords="451,782,655,807"/>
+<area shape="poly" id="edge124_Node000002_Node000009" title=" " alt="" coords="290,2633,295,2277,301,2001,313,1697,330,1397,355,1131,370,1020,387,928,407,859,418,834,430,817,449,802,452,806,434,820,423,837,412,861,393,929,375,1020,360,1132,336,1398,318,1697,307,2001,300,2278,295,2633"/>
+<area shape="rect" id="Node000021" href="$d3/d5b/classAestra_1_1AuditionFilesPage.html" title="The files column of Audition&#39;s Files page (FD&#45;26, V81&#45;A): folders and audio only, set like the rest o..." alt="" coords="460,946,647,971"/>
+<area shape="poly" id="edge131_Node000002_Node000021" title=" " alt="" coords="290,2633,297,2307,305,2055,318,1779,336,1507,360,1266,374,1165,391,1081,409,1019,430,981,443,969,458,961,461,966,446,974,434,984,414,1021,396,1083,379,1165,365,1266,341,1508,323,1780,311,2055,302,2307,296,2633"/>
+<area shape="rect" id="Node000022" href="$da/d9c/classAestra_1_1AuditionHub.html" title=" " alt="" coords="477,995,629,1020"/>
+<area shape="poly" id="edge132_Node000002_Node000022" title=" " alt="" coords="290,2633,298,2316,319,1804,337,1540,361,1306,375,1208,392,1127,410,1067,430,1030,451,1014,476,1005,478,1010,454,1019,434,1033,415,1069,397,1129,381,1209,366,1307,343,1541,325,1804,303,2316,296,2633"/>
+<area shape="rect" id="Node000016" href="$d2/db1/classAestra_1_1AuditionQueuePage.html" title="The queue, as a page of the Audition hub (FD&#45;26, V81&#45;A): what will play, in order." alt="" coords="454,174,653,199"/>
+<area shape="poly" id="edge133_Node000002_Node000016" title=" " alt="" coords="291,2633,303,2158,331,1360,350,950,373,593,400,331,414,250,422,224,430,209,452,192,455,196,434,212,427,226,419,251,405,332,378,593,356,951,336,1360,308,2158,296,2633"/>
+<area shape="rect" id="Node000023" href="$d6/da7/classAestra_1_1BPMDisplay.html" title="BPM Display Component." alt="" coords="478,1044,629,1070"/>
+<area shape="poly" id="edge134_Node000002_Node000023" title=" " alt="" coords="290,2633,299,2324,321,1828,339,1573,363,1346,377,1252,393,1174,410,1115,430,1079,452,1063,477,1055,479,1060,454,1068,434,1083,415,1117,398,1175,382,1253,368,1347,344,1573,326,1828,304,2324,296,2633"/>
+<area shape="rect" id="Node000024" href="$d8/d2f/classAestra_1_1ConfirmationDialog.html" title="Confirmation dialog for unsaved changes prompt." alt="" coords="454,1094,653,1119"/>
+<area shape="poly" id="edge135_Node000002_Node000024" title=" " alt="" coords="291,2633,299,2333,322,1853,340,1606,364,1387,378,1295,394,1220,411,1163,430,1129,452,1112,455,1117,434,1132,416,1165,399,1221,383,1296,369,1387,346,1606,328,1853,305,2333,296,2633"/>
+<area shape="rect" id="Node000025" href="$da/d9f/classAestra_1_1ISettingsPage.html" title="Interface for a settings page in the unified Settings Dialog." alt="" coords="473,1143,633,1168"/>
+<area shape="poly" id="edge136_Node000002_Node000025" title=" " alt="" coords="291,2633,300,2341,324,1877,342,1638,366,1427,379,1339,395,1266,411,1211,430,1178,449,1163,472,1154,474,1159,452,1168,434,1181,416,1214,400,1267,385,1340,371,1428,347,1639,329,1877,305,2341,296,2633"/>
+<area shape="rect" id="Node000031" href="$d1/d48/classAestra_1_1MissingAssetsDialog.html" title="Modal report for audio assets that went missing or moved (T&#45;7, C&#45;004)." alt="" coords="450,1192,657,1218"/>
+<area shape="poly" id="edge142_Node000002_Node000031" title=" " alt="" coords="291,2633,301,2350,325,1902,344,1672,367,1468,381,1382,396,1312,412,1260,430,1227,448,1213,451,1217,434,1231,417,1262,401,1314,386,1383,372,1468,349,1672,331,1902,306,2351,296,2633"/>
+<area shape="rect" id="Node000032" href="$de/d93/classAestra_1_1PerformanceHUD.html" title="Performance HUD overlay." alt="" coords="461,1242,646,1267"/>
+<area shape="poly" id="edge143_Node000002_Node000032" title=" " alt="" coords="291,2633,302,2359,327,1926,345,1704,369,1508,382,1426,397,1358,412,1308,430,1277,444,1265,459,1257,461,1262,446,1270,434,1280,417,1310,402,1360,387,1427,374,1509,351,1705,332,1926,307,2359,296,2633"/>
+<area shape="rect" id="Node000033" href="$d0/dcc/classAestra_1_1RecoveryDialog.html" title="Recovery dialog shown on startup when autosave is detected." alt="" coords="466,1291,641,1316"/>
+<area shape="poly" id="edge144_Node000002_Node000033" title=" " alt="" coords="291,2633,302,2368,328,1951,347,1738,370,1549,397,1405,413,1356,430,1326,446,1313,465,1305,467,1310,449,1318,434,1329,418,1358,403,1406,375,1549,352,1738,334,1952,308,2368,296,2634"/>
+<area shape="rect" id="Node000034" href="$d8/d6f/classAestra_1_1SettingsDialog.html" title=" " alt="" coords="470,1340,637,1366"/>
+<area shape="poly" id="edge145_Node000002_Node000034" title=" " alt="" coords="291,2633,303,2377,330,1976,349,1771,372,1589,398,1451,414,1404,430,1375,448,1361,469,1353,471,1358,451,1366,434,1379,418,1406,404,1452,377,1590,354,1771,335,1976,309,2377,296,2633"/>
+<area shape="rect" id="Node000035" href="$db/de1/classAestra_1_1ThreadCountDisplay.html" title=" " alt="" coords="451,1390,655,1415"/>
+<area shape="poly" id="edge146_Node000002_Node000035" title=" " alt="" coords="291,2633,304,2385,331,2000,350,1803,373,1629,399,1497,414,1452,430,1425,449,1410,453,1414,434,1428,419,1454,405,1498,378,1630,356,1804,337,2001,309,2386,296,2633"/>
+<area shape="rect" id="Node000036" href="$d9/d49/classAestra_1_1TimeSignatureDisplay.html" title="Time Signature Display Component." alt="" coords="445,1439,661,1464"/>
+<area shape="poly" id="edge147_Node000002_Node000036" title=" " alt="" coords="291,2633,305,2394,333,2025,352,1837,375,1670,400,1543,415,1500,430,1474,444,1462,447,1467,434,1477,420,1503,406,1545,380,1671,357,1837,338,2025,310,2395,297,2633"/>
+<area shape="rect" id="Node000037" href="$d7/de9/classAestra_1_1TimerDisplay.html" title="Timer Display Component." alt="" coords="474,1488,633,1514"/>
+<area shape="poly" id="edge148_Node000002_Node000037" title=" " alt="" coords="291,2633,306,2403,334,2050,354,1870,376,1711,401,1590,415,1548,430,1523,450,1508,473,1500,475,1505,452,1513,434,1527,420,1551,407,1591,381,1711,359,1870,340,2050,311,2404,297,2634"/>
+<area shape="rect" id="Node000038" href="$d9/d85/classAestra_1_1TransportBar.html" title="Transport bar component." alt="" coords="476,1538,631,1563"/>
+<area shape="poly" id="edge149_Node000002_Node000038" title=" " alt="" coords="292,2633,307,2412,336,2074,355,1902,378,1751,402,1636,416,1597,430,1573,451,1557,475,1549,477,1554,453,1562,434,1576,421,1599,408,1637,383,1752,361,1903,341,2074,312,2412,297,2633"/>
+<area shape="rect" id="Node000039" href="$de/dc2/classAestra_1_1TransportInfoContainer.html" title="Transport Info Container." alt="" coords="443,1587,663,1612"/>
+<area shape="poly" id="edge150_Node000002_Node000039" title=" " alt="" coords="290,2633,291,2435,295,2289,305,2130,322,1971,347,1824,364,1760,383,1704,405,1657,430,1622,444,1611,447,1615,434,1626,409,1660,388,1706,369,1761,352,1825,327,1972,311,2131,301,2290,296,2435,295,2633"/>
+<area shape="rect" id="Node000040" href="$db/d60/classAestraContent.html" title="Main content area for Aestra." alt="" coords="496,1636,611,1662"/>
+<area shape="poly" id="edge151_Node000002_Node000040" title=" " alt="" coords="290,2633,292,2443,298,2305,308,2153,325,2002,350,1863,366,1802,385,1749,406,1705,430,1671,444,1660,461,1652,495,1644,496,1650,462,1657,447,1664,434,1675,410,1707,389,1751,371,1804,355,1864,331,2003,314,2154,303,2305,298,2443,295,2633"/>
+<area shape="rect" id="Node000041" href="$d8/db1/classAestraRootComponent.html" title="Root component that contains the custom window." alt="" coords="469,1686,638,1711"/>
+<area shape="poly" id="edge152_Node000002_Node000041" title=" " alt="" coords="290,2633,294,2452,300,2320,311,2177,329,2034,353,1902,369,1844,386,1794,407,1752,430,1721,447,1707,467,1699,469,1704,450,1712,434,1724,411,1755,391,1796,374,1846,358,1903,334,2034,317,2177,306,2320,299,2452,295,2633"/>
+<area shape="rect" id="Node000042" href="$d3/d27/classAestraUI_1_1AestraPanelWindow.html" title="Unified panel chrome for all child windows (plugin editors, Settings, etc.)." alt="" coords="446,1735,661,1760"/>
+<area shape="poly" id="edge153_Node000002_Node000042" title=" " alt="" coords="290,2633,295,2460,303,2335,314,2200,332,2065,356,1941,371,1886,388,1839,408,1800,430,1770,444,1759,447,1763,434,1774,413,1802,393,1841,376,1888,361,1942,337,2065,320,2200,308,2335,301,2460,296,2633"/>
+<area shape="rect" id="Node000056" href="$da/d75/classAestraUI_1_1AudioVisualizer.html" title="Audio Visualizer Component." alt="" coords="460,1784,647,1810"/>
+<area shape="poly" id="edge167_Node000002_Node000056" title=" " alt="" coords="291,2633,297,2469,305,2351,318,2223,335,2096,359,1980,374,1929,390,1884,409,1847,430,1819,458,1801,461,1806,434,1823,414,1850,395,1886,379,1930,364,1981,340,2097,323,2224,310,2351,302,2469,296,2633"/>
+<area shape="rect" id="Node000057" href="$df/d31/classAestraUI_1_1CPUIndicator.html" title=" " alt="" coords="468,1834,639,1859"/>
+<area shape="poly" id="edge168_Node000002_Node000057" title=" " alt="" coords="291,2633,299,2477,321,2247,339,2128,362,2019,392,1929,410,1895,430,1868,447,1856,466,1848,468,1852,450,1860,434,1872,415,1897,397,1931,367,2020,344,2129,326,2248,304,2478,296,2633"/>
+<area shape="rect" id="Node000058" href="$d4/d1f/classAestraUI_1_1ChannelStrip.html" title=" " alt="" coords="469,1883,638,1908"/>
+<area shape="poly" id="edge169_Node000002_Node000058" title=" " alt="" coords="291,2633,301,2485,324,2270,342,2159,365,2058,394,1974,411,1942,430,1918,447,1905,467,1897,469,1902,450,1910,434,1922,416,1945,399,1976,370,2059,347,2160,329,2271,306,2486,296,2633"/>
+<area shape="rect" id="Node000059" href="$d6/dd8/classAestraUI_1_1ClockDisplay.html" title=" " alt="" coords="468,1932,639,1958"/>
+<area shape="poly" id="edge170_Node000002_Node000059" title=" " alt="" coords="292,2633,302,2495,327,2294,345,2191,368,2097,396,2019,412,1990,430,1967,447,1955,467,1946,469,1951,450,1959,434,1971,417,1993,401,2022,373,2098,350,2192,332,2295,308,2495,297,2634"/>
+<area shape="rect" id="Node000060" href="$d7/d5c/classAestraUI_1_1DialogBox.html" title=" " alt="" coords="477,1982,630,2007"/>
+<area shape="poly" id="edge171_Node000002_Node000060" title=" " alt="" coords="292,2633,305,2503,330,2317,349,2222,371,2135,398,2065,414,2037,430,2016,451,2002,476,1994,477,1999,454,2007,434,2020,418,2040,403,2067,376,2137,354,2223,335,2318,310,2503,297,2633"/>
+<area shape="rect" id="Node000061" href="$dc/d87/classAestraUI_1_1EffectChainRack.html" title=" " alt="" coords="457,2031,649,2056"/>
+<area shape="poly" id="edge172_Node000002_Node000061" title=" " alt="" coords="293,2633,307,2511,334,2341,352,2254,374,2175,400,2110,415,2085,430,2066,456,2049,458,2054,434,2070,419,2088,405,2112,379,2176,357,2255,339,2342,312,2512,298,2633"/>
+<area shape="rect" id="Node000062" href="$d5/d99/classAestraUI_1_1FileBrowser.html" title="File Browser Component." alt="" coords="472,2080,635,2106"/>
+<area shape="poly" id="edge173_Node000002_Node000062" title=" " alt="" coords="293,2633,309,2521,337,2365,356,2286,377,2214,402,2155,430,2115,449,2102,471,2094,473,2099,452,2107,434,2119,407,2157,382,2216,361,2287,342,2366,314,2522,298,2634"/>
+<area shape="rect" id="Node000063" href="$df/d86/classAestraUI_1_1FilePreviewPanel.html" title=" " alt="" coords="455,2130,651,2155"/>
+<area shape="poly" id="edge174_Node000002_Node000063" title=" " alt="" coords="294,2633,311,2530,340,2389,359,2318,380,2253,404,2200,430,2164,454,2149,456,2154,434,2168,409,2203,385,2255,364,2319,345,2390,316,2531,299,2634"/>
+<area shape="rect" id="Node000064" href="$df/d7b/classAestraUI_1_1ForwardButton.html" title=" " alt="" coords="463,2179,644,2204"/>
+<area shape="poly" id="edge175_Node000002_Node000064" title=" " alt="" coords="290,2633,294,2551,301,2497,312,2438,330,2377,355,2317,388,2262,430,2214,461,2196,464,2201,434,2218,392,2265,359,2319,335,2378,318,2439,306,2498,299,2552,295,2633"/>
+<area shape="rect" id="Node000065" href="$d9/d5b/classAestraUI_1_1InsertSlot.html" title=" " alt="" coords="479,2228,627,2254"/>
+<area shape="poly" id="edge176_Node000002_Node000065" title=" " alt="" coords="291,2633,298,2559,319,2459,337,2405,360,2353,391,2305,430,2263,453,2249,478,2241,480,2246,455,2254,434,2267,396,2308,365,2356,342,2407,324,2460,303,2560,296,2634"/>
+<area shape="rect" id="Node000066" href="$d5/dfb/classAestraUI_1_1LoadingSpinner.html" title=" " alt="" coords="460,2278,647,2303"/>
+<area shape="poly" id="edge177_Node000002_Node000066" title=" " alt="" coords="292,2633,303,2567,326,2480,343,2434,366,2389,395,2348,430,2312,459,2296,461,2301,434,2316,399,2351,371,2392,348,2436,331,2482,308,2568,298,2634"/>
+<area shape="rect" id="Node000067" href="$dd/d90/classAestraUI_1_1MixerPanel.html" title=" " alt="" coords="475,2327,632,2352"/>
+<area shape="poly" id="edge178_Node000002_Node000067" title=" " alt="" coords="294,2633,308,2575,333,2502,351,2463,373,2426,399,2391,430,2362,451,2349,474,2342,475,2347,453,2354,434,2366,403,2395,377,2429,355,2465,338,2504,313,2577,300,2634"/>
+<area shape="rect" id="Node000068" href="$d9/d9a/classAestraUI_1_1ModalOverlay.html" title=" " alt="" coords="465,2376,642,2402"/>
+<area shape="poly" id="edge179_Node000002_Node000068" title=" " alt="" coords="297,2633,313,2585,340,2524,379,2462,403,2435,431,2411,463,2395,466,2400,433,2415,407,2438,383,2466,345,2527,318,2587,302,2635"/>
+<area shape="rect" id="Node000069" href="$dd/db3/classAestraUI_1_1NUIComboBox.html" title=" " alt="" coords="463,2426,644,2451"/>
+<area shape="poly" id="edge180_Node000002_Node000069" title=" " alt="" coords="301,2633,319,2594,348,2547,385,2499,431,2460,461,2446,464,2451,433,2465,389,2503,352,2550,324,2597,305,2635"/>
+<area shape="rect" id="Node000070" href="$d3/da8/classAestraUI_1_1NUIMeter.html" title=" " alt="" coords="479,2475,627,2500"/>
+<area shape="poly" id="edge181_Node000002_Node000070" title=" " alt="" coords="306,2634,356,2571,391,2537,431,2509,478,2492,480,2497,433,2514,394,2541,360,2574,310,2637"/>
+<area shape="rect" id="Node000073" href="$d2/d39/classAestraUI_1_1NUIPanel.html" title=" " alt="" coords="481,2524,626,2550"/>
+<area shape="poly" id="edge184_Node000002_Node000073" title=" " alt="" coords="315,2636,366,2596,398,2576,431,2559,479,2544,481,2549,433,2564,400,2580,369,2600,318,2640"/>
+<area shape="rect" id="Node000074" href="$dc/dc6/classAestraUI_1_1NUIPopupMenu.html" title=" " alt="" coords="460,2574,647,2599"/>
+<area shape="poly" id="edge185_Node000002_Node000074" title=" " alt="" coords="336,2640,431,2608,479,2596,481,2602,433,2613,338,2645"/>
+<area shape="rect" id="Node000076" href="$d8/dc0/classAestraUI_1_1NUIScrollView.html" title=" " alt="" coords="464,2623,643,2648"/>
+<area shape="poly" id="edge187_Node000002_Node000076" title=" " alt="" coords="397,2647,463,2641,464,2647,398,2653"/>
+<area shape="rect" id="Node000077" href="$d6/de0/classAestraUI_1_1NUIToggle.html" title=" " alt="" coords="477,2672,629,2698"/>
+<area shape="poly" id="edge188_Node000002_Node000077" title=" " alt="" coords="398,2667,477,2675,477,2680,397,2673"/>
+<area shape="rect" id="Node000082" href="$d3/d02/classAestraUI_1_1NotificationToast.html" title="Transient status pill (toast)." alt="" coords="456,2722,651,2747"/>
+<area shape="poly" id="edge193_Node000002_Node000082" title=" " alt="" coords="338,2675,433,2706,484,2719,483,2724,431,2712,337,2680"/>
+<area shape="rect" id="Node000083" href="$d2/d91/classAestraUI_1_1PhaseScope.html" title=" " alt="" coords="471,2771,635,2796"/>
+<area shape="poly" id="edge194_Node000002_Node000083" title=" " alt="" coords="318,2679,369,2719,400,2739,433,2756,472,2769,470,2774,431,2761,398,2744,366,2723,315,2683"/>
+<area shape="rect" id="Node000084" href="$d3/df4/classAestraUI_1_1PianoRollControlPanel.html" title=" " alt="" coords="456,2821,651,2861"/>
+<area shape="poly" id="edge195_Node000002_Node000084" title=" " alt="" coords="311,2682,361,2744,395,2777,433,2805,461,2819,458,2823,431,2810,392,2781,357,2748,307,2686"/>
+<area shape="rect" id="Node000085" href="$db/d9f/classAestraUI_1_1PianoRollGrid.html" title=" " alt="" coords="466,2886,641,2911"/>
+<area shape="poly" id="edge196_Node000002_Node000085" title=" " alt="" coords="304,2685,322,2727,350,2777,387,2829,409,2851,433,2871,467,2886,465,2891,431,2875,405,2855,383,2832,345,2780,318,2729,300,2687"/>
+<area shape="rect" id="Node000086" href="$d0/d7a/classAestraUI_1_1PianoRollKeyLane.html" title=" " alt="" coords="452,2935,655,2960"/>
+<area shape="poly" id="edge197_Node000002_Node000086" title=" " alt="" coords="301,2685,316,2736,342,2800,381,2866,405,2895,434,2920,456,2933,453,2937,430,2925,402,2899,377,2869,338,2802,311,2738,296,2687"/>
+<area shape="rect" id="Node000087" href="$da/d37/classAestraUI_1_1PianoRollMinimap.html" title=" " alt="" coords="451,2984,655,3010"/>
+<area shape="poly" id="edge198_Node000002_Node000087" title=" " alt="" coords="299,2686,311,2745,336,2823,353,2863,375,2903,402,2939,434,2970,454,2982,451,2987,430,2974,398,2942,371,2906,349,2866,331,2825,306,2747,294,2687"/>
+<area shape="rect" id="Node000088" href="$d3/df4/classAestraUI_1_1PianoRollNoteLayer.html" title=" " alt="" coords="446,3034,661,3059"/>
+<area shape="poly" id="edge199_Node000002_Node000088" title=" " alt="" coords="297,2686,307,2754,329,2845,346,2893,369,2939,398,2982,434,3019,453,3031,451,3036,430,3023,394,2985,365,2942,342,2895,324,2846,301,2755,292,2687"/>
+<area shape="rect" id="Node000089" href="$d7/d0a/classAestraUI_1_1PianoRollRuler.html" title=" " alt="" coords="463,3083,644,3108"/>
+<area shape="poly" id="edge200_Node000002_Node000089" title=" " alt="" coords="296,2686,302,2762,310,2812,322,2866,340,2921,363,2975,395,3025,434,3068,464,3085,461,3090,430,3072,390,3029,359,2978,335,2923,317,2867,305,2813,297,2762,290,2686"/>
+<area shape="rect" id="Node000090" href="$dc/d8a/classAestraUI_1_1PianoRollToolbar.html" title=" " alt="" coords="456,3132,651,3158"/>
+<area shape="poly" id="edge201_Node000002_Node000090" title=" " alt="" coords="295,2686,298,2771,305,2826,316,2887,333,2950,358,3012,391,3069,434,3118,457,3132,454,3137,430,3122,387,3072,353,3014,328,2952,311,2889,299,2827,293,2771,289,2686"/>
+<area shape="rect" id="Node000091" href="$d1/dab/classAestraUI_1_1PianoRollView.html" title=" " alt="" coords="464,3182,643,3207"/>
+<area shape="poly" id="edge202_Node000002_Node000091" title=" " alt="" coords="299,2686,316,2792,345,2937,363,3011,385,3077,408,3131,434,3167,448,3178,465,3185,463,3190,446,3182,430,3171,404,3134,380,3079,358,3012,339,2938,310,2793,294,2687"/>
+<area shape="rect" id="Node000092" href="$d7/de2/classAestraUI_1_1PlayButton.html" title=" " alt="" coords="475,3231,632,3256"/>
+<area shape="poly" id="edge203_Node000002_Node000092" title=" " alt="" coords="298,2686,313,2801,341,2961,360,3042,382,3116,406,3177,420,3199,434,3216,453,3230,475,3238,473,3243,450,3234,430,3220,415,3202,402,3179,377,3118,355,3044,336,2962,308,2802,293,2687"/>
+<area shape="rect" id="Node000093" href="$d4/dd0/classAestraUI_1_1PluginBrowser.html" title=" " alt="" coords="464,3280,643,3306"/>
+<area shape="poly" id="edge204_Node000002_Node000093" title=" " alt="" coords="298,2686,311,2809,338,2984,356,3074,378,3155,404,3222,419,3247,434,3266,448,3277,465,3284,462,3289,445,3281,430,3270,414,3250,400,3224,373,3157,351,3075,333,2985,306,2810,292,2686"/>
+<area shape="rect" id="Node000094" href="$d8/d3b/classAestraUI_1_1PluginBrowserPanel.html" title="Comprehensive plugin browser panel." alt="" coords="446,3330,661,3355"/>
+<area shape="poly" id="edge205_Node000002_Node000094" title=" " alt="" coords="297,2686,309,2819,335,3009,353,3106,376,3195,403,3267,418,3295,434,3315,450,3327,447,3332,430,3319,413,3298,398,3269,370,3196,348,3107,329,3010,304,2820,292,2687"/>
+<area shape="rect" id="Node000095" href="$df/db6/classAestraUI_1_1PluginSelectorMenu.html" title="A simple vertical list menu for selecting plugins." alt="" coords="446,3379,661,3404"/>
+<area shape="poly" id="edge206_Node000002_Node000095" title=" " alt="" coords="297,2686,307,2827,331,3032,350,3138,373,3234,401,3312,417,3342,434,3364,450,3377,447,3381,430,3368,412,3345,396,3314,367,3235,344,3139,326,3033,302,2828,291,2686"/>
+<area shape="rect" id="Node000096" href="$de/dba/classAestraUI_1_1RecordButton.html" title=" " alt="" coords="466,3428,641,3454"/>
+<area shape="poly" id="edge207_Node000002_Node000096" title=" " alt="" coords="296,2686,306,2836,328,3056,346,3169,370,3273,399,3357,416,3390,434,3414,449,3425,467,3433,464,3438,446,3430,430,3418,411,3393,394,3360,364,3274,341,3170,323,3056,300,2836,291,2686"/>
+<area shape="rect" id="Node000097" href="$d3/d28/classAestraUI_1_1ReflectionPanel.html" title=" " alt="" coords="460,3478,647,3503"/>
+<area shape="poly" id="edge208_Node000002_Node000097" title=" " alt="" coords="296,2686,304,2845,325,3079,343,3201,367,3312,397,3403,414,3437,434,3463,461,3481,458,3485,430,3467,410,3440,392,3405,361,3313,338,3202,320,3080,298,2845,291,2686"/>
+<area shape="rect" id="Node000098" href="$de/d35/classAestraUI_1_1RewindButton.html" title=" " alt="" coords="465,3527,642,3552"/>
+<area shape="poly" id="edge209_Node000002_Node000098" title=" " alt="" coords="296,2686,302,2853,310,2973,322,3103,340,3232,364,3351,378,3403,395,3448,413,3485,434,3513,448,3524,465,3532,463,3537,445,3528,430,3516,409,3488,390,3450,373,3404,358,3352,334,3233,317,3103,305,2973,297,2854,290,2686"/>
+<area shape="rect" id="Node000099" href="$dc/d53/classAestraUI_1_1SettingsPanel.html" title=" " alt="" coords="466,3576,641,3602"/>
+<area shape="poly" id="edge210_Node000002_Node000099" title=" " alt="" coords="296,2686,300,2862,307,2989,319,3126,337,3264,361,3390,376,3445,393,3493,412,3532,434,3562,449,3574,467,3582,465,3587,446,3578,430,3566,408,3535,388,3495,371,3446,356,3391,331,3265,314,3127,302,2989,295,2862,290,2686"/>
+<area shape="rect" id="Node000100" href="$d8/db4/classAestraUI_1_1SpectrumAnalyzer.html" title=" " alt="" coords="451,3626,656,3651"/>
+<area shape="poly" id="edge211_Node000002_Node000100" title=" " alt="" coords="295,2686,299,2871,305,3004,316,3150,333,3295,358,3429,373,3487,391,3538,411,3580,434,3611,452,3625,449,3629,430,3615,407,3583,386,3540,368,3489,353,3430,328,3296,311,3150,300,3005,294,2871,290,2687"/>
+<area shape="rect" id="Node000101" href="$d4/d12/classAestraUI_1_1SplashScreen.html" title=" " alt="" coords="467,3675,640,3700"/>
+<area shape="poly" id="edge212_Node000002_Node000101" title=" " alt="" coords="295,2686,297,2878,303,3019,313,3173,330,3326,355,3467,371,3529,389,3583,410,3627,434,3661,449,3673,468,3681,465,3686,446,3677,430,3664,406,3630,384,3585,366,3531,350,3468,325,3327,308,3173,297,3019,292,2879,290,2686"/>
+<area shape="rect" id="Node000102" href="$df/d96/classAestraUI_1_1StatusBar.html" title=" " alt="" coords="479,3724,628,3750"/>
+<area shape="poly" id="edge213_Node000002_Node000102" title=" " alt="" coords="295,2686,296,2887,300,3034,310,3196,327,3357,352,3506,368,3571,387,3628,409,3675,434,3710,454,3725,479,3733,477,3738,452,3730,430,3714,404,3678,382,3630,363,3573,347,3507,321,3358,305,3196,295,3034,290,2887,290,2686"/>
+<area shape="rect" id="Node000103" href="$d5/d99/classAestraUI_1_1StepSequencerView.html" title="Simple 16&#45;step drum sequencer grid." alt="" coords="446,3774,661,3799"/>
+<area shape="poly" id="edge214_Node000002_Node000103" title=" " alt="" coords="297,2686,312,2910,341,3253,360,3427,383,3581,407,3697,421,3736,434,3759,449,3772,446,3776,430,3763,416,3738,402,3699,377,3581,355,3427,336,3253,306,2910,292,2686"/>
+<area shape="rect" id="Node000104" href="$d4/d78/classAestraUI_1_1StopButton.html" title=" " alt="" coords="474,3823,633,3848"/>
+<area shape="poly" id="edge215_Node000002_Node000104" title=" " alt="" coords="297,2686,311,2919,339,3278,359,3460,381,3621,406,3743,420,3784,434,3809,452,3823,475,3831,473,3836,450,3827,430,3812,415,3786,401,3745,376,3622,353,3461,334,3278,306,2920,291,2687"/>
+<area shape="rect" id="Node000105" href="$d7/d08/classAestraUI_1_1TempoDisplay.html" title=" " alt="" coords="464,3872,643,3898"/>
+<area shape="poly" id="edge216_Node000002_Node000105" title=" " alt="" coords="297,2686,310,2927,338,3302,357,3493,380,3661,405,3790,419,3832,434,3858,448,3869,465,3877,463,3882,445,3874,430,3861,415,3835,400,3791,374,3662,352,3493,333,3302,305,2927,291,2686"/>
+<area shape="rect" id="Node000106" href="$de/d47/classAestraUI_1_1ThemeSelector.html" title=" " alt="" coords="461,3922,645,3947"/>
+<area shape="poly" id="edge217_Node000002_Node000106" title=" " alt="" coords="296,2686,309,2936,336,3326,355,3526,378,3702,404,3836,419,3881,434,3907,447,3918,462,3926,460,3930,444,3922,430,3911,414,3883,399,3837,373,3703,350,3526,331,3327,304,2936,291,2686"/>
+<area shape="rect" id="Node000107" href="$d1/d82/classAestraUI_1_1TimeSignatureDisplay.html" title=" " alt="" coords="438,3971,669,3996"/>
+<area shape="poly" id="edge218_Node000002_Node000107" title=" " alt="" coords="296,2686,308,2946,335,3352,354,3559,377,3743,403,3882,418,3929,434,3957,449,3969,445,3973,430,3960,413,3931,398,3883,371,3744,348,3560,330,3352,303,2946,291,2687"/>
+<area shape="rect" id="Node000108" href="$d0/db2/classAestraUI_1_1TimelineMinimapBar.html" title=" " alt="" coords="442,4020,665,4046"/>
+<area shape="poly" id="edge219_Node000002_Node000108" title=" " alt="" coords="296,2686,308,2954,333,3376,352,3592,375,3783,402,3928,418,3977,434,4006,449,4018,445,4022,430,4009,413,3979,397,3930,370,3784,347,3593,328,3377,302,2955,291,2686"/>
+<area shape="rect" id="Node000109" href="$d3/d8c/classAestraUI_1_1Tooltip.html" title=" " alt="" coords="489,4070,618,4095"/>
+<area shape="poly" id="edge220_Node000002_Node000109" title=" " alt="" coords="296,2686,307,2963,332,3400,350,3625,374,3823,387,3906,402,3974,417,4025,434,4055,459,4073,489,4081,488,4086,457,4077,430,4059,412,4027,396,3976,382,3907,368,3824,345,3625,326,3401,301,2963,291,2686"/>
+<area shape="rect" id="Node000110" href="$d3/d37/classAestraUI_1_1TrackLabel.html" title=" " alt="" coords="476,4119,631,4144"/>
+<area shape="poly" id="edge221_Node000002_Node000110" title=" " alt="" coords="296,2686,306,2971,330,3425,349,3657,372,3864,386,3950,401,4021,417,4073,434,4105,453,4119,477,4128,475,4133,451,4124,430,4108,412,4075,395,4022,380,3951,367,3864,343,3658,325,3425,301,2971,291,2686"/>
+<area shape="rect" id="Node000111" href="$d8/d98/classAestraUI_1_1TransportBar.html" title=" " alt="" coords="469,4168,637,4194"/>
+<area shape="poly" id="edge222_Node000002_Node000111" title=" " alt="" coords="296,2686,305,2980,329,3450,347,3691,371,3904,384,3994,400,4067,416,4121,434,4154,450,4167,470,4175,468,4180,448,4172,430,4157,411,4123,394,4068,379,3994,365,3905,342,3691,323,3450,300,2980,291,2686"/>
+<area shape="rect" id="Node000112" href="$d5/d12/classAestraUI_1_1UIItemSelector.html" title="Item Selector Component (Spinner Style)" alt="" coords="462,4218,645,4243"/>
+<area shape="poly" id="edge223_Node000002_Node000112" title=" " alt="" coords="296,2686,304,2988,327,3473,346,3723,369,3945,383,4037,399,4113,416,4170,434,4203,447,4214,463,4222,461,4227,444,4219,430,4207,411,4172,393,4114,378,4038,364,3945,340,3724,322,3474,299,2988,291,2686"/>
+<area shape="rect" id="Node000113" href="$d3/de7/classAestraUI_1_1UIMixerButtonRow.html" title="Compact M/S/R button row for mixer strips." alt="" coords="450,4267,657,4292"/>
+<area shape="poly" id="edge224_Node000002_Node000113" title=" " alt="" coords="296,2687,304,2999,326,3499,344,3757,368,3986,382,4081,398,4159,415,4218,434,4253,451,4266,448,4271,430,4256,410,4220,392,4161,377,4082,362,3986,339,3757,321,3500,298,2999,290,2687"/>
+<area shape="rect" id="Node000114" href="$de/dd2/classAestraUI_1_1UIMixerFXSummary.html" title="Compact FX summary button with count badge." alt="" coords="445,4316,661,4342"/>
+<area shape="poly" id="edge225_Node000002_Node000114" title=" " alt="" coords="296,2686,303,3006,324,3523,342,3789,366,4026,381,4124,397,4206,415,4266,434,4302,449,4314,445,4318,430,4305,410,4268,391,4207,375,4125,361,4026,337,3790,319,3523,298,3007,290,2686"/>
+<area shape="rect" id="Node000115" href="$da/d9d/classAestraUI_1_1UIMixerFader.html" title="Vertical dB fader widget for the modern mixer UI." alt="" coords="468,4366,639,4391"/>
+<area shape="poly" id="edge226_Node000002_Node000115" title=" " alt="" coords="296,2686,302,3015,310,3270,323,3548,341,3822,365,4066,379,4168,396,4252,414,4314,434,4351,450,4364,469,4372,467,4377,447,4369,430,4355,409,4316,390,4253,374,4169,359,4067,335,3823,318,3548,305,3270,297,3015,290,2686"/>
+<area shape="rect" id="Node000116" href="$da/d5f/classAestraUI_1_1UIMixerFooter.html" title="Mixer strip footer (V81&#45;M1, FD&#45;28 point 3): the fader&#39;s gain on the left, the highest peak since the ..." alt="" coords="465,4415,642,4440"/>
+<area shape="poly" id="edge227_Node000002_Node000116" title=" " alt="" coords="296,2686,302,3023,309,3285,321,3571,339,3855,363,4106,378,4211,395,4298,413,4362,434,4401,448,4412,465,4421,463,4425,445,4417,430,4404,408,4364,389,4299,373,4212,358,4107,334,3855,316,3572,304,3285,296,3023,290,2686"/>
+<area shape="rect" id="Node000117" href="$d8/d87/classAestraUI_1_1UIMixerHeader.html" title="Mixer strip header: color chip + track name + routing label." alt="" coords="462,4464,645,4490"/>
+<area shape="poly" id="edge228_Node000002_Node000117" title=" " alt="" coords="296,2686,301,3031,308,3301,320,3596,338,3888,362,4147,377,4255,394,4344,413,4410,434,4450,447,4461,463,4469,461,4474,444,4466,430,4453,408,4412,389,4345,371,4256,356,4147,332,3888,315,3596,303,3301,295,3032,290,2686"/>
+<area shape="rect" id="Node000118" href="$dc/dd9/classAestraUI_1_1UIMixerInsertList.html" title="The strip&#39;s insert chain by name (V81&#45;M1, FD&#45;28 point 3): &quot;Aestra EQ&quot;, &quot;Saturator&quot; ...." alt="" coords="455,4514,651,4539"/>
+<area shape="poly" id="edge229_Node000002_Node000118" title=" " alt="" coords="295,2687,300,3042,307,3318,319,3622,336,3921,360,4188,375,4299,393,4390,412,4459,423,4483,434,4499,457,4516,454,4520,430,4503,418,4485,407,4460,388,4392,370,4300,355,4188,331,3922,313,3622,302,3319,295,3042,290,2687"/>
+<area shape="rect" id="Node000119" href="$d7/d02/classAestraUI_1_1UIMixerInspector.html" title=" " alt="" coords="455,4563,651,4588"/>
+<area shape="poly" id="edge230_Node000002_Node000119" title=" " alt="" coords="295,2686,299,3049,306,3333,317,3645,334,3953,359,4227,374,4342,392,4436,412,4507,423,4531,434,4549,457,4565,454,4570,430,4552,418,4534,407,4509,387,4438,369,4343,353,4228,329,3954,312,3645,301,3333,294,3049,290,2686"/>
+<area shape="rect" id="Node000120" href="$d6/d69/classAestraUI_1_1UIMixerKnob.html" title="Compact trim/pan knob for the modern mixer UI." alt="" coords="469,4612,638,4638"/>
+<area shape="poly" id="edge231_Node000002_Node000120" title=" " alt="" coords="295,2686,299,3057,305,3349,316,3669,333,3986,357,4268,373,4386,391,4483,411,4555,422,4580,434,4598,450,4611,469,4619,467,4624,447,4616,430,4601,418,4583,406,4557,386,4484,368,4386,352,4268,327,3986,310,3669,299,3349,293,3057,290,2686"/>
+<area shape="rect" id="Node000121" href="$da/d17/classAestraUI_1_1UIMixerMeter.html" title="Stereo level meter widget for the mixer UI." alt="" coords="466,4662,641,4687"/>
+<area shape="poly" id="edge232_Node000002_Node000121" title=" " alt="" coords="295,2686,298,3066,304,3366,314,3694,331,4019,356,4308,372,4429,390,4529,411,4603,422,4629,434,4647,449,4660,467,4668,465,4673,446,4664,430,4651,417,4632,406,4605,385,4530,366,4430,351,4309,326,4020,309,3694,298,3366,293,3067,290,2686"/>
+<area shape="rect" id="Node000122" href="$d8/d09/classAestraUI_1_1UIMixerNavigator.html" title="The mixer&#39;s navigator for sessions that overflow the panel (V81&#45;M1, FD&#45;28 point 7)." alt="" coords="453,4711,653,4736"/>
+<area shape="poly" id="edge233_Node000002_Node000122" title=" " alt="" coords="295,2686,297,3074,303,3381,313,3718,330,4051,354,4348,370,4473,389,4575,410,4651,422,4678,434,4697,455,4712,451,4716,430,4700,417,4680,405,4653,384,4576,365,4473,349,4349,324,4052,308,3718,297,3381,292,3074,290,2686"/>
+<area shape="rect" id="Node000017" href="$d3/d1a/classAestraUI_1_1UIMixerPanel.html" title="Main mixer panel container with channel meters." alt="" coords="468,223,639,248"/>
+<area shape="poly" id="edge234_Node000002_Node000017" title=" " alt="" coords="291,2633,303,2168,331,1386,351,985,374,634,400,378,414,299,422,273,430,258,447,244,467,236,469,241,450,249,434,261,427,275,420,300,405,379,379,635,356,985,337,1386,309,2168,296,2633"/>
+<area shape="rect" id="Node000123" href="$da/d58/classAestraUI_1_1UIMixerPluginDropdown.html" title="Compact plugin finder dropdown anchored to an Add Insert button." alt="" coords="432,4760,675,4786"/>
+<area shape="poly" id="edge235_Node000002_Node000123" title=" " alt="" coords="295,2686,297,3082,302,3396,311,3742,328,4084,353,4389,369,4516,388,4621,410,4699,421,4727,434,4746,449,4758,445,4762,430,4749,417,4729,405,4701,383,4622,364,4517,348,4389,323,4084,306,3742,296,3396,291,3082,290,2686"/>
+<area shape="rect" id="Node000124" href="$de/d10/classAestraUI_1_1UIMixerRoutePicker.html" title="Search&#45;first mixer destination picker." alt="" coords="447,5254,660,5279"/>
+<area shape="poly" id="edge236_Node000002_Node000124" title=" " alt="" coords="296,2686,307,3183,334,4025,353,4459,376,4837,389,4991,404,5114,419,5199,426,5226,434,5241,448,5253,445,5257,430,5244,421,5228,413,5200,398,5114,384,4992,371,4837,348,4459,329,4026,302,3183,291,2686"/>
+<area shape="rect" id="Node000126" href="$d7/dec/classAestraUI_1_1UIMixerSend.html" title=" " alt="" coords="469,4810,637,4835"/>
+<area shape="poly" id="edge238_Node000002_Node000126" title=" " alt="" coords="295,2686,296,3091,300,3413,310,3767,326,4117,351,4429,368,4560,387,4667,409,4747,421,4776,434,4795,450,4808,470,4817,468,4822,447,4813,430,4799,416,4778,404,4749,382,4668,362,4561,346,4430,321,4118,305,3767,295,3413,291,3091,290,2686"/>
+<area shape="rect" id="Node000127" href="$d9/d5d/classAestraUI_1_1UIMixerSendList.html" title="The strip&#39;s sends by destination and level (V81&#45;M1, FD&#45;28 point 3): &quot;■ Reverb &#160;−18&quot;." alt="" coords="458,4859,649,4884"/>
+<area shape="poly" id="edge239_Node000002_Node000127" title=" " alt="" coords="295,2686,295,3099,299,3428,309,3791,325,4150,350,4469,366,4603,386,4713,408,4796,421,4824,434,4845,459,4862,456,4867,430,4848,416,4827,403,4797,381,4715,361,4604,345,4470,319,4150,303,3791,294,3429,290,3099,290,2686"/>
+<area shape="rect" id="Node000128" href="$db/d41/classAestraUI_1_1UIMixerStrip.html" title="Minimal mixer channel strip: header + meter + fader." alt="" coords="470,4908,637,4934"/>
+<area shape="poly" id="edge240_Node000002_Node000128" title=" " alt="" coords="295,2686,295,3108,298,3445,307,3815,323,4183,349,4510,365,4647,385,4760,408,4844,421,4873,434,4894,450,4907,470,4916,468,4921,448,4912,430,4897,416,4876,403,4845,380,4761,360,4648,343,4510,318,4183,302,3816,293,3445,289,3108,290,2686"/>
+<area shape="rect" id="Node000129" href="$d2/dab/classAestraUI_1_1UIMixerToolbar.html" title="The mixer&#39;s toolbar (V81&#45;M1, FD&#45;28 points 1 and 4): what is on screen, the density segment (Wide / No..." alt="" coords="462,4958,645,4983"/>
+<area shape="poly" id="edge241_Node000002_Node000129" title=" " alt="" coords="296,2686,310,3132,339,3875,358,4256,381,4589,407,4832,420,4907,434,4944,447,4955,463,4963,460,4967,444,4959,430,4947,415,4908,401,4833,376,4589,353,4257,333,3875,304,3132,291,2686"/>
+<area shape="rect" id="Node000130" href="$d4/d08/classAestraUI_1_1UIOutputChip.html" title="A named, coloured destination (&quot;→ Drum Bus&quot;), the kit&#39;s answer to a channel number (V81&#45;K1,..." alt="" coords="467,5007,640,5032"/>
+<area shape="poly" id="edge242_Node000002_Node000130" title=" " alt="" coords="296,2686,309,3141,338,3901,358,4290,380,4630,406,4879,420,4955,434,4993,449,5005,467,5014,465,5018,446,5010,430,4996,415,4957,401,4880,375,4631,352,4290,333,3901,304,3141,291,2687"/>
+<area shape="rect" id="Node000131" href="$d2/d73/classAestraUI_1_1UIParamBar.html" title="A value you drag along a bar (V81&#45;K1, FD&#45;28): the kit&#39;s replacement for a knob where the value must r..." alt="" coords="472,5056,635,5082"/>
+<area shape="poly" id="edge243_Node000002_Node000131" title=" " alt="" coords="296,2686,309,3149,337,3925,357,4323,380,4671,406,4925,420,5004,434,5042,451,5056,473,5064,471,5069,449,5061,430,5045,415,5005,400,4926,374,4672,351,4324,332,3925,304,3149,291,2686"/>
+<area shape="rect" id="Node000132" href="$d4/dd4/classAestraUI_1_1UIRoutingMap.html" title="The routing graph (V81&#45;R1, FD&#45;25): opt&#45;in, exceptions only." alt="" coords="464,5106,643,5131"/>
+<area shape="poly" id="edge244_Node000002_Node000132" title=" " alt="" coords="296,2686,309,3158,337,3950,356,4357,379,4713,405,4972,419,5052,427,5077,434,5091,448,5103,465,5111,463,5116,445,5108,430,5095,422,5079,414,5054,400,4973,374,4713,351,4358,331,3951,303,3158,291,2686"/>
+<area shape="rect" id="Node000133" href="$d0/d36/classAestraUI_1_1UnitColorPicker.html" title="A popup color picker with preset colors for Arsenal units." alt="" coords="460,5155,647,5180"/>
+<area shape="poly" id="edge245_Node000002_Node000133" title=" " alt="" coords="296,2686,308,3166,336,3975,355,4390,378,4754,391,4901,405,5019,419,5101,427,5126,434,5141,446,5151,461,5159,459,5164,443,5156,430,5144,422,5128,414,5102,399,5020,386,4902,373,4754,350,4391,330,3975,303,3166,291,2686"/>
+<area shape="rect" id="Node000134" href="$de/de0/classAestraUI_1_1UnitNameLabel.html" title="Editable unit name label used inside Arsenal UnitRow." alt="" coords="460,5204,647,5230"/>
+<area shape="poly" id="edge246_Node000002_Node000134" title=" " alt="" coords="296,2686,308,3175,335,4000,354,4424,377,4795,390,4946,404,5066,419,5149,427,5175,434,5190,446,5201,461,5209,459,5213,443,5205,430,5193,422,5177,414,5151,399,5066,385,4946,372,4795,349,4425,330,4000,302,3175,291,2686"/>
+<area shape="rect" id="Node000018" href="$da/d6f/classAestraUI_1_1UnitRow.html" title=" " alt="" coords="483,272,624,298"/>
+<area shape="poly" id="edge247_Node000002_Node000018" title=" " alt="" coords="291,2633,304,2177,332,1412,352,1019,375,676,401,425,415,347,430,307,454,290,482,281,483,286,456,295,434,311,420,348,406,426,380,676,357,1019,338,1412,309,2177,296,2634"/>
+<area shape="rect" id="Node000135" href="$d3/de7/classAestraUI_1_1VUBridge.html" title=" " alt="" coords="480,322,627,347"/>
+<area shape="poly" id="edge248_Node000002_Node000135" title=" " alt="" coords="291,2633,304,2185,333,1436,353,1052,375,717,401,471,415,395,430,357,452,340,479,331,480,336,455,345,434,360,420,397,406,472,381,717,358,1052,338,1436,309,2185,296,2633"/>
+<area shape="rect" id="Node000136" href="$d3/d29/classAestraUI_1_1WaveformDisplay.html" title=" " alt="" coords="452,371,655,396"/>
+<area shape="poly" id="edge249_Node000002_Node000136" title=" " alt="" coords="291,2633,304,2195,334,1462,353,1086,376,758,402,518,415,444,430,406,450,390,453,395,434,409,420,445,407,519,381,758,359,1086,339,1462,310,2195,296,2634"/>
+<area shape="rect" id="Node000137" href="$da/d6d/classExportDialog.html" title=" " alt="" coords="500,420,607,446"/>
+<area shape="poly" id="edge250_Node000002_Node000137" title=" " alt="" coords="290,2633,290,2217,293,1886,302,1521,319,1159,344,836,360,701,380,590,403,506,416,476,430,455,445,443,462,434,499,427,500,433,464,439,448,447,434,459,421,479,408,508,385,591,366,702,349,837,324,1159,308,1521,299,1886,295,2218,295,2633"/>
+<area shape="rect" id="Node000138" href="$d7/d46/classOverlayLayer.html" title="Layer for overlays (Mixer, Piano Roll, etc.) with pass&#45;through hit&#45;testing." alt="" coords="499,470,608,495"/>
+<area shape="poly" id="edge251_Node000002_Node000138" title=" " alt="" coords="290,2633,290,2225,295,1901,304,1544,320,1191,345,876,362,744,381,636,404,554,416,525,430,505,444,492,461,484,498,477,499,482,463,489,447,497,434,508,421,528,409,556,386,637,367,745,351,877,325,1191,309,1544,300,1901,296,2225,295,2633"/>
+<area shape="rect" id="Node000139" href="$d7/daa/classTextDiagnosticOverlay.html" title="Read&#45;only text pipeline diagnostic overlay." alt="" coords="469,519,638,544"/>
+<area shape="poly" id="edge252_Node000002_Node000139" title=" " alt="" coords="290,2633,291,2234,296,1917,305,1569,322,1224,347,917,363,788,382,682,404,603,417,574,430,554,447,540,467,531,469,536,450,545,434,557,421,577,409,604,387,683,368,789,352,917,327,1224,311,1569,301,1917,296,2234,295,2633"/>
+<area shape="rect" id="Node000140" href="$d7/d96/classUnifiedHUD.html" title="Rocket Engine Profiler &#45; Professional DAW Performance HUD." alt="" coords="504,568,603,594"/>
+<area shape="poly" id="edge253_Node000002_Node000140" title=" " alt="" coords="290,2633,292,2242,297,1933,307,1594,324,1258,349,958,365,833,383,730,405,652,417,624,430,605,446,591,464,583,503,576,504,581,466,588,448,596,434,608,422,627,410,654,389,731,370,834,354,959,329,1258,312,1594,302,1934,297,2242,295,2633"/>
+<area shape="rect" id="Node000008" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html" title="The Arsenal: Unit&#45;Based Sequencer Window Standardized as a WindowPanel (v3.1)" alt="" coords="741,307,942,332"/>
+<area shape="poly" id="edge125_Node000009_Node000008" title=" " alt="" coords="666,773,673,767,833,332,838,334,677,771,669,777"/>
+<area shape="rect" id="Node000010" href="$d6/d24/classAestra_1_1Audio_1_1AudioClipEditorPanel.html" title="Focused editor for one Playlist audio&#45;clip instance and its shared source route." alt="" coords="752,832,931,872"/>
+<area shape="poly" id="edge126_Node000009_Node000010" title=" " alt="" coords="632,807,675,816,752,831,751,836,674,821,631,812"/>
+<area shape="rect" id="Node000011" href="$d3/dc6/classAestra_1_1Audio_1_1MixerPanel.html" title="Mixer Panel &#45; Multi&#45;track audio mixer Standardized as a native NUIComponent (v3.1)" alt="" coords="747,896,935,922"/>
+<area shape="poly" id="edge127_Node000009_Node000011" title=" " alt="" coords="665,810,676,816,693,832,701,850,709,866,724,882,749,894,747,899,721,886,705,869,696,852,689,836,673,821,663,815"/>
+<area shape="rect" id="Node000012" href="$db/d74/classAestra_1_1Audio_1_1PianoRollPanel.html" title="Piano Roll Panel &#45; MIDI editor with piano keyboard." alt="" coords="752,653,931,693"/>
+<area shape="poly" id="edge128_Node000009_Node000012" title=" " alt="" coords="660,774,673,767,689,752,696,736,705,719,721,703,751,688,753,692,724,707,709,722,701,739,693,755,676,771,662,779"/>
+<area shape="rect" id="Node000013" href="$d3/d55/classAestra_1_1Audio_1_1SampleEditorPanel.html" title="Sample Editor panel for editing loaded audio samples." alt="" coords="739,717,943,757"/>
+<area shape="poly" id="edge129_Node000009_Node000013" title=" " alt="" coords="631,776,740,754,741,760,632,782"/>
+<area shape="rect" id="Node000014" href="$d5/d2c/classAestra_1_1Audio_1_1TakesPanel.html" title="Workspace panel for project Takes — named, versioned project states." alt="" coords="747,782,935,807"/>
+<area shape="poly" id="edge130_Node000009_Node000014" title=" " alt="" coords="669,792,747,792,747,797,669,797"/>
+<area shape="rect" id="Node000026" href="$dd/df8/classAestra_1_1AppearanceSettingsPage.html" title=" " alt="" coords="725,1242,958,1267"/>
+<area shape="poly" id="edge137_Node000025_Node000026" title=" " alt="" coords="648,1166,676,1177,692,1190,701,1203,710,1215,724,1227,754,1239,752,1244,721,1231,706,1219,697,1206,688,1193,673,1182,646,1171"/>
+<area shape="rect" id="Node000027" href="$d6/d60/classAestra_1_1AudioSettingsPage.html" title=" " alt="" coords="745,1044,938,1070"/>
+<area shape="poly" id="edge138_Node000025_Node000027" title=" " alt="" coords="646,1140,673,1128,688,1117,696,1104,706,1091,721,1079,749,1067,751,1072,724,1083,710,1095,701,1107,692,1120,676,1133,648,1145"/>
+<area shape="rect" id="Node000028" href="$da/d07/classAestra_1_1GeneralSettingsPage.html" title=" " alt="" coords="738,1094,945,1119"/>
+<area shape="poly" id="edge139_Node000025_Node000028" title=" " alt="" coords="641,1138,766,1116,767,1122,642,1143"/>
+<area shape="rect" id="Node000029" href="$d2/d27/classAestra_1_1MembershipSettingsPage.html" title=" " alt="" coords="723,1143,960,1168"/>
+<area shape="poly" id="edge140_Node000025_Node000029" title=" " alt="" coords="647,1153,723,1153,723,1158,647,1158"/>
+<area shape="rect" id="Node000030" href="$d4/dea/classAestra_1_1UpdatesSettingsPage.html" title=" " alt="" coords="736,1192,947,1218"/>
+<area shape="poly" id="edge141_Node000025_Node000030" title=" " alt="" coords="642,1168,767,1190,766,1195,641,1173"/>
+<area shape="rect" id="Node000043" href="$d9/d1e/classAestraUI_1_1AestraCompEditor.html" title=" " alt="" coords="739,2047,943,2072"/>
+<area shape="poly" id="edge154_Node000042_Node000043" title=" " alt="" coords="673,1767,677,1770,700,1803,708,1836,707,1870,702,1903,696,1936,695,1969,703,2001,725,2033,741,2045,737,2049,721,2036,698,2003,689,1970,690,1936,696,1902,702,1869,703,1837,695,1805,673,1773,669,1770"/>
+<area shape="rect" id="Node000044" href="$dc/db9/classAestraUI_1_1AestraDelayEditor.html" title=" " alt="" coords="739,1439,943,1464"/>
+<area shape="poly" id="edge155_Node000042_Node000044" title=" " alt="" coords="668,1725,673,1721,694,1691,702,1661,701,1631,696,1599,691,1568,690,1536,699,1505,721,1474,737,1461,741,1466,725,1478,704,1507,696,1537,696,1567,701,1599,706,1630,707,1662,698,1693,677,1724,671,1729"/>
+<area shape="rect" id="Node000045" href="$d8/d64/classAestraUI_1_1AestraDriftEditor.html" title=" " alt="" coords="744,1488,939,1514"/>
+<area shape="poly" id="edge156_Node000042_Node000045" title=" " alt="" coords="667,1726,673,1721,690,1697,698,1673,699,1649,696,1624,693,1599,694,1573,702,1548,721,1523,742,1509,745,1513,724,1527,707,1550,699,1574,699,1598,701,1623,704,1649,703,1674,695,1700,677,1724,670,1730"/>
+<area shape="rect" id="Node000046" href="$de/d9b/classAestraUI_1_1AestraEQEditor.html" title=" " alt="" coords="749,1538,933,1563"/>
+<area shape="poly" id="edge157_Node000042_Node000046" title=" " alt="" coords="666,1726,673,1720,687,1703,694,1686,696,1648,698,1610,706,1591,721,1572,747,1556,750,1561,724,1576,710,1593,703,1611,701,1648,699,1687,692,1706,677,1724,670,1730"/>
+<area shape="rect" id="Node000047" href="$df/d5a/classAestraUI_1_1AestraFilterEditor.html" title=" " alt="" coords="742,1587,941,1612"/>
+<area shape="poly" id="edge158_Node000042_Node000047" title=" " alt="" coords="663,1727,673,1720,684,1709,690,1698,696,1672,702,1647,709,1634,721,1622,740,1610,743,1615,724,1626,713,1637,707,1648,701,1674,695,1699,688,1712,676,1724,666,1731"/>
+<area shape="rect" id="Node000048" href="$d2/dfc/classAestraUI_1_1AestraLFOEditor.html" title=" " alt="" coords="746,1636,937,1662"/>
+<area shape="poly" id="edge159_Node000042_Node000048" title=" " alt="" coords="656,1728,673,1720,688,1709,696,1696,706,1683,721,1671,749,1659,751,1664,724,1675,710,1687,701,1699,692,1712,676,1725,658,1733"/>
+<area shape="rect" id="Node000049" href="$d2/d7d/classAestraUI_1_1AestraLimitEditor.html" title=" " alt="" coords="742,1686,941,1711"/>
+<area shape="poly" id="edge160_Node000042_Node000049" title=" " alt="" coords="641,1730,766,1708,767,1714,642,1735"/>
+<area shape="rect" id="Node000050" href="$d2/df5/classAestraUI_1_1AestraOTTEditor.html" title=" " alt="" coords="745,1735,937,1760"/>
+<area shape="poly" id="edge161_Node000042_Node000050" title=" " alt="" coords="675,1745,745,1745,745,1750,675,1750"/>
+<area shape="rect" id="Node000051" href="$d0/d9d/classAestraUI_1_1AestraSatEditor.html" title=" " alt="" coords="748,1784,935,1810"/>
+<area shape="poly" id="edge162_Node000042_Node000051" title=" " alt="" coords="642,1760,767,1782,766,1787,641,1765"/>
+<area shape="rect" id="Node000052" href="$db/dff/classAestraUI_1_1AestraTransientEditor.html" title="Aestra Transient editor — dedicated UI for com.Aestrastudios.transient." alt="" coords="748,1834,935,1874"/>
+<area shape="poly" id="edge163_Node000042_Node000052" title=" " alt="" coords="661,1763,676,1769,692,1782,701,1794,710,1807,724,1819,751,1832,749,1837,721,1823,706,1811,697,1798,688,1785,673,1774,659,1767"/>
+<area shape="rect" id="Node000053" href="$d5/dd9/classAestraUI_1_1AestraVerbEditor.html" title=" " alt="" coords="744,1899,939,1924"/>
+<area shape="poly" id="edge164_Node000042_Node000053" title=" " alt="" coords="670,1765,676,1770,689,1784,697,1799,701,1829,706,1858,712,1871,724,1884,745,1897,742,1901,721,1888,708,1874,701,1859,696,1829,692,1800,685,1787,673,1774,667,1770"/>
+<area shape="rect" id="Node000054" href="$da/dd5/classAestraUI_1_1GenericPluginEditor.html" title="Generic auto&#45;generated parameter UI for plugins." alt="" coords="734,1948,949,1974"/>
+<area shape="poly" id="edge165_Node000042_Node000054" title=" " alt="" coords="672,1766,677,1770,693,1790,701,1811,701,1853,702,1895,709,1915,724,1934,742,1946,739,1950,721,1938,705,1917,697,1896,696,1854,695,1812,688,1793,673,1774,668,1770"/>
+<area shape="rect" id="Node000055" href="$dd/dad/classAestraUI_1_1RumblePluginEditor.html" title=" " alt="" coords="734,1998,949,2023"/>
+<area shape="poly" id="edge166_Node000042_Node000055" title=" " alt="" coords="672,1766,677,1770,696,1796,704,1824,705,1851,702,1879,698,1906,698,1932,706,1958,725,1983,741,1995,738,2000,721,1987,701,1960,693,1933,693,1905,696,1878,700,1851,699,1824,691,1799,673,1773,669,1770"/>
+<area shape="rect" id="Node000071" href="$d7/df1/classAestraUI_1_1MasterVU.html" title=" " alt="" coords="766,2450,917,2475"/>
+<area shape="poly" id="edge182_Node000070_Node000071" title=" " alt="" coords="641,2477,766,2466,766,2472,641,2483"/>
+<area shape="rect" id="Node000072" href="$dd/df1/classAestraUI_1_1MeterStrip.html" title=" " alt="" coords="764,2499,919,2524"/>
+<area shape="poly" id="edge183_Node000070_Node000072" title=" " alt="" coords="641,2492,764,2503,764,2508,641,2498"/>
+<area shape="rect" id="Node000075" href="$d1/d69/classAestraUI_1_1ContextMenu.html" title=" " alt="" coords="755,2574,928,2599"/>
+<area shape="poly" id="edge186_Node000074_Node000075" title=" " alt="" coords="660,2584,754,2584,754,2589,660,2589"/>
+<area shape="rect" id="Node000078" href="$d5/d0c/classAestraUI_1_1ArmButton.html" title=" " alt="" coords="763,2623,919,2648"/>
+<area shape="poly" id="edge189_Node000077_Node000078" title=" " alt="" coords="641,2667,766,2646,767,2651,642,2673"/>
+<area shape="rect" id="Node000079" href="$da/dbc/classAestraUI_1_1LoopToggle.html" title=" " alt="" coords="762,2672,921,2698"/>
+<area shape="poly" id="edge190_Node000077_Node000079" title=" " alt="" coords="643,2682,762,2682,762,2688,643,2688"/>
+<area shape="rect" id="Node000080" href="$d9/dab/classAestraUI_1_1MuteButton.html" title=" " alt="" coords="760,2722,923,2747"/>
+<area shape="poly" id="edge191_Node000077_Node000080" title=" " alt="" coords="642,2697,767,2719,766,2724,641,2703"/>
+<area shape="rect" id="Node000081" href="$d3/d65/classAestraUI_1_1SoloButton.html" title=" " alt="" coords="763,2771,920,2796"/>
+<area shape="poly" id="edge192_Node000077_Node000081" title=" " alt="" coords="644,2694,676,2707,692,2719,701,2732,710,2745,724,2756,764,2771,762,2776,721,2761,706,2748,697,2735,688,2723,673,2711,642,2699"/>
+<area shape="rect" id="Node000125" href="$dc/d80/classAestraUI_1_1UIInsertRoutePicker.html" title="Compatibility wrapper for code written before mixer destinations were named consistently." alt="" coords="734,5254,949,5279"/>
+<area shape="poly" id="edge237_Node000124_Node000125" title=" " alt="" coords="674,5264,734,5264,734,5269,674,5269"/>
+<area shape="rect" id="Node000007" href="$d3/d88/classAestraUI_1_1IDropTarget.html" title="Interface for components that can receive drops." alt="" coords="211,174,372,199"/>
+<area shape="poly" id="edge255_Node000007_Node000006" title=" " alt="" coords="367,166,383,159,397,147,406,135,415,122,431,109,456,97,458,102,433,114,419,126,410,138,401,151,385,163,370,171"/>
+<area shape="poly" id="edge256_Node000007_Node000015" title=" " alt="" coords="372,168,484,147,485,152,373,174"/>
+<area shape="poly" id="edge254_Node000007_Node000008" title=" " alt="" coords="374,165,382,159,394,146,400,132,404,102,409,72,416,58,430,46,463,26,494,13,523,5,552,3,581,6,611,15,676,45,713,72,745,105,771,142,793,181,824,254,839,306,834,308,819,256,788,183,767,145,740,108,709,76,673,50,609,20,580,11,552,8,524,10,496,18,466,31,434,50,421,61,414,74,409,103,405,133,398,148,386,163,377,169"/>
+<area shape="poly" id="edge257_Node000007_Node000016" title=" " alt="" coords="386,184,454,184,454,189,386,189"/>
+<area shape="poly" id="edge258_Node000007_Node000017" title=" " alt="" coords="373,199,485,220,484,226,372,204"/>
+<area shape="poly" id="edge259_Node000007_Node000018" title=" " alt="" coords="326,204,375,232,433,257,483,271,482,276,431,262,373,236,323,209"/>
+</map>

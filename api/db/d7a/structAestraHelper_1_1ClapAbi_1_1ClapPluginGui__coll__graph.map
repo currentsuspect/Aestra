@@ -1,0 +1,7 @@
+<map id="AestraHelper::ClapAbi::ClapPluginGui" name="AestraHelper::ClapAbi::ClapPluginGui">
+<area shape="rect" id="Node000001" title=" " alt="" coords="15,240,180,280"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,56,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="26,44,20,80,16,124,19,171,34,215,44,227,57,238,54,242,40,231,30,217,14,172,10,124,14,79,21,43"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="139,5,189,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="167,45,162,124,153,171,137,217,120,242,116,238,132,215,148,170,157,123,162,45"/>
+</map>

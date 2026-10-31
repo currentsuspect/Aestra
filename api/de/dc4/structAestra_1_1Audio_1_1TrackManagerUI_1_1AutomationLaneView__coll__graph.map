@@ -1,0 +1,13 @@
+<map id="Aestra::Audio::TrackManagerUI::AutomationLaneView" name="Aestra::Audio::TrackManagerUI::AutomationLaneView">
+<area shape="rect" id="Node000001" title=" " alt="" coords="205,285,413,325"/>
+<area shape="rect" id="Node000002" href="$d4/d9c/structAestra_1_1Audio_1_1PlaylistLaneID.html" title="Unique identifier for a playlist lane (track row)" alt="" coords="5,183,216,208"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="145,212,276,283,273,288,142,217"/>
+<area shape="rect" id="Node000003" href="$db/d96/structAestra_1_1Audio_1_1AestraUUID.html" title=" " alt="" coords="14,108,207,133"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="113,148,113,182,108,182,108,148"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="73,5,148,31"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="113,45,113,108,108,108,108,45"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="240,183,379,208"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="312,222,312,285,307,285,307,222"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="403,183,453,208"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="408,220,360,263,333,287,330,283,357,259,404,216"/>
+</map>

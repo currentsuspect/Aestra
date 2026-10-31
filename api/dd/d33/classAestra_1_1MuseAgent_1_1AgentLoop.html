@@ -108,6 +108,12 @@ Public Types</h2></td></tr>
 <tr class="memitem:a1a3ced1e38543107da38323e4b1f6cd7" id="r_a1a3ced1e38543107da38323e4b1f6cd7"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d33/classAestra_1_1MuseAgent_1_1AgentLoop.html#a1a3ced1e38543107da38323e4b1f6cd7">AskUser</a> = std::function&lt; std::string(const std::string &amp;question)&gt;</td></tr>
 <tr class="memdesc:a1a3ced1e38543107da38323e4b1f6cd7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Collaborative-mode question relay (default: stderr + stdin).  <br /></td></tr>
 <tr class="separator:a1a3ced1e38543107da38323e4b1f6cd7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab12541e05ea704b94a50a4564aaa2313" id="r_ab12541e05ea704b94a50a4564aaa2313"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d33/classAestra_1_1MuseAgent_1_1AgentLoop.html#ab12541e05ea704b94a50a4564aaa2313">Sleeper</a> = std::function&lt; void(long milliseconds)&gt;</td></tr>
+<tr class="memdesc:ab12541e05ea704b94a50a4564aaa2313"><td class="mdescLeft">&#160;</td><td class="mdescRight">Replace the backoff sleep (default: this thread sleeps).  <br /></td></tr>
+<tr class="separator:ab12541e05ea704b94a50a4564aaa2313"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa021921ff87b8c7c172966e55f145fef" id="r_aa021921ff87b8c7c172966e55f145fef"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d33/classAestra_1_1MuseAgent_1_1AgentLoop.html#aa021921ff87b8c7c172966e55f145fef">BudgetHook</a> = std::function&lt; void(long remainingMs)&gt;</td></tr>
+<tr class="memdesc:aa021921ff87b8c7c172966e55f145fef"><td class="mdescLeft">&#160;</td><td class="mdescRight">Called before every Muse request with the milliseconds left in the time budget, so the transport can bound its own blocking read.  <br /></td></tr>
+<tr class="separator:aa021921ff87b8c7c172966e55f145fef"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
@@ -116,6 +122,13 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:aec6ac1217cfc0db815711ab20158d5d1" id="r_aec6ac1217cfc0db815711ab20158d5d1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d33/classAestra_1_1MuseAgent_1_1AgentLoop.html#aec6ac1217cfc0db815711ab20158d5d1">setAskUser</a> (<a class="el" href="../../dd/d33/classAestra_1_1MuseAgent_1_1AgentLoop.html#a1a3ced1e38543107da38323e4b1f6cd7">AskUser</a> askUser)</td></tr>
 <tr class="memdesc:aec6ac1217cfc0db815711ab20158d5d1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Route ask_user somewhere other than the terminal (e.g.  <br /></td></tr>
 <tr class="separator:aec6ac1217cfc0db815711ab20158d5d1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0dedcb131701b29174d1ce9e37cefa43" id="r_a0dedcb131701b29174d1ce9e37cefa43"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d33/classAestra_1_1MuseAgent_1_1AgentLoop.html#a0dedcb131701b29174d1ce9e37cefa43">setSleeper</a> (<a class="el" href="../../dd/d33/classAestra_1_1MuseAgent_1_1AgentLoop.html#ab12541e05ea704b94a50a4564aaa2313">Sleeper</a> sleeper)</td></tr>
+<tr class="separator:a0dedcb131701b29174d1ce9e37cefa43"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a31cf95554313cc3c25d6a51c97759a76" id="r_a31cf95554313cc3c25d6a51c97759a76"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d33/classAestra_1_1MuseAgent_1_1AgentLoop.html#a31cf95554313cc3c25d6a51c97759a76">setBudgetHook</a> (<a class="el" href="../../dd/d33/classAestra_1_1MuseAgent_1_1AgentLoop.html#aa021921ff87b8c7c172966e55f145fef">BudgetHook</a> hook)</td></tr>
+<tr class="separator:a31cf95554313cc3c25d6a51c97759a76"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9eabb647031f60416ecd75d9d24f7b51" id="r_a9eabb647031f60416ecd75d9d24f7b51"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d33/classAestra_1_1MuseAgent_1_1AgentLoop.html#a9eabb647031f60416ecd75d9d24f7b51">setInputFd</a> (int fd)</td></tr>
+<tr class="memdesc:a9eabb647031f60416ecd75d9d24f7b51"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="../../d9/d59/classAestra_1_1File.html">File</a> descriptor the default ask_user reads answers from (default 0, stdin).  <br /></td></tr>
+<tr class="separator:a9eabb647031f60416ecd75d9d24f7b51"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac52639c44543e048d16fa2b8efaa9f43" id="r_ac52639c44543e048d16fa2b8efaa9f43"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../de/ddc/structAestra_1_1MuseAgent_1_1AgentLoop_1_1Outcome.html">Outcome</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d33/classAestra_1_1MuseAgent_1_1AgentLoop.html#ac52639c44543e048d16fa2b8efaa9f43">run</a> (const std::string &amp;brief)</td></tr>
 <tr class="memdesc:ac52639c44543e048d16fa2b8efaa9f43"><td class="mdescLeft">&#160;</td><td class="mdescRight">Run one brief through the loop.  <br /></td></tr>
 <tr class="separator:ac52639c44543e048d16fa2b8efaa9f43"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -125,7 +138,7 @@ Public Member Functions</h2></td></tr>
 <p>The loop is provider-agnostic and transport-agnostic. It bootstraps the tool manifest over the wire (get_schema), converts it into provider tool definitions, and iterates model → tool calls → Muse responses until the model calls finish, a budget is exhausted, or the user is needed.</p>
 <p>Hard boundaries (the model must not decide success by vibes alone): max iterations, max tool calls, max elapsed time, and an explicit finish action carrying a summary. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dcf/AgentLoop_8h_source.html#l00024">24</a> of file <a class="el" href="../../db/dcf/AgentLoop_8h_source.html">AgentLoop.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dcf/AgentLoop_8h_source.html#l00027">27</a> of file <a class="el" href="../../db/dcf/AgentLoop_8h_source.html">AgentLoop.h</a>.</p>
 </div><h2 class="groupheader">Member Typedef Documentation</h2>
 <a id="a1a3ced1e38543107da38323e4b1f6cd7" name="a1a3ced1e38543107da38323e4b1f6cd7"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a1a3ced1e38543107da38323e4b1f6cd7">&#9670;&#160;</a></span>AskUser</h2>
@@ -141,7 +154,44 @@ Public Member Functions</h2></td></tr>
 
 <p>Collaborative-mode question relay (default: stderr + stdin). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dcf/AgentLoop_8h_source.html#l00056">56</a> of file <a class="el" href="../../db/dcf/AgentLoop_8h_source.html">AgentLoop.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dcf/AgentLoop_8h_source.html#l00060">60</a> of file <a class="el" href="../../db/dcf/AgentLoop_8h_source.html">AgentLoop.h</a>.</p>
+
+</div>
+</div>
+<a id="aa021921ff87b8c7c172966e55f145fef" name="aa021921ff87b8c7c172966e55f145fef"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa021921ff87b8c7c172966e55f145fef">&#9670;&#160;</a></span>BudgetHook</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="../../dd/d33/classAestra_1_1MuseAgent_1_1AgentLoop.html#aa021921ff87b8c7c172966e55f145fef">Aestra::MuseAgent::AgentLoop::BudgetHook</a> =  std::function&lt;void(long remainingMs)&gt;</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Called before every Muse request with the milliseconds left in the time budget, so the transport can bound its own blocking read. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../db/dcf/AgentLoop_8h_source.html#l00074">74</a> of file <a class="el" href="../../db/dcf/AgentLoop_8h_source.html">AgentLoop.h</a>.</p>
+
+</div>
+</div>
+<a id="ab12541e05ea704b94a50a4564aaa2313" name="ab12541e05ea704b94a50a4564aaa2313"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab12541e05ea704b94a50a4564aaa2313">&#9670;&#160;</a></span>Sleeper</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="../../dd/d33/classAestra_1_1MuseAgent_1_1AgentLoop.html#ab12541e05ea704b94a50a4564aaa2313">Aestra::MuseAgent::AgentLoop::Sleeper</a> =  std::function&lt;void(long milliseconds)&gt;</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Replace the backoff sleep (default: this thread sleeps). </p>
+<p>For tests. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../db/dcf/AgentLoop_8h_source.html#l00068">68</a> of file <a class="el" href="../../db/dcf/AgentLoop_8h_source.html">AgentLoop.h</a>.</p>
 
 </div>
 </div>
@@ -159,7 +209,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Transport: send one JSONL request line, get the response line. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dcf/AgentLoop_8h_source.html#l00053">53</a> of file <a class="el" href="../../db/dcf/AgentLoop_8h_source.html">AgentLoop.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dcf/AgentLoop_8h_source.html#l00057">57</a> of file <a class="el" href="../../db/dcf/AgentLoop_8h_source.html">AgentLoop.h</a>.</p>
 
 </div>
 </div>
@@ -184,7 +234,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../db/dcf/AgentLoop_8h_source.html#l00026">26</a> of file <a class="el" href="../../db/dcf/AgentLoop_8h_source.html">AgentLoop.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dcf/AgentLoop_8h_source.html#l00029">29</a> of file <a class="el" href="../../db/dcf/AgentLoop_8h_source.html">AgentLoop.h</a>.</p>
 
 </div>
 </div>
@@ -221,7 +271,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d64/AgentLoop_8cpp_source.html#l00062">62</a> of file <a class="el" href="../../d6/d64/AgentLoop_8cpp_source.html">AgentLoop.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d64/AgentLoop_8cpp_source.html#l00064">64</a> of file <a class="el" href="../../d6/d64/AgentLoop_8cpp_source.html">AgentLoop.cpp</a>.</p>
 
 </div>
 </div>
@@ -244,7 +294,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Run one brief through the loop. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d64/AgentLoop_8cpp_source.html#l00202">202</a> of file <a class="el" href="../../d6/d64/AgentLoop_8cpp_source.html">AgentLoop.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d64/AgentLoop_8cpp_source.html#l00229">229</a> of file <a class="el" href="../../d6/d64/AgentLoop_8cpp_source.html">AgentLoop.cpp</a>.</p>
 
 </div>
 </div>
@@ -275,7 +325,93 @@ Public Member Functions</h2></td></tr>
 <p>Route ask_user somewhere other than the terminal (e.g. </p>
 <p>tests). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dcf/AgentLoop_8h_source.html#l00061">61</a> of file <a class="el" href="../../db/dcf/AgentLoop_8h_source.html">AgentLoop.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dcf/AgentLoop_8h_source.html#l00065">65</a> of file <a class="el" href="../../db/dcf/AgentLoop_8h_source.html">AgentLoop.h</a>.</p>
+
+</div>
+</div>
+<a id="a31cf95554313cc3c25d6a51c97759a76" name="a31cf95554313cc3c25d6a51c97759a76"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a31cf95554313cc3c25d6a51c97759a76">&#9670;&#160;</a></span>setBudgetHook()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::MuseAgent::AgentLoop::setBudgetHook </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../dd/d33/classAestra_1_1MuseAgent_1_1AgentLoop.html#aa021921ff87b8c7c172966e55f145fef">BudgetHook</a>&#160;</td>
+          <td class="paramname"><em>hook</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../db/dcf/AgentLoop_8h_source.html#l00075">75</a> of file <a class="el" href="../../db/dcf/AgentLoop_8h_source.html">AgentLoop.h</a>.</p>
+
+</div>
+</div>
+<a id="a9eabb647031f60416ecd75d9d24f7b51" name="a9eabb647031f60416ecd75d9d24f7b51"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9eabb647031f60416ecd75d9d24f7b51">&#9670;&#160;</a></span>setInputFd()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::MuseAgent::AgentLoop::setInputFd </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>fd</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p><a class="el" href="../../d9/d59/classAestra_1_1File.html">File</a> descriptor the default ask_user reads answers from (default 0, stdin). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../db/dcf/AgentLoop_8h_source.html#l00078">78</a> of file <a class="el" href="../../db/dcf/AgentLoop_8h_source.html">AgentLoop.h</a>.</p>
+
+</div>
+</div>
+<a id="a0dedcb131701b29174d1ce9e37cefa43" name="a0dedcb131701b29174d1ce9e37cefa43"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0dedcb131701b29174d1ce9e37cefa43">&#9670;&#160;</a></span>setSleeper()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::MuseAgent::AgentLoop::setSleeper </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../dd/d33/classAestra_1_1MuseAgent_1_1AgentLoop.html#ab12541e05ea704b94a50a4564aaa2313">Sleeper</a>&#160;</td>
+          <td class="paramname"><em>sleeper</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../db/dcf/AgentLoop_8h_source.html#l00069">69</a> of file <a class="el" href="../../db/dcf/AgentLoop_8h_source.html">AgentLoop.h</a>.</p>
 
 </div>
 </div>

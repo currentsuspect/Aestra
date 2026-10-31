@@ -48,7 +48,7 @@
 <script type="application/ecmascript">
 var viewWidth = 753;
 var viewHeight = 94;
-var sectionId = 'dynsection-3';
+var sectionId = 'dynsection-4';
 </script>
 <script type="application/ecmascript" xlink:href="../../svg.min.js"/>
 <svg id="graph" class="graph">
@@ -123,7 +123,7 @@ var sectionId = 'dynsection-3';
 <!-- Node4 -->
 <g id="Node000004" class="node">
 <title>Node4</title>
-<g id="a_Node000004"><a xlink:href="../../de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#afd6910159d448765265eb9884cf80360" target="_top" xlink:title="Execute every fully received request line on the caller&#39;s thread.">
+<g id="a_Node000004"><a xlink:href="../../de/dee/classAestra_1_1Audio_1_1MuseSocketServer.html#afd6910159d448765265eb9884cf80360" target="_top" xlink:title="Execute received request lines on the caller&#39;s thread, at most 64 per call.">
 <polygon fill="white" stroke="#666666" points="146,-85.5 0,-85.5 0,-55.5 146,-55.5 146,-85.5"/>
 <text text-anchor="start" x="8" y="-73.5" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::MuseSocket</text>
 <text text-anchor="middle" x="73" y="-62.5" font-family="Helvetica,sans-Serif" font-size="10.00">Server::processPending</text>

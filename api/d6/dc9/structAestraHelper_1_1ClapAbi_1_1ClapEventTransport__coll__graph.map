@@ -1,0 +1,17 @@
+<map id="AestraHelper::ClapAbi::ClapEventTransport" name="AestraHelper::ClapAbi::ClapEventTransport">
+<area shape="rect" id="Node000001" title=" " alt="" coords="229,313,395,353"/>
+<area shape="rect" id="Node000002" href="$d7/de4/structAestraHelper_1_1ClapAbi_1_1ClapEventHeader.html" title=" " alt="" coords="59,123,224,163"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="150,175,169,232,185,262,206,287,223,301,242,311,240,316,220,305,202,291,181,265,164,234,145,177"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="39,5,113,31"/>
+<area shape="poly" id="edge4_Node000001_Node000003" title=" " alt="" coords="56,42,36,67,18,97,9,129,9,146,13,162,38,207,65,237,100,261,147,287,187,305,230,317,228,322,186,310,144,292,97,266,61,241,33,210,8,164,3,146,3,129,13,95,32,64,52,39"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="91,42,134,121,129,124,86,44"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="159,5,233,31"/>
+<area shape="poly" id="edge8_Node000001_Node000004" title=" " alt="" coords="228,38,242,53,264,105,284,179,311,312,306,314,279,180,259,107,238,56,224,41"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="187,45,152,123,147,121,183,43"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="372,130,439,155"/>
+<area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="377,165,356,188,339,220,328,255,316,314,311,313,322,253,334,218,351,185,373,162"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="463,130,529,155"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="497,169,488,237,480,269,469,291,453,305,435,315,396,329,394,324,432,311,450,301,465,288,475,268,482,236,491,169"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="555,130,621,155"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="593,169,594,197,590,230,580,263,560,291,533,306,492,318,395,330,395,325,491,312,531,302,557,287,575,261,585,229,588,197,588,169"/>
+</map>

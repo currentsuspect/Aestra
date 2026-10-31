@@ -2,7 +2,7 @@
 <area shape="rect" id="Node000001" title="Open or close a specific workspace overlay." alt="" coords="571,163,780,189"/>
 <area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#aa6777cac5178b47ce7e1f165cc3f85e8" title="runs a frame later, once the press has been handled" alt="" coords="295,5,523,45"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="650,156,594,107,559,82,521,60,493,48,495,43,524,55,562,77,597,103,653,152"/>
-<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#abc3ee4861acd0c5986598b967bb00e79" title="Open a pattern in the piano&#45;roll editor." alt="" coords="308,69,509,109"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a6cb6b5e62b9a7a547d2631ea4c350934" title="Open a pattern in the piano&#45;roll editor." alt="" coords="308,69,509,109"/>
 <area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="627,161,522,124,483,112,484,107,523,119,629,156"/>
 <area shape="rect" id="Node000008" href="$db/d60/classAestraContent.html#aa898dcc2a0431e3b72849883c2d72712" title="Show or hide the mixer panel." alt="" coords="297,134,520,159"/>
 <area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="556,166,520,162,521,156,557,160"/>

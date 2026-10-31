@@ -148,8 +148,8 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:ae11b9cfd8a64be6ee3e6ebd2ffb629b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a11ac00154965a31831ab1b91af0375e7" id="r_a11ac00154965a31831ab1b91af0375e7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d6f/classAestraUI_1_1UnitRow.html#a11ac00154965a31831ab1b91af0375e7">setOnPatternEdited</a> (std::function&lt; void(<a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">Aestra::Audio::PatternID</a>)&gt; cb)</td></tr>
 <tr class="separator:a11ac00154965a31831ab1b91af0375e7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3d3f5a135d7ae4f2246c56cc6e774713" id="r_a3d3f5a135d7ae4f2246c56cc6e774713"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d6f/classAestraUI_1_1UnitRow.html#a3d3f5a135d7ae4f2246c56cc6e774713">setOnOpenPatternEditor</a> (std::function&lt; void(<a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">Aestra::Audio::PatternID</a>)&gt; cb)</td></tr>
-<tr class="separator:a3d3f5a135d7ae4f2246c56cc6e774713"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a42f2ce011df261fca502c6d4eec7a995" id="r_a42f2ce011df261fca502c6d4eec7a995"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d6f/classAestraUI_1_1UnitRow.html#a42f2ce011df261fca502c6d4eec7a995">setOnOpenPatternEditor</a> (std::function&lt; void(<a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">Aestra::Audio::PatternID</a>, Aestra::Audio::UnitID)&gt; cb)</td></tr>
+<tr class="separator:a42f2ce011df261fca502c6d4eec7a995"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac1e7526e14f1af00d7baa122a38f99ef" id="r_ac1e7526e14f1af00d7baa122a38f99ef"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d6f/classAestraUI_1_1UnitRow.html#ac1e7526e14f1af00d7baa122a38f99ef">setOnRenameUnit</a> (std::function&lt; void(Aestra::Audio::UnitID, const std::string &amp;)&gt; cb)</td></tr>
 <tr class="separator:ac1e7526e14f1af00d7baa122a38f99ef"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a26c3051c28507667c3d3d67ad60323c3" id="r_a26c3051c28507667c3d3d67ad60323c3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d6f/classAestraUI_1_1UnitRow.html#a26c3051c28507667c3d3d67ad60323c3">setOnDeleteUnit</a> (std::function&lt; void(Aestra::Audio::UnitID)&gt; cb)</td></tr>
@@ -389,9 +389,9 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:a7d6da8b5de01965efbefd6d587cb2bb9" id="r_a7d6da8b5de01965efbefd6d587cb2bb9"><td class="memItemLeft" align="right" valign="top">std::function&lt; void(<a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">Aestra::Audio::PatternID</a>)&gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d6f/classAestraUI_1_1UnitRow.html#a7d6da8b5de01965efbefd6d587cb2bb9">m_onPatternEdited</a></td></tr>
 <tr class="memdesc:a7d6da8b5de01965efbefd6d587cb2bb9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback fired after the shared pattern backing this row is edited.  <br /></td></tr>
 <tr class="separator:a7d6da8b5de01965efbefd6d587cb2bb9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae5a39a42ac864a41ea1a23b601e4248b" id="r_ae5a39a42ac864a41ea1a23b601e4248b"><td class="memItemLeft" align="right" valign="top">std::function&lt; void(<a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">Aestra::Audio::PatternID</a>)&gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d6f/classAestraUI_1_1UnitRow.html#ae5a39a42ac864a41ea1a23b601e4248b">m_onOpenPatternEditor</a></td></tr>
-<tr class="memdesc:ae5a39a42ac864a41ea1a23b601e4248b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback used to open the full Piano Roll editor.  <br /></td></tr>
-<tr class="separator:ae5a39a42ac864a41ea1a23b601e4248b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac2000803223c23287b3744c9b52b5909" id="r_ac2000803223c23287b3744c9b52b5909"><td class="memItemLeft" align="right" valign="top">std::function&lt; void(<a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">Aestra::Audio::PatternID</a>, Aestra::Audio::UnitID)&gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d6f/classAestraUI_1_1UnitRow.html#ac2000803223c23287b3744c9b52b5909">m_onOpenPatternEditor</a></td></tr>
+<tr class="memdesc:ac2000803223c23287b3744c9b52b5909"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback used to open the full Piano Roll editor.  <br /></td></tr>
+<tr class="separator:ac2000803223c23287b3744c9b52b5909"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adf3000324c51b3f6f9fc82f3ec12a2d8" id="r_adf3000324c51b3f6f9fc82f3ec12a2d8"><td class="memItemLeft" align="right" valign="top">std::function&lt; void(Aestra::Audio::UnitID, const std::string &amp;)&gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d6f/classAestraUI_1_1UnitRow.html#adf3000324c51b3f6f9fc82f3ec12a2d8">m_onRenameUnit</a></td></tr>
 <tr class="memdesc:adf3000324c51b3f6f9fc82f3ec12a2d8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback fired when the unit name is renamed.  <br /></td></tr>
 <tr class="separator:adf3000324c51b3f6f9fc82f3ec12a2d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -555,7 +555,7 @@ Additional Inherited Members</h2></td></tr>
 <p>Width of one step pad at the current fit/scroll mode, and the 4-step group gap, so lanes line up with the pads. </p>
 <p>The colour this row reads as (its output channel's), for the lanes and strips drawn under it. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00139">139</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00140">140</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
 
 </div>
 </div>
@@ -625,7 +625,7 @@ Additional Inherited Members</h2></td></tr>
 <p>Get the horizontal grid scroll offset. </p>
 <dl class="section return"><dt>Returns</dt><dd>Scroll offset in pixels. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00126">126</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00127">127</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
 
 </div>
 </div>
@@ -655,7 +655,7 @@ Additional Inherited Members</h2></td></tr>
 <p>Get the visible step count for the sequencer section. </p>
 <dl class="section return"><dt>Returns</dt><dd>Number of rendered steps. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00112">112</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00113">113</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
 
 </div>
 </div>
@@ -685,7 +685,7 @@ Additional Inherited Members</h2></td></tr>
 <p>Get the unit identifier represented by this row. </p>
 <dl class="section return"><dt>Returns</dt><dd>Backing unit identifier. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00160">160</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00161">161</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
 
 </div>
 </div>
@@ -715,7 +715,7 @@ Additional Inherited Members</h2></td></tr>
 <p>Where the step pads sit inside the row (the same inset the pads are drawn and hit-tested with). </p>
 <p>The output chip's column at the row's right end (the chip, its 16 px margin, a gap): the grid stops before it. Where the head (stripe, name, M S and the open-lanes key) ends, from the row's left edge. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00130">130</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00131">131</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
 
 </div>
 </div>
@@ -745,7 +745,7 @@ Additional Inherited Members</h2></td></tr>
 <p>Check whether the row is selected. </p>
 <dl class="section return"><dt>Returns</dt><dd>True when the row is selected. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00173">173</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00174">174</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
 
 </div>
 </div>
@@ -925,7 +925,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../de/d55/UnitRow_8cpp_source.html#l01611">1611</a> of file <a class="el" href="../../de/d55/UnitRow_8cpp_source.html">UnitRow.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00070">m_onPluginDropped</a>, <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00068">m_onSampleDropped</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00551">Aestra::Audio::UnitManager::setUnitAudioClip()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00438">Aestra::Audio::UnitManager::setUnitName()</a>, and <a class="el" href="../../de/d55/UnitRow_8cpp_source.html#l00074">updateState()</a>.</p>
+<p class="reference">References <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00070">m_onPluginDropped</a>, <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00068">m_onSampleDropped</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00552">Aestra::Audio::UnitManager::setUnitAudioClip()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00439">Aestra::Audio::UnitManager::setUnitName()</a>, and <a class="el" href="../../de/d55/UnitRow_8cpp_source.html#l00074">updateState()</a>.</p>
 <div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-6-summary" class="dynsummary" style="display:block;">
@@ -1089,7 +1089,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00163">163</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00164">164</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
 
 </div>
 </div>
@@ -1118,7 +1118,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>The output by name ("Master", "Drum Bus"), as the row's pill reads it. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00162">162</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00163">163</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
 
 </div>
 </div>
@@ -1145,7 +1145,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00131">131</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00132">132</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
 
 </div>
 </div>
@@ -1168,7 +1168,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../de/d55/UnitRow_8cpp_source.html#l01728">1728</a> of file <a class="el" href="../../de/d55/UnitRow_8cpp_source.html">UnitRow.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">Aestra::Audio::UnitManager::getUnit()</a>, and <a class="el" href="../../de/d55/UnitRow_8cpp_source.html#l00074">updateState()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">Aestra::Audio::UnitManager::getUnit()</a>, and <a class="el" href="../../de/d55/UnitRow_8cpp_source.html#l00074">updateState()</a>.</p>
 <div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-7-summary" class="dynsummary" style="display:block;">
@@ -1231,7 +1231,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00092">92</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00093">93</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
 
 </div>
 </div>
@@ -1315,7 +1315,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00093">93</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00094">94</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
 
 </div>
 </div>
@@ -1379,7 +1379,7 @@ Additional Inherited Members</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00148">148</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00149">149</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
 
 </div>
 </div>
@@ -1411,8 +1411,8 @@ Additional Inherited Members</h2></td></tr>
 
 </div>
 </div>
-<a id="a3d3f5a135d7ae4f2246c56cc6e774713" name="a3d3f5a135d7ae4f2246c56cc6e774713"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3d3f5a135d7ae4f2246c56cc6e774713">&#9670;&#160;</a></span>setOnOpenPatternEditor()</h2>
+<a id="a42f2ce011df261fca502c6d4eec7a995" name="a42f2ce011df261fca502c6d4eec7a995"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a42f2ce011df261fca502c6d4eec7a995">&#9670;&#160;</a></span>setOnOpenPatternEditor()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1423,7 +1423,7 @@ Additional Inherited Members</h2></td></tr>
         <tr>
           <td class="memname">void AestraUI::UnitRow::setOnOpenPatternEditor </td>
           <td>(</td>
-          <td class="paramtype">std::function&lt; void(<a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">Aestra::Audio::PatternID</a>)&gt;&#160;</td>
+          <td class="paramtype">std::function&lt; void(<a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">Aestra::Audio::PatternID</a>, Aestra::Audio::UnitID)&gt;&#160;</td>
           <td class="paramname"><em>cb</em></td><td>)</td>
           <td></td>
         </tr>
@@ -1435,7 +1435,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00090">90</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00091">91</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
 
 </div>
 </div>
@@ -1519,7 +1519,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00091">91</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00092">92</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
 
 </div>
 </div>
@@ -1603,7 +1603,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00191">191</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00192">192</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
 
 </div>
 </div>
@@ -1639,7 +1639,7 @@ Additional Inherited Members</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00118">118</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00119">119</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
 
 </div>
 </div>
@@ -1675,7 +1675,7 @@ Additional Inherited Members</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00168">168</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00169">169</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
 
 </div>
 </div>
@@ -1739,7 +1739,7 @@ Additional Inherited Members</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00181">181</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00182">182</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
 
 </div>
 </div>
@@ -1775,7 +1775,7 @@ Additional Inherited Members</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00155">155</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00156">156</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
 
 </div>
 </div>
@@ -1802,7 +1802,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00141">141</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00142">142</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
 
 </div>
 </div>
@@ -1829,7 +1829,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00140">140</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00141">141</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
 
 </div>
 </div>
@@ -1856,7 +1856,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00132">132</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00133">133</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
 
 </div>
 </div>
@@ -1879,7 +1879,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../de/d55/UnitRow_8cpp_source.html#l00074">74</a> of file <a class="el" href="../../de/d55/UnitRow_8cpp_source.html">UnitRow.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">Aestra::Audio::UnitManager::getUnit()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00730">Aestra::Audio::UnitManager::getUnitRootMidiNote()</a>, <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00064">m_onEditUnit</a>, and <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00076">m_onRenameUnit</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">Aestra::Audio::UnitManager::getUnit()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00731">Aestra::Audio::UnitManager::getUnitRootMidiNote()</a>, <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00064">m_onEditUnit</a>, and <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00076">m_onRenameUnit</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../de/d55/UnitRow_8cpp_source.html#l01611">onDrop()</a>, <a class="el" href="../../de/d55/UnitRow_8cpp_source.html#l01728">routeToFirstFreeMixerChannel()</a>, and <a class="el" href="../../de/d55/UnitRow_8cpp_source.html#l00068">UnitRow()</a>.</p>
 <div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -2034,14 +2034,14 @@ Additional Inherited Members</h2></td></tr>
 
 </div>
 </div>
-<a id="ae5a39a42ac864a41ea1a23b601e4248b" name="ae5a39a42ac864a41ea1a23b601e4248b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae5a39a42ac864a41ea1a23b601e4248b">&#9670;&#160;</a></span>m_onOpenPatternEditor</h2>
+<a id="ac2000803223c23287b3744c9b52b5909" name="ac2000803223c23287b3744c9b52b5909"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac2000803223c23287b3744c9b52b5909">&#9670;&#160;</a></span>m_onOpenPatternEditor</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">std::function&lt;void(<a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">Aestra::Audio::PatternID</a>)&gt; AestraUI::UnitRow::m_onOpenPatternEditor</td>
+          <td class="memname">std::function&lt;void(<a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">Aestra::Audio::PatternID</a>, Aestra::Audio::UnitID)&gt; AestraUI::UnitRow::m_onOpenPatternEditor</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -2169,7 +2169,7 @@ Additional Inherited Members</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00190">190</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d3a/UnitRow_8h_source.html#l00191">191</a> of file <a class="el" href="../../d4/d3a/UnitRow_8h_source.html">UnitRow.h</a>.</p>
 
 </div>
 </div>

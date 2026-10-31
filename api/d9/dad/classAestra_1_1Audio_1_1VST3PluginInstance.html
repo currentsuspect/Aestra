@@ -181,6 +181,18 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:af60d2b5e4c56405de2f6e30e9f8fbac5" id="r_af60d2b5e4c56405de2f6e30e9f8fbac5"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance.html#af60d2b5e4c56405de2f6e30e9f8fbac5">resizeEditor</a> (int width, int height) override</td></tr>
 <tr class="memdesc:af60d2b5e4c56405de2f6e30e9f8fbac5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resize editor to new size.  <br /></td></tr>
 <tr class="separator:af60d2b5e4c56405de2f6e30e9f8fbac5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a686226222e3ecfe0915300bfa1724413" id="r_a686226222e3ecfe0915300bfa1724413"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance.html#a686226222e3ecfe0915300bfa1724413">openEditorEmbedded</a> (const std::function&lt; std::uintptr_t(int width, int height, bool resizable)&gt; &amp;makeWindow, <a class="el" href="../../df/d1b/classAestra_1_1Audio_1_1EditorLoopPump.html">EditorLoopPump</a> &amp;pump, std::function&lt; void(int width, int height)&gt; requestResize)</td></tr>
+<tr class="memdesc:a686226222e3ecfe0915300bfa1724413"><td class="mdescLeft">&#160;</td><td class="mdescRight">Open the editor in a top-level window the caller creates: an X11 window on Linux (V82-H3), an HWND on Windows (V82-H8).  <br /></td></tr>
+<tr class="separator:a686226222e3ecfe0915300bfa1724413"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab1c25a1755cf92c8b3dda227b803d565" id="r_ab1c25a1755cf92c8b3dda227b803d565"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance.html#ab1c25a1755cf92c8b3dda227b803d565">canResizeEditor</a> () const</td></tr>
+<tr class="memdesc:ab1c25a1755cf92c8b3dda227b803d565"><td class="mdescLeft">&#160;</td><td class="mdescRight">Whether the open editor accepts being resized by the host.  <br /></td></tr>
+<tr class="separator:ab1c25a1755cf92c8b3dda227b803d565"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a41b7df466e79972c43d59b9c987870ed" id="r_a41b7df466e79972c43d59b9c987870ed"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance.html#a41b7df466e79972c43d59b9c987870ed">setEditListener</a> (std::function&lt; void(uint32_t id, double normalized)&gt; listener)</td></tr>
+<tr class="memdesc:a41b7df466e79972c43d59b9c987870ed"><td class="mdescLeft">&#160;</td><td class="mdescRight">Hear about knobs moved in the plugin's own window (IComponentHandler::performEdit), normalized 0..1.  <br /></td></tr>
+<tr class="separator:a41b7df466e79972c43d59b9c987870ed"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aec7866b4adb45a5e90f337aab3474ca6" id="r_aec7866b4adb45a5e90f337aab3474ca6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance.html#aec7866b4adb45a5e90f337aab3474ca6">pumpControllerSync</a> ()</td></tr>
+<tr class="memdesc:aec7866b4adb45a5e90f337aab3474ca6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bring the controller up to date with what the processor reported (its own parameter moves) and act on restartComponent() flags.  <br /></td></tr>
+<tr class="separator:aec7866b4adb45a5e90f337aab3474ca6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af4ca2faaa4bb359ecf89b8cb13e58dd1" id="r_af4ca2faaa4bb359ecf89b8cb13e58dd1"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="../../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html">PluginInfo</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance.html#af4ca2faaa4bb359ecf89b8cb13e58dd1">getInfo</a> () const override</td></tr>
 <tr class="memdesc:af4ca2faaa4bb359ecf89b8cb13e58dd1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get plugin information.  <br /></td></tr>
 <tr class="separator:af4ca2faaa4bb359ecf89b8cb13e58dd1"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -209,6 +221,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ac09ef434ccbbde02fd29bbba3401c8d8 inherit pub_methods_classAestra_1_1Audio_1_1IPluginInstance" id="r_ac09ef434ccbbde02fd29bbba3401c8d8"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ac09ef434ccbbde02fd29bbba3401c8d8">applyAutomation</a> (uint32_t, float) noexcept</td></tr>
 <tr class="memdesc:ac09ef434ccbbde02fd29bbba3401c8d8 inherit pub_methods_classAestra_1_1Audio_1_1IPluginInstance"><td class="mdescLeft">&#160;</td><td class="mdescRight">Hand the plugin the automated value for this block.  <br /></td></tr>
 <tr class="separator:ac09ef434ccbbde02fd29bbba3401c8d8 inherit pub_methods_classAestra_1_1Audio_1_1IPluginInstance"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa31a55f7d6636219b307170826b91fd9 inherit pub_methods_classAestra_1_1Audio_1_1IPluginInstance" id="r_aa31a55f7d6636219b307170826b91fd9"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aa31a55f7d6636219b307170826b91fd9">ownsEditorWindow</a> () const</td></tr>
+<tr class="memdesc:aa31a55f7d6636219b307170826b91fd9 inherit pub_methods_classAestra_1_1Audio_1_1IPluginInstance"><td class="mdescLeft">&#160;</td><td class="mdescRight">Whether the plugin makes its own top-level window (the sandbox helper does), so the app must not make one to embed it in.  <br /></td></tr>
+<tr class="separator:aa31a55f7d6636219b307170826b91fd9 inherit pub_methods_classAestra_1_1Audio_1_1IPluginInstance"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="friends" name="friends"></a>
 Friends</h2></td></tr>
@@ -225,8 +240,27 @@ Friends</h2></td></tr>
 <li>ProcessData setup for audio callbacks </li>
 </ul>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d91/VST3Host_8h_source.html#l00036">36</a> of file <a class="el" href="../../d0/d91/VST3Host_8h_source.html">VST3Host.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d91/VST3Host_8h_source.html#l00041">41</a> of file <a class="el" href="../../d0/d91/VST3Host_8h_source.html">VST3Host.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="a0c5c7aecaca362b93408ce4c234bfa68" name="a0c5c7aecaca362b93408ce4c234bfa68"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0c5c7aecaca362b93408ce4c234bfa68">&#9670;&#160;</a></span>VST3PluginInstance()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">Aestra::Audio::VST3PluginInstance::VST3PluginInstance </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00297">297</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+
+</div>
+</div>
 <a id="af3c4abf01e8664d7b1adb9096a3e2e14" name="af3c4abf01e8664d7b1adb9096a3e2e14"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#af3c4abf01e8664d7b1adb9096a3e2e14">&#9670;&#160;</a></span>~VST3PluginInstance()</h2>
 
@@ -250,7 +284,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00107">107</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00299">299</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
 </div>
 </div>
@@ -282,7 +316,28 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a8c5884486cf915aecc040ed47579f137">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00320">320</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00535">535</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab1c25a1755cf92c8b3dda227b803d565" name="ab1c25a1755cf92c8b3dda227b803d565"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab1c25a1755cf92c8b3dda227b803d565">&#9670;&#160;</a></span>canResizeEditor()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::VST3PluginInstance::canResizeEditor </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Whether the open editor accepts being resized by the host. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l01116">1116</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
 </div>
 </div>
@@ -313,9 +368,9 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#abbbd61d2c9b8113b4fa8842ac1ea025b">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00801">801</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l01076">1076</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00238">unload()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00441">unload()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">
@@ -353,9 +408,9 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ae8873fee63c09979fd8235b66cf82b74">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00330">330</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00547">547</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00311">shutdown()</a>, and <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00238">unload()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00526">shutdown()</a>, and <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00441">unload()</a>.</p>
 <div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-3-summary" class="dynsummary" style="display:block;">
@@ -394,7 +449,7 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a4e9c8e50888e323296ad29ce7465b030">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00812">812</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l01095">1095</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
 </div>
 </div>
@@ -425,7 +480,7 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a0416678fedc43a77f2e208d999559acb">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d91/VST3Host_8h_source.html#l00094">94</a> of file <a class="el" href="../../d0/d91/VST3Host_8h_source.html">VST3Host.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d91/VST3Host_8h_source.html#l00127">127</a> of file <a class="el" href="../../d0/d91/VST3Host_8h_source.html">VST3Host.h</a>.</p>
 
 </div>
 </div>
@@ -456,7 +511,7 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ab213ce811c289ca2c97d1135cc5f2785">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00833">833</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l01176">1176</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
 </div>
 </div>
@@ -495,7 +550,7 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a50146239d3ee44ece1f7ce021a7d9ab7">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00568">568</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00820">820</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
 </div>
 </div>
@@ -526,7 +581,7 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a6d28828563a9f99c2e25d8fd3df742a9">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00561">561</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00813">813</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
 </div>
 </div>
@@ -565,7 +620,7 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a93980dfb9c9c5baf9830e57bda018067">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00582">582</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00851">851</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
 </div>
 </div>
@@ -596,7 +651,7 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a4556ebedc550a3946d87bb73b7981dae">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00554">554</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00806">806</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
 </div>
 </div>
@@ -627,7 +682,7 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ae30ed96e97c3ee9f6e0b67ca02456c30">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00840">840</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l01183">1183</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
 </div>
 </div>
@@ -658,9 +713,9 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aff2c900e33f79f27430b9fc27751d3aa">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00885">885</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l01228">1228</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00318">Aestra::Audio::IPluginInstance::WatchdogStats::avgExecutionTimeNs</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00320">Aestra::Audio::IPluginInstance::WatchdogStats::isBypassed</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00317">Aestra::Audio::IPluginInstance::WatchdogStats::maxExecutionTimeNs</a>, and <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00319">Aestra::Audio::IPluginInstance::WatchdogStats::violationCount</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00324">Aestra::Audio::IPluginInstance::WatchdogStats::avgExecutionTimeNs</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00326">Aestra::Audio::IPluginInstance::WatchdogStats::isBypassed</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00323">Aestra::Audio::IPluginInstance::WatchdogStats::maxExecutionTimeNs</a>, and <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00325">Aestra::Audio::IPluginInstance::WatchdogStats::violationCount</a>.</p>
 
 </div>
 </div>
@@ -691,7 +746,7 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a3493c6f26130010549f41db956f476f7">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00773">773</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l01048">1048</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00056">Aestra::Audio::PluginInfo::hasEditor</a>.</p>
 
@@ -735,7 +790,7 @@ Friends</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">sampleRate</td><td>Audio sample rate in Hz </td></tr>
-    <tr><td class="paramname">maxBlockSize</td><td>Maximum frames per <a class="el" href="../../d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance.html#a210bfef852e74bf2b1a01d5ef80bf9bc" title="Process audio through the plugin.">process()</a> call </td></tr>
+    <tr><td class="paramname">maxBlockSize</td><td>Maximum frames per process() call </td></tr>
   </table>
   </dd>
 </dl>
@@ -743,7 +798,7 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a3f57ac8a0a89a69c6358a74e6fb0eec8">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00283">283</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00486">486</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00044">Aestra::Audio::PluginInfo::name</a>.</p>
 
@@ -776,7 +831,7 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aaf189f5b44c01bf9af82e3e4cc389449">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d91/VST3Host_8h_source.html#l00073">73</a> of file <a class="el" href="../../d0/d91/VST3Host_8h_source.html">VST3Host.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d91/VST3Host_8h_source.html#l00078">78</a> of file <a class="el" href="../../d0/d91/VST3Host_8h_source.html">VST3Host.h</a>.</p>
 
 </div>
 </div>
@@ -807,7 +862,7 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a4dd1d460cb57e7eebbdf7562638a5388">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00896">896</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l01239">1239</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
 </div>
 </div>
@@ -838,7 +893,7 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a0d662ab4e5e2206e4118d6ba4ea1ee33">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00901">901</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l01244">1244</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
 </div>
 </div>
@@ -869,7 +924,7 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a4ca73e835125be8f4c1057c16104f19a">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d91/VST3Host_8h_source.html#l00090">90</a> of file <a class="el" href="../../d0/d91/VST3Host_8h_source.html">VST3Host.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d91/VST3Host_8h_source.html#l00095">95</a> of file <a class="el" href="../../d0/d91/VST3Host_8h_source.html">VST3Host.h</a>.</p>
 
 </div>
 </div>
@@ -898,7 +953,7 @@ Friends</h2></td></tr>
 
 <p>Check if plugin is loaded. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d91/VST3Host_8h_source.html#l00063">63</a> of file <a class="el" href="../../d0/d91/VST3Host_8h_source.html">VST3Host.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d91/VST3Host_8h_source.html#l00068">68</a> of file <a class="el" href="../../d0/d91/VST3Host_8h_source.html">VST3Host.h</a>.</p>
 
 </div>
 </div>
@@ -938,9 +993,9 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true if loaded successfully </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00111">111</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00303">303</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00047">Aestra::Audio::PluginInfo::category</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00048">Aestra::Audio::PluginInfo::format</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00056">Aestra::Audio::PluginInfo::hasEditor</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00054">Aestra::Audio::PluginInfo::hasMidiInput</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00043">Aestra::Audio::PluginInfo::id</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00044">Aestra::Audio::PluginInfo::name</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00052">Aestra::Audio::PluginInfo::numAudioInputs</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00053">Aestra::Audio::PluginInfo::numAudioOutputs</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00050">Aestra::Audio::PluginInfo::path</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00049">Aestra::Audio::PluginInfo::type</a>, <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00238">unload()</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00045">Aestra::Audio::PluginInfo::vendor</a>, and <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00046">Aestra::Audio::PluginInfo::version</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00047">Aestra::Audio::PluginInfo::category</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00048">Aestra::Audio::PluginInfo::format</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00056">Aestra::Audio::PluginInfo::hasEditor</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00054">Aestra::Audio::PluginInfo::hasMidiInput</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00043">Aestra::Audio::PluginInfo::id</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00044">Aestra::Audio::PluginInfo::name</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00052">Aestra::Audio::PluginInfo::numAudioInputs</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00053">Aestra::Audio::PluginInfo::numAudioOutputs</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00050">Aestra::Audio::PluginInfo::path</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00049">Aestra::Audio::PluginInfo::type</a>, <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00441">unload()</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00045">Aestra::Audio::PluginInfo::vendor</a>, and <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00046">Aestra::Audio::PluginInfo::version</a>.</p>
 <div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-4-summary" class="dynsummary" style="display:block;">
@@ -986,7 +1041,7 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a364b42104ca80c8d86d71a69372c6b93">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00701">701</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00970">970</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
 </div>
 </div>
@@ -1025,7 +1080,47 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aa054540a8ed06135b947ea3c71d6cc42">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00777">777</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l01052">1052</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a686226222e3ecfe0915300bfa1724413" name="a686226222e3ecfe0915300bfa1724413"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a686226222e3ecfe0915300bfa1724413">&#9670;&#160;</a></span>openEditorEmbedded()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::VST3PluginInstance::openEditorEmbedded </td>
+          <td>(</td>
+          <td class="paramtype">const std::function&lt; std::uintptr_t(int width, int height, bool resizable)&gt; &amp;&#160;</td>
+          <td class="paramname"><em>makeWindow</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../df/d1b/classAestra_1_1Audio_1_1EditorLoopPump.html">EditorLoopPump</a> &amp;&#160;</td>
+          <td class="paramname"><em>pump</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::function&lt; void(int width, int height)&gt;&#160;</td>
+          <td class="paramname"><em>requestResize</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Open the editor in a top-level window the caller creates: an X11 window on Linux (V82-H3), an HWND on Windows (V82-H8). </p>
+<p>On Windows the plugin runs its own Win32 timers, which the caller's message pump serves.</p>
+<p>The plugin's view is created first so its preferred size is known; <code>makeWindow</code> is then called with that size and whether the plugin can be resized, and returns the X11 window id (0 = could not) the view is attached to ("X11EmbedWindowID"). The plugin drives itself through Linux::IRunLoop, which feeds <code>pump:</code> the caller's GUI thread polls the descriptors and timers the pump holds. When the plugin asks for another size (IPlugFrame::resizeView) <code>requestResize</code> runs, then the view is told the size took. Returns false, with nothing left open, if the plugin has no X11 editor. Call on the thread that owns the window and runs the pump. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l01122">1122</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
 </div>
 </div>
@@ -1114,9 +1209,38 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ad68239e36c4c06b2f56e9ef03c6efb99">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00339">339</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00557">557</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00388">Aestra::Audio::MidiBuffer::Event::data</a>.</p>
+<p class="reference">References <a class="el" href="../../db/d75/HostTransport_8h_source.html#l00035">Aestra::Audio::HostTransport::barStartPpq</a>, <a class="el" href="../../db/d75/HostTransport_8h_source.html#l00197">Aestra::Audio::HostTransportClock::current()</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00394">Aestra::Audio::MidiBuffer::Event::data</a>, <a class="el" href="../../db/d75/HostTransport_8h_source.html#l00034">Aestra::Audio::HostTransport::ppqPosition</a>, <a class="el" href="../../db/d75/HostTransport_8h_source.html#l00032">Aestra::Audio::HostTransport::samplePosition</a>, <a class="el" href="../../db/d75/HostTransport_8h_source.html#l00029">Aestra::Audio::HostTransport::tempo</a>, and <a class="el" href="../../db/d75/HostTransport_8h_source.html#l00026">Aestra::Audio::HostTransport::valid</a>.</p>
+<div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-5-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-5-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance_a210bfef852e74bf2b1a01d5ef80bf9bc_cgraph.svg" width="456" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+
+</div>
+</div>
+<a id="aec7866b4adb45a5e90f337aab3474ca6" name="aec7866b4adb45a5e90f337aab3474ca6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aec7866b4adb45a5e90f337aab3474ca6">&#9670;&#160;</a></span>pumpControllerSync()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::VST3PluginInstance::pumpControllerSync </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Bring the controller up to date with what the processor reported (its own parameter moves) and act on restartComponent() flags. </p>
+<p>Call from the UI side (the editor loop), not the audio thread. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00841">841</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
 </div>
 </div>
@@ -1147,7 +1271,7 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a6d96b47bc0a727596e2a2e80dcdb2240">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00906">906</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l01249">1249</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00044">Aestra::Audio::PluginInfo::name</a>.</p>
 
@@ -1199,7 +1323,7 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#abf06171c7364cfe62ebcc23fe1cabc1f">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00824">824</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l01107">1107</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
 </div>
 </div>
@@ -1231,7 +1355,30 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a8c7d2dc9a6e2ccb6f56202a0fdbeab5c">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00594">594</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00863">863</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a41b7df466e79972c43d59b9c987870ed" name="a41b7df466e79972c43d59b9c987870ed"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a41b7df466e79972c43d59b9c987870ed">&#9670;&#160;</a></span>setEditListener()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::VST3PluginInstance::setEditListener </td>
+          <td>(</td>
+          <td class="paramtype">std::function&lt; void(uint32_t id, double normalized)&gt;&#160;</td>
+          <td class="paramname"><em>listener</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Hear about knobs moved in the plugin's own window (IComponentHandler::performEdit), normalized 0..1. </p>
+<p>Called on the thread that runs the editor, so the listener must be quick and thread-safe. The value has already been queued for the processor; this is for telling the rest of the app (automation recording, parameter UI). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00836">836</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
 </div>
 </div>
@@ -1280,7 +1427,7 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aad11d079af48a8b2492ad744ca1b1b89">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00575">575</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00827">827</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
 </div>
 </div>
@@ -1311,14 +1458,14 @@ Friends</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#afbdcfe0566bdc5d54de9cc4c3f82e0c7">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00311">311</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00526">526</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00330">deactivate()</a>.</p>
-<div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-5-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00547">deactivate()</a>.</p>
+<div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-6-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-5-content" class="dyncontent" style="display:none;">
+<div id="dynsection-6-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance_a2ff25eb88329db8b42e7d00d5db43c8c_cgraph.svg" width="440" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -1341,23 +1488,23 @@ Friends</h2></td></tr>
 
 <p>Unload the plugin. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00238">238</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00441">441</a> of file <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html">VST3Host.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00801">closeEditor()</a>, and <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00330">deactivate()</a>.</p>
+<p class="reference">References <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l01076">closeEditor()</a>, and <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00547">deactivate()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00111">load()</a>.</p>
-<div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-6-summary" class="dynsummary" style="display:block;">
-</div>
-<div id="dynsection-6-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance_ac17f09e6ad1263c54031f1fa8f9a993a_cgraph.svg" width="440" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
-</div>
+<p class="reference">Referenced by <a class="el" href="../../d6/d06/VST3Host_8cpp_source.html#l00303">load()</a>.</p>
 <div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+  <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-7-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-7-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance_ac17f09e6ad1263c54031f1fa8f9a993a_cgraph.svg" width="440" height="115"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+<div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-8-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-8-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance_ac17f09e6ad1263c54031f1fa8f9a993a_icgraph.svg" width="440" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -1384,7 +1531,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d91/VST3Host_8h_source.html#l00045">45</a> of file <a class="el" href="../../d0/d91/VST3Host_8h_source.html">VST3Host.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d91/VST3Host_8h_source.html#l00050">50</a> of file <a class="el" href="../../d0/d91/VST3Host_8h_source.html">VST3Host.h</a>.</p>
 
 </div>
 </div>

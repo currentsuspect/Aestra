@@ -1,0 +1,15 @@
+<map id="Aestra::Audio::DuplicatePatternCommand::execute" name="Aestra::Audio::DuplicatePatternCommand::execute">
+<area shape="rect" id="Node000001" title="Execute the command (first time)" alt="" coords="5,92,200,132"/>
+<area shape="rect" id="Node000002" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#af099c463dfaefc7d884bb200b597b537" title="Clone an existing pattern and return the new ID." alt="" coords="248,5,468,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="162,89,284,47,286,52,163,94"/>
+<area shape="rect" id="Node000003" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a" title="Get a pattern by ID (returns nullptr if not found)" alt="" coords="516,63,736,103"/>
+<area shape="poly" id="edge5_Node000001_Node000003" title=" " alt="" coords="200,104,502,87,502,92,200,109"/>
+<area shape="rect" id="Node000004" href="$de/d7a/classAestra_1_1Audio_1_1DuplicatePatternCommand.html#a649a7ffa999c9b77b2900a38227316ce" title="&quot;&lt;name&gt; copy&quot;, then &quot;&lt;name&gt; copy 2&quot;, ... the first one no pattern already has." alt="" coords="251,184,465,224"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="150,130,249,169,272,177,270,182,247,175,148,135"/>
+<area shape="rect" id="Node000006" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a72a2dd4a0e71f33f0303d44664ccbf14" title="Reinsert a detached pattern with the same stable identity." alt="" coords="248,120,468,160"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="201,120,235,124,234,129,200,125"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="453,43,519,57,518,62,452,48"/>
+<area shape="rect" id="Node000005" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#ab7952e458feafdb9709f3d4ed9f215b3" title="Visit every pattern (read&#45;only), in no particular order." alt="" coords="516,184,736,224"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="465,201,502,201,502,207,465,207"/>
+<area shape="poly" id="edge7_Node000006_Node000003" title=" " alt="" coords="452,117,518,103,519,108,453,123"/>
+</map>

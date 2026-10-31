@@ -119,7 +119,7 @@ Static Public Attributes</h2></td></tr>
 <div class="textblock"><p>One 2x halfband stage: polyphase interpolator + decimating FIR sharing the same linear-phase kernel. </p>
 <p>Mono; instantiate per channel. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00028">28</a> of file <a class="el" href="../../da/d88/Oversampler_8h_source.html">Oversampler.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00077">77</a> of file <a class="el" href="../../da/d88/Oversampler_8h_source.html">Oversampler.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="af0c00e1a6d3fd776f0c322d2cb7e5c50" name="af0c00e1a6d3fd776f0c322d2cb7e5c50"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#af0c00e1a6d3fd776f0c322d2cb7e5c50">&#9670;&#160;</a></span>design()</h2>
@@ -158,9 +158,9 @@ Static Public Attributes</h2></td></tr>
 <p>Compute the Kaiser-windowed-sinc halfband kernel. </p>
 <p>Non-RT (called from plugin initialize/prepare). numTaps must be odd and &lt;= kMaxTaps. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00034">34</a> of file <a class="el" href="../../da/d88/Oversampler_8h_source.html">Oversampler.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00083">83</a> of file <a class="el" href="../../da/d88/Oversampler_8h_source.html">Oversampler.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00153">Aestra::Audio::DSP::Oversampler::prepareKernels()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00439">Aestra::Audio::DSP::Oversampler::prepareKernels()</a>.</p>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-1-summary" class="dynsummary" style="display:block;">
@@ -198,9 +198,9 @@ Static Public Attributes</h2></td></tr>
 <p>Two input samples at 2x rate -&gt; one output sample (decimating FIR). </p>
 <p>The dot product is taken after the even subsample so the round-trip group delay stays integer at the input rate: y[n] = sum_k h[k]*x2[2n-k]. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00084">84</a> of file <a class="el" href="../../da/d88/Oversampler_8h_source.html">Oversampler.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00151">151</a> of file <a class="el" href="../../da/d88/Oversampler_8h_source.html">Oversampler.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00206">Aestra::Audio::DSP::Oversampler::downsample()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00492">Aestra::Audio::DSP::Oversampler::downsample()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">
@@ -234,7 +234,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00059">59</a> of file <a class="el" href="../../da/d88/Oversampler_8h_source.html">Oversampler.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00127">127</a> of file <a class="el" href="../../da/d88/Oversampler_8h_source.html">Oversampler.h</a>.</p>
 
 </div>
 </div>
@@ -261,7 +261,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00053">53</a> of file <a class="el" href="../../da/d88/Oversampler_8h_source.html">Oversampler.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00120">120</a> of file <a class="el" href="../../da/d88/Oversampler_8h_source.html">Oversampler.h</a>.</p>
 
 </div>
 </div>
@@ -302,9 +302,9 @@ Static Public Attributes</h2></td></tr>
 <p>One input sample -&gt; two output samples at 2x rate. </p>
 <p>out[p] = 2 * sum_j h[2j + p] * x[n - j] (zero-stuff + FIR, gain 2) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00063">63</a> of file <a class="el" href="../../da/d88/Oversampler_8h_source.html">Oversampler.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00131">131</a> of file <a class="el" href="../../da/d88/Oversampler_8h_source.html">Oversampler.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00185">Aestra::Audio::DSP::Oversampler::upsample()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00471">Aestra::Audio::DSP::Oversampler::upsample()</a>.</p>
 <div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-3-summary" class="dynsummary" style="display:block;">
@@ -336,7 +336,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00030">30</a> of file <a class="el" href="../../da/d88/Oversampler_8h_source.html">Oversampler.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00079">79</a> of file <a class="el" href="../../da/d88/Oversampler_8h_source.html">Oversampler.h</a>.</p>
 
 </div>
 </div>

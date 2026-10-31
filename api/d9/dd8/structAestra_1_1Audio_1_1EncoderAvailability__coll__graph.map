@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::EncoderAvailability" name="Aestra::Audio::EncoderAvailability">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,197,248,223"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="72,95,123,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="106,133,117,173,125,196,120,198,112,174,101,134"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="147,95,234,120"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="178,133,136,199,132,196,174,130"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="121,5,260,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="193,59,193,94,188,94,188,59"/>
+</map>

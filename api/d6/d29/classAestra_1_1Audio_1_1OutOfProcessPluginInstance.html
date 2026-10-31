@@ -96,6 +96,11 @@ $(function() {
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../da/d00/classAestra_1_1Audio_1_1OutOfProcessPluginInstance__coll__graph.svg" width="227" height="124"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 <center><span class="legend">[<a href="../../graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/d60/structAestra_1_1Audio_1_1OutOfProcessPluginInstance_1_1ParameterEdit.html">ParameterEdit</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:aeb287e83e1f001bcf43bb95e4c3caffa" id="r_aeb287e83e1f001bcf43bb95e4c3caffa"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#aeb287e83e1f001bcf43bb95e4c3caffa">OutOfProcessPluginInstance</a> (<a class="el" href="../../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html">PluginInfo</a> info, std::string hostExecutablePath)</td></tr>
@@ -135,6 +140,15 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ab67f41ad625cf3c944eb0f4e271fb688" id="r_ab67f41ad625cf3c944eb0f4e271fb688"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#ab67f41ad625cf3c944eb0f4e271fb688">getParameterDisplay</a> (uint32_t id) const override</td></tr>
 <tr class="memdesc:ab67f41ad625cf3c944eb0f4e271fb688"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get parameter value as display string.  <br /></td></tr>
 <tr class="separator:ab67f41ad625cf3c944eb0f4e271fb688"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0dc0e2c03c55c296031e3878c5da3960" id="r_a0dc0e2c03c55c296031e3878c5da3960"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#a0dc0e2c03c55c296031e3878c5da3960">supportsRealtimeAutomation</a> () const noexcept override</td></tr>
+<tr class="memdesc:a0dc0e2c03c55c296031e3878c5da3960"><td class="mdescLeft">&#160;</td><td class="mdescRight">Can this instance take automation writes from the render thread?  <br /></td></tr>
+<tr class="separator:a0dc0e2c03c55c296031e3878c5da3960"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9a21e97df1a51c0618d8fefe15093ffe" id="r_a9a21e97df1a51c0618d8fefe15093ffe"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#a9a21e97df1a51c0618d8fefe15093ffe">applyAutomation</a> (uint32_t id, float normalizedValue) noexcept override</td></tr>
+<tr class="memdesc:a9a21e97df1a51c0618d8fefe15093ffe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Hand the plugin the automated value for this block.  <br /></td></tr>
+<tr class="separator:a9a21e97df1a51c0618d8fefe15093ffe"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae33f564dbb205aafa414c9aec5f35f7e" id="r_ae33f564dbb205aafa414c9aec5f35f7e"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="../../df/d60/structAestra_1_1Audio_1_1OutOfProcessPluginInstance_1_1ParameterEdit.html">ParameterEdit</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#ae33f564dbb205aafa414c9aec5f35f7e">takeEditedParameters</a> ()</td></tr>
+<tr class="memdesc:ae33f564dbb205aafa414c9aec5f35f7e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Knobs moved in the plugin's own window since the last call (newest value per parameter). UI thread.  <br /></td></tr>
+<tr class="separator:ae33f564dbb205aafa414c9aec5f35f7e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afa0ca311b954f3b7c1f716e248b52cb7" id="r_afa0ca311b954f3b7c1f716e248b52cb7"><td class="memItemLeft" align="right" valign="top">std::vector&lt; uint8_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#afa0ca311b954f3b7c1f716e248b52cb7">saveState</a> () const override</td></tr>
 <tr class="memdesc:afa0ca311b954f3b7c1f716e248b52cb7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Save plugin state to binary data.  <br /></td></tr>
 <tr class="separator:afa0ca311b954f3b7c1f716e248b52cb7"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -147,6 +161,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a741a2373483b92242084b7b706b131ec" id="r_a741a2373483b92242084b7b706b131ec"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#a741a2373483b92242084b7b706b131ec">openEditor</a> (void *parentWindow) override</td></tr>
 <tr class="memdesc:a741a2373483b92242084b7b706b131ec"><td class="mdescLeft">&#160;</td><td class="mdescRight">Open the plugin editor window.  <br /></td></tr>
 <tr class="separator:a741a2373483b92242084b7b706b131ec"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5e4a78c93741ab91abf556a2350ec53c" id="r_a5e4a78c93741ab91abf556a2350ec53c"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#a5e4a78c93741ab91abf556a2350ec53c">ownsEditorWindow</a> () const override</td></tr>
+<tr class="memdesc:a5e4a78c93741ab91abf556a2350ec53c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Whether the plugin makes its own top-level window (the sandbox helper does), so the app must not make one to embed it in.  <br /></td></tr>
+<tr class="separator:a5e4a78c93741ab91abf556a2350ec53c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a39c86bc51456c7ead47dab8fe8b89cba" id="r_a39c86bc51456c7ead47dab8fe8b89cba"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#a39c86bc51456c7ead47dab8fe8b89cba">closeEditor</a> () override</td></tr>
 <tr class="memdesc:a39c86bc51456c7ead47dab8fe8b89cba"><td class="mdescLeft">&#160;</td><td class="mdescRight">Close the plugin editor window.  <br /></td></tr>
 <tr class="separator:a39c86bc51456c7ead47dab8fe8b89cba"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -182,17 +199,18 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a74a426de67ac91a3b72bd24433876ba3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af17924c8a6585eb335021165b90f6998" id="r_af17924c8a6585eb335021165b90f6998"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#af17924c8a6585eb335021165b90f6998">parameterDropCount</a> () const</td></tr>
 <tr class="separator:af17924c8a6585eb335021165b90f6998"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="inherit_header pub_methods_classAestra_1_1Audio_1_1IPluginInstance"><td colspan="2" onclick="javascript:toggleInherit('pub_methods_classAestra_1_1Audio_1_1IPluginInstance')"><img src="../../closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html">Aestra::Audio::IPluginInstance</a></td></tr>
-<tr class="memitem:ae2d80b82758dc59a4cb43541fa489d43 inherit pub_methods_classAestra_1_1Audio_1_1IPluginInstance" id="r_ae2d80b82758dc59a4cb43541fa489d43"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ae2d80b82758dc59a4cb43541fa489d43">supportsRealtimeAutomation</a> () const noexcept</td></tr>
-<tr class="memdesc:ae2d80b82758dc59a4cb43541fa489d43 inherit pub_methods_classAestra_1_1Audio_1_1IPluginInstance"><td class="mdescLeft">&#160;</td><td class="mdescRight">Can this instance take automation writes from the render thread?  <br /></td></tr>
-<tr class="separator:ae2d80b82758dc59a4cb43541fa489d43 inherit pub_methods_classAestra_1_1Audio_1_1IPluginInstance"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac09ef434ccbbde02fd29bbba3401c8d8 inherit pub_methods_classAestra_1_1Audio_1_1IPluginInstance" id="r_ac09ef434ccbbde02fd29bbba3401c8d8"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ac09ef434ccbbde02fd29bbba3401c8d8">applyAutomation</a> (uint32_t, float) noexcept</td></tr>
-<tr class="memdesc:ac09ef434ccbbde02fd29bbba3401c8d8 inherit pub_methods_classAestra_1_1Audio_1_1IPluginInstance"><td class="mdescLeft">&#160;</td><td class="mdescRight">Hand the plugin the automated value for this block.  <br /></td></tr>
-<tr class="separator:ac09ef434ccbbde02fd29bbba3401c8d8 inherit pub_methods_classAestra_1_1Audio_1_1IPluginInstance"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a40e7573e1e1ac1bd83eb4709ad558f50" id="r_a40e7573e1e1ac1bd83eb4709ad558f50"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#a40e7573e1e1ac1bd83eb4709ad558f50">helperBlockCount</a> () const</td></tr>
+<tr class="separator:a40e7573e1e1ac1bd83eb4709ad558f50"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a04e7f1749f1d1534f0b33354046359a5" id="r_a04e7f1749f1d1534f0b33354046359a5"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#a04e7f1749f1d1534f0b33354046359a5">dryBlockCount</a> () const</td></tr>
+<tr class="separator:a04e7f1749f1d1534f0b33354046359a5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afd4fb7e0f738d81f51e43e66ec9b5cbf" id="r_afd4fb7e0f738d81f51e43e66ec9b5cbf"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#afd4fb7e0f738d81f51e43e66ec9b5cbf">unsentBlockCount</a> () const</td></tr>
+<tr class="separator:afd4fb7e0f738d81f51e43e66ec9b5cbf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8ef90430ac0ff162ce4e0af350ce64e8" id="r_a8ef90430ac0ff162ce4e0af350ce64e8"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#a8ef90430ac0ff162ce4e0af350ce64e8">usesSharedAudio</a> () const</td></tr>
+<tr class="separator:a8ef90430ac0ff162ce4e0af350ce64e8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00021">21</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00026">26</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="aeb287e83e1f001bcf43bb95e4c3caffa" name="aeb287e83e1f001bcf43bb95e4c3caffa"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aeb287e83e1f001bcf43bb95e4c3caffa">&#9670;&#160;</a></span>OutOfProcessPluginInstance()</h2>
@@ -220,7 +238,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00696">696</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00798">798</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
 
 </div>
 </div>
@@ -247,7 +265,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00700">700</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00802">802</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
 
 </div>
 </div>
@@ -279,7 +297,56 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a8c5884486cf915aecc040ed47579f137">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00770">770</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00938">938</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a9a21e97df1a51c0618d8fefe15093ffe" name="a9a21e97df1a51c0618d8fefe15093ffe"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9a21e97df1a51c0618d8fefe15093ffe">&#9670;&#160;</a></span>applyAutomation()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::OutOfProcessPluginInstance::applyAutomation </td>
+          <td>(</td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname">, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname">&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Hand the plugin the automated value for this block. </p>
+<p>Render thread, real-time rules: no allocation, no locks, no I/O, no waiting. Only called when <a class="el" href="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#a0dc0e2c03c55c296031e3878c5da3960" title="Can this instance take automation writes from the render thread?">supportsRealtimeAutomation()</a> is true.</p>
+<ul>
+<li><code>id</code> is the plugin's stable parameter id (the same id <a class="el" href="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#a9969838b3949096f4a7d030d79580bf1" title="Get all parameter descriptors.">getParameters()</a> reports). An unknown id is ignored.</li>
+<li><code>normalizedValue</code> is finite and in the parameter's normalized range, exactly as <a class="el" href="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#a2200d115f25a24555a020c8c83e185de" title="Set parameter value (normalized 0-1)">setParameter()</a> takes it.</li>
+<li>The plugin owns smoothing. The engine hands over the raw target once per block, so automation and a manual edit share one smoother.</li>
+</ul>
+<p>How a plugin satisfies it is its own business. An internal plugin stores to atomic parameter storage. A hosted-format adapter appends to a lock-free queue that process() drains into the format's own parameter change mechanism (VST3 IParameterChanges, CLAP param events). </p>
+
+<p>Reimplemented from <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ac09ef434ccbbde02fd29bbba3401c8d8">Aestra::Audio::IPluginInstance</a>.</p>
+
+<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l01034">1034</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
 
 </div>
 </div>
@@ -301,7 +368,7 @@ Public Member Functions</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
@@ -310,7 +377,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#abbbd61d2c9b8113b4fa8842ac1ea025b">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00048">48</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l01172">1172</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
 
 </div>
 </div>
@@ -341,7 +408,34 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ae8873fee63c09979fd8235b66cf82b74">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00779">779</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00948">948</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a04e7f1749f1d1534f0b33354046359a5" name="a04e7f1749f1d1534f0b33354046359a5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a04e7f1749f1d1534f0b33354046359a5">&#9670;&#160;</a></span>dryBlockCount()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint64_t Aestra::Audio::OutOfProcessPluginInstance::dryBlockCount </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00096">96</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
 
 </div>
 </div>
@@ -363,7 +457,7 @@ Public Member Functions</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
@@ -373,7 +467,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a4e9c8e50888e323296ad29ce7465b030">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00050">50</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l01177">1177</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
 
 </div>
 </div>
@@ -404,7 +498,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a0416678fedc43a77f2e208d999559acb">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00053">53</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00072">72</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
 
 </div>
 </div>
@@ -435,7 +529,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ab213ce811c289ca2c97d1135cc5f2785">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00054">54</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00077">77</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
 
 </div>
 </div>
@@ -474,7 +568,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a50146239d3ee44ece1f7ce021a7d9ab7">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00853">853</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l01021">1021</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
 
 </div>
 </div>
@@ -505,7 +599,16 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a6d28828563a9f99c2e25d8fd3df742a9">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00038">38</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00045">45</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00979">getParameters()</a>.</p>
+<div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-2-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-2-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance_af4a66e7bb3ff16bd13f663cc39f82e32_cgraph.svg" width="530" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 
 </div>
 </div>
@@ -544,7 +647,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a93980dfb9c9c5baf9830e57bda018067">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00896">896</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l01105">1105</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
 
 </div>
 </div>
@@ -566,7 +669,7 @@ Public Member Functions</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
@@ -575,7 +678,18 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a4556ebedc550a3946d87bb73b7981dae">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00037">37</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00979">979</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00070">Aestra::Audio::PluginParameter::defaultValue</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00065">Aestra::Audio::PluginParameter::id</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00074">Aestra::Audio::PluginParameter::isAutomatable</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00075">Aestra::Audio::PluginParameter::isBypass</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00076">Aestra::Audio::PluginParameter::isReadOnly</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00066">Aestra::Audio::PluginParameter::name</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00067">Aestra::Audio::PluginParameter::shortName</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00078">Aestra::Audio::PluginParameter::stepCount</a>, and <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00068">Aestra::Audio::PluginParameter::unit</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00045">getParameterCount()</a>.</p>
+<div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-3-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-3-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance_a9969838b3949096f4a7d030d79580bf1_icgraph.svg" width="530" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 
 </div>
 </div>
@@ -606,7 +720,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ae30ed96e97c3ee9f6e0b67ca02456c30">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00055">55</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00080">80</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
 
 </div>
 </div>
@@ -637,9 +751,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aff2c900e33f79f27430b9fc27751d3aa">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00945">945</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l01187">1187</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00318">Aestra::Audio::IPluginInstance::WatchdogStats::avgExecutionTimeNs</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00320">Aestra::Audio::IPluginInstance::WatchdogStats::isBypassed</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00317">Aestra::Audio::IPluginInstance::WatchdogStats::maxExecutionTimeNs</a>, and <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00319">Aestra::Audio::IPluginInstance::WatchdogStats::violationCount</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00324">Aestra::Audio::IPluginInstance::WatchdogStats::avgExecutionTimeNs</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00326">Aestra::Audio::IPluginInstance::WatchdogStats::isBypassed</a>, <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00323">Aestra::Audio::IPluginInstance::WatchdogStats::maxExecutionTimeNs</a>, and <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00325">Aestra::Audio::IPluginInstance::WatchdogStats::violationCount</a>.</p>
 
 </div>
 </div>
@@ -661,7 +775,7 @@ Public Member Functions</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
@@ -670,7 +784,45 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a3493c6f26130010549f41db956f476f7">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00046">46</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l01150">1150</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00048">Aestra::Audio::PluginInfo::format</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l01159">openEditor()</a>.</p>
+<div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-4-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-4-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance_adad1719769aa54326f3835c9d95e38cd_icgraph.svg" width="470" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+
+</div>
+</div>
+<a id="a40e7573e1e1ac1bd83eb4709ad558f50" name="a40e7573e1e1ac1bd83eb4709ad558f50"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a40e7573e1e1ac1bd83eb4709ad558f50">&#9670;&#160;</a></span>helperBlockCount()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint64_t Aestra::Audio::OutOfProcessPluginInstance::helperBlockCount </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00095">95</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
 
 </div>
 </div>
@@ -712,7 +864,7 @@ Public Member Functions</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">sampleRate</td><td>Audio sample rate in Hz </td></tr>
-    <tr><td class="paramname">maxBlockSize</td><td>Maximum frames per <a class="el" href="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#adbec8ee8a9e3d37eea3b3f11ee32226e" title="Process audio through the plugin.">process()</a> call </td></tr>
+    <tr><td class="paramname">maxBlockSize</td><td>Maximum frames per process() call </td></tr>
   </table>
   </dd>
 </dl>
@@ -720,7 +872,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a3f57ac8a0a89a69c6358a74e6fb0eec8">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00730">730</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00856">856</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
 
 </div>
 </div>
@@ -751,7 +903,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aaf189f5b44c01bf9af82e3e4cc389449">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00032">32</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00037">37</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
 
 </div>
 </div>
@@ -782,7 +934,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a4dd1d460cb57e7eebbdf7562638a5388">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00954">954</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l01196">1196</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
 
 </div>
 </div>
@@ -813,7 +965,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a0d662ab4e5e2206e4118d6ba4ea1ee33">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00060">60</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00085">85</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
 
 </div>
 </div>
@@ -844,7 +996,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a4ca73e835125be8f4c1057c16104f19a">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00049">49</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00068">68</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
 
 </div>
 </div>
@@ -863,7 +1015,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00704">704</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00806">806</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
 
 </div>
 </div>
@@ -902,7 +1054,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a364b42104ca80c8d86d71a69372c6b93">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00921">921</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l01137">1137</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
 
 </div>
 </div>
@@ -941,7 +1093,48 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aa054540a8ed06135b947ea3c71d6cc42">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00934">934</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l01159">1159</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+
+<p class="reference">References <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l01150">hasEditor()</a>, and <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00044">Aestra::Audio::PluginInfo::name</a>.</p>
+<div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-5-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-5-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance_a741a2373483b92242084b7b706b131ec_cgraph.svg" width="470" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+
+</div>
+</div>
+<a id="a5e4a78c93741ab91abf556a2350ec53c" name="a5e4a78c93741ab91abf556a2350ec53c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5e4a78c93741ab91abf556a2350ec53c">&#9670;&#160;</a></span>ownsEditorWindow()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::OutOfProcessPluginInstance::ownsEditorWindow </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Whether the plugin makes its own top-level window (the sandbox helper does), so the app must not make one to embed it in. </p>
+<p>When true, <a class="el" href="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#a741a2373483b92242084b7b706b131ec" title="Open the plugin editor window.">openEditor()</a> ignores its argument: pass nullptr. </p>
+
+<p>Reimplemented from <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aa31a55f7d6636219b307170826b91fd9">Aestra::Audio::IPluginInstance</a>.</p>
+
+<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00066">66</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
 
 </div>
 </div>
@@ -968,7 +1161,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00065">65</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00090">90</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
 
 </div>
 </div>
@@ -1057,7 +1250,16 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ad68239e36c4c06b2f56e9ef03c6efb99">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00784">784</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d4b/OutOfProcessPluginInstanceRt_8cpp_source.html#l00031">31</a> of file <a class="el" href="../../df/d4b/OutOfProcessPluginInstanceRt_8cpp_source.html">OutOfProcessPluginInstanceRt.cpp</a>.</p>
+
+<p class="reference">References <a class="el" href="../../db/d75/HostTransport_8h_source.html#l00197">Aestra::Audio::HostTransportClock::current()</a>, <a class="el" href="../../df/dd1/SandboxBlockFifo_8h_source.html#l00068">Aestra::Audio::InterleavedFifo::popInterleaved()</a>, <a class="el" href="../../df/dd1/SandboxBlockFifo_8h_source.html#l00076">Aestra::Audio::InterleavedFifo::popPlanar()</a>, <a class="el" href="../../df/dd1/SandboxBlockFifo_8h_source.html#l00050">Aestra::Audio::InterleavedFifo::pushInterleaved()</a>, <a class="el" href="../../df/dd1/SandboxBlockFifo_8h_source.html#l00038">Aestra::Audio::InterleavedFifo::pushPlanar()</a>, and <a class="el" href="../../df/dd1/SandboxBlockFifo_8h_source.html#l00130">Aestra::Audio::ChunkMidiQueue::takeChunk()</a>.</p>
+<div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-6-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-6-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance_adbec8ee8a9e3d37eea3b3f11ee32226e_cgraph.svg" width="471" height="371"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 
 </div>
 </div>
@@ -1088,7 +1290,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a6d96b47bc0a727596e2a2e80dcdb2240">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00958">958</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l01200">1200</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
 
 </div>
 </div>
@@ -1138,7 +1340,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#abf06171c7364cfe62ebcc23fe1cabc1f">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00939">939</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l01181">1181</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
 
 </div>
 </div>
@@ -1170,7 +1372,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a8c7d2dc9a6e2ccb6f56202a0fdbeab5c">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00901">901</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l01117">1117</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
 
 </div>
 </div>
@@ -1219,7 +1421,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aad11d079af48a8b2492ad744ca1b1b89">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00858">858</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l01066">1066</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00044">Aestra::Audio::PluginInfo::name</a>.</p>
 
@@ -1252,13 +1454,123 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#afbdcfe0566bdc5d54de9cc4c3f82e0c7">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00760">760</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l00926">926</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a0dc0e2c03c55c296031e3878c5da3960" name="a0dc0e2c03c55c296031e3878c5da3960"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0dc0e2c03c55c296031e3878c5da3960">&#9670;&#160;</a></span>supportsRealtimeAutomation()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::OutOfProcessPluginInstance::supportsRealtimeAutomation </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Can this instance take automation writes from the render thread? </p>
+<p>Default false: a plugin is not automated until it says it can be. The engine skips (and counts) curves aimed at such a plugin instead of guessing. Constant for the life of the instance. </p>
+
+<p>Reimplemented from <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ae2d80b82758dc59a4cb43541fa489d43">Aestra::Audio::IPluginInstance</a>.</p>
+
+<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l01030">1030</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00048">Aestra::Audio::PluginInfo::format</a>.</p>
+
+</div>
+</div>
+<a id="ae33f564dbb205aafa414c9aec5f35f7e" name="ae33f564dbb205aafa414c9aec5f35f7e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae33f564dbb205aafa414c9aec5f35f7e">&#9670;&#160;</a></span>takeEditedParameters()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="../../df/d60/structAestra_1_1Audio_1_1OutOfProcessPluginInstance_1_1ParameterEdit.html">OutOfProcessPluginInstance::ParameterEdit</a> &gt; Aestra::Audio::OutOfProcessPluginInstance::takeEditedParameters </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Knobs moved in the plugin's own window since the last call (newest value per parameter). UI thread. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html#l01048">1048</a> of file <a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a>.</p>
+
+</div>
+</div>
+<a id="afd4fb7e0f738d81f51e43e66ec9b5cbf" name="afd4fb7e0f738d81f51e43e66ec9b5cbf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afd4fb7e0f738d81f51e43e66ec9b5cbf">&#9670;&#160;</a></span>unsentBlockCount()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint64_t Aestra::Audio::OutOfProcessPluginInstance::unsentBlockCount </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00100">100</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
+
+</div>
+</div>
+<a id="a8ef90430ac0ff162ce4e0af350ce64e8" name="a8ef90430ac0ff162ce4e0af350ce64e8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8ef90430ac0ff162ce4e0af350ce64e8">&#9670;&#160;</a></span>usesSharedAudio()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::OutOfProcessPluginInstance::usesSharedAudio </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html#l00103">103</a> of file <a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a>.</p>
 
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>AestraAudio/include/Plugin/<a class="el" href="../../d0/d05/OutOfProcessPluginInstance_8h_source.html">OutOfProcessPluginInstance.h</a></li>
 <li>AestraAudio/src/Plugin/<a class="el" href="../../de/d66/OutOfProcessPluginInstance_8cpp_source.html">OutOfProcessPluginInstance.cpp</a></li>
+<li>AestraAudio/src/Plugin/<a class="el" href="../../df/d4b/OutOfProcessPluginInstanceRt_8cpp_source.html">OutOfProcessPluginInstanceRt.cpp</a></li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->

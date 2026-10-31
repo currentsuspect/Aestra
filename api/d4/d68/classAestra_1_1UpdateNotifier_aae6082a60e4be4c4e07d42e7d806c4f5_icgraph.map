@@ -1,0 +1,5 @@
+<map id="Aestra::UpdateNotifier::currentVersion" name="Aestra::UpdateNotifier::currentVersion">
+<area shape="rect" id="Node000001" title="The version this build reports (AESTRA_UPDATE_VERSION_STRING)." alt="" coords="220,5,387,45"/>
+<area shape="rect" id="Node000002" href="$d4/d68/classAestra_1_1UpdateNotifier.html#a34767f04a91a27c19ce9f177ed0851cf" title="Called as Aestra exits: if the user asked to restart into an update, hand over to the updater." alt="" coords="5,5,172,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="206,28,172,28,172,23,206,23"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="Aestra::RunLog::Location" name="Aestra::RunLog::Location">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,93,188,119"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="25,5,75,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="49,44,54,68,63,81,76,91,73,95,60,85,49,70,44,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="118,5,169,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="133,44,105,94,101,92,128,41"/>
+</map>

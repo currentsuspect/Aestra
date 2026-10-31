@@ -1,0 +1,10 @@
+<map id="Aestra::Audio::HostTransportClock::current" name="Aestra::Audio::HostTransportClock::current">
+<area shape="rect" id="Node000001" title="Any thread. A snapshot that kept moving under the reader comes back !valid." alt="" coords="259,93,465,133"/>
+<area shape="rect" id="Node000002" href="$d8/d09/classAestra_1_1Audio_1_1CLAPPluginInstance.html#a02c6f4380128b55e75cdd4679ecb1716" title="Process audio through the plugin." alt="" coords="13,29,203,69"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="268,92,187,72,189,67,269,87"/>
+<area shape="rect" id="Node000003" href="$d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#adbec8ee8a9e3d37eea3b3f11ee32226e" title="Process audio through the plugin." alt="" coords="5,93,211,133"/>
+<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="245,116,211,116,211,111,245,111"/>
+<area shape="rect" id="Node000004" href="$d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance.html#a210bfef852e74bf2b1a01d5ef80bf9bc" title="Process audio through the plugin." alt="" coords="13,157,203,197"/>
+<area shape="poly" id="edge4_Node000001_Node000004" title=" " alt="" coords="269,139,189,160,187,155,268,134"/>
+<area shape="poly" id="edge2_Node000002_Node000002" title=" " alt="" coords="151,18,136,11,108,8,83,10,69,15,63,21,66,28,61,30,58,20,66,10,82,5,108,3,137,6,153,13"/>
+</map>

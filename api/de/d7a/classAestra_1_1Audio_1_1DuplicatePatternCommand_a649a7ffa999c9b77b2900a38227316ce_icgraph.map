@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::DuplicatePatternCommand::copyName" name="Aestra::Audio::DuplicatePatternCommand::copyName">
+<area shape="rect" id="Node000001" title="&quot;&lt;name&gt; copy&quot;, then &quot;&lt;name&gt; copy 2&quot;, ... the first one no pattern already has." alt="" coords="475,5,688,45"/>
+<area shape="rect" id="Node000002" href="$de/d7a/classAestra_1_1Audio_1_1DuplicatePatternCommand.html#ac894d869a239181170279f7ce85c7500" title="Execute the command (first time)" alt="" coords="232,5,427,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="461,28,427,28,427,23,461,23"/>
+<area shape="rect" id="Node000003" href="$de/d7a/classAestra_1_1Audio_1_1DuplicatePatternCommand.html#acc701d9ce83fb1bfb64cb6906e5075cf" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,184,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="219,28,184,28,184,23,219,23"/>
+</map>

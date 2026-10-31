@@ -1,0 +1,5 @@
+<map id="AestraHelper::EditorHost::limitWait" name="AestraHelper::EditorHost::limitWait">
+<area shape="rect" id="Node000001" title="Lowers timeoutMs to the plugin&#39;s next timer, and to 30 ms while open so the editor&#39;s model keeps up (..." alt="" coords="5,5,188,45"/>
+<area shape="rect" id="Node000002" href="$df/d1b/classAestra_1_1Audio_1_1EditorLoopPump.html#adbf8bfd5fe30b35a1eb2f12277de6558" title="Milliseconds until the next timer is due (0 when one already is), or &#45;1 when there are no timers: the..." alt="" coords="236,5,423,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="188,23,222,23,222,28,188,28"/>
+</map>

@@ -75,6 +75,7 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
+<a href="#nested-classes">Classes</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="../../db/d1e/classAestra_1_1AsyncLogger-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">Aestra::AsyncLogger Class Reference</div></div>
@@ -101,6 +102,9 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a960512a970aaf1baa45aafcae178c0e9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab4ed3ef6aa055abdfe105f71b899dd53" id="r_ab4ed3ef6aa055abdfe105f71b899dd53"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/d10/classAestra_1_1AsyncLogger.html#ab4ed3ef6aa055abdfe105f71b899dd53">log</a> (LogLevel level, const std::string &amp;message) override</td></tr>
 <tr class="separator:ab4ed3ef6aa055abdfe105f71b899dd53"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a21b642bc6d3f261cdc8069ebbe50efb2" id="r_a21b642bc6d3f261cdc8069ebbe50efb2"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/d10/classAestra_1_1AsyncLogger.html#a21b642bc6d3f261cdc8069ebbe50efb2">droppedCount</a> () const</td></tr>
+<tr class="memdesc:a21b642bc6d3f261cdc8069ebbe50efb2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Lines dropped because the queue was full.  <br /></td></tr>
+<tr class="separator:a21b642bc6d3f261cdc8069ebbe50efb2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2a1a5af3658285507e4b3f16689de72d" id="r_a2a1a5af3658285507e4b3f16689de72d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/d10/classAestra_1_1AsyncLogger.html#a2a1a5af3658285507e4b3f16689de72d">setLevel</a> (LogLevel level) override</td></tr>
 <tr class="separator:a2a1a5af3658285507e4b3f16689de72d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a46ed3e73568e57660ece9b2320a489d8" id="r_a46ed3e73568e57660ece9b2320a489d8"><td class="memItemLeft" align="right" valign="top">LogLevel&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/d10/classAestra_1_1AsyncLogger.html#a46ed3e73568e57660ece9b2320a489d8">getLevel</a> () const override</td></tr>
@@ -108,7 +112,7 @@ Public Member Functions</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="../../da/de6/AestraLog_8h_source.html#l00350">350</a> of file <a class="el" href="../../da/de6/AestraLog_8h_source.html">AestraLog.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/de6/AestraLog_8h_source.html#l00351">351</a> of file <a class="el" href="../../da/de6/AestraLog_8h_source.html">AestraLog.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a960512a970aaf1baa45aafcae178c0e9" name="a960512a970aaf1baa45aafcae178c0e9"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a960512a970aaf1baa45aafcae178c0e9">&#9670;&#160;</a></span>AsyncLogger()</h2>
@@ -134,7 +138,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../da/de6/AestraLog_8h_source.html#l00352">352</a> of file <a class="el" href="../../da/de6/AestraLog_8h_source.html">AestraLog.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/de6/AestraLog_8h_source.html#l00353">353</a> of file <a class="el" href="../../da/de6/AestraLog_8h_source.html">AestraLog.h</a>.</p>
 
 </div>
 </div>
@@ -161,11 +165,40 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../da/de6/AestraLog_8h_source.html#l00356">356</a> of file <a class="el" href="../../da/de6/AestraLog_8h_source.html">AestraLog.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/de6/AestraLog_8h_source.html#l00357">357</a> of file <a class="el" href="../../da/de6/AestraLog_8h_source.html">AestraLog.h</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a21b642bc6d3f261cdc8069ebbe50efb2" name="a21b642bc6d3f261cdc8069ebbe50efb2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a21b642bc6d3f261cdc8069ebbe50efb2">&#9670;&#160;</a></span>droppedCount()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint64_t Aestra::AsyncLogger::droppedCount </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Lines dropped because the queue was full. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../da/de6/AestraLog_8h_source.html#l00384">384</a> of file <a class="el" href="../../da/de6/AestraLog_8h_source.html">AestraLog.h</a>.</p>
+
+</div>
+</div>
 <a id="a46ed3e73568e57660ece9b2320a489d8" name="a46ed3e73568e57660ece9b2320a489d8"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a46ed3e73568e57660ece9b2320a489d8">&#9670;&#160;</a></span>getLevel()</h2>
 
@@ -191,7 +224,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/dc6/classAestra_1_1ILogger.html">Aestra::ILogger</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../da/de6/AestraLog_8h_source.html#l00388">388</a> of file <a class="el" href="../../da/de6/AestraLog_8h_source.html">AestraLog.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/de6/AestraLog_8h_source.html#l00391">391</a> of file <a class="el" href="../../da/de6/AestraLog_8h_source.html">AestraLog.h</a>.</p>
 
 </div>
 </div>
@@ -231,7 +264,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/dc6/classAestra_1_1ILogger.html">Aestra::ILogger</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../da/de6/AestraLog_8h_source.html#l00365">365</a> of file <a class="el" href="../../da/de6/AestraLog_8h_source.html">AestraLog.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/de6/AestraLog_8h_source.html#l00366">366</a> of file <a class="el" href="../../da/de6/AestraLog_8h_source.html">AestraLog.h</a>.</p>
 
 </div>
 </div>
@@ -261,7 +294,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/dc6/classAestra_1_1ILogger.html">Aestra::ILogger</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../da/de6/AestraLog_8h_source.html#l00383">383</a> of file <a class="el" href="../../da/de6/AestraLog_8h_source.html">AestraLog.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/de6/AestraLog_8h_source.html#l00386">386</a> of file <a class="el" href="../../da/de6/AestraLog_8h_source.html">AestraLog.h</a>.</p>
 
 </div>
 </div>

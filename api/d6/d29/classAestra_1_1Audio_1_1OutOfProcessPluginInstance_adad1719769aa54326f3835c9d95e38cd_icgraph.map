@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::OutOfProcessPluginInstance::hasEditor" name="Aestra::Audio::OutOfProcessPluginInstance::hasEditor">
+<area shape="rect" id="Node000001" title="Check if plugin has a graphical editor." alt="" coords="259,5,464,45"/>
+<area shape="rect" id="Node000002" href="$d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#a741a2373483b92242084b7b706b131ec" title="Open the plugin editor window." alt="" coords="5,5,211,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="245,28,211,28,211,23,245,23"/>
+</map>

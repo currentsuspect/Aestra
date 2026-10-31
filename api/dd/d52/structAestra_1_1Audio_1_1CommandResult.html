@@ -85,7 +85,7 @@ $(function() {
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-0-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d9/d11/structAestra_1_1Audio_1_1CommandResult__coll__graph.svg" width="618" height="228"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d9/d11/structAestra_1_1Audio_1_1CommandResult__coll__graph.svg" width="640" height="258"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 <center><span class="legend">[<a href="../../graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
@@ -107,6 +107,12 @@ Public Attributes</h2></td></tr>
 <tr class="separator:a28de6f18d2ca73cf7c4ec9aab15b09f1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af6987aaab7c7f5e9ec61e25ad966cf56" id="r_af6987aaab7c7f5e9ec61e25ad966cf56"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d52/structAestra_1_1Audio_1_1CommandResult.html#af6987aaab7c7f5e9ec61e25ad966cf56">hasCreatedId</a> = false</td></tr>
 <tr class="separator:af6987aaab7c7f5e9ec61e25ad966cf56"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7b0bc723a75e07999e7a490b66734122" id="r_a7b0bc723a75e07999e7a490b66734122"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d52/structAestra_1_1Audio_1_1CommandResult.html#a7b0bc723a75e07999e7a490b66734122">createdIdText</a></td></tr>
+<tr class="memdesc:a7b0bc723a75e07999e7a490b66734122"><td class="mdescLeft">&#160;</td><td class="mdescRight">The same, for objects addressed by a UUID (clips, lanes): the exact string list_clips prints, so it can be passed straight back.  <br /></td></tr>
+<tr class="separator:a7b0bc723a75e07999e7a490b66734122"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6ade7292e9224acf519b81d568114541" id="r_a6ade7292e9224acf519b81d568114541"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d52/structAestra_1_1Audio_1_1CommandResult.html#a6ade7292e9224acf519b81d568114541">createdKind</a></td></tr>
+<tr class="memdesc:a6ade7292e9224acf519b81d568114541"><td class="mdescLeft">&#160;</td><td class="mdescRight">What kind of object createdId names: "unit", "track", "lane", "clip", "pattern", "slot".  <br /></td></tr>
+<tr class="separator:a6ade7292e9224acf519b81d568114541"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
@@ -145,7 +151,48 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d5/dfb/CommandResult_8h_source.html#l00029">29</a> of file <a class="el" href="../../d5/dfb/CommandResult_8h_source.html">CommandResult.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00128">Aestra::Audio::CommandParser::execute()</a>, and <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00064">Aestra::Audio::MuseService::handleRequest()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00340">Aestra::Audio::CommandParser::describeCreated()</a>, and <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00064">Aestra::Audio::MuseService::handleRequest()</a>.</p>
+
+</div>
+</div>
+<a id="a7b0bc723a75e07999e7a490b66734122" name="a7b0bc723a75e07999e7a490b66734122"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7b0bc723a75e07999e7a490b66734122">&#9670;&#160;</a></span>createdIdText</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string Aestra::Audio::CommandResult::createdIdText</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>The same, for objects addressed by a UUID (clips, lanes): the exact string list_clips prints, so it can be passed straight back. </p>
+<p>When set, it is what the response carries as createdId. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d5/dfb/CommandResult_8h_source.html#l00036">36</a> of file <a class="el" href="../../d5/dfb/CommandResult_8h_source.html">CommandResult.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00340">Aestra::Audio::CommandParser::describeCreated()</a>, and <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00064">Aestra::Audio::MuseService::handleRequest()</a>.</p>
+
+</div>
+</div>
+<a id="a6ade7292e9224acf519b81d568114541" name="a6ade7292e9224acf519b81d568114541"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6ade7292e9224acf519b81d568114541">&#9670;&#160;</a></span>createdKind</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string Aestra::Audio::CommandResult::createdKind</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>What kind of object createdId names: "unit", "track", "lane", "clip", "pattern", "slot". </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d5/dfb/CommandResult_8h_source.html#l00038">38</a> of file <a class="el" href="../../d5/dfb/CommandResult_8h_source.html">CommandResult.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00340">Aestra::Audio::CommandParser::describeCreated()</a>, and <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00064">Aestra::Audio::MuseService::handleRequest()</a>.</p>
 
 </div>
 </div>

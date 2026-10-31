@@ -1,0 +1,17 @@
+<map id="AestraHelper::ClapAbi::ClapPlugin" name="AestraHelper::ClapAbi::ClapPlugin">
+<area shape="rect" id="Node000001" title=" " alt="" coords="268,533,433,573"/>
+<area shape="rect" id="Node000002" href="$de/d04/structAestraHelper_1_1ClapAbi_1_1ClapPluginDescriptor.html" title=" " alt="" coords="70,343,237,383"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="157,396,169,453,182,482,201,507,232,529,269,542,267,547,230,534,197,511,177,485,164,455,152,397"/>
+<area shape="rect" id="Node000003" href="$de/dc9/structAestraHelper_1_1ClapAbi_1_1ClapVersion.html" title=" " alt="" coords="5,123,171,163"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="89,176,92,244,100,282,113,317,131,341,127,344,108,320,95,283,87,245,83,177"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="51,5,125,31"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="91,44,91,122,85,122,85,44"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="195,130,245,155"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="223,169,216,239,208,280,193,320,176,344,172,341,188,317,202,279,211,238,217,169"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="261,350,312,375"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="283,389,277,446,280,478,290,508,300,521,313,531,309,535,296,524,286,511,275,479,271,446,278,389"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="391,350,441,375"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="417,389,410,446,401,479,389,511,372,535,368,532,384,508,396,477,404,445,412,389"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="515,350,581,375"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="553,389,553,417,549,450,539,482,521,511,506,521,486,529,434,542,433,537,484,524,504,516,517,507,534,480,544,448,548,417,548,389"/>
+</map>

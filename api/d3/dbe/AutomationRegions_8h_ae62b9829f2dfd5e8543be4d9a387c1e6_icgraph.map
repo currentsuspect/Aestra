@@ -1,16 +1,15 @@
 <map id="Aestra::Audio::AutomationRegions::clearSpan" name="Aestra::Audio::AutomationRegions::clearSpan">
-<area shape="rect" id="Node000001" title="Removes every point inside [start, end]. Callers have already checked the span holds no other region." alt="" coords="247,161,440,201"/>
-<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="384,150,370,143,343,140,320,142,306,147,301,153,304,160,299,162,296,152,303,142,319,137,343,135,371,138,386,145"/>
+<area shape="rect" id="Node000001" title="Removes every point inside [start, end]. Callers have already checked the span holds no other region." alt="" coords="247,137,440,177"/>
+<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="384,126,370,119,343,116,320,118,306,123,301,129,304,136,299,138,296,128,303,118,319,113,343,111,371,114,386,121"/>
 <area shape="rect" id="Node000002" href="$d3/dbe/AutomationRegions_8h.html#adda37dfe26a1945508e2dc382d671879" title="Copy region id to deltaBeats away. Returns the new region&#39;s id, or nothing if refused." alt="" coords="5,29,199,69"/>
-<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="305,155,255,118,197,84,170,72,172,67,200,79,258,114,308,150"/>
-<area shape="rect" id="Node000003" href="$d3/dbe/AutomationRegions_8h.html#ad07426f8fc4ff8145747923f6a1bab4a" title="Create a new clip over [start, end] holding two points at value (a flat line)." alt="" coords="5,117,199,157"/>
-<area shape="poly" id="edge4_Node000001_Node000003" title=" " alt="" coords="233,164,198,158,199,152,234,159"/>
-<area shape="rect" id="Node000004" href="$d3/dbe/AutomationRegions_8h.html#a9bcad823a9a2f86cdda5fdc0be15250a" title="Move region id by deltaBeats. False (nothing changed) if it would start before 0 or land on another r..." alt="" coords="5,205,199,245"/>
-<area shape="poly" id="edge6_Node000001_Node000004" title=" " alt="" coords="234,204,199,210,198,205,233,199"/>
-<area shape="rect" id="Node000005" href="$d3/dbe/AutomationRegions_8h.html#ace3d47d7272f91b6d2948818c3e458ab" title="Delete region id and the points inside it." alt="" coords="5,293,199,333"/>
-<area shape="poly" id="edge8_Node000001_Node000005" title=" " alt="" coords="295,210,141,296,138,291,293,206"/>
+<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="295,133,198,84,167,72,169,67,200,79,298,128"/>
+<area shape="rect" id="Node000003" href="$d3/dbe/AutomationRegions_8h.html#ad07426f8fc4ff8145747923f6a1bab4a" title="Create a new clip over [start, end] holding two points at value (a flat line)." alt="" coords="5,93,199,133"/>
+<area shape="poly" id="edge4_Node000001_Node000003" title=" " alt="" coords="233,140,198,134,199,128,234,135"/>
+<area shape="rect" id="Node000004" href="$d3/dbe/AutomationRegions_8h.html#a9bcad823a9a2f86cdda5fdc0be15250a" title="Move region id by deltaBeats. False (nothing changed) if it would start before 0 or land on another r..." alt="" coords="5,181,199,221"/>
+<area shape="poly" id="edge5_Node000001_Node000004" title=" " alt="" coords="234,180,199,186,198,181,233,175"/>
+<area shape="rect" id="Node000005" href="$d3/dbe/AutomationRegions_8h.html#ace3d47d7272f91b6d2948818c3e458ab" title="Delete region id and the points inside it." alt="" coords="5,269,199,309"/>
+<area shape="poly" id="edge7_Node000001_Node000005" title=" " alt="" coords="295,186,141,272,138,267,293,182"/>
 <area shape="poly" id="edge3_Node000002_Node000002" title=" " alt="" coords="143,18,128,11,102,8,79,10,65,15,60,21,62,28,57,30,55,20,62,10,78,5,102,3,130,6,145,13"/>
-<area shape="poly" id="edge5_Node000003_Node000003" title=" " alt="" coords="143,106,128,99,102,96,79,98,65,103,60,109,62,116,57,118,55,108,62,98,78,93,102,91,130,94,145,101"/>
-<area shape="poly" id="edge7_Node000004_Node000004" title=" " alt="" coords="143,194,128,187,102,184,79,186,65,191,60,197,62,204,57,206,55,196,62,186,78,181,102,179,130,182,145,189"/>
-<area shape="poly" id="edge9_Node000005_Node000005" title=" " alt="" coords="143,282,128,275,102,272,79,274,65,279,60,285,62,292,57,294,55,284,62,274,78,269,102,267,130,270,145,277"/>
+<area shape="poly" id="edge6_Node000004_Node000004" title=" " alt="" coords="143,170,128,163,102,160,79,162,65,167,60,173,62,180,57,182,55,172,62,162,78,157,102,155,130,158,145,165"/>
+<area shape="poly" id="edge8_Node000005_Node000005" title=" " alt="" coords="143,258,128,251,102,248,79,250,65,255,60,261,62,268,57,270,55,260,62,250,78,245,102,243,130,246,145,253"/>
 </map>

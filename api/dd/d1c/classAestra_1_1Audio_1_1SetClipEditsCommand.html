@@ -115,6 +115,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a93ccb1cb008970c9d3c5fea655f6effb" id="r_a93ccb1cb008970c9d3c5fea655f6effb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d1c/classAestra_1_1Audio_1_1SetClipEditsCommand.html#a93ccb1cb008970c9d3c5fea655f6effb">redo</a> () override</td></tr>
 <tr class="memdesc:a93ccb1cb008970c9d3c5fea655f6effb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Redo the command (must be explicitly implemented) Implementers should consider: is <a class="el" href="../../dd/d1c/classAestra_1_1Audio_1_1SetClipEditsCommand.html#a93ccb1cb008970c9d3c5fea655f6effb" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe...">redo()</a> exactly <a class="el" href="../../dd/d1c/classAestra_1_1Audio_1_1SetClipEditsCommand.html#ae3b47a09e203a278d7e310e263fa6af7" title="Execute the command (first time)">execute()</a>, or different?  <br /></td></tr>
 <tr class="separator:a93ccb1cb008970c9d3c5fea655f6effb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a807e8fa93cd0f2a45f37350e2c7f6707" id="r_a807e8fa93cd0f2a45f37350e2c7f6707"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/d1c/classAestra_1_1Audio_1_1SetClipEditsCommand.html">SetClipEditsCommand</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d1c/classAestra_1_1Audio_1_1SetClipEditsCommand.html#a807e8fa93cd0f2a45f37350e2c7f6707">named</a> (std::string name)</td></tr>
+<tr class="memdesc:a807e8fa93cd0f2a45f37350e2c7f6707"><td class="mdescLeft">&#160;</td><td class="mdescRight">The undo-history label ("Mute Clip", "Unmute Clip"): the same command edits more than audio clips' sound.  <br /></td></tr>
+<tr class="separator:a807e8fa93cd0f2a45f37350e2c7f6707"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abb98e5adb13893a30c3f6675222f7d95" id="r_abb98e5adb13893a30c3f6675222f7d95"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d1c/classAestra_1_1Audio_1_1SetClipEditsCommand.html#abb98e5adb13893a30c3f6675222f7d95">getName</a> () const override</td></tr>
 <tr class="memdesc:abb98e5adb13893a30c3f6675222f7d95"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a human-readable name for the command (for UI)  <br /></td></tr>
 <tr class="separator:abb98e5adb13893a30c3f6675222f7d95"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -271,7 +274,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#a22e8a4fe943a30ec50ff3d83d3bff9ee">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../da/d9e/SetClipEditsCommand_8h_source.html#l00051">51</a> of file <a class="el" href="../../da/d9e/SetClipEditsCommand_8h_source.html">SetClipEditsCommand.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/d9e/SetClipEditsCommand_8h_source.html#l00057">57</a> of file <a class="el" href="../../da/d9e/SetClipEditsCommand_8h_source.html">SetClipEditsCommand.h</a>.</p>
 
 </div>
 </div>
@@ -304,7 +307,7 @@ Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../da/d9e/SetClipEditsCommand_8h_source.html#l00022">22</a> of file <a class="el" href="../../da/d9e/SetClipEditsCommand_8h_source.html">SetClipEditsCommand.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00316">Aestra::Audio::PlaylistModel::getClip()</a>, and <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00341">Aestra::Audio::PlaylistModel::setClipEdits()</a>.</p>
+<p class="reference">References <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00320">Aestra::Audio::PlaylistModel::getClip()</a>, and <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00345">Aestra::Audio::PlaylistModel::setClipEdits()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">
@@ -342,7 +345,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#ae3e1f451745928e912757c133d949589">Aestra::Audio::ICommand</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../da/d9e/SetClipEditsCommand_8h_source.html#l00049">49</a> of file <a class="el" href="../../da/d9e/SetClipEditsCommand_8h_source.html">SetClipEditsCommand.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/d9e/SetClipEditsCommand_8h_source.html#l00055">55</a> of file <a class="el" href="../../da/d9e/SetClipEditsCommand_8h_source.html">SetClipEditsCommand.h</a>.</p>
 
 </div>
 </div>
@@ -372,6 +375,36 @@ Public Member Functions</h2></td></tr>
 <p>Memory size approximation for this command (for history limits) </p>
 
 <p>Reimplemented from <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html#a75361941c8c0630fb345a45d2e36eb1d">Aestra::Audio::ICommand</a>.</p>
+
+<p class="definition">Definition at line <a class="el" href="../../da/d9e/SetClipEditsCommand_8h_source.html#l00056">56</a> of file <a class="el" href="../../da/d9e/SetClipEditsCommand_8h_source.html">SetClipEditsCommand.h</a>.</p>
+
+</div>
+</div>
+<a id="a807e8fa93cd0f2a45f37350e2c7f6707" name="a807e8fa93cd0f2a45f37350e2c7f6707"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a807e8fa93cd0f2a45f37350e2c7f6707">&#9670;&#160;</a></span>named()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../dd/d1c/classAestra_1_1Audio_1_1SetClipEditsCommand.html">SetClipEditsCommand</a> &amp; Aestra::Audio::SetClipEditsCommand::named </td>
+          <td>(</td>
+          <td class="paramtype">std::string&#160;</td>
+          <td class="paramname"><em>name</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The undo-history label ("Mute Clip", "Unmute Clip"): the same command edits more than audio clips' sound. </p>
 
 <p class="definition">Definition at line <a class="el" href="../../da/d9e/SetClipEditsCommand_8h_source.html#l00050">50</a> of file <a class="el" href="../../da/d9e/SetClipEditsCommand_8h_source.html">SetClipEditsCommand.h</a>.</p>
 
@@ -406,7 +439,7 @@ Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../da/d9e/SetClipEditsCommand_8h_source.html#l00043">43</a> of file <a class="el" href="../../da/d9e/SetClipEditsCommand_8h_source.html">SetClipEditsCommand.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00341">Aestra::Audio::PlaylistModel::setClipEdits()</a>.</p>
+<p class="reference">References <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00345">Aestra::Audio::PlaylistModel::setClipEdits()</a>.</p>
 <div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-3-summary" class="dynsummary" style="display:block;">
@@ -446,7 +479,7 @@ Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../da/d9e/SetClipEditsCommand_8h_source.html#l00035">35</a> of file <a class="el" href="../../da/d9e/SetClipEditsCommand_8h_source.html">SetClipEditsCommand.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00341">Aestra::Audio::PlaylistModel::setClipEdits()</a>.</p>
+<p class="reference">References <a class="el" href="../../d4/ddd/PlaylistModel_8h_source.html#l00345">Aestra::Audio::PlaylistModel::setClipEdits()</a>.</p>
 <div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-4-summary" class="dynsummary" style="display:block;">

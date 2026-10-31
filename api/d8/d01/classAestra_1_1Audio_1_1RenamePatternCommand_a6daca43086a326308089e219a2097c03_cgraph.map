@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::RenamePatternCommand::redo" name="Aestra::Audio::RenamePatternCommand::redo">
+<area shape="rect" id="Node000001" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,223,45"/>
+<area shape="rect" id="Node000002" href="$d8/d01/classAestra_1_1Audio_1_1RenamePatternCommand.html#a06a0dc459d3a8895c6e0d7dc891af935" title="Execute the command (first time)" alt="" coords="271,5,488,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="223,23,257,23,257,28,223,28"/>
+<area shape="rect" id="Node000003" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a" title="Get a pattern by ID (returns nullptr if not found)" alt="" coords="536,5,756,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="488,23,522,23,522,28,488,28"/>
+</map>

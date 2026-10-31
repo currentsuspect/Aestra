@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['clipchangedcallback_0',['ClipChangedCallback',['../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ae49966ac5500dbfcfd43ce69e79fa249',1,'Aestra::Audio::PlaylistModel']]],
-  ['commandsink_1',['CommandSink',['../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a995507996787315914d1f2da71bb6145',1,'Aestra::Audio::MixerChannel']]]
+  ['budgethook_0',['BudgetHook',['../dd/d33/classAestra_1_1MuseAgent_1_1AgentLoop.html#aa021921ff87b8c7c172966e55f145fef',1,'Aestra::MuseAgent::AgentLoop']]]
 ];

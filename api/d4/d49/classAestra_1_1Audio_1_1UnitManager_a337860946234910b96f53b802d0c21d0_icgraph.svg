@@ -676,7 +676,7 @@ var sectionId = 'dynsection-12';
 <!-- Node68 -->
 <g id="Node000068" class="node">
 <title>Node68</title>
-<g id="a_Node000068"><a xlink:href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a61d37a9f648c0e8ffa6fad83728630e3" target="_top" xlink:title="Refill lookahead window with events (non&#45;RT thread) Called periodically by scheduler.">
+<g id="a_Node000068"><a xlink:href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#aa54017c72670cc708de638a0fa28e9c0" target="_top" xlink:title="Refill against an explicit loop and an epoch ticket (the live caller).">
 <polygon fill="white" stroke="#666666" points="853,-442 686,-442 686,-412 853,-412 853,-442"/>
 <text text-anchor="start" x="694" y="-430" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::PatternPlayback</text>
 <text text-anchor="middle" x="769.5" y="-419" font-family="Helvetica,sans-Serif" font-size="10.00">Engine::refillWindow</text>

@@ -105,12 +105,12 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a41ed854f06ce360e2b3bcefe07771ac5" id="r_a41ed854f06ce360e2b3bcefe07771ac5"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a41ed854f06ce360e2b3bcefe07771ac5">PatternPlaybackEngine</a> (<a class="el" href="../../de/ddf/classAestra_1_1Audio_1_1TimelineClock.html">TimelineClock</a> *clock, <a class="el" href="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager.html">PatternManager</a> *patternMgr, <a class="el" href="../../d4/d49/classAestra_1_1Audio_1_1UnitManager.html">UnitManager</a> *unitMgr)</td></tr>
 <tr class="memdesc:a41ed854f06ce360e2b3bcefe07771ac5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create the pattern scheduler.  <br /></td></tr>
 <tr class="separator:a41ed854f06ce360e2b3bcefe07771ac5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4a8cd3c7804784b829d93cc5556ddda5" id="r_a4a8cd3c7804784b829d93cc5556ddda5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a4a8cd3c7804784b829d93cc5556ddda5">schedulePatternInstance</a> (<a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">PatternID</a> pid, double startBeat, uint32_t instanceId, double sourceStartBeat=0.0, double durationBeats=-1.0)</td></tr>
-<tr class="memdesc:a4a8cd3c7804784b829d93cc5556ddda5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Schedule new pattern instance (non-RT thread)  <br /></td></tr>
-<tr class="separator:a4a8cd3c7804784b829d93cc5556ddda5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2477b5e6144cf3ec4606170c5bfca1b8" id="r_a2477b5e6144cf3ec4606170c5bfca1b8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a2477b5e6144cf3ec4606170c5bfca1b8">updatePatternInstance</a> (<a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">PatternID</a> pid, double startBeat, uint32_t instanceId, double sourceStartBeat=0.0, double durationBeats=-1.0)</td></tr>
-<tr class="memdesc:a2477b5e6144cf3ec4606170c5bfca1b8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Re-place a slot while playing without disturbing what already sounds (non-RT thread).  <br /></td></tr>
-<tr class="separator:a2477b5e6144cf3ec4606170c5bfca1b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aabca685e25a6dec33629e1b860d31671" id="r_aabca685e25a6dec33629e1b860d31671"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#aabca685e25a6dec33629e1b860d31671">schedulePatternInstance</a> (<a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">PatternID</a> pid, double startBeat, uint32_t instanceId, double sourceStartBeat=0.0, double durationBeats=-1.0, bool repeatPattern=false)</td></tr>
+<tr class="memdesc:aabca685e25a6dec33629e1b860d31671"><td class="mdescLeft">&#160;</td><td class="mdescRight">Schedule new pattern instance (non-RT thread)  <br /></td></tr>
+<tr class="separator:aabca685e25a6dec33629e1b860d31671"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a12e976086bc55221c1a34567745c06a0" id="r_a12e976086bc55221c1a34567745c06a0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a12e976086bc55221c1a34567745c06a0">updatePatternInstance</a> (<a class="el" href="../../d0/dd3/structAestra_1_1Audio_1_1PatternID.html">PatternID</a> pid, double startBeat, uint32_t instanceId, double sourceStartBeat=0.0, double durationBeats=-1.0, bool repeatPattern=false)</td></tr>
+<tr class="memdesc:a12e976086bc55221c1a34567745c06a0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Re-place a slot while playing without disturbing what already sounds (non-RT thread).  <br /></td></tr>
+<tr class="separator:a12e976086bc55221c1a34567745c06a0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a54dd8e4432b826123bfab7358b029a7e" id="r_a54dd8e4432b826123bfab7358b029a7e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a54dd8e4432b826123bfab7358b029a7e">removePatternInstance</a> (uint32_t instanceId)</td></tr>
 <tr class="memdesc:a54dd8e4432b826123bfab7358b029a7e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove a slot while playing (non-RT thread).  <br /></td></tr>
 <tr class="separator:a54dd8e4432b826123bfab7358b029a7e"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -120,6 +120,18 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a61d37a9f648c0e8ffa6fad83728630e3" id="r_a61d37a9f648c0e8ffa6fad83728630e3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a61d37a9f648c0e8ffa6fad83728630e3">refillWindow</a> (uint64_t currentFrame, int sampleRate, int lookaheadSamples=4096, uint64_t loopLengthSamples=0)</td></tr>
 <tr class="memdesc:a61d37a9f648c0e8ffa6fad83728630e3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Refill lookahead window with events (non-RT thread) Called periodically by scheduler.  <br /></td></tr>
 <tr class="separator:a61d37a9f648c0e8ffa6fad83728630e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa54017c72670cc708de638a0fa28e9c0" id="r_aa54017c72670cc708de638a0fa28e9c0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#aa54017c72670cc708de638a0fa28e9c0">refillWindow</a> (uint16_t ticket, uint64_t currentFrame, int sampleRate, int lookaheadSamples, const <a class="el" href="../../d1/d12/structAestra_1_1Audio_1_1ScheduleLoop.html">ScheduleLoop</a> &amp;loop)</td></tr>
+<tr class="memdesc:aa54017c72670cc708de638a0fa28e9c0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Refill against an explicit loop and an epoch ticket (the live caller).  <br /></td></tr>
+<tr class="separator:aa54017c72670cc708de638a0fa28e9c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a424f96d7a1ffee8fd512f3a0244ca206" id="r_a424f96d7a1ffee8fd512f3a0244ca206"><td class="memItemLeft" align="right" valign="top">uint16_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a424f96d7a1ffee8fd512f3a0244ca206">refillTicket</a> () const</td></tr>
+<tr class="memdesc:a424f96d7a1ffee8fd512f3a0244ca206"><td class="mdescLeft">&#160;</td><td class="mdescRight">Epoch ticket for <a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a61d37a9f648c0e8ffa6fad83728630e3" title="Refill lookahead window with events (non-RT thread) Called periodically by scheduler.">refillWindow()</a>; take it before reading the playhead.  <br /></td></tr>
+<tr class="separator:a424f96d7a1ffee8fd512f3a0244ca206"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8a6564335f16d83ec9a7df652e9f541d" id="r_a8a6564335f16d83ec9a7df652e9f541d"><td class="memItemLeft" align="right" valign="top">uint16_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a8a6564335f16d83ec9a7df652e9f541d">plannedEpoch</a> () const</td></tr>
+<tr class="memdesc:a8a6564335f16d83ec9a7df652e9f541d"><td class="mdescLeft">&#160;</td><td class="mdescRight">The epoch the last completed refill queued under.  <br /></td></tr>
+<tr class="separator:a8a6564335f16d83ec9a7df652e9f541d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad77a9e2b6270862347dcc5c8428de1cb" id="r_ad77a9e2b6270862347dcc5c8428de1cb"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#ad77a9e2b6270862347dcc5c8428de1cb">hasScheduledInstances</a> () const</td></tr>
+<tr class="memdesc:ad77a9e2b6270862347dcc5c8428de1cb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Whether any pattern instance is scheduled.  <br /></td></tr>
+<tr class="separator:ad77a9e2b6270862347dcc5c8428de1cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7c57bbd86690a8a3150c4195aa70559f" id="r_a7c57bbd86690a8a3150c4195aa70559f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a7c57bbd86690a8a3150c4195aa70559f">processAudio</a> (uint64_t currentFrame, int bufferSize, const <a class="el" href="../../d7/d44/structAestra_1_1Audio_1_1PatternPlaybackEngine_1_1UnitMidiRoute.html">UnitMidiRoute</a> *routes, size_t routeCount) noexcept</td></tr>
 <tr class="memdesc:a7c57bbd86690a8a3150c4195aa70559f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Process audio callback (RT-safe, audio thread only) Allocation-free array-based MIDI routing.  <br /></td></tr>
 <tr class="separator:a7c57bbd86690a8a3150c4195aa70559f"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -155,9 +167,9 @@ Static Public Member Functions</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Pattern playback engine with lookahead scheduling. </p>
-<p>Scheduler thread: <a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a4a8cd3c7804784b829d93cc5556ddda5" title="Schedule new pattern instance (non-RT thread)">schedulePatternInstance()</a> → <a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a61d37a9f648c0e8ffa6fad83728630e3" title="Refill lookahead window with events (non-RT thread) Called periodically by scheduler.">refillWindow()</a> Audio thread: <a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a7c57bbd86690a8a3150c4195aa70559f" title="Process audio callback (RT-safe, audio thread only) Allocation-free array-based MIDI routing.">processAudio()</a> (RT-safe) </p>
+<p>Scheduler thread: <a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#aabca685e25a6dec33629e1b860d31671" title="Schedule new pattern instance (non-RT thread)">schedulePatternInstance()</a> → <a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a61d37a9f648c0e8ffa6fad83728630e3" title="Refill lookahead window with events (non-RT thread) Called periodically by scheduler.">refillWindow()</a> Audio thread: <a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a7c57bbd86690a8a3150c4195aa70559f" title="Process audio callback (RT-safe, audio thread only) Allocation-free array-based MIDI routing.">processAudio()</a> (RT-safe) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00134">134</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00125">125</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a41ed854f06ce360e2b3bcefe07771ac5" name="a41ed854f06ce360e2b3bcefe07771ac5"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a41ed854f06ce360e2b3bcefe07771ac5">&#9670;&#160;</a></span>PatternPlaybackEngine()</h2>
@@ -201,7 +213,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00111">111</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00120">120</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -230,7 +242,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00198">198</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00211">211</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -252,9 +264,9 @@ Static Public Member Functions</h2></td></tr>
 <p>Remove every scheduled instance and queued event. </p>
 <p>For transitions that must not carry pattern content forward — leaving Arsenal, or starting timeline playback. <a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#ab5fe99cf5fa482111f0386497e58c931" title="Rewind queued events and all scheduled instances.">rewindScheduledInstances()</a> alone was insufficient there: it rewinds, so an Arsenal instance survived into timeline playback and kept sounding. Control thread only (takes the scheduler mutex); the RT path reads m_rtQueue only. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00676">676</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00752">752</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01741">Aestra::Audio::TrackManager::pauseArsenalPlayback()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01333">Aestra::Audio::TrackManager::play()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l02017">Aestra::Audio::TrackManager::playPatternInArsenal()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01720">Aestra::Audio::TrackManager::stopArsenalPlayback()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01752">Aestra::Audio::TrackManager::pauseArsenalPlayback()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01344">Aestra::Audio::TrackManager::play()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l02028">Aestra::Audio::TrackManager::playPatternInArsenal()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01731">Aestra::Audio::TrackManager::stopArsenalPlayback()</a>.</p>
 <div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-0-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
@@ -291,11 +303,11 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Order-sensitive hash of everything about a pattern that changes what plays. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00707">707</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00782">782</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d2/d78/PatternSource_8h_source.html#l00101">Aestra::Audio::PatternSource::swing</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00223">refillWindow()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00244">refillWindow()</a>.</p>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-1-summary" class="dynsummary" style="display:block;">
@@ -324,7 +336,7 @@ Static Public Member Functions</h2></td></tr>
 <p>Number of scheduled pattern instances (control thread). </p>
 <dl class="section return"><dt>Returns</dt><dd>Count of live instances. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00737">737</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00812">812</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -354,7 +366,7 @@ Static Public Member Functions</h2></td></tr>
 <p>Get the number of scheduler overflows observed so far. </p>
 <dl class="section return"><dt>Returns</dt><dd>Overflow counter value. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00303">303</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00318">318</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 
 </div>
 </div>
@@ -384,7 +396,7 @@ Static Public Member Functions</h2></td></tr>
 <p>Get the number of scheduled events processed so far. </p>
 <dl class="section return"><dt>Returns</dt><dd>Processed event counter value. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00308">308</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00323">323</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 
 </div>
 </div>
@@ -403,7 +415,37 @@ Static Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00699">699</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00774">774</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ad77a9e2b6270862347dcc5c8428de1cb" name="ad77a9e2b6270862347dcc5c8428de1cb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad77a9e2b6270862347dcc5c8428de1cb">&#9670;&#160;</a></span>hasScheduledInstances()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::PatternPlaybackEngine::hasScheduledInstances </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Whether any pattern instance is scheduled. </p>
+<p>Any thread. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00235">235</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 
 </div>
 </div>
@@ -425,9 +467,9 @@ Static Public Member Functions</h2></td></tr>
 <p>Pattern content changed while playing (RT-safe producer-side flag). </p>
 <p>Steps placed or removed in the Arsenal / Piano Roll call this instead of <a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#ab5fe99cf5fa482111f0386497e58c931" title="Rewind queued events and all scheduled instances.">rewindScheduledInstances()</a>: the next refill re-queues from the playhead with current note data — deletions silence immediately and additions enter at their exact frame — WITHOUT resetting the entry state. A full rewind here re-fired every currently-sounding note (audible flam on each edit) and made fresh placements sound before the playhead reached them (#823). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00754">754</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00826">826</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l02076">Aestra::Audio::TrackManager::patternContentEdited()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01263">Aestra::Audio::TrackManager::refreshTimelinePatternInstances()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l02087">Aestra::Audio::TrackManager::patternContentEdited()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01274">Aestra::Audio::TrackManager::refreshTimelinePatternInstances()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">
@@ -435,6 +477,36 @@ Static Public Member Functions</h2></td></tr>
 <div id="dynsection-2-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine_aafad448642f0a160f19c5f9000c48cb2_icgraph.svg" width="100%" height="410"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
+
+</div>
+</div>
+<a id="a8a6564335f16d83ec9a7df652e9f541d" name="a8a6564335f16d83ec9a7df652e9f541d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8a6564335f16d83ec9a7df652e9f541d">&#9670;&#160;</a></span>plannedEpoch()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint16_t Aestra::Audio::PatternPlaybackEngine::plannedEpoch </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The epoch the last completed refill queued under. </p>
+<p>Equal to <a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a424f96d7a1ffee8fd512f3a0244ca206" title="Epoch ticket for refillWindow(); take it before reading the playhead.">refillTicket()</a> once the queue holds notes planned from the current playhead. Any thread. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00233">233</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 
 </div>
 </div>
@@ -495,14 +567,119 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00621">621</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00685">685</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00038">Aestra::Audio::ScheduledEvent::data1</a>, <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00040">Aestra::Audio::ScheduledEvent::data2</a>, <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00032">Aestra::Audio::ScheduledEvent::instanceId</a>, <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00044">Aestra::Audio::ScheduledEvent::noteId</a>, <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00028">Aestra::Audio::ScheduledEvent::sampleFrame</a>, <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00036">Aestra::Audio::ScheduledEvent::statusByte</a>, and <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00030">Aestra::Audio::ScheduledEvent::unitId</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00039">Aestra::Audio::ScheduledEvent::data1</a>, <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00041">Aestra::Audio::ScheduledEvent::data2</a>, <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00045">Aestra::Audio::ScheduledEvent::epoch</a>, <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00033">Aestra::Audio::ScheduledEvent::instanceId</a>, <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00047">Aestra::Audio::ScheduledEvent::noteId</a>, <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00029">Aestra::Audio::ScheduledEvent::sampleFrame</a>, <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00037">Aestra::Audio::ScheduledEvent::statusByte</a>, and <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00031">Aestra::Audio::ScheduledEvent::unitId</a>.</p>
+
+</div>
+</div>
+<a id="a424f96d7a1ffee8fd512f3a0244ca206" name="a424f96d7a1ffee8fd512f3a0244ca206"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a424f96d7a1ffee8fd512f3a0244ca206">&#9670;&#160;</a></span>refillTicket()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint16_t Aestra::Audio::PatternPlaybackEngine::refillTicket </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Epoch ticket for <a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a61d37a9f648c0e8ffa6fad83728630e3" title="Refill lookahead window with events (non-RT thread) Called periodically by scheduler.">refillWindow()</a>; take it before reading the playhead. </p>
+<p>Any thread. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00230">230</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00237">refillWindow()</a>.</p>
+<div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-3-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-3-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine_a424f96d7a1ffee8fd512f3a0244ca206_icgraph.svg" width="504" height="75"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+
+</div>
+</div>
+<a id="aa54017c72670cc708de638a0fa28e9c0" name="aa54017c72670cc708de638a0fa28e9c0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa54017c72670cc708de638a0fa28e9c0">&#9670;&#160;</a></span>refillWindow() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::PatternPlaybackEngine::refillWindow </td>
+          <td>(</td>
+          <td class="paramtype">uint16_t&#160;</td>
+          <td class="paramname"><em>ticket</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint64_t&#160;</td>
+          <td class="paramname"><em>currentFrame</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>sampleRate</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>lookaheadSamples</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="../../d1/d12/structAestra_1_1Audio_1_1ScheduleLoop.html">ScheduleLoop</a> &amp;&#160;</td>
+          <td class="paramname"><em>loop</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Refill against an explicit loop and an epoch ticket (the live caller). </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">ticket</td><td><a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a424f96d7a1ffee8fd512f3a0244ca206" title="Epoch ticket for refillWindow(); take it before reading the playhead.">refillTicket()</a>, taken BEFORE <code>currentFrame</code> was read. A rewind landing between the two (a seek on the audio thread) would otherwise get events planned from the old position stamped with the new epoch, and they would all fire at the top of the next block. </td></tr>
+    <tr><td class="paramname">loop</td><td>The loop to plan across (see <a class="el" href="../../d1/d12/structAestra_1_1Audio_1_1ScheduleLoop.html" title="The loop the note scheduler plans across, in the monotonic frame domain.">ScheduleLoop</a>); <code>currentFrame</code> is in its monotonic domain. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00244">244</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d8/d13/ScheduleLoop_8h_source.html#l00045">Aestra::Audio::ScheduleLoop::baseOf()</a>, <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00782">contentFingerprint()</a>, <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00026">Aestra::Audio::PatternManager::getPattern()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">Aestra::Audio::UnitManager::getUnit()</a>, <a class="el" href="../../d8/d13/ScheduleLoop_8h_source.html#l00034">Aestra::Audio::ScheduleLoop::passOf()</a>, <a class="el" href="../../d8/d13/ScheduleLoop_8h_source.html#l00057">Aestra::Audio::ScheduleLoop::placeInPass()</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00110">Aestra::Audio::UnitInfo::plugin</a>, <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00029">Aestra::Audio::ScheduledEvent::sampleFrame</a>, and <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00144">Aestra::Audio::UnitInfo::type</a>.</p>
+<div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-4-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-4-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine_aa54017c72670cc708de638a0fa28e9c0_cgraph.svg" width="100%" height="558"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
 
 </div>
 </div>
 <a id="a61d37a9f648c0e8ffa6fad83728630e3" name="a61d37a9f648c0e8ffa6fad83728630e3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a61d37a9f648c0e8ffa6fad83728630e3">&#9670;&#160;</a></span>refillWindow()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a61d37a9f648c0e8ffa6fad83728630e3">&#9670;&#160;</a></span>refillWindow() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -550,15 +727,24 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00223">223</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00237">237</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00707">contentFingerprint()</a>, <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00026">Aestra::Audio::PatternManager::getPattern()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">Aestra::Audio::UnitManager::getUnit()</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00109">Aestra::Audio::UnitInfo::plugin</a>, <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00028">Aestra::Audio::ScheduledEvent::sampleFrame</a>, and <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00143">Aestra::Audio::UnitInfo::type</a>.</p>
-<div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-3-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../d8/d13/ScheduleLoop_8h_source.html#l00027">Aestra::Audio::ScheduleLoop::length</a>, <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00230">refillTicket()</a>, and <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00237">refillWindow()</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00237">refillWindow()</a>.</p>
+<div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-5-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-3-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine_a61d37a9f648c0e8ffa6fad83728630e3_cgraph.svg" width="504" height="179"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div id="dynsection-5-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine_a61d37a9f648c0e8ffa6fad83728630e3_cgraph.svg" width="504" height="75"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+<div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-6-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-6-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine_a61d37a9f648c0e8ffa6fad83728630e3_icgraph.svg" width="234" height="75"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
 </div>
@@ -583,14 +769,14 @@ Static Public Member Functions</h2></td></tr>
 <p>Pair with <a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#aafad448642f0a160f19c5f9000c48cb2" title="Pattern content changed while playing (RT-safe producer-side flag).">patternContentEdited()</a>.</p>
 <p>Unlike <a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a2b34a84171856b61b3df9308a37b8825" title="Cancel pattern instance via atomic flag (RT-safe)">cancelPatternInstance()</a>, this does NOT raise the cancellation flag. <a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a7c57bbd86690a8a3150c4195aa70559f" title="Process audio callback (RT-safe, audio thread only) Allocation-free array-based MIDI routing.">processAudio()</a> drops every event of a cancelled slot, note-offs included, so a note sounding at removal would hang. The next content-edit refill releases the removed slot's held notes instead. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00188">188</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00200">200</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01263">Aestra::Audio::TrackManager::refreshTimelinePatternInstances()</a>.</p>
-<div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-4-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01274">Aestra::Audio::TrackManager::refreshTimelinePatternInstances()</a>.</p>
+<div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-7-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-4-content" class="dyncontent" style="display:none;">
+<div id="dynsection-7-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine_a54dd8e4432b826123bfab7358b029a7e_icgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -614,21 +800,21 @@ Static Public Member Functions</h2></td></tr>
 <p>Rewind queued events and all scheduled instances. </p>
 <p>Rewind, NOT removal: instances stay scheduled and re-emit from the top. That is what a loop restart needs. Use <a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#aff1a4e0952563ea158cd48104e3dde38" title="Remove every scheduled instance and queued event.">clearScheduledInstances()</a> when the content must not carry forward at all. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00742">742</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00817">817</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l02064">Aestra::Audio::TrackManager::preparePatternForArsenal()</a>.</p>
-<div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-5-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l02075">Aestra::Audio::TrackManager::preparePatternForArsenal()</a>.</p>
+<div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-8-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-5-content" class="dyncontent" style="display:none;">
+<div id="dynsection-8-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine_ab5fe99cf5fa482111f0386497e58c931_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
 </div>
-<a id="a4a8cd3c7804784b829d93cc5556ddda5" name="a4a8cd3c7804784b829d93cc5556ddda5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4a8cd3c7804784b829d93cc5556ddda5">&#9670;&#160;</a></span>schedulePatternInstance()</h2>
+<a id="aabca685e25a6dec33629e1b860d31671" name="aabca685e25a6dec33629e1b860d31671"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aabca685e25a6dec33629e1b860d31671">&#9670;&#160;</a></span>schedulePatternInstance()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -661,7 +847,13 @@ Static Public Member Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">double&#160;</td>
-          <td class="paramname"><em>durationBeats</em> = <code>-1.0</code>&#160;</td>
+          <td class="paramname"><em>durationBeats</em> = <code>-1.0</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>repeatPattern</em> = <code>false</code>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -677,19 +869,20 @@ Static Public Member Functions</h2></td></tr>
     <tr><td class="paramname">pid</td><td>Pattern identifier to schedule. </td></tr>
     <tr><td class="paramname">startBeat</td><td>Beat at which the pattern starts. </td></tr>
     <tr><td class="paramname">instanceId</td><td>Caller-supplied instance identifier. </td></tr>
+    <tr><td class="paramname">repeatPattern</td><td>A timeline clip longer than its pattern plays it again from the top every pattern length (V82-T3, <a class="el" href="../../d8/d4b/PatternRepeat_8h_source.html">PatternRepeat.h</a>). Needs a finite <code>durationBeats</code>; off, the pattern plays once. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00121">121</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00130">130</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l02017">Aestra::Audio::TrackManager::playPatternInArsenal()</a>, and <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00165">updatePatternInstance()</a>.</p>
-<div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-6-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l02028">Aestra::Audio::TrackManager::playPatternInArsenal()</a>, and <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00176">updatePatternInstance()</a>.</p>
+<div id="dynsection-9" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-9-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-9-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-6-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine_a4a8cd3c7804784b829d93cc5556ddda5_icgraph.svg" width="100%" height="506"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div id="dynsection-9-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine_aabca685e25a6dec33629e1b860d31671_icgraph.svg" width="100%" height="506"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -711,12 +904,12 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Copy of the scheduled instances (control thread; takes the scheduler lock). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00666">666</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00742">742</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
 
 </div>
 </div>
-<a id="a2477b5e6144cf3ec4606170c5bfca1b8" name="a2477b5e6144cf3ec4606170c5bfca1b8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2477b5e6144cf3ec4606170c5bfca1b8">&#9670;&#160;</a></span>updatePatternInstance()</h2>
+<a id="a12e976086bc55221c1a34567745c06a0" name="a12e976086bc55221c1a34567745c06a0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a12e976086bc55221c1a34567745c06a0">&#9670;&#160;</a></span>updatePatternInstance()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -749,7 +942,13 @@ Static Public Member Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">double&#160;</td>
-          <td class="paramname"><em>durationBeats</em> = <code>-1.0</code>&#160;</td>
+          <td class="paramname"><em>durationBeats</em> = <code>-1.0</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>repeatPattern</em> = <code>false</code>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -760,26 +959,26 @@ Static Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Re-place a slot while playing without disturbing what already sounds (non-RT thread). </p>
-<p>Like <a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a4a8cd3c7804784b829d93cc5556ddda5" title="Schedule new pattern instance (non-RT thread)">schedulePatternInstance()</a>, but an existing slot keeps its scheduling frontier. <a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a4a8cd3c7804784b829d93cc5556ddda5" title="Schedule new pattern instance (non-RT thread)">schedulePatternInstance()</a> resets it to 0, which wakes the refill's entry catch-up and re-fires every note already sounding. Pair with <a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#aafad448642f0a160f19c5f9000c48cb2" title="Pattern content changed while playing (RT-safe producer-side flag).">patternContentEdited()</a>: the next refill re-queues this slot from the playhead at its new placement. Held notes that still span the playhead there carry on, and ones that no longer do are released at once. A slot that did not exist is scheduled fresh, exactly as by <a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a4a8cd3c7804784b829d93cc5556ddda5" title="Schedule new pattern instance (non-RT thread)">schedulePatternInstance()</a>. </p>
+<p>Like <a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#aabca685e25a6dec33629e1b860d31671" title="Schedule new pattern instance (non-RT thread)">schedulePatternInstance()</a>, but an existing slot keeps its scheduling frontier. <a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#aabca685e25a6dec33629e1b860d31671" title="Schedule new pattern instance (non-RT thread)">schedulePatternInstance()</a> resets it to 0, which wakes the refill's entry catch-up and re-fires every note already sounding. Pair with <a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#aafad448642f0a160f19c5f9000c48cb2" title="Pattern content changed while playing (RT-safe producer-side flag).">patternContentEdited()</a>: the next refill re-queues this slot from the playhead at its new placement. Held notes that still span the playhead there carry on, and ones that no longer do are released at once. A slot that did not exist is scheduled fresh, exactly as by <a class="el" href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#aabca685e25a6dec33629e1b860d31671" title="Schedule new pattern instance (non-RT thread)">schedulePatternInstance()</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00165">165</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00176">176</a> of file <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html">PatternPlaybackEngine.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00121">schedulePatternInstance()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00130">schedulePatternInstance()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01263">Aestra::Audio::TrackManager::refreshTimelinePatternInstances()</a>.</p>
-<div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-7-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01274">Aestra::Audio::TrackManager::refreshTimelinePatternInstances()</a>.</p>
+<div id="dynsection-10" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-10-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-10-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-7-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine_a2477b5e6144cf3ec4606170c5bfca1b8_cgraph.svg" width="515" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div id="dynsection-10-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine_a12e976086bc55221c1a34567745c06a0_cgraph.svg" width="515" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
-<div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-8-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-11" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-11-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-11-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-8-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine_a2477b5e6144cf3ec4606170c5bfca1b8_icgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div id="dynsection-11-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine_a12e976086bc55221c1a34567745c06a0_icgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>

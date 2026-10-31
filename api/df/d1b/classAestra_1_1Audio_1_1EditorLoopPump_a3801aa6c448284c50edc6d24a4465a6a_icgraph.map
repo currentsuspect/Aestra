@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::EditorLoopPump::fireDueTimers" name="Aestra::Audio::EditorLoopPump::fireDueTimers">
+<area shape="rect" id="Node000001" title="Run every timer that is due at now, then schedule each one interval later (from now,..." alt="" coords="236,5,423,45"/>
+<area shape="rect" id="Node000002" href="$d0/d44/classAestraHelper_1_1EditorHost.html#a10c31b7a7d2fb78ba9a1f8ea69cabe8b" title="Acts on what the window procedure noted, runs due timers and syncs the editor. Never blocks." alt="" coords="5,5,188,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="222,28,188,28,188,23,222,23"/>
+</map>

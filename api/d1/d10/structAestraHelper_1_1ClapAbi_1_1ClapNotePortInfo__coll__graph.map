@@ -1,0 +1,7 @@
+<map id="AestraHelper::ClapAbi::ClapNotePortInfo" name="AestraHelper::ClapAbi::ClapNotePortInfo">
+<area shape="rect" id="Node000001" title=" " alt="" coords="35,123,200,163"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,80,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="40,45,39,71,46,97,57,110,70,120,67,125,53,114,42,100,33,72,34,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="167,5,217,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="189,45,179,72,165,100,144,124,140,121,160,97,174,70,183,43"/>
+</map>

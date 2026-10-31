@@ -342,7 +342,7 @@ var sectionId = 'dynsection-4';
 <!-- Node12 -->
 <g id="Node000012" class="node">
 <title>Node12</title>
-<g id="a_Node000012"><a xlink:href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a2477b5e6144cf3ec4606170c5bfca1b8" target="_top" xlink:title="Re&#45;place a slot while playing without disturbing what already sounds (non&#45;RT thread).">
+<g id="a_Node000012"><a xlink:href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a12e976086bc55221c1a34567745c06a0" target="_top" xlink:title="Re&#45;place a slot while playing without disturbing what already sounds (non&#45;RT thread).">
 <polygon fill="white" stroke="#666666" points="791,-126 624,-126 624,-96 791,-96 791,-126"/>
 <text text-anchor="start" x="632" y="-114" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::PatternPlayback</text>
 <text text-anchor="middle" x="707.5" y="-103" font-family="Helvetica,sans-Serif" font-size="10.00">Engine::updatePatternInstance</text>
@@ -361,7 +361,7 @@ var sectionId = 'dynsection-4';
 <!-- Node13 -->
 <g id="Node000013" class="node">
 <title>Node13</title>
-<g id="a_Node000013"><a xlink:href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a4a8cd3c7804784b829d93cc5556ddda5" target="_top" xlink:title="Schedule new pattern instance (non&#45;RT thread)">
+<g id="a_Node000013"><a xlink:href="../../dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#aabca685e25a6dec33629e1b860d31671" target="_top" xlink:title="Schedule new pattern instance (non&#45;RT thread)">
 <polygon fill="white" stroke="#666666" points="1003,-126 828,-126 828,-96 1003,-96 1003,-126"/>
 <text text-anchor="start" x="836" y="-114" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::PatternPlayback</text>
 <text text-anchor="middle" x="915.5" y="-103" font-family="Helvetica,sans-Serif" font-size="10.00">Engine::schedulePatternInstance</text>

@@ -134,6 +134,15 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a401079ac6501c3f1df6221fd7d596f84" id="r_a401079ac6501c3f1df6221fd7d596f84"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a401079ac6501c3f1df6221fd7d596f84">processBlock</a> (float *outputBuffer, const float *inputBuffer, uint32_t numFrames, double streamTime)</td></tr>
 <tr class="memdesc:a401079ac6501c3f1df6221fd7d596f84"><td class="mdescLeft">&#160;</td><td class="mdescRight">Process a single audio block (driver callback entry).  <br /></td></tr>
 <tr class="separator:a401079ac6501c3f1df6221fd7d596f84"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aad2a21d93378f1a10bbb2a6ad7f17f3c" id="r_aad2a21d93378f1a10bbb2a6ad7f17f3c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#aad2a21d93378f1a10bbb2a6ad7f17f3c">beginManualRender</a> ()</td></tr>
+<tr class="separator:aad2a21d93378f1a10bbb2a6ad7f17f3c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad9ccaa54a9780c45a2085ea7957ec347" id="r_ad9ccaa54a9780c45a2085ea7957ec347"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad9ccaa54a9780c45a2085ea7957ec347">endManualRender</a> ()</td></tr>
+<tr class="separator:ad9ccaa54a9780c45a2085ea7957ec347"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a56cf2ee4a4db96d6032da45f86fbd341" id="r_a56cf2ee4a4db96d6032da45f86fbd341"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a56cf2ee4a4db96d6032da45f86fbd341">setHoldStartForSchedule</a> (bool hold)</td></tr>
+<tr class="separator:a56cf2ee4a4db96d6032da45f86fbd341"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aae7cad7ab15a562dc0b610f15b0a2457" id="r_aae7cad7ab15a562dc0b610f15b0a2457"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#aae7cad7ab15a562dc0b610f15b0a2457">setStopCutsSound</a> (bool cut)</td></tr>
+<tr class="memdesc:aae7cad7ab15a562dc0b610f15b0a2457"><td class="mdescLeft">&#160;</td><td class="mdescRight">Preference: a stop cuts all sound (like pressing stop twice) instead of letting notes release.  <br /></td></tr>
+<tr class="separator:aae7cad7ab15a562dc0b610f15b0a2457"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adceb67afa4b518ef92ae59feff943b4c" id="r_adceb67afa4b518ef92ae59feff943b4c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#adceb67afa4b518ef92ae59feff943b4c">performNonRealtimeMaintenance</a> ()</td></tr>
 <tr class="memdesc:adceb67afa4b518ef92ae59feff943b4c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Non-real-time maintenance hook for deferred resource reclamation.  <br /></td></tr>
 <tr class="separator:adceb67afa4b518ef92ae59feff943b4c"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -287,6 +296,8 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a34d9746cbf415b530045c2d895843e76" id="r_a34d9746cbf415b530045c2d895843e76"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a34d9746cbf415b530045c2d895843e76">setBPM</a> (float bpm)</td></tr>
 <tr class="memdesc:a34d9746cbf415b530045c2d895843e76"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set transport tempo in beats per minute.  <br /></td></tr>
 <tr class="separator:a34d9746cbf415b530045c2d895843e76"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a30311773bd81521f59f8d9ba7a842793" id="r_a30311773bd81521f59f8d9ba7a842793"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a30311773bd81521f59f8d9ba7a842793">setTempoKeepingBeat</a> (float bpm)</td></tr>
+<tr class="separator:a30311773bd81521f59f8d9ba7a842793"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af9ea6f00d65d1352cf858b6f9c57b42a" id="r_af9ea6f00d65d1352cf858b6f9c57b42a"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#af9ea6f00d65d1352cf858b6f9c57b42a">getBPM</a> () const</td></tr>
 <tr class="memdesc:af9ea6f00d65d1352cf858b6f9c57b42a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get transport tempo in beats per minute.  <br /></td></tr>
 <tr class="separator:af9ea6f00d65d1352cf858b6f9c57b42a"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -508,7 +519,7 @@ Friends</h2></td></tr>
 <li>Soft limiting to prevent digital clipping </li>
 </ul>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00062">62</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00065">65</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 </div><h2 class="groupheader">Member Typedef Documentation</h2>
 <a id="ad09c3baea3585c3f023b9e92701b7263" name="ad09c3baea3585c3f023b9e92701b7263"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ad09c3baea3585c3f023b9e92701b7263">&#9670;&#160;</a></span>InputCallback</h2>
@@ -524,7 +535,7 @@ Friends</h2></td></tr>
 
 <p>Audio-input callback signature invoked on the realtime thread. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00149">149</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00158">158</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -551,7 +562,7 @@ Friends</h2></td></tr>
 
 <p>Source currently responsible for transport ducking. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00626">626</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00636">636</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -575,7 +586,7 @@ Friends</h2></td></tr>
 <p>Initialize <a class="el" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html" title="Real-time audio engine with 144dB dynamic range.">AudioEngine</a> runtime state.</p>
 <p>Generates the metronome click samples and starts the background loudness worker used for integrated LUFS calculation. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l02056">2056</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l02009">2009</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -596,7 +607,7 @@ Friends</h2></td></tr>
 
 <p>Destroy the realtime audio engine and release owned resources. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l02081">2081</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l02033">2033</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -627,7 +638,26 @@ Friends</h2></td></tr>
 <p>V8-A5: how many times a Custom automation curve was skipped because its target plugin does not declare supportsRealtimeAutomation(). </p>
 <p>A non-zero count is the honest boundary of third-party automation, visible to diagnostics and tests instead of a silent no-op. Counts curve-blocks. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00247">247</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00256">256</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+
+</div>
+</div>
+<a id="aad2a21d93378f1a10bbb2a6ad7f17f3c" name="aad2a21d93378f1a10bbb2a6ad7f17f3c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aad2a21d93378f1a10bbb2a6ad7f17f3c">&#9670;&#160;</a></span>beginManualRender()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::AudioEngine::beginManualRender </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d48/AudioEngineBlockSplit_8cpp_source.html#l00019">19</a> of file <a class="el" href="../../d6/d48/AudioEngineBlockSplit_8cpp_source.html">AudioEngineBlockSplit.cpp</a>.</p>
 
 </div>
 </div>
@@ -681,11 +711,11 @@ Friends</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true if successful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03627">3627</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03577">3577</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d1/d7f/EngineState_8h_source.html#l00086">Aestra::Audio::EngineState::activeGraphRead()</a>, <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00029">Aestra::Audio::AudioExporter::bounceToWav()</a>, <a class="el" href="../../d1/d5f/PathUtils_8cpp_source.html#l00077">Aestra::Audio::pathStringToWide()</a>, <a class="el" href="../../d1/dbc/AudioRenderer_8cpp_source.html#l00078">Aestra::Audio::AudioRenderer::renderBlock()</a>, and <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00208">setTransportPlaying()</a>.</p>
+<p class="reference">References <a class="el" href="../../d1/d7f/EngineState_8h_source.html#l00086">Aestra::Audio::EngineState::activeGraphRead()</a>, <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00030">Aestra::Audio::AudioExporter::bounceToWav()</a>, <a class="el" href="../../d1/d5f/PathUtils_8cpp_source.html#l00077">Aestra::Audio::pathStringToWide()</a>, <a class="el" href="../../d1/dbc/AudioRenderer_8cpp_source.html#l00078">Aestra::Audio::AudioRenderer::renderBlock()</a>, and <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00217">setTransportPlaying()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00029">Aestra::Audio::AudioExporter::bounceToWav()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00030">Aestra::Audio::AudioExporter::bounceToWav()</a>.</p>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-1-summary" class="dynsummary" style="display:block;">
@@ -727,11 +757,11 @@ Friends</h2></td></tr>
 <li><a class="el" href="../../da/d7d/structAestra_1_1Audio_1_1Track.html" title="The user&#39;s recording and arrangement identity (FD-14).">Track</a> enable/disable </li>
 </ul>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03870">3870</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03821">3821</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dc/d2d/LatencyTopology_8h_source.html#l00044">Aestra::Audio::LatencyGraph::Node::channelId</a>, <a class="el" href="../../dc/d2d/LatencyTopology_8h_source.html#l00057">Aestra::Audio::LatencyGraph::edges</a>, <a class="el" href="../../dc/d2d/LatencyTopology_8h_source.html#l00058">Aestra::Audio::LatencyGraph::generation</a>, <a class="el" href="../../dc/d2d/LatencyTopology_8h_source.html#l00134">Aestra::Audio::SolvedLatencyTopology::generation</a>, <a class="el" href="../../dc/d2d/LatencyTopology_8h_source.html#l00045">Aestra::Audio::LatencyGraph::Node::intrinsicLatency</a>, <a class="el" href="../../dc/d2d/LatencyTopology_8h_source.html#l00046">Aestra::Audio::LatencyGraph::Node::muted</a>, <a class="el" href="../../dc/d2d/LatencyTopology_8h_source.html#l00116">Aestra::Audio::SolvedLatencyTopology::projectAlignmentLatency</a>, and <a class="el" href="../../dc/d2d/LatencyTopology_8h_source.html#l00132">Aestra::Audio::SolvedLatencyTopology::warnings</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l04365">setLatencyCompensationEnabled()</a>, and <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00686">setTrackManager()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l04316">setLatencyCompensationEnabled()</a>, and <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00696">setTrackManager()</a>.</p>
 <div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-3-summary" class="dynsummary" style="display:block;">
@@ -770,7 +800,7 @@ Friends</h2></td></tr>
 
 <p>Capture an interleaved output block into waveform history. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l02010">2010</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l01963">1963</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -799,11 +829,11 @@ Friends</h2></td></tr>
 
 <p>Reset true-peak running max (does not disturb FIR history). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00577">577</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00587">587</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../df/d0e/TruePeakMeter_8h_source.html#l00061">Aestra::Audio::TruePeakMeter::clearPeaks()</a>.</p>
+<p class="reference">References <a class="el" href="../../df/d0e/TruePeakMeter_8h_source.html#l00067">Aestra::Audio::TruePeakMeter::clearPeaks()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>.</p>
 <div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-4-summary" class="dynsummary" style="display:block;">
@@ -846,9 +876,9 @@ Friends</h2></td></tr>
 
 <p>Access the command queue used to communicate with the audio thread. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00157">157</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00166">166</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00046">Aestra::Audio::PianoRollPanel::PianoRollPanel()</a>, and <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l03699">AestraContent::setAudioEngine()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00046">Aestra::Audio::PianoRollPanel::PianoRollPanel()</a>, and <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l03677">AestraContent::setAudioEngine()</a>.</p>
 <div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-6-summary" class="dynsummary" style="display:block;">
@@ -887,9 +917,9 @@ Friends</h2></td></tr>
 
 <p>Copy recent waveform history into an interleaved output buffer. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l01990">1990</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l01943">1943</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01702">AestraContent::onUpdate()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01681">AestraContent::onUpdate()</a>.</p>
 <div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-7-summary" class="dynsummary" style="display:block;">
@@ -925,7 +955,7 @@ Friends</h2></td></tr>
 
 <p>Test hook: indicates whether the last bounce wrote at least one full block. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00597">597</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00607">607</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -947,7 +977,26 @@ Friends</h2></td></tr>
 <p>Non-real-time shutdown drain for deferred resources. </p>
 <p>Call only after the audio stream has been stopped and closed. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00858">858</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00781">781</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ad9ccaa54a9780c45a2085ea7957ec347" name="ad9ccaa54a9780c45a2085ea7957ec347"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad9ccaa54a9780c45a2085ea7957ec347">&#9670;&#160;</a></span>endManualRender()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::AudioEngine::endManualRender </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d48/AudioEngineBlockSplit_8cpp_source.html#l00043">43</a> of file <a class="el" href="../../d6/d48/AudioEngineBlockSplit_8cpp_source.html">AudioEngineBlockSplit.cpp</a>.</p>
 
 </div>
 </div>
@@ -976,7 +1025,7 @@ Friends</h2></td></tr>
 
 <p>Access the mutable engine state object. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00161">161</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00170">170</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -1003,7 +1052,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00506">506</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00516">516</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -1032,7 +1081,7 @@ Friends</h2></td></tr>
 
 <p>Get the time-signature numerator used by the metronome. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00432">432</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00442">442</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -1061,9 +1110,9 @@ Friends</h2></td></tr>
 
 <p>Get transport tempo in beats per minute. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00428">428</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00438">438</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00029">Aestra::Audio::AudioExporter::bounceToWav()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00766">getPlayhead()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l04260">AestraContent::loadEffectToSelectedTrack()</a>, <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>, and <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00751">setPlayhead()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00030">Aestra::Audio::AudioExporter::bounceToWav()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00776">getPlayhead()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l04238">AestraContent::loadEffectToSelectedTrack()</a>, <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>, and <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00761">setPlayhead()</a>.</p>
 <div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-8-summary" class="dynsummary" style="display:block;">
@@ -1099,7 +1148,7 @@ Friends</h2></td></tr>
 
 <p>Get count of samples hard-clipped since last reset. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00301">301</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00310">310</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -1128,7 +1177,7 @@ Friends</h2></td></tr>
 
 <p>Get the active dithering mode. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00586">586</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00596">596</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -1157,9 +1206,9 @@ Friends</h2></td></tr>
 
 <p>Get the current transport position in samples. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00275">275</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00284">284</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00766">getPlayhead()</a>, and <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00776">getPlayhead()</a>, and <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>.</p>
 <div id="dynsection-9" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-9-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-9-summary" class="dynsummary" style="display:block;">
@@ -1195,7 +1244,7 @@ Friends</h2></td></tr>
 
 <p>Get the active interpolation quality. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00289">289</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00298">298</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -1218,7 +1267,7 @@ Friends</h2></td></tr>
 <p>Returns a snapshot of the artifact produced by <code>solveLatency()</code> during the last <code><a class="el" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a0c30690eadea033ba723bcbca0c1d14c" title="Calculate and apply plugin delay compensation across all tracks.">calculateLatencyCompensation()</a></code> call. NOT RT-SAFE: read from main / control thread only.</p>
 <p>Architectural contract (PDC-v2-Design §4.0): the engine consumes this topology read-only. Tests and tools may inspect it for diagnostics and solver-vs-state equivalence checks. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l04222">4222</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l04173">4173</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -1247,7 +1296,7 @@ Friends</h2></td></tr>
 
 <p>Get the loop end position in beats. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00454">454</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00464">464</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -1276,7 +1325,7 @@ Friends</h2></td></tr>
 
 <p>Get the loop start position in beats. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00452">452</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00462">462</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -1305,7 +1354,7 @@ Friends</h2></td></tr>
 
 <p>Get the master gain target. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00296">296</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00305">305</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -1326,7 +1375,7 @@ Friends</h2></td></tr>
 
 <p>Get current max project latency in samples. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l04384">4384</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l04335">4335</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -1355,11 +1404,11 @@ Friends</h2></td></tr>
 
 <p>Latest max-channel true peak in dBTP (decibels True Peak). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00565">565</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00575">575</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00561">getTruePeakL()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00563">getTruePeakR()</a>, and <a class="el" href="../../df/d0e/TruePeakMeter_8h_source.html#l00103">Aestra::Audio::TruePeakMeter::linearToDbTp()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00571">getTruePeakL()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00573">getTruePeakR()</a>, and <a class="el" href="../../df/d0e/TruePeakMeter_8h_source.html#l00109">Aestra::Audio::TruePeakMeter::linearToDbTp()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>.</p>
 <div id="dynsection-10" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-10-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-10-summary" class="dynsummary" style="display:block;">
@@ -1402,7 +1451,7 @@ Friends</h2></td></tr>
 
 <p>Get metronome output volume. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00424">424</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00433">433</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -1431,7 +1480,7 @@ Friends</h2></td></tr>
 
 <p>Get count of NaN/Inf samples sanitized since last reset. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00299">299</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00308">308</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -1458,7 +1507,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00507">507</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00517">517</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -1487,7 +1536,7 @@ Friends</h2></td></tr>
 
 <p>Get the latest left peak meter value. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00551">551</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00561">561</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -1516,7 +1565,7 @@ Friends</h2></td></tr>
 
 <p>Get the latest right peak meter value. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00553">553</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00563">563</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -1546,9 +1595,9 @@ Friends</h2></td></tr>
 <p>Get the current playhead position in beats. </p>
 <dl class="section return"><dt>Returns</dt><dd>Current beat position </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00766">766</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00776">776</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00428">getBPM()</a>, and <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00275">getGlobalSamplePos()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00438">getBPM()</a>, and <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00284">getGlobalSamplePos()</a>.</p>
 <div id="dynsection-12" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-12-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-12-summary" class="dynsummary" style="display:block;">
@@ -1584,7 +1633,7 @@ Friends</h2></td></tr>
 
 <p>Get the current transport position in seconds. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00279">279</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00288">288</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00654">Aestra::Audio::PianoRollPanel::onUpdate()</a>.</p>
 <div id="dynsection-13" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -1622,9 +1671,9 @@ Friends</h2></td></tr>
 
 <p>Current transport duck gain caused by audible preview playback. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00640">640</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00650">650</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01702">AestraContent::onUpdate()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01681">AestraContent::onUpdate()</a>.</p>
 <div id="dynsection-14" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-14-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-14-summary" class="dynsummary" style="display:block;">
@@ -1652,9 +1701,9 @@ Friends</h2></td></tr>
 
 <p>Configured preview duck depth in positive dB; 0 means disabled. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00095">95</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00097">97</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>.</p>
 <div id="dynsection-15" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-15-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-15-summary" class="dynsummary" style="display:block;">
@@ -1690,9 +1739,9 @@ Friends</h2></td></tr>
 
 <p>Source currently responsible for the published preview duck gain. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00642">642</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00652">652</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01702">AestraContent::onUpdate()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01681">AestraContent::onUpdate()</a>.</p>
 <div id="dynsection-16" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-16-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-16-summary" class="dynsummary" style="display:block;">
@@ -1729,7 +1778,7 @@ Friends</h2></td></tr>
 <p>Generation of the last requested / audio-applied playback context. </p>
 <p>Equal means settled. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00503">503</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00513">513</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00089">Aestra::Audio::PlaybackContextController::settled()</a>.</p>
 <div id="dynsection-17" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -1767,7 +1816,7 @@ Friends</h2></td></tr>
 
 <p>Get the latest left RMS meter value. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00555">555</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00565">565</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -1796,7 +1845,7 @@ Friends</h2></td></tr>
 
 <p>Get the latest right RMS meter value. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00557">557</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00567">567</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -1825,9 +1874,9 @@ Friends</h2></td></tr>
 
 <p>Get the active sample rate used by the engine. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00188">188</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00197">197</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00029">Aestra::Audio::AudioExporter::bounceToWav()</a>, <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00046">Aestra::Audio::PianoRollPanel::PianoRollPanel()</a>, <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l03699">AestraContent::setAudioEngine()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01181">AestraContent::setupArsenalPanels()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l00793">AestraContent::setupBrowserPanels()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l02631">AestraContent::setViewFocus()</a>, <a class="el" href="../../da/d3c/ExportDialog_8cpp_source.html#l00151">ExportDialog::show()</a>, and <a class="el" href="../../d3/d93/AestraContentBounce_8cpp_source.html#l00074">AestraContent::togglePreviewFile()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00030">Aestra::Audio::AudioExporter::bounceToWav()</a>, <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00046">Aestra::Audio::PianoRollPanel::PianoRollPanel()</a>, <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l03677">AestraContent::setAudioEngine()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01181">AestraContent::setupArsenalPanels()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l00793">AestraContent::setupBrowserPanels()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l02610">AestraContent::setViewFocus()</a>, <a class="el" href="../../da/d3c/ExportDialog_8cpp_source.html#l00160">ExportDialog::show()</a>, and <a class="el" href="../../d3/d93/AestraContentBounce_8cpp_source.html#l00094">AestraContent::togglePreviewFile()</a>.</p>
 <div id="dynsection-18" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-18-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-18-summary" class="dynsummary" style="display:block;">
@@ -1854,7 +1903,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l04230">4230</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l04181">4181</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -1884,7 +1933,7 @@ Friends</h2></td></tr>
 <p>Get the current <a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html" title="Track/Channel manager for the audio engine.">TrackManager</a>. </p>
 <dl class="section return"><dt>Returns</dt><dd>Shared pointer to track manager (may be null) </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00739">739</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00749">749</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -1913,15 +1962,15 @@ Friends</h2></td></tr>
 
 <p>Latest left-channel true peak (linear, max-hold since last clear). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00561">561</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00571">571</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00565">getMaxTruePeakdBTP()</a>, and <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00972">processBlock()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00575">getMaxTruePeakdBTP()</a>.</p>
 <div id="dynsection-19" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-19-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-19-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-19-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_aebdfdbad3145cd170ab61495a9457951_icgraph.svg" width="100%" height="410"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_aebdfdbad3145cd170ab61495a9457951_icgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -1951,15 +2000,15 @@ Friends</h2></td></tr>
 
 <p>Latest right-channel true peak (linear, max-hold since last clear). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00563">563</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00573">573</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00565">getMaxTruePeakdBTP()</a>, and <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00972">processBlock()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00575">getMaxTruePeakdBTP()</a>.</p>
 <div id="dynsection-20" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-20-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-20-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-20-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_a7ec9a8e1577c72c96b179fab3a0b6adf_icgraph.svg" width="100%" height="410"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_a7ec9a8e1577c72c96b179fab3a0b6adf_icgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -1989,9 +2038,9 @@ Friends</h2></td></tr>
 
 <p>Get the waveform-history buffer capacity in frames. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00602">602</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00612">612</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01702">AestraContent::onUpdate()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01681">AestraContent::onUpdate()</a>.</p>
 <div id="dynsection-21" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-21-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-21-summary" class="dynsummary" style="display:block;">
@@ -2027,7 +2076,7 @@ Friends</h2></td></tr>
 
 <p>Non-RT diagnostic counter incremented whenever a graph is published. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00163">163</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00172">172</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -2056,7 +2105,7 @@ Friends</h2></td></tr>
 
 <p>Check if a routing cycle was detected on the audio thread (poll from UI). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00191">191</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00200">200</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -2078,9 +2127,9 @@ Friends</h2></td></tr>
 <p>Initialize the engine for rendering. </p>
 <dl class="section return"><dt>Returns</dt><dd>true if initialization successful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03843">3843</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03794">3794</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l01788">setBufferConfig()</a>.</p>
+<p class="reference">References <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l01741">setBufferConfig()</a>.</p>
 <div id="dynsection-22" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-22-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-22-summary" class="dynsummary" style="display:block;">
@@ -2116,9 +2165,9 @@ Friends</h2></td></tr>
 
 <p>Check whether audition mode is enabled. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00620">620</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00630">630</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01643">AestraContent::logModeStateIfChanged()</a>, <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00097">Aestra::Audio::PlaybackContextController::observe()</a>, and <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01622">AestraContent::logModeStateIfChanged()</a>, <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00097">Aestra::Audio::PlaybackContextController::observe()</a>, and <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>.</p>
 <div id="dynsection-23" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-23-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-23-summary" class="dynsummary" style="display:block;">
@@ -2154,7 +2203,7 @@ Friends</h2></td></tr>
 
 <p>Check whether master-bus DC removal is enabled. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00413">413</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00422">422</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -2173,7 +2222,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l04380">4380</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l04331">4331</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -2203,7 +2252,7 @@ Friends</h2></td></tr>
 <p>Whether the published latency topology is pending recalculation. </p>
 <p>NOT RT-SAFE: read from the main / control thread only. Diagnostic tooling uses this to distinguish a current solution from a stale one; reading it never triggers recalculation. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00395">395</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00404">404</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -2232,9 +2281,9 @@ Friends</h2></td></tr>
 
 <p>Check whether transport looping is enabled. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00448">448</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00458">458</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>.</p>
 <div id="dynsection-24" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-24-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-24-summary" class="dynsummary" style="display:block;">
@@ -2268,7 +2317,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00443">443</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00453">453</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -2297,9 +2346,9 @@ Friends</h2></td></tr>
 
 <p>Check whether the metronome is enabled. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00418">418</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00427">427</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>.</p>
 <div id="dynsection-25" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-25-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-25-summary" class="dynsummary" style="display:block;">
@@ -2335,7 +2384,7 @@ Friends</h2></td></tr>
 
 <p>Check whether multithreaded processing is enabled. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00613">613</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00623">623</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -2362,7 +2411,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00239">239</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00248">248</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -2391,15 +2440,15 @@ Friends</h2></td></tr>
 
 <p>Check whether Arsenal pattern playback mode is active. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00485">485</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00495">495</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01643">AestraContent::logModeStateIfChanged()</a>, and <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00097">Aestra::Audio::PlaybackContextController::observe()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01622">AestraContent::logModeStateIfChanged()</a>, <a class="el" href="../../d4/d0d/PlaybackContextController_8h_source.html#l00097">Aestra::Audio::PlaybackContextController::observe()</a>, and <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>.</p>
 <div id="dynsection-26" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-26-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-26-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-26-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_ab9a7f9d556efdfa7b6cfe5ee7acbbbad_icgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_ab9a7f9d556efdfa7b6cfe5ee7acbbbad_icgraph.svg" width="100%" height="458"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -2421,7 +2470,7 @@ Friends</h2></td></tr>
 
 <p>Check whether preview ducking is enabled. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00099">99</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00101">101</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -2450,7 +2499,7 @@ Friends</h2></td></tr>
 
 <p>Check whether the master safety limiter is enabled. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00408">408</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00417">417</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -2479,7 +2528,7 @@ Friends</h2></td></tr>
 
 <p>Check whether the internal test tone is enabled. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00591">591</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00601">601</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -2508,9 +2557,9 @@ Friends</h2></td></tr>
 
 <p>Check whether transport playback is active. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00225">225</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00234">234</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00052">Aestra::Audio::PlayCommand::execute()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00081">Aestra::Audio::StopCommand::execute()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00434">loadMetronomeClicks()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01643">AestraContent::logModeStateIfChanged()</a>, and <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00048">Aestra::Audio::PlayCommand::execute()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00077">Aestra::Audio::StopCommand::execute()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00444">loadMetronomeClicks()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01622">AestraContent::logModeStateIfChanged()</a>, and <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>.</p>
 <div id="dynsection-27" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-27-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-27-summary" class="dynsummary" style="display:block;">
@@ -2546,7 +2595,7 @@ Friends</h2></td></tr>
 
 <p>Whether true-peak metering is currently enabled. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00575">575</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00585">585</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -2586,9 +2635,9 @@ Friends</h2></td></tr>
 
 <p>Load downbeat and upbeat click samples for the metronome. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00434">434</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00444">444</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00225">isTransportPlaying()</a>, and <a class="el" href="../../da/d22/MetronomeEngine_8cpp_source.html#l00045">Aestra::Audio::MetronomeEngine::loadClickSounds()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00234">isTransportPlaying()</a>, and <a class="el" href="../../da/d22/MetronomeEngine_8cpp_source.html#l00045">Aestra::Audio::MetronomeEngine::loadClickSounds()</a>.</p>
 <div id="dynsection-28" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-28-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-28-summary" class="dynsummary" style="display:block;">
@@ -2616,7 +2665,7 @@ Friends</h2></td></tr>
 
 <p>Mark latency as dirty (needs recalculation) Called internally when plugins change. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l04388">4388</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l04339">4339</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -2638,11 +2687,11 @@ Friends</h2></td></tr>
 <p>Immediate panic/reset (Double Stop). </p>
 <p>Clears all buffers and resets plugin states. Main Thread. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03396">3396</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03346">3346</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d1/d7f/EngineState_8h_source.html#l00086">Aestra::Audio::EngineState::activeGraphRead()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l03587">AestraContent::pauseFromCurrentFocus()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l02631">AestraContent::setViewFocus()</a>, and <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l03530">AestraContent::stopFromCurrentFocus()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l03566">AestraContent::pauseFromCurrentFocus()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l02610">AestraContent::setViewFocus()</a>, and <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l03509">AestraContent::stopFromCurrentFocus()</a>.</p>
 <div id="dynsection-29" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-29-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-29-summary" class="dynsummary" style="display:block;">
@@ -2678,9 +2727,9 @@ Friends</h2></td></tr>
 <p>Non-real-time maintenance hook for deferred resource reclamation. </p>
 <p>Safe to call from the UI loop, idle tick, export loop, or headless render loop. Throttled internally so frequent calls stay cheap. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00759">759</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00744">744</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>.</p>
 <div id="dynsection-31" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-31-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-31-summary" class="dynsummary" style="display:block;">
@@ -2740,7 +2789,7 @@ Friends</h2></td></tr>
 <p>Post a live MIDI event from the hardware MIDI input thread. </p>
 <p>Same contract as postLiveMidiEvent, but on a separate SPSC queue whose single producer is the hardware MIDI callback thread (RtMidi). Both queues are drained together on the audio thread each block. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00478">478</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00488">488</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d5/ddc/LiveMidiQueue_8h_source.html#l00037">Aestra::Audio::LiveMidiQueue::push()</a>.</p>
 <div id="dynsection-32" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -2803,7 +2852,7 @@ Friends</h2></td></tr>
 <p>Lock-free, allocation-free; safe to call from exactly ONE non-RT producer thread (the UI thread today — a hardware MIDI callback thread will get its own queue). Events are drained on the audio thread each block and delivered to the unit's plugin alongside pattern playback, with or without the transport running.</p>
 <dl class="section return"><dt>Returns</dt><dd>false if the queue was full and the event was dropped. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00467">467</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00477">477</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d5/ddc/LiveMidiQueue_8h_source.html#l00037">Aestra::Audio::LiveMidiQueue::push()</a>.</p>
 
@@ -2864,44 +2913,17 @@ Friends</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Process a single audio block (driver callback entry). </p>
-<p>Real-time audio processing entry point for a single block.</p>
 <p>Must remain lock-free, allocation-free.</p>
-<p>Not yet AESTRA_RT_NONBLOCKING. Annotating this entry point pulls its whole callee graph under the compile-time check (<a class="el" href="../../dc/d3a/RealtimeThreadGuard_8h.html" title="The single source of truth for real-time thread state and misuse reporting (B-004 threading model,...">RealtimeThreadGuard.h</a>), and a survey of that graph found real work behind it — including a shared_ptr returned by value from <a class="el" href="../../d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a34db3b8d6a06afefdf4711c3d84b63f0" title="Build a snapshot of the current unit state for the audio engine.">UnitManager::getAudioSnapshot()</a>, whose destructor can free on the audio thread. Tracked separately; do not annotate this without doing that work, because a red gate teaches people to skip gates.</p>
-<p>Processes input (recording callback), renders the audio graph into an internal double-precision master buffer, applies master gain smoothing, optional safety processing (DC blocking, soft clip), per-sample LUFS filtering and dithering, fades, metronome mixing, and writes the final interleaved stereo float output to outputBuffer. Also updates metering (peak/RMS/low-frequency energy/correlation), accumulates loudness energy for background LUFS calculation, advances the global sample position (with sample-accurate looping support), and captures recent output into the waveform history.</p>
-<p>Parameters: </p><dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">outputBuffer</td><td>Interleaved stereo output buffer to fill (must be non-null and sized for numFrames * output channels). </td></tr>
-    <tr><td class="paramname">inputBuffer</td><td>Optional interleaved input buffer; if provided and an input callback is registered, the callback is invoked with this buffer. </td></tr>
-    <tr><td class="paramname">numFrames</td><td>Number of frames to process in this block. </td></tr>
-    <tr><td class="paramname">streamTime</td><td>Unused (present for API compatibility).</td></tr>
-  </table>
-  </dd>
-</dl>
-<p>Notes:</p><ul>
-<li>If internal buffers are not configured, the function silences the provided outputBuffer and returns.</li>
-<li>Handles fade-in/fade-out state transitions and will set the engine to Silent when fading completes.</li>
-<li>Performs sample-accurate looping by splitting the block if a loop boundary is crossed.</li>
-<li>Meter snapshots are published if a snapshot buffer is available; clipping flags are set when peaks &gt;= 1.0.</li>
-<li>Dithering mode, safety processing, metronome, and LUFS accumulation are all controlled by engine state flags. </li>
-</ul>
+<p>Not yet AESTRA_RT_NONBLOCKING. Annotating this entry point pulls its whole callee graph under the compile-time check (<a class="el" href="../../dc/d3a/RealtimeThreadGuard_8h.html" title="The single source of truth for real-time thread state and misuse reporting (B-004 threading model,...">RealtimeThreadGuard.h</a>), and a survey of that graph found real work behind it — including a shared_ptr returned by value from <a class="el" href="../../d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a34db3b8d6a06afefdf4711c3d84b63f0" title="Build a snapshot of the current unit state for the audio engine.">UnitManager::getAudioSnapshot()</a>, whose destructor can free on the audio thread. Tracked separately; do not annotate this without doing that work, because a red gate teaches people to skip gates. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00972">972</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d48/AudioEngineBlockSplit_8cpp_source.html#l00058">58</a> of file <a class="el" href="../../d6/d48/AudioEngineBlockSplit_8cpp_source.html">AudioEngineBlockSplit.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d1/d7f/EngineState_8h_source.html#l00086">Aestra::Audio::EngineState::activeGraphRead()</a>, <a class="el" href="../../d0/d0f/LoudnessWindow_8h_source.html#l00044">Aestra::Audio::LoudnessWindow::add()</a>, <a class="el" href="../../d8/d85/AudioGraphState_8h_source.html#l00023">Aestra::Audio::SmoothedParamD::current</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00561">getTruePeakL()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00563">getTruePeakR()</a>, <a class="el" href="../../d8/dac/ChannelSlotMap_8h_source.html#l00040">Aestra::Audio::ChannelSlotMap::MASTER_SLOT_INDEX</a>, <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00091">Aestra::Audio::AudioGraph::masterEffectChainSnapshot</a>, <a class="el" href="../../d8/dac/ChannelSlotMap_8h_source.html#l00046">Aestra::Audio::ChannelSlotMap::MAX_CHANNEL_SLOTS</a>, <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00118">Aestra::Audio::AudioTelemetry::recordStableBlock()</a>, and <a class="el" href="../../d8/d85/AudioGraphState_8h_source.html#l00024">Aestra::Audio::SmoothedParamD::target</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../d7/d49/OfflineRenderHarness_8h_source.html#l00028">Aestra::Audio::OfflineRenderHarness::processBlocks()</a>, and <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d7/d49/OfflineRenderHarness_8h_source.html#l00028">Aestra::Audio::OfflineRenderHarness::processBlocks()</a>, and <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>.</p>
 <div id="dynsection-35" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-35-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+  <img id="dynsection-35-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-35-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-35-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_a401079ac6501c3f1df6221fd7d596f84_cgraph.svg" width="519" height="294"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
-</div>
-<div id="dynsection-36" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-36-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-36-summary" class="dynsummary" style="display:block;">
-</div>
-<div id="dynsection-36-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_a401079ac6501c3f1df6221fd7d596f84_icgraph.svg" width="100%" height="410"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -2926,7 +2948,7 @@ Friends</h2></td></tr>
 <p>The normal retirement drain is ack-gated: control only frees a retired ring once RT has acknowledged a newer generation. While the stream is stopped RT never runs, so ackedGeneration never advances and every latency recompute would otherwise retain its 128 KiB ring indefinitely. This path PROVES quiescence first — it waits (bounded) until no processBlock is in flight (engine-wide RT callback depth) — then reclaims every retired ring unconditionally and converges the ack to the current generation.</p>
 <p>Call after stopping/joining the device stream (e.g. from the controller after <a class="el" href="../../df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a035f837c1320901be122e30661f72bb3" title="Stop audio processing.">AudioDeviceManager::stopStream</a>, and at shutdown). Safe to call repeatedly; cheap when nothing is pending. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00866">866</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00789">789</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -2948,7 +2970,7 @@ Friends</h2></td></tr>
 <p>Refresh the sampler cache from <a class="el" href="../../d4/d49/classAestra_1_1Audio_1_1UnitManager.html" title="Unit manager for Arsenal system.">UnitManager</a> snapshot. </p>
 <p>Call from main thread after unit changes. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00654">654</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00639">639</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -2978,7 +3000,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00671">671</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00656">656</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -3008,7 +3030,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00687">687</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00672">672</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -3048,7 +3070,7 @@ Friends</h2></td></tr>
 <p>Rides the audio command queue as SetPlaybackContext, so the audio thread applies it in the same drain as the transport commands around it. The direct <a class="el" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a1d47a21a48da22811eabfc9f49dab695" title="Enable or disable Arsenal pattern playback mode.">setPatternPlaybackMode()</a> store raced them: a block could render a transition's transport under the previous context. The scheduler rewind it needs stays HERE, on the producer thread: rewindScheduledInstances() drains the pattern RT queue from the producer side and must never run on the audio thread.</p>
 <p>If the queue stays full past pushReliable()'s timeout, the context is posted to a generation-tagged fallback slot that the audio thread applies at the start of its next block: never lost, and never written by two threads. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00721">721</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00706">706</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -3069,7 +3091,7 @@ Friends</h2></td></tr>
 
 <p>Request a voice reset after a pattern identity change. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03446">3446</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03396">3396</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -3096,7 +3118,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l01424">1424</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l01450">1450</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -3127,14 +3149,14 @@ Friends</h2></td></tr>
 <p>Offline render only.</p>
 <p>Preview ducking is a monitoring convenience; it must never attenuate an offline render. <a class="el" href="../../d3/da8/classAestra_1_1Audio_1_1AudioExporter.html" title="Offline audio export/render engine (v2.0)">AudioExporter</a> disables the duck depth for the render, and calls this so an already-engaged duck's release tail (~120 ms) cannot bleed into the head of the exported file. Non-RT only — call while no realtime stream is driving processBlock. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00655">655</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00665">665</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>.</p>
-<div id="dynsection-37" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-37-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-37-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>.</p>
+<div id="dynsection-36" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-36-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-36-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-37-content" class="dyncontent" style="display:none;">
+<div id="dynsection-36-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_a4df1a398645324848c1de67797442104_icgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -3165,7 +3187,7 @@ Friends</h2></td></tr>
 
 <p>Reset NaN and clip counters. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00303">303</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00312">312</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -3195,14 +3217,14 @@ Friends</h2></td></tr>
 
 <p>Bind the audition engine used by audition mode. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00616">616</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00626">626</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l00793">AestraContent::setupBrowserPanels()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l02631">AestraContent::setViewFocus()</a>, and <a class="el" href="../../d3/d93/AestraContentBounce_8cpp_source.html#l00074">AestraContent::togglePreviewFile()</a>.</p>
-<div id="dynsection-38" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-38-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-38-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l00793">AestraContent::setupBrowserPanels()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l02610">AestraContent::setViewFocus()</a>, and <a class="el" href="../../d3/d93/AestraContentBounce_8cpp_source.html#l00094">AestraContent::togglePreviewFile()</a>.</p>
+<div id="dynsection-37" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-37-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-37-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-38-content" class="dyncontent" style="display:none;">
+<div id="dynsection-37-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_a8c6dc848d86293b336304bcae17629f0_icgraph.svg" width="100%" height="510"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -3234,14 +3256,14 @@ Friends</h2></td></tr>
 
 <p>Enable or disable audition mode. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00618">618</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00628">628</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>.</p>
-<div id="dynsection-39" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-39-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-39-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>.</p>
+<div id="dynsection-38" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-38-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-38-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-39-content" class="dyncontent" style="display:none;">
+<div id="dynsection-38-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_a4708fa8d989557c07217a8ff48484a69_icgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -3273,7 +3295,7 @@ Friends</h2></td></tr>
 
 <p>Set the time-signature numerator used by the metronome. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00430">430</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00440">440</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -3303,7 +3325,9 @@ Friends</h2></td></tr>
 
 <p>Set transport tempo in beats per minute. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00426">426</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00435">435</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d1/d0d/TransportStart_8h_source.html#l00016">Aestra::Audio::TransportStartState::requestedBpm</a>.</p>
 
 </div>
 </div>
@@ -3337,23 +3361,23 @@ Friends</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>true when the configuration was applied, false when the call was refused because a realtime callback was in flight (#731).</dd></dl>
 <p>Contract: this must only be called while no stream callback is running. It grows RT-visible storage (track buffers, graph scratch, plugin scratch), so a call racing a live processBlock is a use-after-free hazard. Hosts reconfiguring a running stream must do it through <a class="el" href="../../df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html" title="Manages audio devices and streams.">AudioDeviceManager</a>'s pre-restart config hook, which applies the actual granted config while the callback is stopped. A refused call leaves the engine unchanged and logs a critical error. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l01788">1788</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l01741">1741</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d1/d7f/EngineState_8h_source.html#l00086">Aestra::Audio::EngineState::activeGraphRead()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03843">initialize()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03794">initialize()</a>.</p>
+<div id="dynsection-39" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-39-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-39-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-39-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_a7c1a842a72e15af82641955aefba03f4_cgraph.svg" width="452" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 <div id="dynsection-40" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-40-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+  <img id="dynsection-40-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-40-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-40-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_a7c1a842a72e15af82641955aefba03f4_cgraph.svg" width="452" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
-</div>
-<div id="dynsection-41" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-41-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-41-summary" class="dynsummary" style="display:block;">
-</div>
-<div id="dynsection-41-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_a7c1a842a72e15af82641955aefba03f4_icgraph.svg" width="456" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -3378,14 +3402,14 @@ Friends</h2></td></tr>
 <p>Publish the channel-slot map used by the audio thread. </p>
 <p>Non-RT only. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00639">639</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00624">624</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00029">Aestra::Audio::AudioExporter::bounceToWav()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l03699">AestraContent::setAudioEngine()</a>, and <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00024">Aestra::Audio::MuseService::wireHeadlessEngine()</a>.</p>
-<div id="dynsection-42" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-42-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-42-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00030">Aestra::Audio::AudioExporter::bounceToWav()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l03677">AestraContent::setAudioEngine()</a>, and <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00024">Aestra::Audio::MuseService::wireHeadlessEngine()</a>.</p>
+<div id="dynsection-41" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-41-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-41-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-42-content" class="dyncontent" style="display:none;">
+<div id="dynsection-41-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_a5d58311171dbdf556b2f670c4435a417_icgraph.svg" width="100%" height="424"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -3410,14 +3434,14 @@ Friends</h2></td></tr>
 <p>Publish the continuous parameter buffer used for automation. </p>
 <p>Non-RT only. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00624">624</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00609">609</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l03699">AestraContent::setAudioEngine()</a>, and <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00024">Aestra::Audio::MuseService::wireHeadlessEngine()</a>.</p>
-<div id="dynsection-43" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-43-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-43-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l03677">AestraContent::setAudioEngine()</a>, and <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00024">Aestra::Audio::MuseService::wireHeadlessEngine()</a>.</p>
+<div id="dynsection-42" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-42-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-42-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-43-content" class="dyncontent" style="display:none;">
+<div id="dynsection-42-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_af888d556e4e0c92fe141bba9e023800f_icgraph.svg" width="482" height="102"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -3450,7 +3474,7 @@ Friends</h2></td></tr>
 <p>Enable or disable master-bus DC removal (one-pole DC blocker). </p>
 <p>Default: off. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00411">411</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00420">420</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -3480,7 +3504,7 @@ Friends</h2></td></tr>
 
 <p>Set the active dithering mode. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00584">584</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00594">594</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -3510,7 +3534,7 @@ Friends</h2></td></tr>
 
 <p>Test hook: force bounce write error after one successful full-block write. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00593">593</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00603">603</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -3540,14 +3564,14 @@ Friends</h2></td></tr>
 
 <p>Set the current transport position in samples. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00277">277</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00286">286</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00046">Aestra::Audio::PianoRollPanel::PianoRollPanel()</a>, <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00751">setPlayhead()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01181">AestraContent::setupArsenalPanels()</a>, and <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l03530">AestraContent::stopFromCurrentFocus()</a>.</p>
-<div id="dynsection-44" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-44-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-44-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00046">Aestra::Audio::PianoRollPanel::PianoRollPanel()</a>, <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00761">setPlayhead()</a>, <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l01181">AestraContent::setupArsenalPanels()</a>, and <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l03509">AestraContent::stopFromCurrentFocus()</a>.</p>
+<div id="dynsection-43" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-43-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-43-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-44-content" class="dyncontent" style="display:none;">
+<div id="dynsection-43-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_abdcd39f3f1b15706d70b65eda08a0539_icgraph.svg" width="100%" height="530"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -3579,14 +3603,14 @@ Friends</h2></td></tr>
 
 <p>Replace the active audio graph and compile it for rendering. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00249">249</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00258">258</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>.</p>
-<div id="dynsection-45" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-45-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-45-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>.</p>
+<div id="dynsection-44" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-44-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-44-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-45-content" class="dyncontent" style="display:none;">
+<div id="dynsection-44-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_ab8be7c1087d349d3192bb60d6d70143c_icgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -3618,7 +3642,35 @@ Friends</h2></td></tr>
 
 <p>Set global output headroom in decibels. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00404">404</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00413">413</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+
+</div>
+</div>
+<a id="a56cf2ee4a4db96d6032da45f86fbd341" name="a56cf2ee4a4db96d6032da45f86fbd341"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a56cf2ee4a4db96d6032da45f86fbd341">&#9670;&#160;</a></span>setHoldStartForSchedule()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::AudioEngine::setHoldStartForSchedule </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>hold</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00113">113</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -3658,7 +3710,7 @@ Friends</h2></td></tr>
 
 <p>Set the optional input callback used by recording flows. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00151">151</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00160">160</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -3688,7 +3740,7 @@ Friends</h2></td></tr>
 
 <p>Set the active interpolation quality. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00285">285</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00294">294</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -3710,14 +3762,14 @@ Friends</h2></td></tr>
 
 <p>Enable/disable global latency compensation. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l04365">4365</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l04316">4316</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03870">calculateLatencyCompensation()</a>.</p>
-<div id="dynsection-46" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-46-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-46-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03821">calculateLatencyCompensation()</a>.</p>
+<div id="dynsection-45" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-45-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-45-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-46-content" class="dyncontent" style="display:none;">
+<div id="dynsection-45-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_adbf11d4ab019a47f947182cdd23ba4cc_cgraph.svg" width="540" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -3749,14 +3801,14 @@ Friends</h2></td></tr>
 
 <p>Enable or disable transport looping. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00446">446</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00456">456</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>, and <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l00549">AestraContent::setupTrackManagerUI()</a>.</p>
-<div id="dynsection-47" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-47-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-47-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>, and <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l00549">AestraContent::setupTrackManagerUI()</a>.</p>
+<div id="dynsection-46" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-46-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-46-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-47-content" class="dyncontent" style="display:none;">
+<div id="dynsection-46-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_a3000891e107091bf566390e20bf9f57f_icgraph.svg" width="100%" height="410"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -3790,14 +3842,14 @@ Friends</h2></td></tr>
 
 <p>Set the loop region in beats. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03271">3271</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03221">3221</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l00549">AestraContent::setupTrackManagerUI()</a>.</p>
-<div id="dynsection-48" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-48-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-48-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-47" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-47-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-47-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-48-content" class="dyncontent" style="display:none;">
+<div id="dynsection-47-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_a407d5639c9b9948d9e3b42678f44dffb_icgraph.svg" width="451" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -3829,7 +3881,7 @@ Friends</h2></td></tr>
 
 <p>Set the master gain target. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00294">294</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00303">303</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -3852,14 +3904,14 @@ Friends</h2></td></tr>
 <p>Publish the shared meter snapshot buffer used by the UI. </p>
 <p>Non-RT only. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00609">609</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00594">594</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00024">Aestra::Audio::MuseService::wireHeadlessEngine()</a>.</p>
-<div id="dynsection-49" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-49-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-49-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-48" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-48-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-48-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-49-content" class="dyncontent" style="display:none;">
+<div id="dynsection-48-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_a319611db1bdbea6be0de1b2f50d2b8a4_icgraph.svg" width="458" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -3891,14 +3943,14 @@ Friends</h2></td></tr>
 
 <p>Set metronome beats-per-bar (time-signature numerator). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00422">422</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00431">431</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l00703">AestraContent::setupTransportBar()</a>.</p>
-<div id="dynsection-50" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-50-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-50-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-49" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-49-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-49-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-50-content" class="dyncontent" style="display:none;">
+<div id="dynsection-49-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_a02008344761af359bc7cbb9deff94418_icgraph.svg" width="506" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -3930,14 +3982,14 @@ Friends</h2></td></tr>
 
 <p>Enable or disable the metronome. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00416">416</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00425">425</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>.</p>
-<div id="dynsection-51" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-51-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-51-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>.</p>
+<div id="dynsection-50" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-50-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-50-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-51-content" class="dyncontent" style="display:none;">
+<div id="dynsection-50-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_a7500e85dda831daf8385e481db0db008_icgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -3969,7 +4021,7 @@ Friends</h2></td></tr>
 
 <p>Set metronome output volume. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00420">420</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00429">429</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -3999,7 +4051,7 @@ Friends</h2></td></tr>
 
 <p>Enable or disable multithreaded processing. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00611">611</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00621">621</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -4030,14 +4082,14 @@ Friends</h2></td></tr>
 <p>Mark the engine as rendering an offline export. </p>
 <p>While active, processBlock renders track gains snapped to their targets instead of ramping over the first offline block. Live playback ramps gains over one realtime block after a graph compile; the exporter's 4096-frame block would smear the same ramp over ~8x the frames, leaving a level bump at the start of a master bounce that an isolated bounce and warmed live playback do not have (#745). <a class="el" href="../../d3/da8/classAestra_1_1Audio_1_1AudioExporter.html" title="Offline audio export/render engine (v2.0)">AudioExporter</a> sets this around its render loop; the audio thread reads it once per block. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00238">238</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00247">247</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>.</p>
-<div id="dynsection-52" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-52-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-52-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>.</p>
+<div id="dynsection-51" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-51-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-51-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-52-content" class="dyncontent" style="display:none;">
+<div id="dynsection-51-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_a9b59e40f220f5eda0ae66fdb1378e480_icgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -4069,14 +4121,14 @@ Friends</h2></td></tr>
 
 <p>Bind the pattern playback engine used for scheduled MIDI. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00543">543</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00553">553</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l03699">AestraContent::setAudioEngine()</a>, and <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00024">Aestra::Audio::MuseService::wireHeadlessEngine()</a>.</p>
-<div id="dynsection-53" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-53-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-53-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l03677">AestraContent::setAudioEngine()</a>, and <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00024">Aestra::Audio::MuseService::wireHeadlessEngine()</a>.</p>
+<div id="dynsection-52" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-52-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-52-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-53-content" class="dyncontent" style="display:none;">
+<div id="dynsection-52-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_a81edad1c17f18624a84d59e60333cde6_icgraph.svg" width="482" height="102"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -4110,7 +4162,16 @@ Friends</h2></td></tr>
 
 <p>Enable or disable Arsenal pattern playback mode. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00703">703</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00688">688</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>.</p>
+<div id="dynsection-53" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-53-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-53-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-53-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine_a1d47a21a48da22811eabfc9f49dab695_icgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
 
 </div>
 </div>
@@ -4146,9 +4207,9 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00751">751</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00761">761</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00428">getBPM()</a>, and <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00277">setGlobalSamplePos()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00438">getBPM()</a>, and <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00286">setGlobalSamplePos()</a>.</p>
 <div id="dynsection-54" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-54-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-54-summary" class="dynsummary" style="display:block;">
@@ -4178,9 +4239,9 @@ Friends</h2></td></tr>
 <p>Configure preview duck depth in positive dB; 0 disables ducking. </p>
 <p>Non-RT only. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00082">82</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00084">84</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>.</p>
 <div id="dynsection-55" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-55-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-55-summary" class="dynsummary" style="display:block;">
@@ -4217,9 +4278,9 @@ Friends</h2></td></tr>
 
 <p>Bind the preview engine mixed into the main output. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00623">623</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00633">633</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l03699">AestraContent::setAudioEngine()</a>, and <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l00252">AestraContent::~AestraContent()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l03677">AestraContent::setAudioEngine()</a>, and <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l00252">AestraContent::~AestraContent()</a>.</p>
 <div id="dynsection-56" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-56-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-56-summary" class="dynsummary" style="display:block;">
@@ -4257,7 +4318,7 @@ Friends</h2></td></tr>
 <p>Enable or disable the master safety limiter. </p>
 <p>Default: on. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00406">406</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00415">415</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -4287,11 +4348,11 @@ Friends</h2></td></tr>
 
 <p>Set the active sample rate used by the engine. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00166">166</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00175">175</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d6/d30/TruePeakMeter_8cpp_source.html#l00021">Aestra::Audio::TruePeakMeter::initialize()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>.</p>
 <div id="dynsection-57" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-57-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-57-summary" class="dynsummary" style="display:block;">
@@ -4335,7 +4396,59 @@ Friends</h2></td></tr>
 
 <p>Test-only fault injection (#731): makes the next setBufferConfig attempt throw std::bad_alloc before any mutation, deterministically and sanitizer-safe (no astronomically-sized allocations, which LSan/TSan interceptors abort on instead of throwing). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00785">785</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00795">795</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+
+</div>
+</div>
+<a id="aae7cad7ab15a562dc0b610f15b0a2457" name="aae7cad7ab15a562dc0b610f15b0a2457"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aae7cad7ab15a562dc0b610f15b0a2457">&#9670;&#160;</a></span>setStopCutsSound()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::AudioEngine::setStopCutsSound </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>cut</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Preference: a stop cuts all sound (like pressing stop twice) instead of letting notes release. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00115">115</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d1/d0d/TransportStart_8h_source.html#l00013">Aestra::Audio::TransportStartState::stopCutsSound</a>.</p>
+
+</div>
+</div>
+<a id="a30311773bd81521f59f8d9ba7a842793" name="a30311773bd81521f59f8d9ba7a842793"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a30311773bd81521f59f8d9ba7a842793">&#9670;&#160;</a></span>setTempoKeepingBeat()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double Aestra::Audio::AudioEngine::setTempoKeepingBeat </td>
+          <td>(</td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>bpm</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d2/d15/AudioEngineScheduling_8cpp_source.html#l00111">111</a> of file <a class="el" href="../../d2/d15/AudioEngineScheduling_8cpp_source.html">AudioEngineScheduling.cpp</a>.</p>
 
 </div>
 </div>
@@ -4365,7 +4478,7 @@ Friends</h2></td></tr>
 
 <p>Enable or disable the internal test tone. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00589">589</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00599">599</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -4387,7 +4500,7 @@ Friends</h2></td></tr>
 
 <p>Set the worker-thread count used by the engine. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00597">597</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00582">582</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -4423,9 +4536,9 @@ Friends</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00686">686</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00696">696</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03870">calculateLatencyCompensation()</a>.</p>
+<p class="reference">References <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03821">calculateLatencyCompensation()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00024">Aestra::Audio::MuseService::wireHeadlessEngine()</a>.</p>
 <div id="dynsection-59" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -4471,9 +4584,9 @@ Friends</h2></td></tr>
 
 <p>Set transport running state and mirror it onto the audio command queue. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00208">208</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00217">217</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03627">bounceRangeToWav()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00052">Aestra::Audio::PlayCommand::execute()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00081">Aestra::Audio::StopCommand::execute()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00067">Aestra::Audio::PlayCommand::redo()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00096">Aestra::Audio::StopCommand::redo()</a>, <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00060">Aestra::Audio::PlayCommand::undo()</a>, and <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00089">Aestra::Audio::StopCommand::undo()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03577">bounceRangeToWav()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00048">Aestra::Audio::PlayCommand::execute()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00077">Aestra::Audio::StopCommand::execute()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00063">Aestra::Audio::PlayCommand::redo()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00092">Aestra::Audio::StopCommand::redo()</a>, <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00056">Aestra::Audio::PlayCommand::undo()</a>, and <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00085">Aestra::Audio::StopCommand::undo()</a>.</p>
 <div id="dynsection-61" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-61-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-61-summary" class="dynsummary" style="display:block;">
@@ -4510,7 +4623,7 @@ Friends</h2></td></tr>
 
 <p>Enable or disable true-peak metering on the master output (RT-safe). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00571">571</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00581">581</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -4540,9 +4653,9 @@ Friends</h2></td></tr>
 
 <p>Bind the unit manager used for Arsenal rendering. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00510">510</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00520">520</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l03699">AestraContent::setAudioEngine()</a>, and <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00024">Aestra::Audio::MuseService::wireHeadlessEngine()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l03677">AestraContent::setAudioEngine()</a>, and <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00024">Aestra::Audio::MuseService::wireHeadlessEngine()</a>.</p>
 <div id="dynsection-62" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-62-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-62-summary" class="dynsummary" style="display:block;">
@@ -4569,7 +4682,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00208">208</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00222">222</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -4588,7 +4701,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00214">214</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00228">228</a> of file <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a>.</p>
 
 </div>
 </div>
@@ -4617,7 +4730,7 @@ Friends</h2></td></tr>
 
 <p>Access the engine telemetry collector. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00159">159</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00168">168</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -4646,9 +4759,9 @@ Friends</h2></td></tr>
 
 <p>V8-W5: the offline renderer arms this to read one channel's output before it reaches the master. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00241">241</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00250">250</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00084">Aestra::Audio::AudioExporter::render()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00085">Aestra::Audio::AudioExporter::render()</a>.</p>
 <div id="dynsection-63" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-63-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-63-summary" class="dynsummary" style="display:block;">
@@ -4680,7 +4793,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00064">64</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00067">67</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -4704,7 +4817,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00063">63</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00066">66</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -4729,7 +4842,7 @@ Friends</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00066">66</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00069">69</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -4745,7 +4858,7 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00675">675</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00685">685</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -4761,13 +4874,16 @@ Friends</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00676">676</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00686">686</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>AestraAudio/include/Core/<a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a></li>
 <li>AestraAudio/src/Core/<a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html">AudioEngine.cpp</a></li>
+<li>AestraAudio/src/Core/<a class="el" href="../../d5/dd9/AudioEngineAudition_8cpp_source.html">AudioEngineAudition.cpp</a></li>
+<li>AestraAudio/src/Core/<a class="el" href="../../d6/d48/AudioEngineBlockSplit_8cpp_source.html">AudioEngineBlockSplit.cpp</a></li>
+<li>AestraAudio/src/Core/<a class="el" href="../../d2/d15/AudioEngineScheduling_8cpp_source.html">AudioEngineScheduling.cpp</a></li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->

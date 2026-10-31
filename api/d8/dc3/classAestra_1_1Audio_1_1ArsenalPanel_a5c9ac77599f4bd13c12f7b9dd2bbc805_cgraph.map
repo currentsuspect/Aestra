@@ -1,55 +1,57 @@
 <map id="Aestra::Audio::ArsenalPanel::onMouseEvent" name="Aestra::Audio::ArsenalPanel::onMouseEvent">
-<area shape="rect" id="Node000001" title="Handle mouse input routed to the Arsenal panel." alt="" coords="5,344,207,384"/>
-<area shape="rect" id="Node000002" href="$dd/d46/structAestra_1_1ArsenalRackLayout.html#a90cafa365727cf4f988663b23e8c7518" title="Which display slot a drop at y (relative to the rack&#39;s start) lands before: the number of rows whose ..." alt="" coords="257,120,454,160"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="115,343,136,306,167,259,206,211,253,170,262,164,265,169,256,174,210,215,171,263,140,309,120,345"/>
-<area shape="rect" id="Node000003" href="$db/d1a/classAestraUI_1_1NUIComponent.html#a8ff75e00805b13ff9a6babd21f6cc556" title="Window&#45;absolute (V8&#45;X2b Window space): components render and hit&#45;test at bounds_ as&#45;is." alt="" coords="263,184,448,224"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="124,342,178,289,214,259,253,234,266,227,269,232,256,238,218,264,182,293,127,346"/>
-<area shape="rect" id="Node000004" href="$dd/d46/structAestra_1_1ArsenalRackLayout.html#affaf0f31eb9f26cc875a9db72d1194bc" title="The unit&#45;order index a drop at display slot slot inserts before (the row count when it is the end)." alt="" coords="257,248,454,288"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="150,341,254,298,275,290,277,295,256,302,152,346"/>
-<area shape="rect" id="Node000005" href="$dc/d1e/classAestra_1_1ArsenalSceneStrip.html#af1dca6ad0a81b9efc7ef2d6e4fb22b79" title="Pointer routing for the strip: chips select, &quot;+&quot; makes the next pattern, the swing zone drags,..." alt="" coords="260,312,451,352"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="207,348,246,343,246,349,207,354"/>
-<area shape="rect" id="Node000009" href="$d9/d85/classAestra_1_1ArsenalRowLanes.html#ae1591bc133c77563892a230244c37a50" title="Pointer routing. Returns true when the event was a caret or a lane gesture; sets relayout when a row ..." alt="" coords="262,376,449,416"/>
-<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="207,374,249,380,248,385,207,380"/>
-<area shape="rect" id="Node000020" href="$d5/d9d/classAestra_1_1IPlatformUtils.html#a9af28fa56d1b8522774b294c279ef922" title="Open a native folder&#45;selection dialog." alt="" coords="274,440,437,480"/>
-<area shape="poly" id="edge20_Node000001_Node000020" title=" " alt="" coords="152,382,256,426,277,433,275,438,254,430,150,387"/>
-<area shape="rect" id="Node000021" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#aabded31db5191dc40f6eeb98d4054eb8" title="Set the active pattern edited by Arsenal." alt="" coords="255,556,456,596"/>
-<area shape="poly" id="edge21_Node000001_Node000021" title=" " alt="" coords="132,382,256,490,321,545,317,549,253,494,128,386"/>
-<area shape="rect" id="Node000025" href="$d5/d04/classAestra_1_1PendingFileDialog.html#a2b323f51430d511d269b3e1b9ad2da82" title="False if a picker from this owner is already open, or no platform layer." alt="" coords="261,724,450,764"/>
-<area shape="poly" id="edge26_Node000001_Node000025" title=" " alt="" coords="121,383,178,481,257,607,332,711,328,714,252,609,173,483,117,386"/>
-<area shape="rect" id="Node000006" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#af17c4e7693841ef1bc5821a6b4cbba8c" title="Create a MIDI pattern." alt="" coords="504,5,724,45"/>
-<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="440,310,454,298,474,268,481,239,481,209,477,179,473,148,473,118,481,87,502,56,505,52,509,56,506,59,486,89,478,118,478,148,482,178,486,208,487,239,478,270,458,302,444,314"/>
-<area shape="rect" id="Node000008" href="$dc/d1e/classAestra_1_1ArsenalSceneStrip.html#a7f60847d0bb4e1d6f50c70f7f5188a48" title="&quot;Pattern N&quot; that no existing scene already uses." alt="" coords="519,69,709,109"/>
-<area shape="poly" id="edge7_Node000005_Node000008" title=" " alt="" coords="439,310,454,298,470,276,477,255,477,210,478,165,485,142,502,120,506,116,510,120,506,123,490,145,483,166,482,210,482,256,474,279,458,302,443,314"/>
-<area shape="rect" id="Node000007" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#ac8e1d96a07695282b8eb255ad01a6b9a" title="Create a MIDI pattern restoring a serialized identity (#446)." alt="" coords="772,5,992,45"/>
-<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="724,23,758,23,758,28,724,28"/>
-<area shape="rect" id="Node000010" href="$d9/d54/classAestra_1_1ArsenalSoundDrawer.html#a07ce972ddb305529c9c1e9405345cfdc" title="The set chip at the right of the search line: &quot;Folder&quot; or the set&#39;s name; a click moves to the next s..." alt="" coords="510,133,718,173"/>
-<area shape="poly" id="edge9_Node000009_Node000010" title=" " alt="" coords="439,374,454,362,469,341,476,321,478,278,479,235,486,213,502,190,516,178,519,182,506,194,491,215,484,236,483,278,482,322,474,344,458,366,443,378"/>
-<area shape="rect" id="Node000011" href="$d9/d54/classAestra_1_1ArsenalSoundDrawer.html#aae89f7fc35c23d124e74b52d2a732cbf" title="Indices into list whose file name contains every word of filter. An empty filter keeps everything." alt="" coords="778,251,986,291"/>
-<area shape="poly" id="edge10_Node000009_Node000011" title=" " alt="" coords="438,374,454,362,466,347,472,331,475,297,479,264,487,248,502,234,541,213,584,202,628,198,672,201,757,218,827,243,825,248,755,223,671,206,628,204,585,207,543,218,506,238,492,251,484,265,480,298,478,332,471,349,458,366,441,378"/>
-<area shape="rect" id="Node000012" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="513,248,715,288"/>
-<area shape="poly" id="edge11_Node000009_Node000012" title=" " alt="" coords="434,373,454,362,469,347,478,331,486,314,502,298,512,292,515,296,506,302,490,317,482,333,474,350,458,366,437,378"/>
-<area shape="rect" id="Node000013" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae644fa1ba9f25586fd7d597ed08d651f" title="Get the unit manager (Arsenal)" alt="" coords="510,312,718,352"/>
-<area shape="poly" id="edge12_Node000009_Node000013" title=" " alt="" coords="436,373,519,353,520,358,438,379"/>
-<area shape="rect" id="Node000014" href="$d9/d54/classAestra_1_1ArsenalSoundDrawer.html#a6499dcb96e33f3e3582bc930030ca758" title="Open on current: nothing typed, the current sound selected and in view." alt="" coords="510,376,718,416"/>
-<area shape="poly" id="edge13_Node000009_Node000014" title=" " alt="" coords="449,393,496,393,496,399,449,399"/>
-<area shape="rect" id="Node000016" href="$de/dc6/classAestra_1_1ArsenalStepLanes.html#a6028f44184f54d60e8b2f459bb17350b" title="Start (or continue) painting a lane value; returns true if the pointer is in a lane." alt="" coords="520,440,708,480"/>
-<area shape="poly" id="edge16_Node000009_Node000016" title=" " alt="" coords="438,413,520,434,519,439,436,419"/>
-<area shape="rect" id="Node000017" href="$de/dc6/classAestra_1_1ArsenalStepLanes.html#a21f23f521780272e951b081b073a85e2" title="Finish the gesture: the whole drag becomes one undo step." alt="" coords="520,504,708,544"/>
-<area shape="poly" id="edge17_Node000009_Node000017" title=" " alt="" coords="437,414,458,426,474,442,482,459,490,475,506,490,515,496,512,500,502,494,486,478,478,461,469,445,454,430,434,419"/>
-<area shape="rect" id="Node000018" href="$d9/d54/classAestra_1_1ArsenalSoundDrawer.html#ad3c8d3b004c78f613d9a38d5b37383d8" title="Row under p in a drawer drawn into r: an index into the filtered list, or &#45;1." alt="" coords="510,568,718,608"/>
-<area shape="poly" id="edge18_Node000009_Node000018" title=" " alt="" coords="441,414,458,426,471,442,478,459,482,492,486,524,493,539,506,554,510,558,507,562,502,558,489,542,481,525,477,493,473,461,467,445,454,430,438,418"/>
-<area shape="rect" id="Node000019" href="$de/dc6/classAestra_1_1ArsenalStepLanes.html#add675de45e9acdc4ef18755af2131c1d" title="True once if a value was written since the last call, so the panel can tell the engine the pattern ch..." alt="" coords="520,632,708,672"/>
-<area shape="poly" id="edge19_Node000009_Node000019" title=" " alt="" coords="443,414,458,426,475,451,483,476,484,500,482,524,481,548,482,572,489,595,506,618,510,622,507,626,502,622,485,597,477,573,475,548,477,524,479,500,478,477,470,453,454,430,440,418"/>
-<area shape="poly" id="edge14_Node000014_Node000011" title=" " alt="" coords="691,374,723,362,785,330,839,296,842,301,788,334,725,366,693,378"/>
-<area shape="rect" id="Node000015" href="$d9/d54/classAestra_1_1ArsenalSoundDrawer.html#a7df02bb33fb613b23f9a696785102808" title="Scroll just enough that the selected row is inside the window." alt="" coords="778,376,986,416"/>
-<area shape="poly" id="edge15_Node000014_Node000015" title=" " alt="" coords="718,393,764,393,764,399,718,399"/>
-<area shape="rect" id="Node000022" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#afcb4b10be1a700b9e7c2998f9d7c541f" title="Rebuild the UI rows from the current UnitManager state." alt="" coords="513,720,715,760"/>
-<area shape="poly" id="edge22_Node000021_Node000022" title=" " alt="" coords="384,594,438,636,505,682,559,711,556,716,503,686,435,640,380,599"/>
-<area shape="poly" id="edge23_Node000022_Node000022" title=" " alt="" coords="566,720,563,710,571,701,588,695,614,693,644,696,660,703,658,708,643,701,614,699,589,701,574,705,568,711,571,719"/>
-<area shape="rect" id="Node000023" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#adeb1609a296597c46ac498882afcf457" title="Register the panel and current rows for lifecycle&#45;scoped drag/drop." alt="" coords="781,688,983,728"/>
-<area shape="poly" id="edge24_Node000022_Node000023" title=" " alt="" coords="715,725,767,719,768,724,715,731"/>
-<area shape="rect" id="Node000024" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#ad164b5928ab64d33251225dd2e90c4c0" title="Unregister the panel and current rows from drag/drop." alt="" coords="781,752,983,792"/>
-<area shape="poly" id="edge25_Node000022_Node000024" title=" " alt="" coords="715,749,768,756,767,761,715,755"/>
-<area shape="rect" id="Node000026" href="$d8/d94/namespaceAestra.html#a659abf876dabfde58c9ec4c79e81ea4d" title="Start call; deliver receives the result (empty = cancelled or no picker) on the worker thread." alt="" coords="504,785,724,810"/>
-<area shape="poly" id="edge27_Node000025_Node000026" title=" " alt="" coords="451,761,539,779,538,784,450,766"/>
+<area shape="rect" id="Node000001" title="Handle mouse input routed to the Arsenal panel." alt="" coords="5,312,207,352"/>
+<area shape="rect" id="Node000002" href="$dd/d46/structAestra_1_1ArsenalRackLayout.html#a90cafa365727cf4f988663b23e8c7518" title="Which display slot a drop at y (relative to the rack&#39;s start) lands before: the number of rows whose ..." alt="" coords="257,56,454,96"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="113,311,132,268,162,213,202,156,226,129,253,106,261,101,264,105,256,110,230,133,206,159,166,216,136,271,117,313"/>
+<area shape="rect" id="Node000003" href="$db/d1a/classAestraUI_1_1NUIComponent.html#a8ff75e00805b13ff9a6babd21f6cc556" title="Window&#45;absolute (V8&#45;X2b Window space): components render and hit&#45;test at bounds_ as&#45;is." alt="" coords="263,120,448,160"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="119,310,172,242,210,203,253,170,264,164,266,168,256,174,214,207,176,245,123,313"/>
+<area shape="rect" id="Node000004" href="$dd/d46/structAestra_1_1ArsenalRackLayout.html#affaf0f31eb9f26cc875a9db72d1194bc" title="The unit&#45;order index a drop at display slot slot inserts before (the row count when it is the end)." alt="" coords="257,184,454,224"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="132,309,187,272,253,234,270,226,272,231,256,238,189,276,135,314"/>
+<area shape="rect" id="Node000005" href="$df/dae/classAestra_1_1ArsenalSceneMenu.html#ab8c6f1b6d5f54ea18a4a4038e95f8316" title="Pointer events while renaming: inside the box they edit it, a press anywhere else commits (and goes o..." alt="" coords="257,248,453,288"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="184,309,263,289,265,294,185,315"/>
+<area shape="rect" id="Node000006" href="$dc/d1e/classAestra_1_1ArsenalSceneStrip.html#af1dca6ad0a81b9efc7ef2d6e4fb22b79" title="Pointer routing for the strip: chips select, &quot;+&quot; makes the next pattern, the swing zone drags,..." alt="" coords="260,312,451,352"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="207,329,246,329,246,335,207,335"/>
+<area shape="rect" id="Node000010" href="$d9/d85/classAestra_1_1ArsenalRowLanes.html#ae1591bc133c77563892a230244c37a50" title="Pointer routing. Returns true when the event was a caret or a lane gesture; sets relayout when a row ..." alt="" coords="262,376,449,416"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="185,349,265,370,263,375,184,355"/>
+<area shape="rect" id="Node000021" href="$d5/d9d/classAestra_1_1IPlatformUtils.html#a9af28fa56d1b8522774b294c279ef922" title="Open a native folder&#45;selection dialog." alt="" coords="274,440,437,480"/>
+<area shape="poly" id="edge21_Node000001_Node000021" title=" " alt="" coords="135,350,189,388,256,426,272,433,270,438,253,430,187,392,132,355"/>
+<area shape="rect" id="Node000022" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#aabded31db5191dc40f6eeb98d4054eb8" title="Set the active pattern edited by Arsenal." alt="" coords="255,556,456,596"/>
+<area shape="poly" id="edge22_Node000001_Node000022" title=" " alt="" coords="127,351,183,414,257,490,319,545,316,549,253,494,179,418,123,354"/>
+<area shape="rect" id="Node000026" href="$d5/d04/classAestra_1_1PendingFileDialog.html#a2b323f51430d511d269b3e1b9ad2da82" title="False if a picker from this owner is already open, or no platform layer." alt="" coords="261,724,450,764"/>
+<area shape="poly" id="edge27_Node000001_Node000026" title=" " alt="" coords="119,351,175,462,257,607,332,712,327,715,252,609,170,464,115,353"/>
+<area shape="rect" id="Node000007" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#af17c4e7693841ef1bc5821a6b4cbba8c" title="Create a MIDI pattern." alt="" coords="504,5,724,45"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="440,310,454,298,474,268,481,239,481,209,477,179,473,148,473,118,481,87,502,56,505,52,509,56,506,59,486,89,478,118,478,148,482,178,486,208,487,239,478,270,458,302,444,314"/>
+<area shape="rect" id="Node000009" href="$dc/d1e/classAestra_1_1ArsenalSceneStrip.html#a7f60847d0bb4e1d6f50c70f7f5188a48" title="&quot;Pattern N&quot; that no existing scene already uses." alt="" coords="519,69,709,109"/>
+<area shape="poly" id="edge8_Node000006_Node000009" title=" " alt="" coords="439,310,454,298,470,276,477,255,477,210,478,165,485,142,502,120,506,116,510,120,506,123,490,145,483,166,482,210,482,256,474,279,458,302,443,314"/>
+<area shape="rect" id="Node000008" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#ac8e1d96a07695282b8eb255ad01a6b9a" title="Create a MIDI pattern restoring a serialized identity (#446)." alt="" coords="772,5,992,45"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="724,23,758,23,758,28,724,28"/>
+<area shape="rect" id="Node000011" href="$d9/d54/classAestra_1_1ArsenalSoundDrawer.html#a07ce972ddb305529c9c1e9405345cfdc" title="The set chip at the right of the search line: &quot;Folder&quot; or the set&#39;s name; a click moves to the next s..." alt="" coords="510,133,718,173"/>
+<area shape="poly" id="edge10_Node000010_Node000011" title=" " alt="" coords="439,374,454,362,469,341,476,321,478,278,479,235,486,213,502,190,516,178,519,182,506,194,491,215,484,236,483,278,482,322,474,344,458,366,443,378"/>
+<area shape="rect" id="Node000012" href="$d9/d54/classAestra_1_1ArsenalSoundDrawer.html#aae89f7fc35c23d124e74b52d2a732cbf" title="Indices into list whose file name contains every word of filter. An empty filter keeps everything." alt="" coords="778,251,986,291"/>
+<area shape="poly" id="edge11_Node000010_Node000012" title=" " alt="" coords="438,374,454,362,466,347,472,331,475,297,479,264,487,248,502,234,541,213,584,202,628,198,672,201,757,218,827,243,825,248,755,223,671,206,628,204,585,207,543,218,506,238,492,251,484,265,480,298,478,332,471,349,458,366,441,378"/>
+<area shape="rect" id="Node000013" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="513,248,715,288"/>
+<area shape="poly" id="edge12_Node000010_Node000013" title=" " alt="" coords="434,373,454,362,469,347,478,331,486,314,502,298,512,292,515,296,506,302,490,317,482,333,474,350,458,366,437,378"/>
+<area shape="rect" id="Node000014" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae644fa1ba9f25586fd7d597ed08d651f" title="Get the unit manager (Arsenal)" alt="" coords="510,312,718,352"/>
+<area shape="poly" id="edge13_Node000010_Node000014" title=" " alt="" coords="436,373,519,353,520,358,438,379"/>
+<area shape="rect" id="Node000015" href="$d9/d54/classAestra_1_1ArsenalSoundDrawer.html#a6499dcb96e33f3e3582bc930030ca758" title="Open on current: nothing typed, the current sound selected and in view." alt="" coords="510,376,718,416"/>
+<area shape="poly" id="edge14_Node000010_Node000015" title=" " alt="" coords="449,393,496,393,496,399,449,399"/>
+<area shape="rect" id="Node000017" href="$de/dc6/classAestra_1_1ArsenalStepLanes.html#a6028f44184f54d60e8b2f459bb17350b" title="Start (or continue) painting a lane value; returns true if the pointer is in a lane." alt="" coords="520,440,708,480"/>
+<area shape="poly" id="edge17_Node000010_Node000017" title=" " alt="" coords="438,413,520,434,519,439,436,419"/>
+<area shape="rect" id="Node000018" href="$de/dc6/classAestra_1_1ArsenalStepLanes.html#a21f23f521780272e951b081b073a85e2" title="Finish the gesture: the whole drag becomes one undo step." alt="" coords="520,504,708,544"/>
+<area shape="poly" id="edge18_Node000010_Node000018" title=" " alt="" coords="437,414,458,426,474,442,482,459,490,475,506,490,515,496,512,500,502,494,486,478,478,461,469,445,454,430,434,419"/>
+<area shape="rect" id="Node000019" href="$d9/d54/classAestra_1_1ArsenalSoundDrawer.html#ad3c8d3b004c78f613d9a38d5b37383d8" title="Row under p in a drawer drawn into r: an index into the filtered list, or &#45;1." alt="" coords="510,568,718,608"/>
+<area shape="poly" id="edge19_Node000010_Node000019" title=" " alt="" coords="441,414,458,426,471,442,478,459,482,492,486,524,493,539,506,554,510,558,507,562,502,558,489,542,481,525,477,493,473,461,467,445,454,430,438,418"/>
+<area shape="rect" id="Node000020" href="$de/dc6/classAestra_1_1ArsenalStepLanes.html#add675de45e9acdc4ef18755af2131c1d" title="True once if a value was written since the last call, so the panel can tell the engine the pattern ch..." alt="" coords="520,632,708,672"/>
+<area shape="poly" id="edge20_Node000010_Node000020" title=" " alt="" coords="443,414,458,426,475,451,483,476,484,500,482,524,481,548,482,572,489,595,506,618,510,622,507,626,502,622,485,597,477,573,475,548,477,524,479,500,478,477,470,453,454,430,440,418"/>
+<area shape="poly" id="edge15_Node000015_Node000012" title=" " alt="" coords="691,374,723,362,785,330,839,296,842,301,788,334,725,366,693,378"/>
+<area shape="rect" id="Node000016" href="$d9/d54/classAestra_1_1ArsenalSoundDrawer.html#a7df02bb33fb613b23f9a696785102808" title="Scroll just enough that the selected row is inside the window." alt="" coords="778,376,986,416"/>
+<area shape="poly" id="edge16_Node000015_Node000016" title=" " alt="" coords="718,393,764,393,764,399,718,399"/>
+<area shape="rect" id="Node000023" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#afcb4b10be1a700b9e7c2998f9d7c541f" title="Rebuild the UI rows from the current UnitManager state." alt="" coords="513,720,715,760"/>
+<area shape="poly" id="edge23_Node000022_Node000023" title=" " alt="" coords="384,594,438,636,505,682,559,711,556,716,503,686,435,640,380,599"/>
+<area shape="poly" id="edge24_Node000023_Node000023" title=" " alt="" coords="566,720,563,710,571,701,588,695,614,693,644,696,660,703,658,708,643,701,614,699,589,701,574,705,568,711,571,719"/>
+<area shape="rect" id="Node000024" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#adeb1609a296597c46ac498882afcf457" title="Register the panel and current rows for lifecycle&#45;scoped drag/drop." alt="" coords="781,688,983,728"/>
+<area shape="poly" id="edge25_Node000023_Node000024" title=" " alt="" coords="715,725,767,719,768,724,715,731"/>
+<area shape="rect" id="Node000025" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#ad164b5928ab64d33251225dd2e90c4c0" title="Unregister the panel and current rows from drag/drop." alt="" coords="781,752,983,792"/>
+<area shape="poly" id="edge26_Node000023_Node000025" title=" " alt="" coords="715,749,768,756,767,761,715,755"/>
+<area shape="rect" id="Node000027" href="$d8/d94/namespaceAestra.html#a659abf876dabfde58c9ec4c79e81ea4d" title="Start call; deliver receives the result (empty = cancelled or no picker) on the worker thread." alt="" coords="504,785,724,810"/>
+<area shape="poly" id="edge28_Node000026_Node000027" title=" " alt="" coords="451,761,539,779,538,784,450,766"/>
 </map>

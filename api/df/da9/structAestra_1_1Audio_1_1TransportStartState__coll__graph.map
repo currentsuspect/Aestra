@@ -1,0 +1,15 @@
+<map id="Aestra::Audio::TransportStartState" name="Aestra::Audio::TransportStartState">
+<area shape="rect" id="Node000001" title="What happens at the edges of playback: how a play starts and what a stop does to sound." alt="" coords="141,299,319,339"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,181,159,207"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="87,220,94,248,109,273,125,286,144,296,142,301,122,290,105,276,89,250,82,221"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="30,93,81,119"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="65,131,81,180,76,182,60,132"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="105,93,238,119"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="151,130,96,183,93,179,148,126"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="152,5,191,31"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="174,45,174,93,169,93,169,45"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="193,181,267,207"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="233,220,233,298,227,298,227,220"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="341,181,391,207"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="365,221,356,250,339,276,322,290,302,301,300,296,319,286,335,273,351,247,360,220"/>
+</map>

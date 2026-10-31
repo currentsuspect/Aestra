@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['graborigin_0',['GrabOrigin',['../dc/d15/NUICursorService_8h.html#a5a4a7cc03777f041adeac66d57a47fcfaa5429e3e0623005bda450c8b6e5b3c61',1,'AestraUI']]]
+  ['eof_0',['Eof',['../d4/d94/classAestra_1_1MuseAgent_1_1LineReader.html#a05f1485093580afccdfcd05a9826442ba49650dcc55dc413da4032cbe44b15d37',1,'Aestra::MuseAgent::LineReader']]]
 ];

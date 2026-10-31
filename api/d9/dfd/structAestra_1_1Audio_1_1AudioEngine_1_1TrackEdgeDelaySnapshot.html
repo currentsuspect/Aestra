@@ -129,7 +129,7 @@ Public Attributes</h2></td></tr>
 <p>NOT RT-SAFE: read from main / control thread only.</p>
 <p>Returns the node latency/compensation values and per-edge delay state that the off-RT apply pass wrote into <a class="el" href="../../d3/ded/structAestra_1_1Audio_1_1TrackRTState.html">TrackRTState</a> for the given track index. The buffer contents themselves are not exposed; only the values the RT-side P4b.3 consumer will read. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00357">357</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00366">366</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 </div><h2 class="groupheader">Member Data Documentation</h2>
 <a id="a6cf5a1afada206a6a8507a2d6db39bc9" name="a6cf5a1afada206a6a8507a2d6db39bc9"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a6cf5a1afada206a6a8507a2d6db39bc9">&#9670;&#160;</a></span>compensationEnabled</h2>
@@ -146,7 +146,7 @@ Public Attributes</h2></td></tr>
 <p>Engine-wide latency compensation toggle. </p>
 <p>Per-track enablement is not implemented, so this is the same value for every track index. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00381">381</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00390">390</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -162,7 +162,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00382">382</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00391">391</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -181,7 +181,7 @@ Public Attributes</h2></td></tr>
 <p>Highest compensation generation the RT thread has acknowledged consuming. </p>
 <p>Control may not reclaim a retired ring behind this. 0 means "no RT acknowledgement observed" (generations start at 1); the mirror fallback path reports 0 explicitly, never a stale ack. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00375">375</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00384">384</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -200,7 +200,7 @@ Public Attributes</h2></td></tr>
 <p>Generation of the currently published compensation descriptor for this track's output ring (see <a class="el" href="../../dd/d90/structAestra_1_1Audio_1_1TrackCompensationState.html" title="Ownership + RT slot for one track&#39;s compensation ring.">TrackCompensationState</a>). </p>
 <p>Monotonic per publish. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00370">370</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00379">379</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -219,7 +219,7 @@ Public Attributes</h2></td></tr>
 <p>Generations currently held in the retired queue (published but not yet acked). </p>
 <p>Dropping to 0 proves the retirement queue drained. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00378">378</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00387">387</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -235,7 +235,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00367">367</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00376">376</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -251,7 +251,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00366">366</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00375">375</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -267,7 +267,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00383">383</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00392">392</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>
@@ -283,7 +283,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00384">384</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00393">393</a> of file <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html">AudioEngine.h</a>.</p>
 
 </div>
 </div>

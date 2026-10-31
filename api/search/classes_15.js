@@ -8,7 +8,8 @@ var searchData=
   ['viewopenstate_5',['ViewOpenState',['../dc/d8c/structAestraContent_1_1ViewOpenState.html',1,'AestraContent']]],
   ['viewstate_6',['ViewState',['../dc/dce/structAestraContent_1_1ViewState.html',1,'AestraContent']]],
   ['vst3hosttestaccess_7',['VST3HostTestAccess',['../dc/daf/classAestra_1_1Audio_1_1VST3HostTestAccess.html',1,'Aestra::Audio']]],
-  ['vst3pluginfactory_8',['VST3PluginFactory',['../d3/ded/classAestra_1_1Audio_1_1VST3PluginFactory.html',1,'Aestra::Audio']]],
-  ['vst3plugininstance_9',['VST3PluginInstance',['../d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance.html',1,'Aestra::Audio']]],
-  ['vubridge_10',['VUBridge',['../d3/de7/classAestraUI_1_1VUBridge.html',1,'AestraUI']]]
+  ['vst3paramstate_8',['Vst3ParamState',['../d1/db7/structAestra_1_1Audio_1_1Vst3ParamState.html',1,'Aestra::Audio']]],
+  ['vst3pluginfactory_9',['VST3PluginFactory',['../d3/ded/classAestra_1_1Audio_1_1VST3PluginFactory.html',1,'Aestra::Audio']]],
+  ['vst3plugininstance_10',['VST3PluginInstance',['../d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance.html',1,'Aestra::Audio']]],
+  ['vubridge_11',['VUBridge',['../d3/de7/classAestraUI_1_1VUBridge.html',1,'AestraUI']]]
 ];

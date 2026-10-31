@@ -1,0 +1,11 @@
+<map id="AestraHelper::ClapAbi::ClapHost" name="AestraHelper::ClapAbi::ClapHost">
+<area shape="rect" id="Node000001" title=" " alt="" coords="137,284,303,324"/>
+<area shape="rect" id="Node000002" href="$de/dc9/structAestraHelper_1_1ClapAbi_1_1ClapVersion.html" title=" " alt="" coords="5,123,171,163"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="97,175,111,218,122,239,137,258,169,282,166,286,133,262,118,242,106,220,92,177"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="51,5,125,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="91,44,91,122,85,122,85,44"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="195,130,245,155"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="223,169,223,284,217,284,217,169"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="331,130,381,155"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="359,169,352,215,343,240,329,262,313,276,295,286,292,282,310,271,325,258,338,238,347,214,353,169"/>
+</map>

@@ -1,0 +1,11 @@
+<map id="Aestra::Audio::AutomationHeaderReadout" name="Aestra::Audio::AutomationHeaderReadout">
+<area shape="rect" id="Node000001" title="What the row header&#39;s level readout shows." alt="" coords="25,183,218,223"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,95,72,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="56,130,77,157,100,180,97,184,73,160,51,133"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="96,95,147,120"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="124,134,124,182,119,182,119,134"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="171,95,258,120"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="201,133,178,161,150,185,146,181,174,157,197,130"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="145,5,284,45"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="217,59,217,94,212,94,212,59"/>
+</map>

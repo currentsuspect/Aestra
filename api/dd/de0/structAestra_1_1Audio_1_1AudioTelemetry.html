@@ -103,10 +103,15 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a6e3d6f6e62752bce1cd6eace66443f89"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a07f576cb50149bdc0fa81ce830ee98ca" id="r_a07f576cb50149bdc0fa81ce830ee98ca"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a07f576cb50149bdc0fa81ce830ee98ca">incrementOverruns</a> () noexcept</td></tr>
 <tr class="separator:a07f576cb50149bdc0fa81ce830ee98ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a64e9f3f57580096679530389ed6c98ef" id="r_a64e9f3f57580096679530389ed6c98ef"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a64e9f3f57580096679530389ed6c98ef">incrementOversizedBlocks</a> () noexcept</td></tr>
+<tr class="separator:a64e9f3f57580096679530389ed6c98ef"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0c0251ee357521a5de8c7cc24f7dee12" id="r_a0c0251ee357521a5de8c7cc24f7dee12"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a0c0251ee357521a5de8c7cc24f7dee12">incrementSrcActiveBlocks</a> () noexcept</td></tr>
 <tr class="separator:a0c0251ee357521a5de8c7cc24f7dee12"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa11e17ab0df52c59fa537ce99f6d924b" id="r_aa11e17ab0df52c59fa537ce99f6d924b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#aa11e17ab0df52c59fa537ce99f6d924b">incrementRtMisuseViolations</a> () noexcept</td></tr>
 <tr class="separator:aa11e17ab0df52c59fa537ce99f6d924b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a003ebc60df8727fc8e3a45c597dfa4a7" id="r_a003ebc60df8727fc8e3a45c597dfa4a7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a003ebc60df8727fc8e3a45c597dfa4a7">recordRtMisuse</a> (const char *apiName) noexcept</td></tr>
+<tr class="memdesc:a003ebc60df8727fc8e3a45c597dfa4a7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio-thread safe: two relaxed atomic ops, no allocation or lock.  <br /></td></tr>
+<tr class="separator:a003ebc60df8727fc8e3a45c597dfa4a7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a01a3ba4adba8fa43ad9309c0d810d9b7" id="r_a01a3ba4adba8fa43ad9309c0d810d9b7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a01a3ba4adba8fa43ad9309c0d810d9b7">incrementUnderruns</a> () noexcept</td></tr>
 <tr class="memdesc:a01a3ba4adba8fa43ad9309c0d810d9b7"><td class="mdescLeft">&#160;</td><td class="mdescRight">B-009: Record an underrun and manage recovery state.  <br /></td></tr>
 <tr class="separator:a01a3ba4adba8fa43ad9309c0d810d9b7"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -157,6 +162,8 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:aeabbfdbffb540170ece5944cf510036d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4a91139380d91a0fc921584bb35510ed" id="r_a4a91139380d91a0fc921584bb35510ed"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a4a91139380d91a0fc921584bb35510ed">getOverruns</a> () const noexcept</td></tr>
 <tr class="separator:a4a91139380d91a0fc921584bb35510ed"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0631e8b636d5d5309303f4aca81f30be" id="r_a0631e8b636d5d5309303f4aca81f30be"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a0631e8b636d5d5309303f4aca81f30be">getOversizedBlocks</a> () const noexcept</td></tr>
+<tr class="separator:a0631e8b636d5d5309303f4aca81f30be"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3834d271f945a63ecad8aa36aa9532e0" id="r_a3834d271f945a63ecad8aa36aa9532e0"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a3834d271f945a63ecad8aa36aa9532e0">getMaxCallbackNs</a> () const noexcept</td></tr>
 <tr class="separator:a3834d271f945a63ecad8aa36aa9532e0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab0943f1ebc4f6e53165833dd55f94ae9" id="r_ab0943f1ebc4f6e53165833dd55f94ae9"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#ab0943f1ebc4f6e53165833dd55f94ae9">getLastCallbackNs</a> () const noexcept</td></tr>
@@ -165,6 +172,8 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a9507512cf07fb6a9636a96eefea37459"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8d5659de3904c2e98840201235a8cfde" id="r_a8d5659de3904c2e98840201235a8cfde"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a8d5659de3904c2e98840201235a8cfde">getRtMisuseViolations</a> () const noexcept</td></tr>
 <tr class="separator:a8d5659de3904c2e98840201235a8cfde"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3466b7471df31e728a116a05df69271d" id="r_a3466b7471df31e728a116a05df69271d"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a3466b7471df31e728a116a05df69271d">getLastRtMisuseApi</a> () const noexcept</td></tr>
+<tr class="separator:a3466b7471df31e728a116a05df69271d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afd99592a6ce3438cf56ceb212ca2b4f3" id="r_afd99592a6ce3438cf56ceb212ca2b4f3"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#afd99592a6ce3438cf56ceb212ca2b4f3">getLastBufferFrames</a> () const noexcept</td></tr>
 <tr class="separator:afd99592a6ce3438cf56ceb212ca2b4f3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0ae6186327c16834246459d448f7268f" id="r_a0ae6186327c16834246459d448f7268f"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a0ae6186327c16834246459d448f7268f">getLastSampleRate</a> () const noexcept</td></tr>
@@ -190,6 +199,8 @@ Public Attributes</h2></td></tr>
 <tr class="separator:aad756b3213f77c8d8bc9a055c7985548"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a91c040937c7061d4656f6831a6283247" id="r_a91c040937c7061d4656f6831a6283247"><td class="memItemLeft" align="right" valign="top">std::atomic&lt; uint64_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a91c040937c7061d4656f6831a6283247">overruns</a> {0}</td></tr>
 <tr class="separator:a91c040937c7061d4656f6831a6283247"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a806c1107683e18e1e0ca4ddd34681744" id="r_a806c1107683e18e1e0ca4ddd34681744"><td class="memItemLeft" align="right" valign="top">std::atomic&lt; uint64_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a806c1107683e18e1e0ca4ddd34681744">oversizedBlocks</a> {0}</td></tr>
+<tr class="separator:a806c1107683e18e1e0ca4ddd34681744"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5f97a8afb7c51d3a8af4b5ffe237b6ac" id="r_a5f97a8afb7c51d3a8af4b5ffe237b6ac"><td class="memItemLeft" align="right" valign="top">std::atomic&lt; uint64_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a5f97a8afb7c51d3a8af4b5ffe237b6ac">maxCallbackNs</a> {0}</td></tr>
 <tr class="separator:a5f97a8afb7c51d3a8af4b5ffe237b6ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac8f75e737031faa904caccfbe498b9a6" id="r_ac8f75e737031faa904caccfbe498b9a6"><td class="memItemLeft" align="right" valign="top">std::atomic&lt; uint64_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#ac8f75e737031faa904caccfbe498b9a6">lastCallbackNs</a> {0}</td></tr>
@@ -200,6 +211,8 @@ Public Attributes</h2></td></tr>
 <tr class="separator:abe06d181ccc285f91129a3ce96957104"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6020f597da7305870119cf0758e3e40b" id="r_a6020f597da7305870119cf0758e3e40b"><td class="memItemLeft" align="right" valign="top">std::atomic&lt; uint64_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a6020f597da7305870119cf0758e3e40b">rtMisuseViolations</a> {0}</td></tr>
 <tr class="separator:a6020f597da7305870119cf0758e3e40b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7d2cf15b79cd2d4be02875b853138cfc" id="r_a7d2cf15b79cd2d4be02875b853138cfc"><td class="memItemLeft" align="right" valign="top">std::atomic&lt; const char * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a7d2cf15b79cd2d4be02875b853138cfc">lastRtMisuseApi</a> {nullptr}</td></tr>
+<tr class="separator:a7d2cf15b79cd2d4be02875b853138cfc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a52404f5eb9888e8a9919937711674c35" id="r_a52404f5eb9888e8a9919937711674c35"><td class="memItemLeft" align="right" valign="top">std::atomic&lt; uint32_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a52404f5eb9888e8a9919937711674c35">lastBufferFrames</a> {0}</td></tr>
 <tr class="separator:a52404f5eb9888e8a9919937711674c35"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acadd50f4a700e9380cab0c4672fbb2e4" id="r_acadd50f4a700e9380cab0c4672fbb2e4"><td class="memItemLeft" align="right" valign="top">std::atomic&lt; uint32_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#acadd50f4a700e9380cab0c4672fbb2e4">lastSampleRate</a> {0}</td></tr>
@@ -273,7 +286,7 @@ Static Public Attributes</h2></td></tr>
 
 <p>Clear all priority bits — call from the stream starter before a (re)start so the audio thread's first-callback verification publishes the NEW stream's truth instead of a latched stale success. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00146">146</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00155">155</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -302,7 +315,7 @@ Static Public Attributes</h2></td></tr>
 
 <p>Average timed-callback duration in ns (0 if none recorded). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00206">206</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00215">215</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -329,7 +342,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00223">223</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00232">232</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -358,7 +371,7 @@ Static Public Attributes</h2></td></tr>
 
 <p>Current callback budget in ns from the last frames/rate context (0 if unknown). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00212">212</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00221">221</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -385,7 +398,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00240">240</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00251">251</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -412,7 +425,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00235">235</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00246">246</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -439,7 +452,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00233">233</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00244">244</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -466,7 +479,34 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00228">228</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00238">238</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+
+</div>
+</div>
+<a id="a3466b7471df31e728a116a05df69271d" name="a3466b7471df31e728a116a05df69271d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3466b7471df31e728a116a05df69271d">&#9670;&#160;</a></span>getLastRtMisuseApi()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const char * Aestra::Audio::AudioTelemetry::getLastRtMisuseApi </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00243">243</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -493,7 +533,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00234">234</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00245">245</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -520,7 +560,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00236">236</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00247">247</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -547,7 +587,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00227">227</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00237">237</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -574,7 +614,34 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00226">226</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00235">235</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+
+</div>
+</div>
+<a id="a0631e8b636d5d5309303f4aca81f30be" name="a0631e8b636d5d5309303f4aca81f30be"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0631e8b636d5d5309303f4aca81f30be">&#9670;&#160;</a></span>getOversizedBlocks()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint64_t Aestra::Audio::AudioTelemetry::getOversizedBlocks </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00236">236</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -601,7 +668,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00241">241</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00252">252</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -628,7 +695,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00230">230</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00240">240</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -655,7 +722,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00239">239</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00250">250</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -685,9 +752,9 @@ Static Public Attributes</h2></td></tr>
 <p>B-010: Get thread priority status. </p>
 <p>Returns bitmask indicating which priority settings succeeded. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00153">153</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00162">162</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00158">isThreadPriorityOptimal()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00167">isThreadPriorityOptimal()</a>.</p>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-1-summary" class="dynsummary" style="display:block;">
@@ -721,7 +788,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00229">229</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00239">239</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -748,7 +815,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00225">225</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00234">234</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -775,7 +842,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00224">224</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00233">233</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -802,7 +869,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00086">86</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00089">89</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -829,7 +896,34 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00088">88</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00091">91</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+
+</div>
+</div>
+<a id="a64e9f3f57580096679530389ed6c98ef" name="a64e9f3f57580096679530389ed6c98ef"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a64e9f3f57580096679530389ed6c98ef">&#9670;&#160;</a></span>incrementOversizedBlocks()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::AudioTelemetry::incrementOversizedBlocks </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00092">92</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -856,7 +950,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00090">90</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00094">94</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -883,7 +977,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00089">89</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00093">93</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -913,7 +1007,7 @@ Static Public Attributes</h2></td></tr>
 <p>B-009: Record an underrun and manage recovery state. </p>
 <p>Called from audio callback when underrun detected. Tracks consecutive underruns and triggers recovery mode. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00100">100</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00109">109</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -940,7 +1034,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00087">87</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00090">90</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -970,7 +1064,7 @@ Static Public Attributes</h2></td></tr>
 <p>B-009: Check if currently in recovery mode. </p>
 <p>Audio processing may be simplified during recovery. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00135">135</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00144">144</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -999,9 +1093,9 @@ Static Public Attributes</h2></td></tr>
 
 <p>B-010: Check if all thread priority settings succeeded. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00158">158</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00167">167</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00153">getThreadPriorityStatus()</a>.</p>
+<p class="reference">References <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00162">getThreadPriorityStatus()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">
@@ -1056,7 +1150,37 @@ Static Public Attributes</h2></td></tr>
 <p>Consolidated deadline accounting for the device-callback wrapper: updates last/max duration, the running total for averages, the budget context (frames + sample rate), and counts a deadline overrun when the duration exceeds the buffer budget (frames / sampleRate).</p>
 <p>RT-safe: relaxed atomics only — no allocation, locks, or syscalls. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00186">186</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00195">195</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+
+</div>
+</div>
+<a id="a003ebc60df8727fc8e3a45c597dfa4a7" name="a003ebc60df8727fc8e3a45c597dfa4a7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a003ebc60df8727fc8e3a45c597dfa4a7">&#9670;&#160;</a></span>recordRtMisuse()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::AudioTelemetry::recordRtMisuse </td>
+          <td>(</td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>apiName</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Audio-thread safe: two relaxed atomic ops, no allocation or lock. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00098">98</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1086,16 +1210,7 @@ Static Public Attributes</h2></td></tr>
 <p>B-009: Record a successful (stable) audio block. </p>
 <p>Called after each successful audio callback. Clears consecutive underrun counter and may exit recovery mode. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00118">118</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00972">Aestra::Audio::AudioEngine::processBlock()</a>.</p>
-<div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-3-summary" class="dynsummary" style="display:block;">
-</div>
-<div id="dynsection-3-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry_a76c9ac9b4a5e8fceef32f0edda3d558a_icgraph.svg" width="100%" height="410"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
-</div>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00127">127</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1126,7 +1241,7 @@ Static Public Attributes</h2></td></tr>
 <p>B-010: Set thread priority status bit. </p>
 <p>Called from audio thread startup to record priority configuration status. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00142">142</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00151">151</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1154,7 +1269,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00217">217</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00226">226</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1182,7 +1297,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00173">173</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00182">182</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1210,7 +1325,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00172">172</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00181">181</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1238,7 +1353,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00174">174</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00183">183</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1266,7 +1381,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00218">218</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00227">227</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1294,7 +1409,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00163">163</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00172">172</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1327,7 +1442,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00053">53</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00056">56</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1343,7 +1458,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00046">46</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00049">49</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1359,7 +1474,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00055">55</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00058">58</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1383,7 +1498,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00072">72</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00075">75</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1407,7 +1522,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00073">73</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00076">76</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1431,7 +1546,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00071">71</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00074">74</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1457,7 +1572,7 @@ Static Public Attributes</h2></td></tr>
 <b>Initial value:</b><div class="fragment"><div class="line">=</div>
 <div class="line">        kPriorityBit_ThreadPriority | kPriorityBit_MMCSS | kPriorityBit_MMCSSPriority</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00075">75</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00078">78</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1481,7 +1596,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00060">60</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00063">63</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1505,7 +1620,7 @@ Static Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00059">59</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00062">62</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1521,7 +1636,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00042">42</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00045">45</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1537,7 +1652,23 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00035">35</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00037">37</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+
+</div>
+</div>
+<a id="a7d2cf15b79cd2d4be02875b853138cfc" name="a7d2cf15b79cd2d4be02875b853138cfc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7d2cf15b79cd2d4be02875b853138cfc">&#9670;&#160;</a></span>lastRtMisuseApi</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::atomic&lt;const char*&gt; Aestra::Audio::AudioTelemetry::lastRtMisuseApi {nullptr}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00042">42</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1553,7 +1684,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00043">43</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00046">46</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1569,7 +1700,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00047">47</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00050">50</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1585,7 +1716,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00034">34</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00036">36</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1605,6 +1736,22 @@ Static Public Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="a806c1107683e18e1e0ca4ddd34681744" name="a806c1107683e18e1e0ca4ddd34681744"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a806c1107683e18e1e0ca4ddd34681744">&#9670;&#160;</a></span>oversizedBlocks</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::atomic&lt;uint64_t&gt; Aestra::Audio::AudioTelemetry::oversizedBlocks {0}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00035">35</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+
+</div>
+</div>
 <a id="a6455d10faa58050b1ada1d0a7ffecfb3" name="a6455d10faa58050b1ada1d0a7ffecfb3"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a6455d10faa58050b1ada1d0a7ffecfb3">&#9670;&#160;</a></span>recoveryModeActivations</h2>
 
@@ -1617,7 +1764,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00056">56</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00059">59</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1633,7 +1780,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00039">39</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00041">41</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1649,7 +1796,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00050">50</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00053">53</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1665,7 +1812,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00054">54</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00057">57</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1681,7 +1828,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00068">68</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00071">71</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1697,7 +1844,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00038">38</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00040">40</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>
@@ -1713,7 +1860,7 @@ Static Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00037">37</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html#l00039">39</a> of file <a class="el" href="../../d2/daa/AudioTelemetry_8h_source.html">AudioTelemetry.h</a>.</p>
 
 </div>
 </div>

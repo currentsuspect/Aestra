@@ -23,7 +23,7 @@ var searchData=
   ['uioutputchip_20',['UIOutputChip',['../d4/d08/classAestraUI_1_1UIOutputChip.html',1,'AestraUI']]],
   ['uiparambar_21',['UIParamBar',['../d2/d73/classAestraUI_1_1UIParamBar.html',1,'AestraUI']]],
   ['uiroutingmap_22',['UIRoutingMap',['../d4/dd4/classAestraUI_1_1UIRoutingMap.html',1,'AestraUI']]],
-  ['uistate_23',['uistate',['../dd/d75/structAestra_1_1UIState.html',1,'Aestra::UIState'],['../d8/d6c/structProjectSerializer_1_1UIState.html',1,'ProjectSerializer::UIState']]],
+  ['uistate_23',['uistate',['../d8/d6c/structProjectSerializer_1_1UIState.html',1,'ProjectSerializer::UIState'],['../dd/d75/structAestra_1_1UIState.html',1,'Aestra::UIState']]],
   ['uisurfacegeometry_24',['UISurfaceGeometry',['../d4/d99/structAestra_1_1UISurfaceGeometry.html',1,'Aestra']]],
   ['uisurfacestore_25',['UISurfaceStore',['../da/d22/structAestra_1_1UISurfaceStore.html',1,'Aestra']]],
   ['uisurfacestorefile_26',['UISurfaceStoreFile',['../dc/d45/classAestra_1_1UISurfaceStoreFile.html',1,'Aestra']]],
@@ -39,6 +39,8 @@ var searchData=
   ['unitrow_36',['UnitRow',['../da/d6f/classAestraUI_1_1UnitRow.html',1,'AestraUI']]],
   ['unitstate_37',['UnitState',['../d3/d38/structAestra_1_1Audio_1_1UnitState.html',1,'Aestra::Audio']]],
   ['updatenotecommand_38',['UpdateNoteCommand',['../d3/d2f/classAestra_1_1Audio_1_1UpdateNoteCommand.html',1,'Aestra::Audio']]],
-  ['usage_39',['Usage',['../d7/d98/structAestra_1_1MuseAgent_1_1Usage.html',1,'Aestra::MuseAgent']]],
-  ['userprofile_40',['UserProfile',['../da/deb/structAestra_1_1UserProfile.html',1,'Aestra']]]
+  ['updatenotifier_39',['UpdateNotifier',['../d4/d68/classAestra_1_1UpdateNotifier.html',1,'Aestra']]],
+  ['updatessettingspage_40',['UpdatesSettingsPage',['../d4/dea/classAestra_1_1UpdatesSettingsPage.html',1,'Aestra']]],
+  ['usage_41',['Usage',['../d7/d98/structAestra_1_1MuseAgent_1_1Usage.html',1,'Aestra::MuseAgent']]],
+  ['userprofile_42',['UserProfile',['../da/deb/structAestra_1_1UserProfile.html',1,'Aestra']]]
 ];

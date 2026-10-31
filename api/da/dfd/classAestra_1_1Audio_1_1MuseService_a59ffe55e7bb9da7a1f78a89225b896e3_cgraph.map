@@ -1,11 +1,17 @@
 <map id="Aestra::Audio::MuseService::handleRequest" name="Aestra::Audio::MuseService::handleRequest">
-<area shape="rect" id="Node000001" title="Process one JSON request line and return the JSON response." alt="" coords="5,37,205,77"/>
-<area shape="rect" id="Node000002" href="$de/dea/classAestra_1_1Audio_1_1CommandParser.html#a3766cdeeec079d0796e5f982c9aea8df" title="Execute a verb from an already&#45;tokenised flag map." alt="" coords="253,37,477,77"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="205,55,240,55,240,60,205,60"/>
+<area shape="rect" id="Node000001" title="Process one JSON request line and return the JSON response." alt="" coords="5,133,205,173"/>
+<area shape="rect" id="Node000002" href="$de/dea/classAestra_1_1Audio_1_1CommandParser.html#a3766cdeeec079d0796e5f982c9aea8df" title="Execute a verb from an already&#45;tokenised flag map." alt="" coords="253,133,477,173"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="205,151,240,151,240,156,205,156"/>
 <area shape="rect" id="Node000003" href="$de/dea/classAestra_1_1Audio_1_1CommandParser.html#a867df74f8159bfbf8ef7db8366f59012" title="Validate and build a command without executing it." alt="" coords="529,5,753,45"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="477,42,515,37,515,43,478,47"/>
-<area shape="rect" id="Node000005" href="$df/d31/classAestra_1_1Audio_1_1CommandHistory.html#a0494915f3f25d5561f652ef5fb4067e5" title="Execute a command and push it to the undo stack Clears the redo stack." alt="" coords="525,69,756,109"/>
-<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="478,68,512,72,511,77,477,73"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="393,131,452,93,524,55,544,47,546,52,526,60,455,97,396,135"/>
+<area shape="rect" id="Node000005" href="$de/dea/classAestra_1_1Audio_1_1CommandParser.html#af2d5bd28c6bc8ee14df564c64d45ddeb" title="If cmd is a verb that creates something (unit, track, lane, clip, pattern, effect slot),..." alt="" coords="529,69,753,109"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="452,131,540,110,542,115,453,136"/>
+<area shape="rect" id="Node000006" href="$df/d31/classAestra_1_1Audio_1_1CommandHistory.html#a3c8561b6bcb69509c1f8a34bbad31e1d" title="Check if a transaction is currently active." alt="" coords="525,133,756,173"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="478,151,511,151,511,156,478,156"/>
+<area shape="rect" id="Node000007" href="$df/d31/classAestra_1_1Audio_1_1CommandHistory.html#a0494915f3f25d5561f652ef5fb4067e5" title="Execute a command and push it to the undo stack Clears the redo stack." alt="" coords="525,197,756,237"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="453,171,542,192,540,197,452,176"/>
+<area shape="rect" id="Node000008" href="$df/d31/classAestra_1_1Audio_1_1CommandHistory.html#a3dc3b072f240d017cdf83e69175ffbc8" title="Push a command that the caller already executed." alt="" coords="525,261,756,301"/>
+<area shape="poly" id="edge7_Node000002_Node000008" title=" " alt="" coords="396,171,455,209,526,247,546,254,544,259,524,252,452,214,393,176"/>
 <area shape="rect" id="Node000004" href="$db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#ad7b2a4074b0b099b6b8879f5374d971b" title="Take the reason recorded by the most recent failed build." alt="" coords="804,5,1043,45"/>
 <area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="753,23,790,23,790,28,753,28"/>
 </map>

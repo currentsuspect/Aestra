@@ -4,8 +4,8 @@
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="214,67,305,46,306,51,215,72"/>
 <area shape="rect" id="Node000003" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a54dd8e4432b826123bfab7358b029a7e" title="Remove a slot while playing (non&#45;RT thread)." alt="" coords="295,69,520,109"/>
 <area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="247,87,281,87,281,92,247,92"/>
-<area shape="rect" id="Node000004" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a2477b5e6144cf3ec4606170c5bfca1b8" title="Re&#45;place a slot while playing without disturbing what already sounds (non&#45;RT thread)." alt="" coords="296,133,519,173"/>
+<area shape="rect" id="Node000004" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a12e976086bc55221c1a34567745c06a0" title="Re&#45;place a slot while playing without disturbing what already sounds (non&#45;RT thread)." alt="" coords="296,133,519,173"/>
 <area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="215,107,306,128,305,133,214,112"/>
-<area shape="rect" id="Node000005" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a4a8cd3c7804784b829d93cc5556ddda5" title="Schedule new pattern instance (non&#45;RT thread)" alt="" coords="568,133,801,173"/>
+<area shape="rect" id="Node000005" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#aabca685e25a6dec33629e1b860d31671" title="Schedule new pattern instance (non&#45;RT thread)" alt="" coords="568,133,801,173"/>
 <area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="519,151,554,151,554,156,519,156"/>
 </map>

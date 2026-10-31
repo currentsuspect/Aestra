@@ -7,5 +7,7 @@ var searchData=
   ['hasmidiinput_4',['hasMidiInput',['../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html#a811c6418b6f144d5fdc8e9e895c4e814',1,'Aestra::Audio::PluginInfo']]],
   ['hasmidioutput_5',['hasMidiOutput',['../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html#ab80769c6b7ce41866af4530ddb55ce57',1,'Aestra::Audio::PluginInfo']]],
   ['hasversion_6',['hasVersion',['../da/d5f/structAestra_1_1RecoveryInfo_1_1Info.html#a976e50947f41d7062a6a1894354f84bb',1,'Aestra::RecoveryInfo::Info']]],
-  ['height_7',['height',['../d6/d3b/structAestra_1_1WindowDesc.html#aaa3b62c4dfa70b4f8d9d4b4d08a57869',1,'Aestra::WindowDesc::height'],['../d7/da3/structAestraWindowManager_1_1WindowConfig.html#a70825ed32db8ef08328562afb39043e2',1,'AestraWindowManager::WindowConfig::height'],['../dc/d36/structAestraWindowManager_1_1WindowState.html#ace003ad83bf9318a041d2da829e53403',1,'AestraWindowManager::WindowState::height']]]
+  ['height_7',['height',['../d6/d3b/structAestra_1_1WindowDesc.html#aaa3b62c4dfa70b4f8d9d4b4d08a57869',1,'Aestra::WindowDesc::height'],['../d7/da3/structAestraWindowManager_1_1WindowConfig.html#a70825ed32db8ef08328562afb39043e2',1,'AestraWindowManager::WindowConfig::height'],['../dc/d36/structAestraWindowManager_1_1WindowState.html#ace003ad83bf9318a041d2da829e53403',1,'AestraWindowManager::WindowState::height']]],
+  ['holdforschedule_8',['holdForSchedule',['../d9/da9/structAestra_1_1Audio_1_1TransportStartState.html#a0c4891a92c4a930273ea16a78af0bac1',1,'Aestra::Audio::TransportStartState']]],
+  ['holdframesleft_9',['holdFramesLeft',['../d9/da9/structAestra_1_1Audio_1_1TransportStartState.html#a9d03899bcc9c332367393cb390568c61',1,'Aestra::Audio::TransportStartState']]]
 ];

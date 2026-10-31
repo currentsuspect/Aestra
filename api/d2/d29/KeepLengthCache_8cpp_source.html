@@ -184,7 +184,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span> </div>
 <div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>KeepLengthCache::~KeepLengthCache() {</div>
 <div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; slot : m_slots) {</div>
-<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>        retire(slot.buffer.exchange(<span class="keyword">nullptr</span>, std::memory_order_acq_rel));</div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>        retire(swapBuffer(slot, <span class="keyword">nullptr</span>));</div>
 <div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    }</div>
 <div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>}</div>
 <div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span> </div>
@@ -208,7 +208,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>    ++m_generation; <span class="comment">// renders in flight for the old source are discarded on completion</span></div>
 <div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; slot : m_slots) {</div>
 <div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>        slot.state.store(Empty, std::memory_order_release);</div>
-<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>        retire(slot.buffer.exchange(<span class="keyword">nullptr</span>, std::memory_order_acq_rel));</div>
+<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>        retire(swapBuffer(slot, <span class="keyword">nullptr</span>));</div>
 <div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>    }</div>
 <div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>    m_bytes.store(0, std::memory_order_relaxed);</div>
 <div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>    m_settled.notify_all();</div>
@@ -244,125 +244,127 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00153" name="l00153"></a><span class="lineno"><a class="line" href="../../d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#a1ce29a836a8ac483c961c996a12d27a6">  153</a></span>std::shared_ptr&lt;const KeepLengthCache::Buffer&gt; <a class="code hl_function" href="../../d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#a1ce29a836a8ac483c961c996a12d27a6">KeepLengthCache::tryGet</a>(<span class="keywordtype">int</span> semitones) <span class="keyword">noexcept</span> {</div>
 <div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>    <span class="keywordflow">if</span> (!inRange(semitones)) <span class="keywordflow">return</span> <span class="keyword">nullptr</span>;</div>
 <div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>    Slot&amp; slot = m_slots[slotIndex(semitones)];</div>
-<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>    <span class="keyword">auto</span> buffer = slot.buffer.load(std::memory_order_acquire);</div>
-<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>    <span class="keywordflow">if</span> (buffer) {</div>
-<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>        slot.lastUsed.store(m_useClock.fetch_add(1, std::memory_order_relaxed), std::memory_order_relaxed);</div>
-<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>    }</div>
-<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>    <span class="keywordflow">return</span> buffer;</div>
-<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>}</div>
+<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>    <span class="comment">// Copying the pinned owner is a refcount bump; the retire list keeps the last reference</span></div>
+<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>    <span class="comment">// off the audio thread.</span></div>
+<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>    std::shared_ptr&lt;const Buffer&gt; buffer = slot.rtBuffer.readRealtime().shared();</div>
+<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>    <span class="keywordflow">if</span> (buffer) {</div>
+<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>        slot.lastUsed.store(m_useClock.fetch_add(1, std::memory_order_relaxed), std::memory_order_relaxed);</div>
+<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>    }</div>
+<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>    <span class="keywordflow">return</span> buffer;</div>
+<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>}</div>
 </div>
-<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span> </div>
-<div class="foldopen" id="foldopen00163" data-start="{" data-end="}">
-<div class="line"><a id="l00163" name="l00163"></a><span class="lineno"><a class="line" href="../../d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#a5975950402f1ff300a36e78c22ed27c3">  163</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#a5975950402f1ff300a36e78c22ed27c3">KeepLengthCache::request</a>(<span class="keywordtype">int</span> semitones) <span class="keyword">noexcept</span> {</div>
-<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>    <span class="keywordflow">if</span> (!inRange(semitones)) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>    uint8_t expected = Empty;</div>
-<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>    m_slots[slotIndex(semitones)].state.compare_exchange_strong(expected, Pending, std::memory_order_acq_rel);</div>
-<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>}</div>
+<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span> </div>
+<div class="foldopen" id="foldopen00165" data-start="{" data-end="}">
+<div class="line"><a id="l00165" name="l00165"></a><span class="lineno"><a class="line" href="../../d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#a5975950402f1ff300a36e78c22ed27c3">  165</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#a5975950402f1ff300a36e78c22ed27c3">KeepLengthCache::request</a>(<span class="keywordtype">int</span> semitones) <span class="keyword">noexcept</span> {</div>
+<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>    <span class="keywordflow">if</span> (!inRange(semitones)) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>    uint8_t expected = Empty;</div>
+<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>    m_slots[slotIndex(semitones)].state.compare_exchange_strong(expected, Pending, std::memory_order_acq_rel);</div>
+<div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>}</div>
 </div>
-<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span> </div>
-<div class="foldopen" id="foldopen00169" data-start="{" data-end="}">
-<div class="line"><a id="l00169" name="l00169"></a><span class="lineno"><a class="line" href="../../d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#afd87a09b50dd484f601b9270d5358953">  169</a></span><span class="keywordtype">bool</span> <a class="code hl_function" href="../../d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#afd87a09b50dd484f601b9270d5358953">KeepLengthCache::renderOnePending</a>() {</div>
-<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> idx = 0; idx &lt; m_slots.size(); ++idx) {</div>
-<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span>        uint8_t expected = Pending;</div>
-<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span>        <span class="keywordflow">if</span> (!m_slots[idx].state.compare_exchange_strong(expected, Rendering, std::memory_order_acq_rel)) {</div>
-<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>            <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>        }</div>
-<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span> </div>
-<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>        std::shared_ptr&lt;const std::vector&lt;float&gt;&gt; source;</div>
-<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>        uint32_t rate = 0;</div>
-<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>        uint64_t generation = 0;</div>
-<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>        {</div>
-<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>            std::lock_guard&lt;std::mutex&gt; lock(m_mutex);</div>
-<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>            source = m_source;</div>
-<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>            rate = m_sourceRate;</div>
-<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>            generation = m_generation;</div>
-<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>        }</div>
-<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>        <span class="keyword">const</span> <span class="keywordtype">int</span> semitones = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(idx) + MIN_SEMITONES;</div>
-<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>        <span class="keyword">auto</span> finish = [&amp;](std::shared_ptr&lt;const Buffer&gt; rendered, SlotState state) {</div>
-<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>            std::lock_guard&lt;std::mutex&gt; lock(m_mutex);</div>
-<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>            <span class="keywordflow">if</span> (generation != m_generation) <span class="keywordflow">return</span>; <span class="comment">// the source changed while rendering</span></div>
-<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>            <span class="keywordflow">if</span> (rendered) {</div>
-<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>                m_bytes.fetch_add(rendered-&gt;interleaved.size() * <span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), std::memory_order_relaxed);</div>
-<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>                m_slots[idx].lastUsed.store(m_useClock.fetch_add(1, std::memory_order_relaxed),</div>
-<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>                                            std::memory_order_relaxed);</div>
-<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>                retire(m_slots[idx].buffer.exchange(std::move(rendered), std::memory_order_acq_rel));</div>
-<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>            }</div>
-<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>            m_slots[idx].state.store(state, std::memory_order_release);</div>
-<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>            evictToBudget(idx);</div>
-<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>            m_settled.notify_all();</div>
-<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>        };</div>
-<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span> </div>
-<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>        <span class="keywordflow">if</span> (!source || rate == 0 || source-&gt;size() &lt; 4) {</div>
-<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>            finish(<span class="keyword">nullptr</span>, Unsupported);</div>
-<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>        }</div>
-<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span> </div>
-<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>        <span class="keyword">const</span> <span class="keywordtype">size_t</span> frames = source-&gt;size() / 2;</div>
-<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>        <span class="keyword">const</span> <span class="keywordtype">double</span> ratio = std::pow(2.0, semitones / 12.0);</div>
-<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>        <span class="keyword">const</span> <span class="keywordtype">size_t</span> outFrames = <span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(std::llround(<span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(frames) * ratio));</div>
-<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>        std::vector&lt;float&gt; inL(frames), inR(frames), outL(outFrames), outR(outFrames);</div>
-<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; frames; ++i) {</div>
-<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>            inL[i] = (*source)[i * 2];</div>
-<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>            inR[i] = (*source)[i * 2 + 1];</div>
-<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>        }</div>
-<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span> </div>
-<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>        signalsmith::stretch::SignalsmithStretch&lt;float&gt; stretch(STRETCH_SEED);</div>
-<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>        <span class="keyword">const</span> <span class="keywordtype">int</span> block = std::max(256, <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(rate * STRETCH_BLOCK_SECONDS));</div>
-<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>        stretch.configure(2, block, block / 4);</div>
-<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>        <span class="keyword">const</span> <span class="keywordtype">float</span>* inputs[2] = {inL.data(), inR.data()};</div>
-<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>        <span class="keywordtype">float</span>* outputs[2] = {outL.data(), outR.data()};</div>
-<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>        <span class="comment">// Time only: transpose stays 1, frequencies pass through untouched.</span></div>
-<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>        <span class="keywordflow">if</span> (!stretch.exact(inputs, <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(frames), outputs, <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(outFrames))) {</div>
-<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>            finish(<span class="keyword">nullptr</span>, Unsupported); <span class="comment">// too short to stretch; the note plays resampled</span></div>
-<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>        }</div>
-<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span> </div>
-<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>        <span class="keyword">auto</span> buffer = std::make_shared&lt;Buffer&gt;();</div>
-<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>        buffer-&gt;interleaved.resize(outFrames * 2);</div>
-<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; outFrames; ++i) {</div>
-<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>            <span class="keyword">const</span> <span class="keywordtype">float</span> l = outL[i], r = outR[i];</div>
-<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>            buffer-&gt;interleaved[i * 2] = std::isfinite(l) ? l : 0.0f;</div>
-<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>            buffer-&gt;interleaved[i * 2 + 1] = std::isfinite(r) ? r : 0.0f;</div>
-<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>        }</div>
-<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>        finish(std::move(buffer), Ready);</div>
-<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>    }</div>
-<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span>    <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>}</div>
+<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span> </div>
+<div class="foldopen" id="foldopen00171" data-start="{" data-end="}">
+<div class="line"><a id="l00171" name="l00171"></a><span class="lineno"><a class="line" href="../../d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#afd87a09b50dd484f601b9270d5358953">  171</a></span><span class="keywordtype">bool</span> <a class="code hl_function" href="../../d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#afd87a09b50dd484f601b9270d5358953">KeepLengthCache::renderOnePending</a>() {</div>
+<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> idx = 0; idx &lt; m_slots.size(); ++idx) {</div>
+<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>        uint8_t expected = Pending;</div>
+<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>        <span class="keywordflow">if</span> (!m_slots[idx].state.compare_exchange_strong(expected, Rendering, std::memory_order_acq_rel)) {</div>
+<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>            <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>        }</div>
+<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span> </div>
+<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>        std::shared_ptr&lt;const std::vector&lt;float&gt;&gt; source;</div>
+<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>        uint32_t rate = 0;</div>
+<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>        uint64_t generation = 0;</div>
+<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>        {</div>
+<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>            std::lock_guard&lt;std::mutex&gt; lock(m_mutex);</div>
+<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>            source = m_source;</div>
+<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>            rate = m_sourceRate;</div>
+<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>            generation = m_generation;</div>
+<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>        }</div>
+<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>        <span class="keyword">const</span> <span class="keywordtype">int</span> semitones = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(idx) + MIN_SEMITONES;</div>
+<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>        <span class="keyword">auto</span> finish = [&amp;](std::shared_ptr&lt;const Buffer&gt; rendered, SlotState state) {</div>
+<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>            std::lock_guard&lt;std::mutex&gt; lock(m_mutex);</div>
+<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>            <span class="keywordflow">if</span> (generation != m_generation) <span class="keywordflow">return</span>; <span class="comment">// the source changed while rendering</span></div>
+<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>            <span class="keywordflow">if</span> (rendered) {</div>
+<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>                m_bytes.fetch_add(rendered-&gt;interleaved.size() * <span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), std::memory_order_relaxed);</div>
+<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>                m_slots[idx].lastUsed.store(m_useClock.fetch_add(1, std::memory_order_relaxed),</div>
+<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>                                            std::memory_order_relaxed);</div>
+<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>                retire(swapBuffer(m_slots[idx], std::move(rendered)));</div>
+<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>            }</div>
+<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>            m_slots[idx].state.store(state, std::memory_order_release);</div>
+<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>            evictToBudget(idx);</div>
+<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>            m_settled.notify_all();</div>
+<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>        };</div>
+<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span> </div>
+<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>        <span class="keywordflow">if</span> (!source || rate == 0 || source-&gt;size() &lt; 4) {</div>
+<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>            finish(<span class="keyword">nullptr</span>, Unsupported);</div>
+<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>        }</div>
+<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span> </div>
+<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>        <span class="keyword">const</span> <span class="keywordtype">size_t</span> frames = source-&gt;size() / 2;</div>
+<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>        <span class="keyword">const</span> <span class="keywordtype">double</span> ratio = std::pow(2.0, semitones / 12.0);</div>
+<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>        <span class="keyword">const</span> <span class="keywordtype">size_t</span> outFrames = <span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(std::llround(<span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(frames) * ratio));</div>
+<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>        std::vector&lt;float&gt; inL(frames), inR(frames), outL(outFrames), outR(outFrames);</div>
+<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; frames; ++i) {</div>
+<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>            inL[i] = (*source)[i * 2];</div>
+<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>            inR[i] = (*source)[i * 2 + 1];</div>
+<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>        }</div>
+<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span> </div>
+<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>        signalsmith::stretch::SignalsmithStretch&lt;float&gt; stretch(STRETCH_SEED);</div>
+<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>        <span class="keyword">const</span> <span class="keywordtype">int</span> block = std::max(256, <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(rate * STRETCH_BLOCK_SECONDS));</div>
+<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>        stretch.configure(2, block, block / 4);</div>
+<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>        <span class="keyword">const</span> <span class="keywordtype">float</span>* inputs[2] = {inL.data(), inR.data()};</div>
+<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>        <span class="keywordtype">float</span>* outputs[2] = {outL.data(), outR.data()};</div>
+<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>        <span class="comment">// Time only: transpose stays 1, frequencies pass through untouched.</span></div>
+<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>        <span class="keywordflow">if</span> (!stretch.exact(inputs, <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(frames), outputs, <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(outFrames))) {</div>
+<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>            finish(<span class="keyword">nullptr</span>, Unsupported); <span class="comment">// too short to stretch; the note plays resampled</span></div>
+<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>        }</div>
+<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span> </div>
+<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>        <span class="keyword">auto</span> buffer = std::make_shared&lt;Buffer&gt;();</div>
+<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>        buffer-&gt;interleaved.resize(outFrames * 2);</div>
+<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; outFrames; ++i) {</div>
+<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>            <span class="keyword">const</span> <span class="keywordtype">float</span> l = outL[i], r = outR[i];</div>
+<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>            buffer-&gt;interleaved[i * 2] = std::isfinite(l) ? l : 0.0f;</div>
+<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>            buffer-&gt;interleaved[i * 2 + 1] = std::isfinite(r) ? r : 0.0f;</div>
+<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>        }</div>
+<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>        finish(std::move(buffer), Ready);</div>
+<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>    }</div>
+<div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span>    <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span>}</div>
 </div>
-<div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span> </div>
-<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span><span class="keywordtype">void</span> KeepLengthCache::evictToBudget(<span class="keywordtype">size_t</span> keepIndex) {</div>
-<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>    <span class="keywordflow">while</span> (m_bytes.load(std::memory_order_relaxed) &gt; <a class="code hl_variable" href="../../d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#add7f49fac4b8966e2fee2e7331b793d4">MEMORY_BUDGET_BYTES</a>) {</div>
-<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span>        <span class="keywordtype">size_t</span> victim = m_slots.size();</div>
-<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>        uint64_t oldest = std::numeric_limits&lt;uint64_t&gt;::max();</div>
-<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; m_slots.size(); ++i) {</div>
-<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>            <span class="keywordflow">if</span> (i == keepIndex || m_slots[i].state.load(std::memory_order_acquire) != Ready) <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>            <span class="keyword">const</span> uint64_t used = m_slots[i].lastUsed.load(std::memory_order_relaxed);</div>
-<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>            <span class="keywordflow">if</span> (used &lt; oldest) {</div>
-<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>                oldest = used;</div>
-<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>                victim = i;</div>
-<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>            }</div>
-<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>        }</div>
-<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>        <span class="keywordflow">if</span> (victim == m_slots.size()) <span class="keywordflow">return</span>; <span class="comment">// only the newest remains; keep it even over budget</span></div>
-<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>        <span class="keyword">auto</span> old = m_slots[victim].buffer.exchange(<span class="keyword">nullptr</span>, std::memory_order_acq_rel);</div>
-<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>        m_slots[victim].state.store(Empty, std::memory_order_release);</div>
-<div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>        <span class="keywordflow">if</span> (old) {</div>
-<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>            m_bytes.fetch_sub(old-&gt;interleaved.size() * <span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), std::memory_order_relaxed);</div>
-<div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span>            retire(std::move(old));</div>
-<div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span>        }</div>
-<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>    }</div>
-<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span>}</div>
-<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span> </div>
-<div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span>} <span class="comment">// namespace Plugins</span></div>
-<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>} <span class="comment">// namespace Audio</span></div>
-<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span> </div>
+<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span><span class="keywordtype">void</span> KeepLengthCache::evictToBudget(<span class="keywordtype">size_t</span> keepIndex) {</div>
+<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>    <span class="keywordflow">while</span> (m_bytes.load(std::memory_order_relaxed) &gt; <a class="code hl_variable" href="../../d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#add7f49fac4b8966e2fee2e7331b793d4">MEMORY_BUDGET_BYTES</a>) {</div>
+<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span>        <span class="keywordtype">size_t</span> victim = m_slots.size();</div>
+<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>        uint64_t oldest = std::numeric_limits&lt;uint64_t&gt;::max();</div>
+<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; m_slots.size(); ++i) {</div>
+<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>            <span class="keywordflow">if</span> (i == keepIndex || m_slots[i].state.load(std::memory_order_acquire) != Ready) <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>            <span class="keyword">const</span> uint64_t used = m_slots[i].lastUsed.load(std::memory_order_relaxed);</div>
+<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>            <span class="keywordflow">if</span> (used &lt; oldest) {</div>
+<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>                oldest = used;</div>
+<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>                victim = i;</div>
+<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>            }</div>
+<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>        }</div>
+<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>        <span class="keywordflow">if</span> (victim == m_slots.size()) <span class="keywordflow">return</span>; <span class="comment">// only the newest remains; keep it even over budget</span></div>
+<div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>        <span class="keyword">auto</span> old = swapBuffer(m_slots[victim], <span class="keyword">nullptr</span>);</div>
+<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>        m_slots[victim].state.store(Empty, std::memory_order_release);</div>
+<div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span>        <span class="keywordflow">if</span> (old) {</div>
+<div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span>            m_bytes.fetch_sub(old-&gt;interleaved.size() * <span class="keyword">sizeof</span>(<span class="keywordtype">float</span>), std::memory_order_relaxed);</div>
+<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>            retire(std::move(old));</div>
+<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span>        }</div>
+<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>    }</div>
+<div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span>}</div>
+<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span> </div>
+<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>} <span class="comment">// namespace Plugins</span></div>
+<div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span>} <span class="comment">// namespace Audio</span></div>
+<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>} <span class="comment">// namespace Aestra</span></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache_html_a1ce29a836a8ac483c961c996a12d27a6"><div class="ttname"><a href="../../d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#a1ce29a836a8ac483c961c996a12d27a6">Aestra::Audio::Plugins::KeepLengthCache::tryGet</a></div><div class="ttdeci">std::shared_ptr&lt; const Buffer &gt; tryGet(int semitones) noexcept</div><div class="ttdoc">The rendered buffer for semitones, or null if not ready (or 0 / out of range).</div><div class="ttdef"><b>Definition</b> <a href="../../d2/d29/KeepLengthCache_8cpp_source.html#l00153">KeepLengthCache.cpp:153</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache_html_a5975950402f1ff300a36e78c22ed27c3"><div class="ttname"><a href="../../d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#a5975950402f1ff300a36e78c22ed27c3">Aestra::Audio::Plugins::KeepLengthCache::request</a></div><div class="ttdeci">void request(int semitones) noexcept</div><div class="ttdoc">Ask the render service for semitones if nobody has yet. Never blocks.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/d29/KeepLengthCache_8cpp_source.html#l00163">KeepLengthCache.cpp:163</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache_html_a5975950402f1ff300a36e78c22ed27c3"><div class="ttname"><a href="../../d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#a5975950402f1ff300a36e78c22ed27c3">Aestra::Audio::Plugins::KeepLengthCache::request</a></div><div class="ttdeci">void request(int semitones) noexcept</div><div class="ttdoc">Ask the render service for semitones if nobody has yet. Never blocks.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/d29/KeepLengthCache_8cpp_source.html#l00165">KeepLengthCache.cpp:165</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache_html_a824ac0b4df9f9a4d98b606705bfb22eb"><div class="ttname"><a href="../../d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#a824ac0b4df9f9a4d98b606705bfb22eb">Aestra::Audio::Plugins::KeepLengthCache::prewarm</a></div><div class="ttdeci">void prewarm(const std::vector&lt; int &gt; &amp;semitones)</div><div class="ttdoc">Queue renders for these semitone offsets (0 and out-of-range offsets are ignored).</div><div class="ttdef"><b>Definition</b> <a href="../../d2/d29/KeepLengthCache_8cpp_source.html#l00132">KeepLengthCache.cpp:132</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache_html_a8ffa7d3b7e954b0fc23f6042b72ac329"><div class="ttname"><a href="../../d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#a8ffa7d3b7e954b0fc23f6042b72ac329">Aestra::Audio::Plugins::KeepLengthCache::setSource</a></div><div class="ttdeci">void setSource(std::shared_ptr&lt; const std::vector&lt; float &gt; &gt; interleavedStereo, uint32_t sourceRate)</div><div class="ttdoc">Replace the source (interleaved stereo at sourceRate). Invalidates every rendered buffer.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/d29/KeepLengthCache_8cpp_source.html#l00119">KeepLengthCache.cpp:119</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache_html_add7f49fac4b8966e2fee2e7331b793d4"><div class="ttname"><a href="../../d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#add7f49fac4b8966e2fee2e7331b793d4">Aestra::Audio::Plugins::KeepLengthCache::MEMORY_BUDGET_BYTES</a></div><div class="ttdeci">static constexpr size_t MEMORY_BUDGET_BYTES</div><div class="ttdoc">Per-sampler memory budget for rendered buffers; least recently used are evicted first.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d4e/KeepLengthCache_8h_source.html#l00048">KeepLengthCache.h:48</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache_html_add7f49fac4b8966e2fee2e7331b793d4"><div class="ttname"><a href="../../d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#add7f49fac4b8966e2fee2e7331b793d4">Aestra::Audio::Plugins::KeepLengthCache::MEMORY_BUDGET_BYTES</a></div><div class="ttdeci">static constexpr size_t MEMORY_BUDGET_BYTES</div><div class="ttdoc">Per-sampler memory budget for rendered buffers; least recently used are evicted first.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d4e/KeepLengthCache_8h_source.html#l00049">KeepLengthCache.h:49</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache_html_aef48ba1b9be6c21bab0e92f29541c661"><div class="ttname"><a href="../../d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#aef48ba1b9be6c21bab0e92f29541c661">Aestra::Audio::Plugins::KeepLengthCache::waitUntilSettled</a></div><div class="ttdeci">bool waitUntilSettled(const std::vector&lt; int &gt; &amp;semitones, std::chrono::milliseconds timeout)</div><div class="ttdoc">Wait until every listed offset is ready or unsupported. False on timeout.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/d29/KeepLengthCache_8cpp_source.html#l00140">KeepLengthCache.cpp:140</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache_html_afd87a09b50dd484f601b9270d5358953"><div class="ttname"><a href="../../d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#afd87a09b50dd484f601b9270d5358953">Aestra::Audio::Plugins::KeepLengthCache::renderOnePending</a></div><div class="ttdeci">bool renderOnePending()</div><div class="ttdoc">Render one pending offset if there is one. Returns false when nothing was pending.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/d29/KeepLengthCache_8cpp_source.html#l00169">KeepLengthCache.cpp:169</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache_html_afd87a09b50dd484f601b9270d5358953"><div class="ttname"><a href="../../d2/d07/classAestra_1_1Audio_1_1Plugins_1_1KeepLengthCache.html#afd87a09b50dd484f601b9270d5358953">Aestra::Audio::Plugins::KeepLengthCache::renderOnePending</a></div><div class="ttdeci">bool renderOnePending()</div><div class="ttdoc">Render one pending offset if there is one. Returns false when nothing was pending.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/d29/KeepLengthCache_8cpp_source.html#l00171">KeepLengthCache.cpp:171</a></div></div>
 <div class="ttc" id="anamespaceAestra_html"><div class="ttname"><a href="../../d8/d94/namespaceAestra.html">Aestra</a></div><div class="ttdoc">Main application class.</div><div class="ttdef"><b>Definition</b> <a href="../../d7/d7b/AestraAssert_8h_source.html#l00009">AestraAssert.h:9</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

@@ -109,6 +109,9 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a1dfa90038ccd10759dd650594ccaf239"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a81dc15e75f197a2a9af7e092ccf86d9a" id="r_a81dc15e75f197a2a9af7e092ccf86d9a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/dfd/classAestra_1_1Audio_1_1MuseService.html#a81dc15e75f197a2a9af7e092ccf86d9a">clearProjectLoadReport</a> ()</td></tr>
 <tr class="separator:a81dc15e75f197a2a9af7e092ccf86d9a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a29cb30da8219c0167b4ae7ea38750eb2" id="r_a29cb30da8219c0167b4ae7ea38750eb2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/dfd/classAestra_1_1Audio_1_1MuseService.html#a29cb30da8219c0167b4ae7ea38750eb2">setOfflineRenderStreamHooks</a> (std::function&lt; bool()&gt; pause, std::function&lt; void()&gt; resume)</td></tr>
+<tr class="memdesc:a29cb30da8219c0167b4ae7ea38750eb2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Let the host pause its live audio stream around offline renders.  <br /></td></tr>
+<tr class="separator:a29cb30da8219c0167b4ae7ea38750eb2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
@@ -126,7 +129,7 @@ Static Public Member Functions</h2></td></tr>
 <li>handleRequest never throws; malformed input comes back as a status:"parse_error" response. </li>
 </ul>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d13/MuseService_8h_source.html#l00037">37</a> of file <a class="el" href="../../d1/d13/MuseService_8h_source.html">MuseService.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d13/MuseService_8h_source.html#l00038">38</a> of file <a class="el" href="../../d1/d13/MuseService_8h_source.html">MuseService.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a6bf1b2f83d6d6cfe2039fcb220548ebc" name="a6bf1b2f83d6d6cfe2039fcb220548ebc"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a6bf1b2f83d6d6cfe2039fcb220548ebc">&#9670;&#160;</a></span>MuseService()</h2>
@@ -182,7 +185,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d13/MuseService_8h_source.html#l00088">88</a> of file <a class="el" href="../../d1/d13/MuseService_8h_source.html">MuseService.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d13/MuseService_8h_source.html#l00089">89</a> of file <a class="el" href="../../d1/d13/MuseService_8h_source.html">MuseService.h</a>.</p>
 
 </div>
 </div>
@@ -206,15 +209,15 @@ Static Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00064">64</a> of file <a class="el" href="../../d1/d59/MuseService_8cpp_source.html">MuseService.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d5/dfb/CommandResult_8h_source.html#l00029">Aestra::Audio::CommandResult::createdId</a>, <a class="el" href="../../d3/d7a/HostVerbRegistry_8h_source.html#l00094">Aestra::Audio::HostVerbResult::errorCode</a>, <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00128">Aestra::Audio::CommandParser::execute()</a>, and <a class="el" href="../../d3/d7a/HostVerbRegistry_8h_source.html#l00095">Aestra::Audio::HostVerbResult::message</a>.</p>
+<p class="reference">References <a class="el" href="../../d5/dfb/CommandResult_8h_source.html#l00029">Aestra::Audio::CommandResult::createdId</a>, <a class="el" href="../../d5/dfb/CommandResult_8h_source.html#l00036">Aestra::Audio::CommandResult::createdIdText</a>, <a class="el" href="../../d5/dfb/CommandResult_8h_source.html#l00038">Aestra::Audio::CommandResult::createdKind</a>, <a class="el" href="../../d3/d7a/HostVerbRegistry_8h_source.html#l00095">Aestra::Audio::HostVerbResult::errorCode</a>, <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00134">Aestra::Audio::CommandParser::execute()</a>, and <a class="el" href="../../d3/d7a/HostVerbRegistry_8h_source.html#l00096">Aestra::Audio::HostVerbResult::message</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html#l00272">Aestra::Audio::MuseSocketServer::processPending()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d7/d64/MuseSocketServer_8cpp_source.html#l00332">Aestra::Audio::MuseSocketServer::processPending()</a>.</p>
 <div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-0-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-0-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../da/dfd/classAestra_1_1Audio_1_1MuseService_a59ffe55e7bb9da7a1f78a89225b896e3_cgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../da/dfd/classAestra_1_1Audio_1_1MuseService_a59ffe55e7bb9da7a1f78a89225b896e3_cgraph.svg" width="100%" height="530"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
@@ -249,7 +252,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d13/MuseService_8h_source.html#l00078">78</a> of file <a class="el" href="../../d1/d13/MuseService_8h_source.html">MuseService.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d13/MuseService_8h_source.html#l00079">79</a> of file <a class="el" href="../../d1/d13/MuseService_8h_source.html">MuseService.h</a>.</p>
 
 </div>
 </div>
@@ -279,9 +282,9 @@ Static Public Member Functions</h2></td></tr>
 <p>The seam the application registers its capabilities into. </p>
 <p><a class="el" href="../../da/dfd/classAestra_1_1Audio_1_1MuseService.html" title="Muse&#39;s structured machine interface: one JSON request in, one JSON response out.">MuseService</a> cannot reach the UI layer — the dependency runs the other way. The host calls this during startup to register <code>settings.*</code>, <code>view.*</code>, <code>browser.*</code>, <code>dialog.*</code> and <code>project.*</code> verbs; <a class="el" href="../../da/dfd/classAestra_1_1Audio_1_1MuseService.html" title="Muse&#39;s structured machine interface: one JSON request in, one JSON response out.">MuseService</a> only ever sees a name, an argument schema and a callable. See <a class="el" href="../../d3/d7a/HostVerbRegistry_8h.html" title="The seam that lets Muse operate Aestra, not just its audio engine.">HostVerbRegistry.h</a> for why this is a typed registry rather than a generic (name, function) escape hatch. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d13/MuseService_8h_source.html#l00066">66</a> of file <a class="el" href="../../d1/d13/MuseService_8h_source.html">MuseService.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d13/MuseService_8h_source.html#l00067">67</a> of file <a class="el" href="../../d1/d13/MuseService_8h_source.html">MuseService.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/da3/ProjectLifecycle_8cpp_source.html#l00148">AestraApp::registerMuseProjectVerbs()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/da3/ProjectLifecycle_8cpp_source.html#l00179">AestraApp::registerMuseProjectVerbs()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">
@@ -315,7 +318,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d13/MuseService_8h_source.html#l00067">67</a> of file <a class="el" href="../../d1/d13/MuseService_8h_source.html">MuseService.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d13/MuseService_8h_source.html#l00068">68</a> of file <a class="el" href="../../d1/d13/MuseService_8h_source.html">MuseService.h</a>.</p>
 
 </div>
 </div>
@@ -346,7 +349,57 @@ Static Public Member Functions</h2></td></tr>
 <p>Declare that requests run where the host's UI thread lives. </p>
 <p>Default false, so a headless process refuses UI-affine host verbs with a reason instead of running host code on a thread that does not own the state it touches. The in-app socket server executes requests from the main-thread pump, so <a class="el" href="../../d6/d43/classAestraApp.html">AestraApp</a> sets this true. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d13/MuseService_8h_source.html#l00077">77</a> of file <a class="el" href="../../d1/d13/MuseService_8h_source.html">MuseService.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d13/MuseService_8h_source.html#l00078">78</a> of file <a class="el" href="../../d1/d13/MuseService_8h_source.html">MuseService.h</a>.</p>
+
+</div>
+</div>
+<a id="a29cb30da8219c0167b4ae7ea38750eb2" name="a29cb30da8219c0167b4ae7ea38750eb2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a29cb30da8219c0167b4ae7ea38750eb2">&#9670;&#160;</a></span>setOfflineRenderStreamHooks()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::MuseService::setOfflineRenderStreamHooks </td>
+          <td>(</td>
+          <td class="paramtype">std::function&lt; bool()&gt;&#160;</td>
+          <td class="paramname"><em>pause</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::function&lt; void()&gt;&#160;</td>
+          <td class="paramname"><em>resume</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Let the host pause its live audio stream around offline renders. </p>
+<p>An offline render pumps <a class="el" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a401079ac6501c3f1df6221fd7d596f84" title="Process a single audio block (driver callback entry).">AudioEngine::processBlock</a> on the calling thread. In the running app the device callback pumps the same engine at the same time, and the two interleave: the same render came out with peaks from -2 to +3.3 dBFS. The app's Export, Bounce and Versions paths all stop the device stream first; Muse renders must too. <code>pause</code> returns whether a stream was running (so it is resumed only then); <code>resume</code> restarts it. Headless processes have no stream and set nothing. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d1/d13/MuseService_8h_source.html#l00102">102</a> of file <a class="el" href="../../d1/d13/MuseService_8h_source.html">MuseService.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d8/d83/MuseHostVerbs_8cpp_source.html#l00104">Aestra::registerMuseHostVerbs()</a>.</p>
+<div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-3-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-3-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../da/dfd/classAestra_1_1Audio_1_1MuseService_a29cb30da8219c0167b4ae7ea38750eb2_icgraph.svg" width="472" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 
 </div>
 </div>
@@ -377,14 +430,14 @@ Static Public Member Functions</h2></td></tr>
 <p>Publish the application-owned result of the latest project load attempt. </p>
 <p>The application maps <a class="el" href="../../d8/ddf/structProjectSerializer_1_1LoadResult.html">ProjectSerializer::LoadResult</a> into this protocol payload because AestraAudio must not depend on Source/. A new/blank project clears it; beginning or completing another load replaces it. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d13/MuseService_8h_source.html#l00087">87</a> of file <a class="el" href="../../d1/d13/MuseService_8h_source.html">MuseService.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d13/MuseService_8h_source.html#l00088">88</a> of file <a class="el" href="../../d1/d13/MuseService_8h_source.html">MuseService.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/da3/ProjectLifecycle_8cpp_source.html#l00148">AestraApp::registerMuseProjectVerbs()</a>.</p>
-<div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-3-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../dd/da3/ProjectLifecycle_8cpp_source.html#l00179">AestraApp::registerMuseProjectVerbs()</a>.</p>
+<div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-4-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-3-content" class="dyncontent" style="display:none;">
+<div id="dynsection-4-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../da/dfd/classAestra_1_1Audio_1_1MuseService_a1dfa90038ccd10759dd650594ccaf239_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -429,12 +482,12 @@ Static Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00024">24</a> of file <a class="el" href="../../d1/d59/MuseService_8cpp_source.html">MuseService.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00639">Aestra::Audio::AudioEngine::setChannelSlotMap()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01837">Aestra::Audio::TrackManager::setCommandSink()</a>, <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00624">Aestra::Audio::AudioEngine::setContinuousParams()</a>, <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00609">Aestra::Audio::AudioEngine::setMeterSnapshots()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00543">Aestra::Audio::AudioEngine::setPatternPlaybackEngine()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00686">Aestra::Audio::AudioEngine::setTrackManager()</a>, and <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00510">Aestra::Audio::AudioEngine::setUnitManager()</a>.</p>
-<div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-4-summary" class="dynsummary" style="display:block;">
+<p class="reference">References <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00624">Aestra::Audio::AudioEngine::setChannelSlotMap()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l01848">Aestra::Audio::TrackManager::setCommandSink()</a>, <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00609">Aestra::Audio::AudioEngine::setContinuousParams()</a>, <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00594">Aestra::Audio::AudioEngine::setMeterSnapshots()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00553">Aestra::Audio::AudioEngine::setPatternPlaybackEngine()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00696">Aestra::Audio::AudioEngine::setTrackManager()</a>, and <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00520">Aestra::Audio::AudioEngine::setUnitManager()</a>.</p>
+<div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-5-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-4-content" class="dyncontent" style="display:none;">
+<div id="dynsection-5-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../da/dfd/classAestra_1_1Audio_1_1MuseService_a4193ccb9e33e6ad56eb3f03a98fdfa65_cgraph.svg" width="100%" height="600"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 

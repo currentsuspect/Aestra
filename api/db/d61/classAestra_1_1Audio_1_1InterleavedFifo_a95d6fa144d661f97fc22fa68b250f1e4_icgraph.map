@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::InterleavedFifo::popPlanar" name="Aestra::Audio::InterleavedFifo::popPlanar">
+<area shape="rect" id="Node000001" title="Remove frames into planar outputs; outputs past this FIFO&#39;s channels are silenced." alt="" coords="259,5,449,45"/>
+<area shape="rect" id="Node000002" href="$d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#adbec8ee8a9e3d37eea3b3f11ee32226e" title="Process audio through the plugin." alt="" coords="5,5,211,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="245,28,211,28,211,23,245,23"/>
+</map>

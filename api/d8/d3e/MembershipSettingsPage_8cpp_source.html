@@ -309,7 +309,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>    addChild(m_codeInput);</div>
 <div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span> </div>
 <div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>    m_startLoginButton = std::make_shared&lt;AestraUI::NUIButton&gt;();</div>
-<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>    m_startLoginButton-&gt;setText(<span class="stringliteral">&quot;Send Code&quot;</span>);</div>
+<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>    m_startLoginButton-&gt;setText(<span class="stringliteral">&quot;Send code&quot;</span>);</div>
 <div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>    m_startLoginButton-&gt;setStyle(AestraUI::NUIButton::Style::Secondary);</div>
 <div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>    m_startLoginButton-&gt;setOnClick([<span class="keyword">this</span>]() { startLogin(); });</div>
 <div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>    addChild(m_startLoginButton);</div>
@@ -327,9 +327,9 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>    addChild(m_refreshButton);</div>
 <div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span> </div>
 <div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>    m_signOutButton = std::make_shared&lt;AestraUI::NUIButton&gt;();</div>
-<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>    m_signOutButton-&gt;setText(<span class="stringliteral">&quot;Sign Out&quot;</span>);</div>
+<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>    m_signOutButton-&gt;setText(<span class="stringliteral">&quot;Sign out&quot;</span>);</div>
 <div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>    m_signOutButton-&gt;setStyle(AestraUI::NUIButton::Style::Secondary);</div>
-<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>    m_signOutButton-&gt;setOnClick([<span class="keyword">this</span>]() { signOut(); });</div>
+<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>    m_signOutButton-&gt;setOnClick([<span class="keyword">this</span>]() { confirmSignOut(); });</div>
 <div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>    addChild(m_signOutButton);</div>
 <div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>}</div>
 <div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span> </div>
@@ -347,7 +347,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>    Aestra::License::MembershipViewModel viewModel(accountSession, entitlements);</div>
 <div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>    <span class="keyword">const</span> Aestra::License::MembershipViewState state = viewModel.current();</div>
 <div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span> </div>
-<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>    m_accountLabel-&gt;setText(<span class="stringliteral">&quot;Account: &quot;</span> + state.accountLabel);</div>
+<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>    m_accountLabel-&gt;setText(state.accountLabel);</div>
 <div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span>    m_tierLabel-&gt;setText(compactTierLabel(state.tierLabel));</div>
 <div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span>    m_statusLabel-&gt;setText(state.statusLabel);</div>
 <div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>    m_verificationLabel-&gt;setText(std::string(<span class="stringliteral">&quot;Verification: &quot;</span>) +</div>
@@ -415,7 +415,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span>    m_startLoginButton-&gt;setEnabled(showSignIn);</div>
 <div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span>    m_verifyLoginButton-&gt;setEnabled(showSignIn &amp;&amp; !m_pendingChallengeId.empty());</div>
 <div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span><span class="preprocessor">#else</span></div>
-<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span>    m_accountLabel-&gt;setText(<span class="stringliteral">&quot;Account: Signed out&quot;</span>);</div>
+<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span>    m_accountLabel-&gt;setText(<span class="stringliteral">&quot;Signed out&quot;</span>);</div>
 <div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>    m_tierLabel-&gt;setText(<span class="stringliteral">&quot;Core&quot;</span>);</div>
 <div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span>    m_statusLabel-&gt;setText(<span class="stringliteral">&quot;License services unavailable&quot;</span>);</div>
 <div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span>    m_verificationLabel-&gt;setText(<span class="stringliteral">&quot;Verification: Core or unverified local state&quot;</span>);</div>
@@ -598,495 +598,224 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00512" name="l00512"></a><span class="lineno">  512</span>    }</div>
 <div class="line"><a id="l00513" name="l00513"></a><span class="lineno">  513</span>}</div>
 <div class="line"><a id="l00514" name="l00514"></a><span class="lineno">  514</span> </div>
-<div class="line"><a id="l00515" name="l00515"></a><span class="lineno">  515</span><span class="keywordtype">void</span> MembershipSettingsPage::onRender(<a class="code hl_class" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">AestraUI::NUIRenderer</a>&amp; renderer) {</div>
-<div class="line"><a id="l00516" name="l00516"></a><span class="lineno">  516</span>    <span class="keyword">auto</span>&amp; theme = AestraUI::NUIThemeManager::getInstance();</div>
-<div class="line"><a id="l00517" name="l00517"></a><span class="lineno">  517</span>    <span class="keyword">const</span> <span class="keyword">auto</span>&amp; props = theme.getCurrentTheme();</div>
-<div class="line"><a id="l00518" name="l00518"></a><span class="lineno">  518</span>    <span class="keyword">const</span> <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> b = <a class="code hl_function" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a8ff75e00805b13ff9a6babd21f6cc556">getBounds</a>();</div>
-<div class="line"><a id="l00519" name="l00519"></a><span class="lineno">  519</span>    <span class="keywordflow">if</span> (b.isEmpty()) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00520" name="l00520"></a><span class="lineno">  520</span> </div>
-<div class="line"><a id="l00521" name="l00521"></a><span class="lineno">  521</span>    <span class="comment">// --- Theme aliases ---</span></div>
-<div class="line"><a id="l00522" name="l00522"></a><span class="lineno">  522</span>    <span class="keyword">const</span> <span class="keyword">auto</span> bgPrimary = theme.getColor(<span class="stringliteral">&quot;backgroundPrimary&quot;</span>);</div>
-<div class="line"><a id="l00523" name="l00523"></a><span class="lineno">  523</span>    <span class="keyword">const</span> <span class="keyword">auto</span> bgSecondary = theme.getColor(<span class="stringliteral">&quot;backgroundSecondary&quot;</span>);</div>
-<div class="line"><a id="l00524" name="l00524"></a><span class="lineno">  524</span>    <span class="keyword">const</span> <span class="keyword">auto</span> bgTertiary = theme.getColor(<span class="stringliteral">&quot;surfaceTertiary&quot;</span>);</div>
-<div class="line"><a id="l00525" name="l00525"></a><span class="lineno">  525</span>    <span class="keyword">const</span> <span class="keyword">auto</span> borderFaint = theme.getColor(<span class="stringliteral">&quot;borderSubtle&quot;</span>);</div>
-<div class="line"><a id="l00526" name="l00526"></a><span class="lineno">  526</span>    <span class="keyword">const</span> <span class="keyword">auto</span> borderSecondary = theme.getColor(<span class="stringliteral">&quot;border&quot;</span>);</div>
-<div class="line"><a id="l00527" name="l00527"></a><span class="lineno">  527</span>    <span class="keyword">const</span> <span class="keyword">auto</span> textPrimary = theme.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>);</div>
-<div class="line"><a id="l00528" name="l00528"></a><span class="lineno">  528</span>    <span class="keyword">const</span> <span class="keyword">auto</span> textSecondary = theme.getColor(<span class="stringliteral">&quot;textSecondary&quot;</span>);</div>
-<div class="line"><a id="l00529" name="l00529"></a><span class="lineno">  529</span>    <span class="keyword">const</span> <span class="keyword">auto</span> textTertiary = theme.getColor(<span class="stringliteral">&quot;textDisabled&quot;</span>);</div>
-<div class="line"><a id="l00530" name="l00530"></a><span class="lineno">  530</span>    <span class="keyword">const</span> <span class="keyword">auto</span> textSuccess = theme.getColor(<span class="stringliteral">&quot;success&quot;</span>);</div>
-<div class="line"><a id="l00531" name="l00531"></a><span class="lineno">  531</span>    <span class="keyword">const</span> <span class="keyword">auto</span> textDanger = theme.getColor(<span class="stringliteral">&quot;error&quot;</span>);</div>
-<div class="line"><a id="l00532" name="l00532"></a><span class="lineno">  532</span> </div>
-<div class="line"><a id="l00533" name="l00533"></a><span class="lineno">  533</span>    <span class="comment">// --- 1. FOUNDER CARD ---</span></div>
-<div class="line"><a id="l00534" name="l00534"></a><span class="lineno">  534</span>    {</div>
-<div class="line"><a id="l00535" name="l00535"></a><span class="lineno">  535</span>        <span class="keyword">const</span> <span class="keyword">auto</span>&amp; cb = m_founderCardBounds;</div>
-<div class="line"><a id="l00536" name="l00536"></a><span class="lineno">  536</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> r = 12.0f;</div>
-<div class="line"><a id="l00537" name="l00537"></a><span class="lineno">  537</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8edd36aab59578f6c121fae6046db289">fillRoundedRect</a>(cb, r, bgTertiary);</div>
-<div class="line"><a id="l00538" name="l00538"></a><span class="lineno">  538</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8ca30417ddb0b0523e3d9e9ba3eaefdf">strokeRoundedRect</a>(cb, r, 0.5f, borderFaint);</div>
-<div class="line"><a id="l00539" name="l00539"></a><span class="lineno">  539</span> </div>
-<div class="line"><a id="l00540" name="l00540"></a><span class="lineno">  540</span>        <span class="comment">// Decorative circles (bottom-right, clipped by card bounds)</span></div>
-<div class="line"><a id="l00541" name="l00541"></a><span class="lineno">  541</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#ac82c677cff0d5838d3312af1b65ed84b">strokeCircle</a>({cb.right() + 28.0f, cb.bottom() + 28.0f}, 50.0f, 0.5f,</div>
-<div class="line"><a id="l00542" name="l00542"></a><span class="lineno">  542</span>                              borderFaint.withAlpha(0.3f));</div>
-<div class="line"><a id="l00543" name="l00543"></a><span class="lineno">  543</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#ac82c677cff0d5838d3312af1b65ed84b">strokeCircle</a>({cb.right() + 48.0f, cb.bottom() + 48.0f}, 70.0f, 0.5f,</div>
-<div class="line"><a id="l00544" name="l00544"></a><span class="lineno">  544</span>                              borderFaint.withAlpha(0.2f));</div>
-<div class="line"><a id="l00545" name="l00545"></a><span class="lineno">  545</span> </div>
-<div class="line"><a id="l00546" name="l00546"></a><span class="lineno">  546</span>        <span class="keywordtype">float</span> cx = cb.x + 24.0f;</div>
-<div class="line"><a id="l00547" name="l00547"></a><span class="lineno">  547</span>        <span class="keywordtype">float</span> cy = cb.y + 20.0f;</div>
-<div class="line"><a id="l00548" name="l00548"></a><span class="lineno">  548</span> </div>
-<div class="line"><a id="l00549" name="l00549"></a><span class="lineno">  549</span>        <span class="comment">// Tier label</span></div>
-<div class="line"><a id="l00550" name="l00550"></a><span class="lineno">  550</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">drawText</a>(<span class="stringliteral">&quot;MEMBERSHIP TIER&quot;</span>, {cx, cy}, props.fontSizeS, textTertiary);</div>
-<div class="line"><a id="l00551" name="l00551"></a><span class="lineno">  551</span>        cy += 16.0f;</div>
-<div class="line"><a id="l00552" name="l00552"></a><span class="lineno">  552</span> </div>
-<div class="line"><a id="l00553" name="l00553"></a><span class="lineno">  553</span>        <span class="comment">// Tier name</span></div>
-<div class="line"><a id="l00554" name="l00554"></a><span class="lineno">  554</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">drawText</a>(m_tierLabel-&gt;getText(), {cx, cy}, props.fontSizeDisplayS, textPrimary);</div>
-<div class="line"><a id="l00555" name="l00555"></a><span class="lineno">  555</span>        cy += 38.0f;</div>
-<div class="line"><a id="l00556" name="l00556"></a><span class="lineno">  556</span> </div>
-<div class="line"><a id="l00557" name="l00557"></a><span class="lineno">  557</span>        <span class="comment">// Account status pill (top-right)</span></div>
-<div class="line"><a id="l00558" name="l00558"></a><span class="lineno">  558</span>        {</div>
-<div class="line"><a id="l00559" name="l00559"></a><span class="lineno">  559</span>            <span class="keyword">const</span> std::string statusText = m_signedIn ? <span class="stringliteral">&quot;Verified&quot;</span> : <span class="stringliteral">&quot;Signed out&quot;</span>;</div>
-<div class="line"><a id="l00560" name="l00560"></a><span class="lineno">  560</span>            <span class="keyword">const</span> <a class="code hl_struct" href="../../d2/d25/structAestraUI_1_1NUIColor.html">AestraUI::NUIColor</a> statusColor = m_signedIn ? textSuccess : textTertiary;</div>
-<div class="line"><a id="l00561" name="l00561"></a><span class="lineno">  561</span>            <span class="keyword">const</span> <span class="keywordtype">char</span>* statusIcon = m_signedIn ? <span class="stringliteral">&quot;shield-check&quot;</span> : <span class="stringliteral">&quot;log-out&quot;</span>;</div>
-<div class="line"><a id="l00562" name="l00562"></a><span class="lineno">  562</span>            <span class="keyword">const</span> <span class="keywordtype">float</span> pillW = std::max(78.0f,</div>
-<div class="line"><a id="l00563" name="l00563"></a><span class="lineno">  563</span>                                         renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#abe394d6a3fb11601766324bcd8793ac3">measureText</a>(statusText, props.fontSizeS).width + 40.0f);</div>
-<div class="line"><a id="l00564" name="l00564"></a><span class="lineno">  564</span>            <span class="keyword">const</span> <span class="keywordtype">float</span> pillH = 22.0f;</div>
-<div class="line"><a id="l00565" name="l00565"></a><span class="lineno">  565</span>            <span class="keyword">const</span> <span class="keywordtype">float</span> px = cb.right() - pillW - 20.0f;</div>
-<div class="line"><a id="l00566" name="l00566"></a><span class="lineno">  566</span>            <span class="keyword">const</span> <span class="keywordtype">float</span> py = cb.y + 20.0f;</div>
-<div class="line"><a id="l00567" name="l00567"></a><span class="lineno">  567</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8edd36aab59578f6c121fae6046db289">fillRoundedRect</a>(<a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(px, py, pillW, pillH), 999.0f,</div>
-<div class="line"><a id="l00568" name="l00568"></a><span class="lineno">  568</span>                                     statusColor.withAlpha(m_signedIn ? 0.14f : 0.08f));</div>
-<div class="line"><a id="l00569" name="l00569"></a><span class="lineno">  569</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8ca30417ddb0b0523e3d9e9ba3eaefdf">strokeRoundedRect</a>(<a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(px, py, pillW, pillH), 999.0f, 0.5f,</div>
-<div class="line"><a id="l00570" name="l00570"></a><span class="lineno">  570</span>                                       statusColor.withAlpha(m_signedIn ? 0.35f : 0.22f));</div>
-<div class="line"><a id="l00571" name="l00571"></a><span class="lineno">  571</span>            drawIconLabel(renderer, statusIcon, statusText, px + 14.0f, px + 24.0f,</div>
-<div class="line"><a id="l00572" name="l00572"></a><span class="lineno">  572</span>                          py + pillH * 0.5f, 14.0f, props.fontSizeS, statusColor, statusColor);</div>
-<div class="line"><a id="l00573" name="l00573"></a><span class="lineno">  573</span>        }</div>
-<div class="line"><a id="l00574" name="l00574"></a><span class="lineno">  574</span> </div>
-<div class="line"><a id="l00575" name="l00575"></a><span class="lineno">  575</span>        <span class="comment">// Account meta rows. Icon + label share one centre line via drawIconLabel</span></div>
-<div class="line"><a id="l00576" name="l00576"></a><span class="lineno">  576</span>        <span class="comment">// so they sit level; the old {cx+20, cy+2} text offset rendered ~5px low.</span></div>
-<div class="line"><a id="l00577" name="l00577"></a><span class="lineno">  577</span>        <span class="keyword">const</span> <a class="code hl_struct" href="../../d2/d25/structAestraUI_1_1NUIColor.html">AestraUI::NUIColor</a> metaIcon = textSecondary.withAlpha(0.6f);</div>
-<div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span>        drawIconLabel(renderer, <span class="stringliteral">&quot;mail&quot;</span>,</div>
-<div class="line"><a id="l00579" name="l00579"></a><span class="lineno">  579</span>                      m_accountLabel-&gt;getText().empty() ? <span class="stringliteral">&quot;Account unavailable&quot;</span> : m_accountLabel-&gt;getText(),</div>
-<div class="line"><a id="l00580" name="l00580"></a><span class="lineno">  580</span>                      cx + 7.0f, cx + 20.0f, cy + 7.0f, 15.0f, props.fontSizeM, metaIcon, textSecondary);</div>
-<div class="line"><a id="l00581" name="l00581"></a><span class="lineno">  581</span>        cy += 22.0f;</div>
-<div class="line"><a id="l00582" name="l00582"></a><span class="lineno">  582</span>        drawIconLabel(renderer, <span class="stringliteral">&quot;file-badge&quot;</span>,</div>
-<div class="line"><a id="l00583" name="l00583"></a><span class="lineno">  583</span>                      m_verificationLabel-&gt;getText().empty() ? <span class="stringliteral">&quot;Signed lease \u00b7 verified locally&quot;</span></div>
-<div class="line"><a id="l00584" name="l00584"></a><span class="lineno">  584</span>                                                             : m_verificationLabel-&gt;getText(),</div>
-<div class="line"><a id="l00585" name="l00585"></a><span class="lineno">  585</span>                      cx + 7.0f, cx + 20.0f, cy + 7.0f, 15.0f, props.fontSizeM, metaIcon, textSecondary);</div>
-<div class="line"><a id="l00586" name="l00586"></a><span class="lineno">  586</span>        cy += 22.0f;</div>
-<div class="line"><a id="l00587" name="l00587"></a><span class="lineno">  587</span>        drawIconLabel(renderer, <span class="stringliteral">&quot;clock&quot;</span>, <span class="stringliteral">&quot;Last refresh: this session&quot;</span>,</div>
-<div class="line"><a id="l00588" name="l00588"></a><span class="lineno">  588</span>                      cx + 7.0f, cx + 20.0f, cy + 7.0f, 15.0f, props.fontSizeM, metaIcon, textSecondary);</div>
-<div class="line"><a id="l00589" name="l00589"></a><span class="lineno">  589</span>    }</div>
-<div class="line"><a id="l00590" name="l00590"></a><span class="lineno">  590</span> </div>
-<div class="line"><a id="l00591" name="l00591"></a><span class="lineno">  591</span>    <span class="comment">// --- 2. FEATURES CARD ---</span></div>
-<div class="line"><a id="l00592" name="l00592"></a><span class="lineno">  592</span>    {</div>
-<div class="line"><a id="l00593" name="l00593"></a><span class="lineno">  593</span>        <span class="keyword">const</span> <span class="keyword">auto</span>&amp; cb = m_featuresCardBounds;</div>
-<div class="line"><a id="l00594" name="l00594"></a><span class="lineno">  594</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> r = 12.0f;</div>
-<div class="line"><a id="l00595" name="l00595"></a><span class="lineno">  595</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8edd36aab59578f6c121fae6046db289">fillRoundedRect</a>(cb, r, bgPrimary);</div>
-<div class="line"><a id="l00596" name="l00596"></a><span class="lineno">  596</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8ca30417ddb0b0523e3d9e9ba3eaefdf">strokeRoundedRect</a>(cb, r, 0.5f, borderFaint);</div>
-<div class="line"><a id="l00597" name="l00597"></a><span class="lineno">  597</span> </div>
-<div class="line"><a id="l00598" name="l00598"></a><span class="lineno">  598</span>        <span class="keywordtype">float</span> fx = cb.x + 18.0f;</div>
-<div class="line"><a id="l00599" name="l00599"></a><span class="lineno">  599</span>        <span class="keywordtype">float</span> fy = cb.y + 16.0f;</div>
-<div class="line"><a id="l00600" name="l00600"></a><span class="lineno">  600</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">drawText</a>(<span class="stringliteral">&quot;FEATURES&quot;</span>, {fx, fy}, props.fontSizeS, textTertiary);</div>
-<div class="line"><a id="l00601" name="l00601"></a><span class="lineno">  601</span>        fy += 24.0f;</div>
+<div class="line"><a id="l00515" name="l00515"></a><span class="lineno">  515</span><span class="comment">// Board 2&#39;s form. FD-57: Aestra and its plugins are free, so this page is about the account, not a tier card.</span></div>
+<div class="line"><a id="l00516" name="l00516"></a><span class="lineno">  516</span><span class="keywordtype">void</span> MembershipSettingsPage::onRender(<a class="code hl_class" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">AestraUI::NUIRenderer</a>&amp; renderer) {</div>
+<div class="line"><a id="l00517" name="l00517"></a><span class="lineno">  517</span>    <span class="keyword">auto</span>&amp; theme = AestraUI::NUIThemeManager::getInstance();</div>
+<div class="line"><a id="l00518" name="l00518"></a><span class="lineno">  518</span>    <span class="keyword">const</span> <span class="keyword">auto</span>&amp; props = theme.getCurrentTheme();</div>
+<div class="line"><a id="l00519" name="l00519"></a><span class="lineno">  519</span>    <span class="keyword">const</span> <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> b = <a class="code hl_function" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a8ff75e00805b13ff9a6babd21f6cc556">getBounds</a>();</div>
+<div class="line"><a id="l00520" name="l00520"></a><span class="lineno">  520</span>    <span class="keywordflow">if</span> (b.isEmpty())</div>
+<div class="line"><a id="l00521" name="l00521"></a><span class="lineno">  521</span>        <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00522" name="l00522"></a><span class="lineno">  522</span>    <span class="keyword">const</span> <span class="keyword">auto</span> textPrimary = theme.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>);</div>
+<div class="line"><a id="l00523" name="l00523"></a><span class="lineno">  523</span>    <span class="keyword">const</span> <span class="keyword">auto</span> textSecondary = theme.getColor(<span class="stringliteral">&quot;textSecondary&quot;</span>);</div>
+<div class="line"><a id="l00524" name="l00524"></a><span class="lineno">  524</span>    <span class="keyword">const</span> <span class="keyword">auto</span> textMuted = theme.getColor(<span class="stringliteral">&quot;textMuted&quot;</span>);</div>
+<div class="line"><a id="l00525" name="l00525"></a><span class="lineno">  525</span>    <span class="keyword">const</span> <span class="keyword">auto</span> textSuccess = theme.getColor(<span class="stringliteral">&quot;success&quot;</span>);</div>
+<div class="line"><a id="l00526" name="l00526"></a><span class="lineno">  526</span>    <span class="keyword">const</span> <span class="keyword">auto</span> textDanger = theme.getColor(<span class="stringliteral">&quot;error&quot;</span>);</div>
+<div class="line"><a id="l00527" name="l00527"></a><span class="lineno">  527</span> </div>
+<div class="line"><a id="l00528" name="l00528"></a><span class="lineno">  528</span>    m_form.<a class="code hl_function" href="../../d6/dfb/classAestra_1_1SettingsForm.html#a435059286fae1d7ec86d06b988b9c06e">paint</a>(renderer);</div>
+<div class="line"><a id="l00529" name="l00529"></a><span class="lineno">  529</span>    renderer.setClipRect(m_form.area());</div>
+<div class="line"><a id="l00530" name="l00530"></a><span class="lineno">  530</span>    renderChildren(renderer);</div>
+<div class="line"><a id="l00531" name="l00531"></a><span class="lineno">  531</span> </div>
+<div class="line"><a id="l00532" name="l00532"></a><span class="lineno">  532</span>    <span class="comment">// What membership means today, in plain words.</span></div>
+<div class="line"><a id="l00533" name="l00533"></a><span class="lineno">  533</span>    <span class="keywordflow">if</span> (m_aboutItem != SIZE_MAX) {</div>
+<div class="line"><a id="l00534" name="l00534"></a><span class="lineno">  534</span>        <span class="keyword">const</span> <span class="keyword">auto</span> about = m_form.<a class="code hl_function" href="../../d6/dfb/classAestra_1_1SettingsForm.html#a8c57c87b9daf32eb25e2b87864d0250f">boundsOf</a>(m_aboutItem);</div>
+<div class="line"><a id="l00535" name="l00535"></a><span class="lineno">  535</span>        <span class="keyword">const</span> <span class="keywordtype">char</span>* lines[] = {</div>
+<div class="line"><a id="l00536" name="l00536"></a><span class="lineno">  536</span>            <span class="stringliteral">&quot;Aestra, every plugin it makes, and Muse on your own computer are free for everyone.&quot;</span>,</div>
+<div class="line"><a id="l00537" name="l00537"></a><span class="lineno">  537</span>            <span class="stringliteral">&quot;Supporter, when it opens, pays for what costs us money to run: shared projects,&quot;</span>,</div>
+<div class="line"><a id="l00538" name="l00538"></a><span class="lineno">  538</span>            <span class="stringliteral">&quot;online storage and the parts of Muse that run on our servers.&quot;</span>,</div>
+<div class="line"><a id="l00539" name="l00539"></a><span class="lineno">  539</span>        };</div>
+<div class="line"><a id="l00540" name="l00540"></a><span class="lineno">  540</span>        <span class="keywordtype">float</span> y = about.y + 12.0f;</div>
+<div class="line"><a id="l00541" name="l00541"></a><span class="lineno">  541</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keywordtype">char</span>* line : lines) {</div>
+<div class="line"><a id="l00542" name="l00542"></a><span class="lineno">  542</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">drawText</a>(line, {about.x, y}, 12.5f, textSecondary);</div>
+<div class="line"><a id="l00543" name="l00543"></a><span class="lineno">  543</span>            y += 18.0f;</div>
+<div class="line"><a id="l00544" name="l00544"></a><span class="lineno">  544</span>        }</div>
+<div class="line"><a id="l00545" name="l00545"></a><span class="lineno">  545</span>    }</div>
+<div class="line"><a id="l00546" name="l00546"></a><span class="lineno">  546</span>    <span class="comment">// Feedback from Send code / Verify / Refresh, under the rows it came from.</span></div>
+<div class="line"><a id="l00547" name="l00547"></a><span class="lineno">  547</span>    <span class="keyword">const</span> std::string&amp; message = !m_signInMessage.empty() ? m_signInMessage : m_actionErrorMessage;</div>
+<div class="line"><a id="l00548" name="l00548"></a><span class="lineno">  548</span>    <span class="keywordflow">if</span> (!message.empty() &amp;&amp; m_messageItem != SIZE_MAX) {</div>
+<div class="line"><a id="l00549" name="l00549"></a><span class="lineno">  549</span>        <span class="keyword">const</span> <span class="keyword">auto</span> row = m_form.<a class="code hl_function" href="../../d6/dfb/classAestra_1_1SettingsForm.html#a8c57c87b9daf32eb25e2b87864d0250f">boundsOf</a>(m_messageItem);</div>
+<div class="line"><a id="l00550" name="l00550"></a><span class="lineno">  550</span>        <span class="keyword">const</span> <span class="keywordtype">bool</span> positive =</div>
+<div class="line"><a id="l00551" name="l00551"></a><span class="lineno">  551</span>            message.find(<span class="stringliteral">&quot;sent&quot;</span>) != std::string::npos || message.find(<span class="stringliteral">&quot;Signed in&quot;</span>) != std::string::npos;</div>
+<div class="line"><a id="l00552" name="l00552"></a><span class="lineno">  552</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">drawText</a>(message, {row.x, renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a7cef2d4a1418396f273e2b1afd8660fe">calculateTextY</a>(row, 12.0f)}, 12.0f,</div>
+<div class="line"><a id="l00553" name="l00553"></a><span class="lineno">  553</span>                          positive ? textSuccess : (m_actionErrorMessage == message ? textDanger : textMuted));</div>
+<div class="line"><a id="l00554" name="l00554"></a><span class="lineno">  554</span>    }</div>
+<div class="line"><a id="l00555" name="l00555"></a><span class="lineno">  555</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a54f60f3fc2af410bce11eee76e28cc36">clearClipRect</a>();</div>
+<div class="line"><a id="l00556" name="l00556"></a><span class="lineno">  556</span>    (void)textPrimary;</div>
+<div class="line"><a id="l00557" name="l00557"></a><span class="lineno">  557</span> </div>
+<div class="line"><a id="l00558" name="l00558"></a><span class="lineno">  558</span>    <span class="comment">// --- 6. SIGN-OUT CONFIRMATION OVERLAY ---</span></div>
+<div class="line"><a id="l00559" name="l00559"></a><span class="lineno">  559</span>    <span class="keywordflow">if</span> (m_showingSignOutConfirm) {</div>
+<div class="line"><a id="l00560" name="l00560"></a><span class="lineno">  560</span>        <span class="comment">// Dim overlay</span></div>
+<div class="line"><a id="l00561" name="l00561"></a><span class="lineno">  561</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4">fillRect</a>(b, theme.getColor(<span class="stringliteral">&quot;overlay&quot;</span>));</div>
+<div class="line"><a id="l00562" name="l00562"></a><span class="lineno">  562</span> </div>
+<div class="line"><a id="l00563" name="l00563"></a><span class="lineno">  563</span>        <span class="comment">// Dialog</span></div>
+<div class="line"><a id="l00564" name="l00564"></a><span class="lineno">  564</span>        <span class="keyword">auto</span>&amp; db = m_confirmDialogBounds;</div>
+<div class="line"><a id="l00565" name="l00565"></a><span class="lineno">  565</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8edd36aab59578f6c121fae6046db289">fillRoundedRect</a>(db, props.radiusL, theme.getColor(<span class="stringliteral">&quot;elevatedPanel&quot;</span>));</div>
+<div class="line"><a id="l00566" name="l00566"></a><span class="lineno">  566</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8ca30417ddb0b0523e3d9e9ba3eaefdf">strokeRoundedRect</a>(db, props.radiusL, props.layout.dividerWidth, theme.getColor(<span class="stringliteral">&quot;borderStrong&quot;</span>));</div>
+<div class="line"><a id="l00567" name="l00567"></a><span class="lineno">  567</span> </div>
+<div class="line"><a id="l00568" name="l00568"></a><span class="lineno">  568</span>        <span class="keywordtype">float</span> dx = db.x + 24.0f;</div>
+<div class="line"><a id="l00569" name="l00569"></a><span class="lineno">  569</span>        <span class="keywordtype">float</span> dy = db.y + 28.0f;</div>
+<div class="line"><a id="l00570" name="l00570"></a><span class="lineno">  570</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">drawText</a>(<span class="stringliteral">&quot;Sign out of Aestra?&quot;</span>, {dx, dy}, props.fontSizeXL, textPrimary);</div>
+<div class="line"><a id="l00571" name="l00571"></a><span class="lineno">  571</span>        dy += 26.0f;</div>
+<div class="line"><a id="l00572" name="l00572"></a><span class="lineno">  572</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">drawText</a>(<span class="stringliteral">&quot;Your local license cache will be cleared. You&#39;ll need to sign in&quot;</span>,</div>
+<div class="line"><a id="l00573" name="l00573"></a><span class="lineno">  573</span>                          {dx, dy}, props.fontSizeM, textSecondary);</div>
+<div class="line"><a id="l00574" name="l00574"></a><span class="lineno">  574</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">drawText</a>(<span class="stringliteral">&quot;again to access your membership features.&quot;</span>,</div>
+<div class="line"><a id="l00575" name="l00575"></a><span class="lineno">  575</span>                          {dx, dy + 16.0f}, props.fontSizeM, textSecondary);</div>
+<div class="line"><a id="l00576" name="l00576"></a><span class="lineno">  576</span> </div>
+<div class="line"><a id="l00577" name="l00577"></a><span class="lineno">  577</span>        <span class="comment">// Cancel button</span></div>
+<div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span>        {</div>
+<div class="line"><a id="l00579" name="l00579"></a><span class="lineno">  579</span>            <span class="keyword">const</span> <span class="keyword">auto</span>&amp; btn = m_confirmCancelBtnBounds;</div>
+<div class="line"><a id="l00580" name="l00580"></a><span class="lineno">  580</span>            <span class="keyword">auto</span> btnBg = m_confirmPressedButton == 0 ? theme.getColor(<span class="stringliteral">&quot;controlPressed&quot;</span>)</div>
+<div class="line"><a id="l00581" name="l00581"></a><span class="lineno">  581</span>                                                     : m_confirmCancelHovered ? theme.getColor(<span class="stringliteral">&quot;controlHover&quot;</span>)</div>
+<div class="line"><a id="l00582" name="l00582"></a><span class="lineno">  582</span>                                                                               : theme.getColor(<span class="stringliteral">&quot;controlBackground&quot;</span>);</div>
+<div class="line"><a id="l00583" name="l00583"></a><span class="lineno">  583</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8edd36aab59578f6c121fae6046db289">fillRoundedRect</a>(btn, props.radiusM, btnBg);</div>
+<div class="line"><a id="l00584" name="l00584"></a><span class="lineno">  584</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8ca30417ddb0b0523e3d9e9ba3eaefdf">strokeRoundedRect</a>(btn, props.radiusM, props.layout.dividerWidth,</div>
+<div class="line"><a id="l00585" name="l00585"></a><span class="lineno">  585</span>                                       theme.getColor(<span class="stringliteral">&quot;borderStrong&quot;</span>));</div>
+<div class="line"><a id="l00586" name="l00586"></a><span class="lineno">  586</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#aa89fb8461f9b876452eee397232544bf">drawTextCentered</a>(<span class="stringliteral">&quot;Cancel&quot;</span>, btn, props.fontSizeM, textSecondary);</div>
+<div class="line"><a id="l00587" name="l00587"></a><span class="lineno">  587</span>        }</div>
+<div class="line"><a id="l00588" name="l00588"></a><span class="lineno">  588</span> </div>
+<div class="line"><a id="l00589" name="l00589"></a><span class="lineno">  589</span>        <span class="comment">// Sign out button (danger)</span></div>
+<div class="line"><a id="l00590" name="l00590"></a><span class="lineno">  590</span>        {</div>
+<div class="line"><a id="l00591" name="l00591"></a><span class="lineno">  591</span>            <span class="keyword">const</span> <span class="keyword">auto</span>&amp; btn = m_confirmSignOutBtnBounds;</div>
+<div class="line"><a id="l00592" name="l00592"></a><span class="lineno">  592</span>            <span class="keyword">auto</span> btnBg = m_confirmPressedButton == 1 ? textDanger.withAlpha(0.26f)</div>
+<div class="line"><a id="l00593" name="l00593"></a><span class="lineno">  593</span>                                                     : m_confirmSignOutHovered ? textDanger.withAlpha(0.18f)</div>
+<div class="line"><a id="l00594" name="l00594"></a><span class="lineno">  594</span>                                                                                 : textDanger.withAlpha(0.08f);</div>
+<div class="line"><a id="l00595" name="l00595"></a><span class="lineno">  595</span>            <span class="keyword">auto</span> btnBorder = textDanger.withAlpha(0.45f);</div>
+<div class="line"><a id="l00596" name="l00596"></a><span class="lineno">  596</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8edd36aab59578f6c121fae6046db289">fillRoundedRect</a>(btn, props.radiusM, btnBg);</div>
+<div class="line"><a id="l00597" name="l00597"></a><span class="lineno">  597</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8ca30417ddb0b0523e3d9e9ba3eaefdf">strokeRoundedRect</a>(btn, props.radiusM, props.layout.dividerWidth, btnBorder);</div>
+<div class="line"><a id="l00598" name="l00598"></a><span class="lineno">  598</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#aa89fb8461f9b876452eee397232544bf">drawTextCentered</a>(<span class="stringliteral">&quot;Sign out&quot;</span>, btn, props.fontSizeM, textDanger);</div>
+<div class="line"><a id="l00599" name="l00599"></a><span class="lineno">  599</span>        }</div>
+<div class="line"><a id="l00600" name="l00600"></a><span class="lineno">  600</span>    }</div>
+<div class="line"><a id="l00601" name="l00601"></a><span class="lineno">  601</span>}</div>
 <div class="line"><a id="l00602" name="l00602"></a><span class="lineno">  602</span> </div>
-<div class="line"><a id="l00603" name="l00603"></a><span class="lineno">  603</span>        <span class="keyword">struct </span>FeatureChip { <span class="keyword">const</span> <span class="keywordtype">char</span>* <a class="code hl_function" href="../../d3/d6c/namespaceAestra_1_1VersionLanes.html#ac0a166ab89427132371d511b9c8ab004">label</a>; <span class="keyword">const</span> <span class="keywordtype">char</span>* iconName; <span class="keyword">const</span> <span class="keywordtype">char</span>* statusIcon; <span class="keywordtype">bool</span> unlocked; };</div>
-<div class="line"><a id="l00604" name="l00604"></a><span class="lineno">  604</span>        FeatureChip chips[] = {</div>
-<div class="line"><a id="l00605" name="l00605"></a><span class="lineno">  605</span>            {<span class="stringliteral">&quot;Core DAW&quot;</span>, <span class="stringliteral">&quot;monitor&quot;</span>, <span class="stringliteral">&quot;check&quot;</span>, <span class="keyword">true</span>},</div>
-<div class="line"><a id="l00606" name="l00606"></a><span class="lineno">  606</span>            {<span class="stringliteral">&quot;Aestra Rumble&quot;</span>, <span class="stringliteral">&quot;activity&quot;</span>, <span class="stringliteral">&quot;check&quot;</span>, <span class="keyword">true</span>},</div>
-<div class="line"><a id="l00607" name="l00607"></a><span class="lineno">  607</span>            {<span class="stringliteral">&quot;Rumble Headless&quot;</span>, <span class="stringliteral">&quot;headphones&quot;</span>, <span class="stringliteral">&quot;check&quot;</span>, <span class="keyword">true</span>},</div>
-<div class="line"><a id="l00608" name="l00608"></a><span class="lineno">  608</span>            {<span class="stringliteral">&quot;Plugin Bundle&quot;</span>, <span class="stringliteral">&quot;layers&quot;</span>, <span class="stringliteral">&quot;check&quot;</span>, <span class="keyword">true</span>},</div>
-<div class="line"><a id="l00609" name="l00609"></a><span class="lineno">  609</span>            {<span class="stringliteral">&quot;Supporter Badge&quot;</span>, <span class="stringliteral">&quot;award&quot;</span>, <span class="stringliteral">&quot;check&quot;</span>, <span class="keyword">true</span>},</div>
-<div class="line"><a id="l00610" name="l00610"></a><span class="lineno">  610</span>            {<span class="stringliteral">&quot;Founder Badge&quot;</span>, <span class="stringliteral">&quot;crown&quot;</span>, <span class="stringliteral">&quot;check&quot;</span>, <span class="keyword">true</span>},</div>
-<div class="line"><a id="l00611" name="l00611"></a><span class="lineno">  611</span>            {<span class="stringliteral">&quot;Cloud Sync&quot;</span>, <span class="stringliteral">&quot;cloud&quot;</span>, <span class="stringliteral">&quot;lock&quot;</span>, <span class="keyword">false</span>},</div>
-<div class="line"><a id="l00612" name="l00612"></a><span class="lineno">  612</span>            {<span class="stringliteral">&quot;Early Access&quot;</span>, <span class="stringliteral">&quot;zap&quot;</span>, <span class="stringliteral">&quot;lock&quot;</span>, <span class="keyword">false</span>},</div>
-<div class="line"><a id="l00613" name="l00613"></a><span class="lineno">  613</span>        };</div>
-<div class="line"><a id="l00614" name="l00614"></a><span class="lineno">  614</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> chipH = 30.0f;</div>
-<div class="line"><a id="l00615" name="l00615"></a><span class="lineno">  615</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> chipGap = 8.0f;</div>
-<div class="line"><a id="l00616" name="l00616"></a><span class="lineno">  616</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> colW = (cb.width - 36.0f - chipGap) * 0.5f;</div>
-<div class="line"><a id="l00617" name="l00617"></a><span class="lineno">  617</span> </div>
-<div class="line"><a id="l00618" name="l00618"></a><span class="lineno">  618</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; 8; ++i) {</div>
-<div class="line"><a id="l00619" name="l00619"></a><span class="lineno">  619</span>            <span class="keywordtype">float</span> col = i % 2;</div>
-<div class="line"><a id="l00620" name="l00620"></a><span class="lineno">  620</span>            <span class="keywordtype">float</span> row = i / 2;</div>
-<div class="line"><a id="l00621" name="l00621"></a><span class="lineno">  621</span>            <span class="keywordtype">float</span> chipX = fx + col * (colW + chipGap);</div>
-<div class="line"><a id="l00622" name="l00622"></a><span class="lineno">  622</span>            <span class="keywordtype">float</span> chipY = fy + row * (chipH + chipGap);</div>
-<div class="line"><a id="l00623" name="l00623"></a><span class="lineno">  623</span>            <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> chipRect(chipX, chipY, colW, chipH);</div>
-<div class="line"><a id="l00624" name="l00624"></a><span class="lineno">  624</span> </div>
-<div class="line"><a id="l00625" name="l00625"></a><span class="lineno">  625</span>            <span class="comment">// Entire locked chip at 0.45 opacity</span></div>
-<div class="line"><a id="l00626" name="l00626"></a><span class="lineno">  626</span>            <span class="keyword">auto</span> chipBg = chips[i].unlocked ? bgTertiary : bgTertiary.withAlpha(0.45f);</div>
-<div class="line"><a id="l00627" name="l00627"></a><span class="lineno">  627</span>            <span class="keyword">auto</span> chipBorder = chips[i].unlocked ? borderFaint : borderFaint.withAlpha(0.45f);</div>
-<div class="line"><a id="l00628" name="l00628"></a><span class="lineno">  628</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8edd36aab59578f6c121fae6046db289">fillRoundedRect</a>(chipRect, 8.0f, chipBg);</div>
-<div class="line"><a id="l00629" name="l00629"></a><span class="lineno">  629</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8ca30417ddb0b0523e3d9e9ba3eaefdf">strokeRoundedRect</a>(chipRect, 8.0f, 0.5f, chipBorder);</div>
-<div class="line"><a id="l00630" name="l00630"></a><span class="lineno">  630</span> </div>
-<div class="line"><a id="l00631" name="l00631"></a><span class="lineno">  631</span>            <span class="keyword">auto</span> chipTextCol = chips[i].unlocked ? textPrimary : textPrimary.withAlpha(0.45f);</div>
-<div class="line"><a id="l00632" name="l00632"></a><span class="lineno">  632</span>            <span class="keywordtype">float</span> midY = chipY + chipH * 0.5f;</div>
-<div class="line"><a id="l00633" name="l00633"></a><span class="lineno">  633</span>            <span class="keywordtype">float</span> ix = chipX + 10.0f;</div>
-<div class="line"><a id="l00634" name="l00634"></a><span class="lineno">  634</span> </div>
-<div class="line"><a id="l00635" name="l00635"></a><span class="lineno">  635</span>            <span class="keywordflow">if</span> (chips[i].unlocked) {</div>
-<div class="line"><a id="l00636" name="l00636"></a><span class="lineno">  636</span>                drawMembershipIcon(renderer, chips[i].statusIcon, ix, midY, 14.0f, textSuccess);</div>
-<div class="line"><a id="l00637" name="l00637"></a><span class="lineno">  637</span>            } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00638" name="l00638"></a><span class="lineno">  638</span>                drawMembershipIcon(renderer, chips[i].statusIcon, ix, midY, 14.0f, textTertiary.withAlpha(0.45f));</div>
+<div class="line"><a id="l00603" name="l00603"></a><span class="lineno">  603</span><span class="keywordtype">void</span> MembershipSettingsPage::onResize(<span class="keywordtype">int</span> width, <span class="keywordtype">int</span> height) {</div>
+<div class="line"><a id="l00604" name="l00604"></a><span class="lineno">  604</span>    AestraUI::NUIComponent::onResize(width, height);</div>
+<div class="line"><a id="l00605" name="l00605"></a><span class="lineno">  605</span>    layoutComponents();</div>
+<div class="line"><a id="l00606" name="l00606"></a><span class="lineno">  606</span>}</div>
+<div class="line"><a id="l00607" name="l00607"></a><span class="lineno">  607</span> </div>
+<div class="line"><a id="l00608" name="l00608"></a><span class="lineno">  608</span><span class="keywordtype">bool</span> MembershipSettingsPage::onMouseEvent(<span class="keyword">const</span> <a class="code hl_struct" href="../../db/d1d/structAestraUI_1_1NUIMouseEvent.html">AestraUI::NUIMouseEvent</a>&amp; event) {</div>
+<div class="line"><a id="l00609" name="l00609"></a><span class="lineno">  609</span>    <span class="keywordtype">float</span> mx = <span class="keyword">event</span>.position.x;</div>
+<div class="line"><a id="l00610" name="l00610"></a><span class="lineno">  610</span>    <span class="keywordtype">float</span> my = <span class="keyword">event</span>.position.y;</div>
+<div class="line"><a id="l00611" name="l00611"></a><span class="lineno">  611</span> </div>
+<div class="line"><a id="l00612" name="l00612"></a><span class="lineno">  612</span>    <span class="comment">// Sign-out confirmation overlay takes priority</span></div>
+<div class="line"><a id="l00613" name="l00613"></a><span class="lineno">  613</span>    <span class="keywordflow">if</span> (m_showingSignOutConfirm) {</div>
+<div class="line"><a id="l00614" name="l00614"></a><span class="lineno">  614</span>        <span class="comment">// Update hover states based on current position</span></div>
+<div class="line"><a id="l00615" name="l00615"></a><span class="lineno">  615</span>        <span class="keywordtype">bool</span> oldCancel = m_confirmCancelHovered;</div>
+<div class="line"><a id="l00616" name="l00616"></a><span class="lineno">  616</span>        <span class="keywordtype">bool</span> oldSignOut = m_confirmSignOutHovered;</div>
+<div class="line"><a id="l00617" name="l00617"></a><span class="lineno">  617</span>        m_confirmCancelHovered = m_confirmCancelBtnBounds.contains(mx, my);</div>
+<div class="line"><a id="l00618" name="l00618"></a><span class="lineno">  618</span>        m_confirmSignOutHovered = m_confirmSignOutBtnBounds.contains(mx, my);</div>
+<div class="line"><a id="l00619" name="l00619"></a><span class="lineno">  619</span>        <span class="keywordflow">if</span> (oldCancel != m_confirmCancelHovered || oldSignOut != m_confirmSignOutHovered) {</div>
+<div class="line"><a id="l00620" name="l00620"></a><span class="lineno">  620</span>            repaint();</div>
+<div class="line"><a id="l00621" name="l00621"></a><span class="lineno">  621</span>        }</div>
+<div class="line"><a id="l00622" name="l00622"></a><span class="lineno">  622</span> </div>
+<div class="line"><a id="l00623" name="l00623"></a><span class="lineno">  623</span>        <span class="keywordflow">if</span> (event.button == AestraUI::NUIMouseButton::Left &amp;&amp; event.pressed) {</div>
+<div class="line"><a id="l00624" name="l00624"></a><span class="lineno">  624</span>            m_confirmPressedButton = m_confirmCancelHovered ? 0</div>
+<div class="line"><a id="l00625" name="l00625"></a><span class="lineno">  625</span>                                     : m_confirmSignOutHovered ? 1</div>
+<div class="line"><a id="l00626" name="l00626"></a><span class="lineno">  626</span>                                     : !m_confirmDialogBounds.contains(mx, my) ? 2</div>
+<div class="line"><a id="l00627" name="l00627"></a><span class="lineno">  627</span>                                                                                : -1;</div>
+<div class="line"><a id="l00628" name="l00628"></a><span class="lineno">  628</span>            repaint();</div>
+<div class="line"><a id="l00629" name="l00629"></a><span class="lineno">  629</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00630" name="l00630"></a><span class="lineno">  630</span>        }</div>
+<div class="line"><a id="l00631" name="l00631"></a><span class="lineno">  631</span>        <span class="keywordflow">if</span> (event.button == AestraUI::NUIMouseButton::Left &amp;&amp; event.released) {</div>
+<div class="line"><a id="l00632" name="l00632"></a><span class="lineno">  632</span>            <span class="keyword">const</span> <span class="keywordtype">int</span> armedButton = m_confirmPressedButton;</div>
+<div class="line"><a id="l00633" name="l00633"></a><span class="lineno">  633</span>            m_confirmPressedButton = -1;</div>
+<div class="line"><a id="l00634" name="l00634"></a><span class="lineno">  634</span>            <span class="keywordflow">if</span> ((armedButton == 0 &amp;&amp; m_confirmCancelHovered) ||</div>
+<div class="line"><a id="l00635" name="l00635"></a><span class="lineno">  635</span>                (armedButton == 2 &amp;&amp; !m_confirmDialogBounds.contains(mx, my))) {</div>
+<div class="line"><a id="l00636" name="l00636"></a><span class="lineno">  636</span>                m_showingSignOutConfirm = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00637" name="l00637"></a><span class="lineno">  637</span>                repaint();</div>
+<div class="line"><a id="l00638" name="l00638"></a><span class="lineno">  638</span>                <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
 <div class="line"><a id="l00639" name="l00639"></a><span class="lineno">  639</span>            }</div>
-<div class="line"><a id="l00640" name="l00640"></a><span class="lineno">  640</span> </div>
-<div class="line"><a id="l00641" name="l00641"></a><span class="lineno">  641</span>            <span class="keyword">auto</span> iconCol = chips[i].unlocked ? textSecondary : textSecondary.withAlpha(0.45f);</div>
-<div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span>            drawMembershipIcon(renderer, chips[i].iconName, ix + 20.0f, midY, 14.0f, iconCol);</div>
-<div class="line"><a id="l00643" name="l00643"></a><span class="lineno">  643</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">drawText</a>(chips[i].label,</div>
-<div class="line"><a id="l00644" name="l00644"></a><span class="lineno">  644</span>                              {ix + 36.0f, renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a7cef2d4a1418396f273e2b1afd8660fe">calculateTextY</a>(chipRect, props.fontSizeM)},</div>
-<div class="line"><a id="l00645" name="l00645"></a><span class="lineno">  645</span>                              props.fontSizeM, chipTextCol);</div>
-<div class="line"><a id="l00646" name="l00646"></a><span class="lineno">  646</span>        }</div>
-<div class="line"><a id="l00647" name="l00647"></a><span class="lineno">  647</span> </div>
-<div class="line"><a id="l00648" name="l00648"></a><span class="lineno">  648</span>        <span class="comment">// Footer note</span></div>
-<div class="line"><a id="l00649" name="l00649"></a><span class="lineno">  649</span>        <span class="keywordtype">float</span> footY = fy + 4.0f * (chipH + chipGap) + 10.0f;</div>
-<div class="line"><a id="l00650" name="l00650"></a><span class="lineno">  650</span>        drawIconLabel(renderer, <span class="stringliteral">&quot;info&quot;</span>, <span class="stringliteral">&quot;Locked features require verified membership&quot;</span>,</div>
-<div class="line"><a id="l00651" name="l00651"></a><span class="lineno">  651</span>                      fx + 7.0f, fx + 22.0f, footY + 7.0f, 14.0f, props.fontSizeS, textTertiary, textTertiary);</div>
-<div class="line"><a id="l00652" name="l00652"></a><span class="lineno">  652</span>    }</div>
-<div class="line"><a id="l00653" name="l00653"></a><span class="lineno">  653</span> </div>
-<div class="line"><a id="l00654" name="l00654"></a><span class="lineno">  654</span>    <span class="comment">// --- 3. SYNC &amp; SESSION CARD ---</span></div>
-<div class="line"><a id="l00655" name="l00655"></a><span class="lineno">  655</span>    <span class="comment">// Hidden on narrow dialogs (layoutComponents collapses it to a zero rect so</span></div>
-<div class="line"><a id="l00656" name="l00656"></a><span class="lineno">  656</span>    <span class="comment">// Features can take the full width).</span></div>
-<div class="line"><a id="l00657" name="l00657"></a><span class="lineno">  657</span>    <span class="keywordflow">if</span> (m_syncCardBounds.width &gt; 0.0f) {</div>
-<div class="line"><a id="l00658" name="l00658"></a><span class="lineno">  658</span>        <span class="keyword">const</span> <span class="keyword">auto</span>&amp; cb = m_syncCardBounds;</div>
-<div class="line"><a id="l00659" name="l00659"></a><span class="lineno">  659</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> r = 12.0f;</div>
-<div class="line"><a id="l00660" name="l00660"></a><span class="lineno">  660</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8edd36aab59578f6c121fae6046db289">fillRoundedRect</a>(cb, r, bgPrimary);</div>
-<div class="line"><a id="l00661" name="l00661"></a><span class="lineno">  661</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8ca30417ddb0b0523e3d9e9ba3eaefdf">strokeRoundedRect</a>(cb, r, 0.5f, borderFaint);</div>
-<div class="line"><a id="l00662" name="l00662"></a><span class="lineno">  662</span> </div>
-<div class="line"><a id="l00663" name="l00663"></a><span class="lineno">  663</span>        <span class="keywordtype">float</span> sx = cb.x + 18.0f;</div>
-<div class="line"><a id="l00664" name="l00664"></a><span class="lineno">  664</span>        <span class="keywordtype">float</span> sy = cb.y + 16.0f;</div>
-<div class="line"><a id="l00665" name="l00665"></a><span class="lineno">  665</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">drawText</a>(<span class="stringliteral">&quot;SYNC &amp; SESSION&quot;</span>, {sx, sy}, props.fontSizeS, textTertiary);</div>
-<div class="line"><a id="l00666" name="l00666"></a><span class="lineno">  666</span>        sy += 28.0f;</div>
-<div class="line"><a id="l00667" name="l00667"></a><span class="lineno">  667</span> </div>
-<div class="line"><a id="l00668" name="l00668"></a><span class="lineno">  668</span>        <span class="keyword">struct </span>SyncRow { <span class="keyword">const</span> <span class="keywordtype">char</span>* iconName; <span class="keyword">const</span> <span class="keywordtype">char</span>* <a class="code hl_function" href="../../d3/d6c/namespaceAestra_1_1VersionLanes.html#ac0a166ab89427132371d511b9c8ab004">label</a>; <span class="keyword">const</span> <span class="keywordtype">char</span>* value; <span class="keywordtype">bool</span> muted; };</div>
-<div class="line"><a id="l00669" name="l00669"></a><span class="lineno">  669</span>        SyncRow rows[] = {</div>
-<div class="line"><a id="l00670" name="l00670"></a><span class="lineno">  670</span>            {<span class="stringliteral">&quot;refresh&quot;</span>, <span class="stringliteral">&quot;Last refresh&quot;</span>, m_lastRefreshValue.c_str(), <span class="keyword">true</span>},</div>
-<div class="line"><a id="l00671" name="l00671"></a><span class="lineno">  671</span>            {<span class="stringliteral">&quot;database&quot;</span>, <span class="stringliteral">&quot;Sync mode&quot;</span>, <span class="stringliteral">&quot;Local / offline cache&quot;</span>, <span class="keyword">false</span>},</div>
-<div class="line"><a id="l00672" name="l00672"></a><span class="lineno">  672</span>            {<span class="stringliteral">&quot;key&quot;</span>, <span class="stringliteral">&quot;License type&quot;</span>, <span class="stringliteral">&quot;Signed lease&quot;</span>, <span class="keyword">false</span>},</div>
-<div class="line"><a id="l00673" name="l00673"></a><span class="lineno">  673</span>            {<span class="stringliteral">&quot;laptop&quot;</span>, <span class="stringliteral">&quot;Machine&quot;</span>, <span class="stringliteral">&quot;This device&quot;</span>, <span class="keyword">false</span>},</div>
-<div class="line"><a id="l00674" name="l00674"></a><span class="lineno">  674</span>        };</div>
-<div class="line"><a id="l00675" name="l00675"></a><span class="lineno">  675</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> rowH = 36.0f;</div>
-<div class="line"><a id="l00676" name="l00676"></a><span class="lineno">  676</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; 4; ++i) {</div>
-<div class="line"><a id="l00677" name="l00677"></a><span class="lineno">  677</span>            <span class="keywordtype">float</span> ry = sy + i * rowH;</div>
-<div class="line"><a id="l00678" name="l00678"></a><span class="lineno">  678</span>            <span class="keywordflow">if</span> (i &lt; 3) {</div>
-<div class="line"><a id="l00679" name="l00679"></a><span class="lineno">  679</span>                renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8287a2b8a0d43d3eb03d7354121b4a95">drawLine</a>({sx, ry + rowH}, {cb.right() - 18.0f, ry + rowH}, 0.5f, borderFaint);</div>
-<div class="line"><a id="l00680" name="l00680"></a><span class="lineno">  680</span>            }</div>
-<div class="line"><a id="l00681" name="l00681"></a><span class="lineno">  681</span>            drawMembershipIcon(renderer, rows[i].iconName, sx + 7.0f, ry + rowH * 0.5f, 15.0f, textSecondary.withAlpha(0.6f));</div>
-<div class="line"><a id="l00682" name="l00682"></a><span class="lineno">  682</span>            <span class="keyword">const</span> <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> rowRect(sx, ry, cb.right() - 18.0f - sx, rowH);</div>
-<div class="line"><a id="l00683" name="l00683"></a><span class="lineno">  683</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">drawText</a>(rows[i].label, {sx + 22.0f, renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a7cef2d4a1418396f273e2b1afd8660fe">calculateTextY</a>(rowRect, props.fontSizeM)},</div>
-<div class="line"><a id="l00684" name="l00684"></a><span class="lineno">  684</span>                              props.fontSizeM, textSecondary);</div>
-<div class="line"><a id="l00685" name="l00685"></a><span class="lineno">  685</span>            <span class="keyword">auto</span> valCol = (i == 0 &amp;&amp; m_lastRefreshFailed) ? textDanger</div>
-<div class="line"><a id="l00686" name="l00686"></a><span class="lineno">  686</span>                          : rows[i].muted               ? textTertiary</div>
-<div class="line"><a id="l00687" name="l00687"></a><span class="lineno">  687</span>                                                        : textPrimary;</div>
-<div class="line"><a id="l00688" name="l00688"></a><span class="lineno">  688</span>            <span class="keyword">auto</span> valSize = renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#abe394d6a3fb11601766324bcd8793ac3">measureText</a>(rows[i].value, props.fontSizeM);</div>
-<div class="line"><a id="l00689" name="l00689"></a><span class="lineno">  689</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">drawText</a>(rows[i].value,</div>
-<div class="line"><a id="l00690" name="l00690"></a><span class="lineno">  690</span>                              {cb.right() - 18.0f - valSize.width,</div>
-<div class="line"><a id="l00691" name="l00691"></a><span class="lineno">  691</span>                               renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a7cef2d4a1418396f273e2b1afd8660fe">calculateTextY</a>(rowRect, props.fontSizeM)},</div>
-<div class="line"><a id="l00692" name="l00692"></a><span class="lineno">  692</span>                              props.fontSizeM, valCol);</div>
-<div class="line"><a id="l00693" name="l00693"></a><span class="lineno">  693</span>        }</div>
-<div class="line"><a id="l00694" name="l00694"></a><span class="lineno">  694</span>        <span class="comment">// TODO: bind Sync mode row to actual sync state when Cloud Sync is implemented</span></div>
-<div class="line"><a id="l00695" name="l00695"></a><span class="lineno">  695</span>    }</div>
-<div class="line"><a id="l00696" name="l00696"></a><span class="lineno">  696</span> </div>
-<div class="line"><a id="l00697" name="l00697"></a><span class="lineno">  697</span>    <span class="comment">// --- 4. ACTIONS ROW ---</span></div>
-<div class="line"><a id="l00698" name="l00698"></a><span class="lineno">  698</span>    <span class="comment">// Refresh / Manage / Sign out only make sense for an active account. Drawing</span></div>
-<div class="line"><a id="l00699" name="l00699"></a><span class="lineno">  699</span>    <span class="comment">// them while signed out put a nonsensical &quot;Sign out&quot; beside the sign-in form.</span></div>
-<div class="line"><a id="l00700" name="l00700"></a><span class="lineno">  700</span>    <span class="keywordflow">if</span> (m_signedIn) {</div>
-<div class="line"><a id="l00701" name="l00701"></a><span class="lineno">  701</span>        <span class="keyword">const</span> <span class="keyword">auto</span> drawActionBtn = [&amp;](<span class="keyword">const</span> <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>&amp; rect, <span class="keywordtype">bool</span> hovered,</div>
-<div class="line"><a id="l00702" name="l00702"></a><span class="lineno">  702</span>                                        <span class="keyword">const</span> <span class="keywordtype">char</span>* <a class="code hl_function" href="../../d3/d6c/namespaceAestra_1_1VersionLanes.html#ac0a166ab89427132371d511b9c8ab004">label</a>, <span class="keyword">const</span> <span class="keywordtype">char</span>* iconName, <span class="keywordtype">bool</span> danger) {</div>
-<div class="line"><a id="l00703" name="l00703"></a><span class="lineno">  703</span>            <span class="keyword">auto</span> borderCol = danger ? textDanger.withAlpha(0.35f) : borderSecondary.withAlpha(0.45f);</div>
-<div class="line"><a id="l00704" name="l00704"></a><span class="lineno">  704</span>            <span class="keyword">auto</span> textCol = danger ? textDanger : textSecondary;</div>
-<div class="line"><a id="l00705" name="l00705"></a><span class="lineno">  705</span>            <span class="keyword">auto</span> bg = danger ? AestraUI::NUIColor::transparent() : bgSecondary.withAlpha(0.5f);</div>
-<div class="line"><a id="l00706" name="l00706"></a><span class="lineno">  706</span>            <span class="keywordflow">if</span> (hovered) {</div>
-<div class="line"><a id="l00707" name="l00707"></a><span class="lineno">  707</span>                bg = danger ? textDanger.withAlpha(0.12f) : bgSecondary.withAlpha(0.85f);</div>
-<div class="line"><a id="l00708" name="l00708"></a><span class="lineno">  708</span>                borderCol = danger ? textDanger.withAlpha(0.55f) : borderSecondary.withAlpha(0.65f);</div>
-<div class="line"><a id="l00709" name="l00709"></a><span class="lineno">  709</span>            }</div>
-<div class="line"><a id="l00710" name="l00710"></a><span class="lineno">  710</span>            <span class="keywordflow">if</span> (!danger || hovered) {</div>
-<div class="line"><a id="l00711" name="l00711"></a><span class="lineno">  711</span>                renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8edd36aab59578f6c121fae6046db289">fillRoundedRect</a>(rect, 8.0f, bg);</div>
-<div class="line"><a id="l00712" name="l00712"></a><span class="lineno">  712</span>            }</div>
-<div class="line"><a id="l00713" name="l00713"></a><span class="lineno">  713</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8ca30417ddb0b0523e3d9e9ba3eaefdf">strokeRoundedRect</a>(rect, 8.0f, 0.5f, borderCol);</div>
-<div class="line"><a id="l00714" name="l00714"></a><span class="lineno">  714</span> </div>
-<div class="line"><a id="l00715" name="l00715"></a><span class="lineno">  715</span>            <span class="comment">// Measure content block width (icon + gap + text)</span></div>
-<div class="line"><a id="l00716" name="l00716"></a><span class="lineno">  716</span>            <span class="keyword">auto</span> textSize = renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#abe394d6a3fb11601766324bcd8793ac3">measureText</a>(label, props.fontSizeM);</div>
-<div class="line"><a id="l00717" name="l00717"></a><span class="lineno">  717</span>            <span class="keywordtype">float</span> contentW = 15.0f + 6.0f + textSize.width;</div>
-<div class="line"><a id="l00718" name="l00718"></a><span class="lineno">  718</span>            <span class="keywordtype">float</span> contentX = rect.x + (rect.width - contentW) * 0.5f;</div>
-<div class="line"><a id="l00719" name="l00719"></a><span class="lineno">  719</span>            <span class="keywordtype">float</span> midY = rect.y + rect.height * 0.5f;</div>
-<div class="line"><a id="l00720" name="l00720"></a><span class="lineno">  720</span>            drawMembershipIcon(renderer, iconName, contentX + 7.5f, midY, 15.0f, textCol);</div>
-<div class="line"><a id="l00721" name="l00721"></a><span class="lineno">  721</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">drawText</a>(label, {contentX + 21.0f, renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a7cef2d4a1418396f273e2b1afd8660fe">calculateTextY</a>(rect, props.fontSizeM)},</div>
-<div class="line"><a id="l00722" name="l00722"></a><span class="lineno">  722</span>                              props.fontSizeM, textCol);</div>
-<div class="line"><a id="l00723" name="l00723"></a><span class="lineno">  723</span>        };</div>
-<div class="line"><a id="l00724" name="l00724"></a><span class="lineno">  724</span> </div>
-<div class="line"><a id="l00725" name="l00725"></a><span class="lineno">  725</span>        <span class="keyword">const</span> <span class="keywordtype">char</span>* refreshLabel = m_isRefreshing ? <span class="stringliteral">&quot;Refreshing\u2026&quot;</span> : <span class="stringliteral">&quot;Refresh license&quot;</span>;</div>
-<div class="line"><a id="l00726" name="l00726"></a><span class="lineno">  726</span>        drawActionBtn(m_btnRefreshBounds, m_btnRefreshHovered, refreshLabel, <span class="stringliteral">&quot;refresh&quot;</span>, <span class="keyword">false</span>);</div>
-<div class="line"><a id="l00727" name="l00727"></a><span class="lineno">  727</span>        drawActionBtn(m_btnManageBounds, m_btnManageHovered, <span class="stringliteral">&quot;Manage account&quot;</span>, <span class="stringliteral">&quot;external-link&quot;</span>, <span class="keyword">false</span>);</div>
-<div class="line"><a id="l00728" name="l00728"></a><span class="lineno">  728</span>        drawActionBtn(m_btnSignOutBounds, m_btnSignOutHovered, <span class="stringliteral">&quot;Sign out&quot;</span>, <span class="stringliteral">&quot;log-out&quot;</span>, <span class="keyword">true</span>);</div>
-<div class="line"><a id="l00729" name="l00729"></a><span class="lineno">  729</span> </div>
-<div class="line"><a id="l00730" name="l00730"></a><span class="lineno">  730</span>        <span class="comment">// Inline error below actions row</span></div>
-<div class="line"><a id="l00731" name="l00731"></a><span class="lineno">  731</span>        <span class="keywordflow">if</span> (!m_actionErrorMessage.empty()) {</div>
-<div class="line"><a id="l00732" name="l00732"></a><span class="lineno">  732</span>            <span class="keywordtype">float</span> errY = m_actionsRowBounds.bottom() + 8.0f;</div>
-<div class="line"><a id="l00733" name="l00733"></a><span class="lineno">  733</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">drawText</a>(m_actionErrorMessage, {m_actionsRowBounds.x, errY}, props.fontSizeM, textDanger);</div>
-<div class="line"><a id="l00734" name="l00734"></a><span class="lineno">  734</span>        }</div>
-<div class="line"><a id="l00735" name="l00735"></a><span class="lineno">  735</span>    }</div>
-<div class="line"><a id="l00736" name="l00736"></a><span class="lineno">  736</span> </div>
-<div class="line"><a id="l00737" name="l00737"></a><span class="lineno">  737</span>    <span class="comment">// --- 5. SIGN-IN UI (if needed, rendered above the new design) ---</span></div>
-<div class="line"><a id="l00738" name="l00738"></a><span class="lineno">  738</span>    <span class="keywordflow">if</span> (m_signInTitleLabel &amp;&amp; m_signInTitleLabel-&gt;isVisible()) {</div>
-<div class="line"><a id="l00739" name="l00739"></a><span class="lineno">  739</span>        renderChildren(renderer);</div>
-<div class="line"><a id="l00740" name="l00740"></a><span class="lineno">  740</span> </div>
-<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span>        <span class="comment">// Sign-in feedback (Send Code / Verify) on its own line under the form,</span></div>
-<div class="line"><a id="l00742" name="l00742"></a><span class="lineno">  742</span>        <span class="comment">// left-aligned so it can&#39;t overflow like it did in the SYNC card. &quot;Sent&quot;/</span></div>
-<div class="line"><a id="l00743" name="l00743"></a><span class="lineno">  743</span>        <span class="comment">// &quot;Signed in&quot; reads as positive; everything else is a plain notice.</span></div>
-<div class="line"><a id="l00744" name="l00744"></a><span class="lineno">  744</span>        <span class="keywordflow">if</span> (!m_signInMessage.empty()) {</div>
-<div class="line"><a id="l00745" name="l00745"></a><span class="lineno">  745</span>            <span class="keyword">const</span> <span class="keywordtype">bool</span> positive = m_signInMessage.find(<span class="stringliteral">&quot;sent&quot;</span>) != std::string::npos ||</div>
-<div class="line"><a id="l00746" name="l00746"></a><span class="lineno">  746</span>                                  m_signInMessage.find(<span class="stringliteral">&quot;Signed in&quot;</span>) != std::string::npos;</div>
-<div class="line"><a id="l00747" name="l00747"></a><span class="lineno">  747</span>            <span class="keyword">const</span> <span class="keyword">auto</span> msgColor = positive ? theme.getColor(<span class="stringliteral">&quot;success&quot;</span>) : textSecondary;</div>
-<div class="line"><a id="l00748" name="l00748"></a><span class="lineno">  748</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">drawText</a>(m_signInMessage, {b.x + 20.0f, m_signInFormBottomY + 10.0f},</div>
-<div class="line"><a id="l00749" name="l00749"></a><span class="lineno">  749</span>                              props.fontSizeM, msgColor);</div>
-<div class="line"><a id="l00750" name="l00750"></a><span class="lineno">  750</span>        }</div>
-<div class="line"><a id="l00751" name="l00751"></a><span class="lineno">  751</span>    }</div>
-<div class="line"><a id="l00752" name="l00752"></a><span class="lineno">  752</span> </div>
-<div class="line"><a id="l00753" name="l00753"></a><span class="lineno">  753</span>    <span class="comment">// --- 6. SIGN-OUT CONFIRMATION OVERLAY ---</span></div>
-<div class="line"><a id="l00754" name="l00754"></a><span class="lineno">  754</span>    <span class="keywordflow">if</span> (m_showingSignOutConfirm) {</div>
-<div class="line"><a id="l00755" name="l00755"></a><span class="lineno">  755</span>        <span class="comment">// Dim overlay</span></div>
-<div class="line"><a id="l00756" name="l00756"></a><span class="lineno">  756</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4">fillRect</a>(b, theme.getColor(<span class="stringliteral">&quot;overlay&quot;</span>));</div>
-<div class="line"><a id="l00757" name="l00757"></a><span class="lineno">  757</span> </div>
-<div class="line"><a id="l00758" name="l00758"></a><span class="lineno">  758</span>        <span class="comment">// Dialog</span></div>
-<div class="line"><a id="l00759" name="l00759"></a><span class="lineno">  759</span>        <span class="keyword">auto</span>&amp; db = m_confirmDialogBounds;</div>
-<div class="line"><a id="l00760" name="l00760"></a><span class="lineno">  760</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8edd36aab59578f6c121fae6046db289">fillRoundedRect</a>(db, props.radiusL, theme.getColor(<span class="stringliteral">&quot;elevatedPanel&quot;</span>));</div>
-<div class="line"><a id="l00761" name="l00761"></a><span class="lineno">  761</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8ca30417ddb0b0523e3d9e9ba3eaefdf">strokeRoundedRect</a>(db, props.radiusL, props.layout.dividerWidth, theme.getColor(<span class="stringliteral">&quot;borderStrong&quot;</span>));</div>
-<div class="line"><a id="l00762" name="l00762"></a><span class="lineno">  762</span> </div>
-<div class="line"><a id="l00763" name="l00763"></a><span class="lineno">  763</span>        <span class="keywordtype">float</span> dx = db.x + 24.0f;</div>
-<div class="line"><a id="l00764" name="l00764"></a><span class="lineno">  764</span>        <span class="keywordtype">float</span> dy = db.y + 28.0f;</div>
-<div class="line"><a id="l00765" name="l00765"></a><span class="lineno">  765</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">drawText</a>(<span class="stringliteral">&quot;Sign out of Aestra?&quot;</span>, {dx, dy}, props.fontSizeXL, textPrimary);</div>
-<div class="line"><a id="l00766" name="l00766"></a><span class="lineno">  766</span>        dy += 26.0f;</div>
-<div class="line"><a id="l00767" name="l00767"></a><span class="lineno">  767</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">drawText</a>(<span class="stringliteral">&quot;Your local license cache will be cleared. You&#39;ll need to sign in&quot;</span>,</div>
-<div class="line"><a id="l00768" name="l00768"></a><span class="lineno">  768</span>                          {dx, dy}, props.fontSizeM, textSecondary);</div>
-<div class="line"><a id="l00769" name="l00769"></a><span class="lineno">  769</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">drawText</a>(<span class="stringliteral">&quot;again to access your membership features.&quot;</span>,</div>
-<div class="line"><a id="l00770" name="l00770"></a><span class="lineno">  770</span>                          {dx, dy + 16.0f}, props.fontSizeM, textSecondary);</div>
-<div class="line"><a id="l00771" name="l00771"></a><span class="lineno">  771</span> </div>
-<div class="line"><a id="l00772" name="l00772"></a><span class="lineno">  772</span>        <span class="comment">// Cancel button</span></div>
-<div class="line"><a id="l00773" name="l00773"></a><span class="lineno">  773</span>        {</div>
-<div class="line"><a id="l00774" name="l00774"></a><span class="lineno">  774</span>            <span class="keyword">const</span> <span class="keyword">auto</span>&amp; btn = m_confirmCancelBtnBounds;</div>
-<div class="line"><a id="l00775" name="l00775"></a><span class="lineno">  775</span>            <span class="keyword">auto</span> btnBg = m_confirmPressedButton == 0 ? theme.getColor(<span class="stringliteral">&quot;controlPressed&quot;</span>)</div>
-<div class="line"><a id="l00776" name="l00776"></a><span class="lineno">  776</span>                                                     : m_confirmCancelHovered ? theme.getColor(<span class="stringliteral">&quot;controlHover&quot;</span>)</div>
-<div class="line"><a id="l00777" name="l00777"></a><span class="lineno">  777</span>                                                                               : theme.getColor(<span class="stringliteral">&quot;controlBackground&quot;</span>);</div>
-<div class="line"><a id="l00778" name="l00778"></a><span class="lineno">  778</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8edd36aab59578f6c121fae6046db289">fillRoundedRect</a>(btn, props.radiusM, btnBg);</div>
-<div class="line"><a id="l00779" name="l00779"></a><span class="lineno">  779</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8ca30417ddb0b0523e3d9e9ba3eaefdf">strokeRoundedRect</a>(btn, props.radiusM, props.layout.dividerWidth,</div>
-<div class="line"><a id="l00780" name="l00780"></a><span class="lineno">  780</span>                                       theme.getColor(<span class="stringliteral">&quot;borderStrong&quot;</span>));</div>
-<div class="line"><a id="l00781" name="l00781"></a><span class="lineno">  781</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#aa89fb8461f9b876452eee397232544bf">drawTextCentered</a>(<span class="stringliteral">&quot;Cancel&quot;</span>, btn, props.fontSizeM, textSecondary);</div>
-<div class="line"><a id="l00782" name="l00782"></a><span class="lineno">  782</span>        }</div>
-<div class="line"><a id="l00783" name="l00783"></a><span class="lineno">  783</span> </div>
-<div class="line"><a id="l00784" name="l00784"></a><span class="lineno">  784</span>        <span class="comment">// Sign out button (danger)</span></div>
-<div class="line"><a id="l00785" name="l00785"></a><span class="lineno">  785</span>        {</div>
-<div class="line"><a id="l00786" name="l00786"></a><span class="lineno">  786</span>            <span class="keyword">const</span> <span class="keyword">auto</span>&amp; btn = m_confirmSignOutBtnBounds;</div>
-<div class="line"><a id="l00787" name="l00787"></a><span class="lineno">  787</span>            <span class="keyword">auto</span> btnBg = m_confirmPressedButton == 1 ? textDanger.withAlpha(0.26f)</div>
-<div class="line"><a id="l00788" name="l00788"></a><span class="lineno">  788</span>                                                     : m_confirmSignOutHovered ? textDanger.withAlpha(0.18f)</div>
-<div class="line"><a id="l00789" name="l00789"></a><span class="lineno">  789</span>                                                                                 : textDanger.withAlpha(0.08f);</div>
-<div class="line"><a id="l00790" name="l00790"></a><span class="lineno">  790</span>            <span class="keyword">auto</span> btnBorder = textDanger.withAlpha(0.45f);</div>
-<div class="line"><a id="l00791" name="l00791"></a><span class="lineno">  791</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8edd36aab59578f6c121fae6046db289">fillRoundedRect</a>(btn, props.radiusM, btnBg);</div>
-<div class="line"><a id="l00792" name="l00792"></a><span class="lineno">  792</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8ca30417ddb0b0523e3d9e9ba3eaefdf">strokeRoundedRect</a>(btn, props.radiusM, props.layout.dividerWidth, btnBorder);</div>
-<div class="line"><a id="l00793" name="l00793"></a><span class="lineno">  793</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#aa89fb8461f9b876452eee397232544bf">drawTextCentered</a>(<span class="stringliteral">&quot;Sign out&quot;</span>, btn, props.fontSizeM, textDanger);</div>
-<div class="line"><a id="l00794" name="l00794"></a><span class="lineno">  794</span>        }</div>
-<div class="line"><a id="l00795" name="l00795"></a><span class="lineno">  795</span>    }</div>
-<div class="line"><a id="l00796" name="l00796"></a><span class="lineno">  796</span>}</div>
-<div class="line"><a id="l00797" name="l00797"></a><span class="lineno">  797</span> </div>
-<div class="line"><a id="l00798" name="l00798"></a><span class="lineno">  798</span><span class="keywordtype">void</span> MembershipSettingsPage::onResize(<span class="keywordtype">int</span> width, <span class="keywordtype">int</span> height) {</div>
-<div class="line"><a id="l00799" name="l00799"></a><span class="lineno">  799</span>    AestraUI::NUIComponent::onResize(width, height);</div>
-<div class="line"><a id="l00800" name="l00800"></a><span class="lineno">  800</span>    layoutComponents();</div>
-<div class="line"><a id="l00801" name="l00801"></a><span class="lineno">  801</span>}</div>
-<div class="line"><a id="l00802" name="l00802"></a><span class="lineno">  802</span> </div>
-<div class="line"><a id="l00803" name="l00803"></a><span class="lineno">  803</span><span class="keywordtype">bool</span> MembershipSettingsPage::onMouseEvent(<span class="keyword">const</span> <a class="code hl_struct" href="../../db/d1d/structAestraUI_1_1NUIMouseEvent.html">AestraUI::NUIMouseEvent</a>&amp; event) {</div>
-<div class="line"><a id="l00804" name="l00804"></a><span class="lineno">  804</span>    <span class="keywordtype">float</span> mx = <span class="keyword">event</span>.position.x;</div>
-<div class="line"><a id="l00805" name="l00805"></a><span class="lineno">  805</span>    <span class="keywordtype">float</span> my = <span class="keyword">event</span>.position.y;</div>
-<div class="line"><a id="l00806" name="l00806"></a><span class="lineno">  806</span> </div>
-<div class="line"><a id="l00807" name="l00807"></a><span class="lineno">  807</span>    <span class="comment">// Sign-out confirmation overlay takes priority</span></div>
-<div class="line"><a id="l00808" name="l00808"></a><span class="lineno">  808</span>    <span class="keywordflow">if</span> (m_showingSignOutConfirm) {</div>
-<div class="line"><a id="l00809" name="l00809"></a><span class="lineno">  809</span>        <span class="comment">// Update hover states based on current position</span></div>
-<div class="line"><a id="l00810" name="l00810"></a><span class="lineno">  810</span>        <span class="keywordtype">bool</span> oldCancel = m_confirmCancelHovered;</div>
-<div class="line"><a id="l00811" name="l00811"></a><span class="lineno">  811</span>        <span class="keywordtype">bool</span> oldSignOut = m_confirmSignOutHovered;</div>
-<div class="line"><a id="l00812" name="l00812"></a><span class="lineno">  812</span>        m_confirmCancelHovered = m_confirmCancelBtnBounds.contains(mx, my);</div>
-<div class="line"><a id="l00813" name="l00813"></a><span class="lineno">  813</span>        m_confirmSignOutHovered = m_confirmSignOutBtnBounds.contains(mx, my);</div>
-<div class="line"><a id="l00814" name="l00814"></a><span class="lineno">  814</span>        <span class="keywordflow">if</span> (oldCancel != m_confirmCancelHovered || oldSignOut != m_confirmSignOutHovered) {</div>
-<div class="line"><a id="l00815" name="l00815"></a><span class="lineno">  815</span>            repaint();</div>
-<div class="line"><a id="l00816" name="l00816"></a><span class="lineno">  816</span>        }</div>
-<div class="line"><a id="l00817" name="l00817"></a><span class="lineno">  817</span> </div>
-<div class="line"><a id="l00818" name="l00818"></a><span class="lineno">  818</span>        <span class="keywordflow">if</span> (event.button == AestraUI::NUIMouseButton::Left &amp;&amp; event.pressed) {</div>
-<div class="line"><a id="l00819" name="l00819"></a><span class="lineno">  819</span>            m_confirmPressedButton = m_confirmCancelHovered ? 0</div>
-<div class="line"><a id="l00820" name="l00820"></a><span class="lineno">  820</span>                                     : m_confirmSignOutHovered ? 1</div>
-<div class="line"><a id="l00821" name="l00821"></a><span class="lineno">  821</span>                                     : !m_confirmDialogBounds.contains(mx, my) ? 2</div>
-<div class="line"><a id="l00822" name="l00822"></a><span class="lineno">  822</span>                                                                                : -1;</div>
-<div class="line"><a id="l00823" name="l00823"></a><span class="lineno">  823</span>            repaint();</div>
-<div class="line"><a id="l00824" name="l00824"></a><span class="lineno">  824</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00825" name="l00825"></a><span class="lineno">  825</span>        }</div>
-<div class="line"><a id="l00826" name="l00826"></a><span class="lineno">  826</span>        <span class="keywordflow">if</span> (event.button == AestraUI::NUIMouseButton::Left &amp;&amp; event.released) {</div>
-<div class="line"><a id="l00827" name="l00827"></a><span class="lineno">  827</span>            <span class="keyword">const</span> <span class="keywordtype">int</span> armedButton = m_confirmPressedButton;</div>
-<div class="line"><a id="l00828" name="l00828"></a><span class="lineno">  828</span>            m_confirmPressedButton = -1;</div>
-<div class="line"><a id="l00829" name="l00829"></a><span class="lineno">  829</span>            <span class="keywordflow">if</span> ((armedButton == 0 &amp;&amp; m_confirmCancelHovered) ||</div>
-<div class="line"><a id="l00830" name="l00830"></a><span class="lineno">  830</span>                (armedButton == 2 &amp;&amp; !m_confirmDialogBounds.contains(mx, my))) {</div>
-<div class="line"><a id="l00831" name="l00831"></a><span class="lineno">  831</span>                m_showingSignOutConfirm = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00832" name="l00832"></a><span class="lineno">  832</span>                repaint();</div>
-<div class="line"><a id="l00833" name="l00833"></a><span class="lineno">  833</span>                <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00834" name="l00834"></a><span class="lineno">  834</span>            }</div>
-<div class="line"><a id="l00835" name="l00835"></a><span class="lineno">  835</span>            <span class="keywordflow">if</span> (armedButton == 1 &amp;&amp; m_confirmSignOutHovered) {</div>
-<div class="line"><a id="l00836" name="l00836"></a><span class="lineno">  836</span>                m_showingSignOutConfirm = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00837" name="l00837"></a><span class="lineno">  837</span>                signOut();</div>
-<div class="line"><a id="l00838" name="l00838"></a><span class="lineno">  838</span>                <span class="keywordflow">if</span> (m_onSignOutConfirmed) m_onSignOutConfirmed();</div>
-<div class="line"><a id="l00839" name="l00839"></a><span class="lineno">  839</span>                <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00840" name="l00840"></a><span class="lineno">  840</span>            }</div>
-<div class="line"><a id="l00841" name="l00841"></a><span class="lineno">  841</span>            repaint();</div>
-<div class="line"><a id="l00842" name="l00842"></a><span class="lineno">  842</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00843" name="l00843"></a><span class="lineno">  843</span>        }</div>
-<div class="line"><a id="l00844" name="l00844"></a><span class="lineno">  844</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>; <span class="comment">// Consume all mouse events while modal is open</span></div>
-<div class="line"><a id="l00845" name="l00845"></a><span class="lineno">  845</span>    }</div>
-<div class="line"><a id="l00846" name="l00846"></a><span class="lineno">  846</span> </div>
-<div class="line"><a id="l00847" name="l00847"></a><span class="lineno">  847</span>    <span class="comment">// Update hover states for redesigned action buttons on every event</span></div>
-<div class="line"><a id="l00848" name="l00848"></a><span class="lineno">  848</span>    <span class="keywordtype">bool</span> oldRefresh = m_btnRefreshHovered;</div>
-<div class="line"><a id="l00849" name="l00849"></a><span class="lineno">  849</span>    <span class="keywordtype">bool</span> oldManage = m_btnManageHovered;</div>
-<div class="line"><a id="l00850" name="l00850"></a><span class="lineno">  850</span>    <span class="keywordtype">bool</span> oldSignOut = m_btnSignOutHovered;</div>
-<div class="line"><a id="l00851" name="l00851"></a><span class="lineno">  851</span>    m_btnRefreshHovered = m_btnRefreshBounds.contains(mx, my);</div>
-<div class="line"><a id="l00852" name="l00852"></a><span class="lineno">  852</span>    m_btnManageHovered = m_btnManageBounds.contains(mx, my);</div>
-<div class="line"><a id="l00853" name="l00853"></a><span class="lineno">  853</span>    m_btnSignOutHovered = m_btnSignOutBounds.contains(mx, my);</div>
-<div class="line"><a id="l00854" name="l00854"></a><span class="lineno">  854</span>    <span class="keywordflow">if</span> (oldRefresh != m_btnRefreshHovered || oldManage != m_btnManageHovered ||</div>
-<div class="line"><a id="l00855" name="l00855"></a><span class="lineno">  855</span>        oldSignOut != m_btnSignOutHovered) {</div>
-<div class="line"><a id="l00856" name="l00856"></a><span class="lineno">  856</span>        repaint();</div>
-<div class="line"><a id="l00857" name="l00857"></a><span class="lineno">  857</span>    }</div>
-<div class="line"><a id="l00858" name="l00858"></a><span class="lineno">  858</span> </div>
-<div class="line"><a id="l00859" name="l00859"></a><span class="lineno">  859</span>    <span class="comment">// Action buttons only exist (and only hit-test) while signed in — mirrors the</span></div>
-<div class="line"><a id="l00860" name="l00860"></a><span class="lineno">  860</span>    <span class="comment">// render gate so a signed-out click can&#39;t trigger an invisible button.</span></div>
-<div class="line"><a id="l00861" name="l00861"></a><span class="lineno">  861</span>    <span class="keywordflow">if</span> (event.pressed &amp;&amp; m_signedIn) {</div>
-<div class="line"><a id="l00862" name="l00862"></a><span class="lineno">  862</span>        <span class="keywordflow">if</span> (m_btnRefreshBounds.contains(mx, my)) {</div>
-<div class="line"><a id="l00863" name="l00863"></a><span class="lineno">  863</span>            <span class="keywordflow">if</span> (!m_isRefreshing) {</div>
-<div class="line"><a id="l00864" name="l00864"></a><span class="lineno">  864</span>                refreshAccount();</div>
-<div class="line"><a id="l00865" name="l00865"></a><span class="lineno">  865</span>            }</div>
-<div class="line"><a id="l00866" name="l00866"></a><span class="lineno">  866</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00867" name="l00867"></a><span class="lineno">  867</span>        }</div>
-<div class="line"><a id="l00868" name="l00868"></a><span class="lineno">  868</span>        <span class="keywordflow">if</span> (m_btnManageBounds.contains(mx, my)) {</div>
-<div class="line"><a id="l00869" name="l00869"></a><span class="lineno">  869</span>            <span class="comment">// Open account management URL in default browser</span></div>
-<div class="line"><a id="l00870" name="l00870"></a><span class="lineno">  870</span>            std::system(<span class="stringliteral">&quot;xdg-open https://aestra.studio/account &amp;&quot;</span>);</div>
-<div class="line"><a id="l00871" name="l00871"></a><span class="lineno">  871</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00872" name="l00872"></a><span class="lineno">  872</span>        }</div>
-<div class="line"><a id="l00873" name="l00873"></a><span class="lineno">  873</span>        <span class="keywordflow">if</span> (m_btnSignOutBounds.contains(mx, my)) {</div>
-<div class="line"><a id="l00874" name="l00874"></a><span class="lineno">  874</span>            confirmSignOut();</div>
-<div class="line"><a id="l00875" name="l00875"></a><span class="lineno">  875</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00876" name="l00876"></a><span class="lineno">  876</span>        }</div>
-<div class="line"><a id="l00877" name="l00877"></a><span class="lineno">  877</span>    }</div>
-<div class="line"><a id="l00878" name="l00878"></a><span class="lineno">  878</span>    <span class="keywordflow">return</span> AestraUI::NUIComponent::onMouseEvent(event);</div>
-<div class="line"><a id="l00879" name="l00879"></a><span class="lineno">  879</span>}</div>
-<div class="line"><a id="l00880" name="l00880"></a><span class="lineno">  880</span> </div>
-<div class="line"><a id="l00881" name="l00881"></a><span class="lineno">  881</span><span class="keywordtype">void</span> MembershipSettingsPage::layoutComponents() {</div>
-<div class="line"><a id="l00882" name="l00882"></a><span class="lineno">  882</span>    <span class="keyword">const</span> <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> b = <a class="code hl_function" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a8ff75e00805b13ff9a6babd21f6cc556">getBounds</a>();</div>
-<div class="line"><a id="l00883" name="l00883"></a><span class="lineno">  883</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> hPad = 20.0f;</div>
-<div class="line"><a id="l00884" name="l00884"></a><span class="lineno">  884</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> vPad = 16.0f;</div>
-<div class="line"><a id="l00885" name="l00885"></a><span class="lineno">  885</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> cardGap = 16.0f;</div>
-<div class="line"><a id="l00886" name="l00886"></a><span class="lineno">  886</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> x = b.x + hPad;</div>
-<div class="line"><a id="l00887" name="l00887"></a><span class="lineno">  887</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> contentW = b.width - hPad * 2.0f;</div>
-<div class="line"><a id="l00888" name="l00888"></a><span class="lineno">  888</span>    <span class="keywordtype">float</span> y = b.y + vPad;</div>
-<div class="line"><a id="l00889" name="l00889"></a><span class="lineno">  889</span> </div>
-<div class="line"><a id="l00890" name="l00890"></a><span class="lineno">  890</span>    <span class="comment">// Founder card (full width)</span></div>
-<div class="line"><a id="l00891" name="l00891"></a><span class="lineno">  891</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> founderH = 142.0f;</div>
-<div class="line"><a id="l00892" name="l00892"></a><span class="lineno">  892</span>    m_founderCardBounds = <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(x, y, contentW, founderH);</div>
-<div class="line"><a id="l00893" name="l00893"></a><span class="lineno">  893</span>    y += founderH + cardGap;</div>
-<div class="line"><a id="l00894" name="l00894"></a><span class="lineno">  894</span> </div>
-<div class="line"><a id="l00895" name="l00895"></a><span class="lineno">  895</span>    <span class="comment">// Features + Sync cards. Side by side when there&#39;s room; on a narrow dialog the</span></div>
-<div class="line"><a id="l00896" name="l00896"></a><span class="lineno">  896</span>    <span class="comment">// two-column feature chips clip badly, so give Features the full width and hide</span></div>
-<div class="line"><a id="l00897" name="l00897"></a><span class="lineno">  897</span>    <span class="comment">// the secondary Sync &amp; Session card instead of squeezing both. (Height is</span></div>
-<div class="line"><a id="l00898" name="l00898"></a><span class="lineno">  898</span>    <span class="comment">// unchanged either way — the dialog can&#39;t scroll and has no vertical slack.)</span></div>
-<div class="line"><a id="l00899" name="l00899"></a><span class="lineno">  899</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> sideCardW = (contentW - cardGap) * 0.5f;</div>
-<div class="line"><a id="l00900" name="l00900"></a><span class="lineno">  900</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> chipH = 30.0f;</div>
-<div class="line"><a id="l00901" name="l00901"></a><span class="lineno">  901</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> chipGap = 8.0f;</div>
-<div class="line"><a id="l00902" name="l00902"></a><span class="lineno">  902</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> chipRows = 4.0f;</div>
-<div class="line"><a id="l00903" name="l00903"></a><span class="lineno">  903</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> featuresCardH = 16.0f + 24.0f + (chipRows * chipH + (chipRows - 1.0f) * chipGap) + 10.0f + 14.0f + 16.0f;</div>
-<div class="line"><a id="l00904" name="l00904"></a><span class="lineno">  904</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> syncCardH = 16.0f + 28.0f + 4.0f * 36.0f + 16.0f;</div>
-<div class="line"><a id="l00905" name="l00905"></a><span class="lineno">  905</span>    <span class="keyword">const</span> <span class="keywordtype">bool</span> narrowCards = sideCardW &lt; 300.0f;</div>
-<div class="line"><a id="l00906" name="l00906"></a><span class="lineno">  906</span>    <span class="keywordtype">float</span> cardsBlockH;</div>
-<div class="line"><a id="l00907" name="l00907"></a><span class="lineno">  907</span>    <span class="keywordflow">if</span> (narrowCards) {</div>
-<div class="line"><a id="l00908" name="l00908"></a><span class="lineno">  908</span>        m_featuresCardBounds = <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(x, y, contentW, featuresCardH);</div>
-<div class="line"><a id="l00909" name="l00909"></a><span class="lineno">  909</span>        m_syncCardBounds = <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(0.0f, 0.0f, 0.0f, 0.0f); <span class="comment">// hidden — see onRender guard</span></div>
-<div class="line"><a id="l00910" name="l00910"></a><span class="lineno">  910</span>        cardsBlockH = featuresCardH;</div>
-<div class="line"><a id="l00911" name="l00911"></a><span class="lineno">  911</span>    } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00912" name="l00912"></a><span class="lineno">  912</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> cardH = std::max(featuresCardH, syncCardH);</div>
-<div class="line"><a id="l00913" name="l00913"></a><span class="lineno">  913</span>        m_featuresCardBounds = <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(x, y, sideCardW, cardH);</div>
-<div class="line"><a id="l00914" name="l00914"></a><span class="lineno">  914</span>        m_syncCardBounds = <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(x + sideCardW + cardGap, y, sideCardW, cardH);</div>
-<div class="line"><a id="l00915" name="l00915"></a><span class="lineno">  915</span>        cardsBlockH = cardH;</div>
-<div class="line"><a id="l00916" name="l00916"></a><span class="lineno">  916</span>    }</div>
-<div class="line"><a id="l00917" name="l00917"></a><span class="lineno">  917</span>    y += cardsBlockH + cardGap;</div>
-<div class="line"><a id="l00918" name="l00918"></a><span class="lineno">  918</span> </div>
-<div class="line"><a id="l00919" name="l00919"></a><span class="lineno">  919</span>    <span class="comment">// Actions row</span></div>
-<div class="line"><a id="l00920" name="l00920"></a><span class="lineno">  920</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> actionH = 36.0f;</div>
-<div class="line"><a id="l00921" name="l00921"></a><span class="lineno">  921</span>    m_actionsRowBounds = <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(x, y, contentW, actionH);</div>
-<div class="line"><a id="l00922" name="l00922"></a><span class="lineno">  922</span> </div>
-<div class="line"><a id="l00923" name="l00923"></a><span class="lineno">  923</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> btnGap = 8.0f;</div>
-<div class="line"><a id="l00924" name="l00924"></a><span class="lineno">  924</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> btnW = (contentW - btnGap * 2.0f) / 3.0f;</div>
-<div class="line"><a id="l00925" name="l00925"></a><span class="lineno">  925</span>    m_btnRefreshBounds = <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(x, y, btnW, actionH);</div>
-<div class="line"><a id="l00926" name="l00926"></a><span class="lineno">  926</span>    m_btnManageBounds = <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(x + btnW + btnGap, y, btnW, actionH);</div>
-<div class="line"><a id="l00927" name="l00927"></a><span class="lineno">  927</span>    <span class="comment">// Last button fills exactly to the right edge</span></div>
-<div class="line"><a id="l00928" name="l00928"></a><span class="lineno">  928</span>    <span class="keywordtype">float</span> lastX = x + 2.0f * (btnW + btnGap);</div>
-<div class="line"><a id="l00929" name="l00929"></a><span class="lineno">  929</span>    m_btnSignOutBounds = <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(lastX, y, (x + contentW) - lastX, actionH);</div>
-<div class="line"><a id="l00930" name="l00930"></a><span class="lineno">  930</span> </div>
-<div class="line"><a id="l00931" name="l00931"></a><span class="lineno">  931</span>    <span class="comment">// Position sign-in UI below the action row when visible</span></div>
-<div class="line"><a id="l00932" name="l00932"></a><span class="lineno">  932</span>    <span class="keyword">const</span> <span class="keywordtype">bool</span> showSignIn = m_signInTitleLabel &amp;&amp; m_signInTitleLabel-&gt;isVisible();</div>
-<div class="line"><a id="l00933" name="l00933"></a><span class="lineno">  933</span>    <span class="keywordflow">if</span> (showSignIn) {</div>
-<div class="line"><a id="l00934" name="l00934"></a><span class="lineno">  934</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> rowHeight = 19.0f;</div>
-<div class="line"><a id="l00935" name="l00935"></a><span class="lineno">  935</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> buttonHeight = 32.0f;</div>
-<div class="line"><a id="l00936" name="l00936"></a><span class="lineno">  936</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> sBtnGap = 8.0f;</div>
-<div class="line"><a id="l00937" name="l00937"></a><span class="lineno">  937</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> buttonWidth = 110.0f;</div>
-<div class="line"><a id="l00938" name="l00938"></a><span class="lineno">  938</span>        <span class="comment">// The sign-in form and the account Actions row are mutually exclusive</span></div>
-<div class="line"><a id="l00939" name="l00939"></a><span class="lineno">  939</span>        <span class="comment">// (sign-in shows only while signed out, when the Actions row is hidden), so</span></div>
-<div class="line"><a id="l00940" name="l00940"></a><span class="lineno">  940</span>        <span class="comment">// the form takes the Actions row&#39;s slot instead of sitting a whole row</span></div>
-<div class="line"><a id="l00941" name="l00941"></a><span class="lineno">  941</span>        <span class="comment">// below the now-empty space — which left it hanging too low. The small</span></div>
-<div class="line"><a id="l00942" name="l00942"></a><span class="lineno">  942</span>        <span class="comment">// lift seats the &quot;Sign in&quot; heading just under the cards.</span></div>
-<div class="line"><a id="l00943" name="l00943"></a><span class="lineno">  943</span>        <span class="keywordtype">float</span> signY = b.y + vPad + founderH + cardGap + cardsBlockH + cardGap - 10.0f;</div>
-<div class="line"><a id="l00944" name="l00944"></a><span class="lineno">  944</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> inputWidth = std::max(180.0f, contentW - buttonWidth - sBtnGap);</div>
-<div class="line"><a id="l00945" name="l00945"></a><span class="lineno">  945</span>        m_signInTitleLabel-&gt;setBounds(<a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(x, signY, contentW, rowHeight));</div>
-<div class="line"><a id="l00946" name="l00946"></a><span class="lineno">  946</span>        m_signInTitleLabel-&gt;setVisible(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l00947" name="l00947"></a><span class="lineno">  947</span>        signY += rowHeight + 4.0f;</div>
-<div class="line"><a id="l00948" name="l00948"></a><span class="lineno">  948</span>        m_emailInput-&gt;setBounds(<a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(x, signY, inputWidth, buttonHeight));</div>
-<div class="line"><a id="l00949" name="l00949"></a><span class="lineno">  949</span>        m_emailInput-&gt;setVisible(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l00950" name="l00950"></a><span class="lineno">  950</span>        m_startLoginButton-&gt;setBounds(<a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(x + inputWidth + sBtnGap, signY, buttonWidth, buttonHeight));</div>
-<div class="line"><a id="l00951" name="l00951"></a><span class="lineno">  951</span>        m_startLoginButton-&gt;setVisible(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l00952" name="l00952"></a><span class="lineno">  952</span>        signY += buttonHeight + sBtnGap;</div>
-<div class="line"><a id="l00953" name="l00953"></a><span class="lineno">  953</span>        m_codeInput-&gt;setBounds(<a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(x, signY, inputWidth, buttonHeight));</div>
-<div class="line"><a id="l00954" name="l00954"></a><span class="lineno">  954</span>        m_codeInput-&gt;setVisible(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l00955" name="l00955"></a><span class="lineno">  955</span>        m_verifyLoginButton-&gt;setBounds(<a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(x + inputWidth + sBtnGap, signY, buttonWidth, buttonHeight));</div>
-<div class="line"><a id="l00956" name="l00956"></a><span class="lineno">  956</span>        m_verifyLoginButton-&gt;setVisible(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l00957" name="l00957"></a><span class="lineno">  957</span>        m_signInFormBottomY = signY + buttonHeight; <span class="comment">// status line renders below this</span></div>
-<div class="line"><a id="l00958" name="l00958"></a><span class="lineno">  958</span>    } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00959" name="l00959"></a><span class="lineno">  959</span>        <span class="keywordflow">if</span> (m_signInTitleLabel) m_signInTitleLabel-&gt;setVisible(<span class="keyword">false</span>);</div>
-<div class="line"><a id="l00960" name="l00960"></a><span class="lineno">  960</span>        <span class="keywordflow">if</span> (m_emailInput) m_emailInput-&gt;setVisible(<span class="keyword">false</span>);</div>
-<div class="line"><a id="l00961" name="l00961"></a><span class="lineno">  961</span>        <span class="keywordflow">if</span> (m_startLoginButton) m_startLoginButton-&gt;setVisible(<span class="keyword">false</span>);</div>
-<div class="line"><a id="l00962" name="l00962"></a><span class="lineno">  962</span>        <span class="keywordflow">if</span> (m_codeInput) m_codeInput-&gt;setVisible(<span class="keyword">false</span>);</div>
-<div class="line"><a id="l00963" name="l00963"></a><span class="lineno">  963</span>        <span class="keywordflow">if</span> (m_verifyLoginButton) m_verifyLoginButton-&gt;setVisible(<span class="keyword">false</span>);</div>
-<div class="line"><a id="l00964" name="l00964"></a><span class="lineno">  964</span>    }</div>
-<div class="line"><a id="l00965" name="l00965"></a><span class="lineno">  965</span> </div>
-<div class="line"><a id="l00966" name="l00966"></a><span class="lineno">  966</span>    <span class="comment">// Legacy: hide old children that are no longer visually used. The panel draws</span></div>
-<div class="line"><a id="l00967" name="l00967"></a><span class="lineno">  967</span>    <span class="comment">// its header/info/features/actions itself; these child widgets predate that and</span></div>
-<div class="line"><a id="l00968" name="l00968"></a><span class="lineno">  968</span>    <span class="comment">// are only kept for state plumbing. Any left visible get drawn by</span></div>
-<div class="line"><a id="l00969" name="l00969"></a><span class="lineno">  969</span>    <span class="comment">// renderChildren() at their default (0,0) bounds — that stray &quot;Account: Signed</span></div>
-<div class="line"><a id="l00970" name="l00970"></a><span class="lineno">  970</span>    <span class="comment">// out&quot; was leaking into the window&#39;s top-left corner.</span></div>
-<div class="line"><a id="l00971" name="l00971"></a><span class="lineno">  971</span>    m_titleLabel-&gt;setVisible(<span class="keyword">false</span>);</div>
-<div class="line"><a id="l00972" name="l00972"></a><span class="lineno">  972</span>    m_accountLabel-&gt;setVisible(<span class="keyword">false</span>);</div>
-<div class="line"><a id="l00973" name="l00973"></a><span class="lineno">  973</span>    m_tierLabel-&gt;setVisible(<span class="keyword">false</span>);</div>
-<div class="line"><a id="l00974" name="l00974"></a><span class="lineno">  974</span>    m_statusLabel-&gt;setVisible(<span class="keyword">false</span>);</div>
-<div class="line"><a id="l00975" name="l00975"></a><span class="lineno">  975</span>    m_verificationLabel-&gt;setVisible(<span class="keyword">false</span>);</div>
-<div class="line"><a id="l00976" name="l00976"></a><span class="lineno">  976</span>    m_syncLabel-&gt;setVisible(<span class="keyword">false</span>);</div>
-<div class="line"><a id="l00977" name="l00977"></a><span class="lineno">  977</span>    m_lastRefreshLabel-&gt;setVisible(<span class="keyword">false</span>);</div>
-<div class="line"><a id="l00978" name="l00978"></a><span class="lineno">  978</span>    m_detailLabel-&gt;setVisible(<span class="keyword">false</span>);</div>
-<div class="line"><a id="l00979" name="l00979"></a><span class="lineno">  979</span>    m_featuresTitleLabel-&gt;setVisible(<span class="keyword">false</span>);</div>
-<div class="line"><a id="l00980" name="l00980"></a><span class="lineno">  980</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; fl : m_featureLabels) {</div>
-<div class="line"><a id="l00981" name="l00981"></a><span class="lineno">  981</span>        <span class="keywordflow">if</span> (fl) fl-&gt;setVisible(<span class="keyword">false</span>);</div>
-<div class="line"><a id="l00982" name="l00982"></a><span class="lineno">  982</span>    }</div>
-<div class="line"><a id="l00983" name="l00983"></a><span class="lineno">  983</span>    m_refreshButton-&gt;setVisible(<span class="keyword">false</span>);</div>
-<div class="line"><a id="l00984" name="l00984"></a><span class="lineno">  984</span>    m_signOutButton-&gt;setVisible(<span class="keyword">false</span>);</div>
-<div class="line"><a id="l00985" name="l00985"></a><span class="lineno">  985</span>    m_featuresTitleLabel-&gt;setVisible(<span class="keyword">false</span>);</div>
-<div class="line"><a id="l00986" name="l00986"></a><span class="lineno">  986</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; f : m_featureLabels) f-&gt;setVisible(false);</div>
-<div class="line"><a id="l00987" name="l00987"></a><span class="lineno">  987</span>}</div>
-<div class="line"><a id="l00988" name="l00988"></a><span class="lineno">  988</span> </div>
-<div class="line"><a id="l00989" name="l00989"></a><span class="lineno">  989</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="line"><a id="l00640" name="l00640"></a><span class="lineno">  640</span>            <span class="keywordflow">if</span> (armedButton == 1 &amp;&amp; m_confirmSignOutHovered) {</div>
+<div class="line"><a id="l00641" name="l00641"></a><span class="lineno">  641</span>                m_showingSignOutConfirm = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span>                signOut();</div>
+<div class="line"><a id="l00643" name="l00643"></a><span class="lineno">  643</span>                <span class="keywordflow">if</span> (m_onSignOutConfirmed) m_onSignOutConfirmed();</div>
+<div class="line"><a id="l00644" name="l00644"></a><span class="lineno">  644</span>                <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00645" name="l00645"></a><span class="lineno">  645</span>            }</div>
+<div class="line"><a id="l00646" name="l00646"></a><span class="lineno">  646</span>            repaint();</div>
+<div class="line"><a id="l00647" name="l00647"></a><span class="lineno">  647</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00648" name="l00648"></a><span class="lineno">  648</span>        }</div>
+<div class="line"><a id="l00649" name="l00649"></a><span class="lineno">  649</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>; <span class="comment">// Consume all mouse events while modal is open</span></div>
+<div class="line"><a id="l00650" name="l00650"></a><span class="lineno">  650</span>    }</div>
+<div class="line"><a id="l00651" name="l00651"></a><span class="lineno">  651</span> </div>
+<div class="line"><a id="l00652" name="l00652"></a><span class="lineno">  652</span>    <span class="keywordflow">if</span> (AestraUI::NUIComponent::onMouseEvent(event))</div>
+<div class="line"><a id="l00653" name="l00653"></a><span class="lineno">  653</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00654" name="l00654"></a><span class="lineno">  654</span>    <span class="keywordflow">if</span> (m_form.<a class="code hl_function" href="../../d6/dfb/classAestra_1_1SettingsForm.html#a4f8c1565d408d933c12df5331cb72969">onMouseWheel</a>(event)) {</div>
+<div class="line"><a id="l00655" name="l00655"></a><span class="lineno">  655</span>        repaint();</div>
+<div class="line"><a id="l00656" name="l00656"></a><span class="lineno">  656</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00657" name="l00657"></a><span class="lineno">  657</span>    }</div>
+<div class="line"><a id="l00658" name="l00658"></a><span class="lineno">  658</span>    <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00659" name="l00659"></a><span class="lineno">  659</span>}</div>
+<div class="line"><a id="l00660" name="l00660"></a><span class="lineno">  660</span> </div>
+<div class="line"><a id="l00661" name="l00661"></a><span class="lineno">  661</span><span class="keywordtype">void</span> MembershipSettingsPage::layoutComponents() {</div>
+<div class="line"><a id="l00662" name="l00662"></a><span class="lineno">  662</span>    <span class="comment">// The form draws every label; these components only carry state now.</span></div>
+<div class="line"><a id="l00663" name="l00663"></a><span class="lineno">  663</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span>* label : {&amp;m_titleLabel, &amp;m_verificationLabel, &amp;m_syncLabel, &amp;m_lastRefreshLabel, &amp;m_detailLabel,</div>
+<div class="line"><a id="l00664" name="l00664"></a><span class="lineno">  664</span>                        &amp;m_featuresTitleLabel, &amp;m_signInTitleLabel}) {</div>
+<div class="line"><a id="l00665" name="l00665"></a><span class="lineno">  665</span>        <span class="keywordflow">if</span> (*label)</div>
+<div class="line"><a id="l00666" name="l00666"></a><span class="lineno">  666</span>            (*label)-&gt;setVisible(<span class="keyword">false</span>);</div>
+<div class="line"><a id="l00667" name="l00667"></a><span class="lineno">  667</span>    }</div>
+<div class="line"><a id="l00668" name="l00668"></a><span class="lineno">  668</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; f : m_featureLabels) {</div>
+<div class="line"><a id="l00669" name="l00669"></a><span class="lineno">  669</span>        <span class="keywordflow">if</span> (f)</div>
+<div class="line"><a id="l00670" name="l00670"></a><span class="lineno">  670</span>            f-&gt;setVisible(<span class="keyword">false</span>);</div>
+<div class="line"><a id="l00671" name="l00671"></a><span class="lineno">  671</span>    }</div>
+<div class="line"><a id="l00672" name="l00672"></a><span class="lineno">  672</span>    <span class="keyword">const</span> <span class="keywordtype">bool</span> signedIn = m_signedIn;</div>
+<div class="line"><a id="l00673" name="l00673"></a><span class="lineno">  673</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; c : <a class="code hl_namespace" href="../../d8/dcc/namespacestd.html">std</a>::initializer_list&lt;<a class="code hl_namespace" href="../../d8/dcc/namespacestd.html">std</a>::shared_ptr&lt;AestraUI::NUIComponent&gt;&gt;{</div>
+<div class="line"><a id="l00674" name="l00674"></a><span class="lineno">  674</span>             m_emailInput, m_codeInput, m_startLoginButton, m_verifyLoginButton}) {</div>
+<div class="line"><a id="l00675" name="l00675"></a><span class="lineno">  675</span>        c-&gt;setVisible(!signedIn);</div>
+<div class="line"><a id="l00676" name="l00676"></a><span class="lineno">  676</span>    }</div>
+<div class="line"><a id="l00677" name="l00677"></a><span class="lineno">  677</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; c : <a class="code hl_namespace" href="../../d8/dcc/namespacestd.html">std</a>::initializer_list&lt;<a class="code hl_namespace" href="../../d8/dcc/namespacestd.html">std</a>::shared_ptr&lt;AestraUI::NUIComponent&gt;&gt;{</div>
+<div class="line"><a id="l00678" name="l00678"></a><span class="lineno">  678</span>             m_accountLabel, m_tierLabel, m_statusLabel, m_refreshButton, m_signOutButton}) {</div>
+<div class="line"><a id="l00679" name="l00679"></a><span class="lineno">  679</span>        c-&gt;setVisible(signedIn);</div>
+<div class="line"><a id="l00680" name="l00680"></a><span class="lineno">  680</span>    }</div>
+<div class="line"><a id="l00681" name="l00681"></a><span class="lineno">  681</span> </div>
+<div class="line"><a id="l00682" name="l00682"></a><span class="lineno">  682</span>    m_form.clear();</div>
+<div class="line"><a id="l00683" name="l00683"></a><span class="lineno">  683</span>    m_form.section(<span class="stringliteral">&quot;ACCOUNT&quot;</span>);</div>
+<div class="line"><a id="l00684" name="l00684"></a><span class="lineno">  684</span>    <span class="keywordflow">if</span> (signedIn) {</div>
+<div class="line"><a id="l00685" name="l00685"></a><span class="lineno">  685</span>        m_form.<a class="code hl_function" href="../../d6/dfb/classAestra_1_1SettingsForm.html#a041dd8b18c71b67ee080ae47490449a2">row</a>(<span class="stringliteral">&quot;Signed in as&quot;</span>, m_accountLabel, <span class="stringliteral">&quot;&quot;</span>, 320.0f);</div>
+<div class="line"><a id="l00686" name="l00686"></a><span class="lineno">  686</span>        m_form.<a class="code hl_function" href="../../d6/dfb/classAestra_1_1SettingsForm.html#a041dd8b18c71b67ee080ae47490449a2">row</a>(<span class="stringliteral">&quot;Membership&quot;</span>, m_tierLabel, <span class="stringliteral">&quot;&quot;</span>, 220.0f);</div>
+<div class="line"><a id="l00687" name="l00687"></a><span class="lineno">  687</span>        m_form.<a class="code hl_function" href="../../d6/dfb/classAestra_1_1SettingsForm.html#a041dd8b18c71b67ee080ae47490449a2">row</a>(<span class="stringliteral">&quot;Status&quot;</span>, m_statusLabel, <span class="stringliteral">&quot;last refresh: &quot;</span> + m_lastRefreshValue, 220.0f);</div>
+<div class="line"><a id="l00688" name="l00688"></a><span class="lineno">  688</span>        m_form.<a class="code hl_function" href="../../d6/dfb/classAestra_1_1SettingsForm.html#a041dd8b18c71b67ee080ae47490449a2">row</a>(<span class="stringliteral">&quot;&quot;</span>, m_refreshButton, <span class="stringliteral">&quot;&quot;</span>, 96.0f);</div>
+<div class="line"><a id="l00689" name="l00689"></a><span class="lineno">  689</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00690" name="l00690"></a><span class="lineno">  690</span>        m_form.<a class="code hl_function" href="../../d6/dfb/classAestra_1_1SettingsForm.html#a041dd8b18c71b67ee080ae47490449a2">row</a>(<span class="stringliteral">&quot;Email&quot;</span>, m_emailInput, <span class="stringliteral">&quot;&quot;</span>, 260.0f);</div>
+<div class="line"><a id="l00691" name="l00691"></a><span class="lineno">  691</span>        m_form.<a class="code hl_function" href="../../d6/dfb/classAestra_1_1SettingsForm.html#a041dd8b18c71b67ee080ae47490449a2">row</a>(<span class="stringliteral">&quot;Code&quot;</span>, m_codeInput, <span class="stringliteral">&quot;&quot;</span>, 260.0f);</div>
+<div class="line"><a id="l00692" name="l00692"></a><span class="lineno">  692</span>    }</div>
+<div class="line"><a id="l00693" name="l00693"></a><span class="lineno">  693</span>    m_messageItem = m_form.<a class="code hl_function" href="../../d6/dfb/classAestra_1_1SettingsForm.html#ad6e7877f5988d0e01361beee6b5e0574">block</a>(<span class="keyword">nullptr</span>, 30.0f);</div>
+<div class="line"><a id="l00694" name="l00694"></a><span class="lineno">  694</span>    m_form.section(<span class="stringliteral">&quot;WHAT IS FREE&quot;</span>);</div>
+<div class="line"><a id="l00695" name="l00695"></a><span class="lineno">  695</span>    m_aboutItem = m_form.<a class="code hl_function" href="../../d6/dfb/classAestra_1_1SettingsForm.html#ad6e7877f5988d0e01361beee6b5e0574">block</a>(<span class="keyword">nullptr</span>, 70.0f);</div>
+<div class="line"><a id="l00696" name="l00696"></a><span class="lineno">  696</span>    m_form.<a class="code hl_function" href="../../d6/dfb/classAestra_1_1SettingsForm.html#a9160e9ca675674197f8a1acf36b49329">layout</a>(<a class="code hl_function" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a8ff75e00805b13ff9a6babd21f6cc556">getBounds</a>());</div>
+<div class="line"><a id="l00697" name="l00697"></a><span class="lineno">  697</span> </div>
+<div class="line"><a id="l00698" name="l00698"></a><span class="lineno">  698</span>    <span class="comment">// Second buttons beside their row&#39;s control.</span></div>
+<div class="line"><a id="l00699" name="l00699"></a><span class="lineno">  699</span>    <span class="keyword">const</span> <span class="keyword">auto</span> place = [](<span class="keyword">const</span> std::shared_ptr&lt;AestraUI::NUIComponent&gt;&amp; beside,</div>
+<div class="line"><a id="l00700" name="l00700"></a><span class="lineno">  700</span>                          <span class="keyword">const</span> std::shared_ptr&lt;AestraUI::NUIComponent&gt;&amp; button, <span class="keywordtype">float</span> width) {</div>
+<div class="line"><a id="l00701" name="l00701"></a><span class="lineno">  701</span>        <span class="keyword">const</span> <span class="keyword">auto</span>&amp; r = beside-&gt;getBounds();</div>
+<div class="line"><a id="l00702" name="l00702"></a><span class="lineno">  702</span>        button-&gt;setBounds(<a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(r.right() + 8.0f, r.y, width, r.height));</div>
+<div class="line"><a id="l00703" name="l00703"></a><span class="lineno">  703</span>        button-&gt;setVisible(beside-&gt;isVisible());</div>
+<div class="line"><a id="l00704" name="l00704"></a><span class="lineno">  704</span>    };</div>
+<div class="line"><a id="l00705" name="l00705"></a><span class="lineno">  705</span>    <span class="keywordflow">if</span> (signedIn) {</div>
+<div class="line"><a id="l00706" name="l00706"></a><span class="lineno">  706</span>        place(m_refreshButton, m_signOutButton, 96.0f);</div>
+<div class="line"><a id="l00707" name="l00707"></a><span class="lineno">  707</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00708" name="l00708"></a><span class="lineno">  708</span>        place(m_emailInput, m_startLoginButton, 104.0f);</div>
+<div class="line"><a id="l00709" name="l00709"></a><span class="lineno">  709</span>        place(m_codeInput, m_verifyLoginButton, 104.0f);</div>
+<div class="line"><a id="l00710" name="l00710"></a><span class="lineno">  710</span>    }</div>
+<div class="line"><a id="l00711" name="l00711"></a><span class="lineno">  711</span>}</div>
+<div class="line"><a id="l00712" name="l00712"></a><span class="lineno">  712</span> </div>
+<div class="line"><a id="l00713" name="l00713"></a><span class="lineno">  713</span>} <span class="comment">// namespace Aestra</span></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIComponent_html_a8ff75e00805b13ff9a6babd21f6cc556"><div class="ttname"><a href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a8ff75e00805b13ff9a6babd21f6cc556">AestraUI::NUIComponent::getBounds</a></div><div class="ttdeci">NUIRect getBounds() const</div><div class="ttdoc">Window-absolute (V8-X2b Window space): components render and hit-test at bounds_ as-is.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d36/NUIComponent_8h_source.html#l00071">NUIComponent.h:71</a></div></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">AestraUI::NUIRenderer</a></div><div class="ttdoc">Abstract renderer interface for the Aestra UI framework.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d2d/NUIRenderer_8h_source.html#l00021">NUIRenderer.h:21</a></div></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html_a316c06990c4cb6f5a13fd7de95bca7a4"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4">AestraUI::NUIRenderer::fillRect</a></div><div class="ttdeci">virtual void fillRect(const NUIRect &amp;rect, const NUIColor &amp;color)=0</div><div class="ttdoc">Draw a filled rectangle.</div></div>
+<div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html_a54f60f3fc2af410bce11eee76e28cc36"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a54f60f3fc2af410bce11eee76e28cc36">AestraUI::NUIRenderer::clearClipRect</a></div><div class="ttdeci">virtual void clearClipRect()=0</div><div class="ttdoc">Clear the clip rectangle.</div></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html_a7cef2d4a1418396f273e2b1afd8660fe"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a7cef2d4a1418396f273e2b1afd8660fe">AestraUI::NUIRenderer::calculateTextY</a></div><div class="ttdeci">float calculateTextY(const NUIRect &amp;rect, float fontSize) const</div><div class="ttdoc">Calculate baseline-aligned Y position for vertically centered text using measured size.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d2d/NUIRenderer_8h_source.html#l00318">NUIRenderer.h:318</a></div></div>
-<div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html_a8287a2b8a0d43d3eb03d7354121b4a95"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8287a2b8a0d43d3eb03d7354121b4a95">AestraUI::NUIRenderer::drawLine</a></div><div class="ttdeci">virtual void drawLine(const NUIPoint &amp;start, const NUIPoint &amp;end, float thickness, const NUIColor &amp;color)=0</div><div class="ttdoc">Draw a line.</div></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html_a8ca30417ddb0b0523e3d9e9ba3eaefdf"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8ca30417ddb0b0523e3d9e9ba3eaefdf">AestraUI::NUIRenderer::strokeRoundedRect</a></div><div class="ttdeci">virtual void strokeRoundedRect(const NUIRect &amp;rect, float radius, float thickness, const NUIColor &amp;color)=0</div><div class="ttdoc">Draw a rounded rectangle outline.</div></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html_a8edd36aab59578f6c121fae6046db289"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8edd36aab59578f6c121fae6046db289">AestraUI::NUIRenderer::fillRoundedRect</a></div><div class="ttdeci">virtual void fillRoundedRect(const NUIRect &amp;rect, float radius, const NUIColor &amp;color)=0</div><div class="ttdoc">Draw a filled rounded rectangle.</div></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html_a91ed36d4b7fbb90f1d98f0a116b6debc"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">AestraUI::NUIRenderer::drawText</a></div><div class="ttdeci">virtual void drawText(const std::string &amp;text, const NUIPoint &amp;position, float fontSize, const NUIColor &amp;color)=0</div><div class="ttdoc">Draw text at the given position.</div></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html_aa89fb8461f9b876452eee397232544bf"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#aa89fb8461f9b876452eee397232544bf">AestraUI::NUIRenderer::drawTextCentered</a></div><div class="ttdeci">virtual void drawTextCentered(const std::string &amp;text, const NUIRect &amp;rect, float fontSize, const NUIColor &amp;color)=0</div><div class="ttdoc">Draw text centered within a rectangle.</div></div>
-<div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html_abe394d6a3fb11601766324bcd8793ac3"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#abe394d6a3fb11601766324bcd8793ac3">AestraUI::NUIRenderer::measureText</a></div><div class="ttdeci">virtual NUISize measureText(const std::string &amp;text, float fontSize)=0</div><div class="ttdoc">Measure text dimensions.</div></div>
-<div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html_ac82c677cff0d5838d3312af1b65ed84b"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#ac82c677cff0d5838d3312af1b65ed84b">AestraUI::NUIRenderer::strokeCircle</a></div><div class="ttdeci">virtual void strokeCircle(const NUIPoint &amp;center, float radius, float thickness, const NUIColor &amp;color)=0</div><div class="ttdoc">Draw a circle outline.</div></div>
 <div class="ttc" id="aclassAestra_1_1MembershipSettingsPage_html_a994d65754aff10a845bcb495c9459858"><div class="ttname"><a href="../../d2/d27/classAestra_1_1MembershipSettingsPage.html#a994d65754aff10a845bcb495c9459858">Aestra::MembershipSettingsPage::onShow</a></div><div class="ttdeci">void onShow() override</div><div class="ttdoc">Called when the page becomes visible/active.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d3e/MembershipSettingsPage_8cpp_source.html#l00252">MembershipSettingsPage.cpp:252</a></div></div>
+<div class="ttc" id="aclassAestra_1_1SettingsForm_html_a041dd8b18c71b67ee080ae47490449a2"><div class="ttname"><a href="../../d6/dfb/classAestra_1_1SettingsForm.html#a041dd8b18c71b67ee080ae47490449a2">Aestra::SettingsForm::row</a></div><div class="ttdeci">void row(std::string label, std::shared_ptr&lt; AestraUI::NUIComponent &gt; control, std::string hint={}, float controlWidth=kControlWidth)</div><div class="ttdoc">A row. control may be null (a label-only row); hint is drawn muted to the right of the control.</div><div class="ttdef"><b>Definition</b> <a href="../../de/df1/SettingsForm_8cpp_source.html#l00031">SettingsForm.cpp:31</a></div></div>
+<div class="ttc" id="aclassAestra_1_1SettingsForm_html_a435059286fae1d7ec86d06b988b9c06e"><div class="ttname"><a href="../../d6/dfb/classAestra_1_1SettingsForm.html#a435059286fae1d7ec86d06b988b9c06e">Aestra::SettingsForm::paint</a></div><div class="ttdeci">void paint(AestraUI::NUIRenderer &amp;renderer) const</div><div class="ttdoc">Captions, labels, hints and lines. Call before rendering the page's children.</div><div class="ttdef"><b>Definition</b> <a href="../../de/df1/SettingsForm_8cpp_source.html#l00095">SettingsForm.cpp:95</a></div></div>
+<div class="ttc" id="aclassAestra_1_1SettingsForm_html_a4f8c1565d408d933c12df5331cb72969"><div class="ttname"><a href="../../d6/dfb/classAestra_1_1SettingsForm.html#a4f8c1565d408d933c12df5331cb72969">Aestra::SettingsForm::onMouseWheel</a></div><div class="ttdeci">bool onMouseWheel(const AestraUI::NUIMouseEvent &amp;event)</div><div class="ttdoc">Wheel over the area scrolls a page taller than it. Returns true when it scrolled.</div><div class="ttdef"><b>Definition</b> <a href="../../de/df1/SettingsForm_8cpp_source.html#l00132">SettingsForm.cpp:132</a></div></div>
+<div class="ttc" id="aclassAestra_1_1SettingsForm_html_a8c57c87b9daf32eb25e2b87864d0250f"><div class="ttname"><a href="../../d6/dfb/classAestra_1_1SettingsForm.html#a8c57c87b9daf32eb25e2b87864d0250f">Aestra::SettingsForm::boundsOf</a></div><div class="ttdeci">AestraUI::NUIRect boundsOf(size_t item) const</div><div class="ttdoc">The laid-out rect of the item block() or row() returned, scroll applied.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d00/SettingsForm_8h_source.html#l00034">SettingsForm.h:34</a></div></div>
+<div class="ttc" id="aclassAestra_1_1SettingsForm_html_a9160e9ca675674197f8a1acf36b49329"><div class="ttname"><a href="../../d6/dfb/classAestra_1_1SettingsForm.html#a9160e9ca675674197f8a1acf36b49329">Aestra::SettingsForm::layout</a></div><div class="ttdeci">void layout(const AestraUI::NUIRect &amp;area)</div><div class="ttdoc">Places every control inside area (offset by the scroll). Controls of rows outside it are hidden.</div><div class="ttdef"><b>Definition</b> <a href="../../de/df1/SettingsForm_8cpp_source.html#l00068">SettingsForm.cpp:68</a></div></div>
+<div class="ttc" id="aclassAestra_1_1SettingsForm_html_ad6e7877f5988d0e01361beee6b5e0574"><div class="ttname"><a href="../../d6/dfb/classAestra_1_1SettingsForm.html#ad6e7877f5988d0e01361beee6b5e0574">Aestra::SettingsForm::block</a></div><div class="ttdeci">size_t block(std::shared_ptr&lt; AestraUI::NUIComponent &gt; component, float height)</div><div class="ttdoc">A full-width block (a status line, a list) of the given height, under the current section.</div><div class="ttdef"><b>Definition</b> <a href="../../de/df1/SettingsForm_8cpp_source.html#l00042">SettingsForm.cpp:42</a></div></div>
 <div class="ttc" id="anamespaceAestra_1_1VersionLanes_html_ac0a166ab89427132371d511b9c8ab004"><div class="ttname"><a href="../../d3/d6c/namespaceAestra_1_1VersionLanes.html#ac0a166ab89427132371d511b9c8ab004">Aestra::VersionLanes::label</a></div><div class="ttdeci">std::string label(const std::string &amp;branch)</div><div class="ttdoc">How a branch reads on screen: the first lane is stored as &quot;Main&quot; and shows as the main mix.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d43/VersionLanes_8h_source.html#l00027">VersionLanes.h:27</a></div></div>
 <div class="ttc" id="anamespaceAestra_html"><div class="ttname"><a href="../../d8/d94/namespaceAestra.html">Aestra</a></div><div class="ttdoc">Main application class.</div><div class="ttdef"><b>Definition</b> <a href="../../d7/d7b/AestraAssert_8h_source.html#l00009">AestraAssert.h:9</a></div></div>
+<div class="ttc" id="anamespacestd_html"><div class="ttname"><a href="../../d8/dcc/namespacestd.html">std</a></div><div class="ttdoc">STL namespace.</div></div>
 <div class="ttc" id="astructAestraUI_1_1NUIColor_html"><div class="ttname"><a href="../../d2/d25/structAestraUI_1_1NUIColor.html">AestraUI::NUIColor</a></div><div class="ttdef"><b>Definition</b> <a href="../../dc/d90/NUITypes_8h_source.html#l00098">NUITypes.h:98</a></div></div>
 <div class="ttc" id="astructAestraUI_1_1NUIMouseEvent_html"><div class="ttname"><a href="../../db/d1d/structAestraUI_1_1NUIMouseEvent.html">AestraUI::NUIMouseEvent</a></div><div class="ttdef"><b>Definition</b> <a href="../../dc/d90/NUITypes_8h_source.html#l00442">NUITypes.h:442</a></div></div>
 <div class="ttc" id="astructAestraUI_1_1NUIRect_html"><div class="ttname"><a href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a></div><div class="ttdef"><b>Definition</b> <a href="../../dc/d90/NUITypes_8h_source.html#l00058">NUITypes.h:58</a></div></div>

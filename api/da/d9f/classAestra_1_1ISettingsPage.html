@@ -90,7 +90,7 @@ $(function() {
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-0-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d5/d8b/classAestra_1_1ISettingsPage__inherit__graph.svg" width="100%" height="438"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d5/d8b/classAestra_1_1ISettingsPage__inherit__graph.svg" width="100%" height="475"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 <center><span class="legend">[<a href="../../graph_legend.html">legend</a>]</span></center></div>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Collaboration diagram for Aestra::ISettingsPage:</div>
@@ -120,6 +120,14 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ad4ac3417e9ee1eaa43de124c80383b01" id="r_ad4ac3417e9ee1eaa43de124c80383b01"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d9f/classAestra_1_1ISettingsPage.html#ad4ac3417e9ee1eaa43de124c80383b01">hasUnsavedChanges</a> () const =0</td></tr>
 <tr class="memdesc:ad4ac3417e9ee1eaa43de124c80383b01"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if there are unsaved changes.  <br /></td></tr>
 <tr class="separator:ad4ac3417e9ee1eaa43de124c80383b01"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaa7d44d7cc0354d8a53180b83705e7df" id="r_aaa7d44d7cc0354d8a53180b83705e7df"><td class="memItemLeft" align="right" valign="top">virtual int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d9f/classAestra_1_1ISettingsPage.html#aaa7d44d7cc0354d8a53180b83705e7df">pendingChangeCount</a> () const</td></tr>
+<tr class="memdesc:aaa7d44d7cc0354d8a53180b83705e7df"><td class="mdescLeft">&#160;</td><td class="mdescRight">How many settings on this page differ from what is saved (the sidebar badge and the "N changes not saved" note).  <br /></td></tr>
+<tr class="separator:aaa7d44d7cc0354d8a53180b83705e7df"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad8c38fe3d105b0be6ce24737a2a45c5a" id="r_ad8c38fe3d105b0be6ce24737a2a45c5a"><td class="memItemLeft" align="right" valign="top">virtual std::shared_ptr&lt; <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d9f/classAestra_1_1ISettingsPage.html#ad8c38fe3d105b0be6ce24737a2a45c5a">footerAction</a> ()</td></tr>
+<tr class="memdesc:ad8c38fe3d105b0be6ce24737a2a45c5a"><td class="mdescLeft">&#160;</td><td class="mdescRight">A page's own action for the dialog footer's left side (Audio: Test sound), and the muted note beside it.  <br /></td></tr>
+<tr class="separator:ad8c38fe3d105b0be6ce24737a2a45c5a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8294c5ba19e133beb592c7d2971d39d7" id="r_a8294c5ba19e133beb592c7d2971d39d7"><td class="memItemLeft" align="right" valign="top">virtual std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d9f/classAestra_1_1ISettingsPage.html#a8294c5ba19e133beb592c7d2971d39d7">footerNote</a> () const</td></tr>
+<tr class="separator:a8294c5ba19e133beb592c7d2971d39d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1715b261d1a9644779801f552c32d1cc" id="r_a1715b261d1a9644779801f552c32d1cc"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d9f/classAestra_1_1ISettingsPage.html#a1715b261d1a9644779801f552c32d1cc">onShow</a> ()</td></tr>
 <tr class="memdesc:a1715b261d1a9644779801f552c32d1cc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Called when the page becomes visible/active.  <br /></td></tr>
 <tr class="separator:a1715b261d1a9644779801f552c32d1cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -312,7 +320,7 @@ Additional Inherited Members</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Interface for a settings page in the unified Settings Dialog. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d37/ISettingsPage_8h_source.html#l00012">12</a> of file <a class="el" href="../../d0/d37/ISettingsPage_8h_source.html">ISettingsPage.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d37/ISettingsPage_8h_source.html#l00014">14</a> of file <a class="el" href="../../d0/d37/ISettingsPage_8h_source.html">ISettingsPage.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="ac764ffb54e90cbf5e9131bc39cf0392d" name="ac764ffb54e90cbf5e9131bc39cf0392d"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ac764ffb54e90cbf5e9131bc39cf0392d">&#9670;&#160;</a></span>applyChanges()</h2>
@@ -339,7 +347,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Called when changes are applied. </p>
 
-<p>Implemented in <a class="el" href="../../dd/df8/classAestra_1_1AppearanceSettingsPage.html#ade2ef1e4fedda083cb4b0427c0afd679">Aestra::AppearanceSettingsPage</a>, <a class="el" href="../../d6/d60/classAestra_1_1AudioSettingsPage.html#aa9d437df71abfc6a7d5a967940277a3e">Aestra::AudioSettingsPage</a>, <a class="el" href="../../da/d07/classAestra_1_1GeneralSettingsPage.html#a1904fc29a65d585a02fa9c97318c57ef">Aestra::GeneralSettingsPage</a>, and <a class="el" href="../../d2/d27/classAestra_1_1MembershipSettingsPage.html#a565a771fb620fc552a524dd2674f3adb">Aestra::MembershipSettingsPage</a>.</p>
+<p>Implemented in <a class="el" href="../../dd/df8/classAestra_1_1AppearanceSettingsPage.html#ade2ef1e4fedda083cb4b0427c0afd679">Aestra::AppearanceSettingsPage</a>, <a class="el" href="../../d6/d60/classAestra_1_1AudioSettingsPage.html#aa9d437df71abfc6a7d5a967940277a3e">Aestra::AudioSettingsPage</a>, <a class="el" href="../../da/d07/classAestra_1_1GeneralSettingsPage.html#a1904fc29a65d585a02fa9c97318c57ef">Aestra::GeneralSettingsPage</a>, <a class="el" href="../../d2/d27/classAestra_1_1MembershipSettingsPage.html#a565a771fb620fc552a524dd2674f3adb">Aestra::MembershipSettingsPage</a>, and <a class="el" href="../../d4/dea/classAestra_1_1UpdatesSettingsPage.html#a0cef0ce27c04355b5f47453929dd3bb3">Aestra::UpdatesSettingsPage</a>.</p>
 
 </div>
 </div>
@@ -368,7 +376,66 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Called when changes are cancelled/reverted. </p>
 
-<p>Implemented in <a class="el" href="../../dd/df8/classAestra_1_1AppearanceSettingsPage.html#ac0c20594068f44930308a2dc8374a7af">Aestra::AppearanceSettingsPage</a>, <a class="el" href="../../d6/d60/classAestra_1_1AudioSettingsPage.html#a6fdaa97faed39cf83bcae7e02de84b32">Aestra::AudioSettingsPage</a>, <a class="el" href="../../da/d07/classAestra_1_1GeneralSettingsPage.html#a3907b21cd77394f3eb3d3b56a687346b">Aestra::GeneralSettingsPage</a>, and <a class="el" href="../../d2/d27/classAestra_1_1MembershipSettingsPage.html#a127623078be67120bcd60670eeb2360a">Aestra::MembershipSettingsPage</a>.</p>
+<p>Implemented in <a class="el" href="../../dd/df8/classAestra_1_1AppearanceSettingsPage.html#ac0c20594068f44930308a2dc8374a7af">Aestra::AppearanceSettingsPage</a>, <a class="el" href="../../d6/d60/classAestra_1_1AudioSettingsPage.html#a6fdaa97faed39cf83bcae7e02de84b32">Aestra::AudioSettingsPage</a>, <a class="el" href="../../da/d07/classAestra_1_1GeneralSettingsPage.html#a3907b21cd77394f3eb3d3b56a687346b">Aestra::GeneralSettingsPage</a>, <a class="el" href="../../d2/d27/classAestra_1_1MembershipSettingsPage.html#a127623078be67120bcd60670eeb2360a">Aestra::MembershipSettingsPage</a>, and <a class="el" href="../../d4/dea/classAestra_1_1UpdatesSettingsPage.html#afd2b381f5eedb60e7e15b7709def6866">Aestra::UpdatesSettingsPage</a>.</p>
+
+</div>
+</div>
+<a id="ad8c38fe3d105b0be6ce24737a2a45c5a" name="ad8c38fe3d105b0be6ce24737a2a45c5a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad8c38fe3d105b0be6ce24737a2a45c5a">&#9670;&#160;</a></span>footerAction()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual std::shared_ptr&lt; <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a> &gt; Aestra::ISettingsPage::footerAction </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>A page's own action for the dialog footer's left side (Audio: Test sound), and the muted note beside it. </p>
+<p>Null when the page has none. </p>
+
+<p>Reimplemented in <a class="el" href="../../d6/d60/classAestra_1_1AudioSettingsPage.html#a3bdac8c146c6100c7fb1a944212149dd">Aestra::AudioSettingsPage</a>.</p>
+
+<p class="definition">Definition at line <a class="el" href="../../d0/d37/ISettingsPage_8h_source.html#l00058">58</a> of file <a class="el" href="../../d0/d37/ISettingsPage_8h_source.html">ISettingsPage.h</a>.</p>
+
+</div>
+</div>
+<a id="a8294c5ba19e133beb592c7d2971d39d7" name="a8294c5ba19e133beb592c7d2971d39d7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8294c5ba19e133beb592c7d2971d39d7">&#9670;&#160;</a></span>footerNote()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual std::string Aestra::ISettingsPage::footerNote </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d0/d37/ISettingsPage_8h_source.html#l00059">59</a> of file <a class="el" href="../../d0/d37/ISettingsPage_8h_source.html">ISettingsPage.h</a>.</p>
 
 </div>
 </div>
@@ -397,7 +464,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Get the icon name (if supported by sidebar) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d37/ISettingsPage_8h_source.html#l00029">29</a> of file <a class="el" href="../../d0/d37/ISettingsPage_8h_source.html">ISettingsPage.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d37/ISettingsPage_8h_source.html#l00031">31</a> of file <a class="el" href="../../d0/d37/ISettingsPage_8h_source.html">ISettingsPage.h</a>.</p>
 
 </div>
 </div>
@@ -426,7 +493,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Get the unique ID of the page (e.g., "audio", "general") </p>
 
-<p>Implemented in <a class="el" href="../../dd/df8/classAestra_1_1AppearanceSettingsPage.html#a8682a864cd4c6936d7e700d0caae06c9">Aestra::AppearanceSettingsPage</a>, <a class="el" href="../../d6/d60/classAestra_1_1AudioSettingsPage.html#a271aa3aef6ceb9764368ac7eee4168ed">Aestra::AudioSettingsPage</a>, <a class="el" href="../../da/d07/classAestra_1_1GeneralSettingsPage.html#a363e1e00f26ac04170bf72ce08e90664">Aestra::GeneralSettingsPage</a>, and <a class="el" href="../../d2/d27/classAestra_1_1MembershipSettingsPage.html#afff5eed0084b6d8f41598c20fa600071">Aestra::MembershipSettingsPage</a>.</p>
+<p>Implemented in <a class="el" href="../../dd/df8/classAestra_1_1AppearanceSettingsPage.html#a8682a864cd4c6936d7e700d0caae06c9">Aestra::AppearanceSettingsPage</a>, <a class="el" href="../../d6/d60/classAestra_1_1AudioSettingsPage.html#a271aa3aef6ceb9764368ac7eee4168ed">Aestra::AudioSettingsPage</a>, <a class="el" href="../../da/d07/classAestra_1_1GeneralSettingsPage.html#a363e1e00f26ac04170bf72ce08e90664">Aestra::GeneralSettingsPage</a>, <a class="el" href="../../d2/d27/classAestra_1_1MembershipSettingsPage.html#afff5eed0084b6d8f41598c20fa600071">Aestra::MembershipSettingsPage</a>, and <a class="el" href="../../d4/dea/classAestra_1_1UpdatesSettingsPage.html#a3951e328a18aac626aafaf19677a9a61">Aestra::UpdatesSettingsPage</a>.</p>
 
 </div>
 </div>
@@ -455,7 +522,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Get the display title of the page. </p>
 
-<p>Implemented in <a class="el" href="../../dd/df8/classAestra_1_1AppearanceSettingsPage.html#af116dde24e52ff88ea298e6e5ef6f623">Aestra::AppearanceSettingsPage</a>, <a class="el" href="../../d6/d60/classAestra_1_1AudioSettingsPage.html#a7bee12d791eb97c20f653850b7450b0d">Aestra::AudioSettingsPage</a>, <a class="el" href="../../da/d07/classAestra_1_1GeneralSettingsPage.html#aa20ea659826350417701742c43d63166">Aestra::GeneralSettingsPage</a>, and <a class="el" href="../../d2/d27/classAestra_1_1MembershipSettingsPage.html#a0be5cfc3393784a14c9c17b8b2e82aea">Aestra::MembershipSettingsPage</a>.</p>
+<p>Implemented in <a class="el" href="../../dd/df8/classAestra_1_1AppearanceSettingsPage.html#af116dde24e52ff88ea298e6e5ef6f623">Aestra::AppearanceSettingsPage</a>, <a class="el" href="../../d6/d60/classAestra_1_1AudioSettingsPage.html#a7bee12d791eb97c20f653850b7450b0d">Aestra::AudioSettingsPage</a>, <a class="el" href="../../da/d07/classAestra_1_1GeneralSettingsPage.html#aa20ea659826350417701742c43d63166">Aestra::GeneralSettingsPage</a>, <a class="el" href="../../d2/d27/classAestra_1_1MembershipSettingsPage.html#a0be5cfc3393784a14c9c17b8b2e82aea">Aestra::MembershipSettingsPage</a>, and <a class="el" href="../../d4/dea/classAestra_1_1UpdatesSettingsPage.html#a851b21a7da16c91ef4b96c547a94301c">Aestra::UpdatesSettingsPage</a>.</p>
 
 </div>
 </div>
@@ -484,7 +551,16 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Check if there are unsaved changes. </p>
 
-<p>Implemented in <a class="el" href="../../dd/df8/classAestra_1_1AppearanceSettingsPage.html#a39449522c7bb92a75dfbd04836f496be">Aestra::AppearanceSettingsPage</a>, <a class="el" href="../../d6/d60/classAestra_1_1AudioSettingsPage.html#acbe81b1258534d0eb8c50a0144f21c68">Aestra::AudioSettingsPage</a>, <a class="el" href="../../da/d07/classAestra_1_1GeneralSettingsPage.html#a6da67465f8abb9e5d119b57df69e8c11">Aestra::GeneralSettingsPage</a>, and <a class="el" href="../../d2/d27/classAestra_1_1MembershipSettingsPage.html#a5f1d4524561e7ab4434b2ba9453f1f5e">Aestra::MembershipSettingsPage</a>.</p>
+<p>Implemented in <a class="el" href="../../dd/df8/classAestra_1_1AppearanceSettingsPage.html#a39449522c7bb92a75dfbd04836f496be">Aestra::AppearanceSettingsPage</a>, <a class="el" href="../../d6/d60/classAestra_1_1AudioSettingsPage.html#acbe81b1258534d0eb8c50a0144f21c68">Aestra::AudioSettingsPage</a>, <a class="el" href="../../da/d07/classAestra_1_1GeneralSettingsPage.html#a6da67465f8abb9e5d119b57df69e8c11">Aestra::GeneralSettingsPage</a>, <a class="el" href="../../d2/d27/classAestra_1_1MembershipSettingsPage.html#a5f1d4524561e7ab4434b2ba9453f1f5e">Aestra::MembershipSettingsPage</a>, and <a class="el" href="../../d4/dea/classAestra_1_1UpdatesSettingsPage.html#a9d35c40cd3e90e849f90392c41f0bc57">Aestra::UpdatesSettingsPage</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d0/d37/ISettingsPage_8h_source.html#l00052">pendingChangeCount()</a>.</p>
+<div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-2-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-2-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../da/d9f/classAestra_1_1ISettingsPage_ad4ac3417e9ee1eaa43de124c80383b01_icgraph.svg" width="395" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 
 </div>
 </div>
@@ -515,7 +591,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented in <a class="el" href="../../d6/d60/classAestra_1_1AudioSettingsPage.html#a3717a368d1565006e13692df08fa86f0">Aestra::AudioSettingsPage</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d37/ISettingsPage_8h_source.html#l00054">54</a> of file <a class="el" href="../../d0/d37/ISettingsPage_8h_source.html">ISettingsPage.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d37/ISettingsPage_8h_source.html#l00069">69</a> of file <a class="el" href="../../d0/d37/ISettingsPage_8h_source.html">ISettingsPage.h</a>.</p>
 
 </div>
 </div>
@@ -544,9 +620,48 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Called when the page becomes visible/active. </p>
 
-<p>Reimplemented in <a class="el" href="../../dd/df8/classAestra_1_1AppearanceSettingsPage.html#ab5e8f49de1f8424d32919ea29a8e7e7f">Aestra::AppearanceSettingsPage</a>, <a class="el" href="../../d6/d60/classAestra_1_1AudioSettingsPage.html#a7f14351962692a807fd3b76c94d915a9">Aestra::AudioSettingsPage</a>, and <a class="el" href="../../d2/d27/classAestra_1_1MembershipSettingsPage.html#a994d65754aff10a845bcb495c9459858">Aestra::MembershipSettingsPage</a>.</p>
+<p>Reimplemented in <a class="el" href="../../dd/df8/classAestra_1_1AppearanceSettingsPage.html#ab5e8f49de1f8424d32919ea29a8e7e7f">Aestra::AppearanceSettingsPage</a>, <a class="el" href="../../d6/d60/classAestra_1_1AudioSettingsPage.html#a7f14351962692a807fd3b76c94d915a9">Aestra::AudioSettingsPage</a>, <a class="el" href="../../d2/d27/classAestra_1_1MembershipSettingsPage.html#a994d65754aff10a845bcb495c9459858">Aestra::MembershipSettingsPage</a>, and <a class="el" href="../../d4/dea/classAestra_1_1UpdatesSettingsPage.html#a9b67f05c9fb68a2e2433392b2d7bf522">Aestra::UpdatesSettingsPage</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d37/ISettingsPage_8h_source.html#l00049">49</a> of file <a class="el" href="../../d0/d37/ISettingsPage_8h_source.html">ISettingsPage.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d37/ISettingsPage_8h_source.html#l00064">64</a> of file <a class="el" href="../../d0/d37/ISettingsPage_8h_source.html">ISettingsPage.h</a>.</p>
+
+</div>
+</div>
+<a id="aaa7d44d7cc0354d8a53180b83705e7df" name="aaa7d44d7cc0354d8a53180b83705e7df"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaa7d44d7cc0354d8a53180b83705e7df">&#9670;&#160;</a></span>pendingChangeCount()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual int Aestra::ISettingsPage::pendingChangeCount </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>How many settings on this page differ from what is saved (the sidebar badge and the "N changes not saved" note). </p>
+<p>Pages that only know yes/no report 1. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d0/d37/ISettingsPage_8h_source.html#l00052">52</a> of file <a class="el" href="../../d0/d37/ISettingsPage_8h_source.html">ISettingsPage.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../da/d9f/classAestra_1_1ISettingsPage.html#ad4ac3417e9ee1eaa43de124c80383b01">hasUnsavedChanges()</a>.</p>
+<div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-3-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-3-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../da/d9f/classAestra_1_1ISettingsPage_aaa7d44d7cc0354d8a53180b83705e7df_cgraph.svg" width="395" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 
 </div>
 </div>

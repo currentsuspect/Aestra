@@ -93,7 +93,7 @@ $(function() {
 <div id="dynsection-1-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-1-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d7/d1c/classAestraUI_1_1PianoRollRuler__coll__graph.svg" width="100%" height="584"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d7/d1c/classAestraUI_1_1PianoRollRuler__coll__graph.svg" width="100%" height="600"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 <center><span class="legend">[<a href="../../graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
@@ -242,6 +242,9 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:a78281b95124028722d750a6606cd056e" id="r_a78281b95124028722d750a6606cd056e"><td class="memItemLeft" align="right" valign="top">std::function&lt; void(double startBeat, double endBeat)&gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/d0a/classAestraUI_1_1PianoRollRuler.html#a78281b95124028722d750a6606cd056e">onLoopZoneDrawn</a></td></tr>
 <tr class="memdesc:a78281b95124028722d750a6606cd056e"><td class="mdescLeft">&#160;</td><td class="mdescRight">A right-drag (or Ctrl+left-drag) on the ruler made a loop zone (SPEC 3 §5.2), called once on release with the snapped [start, end).  <br /></td></tr>
 <tr class="separator:a78281b95124028722d750a6606cd056e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a24fa665b8b395af3427ca568e2581d01" id="r_a24fa665b8b395af3427ca568e2581d01"><td class="memItemLeft" align="right" valign="top">std::function&lt; void()&gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/d0a/classAestraUI_1_1PianoRollRuler.html#a24fa665b8b395af3427ca568e2581d01">onLoopZoneCleared</a></td></tr>
+<tr class="memdesc:a24fa665b8b395af3427ca568e2581d01"><td class="mdescLeft">&#160;</td><td class="mdescRight">A zone gesture (right-click, Ctrl+click) that ended without dragging out a range: the owner clears the zone.  <br /></td></tr>
+<tr class="separator:a24fa665b8b395af3427ca568e2581d01"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_attribs_classAestraUI_1_1NUIComponent"><td colspan="2" onclick="javascript:toggleInherit('pub_attribs_classAestraUI_1_1NUIComponent')"><img src="../../closed.png" alt="-"/>&#160;Public Attributes inherited from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a></td></tr>
 <tr class="memitem:a1ae675c5a181ae05a45c97a294db9b2c inherit pub_attribs_classAestraUI_1_1NUIComponent" id="r_a1ae675c5a181ae05a45c97a294db9b2c"><td class="memItemLeft" align="right" valign="top">NUIMouseCallback&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a1ae675c5a181ae05a45c97a294db9b2c">onMouseDown</a></td></tr>
 <tr class="separator:a1ae675c5a181ae05a45c97a294db9b2c inherit pub_attribs_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -398,7 +401,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/dc7/PianoRollRuler_8cpp_source.html#l00094">94</a> of file <a class="el" href="../../d5/dc7/PianoRollRuler_8cpp_source.html">PianoRollRuler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/dc7/PianoRollRuler_8cpp_source.html#l00096">96</a> of file <a class="el" href="../../d5/dc7/PianoRollRuler_8cpp_source.html">PianoRollRuler.cpp</a>.</p>
 
 </div>
 </div>
@@ -474,7 +477,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>The zone to draw (the view owns it). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00202">202</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00204">204</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -504,7 +507,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Whether a right-drag (or Ctrl+left-drag) draws a loop zone; off for hosts that only want numbers, ticks and scrub. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00200">200</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00202">202</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -526,7 +529,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the horizontal zoom level in pixels per beat. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/dc7/PianoRollRuler_8cpp_source.html#l00181">181</a> of file <a class="el" href="../../d5/dc7/PianoRollRuler_8cpp_source.html">PianoRollRuler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/dc7/PianoRollRuler_8cpp_source.html#l00183">183</a> of file <a class="el" href="../../d5/dc7/PianoRollRuler_8cpp_source.html">PianoRollRuler.cpp</a>.</p>
 
 </div>
 </div>
@@ -578,11 +581,29 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the horizontal scroll offset in pixels. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/dc7/PianoRollRuler_8cpp_source.html#l00182">182</a> of file <a class="el" href="../../d5/dc7/PianoRollRuler_8cpp_source.html">PianoRollRuler.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/dc7/PianoRollRuler_8cpp_source.html#l00184">184</a> of file <a class="el" href="../../d5/dc7/PianoRollRuler_8cpp_source.html">PianoRollRuler.cpp</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Member Data Documentation</h2>
+<a id="a24fa665b8b395af3427ca568e2581d01" name="a24fa665b8b395af3427ca568e2581d01"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a24fa665b8b395af3427ca568e2581d01">&#9670;&#160;</a></span>onLoopZoneCleared</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::function&lt;void()&gt; AestraUI::PianoRollRuler::onLoopZoneCleared</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>A zone gesture (right-click, Ctrl+click) that ended without dragging out a range: the owner clears the zone. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00200">200</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+
+</div>
+</div>
 <a id="a78281b95124028722d750a6606cd056e" name="a78281b95124028722d750a6606cd056e"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a78281b95124028722d750a6606cd056e">&#9670;&#160;</a></span>onLoopZoneDrawn</h2>
 

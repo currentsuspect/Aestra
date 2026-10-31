@@ -1,5 +1,11 @@
 <map id="Aestra::Audio::PatternManager::forEachPattern" name="Aestra::Audio::PatternManager::forEachPattern">
-<area shape="rect" id="Node000001" title="Visit every pattern (read&#45;only), in no particular order." alt="" coords="227,5,447,45"/>
-<area shape="rect" id="Node000002" href="$da/d25/namespaceAestra_1_1BringOver.html#ad57da864877180c24fb0bdc51750c705" title="What other has that current could take, compared by name." alt="" coords="5,13,179,38"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="213,28,179,28,179,23,213,23"/>
+<area shape="rect" id="Node000001" title="Visit every pattern (read&#45;only), in no particular order." alt="" coords="736,35,956,75"/>
+<area shape="rect" id="Node000002" href="$de/d7a/classAestra_1_1Audio_1_1DuplicatePatternCommand.html#a649a7ffa999c9b77b2900a38227316ce" title="&quot;&lt;name&gt; copy&quot;, then &quot;&lt;name&gt; copy 2&quot;, ... the first one no pattern already has." alt="" coords="475,5,688,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="722,44,688,40,689,35,723,38"/>
+<area shape="rect" id="Node000005" href="$da/d25/namespaceAestra_1_1BringOver.html#ad57da864877180c24fb0bdc51750c705" title="What other has that current could take, compared by name." alt="" coords="495,70,668,95"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="723,70,668,76,668,71,722,65"/>
+<area shape="rect" id="Node000003" href="$de/d7a/classAestra_1_1Audio_1_1DuplicatePatternCommand.html#ac894d869a239181170279f7ce85c7500" title="Execute the command (first time)" alt="" coords="232,5,427,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="461,28,427,28,427,23,461,23"/>
+<area shape="rect" id="Node000004" href="$de/d7a/classAestra_1_1Audio_1_1DuplicatePatternCommand.html#acc701d9ce83fb1bfb64cb6906e5075cf" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,184,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="219,28,184,28,184,23,219,23"/>
 </map>

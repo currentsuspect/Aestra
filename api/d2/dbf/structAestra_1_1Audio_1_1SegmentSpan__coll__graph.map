@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::SegmentSpan" name="Aestra::Audio::SegmentSpan">
+<area shape="rect" id="Node000001" title="The part of a curve segment, from screen x1 to x2, that lies inside the lane [left,..." alt="" coords="5,108,212,133"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="83,5,134,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="111,45,111,108,106,108,106,45"/>
+</map>

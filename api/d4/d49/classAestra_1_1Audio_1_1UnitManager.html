@@ -75,6 +75,7 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
+<a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="../../d6/d1c/classAestra_1_1Audio_1_1UnitManager-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">Aestra::Audio::UnitManager Class Reference</div></div>
@@ -86,6 +87,12 @@ $(function() {
 
 <p><code>#include &lt;<a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>&gt;</code></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
+Public Types</h2></td></tr>
+<tr class="memitem:aa1ae2e1b75f14823660103214e0c49df" id="r_aa1ae2e1b75f14823660103214e0c49df"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d49/classAestra_1_1Audio_1_1UnitManager.html#aa1ae2e1b75f14823660103214e0c49df">AudioSnapshotRead</a> = <a class="el" href="../../dc/dca/classAestra_1_1Audio_1_1RealtimeSharedSlot.html">RealtimeSharedSlot</a>&lt; const <a class="el" href="../../dd/de8/structAestra_1_1Audio_1_1AudioArsenalSnapshot.html">AudioArsenalSnapshot</a> &gt;::ReadHandle</td></tr>
+<tr class="memdesc:aa1ae2e1b75f14823660103214e0c49df"><td class="mdescLeft">&#160;</td><td class="mdescRight">Audio-thread read of the published snapshot: no lock, no allocation, never the last reference.  <br /></td></tr>
+<tr class="separator:aa1ae2e1b75f14823660103214e0c49df"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a86cf972d06ed8ca7f77624dd4f437a66" id="r_a86cf972d06ed8ca7f77624dd4f437a66"><td class="memItemLeft" align="right" valign="top"><a id="a86cf972d06ed8ca7f77624dd4f437a66" name="a86cf972d06ed8ca7f77624dd4f437a66"></a>
@@ -95,6 +102,8 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a34db3b8d6a06afefdf4711c3d84b63f0" id="r_a34db3b8d6a06afefdf4711c3d84b63f0"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; const <a class="el" href="../../dd/de8/structAestra_1_1Audio_1_1AudioArsenalSnapshot.html">AudioArsenalSnapshot</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a34db3b8d6a06afefdf4711c3d84b63f0">getAudioSnapshot</a> () const</td></tr>
 <tr class="memdesc:a34db3b8d6a06afefdf4711c3d84b63f0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Build a snapshot of the current unit state for the audio engine.  <br /></td></tr>
 <tr class="separator:a34db3b8d6a06afefdf4711c3d84b63f0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa35ed3309c95707b7f5d5229c8dec2f5" id="r_aa35ed3309c95707b7f5d5229c8dec2f5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d49/classAestra_1_1Audio_1_1UnitManager.html#aa1ae2e1b75f14823660103214e0c49df">AudioSnapshotRead</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d49/classAestra_1_1Audio_1_1UnitManager.html#aa35ed3309c95707b7f5d5229c8dec2f5">readAudioSnapshotRt</a> () const noexcept</td></tr>
+<tr class="separator:aa35ed3309c95707b7f5d5229c8dec2f5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a337860946234910b96f53b802d0c21d0" id="r_a337860946234910b96f53b802d0c21d0"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html">UnitInfo</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0">getUnit</a> (UnitID id)</td></tr>
 <tr class="memdesc:a337860946234910b96f53b802d0c21d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a mutable unit by identifier.  <br /></td></tr>
 <tr class="separator:a337860946234910b96f53b802d0c21d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -228,8 +237,27 @@ Public Member Functions</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Unit manager for Arsenal system. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00200">200</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
-</div><h2 class="groupheader">Member Function Documentation</h2>
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00201">201</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+</div><h2 class="groupheader">Member Typedef Documentation</h2>
+<a id="aa1ae2e1b75f14823660103214e0c49df" name="aa1ae2e1b75f14823660103214e0c49df"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa1ae2e1b75f14823660103214e0c49df">&#9670;&#160;</a></span>AudioSnapshotRead</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="../../d4/d49/classAestra_1_1Audio_1_1UnitManager.html#aa1ae2e1b75f14823660103214e0c49df">Aestra::Audio::UnitManager::AudioSnapshotRead</a> =  <a class="el" href="../../dc/dca/classAestra_1_1Audio_1_1RealtimeSharedSlot.html">RealtimeSharedSlot</a>&lt;const <a class="el" href="../../dd/de8/structAestra_1_1Audio_1_1AudioArsenalSnapshot.html">AudioArsenalSnapshot</a>&gt;::ReadHandle</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Audio-thread read of the published snapshot: no lock, no allocation, never the last reference. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00215">215</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Member Function Documentation</h2>
 <a id="a736081f5fcc291f3a3a355315f487abd" name="a736081f5fcc291f3a3a355315f487abd"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a736081f5fcc291f3a3a355315f487abd">&#9670;&#160;</a></span>assignUnitToTimelineLane()</h2>
 
@@ -258,9 +286,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Retain a legacy Timeline lane assignment for ownership compatibility. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00518">518</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00519">519</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
 <div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-0-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
@@ -313,9 +341,9 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00687">687</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00688">688</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-1-summary" class="dynsummary" style="display:block;">
@@ -344,9 +372,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Capture the current plugin state back into the unit model. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00714">714</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00715">715</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>, and <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00109">Aestra::Audio::UnitInfo::plugin</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>, and <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00110">Aestra::Audio::UnitInfo::plugin</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d7/dcb/SamplerEditHistory_8h_source.html#l00029">Aestra::SamplerEditHistory::commit()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -383,11 +411,11 @@ Public Member Functions</h2></td></tr>
 
 <p>Remove every unit from the manager. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00427">427</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00428">428</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00800">loadFromJSON()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00801">loadFromJSON()</a>.</p>
 <div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-4-summary" class="dynsummary" style="display:block;">
@@ -423,9 +451,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Clear legacy Timeline ownership metadata without changing mixer output. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00530">530</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00531">531</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
 <div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-6-summary" class="dynsummary" style="display:block;">
@@ -454,11 +482,11 @@ Public Member Functions</h2></td></tr>
 <p>Create a unit with generated defaults. </p>
 <dl class="section return"><dt>Returns</dt><dd>Identifier of the created unit. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00299">299</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00300">300</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00299">createUnit()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00300">createUnit()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00299">createUnit()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00325">createUnit()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00329">duplicateUnit()</a>, and <a class="el" href="../../d8/df0/AddUnitCommand_8h_source.html#l00025">Aestra::Audio::AddUnitCommand::execute()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00300">createUnit()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00326">createUnit()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00330">duplicateUnit()</a>, and <a class="el" href="../../d8/df0/AddUnitCommand_8h_source.html#l00025">Aestra::Audio::AddUnitCommand::execute()</a>.</p>
 <div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-7-summary" class="dynsummary" style="display:block;">
@@ -512,9 +540,9 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Identifier of the created unit. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00325">325</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00326">326</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00299">createUnit()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00300">createUnit()</a>.</p>
 <div id="dynsection-9" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-9-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-9-summary" class="dynsummary" style="display:block;">
@@ -551,7 +579,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00303">303</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00304">304</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -580,9 +608,9 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Identifier of the new unit, or 0 if the source is missing. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00329">329</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00330">330</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00128">Aestra::Audio::PatternManager::clonePattern()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00299">createUnit()</a>, <a class="el" href="../../da/dc5/PluginManager_8cpp_source.html#l00032">Aestra::Audio::PluginManager::getInstance()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
+<p class="reference">References <a class="el" href="../../db/d17/PatternManager_8h_source.html#l00128">Aestra::Audio::PatternManager::clonePattern()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00300">createUnit()</a>, <a class="el" href="../../da/dc5/PluginManager_8cpp_source.html#l00032">Aestra::Audio::PluginManager::getInstance()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
 <div id="dynsection-10" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-10-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-10-summary" class="dynsummary" style="display:block;">
@@ -619,9 +647,9 @@ Public Member Functions</h2></td></tr>
 <p>Get all unit identifiers in display order. </p>
 <dl class="section return"><dt>Returns</dt><dd>Ordered unit identifier list. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00255">255</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00260">260</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00111">Aestra::Audio::DeleteTrackCommand::execute()</a>, <a class="el" href="../../d3/d38/ArsenalRowLanes_8h_source.html#l00038">Aestra::ArsenalRowLanes::noSounds()</a>, and <a class="el" href="../../d1/d5a/TrackManager_8cpp_source.html#l00133">Aestra::Audio::TrackManager::prewarmSamplerKeepLength()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00107">Aestra::Audio::DeleteTrackCommand::execute()</a>, <a class="el" href="../../d3/d38/ArsenalRowLanes_8h_source.html#l00038">Aestra::ArsenalRowLanes::noSounds()</a>, and <a class="el" href="../../d1/d5a/TrackManager_8cpp_source.html#l00360">Aestra::Audio::TrackManager::prewarmSamplerKeepLength()</a>.</p>
 <div id="dynsection-11" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-11-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-11-summary" class="dynsummary" style="display:block;">
@@ -650,7 +678,7 @@ Public Member Functions</h2></td></tr>
 <p>Build a snapshot of the current unit state for the audio engine. </p>
 <dl class="section return"><dt>Returns</dt><dd>Shared immutable snapshot of unit routing and plugin state. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00284">284</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00285">285</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -679,9 +707,9 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to the unit, or nullptr when missing. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">289</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">290</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00518">assignUnitToTimelineLane()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00687">attachPlugin()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00714">captureUnitPluginState()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00530">clearUnitTimelineLane()</a>, <a class="el" href="../../d3/d38/ArsenalRowLanes_8h_source.html#l00056">Aestra::ArsenalRowLanes::draw()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00329">duplicateUnit()</a>, <a class="el" href="../../da/d58/AssignUnitToFirstFreeMixerChannelCommand_8h_source.html#l00092">Aestra::Audio::AssignUnitToFirstFreeMixerChannelCommand::execute()</a>, <a class="el" href="../../d0/dd4/LoadSampleCommand_8h_source.html#l00024">Aestra::Audio::LoadSampleCommand::execute()</a>, <a class="el" href="../../d9/de9/SetUnitGainCommand_8h_source.html#l00020">Aestra::Audio::SetUnitGainCommand::execute()</a>, <a class="el" href="../../db/da1/SetUnitMixerChannelCommand_8h_source.html#l00016">Aestra::Audio::SetUnitMixerChannelCommand::execute()</a>, <a class="el" href="../../d3/d38/ArsenalRowLanes_8h_source.html#l00031">Aestra::ArsenalRowLanes::extraFor()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00469">getUnitMixerChannel()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00720">getUnitPlugin()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00725">getUnitPluginId()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00538">getUnitTimelineLane()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00680">getUnitType()</a>, <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00166">Aestra::Audio::CommandRegistry::initialize()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00476">migrateLegacyMixerRoutes()</a>, <a class="el" href="../../d3/d38/ArsenalRowLanes_8h_source.html#l00038">Aestra::ArsenalRowLanes::noSounds()</a>, <a class="el" href="../../d3/d38/ArsenalRowLanes_8h_source.html#l00180">Aestra::ArsenalRowLanes::onKey()</a>, <a class="el" href="../../d3/d38/ArsenalRowLanes_8h_source.html#l00089">Aestra::ArsenalRowLanes::onMouse()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>, <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00223">Aestra::Audio::PatternPlaybackEngine::refillWindow()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00504">resetMixerChannel()</a>, <a class="el" href="../../de/d55/UnitRow_8cpp_source.html#l01728">AestraUI::UnitRow::routeToFirstFreeMixerChannel()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00739">saveToJSON()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00441">setUnitArmed()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00551">setUnitAudioClip()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00614">setUnitAudioClipFromDecoded()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00666">setUnitColor()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00442">setUnitEnabled()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00544">setUnitGain()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00667">setUnitGroup()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00460">setUnitMixerChannel()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00439">setUnitMute()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00438">setUnitName()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00704">setUnitPluginState()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00440">setUnitSolo()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00434">setUnitSoundSet()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00668">setUnitType()</a>, <a class="el" href="../../d8/d6e/UnitSignalColor_8h_source.html#l00014">Aestra::unitSignalColor()</a>, and <a class="el" href="../../de/d55/UnitRow_8cpp_source.html#l00074">AestraUI::UnitRow::updateState()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00519">assignUnitToTimelineLane()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00688">attachPlugin()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00715">captureUnitPluginState()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00531">clearUnitTimelineLane()</a>, <a class="el" href="../../d3/d38/ArsenalRowLanes_8h_source.html#l00056">Aestra::ArsenalRowLanes::draw()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00330">duplicateUnit()</a>, <a class="el" href="../../da/d58/AssignUnitToFirstFreeMixerChannelCommand_8h_source.html#l00092">Aestra::Audio::AssignUnitToFirstFreeMixerChannelCommand::execute()</a>, <a class="el" href="../../d0/dd4/LoadSampleCommand_8h_source.html#l00024">Aestra::Audio::LoadSampleCommand::execute()</a>, <a class="el" href="../../d9/de9/SetUnitGainCommand_8h_source.html#l00020">Aestra::Audio::SetUnitGainCommand::execute()</a>, <a class="el" href="../../db/da1/SetUnitMixerChannelCommand_8h_source.html#l00016">Aestra::Audio::SetUnitMixerChannelCommand::execute()</a>, <a class="el" href="../../d3/d38/ArsenalRowLanes_8h_source.html#l00031">Aestra::ArsenalRowLanes::extraFor()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00470">getUnitMixerChannel()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00721">getUnitPlugin()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00726">getUnitPluginId()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00539">getUnitTimelineLane()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00681">getUnitType()</a>, <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00113">Aestra::Audio::CommandRegistry::initialize()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00477">migrateLegacyMixerRoutes()</a>, <a class="el" href="../../d3/d38/ArsenalRowLanes_8h_source.html#l00038">Aestra::ArsenalRowLanes::noSounds()</a>, <a class="el" href="../../d3/d38/ArsenalRowLanes_8h_source.html#l00180">Aestra::ArsenalRowLanes::onKey()</a>, <a class="el" href="../../d3/d38/ArsenalRowLanes_8h_source.html#l00089">Aestra::ArsenalRowLanes::onMouse()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>, <a class="el" href="../../d3/d09/PatternPlaybackEngine_8cpp_source.html#l00244">Aestra::Audio::PatternPlaybackEngine::refillWindow()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00505">resetMixerChannel()</a>, <a class="el" href="../../de/d55/UnitRow_8cpp_source.html#l01728">AestraUI::UnitRow::routeToFirstFreeMixerChannel()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00740">saveToJSON()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00442">setUnitArmed()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00552">setUnitAudioClip()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00615">setUnitAudioClipFromDecoded()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00667">setUnitColor()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00443">setUnitEnabled()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00545">setUnitGain()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00668">setUnitGroup()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00461">setUnitMixerChannel()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00440">setUnitMute()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00439">setUnitName()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00705">setUnitPluginState()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00441">setUnitSolo()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00435">setUnitSoundSet()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00669">setUnitType()</a>, <a class="el" href="../../d8/d6e/UnitSignalColor_8h_source.html#l00014">Aestra::unitSignalColor()</a>, and <a class="el" href="../../de/d55/UnitRow_8cpp_source.html#l00074">AestraUI::UnitRow::updateState()</a>.</p>
 <div id="dynsection-12" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-12-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-12-summary" class="dynsummary" style="display:block;">
@@ -717,7 +745,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to the unit, or nullptr when missing. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00294">294</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00295">295</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -747,7 +775,7 @@ Public Member Functions</h2></td></tr>
 <p>Get the number of units in display order. </p>
 <dl class="section return"><dt>Returns</dt><dd>Unit count. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00250">250</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00255">255</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
 </div>
 </div>
@@ -769,11 +797,11 @@ Public Member Functions</h2></td></tr>
 
 <p>Return the unit's stable mixer destination ID (0 means Master). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00469">469</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00470">470</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../da/d58/AssignUnitToFirstFreeMixerChannelCommand_8h_source.html#l00092">Aestra::Audio::AssignUnitToFirstFreeMixerChannelCommand::execute()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00111">Aestra::Audio::DeleteTrackCommand::execute()</a>, and <a class="el" href="../../db/da1/SetUnitMixerChannelCommand_8h_source.html#l00016">Aestra::Audio::SetUnitMixerChannelCommand::execute()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../da/d58/AssignUnitToFirstFreeMixerChannelCommand_8h_source.html#l00092">Aestra::Audio::AssignUnitToFirstFreeMixerChannelCommand::execute()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00107">Aestra::Audio::DeleteTrackCommand::execute()</a>, and <a class="el" href="../../db/da1/SetUnitMixerChannelCommand_8h_source.html#l00016">Aestra::Audio::SetUnitMixerChannelCommand::execute()</a>.</p>
 <div id="dynsection-13" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-13-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-13-summary" class="dynsummary" style="display:block;">
@@ -809,11 +837,11 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the plugin instance attached to a unit. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00720">720</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00721">721</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00730">getUnitRootMidiNote()</a>, and <a class="el" href="../../d1/d5a/TrackManager_8cpp_source.html#l00133">Aestra::Audio::TrackManager::prewarmSamplerKeepLength()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00731">getUnitRootMidiNote()</a>, and <a class="el" href="../../d1/d5a/TrackManager_8cpp_source.html#l00360">Aestra::Audio::TrackManager::prewarmSamplerKeepLength()</a>.</p>
 <div id="dynsection-15" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-15-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-15-summary" class="dynsummary" style="display:block;">
@@ -849,9 +877,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the plugin identifier attached to a unit. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00725">725</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00726">726</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>.</p>
 <div id="dynsection-17" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-17-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-17-summary" class="dynsummary" style="display:block;">
@@ -880,9 +908,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the MIDI note that plays a unit's sample untransposed (60 fallback). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00730">730</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00731">731</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00720">getUnitPlugin()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00721">getUnitPlugin()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../de/d55/UnitRow_8cpp_source.html#l00074">AestraUI::UnitRow::updateState()</a>.</p>
 <div id="dynsection-18" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -920,9 +948,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the current Timeline lane assignment, or -1 when none. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00538">538</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00539">539</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>.</p>
 <div id="dynsection-20" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-20-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-20-summary" class="dynsummary" style="display:block;">
@@ -951,9 +979,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the current content type for a unit. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00680">680</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00681">681</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>.</p>
 <div id="dynsection-21" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-21-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-21-summary" class="dynsummary" style="display:block;">
@@ -982,9 +1010,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Restore unit state from <a class="el" href="../../df/dee/classAestra_1_1JSON.html">JSON</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00800">800</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00801">801</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00130">Aestra::Audio::UnitInfo::audioClipPath</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00137">Aestra::Audio::UnitInfo::audioDurationSeconds</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00105">Aestra::Audio::UnitInfo::bridgeMode</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00427">clear()</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00118">Aestra::Audio::UnitInfo::color</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00145">Aestra::Audio::UnitInfo::defaultPatternId</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00073">Aestra::Audio::UnitInfo::enabled</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00120">Aestra::Audio::UnitInfo::gain</a>, <a class="el" href="../../da/dc5/PluginManager_8cpp_source.html#l00032">Aestra::Audio::PluginManager::getInstance()</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00141">Aestra::Audio::UnitInfo::group</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00071">Aestra::Audio::UnitInfo::id</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00126">Aestra::Audio::UnitInfo::isArmed</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00128">Aestra::Audio::UnitInfo::isEnabled</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00122">Aestra::Audio::UnitInfo::isMuted</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00124">Aestra::Audio::UnitInfo::isSolo</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00085">Aestra::Audio::UnitInfo::legacyMixerRoutePending</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00116">Aestra::Audio::UnitInfo::name</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00109">Aestra::Audio::UnitInfo::plugin</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00111">Aestra::Audio::UnitInfo::pluginId</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00113">Aestra::Audio::UnitInfo::pluginState</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00092">Aestra::Audio::UnitInfo::routeMode</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00135">Aestra::Audio::UnitInfo::soundSet</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00083">Aestra::Audio::UnitInfo::targetMixerChannelId</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00081">Aestra::Audio::UnitInfo::targetMixerRoute</a>, and <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00143">Aestra::Audio::UnitInfo::type</a>.</p>
+<p class="reference">References <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00131">Aestra::Audio::UnitInfo::audioClipPath</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00138">Aestra::Audio::UnitInfo::audioDurationSeconds</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00106">Aestra::Audio::UnitInfo::bridgeMode</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00428">clear()</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00119">Aestra::Audio::UnitInfo::color</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00146">Aestra::Audio::UnitInfo::defaultPatternId</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00074">Aestra::Audio::UnitInfo::enabled</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00121">Aestra::Audio::UnitInfo::gain</a>, <a class="el" href="../../da/dc5/PluginManager_8cpp_source.html#l00032">Aestra::Audio::PluginManager::getInstance()</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00142">Aestra::Audio::UnitInfo::group</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00072">Aestra::Audio::UnitInfo::id</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00127">Aestra::Audio::UnitInfo::isArmed</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00129">Aestra::Audio::UnitInfo::isEnabled</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00123">Aestra::Audio::UnitInfo::isMuted</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00125">Aestra::Audio::UnitInfo::isSolo</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00086">Aestra::Audio::UnitInfo::legacyMixerRoutePending</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00117">Aestra::Audio::UnitInfo::name</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00110">Aestra::Audio::UnitInfo::plugin</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00112">Aestra::Audio::UnitInfo::pluginId</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00114">Aestra::Audio::UnitInfo::pluginState</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00093">Aestra::Audio::UnitInfo::routeMode</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00136">Aestra::Audio::UnitInfo::soundSet</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00084">Aestra::Audio::UnitInfo::targetMixerChannelId</a>, <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00082">Aestra::Audio::UnitInfo::targetMixerRoute</a>, and <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00144">Aestra::Audio::UnitInfo::type</a>.</p>
 <div id="dynsection-22" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-22-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-22-summary" class="dynsummary" style="display:block;">
@@ -1013,9 +1041,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Resolve lane-index routes from projects saved before stable mixer IDs existed. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00476">476</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00477">477</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
 <div id="dynsection-23" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-23-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-23-summary" class="dynsummary" style="display:block;">
@@ -1046,9 +1074,9 @@ Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">254</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>, and <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00153">Aestra::Audio::UnitState::id</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>, and <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00154">Aestra::Audio::UnitState::id</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00518">assignUnitToTimelineLane()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00687">attachPlugin()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00427">clear()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00530">clearUnitTimelineLane()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00329">duplicateUnit()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00800">loadFromJSON()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00476">migrateLegacyMixerRoutes()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00415">removeUnit()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00397">reorderUnit()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00504">resetMixerChannel()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00551">setUnitAudioClip()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00614">setUnitAudioClipFromDecoded()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00442">setUnitEnabled()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00544">setUnitGain()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00460">setUnitMixerChannel()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00439">setUnitMute()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00704">setUnitPluginState()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00440">setUnitSolo()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00668">setUnitType()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00519">assignUnitToTimelineLane()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00688">attachPlugin()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00428">clear()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00531">clearUnitTimelineLane()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00330">duplicateUnit()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00801">loadFromJSON()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00477">migrateLegacyMixerRoutes()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00416">removeUnit()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00398">reorderUnit()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00505">resetMixerChannel()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00552">setUnitAudioClip()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00615">setUnitAudioClipFromDecoded()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00443">setUnitEnabled()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00545">setUnitGain()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00461">setUnitMixerChannel()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00440">setUnitMute()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00705">setUnitPluginState()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00441">setUnitSolo()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00669">setUnitType()</a>.</p>
 <div id="dynsection-24" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-24-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-24-summary" class="dynsummary" style="display:block;">
@@ -1063,6 +1091,33 @@ Public Member Functions</h2></td></tr>
 <div id="dynsection-25-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d4/d49/classAestra_1_1Audio_1_1UnitManager_a6c8467163ee1bf8434a63f4e85279d05_icgraph.svg" width="100%" height="600"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
+
+</div>
+</div>
+<a id="aa35ed3309c95707b7f5d5229c8dec2f5" name="aa35ed3309c95707b7f5d5229c8dec2f5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa35ed3309c95707b7f5d5229c8dec2f5">&#9670;&#160;</a></span>readAudioSnapshotRt()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d4/d49/classAestra_1_1Audio_1_1UnitManager.html#aa1ae2e1b75f14823660103214e0c49df">AudioSnapshotRead</a> Aestra::Audio::UnitManager::readAudioSnapshotRt </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00216">216</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
 </div>
 </div>
@@ -1091,7 +1146,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True when a unit was removed. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00415">415</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00416">416</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
 
@@ -1148,7 +1203,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00397">397</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00398">398</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
 <div id="dynsection-28" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -1179,11 +1234,11 @@ Public Member Functions</h2></td></tr>
 
 <p>Reset units targeting a mixer channel that is being removed. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00504">504</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00505">505</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>, and <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00083">Aestra::Audio::UnitInfo::targetMixerChannelId</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>, and <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00084">Aestra::Audio::UnitInfo::targetMixerChannelId</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00111">Aestra::Audio::DeleteTrackCommand::execute()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00184">Aestra::Audio::DeleteTrackCommand::redo()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00201">Aestra::Audio::TrackManager::removeLastChannel()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00107">Aestra::Audio::DeleteTrackCommand::execute()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00180">Aestra::Audio::DeleteTrackCommand::redo()</a>, and <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00207">Aestra::Audio::TrackManager::removeLastChannel()</a>.</p>
 <div id="dynsection-29" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-29-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-29-summary" class="dynsummary" style="display:block;">
@@ -1218,9 +1273,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Serialize the manager to <a class="el" href="../../df/dee/classAestra_1_1JSON.html">JSON</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00739">739</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00740">740</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>.</p>
 <div id="dynsection-31" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-31-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-31-summary" class="dynsummary" style="display:block;">
@@ -1255,7 +1310,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00374">374</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00382">382</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
 </div>
 </div>
@@ -1285,7 +1340,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Where a new unit's colour comes from (given how many units exist); unset keeps the grey default. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00310">310</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00315">315</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
 </div>
 </div>
@@ -1315,7 +1370,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Set the <a class="el" href="../../d3/d1a/classAestra_1_1Audio_1_1PatternManager.html" title="Simple in-memory pattern manager.">PatternManager</a> used for auto-creating patterns per unit. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00342">342</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00347">347</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
 </div>
 </div>
@@ -1343,7 +1398,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00373">373</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d9b/UnitManager_8h_source.html#l00381">381</a> of file <a class="el" href="../../d7/d9b/UnitManager_8h_source.html">UnitManager.h</a>.</p>
 
 </div>
 </div>
@@ -1375,9 +1430,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Set armed state for a unit. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00441">441</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00442">442</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>.</p>
 <div id="dynsection-32" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-32-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-32-summary" class="dynsummary" style="display:block;">
@@ -1416,9 +1471,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Attach an audio clip path to a unit. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00551">551</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00552">552</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../da/dc5/PluginManager_8cpp_source.html#l00032">Aestra::Audio::PluginManager::getInstance()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>, <a class="el" href="../../df/dae/MetadataParser_8cpp_source.html#l00018">Aestra::Audio::MetadataParser::parse()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
+<p class="reference">References <a class="el" href="../../da/dc5/PluginManager_8cpp_source.html#l00032">Aestra::Audio::PluginManager::getInstance()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>, <a class="el" href="../../df/dae/MetadataParser_8cpp_source.html#l00018">Aestra::Audio::MetadataParser::parse()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d0/dd4/LoadSampleCommand_8h_source.html#l00024">Aestra::Audio::LoadSampleCommand::execute()</a>, <a class="el" href="../../de/d55/UnitRow_8cpp_source.html#l01611">AestraUI::UnitRow::onDrop()</a>, and <a class="el" href="../../d0/dd4/LoadSampleCommand_8h_source.html#l00033">Aestra::Audio::LoadSampleCommand::undo()</a>.</p>
 <div id="dynsection-33" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -1496,9 +1551,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Publish a pre-decoded audio clip to a unit without doing file I/O on the caller. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00614">614</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00615">615</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../da/dc5/PluginManager_8cpp_source.html#l00032">Aestra::Audio::PluginManager::getInstance()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
+<p class="reference">References <a class="el" href="../../da/dc5/PluginManager_8cpp_source.html#l00032">Aestra::Audio::PluginManager::getInstance()</a>, <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
 <div id="dynsection-35" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-35-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-35-summary" class="dynsummary" style="display:block;">
@@ -1537,9 +1592,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Set the UI accent color for a unit. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00666">666</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00667">667</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>.</p>
 <div id="dynsection-36" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-36-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-36-summary" class="dynsummary" style="display:block;">
@@ -1578,9 +1633,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Set enabled state for a unit. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00442">442</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00443">443</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d8/df0/AddUnitCommand_8h_source.html#l00025">Aestra::Audio::AddUnitCommand::execute()</a>.</p>
 <div id="dynsection-37" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -1628,9 +1683,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Set the unit's linear output gain (published to the audio snapshot). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00544">544</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00545">545</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d9/de9/SetUnitGainCommand_8h_source.html#l00020">Aestra::Audio::SetUnitGainCommand::execute()</a>, and <a class="el" href="../../d9/de9/SetUnitGainCommand_8h_source.html#l00029">Aestra::Audio::SetUnitGainCommand::undo()</a>.</p>
 <div id="dynsection-39" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -1678,9 +1733,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Set the unit group classification. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00667">667</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00668">668</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>.</p>
 <div id="dynsection-41" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-41-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-41-summary" class="dynsummary" style="display:block;">
@@ -1719,11 +1774,11 @@ Public Member Functions</h2></td></tr>
 
 <p>Route a unit to a stable mixer channel ID (0 means Master). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00460">460</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00461">461</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../da/d58/AssignUnitToFirstFreeMixerChannelCommand_8h_source.html#l00092">Aestra::Audio::AssignUnitToFirstFreeMixerChannelCommand::execute()</a>, <a class="el" href="../../db/da1/SetUnitMixerChannelCommand_8h_source.html#l00016">Aestra::Audio::SetUnitMixerChannelCommand::execute()</a>, <a class="el" href="../../da/d58/AssignUnitToFirstFreeMixerChannelCommand_8h_source.html#l00124">Aestra::Audio::AssignUnitToFirstFreeMixerChannelCommand::undo()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00162">Aestra::Audio::DeleteTrackCommand::undo()</a>, and <a class="el" href="../../db/da1/SetUnitMixerChannelCommand_8h_source.html#l00027">Aestra::Audio::SetUnitMixerChannelCommand::undo()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../da/d58/AssignUnitToFirstFreeMixerChannelCommand_8h_source.html#l00092">Aestra::Audio::AssignUnitToFirstFreeMixerChannelCommand::execute()</a>, <a class="el" href="../../db/da1/SetUnitMixerChannelCommand_8h_source.html#l00016">Aestra::Audio::SetUnitMixerChannelCommand::execute()</a>, <a class="el" href="../../da/d58/AssignUnitToFirstFreeMixerChannelCommand_8h_source.html#l00124">Aestra::Audio::AssignUnitToFirstFreeMixerChannelCommand::undo()</a>, <a class="el" href="../../d9/d65/MuseStubs_8cpp_source.html#l00158">Aestra::Audio::DeleteTrackCommand::undo()</a>, and <a class="el" href="../../db/da1/SetUnitMixerChannelCommand_8h_source.html#l00027">Aestra::Audio::SetUnitMixerChannelCommand::undo()</a>.</p>
 <div id="dynsection-42" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-42-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-42-summary" class="dynsummary" style="display:block;">
@@ -1769,9 +1824,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Set muted state for a unit. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00439">439</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00440">440</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
 <div id="dynsection-44" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-44-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-44-summary" class="dynsummary" style="display:block;">
@@ -1810,9 +1865,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Set the display name for a unit. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00438">438</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00439">439</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../de/d55/UnitRow_8cpp_source.html#l01611">AestraUI::UnitRow::onDrop()</a>.</p>
 <div id="dynsection-45" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -1860,9 +1915,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Replace the serialized plugin state blob for a unit. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00704">704</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00705">705</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
 <div id="dynsection-47" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-47-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-47-summary" class="dynsummary" style="display:block;">
@@ -1901,9 +1956,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Set solo state for a unit. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00440">440</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00441">441</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
 <div id="dynsection-48" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-48-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-48-summary" class="dynsummary" style="display:block;">
@@ -1942,9 +1997,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Point a unit's sound arrows and drawer at a sound set (empty: its own folder). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00434">434</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00435">435</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>.</p>
 <div id="dynsection-49" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-49-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-49-summary" class="dynsummary" style="display:block;">
@@ -1983,9 +2038,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Set the unit content type and keep its group classification aligned. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00668">668</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00669">669</a> of file <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html">UnitManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00289">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00290">getUnit()</a>, and <a class="el" href="../../d0/d70/UnitManager_8cpp_source.html#l00254">publishSnapshot()</a>.</p>
 <div id="dynsection-50" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-50-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-50-summary" class="dynsummary" style="display:block;">

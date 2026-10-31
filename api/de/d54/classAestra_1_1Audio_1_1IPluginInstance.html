@@ -153,6 +153,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:aa054540a8ed06135b947ea3c71d6cc42" id="r_aa054540a8ed06135b947ea3c71d6cc42"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aa054540a8ed06135b947ea3c71d6cc42">openEditor</a> (void *parentWindow)=0</td></tr>
 <tr class="memdesc:aa054540a8ed06135b947ea3c71d6cc42"><td class="mdescLeft">&#160;</td><td class="mdescRight">Open the plugin editor window.  <br /></td></tr>
 <tr class="separator:aa054540a8ed06135b947ea3c71d6cc42"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa31a55f7d6636219b307170826b91fd9" id="r_aa31a55f7d6636219b307170826b91fd9"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aa31a55f7d6636219b307170826b91fd9">ownsEditorWindow</a> () const</td></tr>
+<tr class="memdesc:aa31a55f7d6636219b307170826b91fd9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Whether the plugin makes its own top-level window (the sandbox helper does), so the app must not make one to embed it in.  <br /></td></tr>
+<tr class="separator:aa31a55f7d6636219b307170826b91fd9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abbbd61d2c9b8113b4fa8842ac1ea025b" id="r_abbbd61d2c9b8113b4fa8842ac1ea025b"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#abbbd61d2c9b8113b4fa8842ac1ea025b">closeEditor</a> ()=0</td></tr>
 <tr class="memdesc:abbbd61d2c9b8113b4fa8842ac1ea025b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Close the plugin editor window.  <br /></td></tr>
 <tr class="separator:abbbd61d2c9b8113b4fa8842ac1ea025b"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -192,7 +195,7 @@ Public Member Functions</h2></td></tr>
 <p>This interface wraps format-specific plugin implementations (VST3, CLAP) providing a unified API for the audio engine to interact with plugins.</p>
 <p>Thread Safety:</p><ul>
 <li><a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a3f57ac8a0a89a69c6358a74e6fb0eec8" title="Initialize the plugin for processing.">initialize()</a>, <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#afbdcfe0566bdc5d54de9cc4c3f82e0c7" title="Shutdown the plugin, releasing all resources.">shutdown()</a>, <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a8c5884486cf915aecc040ed47579f137" title="Activate the plugin for processing Called when audio engine starts or plugin is enabled.">activate()</a>, <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ae8873fee63c09979fd8235b66cf82b74" title="Deactivate the plugin Called when audio engine stops or plugin is disabled.">deactivate()</a> must be called from main thread</li>
-<li><a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ad68239e36c4c06b2f56e9ef03c6efb99" title="Process audio through the plugin.">process()</a> is called from audio thread (RT-safe)</li>
+<li>process() is called from audio thread (RT-safe)</li>
 <li>Parameter getters/setters are thread-safe</li>
 <li>State save/load must be called from main thread</li>
 <li>Editor methods must be called from UI thread </li>
@@ -270,9 +273,9 @@ Public Member Functions</h2></td></tr>
 <li><code>normalizedValue</code> is finite and in the parameter's normalized range, exactly as <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aad11d079af48a8b2492ad744ca1b1b89" title="Set parameter value (normalized 0-1)">setParameter()</a> takes it.</li>
 <li>The plugin owns smoothing. The engine hands over the raw target once per block, so automation and a manual edit share one smoother.</li>
 </ul>
-<p>How a plugin satisfies it is its own business. An internal plugin stores to atomic parameter storage. A hosted-format adapter appends to a lock-free queue that <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ad68239e36c4c06b2f56e9ef03c6efb99" title="Process audio through the plugin.">process()</a> drains into the format's own parameter change mechanism (VST3 IParameterChanges, CLAP param events). </p>
+<p>How a plugin satisfies it is its own business. An internal plugin stores to atomic parameter storage. A hosted-format adapter appends to a lock-free queue that process() drains into the format's own parameter change mechanism (VST3 IParameterChanges, CLAP param events). </p>
 
-<p>Reimplemented in <a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a6d48aef4b6d6e8b0b45c212ed6d87485">Aestra::Audio::InternalPluginBase</a>, and <a class="el" href="../../db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html#ab3c029639d94a9839bb86c4c17776524">Aestra::Audio::Plugins::SamplerPlugin</a>.</p>
+<p>Reimplemented in <a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a6d48aef4b6d6e8b0b45c212ed6d87485">Aestra::Audio::InternalPluginBase</a>, <a class="el" href="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#a9a21e97df1a51c0618d8fefe15093ffe">Aestra::Audio::OutOfProcessPluginInstance</a>, and <a class="el" href="../../db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html#ab3c029639d94a9839bb86c4c17776524">Aestra::Audio::Plugins::SamplerPlugin</a>.</p>
 
 <p class="definition">Definition at line <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00224">224</a> of file <a class="el" href="../../d8/da5/PluginHost_8h_source.html">PluginHost.h</a>.</p>
 
@@ -681,7 +684,7 @@ Public Member Functions</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">sampleRate</td><td>Audio sample rate in Hz </td></tr>
-    <tr><td class="paramname">maxBlockSize</td><td>Maximum frames per <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ad68239e36c4c06b2f56e9ef03c6efb99" title="Process audio through the plugin.">process()</a> call </td></tr>
+    <tr><td class="paramname">maxBlockSize</td><td>Maximum frames per process() call </td></tr>
   </table>
   </dd>
 </dl>
@@ -878,6 +881,38 @@ Public Member Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>true if editor opened successfully </dd></dl>
 
 <p>Implemented in <a class="el" href="../../db/d0e/classAestra_1_1Audio_1_1Plugins_1_1AestraEQ.html#a31b81b3d7cb693fa018154f1abe34750">Aestra::Audio::Plugins::AestraEQ</a>, <a class="el" href="../../d7/db4/classAestra_1_1Audio_1_1Plugins_1_1AestraComp.html#a427d8f211ff960e9e998306edd8d5a48">Aestra::Audio::Plugins::AestraComp</a>, <a class="el" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html#a4d01c258cbd7caca8751b635a8f3908f">Aestra::Audio::Plugins::AestraDelay</a>, <a class="el" href="../../d3/d79/classAestra_1_1Audio_1_1Plugins_1_1AestraDrift.html#a2daaf8550322516acfbe4bc27084eb3a">Aestra::Audio::Plugins::AestraDrift</a>, <a class="el" href="../../d0/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraLimit.html#abff6ac152ce2cebd490f3bddba7ff4be">Aestra::Audio::Plugins::AestraLimit</a>, <a class="el" href="../../d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#ae20fe1cd7c606067607e9d8cb2424b9a">Aestra::Audio::Plugins::AestraVerb</a>, <a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a41d7acd7a554ca469d417d2ec18787d9">Aestra::Audio::InternalPluginBase</a>, <a class="el" href="../../d8/d09/classAestra_1_1Audio_1_1CLAPPluginInstance.html#a7187223de148baa29014aacd77462502">Aestra::Audio::CLAPPluginInstance</a>, <a class="el" href="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#a741a2373483b92242084b7b706b131ec">Aestra::Audio::OutOfProcessPluginInstance</a>, <a class="el" href="../../db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html#a29cc7fcd41b9d28a57f3a36cf9353622">Aestra::Audio::Plugins::SamplerPlugin</a>, and <a class="el" href="../../d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance.html#a496ace31a1a5692ea1c1595eb5d2d855">Aestra::Audio::VST3PluginInstance</a>.</p>
+
+</div>
+</div>
+<a id="aa31a55f7d6636219b307170826b91fd9" name="aa31a55f7d6636219b307170826b91fd9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa31a55f7d6636219b307170826b91fd9">&#9670;&#160;</a></span>ownsEditorWindow()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual bool Aestra::Audio::IPluginInstance::ownsEditorWindow </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Whether the plugin makes its own top-level window (the sandbox helper does), so the app must not make one to embed it in. </p>
+<p>When true, <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aa054540a8ed06135b947ea3c71d6cc42" title="Open the plugin editor window.">openEditor()</a> ignores its argument: pass nullptr. </p>
+
+<p>Reimplemented in <a class="el" href="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#a5e4a78c93741ab91abf556a2350ec53c">Aestra::Audio::OutOfProcessPluginInstance</a>.</p>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00270">270</a> of file <a class="el" href="../../d8/da5/PluginHost_8h_source.html">PluginHost.h</a>.</p>
 
 </div>
 </div>
@@ -1177,7 +1212,7 @@ Public Member Functions</h2></td></tr>
 <p>Can this instance take automation writes from the render thread? </p>
 <p>Default false: a plugin is not automated until it says it can be. The engine skips (and counts) curves aimed at such a plugin instead of guessing. Constant for the life of the instance. </p>
 
-<p>Reimplemented in <a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#ab9c0092bf57cbc7f6ea2c03ddaea1681">Aestra::Audio::InternalPluginBase</a>, and <a class="el" href="../../db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html#a2551e92fd1bce5a6c99c9eb46730cdda">Aestra::Audio::Plugins::SamplerPlugin</a>.</p>
+<p>Reimplemented in <a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#ab9c0092bf57cbc7f6ea2c03ddaea1681">Aestra::Audio::InternalPluginBase</a>, <a class="el" href="../../d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html#a0dc0e2c03c55c296031e3878c5da3960">Aestra::Audio::OutOfProcessPluginInstance</a>, and <a class="el" href="../../db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html#a2551e92fd1bce5a6c99c9eb46730cdda">Aestra::Audio::Plugins::SamplerPlugin</a>.</p>
 
 <p class="definition">Definition at line <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00204">204</a> of file <a class="el" href="../../d8/da5/PluginHost_8h_source.html">PluginHost.h</a>.</p>
 

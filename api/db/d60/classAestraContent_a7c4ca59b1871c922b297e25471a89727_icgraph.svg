@@ -242,7 +242,7 @@ var sectionId = 'dynsection-100';
 <!-- Node12 -->
 <g id="Node000012" class="node">
 <title>Node12</title>
-<g id="a_Node000012"><a xlink:href="../../db/d60/classAestraContent.html#abc3ee4861acd0c5986598b967bb00e79" target="_top" xlink:title="Open a pattern in the piano&#45;roll editor.">
+<g id="a_Node000012"><a xlink:href="../../db/d60/classAestraContent.html#a6cb6b5e62b9a7a547d2631ea4c350934" target="_top" xlink:title="Open a pattern in the piano&#45;roll editor.">
 <polygon fill="white" stroke="#666666" points="573,-164 422,-164 422,-134 573,-134 573,-164"/>
 <text text-anchor="start" x="430" y="-152" font-family="Helvetica,sans-Serif" font-size="10.00">AestraContent::openPattern</text>
 <text text-anchor="middle" x="497.5" y="-141" font-family="Helvetica,sans-Serif" font-size="10.00">InPianoRoll</text>

@@ -107,9 +107,6 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:af13e58bf08dd46ef1ec3ade09322591f" id="r_af13e58bf08dd46ef1ec3ade09322591f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/dce/classAestra_1_1Audio_1_1LockFreeSPSCQueue.html#af13e58bf08dd46ef1ec3ade09322591f">pop</a> ()</td></tr>
 <tr class="memdesc:af13e58bf08dd46ef1ec3ade09322591f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove the current front item.  <br /></td></tr>
 <tr class="separator:af13e58bf08dd46ef1ec3ade09322591f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae795d534e71a56d89b41167045e3a4d8" id="r_ae795d534e71a56d89b41167045e3a4d8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/dce/classAestra_1_1Audio_1_1LockFreeSPSCQueue.html#ae795d534e71a56d89b41167045e3a4d8">forceDrain</a> ()</td></tr>
-<tr class="memdesc:ae795d534e71a56d89b41167045e3a4d8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Drain all items from the producer side (RT-safe).  <br /></td></tr>
-<tr class="separator:ae795d534e71a56d89b41167045e3a4d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a384bfa0c345a4017e9cf8d195120fd2c" id="r_a384bfa0c345a4017e9cf8d195120fd2c"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/dce/classAestra_1_1Audio_1_1LockFreeSPSCQueue.html#a384bfa0c345a4017e9cf8d195120fd2c">size</a> () const</td></tr>
 <tr class="memdesc:a384bfa0c345a4017e9cf8d195120fd2c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the current queue occupancy.  <br /></td></tr>
 <tr class="separator:a384bfa0c345a4017e9cf8d195120fd2c"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -119,7 +116,7 @@ Public Member Functions</h2></td></tr>
 class Aestra::Audio::LockFreeSPSCQueue&lt; T, Capacity &gt;</div><p>Lock-free SPSC (single-producer, single-consumer) ring buffer. </p>
 <p>Simple bounded queue for RT-safe event transfer </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00053">53</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00056">56</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="af9998ff0a2b24c885b4d2980b76b2f4a" name="af9998ff0a2b24c885b4d2980b76b2f4a"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#af9998ff0a2b24c885b4d2980b76b2f4a">&#9670;&#160;</a></span>LockFreeSPSCQueue()</h2>
@@ -148,43 +145,11 @@ template&lt;typename T , size_t Capacity&gt; </div>
 
 <p>Create an empty single-producer/single-consumer queue. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00058">58</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00061">61</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="ae795d534e71a56d89b41167045e3a4d8" name="ae795d534e71a56d89b41167045e3a4d8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae795d534e71a56d89b41167045e3a4d8">&#9670;&#160;</a></span>forceDrain()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;typename T , size_t Capacity&gt; </div>
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">void <a class="el" href="../../d7/dce/classAestra_1_1Audio_1_1LockFreeSPSCQueue.html">Aestra::Audio::LockFreeSPSCQueue</a>&lt; T, Capacity &gt;::forceDrain </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Drain all items from the producer side (RT-safe). </p>
-<p>Resets the write head to the current read tail, discarding all queued items. Only safe to call from the producer thread when the consumer thread is known to be idle or tolerant of an empty queue. </p>
-
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00107">107</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
-
-</div>
-</div>
 <a id="ac53c60d664eb3cfb44c77a20c98793ca" name="ac53c60d664eb3cfb44c77a20c98793ca"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ac53c60d664eb3cfb44c77a20c98793ca">&#9670;&#160;</a></span>peek()</h2>
 
@@ -220,7 +185,7 @@ template&lt;typename T , size_t Capacity&gt; </div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>False when the queue is empty. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00083">83</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00086">86</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 
 </div>
 </div>
@@ -251,7 +216,7 @@ template&lt;typename T , size_t Capacity&gt; </div>
 
 <p>Remove the current front item. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00095">95</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00098">98</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 
 </div>
 </div>
@@ -290,7 +255,7 @@ template&lt;typename T , size_t Capacity&gt; </div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>False when the queue is full. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00065">65</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00068">68</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 
 </div>
 </div>
@@ -322,7 +287,7 @@ template&lt;typename T , size_t Capacity&gt; </div>
 <p>Get the current queue occupancy. </p>
 <dl class="section return"><dt>Returns</dt><dd>Number of queued items. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00116">116</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html#l00107">107</a> of file <a class="el" href="../../d3/d9d/PatternPlaybackEngine_8h_source.html">PatternPlaybackEngine.h</a>.</p>
 
 </div>
 </div>

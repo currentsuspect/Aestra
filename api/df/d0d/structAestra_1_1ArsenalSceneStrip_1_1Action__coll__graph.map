@@ -1,7 +1,11 @@
 <map id="Aestra::ArsenalSceneStrip::Action" name="Aestra::ArsenalSceneStrip::Action">
-<area shape="rect" id="Node000001" title="What a pointer event asks the panel to do (the strip changes swing itself)." alt="" coords="5,93,196,133"/>
-<area shape="rect" id="Node000002" title=" " alt="" coords="33,5,83,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="69,43,79,68,92,92,87,94,74,70,64,45"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="107,5,182,31"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="136,44,112,94,107,92,131,42"/>
+<area shape="rect" id="Node000001" title="What a pointer event asks the panel to do (the strip changes swing itself)." alt="" coords="22,196,213,236"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,108,56,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="50,142,75,170,99,194,95,198,71,174,46,145"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="80,108,155,133"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="120,147,120,196,115,196,115,147"/>
+<area shape="rect" id="Node000004" href="$dd/d25/structAestraUI_1_1NUIPoint.html" title=" " alt="" coords="179,108,322,133"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="225,143,146,198,143,194,222,139"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="225,5,276,31"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="253,45,253,108,248,108,248,45"/>
 </map>

@@ -76,6 +76,7 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-static-methods">Static Public Member Functions</a> &#124;
 <a href="../../d6/d9f/classAestra_1_1Audio_1_1CommandParser-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">Aestra::Audio::CommandParser Class Reference</div></div>
 </div><!--header-->
@@ -91,6 +92,12 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a867df74f8159bfbf8ef7db8366f59012" id="r_a867df74f8159bfbf8ef7db8366f59012"><td class="memItemLeft" align="right" valign="top">std::unique_ptr&lt; <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html">ICommand</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dea/classAestra_1_1Audio_1_1CommandParser.html#a867df74f8159bfbf8ef7db8366f59012">buildValidated</a> (const std::string &amp;verb, const std::unordered_map&lt; std::string, std::string &gt; &amp;flags, CommandStatus &amp;outStatus, std::string &amp;outMessage, const <a class="el" href="../../dd/d88/structAestra_1_1Audio_1_1CommandContext.html">CommandContext</a> &amp;context)</td></tr>
 <tr class="memdesc:a867df74f8159bfbf8ef7db8366f59012"><td class="mdescLeft">&#160;</td><td class="mdescRight">Validate and build a command without executing it.  <br /></td></tr>
 <tr class="separator:a867df74f8159bfbf8ef7db8366f59012"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
+Static Public Member Functions</h2></td></tr>
+<tr class="memitem:af2d5bd28c6bc8ee14df564c64d45ddeb" id="r_af2d5bd28c6bc8ee14df564c64d45ddeb"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dea/classAestra_1_1Audio_1_1CommandParser.html#af2d5bd28c6bc8ee14df564c64d45ddeb">describeCreated</a> (const <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html">ICommand</a> &amp;cmd, <a class="el" href="../../dd/d52/structAestra_1_1Audio_1_1CommandResult.html">CommandResult</a> &amp;out)</td></tr>
+<tr class="memdesc:af2d5bd28c6bc8ee14df564c64d45ddeb"><td class="mdescLeft">&#160;</td><td class="mdescRight">If <code>cmd</code> is a verb that creates something (unit, track, lane, clip, pattern, effect slot), fill out.createdId / createdIdText / createdKind and a message naming it.  <br /></td></tr>
+<tr class="separator:af2d5bd28c6bc8ee14df564c64d45ddeb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
@@ -143,11 +150,11 @@ Public Member Functions</h2></td></tr>
 <p>Validate and build a command without executing it. </p>
 <p>The front half of <a class="el" href="../../de/dea/classAestra_1_1Audio_1_1CommandParser.html#a3766cdeeec079d0796e5f982c9aea8df" title="Execute a verb from an already-tokenised flag map.">execute()</a>: schema lookup, unknown-flag rejection, flag validation, and registry build. Batch execution uses this to validate each member against the current state immediately before executing it. Returns nullptr with outStatus/outMessage set on failure. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00067">67</a> of file <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html">CommandParser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00073">73</a> of file <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html">CommandParser.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00144">Aestra::Audio::CommandRegistry::consumeLastBuildError()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00091">Aestra::Audio::CommandRegistry::consumeLastBuildError()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00128">execute()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00134">execute()</a>.</p>
 <div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-0-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
@@ -161,6 +168,59 @@ Public Member Functions</h2></td></tr>
 </div>
 <div id="dynsection-1-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dea/classAestra_1_1Audio_1_1CommandParser_a867df74f8159bfbf8ef7db8366f59012_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+
+</div>
+</div>
+<a id="af2d5bd28c6bc8ee14df564c64d45ddeb" name="af2d5bd28c6bc8ee14df564c64d45ddeb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af2d5bd28c6bc8ee14df564c64d45ddeb">&#9670;&#160;</a></span>describeCreated()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::CommandParser::describeCreated </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html">ICommand</a> &amp;&#160;</td>
+          <td class="paramname"><em>cmd</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../dd/d52/structAestra_1_1Audio_1_1CommandResult.html">CommandResult</a> &amp;&#160;</td>
+          <td class="paramname"><em>out</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>If <code>cmd</code> is a verb that creates something (unit, track, lane, clip, pattern, effect slot), fill out.createdId / createdIdText / createdKind and a message naming it. </p>
+<p>Returns false when it is such a verb but nothing was created (<a class="el" href="../../de/dea/classAestra_1_1Audio_1_1CommandParser.html#a3766cdeeec079d0796e5f982c9aea8df" title="Execute a verb from an already-tokenised flag map.">execute()</a> threw and was swallowed): the caller must report a failure. Returns true otherwise, with hasCreatedId telling whether there was anything to report.</p>
+<p>One function for single verbs and batch members, so the two cannot report created objects differently. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00340">340</a> of file <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html">CommandParser.cpp</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d5/dfb/CommandResult_8h_source.html#l00029">Aestra::Audio::CommandResult::createdId</a>, <a class="el" href="../../d5/dfb/CommandResult_8h_source.html#l00036">Aestra::Audio::CommandResult::createdIdText</a>, and <a class="el" href="../../d5/dfb/CommandResult_8h_source.html#l00038">Aestra::Audio::CommandResult::createdKind</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00134">execute()</a>.</p>
+<div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-2-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-2-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dea/classAestra_1_1Audio_1_1CommandParser_af2d5bd28c6bc8ee14df564c64d45ddeb_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
 </div>
@@ -206,23 +266,23 @@ Public Member Functions</h2></td></tr>
 <p>Execute a verb from an already-tokenised flag map. </p>
 <p>The shared back half of parse(): schema lookup, flag validation, registry build, and execution through <a class="el" href="../../df/d31/classAestra_1_1Audio_1_1CommandHistory.html" title="Manages undo/redo stacks for commands.">CommandHistory</a>. <a class="el" href="../../da/dfd/classAestra_1_1Audio_1_1MuseService.html" title="Muse&#39;s structured machine interface: one JSON request in, one JSON response out.">MuseService</a>'s <a class="el" href="../../df/dee/classAestra_1_1JSON.html">JSON</a> surface enters here so text and structured requests can never diverge in behaviour. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00128">128</a> of file <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html">CommandParser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00134">134</a> of file <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html">CommandParser.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00067">buildValidated()</a>, <a class="el" href="../../d5/dfb/CommandResult_8h_source.html#l00029">Aestra::Audio::CommandResult::createdId</a>, and <a class="el" href="../../d7/d81/CommandHistory_8cpp_source.html#l00040">Aestra::Audio::CommandHistory::pushAndExecute()</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00073">buildValidated()</a>, <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00340">describeCreated()</a>, <a class="el" href="../../d7/d81/CommandHistory_8cpp_source.html#l00175">Aestra::Audio::CommandHistory::isTransactionActive()</a>, <a class="el" href="../../d7/d81/CommandHistory_8cpp_source.html#l00040">Aestra::Audio::CommandHistory::pushAndExecute()</a>, and <a class="el" href="../../d7/d81/CommandHistory_8cpp_source.html#l00088">Aestra::Audio::CommandHistory::pushExecuted()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00064">Aestra::Audio::MuseService::handleRequest()</a>.</p>
-<div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
-<div id="dynsection-2-summary" class="dynsummary" style="display:block;">
-</div>
-<div id="dynsection-2-content" class="dyncontent" style="display:none;">
-<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dea/classAestra_1_1Audio_1_1CommandParser_a3766cdeeec079d0796e5f982c9aea8df_cgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
-</div>
 <div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-3-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-3-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dea/classAestra_1_1Audio_1_1CommandParser_a3766cdeeec079d0796e5f982c9aea8df_cgraph.svg" width="100%" height="530"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+<div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-4-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-4-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dea/classAestra_1_1Audio_1_1CommandParser_a3766cdeeec079d0796e5f982c9aea8df_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -260,7 +320,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00030">30</a> of file <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html">CommandParser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00036">36</a> of file <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html">CommandParser.cpp</a>.</p>
 
 </div>
 </div>

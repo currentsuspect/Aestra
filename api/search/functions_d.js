@@ -1,17 +1,19 @@
 var searchData=
 [
-  ['nameof_0',['nameOf',['../d1/dfb/classAestra_1_1Audio_1_1RoutingModel.html#a769506c8ca08ca09b9b7e655af4fb18c',1,'Aestra::Audio::RoutingModel']]],
-  ['names_1',['names',['../d3/d6c/namespaceAestra_1_1VersionLanes.html#a886fec8573c481707befe1ea84208705',1,'Aestra::VersionLanes']]],
-  ['next_2',['next',['../d2/d99/structAestra_1_1Audio_1_1SmoothedParamD.html#ae6c4d9a6476f6a5265507d520b36a8a5',1,'Aestra::Audio::SmoothedParamD::next()'],['../d2/dc0/structAestra_1_1Audio_1_1ExportQuantization_1_1TpdfDither.html#acd30df70e82ba0db9750b1925c30fb4b',1,'Aestra::Audio::ExportQuantization::TpdfDither::next()'],['../d4/da7/classAestraUI_1_1ToastQueue.html#ac6b5ea9518583e7544fb5a9b89a2d4bc',1,'AestraUI::ToastQueue::next()']]],
-  ['nextfloat_3',['nextFloat',['../d2/dc0/structAestra_1_1Audio_1_1ExportQuantization_1_1TpdfDither.html#a9cc707685ae5eb3528ccc7fc32decc6d',1,'Aestra::Audio::ExportQuantization::TpdfDither']]],
-  ['nextname_4',['nextName',['../dc/d1e/classAestra_1_1ArsenalSceneStrip.html#a7f60847d0bb4e1d6f50c70f7f5188a48',1,'Aestra::ArsenalSceneStrip']]],
-  ['nexttpdf_5',['nextTpdf',['../d2/dc0/structAestra_1_1Audio_1_1ExportQuantization_1_1TpdfDither.html#a67c747c829e2179e591325601f6088b6',1,'Aestra::Audio::ExportQuantization::TpdfDither']]],
-  ['nexttrack_6',['nextTrack',['../dd/d1f/classAestra_1_1Audio_1_1AuditionEngine.html#a7c741fd67a25c95001c93eea34cb6b02',1,'Aestra::Audio::AuditionEngine']]],
-  ['nodeat_7',['nodeAt',['../db/def/structAestra_1_1VersionsTimeline.html#aef8478d7876684e91f1f02b46807aabc',1,'Aestra::VersionsTimeline']]],
-  ['nodecount_8',['nodeCount',['../d4/dd4/classAestraUI_1_1UIRoutingMap.html#aa8fb337db510ea48f365e695e6579301',1,'AestraUI::UIRoutingMap']]],
-  ['nosounds_9',['noSounds',['../d9/d85/classAestra_1_1ArsenalRowLanes.html#abe55d1e559d94e0fb01fad5b5dfb946f',1,'Aestra::ArsenalRowLanes']]],
-  ['notedivisionmultiplier_10',['noteDivisionMultiplier',['../df/d51/classAestra_1_1Audio_1_1Plugins_1_1AestraLFO.html#aeb0e95d8759de4fcb9222b4513d40269',1,'Aestra::Audio::Plugins::AestraLFO']]],
-  ['noteoutsidepress_11',['noteOutsidePress',['../db/d60/classAestraContent.html#a9a9ae87a5651202c8e4ceac1f901b6ff',1,'AestraContent']]],
-  ['notepointergesture_12',['notePointerGesture',['../db/d1a/classAestraUI_1_1NUIComponent.html#af8edbe1ed5d776c96a836c0f5e3853f3',1,'AestraUI::NUIComponent']]],
-  ['nudgeselectedclips_13',['nudgeSelectedClips',['../d1/d11/classAestra_1_1Audio_1_1TrackManagerUI.html#a521cd5a92f24d52db71eff33cad8f0c1',1,'Aestra::Audio::TrackManagerUI']]]
+  ['named_0',['named',['../dd/d1c/classAestra_1_1Audio_1_1SetClipEditsCommand.html#a807e8fa93cd0f2a45f37350e2c7f6707',1,'Aestra::Audio::SetClipEditsCommand']]],
+  ['nameof_1',['nameOf',['../d1/dfb/classAestra_1_1Audio_1_1RoutingModel.html#a769506c8ca08ca09b9b7e655af4fb18c',1,'Aestra::Audio::RoutingModel']]],
+  ['names_2',['names',['../d3/d6c/namespaceAestra_1_1VersionLanes.html#a886fec8573c481707befe1ea84208705',1,'Aestra::VersionLanes']]],
+  ['next_3',['next',['../d2/dc0/structAestra_1_1Audio_1_1ExportQuantization_1_1TpdfDither.html#acd30df70e82ba0db9750b1925c30fb4b',1,'Aestra::Audio::ExportQuantization::TpdfDither::next()'],['../d4/da7/classAestraUI_1_1ToastQueue.html#ac6b5ea9518583e7544fb5a9b89a2d4bc',1,'AestraUI::ToastQueue::next()'],['../d2/d99/structAestra_1_1Audio_1_1SmoothedParamD.html#ae6c4d9a6476f6a5265507d520b36a8a5',1,'Aestra::Audio::SmoothedParamD::next()']]],
+  ['nextfloat_4',['nextFloat',['../d2/dc0/structAestra_1_1Audio_1_1ExportQuantization_1_1TpdfDither.html#a9cc707685ae5eb3528ccc7fc32decc6d',1,'Aestra::Audio::ExportQuantization::TpdfDither']]],
+  ['nextindex_5',['nextIndex',['../d6/dfb/classAestra_1_1SettingsForm.html#aab2e13eb4ab338f4108a64136c9a8d4e',1,'Aestra::SettingsForm']]],
+  ['nextname_6',['nextName',['../dc/d1e/classAestra_1_1ArsenalSceneStrip.html#a7f60847d0bb4e1d6f50c70f7f5188a48',1,'Aestra::ArsenalSceneStrip']]],
+  ['nexttpdf_7',['nextTpdf',['../d2/dc0/structAestra_1_1Audio_1_1ExportQuantization_1_1TpdfDither.html#a67c747c829e2179e591325601f6088b6',1,'Aestra::Audio::ExportQuantization::TpdfDither']]],
+  ['nexttrack_8',['nextTrack',['../dd/d1f/classAestra_1_1Audio_1_1AuditionEngine.html#a7c741fd67a25c95001c93eea34cb6b02',1,'Aestra::Audio::AuditionEngine']]],
+  ['nodeat_9',['nodeAt',['../db/def/structAestra_1_1VersionsTimeline.html#aef8478d7876684e91f1f02b46807aabc',1,'Aestra::VersionsTimeline']]],
+  ['nodecount_10',['nodeCount',['../d4/dd4/classAestraUI_1_1UIRoutingMap.html#aa8fb337db510ea48f365e695e6579301',1,'AestraUI::UIRoutingMap']]],
+  ['nosounds_11',['noSounds',['../d9/d85/classAestra_1_1ArsenalRowLanes.html#abe55d1e559d94e0fb01fad5b5dfb946f',1,'Aestra::ArsenalRowLanes']]],
+  ['notedivisionmultiplier_12',['noteDivisionMultiplier',['../df/d51/classAestra_1_1Audio_1_1Plugins_1_1AestraLFO.html#aeb0e95d8759de4fcb9222b4513d40269',1,'Aestra::Audio::Plugins::AestraLFO']]],
+  ['noteoutsidepress_13',['noteOutsidePress',['../db/d60/classAestraContent.html#a9a9ae87a5651202c8e4ceac1f901b6ff',1,'AestraContent']]],
+  ['notepointergesture_14',['notePointerGesture',['../db/d1a/classAestraUI_1_1NUIComponent.html#af8edbe1ed5d776c96a836c0f5e3853f3',1,'AestraUI::NUIComponent']]],
+  ['nudgeselectedclips_15',['nudgeSelectedClips',['../d1/d11/classAestra_1_1Audio_1_1TrackManagerUI.html#a521cd5a92f24d52db71eff33cad8f0c1',1,'Aestra::Audio::TrackManagerUI']]]
 ];

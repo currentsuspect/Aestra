@@ -1,9 +1,6 @@
 <map id="Aestra::Audio::PatternPlaybackEngine::refillWindow" name="Aestra::Audio::PatternPlaybackEngine::refillWindow">
-<area shape="rect" id="Node000001" title="Refill lookahead window with events (non&#45;RT thread) Called periodically by scheduler." alt="" coords="5,69,228,109"/>
-<area shape="rect" id="Node000002" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#affd3122592a6708abaff3da9809f7fd2" title="Order&#45;sensitive hash of everything about a pattern that changes what plays." alt="" coords="276,5,499,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="201,67,288,46,290,51,203,72"/>
-<area shape="rect" id="Node000003" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a" title="Get a pattern by ID (returns nullptr if not found)" alt="" coords="277,69,497,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="228,87,264,87,264,92,228,92"/>
-<area shape="rect" id="Node000004" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="287,133,488,173"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="203,107,290,128,288,133,201,112"/>
+<area shape="rect" id="Node000001" title="Refill lookahead window with events (non&#45;RT thread) Called periodically by scheduler." alt="" coords="5,29,228,69"/>
+<area shape="poly" id="edge2_Node000001_Node000001" title=" " alt="" coords="67,30,64,20,72,10,90,5,117,3,148,5,165,13,163,18,147,11,117,8,91,10,75,15,69,21,72,28"/>
+<area shape="rect" id="Node000002" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a424f96d7a1ffee8fd512f3a0244ca206" title="Epoch ticket for refillWindow(); take it before reading the playhead." alt="" coords="276,29,499,69"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="228,47,262,47,262,52,228,52"/>
 </map>

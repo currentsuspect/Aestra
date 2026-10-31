@@ -1,0 +1,16 @@
+<map id="Aestra::Audio::PatternPlaybackEngine::refillWindow" name="Aestra::Audio::PatternPlaybackEngine::refillWindow">
+<area shape="rect" id="Node000001" title="Refill against an explicit loop and an epoch ticket (the live caller)." alt="" coords="5,139,228,179"/>
+<area shape="rect" id="Node000002" href="$d1/d12/structAestra_1_1Audio_1_1ScheduleLoop.html#a3692f91cd671c1ae32281422b0d74a95" title="Monotonic frame of timeline position 0 within pass." alt="" coords="547,143,753,183"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="132,137,157,110,190,80,230,50,275,28,337,9,388,3,438,9,500,28,539,48,574,75,627,130,623,134,570,79,536,53,498,33,437,14,388,8,338,15,277,33,233,55,194,84,161,114,136,141"/>
+<area shape="rect" id="Node000003" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#affd3122592a6708abaff3da9809f7fd2" title="Order&#45;sensitive hash of everything about a pattern that changes what plays." alt="" coords="276,43,499,83"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="163,136,275,92,299,84,301,90,277,97,165,141"/>
+<area shape="rect" id="Node000004" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a" title="Get a pattern by ID (returns nullptr if not found)" alt="" coords="277,107,497,147"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="228,143,263,139,264,144,228,148"/>
+<area shape="rect" id="Node000005" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="287,171,488,211"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="228,169,273,175,273,180,228,175"/>
+<area shape="rect" id="Node000006" href="$d1/d12/structAestra_1_1Audio_1_1ScheduleLoop.html#aa3d5005ab00ce9d60d3e2183f5161eca" title="The pass containing monotonic frame frame." alt="" coords="284,235,491,275"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="165,176,277,220,301,228,299,233,275,225,163,181"/>
+<area shape="rect" id="Node000007" href="$d1/d12/structAestra_1_1Audio_1_1ScheduleLoop.html#a4a3fc76570f821fd99de36b201c99030" title="Confine a timeline&#45;loop note to its pass (monotonic frames, in place)." alt="" coords="284,299,491,339"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="139,177,198,231,236,260,277,285,292,291,290,296,275,289,233,264,195,235,136,181"/>
+<area shape="poly" id="edge7_Node000007_Node000002" title=" " alt="" coords="471,296,497,285,532,263,565,239,618,191,622,195,568,243,535,268,500,289,473,301"/>
+</map>

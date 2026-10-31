@@ -1,0 +1,5 @@
+<map id="Aestra::UpdateNotifier::applyPendingRestart" name="Aestra::UpdateNotifier::applyPendingRestart">
+<area shape="rect" id="Node000001" title="Called as Aestra exits: if the user asked to restart into an update, hand over to the updater." alt="" coords="5,5,172,45"/>
+<area shape="rect" id="Node000002" href="$d4/d68/classAestra_1_1UpdateNotifier.html#aae6082a60e4be4c4e07d42e7d806c4f5" title="The version this build reports (AESTRA_UPDATE_VERSION_STRING)." alt="" coords="220,5,387,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="173,23,206,23,206,28,173,28"/>
+</map>

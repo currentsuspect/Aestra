@@ -2533,9 +2533,9 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l02445" name="l02445"></a><span class="lineno"> 2445</span>            <span class="keyword">constexpr</span> <span class="keywordtype">float</span> ROW_ICON_SIZE = 14.0f;</div>
 <div class="line"><a id="l02446" name="l02446"></a><span class="lineno"> 2446</span>            <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a> iconRect(contentX, std::round(itemRect.y + (itemRect.height - ROW_ICON_SIZE) * 0.5f), ROW_ICON_SIZE,</div>
 <div class="line"><a id="l02447" name="l02447"></a><span class="lineno"> 2447</span>                             ROW_ICON_SIZE);</div>
-<div class="line"><a id="l02448" name="l02448"></a><span class="lineno"> 2448</span>            icon-&gt;setBounds(iconRect);</div>
-<div class="line"><a id="l02449" name="l02449"></a><span class="lineno"> 2449</span>            icon-&gt;setColor(item-&gt;isDirectory ? NUIColor::fromHex(0xffc9a46a) : themeManager.getColor(<span class="stringliteral">&quot;secondary&quot;</span>)); <span class="comment">// folders sand, audio violet</span></div>
-<div class="line"><a id="l02450" name="l02450"></a><span class="lineno"> 2450</span>            icon-&gt;onRender(renderer);</div>
+<div class="line"><a id="l02448" name="l02448"></a><span class="lineno"> 2448</span>            <span class="comment">// renderAt: the shared per-file-type icon was re-tinted per row, invalidating it per frame.</span></div>
+<div class="line"><a id="l02449" name="l02449"></a><span class="lineno"> 2449</span>            icon-&gt;renderAt(renderer, iconRect, item-&gt;isDirectory ? NUIColor::fromHex(0xffc9a46a)</div>
+<div class="line"><a id="l02450" name="l02450"></a><span class="lineno"> 2450</span>                                                                : themeManager.getColor(<span class="stringliteral">&quot;secondary&quot;</span>));</div>
 <div class="line"><a id="l02451" name="l02451"></a><span class="lineno"> 2451</span>        }</div>
 <div class="line"><a id="l02452" name="l02452"></a><span class="lineno"> 2452</span>        contentX += 20.0f;</div>
 <div class="line"><a id="l02453" name="l02453"></a><span class="lineno"> 2453</span> </div>

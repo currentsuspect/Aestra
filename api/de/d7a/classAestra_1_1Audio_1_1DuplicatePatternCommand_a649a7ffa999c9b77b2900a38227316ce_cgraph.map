@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::DuplicatePatternCommand::copyName" name="Aestra::Audio::DuplicatePatternCommand::copyName">
+<area shape="rect" id="Node000001" title="&quot;&lt;name&gt; copy&quot;, then &quot;&lt;name&gt; copy 2&quot;, ... the first one no pattern already has." alt="" coords="5,5,219,45"/>
+<area shape="rect" id="Node000002" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#ab7952e458feafdb9709f3d4ed9f215b3" title="Visit every pattern (read&#45;only), in no particular order." alt="" coords="267,5,487,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="219,23,253,23,253,28,219,28"/>
+</map>

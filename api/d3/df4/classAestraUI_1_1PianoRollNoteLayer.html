@@ -103,6 +103,9 @@ Classes</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
+<tr class="memitem:a26fda458862860e7bbf126f003db0de6" id="r_a26fda458862860e7bbf126f003db0de6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/df4/classAestraUI_1_1PianoRollNoteLayer.html#a26fda458862860e7bbf126f003db0de6">setNoteColor</a> (const <a class="el" href="../../d2/d25/structAestraUI_1_1NUIColor.html">NUIColor</a> &amp;color)</td></tr>
+<tr class="memdesc:a26fda458862860e7bbf126f003db0de6"><td class="mdescLeft">&#160;</td><td class="mdescRight">The unit being edited gives its notes their colour (flat and opaque, FD-48).  <br /></td></tr>
+<tr class="separator:a26fda458862860e7bbf126f003db0de6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aec0d14255f334d8cec10feb60628fe74" id="r_aec0d14255f334d8cec10feb60628fe74"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/df4/classAestraUI_1_1PianoRollNoteLayer.html#aec0d14255f334d8cec10feb60628fe74">PianoRollNoteLayer</a> ()</td></tr>
 <tr class="memdesc:aec0d14255f334d8cec10feb60628fe74"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create the editable piano-roll note layer.  <br /></td></tr>
 <tr class="separator:aec0d14255f334d8cec10feb60628fe74"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -115,6 +118,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ab106a8b6c9529a09e799d9fddde4091d" id="r_ab106a8b6c9529a09e799d9fddde4091d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/df4/classAestraUI_1_1PianoRollNoteLayer.html#ab106a8b6c9529a09e799d9fddde4091d">setNotes</a> (const std::vector&lt; MidiNote &gt; &amp;notes)</td></tr>
 <tr class="memdesc:ab106a8b6c9529a09e799d9fddde4091d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Replace the currently edited note list.  <br /></td></tr>
 <tr class="separator:ab106a8b6c9529a09e799d9fddde4091d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a682256d882646e968d5b6886b5cfc079" id="r_a682256d882646e968d5b6886b5cfc079"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/df4/classAestraUI_1_1PianoRollNoteLayer.html#a682256d882646e968d5b6886b5cfc079">setLaneValue</a> (int index, bool pan, float value)</td></tr>
+<tr class="memdesc:a682256d882646e968d5b6886b5cfc079"><td class="mdescLeft">&#160;</td><td class="mdescRight">One note's velocity or pan, edited in place: no copy of the list and no re-sort, so a lane drag costs the same on a thousand notes as on ten, and notes that start together (a chord) keep their order under the dragged index.  <br /></td></tr>
+<tr class="separator:a682256d882646e968d5b6886b5cfc079"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a00dcb00c3630197b26ccca59f1fdd044" id="r_a00dcb00c3630197b26ccca59f1fdd044"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; MidiNote &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/df4/classAestraUI_1_1PianoRollNoteLayer.html#a00dcb00c3630197b26ccca59f1fdd044">getNotes</a> () const</td></tr>
 <tr class="memdesc:a00dcb00c3630197b26ccca59f1fdd044"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the currently edited note list.  <br /></td></tr>
 <tr class="separator:a00dcb00c3630197b26ccca59f1fdd044"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -213,6 +219,15 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a1bebb37a9a87d0cf847d4e32613d38c5" id="r_a1bebb37a9a87d0cf847d4e32613d38c5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/df4/classAestraUI_1_1PianoRollNoteLayer.html#a1bebb37a9a87d0cf847d4e32613d38c5">quantizeSelectedNotes</a> ()</td></tr>
 <tr class="memdesc:a1bebb37a9a87d0cf847d4e32613d38c5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Snap the starts of the selected notes to the current snap grid.  <br /></td></tr>
 <tr class="separator:a1bebb37a9a87d0cf847d4e32613d38c5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac48ba56831d4fbce1cfdf79b16bc444a" id="r_ac48ba56831d4fbce1cfdf79b16bc444a"><td class="memItemLeft" align="right" valign="top">std::optional&lt; std::pair&lt; double, double &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/df4/classAestraUI_1_1PianoRollNoteLayer.html#ac48ba56831d4fbce1cfdf79b16bc444a">duplicateLikeFl</a> (const std::optional&lt; std::pair&lt; double, double &gt; &gt; &amp;ruler)</td></tr>
+<tr class="memdesc:ac48ba56831d4fbce1cfdf79b16bc444a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Duplicate like FL Studio (V82-PR1, FD-52; rules in <a class="el" href="../../d6/db0/PianoRollDuplicate_8h_source.html">PianoRollDuplicate.h</a>): copy into the next block and select the copies, as one undo step.  <br /></td></tr>
+<tr class="separator:ac48ba56831d4fbce1cfdf79b16bc444a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a32818ac0054f423c35ecbd9364cc3c01" id="r_a32818ac0054f423c35ecbd9364cc3c01"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/df4/classAestraUI_1_1PianoRollNoteLayer.html#a32818ac0054f423c35ecbd9364cc3c01">selectStartingIn</a> (double startBeat, double endBeat)</td></tr>
+<tr class="memdesc:a32818ac0054f423c35ecbd9364cc3c01"><td class="mdescLeft">&#160;</td><td class="mdescRight">Select exactly the notes that start in [startBeat, endBeat) (what a ruler drag leaves selected).  <br /></td></tr>
+<tr class="separator:a32818ac0054f423c35ecbd9364cc3c01"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a23cf342b058dcfdecbe5fd17c1f96608" id="r_a23cf342b058dcfdecbe5fd17c1f96608"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/df4/classAestraUI_1_1PianoRollNoteLayer.html#a23cf342b058dcfdecbe5fd17c1f96608">setOnNeedPatternEnd</a> (std::function&lt; void(double endBeat)&gt; cb)</td></tr>
+<tr class="memdesc:a23cf342b058dcfdecbe5fd17c1f96608"><td class="mdescLeft">&#160;</td><td class="mdescRight">Asked to make the pattern at least this long (in beats) before notes past its end are added.  <br /></td></tr>
+<tr class="separator:a23cf342b058dcfdecbe5fd17c1f96608"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab831db375661c17af158139e042a8507" id="r_ab831db375661c17af158139e042a8507"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/df4/classAestraUI_1_1PianoRollNoteLayer.html#ab831db375661c17af158139e042a8507">pushExternalEdit</a> (const std::vector&lt; MidiNote &gt; &amp;before, const std::string &amp;description)</td></tr>
 <tr class="memdesc:ab831db375661c17af158139e042a8507"><td class="mdescLeft">&#160;</td><td class="mdescRight">Commit an edit applied externally (e.g.  <br /></td></tr>
 <tr class="separator:ab831db375661c17af158139e042a8507"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -407,7 +422,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00453">453</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00462">462</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="aec0d14255f334d8cec10feb60628fe74" name="aec0d14255f334d8cec10feb60628fe74"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aec0d14255f334d8cec10feb60628fe74">&#9670;&#160;</a></span>PianoRollNoteLayer()</h2>
@@ -453,6 +468,29 @@ Additional Inherited Members</h2></td></tr>
 
 </div>
 </div>
+<a id="ac48ba56831d4fbce1cfdf79b16bc444a" name="ac48ba56831d4fbce1cfdf79b16bc444a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac48ba56831d4fbce1cfdf79b16bc444a">&#9670;&#160;</a></span>duplicateLikeFl()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::optional&lt; std::pair&lt; double, double &gt; &gt; AestraUI::PianoRollNoteLayer::duplicateLikeFl </td>
+          <td>(</td>
+          <td class="paramtype">const std::optional&lt; std::pair&lt; double, double &gt; &gt; &amp;&#160;</td>
+          <td class="paramname"><em>ruler</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Duplicate like FL Studio (V82-PR1, FD-52; rules in <a class="el" href="../../d6/db0/PianoRollDuplicate_8h_source.html">PianoRollDuplicate.h</a>): copy into the next block and select the copies, as one undo step. </p>
+<p>With a ruler range that holds the selection (or nothing is selected) the range's notes are copied into the next block of the same length and the new range is returned, for the caller to move the highlight there. Otherwise the selection moves one whole-bar-rounded step on, and nothing is returned. The pattern is grown first when the copies would run past its end. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d5e/PianoRollNoteLayerDuplicate_8cpp_source.html#l00012">12</a> of file <a class="el" href="../../dd/d5e/PianoRollNoteLayerDuplicate_8cpp_source.html">PianoRollNoteLayerDuplicate.cpp</a>.</p>
+
+</div>
+</div>
 <a id="aefbccf5b4c3de8d3b5eae7eb0d39b2ad" name="aefbccf5b4c3de8d3b5eae7eb0d39b2ad"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aefbccf5b4c3de8d3b5eae7eb0d39b2ad">&#9670;&#160;</a></span>getChordMode()</h2>
 
@@ -476,7 +514,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00557">557</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00578">578</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -505,7 +543,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Get the currently edited note list. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00476">476</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00497">497</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -534,7 +572,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Get the snap grid used for note edits. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00491">491</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00512">512</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -563,7 +601,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Check if snap-to-scale is currently active. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00500">500</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00521">521</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -592,7 +630,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Get the active editing tool. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00484">484</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00505">505</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -619,7 +657,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00518">518</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00539">539</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -690,7 +728,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>True only while committing a continuation of the previous edit (an Alt+wheel velocity scrub), so the owner can fold it into the history entry it already recorded instead of adding a new one. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00507">507</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00528">528</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -720,7 +758,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l01685">1685</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l01619">1619</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
 
 </div>
 </div>
@@ -750,7 +788,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l00909">909</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l00843">843</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
 
 </div>
 </div>
@@ -822,7 +860,7 @@ Additional Inherited Members</h2></td></tr>
 <p>the velocity lane) as one step.</p>
 <p>The layer keeps no undo history (the owner's CommandHistory is the only one); <code>before</code> and <code>description</code> are retained for call-site clarity. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00585">585</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00621">621</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -844,6 +882,38 @@ Additional Inherited Members</h2></td></tr>
 <p>Snap the starts of the selected notes to the current snap grid. </p>
 
 <p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l00191">191</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a32818ac0054f423c35ecbd9364cc3c01" name="a32818ac0054f423c35ecbd9364cc3c01"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a32818ac0054f423c35ecbd9364cc3c01">&#9670;&#160;</a></span>selectStartingIn()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::PianoRollNoteLayer::selectStartingIn </td>
+          <td>(</td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>startBeat</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>endBeat</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Select exactly the notes that start in [startBeat, endBeat) (what a ruler drag leaves selected). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d5e/PianoRollNoteLayerDuplicate_8cpp_source.html#l00034">34</a> of file <a class="el" href="../../dd/d5e/PianoRollNoteLayerDuplicate_8cpp_source.html">PianoRollNoteLayerDuplicate.cpp</a>.</p>
 
 </div>
 </div>
@@ -873,7 +943,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set beats-per-bar, used for the bar:beat readout while editing. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00530">530</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00551">551</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -903,7 +973,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Toggle chord mode: the pencil stamps a diatonic triad, not one note. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00556">556</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00577">577</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -933,7 +1003,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the default unit assigned to newly created notes. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00553">553</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00574">574</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -955,7 +1025,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set ghost patterns rendered behind the active notes. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l01951">1951</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l01855">1855</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
 
 </div>
 </div>
@@ -985,7 +1055,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set callback to check if transport is playing (suppresses audition). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00543">543</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00564">564</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -1007,7 +1077,83 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the vertical pitch-row height. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l01958">1958</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l01862">1862</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a682256d882646e968d5b6886b5cfc079" name="a682256d882646e968d5b6886b5cfc079"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a682256d882646e968d5b6886b5cfc079">&#9670;&#160;</a></span>setLaneValue()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool AestraUI::PianoRollNoteLayer::setLaneValue </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>index</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>pan</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>value</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>One note's velocity or pan, edited in place: no copy of the list and no re-sort, so a lane drag costs the same on a thousand notes as on ten, and notes that start together (a chord) keep their order under the dragged index. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00489">489</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+
+</div>
+</div>
+<a id="a26fda458862860e7bbf126f003db0de6" name="a26fda458862860e7bbf126f003db0de6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a26fda458862860e7bbf126f003db0de6">&#9670;&#160;</a></span>setNoteColor()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::PianoRollNoteLayer::setNoteColor </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="../../d2/d25/structAestraUI_1_1NUIColor.html">NUIColor</a> &amp;&#160;</td>
+          <td class="paramname"><em>color</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The unit being edited gives its notes their colour (flat and opaque, FD-48). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00465">465</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -1029,7 +1175,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Replace the currently edited note list. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l01941">1941</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l01845">1845</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1059,7 +1205,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>A plain Select-tool press on empty grid (the editor's selection "exit"). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00548">548</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00569">569</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -1087,7 +1233,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00549">549</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00570">570</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -1118,7 +1264,37 @@ Additional Inherited Members</h2></td></tr>
 <p>Called as notes are pressed and released in the grid, so the key lane can show those keys pressed (SPEC 3 §5.1). </p>
 <p>A drag onto a new pitch releases the old one; a chord press holds all of its pitches. Fired whether or not the audition sounds. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00541">541</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00562">562</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+
+</div>
+</div>
+<a id="a23cf342b058dcfdecbe5fd17c1f96608" name="a23cf342b058dcfdecbe5fd17c1f96608"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a23cf342b058dcfdecbe5fd17c1f96608">&#9670;&#160;</a></span>setOnNeedPatternEnd()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::PianoRollNoteLayer::setOnNeedPatternEnd </td>
+          <td>(</td>
+          <td class="paramtype">std::function&lt; void(double endBeat)&gt;&#160;</td>
+          <td class="paramname"><em>cb</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Asked to make the pattern at least this long (in beats) before notes past its end are added. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00613">613</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -1140,7 +1316,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the callback fired whenever notes change. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l02019">2019</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l01923">1923</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1170,7 +1346,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set callback used to audition a pitch (velocity 0 = note-off). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00533">533</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00554">554</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -1192,7 +1368,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the horizontal zoom level in pixels per beat. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l01957">1957</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l01861">1861</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1214,7 +1390,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the platform bridge for cursor style changes. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l02021">2021</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l01925">1925</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1244,7 +1420,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the current playhead beat used for rendering. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00524">524</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00545">545</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -1274,7 +1450,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set whether transport is playing, so sounding notes can light up. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00527">527</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00548">548</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -1304,7 +1480,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the musical root key for scale snapping. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00494">494</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00515">515</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -1334,7 +1510,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the active scale type for scale snapping. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00496">496</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00517">517</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -1356,7 +1532,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the horizontal scroll offset. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l01959">1959</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l01863">1863</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1378,7 +1554,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the vertical scroll offset. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l01960">1960</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l01864">1864</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1408,7 +1584,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the snap grid used for note edits. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00489">489</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00510">510</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -1438,7 +1614,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Enable or disable snap-to-scale quantization on the Y-axis. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00498">498</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00519">519</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -1460,7 +1636,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the active editing tool. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l01922">1922</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l01826">1826</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1488,7 +1664,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00517">517</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00538">538</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -1554,7 +1730,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>The hover cursor over empty grid for the active tool (pencil, eraser, arrow). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l00897">897</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l00831">831</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
 
 </div>
 </div>
@@ -1598,13 +1774,15 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Call during drag to update edge scrolling and apply scroll offset. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l01962">1962</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html#l01866">1866</a> of file <a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a>.</p>
 
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>AestraUI/Widgets/<a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a></li>
 <li>AestraUI/Widgets/<a class="el" href="../../d8/d56/PianoRollNoteLayer_8cpp_source.html">PianoRollNoteLayer.cpp</a></li>
+<li>AestraUI/Widgets/<a class="el" href="../../dd/d5e/PianoRollNoteLayerDuplicate_8cpp_source.html">PianoRollNoteLayerDuplicate.cpp</a></li>
+<li>AestraUI/Widgets/<a class="el" href="../../d8/d87/PianoRollNotePaint_8cpp_source.html">PianoRollNotePaint.cpp</a></li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->

@@ -75,6 +75,7 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
+<a href="#nested-classes">Classes</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="../../da/dfd/classAestra_1_1Audio_1_1RtAudioDriver-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">Aestra::Audio::RtAudioDriver Class Reference</div></div>
@@ -132,6 +133,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a7070dc17368fec822aad2794ff89b126" id="r_a7070dc17368fec822aad2794ff89b126"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d81/classAestra_1_1Audio_1_1RtAudioDriver.html#a7070dc17368fec822aad2794ff89b126">isDitheringEnabled</a> () const override</td></tr>
 <tr class="memdesc:a7070dc17368fec822aad2794ff89b126"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if dithering is enabled.  <br /></td></tr>
 <tr class="separator:a7070dc17368fec822aad2794ff89b126"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1bf0fe0a9fa337dd0e9f57bbf62e4654" id="r_a1bf0fe0a9fa337dd0e9f57bbf62e4654"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d81/classAestra_1_1Audio_1_1RtAudioDriver.html#a1bf0fe0a9fa337dd0e9f57bbf62e4654">abandonStream</a> () override</td></tr>
+<tr class="memdesc:a1bf0fe0a9fa337dd0e9f57bbf62e4654"><td class="mdescLeft">&#160;</td><td class="mdescRight">Hands a wedged stream to a reaper thread and starts a fresh RtAudio instance (see <a class="el" href="../../d7/d78/classAestra_1_1Audio_1_1IAudioDriver.html">IAudioDriver</a>).  <br /></td></tr>
+<tr class="separator:a1bf0fe0a9fa337dd0e9f57bbf62e4654"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_methods_classAestra_1_1Audio_1_1IAudioDriver"><td colspan="2" onclick="javascript:toggleInherit('pub_methods_classAestra_1_1Audio_1_1IAudioDriver')"><img src="../../closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="../../d7/d78/classAestra_1_1Audio_1_1IAudioDriver.html">Aestra::Audio::IAudioDriver</a></td></tr>
 <tr class="memitem:ad020155f17eca9b511018fb6f1af178a inherit pub_methods_classAestra_1_1Audio_1_1IAudioDriver" id="r_ad020155f17eca9b511018fb6f1af178a"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/d78/classAestra_1_1Audio_1_1IAudioDriver.html#ad020155f17eca9b511018fb6f1af178a">supportsExclusiveMode</a> () const</td></tr>
 <tr class="separator:ad020155f17eca9b511018fb6f1af178a inherit pub_methods_classAestra_1_1Audio_1_1IAudioDriver"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -155,7 +159,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00043">43</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00044">44</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
 
 </div>
 </div>
@@ -182,11 +186,42 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00061">61</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00062">62</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a1bf0fe0a9fa337dd0e9f57bbf62e4654" name="a1bf0fe0a9fa337dd0e9f57bbf62e4654"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1bf0fe0a9fa337dd0e9f57bbf62e4654">&#9670;&#160;</a></span>abandonStream()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::RtAudioDriver::abandonStream </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Hands a wedged stream to a reaper thread and starts a fresh RtAudio instance (see <a class="el" href="../../d7/d78/classAestra_1_1Audio_1_1IAudioDriver.html">IAudioDriver</a>). </p>
+
+<p>Reimplemented from <a class="el" href="../../d7/d78/classAestra_1_1Audio_1_1IAudioDriver.html#a38808707b59efc3b75e8807dc1bc8c22">Aestra::Audio::IAudioDriver</a>.</p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00260">260</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
+
+</div>
+</div>
 <a id="a654a05003a50d423f7bc95800b0f39fa" name="a654a05003a50d423f7bc95800b0f39fa"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a654a05003a50d423f7bc95800b0f39fa">&#9670;&#160;</a></span>closeStream()</h2>
 
@@ -212,7 +247,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d7/d78/classAestra_1_1Audio_1_1IAudioDriver.html">Aestra::Audio::IAudioDriver</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00160">160</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00166">166</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
 
 </div>
 </div>
@@ -243,7 +278,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d7/d78/classAestra_1_1Audio_1_1IAudioDriver.html#ad1cf40d79d4bbfd6a66ad49c03f5a1d6">Aestra::Audio::IAudioDriver</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00078">78</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00079">79</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d2/d19/AudioDriver_8h_source.html#l00016">Aestra::Audio::AudioDeviceInfo::id</a>.</p>
 
@@ -274,7 +309,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d7/d78/classAestra_1_1Audio_1_1IAudioDriver.html">Aestra::Audio::IAudioDriver</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00065">65</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00066">66</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
 
 </div>
 </div>
@@ -303,7 +338,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d7/d78/classAestra_1_1Audio_1_1IAudioDriver.html">Aestra::Audio::IAudioDriver</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00070">70</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00071">71</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
 
 </div>
 </div>
@@ -390,7 +425,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d7/d78/classAestra_1_1Audio_1_1IAudioDriver.html">Aestra::Audio::IAudioDriver</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00258">258</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00316">316</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
 
 </div>
 </div>
@@ -419,7 +454,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d7/d78/classAestra_1_1Audio_1_1IAudioDriver.html">Aestra::Audio::IAudioDriver</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00250">250</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00308">308</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
 
 </div>
 </div>
@@ -448,7 +483,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d7/d78/classAestra_1_1Audio_1_1IAudioDriver.html">Aestra::Audio::IAudioDriver</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00254">254</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00312">312</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
 
 </div>
 </div>
@@ -477,7 +512,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d7/d78/classAestra_1_1Audio_1_1IAudioDriver.html">Aestra::Audio::IAudioDriver</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00074">74</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00075">75</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
 
 </div>
 </div>
@@ -537,7 +572,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d7/d78/classAestra_1_1Audio_1_1IAudioDriver.html">Aestra::Audio::IAudioDriver</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00246">246</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00304">304</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
 
 </div>
 </div>
@@ -583,7 +618,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d7/d78/classAestra_1_1Audio_1_1IAudioDriver.html">Aestra::Audio::IAudioDriver</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00109">109</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00110">110</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
 
 </div>
 </div>
@@ -645,7 +680,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d7/d78/classAestra_1_1Audio_1_1IAudioDriver.html">Aestra::Audio::IAudioDriver</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00187">187</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00193">193</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
 
 </div>
 </div>
@@ -674,7 +709,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d7/d78/classAestra_1_1Audio_1_1IAudioDriver.html">Aestra::Audio::IAudioDriver</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00237">237</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html#l00243">243</a> of file <a class="el" href="../../dd/d35/RtAudioDriver_8cpp_source.html">RtAudioDriver.cpp</a>.</p>
 
 </div>
 </div>

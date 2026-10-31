@@ -75,7 +75,8 @@
 <polygon fill="#9a32cd" stroke="#9a32cd" points="189.85,-100.87 195.8,-109.63 196.62,-99.07 189.85,-100.87"/>
 </a>
 </g>
-<text text-anchor="middle" x="218.5" y="-67.5" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey"> channelIdx</text>
+<text text-anchor="middle" x="218.5" y="-73" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey"> channelIdx</text>
+<text text-anchor="middle" x="218.5" y="-62" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">epoch</text>
 </g>
 <!-- Node5 -->
 <g id="Node000005" class="node">

@@ -127,24 +127,26 @@ Public Types</h2></td></tr>
 , <b>kCompMode</b>
 , <br />
 &#160;&#160;<b>kOversampling</b>
+, <b>kSidechain</b>
 , <b>kParamCount</b>
 , <b>kDetectorMode</b> = kInputGain
-, <b>kTopology</b> = kOutputGain
 , <br />
-&#160;&#160;<b>kHold</b> = kDetectorHPF
+&#160;&#160;<b>kTopology</b> = kOutputGain
+, <b>kHold</b> = kDetectorHPF
 , <b>kAutoRelease</b> = kParamCount
 , <b>kRange</b>
-, <b>kLookahead</b>
 , <br />
-&#160;&#160;<b>kStereoLink</b>
+&#160;&#160;<b>kLookahead</b>
+, <b>kStereoLink</b>
 , <b>kStereoLinkLaw</b>
 , <b>kSCHPF</b>
-, <b>kSCLPF</b>
 , <br />
-&#160;&#160;<b>kSCListen</b>
+&#160;&#160;<b>kSCLPF</b>
+, <b>kSCListen</b>
 , <b>kOutputTrim</b>
 , <b>kStyle</b>
-, <b>kQuality</b>
+, <br />
+&#160;&#160;<b>kQuality</b>
 <br />
  }</td></tr>
 <tr class="separator:a349b42f83ba9fb79fb990734584749dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -297,6 +299,10 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:aa2f172712d45fc8e2945fd223ceddb73 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase" id="r_aa2f172712d45fc8e2945fd223ceddb73"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#aa2f172712d45fc8e2945fd223ceddb73">isCrashed</a> () const override</td></tr>
 <tr class="memdesc:aa2f172712d45fc8e2945fd223ceddb73 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if plugin has crashed (fatal exception caught)  <br /></td></tr>
 <tr class="separator:aa2f172712d45fc8e2945fd223ceddb73 inherit pub_methods_classAestra_1_1Audio_1_1InternalPluginBase"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pub_methods_classAestra_1_1Audio_1_1IPluginInstance"><td colspan="2" onclick="javascript:toggleInherit('pub_methods_classAestra_1_1Audio_1_1IPluginInstance')"><img src="../../closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html">Aestra::Audio::IPluginInstance</a></td></tr>
+<tr class="memitem:aa31a55f7d6636219b307170826b91fd9 inherit pub_methods_classAestra_1_1Audio_1_1IPluginInstance" id="r_aa31a55f7d6636219b307170826b91fd9"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aa31a55f7d6636219b307170826b91fd9">ownsEditorWindow</a> () const</td></tr>
+<tr class="memdesc:aa31a55f7d6636219b307170826b91fd9 inherit pub_methods_classAestra_1_1Audio_1_1IPluginInstance"><td class="mdescLeft">&#160;</td><td class="mdescRight">Whether the plugin makes its own top-level window (the sandbox helper does), so the app must not make one to embed it in.  <br /></td></tr>
+<tr class="separator:aa31a55f7d6636219b307170826b91fd9 inherit pub_methods_classAestra_1_1Audio_1_1IPluginInstance"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
 Static Public Attributes</h2></td></tr>
@@ -400,9 +406,9 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a8c5884486cf915aecc040ed47579f137">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00114">114</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00115">115</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00153">Aestra::Audio::DSP::Oversampler::prepareKernels()</a>.</p>
+<p class="reference">References <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00439">Aestra::Audio::DSP::Oversampler::prepareKernels()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">
@@ -440,7 +446,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#abbbd61d2c9b8113b4fa8842ac1ea025b">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00417">417</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00434">434</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -471,7 +477,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ae8873fee63c09979fd8235b66cf82b74">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00126">126</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00127">127</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -498,7 +504,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00438">438</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00455">455</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -530,7 +536,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a4e9c8e50888e323296ad29ce7465b030">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00419">419</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00436">436</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -557,7 +563,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00442">442</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00459">459</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -588,7 +594,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a0416678fedc43a77f2e208d999559acb">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00422">422</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00439">439</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -615,7 +621,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00439">439</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00456">456</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -646,7 +652,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ab213ce811c289ca2c97d1135cc5f2785">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00423">423</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00440">440</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -673,7 +679,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00440">440</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00457">457</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -712,7 +718,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a93980dfb9c9c5baf9830e57bda018067">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00351">351</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00367">367</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d40/InternalPluginBase_8h_source.html#l00202">Aestra::Audio::InternalPluginBase::getParameter()</a>.</p>
 <div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -752,7 +758,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ae30ed96e97c3ee9f6e0b67ca02456c30">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00430">430</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00447">447</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -783,7 +789,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aff2c900e33f79f27430b9fc27751d3aa">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00431">431</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00448">448</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -814,7 +820,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a3493c6f26130010549f41db956f476f7">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00415">415</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00432">432</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -856,7 +862,7 @@ Additional Inherited Members</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">sampleRate</td><td>Audio sample rate in Hz </td></tr>
-    <tr><td class="paramname">maxBlockSize</td><td>Maximum frames per <a class="el" href="../../d7/db4/classAestra_1_1Audio_1_1Plugins_1_1AestraComp.html#a8b80715be9d54c0deee1c88925783c6f" title="Process audio through the plugin.">process()</a> call </td></tr>
+    <tr><td class="paramname">maxBlockSize</td><td>Maximum frames per process() call </td></tr>
   </table>
   </dd>
 </dl>
@@ -864,9 +870,9 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a3f57ac8a0a89a69c6358a74e6fb0eec8">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00093">93</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00094">94</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00153">Aestra::Audio::DSP::Oversampler::prepareKernels()</a>, and <a class="el" href="../../d9/d40/InternalPluginBase_8h_source.html#l00431">Aestra::Audio::InternalPluginBase::seedDefaultsOnce()</a>.</p>
+<p class="reference">References <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00439">Aestra::Audio::DSP::Oversampler::prepareKernels()</a>, and <a class="el" href="../../d9/d40/InternalPluginBase_8h_source.html#l00431">Aestra::Audio::InternalPluginBase::seedDefaultsOnce()</a>.</p>
 <div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-4-summary" class="dynsummary" style="display:block;">
@@ -904,7 +910,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aaf189f5b44c01bf9af82e3e4cc389449">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00127">127</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00128">128</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -935,7 +941,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a4dd1d460cb57e7eebbdf7562638a5388">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00433">433</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00450">450</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -966,7 +972,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a0d662ab4e5e2206e4118d6ba4ea1ee33">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00434">434</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00451">451</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -997,7 +1003,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a4ca73e835125be8f4c1057c16104f19a">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00418">418</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00435">435</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -1041,7 +1047,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#aab2b659d581559924c8a2f9ead2d8612">Aestra::Audio::InternalPluginBase</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00303">303</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00318">318</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -1080,7 +1086,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#aa054540a8ed06135b947ea3c71d6cc42">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00416">416</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00433">433</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -1111,7 +1117,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a7dec060338b713ecd42311bc7439b820">Aestra::Audio::InternalPluginBase</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00346">346</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00362">362</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -1142,7 +1148,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#a853525e44b013bf858624c0683d2dfac">Aestra::Audio::InternalPluginBase</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00345">345</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00361">361</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -1231,9 +1237,9 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#ad68239e36c4c06b2f56e9ef03c6efb99">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00129">129</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00130">130</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00206">Aestra::Audio::DSP::Oversampler::downsample()</a>, <a class="el" href="../../d9/d40/InternalPluginBase_8h_source.html#l00441">Aestra::Audio::InternalPluginBase::isBypassed()</a>, <a class="el" href="../../d9/d40/InternalPluginBase_8h_source.html#l00438">Aestra::Audio::InternalPluginBase::paramValue()</a>, and <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00185">Aestra::Audio::DSP::Oversampler::upsample()</a>.</p>
+<p class="reference">References <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00492">Aestra::Audio::DSP::Oversampler::downsample()</a>, <a class="el" href="../../d9/d40/InternalPluginBase_8h_source.html#l00441">Aestra::Audio::InternalPluginBase::isBypassed()</a>, <a class="el" href="../../d9/d40/InternalPluginBase_8h_source.html#l00438">Aestra::Audio::InternalPluginBase::paramValue()</a>, and <a class="el" href="../../da/d88/Oversampler_8h_source.html#l00471">Aestra::Audio::DSP::Oversampler::upsample()</a>.</p>
 <div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-5-summary" class="dynsummary" style="display:block;">
@@ -1271,7 +1277,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#a6d96b47bc0a727596e2a2e80dcdb2240">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00432">432</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00449">449</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -1321,7 +1327,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#abf06171c7364cfe62ebcc23fe1cabc1f">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00420">420</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00437">437</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -1349,7 +1355,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00436">436</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00453">453</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -1380,7 +1386,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html#afbdcfe0566bdc5d54de9cc4c3f82e0c7">Aestra::Audio::IPluginInstance</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00112">112</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00113">113</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -1412,7 +1418,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Implements <a class="el" href="../../d8/db2/classAestra_1_1Audio_1_1InternalPluginBase.html#abd1a758de5cf5298a30d9b56c5790f4e">Aestra::Audio::InternalPluginBase</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00348">348</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00364">364</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>
@@ -1551,9 +1557,10 @@ Additional Inherited Members</h2></td></tr>
 <div class="line">        {kDetectorHPF, <span class="stringliteral">&quot;Detector HPF&quot;</span>, <span class="stringliteral">&quot;HPF&quot;</span>, <span class="stringliteral">&quot;Hz&quot;</span>, 0.0f, 0.0f, 1.0f, <span class="keyword">true</span>},</div>
 <div class="line">        {kCompMode, <span class="stringliteral">&quot;Mode&quot;</span>, <span class="stringliteral">&quot;MODE&quot;</span>, <span class="stringliteral">&quot;&quot;</span>, 0.0f, 0.0f, 1.0f, <span class="keyword">true</span>},</div>
 <div class="line">        {kOversampling, <span class="stringliteral">&quot;Oversampling&quot;</span>, <span class="stringliteral">&quot;OS&quot;</span>, <span class="stringliteral">&quot;&quot;</span>, 0.0f, 0.0f, 1.0f, <span class="keyword">true</span>, <span class="keyword">false</span>, <span class="keyword">false</span>, 2},</div>
+<div class="line">        {kSidechain, <span class="stringliteral">&quot;Sidechain&quot;</span>, <span class="stringliteral">&quot;SC&quot;</span>, <span class="stringliteral">&quot;&quot;</span>, 0.0f, 0.0f, 1.0f, <span class="keyword">true</span>, <span class="keyword">false</span>, <span class="keyword">false</span>, 1},</div>
 <div class="line">    }</div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00329">329</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/da3/AestraComp_8h_source.html#l00344">344</a> of file <a class="el" href="../../df/da3/AestraComp_8h_source.html">AestraComp.h</a>.</p>
 
 </div>
 </div>

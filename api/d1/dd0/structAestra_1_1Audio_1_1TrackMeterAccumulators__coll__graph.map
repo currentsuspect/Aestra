@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::TrackMeterAccumulators" name="Aestra::Audio::TrackMeterAccumulators">
+<area shape="rect" id="Node000001" title="The running meter figures for one track strip, accumulated over a block." alt="" coords="5,152,195,192"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="67,5,133,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="103,44,103,152,97,152,97,44"/>
+</map>

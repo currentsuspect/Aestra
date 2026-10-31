@@ -937,158 +937,165 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00808" name="l00808"></a><span class="lineno">  808</span>    <span class="keywordflow">if</span> (height &lt;= 0) height = 600;</div>
 <div class="line"><a id="l00809" name="l00809"></a><span class="lineno">  809</span>    </div>
 <div class="line"><a id="l00810" name="l00810"></a><span class="lineno">  810</span><span class="preprocessor">#ifdef _WIN32</span></div>
-<div class="line"><a id="l00811" name="l00811"></a><span class="lineno">  811</span>    <span class="comment">// Register window class (once)</span></div>
-<div class="line"><a id="l00812" name="l00812"></a><span class="lineno">  812</span>    <span class="keyword">static</span> <span class="keywordtype">bool</span> classRegistered = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00813" name="l00813"></a><span class="lineno">  813</span>    <span class="keyword">static</span> <span class="keyword">const</span> <span class="keywordtype">wchar_t</span>* CLASS_NAME = L<span class="stringliteral">&quot;AestraPluginEditor&quot;</span>;</div>
-<div class="line"><a id="l00814" name="l00814"></a><span class="lineno">  814</span>    </div>
-<div class="line"><a id="l00815" name="l00815"></a><span class="lineno">  815</span>    <span class="keywordflow">if</span> (!classRegistered) {</div>
-<div class="line"><a id="l00816" name="l00816"></a><span class="lineno">  816</span>        WNDCLASSEXW wc = {};</div>
-<div class="line"><a id="l00817" name="l00817"></a><span class="lineno">  817</span>        wc.cbSize = <span class="keyword">sizeof</span>(wc);</div>
-<div class="line"><a id="l00818" name="l00818"></a><span class="lineno">  818</span>        wc.style = CS_HREDRAW | CS_VREDRAW;</div>
-<div class="line"><a id="l00819" name="l00819"></a><span class="lineno">  819</span>        wc.lpfnWndProc = Impl::WindowProc;</div>
-<div class="line"><a id="l00820" name="l00820"></a><span class="lineno">  820</span>        wc.hInstance = GetModuleHandle(<span class="keyword">nullptr</span>);</div>
-<div class="line"><a id="l00821" name="l00821"></a><span class="lineno">  821</span>        wc.hCursor = LoadCursor(<span class="keyword">nullptr</span>, IDC_ARROW);</div>
-<div class="line"><a id="l00822" name="l00822"></a><span class="lineno">  822</span>        wc.hbrBackground = <span class="keyword">reinterpret_cast&lt;</span>HBRUSH<span class="keyword">&gt;</span>(COLOR_WINDOW + 1);</div>
-<div class="line"><a id="l00823" name="l00823"></a><span class="lineno">  823</span>        wc.lpszClassName = CLASS_NAME;</div>
-<div class="line"><a id="l00824" name="l00824"></a><span class="lineno">  824</span>        RegisterClassExW(&amp;wc);</div>
-<div class="line"><a id="l00825" name="l00825"></a><span class="lineno">  825</span>        classRegistered = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00826" name="l00826"></a><span class="lineno">  826</span>    }</div>
-<div class="line"><a id="l00827" name="l00827"></a><span class="lineno">  827</span>    </div>
-<div class="line"><a id="l00828" name="l00828"></a><span class="lineno">  828</span>    <span class="comment">// Convert title to wide string</span></div>
-<div class="line"><a id="l00829" name="l00829"></a><span class="lineno">  829</span>    <span class="keywordtype">int</span> titleLen = MultiByteToWideChar(CP_UTF8, 0, title.c_str(), -1, <span class="keyword">nullptr</span>, 0);</div>
-<div class="line"><a id="l00830" name="l00830"></a><span class="lineno">  830</span>    std::wstring wideTitle(titleLen, 0);</div>
-<div class="line"><a id="l00831" name="l00831"></a><span class="lineno">  831</span>    MultiByteToWideChar(CP_UTF8, 0, title.c_str(), -1, &amp;wideTitle[0], titleLen);</div>
-<div class="line"><a id="l00832" name="l00832"></a><span class="lineno">  832</span>    </div>
-<div class="line"><a id="l00833" name="l00833"></a><span class="lineno">  833</span>    <span class="comment">// Create window</span></div>
-<div class="line"><a id="l00834" name="l00834"></a><span class="lineno">  834</span>    RECT rect = {0, 0, width, height};</div>
-<div class="line"><a id="l00835" name="l00835"></a><span class="lineno">  835</span>    AdjustWindowRect(&amp;rect, WS_OVERLAPPEDWINDOW, FALSE);</div>
-<div class="line"><a id="l00836" name="l00836"></a><span class="lineno">  836</span>    </div>
-<div class="line"><a id="l00837" name="l00837"></a><span class="lineno">  837</span>    m_impl-&gt;hwnd = CreateWindowExW(</div>
-<div class="line"><a id="l00838" name="l00838"></a><span class="lineno">  838</span>        0,</div>
-<div class="line"><a id="l00839" name="l00839"></a><span class="lineno">  839</span>        CLASS_NAME,</div>
-<div class="line"><a id="l00840" name="l00840"></a><span class="lineno">  840</span>        wideTitle.c_str(),</div>
-<div class="line"><a id="l00841" name="l00841"></a><span class="lineno">  841</span>        WS_OVERLAPPEDWINDOW,</div>
-<div class="line"><a id="l00842" name="l00842"></a><span class="lineno">  842</span>        m_impl-&gt;posX, m_impl-&gt;posY,</div>
-<div class="line"><a id="l00843" name="l00843"></a><span class="lineno">  843</span>        rect.right - rect.left, rect.bottom - rect.top,</div>
-<div class="line"><a id="l00844" name="l00844"></a><span class="lineno">  844</span>        <span class="keyword">nullptr</span>,</div>
-<div class="line"><a id="l00845" name="l00845"></a><span class="lineno">  845</span>        <span class="keyword">nullptr</span>,</div>
-<div class="line"><a id="l00846" name="l00846"></a><span class="lineno">  846</span>        GetModuleHandle(<span class="keyword">nullptr</span>),</div>
-<div class="line"><a id="l00847" name="l00847"></a><span class="lineno">  847</span>        <span class="keyword">nullptr</span></div>
-<div class="line"><a id="l00848" name="l00848"></a><span class="lineno">  848</span>    );</div>
-<div class="line"><a id="l00849" name="l00849"></a><span class="lineno">  849</span>    </div>
-<div class="line"><a id="l00850" name="l00850"></a><span class="lineno">  850</span>    <span class="keywordflow">if</span> (!m_impl-&gt;hwnd) {</div>
-<div class="line"><a id="l00851" name="l00851"></a><span class="lineno">  851</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00852" name="l00852"></a><span class="lineno">  852</span>    }</div>
-<div class="line"><a id="l00853" name="l00853"></a><span class="lineno">  853</span>    </div>
-<div class="line"><a id="l00854" name="l00854"></a><span class="lineno">  854</span>    <span class="comment">// Store this pointer</span></div>
-<div class="line"><a id="l00855" name="l00855"></a><span class="lineno">  855</span>    SetWindowLongPtr(m_impl-&gt;hwnd, GWLP_USERDATA, <span class="keyword">reinterpret_cast&lt;</span>LONG_PTR<span class="keyword">&gt;</span>(<span class="keyword">this</span>));</div>
+<div class="line"><a id="l00811" name="l00811"></a><span class="lineno">  811</span>    <span class="comment">// A sandboxed plugin&#39;s window is made by the helper (V82-H8): an app window here would sit empty beside it.</span></div>
+<div class="line"><a id="l00812" name="l00812"></a><span class="lineno">  812</span>    <span class="keywordflow">if</span> (instance-&gt;ownsEditorWindow()) {</div>
+<div class="line"><a id="l00813" name="l00813"></a><span class="lineno">  813</span>        <span class="keywordflow">if</span> (!instance-&gt;openEditor(<span class="keyword">nullptr</span>)) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00814" name="l00814"></a><span class="lineno">  814</span>        m_isOpen = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00815" name="l00815"></a><span class="lineno">  815</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00816" name="l00816"></a><span class="lineno">  816</span>    }</div>
+<div class="line"><a id="l00817" name="l00817"></a><span class="lineno">  817</span> </div>
+<div class="line"><a id="l00818" name="l00818"></a><span class="lineno">  818</span>    <span class="comment">// Register window class (once)</span></div>
+<div class="line"><a id="l00819" name="l00819"></a><span class="lineno">  819</span>    <span class="keyword">static</span> <span class="keywordtype">bool</span> classRegistered = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00820" name="l00820"></a><span class="lineno">  820</span>    <span class="keyword">static</span> <span class="keyword">const</span> <span class="keywordtype">wchar_t</span>* CLASS_NAME = L<span class="stringliteral">&quot;AestraPluginEditor&quot;</span>;</div>
+<div class="line"><a id="l00821" name="l00821"></a><span class="lineno">  821</span>    </div>
+<div class="line"><a id="l00822" name="l00822"></a><span class="lineno">  822</span>    <span class="keywordflow">if</span> (!classRegistered) {</div>
+<div class="line"><a id="l00823" name="l00823"></a><span class="lineno">  823</span>        WNDCLASSEXW wc = {};</div>
+<div class="line"><a id="l00824" name="l00824"></a><span class="lineno">  824</span>        wc.cbSize = <span class="keyword">sizeof</span>(wc);</div>
+<div class="line"><a id="l00825" name="l00825"></a><span class="lineno">  825</span>        wc.style = CS_HREDRAW | CS_VREDRAW;</div>
+<div class="line"><a id="l00826" name="l00826"></a><span class="lineno">  826</span>        wc.lpfnWndProc = Impl::WindowProc;</div>
+<div class="line"><a id="l00827" name="l00827"></a><span class="lineno">  827</span>        wc.hInstance = GetModuleHandle(<span class="keyword">nullptr</span>);</div>
+<div class="line"><a id="l00828" name="l00828"></a><span class="lineno">  828</span>        wc.hCursor = LoadCursor(<span class="keyword">nullptr</span>, IDC_ARROW);</div>
+<div class="line"><a id="l00829" name="l00829"></a><span class="lineno">  829</span>        wc.hbrBackground = <span class="keyword">reinterpret_cast&lt;</span>HBRUSH<span class="keyword">&gt;</span>(COLOR_WINDOW + 1);</div>
+<div class="line"><a id="l00830" name="l00830"></a><span class="lineno">  830</span>        wc.lpszClassName = CLASS_NAME;</div>
+<div class="line"><a id="l00831" name="l00831"></a><span class="lineno">  831</span>        RegisterClassExW(&amp;wc);</div>
+<div class="line"><a id="l00832" name="l00832"></a><span class="lineno">  832</span>        classRegistered = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00833" name="l00833"></a><span class="lineno">  833</span>    }</div>
+<div class="line"><a id="l00834" name="l00834"></a><span class="lineno">  834</span>    </div>
+<div class="line"><a id="l00835" name="l00835"></a><span class="lineno">  835</span>    <span class="comment">// Convert title to wide string</span></div>
+<div class="line"><a id="l00836" name="l00836"></a><span class="lineno">  836</span>    <span class="keywordtype">int</span> titleLen = MultiByteToWideChar(CP_UTF8, 0, title.c_str(), -1, <span class="keyword">nullptr</span>, 0);</div>
+<div class="line"><a id="l00837" name="l00837"></a><span class="lineno">  837</span>    std::wstring wideTitle(titleLen, 0);</div>
+<div class="line"><a id="l00838" name="l00838"></a><span class="lineno">  838</span>    MultiByteToWideChar(CP_UTF8, 0, title.c_str(), -1, &amp;wideTitle[0], titleLen);</div>
+<div class="line"><a id="l00839" name="l00839"></a><span class="lineno">  839</span>    </div>
+<div class="line"><a id="l00840" name="l00840"></a><span class="lineno">  840</span>    <span class="comment">// Create window</span></div>
+<div class="line"><a id="l00841" name="l00841"></a><span class="lineno">  841</span>    RECT rect = {0, 0, width, height};</div>
+<div class="line"><a id="l00842" name="l00842"></a><span class="lineno">  842</span>    AdjustWindowRect(&amp;rect, WS_OVERLAPPEDWINDOW, FALSE);</div>
+<div class="line"><a id="l00843" name="l00843"></a><span class="lineno">  843</span>    </div>
+<div class="line"><a id="l00844" name="l00844"></a><span class="lineno">  844</span>    m_impl-&gt;hwnd = CreateWindowExW(</div>
+<div class="line"><a id="l00845" name="l00845"></a><span class="lineno">  845</span>        0,</div>
+<div class="line"><a id="l00846" name="l00846"></a><span class="lineno">  846</span>        CLASS_NAME,</div>
+<div class="line"><a id="l00847" name="l00847"></a><span class="lineno">  847</span>        wideTitle.c_str(),</div>
+<div class="line"><a id="l00848" name="l00848"></a><span class="lineno">  848</span>        WS_OVERLAPPEDWINDOW,</div>
+<div class="line"><a id="l00849" name="l00849"></a><span class="lineno">  849</span>        m_impl-&gt;posX, m_impl-&gt;posY,</div>
+<div class="line"><a id="l00850" name="l00850"></a><span class="lineno">  850</span>        rect.right - rect.left, rect.bottom - rect.top,</div>
+<div class="line"><a id="l00851" name="l00851"></a><span class="lineno">  851</span>        <span class="keyword">nullptr</span>,</div>
+<div class="line"><a id="l00852" name="l00852"></a><span class="lineno">  852</span>        <span class="keyword">nullptr</span>,</div>
+<div class="line"><a id="l00853" name="l00853"></a><span class="lineno">  853</span>        GetModuleHandle(<span class="keyword">nullptr</span>),</div>
+<div class="line"><a id="l00854" name="l00854"></a><span class="lineno">  854</span>        <span class="keyword">nullptr</span></div>
+<div class="line"><a id="l00855" name="l00855"></a><span class="lineno">  855</span>    );</div>
 <div class="line"><a id="l00856" name="l00856"></a><span class="lineno">  856</span>    </div>
-<div class="line"><a id="l00857" name="l00857"></a><span class="lineno">  857</span>    <span class="comment">// Open plugin editor into window</span></div>
-<div class="line"><a id="l00858" name="l00858"></a><span class="lineno">  858</span>    <span class="keywordflow">if</span> (!instance-&gt;openEditor(m_impl-&gt;hwnd)) {</div>
-<div class="line"><a id="l00859" name="l00859"></a><span class="lineno">  859</span>        DestroyWindow(m_impl-&gt;hwnd);</div>
-<div class="line"><a id="l00860" name="l00860"></a><span class="lineno">  860</span>        m_impl-&gt;hwnd = <span class="keyword">nullptr</span>;</div>
-<div class="line"><a id="l00861" name="l00861"></a><span class="lineno">  861</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00862" name="l00862"></a><span class="lineno">  862</span>    }</div>
+<div class="line"><a id="l00857" name="l00857"></a><span class="lineno">  857</span>    <span class="keywordflow">if</span> (!m_impl-&gt;hwnd) {</div>
+<div class="line"><a id="l00858" name="l00858"></a><span class="lineno">  858</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00859" name="l00859"></a><span class="lineno">  859</span>    }</div>
+<div class="line"><a id="l00860" name="l00860"></a><span class="lineno">  860</span>    </div>
+<div class="line"><a id="l00861" name="l00861"></a><span class="lineno">  861</span>    <span class="comment">// Store this pointer</span></div>
+<div class="line"><a id="l00862" name="l00862"></a><span class="lineno">  862</span>    SetWindowLongPtr(m_impl-&gt;hwnd, GWLP_USERDATA, <span class="keyword">reinterpret_cast&lt;</span>LONG_PTR<span class="keyword">&gt;</span>(<span class="keyword">this</span>));</div>
 <div class="line"><a id="l00863" name="l00863"></a><span class="lineno">  863</span>    </div>
-<div class="line"><a id="l00864" name="l00864"></a><span class="lineno">  864</span>    <span class="comment">// Show window</span></div>
-<div class="line"><a id="l00865" name="l00865"></a><span class="lineno">  865</span>    ShowWindow(m_impl-&gt;hwnd, SW_SHOW);</div>
-<div class="line"><a id="l00866" name="l00866"></a><span class="lineno">  866</span>    UpdateWindow(m_impl-&gt;hwnd);</div>
-<div class="line"><a id="l00867" name="l00867"></a><span class="lineno">  867</span>    </div>
-<div class="line"><a id="l00868" name="l00868"></a><span class="lineno">  868</span>    m_isOpen = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00869" name="l00869"></a><span class="lineno">  869</span>    <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00870" name="l00870"></a><span class="lineno">  870</span><span class="preprocessor">#else</span></div>
-<div class="line"><a id="l00871" name="l00871"></a><span class="lineno">  871</span>    <span class="comment">// Non-Windows: stub implementation</span></div>
-<div class="line"><a id="l00872" name="l00872"></a><span class="lineno">  872</span>    m_isOpen = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00873" name="l00873"></a><span class="lineno">  873</span>    <span class="keywordflow">return</span> instance-&gt;openEditor(<span class="keyword">nullptr</span>);</div>
-<div class="line"><a id="l00874" name="l00874"></a><span class="lineno">  874</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00875" name="l00875"></a><span class="lineno">  875</span>}</div>
+<div class="line"><a id="l00864" name="l00864"></a><span class="lineno">  864</span>    <span class="comment">// Open plugin editor into window</span></div>
+<div class="line"><a id="l00865" name="l00865"></a><span class="lineno">  865</span>    <span class="keywordflow">if</span> (!instance-&gt;openEditor(m_impl-&gt;hwnd)) {</div>
+<div class="line"><a id="l00866" name="l00866"></a><span class="lineno">  866</span>        DestroyWindow(m_impl-&gt;hwnd);</div>
+<div class="line"><a id="l00867" name="l00867"></a><span class="lineno">  867</span>        m_impl-&gt;hwnd = <span class="keyword">nullptr</span>;</div>
+<div class="line"><a id="l00868" name="l00868"></a><span class="lineno">  868</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00869" name="l00869"></a><span class="lineno">  869</span>    }</div>
+<div class="line"><a id="l00870" name="l00870"></a><span class="lineno">  870</span>    </div>
+<div class="line"><a id="l00871" name="l00871"></a><span class="lineno">  871</span>    <span class="comment">// Show window</span></div>
+<div class="line"><a id="l00872" name="l00872"></a><span class="lineno">  872</span>    ShowWindow(m_impl-&gt;hwnd, SW_SHOW);</div>
+<div class="line"><a id="l00873" name="l00873"></a><span class="lineno">  873</span>    UpdateWindow(m_impl-&gt;hwnd);</div>
+<div class="line"><a id="l00874" name="l00874"></a><span class="lineno">  874</span>    </div>
+<div class="line"><a id="l00875" name="l00875"></a><span class="lineno">  875</span>    m_isOpen = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00876" name="l00876"></a><span class="lineno">  876</span>    <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00877" name="l00877"></a><span class="lineno">  877</span><span class="preprocessor">#else</span></div>
+<div class="line"><a id="l00878" name="l00878"></a><span class="lineno">  878</span>    <span class="comment">// Non-Windows: stub implementation</span></div>
+<div class="line"><a id="l00879" name="l00879"></a><span class="lineno">  879</span>    m_isOpen = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00880" name="l00880"></a><span class="lineno">  880</span>    <span class="keywordflow">return</span> instance-&gt;openEditor(<span class="keyword">nullptr</span>);</div>
+<div class="line"><a id="l00881" name="l00881"></a><span class="lineno">  881</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00882" name="l00882"></a><span class="lineno">  882</span>}</div>
 </div>
-<div class="line"><a id="l00876" name="l00876"></a><span class="lineno">  876</span> </div>
-<div class="foldopen" id="foldopen00877" data-start="{" data-end="}">
-<div class="line"><a id="l00877" name="l00877"></a><span class="lineno"><a class="line" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a8dd9beea4fa798f5bf868f7a7af9f1cf">  877</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a8dd9beea4fa798f5bf868f7a7af9f1cf">PluginEditorWindow::close</a>() {</div>
-<div class="line"><a id="l00878" name="l00878"></a><span class="lineno">  878</span>    <span class="keywordflow">if</span> (!m_isOpen) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00879" name="l00879"></a><span class="lineno">  879</span>    </div>
-<div class="line"><a id="l00880" name="l00880"></a><span class="lineno">  880</span>    <span class="keywordflow">if</span> (m_instance) {</div>
-<div class="line"><a id="l00881" name="l00881"></a><span class="lineno">  881</span>        m_instance-&gt;closeEditor();</div>
-<div class="line"><a id="l00882" name="l00882"></a><span class="lineno">  882</span>    }</div>
-<div class="line"><a id="l00883" name="l00883"></a><span class="lineno">  883</span>    </div>
-<div class="line"><a id="l00884" name="l00884"></a><span class="lineno">  884</span><span class="preprocessor">#ifdef _WIN32</span></div>
-<div class="line"><a id="l00885" name="l00885"></a><span class="lineno">  885</span>    <span class="keywordflow">if</span> (m_impl-&gt;hwnd) {</div>
-<div class="line"><a id="l00886" name="l00886"></a><span class="lineno">  886</span>        DestroyWindow(m_impl-&gt;hwnd);</div>
-<div class="line"><a id="l00887" name="l00887"></a><span class="lineno">  887</span>        m_impl-&gt;hwnd = <span class="keyword">nullptr</span>;</div>
-<div class="line"><a id="l00888" name="l00888"></a><span class="lineno">  888</span>    }</div>
-<div class="line"><a id="l00889" name="l00889"></a><span class="lineno">  889</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00883" name="l00883"></a><span class="lineno">  883</span> </div>
+<div class="foldopen" id="foldopen00884" data-start="{" data-end="}">
+<div class="line"><a id="l00884" name="l00884"></a><span class="lineno"><a class="line" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a8dd9beea4fa798f5bf868f7a7af9f1cf">  884</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a8dd9beea4fa798f5bf868f7a7af9f1cf">PluginEditorWindow::close</a>() {</div>
+<div class="line"><a id="l00885" name="l00885"></a><span class="lineno">  885</span>    <span class="keywordflow">if</span> (!m_isOpen) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00886" name="l00886"></a><span class="lineno">  886</span>    </div>
+<div class="line"><a id="l00887" name="l00887"></a><span class="lineno">  887</span>    <span class="keywordflow">if</span> (m_instance) {</div>
+<div class="line"><a id="l00888" name="l00888"></a><span class="lineno">  888</span>        m_instance-&gt;closeEditor();</div>
+<div class="line"><a id="l00889" name="l00889"></a><span class="lineno">  889</span>    }</div>
 <div class="line"><a id="l00890" name="l00890"></a><span class="lineno">  890</span>    </div>
-<div class="line"><a id="l00891" name="l00891"></a><span class="lineno">  891</span>    m_isOpen = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00892" name="l00892"></a><span class="lineno">  892</span>    m_instance.reset();</div>
-<div class="line"><a id="l00893" name="l00893"></a><span class="lineno">  893</span>}</div>
+<div class="line"><a id="l00891" name="l00891"></a><span class="lineno">  891</span><span class="preprocessor">#ifdef _WIN32</span></div>
+<div class="line"><a id="l00892" name="l00892"></a><span class="lineno">  892</span>    <span class="keywordflow">if</span> (m_impl-&gt;hwnd) {</div>
+<div class="line"><a id="l00893" name="l00893"></a><span class="lineno">  893</span>        DestroyWindow(m_impl-&gt;hwnd);</div>
+<div class="line"><a id="l00894" name="l00894"></a><span class="lineno">  894</span>        m_impl-&gt;hwnd = <span class="keyword">nullptr</span>;</div>
+<div class="line"><a id="l00895" name="l00895"></a><span class="lineno">  895</span>    }</div>
+<div class="line"><a id="l00896" name="l00896"></a><span class="lineno">  896</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00897" name="l00897"></a><span class="lineno">  897</span>    </div>
+<div class="line"><a id="l00898" name="l00898"></a><span class="lineno">  898</span>    m_isOpen = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00899" name="l00899"></a><span class="lineno">  899</span>    m_instance.reset();</div>
+<div class="line"><a id="l00900" name="l00900"></a><span class="lineno">  900</span>}</div>
 </div>
-<div class="line"><a id="l00894" name="l00894"></a><span class="lineno">  894</span> </div>
-<div class="foldopen" id="foldopen00895" data-start="{" data-end="}">
-<div class="line"><a id="l00895" name="l00895"></a><span class="lineno"><a class="line" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a1146364e73bdb321f7738b7787f35450">  895</a></span><span class="keywordtype">bool</span> <a class="code hl_function" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a1146364e73bdb321f7738b7787f35450">PluginEditorWindow::isOpen</a>()<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00896" name="l00896"></a><span class="lineno">  896</span>    <span class="keywordflow">return</span> m_isOpen;</div>
-<div class="line"><a id="l00897" name="l00897"></a><span class="lineno">  897</span>}</div>
+<div class="line"><a id="l00901" name="l00901"></a><span class="lineno">  901</span> </div>
+<div class="foldopen" id="foldopen00902" data-start="{" data-end="}">
+<div class="line"><a id="l00902" name="l00902"></a><span class="lineno"><a class="line" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a1146364e73bdb321f7738b7787f35450">  902</a></span><span class="keywordtype">bool</span> <a class="code hl_function" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a1146364e73bdb321f7738b7787f35450">PluginEditorWindow::isOpen</a>()<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00903" name="l00903"></a><span class="lineno">  903</span>    <span class="keywordflow">return</span> m_isOpen;</div>
+<div class="line"><a id="l00904" name="l00904"></a><span class="lineno">  904</span>}</div>
 </div>
-<div class="line"><a id="l00898" name="l00898"></a><span class="lineno">  898</span> </div>
-<div class="foldopen" id="foldopen00899" data-start="{" data-end="}">
-<div class="line"><a id="l00899" name="l00899"></a><span class="lineno"><a class="line" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#abeab90f9d96e132724b7f69ce32a8033">  899</a></span><span class="keywordtype">void</span>* <a class="code hl_function" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#abeab90f9d96e132724b7f69ce32a8033">PluginEditorWindow::getNativeHandle</a>()<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00900" name="l00900"></a><span class="lineno">  900</span><span class="preprocessor">#ifdef _WIN32</span></div>
-<div class="line"><a id="l00901" name="l00901"></a><span class="lineno">  901</span>    <span class="keywordflow">return</span> m_impl-&gt;hwnd;</div>
-<div class="line"><a id="l00902" name="l00902"></a><span class="lineno">  902</span><span class="preprocessor">#else</span></div>
-<div class="line"><a id="l00903" name="l00903"></a><span class="lineno">  903</span>    <span class="keywordflow">return</span> <span class="keyword">nullptr</span>;</div>
-<div class="line"><a id="l00904" name="l00904"></a><span class="lineno">  904</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00905" name="l00905"></a><span class="lineno">  905</span>}</div>
+<div class="line"><a id="l00905" name="l00905"></a><span class="lineno">  905</span> </div>
+<div class="foldopen" id="foldopen00906" data-start="{" data-end="}">
+<div class="line"><a id="l00906" name="l00906"></a><span class="lineno"><a class="line" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#abeab90f9d96e132724b7f69ce32a8033">  906</a></span><span class="keywordtype">void</span>* <a class="code hl_function" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#abeab90f9d96e132724b7f69ce32a8033">PluginEditorWindow::getNativeHandle</a>()<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00907" name="l00907"></a><span class="lineno">  907</span><span class="preprocessor">#ifdef _WIN32</span></div>
+<div class="line"><a id="l00908" name="l00908"></a><span class="lineno">  908</span>    <span class="keywordflow">return</span> m_impl-&gt;hwnd;</div>
+<div class="line"><a id="l00909" name="l00909"></a><span class="lineno">  909</span><span class="preprocessor">#else</span></div>
+<div class="line"><a id="l00910" name="l00910"></a><span class="lineno">  910</span>    <span class="keywordflow">return</span> <span class="keyword">nullptr</span>;</div>
+<div class="line"><a id="l00911" name="l00911"></a><span class="lineno">  911</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00912" name="l00912"></a><span class="lineno">  912</span>}</div>
 </div>
-<div class="line"><a id="l00906" name="l00906"></a><span class="lineno">  906</span> </div>
-<div class="foldopen" id="foldopen00907" data-start="{" data-end="}">
-<div class="line"><a id="l00907" name="l00907"></a><span class="lineno"><a class="line" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a7ed3f537382e13f4fcd1380b007ca9fd">  907</a></span>std::shared_ptr&lt;Aestra::Audio::IPluginInstance&gt; <a class="code hl_function" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a7ed3f537382e13f4fcd1380b007ca9fd">PluginEditorWindow::getPluginInstance</a>()<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00908" name="l00908"></a><span class="lineno">  908</span>    <span class="keywordflow">return</span> m_instance;</div>
-<div class="line"><a id="l00909" name="l00909"></a><span class="lineno">  909</span>}</div>
+<div class="line"><a id="l00913" name="l00913"></a><span class="lineno">  913</span> </div>
+<div class="foldopen" id="foldopen00914" data-start="{" data-end="}">
+<div class="line"><a id="l00914" name="l00914"></a><span class="lineno"><a class="line" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a7ed3f537382e13f4fcd1380b007ca9fd">  914</a></span>std::shared_ptr&lt;Aestra::Audio::IPluginInstance&gt; <a class="code hl_function" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a7ed3f537382e13f4fcd1380b007ca9fd">PluginEditorWindow::getPluginInstance</a>()<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00915" name="l00915"></a><span class="lineno">  915</span>    <span class="keywordflow">return</span> m_instance;</div>
+<div class="line"><a id="l00916" name="l00916"></a><span class="lineno">  916</span>}</div>
 </div>
-<div class="line"><a id="l00910" name="l00910"></a><span class="lineno">  910</span> </div>
-<div class="foldopen" id="foldopen00911" data-start="{" data-end="}">
-<div class="line"><a id="l00911" name="l00911"></a><span class="lineno"><a class="line" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a07c0fd664aaa17afa9b22f617e3568db">  911</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a07c0fd664aaa17afa9b22f617e3568db">PluginEditorWindow::bringToFront</a>() {</div>
-<div class="line"><a id="l00912" name="l00912"></a><span class="lineno">  912</span><span class="preprocessor">#ifdef _WIN32</span></div>
-<div class="line"><a id="l00913" name="l00913"></a><span class="lineno">  913</span>    <span class="keywordflow">if</span> (m_impl-&gt;hwnd) {</div>
-<div class="line"><a id="l00914" name="l00914"></a><span class="lineno">  914</span>        SetForegroundWindow(m_impl-&gt;hwnd);</div>
-<div class="line"><a id="l00915" name="l00915"></a><span class="lineno">  915</span>    }</div>
-<div class="line"><a id="l00916" name="l00916"></a><span class="lineno">  916</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00917" name="l00917"></a><span class="lineno">  917</span>}</div>
+<div class="line"><a id="l00917" name="l00917"></a><span class="lineno">  917</span> </div>
+<div class="foldopen" id="foldopen00918" data-start="{" data-end="}">
+<div class="line"><a id="l00918" name="l00918"></a><span class="lineno"><a class="line" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a07c0fd664aaa17afa9b22f617e3568db">  918</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a07c0fd664aaa17afa9b22f617e3568db">PluginEditorWindow::bringToFront</a>() {</div>
+<div class="line"><a id="l00919" name="l00919"></a><span class="lineno">  919</span><span class="preprocessor">#ifdef _WIN32</span></div>
+<div class="line"><a id="l00920" name="l00920"></a><span class="lineno">  920</span>    <span class="keywordflow">if</span> (m_impl-&gt;hwnd) {</div>
+<div class="line"><a id="l00921" name="l00921"></a><span class="lineno">  921</span>        SetForegroundWindow(m_impl-&gt;hwnd);</div>
+<div class="line"><a id="l00922" name="l00922"></a><span class="lineno">  922</span>    }</div>
+<div class="line"><a id="l00923" name="l00923"></a><span class="lineno">  923</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00924" name="l00924"></a><span class="lineno">  924</span>}</div>
 </div>
-<div class="line"><a id="l00918" name="l00918"></a><span class="lineno">  918</span> </div>
-<div class="foldopen" id="foldopen00919" data-start="{" data-end="}">
-<div class="line"><a id="l00919" name="l00919"></a><span class="lineno"><a class="line" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a72155a37cc87c39751d5da09b6812c6c">  919</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a72155a37cc87c39751d5da09b6812c6c">PluginEditorWindow::setPosition</a>(<span class="keywordtype">int</span> x, <span class="keywordtype">int</span> y) {</div>
-<div class="line"><a id="l00920" name="l00920"></a><span class="lineno">  920</span>    m_impl-&gt;posX = x;</div>
-<div class="line"><a id="l00921" name="l00921"></a><span class="lineno">  921</span>    m_impl-&gt;posY = y;</div>
-<div class="line"><a id="l00922" name="l00922"></a><span class="lineno">  922</span><span class="preprocessor">#ifdef _WIN32</span></div>
-<div class="line"><a id="l00923" name="l00923"></a><span class="lineno">  923</span>    <span class="keywordflow">if</span> (m_impl-&gt;hwnd) {</div>
-<div class="line"><a id="l00924" name="l00924"></a><span class="lineno">  924</span>        SetWindowPos(m_impl-&gt;hwnd, <span class="keyword">nullptr</span>, x, y, 0, 0, </div>
-<div class="line"><a id="l00925" name="l00925"></a><span class="lineno">  925</span>                     SWP_NOSIZE | SWP_NOZORDER);</div>
-<div class="line"><a id="l00926" name="l00926"></a><span class="lineno">  926</span>    }</div>
-<div class="line"><a id="l00927" name="l00927"></a><span class="lineno">  927</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00928" name="l00928"></a><span class="lineno">  928</span>}</div>
+<div class="line"><a id="l00925" name="l00925"></a><span class="lineno">  925</span> </div>
+<div class="foldopen" id="foldopen00926" data-start="{" data-end="}">
+<div class="line"><a id="l00926" name="l00926"></a><span class="lineno"><a class="line" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a72155a37cc87c39751d5da09b6812c6c">  926</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a72155a37cc87c39751d5da09b6812c6c">PluginEditorWindow::setPosition</a>(<span class="keywordtype">int</span> x, <span class="keywordtype">int</span> y) {</div>
+<div class="line"><a id="l00927" name="l00927"></a><span class="lineno">  927</span>    m_impl-&gt;posX = x;</div>
+<div class="line"><a id="l00928" name="l00928"></a><span class="lineno">  928</span>    m_impl-&gt;posY = y;</div>
+<div class="line"><a id="l00929" name="l00929"></a><span class="lineno">  929</span><span class="preprocessor">#ifdef _WIN32</span></div>
+<div class="line"><a id="l00930" name="l00930"></a><span class="lineno">  930</span>    <span class="keywordflow">if</span> (m_impl-&gt;hwnd) {</div>
+<div class="line"><a id="l00931" name="l00931"></a><span class="lineno">  931</span>        SetWindowPos(m_impl-&gt;hwnd, <span class="keyword">nullptr</span>, x, y, 0, 0, </div>
+<div class="line"><a id="l00932" name="l00932"></a><span class="lineno">  932</span>                     SWP_NOSIZE | SWP_NOZORDER);</div>
+<div class="line"><a id="l00933" name="l00933"></a><span class="lineno">  933</span>    }</div>
+<div class="line"><a id="l00934" name="l00934"></a><span class="lineno">  934</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00935" name="l00935"></a><span class="lineno">  935</span>}</div>
 </div>
-<div class="line"><a id="l00929" name="l00929"></a><span class="lineno">  929</span> </div>
-<div class="foldopen" id="foldopen00930" data-start="{" data-end="}">
-<div class="line"><a id="l00930" name="l00930"></a><span class="lineno"><a class="line" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a60e44fcfb5d8a9ab7c31f63e97572140">  930</a></span>std::pair&lt;int, int&gt; <a class="code hl_function" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a60e44fcfb5d8a9ab7c31f63e97572140">PluginEditorWindow::getPosition</a>()<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00931" name="l00931"></a><span class="lineno">  931</span><span class="preprocessor">#ifdef _WIN32</span></div>
-<div class="line"><a id="l00932" name="l00932"></a><span class="lineno">  932</span>    <span class="keywordflow">if</span> (m_impl-&gt;hwnd) {</div>
-<div class="line"><a id="l00933" name="l00933"></a><span class="lineno">  933</span>        RECT rect;</div>
-<div class="line"><a id="l00934" name="l00934"></a><span class="lineno">  934</span>        GetWindowRect(m_impl-&gt;hwnd, &amp;rect);</div>
-<div class="line"><a id="l00935" name="l00935"></a><span class="lineno">  935</span>        <span class="keywordflow">return</span> {rect.left, rect.top};</div>
-<div class="line"><a id="l00936" name="l00936"></a><span class="lineno">  936</span>    }</div>
-<div class="line"><a id="l00937" name="l00937"></a><span class="lineno">  937</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00938" name="l00938"></a><span class="lineno">  938</span>    <span class="keywordflow">return</span> {m_impl-&gt;posX, m_impl-&gt;posY};</div>
-<div class="line"><a id="l00939" name="l00939"></a><span class="lineno">  939</span>}</div>
+<div class="line"><a id="l00936" name="l00936"></a><span class="lineno">  936</span> </div>
+<div class="foldopen" id="foldopen00937" data-start="{" data-end="}">
+<div class="line"><a id="l00937" name="l00937"></a><span class="lineno"><a class="line" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a60e44fcfb5d8a9ab7c31f63e97572140">  937</a></span>std::pair&lt;int, int&gt; <a class="code hl_function" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a60e44fcfb5d8a9ab7c31f63e97572140">PluginEditorWindow::getPosition</a>()<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00938" name="l00938"></a><span class="lineno">  938</span><span class="preprocessor">#ifdef _WIN32</span></div>
+<div class="line"><a id="l00939" name="l00939"></a><span class="lineno">  939</span>    <span class="keywordflow">if</span> (m_impl-&gt;hwnd) {</div>
+<div class="line"><a id="l00940" name="l00940"></a><span class="lineno">  940</span>        RECT rect;</div>
+<div class="line"><a id="l00941" name="l00941"></a><span class="lineno">  941</span>        GetWindowRect(m_impl-&gt;hwnd, &amp;rect);</div>
+<div class="line"><a id="l00942" name="l00942"></a><span class="lineno">  942</span>        <span class="keywordflow">return</span> {rect.left, rect.top};</div>
+<div class="line"><a id="l00943" name="l00943"></a><span class="lineno">  943</span>    }</div>
+<div class="line"><a id="l00944" name="l00944"></a><span class="lineno">  944</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00945" name="l00945"></a><span class="lineno">  945</span>    <span class="keywordflow">return</span> {m_impl-&gt;posX, m_impl-&gt;posY};</div>
+<div class="line"><a id="l00946" name="l00946"></a><span class="lineno">  946</span>}</div>
 </div>
-<div class="line"><a id="l00940" name="l00940"></a><span class="lineno">  940</span> </div>
-<div class="foldopen" id="foldopen00941" data-start="{" data-end="}">
-<div class="line"><a id="l00941" name="l00941"></a><span class="lineno"><a class="line" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#ad0fd0cbb44de1e4ea27090ff643935e8">  941</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#ad0fd0cbb44de1e4ea27090ff643935e8">PluginEditorWindow::setOnClose</a>(std::function&lt;<span class="keywordtype">void</span>()&gt; callback) {</div>
-<div class="line"><a id="l00942" name="l00942"></a><span class="lineno">  942</span>    m_onClose = std::move(callback);</div>
-<div class="line"><a id="l00943" name="l00943"></a><span class="lineno">  943</span>}</div>
+<div class="line"><a id="l00947" name="l00947"></a><span class="lineno">  947</span> </div>
+<div class="foldopen" id="foldopen00948" data-start="{" data-end="}">
+<div class="line"><a id="l00948" name="l00948"></a><span class="lineno"><a class="line" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#ad0fd0cbb44de1e4ea27090ff643935e8">  948</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#ad0fd0cbb44de1e4ea27090ff643935e8">PluginEditorWindow::setOnClose</a>(std::function&lt;<span class="keywordtype">void</span>()&gt; callback) {</div>
+<div class="line"><a id="l00949" name="l00949"></a><span class="lineno">  949</span>    m_onClose = std::move(callback);</div>
+<div class="line"><a id="l00950" name="l00950"></a><span class="lineno">  950</span>}</div>
 </div>
-<div class="line"><a id="l00944" name="l00944"></a><span class="lineno">  944</span> </div>
-<div class="line"><a id="l00945" name="l00945"></a><span class="lineno">  945</span>} <span class="comment">// namespace AestraUI</span></div>
+<div class="line"><a id="l00951" name="l00951"></a><span class="lineno">  951</span> </div>
+<div class="line"><a id="l00952" name="l00952"></a><span class="lineno">  952</span>} <span class="comment">// namespace AestraUI</span></div>
 <div class="ttc" id="aEditorSurfacePlacement_8h_html"><div class="ttname"><a href="../../d7/d79/EditorSurfacePlacement_8h.html">EditorSurfacePlacement.h</a></div><div class="ttdoc">V8-C14 step 5b: the pure half of plugin-editor position persistence.</div></div>
 <div class="ttc" id="aclassAestraUI_1_1EffectChainRack_html"><div class="ttname"><a href="../../dc/d87/classAestraUI_1_1EffectChainRack.html">AestraUI::EffectChainRack</a></div><div class="ttdef"><b>Definition</b> <a href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00338">PluginBrowserPanel.h:338</a></div></div>
 <div class="ttc" id="aclassAestraUI_1_1EffectChainRack_html_a1ebe215999517633aeda4c83d1b752f8"><div class="ttname"><a href="../../dc/d87/classAestraUI_1_1EffectChainRack.html#a1ebe215999517633aeda4c83d1b752f8">AestraUI::EffectChainRack::MAX_SLOTS</a></div><div class="ttdeci">static constexpr int MAX_SLOTS</div><div class="ttdoc">Ceiling on rows the rack can hold.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00344">PluginBrowserPanel.h:344</a></div></div>
@@ -1105,16 +1112,16 @@ $(document).ready(function() { init_codefold(1); });
 <div class="ttc" id="aclassAestraUI_1_1PluginBrowserPanel_html_ad744a08ac456fd16e83ec716f3d89d1a"><div class="ttname"><a href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#ad744a08ac456fd16e83ec716f3d89d1a">AestraUI::PluginBrowserPanel::setScanning</a></div><div class="ttdeci">void setScanning(bool scanning, float progress=0.0f)</div><div class="ttdoc">Set scanning state (shows progress indicator)</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00789">PluginBrowserPanel.cpp:789</a></div></div>
 <div class="ttc" id="aclassAestraUI_1_1PluginBrowserPanel_html_af67938d1cdeccb1b9a9ddb12096ce77d"><div class="ttname"><a href="../../d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#af67938d1cdeccb1b9a9ddb12096ce77d">AestraUI::PluginBrowserPanel::setPluginList</a></div><div class="ttdeci">void setPluginList(const std::vector&lt; PluginListItem &gt; &amp;plugins)</div><div class="ttdoc">Set the list of available plugins.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d72/PluginBrowserPanel_8cpp_source.html#l00603">PluginBrowserPanel.cpp:603</a></div></div>
 <div class="ttc" id="aclassAestraUI_1_1PluginEditorWindow_html"><div class="ttname"><a href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html">AestraUI::PluginEditorWindow</a></div><div class="ttdoc">Floating window for hosting plugin editor GUIs.</div><div class="ttdef"><b>Definition</b> <a href="../../dc/d21/PluginUIController_8h_source.html#l00333">PluginUIController.h:333</a></div></div>
-<div class="ttc" id="aclassAestraUI_1_1PluginEditorWindow_html_a07c0fd664aaa17afa9b22f617e3568db"><div class="ttname"><a href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a07c0fd664aaa17afa9b22f617e3568db">AestraUI::PluginEditorWindow::bringToFront</a></div><div class="ttdeci">void bringToFront()</div><div class="ttdoc">Bring window to front.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d3f/PluginUIController_8cpp_source.html#l00911">PluginUIController.cpp:911</a></div></div>
-<div class="ttc" id="aclassAestraUI_1_1PluginEditorWindow_html_a1146364e73bdb321f7738b7787f35450"><div class="ttname"><a href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a1146364e73bdb321f7738b7787f35450">AestraUI::PluginEditorWindow::isOpen</a></div><div class="ttdeci">bool isOpen() const</div><div class="ttdoc">Check if window is currently open.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d3f/PluginUIController_8cpp_source.html#l00895">PluginUIController.cpp:895</a></div></div>
+<div class="ttc" id="aclassAestraUI_1_1PluginEditorWindow_html_a07c0fd664aaa17afa9b22f617e3568db"><div class="ttname"><a href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a07c0fd664aaa17afa9b22f617e3568db">AestraUI::PluginEditorWindow::bringToFront</a></div><div class="ttdeci">void bringToFront()</div><div class="ttdoc">Bring window to front.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d3f/PluginUIController_8cpp_source.html#l00918">PluginUIController.cpp:918</a></div></div>
+<div class="ttc" id="aclassAestraUI_1_1PluginEditorWindow_html_a1146364e73bdb321f7738b7787f35450"><div class="ttname"><a href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a1146364e73bdb321f7738b7787f35450">AestraUI::PluginEditorWindow::isOpen</a></div><div class="ttdeci">bool isOpen() const</div><div class="ttdoc">Check if window is currently open.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d3f/PluginUIController_8cpp_source.html#l00902">PluginUIController.cpp:902</a></div></div>
 <div class="ttc" id="aclassAestraUI_1_1PluginEditorWindow_html_a4885dadf0e32a37fce5112302587ec3b"><div class="ttname"><a href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a4885dadf0e32a37fce5112302587ec3b">AestraUI::PluginEditorWindow::open</a></div><div class="ttdeci">bool open(std::shared_ptr&lt; Aestra::Audio::IPluginInstance &gt; instance, const std::string &amp;title=&quot;Plugin Editor&quot;)</div><div class="ttdoc">Open editor for a plugin instance.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d3f/PluginUIController_8cpp_source.html#l00791">PluginUIController.cpp:791</a></div></div>
-<div class="ttc" id="aclassAestraUI_1_1PluginEditorWindow_html_a60e44fcfb5d8a9ab7c31f63e97572140"><div class="ttname"><a href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a60e44fcfb5d8a9ab7c31f63e97572140">AestraUI::PluginEditorWindow::getPosition</a></div><div class="ttdeci">std::pair&lt; int, int &gt; getPosition() const</div><div class="ttdoc">Get window position.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d3f/PluginUIController_8cpp_source.html#l00930">PluginUIController.cpp:930</a></div></div>
-<div class="ttc" id="aclassAestraUI_1_1PluginEditorWindow_html_a72155a37cc87c39751d5da09b6812c6c"><div class="ttname"><a href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a72155a37cc87c39751d5da09b6812c6c">AestraUI::PluginEditorWindow::setPosition</a></div><div class="ttdeci">void setPosition(int x, int y)</div><div class="ttdoc">Set window position.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d3f/PluginUIController_8cpp_source.html#l00919">PluginUIController.cpp:919</a></div></div>
-<div class="ttc" id="aclassAestraUI_1_1PluginEditorWindow_html_a7ed3f537382e13f4fcd1380b007ca9fd"><div class="ttname"><a href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a7ed3f537382e13f4fcd1380b007ca9fd">AestraUI::PluginEditorWindow::getPluginInstance</a></div><div class="ttdeci">std::shared_ptr&lt; Aestra::Audio::IPluginInstance &gt; getPluginInstance() const</div><div class="ttdoc">Get the plugin instance being edited.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d3f/PluginUIController_8cpp_source.html#l00907">PluginUIController.cpp:907</a></div></div>
-<div class="ttc" id="aclassAestraUI_1_1PluginEditorWindow_html_a8dd9beea4fa798f5bf868f7a7af9f1cf"><div class="ttname"><a href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a8dd9beea4fa798f5bf868f7a7af9f1cf">AestraUI::PluginEditorWindow::close</a></div><div class="ttdeci">void close()</div><div class="ttdoc">Close the editor window.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d3f/PluginUIController_8cpp_source.html#l00877">PluginUIController.cpp:877</a></div></div>
+<div class="ttc" id="aclassAestraUI_1_1PluginEditorWindow_html_a60e44fcfb5d8a9ab7c31f63e97572140"><div class="ttname"><a href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a60e44fcfb5d8a9ab7c31f63e97572140">AestraUI::PluginEditorWindow::getPosition</a></div><div class="ttdeci">std::pair&lt; int, int &gt; getPosition() const</div><div class="ttdoc">Get window position.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d3f/PluginUIController_8cpp_source.html#l00937">PluginUIController.cpp:937</a></div></div>
+<div class="ttc" id="aclassAestraUI_1_1PluginEditorWindow_html_a72155a37cc87c39751d5da09b6812c6c"><div class="ttname"><a href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a72155a37cc87c39751d5da09b6812c6c">AestraUI::PluginEditorWindow::setPosition</a></div><div class="ttdeci">void setPosition(int x, int y)</div><div class="ttdoc">Set window position.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d3f/PluginUIController_8cpp_source.html#l00926">PluginUIController.cpp:926</a></div></div>
+<div class="ttc" id="aclassAestraUI_1_1PluginEditorWindow_html_a7ed3f537382e13f4fcd1380b007ca9fd"><div class="ttname"><a href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a7ed3f537382e13f4fcd1380b007ca9fd">AestraUI::PluginEditorWindow::getPluginInstance</a></div><div class="ttdeci">std::shared_ptr&lt; Aestra::Audio::IPluginInstance &gt; getPluginInstance() const</div><div class="ttdoc">Get the plugin instance being edited.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d3f/PluginUIController_8cpp_source.html#l00914">PluginUIController.cpp:914</a></div></div>
+<div class="ttc" id="aclassAestraUI_1_1PluginEditorWindow_html_a8dd9beea4fa798f5bf868f7a7af9f1cf"><div class="ttname"><a href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a8dd9beea4fa798f5bf868f7a7af9f1cf">AestraUI::PluginEditorWindow::close</a></div><div class="ttdeci">void close()</div><div class="ttdoc">Close the editor window.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d3f/PluginUIController_8cpp_source.html#l00884">PluginUIController.cpp:884</a></div></div>
 <div class="ttc" id="aclassAestraUI_1_1PluginEditorWindow_html_ab39cc74bf1e9882624488a0e49aa0e82"><div class="ttname"><a href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#ab39cc74bf1e9882624488a0e49aa0e82">AestraUI::PluginEditorWindow::~PluginEditorWindow</a></div><div class="ttdeci">~PluginEditorWindow()</div><div class="ttdoc">Destroy the floating plugin editor window.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d3f/PluginUIController_8cpp_source.html#l00787">PluginUIController.cpp:787</a></div></div>
-<div class="ttc" id="aclassAestraUI_1_1PluginEditorWindow_html_abeab90f9d96e132724b7f69ce32a8033"><div class="ttname"><a href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#abeab90f9d96e132724b7f69ce32a8033">AestraUI::PluginEditorWindow::getNativeHandle</a></div><div class="ttdeci">void * getNativeHandle() const</div><div class="ttdoc">Get the native window handle.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d3f/PluginUIController_8cpp_source.html#l00899">PluginUIController.cpp:899</a></div></div>
-<div class="ttc" id="aclassAestraUI_1_1PluginEditorWindow_html_ad0fd0cbb44de1e4ea27090ff643935e8"><div class="ttname"><a href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#ad0fd0cbb44de1e4ea27090ff643935e8">AestraUI::PluginEditorWindow::setOnClose</a></div><div class="ttdeci">void setOnClose(std::function&lt; void()&gt; callback)</div><div class="ttdoc">Set callback for when window closes.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d3f/PluginUIController_8cpp_source.html#l00941">PluginUIController.cpp:941</a></div></div>
+<div class="ttc" id="aclassAestraUI_1_1PluginEditorWindow_html_abeab90f9d96e132724b7f69ce32a8033"><div class="ttname"><a href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#abeab90f9d96e132724b7f69ce32a8033">AestraUI::PluginEditorWindow::getNativeHandle</a></div><div class="ttdeci">void * getNativeHandle() const</div><div class="ttdoc">Get the native window handle.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d3f/PluginUIController_8cpp_source.html#l00906">PluginUIController.cpp:906</a></div></div>
+<div class="ttc" id="aclassAestraUI_1_1PluginEditorWindow_html_ad0fd0cbb44de1e4ea27090ff643935e8"><div class="ttname"><a href="../../d6/d10/classAestraUI_1_1PluginEditorWindow.html#ad0fd0cbb44de1e4ea27090ff643935e8">AestraUI::PluginEditorWindow::setOnClose</a></div><div class="ttdeci">void setOnClose(std::function&lt; void()&gt; callback)</div><div class="ttdoc">Set callback for when window closes.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d3f/PluginUIController_8cpp_source.html#l00948">PluginUIController.cpp:948</a></div></div>
 <div class="ttc" id="aclassAestraUI_1_1PluginUIController_html_a0c61004bfcfdfebdaf0ba7c0696a60dd"><div class="ttname"><a href="../../da/d71/classAestraUI_1_1PluginUIController.html#a0c61004bfcfdfebdaf0ba7c0696a60dd">AestraUI::PluginUIController::setPluginManager</a></div><div class="ttdeci">void setPluginManager(Aestra::Audio::PluginManager *manager)</div><div class="ttdoc">Set the plugin manager (for loading instances)</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d3f/PluginUIController_8cpp_source.html#l00063">PluginUIController.cpp:63</a></div></div>
 <div class="ttc" id="aclassAestraUI_1_1PluginUIController_html_a10606696ef2ab6682a594e1f970b3ac6"><div class="ttname"><a href="../../da/d71/classAestraUI_1_1PluginUIController.html#a10606696ef2ab6682a594e1f970b3ac6">AestraUI::PluginUIController::startScan</a></div><div class="ttdeci">void startScan()</div><div class="ttdoc">Start a plugin scan.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d3f/PluginUIController_8cpp_source.html#l00224">PluginUIController.cpp:224</a></div></div>
 <div class="ttc" id="aclassAestraUI_1_1PluginUIController_html_a212dbf3849e370089393c7b225bd33b2"><div class="ttname"><a href="../../da/d71/classAestraUI_1_1PluginUIController.html#a212dbf3849e370089393c7b225bd33b2">AestraUI::PluginUIController::loadPluginToSlot</a></div><div class="ttdeci">bool loadPluginToSlot(const std::string &amp;pluginId, Aestra::Audio::EffectChain *chain, int slot)</div><div class="ttdoc">Load a plugin into an effect slot.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d3f/PluginUIController_8cpp_source.html#l00481">PluginUIController.cpp:481</a></div></div>
@@ -1137,19 +1144,19 @@ $(document).ready(function() { init_codefold(1); });
 <div class="ttc" id="aclassAestraUI_1_1PluginUIController_html_afd31984a7eefb5b9f1881cc748fccbc0"><div class="ttname"><a href="../../da/d71/classAestraUI_1_1PluginUIController.html#afd31984a7eefb5b9f1881cc748fccbc0">AestraUI::PluginUIController::unbindBrowser</a></div><div class="ttdeci">void unbindBrowser()</div><div class="ttdoc">Unbind the browser.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d3f/PluginUIController_8cpp_source.html#l00202">PluginUIController.cpp:202</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1EffectChain_html"><div class="ttname"><a href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html">Aestra::Audio::EffectChain</a></div><div class="ttdef"><b>Definition</b> <a href="../../df/d60/EffectChain_8h_source.html#l00185">EffectChain.h:185</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1EffectChain_html_a00a6a69855aeed72bf72a3cd390a75dd"><div class="ttname"><a href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a00a6a69855aeed72bf72a3cd390a75dd">Aestra::Audio::EffectChain::insertPlugin</a></div><div class="ttdeci">bool insertPlugin(size_t slotIndex, PluginInstancePtr plugin, uint64_t preservedInstanceId=0)</div><div class="ttdoc">Insert plugin into slot.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d19/EffectChain_8cpp_source.html#l00185">EffectChain.cpp:185</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1EffectChain_html_a05ca8fc22e7be0358516ecb73098996e"><div class="ttname"><a href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a05ca8fc22e7be0358516ecb73098996e">Aestra::Audio::EffectChain::removePlugin</a></div><div class="ttdeci">PluginInstancePtr removePlugin(size_t slotIndex)</div><div class="ttdoc">Remove plugin from slot.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d19/EffectChain_8cpp_source.html#l00257">EffectChain.cpp:257</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1EffectChain_html_a75a3b9245de1b918055973941eb00244"><div class="ttname"><a href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a75a3b9245de1b918055973941eb00244">Aestra::Audio::EffectChain::getPlugin</a></div><div class="ttdeci">PluginInstancePtr getPlugin(size_t slotIndex) const</div><div class="ttdoc">Get plugin in slot.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d19/EffectChain_8cpp_source.html#l00357">EffectChain.cpp:357</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1EffectChain_html_a871b0ffa96ec2073201f8b80a960ecbb"><div class="ttname"><a href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a871b0ffa96ec2073201f8b80a960ecbb">Aestra::Audio::EffectChain::isSlotBypassed</a></div><div class="ttdeci">bool isSlotBypassed(size_t slotIndex) const</div><div class="ttdoc">Check if slot is bypassed.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d19/EffectChain_8cpp_source.html#l00477">EffectChain.cpp:477</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1EffectChain_html_ad3d64d4092a82321d954487d102aa432"><div class="ttname"><a href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#ad3d64d4092a82321d954487d102aa432">Aestra::Audio::EffectChain::isSlotBypassedByNonFiniteOutput</a></div><div class="ttdeci">bool isSlotBypassedByNonFiniteOutput(size_t slotIndex) const</div><div class="ttdoc">Check if a slot was automatically bypassed after unsafe non-finite output.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d19/EffectChain_8cpp_source.html#l00485">EffectChain.cpp:485</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1EffectChain_html_a05ca8fc22e7be0358516ecb73098996e"><div class="ttname"><a href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a05ca8fc22e7be0358516ecb73098996e">Aestra::Audio::EffectChain::removePlugin</a></div><div class="ttdeci">PluginInstancePtr removePlugin(size_t slotIndex)</div><div class="ttdoc">Remove plugin from slot.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d19/EffectChain_8cpp_source.html#l00255">EffectChain.cpp:255</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1EffectChain_html_a75a3b9245de1b918055973941eb00244"><div class="ttname"><a href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a75a3b9245de1b918055973941eb00244">Aestra::Audio::EffectChain::getPlugin</a></div><div class="ttdeci">PluginInstancePtr getPlugin(size_t slotIndex) const</div><div class="ttdoc">Get plugin in slot.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d19/EffectChain_8cpp_source.html#l00353">EffectChain.cpp:353</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1EffectChain_html_a871b0ffa96ec2073201f8b80a960ecbb"><div class="ttname"><a href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a871b0ffa96ec2073201f8b80a960ecbb">Aestra::Audio::EffectChain::isSlotBypassed</a></div><div class="ttdeci">bool isSlotBypassed(size_t slotIndex) const</div><div class="ttdoc">Check if slot is bypassed.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d19/EffectChain_8cpp_source.html#l00471">EffectChain.cpp:471</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1EffectChain_html_ad3d64d4092a82321d954487d102aa432"><div class="ttname"><a href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#ad3d64d4092a82321d954487d102aa432">Aestra::Audio::EffectChain::isSlotBypassedByNonFiniteOutput</a></div><div class="ttdeci">bool isSlotBypassedByNonFiniteOutput(size_t slotIndex) const</div><div class="ttdoc">Check if a slot was automatically bypassed after unsafe non-finite output.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d19/EffectChain_8cpp_source.html#l00479">EffectChain.cpp:479</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1EffectChain_html_afe765cafd37e0deb123dae8cb16b0164"><div class="ttname"><a href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#afe765cafd37e0deb123dae8cb16b0164">Aestra::Audio::EffectChain::kMaxSlots</a></div><div class="ttdeci">static constexpr size_t kMaxSlots</div><div class="ttdoc">Safety ceiling, not a design number: a chain grows on demand up to here (insertPlugin / movePlugin in...</div><div class="ttdef"><b>Definition</b> <a href="../../df/d60/EffectChain_8h_source.html#l00195">EffectChain.h:195</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1MixerChannel_html"><div class="ttname"><a href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html">Aestra::Audio::MixerChannel</a></div><div class="ttdoc">Mixer Channel - Dedicated routing and DSP entity (v3.0)</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d8f/MixerChannel_8h_source.html#l00111">MixerChannel.h:111</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1MixerChannel_html_a107c869111f74c0e34ea921eabea4e63"><div class="ttname"><a href="../../d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a107c869111f74c0e34ea921eabea4e63">Aestra::Audio::MixerChannel::getEffectChain</a></div><div class="ttdeci">EffectChain &amp; getEffectChain()</div><div class="ttdoc">Access the insert-effect chain.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d8f/MixerChannel_8h_source.html#l00234">MixerChannel.h:234</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PluginManager_html"><div class="ttname"><a href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html">Aestra::Audio::PluginManager</a></div><div class="ttdoc">Central manager for plugin lifecycle and instances.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/db3/PluginManager_8h_source.html#l00047">PluginManager.h:47</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PluginManager_html_a44cee57644631d1a05358e91b0d4bd16"><div class="ttname"><a href="../../d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a44cee57644631d1a05358e91b0d4bd16">Aestra::Audio::PluginManager::createInstanceById</a></div><div class="ttdeci">PluginInstancePtr createInstanceById(const std::string &amp;pluginId)</div><div class="ttdoc">Create instance by plugin ID.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc5/PluginManager_8cpp_source.html#l00187">PluginManager.cpp:187</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1PluginScanner_html"><div class="ttname"><a href="../../d5/d75/classAestra_1_1Audio_1_1PluginScanner.html">Aestra::Audio::PluginScanner</a></div><div class="ttdoc">Plugin scanner for discovering installed plugins.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/dea/PluginScanner_8h_source.html#l00036">PluginScanner.h:36</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1PluginScanner_html_a262f97d26b294e814c7b4cb98a214771"><div class="ttname"><a href="../../d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#a262f97d26b294e814c7b4cb98a214771">Aestra::Audio::PluginScanner::scanAsync</a></div><div class="ttdeci">void scanAsync(ScanProgressCallback progressCallback=nullptr, ScanCompleteCallback completeCallback=nullptr)</div><div class="ttdoc">Start async plugin scan.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d5e/PluginScanner_8cpp_source.html#l00433">PluginScanner.cpp:433</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1PluginScanner_html_affcef3fc60ee455dd741b4a672df5155"><div class="ttname"><a href="../../d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#affcef3fc60ee455dd741b4a672df5155">Aestra::Audio::PluginScanner::getScannedPlugins</a></div><div class="ttdeci">const std::vector&lt; PluginInfo &gt; &amp; getScannedPlugins() const</div><div class="ttdoc">Get all scanned plugins.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d5e/PluginScanner_8cpp_source.html#l00558">PluginScanner.cpp:558</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1TrackManager_html"><div class="ttname"><a href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html">Aestra::Audio::TrackManager</a></div><div class="ttdoc">Track/Channel manager for the audio engine.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/dfc/TrackManager_8h_source.html#l00056">TrackManager.h:56</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1PluginScanner_html_a262f97d26b294e814c7b4cb98a214771"><div class="ttname"><a href="../../d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#a262f97d26b294e814c7b4cb98a214771">Aestra::Audio::PluginScanner::scanAsync</a></div><div class="ttdeci">void scanAsync(ScanProgressCallback progressCallback=nullptr, ScanCompleteCallback completeCallback=nullptr)</div><div class="ttdoc">Start async plugin scan.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d5e/PluginScanner_8cpp_source.html#l00434">PluginScanner.cpp:434</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1PluginScanner_html_affcef3fc60ee455dd741b4a672df5155"><div class="ttname"><a href="../../d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#affcef3fc60ee455dd741b4a672df5155">Aestra::Audio::PluginScanner::getScannedPlugins</a></div><div class="ttdeci">const std::vector&lt; PluginInfo &gt; &amp; getScannedPlugins() const</div><div class="ttdoc">Get all scanned plugins.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d5e/PluginScanner_8cpp_source.html#l00565">PluginScanner.cpp:565</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1TrackManager_html"><div class="ttname"><a href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html">Aestra::Audio::TrackManager</a></div><div class="ttdoc">Track/Channel manager for the audio engine.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/dfc/TrackManager_8h_source.html#l00060">TrackManager.h:60</a></div></div>
 <div class="ttc" id="anamespacestd_html"><div class="ttname"><a href="../../d8/dcc/namespacestd.html">std</a></div><div class="ttdoc">STL namespace.</div></div>
 <div class="ttc" id="astructAestraUI_1_1EffectChainRack_1_1EffectSlotInfo_html"><div class="ttname"><a href="../../d4/da3/structAestraUI_1_1EffectChainRack_1_1EffectSlotInfo.html">AestraUI::EffectChainRack::EffectSlotInfo</a></div><div class="ttdef"><b>Definition</b> <a href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00348">PluginBrowserPanel.h:348</a></div></div>
 <div class="ttc" id="astructAestraUI_1_1EffectChainRack_1_1EffectSlotInfo_html_a11ca92e7a4b871a02841d448faf3ed60"><div class="ttname"><a href="../../d4/da3/structAestraUI_1_1EffectChainRack_1_1EffectSlotInfo.html#a11ca92e7a4b871a02841d448faf3ed60">AestraUI::EffectChainRack::EffectSlotInfo::name</a></div><div class="ttdeci">std::string name</div><div class="ttdoc">Plugin name or &quot;Empty&quot;.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/db9/PluginBrowserPanel_8h_source.html#l00349">PluginBrowserPanel.h:349</a></div></div>

@@ -1,0 +1,8 @@
+<map id="Aestra::Audio::ScheduleLoop::baseOf" name="Aestra::Audio::ScheduleLoop::baseOf">
+<area shape="rect" id="Node000001" title="Monotonic frame of timeline position 0 within pass." alt="" coords="531,35,737,75"/>
+<area shape="rect" id="Node000002" href="$d1/d12/structAestra_1_1Audio_1_1ScheduleLoop.html#a4a3fc76570f821fd99de36b201c99030" title="Confine a timeline&#45;loop note to its pass (monotonic frames, in place)." alt="" coords="276,5,483,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="517,44,483,40,483,35,518,39"/>
+<area shape="rect" id="Node000003" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#aa54017c72670cc708de638a0fa28e9c0" title="Refill against an explicit loop and an epoch ticket (the live caller)." alt="" coords="5,35,228,75"/>
+<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="517,60,483,60,276,60,228,59,228,54,276,55,483,55,517,54"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="263,41,229,45,228,40,262,36"/>
+</map>

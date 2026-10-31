@@ -1,0 +1,5 @@
+<map id="Aestra::ISettingsPage::hasUnsavedChanges" name="Aestra::ISettingsPage::hasUnsavedChanges">
+<area shape="rect" id="Node000001" title="Check if there are unsaved changes." alt="" coords="223,5,389,45"/>
+<area shape="rect" id="Node000002" href="$da/d9f/classAestra_1_1ISettingsPage.html#aaa7d44d7cc0354d8a53180b83705e7df" title="How many settings on this page differ from what is saved (the sidebar badge and the &quot;N changes not sa..." alt="" coords="5,5,175,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="209,28,175,28,175,23,209,23"/>
+</map>

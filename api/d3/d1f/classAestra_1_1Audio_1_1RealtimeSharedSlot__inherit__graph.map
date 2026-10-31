@@ -1,0 +1,11 @@
+<map id="Aestra::Audio::RealtimeSharedSlot&lt; T &gt;" name="Aestra::Audio::RealtimeSharedSlot&lt; T &gt;">
+<area shape="rect" id="Node000001" title="A shared_ptr the audio thread can read without a lock." alt="" coords="5,124,227,164"/>
+<area shape="rect" id="Node000002" href="$dc/dca/classAestra_1_1Audio_1_1RealtimeSharedSlot.html" title=" " alt="" coords="473,5,715,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="155,114,199,88,250,65,306,50,363,39,473,26,473,31,364,44,307,55,252,71,201,93,157,119"/>
+<area shape="rect" id="Node000003" href="$dc/dca/classAestra_1_1Audio_1_1RealtimeSharedSlot.html" title=" " alt="" coords="483,69,705,139"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="240,131,483,111,483,116,241,136"/>
+<area shape="rect" id="Node000004" href="$dc/dca/classAestra_1_1Audio_1_1RealtimeSharedSlot.html" title=" " alt="" coords="483,163,705,203"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="241,151,483,171,483,176,240,157"/>
+<area shape="rect" id="Node000005" href="$dc/dca/classAestra_1_1Audio_1_1RealtimeSharedSlot.html" title=" " alt="" coords="483,227,705,282"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="167,168,207,187,251,203,370,229,483,244,483,250,369,235,250,208,205,192,164,173"/>
+</map>

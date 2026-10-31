@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['savefailed_0',['SaveFailed',['../d8/d94/namespaceAestra.html#a335457aa6542c6afd3116e5965914cd4a11df4d95826897179ae2aa0663e87f38',1,'Aestra']]],
-  ['settings_1',['Settings',['../d3/d7a/HostVerbRegistry_8h.html#ae4fe5c25565ab3714b60306ec5d3bb7eaf4f70727dc34561dfde1a3c529b6205c',1,'Aestra::Audio']]],
-  ['shuttingdown_2',['ShuttingDown',['../d8/d94/namespaceAestra.html#a5a342fa78d46408488b9ee6a276710fca075d9c9ae8c8f1c79c1a1965cd8c5a42',1,'Aestra']]]
+  ['reserveddomain_0',['ReservedDomain',['../d4/d8f/classAestra_1_1Audio_1_1HostVerbRegistry.html#a8ad8fd72c16f66cc54db72f76b202f41a667fc10fe084ef174a80910252d13227',1,'Aestra::Audio::HostVerbRegistry']]],
+  ['running_1',['Running',['../d8/d94/namespaceAestra.html#a5a342fa78d46408488b9ee6a276710fca5bda814c4aedb126839228f1a3d92f09',1,'Aestra']]]
 ];

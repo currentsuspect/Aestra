@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::ParamChange" name="Aestra::Audio::ParamChange">
+<area shape="rect" id="Node000001" title="One value for one parameter, normalized 0..1." alt="" coords="5,93,212,119"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="25,5,99,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="77,41,105,92,100,94,72,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="123,5,190,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="146,44,118,94,113,91,141,41"/>
+</map>

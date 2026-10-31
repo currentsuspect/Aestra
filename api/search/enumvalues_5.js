@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['hostuithread_0',['HostUiThread',['../d3/d7a/HostVerbRegistry_8h.html#a811b9605980bc3ec78624aa89a9e4d83a2961e1d36aa92614363ef1669a9cede6',1,'Aestra::Audio']]]
+  ['graborigin_0',['GrabOrigin',['../dc/d15/NUICursorService_8h.html#a5a4a7cc03777f041adeac66d57a47fcfaa5429e3e0623005bda450c8b6e5b3c61',1,'AestraUI']]]
 ];

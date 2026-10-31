@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['namemalformed_0',['NameMalformed',['../d4/d8f/classAestra_1_1Audio_1_1HostVerbRegistry.html#a8ad8fd72c16f66cc54db72f76b202f41aaf561c78fbc7bf8f38643584b0022728',1,'Aestra::Audio::HostVerbRegistry']]],
-  ['nothingtoimport_1',['NothingToImport',['../d8/d94/namespaceAestra.html#a335457aa6542c6afd3116e5965914cd4a7a3efde257e8054d1dd61a7a46cbb937',1,'Aestra']]]
+  ['line_0',['Line',['../d4/d94/classAestra_1_1MuseAgent_1_1LineReader.html#a05f1485093580afccdfcd05a9826442ba4803e6b9e63dabf04de980788d6a13c4',1,'Aestra::MuseAgent::LineReader']]],
+  ['locked30_1',['Locked30',['../dc/d08/classAestraUI_1_1NUIAdaptiveFPS.html#a6e29841c9e42922b6a81671a5fc59638a28c769caadd560d9681174621f2fa841',1,'AestraUI::NUIAdaptiveFPS']]],
+  ['locked60_2',['Locked60',['../dc/d08/classAestraUI_1_1NUIAdaptiveFPS.html#a6e29841c9e42922b6a81671a5fc59638a9e6f19da7c8a22046b81e1cb142ad239',1,'AestraUI::NUIAdaptiveFPS']]]
 ];
