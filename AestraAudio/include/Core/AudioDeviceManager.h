@@ -270,6 +270,13 @@ public:
     std::string getFallbackReason() const;
 
     /**
+     * @brief Name of the last real (non-safety) output device that was opened.
+     * @return The device name, or empty if unknown. Survives a fallback to the
+     *         safety driver, so a "your interface is back" notice can name it.
+     */
+    std::string getPreferredDeviceName() const;
+
+    /**
      * @brief Add a driver to the manager (Dependency Injection)
      * @param driver Unique pointer to the driver instance
      */
@@ -377,6 +384,7 @@ private:
     // Driver mode change notification
     DriverModeChangeCallback m_driverModeChangeCallback;
     std::string m_fallbackReason;
+    std::string m_activeDeviceName; // last real device opened; kept across a safety fallback (#650)
 
     // Auto-buffer scaling
     bool m_autoBufferScalingEnabled = false;

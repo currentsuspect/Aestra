@@ -200,6 +200,16 @@ bool AudioDeviceManager::openStreamLocked(const AudioStreamConfig& config, Audio
 
     for (auto& driver : m_drivers) {
         if (tryDriver(driver.get(), config, callback, userData)) {
+            // Remember which device is really in use, so a later notice can name it (#650).
+            if (m_activeDriver && m_activeDriver->getDriverType() != AudioDriverType::DUMMY) {
+                m_activeDeviceName.clear();
+                for (const auto& device : m_activeDriver->getDevices()) {
+                    if (device.id == config.deviceId) {
+                        m_activeDeviceName = device.name;
+                        break;
+                    }
+                }
+            }
             if (m_activeDriver && m_activeDriver->getDriverType() != m_preferredDriverType) {
                 if (m_fallbackReason.empty()) {
                     m_fallbackReason = "Preferred driver (" + std::string(DriverTypeToString(m_preferredDriverType)) +
@@ -936,6 +946,8 @@ bool AudioDeviceManager::switchToSafetyDriverLocked(PendingModeChange& outPendin
             outPending.preferred = m_preferredDriverType;
             outPending.actual = AudioDriverType::DUMMY;
             outPending.reason = "Hardware stall/disconnect: fallback to safety driver";
+            // Queryable afterwards too (status line, Muse), not just at the moment of the callback (#650).
+            m_fallbackReason = outPending.reason;
             return true;
         }
         // Opened but could not start: close it and leave no active driver rather
@@ -1061,6 +1073,11 @@ bool AudioDeviceManager::isDitheringEnabled() const {
 std::string AudioDeviceManager::getFallbackReason() const {
     std::lock_guard<std::mutex> lock(m_mutex);
     return m_fallbackReason;
+}
+
+std::string AudioDeviceManager::getPreferredDeviceName() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_activeDeviceName;
 }
 
 void AudioDeviceManager::setDriverModeChangeCallback(DriverModeChangeCallback callback) {

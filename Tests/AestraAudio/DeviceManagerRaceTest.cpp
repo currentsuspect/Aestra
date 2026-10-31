@@ -241,10 +241,12 @@ std::unique_ptr<Harness> makeHarness(bool withDummy = true) {
         h->dummy = dummy.get();
         h->mgr.addDriver(std::move(dummy));
     }
-    // Preferred = SHARED so the primary is not treated as a fallback.
-    h->mgr.setPreferredDriverType(AudioDriverType::WASAPI_SHARED);
     // initialize(false): use ONLY the injected fakes, never real platform drivers.
     h->mgr.initialize(false);
+    // Preferred = SHARED so the primary is not treated as a fallback. Must come
+    // after initialize(): before it the call is refused and the default
+    // (EXCLUSIVE) stays, which made every fake-driver stream look like a fallback.
+    h->mgr.setPreferredDriverType(AudioDriverType::WASAPI_SHARED);
     return h;
 }
 
@@ -662,6 +664,58 @@ void testSwitchDeviceWhileWedged() {
     h->mgr.shutdown();
 }
 
+// 14. #650 Stage 1: a lost interface is reported. The registered callback
+//     fires exactly once with the preferred/actual types and a reason, and the
+//     manager can be asked afterwards (isUsingFallbackDriver / getFallbackReason).
+void testFallbackIsReported() {
+    auto h = makeHarness();
+    std::atomic<int> calls{0};
+    std::mutex mx;
+    AudioDriverType seenPreferred = AudioDriverType::UNKNOWN;
+    AudioDriverType seenActual = AudioDriverType::UNKNOWN;
+    std::string seenReason;
+    h->mgr.setDriverModeChangeCallback([&](AudioDriverType preferred, AudioDriverType actual, const std::string& reason) {
+        std::lock_guard<std::mutex> l(mx);
+        seenPreferred = preferred;
+        seenActual = actual;
+        seenReason = reason;
+        calls.fetch_add(1);
+    });
+    h->mgr.openStream(baseConfig(), silentCallback, nullptr);
+    h->mgr.startStream();
+    check(!h->mgr.isUsingFallbackDriver(), "no fallback while the interface is healthy");
+    check(h->mgr.getFallbackReason().empty(), "no fallback reason while the interface is healthy");
+
+    h->primary->freezeCallbacks(); // the interface stops answering
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(20);
+    while (calls.load() == 0 && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(1200)); // room for a (wrong) second notification
+    check(calls.load() == 1, "the stall is reported exactly once (got " + std::to_string(calls.load()) + ")");
+    {
+        std::lock_guard<std::mutex> l(mx);
+        check(seenPreferred == AudioDriverType::WASAPI_SHARED && seenActual == AudioDriverType::DUMMY,
+              "the callback names the preferred and the substituted driver");
+        check(!seenReason.empty(), "the callback carries a reason");
+    }
+    check(h->mgr.isUsingFallbackDriver(), "isUsingFallbackDriver() is true while substituted");
+    check(!h->mgr.getFallbackReason().empty(), "getFallbackReason() explains the substitution");
+    h->mgr.shutdown();
+
+    // Revert check: with no callback registered nothing is delivered.
+    auto h2 = makeHarness();
+    std::atomic<int> unregisteredCalls{0};
+    h2->mgr.setDriverModeChangeCallback(
+        [&](AudioDriverType, AudioDriverType, const std::string&) { unregisteredCalls.fetch_add(1); });
+    h2->mgr.setDriverModeChangeCallback({});
+    h2->mgr.openStream(baseConfig(), silentCallback, nullptr);
+    h2->mgr.startStream();
+    h2->mgr.switchToSafetyDriver();
+    check(unregisteredCalls.load() == 0, "an unregistered callback is not delivered to");
+    h2->mgr.shutdown();
+}
+
 int main() {
     std::cout << "=== AudioDeviceManager race/coherence tests (#391) ===\n";
     testEnumerationBarrierVsTransition();
@@ -677,6 +731,7 @@ int main() {
     testPreRestartCallbackRejectionTriggersRollback();
     testWedgedStreamDoesNotFreezeManager();
     testSwitchDeviceWhileWedged();
+    testFallbackIsReported();
 
     std::cout << (g_failures == 0 ? "ALL PASSED\n" : "FAILURES: " + std::to_string(g_failures) + "\n");
     return g_failures == 0 ? 0 : 1;
