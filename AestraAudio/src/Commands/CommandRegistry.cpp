@@ -30,6 +30,7 @@
 #include "Commands/SetUnitMixerChannelCommand.h"
 #include "Commands/RenderAudioClipCommand.h"
 #include "Commands/RemoveNoteCommand.h"
+#include "Commands/ReplacePatternNotesCommand.h"
 #include "Commands/SetMuteCommand.h"
 #include "Commands/SetPanCommand.h"
 #include "Commands/SetSoloCommand.h"
@@ -1075,8 +1076,36 @@ void CommandRegistry::initialize() {
             if (!p) return nullptr;
             pan = *p;
         }
-        return std::make_unique<UpdateNoteCommand>(tm->getPatternManager(), key->patternId, *note,
-                                                   velocity, pan);
+        // V82-M2: per-step chance and ratchet (FD-27's engine fields).
+        float chance = note->chance;
+        if (auto it = flags.find("chance"); it != flags.end()) {
+            auto c = safeStof(it->second);
+            if (!c || *c < 0.0f || *c > 1.0f) return CommandRegistry::fail("chance is 0..1");
+            chance = *c;
+        }
+        uint8_t ratchet = note->ratchet;
+        if (auto it = flags.find("ratchet"); it != flags.end()) {
+            auto r = safeStoi(it->second);
+            if (!r || *r < 1 || *r > 4) return CommandRegistry::fail("ratchet is 1..4");
+            ratchet = static_cast<uint8_t>(*r);
+        }
+        if (chance == note->chance && ratchet == note->ratchet)
+            return std::make_unique<UpdateNoteCommand>(tm->getPatternManager(), key->patternId, *note,
+                                                       velocity, pan);
+        // Chance or ratchet changed: replace the note in one step (UpdateNoteCommand carries velocity and pan only).
+        const PatternSource* pattern = tm->getPatternManager().getPattern(key->patternId);
+        std::vector<MidiNote> after = std::get<MidiPayload>(pattern->payload).notes;
+        for (MidiNote& n : after) {
+            if (n.pitch == note->pitch && n.unitId == note->unitId && n.startBeat == note->startBeat) {
+                n.velocity = velocity;
+                n.pan = pan;
+                n.chance = chance;
+                n.ratchet = ratchet;
+                break;
+            }
+        }
+        return std::make_unique<ReplacePatternNotesCommand>(tm->getPatternManager(), key->patternId, std::move(after),
+                                                            0.0, "Update Note");
     });
 
     // ===== Mixer routing (V82-M5, FD-53) =====

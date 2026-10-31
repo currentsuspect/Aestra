@@ -1,10 +1,11 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 // V82-M3 (FD-53): the piano roll through Muse. Notes in bulk, a note's length, deleting a range, and the FL-style
-// duplicate of FD-52. Each verb is one step in the same undo history the editor uses. Its own file because
+// duplicate of FD-52. V82-M2's per-step expression over a range and the pattern menu (rename, delete) live here too. Each verb is one step in the same undo history the editor uses. Its own file because
 // CommandRegistry.cpp is close to the file-size limit.
 
 #include "CommandRegistryFlags.h"
 #include "Commands/CommandRegistry.h"
+#include "Commands/PatternMenuCommands.h"
 #include "Commands/ReplacePatternNotesCommand.h"
 #include "Commands/ResizeNoteCommand.h"
 #include "Core/AudioEngine.h"
@@ -288,6 +289,104 @@ void registerPianoRollVerbs(CommandRegistry& reg) {
                                          beats(range->second) + " to duplicate");
         return std::make_unique<ReplacePatternNotesCommand>(tm->getPatternManager(), id, std::move(after),
                                                             grownLength(*pattern, end, ctx), "Duplicate Notes");
+    });
+
+    // set_notes: velocity, chance, ratchet and pan on every note that starts in [from, to) — a drum row's steps, or a
+    // phrase. Optionally one unit's and one pitch. Only the fields given change.
+    reg.registerCommand("set_notes", [](const Flags& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm)
+            return nullptr;
+        PatternID id;
+        const PatternSource* pattern = midiPattern(*tm, flags, id);
+        if (!pattern)
+            return nullptr;
+        const auto range = parseRange(flags);
+        const auto unit = optionalUnit(flags);
+        if (!range || !unit)
+            return nullptr;
+        std::optional<int> pitch;
+        if (auto raw = requireFlag(flags, "pitch")) {
+            pitch = safeStoi(*raw);
+            if (!pitch)
+                return nullptr;
+        }
+        const auto unitFloat = [&](const char* key, float lo, float hi, std::optional<float>& out) -> bool {
+            auto raw = requireFlag(flags, key);
+            if (!raw)
+                return true;
+            auto v = safeStof(*raw);
+            if (!v || *v < lo || *v > hi)
+                return false;
+            out = *v;
+            return true;
+        };
+        std::optional<float> velocity, chance, pan;
+        if (!unitFloat("velocity", 0.0f, 1.0f, velocity) || !unitFloat("chance", 0.0f, 1.0f, chance) ||
+            !unitFloat("pan", -1.0f, 1.0f, pan))
+            return CommandRegistry::fail("velocity and chance are 0..1, pan -1..1");
+        std::optional<int> ratchet;
+        if (auto raw = requireFlag(flags, "ratchet")) {
+            ratchet = safeStoi(*raw);
+            if (!ratchet || *ratchet < 1 || *ratchet > 4)
+                return CommandRegistry::fail("ratchet is 1..4");
+        }
+        if (!velocity && !chance && !pan && !ratchet)
+            return CommandRegistry::fail("set_notes needs at least one of velocity, chance, ratchet, pan");
+
+        std::vector<MidiNote> after = notesOf(*pattern);
+        size_t changed = 0;
+        for (MidiNote& n : after) {
+            if (!startsIn(n, range->first, range->second) || (*unit != 0 && n.unitId != *unit) ||
+                (pitch && n.pitch != *pitch))
+                continue;
+            if (velocity) n.velocity = *velocity;
+            if (chance) n.chance = *chance;
+            if (pan) n.pan = *pan;
+            if (ratchet) n.ratchet = static_cast<uint8_t>(*ratchet);
+            ++changed;
+        }
+        if (changed == 0)
+            return CommandRegistry::fail("no notes start in beats " + beats(range->first) + " to " +
+                                         beats(range->second) + " that match");
+        return std::make_unique<ReplacePatternNotesCommand>(tm->getPatternManager(), id, std::move(after), 0.0,
+                                                            "Set Notes");
+    });
+
+    // The Arsenal pattern menu's rename and delete (V82-AR1), with the same rules.
+    reg.registerCommand("rename_pattern", [](const Flags& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm)
+            return nullptr;
+        PatternID id;
+        const PatternSource* pattern = midiPattern(*tm, flags, id);
+        if (!pattern)
+            return nullptr;
+        auto raw = requireFlag(flags, "name");
+        const std::string name = raw ? trim(std::string(*raw)) : std::string();
+        if (name.empty())
+            return CommandRegistry::fail("rename_pattern needs a name");
+        if (name == pattern->name)
+            return CommandRegistry::fail("the pattern is already called " + name);
+        return std::make_unique<RenamePatternCommand>(tm->getPatternManager(), id, name);
+    });
+
+    reg.registerCommand("delete_pattern", [](const Flags& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm)
+            return nullptr;
+        PatternID id;
+        if (!midiPattern(*tm, flags, id))
+            return nullptr;
+        // Same rules as the Arsenal menu (ArsenalSceneMenu::canDelete).
+        if (tm->getPlaylistModel().isPatternUsed(id))
+            return CommandRegistry::fail("pattern " + std::to_string(id.value) +
+                                         " plays in the timeline; delete its clips first");
+        size_t midiPatterns = 0;
+        tm->getPatternManager().forEachPattern([&](const PatternSource& p) { midiPatterns += p.isMidi() ? 1 : 0; });
+        if (midiPatterns <= 1)
+            return CommandRegistry::fail("it is the only pattern");
+        return std::make_unique<DeletePatternCommand>(tm->getPatternManager(), id);
     });
 }
 

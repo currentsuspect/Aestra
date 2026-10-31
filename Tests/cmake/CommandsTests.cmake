@@ -451,3 +451,12 @@ target_include_directories(MuseTrackAddressingTest PRIVATE
 )
 add_test(NAME MuseTrackAddressingTest COMMAND MuseTrackAddressingTest)
 set_tests_properties(MuseTrackAddressingTest PROPERTIES TIMEOUT 60 LABELS "commands;muse;contract:application")
+# V82-M2 (FD-53): per-step chance/ratchet and the pattern menu (rename, delete) through Muse.
+add_executable(MuseStepVerbsTest Commands/MuseStepVerbsTest.cpp)
+target_link_libraries(MuseStepVerbsTest PRIVATE AestraAudioCore)
+target_include_directories(MuseStepVerbsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MuseStepVerbsTest COMMAND MuseStepVerbsTest)
+set_tests_properties(MuseStepVerbsTest PROPERTIES TIMEOUT 60 LABELS "commands;muse;contract:application")

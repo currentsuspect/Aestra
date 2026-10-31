@@ -377,6 +377,8 @@ std::optional<std::string> handleLibraryVerbs(const RequestContext& ctx, const R
                 n.set("duration", JSON(note.durationBeats));
                 n.set("velocity", JSON(static_cast<double>(note.velocity)));
                 n.set("pan", JSON(static_cast<double>(note.pan)));
+                n.set("chance", JSON(static_cast<double>(note.chance)));
+                n.set("ratchet", JSON(static_cast<double>(note.ratchet)));
                 n.set("unit", JSON(static_cast<double>(note.unitId)));
                 notes.push(n);
             }
