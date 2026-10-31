@@ -143,6 +143,8 @@ public:
     /** @brief Set the current playhead beat displayed in the minimap. */
     void setPlayheadBeat(double beat);
     /** @brief Replace the note spans rendered inside the minimap. */
+    /** @brief The unit's colour, so the overview's notes match the grid's (FD-63). */
+    void setNoteColor(const NUIColor& color) { noteColor_ = color; repaint(); }
     void setNotes(const std::vector<MidiNote>& notes);
     
     // Callbacks
@@ -151,6 +153,7 @@ public:
 private:
     void updateHoverCursor(const NUIMouseEvent& event);
 
+    NUIColor noteColor_ = NUIColor(0.55f, 0.6f, 0.7f, 1.0f);
     std::vector<MidiNote> notes_;
     double startBeat_ = 0.0;
     double viewDuration_ = 4.0;

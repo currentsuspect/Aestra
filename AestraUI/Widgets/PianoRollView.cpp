@@ -26,7 +26,7 @@ constexpr float kToolbarHeight = 42.0f;
 constexpr float kMinimapHeight = 22.0f;
 constexpr float kRulerHeight = 44.0f; // FD-63: the chord ruler, a bar number over its chord
 constexpr float kStatusHeight = 24.0f; // FD-63: the status line under the lanes
-constexpr float kMinimapGap = 4.0f;
+constexpr float kMinimapGap = 0.0f; // FD-63: the overview sits on the ruler, one band
 
 // =============================================================================
 // PianoRollView (split from NUIPianoRollWidgets.cpp)
@@ -187,7 +187,11 @@ void PianoRollView::onRender(NUIRenderer& renderer) {
                               bounds.y + toolbarH,
                               m_keyLaneWidth,
                               minimapH + minimapGap + rulerH);
-    // FD-63: the corner over the keys is plain bed, ruled off from the ruler and the keys.
+    // FD-63: the corner over the keys is plain bed, ruled off from the ruler and the keys; the overview's rule runs
+    // across it too, so the overview reads as one band of the frame.
+    if (m_showLocalMinimap)
+        renderer.drawLine(NUIPoint(pitchHeader.x, pitchHeader.y + minimapH - 0.5f),
+                          NUIPoint(pitchHeader.right(), pitchHeader.y + minimapH - 0.5f), 1.0f, theme.getColor("border"));
     renderer.drawLine(NUIPoint(pitchHeader.right() - 0.5f, pitchHeader.y), NUIPoint(pitchHeader.right() - 0.5f, pitchHeader.bottom()),
                       1.0f, theme.getColor("border"));
     renderer.drawLine(NUIPoint(pitchHeader.x, pitchHeader.bottom() - 0.5f), NUIPoint(pitchHeader.right(), pitchHeader.bottom() - 0.5f),
@@ -760,6 +764,7 @@ void PianoRollView::setGhostPatterns(const std::vector<PianoRollNoteLayer::Ghost
 
 void PianoRollView::setNoteColor(const NUIColor& color) {
     m_notes->setNoteColor(color);
+    if (m_minimap) m_minimap->setNoteColor(color);
     m_toolbar->setUnitColor(color); // the chip beside the unit name
 }
 
