@@ -206,7 +206,10 @@ void ExportDialog::show(const std::string& projectPath, Aestra::Audio::AudioEngi
     m_selectedSampleRate = live.sampleRateIndex;
     m_selectedBitDepth = live.bitDepthIndex;
     m_selectedScope = live.scopeIndex;
-    m_outputPath = (std::filesystem::path(live.outputDirectory) / exportName).string();
+    // Kept in a local: syncFormatChips() below re-derives m_outputPath from the (still empty) name field through the
+    // format menu's callback, which turned every project's default into "Untitled" (#1296).
+    const std::string defaultOutput = (std::filesystem::path(live.outputDirectory) / exportName).string();
+    m_outputPath = defaultOutput;
 
     // The restored text is the authority for the tail value, but it is disk
     // data: an unparseable one falls back to the live seconds rather than
@@ -222,7 +225,7 @@ void ExportDialog::show(const std::string& projectPath, Aestra::Audio::AudioEngi
     m_scopeDropdown->setSelectedIndex(m_selectedScope);
     m_rateDropdown->setSelectedIndex(m_selectedSampleRate);
     syncFormatChips();
-    setOutputFromPath(m_outputPath);
+    setOutputFromPath(defaultOutput);
     m_tailField->setText(m_tailInput);
     m_stems = false;
     m_stemsCheckbox->setChecked(false);

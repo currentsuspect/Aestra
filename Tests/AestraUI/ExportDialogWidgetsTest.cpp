@@ -77,6 +77,27 @@ int main() {
     dialog.show("", engine, tracks);
     dialog.onResize(1280, 800);
 
+    std::cout << "[0] a saved project offers its own name (#1296)\n";
+    {
+        // Opened with a project on disk, the name field starts from the project's name, in the project's folder.
+        // It offered "Untitled" in the working directory for a project opened from the command line.
+        ExportDialog named;
+        named.setBounds({0, 0, 1280, 800});
+        named.show("/music/beats/Night Session.aes", engine, tracks);
+        std::string offered;
+        for (const auto& c : named.getChildren())
+            if (auto t = std::dynamic_pointer_cast<NUITextInput>(c)) {
+                offered = t->getText();
+                break;
+            }
+        check(offered.rfind("Night Session", 0) == 0, "the name starts from the project's name (got \"" + offered + "\")");
+        bool inProjectFolder = false;
+        for (const auto& c : named.getChildren())
+            if (auto b = std::dynamic_pointer_cast<NUIButton>(c); b && b->getText() == "in beats")
+                inProjectFolder = true;
+        check(inProjectFolder, "and the folder is the project's (\"in beats\")");
+    }
+
     std::cout << "[1] settings screen\n";
     std::vector<std::shared_ptr<NUIComponent>> shown;
     visibleControls(std::shared_ptr<NUIComponent>(&dialog, [](NUIComponent*) {}), shown);
