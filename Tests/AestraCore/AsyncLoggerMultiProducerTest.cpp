@@ -16,6 +16,9 @@
 #include <vector>
 
 namespace {
+// Namespace scope so the producer lambdas can use them without capturing (MSVC requires a capture for locals).
+constexpr int kThreads = 8, kPerThread = 100, kRounds = 20; // 800 lines per round: fits the 1024-slot queue
+
 class Capture : public Aestra::ILogger {
 public:
     void log(Aestra::LogLevel, const std::string& message) override {
@@ -37,7 +40,6 @@ std::string line(int thread, int index) {
 } // namespace
 
 int main() {
-    constexpr int kThreads = 8, kPerThread = 100, kRounds = 20; // 800 lines per round: fits the 1024-slot queue
     int bad = 0;
     for (int round = 0; round < kRounds; ++round) {
         auto capture = std::make_shared<Capture>();
