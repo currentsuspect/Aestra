@@ -28,11 +28,28 @@ v1.0.0                  — initial public release
 | `v0.7.0-alpha`       | Superseded | 2026-08-16 | Routing & automation correctness, Master plugin host, PDC master latency, piano-roll workflow, reliability gates, 338 PRs merged |
 | `v0.7.1-alpha`       | Superseded | 2026-09-12 | Trust Sprint: pattern-edit rescheduling, stop-at-zero, recording latency compensation, missing-asset relink, compile-time RT checking, one feature by design (fit-to-N bars), 162 commits since v0.7.0 |
 | `v0.8.0-alpha`       | Superseded | 2026-10-11 | Automation clips and an authoring surface, Bounce in Place, stems export, panel Docked/Floating and Contextual/Keep Open, compact PCM sources (-43% audio memory in a 12-track session), UI tests that fail CI, 39 scoped items |
-| `v0.8.1-alpha`       | Current   | 2026-10-19 | The revamp: the Arsenal as a rack you play, a meters-first mixer, the routing graph, Audition, Versions, the v0.8.1 look, 88 PRs merged |
+| `v0.8.1-alpha`       | Superseded | 2026-10-19 | The revamp: the Arsenal as a rack you play, a meters-first mixer, the routing graph, Audition, Versions, the v0.8.1 look, 88 PRs merged |
+| `v0.8.2-alpha`       | Current   | 2026-10-31 | Plugins in the sandbox with their own windows on Linux and Windows, FLAC and MP3 export, in-app updates, the whole piano roll and Arsenal through Muse, and the everyday fixes, 106 merges |
 
 ---
 
 ## Milestone History
+
+### v0.8.2-alpha — Plugins in the sandbox, export formats, the everyday fixes (Oct 2026)
+
+106 merges since v0.8.1-alpha, cut by FD-64 once every v0.8.2 item was in. Third-party plugins became usable in earnest, export gained formats, Aestra learned to update itself, and an overnight sweep of the issue list fixed what got in the way of making music.
+
+**Plugins** — VST3 and CLAP run in the sandbox with their own editor windows on Linux and Windows, with parameters and automation through it. Plugins know the song's tempo, time signature and playhead. Dropouts in the sandbox are gone, a missed deadline snaps back into time, and lookahead plugins stay aligned. Every plugin Aestra makes is free.
+
+**Export, files and updates** — FLAC and MP3 export beside WAV, from a simpler Export window. Save a copy. Sampler settings and projects from older versions reopen as they were saved. Aestra checks for, downloads and installs signed updates.
+
+**Editing and the timeline** — Preview in the Sample and Audio Clip editors, FL-style Duplicate in the piano roll, the Arsenal pattern menu, a timeline toolbar, clips in their track's colour, automation lanes under their own track, untouched tracks folded into one row.
+
+**Fixes worth naming** — Exporting right after playing a pattern rendered silence; it renders the song. The Arsenal opened an empty Pattern 1; it opens the pattern with notes. MIDI keyboards plugged in after launch now play. Project load no longer hangs on a damaged file, and the logger no longer loses lines from busy threads.
+
+**Muse** — The piano roll and the Arsenal are fully reachable by agents (bulk notes, duplicate, chance and ratchet, pattern rename and delete), and the socket and `muse-agent` are hardened (bounded queues, strict parsing, retry with backoff, a time budget).
+
+**Known gaps, carried openly** — Moved to v0.8.3: the new piano roll (FD-63), presets, in-app documentation, Audition part 2 and Versions compare. Plugin windows and the updater on Windows and macOS are compiled and tested in CI but not yet on a real machine of each. See `CHANGELOG.md`.
 
 ### v0.8.1-alpha — The revamp (Oct 2026)
 
