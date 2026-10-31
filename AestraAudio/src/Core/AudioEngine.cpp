@@ -103,13 +103,14 @@ bool AudioEngine::isPreviewDuckingEnabled() const {
 }
 
 namespace {
-std::atomic<AudioTelemetry*> g_misuseTelemetry{nullptr};
-std::atomic<const char*> g_rtMisuseLastApi{nullptr};
-
+// Process-wide dispatch, per-engine accounting (#885): the handler pointer is
+// one per process, but each engine publishes its telemetry as the misuse
+// context for the duration of its processBlock, so a violation lands on the
+// engine whose audio thread committed it. Outside any engine scope there is
+// no owner and nothing is counted.
 void recordRealtimeMisuse(const char* apiName) noexcept {
-    g_rtMisuseLastApi.store(apiName, std::memory_order_relaxed);
-    if (auto* telemetry = g_misuseTelemetry.load(std::memory_order_acquire)) {
-        telemetry->incrementRtMisuseViolations();
+    if (auto* telemetry = static_cast<AudioTelemetry*>(g_realtimeMisuseContext)) {
+        telemetry->recordRtMisuse(apiName);
     }
 }
 
@@ -752,7 +753,7 @@ void AudioEngine::performNonRealtimeMaintenance() {
     const uint64_t rtMisuseCount = m_telemetry.getRtMisuseViolations();
     if (rtMisuseCount != m_reportedMisuseCount.load(std::memory_order_relaxed)) {
         m_reportedMisuseCount.store(rtMisuseCount, std::memory_order_relaxed);
-        const char* apiName = g_rtMisuseLastApi.load(std::memory_order_relaxed);
+        const char* apiName = m_telemetry.getLastRtMisuseApi();
         Aestra::Log::warning(
             "[RTGuard] Non-real-time API reached audio thread: " + std::string(apiName ? apiName : "unknown") +
             " (count=" + std::to_string(rtMisuseCount) + ")");
@@ -894,6 +895,7 @@ void AudioEngine::syncCachedSamplerSampleRatesRt(uint32_t sampleRate) noexcept {
 int AudioEngine::processBlockWithinCapacity(float* outputBuffer, const float* inputBuffer, uint32_t numFrames,
                                            double /*streamTime*/) {
     ScopedRealtimeAudioThread realtimeScope;
+    ScopedRealtimeMisuseContext misuseContext(&m_telemetry);
     // Admission guard for the setBufferConfig contract (#731): if a config
     // transaction owns the admission gate, refuse to enter and return early.
     ProcessBlockAdmissionGuard admissionGuard(m_admissionGate);
@@ -2006,7 +2008,6 @@ AudioEngine::BiquadCoeff AudioEngine::computeKWeightRLB(double sampleRate) {
  */
 AudioEngine::AudioEngine() {
     installRealtimeMisuseHandler();
-    g_misuseTelemetry.store(&m_telemetry, std::memory_order_release);
     Aestra::Log::info("[AudioEngine] Created (Original Ctor). Ptr: " +
                       std::to_string(reinterpret_cast<uintptr_t>(this)));
 
@@ -2030,8 +2031,6 @@ AudioEngine::AudioEngine() {
 }
 
 AudioEngine::~AudioEngine() {
-    AudioTelemetry* expected = &m_telemetry;
-    g_misuseTelemetry.compare_exchange_strong(expected, nullptr, std::memory_order_acq_rel);
     if (auto trackMgr = m_trackManager.lock()) {
         trackMgr->setChannelPrepareCallback(nullptr);
         for (size_t i = 0; i < trackMgr->getChannelCount(); ++i) {

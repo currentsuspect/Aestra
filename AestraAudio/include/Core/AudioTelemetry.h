@@ -39,6 +39,7 @@ struct AudioTelemetry {
     std::atomic<uint64_t> totalCallbackNs{0};
     std::atomic<uint64_t> timedCallbackCount{0};
     std::atomic<uint64_t> rtMisuseViolations{0};
+    std::atomic<const char*> lastRtMisuseApi{nullptr}; // static string literal from the reporting call site
 
     // Callback budget context (set from the audio thread wrapper)
     std::atomic<uint32_t> lastBufferFrames{0};
@@ -92,6 +93,11 @@ struct AudioTelemetry {
     void incrementSrcActiveBlocks() noexcept { srcActiveBlocks.fetch_add(1, std::memory_order_relaxed); }
     void incrementRtMisuseViolations() noexcept {
         rtMisuseViolations.fetch_add(1, std::memory_order_relaxed);
+    }
+    /// Audio-thread safe: two relaxed atomic ops, no allocation or lock.
+    void recordRtMisuse(const char* apiName) noexcept {
+        lastRtMisuseApi.store(apiName, std::memory_order_relaxed);
+        incrementRtMisuseViolations();
     }
 
     /**
@@ -234,6 +240,7 @@ struct AudioTelemetry {
     uint64_t getRtMisuseViolations() const noexcept {
         return rtMisuseViolations.load(std::memory_order_relaxed);
     }
+    const char* getLastRtMisuseApi() const noexcept { return lastRtMisuseApi.load(std::memory_order_relaxed); }
     uint32_t getLastBufferFrames() const noexcept { return lastBufferFrames.load(std::memory_order_relaxed); }
     uint32_t getLastSampleRate() const noexcept { return lastSampleRate.load(std::memory_order_relaxed); }
     uint64_t getCycleHz() const noexcept { return cycleHz.load(std::memory_order_relaxed); }
