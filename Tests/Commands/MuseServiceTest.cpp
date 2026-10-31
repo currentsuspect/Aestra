@@ -192,7 +192,11 @@ int main() {
         telemetry.incrementXruns();
         telemetry.incrementUnderruns();
         {
+            // Violations are accounted to the engine whose audio thread committed
+            // them (#885). This probe stands in for that thread, so it claims the
+            // scope the way processBlock does.
             Aestra::Audio::ScopedRealtimeAudioThread rtScope;
+            Aestra::Audio::ScopedRealtimeMisuseContext rtOwner(&telemetry);
             Aestra::Audio::reportRealtimeMisuse("MuseServiceTest::rtProbe");
         }
         engine.commandQueue().push(Aestra::Audio::AudioQueueCommand{});
