@@ -2141,6 +2141,18 @@ target_include_directories(AudioEngineOwnershipTest PRIVATE
 add_test(NAME AudioEngineOwnershipTest COMMAND AudioEngineOwnershipTest)
 set_tests_properties(AudioEngineOwnershipTest PROPERTIES LABELS "audio;engine;integrity;contract:core" TIMEOUT 120)
 
+# RT-misuse accounting is per-engine (#885): a violation committed under one
+# engine's audio thread is counted on that engine and no other.
+add_executable(RtMisusePerEngineTest AestraAudio/RtMisusePerEngineTest.cpp)
+target_link_libraries(RtMisusePerEngineTest PRIVATE AestraAudio)
+target_include_directories(RtMisusePerEngineTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME RtMisusePerEngineTest COMMAND RtMisusePerEngineTest)
+set_tests_properties(RtMisusePerEngineTest PROPERTIES LABELS "audio;engine;integrity;rt-safety;contract:core" TIMEOUT 120)
+
 # Buffer Config Exception Safety Test (#731) — pins the exception-safety
 # contract of AudioEngine::setBufferConfig: the RTConfigAdmission gate is
 # released by RAII on every throwing path, and config values are published
