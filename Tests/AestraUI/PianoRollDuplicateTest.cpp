@@ -216,6 +216,7 @@ int main() {
         view.setBeatsPerBar(4);
         view.setTotalDurationBeats(16.0);
         view.setViewWindow(0.0, 16.0);
+        view.setSnap(SnapGrid::Beat); // a fixed one-beat snap (Smart Snap would follow this test's zoom)
         view.setNotes({note(60, 1.0, 0.5, true), note(62, 2.0, 0.5, true), note(64, 9.0, 0.5, false)});
         int commits = 0;
         view.setOnNotesChanged([&](const std::vector<MidiNote>&) { ++commits; });

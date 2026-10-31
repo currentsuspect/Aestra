@@ -85,6 +85,8 @@ public:
      * @param bpb Beats per bar.
      */
     void setBeatsPerBar(int bpb);
+    /** @brief A fixed snap (Smart Snap steps aside, FD-66). */
+    void setSnap(AestraUI::SnapGrid snap) { if (m_pianoRoll) m_pianoRoll->setSnap(snap); }
     /** @brief Apply one complete harmony edit through the editor view. */
     void applyHarmonyContextEdit(int rootKey, AestraUI::ScaleType scaleType, bool snapToScale);
     /** @brief Return the complete harmony context currently shown by the editor. */

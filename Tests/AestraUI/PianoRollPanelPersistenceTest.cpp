@@ -66,6 +66,7 @@ void testSelectionSurvivesCommittedEditRoundTrip() {
 
     PianoRollPanel editor(trackManager);
     editor.loadPattern(patternId);
+    editor.setSnap(AestraUI::SnapGrid::Beat); // fixed, so a nudge is one beat (Smart Snap would follow the zoom)
 
     // Ctrl+A selects every note.
     AestraUI::NUIKeyEvent ctrlA;
@@ -137,6 +138,7 @@ void testNoteEditsGrowButNeverShrinkThePattern() {
     const PatternID wide = oneNotePattern(pm, "Four bars", 0.0, 16.0);
     PianoRollPanel editor(trackManager);
     editor.loadPattern(wide);
+    editor.setSnap(AestraUI::SnapGrid::Beat); // fixed, so a nudge is one beat
     nudgeAll(editor);
     const PatternSource* stored = pm.getPattern(wide);
     expect(stored && std::abs(std::get<MidiPayload>(stored->payload).notes[0].startBeat - 1.0) < 0.001,

@@ -544,6 +544,7 @@ void PianoRollView::updateScrollbars() {
 
 void PianoRollView::syncChildren() {
     if (!m_keys) return;
+    if (m_toolbar) m_toolbar->setZoomForSmartSnap(m_pixelsPerBeat, m_beatsPerBar); // FD-66: the zoom picks the snap
     
     float x = m_scrollX;
     float y = m_scrollY; 
@@ -810,6 +811,15 @@ void PianoRollView::setPixelsPerBeat(float ppb) {
     updateScrollbars();
     syncChildren();
 }
+
+void PianoRollView::setSnap(SnapGrid snap) {
+    if (m_toolbar) m_toolbar->chooseSnap(snap);
+}
+void PianoRollView::setSmartSnap(bool on) {
+    if (m_toolbar) m_toolbar->setSmartSnap(on);
+}
+SnapGrid PianoRollView::getSnap() const { return m_toolbar ? m_toolbar->getSnap() : SnapGrid::Beat; }
+bool PianoRollView::isSmartSnap() const { return m_toolbar && m_toolbar->isSmartSnap(); }
 
 void PianoRollView::setBeatsPerBar(int bpb) {
     m_beatsPerBar = std::max(1, bpb);
