@@ -601,3 +601,45 @@ add_test(NAME CompRangesTest COMMAND CompRangesTest)
 set_tests_properties(CompRangesTest PROPERTIES
     LABELS "audio;comping;regression;contract:audio"
     TIMEOUT 120)
+
+# SetCompRangeCommandTest: comping (SPEC-022 CT-2), a swipe is one undoable step.
+add_executable(SetCompRangeCommandTest
+    AestraAudio/SetCompRangeCommandTest.cpp
+)
+target_link_libraries(SetCompRangeCommandTest PRIVATE AestraAudio)
+target_include_directories(SetCompRangeCommandTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME SetCompRangeCommandTest COMMAND SetCompRangeCommandTest)
+set_tests_properties(SetCompRangeCommandTest PROPERTIES
+    LABELS "audio;comping;command;regression;contract:audio"
+    TIMEOUT 120)
+
+# CompProjectRoundTripTest: a comp survives save and load (SPEC-022 CT-2).
+add_executable(CompProjectRoundTripTest
+    Integration/CompProjectRoundTripTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+)
+target_link_libraries(CompProjectRoundTripTest PRIVATE AestraAudio)
+target_include_directories(CompProjectRoundTripTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+)
+add_test(NAME CompProjectRoundTripTest COMMAND CompProjectRoundTripTest)
+set_tests_properties(CompProjectRoundTripTest PROPERTIES
+    LABELS "integration;serialization;comping;contract:durability"
+    TIMEOUT 120)

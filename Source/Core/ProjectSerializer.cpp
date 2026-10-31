@@ -10,6 +10,7 @@
 #include "PluginManager.h"
 #include "Music/ScaleContext.h"
 #include "Models/LegacyTrackRepair.h"
+#include "CompJson.h"
 #include <array>
 #include <atomic>
 #include <algorithm>
@@ -1106,6 +1107,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 laneIdsJson.push(JSON(laneId.toString()));
             }
             tjs.set("laneIds", laneIdsJson);
+            if (JSON comp = compToJson(*track); !comp.isNull()) tjs.set("comp", comp); // comping (SPEC-022)
             tracksJson.push(tjs);
         }
         root.set("tracks", tracksJson);
@@ -2682,6 +2684,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             }
                         }
                     }
+                    compFromJson(tj[t], track, [&](const PlaylistLaneID& id) { return trackManager->getPlaylistModel().getLane(id) != nullptr; });
                     records.push_back(std::move(track));
                 }
                 const auto fixed = repairLegacyTrackRecords(records, [&](const PlaylistLaneID& id) {

@@ -93,6 +93,13 @@ static const std::vector<CommandSchema> s_schemas = {
         {"end", FlagType::Float, true}
     },
      "Trim a clip to a start/end beat range."},
+    {"set_comp", CommandCategory::Clip, {
+        {"track", FlagType::Int, true, 1.0},
+        {"lane", FlagType::Id, true},
+        {"start", FlagType::Float, true},
+        {"end", FlagType::Float, true}
+    },
+     "Comping: make the beat range start..end of a track's comp play one take lane (a lane id from list_lanes). The first call creates the track's Comp lane; the other takes go silent. One call is one undo step."},
     {"reverse_clip", CommandCategory::Clip, {
         {"id", FlagType::Id, true}
     },

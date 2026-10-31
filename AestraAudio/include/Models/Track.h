@@ -2,6 +2,7 @@
 #pragma once
 
 #include "Models/ClipInstance.h"
+#include "Models/CompRanges.h"
 #include "Core/MixerChannel.h"
 
 #include <cstdint>
@@ -35,6 +36,11 @@ struct Track {
     PlaylistLaneID activeLaneId;
     /** Owned lanes in display order; track-local numbering by position. */
     std::vector<PlaylistLaneID> laneIds;
+    /** Comping (SPEC-022, FD-70): the master lane the comp plays from, once a comp exists. Invalid = no comp. It is
+     *  one of laneIds; the others are the takes it reads from. */
+    PlaylistLaneID compLaneId;
+    /** Which take plays where. The master lane's clips are derived from this (compClipsFor). */
+    CompRanges comp;
 
     /** Track-local lane number (1-based position in laneIds), or 0 when the
      * lane is not owned by this track. */

@@ -19,6 +19,7 @@
 #include "Commands/SetStepsCommand.h"
 #include "Commands/TransposePatternCommand.h"
 #include "Commands/CreateLaneCommand.h"
+#include "Commands/SetCompRangeCommand.h"
 #include "Commands/CreateTrackWithLaneCommand.h"
 #include "Commands/DeleteLaneCommand.h"
 #include "Commands/ImportAudioClipCommand.h"
@@ -429,6 +430,25 @@ void CommandRegistry::initialize() {
 
         ClipInstanceID clipId(*idOpt);
         return std::make_unique<TrimClipCommand>(*pm, clipId, *startOpt, *endOpt);
+    });
+
+    reg.registerCommand("set_comp", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        TrackManager* tm = ctx.trackManager;
+        if (!tm) return nullptr;
+        auto trackRaw = requireFlag(flags, "track");
+        auto laneRaw = requireFlag(flags, "lane");
+        auto startRaw = requireFlag(flags, "start");
+        auto endRaw = requireFlag(flags, "end");
+        if (!trackRaw || !laneRaw || !startRaw || !endRaw) return nullptr;
+        auto trackOpt = safeStoull(*trackRaw);
+        auto startOpt = safeStof(*startRaw);
+        auto endOpt = safeStof(*endRaw);
+        if (!trackOpt || !startOpt || !endOpt) return nullptr;
+        auto laneOpt = parseObjectId(*laneRaw);
+        if (!laneOpt) return CommandRegistry::fail("not a lane id: " + std::string(*laneRaw));
+        if (!tm->getTrack(*trackOpt)) return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
+        if (*endOpt <= *startOpt) return CommandRegistry::fail("a comp range must end after it starts");
+        return std::make_unique<SetCompRangeCommand>(*tm, *trackOpt, *startOpt, *endOpt, PlaylistLaneID(*laneOpt));
     });
 
     // ===== Unit (2) =====
