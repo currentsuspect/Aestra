@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "NUIPianoRollWidgets.h"
+#include "PianoRollInspector.h"
 #include "PlayheadMarker.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
@@ -23,7 +24,8 @@ namespace AestraUI {
 // are 30px, which 42 clears; the ruler and minimap are text and a strip.
 constexpr float kToolbarHeight = 42.0f;
 constexpr float kMinimapHeight = 22.0f;
-constexpr float kRulerHeight = 24.0f;
+constexpr float kRulerHeight = 44.0f; // FD-63: the chord ruler, a bar number over its chord
+constexpr float kStatusHeight = 24.0f; // FD-63: the status line under the lanes
 constexpr float kMinimapGap = 4.0f;
 
 // =============================================================================
@@ -32,25 +34,27 @@ constexpr float kMinimapGap = 4.0f;
 PianoRollView::PianoRollView()
     // Spec 2 §6: the pitch lane keeps its key shapes and octave labels at 58px;
     // the 18px it gives back goes straight to the grid.
-    : m_keyLaneWidth(58.0f), m_rulerHeight(kRulerHeight), m_pixelsPerBeat(80.0f), m_keyHeight(24.0f),
+    : m_keyLaneWidth(68.0f), m_rulerHeight(kRulerHeight), m_pixelsPerBeat(80.0f), m_keyHeight(16.0f), // FD-63: 16 px rows
       m_scrollX(0.0f), m_targetScrollX(0.0f)
 {
-    // [FIX] Canonical default octave: C3 (MIDI 48).
-    // scrollY = (127 - targetPitch) * keyHeight => (127 - 48) * 24 = 1896
-    m_scrollY = 1896.0f;
-    m_targetScrollY = 1896.0f;
+    // FD-63 board: C5 (MIDI 72) at the top until a pattern's notes say otherwise (frameNotesVertically).
+    m_scrollY = (127.0f - 72.0f) * m_keyHeight;
+    m_targetScrollY = m_scrollY;
     m_keys = std::make_shared<PianoRollKeyLane>();
     m_ruler = std::make_shared<PianoRollRuler>();
     m_grid = std::make_shared<PianoRollGrid>();
     m_notes = std::make_shared<PianoRollNoteLayer>();
     m_controls = std::make_shared<PianoRollControlPanel>();
+    m_inspector = std::make_shared<PianoRollInspector>();
 
     m_notes->setOnHoveredPitchChanged([this](int pitch) {
         if (m_grid) m_grid->setHoveredPitch(pitch);
         if (m_keys) m_keys->setHoveredKey(pitch);
+        if (m_statusPitch != pitch) { m_statusPitch = pitch; repaint(); }
     });
     m_keys->setOnHoveredKeyChanged([this](int pitch) {
         if (m_grid) m_grid->setHoveredPitch(pitch);
+        if (m_statusPitch != pitch) { m_statusPitch = pitch; repaint(); }
     });
     // A note pressed in the grid presses its key (SPEC 3 §5.1).
     m_notes->setOnKeyPressChanged([this](int pitch, bool down) {
@@ -74,6 +78,7 @@ PianoRollView::PianoRollView()
     });
 
     m_controls->setNoteLayer(m_notes);
+    m_inspector->setNoteLayer(m_notes);
     
     m_minimap = std::make_shared<PianoRollMinimap>(); // Local Minimap
     
@@ -162,6 +167,7 @@ PianoRollView::PianoRollView()
     addChild(m_grid);
     addChild(m_notes);
     addChild(m_controls);
+    addChild(m_inspector);
     addChild(m_minimap);
     addChild(m_vScroll);
     addChild(m_hScroll);
@@ -181,25 +187,16 @@ void PianoRollView::onRender(NUIRenderer& renderer) {
                               bounds.y + toolbarH,
                               m_keyLaneWidth,
                               minimapH + minimapGap + rulerH);
-    renderer.fillRect(pitchHeader, theme.getColor("backgroundSecondary").darkened(0.025f));
-    renderer.drawLine(NUIPoint(pitchHeader.right() - 0.5f, pitchHeader.y),
-                      NUIPoint(pitchHeader.right() - 0.5f, pitchHeader.bottom()),
-                      1.0f,
-                      theme.getColor("border").withAlpha(0.54f));
-    renderer.drawLine(NUIPoint(pitchHeader.x, pitchHeader.bottom() - 0.5f),
-                      NUIPoint(pitchHeader.right(), pitchHeader.bottom() - 0.5f),
-                      1.0f,
-                      theme.getColor("border").withAlpha(0.54f));
-    const auto pitchLabelSize = renderer.measureText("PITCH", 9.0f);
-    renderer.drawText("PITCH",
-                      NUIPoint(pitchHeader.x + (pitchHeader.width - pitchLabelSize.width) * 0.5f,
-                               pitchHeader.bottom() - rulerH + (rulerH - pitchLabelSize.height) * 0.5f),
-                      9.0f,
-                      theme.getColor("textSecondary").withAlpha(0.62f));
+    // FD-63: the corner over the keys is plain bed, ruled off from the ruler and the keys.
+    renderer.drawLine(NUIPoint(pitchHeader.right() - 0.5f, pitchHeader.y), NUIPoint(pitchHeader.right() - 0.5f, pitchHeader.bottom()),
+                      1.0f, theme.getColor("border"));
+    renderer.drawLine(NUIPoint(pitchHeader.x, pitchHeader.bottom() - 0.5f), NUIPoint(pitchHeader.right(), pitchHeader.bottom() - 0.5f),
+                      1.0f, theme.getColor("border"));
 
     renderer.setClipRect(bounds);
     NUIComponent::onRender(renderer);
     renderer.clearClipRect();
+    renderStatusLine(renderer);
 
     // Draw playhead
     if (m_grid && m_ruler) {
@@ -214,8 +211,10 @@ void PianoRollView::onRender(NUIRenderer& renderer) {
         if (m_playheadBeat >= visibleStartBeat && m_playheadBeat <= visibleEndBeat &&
             playheadX >= gridBounds.x && playheadX <= gridBounds.right()) {
             const float playheadStartY = rulerBounds.bottom();
-            const float playheadEndY = m_controls ? m_controls->getBounds().bottom() : gridBounds.bottom();
-            Playhead::drawLine(renderer, playheadX, playheadStartY, playheadEndY, accent); // flat, 2 px
+            const float playheadEndY = gridBounds.bottom();
+            (void)accent;
+            // FD-63 board: a 1 px line in the text colour, over the grid only.
+            renderer.fillRect(NUIRect(playheadX, playheadStartY, 1.0f, playheadEndY - playheadStartY), theme.getColor("textPrimary"));
         }
     }
 
@@ -229,7 +228,7 @@ void PianoRollView::onRender(NUIRenderer& renderer) {
         renderer.fillRoundedRect(splitterGrip,
                                  2.0f,
                                  theme.getColor("accentPrimary").withAlpha(
-                                     m_isResizingPanel ? 0.92f : (m_splitterHovered ? 0.52f : 0.22f)));
+                                     m_isResizingPanel ? 0.92f : (m_splitterHovered ? 0.52f : 0.0f))); // shown on hover only
     }
 
     if (m_toolbar) {
@@ -262,7 +261,7 @@ void PianoRollView::renderShortcutHelp(NUIRenderer& renderer) {
         {"Alt+Wheel", "adjust velocity under cursor"},
         {"Right-Click", "erase"},
         {"Double-Click", "add note / note properties"},
-        {"Lane sidebar", "switch velocity / pan lane"},
+        {"Lane sidebar", "show velocity, chance, ratchet or pan"},
     };
     static constexpr Entry kKeys[] = {
         {"Q", "quantize note starts"},
@@ -406,6 +405,18 @@ std::shared_ptr<PianoRollToolbar> PianoRollView::detachToolbarForHost() {
 
 void PianoRollView::layoutChildren() {
     auto b = getBounds();
+    // FD-63: the inspector takes a column at the right, from the top to the status line; the rest lays out beside it.
+    // A narrow view (under 900 px) drops it rather than squeeze the grid.
+    if (m_inspector) {
+        const bool room = b.width >= 900.0f;
+        m_inspector->setVisible(room);
+        const float top = m_toolbarHosted ? 0.0f : kToolbarHeight;
+        if (room) {
+            m_inspector->setBounds(NUIRect(b.right() - PianoRollInspector::kWidth, b.y + top, PianoRollInspector::kWidth,
+                                           std::max(0.0f, b.height - top - kStatusHeight)));
+            b.width -= PianoRollInspector::kWidth;
+        }
+    }
     const float sbSize = kOverlayScrollbarThickness;
     
     // 0. Toolbar — zero once a host panel has taken it into its title bar.
@@ -426,7 +437,7 @@ void PianoRollView::layoutChildren() {
     float keyW = std::max(40.0f, m_keyLaneWidth);
     const float hScrollH = kOverlayScrollbarThickness; // Horizontal scrollbar row below the grid
     float contentW = std::max(0.0f, b.width - keyW - sbSize);
-    float contentH = std::max(0.0f, b.height - topTotalH - m_controlPanelHeight - hScrollH); // Subtract control panel
+    float contentH = std::max(0.0f, b.height - topTotalH - m_controlPanelHeight - hScrollH - kStatusHeight);
 
     // 1. Minimap (Top)
     m_minimap->setVisible(m_showLocalMinimap);
@@ -601,7 +612,7 @@ bool PianoRollView::onMouseEvent(const NUIMouseEvent& event) {
     }
 
     auto b = getBounds();
-    float splitterY = b.y + b.height - m_controlPanelHeight;
+    float splitterY = b.y + b.height - kStatusHeight - m_controlPanelHeight; // the lane sits on the status line
     float splitterZone = 7.0f;
     const bool splitterHovered = std::abs(event.position.y - splitterY) < splitterZone;
     if (m_splitterHovered != splitterHovered) {
@@ -799,6 +810,7 @@ void PianoRollView::setBeatsPerBar(int bpb) {
     m_beatsPerBar = std::max(1, bpb);
     if (m_grid) m_grid->setBeatsPerBar(bpb);
     if (m_ruler) m_ruler->setBeatsPerBar(bpb);
+    if (m_inspector) m_inspector->setBeatsPerBar(bpb);
     if (m_notes) m_notes->setBeatsPerBar(bpb);
     if (m_controls) m_controls->setBeatsPerBar(bpb);
     // Full refresh so the h-scrollbar and minimap pick up the new domain
@@ -884,6 +896,32 @@ void PianoRollView::applyZoom(float factor, float anchorX) {
     m_targetScrollX = m_scrollX;
     updateScrollbars();
     syncChildren();
+}
+
+// FD-63, board "A + C": the status line. Left, the playhead as bar.beat.step and the hovered key; right, the shortcuts
+// that matter most. The harmony service will add what the hovered key is in the chord ("A4 = 3rd of F").
+void PianoRollView::renderStatusLine(NUIRenderer& renderer) {
+    auto& theme = NUIThemeManager::getInstance();
+    const auto b = getBounds();
+    const NUIRect strip(b.x, b.bottom() - kStatusHeight, b.width, kStatusHeight);
+    renderer.fillRect(strip, theme.getColor("backgroundPrimary"));
+    renderer.drawLine(NUIPoint(strip.x, strip.y + 0.5f), NUIPoint(strip.right(), strip.y + 0.5f), 1.0f, theme.getColor("border"));
+    const float fs = 11.0f;
+    const auto ink = theme.getColor("textMuted");
+    const int bpb = std::max(1, m_beatsPerBar);
+    const double beat = std::max(0.0, m_playheadBeat);
+    const int bar = static_cast<int>(beat / bpb) + 1;
+    const int beatInBar = static_cast<int>(std::fmod(beat, static_cast<double>(bpb))) + 1;
+    const int step = static_cast<int>(std::fmod(beat, 1.0) * 4.0) + 1;
+    std::string left = std::to_string(bar) + "." + std::to_string(beatInBar) + "." + std::to_string(step);
+    float x = strip.x + 14.0f;
+    renderer.drawText(left, NUIPoint(x, renderer.calculateTextY(strip, fs)), fs, ink);
+    x += renderer.measureText(left, fs).width + 18.0f;
+    if (m_statusPitch >= 0 && m_statusPitch <= 127)
+        renderer.drawText(MusicTheory::getPitchName(m_statusPitch), NUIPoint(x, renderer.calculateTextY(strip, fs)), fs, ink);
+    const std::string hints = "Ctrl+D duplicate \xC2\xB7 Q quantize \xC2\xB7 Alt+Wheel velocity";
+    const float hw = renderer.measureText(hints, fs).width;
+    renderer.drawText(hints, NUIPoint(strip.right() - 14.0f - hw, renderer.calculateTextY(strip, fs)), fs, ink);
 }
 
 void PianoRollView::setPlayheadBeat(double beat, bool follow) {
@@ -987,6 +1025,22 @@ void PianoRollView::setLocalMinimapVisible(bool visible) {
     if (m_showLocalMinimap == visible) return;
     m_showLocalMinimap = visible;
     layoutChildren();
+}
+
+void PianoRollView::frameNotesVertically() {
+    // The highest note two rows under the top, so the line reads from its top; an empty pattern keeps the view.
+    int highest = -1;
+    if (m_notes)
+        for (const auto& n : m_notes->getNotes())
+            if (!n.isDeleted) highest = std::max(highest, n.pitch);
+    if (highest < 0) return;
+    const float totalH = 128.0f * m_keyHeight;
+    const float visibleH = m_grid ? m_grid->getHeight() : 0.0f;
+    const float maxScrollY = std::max(0.0f, totalH - visibleH);
+    m_scrollY = safeClampScroll((127.0f - static_cast<float>(std::min(127, highest + 2))) * m_keyHeight, maxScrollY);
+    m_targetScrollY = m_scrollY;
+    updateScrollbars();
+    syncChildren();
 }
 
 void PianoRollView::applyEdgeAutoScroll(float scrollX, float scrollY) {

@@ -98,23 +98,18 @@ void PianoRollRuler::onRender(NUIRenderer& renderer) {
     const auto bounds = getBounds();
     auto& theme = NUIThemeManager::getInstance();
 
-    const auto rulerBackground = NUIThemeManager::getInstance().getColor("backgroundPrimary");
-    const auto border = NUIColor::white().withAlpha(0.075f);
-    const auto highlight = NUIColor::white().withAlpha(0.014f);
-    const auto text = theme.getColor("textPrimary").withAlpha(0.86f);
-    const auto tick = NUIColor::fromHex(0x2e2e2e).withAlpha(0.82f);
-
-    renderer.fillRoundedRect(bounds, 3.0f, rulerBackground);
-    renderer.fillRect(NUIRect(bounds.x, bounds.y, bounds.width, 1.0f), highlight);
-    renderer.strokeRoundedRect(bounds, 3.0f, 1.0f, border);
-    renderer.drawLine(NUIPoint(bounds.x, bounds.bottom() - 1.0f),
-                      NUIPoint(bounds.right(), bounds.bottom() - 1.0f),
-                      1.0f,
-                      border);
+    // FD-63, board "A + C": one cell per bar on the bed, a rule at its left edge and its number at the top left. The
+    // chord the harmony service finds goes under the number (V83-HS1); the loop range is a 4 px accent strip on top.
+    const auto bed = theme.getColor("backgroundPrimary");
+    const auto rule = theme.getColor("textDisabled");
+    const auto number = theme.getColor("textMuted");
+    const auto accent = theme.getColor("accentPrimary");
+    renderer.fillRect(bounds, bed);
+    renderer.drawLine(NUIPoint(bounds.x, bounds.bottom() - 0.5f), NUIPoint(bounds.right(), bounds.bottom() - 0.5f), 1.0f,
+                      theme.getColor("border"));
 
     renderer.setClipRect(bounds);
 
-    // The loop zone band: the committed zone, or the one being drawn.
     {
         const bool drawing = isDrawingZone_;
         const double zs = drawing ? std::min(zoneAnchorBeat_, zoneDragBeat_) : loopZoneStart_;
@@ -122,10 +117,7 @@ void PianoRollRuler::onRender(NUIRenderer& renderer) {
         if ((drawing || loopZoneActive_) && ze > zs) {
             const float x1 = bounds.x + static_cast<float>(zs * pixelsPerBeat_) - scrollX_;
             const float x2 = bounds.x + static_cast<float>(ze * pixelsPerBeat_) - scrollX_;
-            const auto accent = theme.getColor("accentPrimary");
-            renderer.fillRect(NUIRect(x1, bounds.y, x2 - x1, bounds.height), accent.withAlpha(0.28f));
-            renderer.fillRect(NUIRect(x1, bounds.y, 1.5f, bounds.height), accent.withAlpha(0.9f));
-            renderer.fillRect(NUIRect(x2 - 1.5f, bounds.y, 1.5f, bounds.height), accent.withAlpha(0.9f));
+            renderer.fillRect(NUIRect(x1, bounds.y, x2 - x1, 4.0f), accent);
         }
     }
 
@@ -143,38 +135,14 @@ void PianoRollRuler::onRender(NUIRenderer& renderer) {
 
     for (int bar = startBar; bar <= endBar; bar += barStride) {
         const float x = snapVerticalLineX(bounds.x + bar * pixelsPerBar - scrollX_);
-        const int barNumber = bar + 1;
-        const bool isMajorBar = barStride > 1 || barNumber == 1 || ((barNumber - 1) % 4 == 0);
-        const float fontSize = isMajorBar ? 11.0f : 10.0f;
-        const float textY = std::round(renderer.calculateTextY(bounds, fontSize));
-        renderer.drawText(std::to_string(barNumber),
-                          NUIPoint(x + 4.0f, textY),
-                          fontSize,
-                          isMajorBar ? text : text.withAlpha(0.76f));
-
-        const float tickHeight = isMajorBar ? bounds.height * 0.58f : bounds.height * 0.24f;
-        renderer.drawLine(NUIPoint(x, bounds.bottom() - tickHeight),
-                          NUIPoint(x, bounds.bottom()),
-                          isMajorBar ? 1.15f : 1.0f,
-                          isMajorBar ? tick : tick.withAlpha(0.58f));
-
-        if (pixelsPerBeat_ >= 10.0f && barStride == 1) {
-            for (int beat = 1; beat < beatsPerBar; ++beat) {
-                const float beatX = x + beat * pixelsPerBeat_;
-                renderer.drawLine(NUIPoint(beatX, bounds.bottom() - bounds.height * 0.22f),
-                                  NUIPoint(beatX, bounds.bottom()),
-                                  1.0f,
-                                  NUIColor::fromHex(0x262626).withAlpha(0.36f));
-            }
-        }
+        renderer.drawLine(NUIPoint(x, bounds.y), NUIPoint(x, bounds.bottom()), 1.0f, rule);
+        renderer.drawText(std::to_string(bar + 1), NUIPoint(x + 8.0f, bounds.y + 6.0f), 12.0f, number);
     }
 
     const float playheadX =
         snapVerticalLineX(beatToScreenX(playheadBeat_, pixelsPerBeat_, scrollX_, bounds.x));
     if (playheadX >= bounds.x && playheadX <= bounds.right()) {
-        // Same marker language as the Track Manager playhead: a small downward
-        // triangle at the ruler's bottom edge, tip pointing down at the grid line.
-        Playhead::drawHead(renderer, playheadX, bounds.bottom(), theme.getColor("accentPrimary"),
+        Playhead::drawHead(renderer, playheadX, bounds.bottom(), theme.getColor("textPrimary"),
                            isScrubbing_ ? 1.25f : 1.0f);
     }
 

@@ -82,6 +82,16 @@ public:
     void onResize(int width, int height) override;
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
 
+    /**
+     * @brief Full-window editor (FD-63: the piano roll fills the window).
+     *
+     * The panel stops being a window: no title text, no minimize/maximize, no drag or edge resize, square corners.
+     * The title bar becomes the editor's header: the accessory spans it from the left edge, and the close button
+     * is a boxed X at its right. The owner sets the bounds (the whole content area).
+     */
+    void setFullWindow(bool fullWindow);
+    bool isFullWindow() const { return m_fullWindow; }
+
     // SPEC 3 section 1.1: a docked panel is locked in place (no title-bar drag, no edge resize).
     void setLocked(bool locked) { m_locked = locked; }
     bool isLocked() const { return m_locked; }
@@ -126,6 +136,7 @@ private:
     // Window state
     bool m_minimized{false};
     bool m_maximized{false};
+    bool m_fullWindow{false};
     float m_titleBarHeight{28.0f};
     static constexpr float kDefaultTitleBarHeight{32.0f};
     std::shared_ptr<AestraUI::NUIComponent> m_titleBarAccessory;

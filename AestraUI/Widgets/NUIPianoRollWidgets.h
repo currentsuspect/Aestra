@@ -341,7 +341,14 @@ private:
     std::shared_ptr<NUIButton> m_lengthUpBtn;
     std::shared_ptr<NUIButton> m_followBtn;
     std::shared_ptr<NUIButton> m_centerBtn;
-    std::shared_ptr<NUIButton> m_scaleBtn;   // SCALE value: opens the root/scale/snap-to-scale menu
+    std::shared_ptr<NUIButton> m_scaleBtn;   // Key value: opens the root/scale/snap-to-scale menu
+    // FD-63 header (board A + C): the pattern and unit as a breadcrumb, Snap as a value box. Each opens a menu.
+    std::shared_ptr<NUIButton> m_patternCrumbBtn;
+    std::shared_ptr<NUIButton> m_unitCrumbBtn;
+    std::shared_ptr<NUIButton> m_snapBtn;
+    void openChoiceMenu(const NUIRect& anchor, const std::vector<PatternChoice>& choices, int selected,
+                        const std::string& group, std::function<void(int)> onPick);
+    void openSnapMenu();
     NUIColor m_unitColor = NUIColor(0.55f, 0.6f, 0.7f, 1.0f);
     std::shared_ptr<NUIDropdown> m_patternDropdown;
     std::shared_ptr<NUIDropdown> m_unitDropdown;
@@ -481,6 +488,7 @@ class PianoRollNoteLayer : public NUIComponent {
 public:
     /// The unit being edited gives its notes their colour (flat and opaque, FD-48).
     void setNoteColor(const NUIColor& color) { if (noteColor_.r == color.r && noteColor_.g == color.g && noteColor_.b == color.b) return; noteColor_ = color; repaint(); }
+    const NUIColor& getNoteColor() const { return noteColor_; }
 
     struct GhostPattern {
         /** @brief Notes rendered as a ghost overlay. */
@@ -978,6 +986,8 @@ public:
     /** @brief One-shot "center on playhead" (no continuous following). */
     void setOnCenterOnPlayhead(std::function<void()> cb);
     void centerOnPlayhead();
+    /** @brief Scroll so the highest note sits just under the top (FD-63: done when a pattern opens). */
+    void frameNotesVertically();
 
     void setPixelsPerBeat(float ppb);
     void setBeatsPerBar(int bpb);
@@ -1003,6 +1013,9 @@ private:
     std::shared_ptr<PianoRollGrid> m_grid;
     std::shared_ptr<PianoRollNoteLayer> m_notes;
     std::shared_ptr<PianoRollControlPanel> m_controls;
+    std::shared_ptr<class PianoRollInspector> m_inspector; // FD-63: the selection column at the right
+    int m_statusPitch = -1; ///< the key under the pointer, for the status line
+    void renderStatusLine(NUIRenderer& renderer);
     std::shared_ptr<PianoRollMinimap> m_minimap;
     std::optional<std::pair<double, double>> m_loopZone;
     std::function<void(std::optional<std::pair<double, double>>)> m_onLoopZoneChanged;
@@ -1019,7 +1032,7 @@ private:
     float m_rulerHeight;
     // Spec 2 §6: the velocity/pan lane was 116px of mostly empty space under the
     // grid. Still splitter-resizable; this is only where it starts.
-    float m_controlPanelHeight = 112.0f; // FD-63: tall enough for Velocity, Chance, Ratchet and Pan
+    float m_controlPanelHeight = 132.0f; // FD-63 board A + C: Velocity, Chance, Ratchet and Pan
     
     float m_pixelsPerBeat;
     float m_keyHeight;

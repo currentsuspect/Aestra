@@ -352,9 +352,8 @@ void AestraContent::savePanelPreference(Audio::ViewType view, const Aestra::UISu
 
 AestraUI::NUIRect AestraContent::applyPanelPreference(Audio::ViewType view) {
     auto panel = panelForView(view);
-    if (!panel) {
-        return {};
-    }
+    if (!panel) return {};
+    if (placeFullWindowPanel(*panel)) return panel->getBounds(); // FD-63: the piano roll fills the window
     const Content::FloatingPanelGeometry& spec = floatingPanelSpec(view);
     const UISurfaceGeometry preference = panelPreference(view);
     const Layout::NUIWindowRect region = toWindowRect(computePlacementRegion());

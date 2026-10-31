@@ -23,13 +23,19 @@ namespace AestraUI {
 namespace PianoRollLook {
 
 // ---- Keys ----
-inline NUIColor ivoryKey() { return NUIColor(0.91f, 0.89f, 0.84f, 1.0f); }
-inline NUIColor ivoryKeyHover() { return NUIColor(0.97f, 0.95f, 0.90f, 1.0f); }
-inline NUIColor blackKey() { return NUIColor(0.075f, 0.075f, 0.09f, 1.0f); }
-inline NUIColor blackKeyHover() { return NUIColor(0.20f, 0.20f, 0.24f, 1.0f); }
+inline NUIColor ivoryKey() { return NUIColor::fromHex(0xd9d3c9); } // FD-63 board A + C
+inline NUIColor ivoryKeyHover() { return NUIColor::fromHex(0xe8e3da); }
+inline NUIColor blackKey() { return NUIColor::fromHex(0x1c1a17); }
+inline NUIColor blackKeyHover() { return NUIColor::fromHex(0x2e2a26); }
 inline NUIColor keyEdge() { return NUIColor(0.0f, 0.0f, 0.0f, 0.35f); }
 /// The label on an ivory key: dark, so every C reads.
-inline NUIColor ivoryKeyLabel() { return NUIColor(0.20f, 0.19f, 0.18f, 1.0f); }
+inline NUIColor ivoryKeyLabel() { return NUIColor::fromHex(0x0c0b0a); }
+/// A scale degree's ink (board A + C): the root in burnt amber on any key, the rest grey on a natural, light on an
+/// accidental so it reads on the dark key.
+inline NUIColor degreeInk(bool root, bool accidental) {
+    if (root) return NUIColor::fromHex(0xb45309);
+    return accidental ? NUIColor::fromHex(0xaca397) : NUIColor::fromHex(0x57514a);
+}
 
 // ---- Rows ----
 enum class RowShade {
@@ -73,6 +79,18 @@ inline std::string scaleDegreeLabel(int pitch, int rootKey, ScaleType scale) {
         return (scale == ScaleType::Locrian || scale == ScaleType::Blues) ? "\xE2\x99\xAD" "5" : "\xE2\x99\xAF" "4";
     return kNames[interval];
 }
+
+/// A row's fill on the board's black bed (FD-63, board A + C): the root's row warm, the scale's rows a step off black,
+/// the rest the bed itself. With no scale set, the naturals take the scale's step, like a keyboard's white keys.
+inline NUIColor rowFill(int pitch, int rootKey, ScaleType scale) {
+    const int pc = ((pitch % 12) + 12) % 12;
+    if (scale == ScaleType::Chromatic) return isAccidental(pitch) ? NUIColor::fromHex(0x000000) : NUIColor::fromHex(0x0b0a09);
+    if (pc == ((rootKey % 12) + 12) % 12) return NUIColor::fromHex(0x14100c);
+    return MusicTheory::isNoteInScale(pitch, rootKey, scale) ? NUIColor::fromHex(0x0b0a09) : NUIColor::fromHex(0x000000);
+}
+
+/// The line under a row on the board: brighter under every C so the octaves can be counted.
+inline NUIColor rowLine(int pitch) { return pitch % 12 == 0 ? NUIColor::fromHex(0x2e2a26) : NUIColor::fromHex(0x141210); }
 
 /// The line under a row: every C is stronger than the rest, so the octaves can be counted at a glance.
 inline float rowLineAlpha(int pitch) { return pitch % 12 == 0 ? 0.13f : 0.035f; }

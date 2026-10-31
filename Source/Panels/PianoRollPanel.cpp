@@ -36,13 +36,6 @@ double quantizePatternLengthBeats(double contentEndBeat, int beatsPerBar) {
 }
 } // namespace
 
-namespace {
-// Width reserved for the "PIANO ROLL" title to the left of the tool strip.
-// Layout runs without a renderer, so this is stated rather than measured; it is
-// the 12px title's width plus its left inset and a gap, rounded up.
-constexpr float kTitleZoneWidth = 96.0f;
-} // namespace
-
 PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
     : WindowPanel("PIANO ROLL")
     , m_trackManager(trackManager)
@@ -50,9 +43,9 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
 {
     // Create piano roll view
     m_pianoRoll = std::make_shared<AestraUI::PianoRollView>();
-    m_pianoRoll->setLocalMinimapVisible(true);
+    m_pianoRoll->setLocalMinimapVisible(true); // the overview strip stays (owner, 31 Oct), above the chord ruler
     m_pianoRoll->setBeatsPerBar(4);
-    m_pianoRoll->setPixelsPerBeat(50.0f);
+    m_pianoRoll->setPixelsPerBeat(66.0f); // FD-63 board: four bars across a 1366 px screen
     
     // Start with empty notes (will load when pattern is opened)
     m_pianoRoll->setNotes({});
@@ -242,7 +235,9 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
     // right, and repeating it would cost width the strip needs.
     if (auto toolbar = m_pianoRoll->detachToolbarForHost()) {
         toolbar->setHostedInTitleBar(true);
-        setTitleBarAccessory(toolbar, 26.0f, kTitleZoneWidth);
+        // FD-63: the piano roll fills the window, and the tool strip is its 40 px header (board A + C).
+        setFullWindow(true);
+        setTitleBarAccessory(toolbar, 32.0f, 0.0f);
     }
 }
 
@@ -302,7 +297,8 @@ void PianoRollPanel::loadPattern(PatternID patternId) {
         // The loop zone belongs to the pattern it was drawn on: switching patterns ends it.
         // TrackManager also scopes it to that pattern, so this keeps the ruler honest; the old
         // pattern's length is passed because that is the loop the cleared zone was shaping.
-        if (m_currentPatternId != patternId && m_pianoRoll->getLoopZone()) {
+        const bool switchedPattern = m_currentPatternId != patternId;
+        if (switchedPattern && m_pianoRoll->getLoopZone()) {
             m_pianoRoll->setLoopZone(std::nullopt);
             if (m_playbackContext) {
                 double oldLength = std::max(0.25, pattern->lengthBeats);
@@ -366,6 +362,7 @@ void PianoRollPanel::loadPattern(PatternID patternId) {
 
         m_pianoRoll->setDefaultUnitId(m_editingUnitId);
         m_pianoRoll->setNotes(uiNotes);
+        if (switchedPattern) m_pianoRoll->frameNotesVertically(); // FD-63: open on the notes, not a fixed octave
         double longestBeat = pattern->lengthBeats;
         for (const auto& note : midiPayload.notes) {
             longestBeat = std::max(longestBeat, note.startBeat + note.durationBeats);
