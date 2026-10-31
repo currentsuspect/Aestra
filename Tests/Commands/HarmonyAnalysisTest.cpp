@@ -106,6 +106,51 @@ int main() {
         check(t.chords.size() == 1 && t.chords[0].root == 0 && t.chords[0].bass == 4, "root C, bass E");
     }
     {
+        // The bass is what sounds lowest when the chord starts. A Bb triad struck on the bar, then a melody falling to
+        // D after the stab ends, is Bb, not Bb/D: the two half-bars each saw a different lowest note, and the tie
+        // went to the lower pitch-class number (found on the board's phrase, 31 Oct).
+        Notes n;
+        add(n, 0.0, 1.75, {46, 50, 53});
+        add(n, 0.0, 0.75, {67});
+        add(n, 0.75, 0.25, {69});
+        add(n, 1.0, 1.5, {70});
+        add(n, 2.5, 0.5, {65});
+        add(n, 3.0, 1.0, {62});
+        const auto t = analyzeHarmony(n, 4.0);
+        check(names(t) == "Bb", "a Bb stab under a melody falling to D is Bb, not Bb/D (" + names(t) + ")");
+    }
+    {
+        // What is struck together is the chord: C F A stabbed together with a passing E in the melody is F over C,
+        // not Am over C (the fifth-in-the-bass voicing lost to the template that takes C as a third).
+        Notes n;
+        add(n, 0.0, 1.75, {48, 53, 57});
+        add(n, 0.0, 0.5, {64});
+        add(n, 0.5, 0.5, {65});
+        add(n, 1.0, 1.0, {69});
+        add(n, 2.0, 1.5, {72});
+        add(n, 3.5, 0.5, {70});
+        const auto t = analyzeHarmony(n, 4.0);
+        check(names(t) == "F/C", "a C-F-A stab under a melody is F/C, not Am/C (" + names(t) + ")");
+    }
+    {
+        // The FD-63 board's phrase, whole: chord stabs on each bar under a moving melody. A chord struck on the bar
+        // holds for the bar; a melody note in its second half (here C, the stab's fifth) does not turn F into Am.
+        Notes n;
+        // Velocities as the board writes them: the melody up to full, the stabs at 0.6.
+        const double mel[][4] = {{69, 0, 0.5, .9}, {72, 0.5, 0.5, .7}, {70, 1, 1, .85}, {69, 2, 0.5, .6},
+                                 {67, 2.5, 0.5, .75}, {65, 3, 1, .95}, {67, 4, 0.75, .8}, {69, 4.75, 0.25, .5},
+                                 {70, 5, 1.5, .9}, {65, 6.5, 0.5, .6}, {62, 7, 1, .8}, {64, 8, 0.5, .85},
+                                 {65, 8.5, 0.5, .7}, {69, 9, 1, 1}, {72, 10, 1.5, .92}, {70, 11.5, 0.5, .55}};
+        for (const auto& m : mel) add(n, m[1], m[2], {static_cast<int>(m[0])}, static_cast<float>(m[3]));
+        add(n, 0, 1.75, {50, 53, 57}, 0.6f);
+        add(n, 4, 1.75, {46, 50, 53}, 0.6f);
+        add(n, 8, 1.75, {48, 53, 57}, 0.6f);
+        add(n, 12, 1.75, {50, 53, 57}, 0.6f);
+        const auto t = analyzeHarmony(n, 4.0);
+        check(names(t) == "Dm Bb F/C Dm", "the board's phrase reads Dm Bb F/C Dm (" + names(t) + ")");
+        check(romans(t) == "i VI III i", "and i VI III i (" + romans(t) + ")");
+    }
+    {
         Notes n;
         add(n, 0, 4, {55, 59, 62, 65});
         HarmonyTimeline t = analyzeHarmony(n, 4.0);
