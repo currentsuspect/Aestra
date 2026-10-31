@@ -294,6 +294,13 @@ if(TARGET MuseAgentCore)
     )
     add_test(NAME MuseAgentLoopTest COMMAND MuseAgentLoopTest)
     set_tests_properties(MuseAgentLoopTest PROPERTIES LABELS "commands;muse;contract:application")
+
+    if(NOT WIN32)
+        add_executable(MuseHttpClientCapTest Commands/MuseHttpClientCapTest.cpp)
+        target_link_libraries(MuseHttpClientCapTest PRIVATE MuseAgentCore Threads::Threads)
+        add_test(NAME MuseHttpClientCapTest COMMAND MuseHttpClientCapTest)
+        set_tests_properties(MuseHttpClientCapTest PROPERTIES LABELS "commands;muse;contract:application")
+    endif()
 endif()
 
 # Rumble state and migration are deterministic pure-logic coverage. Keep this in
