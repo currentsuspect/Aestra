@@ -284,6 +284,8 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/MuseStubs.cpp
     src/Commands/HostVerbRegistry.cpp
     src/Commands/MuseService.cpp
+    src/Harmony/HarmonyAnalysis.cpp
+    src/Harmony/HarmonyGather.cpp
     # One translation unit per Muse verb family. MuseService.cpp is the
     # dispatcher; these hold the verbs themselves. See MuseServiceInternal.h.
     src/Commands/MuseServiceQueries.cpp
@@ -408,6 +410,8 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/IO/WaveformCache.h
     include/Models/UnitManager.h
     include/Music/ScaleContext.h
+    include/Harmony/HarmonyAnalysis.h
+    include/Harmony/HarmonyGather.h
 
     include/IO/StreamingDecoder.h
     # Undo/Redo

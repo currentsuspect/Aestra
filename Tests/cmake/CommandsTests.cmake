@@ -481,3 +481,13 @@ target_include_directories(MuseStepVerbsTest PRIVATE
 )
 add_test(NAME MuseStepVerbsTest COMMAND MuseStepVerbsTest)
 set_tests_properties(MuseStepVerbsTest PROPERTIES TIMEOUT 60 LABELS "commands;muse;contract:application")
+
+# V83-HS1 (FD-63): the harmony service — key and chord detection from MIDI, and the get_harmony Muse verb.
+add_executable(HarmonyAnalysisTest Commands/HarmonyAnalysisTest.cpp)
+target_link_libraries(HarmonyAnalysisTest PRIVATE AestraAudioCore)
+target_include_directories(HarmonyAnalysisTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME HarmonyAnalysisTest COMMAND HarmonyAnalysisTest)
+set_tests_properties(HarmonyAnalysisTest PROPERTIES TIMEOUT 120 LABELS "commands;muse;contract:application")
