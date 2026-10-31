@@ -3003,7 +3003,7 @@ void TrackUIComponent::drawLiveWaveform(AestraUI::NUIRenderer& renderer, const A
     if (!m_trackManager || !m_trackManager->isRecording()) return;
     auto* lane = m_trackManager->getPlaylistModel().getLane(m_laneId);
     auto* track = lane ? m_trackManager->getTrack(lane->trackId) : nullptr;
-    if (!track || !track->armed) return;
+    if (!track || !track->armed || m_isAutomationRow || lane->id != track->activeLaneId) return; // only the lane the take lands on
 
     // Bounded decimated read (#846/#849): min/max pairs instead of copying
     // the whole capture ring every frame (~3 MB/track at default limits).

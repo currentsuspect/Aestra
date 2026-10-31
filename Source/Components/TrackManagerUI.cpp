@@ -428,6 +428,10 @@ void TrackManagerUI::revealLane(PlaylistLaneID laneId) {
         expandTrack(lane->trackId);
     }
     refreshTracks();
+    // A take that fit the armed lane landed where the producer was already looking: nothing to move to. The view
+    // follows only when the take overflowed onto a lane of its own, so the move says "this did not fit".
+    const auto* owner = lane && m_trackManager ? m_trackManager->getTrack(lane->trackId) : nullptr;
+    if (owner && owner->activeLaneId == laneId) return;
     for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
         if (m_trackUIComponents[i] && m_trackUIComponents[i]->getLaneId() == laneId) {
             // Bring the row into view only if it is not already, and by the least that does it. It used to put the row at the
@@ -439,8 +443,11 @@ void TrackManagerUI::revealLane(PlaylistLaneID laneId) {
             const float viewHeight = currentTimelineLayout().rows.height;
             if (rowTop < m_scrollOffset) {
                 setVerticalScroll(rowTop);
-            } else if (rowBottom > m_scrollOffset + viewHeight) {
-                setVerticalScroll(rowBottom - viewHeight);
+            } else if (rowBottom > m_scrollOffset + viewHeight + 0.5f) {
+                // Whole rows, no more than it takes: the top row slides out and every other row stays where the
+                // producer left it (owner, 2026-10-31: the screen is full, so move one down, do not focus the take).
+                const float rows = std::ceil((rowBottom - viewHeight - m_scrollOffset) / rowHeight);
+                setVerticalScroll(m_scrollOffset + rows * rowHeight);
             }
             break;
         }
