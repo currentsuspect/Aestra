@@ -15,6 +15,7 @@ namespace MuseAgent {
  */
 struct HttpResponse {
     long status = 0;
+    int retryAfterSeconds = -1; // Retry-After in delta-seconds form; -1 if absent or an HTTP-date
     std::string body;
     std::string error; // transport-level failure (status stays 0)
     bool bodyTooLarge = false; // the response exceeded the size cap; body holds a prefix, error is set

@@ -76,6 +76,8 @@ ModelResponse OpenAICompatProvider::complete(const ModelRequest& request) {
 
     if (!http.error.empty()) {
         response.error = "transport: " + http.error;
+        // An oversized response (#1260) is not transient: fetching it again returns the same body, so never retry it.
+        response.transportFailure = !http.bodyTooLarge;
         return response;
     }
 
@@ -83,6 +85,14 @@ ModelResponse OpenAICompatProvider::complete(const ModelRequest& request) {
     try {
         parsed = JSON::parse(http.body);
     } catch (const std::exception& e) {
+        if (http.status != 200) {
+            // A proxy's HTML 502/503 page is not JSON; the status is what matters.
+            response.error = "HTTP " + std::to_string(http.status) + ": " +
+                             truncateForMessage(http.body);
+            response.httpStatus = static_cast<int>(http.status);
+            response.retryAfterSeconds = http.retryAfterSeconds;
+            return response;
+        }
         response.error = "unparseable response: " + std::string(e.what());
         return response;
     }
@@ -94,6 +104,8 @@ ModelResponse OpenAICompatProvider::complete(const ModelRequest& request) {
             detail = parsed["error"]["message"].asString();
         }
         response.error = "HTTP " + std::to_string(http.status) + ": " + truncateForMessage(detail);
+        response.httpStatus = static_cast<int>(http.status);
+        response.retryAfterSeconds = http.retryAfterSeconds;
         return response;
     }
 

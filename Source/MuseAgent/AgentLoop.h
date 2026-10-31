@@ -2,6 +2,7 @@
 #pragma once
 
 #include "ModelProvider.h"
+#include "RetryPolicy.h"
 
 #include <functional>
 #include <string>
@@ -36,6 +37,7 @@ public:
         int maxSeconds = 900;     // wall clock
         int maxTokensPerTurn = 16000;
         bool verbose = false;     // log every verb + response to stderr
+        RetryPolicy retry;        // transient provider failures: bounded exponential backoff
     };
 
     struct Outcome {
@@ -60,6 +62,10 @@ public:
     /** @brief Route ask_user somewhere other than the terminal (e.g. tests). */
     void setAskUser(AskUser askUser) { m_askUser = std::move(askUser); }
 
+    /** @brief Replace the backoff sleep (default: this thread sleeps). For tests. */
+    using Sleeper = std::function<void(long milliseconds)>;
+    void setSleeper(Sleeper sleeper) { m_sleeper = std::move(sleeper); }
+
     /** @brief Run one brief through the loop. */
     Outcome run(const std::string& brief);
 
@@ -71,6 +77,7 @@ private:
     Transport m_transport;
     Options m_options;
     AskUser m_askUser;
+    Sleeper m_sleeper;
 };
 
 } // namespace MuseAgent

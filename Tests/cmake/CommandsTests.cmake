@@ -308,6 +308,10 @@ if(TARGET MuseAgentCore)
         add_test(NAME MuseHttpClientCapTest COMMAND MuseHttpClientCapTest)
         set_tests_properties(MuseHttpClientCapTest PROPERTIES LABELS "commands;muse;contract:application")
     endif()
+    add_executable(MuseAgentRetryTest Commands/MuseAgentRetryTest.cpp)
+    target_link_libraries(MuseAgentRetryTest PRIVATE MuseAgentCore)
+    add_test(NAME MuseAgentRetryTest COMMAND MuseAgentRetryTest)
+    set_tests_properties(MuseAgentRetryTest PROPERTIES LABELS "commands;muse;contract:application")
 endif()
 
 # Rumble state and migration are deterministic pure-logic coverage. Keep this in
