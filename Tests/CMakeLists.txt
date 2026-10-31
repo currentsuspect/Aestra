@@ -1019,6 +1019,18 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerLoopModeTest.cpp")
     set_tests_properties(SamplerLoopModeTest PROPERTIES LABELS "audio;sampler;loop;regression;contract:audio")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerVelocityCurveTest.cpp")
+    add_executable(SamplerVelocityCurveTest AestraAudio/SamplerVelocityCurveTest.cpp)
+    target_link_libraries(SamplerVelocityCurveTest PRIVATE AestraAudio)
+    target_include_directories(SamplerVelocityCurveTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME SamplerVelocityCurveTest COMMAND SamplerVelocityCurveTest)
+    set_tests_properties(SamplerVelocityCurveTest PROPERTIES LABELS "audio;sampler;velocity;regression;contract:audio")
+endif()
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternPlaybackTempoChangeTest.cpp")
     add_executable(PatternPlaybackTempoChangeTest AestraAudio/PatternPlaybackTempoChangeTest.cpp)
     target_link_libraries(PatternPlaybackTempoChangeTest PRIVATE AestraAudio)

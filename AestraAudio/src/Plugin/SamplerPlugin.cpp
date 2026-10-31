@@ -653,6 +653,11 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
                 );
             }
 
+            // Velocity policy (#462, FD-64): gain = (velocity/127)^2, deliberately.
+            // The square gives a wider, more natural dynamic range than linear
+            // (vel 64 is 0.25x, -12 dB; vel 32 is 0.06x). It is a kept
+            // decision, not a leftover: changing it shifts the balance of every
+            // existing project. Pinned by SamplerVelocityCurveTest.
             float gain = (v.velocity * v.velocity) * env * kSamplerOutputHeadroom * m_voiceCompSmoothed;
             L += outL * gain * v.gainL;
             R += outR * gain * v.gainR;
