@@ -19,6 +19,7 @@
 #include "AnthropicProvider.h"
 #include "CliArgs.h"
 #include "MuseSocketClient.h"
+#include "MuseSocketToken.h"
 #include "OpenAICompatProvider.h"
 
 #include <cstdlib>
@@ -38,6 +39,8 @@ void printUsage() {
     std::cout <<
         "muse-agent: drive a Muse session with a model.\n"
         "  --connect <port|host:port|[v6]:port>  Muse socket (default host 127.0.0.1)\n"
+        "  --token-file <path>         session token file (default: the per-user file the app\n"
+        "                              wrote for the port; the socket refuses clients without it)\n"
         "  --brief \"...\"               the production brief (required)\n"
         "  --provider anthropic|openai (default openai — local-first)\n"
         "  --model <id>                model id (defaults: claude-opus-4-8 / server default)\n"
@@ -62,6 +65,7 @@ std::string envOr(const char* primary, const char* fallback) {
 
 int main(int argc, char** argv) {
     std::string connect = "41952";
+    std::string tokenFile;
     std::string brief;
     std::string providerName = "openai";
     std::string model;
@@ -78,6 +82,7 @@ int main(int argc, char** argv) {
             return argv[++i];
         };
         if (arg == "--connect") connect = next("--connect");
+        else if (arg == "--token-file") tokenFile = next("--token-file");
         else if (arg == "--brief") brief = next("--brief");
         else if (arg == "--provider") providerName = next("--provider");
         else if (arg == "--model") model = next("--model");
@@ -130,14 +135,26 @@ int main(int argc, char** argv) {
 
     const int port = *parsedPort;
 
-    MuseSocketClient client;
     std::string error;
+    std::string token;
+    if (!Aestra::MuseToken::loadToken(static_cast<uint16_t>(port), tokenFile, token, error)) {
+        std::cerr << error << "\n";
+        return 1;
+    }
+
+    MuseSocketClient client;
     if (!client.connect(host, static_cast<uint16_t>(port), error)) {
         std::cerr << error << "\n"
                   << "Is Muse listening? Start the app with AESTRA_MUSE_PORT=" << port
                   << " or run: MuseRepl --port " << port << "\n";
         return 1;
     }
+    client.setReadTimeoutMs(10 * 1000);
+    if (!client.authenticate(token, error)) {
+        std::cerr << error << "\n";
+        return 1;
+    }
+    client.setReadTimeoutMs(0);
 
     // Resolve the brain. Local-first: the OpenAI-compatible adapter covers
     // llama.cpp server, Ollama, and LM Studio out of the box; hosted keys

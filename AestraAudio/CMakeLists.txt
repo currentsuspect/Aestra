@@ -590,9 +590,9 @@ if(TARGET AestraCore)
     target_link_libraries(AestraAudioCore PUBLIC AestraCore)
 endif()
 
-# MuseSocketServer uses winsock on Windows.
+# MuseSocketServer uses winsock on Windows, and bcrypt for its session token.
 if(WIN32)
-    target_link_libraries(AestraAudioCore PUBLIC ws2_32)
+    target_link_libraries(AestraAudioCore PUBLIC ws2_32 bcrypt)
 endif()
 
 # AestraAudioCore stays license-free: no AestraAudio source references any

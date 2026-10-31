@@ -2,11 +2,14 @@
 #include "Commands/MuseSocketServer.h"
 
 #include "Commands/MuseService.h"
+#include "AestraJSON.h"
 #include "AestraLog.h"
+#include "MuseSocketToken.h"
 
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <bcrypt.h>
 using SocketHandle = SOCKET;
 static constexpr SocketHandle kInvalidSocket = INVALID_SOCKET;
 #else
@@ -16,13 +19,20 @@ static constexpr SocketHandle kInvalidSocket = INVALID_SOCKET;
 #include <netinet/in.h>
 #include <sys/select.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <unistd.h>
+#if defined(__linux__)
+#include <sys/random.h>
+#endif
 using SocketHandle = int;
 static constexpr SocketHandle kInvalidSocket = -1;
 #endif
 
 #include <atomic>
+#include <chrono>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
 #include <deque>
 #include <mutex>
 #include <thread>
@@ -75,6 +85,103 @@ constexpr size_t kMaxLineBytes = 1 << 20;         // one request line
 constexpr size_t kMaxClientWriteBytes = 1 << 20;  // unsent responses per client
 constexpr size_t kMaxInboxRequests = 256;         // queued, not yet executed
 
+
+constexpr size_t kMaxAuthFailures = 3;            // unauthorized requests before the client is dropped
+constexpr size_t kMaxPreAuthLineBytes = 4096;     // an auth line is ~80 bytes; do not parse more from a stranger
+constexpr auto kAuthDeadline = std::chrono::seconds(10);
+
+// 256 bits from the operating system's CSPRNG. No fallback to a weaker source: a server that
+// cannot make a token must not run unauthenticated, so the caller fails start() instead.
+bool fillRandom(unsigned char* out, size_t length) {
+#if defined(_WIN32)
+    return BCryptGenRandom(nullptr, out, static_cast<ULONG>(length), BCRYPT_USE_SYSTEM_PREFERRED_RNG) >= 0;
+#elif defined(__APPLE__)
+    arc4random_buf(out, length);
+    return true;
+#else
+    size_t done = 0;
+    while (done < length) {
+        const ssize_t n = ::getrandom(out + done, length - done, 0);
+        if (n < 0 && errno == EINTR) continue;
+        if (n <= 0) return false;
+        done += static_cast<size_t>(n);
+    }
+    return true;
+#endif
+}
+
+std::string makeToken() {
+    unsigned char raw[MuseToken::kTokenBytes];
+    if (!fillRandom(raw, sizeof(raw))) return {};
+    static const char hex[] = "0123456789abcdef";
+    std::string token;
+    token.reserve(MuseToken::kTokenHexLength);
+    for (unsigned char b : raw) {
+        token += hex[b >> 4];
+        token += hex[b & 0x0f];
+    }
+    return token;
+}
+
+// Write @p token to the first per-user folder that accepts it. POSIX: the folder is made 0700 and the file is created
+// exclusively with mode 0600, so it is never readable by anyone else even for an instant. Returns the path, or an empty
+// path with @p outError set.
+std::filesystem::path writeTokenFile(uint16_t port, const std::string& token, std::string& outError) {
+    namespace fs = std::filesystem;
+    std::string tried;
+    for (const fs::path& dir : MuseToken::candidateDirectories()) {
+        std::error_code ec;
+        fs::create_directories(dir, ec);
+        if (ec || !fs::is_directory(dir, ec)) {
+            tried += dir.string() + " (cannot create) ";
+            continue;
+        }
+        const fs::path file = dir / MuseToken::tokenFileName(port);
+        fs::remove(file, ec); // a stale file from a crashed run; O_EXCL below must own the new one
+#ifdef _WIN32
+        std::ofstream out(file, std::ios::binary | std::ios::trunc);
+        if (!out) {
+            tried += file.string() + " (cannot write) ";
+            continue;
+        }
+        out << token << "\n";
+        out.close();
+        if (!out) {
+            tried += file.string() + " (cannot write) ";
+            continue;
+        }
+        return file;
+#else
+        ::chmod(dir.c_str(), 0700);
+        struct stat dirInfo {};
+        if (::stat(dir.c_str(), &dirInfo) != 0 || dirInfo.st_uid != ::geteuid() || (dirInfo.st_mode & 0077) != 0) {
+            tried += dir.string() + " (not private to this user) ";
+            continue;
+        }
+        const int fd = ::open(file.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0600);
+        if (fd < 0) {
+            tried += file.string() + " (cannot create) ";
+            continue;
+        }
+        const std::string content = token + "\n";
+        struct stat fileInfo {};
+        const bool ok = ::fchmod(fd, 0600) == 0 && ::fstat(fd, &fileInfo) == 0 &&
+                        (fileInfo.st_mode & 0777) == 0600 &&
+                        ::write(fd, content.data(), content.size()) == static_cast<ssize_t>(content.size());
+        ::close(fd);
+        if (!ok) {
+            fs::remove(file, ec);
+            tried += file.string() + " (cannot write) ";
+            continue;
+        }
+        return file;
+#endif
+    }
+    outError = "cannot write the Muse token file (" + (tried.empty() ? std::string("no per-user folder is configured") : tried) +
+               "); refusing to serve without authentication";
+    return {};
+}
+
 bool initSockets(std::string& outError) {
 #ifdef _WIN32
     static std::once_flag once;
@@ -105,7 +212,35 @@ struct MuseSocketServer::Impl {
         SocketHandle socket = kInvalidSocket;
         std::string readBuffer;
         std::string writeBuffer; // IO-thread only
+        bool authenticated = false;
+        size_t authFailures = 0;
+        bool closeWhenFlushed = false; // refused client: say why, then hang up
+        std::chrono::steady_clock::time_point connectedAt = std::chrono::steady_clock::now();
     };
+
+    std::string token;                     // this run's secret; written to tokenFile
+    std::filesystem::path tokenFile;       // removed by stop()
+
+    // Pre-authentication handling for one line. IO thread only; never reaches the service.
+    void handleUnauthenticatedLine(Client& client, const std::string& line) {
+        bool accepted = false;
+        if (line.size() <= kMaxPreAuthLineBytes) {
+            const JSON parsed = JSON::parse(line);
+            if (parsed.isObject() && parsed["auth"].isString()) {
+                accepted = MuseToken::constantTimeEquals(parsed["auth"].asString(), token);
+            }
+        }
+        if (accepted) {
+            client.authenticated = true;
+            client.writeBuffer += "{\"status\":\"ok\",\"result\":{\"authenticated\":true}}\n";
+            return;
+        }
+        ++client.authFailures;
+        client.writeBuffer +=
+            "{\"status\":\"unauthorized\",\"message\":\"send {\\\"auth\\\":\\\"<token>\\\"} first; "
+            "the token is in the per-user Muse token file\"}\n";
+        if (client.authFailures >= kMaxAuthFailures) client.closeWhenFlushed = true;
+    }
 
     // IO-thread state
     std::unordered_map<uint64_t, Client> clients;
@@ -172,7 +307,12 @@ struct MuseSocketServer::Impl {
 
             std::vector<uint64_t> disconnected;
             for (auto& [clientId, client] : clients) {
-                if (inboxHasRoom && ready > 0 && FD_ISSET(client.socket, &readSet)) {
+                if (!client.authenticated &&
+                    std::chrono::steady_clock::now() - client.connectedAt > kAuthDeadline) {
+                    disconnected.push_back(clientId); // never authenticated: do not hold a slot
+                    continue;
+                }
+                if (!client.closeWhenFlushed && inboxHasRoom && ready > 0 && FD_ISSET(client.socket, &readSet)) {
                     char chunk[4096];
                     const auto received = ::recv(client.socket, chunk, sizeof(chunk), 0);
                     if (received == 0 || (received < 0 && !wouldBlock())) {
@@ -185,7 +325,15 @@ struct MuseSocketServer::Impl {
                 // Move complete lines to the inbox while it has room; any left
                 // over stay in readBuffer (bounded below) for a later pass.
                 size_t newline;
-                while ((newline = client.readBuffer.find('\n')) != std::string::npos) {
+                while (!client.closeWhenFlushed &&
+                       (newline = client.readBuffer.find('\n')) != std::string::npos) {
+                    if (!client.authenticated) {
+                        std::string line = client.readBuffer.substr(0, newline);
+                        client.readBuffer.erase(0, newline + 1);
+                        if (!line.empty() && line.back() == '\r') line.pop_back();
+                        if (!line.empty()) handleUnauthenticatedLine(client, line);
+                        continue;
+                    }
                     {
                         std::lock_guard<std::mutex> lock(mutex);
                         if (inbox.size() >= kMaxInboxRequests) break;
@@ -196,7 +344,7 @@ struct MuseSocketServer::Impl {
                     }
                 }
                 // A runaway line without a newline must not grow forever.
-                if (client.readBuffer.size() > kMaxLineBytes) {
+                if (client.readBuffer.size() > (client.authenticated ? kMaxLineBytes : kMaxPreAuthLineBytes)) {
                     disconnected.push_back(clientId);
                 }
             }
@@ -234,6 +382,7 @@ struct MuseSocketServer::Impl {
                     }
                     client.writeBuffer.erase(0, static_cast<size_t>(sent));
                 }
+                if (client.closeWhenFlushed && client.writeBuffer.empty()) disconnected.push_back(clientId);
             }
 
             for (uint64_t clientId : disconnected) {
@@ -308,9 +457,26 @@ bool MuseSocketServer::start(uint16_t port, std::string& outError) {
         m_impl->boundPort = port;
     }
 
+    // FD-64: nothing is served until there is a secret and a place only this user can read it.
+    m_impl->token = makeToken();
+    if (m_impl->token.empty()) {
+        outError = "cannot read the operating system's random source for the Muse token";
+        closeSocket(m_impl->listenSocket);
+        m_impl->listenSocket = kInvalidSocket;
+        return false;
+    }
+    m_impl->tokenFile = writeTokenFile(m_impl->boundPort, m_impl->token, outError);
+    if (m_impl->tokenFile.empty()) {
+        m_impl->token.clear();
+        closeSocket(m_impl->listenSocket);
+        m_impl->listenSocket = kInvalidSocket;
+        return false;
+    }
+
     m_impl->running.store(true, std::memory_order_relaxed);
     m_impl->ioThread = std::thread([impl = m_impl.get()]() { impl->ioLoop(); });
-    Log::info("[MuseSocket] listening on 127.0.0.1:" + std::to_string(m_impl->boundPort));
+    Log::info("[MuseSocket] listening on 127.0.0.1:" + std::to_string(m_impl->boundPort) +
+              "; token file " + m_impl->tokenFile.string());
     return true;
 }
 
@@ -319,6 +485,12 @@ void MuseSocketServer::stop() {
     if (m_impl->ioThread.joinable()) m_impl->ioThread.join();
     closeSocket(m_impl->listenSocket);
     m_impl->listenSocket = kInvalidSocket;
+    if (!m_impl->tokenFile.empty()) {
+        std::error_code ec;
+        std::filesystem::remove(m_impl->tokenFile, ec);
+        m_impl->tokenFile.clear();
+    }
+    m_impl->token.clear();
 }
 
 uint16_t MuseSocketServer::port() const {
