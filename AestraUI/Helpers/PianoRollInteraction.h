@@ -100,6 +100,13 @@ uint8_t ratchetFromPanelPosition(float pointerY, float bottomY, float availableH
 float ratchetToPanelHeight(int ratchet, float availableHeight);
 
 /**
+ * Smart Snap (FD-66): the snap the zoom asks for. The finest straight division whose step is still at least
+ * @p minStepPx wide on screen: zoomed out that is the bar (only in 4/4, where a bar is the 4 beats SnapGrid::Bar means),
+ * zoomed in down to 1/16 of a beat. Triplets are not chosen (FD-66 leaves them undecided).
+ */
+SnapGrid smartSnapFor(float pixelsPerBeat, int beatsPerBar, float minStepPx = 16.0f);
+
+/**
  * Check if a note should be considered for interaction (not deleted).
  */
 /**

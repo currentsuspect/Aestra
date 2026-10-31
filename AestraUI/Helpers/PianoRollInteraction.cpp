@@ -67,6 +67,16 @@ uint8_t ratchetFromPanelPosition(float pointerY, float bottomY, float availableH
     return static_cast<uint8_t>(std::clamp(1 + static_cast<int>(fraction * 4.0f), 1, 4));
 }
 
+SnapGrid smartSnapFor(float pixelsPerBeat, int beatsPerBar, float minStepPx) {
+    if (!std::isfinite(pixelsPerBeat) || pixelsPerBeat <= 0.0f) return SnapGrid::Beat;
+    // Finest first; the first whose step is wide enough to hit on purpose wins.
+    static constexpr SnapGrid kFineToCoarse[] = {SnapGrid::Sixteenth, SnapGrid::Eighth, SnapGrid::Quarter,
+                                                 SnapGrid::Half, SnapGrid::Beat};
+    for (const SnapGrid g : kFineToCoarse)
+        if (static_cast<float>(MusicTheory::getSnapDuration(g)) * pixelsPerBeat >= minStepPx) return g;
+    return beatsPerBar == 4 ? SnapGrid::Bar : SnapGrid::Beat;
+}
+
 float ratchetToPanelHeight(int ratchet, float availableHeight) {
     if (!std::isfinite(availableHeight) || availableHeight <= 0.0f) return 0.0f;
     return static_cast<float>(std::clamp(ratchet, 1, 4)) * 0.25f * availableHeight;

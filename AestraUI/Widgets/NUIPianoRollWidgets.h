@@ -352,6 +352,20 @@ private:
     void openChoiceMenu(const NUIRect& anchor, const std::vector<PatternChoice>& choices, int selected,
                         const std::string& group, std::function<void(int)> onPick);
     void openSnapMenu();
+    // FD-66 Smart Snap: on by default; the view reports every zoom, and the snap follows it until the producer picks
+    // a fixed snap from the menu. Picking Smart again hands it back to the zoom.
+    bool m_smartSnap = true;
+    float m_smartPixelsPerBeat = 66.0f;
+    int m_smartBeatsPerBar = 4;
+    void setSnapNow(SnapGrid snap); ///< grid, notes and display, without changing who chose it
+public:
+    void setZoomForSmartSnap(float pixelsPerBeat, int beatsPerBar);
+    bool isSmartSnap() const { return m_smartSnap; }
+    void setSmartSnap(bool on);
+    SnapGrid getSnap() const { return m_currentSnap; }
+    /** @brief A fixed snap, as if picked from the menu: Smart Snap steps aside. */
+    void chooseSnap(SnapGrid snap) { applySnap(snap); }
+private:
     NUIColor m_unitColor = NUIColor(0.55f, 0.6f, 0.7f, 1.0f);
     std::shared_ptr<NUIDropdown> m_patternDropdown;
     std::shared_ptr<NUIDropdown> m_unitDropdown;
@@ -993,6 +1007,12 @@ public:
     void frameNotesVertically();
 
     void setPixelsPerBeat(float ppb);
+    /** @brief A fixed snap, as if picked from the menu (Smart Snap steps aside); see FD-66. */
+    void setSnap(SnapGrid snap);
+    /** @brief Hand the snap back to the zoom (FD-66 Smart Snap, the default). */
+    void setSmartSnap(bool on);
+    SnapGrid getSnap() const;
+    bool isSmartSnap() const;
     void setBeatsPerBar(int bpb);
     /** @brief Scrollable domain end in beats (16-bar empty floor, dynamic with
      *  content — Track Manager parity). */

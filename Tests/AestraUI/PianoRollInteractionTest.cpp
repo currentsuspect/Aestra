@@ -1289,12 +1289,56 @@ static void test_inspector_summarizes_and_edits_the_selection() {
     PASS("the inspector summarizes and edits the selection, one commit per change");
 }
 
+// FD-66 Smart Snap: the zoom says how fine a grid you want.
+static void test_smart_snap_follows_zoom() {
+    ASSERT(smartSnapFor(66.0f, 4) == SnapGrid::Quarter, "the default zoom (66 px a beat) snaps to 1/4 beat, the board's 1/16");
+    ASSERT(smartSnapFor(400.0f, 4) == SnapGrid::Sixteenth, "zoomed far in: 1/16 beat");
+    ASSERT(smartSnapFor(140.0f, 4) == SnapGrid::Eighth, "zoomed in: 1/8 beat (17.5 px)");
+    ASSERT(smartSnapFor(40.0f, 4) == SnapGrid::Half, "zoomed out a little: 1/2 beat (20 px)");
+    ASSERT(smartSnapFor(20.0f, 4) == SnapGrid::Beat, "zoomed out: the beat");
+    ASSERT(smartSnapFor(10.0f, 4) == SnapGrid::Bar, "zoomed far out in 4/4: the bar");
+    ASSERT(smartSnapFor(10.0f, 3) == SnapGrid::Beat, "in 3/4 it stops at the beat (Bar means 4 beats)");
+    bool monotonic = true;
+    double last = 0.0;
+    for (float ppb = 500.0f; ppb >= 5.0f; ppb -= 1.0f) {
+        const double step = MusicTheory::getSnapDuration(smartSnapFor(ppb, 4));
+        monotonic = monotonic && step >= last;
+        last = step;
+    }
+    ASSERT(monotonic, "zooming out never makes the snap finer");
+    ASSERT(smartSnapFor(0.0f, 4) == SnapGrid::Beat && smartSnapFor(-3.0f, 4) == SnapGrid::Beat, "a bad zoom falls back to the beat");
+    PASS("Smart Snap follows the zoom");
+}
+
+// FD-66 in the view: Smart Snap is the default and follows zoom; a picked snap holds until Smart is picked again.
+static void test_view_smart_snap_default_and_override() {
+    PianoRollView view;
+    view.setBounds({0.0f, 0.0f, 1200.0f, 600.0f});
+    view.onResize(1200, 600);
+    view.setBeatsPerBar(4);
+    view.setTotalDurationBeats(64.0);
+    view.setPixelsPerBeat(66.0f);
+    ASSERT(view.isSmartSnap(), "Smart Snap is on by default");
+    ASSERT(view.getSnap() == SnapGrid::Quarter, "at 66 px a beat it snaps to 1/4 beat");
+    view.setPixelsPerBeat(12.0f);
+    ASSERT(view.getSnap() == SnapGrid::Bar, "zooming out moves the snap to the bar");
+    view.setSnap(SnapGrid::Half);
+    ASSERT(!view.isSmartSnap() && view.getSnap() == SnapGrid::Half, "picking a snap fixes it");
+    view.setPixelsPerBeat(300.0f);
+    ASSERT(view.getSnap() == SnapGrid::Half, "a fixed snap holds through zooming");
+    view.setSmartSnap(true);
+    ASSERT(view.isSmartSnap() && view.getSnap() == SnapGrid::Sixteenth, "Smart again follows the zoom at once");
+    PASS("Smart Snap is the default, follows zoom, and steps aside for a picked snap");
+}
+
 int main() {
     std::cout << "=== PianoRollInteraction Unit Tests ===\n\n";
 
     test_alt_drag_clone_is_drawn_while_dragging();
     test_lane_value_edits_in_place_and_keeps_chord_order();
     test_ratchet_lane_bands();
+    test_smart_snap_follows_zoom();
+    test_view_smart_snap_default_and_override();
     test_inspector_summarizes_and_edits_the_selection();
 
     test_alt_drag_copy_is_one_gesture_and_moves_only_the_clone();
