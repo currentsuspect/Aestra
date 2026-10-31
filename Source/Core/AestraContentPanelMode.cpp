@@ -147,3 +147,12 @@ void AestraContent::resetPanelPositions() {
         m_pluginController->resetEditorPositions();
     setDirty(true);
 }
+
+bool AestraContent::placeFullWindowPanel(Audio::WindowPanel& panel) {
+    if (!panel.isFullWindow()) return false;
+    const AestraUI::NUIRect whole = getBounds();
+    const AestraUI::NUIRect now = panel.getBounds();
+    if (now.x != whole.x || now.y != whole.y || now.width != whole.width || now.height != whole.height)
+        panel.setBounds(whole);
+    return true;
+}

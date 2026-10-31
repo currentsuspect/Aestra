@@ -125,6 +125,20 @@ void PianoRollToolbar::setupUI() {
             if (auto n = notes_.lock()) n->humanizeSelectedVelocities();
         });
 
+        // The board's header has no room for these, so they live here (FD-63).
+        {
+            const int bars = std::max(1, static_cast<int>(std::lround(m_patternLengthBeats / 4.0)));
+            auto lengthMenu = std::make_shared<NUIContextMenu>();
+            lengthMenu->addItem("Extend by 2 Bars", [this]() { if (onAdjustPatternLength_) onAdjustPatternLength_(2); });
+            lengthMenu->addItem("Shorten by 2 Bars", [this]() { if (onAdjustPatternLength_) onAdjustPatternLength_(-2); });
+            menu->addSubmenu("Length: " + std::to_string(bars) + (bars == 1 ? " Bar" : " Bars"), lengthMenu);
+        }
+        menu->addCheckbox("Follow Playhead", m_followPlayhead, [this](bool on) {
+            m_followPlayhead = on;
+            if (onFollowPlayheadChanged_) onFollowPlayheadChanged_(m_followPlayhead);
+            repaint();
+        });
+
         menu->addItem("Center on Playhead", [this]() {
             if (onCenterOnPlayhead_) onCenterOnPlayhead_();
         });
@@ -245,22 +259,37 @@ void PianoRollToolbar::setupUI() {
     const char* centerSvg = R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>)";
     m_centerIcon = std::make_shared<NUIIcon>(centerSvg);
 
+    // FD-63 header: the breadcrumb and Snap open menus. The dropdowns stay as the choice lists' state but are no
+    // longer shown; Length and Follow moved under More.
+    m_patternCrumbBtn = std::make_shared<NUIButton>("");
+    m_patternCrumbBtn->setTooltip("Pattern");
+    m_patternCrumbBtn->setOnClick([this]() {
+        openChoiceMenu(m_patternCrumbBtn->getBounds(), m_appliedPatternChoices, m_appliedPatternSelection,
+                       "piano-roll-pattern", [this](int v) { if (onPatternChoiceSelected_) onPatternChoiceSelected_(v); });
+    });
+    m_unitCrumbBtn = std::make_shared<NUIButton>("");
+    m_unitCrumbBtn->setTooltip("Unit");
+    m_unitCrumbBtn->setOnClick([this]() {
+        openChoiceMenu(m_unitCrumbBtn->getBounds(), m_appliedUnitChoices, m_appliedUnitSelection, "piano-roll-unit",
+                       [this](int v) { if (onUnitChoiceSelected_) onUnitChoiceSelected_(v); });
+    });
+    m_snapBtn = std::make_shared<NUIButton>("");
+    m_snapBtn->setTooltip("Snap");
+    m_snapBtn->setOnClick([this]() { openSnapMenu(); });
+
     addChild(m_menuBtn);
+    addChild(m_patternCrumbBtn);
+    addChild(m_unitCrumbBtn);
     addChild(m_ptrBtn);
     addChild(m_pencilBtn);
     addChild(m_eraserBtn);
-    addChild(m_patternDropdown);
-    addChild(m_unitDropdown);
-    addChild(m_snapDropdown);
+    addChild(m_snapBtn);
     addChild(m_scaleBtn);
-    addChild(m_lengthDownBtn);
-    addChild(m_lengthUpBtn);
-    addChild(m_followBtn);
-    addChild(m_centerBtn);
 
     // The row draws its own chrome (outline, active fill, glyphs) over these; the buttons only take input, so their own
     // fills must not show through as purple blocks.
-    for (const auto& btn : {m_menuBtn, m_ptrBtn, m_pencilBtn, m_eraserBtn, m_scaleBtn, m_lengthDownBtn, m_lengthUpBtn, m_followBtn, m_centerBtn}) {
+    for (const auto& btn : {m_menuBtn, m_patternCrumbBtn, m_unitCrumbBtn, m_ptrBtn, m_pencilBtn, m_eraserBtn, m_snapBtn,
+                            m_scaleBtn, m_lengthDownBtn, m_lengthUpBtn, m_followBtn, m_centerBtn}) {
         if (!btn) continue;
         const NUIColor clear(0.0f, 0.0f, 0.0f, 0.0f);
         btn->setBackgroundColor(clear);
@@ -299,6 +328,31 @@ void PianoRollToolbar::openScaleMenu() {
     if (auto* parent = getParent()) parent->addChild(m_activeContextMenu);
     else addChild(m_activeContextMenu);
     menu->showAt(static_cast<int>(at.x), static_cast<int>(at.y + at.height + 2.0f));
+}
+
+void PianoRollToolbar::openChoiceMenu(const NUIRect& anchor, const std::vector<PatternChoice>& choices, int selected,
+                                      const std::string& group, std::function<void(int)> onPick) {
+    if (m_activeContextMenu) {
+        const bool wasOpen = m_activeContextMenu->isVisible();
+        closeActiveContextMenu();
+        if (wasOpen) return;
+    }
+    auto menu = std::make_shared<NUIContextMenu>();
+    m_activeContextMenu = std::static_pointer_cast<NUIComponent>(menu);
+    for (const auto& choice : choices) {
+        const int value = choice.value;
+        menu->addRadioItem(choice.label, group, value == selected, [onPick, value]() { onPick(value); });
+    }
+    if (auto* parent = getParent()) parent->addChild(m_activeContextMenu);
+    else addChild(m_activeContextMenu);
+    menu->showAt(static_cast<int>(anchor.x), static_cast<int>(anchor.y + anchor.height + 2.0f));
+}
+
+void PianoRollToolbar::openSnapMenu() {
+    std::vector<PatternChoice> snaps;
+    for (auto snap : MusicTheory::getSnapOptions()) snaps.push_back({static_cast<int>(snap), MusicTheory::getSnapName(snap)});
+    openChoiceMenu(m_snapBtn->getBounds(), snaps, static_cast<int>(m_currentSnap), "piano-roll-snap",
+                   [this](int v) { applySnap(static_cast<SnapGrid>(v)); });
 }
 
 void PianoRollToolbar::applySnap(SnapGrid snap) {
@@ -410,205 +464,116 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
     // Children keep input and hit-testing; the chrome and glyphs below are drawn over them.
     renderChildren(renderer);
 
-    // FD-48 / board 6, one row: Select | Draw | Erase as a labelled segment, the pattern and the unit as chips (the unit
-    // with its own colour), SNAP, LENGTH and SCALE as values, Follow as a toggle, the rest under More. A cluster appears
-    // whole or not at all; the ones that matter least go first when the window is narrow (right edge = the window buttons).
-    const float h = m_hostedInTitleBar ? 26.0f : 30.0f;
-    const float pad = m_hostedInTitleBar ? 4.0f : 10.0f;
-    const float gap = 8.0f;
-    const float small = themeManager.getFontSize("xs");
-    const float label = themeManager.getFontSize("s");
-    float x = b.x + pad;
-    const float y = b.y + (b.height - h) * 0.5f;
-    const float right = b.right();
+    // FD-63, board "A + C": a 40 px header. Left to right: the unit's colour, the pattern / the unit (each opens its
+    // list), a Draw | Select | Erase segment, "Snap" and "Key" each with a boxed value. More sits at the right; the
+    // panel draws the close box after it. Length, Follow and the rest live under More.
+    const auto bed = themeManager.getColor("backgroundPrimary");
+    const auto raised = themeManager.getColor("surfaceRaised");
+    const auto secondary = themeManager.getColor("textSecondary");
+    const auto muted = themeManager.getColor("textMuted");
+    const float fs = 12.0f;
+    const float y = b.y;
+    const float hRow = b.height;
     const auto park = [](const std::shared_ptr<NUIComponent>& w) {
         if (w) w->setBounds(NUIRect(0.0f, 0.0f, 0.0f, 0.0f));
     };
-    const auto outline = [&](const NUIRect& r, bool hovered) {
-        if (hovered) renderer.fillRoundedRect(r, 5.0f, themeManager.getColor("buttonBgHover").withAlpha(0.9f));
-        renderer.strokeRoundedRect(r, 5.0f, 1.0f, border.withAlpha(hovered ? 0.55f : 0.35f));
+    for (const auto& w : {std::static_pointer_cast<NUIComponent>(m_lengthDownBtn), std::static_pointer_cast<NUIComponent>(m_lengthUpBtn),
+                          std::static_pointer_cast<NUIComponent>(m_followBtn), std::static_pointer_cast<NUIComponent>(m_centerBtn)})
+        park(w);
+    const auto textY = [&](const NUIRect& r, float size) { return renderer.calculateTextY(r, size); };
+    const auto labelOf = [](const std::vector<PatternChoice>& choices, int selected, const std::string& fallback) {
+        for (const auto& c : choices)
+            if (c.value == selected) return c.label;
+        return fallback;
     };
 
-    // The More button and Follow are anchored at the right edge: always reachable, whatever else is dropped.
-    const float moreX = right - pad - h;
-    const float followW = m_hostedInTitleBar ? 72.0f : 78.0f;
-    const float followX = moreX - gap * 0.5f - followW;
-    const float limit = followX - gap; // the middle clusters must end before this
-
-    // ---- Tools: a labelled segment (icons alone when the row is tight) ----
-    const bool wide = (limit - x) > 780.0f;
-    struct Tool { std::shared_ptr<NUIButton> button; std::shared_ptr<NUIIcon> icon; GlobalTool tool; const char* name; };
-    const Tool tools[] = {{m_ptrBtn, m_ptrIcon, GlobalTool::Pointer, "Select"},
-                          {m_pencilBtn, m_pencilIcon, GlobalTool::Pencil, "Draw"},
-                          {m_eraserBtn, m_eraserIcon, GlobalTool::Eraser, "Erase"}};
-    float widths[3];
-    float segmentW = 4.0f;
-    for (int i = 0; i < 3; ++i) {
-        widths[i] = wide ? 26.0f + renderer.measureText(tools[i].name, label).width + 10.0f : h;
-        segmentW += widths[i];
+    float x = b.x + 14.0f;
+    // ---- Breadcrumb: [colour] Pattern / Unit ----
+    renderer.fillRect(NUIRect(x, std::round(y + (hRow - 10.0f) * 0.5f), 10.0f, 10.0f), m_unitColor);
+    x += 18.0f;
+    {
+        const std::string pattern = labelOf(m_appliedPatternChoices, m_appliedPatternSelection, m_patternName);
+        const float w = renderer.measureText(pattern, 13.0f).width;
+        const NUIRect r(x, y + 8.0f, w, hRow - 16.0f);
+        m_patternCrumbBtn->setBounds(r);
+        renderer.drawText(pattern, NUIPoint(x, textY(r, 13.0f)), 13.0f, text.withAlpha(m_patternCrumbBtn->isHovered() ? 1.0f : 0.96f));
+        x += w + 8.0f;
+        renderer.drawText("/", NUIPoint(x, textY(r, fs)), fs, muted);
+        x += renderer.measureText("/", fs).width + 8.0f;
+        const std::string unit = labelOf(m_appliedUnitChoices, m_appliedUnitSelection, "");
+        const float uw = std::min(renderer.measureText(unit, fs).width, 180.0f);
+        const NUIRect ur(x, y + 8.0f, uw, hRow - 16.0f);
+        m_unitCrumbBtn->setBounds(ur);
+        renderer.drawText(unit, NUIPoint(x, textY(ur, fs)), fs, m_unitCrumbBtn->isHovered() ? text : secondary);
+        x += uw + 30.0f;
     }
-    if (x + segmentW <= limit) {
-        renderer.strokeRoundedRect(NUIRect(x, y, segmentW, h), 6.0f, 1.0f, border.withAlpha(0.35f));
+
+    // ---- Tools: a boxed segment, the active one raised ----
+    {
+        struct Tool { std::shared_ptr<NUIButton> button; GlobalTool tool; const char* name; };
+        const Tool tools[] = {{m_pencilBtn, GlobalTool::Pencil, "Draw"},
+                              {m_ptrBtn, GlobalTool::Pointer, "Select"},
+                              {m_eraserBtn, GlobalTool::Eraser, "Erase"}};
+        const float segH = 30.0f;
+        const float sy = std::round(y + (hRow - segH) * 0.5f);
+        float segW = 4.0f;
+        float widths[3];
+        for (int i = 0; i < 3; ++i) {
+            widths[i] = renderer.measureText(tools[i].name, fs).width + 20.0f;
+            segW += widths[i] + (i > 0 ? 2.0f : 0.0f);
+        }
+        const NUIRect seg(x, sy, segW, segH);
+        renderer.fillRect(seg, bed);
+        renderer.strokeRect(seg, 1.0f, border);
         float tx = x + 2.0f;
         for (int i = 0; i < 3; ++i) {
-            const NUIRect r(tx, y + 2.0f, widths[i], h - 4.0f);
+            const NUIRect r(tx, sy + 2.0f, widths[i], segH - 4.0f);
             tools[i].button->setBounds(r);
             tools[i].button->setText("");
             const bool active = activeTool_ == tools[i].tool;
-            if (active) renderer.fillRoundedRect(r, 4.0f, accent.withAlpha(0.28f));
-            else if (tools[i].button->isHovered()) renderer.fillRoundedRect(r, 4.0f, themeManager.getColor("buttonBgHover").withAlpha(0.9f));
-            const float alpha = active ? 1.0f : (tools[i].button->isHovered() ? 0.9f : 0.62f);
-            const float glyph = 14.0f;
-            const float contentW = wide ? glyph + 6.0f + renderer.measureText(tools[i].name, label).width : glyph;
-            const float gx = std::round(r.x + (r.width - contentW) * 0.5f);
-            if (tools[i].icon) {
-                tools[i].icon->setIconSize(glyph, glyph);
-                tools[i].icon->setBounds(NUIRect(gx, std::round(r.y + (r.height - glyph) * 0.5f), glyph, glyph));
-                tools[i].icon->setColor(text.withAlpha(alpha));
-                tools[i].icon->onRender(renderer);
-            }
-            if (wide) renderer.drawText(tools[i].name, NUIPoint(gx + glyph + 6.0f, renderer.calculateTextY(r, label)), label, text.withAlpha(alpha));
-            tx += widths[i];
+            if (active) renderer.fillRect(r, raised);
+            renderer.drawText(tools[i].name, NUIPoint(r.x + 10.0f, textY(r, fs)), fs,
+                              active || tools[i].button->isHovered() ? text : secondary);
+            tx += widths[i] + 2.0f;
         }
-        x += segmentW + gap;
-    } else {
-        for (const auto& t : tools) park(t.button);
+        x += segW + 14.0f;
     }
 
-    // ---- Pattern and unit chips ----
-    if (m_patternDropdown) {
-        const float w = m_hostedInTitleBar ? std::clamp(b.width * 0.15f, 110.0f, 160.0f) : std::clamp(b.width * 0.22f, 170.0f, 240.0f);
-        if (x + w <= limit) {
-            outline(NUIRect(x - 2.0f, y, w + 4.0f, h), false);
-            m_patternDropdown->setBounds(NUIRect(x, y, w, h));
-            m_patternDropdown->onRender(renderer);
-            x += w + gap;
-        } else {
-            park(m_patternDropdown);
-        }
-    }
-    if (m_unitDropdown) {
-        const float dot = 16.0f; // room for the unit's colour
-        const float w = m_hostedInTitleBar ? std::clamp(b.width * 0.12f, 100.0f, 140.0f) : std::clamp(b.width * 0.16f, 130.0f, 190.0f);
-        if (x + dot + w <= limit) {
-            outline(NUIRect(x - 2.0f, y, dot + w + 4.0f, h), false);
-            renderer.fillRoundedRect(NUIRect(x + 5.0f, y + (h - 8.0f) * 0.5f, 8.0f, 8.0f), 4.0f, m_unitColor); // a flat chip of the unit's colour
-            m_unitDropdown->setBounds(NUIRect(x + dot, y, w, h));
-            m_unitDropdown->onRender(renderer);
-            x += dot + w + gap;
-        } else {
-            park(m_unitDropdown);
-        }
-    }
+    // ---- "Snap" and "Key", each a label and a boxed value ----
+    const auto valueBox = [&](const char* label, const std::string& value, const std::shared_ptr<NUIButton>& button,
+                              const NUIColor& valueColor) {
+        renderer.drawText(label, NUIPoint(x, textY(NUIRect(x, y, 1.0f, hRow), fs)), fs, secondary);
+        x += renderer.measureText(label, fs).width + 6.0f;
+        const float w = renderer.measureText(value, fs).width + 16.0f;
+        const NUIRect r(x, std::round(y + (hRow - 24.0f) * 0.5f), w, 24.0f);
+        button->setBounds(r);
+        renderer.fillRect(r, bed);
+        renderer.strokeRect(r, 1.0f, button->isHovered() ? muted : border);
+        renderer.drawText(value, NUIPoint(r.x + 8.0f, textY(r, fs)), fs, valueColor);
+        x += w + 14.0f;
+    };
+    valueBox("Snap", MusicTheory::getSnapName(m_currentSnap), m_snapBtn, text);
+    const bool keyed = m_scaleType != ScaleType::Chromatic;
+    const std::string key = keyed ? MusicTheory::getRootNames()[std::clamp(m_rootKey, 0, 11)] + " " +
+                                        MusicTheory::getScales()[static_cast<size_t>(m_scaleType)].name
+                                  : std::string("None");
+    valueBox("Key", key, m_scaleBtn, keyed ? text : muted);
 
-    // ---- SNAP: the label, then the dropdown showing its value ----
-    if (m_snapDropdown) {
-        const float labelW = renderer.measureText("SNAP", small).width;
-        const float w = 86.0f;
-        if (x + labelW + 6.0f + w <= limit) {
-            renderer.drawText("SNAP", NUIPoint(x, renderer.calculateTextY(NUIRect(x, y, labelW, h), small)), small, text.withAlpha(0.45f));
-            m_snapDropdown->setBounds(NUIRect(x + labelW + 6.0f, y, w, h));
-            m_snapDropdown->onRender(renderer);
-            x += labelW + 6.0f + w + gap;
-        } else {
-            park(m_snapDropdown);
-        }
-    }
-
-    // ---- LENGTH: [-] 8 Bars [+] ----
+    // ---- More, at the right edge (the panel's close box is beyond it) ----
     {
-        const int bars = std::max(1, static_cast<int>(std::lround(m_patternLengthBeats / 4.0)));
-        const std::string value = std::to_string(bars) + (bars == 1 ? " Bar" : " Bars");
-        const float labelW = renderer.measureText("LENGTH", small).width;
-        const float valueW = std::max(52.0f, renderer.measureText(value, label).width + 16.0f);
-        const float total = labelW + 6.0f + h + valueW + h;
-        if (x + total <= limit) {
-            renderer.drawText("LENGTH", NUIPoint(x, renderer.calculateTextY(NUIRect(x, y, labelW, h), small)), small, text.withAlpha(0.45f));
-            float lx = x + labelW + 6.0f;
-            const std::shared_ptr<NUIButton> steps[] = {m_lengthDownBtn, m_lengthUpBtn};
-            m_lengthDownBtn->setBounds(NUIRect(lx, y, h, h));
-            outline(m_lengthDownBtn->getBounds(), m_lengthDownBtn->isHovered());
-            if (m_lengthDownIcon) {
-                m_lengthDownIcon->setIconSize(14.0f, 14.0f);
-                m_lengthDownIcon->setBounds(NUIRect(std::round(lx + (h - 14.0f) * 0.5f), std::round(y + (h - 14.0f) * 0.5f), 14.0f, 14.0f));
-                m_lengthDownIcon->setColor(text.withAlpha(0.75f));
-                m_lengthDownIcon->onRender(renderer);
-            }
-            lx += h;
-            renderer.drawText(value, NUIPoint(lx + (valueW - renderer.measureText(value, label).width) * 0.5f,
-                                              renderer.calculateTextY(NUIRect(lx, y, valueW, h), label)), label, text.withAlpha(0.9f));
-            lx += valueW;
-            m_lengthUpBtn->setBounds(NUIRect(lx, y, h, h));
-            outline(m_lengthUpBtn->getBounds(), m_lengthUpBtn->isHovered());
-            if (m_lengthUpIcon) {
-                m_lengthUpIcon->setIconSize(14.0f, 14.0f);
-                m_lengthUpIcon->setBounds(NUIRect(std::round(lx + (h - 14.0f) * 0.5f), std::round(y + (h - 14.0f) * 0.5f), 14.0f, 14.0f));
-                m_lengthUpIcon->setColor(text.withAlpha(0.75f));
-                m_lengthUpIcon->onRender(renderer);
-            }
-            (void)steps;
-            x += total + gap;
-        } else {
-            park(m_lengthDownBtn);
-            park(m_lengthUpBtn);
-        }
-    }
-
-    // ---- SCALE: the value, opening the scale menu ----
-    if (m_scaleBtn) {
-        const std::string value = m_scaleType == ScaleType::Chromatic ? std::string("Off")
-                                                                       : MusicTheory::getRootNames()[std::clamp(m_rootKey, 0, 11)] + " " +
-                                                                             MusicTheory::getScales()[static_cast<size_t>(m_scaleType)].name;
-        const float labelW = renderer.measureText("SCALE", small).width;
-        const float valueW = renderer.measureText(value, label).width;
-        const float w = labelW + 8.0f + valueW + 24.0f;
-        if (x + w <= limit) {
-            const NUIRect r(x, y, w, h);
-            m_scaleBtn->setBounds(r);
-            outline(r, m_scaleBtn->isHovered());
-            renderer.drawText("SCALE", NUIPoint(r.x + 8.0f, renderer.calculateTextY(r, small)), small, text.withAlpha(0.45f));
-            renderer.drawText(value, NUIPoint(r.x + 8.0f + labelW + 8.0f, renderer.calculateTextY(r, label)), label, text.withAlpha(m_scaleType == ScaleType::Chromatic ? 0.6f : 0.9f));
-            const float cx = r.right() - 11.0f;
-            const float cy = std::round(r.y + r.height * 0.5f);
-            for (int i = 0; i < 3; ++i) // a drawn caret: the UI font has no triangle glyph
-                renderer.fillRect(NUIRect(cx - 2.0f + static_cast<float>(i), cy - 1.0f + static_cast<float>(i), 5.0f - 2.0f * static_cast<float>(i), 1.0f), text.withAlpha(0.6f));
-            x += w + gap;
-        } else {
-            park(m_scaleBtn);
-        }
-    }
-
-    // ---- Follow (a toggle) and More, anchored right ----
-    {
-        const NUIRect r(followX, y, followW, h);
-        m_followBtn->setBounds(r);
-        m_followBtn->setText("");
-        if (m_followPlayhead) renderer.fillRoundedRect(r, 5.0f, accent.withAlpha(0.28f));
-        outline(r, m_followBtn->isHovered());
-        const float glyph = 14.0f;
-        const float labelW = renderer.measureText("Follow", label).width;
-        const float gx = std::round(r.x + (r.width - (glyph + 6.0f + labelW)) * 0.5f);
-        if (m_followIcon) {
-            m_followIcon->setIconSize(glyph, glyph);
-            m_followIcon->setBounds(NUIRect(gx, std::round(r.y + (r.height - glyph) * 0.5f), glyph, glyph));
-            m_followIcon->setColor(text.withAlpha(m_followPlayhead ? 1.0f : 0.62f));
-            m_followIcon->onRender(renderer);
-        }
-        renderer.drawText("Follow", NUIPoint(gx + glyph + 6.0f, renderer.calculateTextY(r, label)), label, text.withAlpha(m_followPlayhead ? 1.0f : 0.62f));
-    }
-    {
-        const NUIRect r(moreX, y, h, h);
+        const float s = 28.0f;
+        const NUIRect r(b.right() - s, std::round(y + (hRow - s) * 0.5f), s, s);
         m_menuBtn->setBounds(r);
         m_menuBtn->setText("");
-        outline(r, m_menuBtn->isHovered());
+        renderer.strokeRect(r, 1.0f, m_menuBtn->isHovered() ? muted : border);
         if (m_menuIcon) {
             m_menuIcon->setIconSize(14.0f, 14.0f);
-            m_menuIcon->setBounds(NUIRect(std::round(r.x + (r.width - 14.0f) * 0.5f), std::round(r.y + (r.height - 14.0f) * 0.5f), 14.0f, 14.0f));
-            m_menuIcon->setColor(text.withAlpha(m_menuBtn->isHovered() ? 0.9f : 0.65f));
+            m_menuIcon->setBounds(NUIRect(std::round(r.x + 7.0f), std::round(r.y + 7.0f), 14.0f, 14.0f));
+            m_menuIcon->setColor(m_menuBtn->isHovered() ? text : secondary);
             m_menuIcon->onRender(renderer);
         }
     }
-    park(m_centerBtn); // "Center on playhead" lives under More now
+    (void)accent;
 }
 
 void PianoRollToolbar::setGrid(std::shared_ptr<PianoRollGrid> grid) {

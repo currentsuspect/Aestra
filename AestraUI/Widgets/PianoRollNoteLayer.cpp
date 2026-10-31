@@ -610,9 +610,9 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
             
             if (x + w < b.x || x > b.x + b.width || y + h < b.y || y > b.y + b.height) continue;
             
-            NUIRect r(x, y + 2, std::max(4.0f, w), h - 4);
-            renderer.fillRoundedRect(r, 2.0f, gCol);
-            renderer.strokeRoundedRect(r, 2.0f, 1.0f, gBorder);
+            NUIRect r(x, y + 1, std::max(4.0f, w - 1.0f), h - 2); // FD-63: an outline in the unit's colour, no fill
+            (void)gCol;
+            renderer.strokeRect(r, 1.0f, gBorder.withAlpha(std::max(gBorder.a, 0.5f)));
         }
     }
     

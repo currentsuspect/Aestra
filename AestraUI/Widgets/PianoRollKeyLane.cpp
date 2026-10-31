@@ -32,7 +32,6 @@ void PianoRollKeyLane::onRender(NUIRenderer& renderer) {
     const auto accidentalKey = PianoRollLook::blackKey();
     const auto accidentalHover = PianoRollLook::blackKeyHover();
     const auto separator = PianoRollLook::keyEdge();
-    const auto rootAccent = themeManager.getColor("accentPrimary");
     const auto naturalText = PianoRollLook::ivoryKeyLabel();
     // Pressed (SPEC 3 §5.1): the key takes the accent, sinks a little, and its tip glows
     // toward the grid row it plays. Blended by the key's press level, so release eases out.
@@ -55,72 +54,37 @@ void PianoRollKeyLane::onRender(NUIRenderer& renderer) {
         const bool accidental = isBlackKey(p);
         const bool hovered = p == hoveredKey_;
         const float press = pressLevel_[p];
-        const float rightPad = 3.0f;
-        const float accidentalW = std::round(b.width * 0.68f);
-        // A pressed key sinks: its free end (toward the grid) travels in by up to 2 px.
-        const float sink = 2.0f * press;
-        NUIRect keyRect(b.x + 3.0f,
-                        y + 1.0f,
-                        (accidental ? accidentalW : b.width - 3.0f - rightPad) - sink,
-                        std::max(4.0f, keyHeight_ - 2.0f));
+        // FD-63, board "A + C": flat keys, one per row. A natural spans the lane, an accidental 44 of its 68 px; a dark
+        // line under each. The degree sits at the key's left, the C's octave name at its right.
+        const float accidentalW = std::round(b.width * (44.0f / 68.0f));
+        const float sink = 2.0f * press; // a pressed key's free end travels in by up to 2 px
+        NUIRect keyRect(b.x, y, (accidental ? accidentalW : b.width) - sink, keyHeight_);
 
         const auto restFill = hovered ? (accidental ? accidentalHover : naturalHover)
                                       : (accidental ? accidentalKey : naturalKey);
         const auto fill =
             press > 0.0f ? NUIColor::lerp(restFill, accidental ? accidentalPressed : naturalPressed, press) : restFill;
-        renderer.fillRoundedRect(keyRect, accidental ? 2.0f : 3.0f, fill);
-        if (!accidental) renderer.strokeRoundedRect(keyRect, 3.0f, 1.0f, separator);
-        if (press > 0.0f) {
-            // The lit tip: a bright edge where the key meets its grid row.
-            renderer.fillRoundedRect(NUIRect(keyRect.right() - 3.0f, keyRect.y + 1.0f, 2.0f, keyRect.height - 2.0f),
-                                     1.0f,
-                                     accent.lightened(0.25f).withAlpha(0.95f * press));
-        }
+        renderer.fillRect(keyRect, fill);
+        if (const float play = playLevel_[p]; play > 0.0f) renderer.fillRect(keyRect, accent.withAlpha(0.34f * play));
+        if (press > 0.0f)
+            renderer.fillRect(NUIRect(keyRect.right() - 2.0f, keyRect.y, 2.0f, keyRect.height), accent.lightened(0.25f).withAlpha(0.95f * press));
+        renderer.drawLine(NUIPoint(b.x, keyRect.bottom() - 0.5f), NUIPoint(b.right(), keyRect.bottom() - 0.5f), 1.0f,
+                          PianoRollLook::blackKey());
 
-        // Playing (SPEC 3 §5.1): a note of this pattern is under the playhead. A soft accent
-        // wash and a lit tip toward the grid row, quieter than a key the user presses.
-        if (const float play = playLevel_[p]; play > 0.0f) {
-            renderer.fillRoundedRect(keyRect, accidental ? 2.0f : 3.0f, accent.withAlpha(0.34f * play));
-            renderer.fillRoundedRect(NUIRect(keyRect.right() - 3.0f, keyRect.y + 1.0f, 2.0f, keyRect.height - 2.0f),
-                                     1.0f,
-                                     accent.lightened(0.2f).withAlpha(0.6f * play));
-        }
-
-        if (!accidental) {
-            renderer.drawLine(NUIPoint(keyRect.x, keyRect.bottom()),
-                              NUIPoint(keyRect.right(), keyRect.bottom()),
-                              1.0f,
-                              separator.withAlpha(0.52f));
-        }
-
-        if (keyHeight_ >= 15.0f && p % 12 == 0) {
-            const std::string label = getNoteLabel(p);
-            const float fontSize = 10.0f;
-            const auto textSize = renderer.measureText(label, fontSize);
-            const float textX = keyRect.right() - textSize.width - 8.0f;
-            const float textY = keyRect.y + (keyRect.height - textSize.height) * 0.5f;
-            renderer.drawText(label,
-                              NUIPoint(textX, textY),
-                              fontSize,
-                              naturalText);
-        }
-
-        // FD-63: a key in the scale shows its degree at its free end, the root's in the accent.
+        const float fontSize = 10.0f;
         if (keyHeight_ >= 12.0f) {
             if (const std::string degree = PianoRollLook::scaleDegreeLabel(p, rootKey_, scaleType_); !degree.empty()) {
-                const float fontSize = 9.0f;
                 const auto textSize = renderer.measureText(degree, fontSize);
-                const bool root = degree == "1";
-                const auto ink = root ? accent : (accidental ? naturalKey.withAlpha(0.7f) : naturalText.withAlpha(0.62f));
-                renderer.drawText(degree, NUIPoint(keyRect.x + 6.0f, keyRect.y + (keyRect.height - textSize.height) * 0.5f),
-                                  fontSize, ink);
+                renderer.drawText(degree, NUIPoint(keyRect.x + 5.0f, keyRect.y + (keyRect.height - textSize.height) * 0.5f),
+                                  fontSize, PianoRollLook::degreeInk(degree == "1", accidental));
             }
         }
-
-        if (p % 12 == 0) {
-            renderer.fillRoundedRect(NUIRect(b.x + 3.0f, y + 4.0f, 2.0f, std::max(2.0f, keyHeight_ - 8.0f)),
-                                     1.0f,
-                                     rootAccent);
+        if (keyHeight_ >= 12.0f && p % 12 == 0) {
+            const std::string label = getNoteLabel(p);
+            const auto textSize = renderer.measureText(label, fontSize);
+            renderer.drawText(label, NUIPoint(keyRect.right() - 5.0f - textSize.width,
+                                              keyRect.y + (keyRect.height - textSize.height) * 0.5f),
+                              fontSize, naturalText);
         }
     }
 

@@ -3,6 +3,7 @@
 #include "Helpers/TimelineGridRenderer.h"
 #include "Common/MusicHelpers.h"
 #include "Widgets/NUIPianoRollWidgets.h"
+#include "Widgets/PianoRollInspector.h"
 #include "Widgets/PianoRollWidgetShared.h"
 #include "../Support/NullRenderer.h"
 #include <algorithm>
@@ -674,8 +675,9 @@ static void test_ruler_draws_and_clears_a_loop_zone() {
     ASSERT(view.getLoopZone().has_value(), "Ctrl+left-drag on the ruler makes a zone");
     view.setTool(PianoRollTool::Pointer);
     const NUIRect grid = view.getGridBounds();
-    view.onMouseEvent(mouse(NUIMouseEventType::Down, NUIMouseButton::Left, grid.x + 40.0f, grid.y + 40.0f));
-    view.onMouseEvent(mouse(NUIMouseEventType::Up, NUIMouseButton::Left, grid.x + 40.0f, grid.y + 40.0f));
+    // At beat 0.25: outside the [1, 3) highlight whatever the grid's width (the FD-63 inspector narrows it).
+    view.onMouseEvent(mouse(NUIMouseEventType::Down, NUIMouseButton::Left, xAt(0.25), grid.y + 40.0f));
+    view.onMouseEvent(mouse(NUIMouseEventType::Up, NUIMouseButton::Left, xAt(0.25), grid.y + 40.0f));
     ASSERT(!view.getLoopZone(), "a Select-tool press on empty grid clears the zone");
 
     // A drag past the pattern end is clamped to it: past the end there is only silence to loop
@@ -782,9 +784,9 @@ static void test_velocity_lane_lines_up_with_the_grid() {
 
     const NUIRect grid = view.getGridBounds();
     const double ppb = static_cast<double>(grid.width) / view.getViewDurationBeats();
-    // Near the top of the lane (the panel is the view's bottom 112 px since FD-63 added Chance and
+    // Near the top of the lane (the panel is the view's bottom 132 px since FD-63 added Chance and
     // Ratchet; its value area runs from bottom - 8 up by height - 28), so a hit sets a high velocity.
-    const float laneY = 600.0f - 8.0f - (112.0f - 28.0f) * 0.9f;
+    const float laneY = 600.0f - 24.0f - 8.0f - (132.0f - 28.0f) * 0.9f; // above the 24 px status line
     auto press = [&](float x) {
         NUIMouseEvent down;
         down.type = NUIMouseEventType::Down;
@@ -1036,7 +1038,8 @@ static void test_alt_drag_copy_is_one_gesture_and_moves_only_the_clone() {
 class NoteBodyRecorder : public Aestra::Testing::NullRenderer {
 public:
     std::vector<NUIRect> strokes;
-    void fillRoundedRect(const NUIRect& r, float, const NUIColor&) override { strokes.push_back(r); } // flat notes are one fill (FD-48)
+    void fillRoundedRect(const NUIRect& r, float, const NUIColor&) override { strokes.push_back(r); }
+    void fillRect(const NUIRect& r, const NUIColor&) override { strokes.push_back(r); } // square notes since FD-63
 };
 
 static void test_alt_drag_clone_is_drawn_while_dragging() {
@@ -1230,12 +1233,69 @@ static void test_ratchet_lane_bands() {
     PASS("the ratchet lane steps x1..x4");
 }
 
+// FD-63: the inspector says what is selected and edits it, each change one commit (one undo step).
+static void test_inspector_summarizes_and_edits_the_selection() {
+    auto layer = std::make_shared<PianoRollNoteLayer>();
+    int commits = 0;
+    layer->setOnNotesChanged([&](const std::vector<MidiNote>&) { ++commits; });
+    std::vector<MidiNote> notes;
+    for (int i = 0; i < 4; ++i) notes.push_back({60 + i, 8.0 + i, 1.0, 0.5f + 0.1f * i, 0.0f, 0, i < 3, false, 1.0f});
+    notes[0].chance = 0.6f;
+    layer->setNotes(notes);
+
+    PianoRollInspector inspector;
+    inspector.setNoteLayer(layer);
+    inspector.setBeatsPerBar(4);
+    inspector.setBounds(NUIRect(1000.0f, 40.0f, PianoRollInspector::kWidth, 700.0f));
+    auto s = inspector.summarize();
+    ASSERT(s.count == 3, "three notes are selected");
+    ASSERT(s.firstBar == 3 && s.lastBar == 3, "they start in bar 3");
+    ASSERT(s.velocityMixed && s.chanceMixed && s.ratchet == 1, "velocity and chance differ; all are x1");
+
+    auto press = [&](float x, float y, bool down) {
+        NUIMouseEvent e;
+        e.type = down ? NUIMouseEventType::Down : NUIMouseEventType::Up;
+        e.button = NUIMouseButton::Left;
+        e.position = {x, y};
+        e.pressed = down;
+        e.released = !down;
+        return inspector.onMouseEvent(e);
+    };
+    const NUIRect x3 = inspector.ratchetButton(3);
+    press(x3.x + 4.0f, x3.y + 4.0f, true);
+    ASSERT(commits == 1, "a ratchet button is one commit");
+    s = inspector.summarize();
+    ASSERT(s.ratchet == 3, "the selection is x3");
+    ASSERT(layer->getNotes()[3].ratchet == 1, "the unselected note is untouched");
+
+    const NUIRect bar = inspector.velocityBar();
+    press(bar.x + bar.width * 0.25f, bar.y + 3.0f, true);
+    NUIMouseEvent move;
+    move.type = NUIMouseEventType::Move;
+    move.button = NUIMouseButton::None;
+    move.position = {bar.x + bar.width * 0.75f, bar.y + 3.0f};
+    inspector.onMouseEvent(move);
+    ASSERT(commits == 1, "a velocity drag commits nothing until release");
+    press(bar.x + bar.width * 0.75f, bar.y + 3.0f, false);
+    ASSERT(commits == 2, "the whole drag is one commit");
+    s = inspector.summarize();
+    ASSERT(!s.velocityMixed && std::abs(s.velocity - 0.75f) < 0.01f, "every selected note took the dragged velocity");
+
+    NUIMouseEvent passing;
+    passing.type = NUIMouseEventType::Move;
+    passing.button = NUIMouseButton::None;
+    passing.position = {1100.0f, 300.0f};
+    ASSERT(!inspector.onMouseEvent(passing), "a move passing over the column is not claimed (a drag elsewhere keeps it)");
+    PASS("the inspector summarizes and edits the selection, one commit per change");
+}
+
 int main() {
     std::cout << "=== PianoRollInteraction Unit Tests ===\n\n";
 
     test_alt_drag_clone_is_drawn_while_dragging();
     test_lane_value_edits_in_place_and_keeps_chord_order();
     test_ratchet_lane_bands();
+    test_inspector_summarizes_and_edits_the_selection();
 
     test_alt_drag_copy_is_one_gesture_and_moves_only_the_clone();
     test_drag_painted_notes_keep_the_dragged_length();
