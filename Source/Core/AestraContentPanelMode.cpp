@@ -150,7 +150,10 @@ void AestraContent::resetPanelPositions() {
 
 bool AestraContent::placeFullWindowPanel(Audio::WindowPanel& panel) {
     if (!panel.isFullWindow()) return false;
-    const AestraUI::NUIRect whole = getBounds();
+    // Owner, 31 Oct: under the transport, so play, stop, record and the position stay where the hand expects them;
+    // and over the browser, which the piano roll has no use for. The browser keeps its state underneath and is there
+    // as it was when the editor closes. (If the editor ever uses the browser, bound it beside it like the mixer.)
+    const AestraUI::NUIRect whole = computeSafeRect();
     const AestraUI::NUIRect now = panel.getBounds();
     if (now.x != whole.x || now.y != whole.y || now.width != whole.width || now.height != whole.height)
         panel.setBounds(whole);
