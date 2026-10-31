@@ -52,10 +52,11 @@ public:
     bool isRunning() const;
 
     /**
-     * @brief Execute every fully received request line on the caller's thread.
+     * @brief Execute received request lines on the caller's thread, at most 64 per call.
      *
      * Runs each through the service and queues the responses for the IO
-     * thread to deliver. Call from the main thread only.
+     * thread to deliver. Requests beyond the per-call bound stay queued for
+     * the next call. Call from the main thread only.
      * @return Number of requests processed.
      */
     size_t processPending(MuseService& service);
