@@ -66,6 +66,7 @@ PianoRollView::PianoRollView()
     m_toolbar = std::make_shared<PianoRollToolbar>();
     m_toolbar->setGrid(m_grid);
     m_toolbar->setNoteLayer(m_notes);
+    m_toolbar->setKeyLane(m_keys);
     m_toolbar->setPatternLengthBeats(m_patternLengthBeats);
     m_toolbar->setOnShowShortcutHelp([this]() {
         m_showShortcutHelp = !m_showShortcutHelp;

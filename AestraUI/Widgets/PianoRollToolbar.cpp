@@ -378,6 +378,7 @@ void PianoRollToolbar::setHarmonyContext(int rootKey, ScaleType scaleType, bool 
         notes->setScaleType(m_scaleType);
         notes->setSnapToScale(m_snapToScale);
     }
+    if (auto keys = keys_.lock()) keys->setScale(m_rootKey, m_scaleType);
     repaint();
 }
 

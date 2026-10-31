@@ -782,9 +782,9 @@ static void test_velocity_lane_lines_up_with_the_grid() {
 
     const NUIRect grid = view.getGridBounds();
     const double ppb = static_cast<double>(grid.width) / view.getViewDurationBeats();
-    // Near the top of the lane (the panel is the view's bottom 88 px; its value area
-    // runs from bottom - 8 up by height - 28), so a hit sets a high velocity.
-    const float laneY = 600.0f - 8.0f - (88.0f - 28.0f) * 0.9f;
+    // Near the top of the lane (the panel is the view's bottom 112 px since FD-63 added Chance and
+    // Ratchet; its value area runs from bottom - 8 up by height - 28), so a hit sets a high velocity.
+    const float laneY = 600.0f - 8.0f - (112.0f - 28.0f) * 0.9f;
     auto press = [&](float x) {
         NUIMouseEvent down;
         down.type = NUIMouseEventType::Down;
@@ -1194,9 +1194,14 @@ static void test_lane_value_edits_in_place_and_keeps_chord_order() {
     layer.setNotes(chord);
     const auto before = layer.getNotes();
 
-    ASSERT(layer.setLaneValue(2, false, 0.25f), "an in-range index is edited");
-    ASSERT(layer.setLaneValue(1, true, -0.5f), "pan is edited the same way");
-    ASSERT(!layer.setLaneValue(9, false, 0.1f) && !layer.setLaneValue(-1, false, 0.1f), "an out-of-range index is refused");
+    ASSERT(layer.setLaneValue(2, NoteLaneField::Velocity, 0.25f), "an in-range index is edited");
+    ASSERT(layer.setLaneValue(1, NoteLaneField::Pan, -0.5f), "pan is edited the same way");
+    ASSERT(!layer.setLaneValue(9, NoteLaneField::Velocity, 0.1f) && !layer.setLaneValue(-1, NoteLaneField::Velocity, 0.1f),
+           "an out-of-range index is refused");
+    // FD-63: chance and ratchet are lanes too, each clamped to what the engine plays.
+    ASSERT(layer.setLaneValue(0, NoteLaneField::Chance, 0.4f) && layer.setLaneValue(3, NoteLaneField::Ratchet, 3.2f),
+           "chance and ratchet are edited the same way");
+    ASSERT(layer.setLaneValue(3, NoteLaneField::Chance, 1.7f), "an out-of-range chance is accepted and clamped");
 
     const auto& after = layer.getNotes();
     bool sameOrder = after.size() == before.size();
@@ -1205,7 +1210,24 @@ static void test_lane_value_edits_in_place_and_keeps_chord_order() {
     ASSERT(after[2].velocity == 0.25f && after[2].pan == 0.0f, "the dragged note's velocity changed and nothing else on it");
     ASSERT(after[1].pan == -0.5f && after[1].velocity == 0.8f, "pan changed on its own note only");
     ASSERT(after[0].velocity == 0.8f && after[3].velocity == 0.8f, "the other notes are untouched");
+    ASSERT(after[0].chance == 0.4f && after[0].ratchet == 1, "chance changed on its own note only");
+    ASSERT(after[3].ratchet == 3 && after[3].chance == 1.0f, "a ratchet rounds to whole hits; chance clamps to 100%");
+    ASSERT(after[1].chance == 1.0f && after[2].ratchet == 1, "the others keep chance 100% and x1");
     PASS("a lane edit is in place and keeps chord order");
+}
+
+// FD-63: the Ratchet lane is four equal bands, x1 at the bottom to x4 at the top.
+static void test_ratchet_lane_bands() {
+    const float bottom = 100.0f, h = 80.0f;
+    ASSERT(ratchetFromPanelPosition(bottom, bottom, h) == 1, "the floor is x1");
+    ASSERT(ratchetFromPanelPosition(bottom - 19.0f, bottom, h) == 1, "the bottom quarter is x1");
+    ASSERT(ratchetFromPanelPosition(bottom - 21.0f, bottom, h) == 2, "the second quarter is x2");
+    ASSERT(ratchetFromPanelPosition(bottom - 61.0f, bottom, h) == 4, "the top quarter is x4");
+    ASSERT(ratchetFromPanelPosition(bottom - 500.0f, bottom, h) == 4 && ratchetFromPanelPosition(bottom + 50.0f, bottom, h) == 1,
+           "above and below the lane clamp to x4 and x1");
+    ASSERT(ratchetToPanelHeight(1, h) == 20.0f && ratchetToPanelHeight(4, h) == 80.0f && ratchetToPanelHeight(9, h) == 80.0f,
+           "a stem is a quarter of the lane per hit, at most x4");
+    PASS("the ratchet lane steps x1..x4");
 }
 
 int main() {
@@ -1213,6 +1235,7 @@ int main() {
 
     test_alt_drag_clone_is_drawn_while_dragging();
     test_lane_value_edits_in_place_and_keeps_chord_order();
+    test_ratchet_lane_bands();
 
     test_alt_drag_copy_is_one_gesture_and_moves_only_the_clone();
     test_drag_painted_notes_keep_the_dragged_length();

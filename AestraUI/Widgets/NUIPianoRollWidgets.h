@@ -5,7 +5,10 @@
 #include "NUIScrollbar.h" // Include Scrollbar
 #include "../Platform/NUICursorStyle.h"
 #include "../Core/NUIHoverCursorClaim.h"
+#include <algorithm>
 #include <array>
+#include <cmath>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -91,8 +94,17 @@ public:
 
     /** Seconds a key takes to ease back to rest after its note stops playing. */
     static constexpr float kPlayReleaseSeconds = 0.16f;
+    /** @brief The key and scale, so each key in it shows its scale degree (FD-63). */
+    void setScale(int rootKey, ScaleType scaleType) {
+        if (rootKey_ == rootKey && scaleType_ == scaleType) return;
+        rootKey_ = rootKey;
+        scaleType_ = scaleType;
+        repaint();
+    }
 
 private:
+    int rootKey_ = 0;
+    ScaleType scaleType_ = ScaleType::Chromatic;
     float keyHeight_;
     float scrollY_;
     int hoveredKey_; // -1 if none
@@ -269,6 +281,8 @@ public:
     void setGrid(std::shared_ptr<PianoRollGrid> grid);
     /** @brief Bind the note layer controlled by the toolbar tools. */
     void setNoteLayer(std::shared_ptr<PianoRollNoteLayer> notes); // To set tools directly
+    /** @brief Bind the key lane, which labels the scale's keys with their degrees. */
+    void setKeyLane(std::shared_ptr<PianoRollKeyLane> keys) { keys_ = std::move(keys); }
     void setPatternLengthBeats(double beats);
     /** @brief The editing unit's colour, shown as a chip beside the unit name. */
     void setUnitColor(const NUIColor& color) { m_unitColor = color; repaint(); }
@@ -350,6 +364,7 @@ private:
 
     std::weak_ptr<PianoRollGrid> grid_;
     std::weak_ptr<PianoRollNoteLayer> notes_;
+    std::weak_ptr<PianoRollKeyLane> keys_;
     
     std::shared_ptr<NUIComponent> m_activeContextMenu;
     std::function<void(int barsDelta)> onAdjustPatternLength_;
@@ -455,6 +470,9 @@ private:
 
 class NUIPlatformBridge;
 
+/// The per-note values the lane under the piano roll edits (FD-63 adds Chance and Ratchet).
+enum class NoteLaneField : uint8_t { Velocity, Chance, Ratchet, Pan };
+
 // -----------------------------------------------------------------------------
 // PianoRollNoteLayer: Handles Rendering and Editing of Notes
 // Contains Logic for: Painting, Selecting, Moving, Resizing
@@ -484,11 +502,18 @@ public:
 
     /** @brief Replace the currently edited note list. */
     void setNotes(const std::vector<MidiNote>& notes);
-    /// One note's velocity or pan, edited in place: no copy of the list and no re-sort, so a lane drag costs the same on a
-    /// thousand notes as on ten, and notes that start together (a chord) keep their order under the dragged index.
-    bool setLaneValue(int index, bool pan, float value) {
+    /// One note's lane value (velocity, chance, ratchet or pan), edited in place: no copy of the list and no re-sort, so
+    /// a lane drag costs the same on a thousand notes as on ten, and notes that start together (a chord) keep their order
+    /// under the dragged index.
+    bool setLaneValue(int index, NoteLaneField field, float value) {
         if (index < 0 || static_cast<size_t>(index) >= notes_.size()) return false;
-        (pan ? notes_[index].pan : notes_[index].velocity) = value;
+        auto& n = notes_[static_cast<size_t>(index)];
+        switch (field) {
+        case NoteLaneField::Velocity: n.velocity = value; break;
+        case NoteLaneField::Chance: n.chance = std::clamp(value, 0.0f, 1.0f); break;
+        case NoteLaneField::Ratchet: n.ratchet = static_cast<uint8_t>(std::clamp(static_cast<int>(std::lround(value)), 1, 4)); break;
+        case NoteLaneField::Pan: n.pan = value; break;
+        }
         lastCommitWasVelocityScrub_ = false;
         repaint();
         return true;
@@ -811,7 +836,7 @@ private:
 class PianoRollControlPanel : public NUIComponent {
 public:
     /** @brief Which per-note property the lane draws and edits. */
-    enum class LaneMode : uint8_t { Velocity, Pan };
+    using LaneMode = NoteLaneField;
 
     PianoRollControlPanel();
 
@@ -994,7 +1019,7 @@ private:
     float m_rulerHeight;
     // Spec 2 §6: the velocity/pan lane was 116px of mostly empty space under the
     // grid. Still splitter-resizable; this is only where it starts.
-    float m_controlPanelHeight = 88.0f;
+    float m_controlPanelHeight = 112.0f; // FD-63: tall enough for Velocity, Chance, Ratchet and Pan
     
     float m_pixelsPerBeat;
     float m_keyHeight;

@@ -16,6 +16,9 @@ struct MidiNote {
     bool selected = false;
     bool isDeleted = false; // For delete animation
     mutable float animationScale = 1.0f; // For animations
+    // Last, so brace-initialised notes elsewhere keep their meaning (FD-63).
+    float chance = 1.0f; // probability the note plays on a pass (1 = always); the engine's MidiNote::chance
+    uint8_t ratchet = 1; // hits the note is split into (1..4); the engine's MidiNote::ratchet
 };
 
 // Global Tools available on the Transport Bar

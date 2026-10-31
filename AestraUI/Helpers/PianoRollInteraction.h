@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <vector>
 
@@ -88,6 +89,15 @@ float velocityFromPanelPosition(float pointerY, float bottomY, float availableHe
  * Convert a normalized MidiNote velocity to a rendered lane height.
  */
 float velocityToPanelHeight(float velocity, float availableHeight);
+
+/**
+ * The ratchet a pointer height picks in the Ratchet lane (FD-63): the lane is four equal bands, x1 at the bottom to x4
+ * at the top, so a drag steps through them.
+ */
+uint8_t ratchetFromPanelPosition(float pointerY, float bottomY, float availableHeight);
+
+/** The stem height of a ratchet: x1 is a quarter of the lane, x4 all of it. */
+float ratchetToPanelHeight(int ratchet, float availableHeight);
 
 /**
  * Check if a note should be considered for interaction (not deleted).

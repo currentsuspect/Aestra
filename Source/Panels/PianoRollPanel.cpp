@@ -347,6 +347,8 @@ void PianoRollPanel::loadPattern(PatternID patternId) {
             uiNote.durationBeats = vn.durationBeats;
             uiNote.velocity = vn.velocity;
             uiNote.pan = vn.pan;
+            uiNote.chance = vn.chance;
+            uiNote.ratchet = vn.ratchet;
             uiNote.unitId = vn.unitId;
             uiNote.selected = false;
             uiNote.isDeleted = false;
@@ -415,6 +417,8 @@ void PianoRollPanel::savePattern() {
         backendNote.durationBeats = uiNote.durationBeats;
         backendNote.velocity = uiNote.velocity;
         backendNote.pan = uiNote.pan;
+        backendNote.chance = uiNote.chance;
+        backendNote.ratchet = uiNote.ratchet;
         backendNote.unitId = uiNote.unitId != 0 ? uiNote.unitId : m_editingUnitId;
         currentNotes.push_back(backendNote);
     }
@@ -491,7 +495,7 @@ void PianoRollPanel::savePattern() {
         }
         for (const auto& [oldNote, newNote] : diff.modified) {
             commands.push_back(std::make_shared<UpdateNoteCommand>(pm, m_currentPatternId, oldNote, newNote.velocity,
-                                                                   newNote.pan));
+                                                                   newNote.pan, newNote.chance, newNote.ratchet));
         }
         for (const auto& note : diff.added) {
             commands.push_back(std::make_shared<AddNoteCommand>(pm, m_currentPatternId, note));

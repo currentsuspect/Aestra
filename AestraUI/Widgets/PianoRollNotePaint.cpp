@@ -5,6 +5,7 @@
 #include "PianoRollLook.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace AestraUI {
 
@@ -14,10 +15,19 @@ void PianoRollNoteLayer::paintNote(NUIRenderer& renderer, const NUIRect& r, cons
     state.selected = n.selected;
     state.hovered = hovered;
     state.sounding = sounding;
-    const NUIColor fill = PianoRollLook::noteFill(noteColor_, state);
-
-    // Flat and opaque, like a clip: no shadow, no gradient, no alpha by velocity (the velocity lane says that).
+    // Flat and opaque, like a clip: no shadow, no gradient. FD-63: shaded by velocity, then lifted by state.
+    const NUIColor fill = PianoRollLook::noteFill(PianoRollLook::velocityFill(noteColor_, n.velocity), state);
     renderer.fillRoundedRect(r, 2.0f, fill);
+
+    // A note that may not play is striped; a ratchet is ticked where its hits split the note.
+    if (n.chance < 0.995f) {
+        const NUIColor stripe = PianoRollLook::chanceStripe(fill);
+        const NUIRect inner(r.x + 1.0f, r.y + 1.0f, r.width - 2.0f, r.height - 2.0f);
+        for (const auto& s : PianoRollLook::chanceStripes(inner)) renderer.drawLine(s.a, s.b, 2.5f, stripe);
+    }
+    for (const float x : PianoRollLook::ratchetTicks(r, n.ratchet))
+        renderer.fillRect(NUIRect(std::round(x) - 1.0f, r.y, 2.0f, r.height), NUIColor(0.0f, 0.0f, 0.0f, 0.85f));
+
     if (n.selected) renderer.strokeRoundedRect(r, 2.0f, 1.0f, NUIColor::white().withAlpha(0.95f));
 
     // Selected notes keep their resize grips; the edge under the pointer goes full white.
@@ -34,10 +44,11 @@ void PianoRollNoteLayer::paintNote(NUIRenderer& renderer, const NUIRect& r, cons
         }
     }
 
-    // The pitch name inside, when there is room for it.
+    // Inside, when there is room: the note's chance and ratchet if it has them ("60%", "×3"), else its pitch.
     constexpr float kMinWidthForLabel = 22.0f;
     if (rawWidth >= kMinWidthForLabel) {
-        const std::string label = MusicTheory::getPitchName(n.pitch);
+        std::string label = PianoRollLook::expressionTag(n.chance, n.ratchet);
+        if (label.empty()) label = MusicTheory::getPitchName(n.pitch);
         constexpr float kFontSize = 10.0f;
         const auto measured = renderer.measureText(label, kFontSize);
         const float labelX = r.x + 6.0f;
