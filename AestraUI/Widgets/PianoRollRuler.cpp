@@ -161,6 +161,17 @@ void PianoRollRuler::onRender(NUIRenderer& renderer) {
         }
     }
 
+    // Quiet mode (FD-63): a violet dot after the bar number says Muse has an idea for that bar. Tab shows it.
+    if (museMarkBeat_ >= 0.0) {
+        const float bx = bounds.x + static_cast<float>(museMarkBeat_ * pixelsPerBeat_) - scrollX_;
+        const int barNo = static_cast<int>(museMarkBeat_ / std::max(1, beatsPerBar_)) + 1;
+        const float cx = bx + 8.0f + renderer.measureText(std::to_string(barNo), 12.0f).width + 10.0f;
+        if (cx > bounds.x && cx < bounds.right()) {
+            renderer.fillCircle(NUIPoint(cx, bounds.y + 13.0f), 7.0f, NUIColor::fromHex(0xa78bfa).withAlpha(0.18f));
+            renderer.fillCircle(NUIPoint(cx, bounds.y + 13.0f), 4.0f, NUIColor::fromHex(0xa78bfa));
+        }
+    }
+
     const float playheadX =
         snapVerticalLineX(beatToScreenX(playheadBeat_, pixelsPerBeat_, scrollX_, bounds.x));
     if (playheadX >= bounds.x && playheadX <= bounds.right()) {

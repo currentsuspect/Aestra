@@ -46,6 +46,15 @@ struct PianoRollKeyGuess {
     bool minor = false;
 };
 
+/// Muse in the piano roll (FD-63). v0.8.3 ships Quiet and Off; On (ideas drawn without asking) comes with learning.
+enum class MuseMode : uint8_t { Off, Quiet };
+
+/// One next-bar idea from Muse, as notes to preview and keep.
+struct PianoRollIdea {
+    std::string label;          ///< "Answer bar 2, a step up"
+    std::vector<MidiNote> notes; ///< absolute beats, inside the idea's bar
+};
+
 /// "A4 = 3rd of F": what a pitch is in a chord, or empty when it is not one of its tones.
 std::string chordToneRole(int pitch, const PianoRollChord& chord);
 
@@ -245,9 +254,12 @@ public:
         repaint();
     }
 
+    /** @brief Quiet mode's mark (FD-63): a violet dot on the bar an idea is ready for; a negative beat hides it. */
+    void setMuseMark(double barStartBeat) { if (museMarkBeat_ == barStartBeat) return; museMarkBeat_ = barStartBeat; repaint(); }
     /** @brief The chords to name under the bar numbers (FD-63 harmony ruler). */
     void setChords(const std::vector<PianoRollChord>* chords) { chords_ = chords; repaint(); }
 private:
+    double museMarkBeat_ = -1.0;
     const std::vector<PianoRollChord>* chords_ = nullptr; ///< owned by the view
     float scrollX_; // REORDERED
     float pixelsPerBeat_; // REORDERED
@@ -381,6 +393,10 @@ private:
     // a fixed snap from the menu. Picking Smart again hands it back to the zoom.
     bool m_smartSnap = true;
     PianoRollKeyGuess m_detectedKey;
+    MuseMode m_museMode = MuseMode::Quiet; // FD-68: experienced producers start Quiet, never Off
+    std::shared_ptr<NUIButton> m_museQuietBtn;
+    std::shared_ptr<NUIButton> m_museOffBtn;
+    std::function<void(MuseMode)> onMuseModeChanged_;
     void pushDisplayScale(); ///< grid and keys show the set key, or the detected one when none is set
     float m_smartPixelsPerBeat = 66.0f;
     int m_smartBeatsPerBar = 4;
@@ -390,6 +406,10 @@ public:
     bool isSmartSnap() const { return m_smartSnap; }
     void setSmartSnap(bool on);
     SnapGrid getSnap() const { return m_currentSnap; }
+    /** @brief Muse's mode in the header switch (FD-63); the callback fires on the producer's change. */
+    void setMuseMode(MuseMode mode) { if (m_museMode == mode) return; m_museMode = mode; repaint(); }
+    MuseMode getMuseMode() const { return m_museMode; }
+    void setOnMuseModeChanged(std::function<void(MuseMode)> cb) { onMuseModeChanged_ = std::move(cb); }
     /** @brief The key the notes suggest; shown, and used for the rows and degrees, while no key is set (FD-67). */
     void setDetectedKey(const PianoRollKeyGuess& key);
     /** @brief A fixed snap, as if picked from the menu: Smart Snap steps aside. */
@@ -577,6 +597,18 @@ public:
     }
     /** @brief Get the currently edited note list. */
     const std::vector<MidiNote>& getNotes() const { return notes_; }
+    /// Add notes as one committed edit, selected, the rest deselected (a kept Muse idea is one undo step, FD-63).
+    void appendNotes(const std::vector<MidiNote>& added) {
+        if (added.empty()) return;
+        for (auto& n : notes_) n.selected = false;
+        for (MidiNote n : added) {
+            n.selected = true;
+            n.isDeleted = false;
+            notes_.push_back(n);
+        }
+        commitNotes();
+        repaint();
+    }
     
     /** @brief Set ghost patterns rendered behind the active notes. */
     void setGhostPatterns(const std::vector<GhostPattern>& ghosts);
@@ -1039,6 +1071,16 @@ public:
     void frameNotesVertically();
 
     void setPixelsPerBeat(float ppb);
+    /** @brief Muse's next-bar ideas (FD-63 Quiet): a dot on the ruler; Tab previews, Tab keeps, ⇧Tab next, Esc drops. */
+    void setMuseIdeas(double barStartBeat, std::vector<PianoRollIdea> ideas);
+    void clearMuseIdeas();
+    const std::vector<PianoRollIdea>& getMuseIdeas() const { return m_ideas; }
+    int getPreviewedIdea() const { return m_previewIdea; }
+    void previewIdea(int index);
+    bool keepPreviewedIdea();
+    void setMuseMode(MuseMode mode);
+    MuseMode getMuseMode() const;
+    void setOnMuseModeChanged(std::function<void(MuseMode)> cb) { m_onMuseModeChanged = std::move(cb); }
     /** @brief What the harmony service found in this pattern: chords for the ruler and the grid, and the key. */
     void setHarmony(std::vector<PianoRollChord> chords, const PianoRollKeyGuess& key);
     const std::vector<PianoRollChord>& getChords() const { return m_chords; }
@@ -1075,6 +1117,12 @@ private:
     std::shared_ptr<class PianoRollInspector> m_inspector; // FD-63: the selection column at the right
     int m_statusPitch = -1; ///< the key under the pointer, for the status line
     std::vector<PianoRollChord> m_chords; ///< the ruler and grid point at this
+    std::vector<PianoRollIdea> m_ideas;   ///< Muse's ideas for the bar at m_ideaBar
+    double m_ideaBar = -1.0;
+    int m_previewIdea = -1;               ///< the idea drawn dashed in the grid, or -1
+    std::function<void(MuseMode)> m_onMuseModeChanged;
+    void renderMusePreview(NUIRenderer& renderer);
+    void syncMuseSurfaces();              ///< ruler dot, inspector list
     void renderStatusLine(NUIRenderer& renderer);
     std::shared_ptr<PianoRollMinimap> m_minimap;
     std::optional<std::pair<double, double>> m_loopZone;

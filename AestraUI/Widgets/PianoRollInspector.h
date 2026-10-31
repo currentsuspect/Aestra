@@ -7,7 +7,9 @@
 
 #include "NUIComponent.h"
 #include "../Common/MusicHelpers.h"
+#include "NUIPianoRollWidgets.h"
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -22,6 +24,16 @@ public:
 
     void setNoteLayer(std::shared_ptr<PianoRollNoteLayer> layer) { layer_ = layer; repaint(); }
     void setBeatsPerBar(int bpb) { beatsPerBar_ = bpb < 1 ? 1 : bpb; }
+    /// Muse's section (board A + C "MUSE · NEXT BAR"): the ideas for the next bar, the one previewed, what it listens to.
+    void setMuse(const std::vector<PianoRollIdea>* ideas, int previewed, MuseMode mode, std::string listeningTo) {
+        ideas_ = ideas;
+        previewed_ = previewed;
+        museMode_ = mode;
+        listeningTo_ = std::move(listeningTo);
+        repaint();
+    }
+    void setOnIdeaClicked(std::function<void(int)> cb) { onIdeaClicked_ = std::move(cb); }
+    NUIRect ideaButton(int index) const; ///< the idea's row in the Muse section (public for tests)
 
     void onRender(NUIRenderer& renderer) override;
     void onUpdate(double deltaTime) override;
@@ -61,6 +73,11 @@ private:
     Drag drag_ = Drag::None;
     std::vector<MidiNote> dragBefore_;
     Summary lastShown_;
+    const std::vector<PianoRollIdea>* ideas_ = nullptr;
+    int previewed_ = -1;
+    MuseMode museMode_ = MuseMode::Quiet;
+    std::string listeningTo_;
+    std::function<void(int)> onIdeaClicked_;
 };
 
 } // namespace AestraUI

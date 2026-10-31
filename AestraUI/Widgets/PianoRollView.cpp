@@ -71,6 +71,11 @@ PianoRollView::PianoRollView()
     m_toolbar->setGrid(m_grid);
     m_toolbar->setNoteLayer(m_notes);
     m_toolbar->setKeyLane(m_keys);
+    m_toolbar->setOnMuseModeChanged([this](MuseMode mode) {
+        if (mode == MuseMode::Off) clearMuseIdeas();
+        syncMuseSurfaces();
+        if (m_onMuseModeChanged) m_onMuseModeChanged(mode);
+    });
     m_toolbar->setPatternLengthBeats(m_patternLengthBeats);
     m_toolbar->setOnShowShortcutHelp([this]() {
         m_showShortcutHelp = !m_showShortcutHelp;
@@ -79,6 +84,7 @@ PianoRollView::PianoRollView()
 
     m_controls->setNoteLayer(m_notes);
     m_inspector->setNoteLayer(m_notes);
+    m_inspector->setOnIdeaClicked([this](int i) { previewIdea(i); });
     
     m_minimap = std::make_shared<PianoRollMinimap>(); // Local Minimap
     
@@ -200,6 +206,7 @@ void PianoRollView::onRender(NUIRenderer& renderer) {
     renderer.setClipRect(bounds);
     NUIComponent::onRender(renderer);
     renderer.clearClipRect();
+    renderMusePreview(renderer);
     renderStatusLine(renderer);
 
     // Draw playhead
@@ -717,6 +724,18 @@ bool PianoRollView::onKeyEvent(const NUIKeyEvent& event) {
         repaint();
         return true;
     }
+    // Muse (FD-63 Quiet): with ideas ready, Tab shows the first, Tab again keeps it (one undo step), Shift+Tab shows
+    // the next, Esc drops them. Nothing lands in the pattern until it is kept.
+    if (event.pressed && event.keyCode == NUIKeyCode::Tab && !m_ideas.empty() && getMuseMode() != MuseMode::Off) {
+        if (event.modifiers & NUIModifiers::Shift) previewIdea(m_previewIdea < 0 ? 0 : m_previewIdea + 1);
+        else if (m_previewIdea < 0) previewIdea(0);
+        else keepPreviewedIdea();
+        return true;
+    }
+    if (event.pressed && event.keyCode == NUIKeyCode::Escape && m_previewIdea >= 0) {
+        clearMuseIdeas();
+        return true;
+    }
     // Esc is the exit: it clears the loop zone, and the note layer still gets it (deselect).
     if (event.pressed && event.keyCode == NUIKeyCode::Escape && m_loopZone) {
         applyLoopZone(std::nullopt, true);
@@ -836,6 +855,112 @@ void PianoRollView::setHarmony(std::vector<PianoRollChord> chords, const PianoRo
     if (m_grid) m_grid->setChords(&m_chords);
     if (m_toolbar) m_toolbar->setDetectedKey(key);
     repaint();
+}
+
+void PianoRollView::setMuseIdeas(double barStartBeat, std::vector<PianoRollIdea> ideas) {
+    if (getMuseMode() == MuseMode::Off) ideas.clear();
+    m_ideaBar = ideas.empty() ? -1.0 : barStartBeat;
+    m_ideas = std::move(ideas);
+    m_previewIdea = -1;
+    syncMuseSurfaces();
+    repaint();
+}
+
+void PianoRollView::clearMuseIdeas() { setMuseIdeas(-1.0, {}); }
+
+void PianoRollView::previewIdea(int index) {
+    if (m_ideas.empty()) return;
+    const int n = static_cast<int>(m_ideas.size());
+    m_previewIdea = ((index % n) + n) % n;
+    syncMuseSurfaces();
+    repaint();
+}
+
+bool PianoRollView::keepPreviewedIdea() {
+    if (m_previewIdea < 0 || m_previewIdea >= static_cast<int>(m_ideas.size())) return false;
+    const auto notes = m_ideas[static_cast<size_t>(m_previewIdea)].notes;
+    clearMuseIdeas();
+    m_notes->appendNotes(notes); // one committed edit: one undo step
+    return true;
+}
+
+void PianoRollView::setMuseMode(MuseMode mode) {
+    if (m_toolbar) m_toolbar->setMuseMode(mode);
+    if (mode == MuseMode::Off) clearMuseIdeas();
+    syncMuseSurfaces();
+}
+
+MuseMode PianoRollView::getMuseMode() const { return m_toolbar ? m_toolbar->getMuseMode() : MuseMode::Quiet; }
+
+void PianoRollView::syncMuseSurfaces() {
+    if (m_ruler) m_ruler->setMuseMark(m_previewIdea < 0 && !m_ideas.empty() ? m_ideaBar : -1.0);
+    if (m_inspector) {
+        std::string listening;
+        if (!m_ideas.empty()) {
+            listening = "this pattern";
+            for (const auto& c : m_chords)
+                if (m_ideaBar >= c.startBeat && m_ideaBar < c.endBeat) listening += ", " + c.name;
+            listening += ", your last bar.";
+        }
+        m_inspector->setMuse(&m_ideas, m_previewIdea, getMuseMode(), listening);
+    }
+}
+
+// The previewed idea (board A + C): the bar washed violet, its notes dashed and filled faintly, and the pill that says
+// what it is and how to keep it. Drawn over the grid, never into the pattern.
+void PianoRollView::renderMusePreview(NUIRenderer& renderer) {
+    if (m_previewIdea < 0 || m_previewIdea >= static_cast<int>(m_ideas.size()) || !m_grid) return;
+    const auto& idea = m_ideas[static_cast<size_t>(m_previewIdea)];
+    const NUIRect g = m_grid->getBounds();
+    const auto violet = NUIColor::fromHex(0x7c3aed);
+    const auto line = NUIColor::fromHex(0xa78bfa);
+    renderer.setClipRect(g);
+    const float bx = g.x + static_cast<float>(m_ideaBar * m_pixelsPerBeat) - m_scrollX;
+    const float bw = static_cast<float>(m_beatsPerBar) * m_pixelsPerBeat;
+    renderer.fillRect(NUIRect(bx, g.y, bw * 0.5f, g.height), violet.withAlpha(0.10f));
+    renderer.fillRect(NUIRect(bx + bw * 0.5f, g.y, bw * 0.5f, g.height), violet.withAlpha(0.05f));
+    const auto dashed = [&](const NUIRect& r) {
+        for (float x = r.x; x < r.right(); x += 7.0f) {
+            const float w = std::min(4.0f, r.right() - x);
+            renderer.fillRect(NUIRect(x, r.y, w, 1.0f), line);
+            renderer.fillRect(NUIRect(x, r.bottom() - 1.0f, w, 1.0f), line);
+        }
+        for (float y = r.y; y < r.bottom(); y += 7.0f) {
+            const float h = std::min(4.0f, r.bottom() - y);
+            renderer.fillRect(NUIRect(r.x, y, 1.0f, h), line);
+            renderer.fillRect(NUIRect(r.right() - 1.0f, y, 1.0f, h), line);
+        }
+    };
+    int top = -1;
+    float topY = g.bottom();
+    for (const auto& n : idea.notes) {
+        const float x = g.x + static_cast<float>(n.startBeat * m_pixelsPerBeat) - m_scrollX;
+        const float y = g.y + (127 - n.pitch) * m_keyHeight - m_scrollY;
+        const NUIRect r(x, y + 1.0f, std::max(4.0f, static_cast<float>(n.durationBeats * m_pixelsPerBeat) - 1.0f), m_keyHeight - 2.0f);
+        renderer.fillRect(r, violet.withAlpha(0.22f));
+        dashed(r);
+        if (y < topY) { topY = y; top = n.pitch; }
+    }
+    // The pill, above the idea's highest note, ending at the bar's left edge when it fits there.
+    const std::string head = "Idea " + std::to_string(m_previewIdea + 1) + " of " + std::to_string(m_ideas.size());
+    const std::string keys = "Tab keep \xC2\xB7 \xE2\x87\xA7Tab next \xC2\xB7 Esc";
+    const float fs = 11.0f;
+    const float w = renderer.measureText(head, fs).width + renderer.measureText(idea.label, fs).width +
+                    renderer.measureText(keys, fs).width + 20.0f * 2.0f + 20.0f;
+    float px = std::clamp(bx - 8.0f - w, g.x + 4.0f, g.right() - w - 4.0f);
+    if (px + w > bx && bx - w - 8.0f < g.x) px = std::min(bx + 8.0f, g.right() - w - 4.0f);
+    const float py = std::clamp(top >= 0 ? topY - 30.0f : g.y + 8.0f, g.y + 4.0f, g.bottom() - 30.0f);
+    const NUIRect pill(px, py, w, 26.0f);
+    renderer.fillRect(pill, NUIColor::fromHex(0x1c1530));
+    renderer.strokeRect(pill, 1.0f, violet);
+    float tx = pill.x + 10.0f;
+    const float ty = renderer.calculateTextY(pill, fs);
+    renderer.drawText(head, NUIPoint(tx, ty), fs, line);
+    tx += renderer.measureText(head, fs).width + 20.0f;
+    renderer.drawText(idea.label, NUIPoint(tx, ty), fs, NUIColor::fromHex(0xeee9e1));
+    tx += renderer.measureText(idea.label, fs).width + 20.0f;
+    renderer.drawText(keys, NUIPoint(tx, ty), fs, NUIColor::fromHex(0xaca397));
+    renderer.clearClipRect();
 }
 
 void PianoRollView::setSnap(SnapGrid snap) {
