@@ -3003,10 +3003,7 @@ void TrackUIComponent::drawLiveWaveform(AestraUI::NUIRenderer& renderer, const A
     if (!m_trackManager || !m_trackManager->isRecording()) return;
     auto* lane = m_trackManager->getPlaylistModel().getLane(m_laneId);
     auto* track = lane ? m_trackManager->getTrack(lane->trackId) : nullptr;
-    if (!track || !track->armed) return;
-    // The take lands on the armed lane, so that is the lane that shows it growing. Every other lane of the track (take
-    // lanes from earlier passes, its automation row) used to draw a copy of the same red wave over its own clips.
-    if (m_isAutomationRow || lane->id != track->activeLaneId) return;
+    if (!track || !track->armed || m_isAutomationRow || lane->id != track->activeLaneId) return; // only the lane the take lands on
 
     // Bounded decimated read (#846/#849): min/max pairs instead of copying
     // the whole capture ring every frame (~3 MB/track at default limits).
