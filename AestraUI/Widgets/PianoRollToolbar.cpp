@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "NUIPianoRollWidgets.h"
+#include "../Helpers/PianoRollInteraction.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include "PianoRollWidgetShared.h"
@@ -57,6 +58,7 @@ void PianoRollToolbar::setupUI() {
         
         // --- SNAP SUBMENU ---
         auto snapMenu = std::make_shared<NUIContextMenu>();
+        snapMenu->addItem("Smart (follows the zoom)", [this]() { setSmartSnap(true); });
         auto snaps = MusicTheory::getSnapOptions();
         for (auto snap : snaps) {
             snapMenu->addItem(MusicTheory::getSnapName(snap), [this, snap]() {
@@ -349,13 +351,37 @@ void PianoRollToolbar::openChoiceMenu(const NUIRect& anchor, const std::vector<P
 }
 
 void PianoRollToolbar::openSnapMenu() {
-    std::vector<PatternChoice> snaps;
+    constexpr int kSmart = -1;
+    std::vector<PatternChoice> snaps{{kSmart, "Smart (follows the zoom)"}};
     for (auto snap : MusicTheory::getSnapOptions()) snaps.push_back({static_cast<int>(snap), MusicTheory::getSnapName(snap)});
-    openChoiceMenu(m_snapBtn->getBounds(), snaps, static_cast<int>(m_currentSnap), "piano-roll-snap",
-                   [this](int v) { applySnap(static_cast<SnapGrid>(v)); });
+    openChoiceMenu(m_snapBtn->getBounds(), snaps, m_smartSnap ? kSmart : static_cast<int>(m_currentSnap), "piano-roll-snap",
+                   [this](int v) {
+                       if (v == kSmart) setSmartSnap(true);
+                       else applySnap(static_cast<SnapGrid>(v));
+                   });
 }
 
+void PianoRollToolbar::setZoomForSmartSnap(float pixelsPerBeat, int beatsPerBar) {
+    m_smartPixelsPerBeat = pixelsPerBeat;
+    m_smartBeatsPerBar = beatsPerBar;
+    if (!m_smartSnap) return;
+    const SnapGrid wanted = smartSnapFor(pixelsPerBeat, beatsPerBar);
+    if (wanted != m_currentSnap) setSnapNow(wanted);
+}
+
+void PianoRollToolbar::setSmartSnap(bool on) {
+    m_smartSnap = on;
+    if (on) setSnapNow(smartSnapFor(m_smartPixelsPerBeat, m_smartBeatsPerBar));
+    repaint();
+}
+
+// A snap the producer picked: Smart Snap steps aside until they pick Smart again.
 void PianoRollToolbar::applySnap(SnapGrid snap) {
+    m_smartSnap = false;
+    setSnapNow(snap);
+}
+
+void PianoRollToolbar::setSnapNow(SnapGrid snap) {
     m_currentSnap = snap;
     if (auto g = grid_.lock()) g->setSnap(snap);
     if (auto n = notes_.lock()) n->setSnap(snap);
@@ -552,7 +578,9 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
         renderer.drawText(value, NUIPoint(r.x + 8.0f, textY(r, fs)), fs, valueColor);
         x += w + 14.0f;
     };
-    valueBox("Snap", MusicTheory::getSnapName(m_currentSnap), m_snapBtn, text);
+    // Smart Snap shows its guess: "Smart · 1/4 Beat" (FD-67: a guess is visible).
+    valueBox("Snap", m_smartSnap ? "Smart \xC2\xB7 " + MusicTheory::getSnapName(m_currentSnap) : MusicTheory::getSnapName(m_currentSnap),
+             m_snapBtn, text);
     const bool keyed = m_scaleType != ScaleType::Chromatic;
     const std::string key = keyed ? MusicTheory::getRootNames()[std::clamp(m_rootKey, 0, 11)] + " " +
                                         MusicTheory::getScales()[static_cast<size_t>(m_scaleType)].name
