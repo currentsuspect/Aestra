@@ -22,7 +22,7 @@ void check(bool ok, const char* name) {
         ++g_failures;
 }
 
-bool near(double a, double b) {
+bool closeTo(double a, double b) {
     return std::fabs(a - b) < 1e-9;
 }
 
@@ -35,9 +35,9 @@ void testSwipeInsideReplacesOnlyItsSpan() {
     comp.set(0, 16, A);
     comp.set(4, 8, B);
     const auto& r = comp.ranges();
-    check(r.size() == 3 && r[0].laneId == A && near(r[0].startBeat, 0) && near(r[0].endBeat, 4) && r[1].laneId == B &&
-              near(r[1].startBeat, 4) && near(r[1].endBeat, 8) && r[2].laneId == A && near(r[2].startBeat, 8) &&
-              near(r[2].endBeat, 16),
+    check(r.size() == 3 && r[0].laneId == A && closeTo(r[0].startBeat, 0) && closeTo(r[0].endBeat, 4) && r[1].laneId == B &&
+              closeTo(r[1].startBeat, 4) && closeTo(r[1].endBeat, 8) && r[2].laneId == A && closeTo(r[2].startBeat, 8) &&
+              closeTo(r[2].endBeat, 16),
           "SwipeInsideSplitsTheSurroundingRange");
 }
 
@@ -48,8 +48,8 @@ void testSwipeOverManyReplacesAll() {
     comp.set(8, 12, A);
     comp.set(2, 10, C);
     const auto& r = comp.ranges();
-    check(r.size() == 3 && r[0].laneId == A && near(r[0].endBeat, 2) && r[1].laneId == C && near(r[1].startBeat, 2) &&
-              near(r[1].endBeat, 10) && r[2].laneId == A && near(r[2].startBeat, 10) && near(r[2].endBeat, 12),
+    check(r.size() == 3 && r[0].laneId == A && closeTo(r[0].endBeat, 2) && r[1].laneId == C && closeTo(r[1].startBeat, 2) &&
+              closeTo(r[1].endBeat, 10) && r[2].laneId == A && closeTo(r[2].startBeat, 10) && closeTo(r[2].endBeat, 12),
           "SwipeAcrossSeveralRangesTrimsTheEndsAndDropsTheMiddle");
 }
 
@@ -58,7 +58,7 @@ void testNeighboursOnTheSameTakeJoin() {
     comp.set(0, 4, A);
     comp.set(8, 12, A);
     comp.set(4, 8, A);
-    check(comp.ranges().size() == 1 && near(comp.ranges()[0].startBeat, 0) && near(comp.ranges()[0].endBeat, 12),
+    check(comp.ranges().size() == 1 && closeTo(comp.ranges()[0].startBeat, 0) && closeTo(comp.ranges()[0].endBeat, 12),
           "TouchingRangesOnOneTakeBecomeOne");
     comp.set(4, 8, B);
     comp.set(4, 8, A);
@@ -105,14 +105,14 @@ void testClipsReadTheRightAudio() {
     check(clips.size() == 3, "OneClipPerRange");
     if (clips.size() != 3)
         return;
-    check(near(clips[0].startBeat, 0) && near(clips[0].durationBeats, 4) && near(clips[0].sourceOffsetSeconds, 1.0),
+    check(closeTo(clips[0].startBeat, 0) && closeTo(clips[0].durationBeats, 4) && closeTo(clips[0].sourceOffsetSeconds, 1.0),
           "FirstPieceKeepsItsOffset");
     // B's piece starts 4 beats = 2 s into B's clip, which itself starts at offset 0.
-    check(near(clips[1].startBeat, 4) && near(clips[1].durationBeats, 4) && near(clips[1].sourceOffsetSeconds, 2.0) &&
-              near(clips[1].durationSeconds, 2.0),
+    check(closeTo(clips[1].startBeat, 4) && closeTo(clips[1].durationBeats, 4) && closeTo(clips[1].sourceOffsetSeconds, 2.0) &&
+              closeTo(clips[1].durationSeconds, 2.0),
           "CutPieceAdvancesTheAudioOffsetByTheCut");
     // A's last piece starts at beat 8: 8 beats = 4 s later than A's own offset of 1 s.
-    check(near(clips[2].startBeat, 8) && near(clips[2].sourceOffsetSeconds, 5.0),
+    check(closeTo(clips[2].startBeat, 8) && closeTo(clips[2].sourceOffsetSeconds, 5.0),
           "ResumedTakeLandsWhereItWouldHaveBeen");
     check(clips[0].id != clips[1].id && clips[1].id != clips[2].id && clips[0].id != takeA[0].id, "PiecesGetFreshIds");
     check(clips[1].sourceId == 77, "PiecesReadTheSameSource");
@@ -123,7 +123,7 @@ void testRangeOutsideTheTakesClipsYieldsNothing() {
     CompRanges comp;
     comp.set(0, 16, A);
     const auto clips = compClipsFor(comp, {{A, &take}}, 120.0);
-    check(clips.size() == 1 && near(clips[0].startBeat, 8) && near(clips[0].durationBeats, 4),
+    check(clips.size() == 1 && closeTo(clips[0].startBeat, 8) && closeTo(clips[0].durationBeats, 4),
           "OnlyTheOverlapIsPlayed");
 }
 
