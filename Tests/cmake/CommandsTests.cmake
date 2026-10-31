@@ -316,6 +316,12 @@ if(TARGET MuseAgentCore)
     target_link_libraries(MuseAgentRetryTest PRIVATE MuseAgentCore)
     add_test(NAME MuseAgentRetryTest COMMAND MuseAgentRetryTest)
     set_tests_properties(MuseAgentRetryTest PROPERTIES LABELS "commands;muse;contract:application")
+    if(NOT WIN32) # LineReader is POSIX-only
+        add_executable(MuseAgentDeadlineTest Commands/MuseAgentDeadlineTest.cpp)
+        target_link_libraries(MuseAgentDeadlineTest PRIVATE MuseAgentCore)
+        add_test(NAME MuseAgentDeadlineTest COMMAND MuseAgentDeadlineTest)
+        set_tests_properties(MuseAgentDeadlineTest PROPERTIES LABELS "commands;muse;contract:application")
+    endif()
 endif()
 
 # Rumble state and migration are deterministic pure-logic coverage. Keep this in

@@ -21,6 +21,7 @@
 #include "MuseSocketClient.h"
 #include "OpenAICompatProvider.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -163,6 +164,10 @@ int main(int argc, char** argv) {
     AgentLoop loop(*provider,
                    [&client](const std::string& line) { return client.request(line); },
                    options);
+    // A silent Muse must not outlive --max-seconds: bound each recv by what is left.
+    loop.setBudgetHook([&client](long remainingMs) {
+        client.setReadTimeoutMs(static_cast<int>(std::min<long>(remainingMs, 2000000000L)));
+    });
 
     std::cerr << "[muse-agent] " << provider->name() << " -> " << host << ":" << port
               << "\n";

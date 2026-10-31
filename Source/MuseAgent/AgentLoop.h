@@ -1,9 +1,11 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include "LineReader.h"
 #include "ModelProvider.h"
 #include "RetryPolicy.h"
 
+#include <chrono>
 #include <functional>
 #include <string>
 
@@ -65,6 +67,15 @@ public:
     /** @brief Replace the backoff sleep (default: this thread sleeps). For tests. */
     using Sleeper = std::function<void(long milliseconds)>;
     void setSleeper(Sleeper sleeper) { m_sleeper = std::move(sleeper); }
+    /**
+     * @brief Called before every Muse request with the milliseconds left in the
+     *        time budget, so the transport can bound its own blocking read.
+     */
+    using BudgetHook = std::function<void(long remainingMs)>;
+    void setBudgetHook(BudgetHook hook) { m_budgetHook = std::move(hook); }
+
+    /** @brief File descriptor the default ask_user reads answers from (default 0, stdin). */
+    void setInputFd(int fd) { m_lineReader = LineReader(fd); }
 
     /** @brief Run one brief through the loop. */
     Outcome run(const std::string& brief);
@@ -78,6 +89,9 @@ private:
     Options m_options;
     AskUser m_askUser;
     Sleeper m_sleeper;
+    BudgetHook m_budgetHook;
+    LineReader m_lineReader{0};
+    std::chrono::steady_clock::time_point m_deadline{};
 };
 
 } // namespace MuseAgent
