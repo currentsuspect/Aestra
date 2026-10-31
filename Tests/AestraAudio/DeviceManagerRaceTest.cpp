@@ -64,6 +64,9 @@ public:
     std::atomic<bool> m_openShouldFail{false};
     std::atomic<int64_t> m_failDeviceId{-1}; // fail openStream for this deviceId (-1 = none)
     std::atomic<bool> m_startShouldFail{false};
+    // Device A is the user's interface. Unplugged, it vanishes from enumeration and cannot be
+    // opened; Device B (say, the laptop's own output) stays.
+    std::atomic<bool> m_devicePresent{true};
     std::atomic<int> m_openCount{0};
     // When non-zero, getStreamBufferSize() reports this value instead of the
     // requested config — simulates a backend granting a different buffer size.
@@ -88,6 +91,7 @@ public:
 
     // Freeze the reported callbackCount so the health monitor detects a "stall".
     void freezeCallbacks() { m_callbacksFrozen.store(true); }
+    void unfreezeCallbacks() { m_callbacksFrozen.store(false); }
 
     // Wedge stopStream() the way a real backend can (PulseAudio blocked in its
     // own write after the device vanished): it blocks until released.
@@ -117,11 +121,17 @@ public:
                 m_barrierCv.wait(l, [this] { return !m_barrierArmed; });
             }
         }
+        if (!m_devicePresent.load()) {
+            return {makeDevice(kDeviceB, "Device B", false)};
+        }
         return {makeDevice(kDeviceA, "Device A", true), makeDevice(kDeviceB, "Device B", false)};
     }
 
     bool openStream(const AudioStreamConfig& config, AudioCallback callback, void* userData) override {
         m_openCount.fetch_add(1);
+        if (!m_devicePresent.load() && config.deviceId == kDeviceA) {
+            return false;
+        }
         // Deterministic, config-keyed failure: opening a specific "bad" device
         // fails while others succeed — lets a test fail a transition's reopen but
         // allow its rollback, with no timing involved.
@@ -716,6 +726,179 @@ void testFallbackIsReported() {
     h2->mgr.shutdown();
 }
 
+// ---------------------------------------------------------------------------
+// #650 stage 2 (FD-64): switch back by itself when the interface returns.
+// These drive tryRestorePreferredDriver() directly with the monitor stopped so
+// they do not wait on its cadence; the last one runs through the real monitor.
+// ---------------------------------------------------------------------------
+
+struct RestoreRig {
+    std::unique_ptr<Harness> h;
+    std::atomic<int> calls{0};
+    std::atomic<int> restoreCalls{0};
+    std::mutex mx;
+    AudioDriverType lastActual = AudioDriverType::UNKNOWN;
+};
+
+// An open, running stream on the real driver that then falls back to the dummy, with the interface unplugged.
+std::unique_ptr<RestoreRig> makeFallenBackRig() {
+    auto r = std::make_unique<RestoreRig>();
+    r->h = makeHarness();
+    r->h->mgr.setDriverModeChangeCallback([rig = r.get()](AudioDriverType, AudioDriverType actual, const std::string&) {
+        std::lock_guard<std::mutex> l(rig->mx);
+        rig->lastActual = actual;
+        rig->calls.fetch_add(1);
+        if (actual != AudioDriverType::DUMMY) {
+            rig->restoreCalls.fetch_add(1);
+        }
+    });
+    AudioStreamConfig cfg = baseConfig();
+    cfg.sampleRate = 96000;
+    cfg.bufferSize = 512;
+    r->h->mgr.openStream(cfg, silentCallback, nullptr);
+    r->h->mgr.startStream();
+    r->h->mgr.stopHealthMonitor();             // the test drives the probes
+    r->h->mgr.setRestoreProbeInterval(std::chrono::milliseconds(0));
+    r->h->primary->m_devicePresent.store(false); // unplugged
+    r->h->mgr.switchToSafetyDriver();
+    return r;
+}
+
+// 15. The interface comes back: the manager reopens it with the settings it had, and says so.
+void testRestoreWhenDeviceReturns() {
+    auto r = makeFallenBackRig();
+    auto& mgr = r->h->mgr;
+    check(mgr.isUsingFallbackDriver() && r->calls.load() == 1, "setup: fallen back, loss reported once");
+
+    for (int i = 0; i < 4; ++i) mgr.tryRestorePreferredDriver();
+    check(mgr.getActiveDriverType() == AudioDriverType::DUMMY, "stays on the safety driver while the device is gone");
+
+    r->h->primary->m_devicePresent.store(true);
+    check(!mgr.tryRestorePreferredDriver(), "first sighting does not restore yet");
+    check(mgr.tryRestorePreferredDriver(), "second consecutive sighting restores");
+    check(mgr.getActiveDriverType() == AudioDriverType::WASAPI_SHARED, "the real driver is active again");
+    check(!mgr.isUsingFallbackDriver(), "isUsingFallbackDriver() is false after the restore");
+    check(mgr.getFallbackReason().empty(), "the fallback reason is cleared");
+    check(mgr.isStreamRunning(), "audio is running on the restored device");
+    check(mgr.getCurrentConfig().sampleRate == 96000 && mgr.getCurrentConfig().bufferSize == 512,
+          "the settings in force at the moment of loss are reapplied");
+    check(r->restoreCalls.load() == 1 && r->calls.load() == 2, "one restore notification, no duplicates");
+    check(mgr.getPreferredDeviceName() == "Device A", "the restored device can be named");
+    check(!mgr.tryRestorePreferredDriver() && r->calls.load() == 2, "nothing more happens once restored");
+    mgr.shutdown();
+}
+
+// 16. A flapping interface is not trusted until it has been seen twice in a row.
+void testRestoreIgnoresFlap() {
+    auto r = makeFallenBackRig();
+    auto& mgr = r->h->mgr;
+    r->h->primary->m_devicePresent.store(true);
+    mgr.tryRestorePreferredDriver();                 // seen once
+    r->h->primary->m_devicePresent.store(false);     // gone again
+    mgr.tryRestorePreferredDriver();
+    r->h->primary->m_devicePresent.store(true);
+    check(!mgr.tryRestorePreferredDriver(), "a flap resets the count: one sighting is not enough");
+    check(mgr.getActiveDriverType() == AudioDriverType::DUMMY, "still on the safety driver after a flap");
+    check(mgr.tryRestorePreferredDriver(), "restores once it has been seen twice in a row");
+    mgr.shutdown();
+}
+
+// 17. The user picked something else while the interface was gone: never undo that.
+void testRestoreNeverOverridesUserChoice() {
+    auto r = makeFallenBackRig();
+    auto& mgr = r->h->mgr;
+    // The user chooses Device B, which will not open yet, so the safety driver keeps running under it.
+    r->h->primary->m_failDeviceId.store(kDeviceB);
+    mgr.switchDevice(kDeviceB);
+    check(mgr.getActiveDriverType() == AudioDriverType::DUMMY && mgr.getCurrentConfig().deviceId == kDeviceB,
+          "setup: user chose Device B and is still on the safety driver");
+    // Everything becomes openable: a restore that ignored the user's choice would now succeed.
+    r->h->primary->m_failDeviceId.store(-1);
+    r->h->primary->m_devicePresent.store(true);
+    bool restored = false;
+    for (int i = 0; i < 6; ++i) restored = mgr.tryRestorePreferredDriver() || restored;
+    check(!restored && mgr.getActiveDriverType() == AudioDriverType::DUMMY,
+          "no automatic restore after the user chose a device");
+    check(mgr.getCurrentConfig().deviceId == kDeviceB, "the user's chosen device is untouched");
+    check(r->restoreCalls.load() == 0, "no restore notification");
+    mgr.shutdown();
+}
+
+// 18. A failed reopen leaves the safety driver running, never crashes, and is retried later with backoff.
+void testRestoreRetriesAfterFailedReopen() {
+    auto r = makeFallenBackRig();
+    auto& mgr = r->h->mgr;
+    r->h->primary->m_devicePresent.store(true);
+    r->h->primary->m_openShouldFail.store(true); // listed, but will not open
+    mgr.tryRestorePreferredDriver();
+    const bool failed = !mgr.tryRestorePreferredDriver();
+    check(failed, "a failed reopen is reported as not restored");
+    check(mgr.getActiveDriverType() == AudioDriverType::DUMMY && mgr.isStreamRunning(),
+          "after a failed reopen the safety driver is still running");
+    check(r->restoreCalls.load() == 0, "no restore notification for a failed reopen");
+
+    // Backoff: with a real interval an immediate second try must not hammer the device.
+    mgr.setRestoreProbeInterval(std::chrono::milliseconds(80));
+    const int opensBefore = r->h->primary->m_openCount.load();
+    for (int i = 0; i < 5; ++i) mgr.tryRestorePreferredDriver();
+    check(r->h->primary->m_openCount.load() == opensBefore, "probes are rate limited after a failure");
+
+    r->h->primary->m_openShouldFail.store(false); // the device settles
+    bool restored = false;
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+    while (!restored && std::chrono::steady_clock::now() < deadline) {
+        restored = mgr.tryRestorePreferredDriver();
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+    check(restored && mgr.getActiveDriverType() == AudioDriverType::WASAPI_SHARED, "it retries and restores later");
+    mgr.shutdown();
+}
+
+// 19. Not while a take is recording: the guard vetoes, and the restore happens once it lifts.
+void testRestoreWaitsForGuard() {
+    auto r = makeFallenBackRig();
+    auto& mgr = r->h->mgr;
+    std::atomic<bool> recording{true};
+    mgr.setRestoreGuard([&] { return !recording.load(); });
+    r->h->primary->m_devicePresent.store(true);
+    bool restored = false;
+    for (int i = 0; i < 6; ++i) restored = mgr.tryRestorePreferredDriver() || restored;
+    check(!restored && mgr.getActiveDriverType() == AudioDriverType::DUMMY, "no restore while the guard says no");
+    recording.store(false);
+    mgr.tryRestorePreferredDriver();
+    check(mgr.tryRestorePreferredDriver(), "restores after the guard lifts");
+    mgr.shutdown();
+}
+
+// 20. End to end through the real health monitor: stall -> fallback -> device returns -> back by itself.
+void testRestoreThroughMonitor() {
+    auto h = makeHarness();
+    std::atomic<int> lost{0};
+    std::atomic<int> back{0};
+    h->mgr.setDriverModeChangeCallback([&](AudioDriverType, AudioDriverType actual, const std::string&) {
+        (actual == AudioDriverType::DUMMY ? lost : back).fetch_add(1);
+    });
+    h->mgr.setRestoreProbeInterval(std::chrono::milliseconds(0));
+    h->mgr.openStream(baseConfig(), silentCallback, nullptr);
+    h->mgr.startStream();
+    h->primary->m_devicePresent.store(false);
+    h->primary->freezeCallbacks();
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    while (lost.load() == 0 && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+    check(lost.load() == 1, "the monitor reports the loss");
+    h->primary->unfreezeCallbacks();
+    h->primary->m_devicePresent.store(true);
+    deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    while (back.load() == 0 && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+    check(back.load() == 1, "the monitor restores the device and reports it once");
+    check(!h->mgr.isUsingFallbackDriver() && h->mgr.isStreamRunning(), "audio is back on the real device");
+    h->mgr.shutdown();
+}
+
 int main() {
     std::cout << "=== AudioDeviceManager race/coherence tests (#391) ===\n";
     testEnumerationBarrierVsTransition();
@@ -732,6 +915,12 @@ int main() {
     testWedgedStreamDoesNotFreezeManager();
     testSwitchDeviceWhileWedged();
     testFallbackIsReported();
+    testRestoreWhenDeviceReturns();
+    testRestoreIgnoresFlap();
+    testRestoreNeverOverridesUserChoice();
+    testRestoreRetriesAfterFailedReopen();
+    testRestoreWaitsForGuard();
+    testRestoreThroughMonitor();
 
     std::cout << (g_failures == 0 ? "ALL PASSED\n" : "FAILURES: " + std::to_string(g_failures) + "\n");
     return g_failures == 0 ? 0 : 1;

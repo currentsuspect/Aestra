@@ -145,6 +145,15 @@ AestraAudioController::AestraAudioController() {
         rateRollback.commit();
         return true;
     });
+
+    // #650: when the audio interface comes back after a fallback the manager switches to it by itself,
+    // but never in the middle of a take. Runs on the manager's health-monitor thread, so it only reads
+    // the atomically published content and TrackManager's atomic recording flag.
+    m_audioManager->setRestoreGuard([this]() {
+        const auto content = m_rtContent.load(std::memory_order_acquire);
+        const auto trackManager = content ? content->getTrackManager() : nullptr;
+        return !(trackManager && trackManager->isRecording());
+    });
 }
 
 AestraAudioController::~AestraAudioController() {

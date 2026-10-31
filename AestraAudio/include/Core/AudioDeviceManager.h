@@ -277,6 +277,41 @@ public:
     std::string getPreferredDeviceName() const;
 
     /**
+     * @brief While on the safety driver, check whether the user's real device is
+     *        back and, if so, reopen it (#650 stage 2, FD-64).
+     * @return true if the real device was restored by this call.
+     *
+     * Called by the health-monitor thread every tick; cheap when there is
+     * nothing to do. Probes at the restore interval (default 2 s, backing off
+     * after a failed reopen), requires the device to be seen on two consecutive
+     * probes before it acts, and never acts if the user opened a stream or chose
+     * another device since the fallback (user intent wins), or if the restore
+     * guard says it is not a safe moment (e.g. a take is being recorded). On
+     * success it reopens the device with the settings in force at the moment of
+     * loss, applies the pre-restart hook, and fires the mode-change callback
+     * (actual != DUMMY) outside the lock. On failure it stays on the safety
+     * driver. Public so tests can drive it without waiting on the monitor.
+     */
+    bool tryRestorePreferredDriver();
+
+    /**
+     * @brief How often the real device is probed while on the safety driver.
+     * @param interval Probe period; zero probes on every call (tests). A failed
+     *        reopen doubles it each time, capped at 30 s.
+     */
+    void setRestoreProbeInterval(std::chrono::milliseconds interval);
+
+    /**
+     * @brief Veto automatic restoration for as long as the callback returns false.
+     *
+     * The app returns false while a take is recording: swapping the stream under
+     * a recording is a hazard even when the device is back. Runs on the monitor
+     * thread under the manager lock; it must be quick, lock-free and must not
+     * call back into the manager.
+     */
+    void setRestoreGuard(std::function<bool()> canRestoreNow);
+
+    /**
      * @brief Add a driver to the manager (Dependency Injection)
      * @param driver Unique pointer to the driver instance
      */
@@ -384,6 +419,15 @@ private:
     // Driver mode change notification
     DriverModeChangeCallback m_driverModeChangeCallback;
     std::string m_fallbackReason;
+    // Automatic restore of the real device after a safety fallback (#650 stage 2). All guarded by m_mutex.
+    bool m_restorePending = false;   // fell back and the user has not chosen anything since
+    int m_restoreSightings = 0;      // consecutive probes that saw the device
+    int m_restoreFailures = 0;       // failed reopens since the fallback (drives backoff)
+    int m_restoreFlaps = 0;          // fallbacks that came within a minute of a restore (drives backoff)
+    std::chrono::steady_clock::time_point m_lastRestoreAt{};
+    std::chrono::milliseconds m_restoreInterval{2000};
+    std::chrono::steady_clock::time_point m_restoreNextProbe{};
+    std::function<bool()> m_restoreGuard;
     std::string m_activeDeviceName; // last real device opened; kept across a safety fallback (#650)
 
     // Auto-buffer scaling
@@ -438,6 +482,7 @@ private:
     bool tryDriver(IAudioDriver* driver, const AudioStreamConfig& config, AudioCallback callback, void* userData);
     void checkDriverHealthLocked(PendingModeChange& outPending);
     bool switchToSafetyDriverLocked(PendingModeChange& outPending);
+    bool tryRestoreLocked(PendingModeChange& outPending);
 };
 
 // =============================================================================

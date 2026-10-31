@@ -191,6 +191,11 @@ bool AudioDeviceManager::openStreamLocked(const AudioStreamConfig& config, Audio
         return false;
     }
 
+    // The user (or the app on their behalf) is opening a stream: that is a choice, and it
+    // outranks any pending automatic return to the device that was lost (#650).
+    m_restorePending = false;
+    m_restoreSightings = 0;
+
     m_currentConfig = config;
     m_currentCallback = callback;
     m_currentUserData = userData;
@@ -948,6 +953,17 @@ bool AudioDeviceManager::switchToSafetyDriverLocked(PendingModeChange& outPendin
             outPending.reason = "Hardware stall/disconnect: fallback to safety driver";
             // Queryable afterwards too (status line, Muse), not just at the moment of the callback (#650).
             m_fallbackReason = outPending.reason;
+            // Arm the automatic return (#650 stage 2). Anything the user opens or picks from here on disarms it.
+            // A device that drops again soon after a restore is flapping: each repeat doubles the wait
+            // before the next attempt, so it cannot churn the stream every few seconds.
+            const auto armedAt = std::chrono::steady_clock::now();
+            const bool justRestored = m_lastRestoreAt != std::chrono::steady_clock::time_point{} &&
+                                      armedAt - m_lastRestoreAt < std::chrono::seconds(60);
+            m_restoreFlaps = justRestored ? m_restoreFlaps + 1 : 0;
+            m_restorePending = true;
+            m_restoreSightings = 0;
+            m_restoreFailures = 0;
+            m_restoreNextProbe = armedAt + m_restoreInterval;
             return true;
         }
         // Opened but could not start: close it and leave no active driver rather
@@ -957,6 +973,158 @@ bool AudioDeviceManager::switchToSafetyDriverLocked(PendingModeChange& outPendin
     }
     m_activeDriver = nullptr;
     return false;
+}
+
+// Automatic return to the user's real device after a safety fallback (#650 stage 2, FD-64).
+//
+// Runs on the health-monitor thread under m_mutex, like switchToSafetyDriverLocked. That is
+// acceptable here because the only stream torn down is the dummy driver's (it cannot wedge);
+// the real device is only opened, never stopped. If anything fails the dummy is reopened, so
+// the engine always keeps a driver. The notification is captured and fired by the caller
+// after the lock is released (#391 constraint 6).
+bool AudioDeviceManager::tryRestoreLocked(PendingModeChange& outPending) {
+    // Only while the safety driver is what is running, and nothing the user did since.
+    if (!m_initialized || !m_restorePending || !m_activeDriver ||
+        m_activeDriver->getDriverType() != AudioDriverType::DUMMY || !m_activeDriver->isStreamRunning()) {
+        m_restoreSightings = 0;
+        return false;
+    }
+
+    const auto now = std::chrono::steady_clock::now();
+    if (m_restoreInterval.count() > 0 && now < m_restoreNextProbe) {
+        return false; // gentle cadence; backs off after failed reopens
+    }
+    // Next probe: the interval, doubled for each failed reopen so far, capped at 30 s.
+    constexpr auto kMaxBackoff = std::chrono::milliseconds(30000);
+    auto wait = m_restoreInterval;
+    for (int i = 0; i < m_restoreFailures + m_restoreFlaps && wait < kMaxBackoff; ++i) {
+        wait *= 2;
+    }
+    m_restoreNextProbe = now + std::min(wait, kMaxBackoff);
+
+    if (m_restoreGuard && !m_restoreGuard()) {
+        m_restoreSightings = 0;
+        return false; // e.g. a take is recording: not a safe moment to swap the stream
+    }
+
+    // Is the user's device listed again? Re-enumeration alone proves little, so the reopen below
+    // is the real test; this only decides whether trying is worthwhile. Ids can shift when a
+    // device is replugged, so a remembered name is matched when the id no longer fits.
+    IAudioDriver* target = nullptr;
+    uint32_t targetDeviceId = m_currentConfig.deviceId;
+    for (auto& driver : m_drivers) {
+        if (!driver || driver->getDriverType() == AudioDriverType::DUMMY || !driver->isAvailable()) {
+            continue;
+        }
+        bool found = false;
+        uint32_t id = 0;
+        for (const auto& device : driver->getDevices()) {
+            if (device.maxOutputChannels == 0) {
+                continue;
+            }
+            const bool nameKnown = !m_activeDeviceName.empty();
+            if (device.id == m_currentConfig.deviceId && (!nameKnown || device.name == m_activeDeviceName)) {
+                found = true;
+                id = device.id;
+                break;
+            }
+            if (nameKnown && device.name == m_activeDeviceName && !found) {
+                found = true;
+                id = device.id; // same name, new id: keep looking for an exact match
+            }
+        }
+        if (found) {
+            target = driver.get();
+            targetDeviceId = id;
+            break;
+        }
+    }
+    if (!target) {
+        m_restoreSightings = 0;
+        return false;
+    }
+    if (++m_restoreSightings < 2) {
+        return false; // seen once; wait for a second consecutive probe so a flapping device does not churn the stream
+    }
+
+    AESTRA_LOG_INFO("[AudioDeviceManager] Preferred audio device is back; reopening " + target->getDisplayName());
+    const AudioStreamConfig previousConfig = m_currentConfig;
+    AudioStreamConfig config = m_currentConfig;
+    config.deviceId = targetDeviceId;
+
+    IAudioDriver* dummy = m_activeDriver;
+    dummy->stopStream();
+    dummy->closeStream();
+    m_activeDriver = nullptr;
+
+    bool ok = false;
+    try {
+        if (target->openStream(config, m_currentCallback, m_currentUserData)) {
+            m_activeDriver = target;
+            m_currentConfig = config;
+            // Let the engine take the granted rate/buffer before audio flows, as every reopen does.
+            // A rejection or a start failure rolls back to the safety driver below.
+            if (firePreRestartConfigCallbackLocked() && startStreamLocked()) {
+                ok = true;
+            } else {
+                target->closeStream();
+                m_activeDriver = nullptr;
+            }
+        }
+    } catch (const std::exception& e) {
+        AESTRA_LOG_WARNING(std::string("[AudioDeviceManager] Restore of preferred device threw: ") + e.what());
+        try {
+            target->closeStream();
+        } catch (...) {
+        }
+        m_activeDriver = nullptr;
+    }
+
+    if (!ok) {
+        ++m_restoreFailures;
+        m_restoreSightings = 0;
+        m_currentConfig = previousConfig; // the callback may have seen the new id; the dummy runs on the old one
+        AESTRA_LOG_WARNING("[AudioDeviceManager] Could not reopen the preferred device; staying on the safety driver");
+        if (dummy->openStream(m_currentConfig, m_currentCallback, m_currentUserData) && dummy->startStream()) {
+            m_activeDriver = dummy;
+        } else {
+            AESTRA_LOG_ERROR("[AudioDeviceManager] CRITICAL: could not bring the safety driver back after a failed restore");
+        }
+        return false;
+    }
+
+    m_restorePending = false;
+    m_restoreSightings = 0;
+    m_restoreFailures = 0;
+    m_lastRestoreAt = now;
+    m_fallbackReason.clear();
+    AESTRA_LOG_INFO("[AudioDeviceManager] Audio device restored; left the safety driver");
+    outPending.valid = static_cast<bool>(m_driverModeChangeCallback);
+    outPending.preferred = m_preferredDriverType;
+    outPending.actual = target->getDriverType();
+    outPending.reason = "Audio device restored";
+    return true;
+}
+
+bool AudioDeviceManager::tryRestorePreferredDriver() {
+    PendingModeChange pending;
+    bool restored;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        restored = tryRestoreLocked(pending);
+    }
+    fireModeChange(pending);
+    return restored;
+}
+
+void AudioDeviceManager::setRestoreProbeInterval(std::chrono::milliseconds interval) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_restoreInterval = interval;
+}
+
+void AudioDeviceManager::setRestoreGuard(std::function<bool()> canRestoreNow) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_restoreGuard = std::move(canRestoreNow);
 }
 
 bool AudioDeviceManager::switchToSafetyDriver() {
@@ -1023,6 +1191,7 @@ void AudioDeviceManager::fireModeChange(const PendingModeChange& pending) const 
 void AudioDeviceManager::healthMonitorLoop() {
     while (m_healthMonitorRunning.load(std::memory_order_acquire)) {
         checkDriverHealth(); // locks internally; fires callback outside the lock
+        tryRestorePreferredDriver(); // no-op unless we are on the safety driver; same lock/notify discipline
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 }
