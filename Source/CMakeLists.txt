@@ -14,6 +14,8 @@ set(Aestra_SOURCES
 	App/AestraApp.cpp
 	App/AestraAppVersions.cpp
 	App/AestraAppUpdates.cpp
+	App/AestraAppAudioStatus.cpp
+	App/AudioDeviceNotice.h
 	App/UpdateNotifier.cpp
 	App/UpdateNotifier.h
 	App/AestraAppRecovery.cpp

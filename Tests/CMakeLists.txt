@@ -1328,6 +1328,12 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/DeviceManagerRaceTest.cpp")
     set_tests_properties(DeviceManagerRaceTest PROPERTIES LABELS "audio;device;rt-safety;concurrency;contract:realtime" TIMEOUT 60)
 endif()
 
+# #650 (FD-64): the wording the user sees when the audio interface drops out and returns. Header-only, no UI.
+add_executable(AudioDeviceNoticeTest App/AudioDeviceNoticeTest.cpp)
+target_include_directories(AudioDeviceNoticeTest PRIVATE ${CMAKE_SOURCE_DIR}/Source)
+add_test(NAME AudioDeviceNoticeTest COMMAND AudioDeviceNoticeTest)
+set_tests_properties(AudioDeviceNoticeTest PROPERTIES LABELS "audio;device;regression;contract:application" TIMEOUT 30)
+
 # PathologicalChaosStressTest
 if(EXISTS "${CMAKE_SOURCE_DIR}/AestraAudio/PathologicalChaosStressTest.cpp")
     add_executable(AestraPathologicalChaosStressTest AestraAudio/PathologicalChaosStressTest.cpp)
