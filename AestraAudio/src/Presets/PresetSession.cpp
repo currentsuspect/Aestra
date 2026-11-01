@@ -172,7 +172,15 @@ std::string PresetSession::suggestedName() const {
     for (const auto& p : m_presets)
         if (p.source != PresetSource::Factory) taken.push_back(p.name);
     if (canUpdateCurrent()) return (*m_current)->name; // Update keeps the name
-    return suggestName(m_trackName, currentName(), taken);
+    // With no preset to name it after, the plugin says what it is: "Lead Vox" + "Compressor".
+    std::string from = currentName();
+    if (from.empty() && m_plugin) {
+        from = m_plugin->getInfo().name;
+        const std::string vendor = m_plugin->getInfo().vendor;
+        if (from.rfind("Aestra ", 0) == 0) from = from.substr(7);
+        else if (!vendor.empty() && from.rfind(vendor + " ", 0) == 0) from = from.substr(vendor.size() + 1);
+    }
+    return suggestName(m_trackName, from, taken);
 }
 
 bool PresetSession::canUpdateCurrent() const {

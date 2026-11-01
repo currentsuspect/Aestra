@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <string>
 
 namespace AestraUI {
@@ -53,6 +54,25 @@ NUIRect drawDialogChrome(NUIRenderer& renderer, const DialogChrome& chrome);
 NUIRect dialogCloseButtonRect(const NUIRect& panel);
 
 /**
+ * @brief Something a panel draws in its title bar and may float over its content: the preset bar (FD-72).
+ *
+ * The panel gives it the title bar after the title text, routes the pointer to it first, and draws its overlay
+ * last so a popover sits above the editor's own controls.
+ */
+class PanelTitleAccessory {
+public:
+    virtual ~PanelTitleAccessory() = default;
+    virtual void render(NUIRenderer& renderer, const NUIRect& titleBar) = 0;
+    virtual void renderOverlay(NUIRenderer& renderer, const NUIRect& window) = 0;
+    virtual bool onMouseEvent(const NUIMouseEvent& event) = 0;
+    virtual bool onKeyEvent(const NUIKeyEvent& event) = 0;
+    /// True while a popover is open: keys go here before the app's shortcuts.
+    virtual bool wantsKeys() const = 0;
+    /// Narrower title bars do not show it.
+    virtual float minimumWidth() const = 0;
+};
+
+/**
  * @brief Unified panel chrome for all child windows (plugin editors, Settings, etc.).
  *
  * Renders a 32 px title bar with:
@@ -71,8 +91,16 @@ public:
     void onRender(NUIRenderer& renderer) override;
     void onThemeChanged(const NUIThemeProperties& theme) override { cacheThemeColors(); NUIComponent::onThemeChanged(theme); }
     bool onMouseEvent(const NUIMouseEvent& event) override;
+    /// Typed characters arrive at the focused component only; while the preset bar has a popover open the panel
+    /// holds focus and hands them on.
+    bool onKeyEvent(const NUIKeyEvent& event) override;
 
     void setPanelTitle(const std::string& title);
+    /// Puts an accessory (the preset bar) in the title bar; nullptr removes it.
+    void setTitleAccessory(std::shared_ptr<PanelTitleAccessory> accessory);
+    PanelTitleAccessory* titleAccessory() const { return m_accessory.get(); }
+    /// Keys for the accessory while its popover is open; false when it does not want them.
+    bool routeKeyToAccessory(const NUIKeyEvent& event);
     void setBadgeText(const std::string& text);   // empty = no badge
     void setOnClose(std::function<void()> callback) { m_onClose = std::move(callback); }
     void setCloseOnOutsideClick(bool close) { m_closeOnOutsideClick = close; }
@@ -180,6 +208,7 @@ private:
 
     std::string m_title;
     std::string m_badgeText;
+    std::shared_ptr<PanelTitleAccessory> m_accessory;
     std::function<void()> m_onClose;
     std::function<void()> m_onWindowDragEnd;
     bool m_closeOnOutsideClick = true;

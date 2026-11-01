@@ -39,6 +39,7 @@ set(Aestra_SOURCES
 	Panels/DspLoadReadout.h
 	Core/AestraContentImport.cpp
 	Core/AestraContentPanelMode.cpp
+	Core/AestraContentPresets.cpp
 	Core/AestraContentPlacement.cpp
 	Core/AestraContentRouting.cpp
 	Core/WorkspaceFocus.h

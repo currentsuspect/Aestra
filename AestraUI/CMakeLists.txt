@@ -166,6 +166,7 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/PluginBrowserFavorites.cpp
     Widgets/PluginUIController.h
     Widgets/PluginUIController.cpp
+    Widgets/PluginPresetBar.cpp
     Widgets/PluginEditorRegistry.cpp
     Widgets/AestraPanelWindow.h
     Widgets/AestraPanelWindow.cpp
