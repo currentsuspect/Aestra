@@ -6,6 +6,7 @@
 // One swipe is one undo step; undo restores the clips, the comp, the mute flags and (for the first swipe) removes the lane.
 
 #include "Commands/AttachLaneToTrackCommand.h"
+#include "Commands/CompSync.h"
 #include "Commands/CreateLaneCommand.h"
 #include "Commands/ICommand.h"
 #include "Models/CompRanges.h"
@@ -86,60 +87,10 @@ public:
     std::string type() const override { return "set_comp_range"; }
 
 private:
-    struct State {
-        CompRanges comp;
-        PlaylistLaneID compLaneId;
-        std::vector<ClipInstance> clips;                      // the master lane's clips
-        std::vector<std::pair<PlaylistLaneID, bool>> muted;   // every lane the track owns
-    };
-
-    State capture(const Track& track) {
-        State s;
-        s.comp = track.comp;
-        s.compLaneId = track.compLaneId;
-        auto& playlist = m_tracks.getPlaylistModel();
-        if (const PlaylistLane* master = track.compLaneId.isValid() ? playlist.getLane(track.compLaneId) : nullptr) s.clips = master->clips;
-        for (const PlaylistLaneID& id : track.laneIds)
-            if (const PlaylistLane* lane = playlist.getLane(id)) s.muted.emplace_back(id, lane->muted);
-        return s;
-    }
-
-    void restore(Track& track, const State& s) {
-        auto& playlist = m_tracks.getPlaylistModel();
-        track.comp = s.comp;
-        track.compLaneId = s.compLaneId;
-        for (const auto& [id, muted] : s.muted)
-            if (PlaylistLane* lane = playlist.getLane(id)) lane->muted = muted;
-        setMasterClips(track, s.clips);
-    }
-
-    void setMasterClips(const Track& track, const std::vector<ClipInstance>& clips) {
-        if (!track.compLaneId.isValid()) return;
-        auto& playlist = m_tracks.getPlaylistModel();
-        const PlaylistLane* master = playlist.getLane(track.compLaneId);
-        if (!master) return;
-        std::vector<ClipInstanceID> old;
-        for (const ClipInstance& c : master->clips) old.push_back(c.id);
-        for (const ClipInstanceID& id : old) playlist.removeClip(id);
-        for (const ClipInstance& c : clips) playlist.addClip(track.compLaneId, c);
-    }
-
-    /// The master lane plays the comp; the takes it reads from are silent.
-    void rebuild(Track& track) {
-        auto& playlist = m_tracks.getPlaylistModel();
-        std::vector<CompSourceLane> sources;
-        for (const PlaylistLaneID& id : track.laneIds) {
-            if (id == track.compLaneId) continue;
-            PlaylistLane* lane = playlist.getLane(id);
-            if (!lane) continue;
-            lane->muted = true;
-            sources.push_back({id, &lane->clips});
-        }
-        std::vector<ClipInstance> pieces = compClipsFor(track.comp, sources, playlist.getBPM());
-        for (ClipInstance& piece : pieces) // each piece reads as the take it plays (FD-71)
-            piece.name = "Take " + std::to_string(track.laneNumber(track.comp.laneAt(piece.startBeat + kCompEpsilon)));
-        setMasterClips(track, pieces);
-    }
+    using State = CompSnapshot;
+    State capture(const Track& track) { return captureComp(m_tracks.getPlaylistModel(), track); }
+    void restore(Track& track, const State& s) { restoreComp(m_tracks.getPlaylistModel(), track, s); }
+    void rebuild(Track& track) { rebuildComp(m_tracks.getPlaylistModel(), track); }
 
     TrackManager& m_tracks;
     uint64_t m_trackId;

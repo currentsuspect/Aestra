@@ -547,6 +547,7 @@ private:
     double beatAtX(float x) const;
     bool compSpanForClick(double beat, bool wholeTake, double& start, double& end) const;
     void commitCompSpan(double start, double end);
+    void drawCompGaps(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float gridStart, const Track& track);
     void drawCompOverlay(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float controlAreaWidth);
     bool m_compPressed{false};
     bool m_compDragging{false};

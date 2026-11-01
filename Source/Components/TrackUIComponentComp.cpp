@@ -169,9 +169,36 @@ void TrackUIComponent::commitCompSpan(double start, double end) {
     m_trackManager->getCommandHistory().pushAndExecute(cmd);
 }
 
+/// A hole inside the comp (a range that lost its take) is silence, and says so: hatched and labelled, never blank.
+void TrackUIComponent::drawCompGaps(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float gridStart,
+                                    const Track& track) {
+    const auto& ranges = track.comp.ranges();
+    const AestraUI::NUIColor ink = AestraUI::NUIThemeManager::getInstance().getColor("textSecondary");
+    for (size_t i = 0; i + 1 < ranges.size(); ++i) {
+        if (ranges[i + 1].startBeat - ranges[i].endBeat <= kCompEpsilon)
+            continue;
+        const float x0 = std::max(gridStart + static_cast<float>(ranges[i].endBeat) * m_pixelsPerBeat - m_timelineScrollOffset, gridStart);
+        const float x1 = std::min(gridStart + static_cast<float>(ranges[i + 1].startBeat) * m_pixelsPerBeat - m_timelineScrollOffset,
+                                  bounds.right());
+        if (x1 - x0 < 2.0f)
+            continue;
+        const float top = bounds.y + 3.0f, h = bounds.height - 6.0f;
+        renderer.fillRect(AestraUI::NUIRect(x0, top, x1 - x0, h), AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.35f));
+        for (float x = x0 - h; x < x1; x += 7.0f) { // diagonal hatch, clipped to the gap
+            const float ax = std::max(x, x0), bx = std::min(x + h, x1);
+            if (bx <= ax)
+                continue;
+            renderer.drawLine(AestraUI::NUIPoint(ax, top + h - (ax - x)), AestraUI::NUIPoint(bx, top + h - (bx - x)), 1.0f,
+                              ink.withAlpha(0.28f));
+        }
+        if (x1 - x0 > 56.0f)
+            renderer.drawTextCentered("Silent", AestraUI::NUIRect(x0, top, x1 - x0, h), 11.0f, ink);
+    }
+}
+
 void TrackUIComponent::drawCompOverlay(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds,
                                        float controlAreaWidth) {
-    if (!isCompTakeLane())
+    if (!m_trackManager)
         return;
     const float gridStart = timelineGridStartX(bounds.x, controlAreaWidth);
     auto xOf = [&](double beat) {
@@ -180,6 +207,12 @@ void TrackUIComponent::drawCompOverlay(AestraUI::NUIRenderer& renderer, const Ae
     const PlaylistLane* lane = m_trackManager->getPlaylistModel().getLane(m_laneId);
     const Track* track = lane ? m_trackManager->getTrack(lane->trackId) : nullptr;
     if (!track)
+        return;
+    if (m_laneId == track->compLaneId) { // the master: hatch the silent gaps where a deleted take used to play
+        drawCompGaps(renderer, bounds, gridStart, *track);
+        return;
+    }
+    if (!isCompTakeLane())
         return;
 
     // Once there is a comp, dim what of this take it does not use.
