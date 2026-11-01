@@ -1,8 +1,9 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 // Comping on the timeline (SPEC-022 CT-3, FD-70, FD-71 tab B). On a take lane of a track that has takes:
-//   * drag across the lane  -> that span of this take plays on the comp (one drag = one SetCompRangeCommand = one undo)
-//   * click                 -> this take plays in place of the piece under the pointer
-//   * double-click          -> this take plays for the whole take
+//   * drag across the lane       -> that span of this take plays on the comp (one drag = one SetCompRangeCommand = one undo)
+//   * double-click               -> this take plays in place of the piece under the pointer
+//   * Shift + double-click       -> this take plays for the whole take
+//   * a single click             -> nothing (owner, 2026-11-01: a lone click must never change the comp; flow needs a guarantee)
 // The live drag is drawn in violet; once committed, the part of a take the comp does not use is dimmed (the used part
 // keeps the track's own colour, which the clips already paint). Kept out of TrackUIComponent.cpp, which is at its pin.
 #include "../AestraUI/Core/NUIThemeSystem.h"
@@ -11,6 +12,7 @@
 #include "TrackUIComponent.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 
 namespace Aestra {
@@ -56,6 +58,13 @@ bool TrackUIComponent::handleCompSwipe(const AestraUI::NUIMouseEvent& event) {
         const AestraUI::NUIRect bounds = getBounds();
         if (!bounds.contains(event.position) || event.position.x < bounds.x + controls)
             return false; // the header keeps its buttons
+        // A double-click is two presses close in time and place. The platform flag is not trusted (the clip code keeps
+        // its own timer for the same reason), and it is read on the PRESS, not the release.
+        const long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+        m_compDouble = event.doubleClick || (nowMs - m_compLastClickMs < 400 && std::fabs(event.position.x - m_compLastClickX) < 6.0f);
+        m_compShift = event.modifiers & AestraUI::NUIModifiers::Shift;
+        m_compLastClickMs = m_compDouble ? 0 : nowMs; // a double-click uses the pair up: a third click starts afresh
+        m_compLastClickX = event.position.x;
         m_compPressed = true;
         m_compDragging = false;
         m_compPressX = event.position.x;
@@ -87,8 +96,8 @@ bool TrackUIComponent::handleCompSwipe(const AestraUI::NUIMouseEvent& event) {
     if (dragged) {
         start = snapBeatToGrid(std::min(anchor, m_compEndBeat));
         end = snapBeatToGrid(std::max(anchor, m_compEndBeat));
-    } else if (!compSpanForClick(anchor, event.doubleClick, start, end)) {
-        repaint();
+    } else if (!m_compDouble || !compSpanForClick(anchor, m_compShift, start, end)) {
+        repaint(); // a single click changes nothing
         return true;
     }
     commitCompSpan(start, end);
