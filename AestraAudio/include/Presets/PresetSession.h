@@ -36,6 +36,8 @@ public:
                   Recorder record);
 
     void setProjectPresets(ProjectPresets list, SaveToProject save);
+    /// False until the project can keep presets: Save then offers only "Yours".
+    bool canSaveToProject() const { return static_cast<bool>(m_projectSave); }
     /// Called after undo/redo or a preset load so an open editor can redraw its knobs.
     void setOnSoundChanged(std::function<void()> callback) { *m_notifyCell = std::move(callback); }
 

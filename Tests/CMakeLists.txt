@@ -3526,6 +3526,24 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(PluginRackBindingLifecycleTest PROPERTIES LABELS "ui;plugin;regression;contract:application")
 endif()
 
+# The preset bar in every plugin window (V83-S2, FD-72): step, browse by ear (Esc puts back, Enter keeps as one
+# undo), Save with the name filled in, A|B, and keys only while a popover is open.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(PluginPresetBarTest AestraUI_Core AestraUI_Platform)
+    add_executable(PluginPresetBarTest AestraUI/PluginPresetBarTest.cpp)
+    target_link_libraries(PluginPresetBarTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(PluginPresetBarTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PluginPresetBarTest COMMAND PluginPresetBarTest)
+    set_tests_properties(PluginPresetBarTest PROPERTIES LABELS "ui;plugin;presets;contract:application")
+endif()
+
 # Floating panels must only raise themselves on presses inside their bounds:
 # the overlay forwards every press to every visible panel, so a transport-bar
 # click must not pop panels to the front (the Arsenal-mode double-stop bug).
@@ -4209,6 +4227,7 @@ if(AESTRA_ENABLE_UI)
         ArsenalKitTest
         UIMixerPanelGroupingTest
         PluginRackBindingLifecycleTest
+        PluginPresetBarTest
         WindowPanelRaiseTest
         TakesHistoryPanelTest
         PluginBrowserSelectionTest

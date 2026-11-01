@@ -5419,8 +5419,8 @@ void AestraEQEditor::handleHoverUpdate(const NUIMouseEvent& event) {
 }
 
 bool AestraEQEditor::onKeyEvent(const NUIKeyEvent& event) {
-    if (!isVisible())
-        return false;
+    if (!isVisible()) return false;
+    if (routeKeyToAccessory(event)) return true; // the preset bar's browser or Save form takes typing first
     if (handleNumericEditKey(event))
         return true;
     if (m_typeMenuBand >= 0 && event.pressed && event.keyCode == NUIKeyCode::Escape) {

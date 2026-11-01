@@ -17,6 +17,8 @@ class NUIPlatformBridge;
 #include <PluginScanner.h>
 #include <PluginManager.h>
 #include <EffectChain.h>
+#include "Presets/PresetLibrary.h"
+#include "Presets/PresetSession.h"
 
 #include <functional>
 #include <memory>
@@ -122,6 +124,20 @@ public:
     using EditorModeGetter = std::function<PanelMode()>;
     using EditorModeSaver = std::function<void(const PanelMode&)>;
     void setEditorModeProvider(EditorModeGetter getter, EditorModeSaver saver);
+
+    /// What the preset bar needs to know about a plugin that is opening (FD-72): the track it is on, where its
+    /// undo steps go, and the project's own presets. Nothing returned = no bar for that plugin.
+    struct PresetContext {
+        std::string trackName;
+        std::function<void(std::shared_ptr<Aestra::Audio::ICommand>)> record;
+        Aestra::Audio::Presets::PresetSession::ProjectPresets projectPresets;
+        Aestra::Audio::Presets::PresetSession::SaveToProject saveToProject;
+    };
+    using PresetContextProvider =
+        std::function<std::optional<PresetContext>(const std::shared_ptr<Aestra::Audio::IPluginInstance>&)>;
+    void setPresetContextProvider(PresetContextProvider provider) { m_presetContext = std::move(provider); }
+    /// Keys for an open preset browser or Save form; true when one took the key.
+    bool routeKeyToPresetBar(const NUIKeyEvent& event);
 
     /** @brief Bring every open editor fully inside the popup layer (View > Gather Panels). */
     void gatherEditors();
@@ -306,6 +322,10 @@ private:
     NUIComponent* m_popupLayer = nullptr;
     std::shared_ptr<UIMixerPluginDropdown> m_activeMenu;
     std::vector<std::shared_ptr<NUIComponent>> m_activeEditors;
+    PresetContextProvider m_presetContext;
+    std::unique_ptr<Aestra::Audio::Presets::PresetLibrary> m_presetLibrary;
+    void attachPresetBar(const std::shared_ptr<AestraPanelWindow>& editor,
+                         const std::shared_ptr<Aestra::Audio::IPluginInstance>& instance);
 
     // Catalog source for on-demand popup menus (see setMixerCatalogProvider)
     std::function<std::vector<Aestra::Components::MixerPluginEntry>()> m_mixerCatalogProvider;
