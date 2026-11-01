@@ -556,6 +556,8 @@ private:
     bool m_compDouble{false};  // this press is the second click of a double-click
     bool m_compShift{false};
     long long m_compLastClickMs{0};
+    double m_compHintStart{0.0}, m_compHintEnd{0.0}; // what a double-click here would replace, shown briefly after a single click
+    long long m_compHintMs{0};
     float m_compLastClickX{0.0f};
     bool m_muteStroke{false};
     bool m_muteStrokeTarget{true};

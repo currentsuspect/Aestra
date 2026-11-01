@@ -20,6 +20,11 @@ namespace Audio {
 
 namespace {
 constexpr float kDragThresholdPx = 4.0f;
+constexpr long long kHintMs = 1400; // how long the single-click highlight lasts
+
+long long nowMs() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
 
 bool laneHoldsClips(const PlaylistModel& playlist, PlaylistLaneID id) {
     const PlaylistLane* lane = const_cast<PlaylistModel&>(playlist).getLane(id);
@@ -60,10 +65,10 @@ bool TrackUIComponent::handleCompSwipe(const AestraUI::NUIMouseEvent& event) {
             return false; // the header keeps its buttons
         // A double-click is two presses close in time and place. The platform flag is not trusted (the clip code keeps
         // its own timer for the same reason), and it is read on the PRESS, not the release.
-        const long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
-        m_compDouble = event.doubleClick || (nowMs - m_compLastClickMs < 400 && std::fabs(event.position.x - m_compLastClickX) < 6.0f);
+        const long long now = nowMs();
+        m_compDouble = event.doubleClick || (now - m_compLastClickMs < 400 && std::fabs(event.position.x - m_compLastClickX) < 6.0f);
         m_compShift = event.modifiers & AestraUI::NUIModifiers::Shift;
-        m_compLastClickMs = m_compDouble ? 0 : nowMs; // a double-click uses the pair up: a third click starts afresh
+        m_compLastClickMs = m_compDouble ? 0 : now; // a double-click uses the pair up: a third click starts afresh
         m_compLastClickX = event.position.x;
         m_compPressed = true;
         m_compDragging = false;
@@ -97,9 +102,13 @@ bool TrackUIComponent::handleCompSwipe(const AestraUI::NUIMouseEvent& event) {
         start = snapBeatToGrid(std::min(anchor, m_compEndBeat));
         end = snapBeatToGrid(std::max(anchor, m_compEndBeat));
     } else if (!m_compDouble || !compSpanForClick(anchor, m_compShift, start, end)) {
-        repaint(); // a single click changes nothing
+        // A single click changes nothing; it only shows what a double-click here WOULD replace, fading out.
+        if (!m_compDouble && compSpanForClick(anchor, false, m_compHintStart, m_compHintEnd)) m_compHintMs = nowMs();
+        repaint();
+        if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
         return true;
     }
+    m_compHintMs = 0;
     commitCompSpan(start, end);
     repaint();
     if (m_onCacheInvalidationCallback)
@@ -192,6 +201,24 @@ void TrackUIComponent::drawCompOverlay(AestraUI::NUIRenderer& renderer, const Ae
             }
             if (cursor < clip.endBeat())
                 shade(cursor, clip.endBeat());
+        }
+    }
+
+    // After a single click: outline the stretch a double-click here would replace, then let it fade.
+    if (m_compHintMs != 0 && !(m_compPressed && m_compDragging)) {
+        const long long age = nowMs() - m_compHintMs;
+        if (age >= kHintMs) {
+            m_compHintMs = 0;
+        } else {
+            const float fade = 1.0f - static_cast<float>(age) / static_cast<float>(kHintMs);
+            const AestraUI::NUIColor violet = AestraUI::NUIThemeManager::getInstance().getColor("primary");
+            const float x0 = std::max(xOf(m_compHintStart), gridStart), x1 = std::min(xOf(m_compHintEnd), bounds.right());
+            if (x1 > x0) {
+                renderer.fillRect(AestraUI::NUIRect(x0, bounds.y, x1 - x0, bounds.height), violet.withAlpha(0.22f * fade));
+                renderer.drawLine(AestraUI::NUIPoint(x0, bounds.y + 1), AestraUI::NUIPoint(x1, bounds.y + 1), 2.0f, violet.withAlpha(fade));
+                renderer.drawLine(AestraUI::NUIPoint(x0, bounds.y + bounds.height - 1), AestraUI::NUIPoint(x1, bounds.y + bounds.height - 1), 2.0f, violet.withAlpha(fade));
+            }
+            repaint(); // keep fading
         }
     }
 
