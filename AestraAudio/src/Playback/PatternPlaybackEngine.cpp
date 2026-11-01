@@ -96,8 +96,12 @@ NoteOffTiming calculateNoteOffTiming(const MidiPayload& midi, const MidiNote& no
     const double noteBeat = instanceStartBeat + note.startBeat;
     NoteOffTiming timing{std::min(noteBeat + note.durationBeats, sourceEndBeatAbsolute), false};
     if (isPitchedSampler) {
+        // Gate is the share of the note's OWN length that sounds, as on a step sequencer: a grid step
+        // (one step long) rings for gate x a step, and a note drawn at any length in the piano roll
+        // rings for that length. Timing it from the step alone cut every drawn note to a blip.
         const double gate = std::clamp(static_cast<double>(note.gate), 0.1, 2.0);
-        timing.offBeat = std::min(noteBeat + gate * kPitchedSamplerStepBeats, sourceEndBeatAbsolute);
+        const double length = note.durationBeats > 0.0 ? note.durationBeats : kPitchedSamplerStepBeats;
+        timing.offBeat = std::min(noteBeat + gate * length, sourceEndBeatAbsolute);
         if (const auto* nextStep = findNextActiveStepForUnit(midi, note)) {
             if (note.slide) {
                 timing.suppressNoteOff = true;
