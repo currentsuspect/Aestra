@@ -200,8 +200,10 @@ Preset capture(const IPluginInstance& plugin, const std::string& name) {
         if (!presetWritable(param)) continue;
         p.params.push_back({param.id, param.name, plugin.getParameter(param.id)});
     }
-    // Aestra's own plugins are fully described by their parameters; anything else keeps its own state too.
-    if (plugin.getInfo().format != PluginFormat::Internal || p.params.empty()) p.state = plugin.saveState();
+    // The plugin's own state too: a third-party plugin's sound lives there, and some of Aestra's keep more than
+    // their parameters (the EQ's dynamic bands). apply() loads it first and the params by name second, so a
+    // preset from an older build still lands right if the state format moved on.
+    p.state = plugin.saveState();
     return p;
 }
 

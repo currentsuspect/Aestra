@@ -291,6 +291,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Presets/PresetLibrary.cpp
     src/Presets/FactoryPresets.cpp
     src/Presets/PresetSession.cpp
+    src/Presets/LegacyPresets.cpp
     # One translation unit per Muse verb family. MuseService.cpp is the
     # dispatcher; these hold the verbs themselves. See MuseServiceInternal.h.
     src/Commands/MuseServiceQueries.cpp
@@ -421,6 +422,7 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Presets/Preset.h
     include/Presets/PresetLibrary.h
     include/Presets/PresetSession.h
+    include/Presets/LegacyPresets.h
     include/Commands/ApplyPresetCommand.h
 
     include/IO/StreamingDecoder.h
