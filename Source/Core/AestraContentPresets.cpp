@@ -7,6 +7,9 @@
 #include "../AestraUI/Widgets/PluginUIController.h"
 
 #include "Models/TrackManager.h"
+#include "ProjectPresetsJson.h"
+
+#include <algorithm>
 
 using namespace Aestra;
 
@@ -45,7 +48,28 @@ void AestraContent::wirePluginPresets() {
             context.record = [weakTm](std::shared_ptr<Audio::ICommand> command) {
                 if (auto tm = weakTm.lock()) tm->getCommandHistory().pushExecuted(std::move(command));
             };
-            // "This project only" arrives with project presets in the project file (V83-S2 slice 3).
+            // "This project only": kept on the project model and written into the project file (FD-72).
+            context.projectPresets = [weakTm](const std::string& pluginId) {
+                std::vector<Audio::Presets::Preset> out;
+                if (auto tm = weakTm.lock())
+                    for (const auto& p : tm->projectPresets())
+                        if (p.pluginId == pluginId) out.push_back(p);
+                return out;
+            };
+            context.saveToProject = [weakTm](const Audio::Presets::Preset& preset) {
+                auto tm = weakTm.lock();
+                if (!tm) return false;
+                auto& kept = tm->projectPresets();
+                // The same name for the same plugin is the same preset: saving again updates it in place.
+                auto same = std::find_if(kept.begin(), kept.end(), [&](const Audio::Presets::Preset& p) {
+                    return p.pluginId == preset.pluginId && p.name == preset.name;
+                });
+                if (same != kept.end()) *same = preset;
+                else if (kept.size() < kMaxProjectPresets) kept.push_back(preset);
+                else return false;
+                tm->markModified(); // it lives in the project, so the project has changed
+                return true;
+            };
             return context;
         });
 }

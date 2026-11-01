@@ -25,6 +25,8 @@
 #include "Track.h"
 #include "UnitManager.h"
 
+#include "Presets/Preset.h"
+
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -740,20 +742,10 @@ public:
      * another. Falls back to the same user-documents root as recording when
      * the project has never been saved.
      */
-    std::string renderRootDirectory() const {
-        namespace fs = std::filesystem;
-        if (!m_recordingProjectPath.empty()) {
-            fs::path projectPath(m_recordingProjectPath);
-            if (projectPath.has_extension()) {
-                return (projectPath.parent_path() / "Renders").string();
-            }
-            return (projectPath / "Renders").string();
-        }
-        if (const char* home = std::getenv("HOME")) {
-            return (fs::path(home) / "Documents" / "Aestra" / "Renders").string();
-        }
-        return (fs::current_path() / "Renders").string();
-    }
+    std::string renderRootDirectory() const; // TrackManager.cpp
+
+    /// Presets kept in this project only (FD-72 "This project only"): saved in the project file, never in Yours.
+    std::vector<Presets::Preset>& projectPresets() { return m_projectPresets; }
 
     /**
      * @brief Get output sample rate
@@ -1932,6 +1924,7 @@ public:
      */
     void clearAllTracks() {
         m_tracks.clear();
+        m_projectPresets.clear(); // a new or reloaded project starts with none of the last one's
         m_nextTrackId = 1;
         requestAudioGraphRebuild(GraphDirtyReason::TrackStructureChanged);
     }
@@ -2431,20 +2424,7 @@ private:
         return (root / oss.str()).string();
     }
 
-    std::filesystem::path recordingRootDirectory() const {
-        namespace fs = std::filesystem;
-        if (!m_recordingProjectPath.empty()) {
-            fs::path projectPath(m_recordingProjectPath);
-            if (projectPath.has_extension()) {
-                return projectPath.parent_path() / "Recordings";
-            }
-            return projectPath / "Recordings";
-        }
-        if (const char* home = std::getenv("HOME")) {
-            return fs::path(home) / "Documents" / "Aestra" / "Recordings";
-        }
-        return fs::current_path() / "Recordings";
-    }
+    std::filesystem::path recordingRootDirectory() const; // TrackManager.cpp
 
     bool writeRecordedTakeWav(const std::string& path, const AudioBufferData& buffer) const {
         if (buffer.isCompact()) { AudioBufferData f = buffer; f.expandToFloat(); return writeRecordedTakeWav(path, f); }
@@ -2629,6 +2609,7 @@ private:
     std::shared_ptr<ContinuousParamBuffer> m_continuousParams; // STUB: Phase 2
     std::shared_ptr<ChannelSlotMap> m_channelSlotMap;
     UnitManager m_unitManager;
+    std::vector<Presets::Preset> m_projectPresets; // UI thread only; see projectPresets()
     std::function<bool(const AudioQueueCommand&)> m_commandSink;
     std::atomic<bool> m_metronomeDirty{false};
     std::function<void(MixerChannel&)> m_channelPrepareCallback;

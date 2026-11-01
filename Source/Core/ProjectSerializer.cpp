@@ -11,6 +11,7 @@
 #include "Music/ScaleContext.h"
 #include "Models/LegacyTrackRepair.h"
 #include "CompJson.h"
+#include "ProjectPresetsJson.h"
 #include <array>
 #include <atomic>
 #include <algorithm>
@@ -1115,6 +1116,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
 
     // 4. Save Arsenal Units
     root.set("arsenal", trackManager->getUnitManager().saveToJSON());
+    if (!trackManager->projectPresets().empty()) root.set("presets", projectPresetsToJson(trackManager->projectPresets()));
 
     // 5. Optional UI state (panels, dialog, etc.)
     if (uiState) {
@@ -1132,21 +1134,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
         ui.set("pianoRollOpen", JSON(uiState->pianoRollOpen));
         ui.set("sequencerOpen", JSON(uiState->sequencerOpen));
 
-        JSON panels = JSON::array();
-        for (const auto& p : uiState->panels) {
-            JSON pj = JSON::object();
-            pj.set("title", JSON(p.title));
-            pj.set("x", JSON(p.x));
-            pj.set("y", JSON(p.y));
-            pj.set("width", JSON(p.width));
-            pj.set("height", JSON(p.height));
-            pj.set("expandedHeight", JSON(p.expandedHeight));
-            pj.set("minimized", JSON(p.minimized));
-            pj.set("maximized", JSON(p.maximized));
-            pj.set("userPositioned", JSON(p.userPositioned));
-            panels.push(pj);
-        }
-        ui.set("panels", panels);
+        ui.set("panels", uiPanelsToJson(uiState->panels)); // ProjectPresetsJson.h
 
         root.set("ui", ui);
     }
@@ -1736,6 +1724,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         }
     
         // 5. Load Arsenal Units (must load before patterns - patterns reference unitId in MIDI note data)
+        if (root.has("presets")) trackManager->projectPresets() = projectPresetsFromJson(root["presets"]); // FD-72
         if (root.has("arsenal")) {
             trackManager->getUnitManager().loadFromJSON(root["arsenal"]);
         }

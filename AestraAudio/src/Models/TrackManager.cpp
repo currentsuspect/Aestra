@@ -381,5 +381,27 @@ bool TrackManager::prewarmSamplerKeepLength(bool wait) {
     return allReady;
 }
 
+// Where a project's renders and recordings go: beside the project file, or under Documents/Aestra before the project
+// has been saved. Out of the header to keep it under its size pin.
+namespace {
+std::filesystem::path projectSubfolder(const std::string& projectPath, const char* leaf) {
+    namespace fs = std::filesystem;
+    if (!projectPath.empty()) {
+        const fs::path p(projectPath);
+        return (p.has_extension() ? p.parent_path() : p) / leaf;
+    }
+    if (const char* home = std::getenv("HOME")) return fs::path(home) / "Documents" / "Aestra" / leaf;
+    return fs::current_path() / leaf;
+}
+} // namespace
+
+std::string TrackManager::renderRootDirectory() const {
+    return projectSubfolder(m_recordingProjectPath, "Renders").string();
+}
+
+std::filesystem::path TrackManager::recordingRootDirectory() const {
+    return projectSubfolder(m_recordingProjectPath, "Recordings");
+}
+
 } // namespace Audio
 } // namespace Aestra
