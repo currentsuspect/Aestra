@@ -210,10 +210,13 @@ void TrackManagerUI::refreshTracks() {
             ++m_foldedEmptyTracks; // V82-T2: folded into the last row
             continue;
         }
-        orderedLaneIds.push_back(laneId);
+        // A comped track leads with its comp (master) lane and lists the takes under it, newest first (FD-70, FD-71).
+        const PlaylistLaneID primary = track->primaryLaneId();
+        orderedLaneIds.push_back(primary);
         if (!isTrackCollapsed(track->trackId)) {
-            for (const auto& owned : track->laneIds) {
-                if (owned != laneId) {
+            const std::vector<PlaylistLaneID> nested = track->compLaneId.isValid() ? track->takeLanesNewestFirst() : track->laneIds;
+            for (const auto& owned : nested) {
+                if (owned != primary) {
                     orderedLaneIds.push_back(owned);
                 }
             }
@@ -237,7 +240,7 @@ void TrackManagerUI::refreshTracks() {
         // for the chevron glyph. The expansion toggle lives on the primary
         // row of a multi-lane track.
         const auto* owningTrack = lane->trackId != 0 ? m_trackManager->getTrack(lane->trackId) : nullptr;
-        const bool isPrimaryRow = owningTrack && !owningTrack->laneIds.empty() && owningTrack->laneIds.front() == laneId;
+        const bool isPrimaryRow = owningTrack && !owningTrack->laneIds.empty() && owningTrack->primaryLaneId() == laneId;
         trackUI->setIsNestedLane(owningTrack != nullptr && !isPrimaryRow);
         trackUI->setTrackCollapsed(isTrackCollapsed(lane->trackId));
         if (owningTrack && isPrimaryRow && owningTrack->laneIds.size() > 1) {

@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -134,7 +135,10 @@ private:
             lane->muted = true;
             sources.push_back({id, &lane->clips});
         }
-        setMasterClips(track, compClipsFor(track.comp, sources, playlist.getBPM()));
+        std::vector<ClipInstance> pieces = compClipsFor(track.comp, sources, playlist.getBPM());
+        for (ClipInstance& piece : pieces) // each piece reads as the take it plays (FD-71)
+            piece.name = "Take " + std::to_string(track.laneNumber(track.comp.laneAt(piece.startBeat + kCompEpsilon)));
+        setMasterClips(track, pieces);
     }
 
     TrackManager& m_tracks;

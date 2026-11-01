@@ -77,6 +77,9 @@ void testFirstSwipeMakesTheMasterLane() {
           "MasterPlaysTheChosenTakeAcrossTheSwipe");
     check(r.lane(r.take1)->muted && r.lane(r.take2)->muted && !r.lane(master)->muted, "TakesGoSilentMasterPlays");
     check(r.track().activeLaneId == r.take1, "TheArmedLaneStaysTheArmedLane");
+    check(r.lane(master)->clips[0].name == "Take 2", "MasterPieceIsNamedForItsTake");
+    check(r.track().primaryLaneId() == master && r.track().takeLanesNewestFirst() == std::vector<PlaylistLaneID>({r.take2, r.take1}),
+          "TheMasterLeadsAndTakesFollowNewestFirst");
 }
 
 void testSecondSwipeReusesTheMaster() {
