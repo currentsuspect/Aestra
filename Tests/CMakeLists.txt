@@ -4729,6 +4729,20 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/TimelineClipMoveKeepsNotesTes
     set_tests_properties(TimelineClipMoveKeepsNotesTest PROPERTIES LABELS "audio;pattern;playback;regression;contract:audio")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PitchedSamplerNoteLengthTest.cpp")
+    add_executable(PitchedSamplerNoteLengthTest AestraAudio/PitchedSamplerNoteLengthTest.cpp)
+    target_link_libraries(PitchedSamplerNoteLengthTest PRIVATE AestraAudio)
+    target_include_directories(PitchedSamplerNoteLengthTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PitchedSamplerNoteLengthTest COMMAND PitchedSamplerNoteLengthTest)
+    set_tests_properties(PitchedSamplerNoteLengthTest PROPERTIES LABELS "audio;pattern;playback;regression;contract:audio")
+endif()
+
 # T-6 (v0.7.1 trust sprint): record-path latency compensation + engine-frame
 # capture placement.
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/RecordingLatencyCompensationTest.cpp")

@@ -20,7 +20,8 @@ namespace Audio {
  *  - chance decides, per note and per pass, whether the step plays. The decision is a hash of the note's
  *    identity and the pass, never a random draw, so a re-queue after an edit while playing lands on the
  *    same answer and a bounce matches playback;
- *  - a ratchet splits the step into 2..4 equal hits (the gate shrinks with it; only the last may slide).
+ *  - a ratchet splits the step into 2..4 equal hits (each hit keeps the gate, a share of its own length;
+ *    only the last may slide).
  */
 inline constexpr double kExprStepBeats = 0.25;
 inline constexpr double kMaxSwingDelayBeats = 0.125; ///< swing 1.0 = half a step late
@@ -88,8 +89,8 @@ inline std::vector<MidiNote> expandForPlayback(const std::vector<MidiNote>& note
         for (int i = 0; i < hits; ++i) {
             MidiNote m = n;
             m.startBeat = start + span * i;
-            m.durationBeats = span;
-            m.gate = n.gate / static_cast<float>(hits);
+            m.durationBeats = span; // each hit keeps the note's gate: gate is a share of the hit's own length
+
             m.slide = n.slide && i == hits - 1;
             m.ratchet = 1;
             out.push_back(m);
