@@ -510,3 +510,13 @@ target_include_directories(PresetCoreTest PRIVATE
 )
 add_test(NAME PresetCoreTest COMMAND PresetCoreTest)
 set_tests_properties(PresetCoreTest PROPERTIES TIMEOUT 120 LABELS "commands;plugins;presets;contract:application")
+
+# FactoryPresetsTest — V83-S2 slice 4 (FD-72): 8 to 10 factory presets per Aestra plugin, each naming real parameters.
+add_executable(FactoryPresetsTest Commands/FactoryPresetsTest.cpp)
+target_link_libraries(FactoryPresetsTest PRIVATE AestraAudioCore)
+target_include_directories(FactoryPresetsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME FactoryPresetsTest COMMAND FactoryPresetsTest)
+set_tests_properties(FactoryPresetsTest PROPERTIES TIMEOUT 120 LABELS "commands;plugins;presets;contract:application")
