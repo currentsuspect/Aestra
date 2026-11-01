@@ -87,7 +87,9 @@ struct NoteOffTiming {
 // delay and pitched-sampler gates. Bounds the repeats a window walks (PatternRepeat::inWindow).
 double repeatReachBeats(const std::vector<MidiNote>& notes, double patternLengthBeats) {
     double reach = patternLengthBeats;
-    for (const auto& n : notes) reach = std::max(reach, n.startBeat + n.durationBeats);
+    // A pitched-sampler gate holds a note up to twice its length (calculateNoteOffTiming).
+    for (const auto& n : notes)
+        reach = std::max(reach, n.startBeat + n.durationBeats * std::clamp(static_cast<double>(n.gate), 1.0, 2.0));
     return reach + 1.0;
 }
 

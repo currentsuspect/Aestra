@@ -16,6 +16,7 @@
 #include "Models/TrackManager.h"
 #include "Models/UnitManager.h"
 #include "Playback/PatternPlaybackEngine.h"
+#include "Playback/TimelineClock.h"
 
 #include <cstdint>
 #include <iostream>
@@ -171,6 +172,48 @@ void testRatchetedStepKeepsItsGatePerHit() {
     check(!f.offs.empty() && landsNear(f.offs.front(), 0.25), "the first hit of a gate-2 ratchet ends at beat 0.25");
 }
 
+// A gate can now hold a note past its drawn length (gate 2 = twice it). In a clip that repeats its
+// pattern, each repeat's note must still get its note-off, even one that lands after the repeat
+// has ended (review, #1325): a 4-beat pattern, a 3-beat note at gate 2 = off 6 beats after each start.
+void testRepeatingClipReleasesALongGatedNote() {
+    TimelineClock clock{120.0};
+    PatternManager patterns;
+    UnitManager units;
+    PatternPlaybackEngine engine(&clock, &patterns, &units);
+    const UnitID unit = units.createUnit("808", UnitType::PitchedSampler);
+    MidiPayload payload;
+    MidiNote n = note(0.0, 3.0, 2.0f);
+    n.unitId = unit;
+    payload.notes.push_back(n);
+    const PatternID id = patterns.createMidiPattern("Long gate", 4.0, payload);
+    engine.schedulePatternInstance(id, 0.0, 2, 0.0, 12.0, true);
+
+    std::vector<uint64_t> ons, offs;
+    MidiBuffer buffer;
+    PatternPlaybackEngine::UnitMidiRoute route{unit, &buffer};
+    bool edited = false;
+    for (uint64_t frame = 0; frame < beatFrame(20.0); frame += kBlock) {
+        // A content edit while the first repeat's note still sounds (beat 5.5, its off is at 6):
+        // the live-edit reconciliation must still find that note and keep its end.
+        if (!edited && frame >= beatFrame(5.5)) {
+            engine.patternContentEdited();
+            edited = true;
+        }
+        engine.refillWindow(frame, kSampleRate, kSampleRate / 4, 0);
+        buffer.clear();
+        engine.processAudio(frame, kBlock, &route, 1);
+        for (size_t i = 0; i < buffer.getEventCount(); ++i) {
+            const auto& e = buffer.getEvent(i);
+            const uint8_t status = e.data[0] & 0xF0;
+            if (status == 0x90 && e.data[2] > 0) ons.push_back(frame + e.sampleOffset);
+            if (status == 0x80 || (status == 0x90 && e.data[2] == 0)) offs.push_back(frame + e.sampleOffset);
+        }
+    }
+    check(ons.size() == 3, "three repeats, three note-ons (got " + std::to_string(ons.size()) + ")");
+    check(offs.size() == ons.size(), "every repeat's note gets its note-off (got " + std::to_string(offs.size()) + ")");
+    check(!offs.empty() && landsNear(offs.front(), 6.0), "the first repeat's note ends at beat 6, after its repeat, even with an edit at beat 5.5");
+}
+
 // The 808 is monophonic: the next step still cuts a long note, as a new hit does.
 void testNextStepStillCutsALongNote() {
     Fixture f;
@@ -189,6 +232,7 @@ int main() {
     testDrawnShortNoteIsShort();
     testStepNotesKeepTheirGate();
     testRatchetedStepKeepsItsGatePerHit();
+    testRepeatingClipReleasesALongGatedNote();
     testNextStepStillCutsALongNote();
 
     if (g_failures == 0) {
