@@ -97,7 +97,13 @@ double correlation(const double* a, const double* b) {
 
 const char* kSharpNames[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 const char* kFlatNames[12] = {"C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"};
-const char* noteName(int pc, bool flats) { return (flats ? kFlatNames : kSharpNames)[((pc % 12) + 12) % 12]; }
+const char* noteName(int pc, bool flats) {
+    // Wrap first, then pick the table. Indexing the ?: of the two arrays directly drew "index -4 out of bounds for
+    // type 'char *[12]'" from the CI sanitizer build (GCC, -O0), though the wrapped index is always 0..11; it did not
+    // reproduce with GCC 16 or clang locally. Splitting the two steps leaves nothing for the bounds check to misread.
+    const int i = ((pc % 12) + 12) % 12;
+    return flats ? kFlatNames[i] : kSharpNames[i];
+}
 
 bool inScale(const Key& key, int pc) {
     static const bool major[12] = {1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1};
