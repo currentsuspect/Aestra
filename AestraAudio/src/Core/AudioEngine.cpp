@@ -638,19 +638,18 @@ void AudioEngine::setChannelSlotMap(std::shared_ptr<const ChannelSlotMap> slotMa
 
 void AudioEngine::refreshSamplerCache() {
     auto* unitMgr = m_unitManager.load(std::memory_order_acquire);
-    if (unitMgr) {
-        auto newCache = std::make_shared<SamplerCacheData>();
-        refreshSamplerCacheToSnapshot(*unitMgr, *newCache);
-
-        // Double-buffer swap: atomically publish new cache
-        auto retired = std::move(m_samplerCacheOwned);
-        m_samplerCacheOwned = std::move(newCache);
-        m_samplerCacheRaw.store(m_samplerCacheOwned.get(), std::memory_order_release);
-        m_cachedSamplerCount.store(m_samplerCacheOwned->count, std::memory_order_release);
-
-        // Retire old cache via garbage collector
-        GarbageCollector::instance().release(std::move(retired), "AudioEngine::SamplerCache");
-    }
+    auto snapshot = unitMgr ? unitMgr->getAudioSnapshot() : nullptr;
+    if (!unitMgr || snapshot == m_samplerCacheSource) return; // no unit change since the last build
+    m_samplerCacheSource = std::move(snapshot);
+    auto newCache = std::make_shared<SamplerCacheData>();
+    refreshSamplerCacheToSnapshot(*unitMgr, *newCache);
+    // Double-buffer swap: atomically publish new cache
+    auto retired = std::move(m_samplerCacheOwned);
+    m_samplerCacheOwned = std::move(newCache);
+    m_samplerCacheRaw.store(m_samplerCacheOwned.get(), std::memory_order_release);
+    m_cachedSamplerCount.store(m_samplerCacheOwned->count, std::memory_order_release);
+    // Retire old cache via garbage collector
+    GarbageCollector::instance().release(std::move(retired), "AudioEngine::SamplerCache");
 }
 
 void AudioEngine::refreshSamplerCacheToSnapshot(UnitManager& mgr, SamplerCacheData& cache) {
@@ -760,6 +759,7 @@ void AudioEngine::performNonRealtimeMaintenance() {
     }
 
     refillNoteSchedule(); // lookahead refill of the note queue (AudioEngineScheduling.cpp)
+    refreshSamplerCache(); // units added since (every sample dropped into Arsenal) get the stop's release
 
     constexpr uint64_t kCollectionIntervalNs = 500000000ull;
     const uint64_t nowNs = static_cast<uint64_t>(

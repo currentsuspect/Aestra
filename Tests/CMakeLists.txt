@@ -1435,6 +1435,20 @@ target_include_directories(AestraTransportEdgesTest PRIVATE
 add_test(NAME AestraTransportEdgesTest COMMAND AestraTransportEdgesTest)
 set_tests_properties(AestraTransportEdgesTest PROPERTIES LABELS "audio;transport;playback;regression;contract:audio" TIMEOUT 120)
 
+# A stop releases every sampler unit, including ones added after the engine was wired
+add_executable(AestraStopReleasesLateSamplerTest AestraAudio/StopReleasesLateSamplerTest.cpp)
+target_link_libraries(AestraStopReleasesLateSamplerTest PRIVATE AestraAudio)
+target_include_directories(AestraStopReleasesLateSamplerTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Tests
+)
+add_test(NAME AestraStopReleasesLateSamplerTest COMMAND AestraStopReleasesLateSamplerTest)
+set_tests_properties(AestraStopReleasesLateSamplerTest PROPERTIES LABELS "audio;sampler;transport;regression;contract:audio" TIMEOUT 120)
+
 # Oversized driver block: processBlock splits it into capacity-sized chunks
 add_executable(AestraOversizedDriverBlockTest AestraAudio/OversizedDriverBlockTest.cpp)
 target_link_libraries(AestraOversizedDriverBlockTest PRIVATE AestraAudio)
@@ -3019,6 +3033,37 @@ if(AESTRA_ENABLE_UI)
     )
     add_test(NAME PanelResizeLayoutTest COMMAND PanelResizeLayoutTest)
     set_tests_properties(PanelResizeLayoutTest PROPERTIES LABELS "ui;layout;regression;contract:application")
+endif()
+
+# A sample dragged onto an open Arsenal lands there, not on the timeline under it (4 Nov 2026)
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(ArsenalDropOrderTest AestraUI_Core AestraUI_Platform)
+    add_executable(ArsenalDropOrderTest
+        AestraUI/ArsenalDropOrderTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/WindowPanel.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/AudioClipEditorPanel.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/SampleEditorPanel.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/ArsenalPanel.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/ArsenalPanelScenes.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/ArsenalSceneMenu.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/PatternBrowserPanel.cpp
+    )
+    target_link_libraries(ArsenalDropOrderTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(ArsenalDropOrderTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Tests/AestraAudio
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ArsenalDropOrderTest COMMAND ArsenalDropOrderTest)
+    set_tests_properties(ArsenalDropOrderTest PROPERTIES LABELS "ui;dragdrop;regression;contract:application")
 endif()
 
 # V8-S1: the export dialog is NUI widgets: fits, per-state visibility, stems toggle, failure path.

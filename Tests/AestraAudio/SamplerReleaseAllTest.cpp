@@ -159,6 +159,36 @@ int main() {
         expect(after <= mid + 1.0e-6f, "a releasing voice is not restarted by the request (level does not jump back up)");
     }
 
+    // 6. All Notes Off (CC123, what the engine's stop sends every unit) releases through the ADSR,
+    //    so a stop reaches the sampler even when the engine's release request does not (4 Nov 2026).
+    {
+        Rig rig;
+        rig.init(wav, 0.300f);
+        MidiBuffer on; on.addNoteOn(1, kNote, kVelocity, 0);
+        rig.block(&on);
+        for (int b = 0; b < 8; ++b) rig.block(nullptr);
+        MidiBuffer cc; const uint8_t allNotesOff[3] = {0xB0, 123, 0}; cc.addEvent(0, allNotesOff, 3);
+        rig.block(&cc);
+        const float soon = rig.block(nullptr);
+        float tail = 0.0f;
+        for (int b = 0; b < 80; ++b) tail = rig.block(nullptr);
+        expect(soon > 0.01f, "All Notes Off releases through the ADSR (a 300 ms tail, not a cut)");
+        expect(tail < 1.0e-4f, "and the voice is silent once the release time has passed");
+    }
+
+    // 7. All Sound Off (CC120, the engine's panic) cuts at once.
+    {
+        Rig rig;
+        rig.init(wav, 0.300f);
+        MidiBuffer on; on.addNoteOn(1, kNote, kVelocity, 0);
+        rig.block(&on);
+        for (int b = 0; b < 8; ++b) rig.block(nullptr);
+        MidiBuffer cc; const uint8_t allSoundOff[3] = {0xB0, 120, 0}; cc.addEvent(0, allSoundOff, 3);
+        rig.block(&cc);
+        const float after = rig.block(nullptr);
+        expect(after < 1.0e-4f, "All Sound Off cuts every voice in the block it arrives");
+    }
+
     std::error_code ec;
     std::filesystem::remove(wav, ec);
     std::cout << (g_failures == 0 ? "[PASS] SamplerReleaseAllTest\n" : "[FAIL] SamplerReleaseAllTest\n");

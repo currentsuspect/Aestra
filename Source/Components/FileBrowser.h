@@ -679,6 +679,7 @@ public:
     // Double-click detection
     int lastClickedIndex_;
     double lastClickTime_;
+    NUIPoint lastClickPos_{};
     static constexpr double DOUBLE_CLICK_TIME = 0.5; // 500ms window for double-click
     
     // Sorting

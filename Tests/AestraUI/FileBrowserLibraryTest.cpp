@@ -665,6 +665,65 @@ void testOverlappingRootsIndexOnce() {
 
 } // namespace
 
+// A double-click is two presses in one spot. The first click can show or hide the
+// preview dock under the rows; with the list scrolled to the bottom the rows then
+// shift under a still pointer, and the second press used to land on another row:
+// meant to open a folder, it previewed a sample (owner, 4 Nov 2026).
+void testDoubleClickSurvivesPreviewDockReflow() {
+    Sandbox box("dblclick");
+    const fs::path root = box.home / "Documents" / "Aestra";
+    for (int i = 0; i < 30; ++i) {
+        char name[16];
+        std::snprintf(name, sizeof(name), "kit%02d", i);
+        touch(root / name / "hit.wav");
+    }
+    auto browser = makeBrowser(600.0f);
+    CHECK(waitForScan(*browser), "initial scan finishes");
+    browser->setPreviewPanelVisible(true); // a sample was selected earlier: the dock is up
+    std::vector<std::string> previewed;
+    browser->setOnSoundPreview([&](const AestraUI::FileItem& item) { previewed.push_back(item.path); });
+
+    Aestra::Testing::NullRenderer renderer;
+    const auto list = browser->computeBrowserLayout().list;
+    for (int wheel = 0; wheel < 60; ++wheel) { // to the bottom of the list
+        AestraUI::NUIMouseEvent scroll;
+        scroll.type = AestraUI::NUIMouseEventType::Scroll;
+        scroll.position = {list.x + 40.0f, list.y + 40.0f};
+        scroll.wheelDelta = -1.0f;
+        browser->onMouseEvent(scroll);
+        browser->onUpdate(0.1);
+        browser->onRender(renderer);
+    }
+
+    AestraUI::NUIMouseEvent press;
+    press.type = AestraUI::NUIMouseEventType::Down;
+    press.button = AestraUI::NUIMouseButton::Left;
+    press.pressed = true;
+    press.position = {list.x + 160.0f, list.bottom() - 16.0f}; // the last visible row, on its name
+    AestraUI::NUIMouseEvent release = press;
+    release.type = AestraUI::NUIMouseEventType::Up;
+    release.pressed = false;
+    release.released = true;
+
+    browser->onMouseEvent(press);
+    browser->onMouseEvent(release);
+    const AestraUI::FileItem* first = browser->getSelectedFile();
+    CHECK(first && first->isDirectory, "the first click selects a folder");
+    const std::string folder = first ? first->path : std::string();
+
+    browser->setPreviewPanelVisible(false); // a folder has no preview: the dock goes, the rows shift
+    browser->onUpdate(0.016);
+    browser->onRender(renderer);
+
+    browser->onMouseEvent(press);
+    browser->onMouseEvent(release);
+    waitForScan(*browser);
+    const auto expanded = browser->getExpandedFolders();
+    CHECK(std::find(expanded.begin(), expanded.end(), folder) != expanded.end(),
+          "the second press of the double-click opens the folder the first press hit");
+    CHECK(previewed.empty(), "and no sound is previewed by it");
+}
+
 int main() {
     testNaturalCompare();
     testXdgParsing();
@@ -687,6 +746,7 @@ int main() {
     testSearchReachesTheWholeLibrary();
     testOverlappingRootsIndexOnce();
     testExistingStateStartsTheIndex();
+    testDoubleClickSurvivesPreviewDockReflow();
 
     if (g_failures == 0) {
         std::printf("FileBrowserLibraryTest: all checks passed\n");

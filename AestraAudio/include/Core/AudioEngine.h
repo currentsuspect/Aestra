@@ -1342,13 +1342,11 @@ private:
     std::array<Plugins::SamplerPlugin*, kMaxCachedSamplers> m_cachedSamplers{};
     std::array<std::shared_ptr<Plugins::SamplerPlugin>, kMaxCachedSamplers> m_cachedSamplerOwners{};
     std::atomic<size_t> m_cachedSamplerCount{0}; // Kept for compatibility
+    std::shared_ptr<const AudioArsenalSnapshot> m_samplerCacheSource; // what the cache was built from (main thread)
     std::atomic<uint64_t> m_lastDeferredResourceCollectionNs{0};
 
 public:
-    /**
-     * @brief Refresh the sampler cache from UnitManager snapshot.
-     * Call from main thread after unit changes.
-     */
+    /** @brief Rebuild the sampler cache when the units changed (main thread; maintenance calls it). */
     void refreshSamplerCache();
 
 private:

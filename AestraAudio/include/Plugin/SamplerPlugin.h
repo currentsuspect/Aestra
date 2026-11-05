@@ -234,6 +234,8 @@ private:
     uint64_t m_nextVoiceOrder = 1;
 
     // Helpers
+    void resetAllVoices();   // hard cut, audio thread
+    void releaseAllVoices(); // every sounding voice into its release, audio thread
     void handleMidiEvent(const MidiBuffer::Event& event, double baseRate,
                          const std::shared_ptr<SampleData>& currentData);
     void renderVoice(Voice& voice, float* outL, float* outR, uint32_t frames);

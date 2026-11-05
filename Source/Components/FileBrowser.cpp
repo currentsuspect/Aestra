@@ -1280,6 +1280,13 @@ bool FileBrowser::handleListMouse(const NUIMouseEvent& event, const std::vector<
 	            // Calculate which file was clicked
 	            float relativeY = event.position.y - listY;
 	            int itemIndex = static_cast<int>((relativeY + scrollOffset_) / itemHeight);
+                const double currentTime = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+                // A double-click is two presses in one spot, whatever row is under the second: the first click can show
+                // or hide the preview dock, and the rows shift under a still pointer (owner, 4 Nov 2026).
+                const bool isDoubleClick = (currentTime - lastClickTime_) < DOUBLE_CLICK_TIME &&
+                    std::abs(event.position.x - lastClickPos_.x) <= 6.0f && std::abs(event.position.y - lastClickPos_.y) <= 6.0f &&
+                    lastClickedIndex_ >= 0 && lastClickedIndex_ < static_cast<int>(view.size());
+                if (isDoubleClick) itemIndex = lastClickedIndex_;
 
 	            if (itemIndex >= 0 && itemIndex < static_cast<int>(view.size())) {
 	                const FileItem* clickedFile = view[itemIndex];
@@ -1314,18 +1321,9 @@ bool FileBrowser::handleListMouse(const NUIMouseEvent& event, const std::vector<
 	                    dragStartPos_ = event.position;
 	                }
 
-                // Get current time for double-click detection
-                double currentTime = std::chrono::duration<double>(
-                    std::chrono::steady_clock::now().time_since_epoch()
-                ).count();
-
-                // Check for double-click: same item clicked within time window
-                bool isDoubleClick = (itemIndex == lastClickedIndex_) &&
-                                    ((currentTime - lastClickTime_) < DOUBLE_CLICK_TIME);
-
-                // Update click tracking
                 lastClickedIndex_ = itemIndex;
-                lastClickTime_ = currentTime;
+                lastClickTime_ = isDoubleClick ? 0.0 : currentTime; // a third press starts a new double-click
+                lastClickPos_ = event.position;
 
                 // Update selection with multi-select support
                 bool ctrl = event.modifiers & NUIModifiers::Ctrl;
@@ -1335,9 +1333,6 @@ bool FileBrowser::handleListMouse(const NUIMouseEvent& event, const std::vector<
 	                const auto& activeView = getActiveView();
 	                if (selectedIndex_ >= 0 && selectedIndex_ < static_cast<int>(activeView.size())) {
 	                    selectedFile_ = activeView[selectedIndex_];
-
-	                    // Waveform generation moved to FilePreviewPanel
-	                    // waveformData_.clear();
 	                    if (onFileSelected_) {
 	                        onFileSelected_(*selectedFile_);
 	                    }
@@ -1352,9 +1347,6 @@ bool FileBrowser::handleListMouse(const NUIMouseEvent& event, const std::vector<
                     if (selectedFile_->isDirectory) {
                         // Double-click on folder: toggle it
                         toggleFolder(const_cast<FileItem*>(selectedFile_));
-                        // Clear double-click tracking so subsequent clicks start fresh
-                        lastClickedIndex_ = -1;
-                        lastClickTime_ = 0.0;
                     }
                     // Double-click on files now only previews; loading is Enter/drag-drop
                     if (onSoundPreview_ && !selectedFile_->isDirectory) {
@@ -1362,9 +1354,7 @@ bool FileBrowser::handleListMouse(const NUIMouseEvent& event, const std::vector<
                         if (type == FileType::AudioFile || type == FileType::MusicFile ||
                             type == FileType::WavFile || type == FileType::Mp3File ||
                             type == FileType::FlacFile) {
-                            // PreviewEngine now handles async decode internally
-                            // No need for wrapper thread - just call directly
-                            onSoundPreview_(*selectedFile_);
+                            onSoundPreview_(*selectedFile_); // PreviewEngine decodes asynchronously
                         }
                     }
                 } else {
@@ -1374,9 +1364,7 @@ bool FileBrowser::handleListMouse(const NUIMouseEvent& event, const std::vector<
                         if (type == FileType::AudioFile || type == FileType::MusicFile ||
                             type == FileType::WavFile || type == FileType::Mp3File ||
                             type == FileType::FlacFile) {
-                            // PreviewEngine now handles async decode internally
-                            // No need for wrapper thread - just call directly
-                            onSoundPreview_(*selectedFile_);
+                            onSoundPreview_(*selectedFile_); // PreviewEngine decodes asynchronously
                         }
                     }
                 }
