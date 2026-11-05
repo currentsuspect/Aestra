@@ -1285,7 +1285,7 @@ bool FileBrowser::handleListMouse(const NUIMouseEvent& event, const std::vector<
                 // or hide the preview dock, and the rows shift under a still pointer (owner, 4 Nov 2026).
                 const bool isDoubleClick = (currentTime - lastClickTime_) < DOUBLE_CLICK_TIME &&
                     std::abs(event.position.x - lastClickPos_.x) <= 6.0f && std::abs(event.position.y - lastClickPos_.y) <= 6.0f &&
-                    lastClickedIndex_ >= 0 && lastClickedIndex_ < static_cast<int>(view.size());
+                    lastClickedIndex_ >= 0 && lastClickedIndex_ < static_cast<int>(view.size()) && view[lastClickedIndex_] && view[lastClickedIndex_]->path == lastClickPath_;
                 if (isDoubleClick) itemIndex = lastClickedIndex_;
 
 	            if (itemIndex >= 0 && itemIndex < static_cast<int>(view.size())) {
@@ -1323,7 +1323,7 @@ bool FileBrowser::handleListMouse(const NUIMouseEvent& event, const std::vector<
 
                 lastClickedIndex_ = itemIndex;
                 lastClickTime_ = isDoubleClick ? 0.0 : currentTime; // a third press starts a new double-click
-                lastClickPos_ = event.position;
+                lastClickPos_ = event.position; lastClickPath_ = clickedFile->path; // the row index alone can name another item later
 
                 // Update selection with multi-select support
                 bool ctrl = event.modifiers & NUIModifiers::Ctrl;

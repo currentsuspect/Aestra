@@ -156,7 +156,13 @@ void testHardStop(const std::filesystem::path& wav) {
     rig.engine.setGlobalSamplePos(0);
     rig.engine.setTransportPlaying(true);
     rig.blocks(40);
+    // Clear the schedule first: the panic rewinds the pattern, and with the transport still rolling the
+    // held note would simply start again. Only the panic itself is under test here.
+    rig.tm->getPatternPlaybackEngine().clearScheduledInstances();
     rig.engine.panic();
+    rig.blocks(4);
+    const float afterPanic = rig.blocks(20); // the panic alone, before any transport change
+    check(afterPanic < 1.0e-4f, "C: a panic alone silences the late-added sampler (peak " + std::to_string(afterPanic) + ")");
     rig.engine.setTransportPlaying(false);
     rig.blocks(4);
     rig.engine.setTransportPlaying(true); // the next play: it must not resume the old voice either

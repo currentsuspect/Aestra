@@ -637,19 +637,15 @@ void AudioEngine::setChannelSlotMap(std::shared_ptr<const ChannelSlotMap> slotMa
 }
 
 void AudioEngine::refreshSamplerCache() {
+    std::lock_guard<std::mutex> lock(m_samplerCacheMutex);
     auto* unitMgr = m_unitManager.load(std::memory_order_acquire);
     auto snapshot = unitMgr ? unitMgr->getAudioSnapshot() : nullptr;
     if (!unitMgr || snapshot == m_samplerCacheSource) return; // no unit change since the last build
     m_samplerCacheSource = std::move(snapshot);
     auto newCache = std::make_shared<SamplerCacheData>();
     refreshSamplerCacheToSnapshot(*unitMgr, *newCache);
-    // Double-buffer swap: atomically publish new cache
-    auto retired = std::move(m_samplerCacheOwned);
-    m_samplerCacheOwned = std::move(newCache);
-    m_samplerCacheRaw.store(m_samplerCacheOwned.get(), std::memory_order_release);
-    m_cachedSamplerCount.store(m_samplerCacheOwned->count, std::memory_order_release);
-    // Retire old cache via garbage collector
-    GarbageCollector::instance().release(std::move(retired), "AudioEngine::SamplerCache");
+    m_cachedSamplerCount.store(newCache->count, std::memory_order_release);
+    m_samplerCache.publish(std::move(newCache)); // the old generation goes once no audio-thread pin reads it
 }
 
 void AudioEngine::refreshSamplerCacheToSnapshot(UnitManager& mgr, SamplerCacheData& cache) {
@@ -835,7 +831,8 @@ void AudioEngine::reclaimRetiredCompensationWhenStopped() {
 }
 
 void AudioEngine::resetCachedSamplerVoicesRt(bool soft) noexcept {
-    auto* cache = m_samplerCacheRaw.load(std::memory_order_acquire);
+    const auto pin = m_samplerCache.readRealtime(); // held for the walk: a refresh cannot free it
+    const auto* cache = pin.get();
     if (!cache)
         return;
     const size_t cachedCount = cache->count;
@@ -853,7 +850,8 @@ void AudioEngine::syncCachedSamplerSampleRatesRt(uint32_t sampleRate) noexcept {
     if (m_lastSyncedArsenalSampleRate == sampleRate) {
         return;
     }
-    auto* cache = m_samplerCacheRaw.load(std::memory_order_acquire);
+    const auto pin = m_samplerCache.readRealtime(); // held for the walk: a refresh cannot free it
+    const auto* cache = pin.get();
     if (!cache)
         return;
     const size_t cachedCount = cache->count;

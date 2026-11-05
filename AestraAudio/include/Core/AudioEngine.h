@@ -26,6 +26,7 @@
 #include "Playback/LiveMidiQueue.h"
 #include "Playback/ScheduleSnapshot.h"
 #include "Core/TransportStart.h"
+#include "Core/RealtimeSharedSlot.h"
 #include "PluginHost.h" // For MidiBuffer [NEW]
 
 #include <cstring>
@@ -540,10 +541,8 @@ public:
         if (mgr) {
             refreshSamplerCacheToSnapshot(*mgr, *newCache);
         }
-        auto retired = std::move(m_samplerCacheOwned);
-        m_samplerCacheOwned = std::move(newCache);
-        m_samplerCacheRaw.store(m_samplerCacheOwned.get(), std::memory_order_release);
-        GarbageCollector::instance().release(std::move(retired), "AudioEngine::SamplerCache");
+        std::lock_guard<std::mutex> cacheLock(m_samplerCacheMutex);
+        m_samplerCache.publish(std::move(newCache)); // the old generation goes once no audio-thread pin reads it
     }
 
     // Internal helper: populate a cache snapshot from a specific UnitManager
@@ -1337,8 +1336,9 @@ private:
     // Legacy separate fields kept for backward compatibility during transition
     // TODO: remove these once all readers migrated to m_unitManagerSnapshot
     // Using double-buffering with atomic pointer swap for thread safety
-    std::shared_ptr<SamplerCacheData> m_samplerCacheOwned{std::make_shared<SamplerCacheData>()};
-    std::atomic<SamplerCacheData*> m_samplerCacheRaw{m_samplerCacheOwned.get()};
+    // Audio-thread reads pin a generation, so a refresh never frees a cache a stop is walking.
+    RealtimeSharedSlot<SamplerCacheData> m_samplerCache{std::make_shared<SamplerCacheData>()};
+    std::mutex m_samplerCacheMutex; // refreshes: the UI loop and the export worker both run maintenance
     std::array<Plugins::SamplerPlugin*, kMaxCachedSamplers> m_cachedSamplers{};
     std::array<std::shared_ptr<Plugins::SamplerPlugin>, kMaxCachedSamplers> m_cachedSamplerOwners{};
     std::atomic<size_t> m_cachedSamplerCount{0}; // Kept for compatibility

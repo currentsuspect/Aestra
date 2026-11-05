@@ -184,9 +184,10 @@ int main() {
         rig.block(&on);
         for (int b = 0; b < 8; ++b) rig.block(nullptr);
         MidiBuffer cc; const uint8_t allSoundOff[3] = {0xB0, 120, 0}; cc.addEvent(0, allSoundOff, 3);
-        rig.block(&cc);
+        const float arrival = rig.block(&cc); // the CC sits at offset 0: the whole block is silent
         const float after = rig.block(nullptr);
-        expect(after < 1.0e-4f, "All Sound Off cuts every voice in the block it arrives");
+        expect(arrival < 1.0e-4f, "All Sound Off cuts every voice in the block it arrives");
+        expect(after < 1.0e-4f, "and nothing comes back in the next block");
     }
 
     std::error_code ec;

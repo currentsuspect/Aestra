@@ -680,6 +680,7 @@ public:
     int lastClickedIndex_;
     double lastClickTime_;
     NUIPoint lastClickPos_{};
+    std::string lastClickPath_; // the item the last press hit: a double-click must land on the same one
     static constexpr double DOUBLE_CLICK_TIME = 0.5; // 500ms window for double-click
     
     // Sorting

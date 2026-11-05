@@ -722,6 +722,34 @@ void testDoubleClickSurvivesPreviewDockReflow() {
     CHECK(std::find(expanded.begin(), expanded.end(), folder) != expanded.end(),
           "the second press of the double-click opens the folder the first press hit");
     CHECK(previewed.empty(), "and no sound is previewed by it");
+
+    // The two edges that keep it a double-click: one spot, inside the time window.
+    const auto expandedNow = [&](const std::string& path) {
+        const auto list = browser->getExpandedFolders();
+        return std::find(list.begin(), list.end(), path) != list.end();
+    };
+    AestraUI::NUIMouseEvent near = press;
+    near.position = {press.position.x, list.y + 16.0f}; // the top row, far from the bottom one
+    AestraUI::NUIMouseEvent nearRelease = near;
+    nearRelease.type = AestraUI::NUIMouseEventType::Up;
+    nearRelease.pressed = false;
+    nearRelease.released = true;
+
+    browser->onMouseEvent(near);
+    browser->onMouseEvent(nearRelease);
+    const AestraUI::FileItem* top = browser->getSelectedFile();
+    const std::string topPath = top ? top->path : std::string();
+    CHECK(top && top->isDirectory && !expandedNow(topPath), "a single click on the top folder leaves it closed");
+    AestraUI::NUIMouseEvent far = near;
+    far.position.y += 8.0f; // 8 px away: two separate clicks
+    browser->onMouseEvent(far);
+    waitForScan(*browser);
+    CHECK(!expandedNow(topPath), "a second press 8 px away is not a double-click");
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(600)); // past the 0.5 s window
+    browser->onMouseEvent(far);
+    waitForScan(*browser);
+    CHECK(!expandedNow(topPath), "a second press after the time window is not a double-click");
 }
 
 int main() {
