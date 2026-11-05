@@ -547,6 +547,7 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
 
     m_window->setFocusCallback([this](bool focused) {
          m_windowFocused = focused;
+         Log::info(std::string("[Cursor] window focus ") + (focused ? "gained" : "lost")); // read with the native flips
          if (!focused && m_content) {
              m_content->releaseMusicalTypingNotes();
          }
@@ -1025,6 +1026,15 @@ void AestraWindowManager::resolveCursorState() {
     if (hideNative != m_cachedNativeCursorHidden) {
         m_cachedNativeCursorHidden = hideNative;
         m_window->setCursorVisible(!hideNative);
+        // The owner sees the pointer vanish now and then and it does not reproduce on demand (5 Nov 2026): every
+        // flip of the native cursor goes in the log with what decided it, so a live report can be read back.
+        const auto pos = m_window->getCursorPosition();
+        Log::info(std::string("[Cursor] native ") + (hideNative ? "hidden" : "shown") +
+                  " captured=" + std::to_string(m_window->isCursorCaptured()) +
+                  " focused=" + std::to_string(m_windowFocused) +
+                  " timelineCursor=" + std::to_string(trackManagerHasCustomCursor) +
+                  " style=" + std::to_string(static_cast<int>(style)) + " modal=" + std::to_string(modalOpen) +
+                  " at=" + std::to_string(static_cast<int>(pos.x)) + "," + std::to_string(static_cast<int>(pos.y)));
     }
 }
 

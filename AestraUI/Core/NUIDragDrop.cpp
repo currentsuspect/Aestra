@@ -73,7 +73,11 @@ void NUIDragDropManager::endDrag(const NUIPoint& position) {
     if (!m_isDragging) return;
     
     DropResult result;
-    
+
+    // Resolve the target where the release is, against the current order: a panel can claim the front of the
+    // list after the last move (ArsenalPanel, UIMixerPanel), and the cached target would still be the one behind it.
+    if (m_dragStarted) updateCurrentTarget(position);
+
     // Only process drop if drag actually started
     if (m_dragStarted && !m_currentTarget.expired()) {
         if (auto target = m_currentTarget.lock()) {
