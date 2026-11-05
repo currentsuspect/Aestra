@@ -4260,6 +4260,7 @@ if(AESTRA_ENABLE_UI)
         BPMEditorPaintTest
         TransportClockFormatTest
         PanelResizeLayoutTest
+        ArsenalDropOrderTest
         ExportDialogWidgetsTest
         AutomationClipLayerTest
         PanelModeBehaviourTest
