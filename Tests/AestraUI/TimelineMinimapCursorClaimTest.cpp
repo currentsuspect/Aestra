@@ -167,6 +167,25 @@ void testDraggingTheBarKeepsTheClaim() {
         f.manager.get(), mouse(AestraUI::NUIMouseEventType::Up, f.onBar.x, f.onBar.y, false, /*released=*/true));
 }
 
+// A drag of the bar released over the transport bar: the release never reaches the timeline, only the window
+// hears it. The window passes it on, and the drag, its claim and the closed hand must end with it.
+void testDragReleasedOverTheTransportEnds() {
+    Fixture f;
+    if (!f.build())
+        return;
+    f.windowMove(f.onBar.x, f.onBar.y);
+    AestraUI::NUIComponent::dispatchMouseEvent(
+        f.manager.get(), mouse(AestraUI::NUIMouseEventType::Down, f.onBar.x, f.onBar.y, /*pressed=*/true));
+    if (!f.minimap->isViewportDragActive()) {
+        check(false, "a press on the viewport bar must start a viewport drag");
+        return;
+    }
+    f.windowMove(f.onBar.x, Fixture::kTimelineTop - 40.0f);
+    f.manager->onWindowMouseReleased(); // what the window manager does on every left release
+    check(!f.minimap->isViewportDragActive(), "a release over the transport bar must end the minimap drag");
+    check(!f.manager->isCustomCursorActive(), "with the drag over, the timeline must give the cursor back");
+}
+
 } // namespace
 
 int main() {
@@ -174,6 +193,7 @@ int main() {
     testLeavingUpIntoTheTransportReleasesTheClaim();
     testComingBackResolvesFromTheNewMove();
     testDraggingTheBarKeepsTheClaim();
+    testDragReleasedOverTheTransportEnds();
     if (g_failures > 0) {
         std::cout << "[FAIL] TimelineMinimapCursorClaimTest: " << g_failures << " check(s) failed\n";
         return 1;

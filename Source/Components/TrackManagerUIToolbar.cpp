@@ -281,6 +281,14 @@ bool TrackManagerUI::minimapClaimsGrab() const {
     return m_timelineMinimap->isViewportPanActive() && isHoverPointerCurrent();
 }
 
+void TrackManagerUI::onWindowMouseReleased() {
+    // A minimap drag released over the transport bar never hears the release: on Linux and macOS nothing else
+    // ends it (the minimap's own button poll is Windows-only), so the drag, its claim and a closed hand stuck.
+    if (m_timelineMinimap && m_timelineMinimap->isViewportDragActive()) {
+        m_timelineMinimap->endDragFromOutside();
+    }
+}
+
 void TrackManagerUI::setWindowPointerPosition(float x, float y) {
     m_windowPointerPos = AestraUI::NUIPoint(x, y);
     m_hasWindowPointerPos = true;

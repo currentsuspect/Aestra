@@ -162,6 +162,7 @@ public:
      *  consumed before they reached the timeline. Hover cursor claims are only
      *  honoured while it matches the timeline's own last-seen position. */
     void setWindowPointerPosition(float x, float y);
+    void onWindowMouseReleased(); // the window saw a left release, which may never have reached the timeline
 
     // View Toggle Callbacks (v3.1)
     void setOnToggleMixer(std::function<void()> cb) { m_onToggleMixer = cb; }
