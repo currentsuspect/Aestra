@@ -396,6 +396,11 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         if (!pressed) { // Release
             if (m_content) {
                 AestraUI::NUIDragDropManager::getInstance().endDrag(AestraUI::NUIPoint((float)m_lastMouseX, (float)m_lastMouseY)); // Fixed arg
+                // The window hears every release; the timeline does not (one over the transport bar never
+                // reaches it), so a gesture it started must be told the button came up.
+                if (button == 0 && m_content->getTrackManagerUI()) {
+                    m_content->getTrackManagerUI()->onWindowMouseReleased();
+                }
             }
         }
         if (pressed && button == 0) { // Left click
