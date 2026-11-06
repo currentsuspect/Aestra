@@ -4303,6 +4303,7 @@ if(AESTRA_ENABLE_UI)
         NUIThemeConsistencyTest
         NUIContextMenuInteractionTest
         ClipContextMenuReachabilityTest
+        TimelineMinimapCursorClaimTest
         ClipDragReleaseTest
         TimelineFollowPreferenceTest
         TimelineGridSelectionTest
