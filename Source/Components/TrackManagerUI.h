@@ -596,6 +596,7 @@ private:
     ::AestraUI::NUIPoint m_windowPointerPos; // Every window move, including ones a popup consumed
     bool m_hasWindowPointerPos = false;
     bool isHoverPointerCurrent() const; // m_lastMousePos still matches the real pointer
+    bool minimapClaimsGrab() const;     // minimap viewport drag, or its hover from a current pointer
 
     // Playhead dragging state
     bool m_isDraggingPlayhead = false;
