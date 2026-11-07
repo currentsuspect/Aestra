@@ -839,7 +839,8 @@ void TrackManagerUI::renderToolCursor(AestraUI::NUIRenderer& renderer, const Aes
             const auto& allClipBounds = trackUI->getAllClipBounds();
             for (auto it = allClipBounds.begin(); it != allClipBounds.end(); ++it) {
                 const auto& clipBounds = it->second;
-                if (clipBounds.contains(AestraUI::NUIPoint(position.x, lineY))) {
+                // Only where a click would cut: the header and the trim edges move and resize instead.
+                if (trackUI->splitTargetAt(AestraUI::NUIPoint(position.x, lineY)) == it->first) {
                     float lineTop = clipBounds.y;
                     float lineBottom = clipBounds.y + clipBounds.height;
                     float y = lineTop;

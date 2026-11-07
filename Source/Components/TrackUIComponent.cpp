@@ -432,6 +432,10 @@ TrackUIComponent::FadeHandle TrackUIComponent::fadeHandleAt(const AestraUI::NUIR
     if (position.x < clipBounds.x || position.x > clipBounds.x + clipBounds.width) {
         return FadeHandle::None;
     }
+    // The edge strip always resizes, whatever fade state the clip is in (owner 2026-11-07).
+    if (position.x - clipBounds.x < TRIM_EDGE_WIDTH || clipBounds.x + clipBounds.width - position.x < TRIM_EDGE_WIDTH) {
+        return FadeHandle::None;
+    }
 
     // Each handle sits at the END of its ramp, so it tracks the fade as it is
     // dragged. At zero the in-handle rests on the clip's left corner and the
@@ -444,15 +448,19 @@ TrackUIComponent::FadeHandle TrackUIComponent::fadeHandleAt(const AestraUI::NUIR
     const float dOut = std::abs(position.x - outX);
 
     // An unset fade handle sits ON the clip edge with nothing drawn to aim at (a 9px target on an
-    // invisible point), so it claims a wider zone inward from the edge, as in other DAWs. Once
-    // a fade exists its handle is visible and the tight tolerance applies.
+    // invisible point), so it claims a wider zone inward from the edge, as in other DAWs, but only in
+    // the top corner of the body: below it the edge belongs to resize. Once a fade exists its handle
+    // is visible and the tight tolerance applies.
     const bool inUnset = clip.edits.fadeInBeats <= 0.0f;
     const bool outUnset = clip.edits.fadeOutBeats <= 0.0f;
     const float inReach = inUnset ? FADE_CORNER_REACH : FADE_HANDLE_GRAB;
     const float outReach = outUnset ? FADE_CORNER_REACH : FADE_HANDLE_GRAB;
 
-    const bool inHit = inUnset ? (position.x - inX >= 0.0f && position.x - inX <= inReach) : dIn <= inReach;
-    const bool outHit = outUnset ? (outX - position.x >= 0.0f && outX - position.x <= outReach) : dOut <= outReach;
+    const bool inCornerBand = position.y <= bandTop + FADE_CORNER_HEIGHT;
+    const bool inHit = inUnset ? (inCornerBand && position.x - inX >= 0.0f && position.x - inX <= inReach)
+                               : dIn <= inReach;
+    const bool outHit = outUnset ? (inCornerBand && outX - position.x >= 0.0f && outX - position.x <= outReach)
+                                 : dOut <= outReach;
     if (!inHit && !outHit) {
         return FadeHandle::None;
     }
@@ -462,6 +470,30 @@ TrackUIComponent::FadeHandle TrackUIComponent::fadeHandleAt(const AestraUI::NUIR
     // Ties go to whichever handle is nearer; on a very short clip both can be
     // in range and picking arbitrarily would feel broken.
     return dIn <= dOut ? FadeHandle::In : FadeHandle::Out;
+}
+
+TrackUIComponent::TrimEdge TrackUIComponent::trimEdgeAt(const AestraUI::NUIRect& clipBounds,
+                                                       const AestraUI::NUIPoint& position) const {
+    if (!clipBounds.contains(position)) {
+        return TrimEdge::None;
+    }
+    // Full height: fades and Split do not get to take the strip (owner 2026-11-07).
+    switch (ClipPaint::edgeHit(position.x - clipBounds.x, clipBounds.x + clipBounds.width - position.x,
+                               TRIM_EDGE_WIDTH, TRIM_EDGE_UNDER_GLYPH, clipMenuAt(position).isValid())) {
+        case ClipPaint::EdgeHit::Left: return TrimEdge::Left;
+        case ClipPaint::EdgeHit::Right: return TrimEdge::Right;
+        default: return TrimEdge::None;
+    }
+}
+
+ClipInstanceID TrackUIComponent::splitTargetAt(const AestraUI::NUIPoint& point) const {
+    for (const auto& [clipId, bounds] : m_allClipBounds) {
+        if (!bounds.contains(point)) continue;
+        const bool notBody = trimEdgeAt(bounds, point) != TrimEdge::None || clipMenuAt(point) == clipId ||
+                             ClipPaint::inHeaderBand(bounds.width, bounds.height, point.y - bounds.y);
+        return notBody ? ClipInstanceID{} : clipId;
+    }
+    return ClipInstanceID{};
 }
 
 void TrackUIComponent::drawClipFades(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
@@ -2052,13 +2084,21 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             if (!clipBounds.contains(event.position)) continue;
             
             m_hoveredClipId = clipId;
+
+            // The edge strip resizes at any height (owner 2026-11-07), and the press asks the same
+            // question, so the cursor matches the click. The glyph keeps its own rect, bar the
+            // outermost sliver of the left edge, which trimEdgeAt already excludes.
+            newHoverEdge = trimEdgeAt(clipBounds, event.position);
+            if (newHoverEdge != TrimEdge::None) {
+                m_hoveredClipMenuId = ClipInstanceID{};
+                break;
+            }
             if (m_hoveredClipMenuId == clipId) {
-                break; // no fade or trim under the menu glyph
+                break; // no fade under the menu glyph
             }
 
-            // V8-W3: the fade band is tested BEFORE the trim edges. Both live at
-            // the clip's corners, so without an explicit order the full-height
-            // trim zone would swallow every fade grab.
+            // V8-W3: fades share the clip's corners with the trim strip; fadeHandleAt leaves the strip
+            // alone, so only the top corner of the body is a fade grab.
             if (m_trackManager) {
                 if (const auto* clip = m_trackManager->getPlaylistModel().getClip(clipId)) {
                     newHoverFade = fadeHandleAt(clipBounds, *clip, event.position);
@@ -2066,25 +2106,6 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                         break;
                     }
                 }
-            }
-
-            float leftEdge = clipBounds.x;
-            float rightEdge = clipBounds.x + clipBounds.width;
-            
-            // Check left edge
-            if (std::abs(event.position.x - leftEdge) < TRIM_EDGE_WIDTH &&
-                event.position.y >= clipBounds.y && 
-                event.position.y <= clipBounds.y + clipBounds.height) {
-                newHoverEdge = TrimEdge::Left;
-                break;
-            }
-            
-            // Check right edge
-            if (std::abs(event.position.x - rightEdge) < TRIM_EDGE_WIDTH &&
-                event.position.y >= clipBounds.y && 
-                event.position.y <= clipBounds.y + clipBounds.height) {
-                newHoverEdge = TrimEdge::Right;
-                break;
             }
         }
         
@@ -2719,8 +2740,10 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 }
             }
             
-            // Handle SPLIT TOOL - click on clip to split at that position
-            if (isSplitToolActive && clickedClipId.isValid()) {
+            // Handle SPLIT TOOL - click on a clip's waveform to split at that position.
+            // Owner 2026-11-07: "When you select the cut tool, you cannot move the clips." The header and
+            // the trim edges fall through to the Select handling below, so they still move and resize.
+            if (isSplitToolActive && splitTargetAt(event.position).isValid()) {
                 // Calculate beat position using same math as the visual cursor in TrackManagerUI
                 // This ensures the split occurs exactly where the preview line shows
                 double mouseBeat =
@@ -2765,7 +2788,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 // affordance always wins inside its generous hit zone. Gated by
                 // the same visible-width condition as the rendered glyph, so
                 // narrow/partially-clipped clips keep drag + editor gestures.
-                if (clickedClipBounds.width > 20.0f) {
+                const TrimEdge pressEdge = trimEdgeAt(clickedClipBounds, event.position);
+                if (clickedClipBounds.width > 20.0f && pressEdge == TrimEdge::None) {
                     // The painted glyph's rect, the same one hover uses. This used the full clip
                     // bounds, which drift from the glyph when a clip is scrolled off the left.
                     if (event.pressed && event.button == AestraUI::NUIMouseButton::Left &&
@@ -2809,9 +2833,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                     }
                 }
 
-                // V8-W3: fade handles are tested before the trim edges, for the
-                // same reason as the hover path — they share the clip's corners
-                // and trim owns full height, so trim would otherwise win every time.
+                // V8-W3: fade handles share the clip's corners with the trim strip. fadeHandleAt
+                // leaves the strip alone (owner 2026-11-07), so the order no longer matters.
                 if (m_trackManager) {
                     if (const auto* fadeClip = m_trackManager->getPlaylistModel().getClip(clickedClipId)) {
                         const FadeHandle handle = fadeHandleAt(clickedClipBounds, *fadeClip, event.position);
@@ -2833,13 +2856,8 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                     }
                 }
 
-                float leftEdge = clickedClipBounds.x;
-                float rightEdge = clickedClipBounds.x + clickedClipBounds.width;
-                
                 // Left edge trim detection
-                if (std::abs(event.position.x - leftEdge) < TRIM_EDGE_WIDTH &&
-                    event.position.y >= clickedClipBounds.y && 
-                    event.position.y <= clickedClipBounds.y + clickedClipBounds.height) {
+                if (pressEdge == TrimEdge::Left) {
                     m_trimEdge = TrimEdge::Left;
                     m_isTrimming = true;
                     m_trimDragStartX = event.position.x;
@@ -2867,9 +2885,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 }
                 
                 // Right edge trim detection
-                if (std::abs(event.position.x - rightEdge) < TRIM_EDGE_WIDTH &&
-                    event.position.y >= clickedClipBounds.y && 
-                    event.position.y <= clickedClipBounds.y + clickedClipBounds.height) {
+                if (pressEdge == TrimEdge::Right) {
                     m_trimEdge = TrimEdge::Right;
                     m_isTrimming = true;
                     m_trimDragStartX = event.position.x;

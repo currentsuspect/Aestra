@@ -199,6 +199,14 @@ public:
     // Accessors
     std::shared_ptr<MixerChannel> getChannel() const { return m_channel; }
     const std::map<ClipInstanceID, AestraUI::NUIRect>& getAllClipBounds() const { return m_allClipBounds; }
+    /**
+     * @brief The clip a Split-tool press at @p point would cut: its waveform body only.
+     *
+     * The header band (grab to move), the trim strips (resize) and the menu glyph are not split targets, so
+     * with Split active those still move, resize and open the menu (owner 2026-11-07). The press handler and
+     * the blade preview line both use this, so what is drawn is what a click does.
+     */
+    ClipInstanceID splitTargetAt(const AestraUI::NUIPoint& point) const;
     /** @brief The colour this row paints @p clip in (its routed channel's colour, or its own). */
     AestraUI::NUIColor resolveClipDisplayColor(const ClipInstance& clip) const;
 
@@ -324,6 +332,9 @@ private:
     double m_trimOriginalDurationSeconds = 0.0;     // Original duration (seconds, audio) before drag
     float m_trimDragStartX = 0.0f;            // Mouse X when trim started
     static constexpr float TRIM_EDGE_WIDTH = 8.0f;  // Pixels for edge hit detection
+    // The menu glyph outranks the trim strip it overlaps on the left, except for this outermost sliver:
+    // owner 2026-11-07 wanted the left edge resizable at the top too, and the glyph sits flush on it.
+    static constexpr float TRIM_EDGE_UNDER_GLYPH = 4.0f;
 
     // V8-W3 — timeline fade handles. The model, serialization, offline render,
     // live playback (ClipRenderKernel) and the AudioClipEditorPanel sliders all
@@ -345,6 +356,10 @@ private:
     // An unset fade has no drawn handle to aim at, so its corner claims a
     // wider inward zone. Without this the gesture only landed by luck.
     static constexpr float FADE_CORNER_REACH = 26.0f;
+    // Owner 2026-11-07 ("when I hover over that top grid ... I want to resize"): an unset fade used to claim
+    // the whole body height, so it swallowed the edge strip. It now claims only the top corner of the body,
+    // from the trim strip (TRIM_EDGE_WIDTH) out to FADE_CORNER_REACH, this tall:
+    static constexpr float FADE_CORNER_HEIGHT = 16.0f;
     static constexpr float FADE_HANDLE_SIZE = 6.0f;      // Drawn marker size
 
     enum class FadeHandle { None, In, Out };
@@ -359,6 +374,11 @@ private:
      * selected without moving) pushes no command.
      */
     void pushAutomationEditCommand(std::vector<AutomationCurve> before, const char* name);
+    /**
+     * @brief Which trim edge (if any) the point is on for a clip: the TRIM_EDGE_WIDTH strip inside either
+     *        edge, at any height. Hover and press both ask this, so the cursor matches the click.
+     */
+    TrimEdge trimEdgeAt(const AestraUI::NUIRect& clipBounds, const AestraUI::NUIPoint& position) const;
     /** @brief Which fade handle (if any) the pointer is over for this clip. */
     FadeHandle fadeHandleAt(const AestraUI::NUIRect& clipBounds, const ClipInstance& clip,
                             const AestraUI::NUIPoint& position) const;
