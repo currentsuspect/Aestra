@@ -395,6 +395,20 @@ if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/Rende
     set_tests_properties(RenderAudioClipCommandTest PROPERTIES LABELS "commands;audio;clip-render;undo;contract:audio")
 endif()
 
+# Delete Silence (founder request 2026-11-07): detector on synthetic speech, then the one-undo-step command
+foreach(_ds_test SilenceDetectorTest DeleteSilenceCommandTest)
+    if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/${_ds_test}.cpp")
+        add_executable(${_ds_test} Commands/${_ds_test}.cpp)
+        target_link_libraries(${_ds_test} PRIVATE AestraAudioCore)
+        target_include_directories(${_ds_test} PRIVATE
+            ${CMAKE_SOURCE_DIR}/AestraAudio/include
+            ${CMAKE_SOURCE_DIR}/AestraCore/include
+        )
+        add_test(NAME ${_ds_test} COMMAND ${_ds_test})
+        set_tests_properties(${_ds_test} PROPERTIES LABELS "commands;audio;silence;undo;contract:audio")
+    endif()
+endforeach()
+
 if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/MuseClipRoundTripTest.cpp")
     add_executable(MuseClipRoundTripTest Commands/MuseClipRoundTripTest.cpp)
     target_link_libraries(MuseClipRoundTripTest PRIVATE AestraAudioCore)

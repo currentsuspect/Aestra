@@ -104,6 +104,11 @@ static const std::vector<CommandSchema> s_schemas = {
         {"id", FlagType::Id, true}
     },
      "Replace an audio clip's source with a reversed render of itself. Writes a new file; undo restores the original."},
+    {"delete_silence", CommandCategory::Clip, {
+        {"id", FlagType::Id, true},
+        {"all_lanes", FlagType::Bool, false}
+    },
+     "Cut the measured dead air out of an audio clip: pauses over 0.4 s lose their middle, keeping 0.25 s of each, with short fades at the new edges. Later clips on the clip's own lane move left to close the gap; all_lanes=true moves the clips on every lane. One call is one undo step."},
     {"commit_clip_edits", CommandCategory::Clip, {
         {"id", FlagType::Id, true}
     },
