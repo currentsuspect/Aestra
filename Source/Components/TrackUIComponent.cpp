@@ -321,8 +321,8 @@ void TrackUIComponent::showClipRoutingMenu(const ClipInstanceID& clipId, const A
         addAction("Cut", "Ctrl+X", [parentManager]() { parentManager->cutSelectedClip(); });
         addAction("Copy", "Ctrl+C", [parentManager]() { parentManager->copySelectedClip(); });
         addAction("Duplicate", "Ctrl+D", [parentManager]() { parentManager->duplicateSelectedClip(); }); addAction(parentManager->isClipMuted(clipId) ? "Unmute" : "Mute", "Alt+Click", [parentManager, clipId]() { parentManager->toggleClipMute(clipId); });
-        if (pattern)
-            addAction("Bounce in Place", "", [parentManager]() { parentManager->bounceSelectedClipsInPlace(); });
+        if (pattern) addAction("Bounce in Place", "", [parentManager]() { parentManager->bounceSelectedClipsInPlace(); });
+        if (pattern && pattern->isAudio()) parentManager->addDeleteSilenceMenu(*m_clipRoutingMenu, clipId); // Ctrl+Shift+X
         if (pattern && m_trackManager) {
             // Break shared pattern identity for this clip only (duplicate → make unique).
             addAction("Make Unique", "", [this, clipId]() {
