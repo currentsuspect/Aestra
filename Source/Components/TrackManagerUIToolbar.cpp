@@ -222,6 +222,13 @@ bool TrackManagerUI::isCustomCursorActive() const {
         }
     }
 
+    // 1b. A clip being moved, or hovered where a drag would move it → hand.
+    for (const auto& trackUI : m_trackUIComponents) {
+        if (trackUI && (trackUI->isDraggingClip() || (hoverCurrent && trackUI->isHoveringMoveZone()))) {
+            return true;
+        }
+    }
+
     // 2. Split or Paint tool in grid area.
     // Use getBounds() (not getGlobalBounds()) so this suppression region shares
     // the exact coordinate basis renderToolCursor()/renderMinimapResizeCursor()
@@ -773,6 +780,22 @@ void TrackManagerUI::renderToolCursor(AestraUI::NUIRenderer& renderer, const Aes
         }
 
         return; // Skip other tool cursors when resize cursor is active
+    }
+
+    // Clip move → hand (owner 2026-11-07): open where a drag would move the clip, closed while it moves.
+    // Outranks the tool glyph, so with Split the header shows the hand and only the body shows the blade.
+    for (auto& trackUI : m_trackUIComponents) {
+        if (!trackUI) continue;
+        const bool moving = trackUI->isDraggingClip();
+        if (moving || (isHoverPointerCurrent() && trackUI->isHoveringMoveZone())) {
+            // Drawn like the ruler's hand, so every grab in the timeline is the same glyph.
+            const auto& handIcon = (moving && m_grabbingCursorIcon) ? m_grabbingCursorIcon : m_grabCursorIcon;
+            if (handIcon) {
+                handIcon->setBounds(AestraUI::NUIRect(position.x - 9, position.y - 9, 18, 18));
+                handIcon->onRender(renderer);
+            }
+            return;
+        }
     }
 
     // Ruler scrub/loop zone and minimap viewport-pan → grab hand (the draggable

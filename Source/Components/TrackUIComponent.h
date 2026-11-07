@@ -196,6 +196,10 @@ public:
     bool isHoveringTrimEdge() const { return m_hoverTrimEdge != TrimEdge::None; }
     bool isTrimming() const { return m_isTrimming; }
 
+    // Move Hover Query (for the hand cursor): the pointer is where a drag would move a clip, or a move is live.
+    bool isHoveringMoveZone() const { return m_hoverMoveZone; }
+    bool isDraggingClip() const { return m_isDraggingClip; }
+
     // Accessors
     std::shared_ptr<MixerChannel> getChannel() const { return m_channel; }
     const std::map<ClipInstanceID, AestraUI::NUIRect>& getAllClipBounds() const { return m_allClipBounds; }
@@ -324,6 +328,7 @@ private:
     enum class TrimEdge { None, Left, Right };
     TrimEdge m_trimEdge = TrimEdge::None;     // Which edge is being dragged
     TrimEdge m_hoverTrimEdge = TrimEdge::None; // Which edge is being hovered (for cursor)
+    bool m_hoverMoveZone = false;               // Pointer is where a press would move a clip (hand cursor)
     bool m_isTrimming = false;                // True during trim operation
     double m_trimOriginalStart = 0.0;         // Original trim start before drag
     double m_trimOriginalDuration = 0.0;      // Original trim duration before drag

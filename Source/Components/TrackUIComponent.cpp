@@ -2067,6 +2067,9 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     
     // === HOVER EDGE DETECTION (for resize cursor) ===
     // Update hover state on every mouse move (not just press)
+    if (!isInsideBounds) {
+        m_hoverMoveZone = false; // the hand must not follow the pointer off the row
+    }
     if (!m_isTrimming && isInsideBounds && !event.pressed) {
         const ClipInstanceID previousHoveredClipId = m_hoveredClipId;
         const FadeHandle previousHoverFade = m_hoverFadeHandle;
@@ -2080,10 +2083,12 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         m_hoveredClipMenuId =
             m_playlistMode == PlaylistMode::Automation ? ClipInstanceID{} : clipMenuAt(event.position);
 
+        bool overClip = false;
         for (const auto& [clipId, clipBounds] : m_allClipBounds) {
             if (!clipBounds.contains(event.position)) continue;
             
             m_hoveredClipId = clipId;
+            overClip = true;
 
             // The edge strip resizes at any height (owner 2026-11-07), and the press asks the same
             // question, so the cursor matches the click. The glyph keeps its own rect, bar the
@@ -2131,6 +2136,22 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             if (m_onCacheInvalidationCallback) {
                 m_onCacheInvalidationCallback();
             }
+        }
+
+        // Hand cursor where a press would move the clip (owner 2026-11-07): the body with Select, the
+        // header band with Split (its body cuts). Trim, fade corners and the menu glyph keep their own.
+        bool newMoveZone = false;
+        if (overClip && newHoverEdge == TrimEdge::None && newHoverFade == FadeHandle::None &&
+            !m_hoveredClipMenuId.isValid() && m_playlistMode != PlaylistMode::Automation) {
+            if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
+                const PlaylistTool tool = parentMgr->getCurrentTool();
+                newMoveZone = tool == PlaylistTool::Select ||
+                              (tool == PlaylistTool::Split && !splitTargetAt(event.position).isValid());
+            }
+        }
+        if (m_hoverMoveZone != newMoveZone) {
+            m_hoverMoveZone = newMoveZone;
+            repaint(); // cursor feedback, as for the trim edge
         }
 
         m_hoverFadeHandle = newHoverFade;
@@ -3138,6 +3159,7 @@ ClipInstanceID TrackUIComponent::clipMenuAt(const AestraUI::NUIPoint& point) con
 void TrackUIComponent::releaseClipMenuHover() {
     const bool hadHover = m_hoveredClipMenuId.isValid();
     m_hoveredClipMenuId = ClipInstanceID{};
+    m_hoverMoveZone = false;
     if (m_clipMenuCursorClaimed && m_platformBridge) {
         m_platformBridge->setCursorStyle(AestraUI::NUICursorStyle::Arrow);
     }
