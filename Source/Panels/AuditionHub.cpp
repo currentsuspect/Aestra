@@ -104,8 +104,16 @@ void AuditionHub::refresh() {
     const Project project = m_projectProvider ? m_projectProvider() : Project{};
     m_projectName = project.name;
     m_files->setProjectDir(project.path.empty() ? std::string() : std::filesystem::path(project.path).parent_path().string());
-    m_versions = project.path.empty() ? std::vector<AuditionLibrary::Item>{}
-                                      : AuditionLibrary::versionItems(project.name, project.path, TakeManager::loadManifest(project.path), nowMs());
+    m_versions.clear();
+    m_openBadge.clear();
+    if (!project.path.empty()) {
+        const auto manifest = TakeManager::loadManifest(project.path);
+        m_versions = AuditionLibrary::versionItems(project.name, project.path, manifest, nowMs());
+        // The bounce tile says "Bounce again" when a click would replace the open version's bounce.
+        if (const auto* open = manifest.ok ? manifest.activeTake() : nullptr)
+            for (const auto& v : m_versions)
+                if (v.id == "v:" + open->id) m_openBadge = v.badge;
+    }
     m_references.clear();
     for (const auto& r : m_refList) m_references.push_back(AuditionLibrary::itemOf(r));
     std::sort(m_references.begin(), m_references.end(), [](const auto& a, const auto& b) { return a.title < b.title; });
@@ -279,6 +287,15 @@ void AuditionHub::onUpdate(double deltaTime) {
         if (path != m_lastEnginePath) { m_lastEnginePath = path; m_onActiveTrackPathChanged(path); }
     }
     if (++m_tick % 180 == 0) refresh();
+    const bool hadLine = !m_bounceTile.message.empty();
+    if (m_bounceTile.step(deltaTime, m_onBounceNow, [this]() {
+            refresh();
+            const std::string& badge = m_openBadge;
+            if (badge.empty()) return std::string("Bounced. Press play on it to listen.");
+            return m_bounceReplaced == badge ? "Replaced " + badge + " with the timeline as it is now."
+                                             : "Bounced " + badge + ". Press play on it to listen.";
+        }) || hadLine != !m_bounceTile.message.empty() || m_bounceTile.busy())
+        setDirty(true);
     if (m_engine && m_engine->isPlaying()) setDirty(true);  // the position moves
     layoutQueuePage();
 }
@@ -383,11 +400,26 @@ void AuditionHub::renderPage(NUIRenderer& r, const AuditionHubLayout::Frame& f) 
                     r.fillRect({cover.x, cover.y + d, 1.0f, len}, muted.withAlpha(0.6f));
                     r.fillRect({cover.right() - 1.0f, cover.y + d, 1.0f, len}, muted.withAlpha(0.6f));
                 }
-                const std::string label = tile.kind == Tile::Kind::BounceNow ? "Bounce the timeline now" : "Import a reference...";
+                const bool bounce = tile.kind == Tile::Kind::BounceNow;
+                const std::string replaces = bounce ? m_openBadge : std::string();
+                const std::string label = !bounce ? "Import a reference..." : m_bounceTile.busy() ? "Bouncing..." : AuditionBounceTile::label(replaces);
                 const float lw = r.measureText(label, 12.0f).width;
                 r.drawText(label, {cover.x + (cover.width - lw) * 0.5f, cover.bottom() - 26.0f}, 12.0f, text);
-                const std::string sub = tile.kind == Tile::Kind::BounceNow ? "Adds v" + std::to_string(m_versions.size() + 1) + " to this project" : "Any audio file";
-                r.drawText(sub, {cover.x, cover.bottom() + 12.0f}, 11.0f, muted);
+                std::string sub = bounce ? AuditionBounceTile::sub(replaces, m_versions.size()) : "Any audio file";
+                NUIColor subColor = muted;
+                if (bounce && !m_bounceTile.message.empty()) {
+                    // What the click did, where the eye already is: under the tile it clicked.
+                    sub = m_bounceTile.message;
+                    using S = AuditionBounceTile::State;
+                    subColor = m_bounceTile.state == S::Failed ? theme.getColor("warning")
+                               : m_bounceTile.state == S::Done ? theme.getColor("accentPrimary") : text;
+                    if (m_bounceTile.busy()) {
+                        r.fillRect(cover, theme.getColor("surfaceTertiary"));
+                        r.drawText(label, {cover.x + (cover.width - lw) * 0.5f, cover.bottom() - 26.0f}, 12.0f, text);
+                    }
+                    m_bounceTile.notePainted();
+                }
+                r.drawText(sub, {cover.x, cover.bottom() + 12.0f}, 11.0f, subColor);
             }
         }
     }
@@ -600,7 +632,7 @@ bool AuditionHub::onMouseEvent(const NUIMouseEvent& event) {
                 if (!shelves[s].tiles[t].contains(p)) continue;
                 const Tile& tile = models[s].tiles[t];
                 if (tile.kind == Tile::Kind::Item) openItem(tile.item);
-                else if (tile.kind == Tile::Kind::BounceNow) { if (m_onBounceNow && m_onBounceNow()) refresh(); }
+                else if (tile.kind == Tile::Kind::BounceNow) { if (!m_bounceTile.busy()) m_bounceReplaced = m_openBadge; m_bounceTile.press(); setDirty(true); }
                 else if (m_onImportReference) m_onImportReference();
                 return true;
             }

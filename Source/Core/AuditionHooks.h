@@ -1,6 +1,8 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include "../Panels/AuditionBounceTile.h"
+
 #include <functional>
 #include <string>
 #include <utility>
@@ -13,7 +15,7 @@ struct AuditionHooks {
     std::function<std::pair<std::string, std::string>()> project;  ///< name, path of the open project
     std::string libraryFile;                                       ///< where the imported references are listed
     std::function<void()> importReference;                         ///< pick a file, then call addAuditionReference
-    std::function<bool()> bounceNow;                               ///< bounce the open version; true when it was
+    std::function<BounceOutcome()> bounceNow;                      ///< bounce the open version; ok, or why not
 };
 
 } // namespace Aestra

@@ -11,6 +11,7 @@
 #include "../AestraUI/Core/NUIComponent.h"
 #include "../Core/AuditionCompare.h"
 #include "../Core/AuditionLibrary.h"
+#include "AuditionBounceTile.h"
 #include "AuditionEngine.h"
 #include "AuditionFilesPage.h"
 #include "AuditionHubLayout.h"
@@ -55,8 +56,8 @@ public:
     void setLibraryFile(std::string file);
     /// The user asked to import a reference: the app picks a file and calls addReference.
     void setOnImportReference(std::function<void()> cb) { m_onImportReference = std::move(cb); }
-    /// The user asked to bounce the timeline now; true when it was bounced.
-    void setOnBounceNow(std::function<bool()> cb) { m_onBounceNow = std::move(cb); }
+    /// The user asked to bounce the timeline now: ok, or why not. Runs on the UI thread, after "Bouncing..." is painted.
+    void setOnBounceNow(std::function<BounceOutcome()> cb) { m_onBounceNow = std::move(cb); }
     void addReference(const std::string& path);
 
     /// Re-read the project's bounces and the reference list (the hub does this when it is shown, and every few seconds).
@@ -156,7 +157,10 @@ private:
 
     std::function<Project()> m_projectProvider;
     std::function<void()> m_onImportReference;
-    std::function<bool()> m_onBounceNow;
+    std::function<BounceOutcome()> m_onBounceNow;
+    AuditionBounceTile m_bounceTile;
+    std::string m_bounceReplaced; ///< the badge a click was about to replace, for the line after
+    std::string m_openBadge; ///< "v1" when the open version has a bounce, else empty (read in refresh)
     std::function<void()> m_onPlayRequest;
     std::string m_libraryFile;
     std::vector<AuditionLibrary::Item> m_versions, m_references;

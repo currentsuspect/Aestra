@@ -92,16 +92,19 @@ void AestraApp::wireAudition() {
         pickFileAsync([filter](Aestra::IPlatformUtils& utils) { return utils.openFileDialog("Import a reference", filter); },
                       [this](const std::string& picked) { if (!picked.empty() && m_content) m_content->addAuditionReference(picked); });
     };
-    hooks.bounceNow = [this]() {
+    hooks.bounceNow = [this]() -> BounceOutcome {
         const std::string path = m_documentState.canonicalPath();
-        if (path.empty()) return false;
+        if (path.empty()) return {false, "Save the project first: a bounce is kept with the saved project."};
         // The bounce renders the project as it is now, so the open version's snapshot must be the same state:
         // save it first (it also creates the Versions manifest a project opened from disk doesn't have yet;
         // without one the tile did nothing at all). A failed save means no bounce.
-        if (!saveActiveTakeSnapshot()) return false;
+        if (!saveActiveTakeSnapshot()) return {false, "The project couldn't be saved, so nothing was bounced."};
         const auto manifest = TakeManager::loadManifest(path);
         const auto* open = manifest.ok ? manifest.activeTake() : nullptr;
-        return open && bounceSavedVersion(m_documentState.canonicalPath(), open->id, [this](std::vector<float>& a, uint32_t& c, uint32_t& r) { return m_content->renderMixToBuffer(a, c, r); });
+        if (!open) return {false, "No open version to bounce. Nothing was changed."};
+        if (!bounceSavedVersion(m_documentState.canonicalPath(), open->id, [this](std::vector<float>& a, uint32_t& c, uint32_t& r) { return m_content->renderMixToBuffer(a, c, r); }))
+            return {false, "The timeline didn't render. Is there anything on it?"};
+        return {true, ""};
     };
     m_content->setAuditionHooks(std::move(hooks));
 }
