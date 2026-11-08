@@ -446,6 +446,7 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         }
         
         m_keyModifiers = static_cast<NM>(currentMods);
+        if (pressed && m_inputHold && m_inputHold()) return; // a bounce holds input; releases still reach latches
 
         // RecoveryDialog is modal - consume all key events when visible
         if (m_recoveryDialog && m_recoveryDialog->isDialogVisible()) {
@@ -537,7 +538,7 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
     });
 
     m_window->setCharCallback([this](unsigned int codepoint) {
-        if (codepoint < 32 || codepoint > 126) {
+        if (codepoint < 32 || codepoint > 126 || (m_inputHold && m_inputHold())) {
             return;
         }
         if (auto* focused = AestraUI::NUIComponent::getFocusedComponent()) {
@@ -1043,6 +1044,11 @@ void AestraWindowManager::resolveCursorState() {
                   " style=" + std::to_string(static_cast<int>(style)) + " modal=" + std::to_string(modalOpen) +
                   " at=" + std::to_string(static_cast<int>(pos.x)) + "," + std::to_string(static_cast<int>(pos.y)));
     }
+}
+
+void AestraWindowManager::setInputHold(std::function<bool()> held) {
+    m_inputHold = held;
+    if (m_rootComponent) m_rootComponent->setInputHold(std::move(held));
 }
 
 bool AestraWindowManager::isModalDialogOpen() const {
