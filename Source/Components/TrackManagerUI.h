@@ -649,6 +649,7 @@ private:
     AestraUI::NUIRect m_foldedRowRect{};
     AestraUI::NUIRect m_foldedToggleRect{};
     bool isFoldableEmptyLane(const Audio::PlaylistLane& lane, size_t laneCountOfItsTrack) const;
+    PlaylistLaneID firstFoldedEmptyLane() const; // the lane a drop on the folded row fills
     void renderFoldedEmptyRow(AestraUI::NUIRenderer& renderer);
     bool handleFoldedRowMouse(const AestraUI::NUIMouseEvent& event);
 

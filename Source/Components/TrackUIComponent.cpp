@@ -30,9 +30,9 @@
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include "../AestraUI/Widgets/TrackColorPalette.h"
 #include "TimelineClipPaint.h"
+#include "TimelineFold.h"
 #include "TrackHeaderText.h"
 #include <algorithm>
-#include <charconv>
 #include <cmath>
 #include <chrono>
 #include <limits>
@@ -88,19 +88,6 @@ using AestraUI::kMonitorIconSvg;
 using AestraUI::kLaneStackIconSvg;
 using AestraUI::kChevronUpSvg;
 using AestraUI::kChevronDownSvg;
-
-bool parseTrailingTrackNumber(const std::string& trackName, uint32_t& trackNumberOut) {
-    const size_t numberPos = trackName.find_last_not_of("0123456789");
-    if (numberPos == std::string::npos || numberPos >= trackName.length() - 1) return false;
-    const std::string_view numberStr(trackName.c_str() + numberPos + 1, trackName.length() - numberPos - 1);
-    uint32_t parsed = 0;
-    const char* begin = numberStr.data();
-    const char* end = begin + numberStr.size();
-    const auto result = std::from_chars(begin, end, parsed);
-    if (result.ec != std::errc{} || result.ptr != end || parsed == 0) return false;
-    trackNumberOut = parsed;
-    return true;
-}
 
 std::string truncateClipLabel(const std::string& text, float availableWidth, float charWidth, size_t minChars = 4) {
     if (text.empty() || availableWidth <= 0.0f || charWidth <= 0.0f) return {};
@@ -1854,9 +1841,7 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
             const auto* nestedTrack = m_trackManager ? m_trackManager->getTrack(lane->trackId) : nullptr;
             numberText = "Lane " + std::to_string(nestedTrack ? nestedTrack->laneNumber(m_laneId) : 0);
         } else {
-            uint32_t parsedNumber = 0; // a trailing number in the name wins over the lane index
-            numberText = std::to_string(parseTrailingTrackNumber(m_nameLabel->getText(), parsedNumber)
-                                            ? parsedNumber : static_cast<uint32_t>(lane->index + 1));
+            numberText = std::to_string(timelineTrackNumber(m_nameLabel->getText(), lane->index)); // TimelineFold.h
         }
         // Centred on the name's row by cap height (SPEC 3 §3.2), not `nameBounds.y + 2` (1.5 px low).
         const float numberFontSize = themeManager.getFontSize("xs");
