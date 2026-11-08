@@ -956,7 +956,9 @@ void AestraWindowManager::render() {
             trackManagerHasCustomCursor = m_content->getTrackManagerUI()->isCustomCursorActive();
         }
 
-        if (!trackManagerHasCustomCursor) {
+        if (trackManagerHasCustomCursor) {
+            m_content->getTrackManagerUI()->renderCursorOverlay(*m_renderer);
+        } else {
             renderCustomCursor();
         }
     }

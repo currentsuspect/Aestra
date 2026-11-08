@@ -844,42 +844,6 @@ void TrackManagerUI::renderToolCursor(AestraUI::NUIRenderer& renderer, const Aes
 
     // === SPLIT TOOL LOGIC ===
     if (m_currentTool == PlaylistTool::Split) {
-        // ... (Existing Split Logic) ...
-        float mouseRelX = position.x - gridStartX + m_timelineScrollOffset;
-        double mouseBeat = mouseRelX / m_pixelsPerBeat;
-        double snappedBeat = snapBeatToGrid(mouseBeat);
-        float snappedX = gridStartX + static_cast<float>(snappedBeat * m_pixelsPerBeat - m_timelineScrollOffset);
-
-        // A hairline: the rest of the app draws its guides one pixel wide, and a 2 px dashed line read as heavy beside them.
-        // Centred on a pixel so it stays crisp instead of smearing across two.
-        float lineX = std::floor(snappedX) + 0.5f;
-        float lineY = position.y;
-        AestraUI::NUIColor splitColor(255, 107, 107, 170);
-        float dashLength = 5.0f;
-        float gapLength = 4.0f;
-
-        for (auto& trackUI : m_trackUIComponents) {
-            if (!trackUI)
-                continue;
-            const auto& allClipBounds = trackUI->getAllClipBounds();
-            for (auto it = allClipBounds.begin(); it != allClipBounds.end(); ++it) {
-                const auto& clipBounds = it->second;
-                // Only where a click would cut: the header and the trim edges move and resize instead.
-                if (trackUI->splitTargetAt(AestraUI::NUIPoint(position.x, lineY)) == it->first) {
-                    float lineTop = clipBounds.y;
-                    float lineBottom = clipBounds.y + clipBounds.height;
-                    float y = lineTop;
-                    while (y < lineBottom) {
-                        float dashEnd = std::min(y + dashLength, lineBottom);
-                        renderer.drawLine(AestraUI::NUIPoint(lineX, y), AestraUI::NUIPoint(lineX, dashEnd), 1.0f,
-                                          splitColor);
-                        y = dashEnd + gapLength;
-                    }
-                    break;
-                }
-            }
-        }
-
         // The blade follows the pointer exactly; only the dashed line is snapped, because that line is where the cut will
         // land. (The glyph used to sit ON the snapped line, so the cursor itself jumped from grid line to grid line.)
         drawToolCursorGlyph(renderer, m_splitToolIcon, AestraUI::NUIRect(position.x - 10, position.y - 10, 20, 20));
@@ -918,6 +882,67 @@ void TrackManagerUI::renderToolCursor(AestraUI::NUIRenderer& renderer, const Aes
     // === MUTE TOOL LOGIC ===
     // The speaker-with-a-cross, centred on the pointer: the click lands on the clip under it.
     drawToolCursorGlyph(renderer, m_muteToolIcon, AestraUI::NUIRect(position.x - 10, position.y - 10, 20, 20));
+}
+
+void TrackManagerUI::renderSplitGuide(AestraUI::NUIRenderer& renderer, const AestraUI::NUIPoint& position) {
+    // Where the cut will land: part of the timeline, so it is painted with it (panels cover it). The blade glyph is
+    // the cursor and is painted last, over everything, by renderCursorOverlay.
+    if (m_currentTool != PlaylistTool::Split || !toolOwnsCursor(m_currentTool, canPaintClip())) {
+        return;
+    }
+    const AestraUI::NUIRect bounds = getBounds();
+    const float controlAreaWidth = AestraUI::NUIThemeManager::getInstance().getLayoutDimensions().trackControlsWidth;
+    const float gridStartX = bounds.x + controlAreaWidth + kTimelineGridInsetX;
+    const AestraUI::NUIRect gridBounds(gridStartX, bounds.y + kTimelineTimeBandHeight,
+                                       bounds.width - controlAreaWidth - 20.0f, bounds.height - kTimelineTimeBandHeight);
+    if (!gridBounds.contains(position)) {
+        return;
+    }
+    float mouseRelX = position.x - gridStartX + m_timelineScrollOffset;
+    double mouseBeat = mouseRelX / m_pixelsPerBeat;
+    double snappedBeat = snapBeatToGrid(mouseBeat);
+    float snappedX = gridStartX + static_cast<float>(snappedBeat * m_pixelsPerBeat - m_timelineScrollOffset);
+
+    // A hairline: the rest of the app draws its guides one pixel wide, and a 2 px dashed line read as heavy beside them.
+    // Centred on a pixel so it stays crisp instead of smearing across two.
+    float lineX = std::floor(snappedX) + 0.5f;
+    float lineY = position.y;
+    AestraUI::NUIColor splitColor(255, 107, 107, 170);
+    float dashLength = 5.0f;
+    float gapLength = 4.0f;
+
+    for (auto& trackUI : m_trackUIComponents) {
+        if (!trackUI)
+            continue;
+        const auto& allClipBounds = trackUI->getAllClipBounds();
+        for (auto it = allClipBounds.begin(); it != allClipBounds.end(); ++it) {
+            const auto& clipBounds = it->second;
+            // Only where a click would cut: the header and the trim edges move and resize instead.
+            if (trackUI->splitTargetAt(AestraUI::NUIPoint(position.x, lineY)) == it->first) {
+                float lineTop = clipBounds.y;
+                float lineBottom = clipBounds.y + clipBounds.height;
+                float y = lineTop;
+                while (y < lineBottom) {
+                    float dashEnd = std::min(y + dashLength, lineBottom);
+                    renderer.drawLine(AestraUI::NUIPoint(lineX, y), AestraUI::NUIPoint(lineX, dashEnd), 1.0f,
+                                      splitColor);
+                    y = dashEnd + gapLength;
+                }
+                break;
+            }
+        }
+    }
+}
+
+void TrackManagerUI::renderCursorOverlay(AestraUI::NUIRenderer& renderer) {
+    // Painted by the window after everything else (owner, 2026-11-08: dragging the minimap bar up, the hand went
+    // BEHIND the transport bar). Drawn inside the timeline's own pass, anything painted later covered it: the
+    // transport bar, a floating panel. The arrow already draws last; the timeline's glyphs now do too.
+    if (m_window && m_window->getCursorStyle() == AestraUI::NUICursorStyle::Hidden) {
+        return;
+    }
+    renderToolCursor(renderer, m_lastMousePos);
+    renderMinimapResizeCursor(renderer, m_lastMousePos);
 }
 
 void TrackManagerUI::renderMinimapResizeCursor(AestraUI::NUIRenderer& renderer, const AestraUI::NUIPoint& position) {

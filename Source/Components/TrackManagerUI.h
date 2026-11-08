@@ -162,7 +162,9 @@ public:
      *  consumed before they reached the timeline. Hover cursor claims are only
      *  honoured while it matches the timeline's own last-seen position. */
     void setWindowPointerPosition(float x, float y);
-    void onWindowMouseReleased(); // the window saw a left release, which may never have reached the timeline
+    void onWindowMouseReleased();
+    /** @brief The timeline's cursor glyph (hand, trim, tool), painted by the window last so nothing covers it. */
+    void renderCursorOverlay(::AestraUI::NUIRenderer& renderer); // the window saw a left release, which may never have reached the timeline
 
     // View Toggle Callbacks (v3.1)
     void setOnToggleMixer(std::function<void()> cb) { m_onToggleMixer = cb; }
@@ -824,6 +826,7 @@ private:
     void renderToolbar(::AestraUI::NUIRenderer& renderer);
     bool handleToolbarClick(const ::AestraUI::NUIPoint& position);
     void renderToolCursor(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIPoint& position);
+    void renderSplitGuide(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIPoint& position);
 
     // onMouseEvent decomposition — called by the dispatcher in this order;
     // bool handlers return true when the event was consumed.
