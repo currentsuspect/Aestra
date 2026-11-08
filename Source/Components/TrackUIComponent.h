@@ -199,6 +199,11 @@ public:
     // Move Hover Query (for the hand cursor): the pointer is where a drag would move a clip, or a move is live.
     bool isHoveringMoveZone() const { return m_hoverMoveZone; }
     bool isDraggingClip() const { return m_isDraggingClip; }
+    /** @brief The timeline ended this row's clip move (release it heard first, Escape): forget the drag here too. */
+    void endClipDrag() {
+        m_isDraggingClip = false;
+        m_clipDragPotential = false;
+    }
 
     // Accessors
     std::shared_ptr<MixerChannel> getChannel() const { return m_channel; }

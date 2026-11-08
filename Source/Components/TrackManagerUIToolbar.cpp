@@ -294,6 +294,8 @@ void TrackManagerUI::onWindowMouseReleased() {
     if (m_timelineMinimap && m_timelineMinimap->isViewportDragActive()) {
         m_timelineMinimap->endDragFromOutside();
     }
+    // Likewise a clip move. The dispatcher hands the row its release; this covers one the tree is never sent.
+    finishInstantClipDrag();
 }
 
 void TrackManagerUI::setWindowPointerPosition(float x, float y) {
