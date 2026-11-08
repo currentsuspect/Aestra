@@ -941,8 +941,11 @@ void TrackManagerUI::renderCursorOverlay(AestraUI::NUIRenderer& renderer) {
     if (m_window && m_window->getCursorStyle() == AestraUI::NUICursorStyle::Hidden) {
         return;
     }
-    renderToolCursor(renderer, m_lastMousePos);
-    renderMinimapResizeCursor(renderer, m_lastMousePos);
+    // Drawn where the pointer really is. m_lastMousePos is only what the timeline last heard (the title bar takes
+    // moves over it, so the hand froze at its edge) and a clip drag clamps it to the grid.
+    const AestraUI::NUIPoint at = m_hasWindowPointerPos ? m_windowPointerPos : m_lastMousePos;
+    renderToolCursor(renderer, at);
+    renderMinimapResizeCursor(renderer, at);
 }
 
 void TrackManagerUI::renderMinimapResizeCursor(AestraUI::NUIRenderer& renderer, const AestraUI::NUIPoint& position) {
