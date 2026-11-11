@@ -346,30 +346,12 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
 
     // RT-safe hard reset (requested by engine on transport restart)
     if (m_resetVoicesRequested.exchange(false, std::memory_order_acq_rel)) {
-        for (auto& v : m_voices) {
-            v.active = false;
-            v.stage = EnvStage::Off;
-            v.position = 0.0;
-            v.playbackRate = 1.0;
-            v.targetPlaybackRate = 1.0;
-            v.playbackDirection = 1;
-            v.glideActive = false;
-            v.stageTime = 0.0;
-            v.currentGain = 0.0f;
-            v.releaseGain = 0.0f;
-            v.ownData.reset(); // refcount drop only: the cache or GarbageCollector owns the buffer
-            v.held.reset();
-        }
+        resetAllVoices();
     }
     // Soft release (pause / stop / loop wrap): every sounding voice goes through its own release
     // stage. Voices already releasing keep their tail; their gain is not restarted.
     if (m_releaseVoicesRequested.exchange(false, std::memory_order_acq_rel)) {
-        for (auto& v : m_voices) {
-            if (!v.active || v.stage == EnvStage::Release || v.stage == EnvStage::Off) continue;
-            v.stage = EnvStage::Release;
-            v.stageTime = 0.0;
-            v.releaseGain = v.currentGain;
-        }
+        releaseAllVoices();
     }
     // Idle voices let go of stretched buffers so evicted ones can be collected.
     for (auto& v : m_voices) {
@@ -675,11 +657,46 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
     }
 }
 
+void SamplerPlugin::resetAllVoices() {
+    for (auto& v : m_voices) {
+        v.active = false;
+        v.stage = EnvStage::Off;
+        v.position = 0.0;
+        v.playbackRate = 1.0;
+        v.targetPlaybackRate = 1.0;
+        v.playbackDirection = 1;
+        v.glideActive = false;
+        v.stageTime = 0.0;
+        v.currentGain = 0.0f;
+        v.releaseGain = 0.0f;
+        v.ownData.reset(); // refcount drop only: the cache or GarbageCollector owns the buffer
+        v.held.reset();
+    }
+}
+
+void SamplerPlugin::releaseAllVoices() {
+    for (auto& v : m_voices) {
+        if (!v.active || v.stage == EnvStage::Release || v.stage == EnvStage::Off) continue;
+        v.stage = EnvStage::Release;
+        v.stageTime = 0.0;
+        v.releaseGain = v.currentGain;
+    }
+}
+
 void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseRate,
                                     const std::shared_ptr<SampleData>& currentData) {
     uint8_t status = event.data[0] & 0xF0;
     uint8_t note = event.data[1];
     uint8_t velocity = event.data[2];
+
+    // The engine's stop sends All Notes Off and its panic All Sound Off to every unit. Acting on
+    // them means a stop reaches this sampler even when the engine's own release request does not
+    // (a unit it has not seen yet). All Notes Off releases through the ADSR, like the request.
+    if (status == 0xB0) {
+        if (note == 123) releaseAllVoices();
+        else if (note == 120) resetAllVoices();
+        return;
+    }
 
     if (status == 0xA0) { // Per-note pan, sent just before the matching note-on
         m_pendingNotePan[note & 0x7F] = velocity; // 1..127, 64 = centre
