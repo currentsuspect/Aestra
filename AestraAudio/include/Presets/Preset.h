@@ -33,7 +33,8 @@ struct PresetParam {
  * The sound is kept two ways. `params` holds every writable, non-bypass parameter by name and value: that is what an
  * Aestra plugin is restored from, what "2 changes" is counted against, and what a person can read in the file.
  * `state` is the plugin's own saved state, kept for plugins whose sound is more than their parameters (a VST3 or
- * CLAP plugin, the sampler's sample). A preset applies its state first and falls back to its params.
+ * CLAP plugin, the sampler's sample, the EQ's dynamic bands). A preset applies its state first, then its params.
+ * Factory presets carry params only.
  */
 struct Preset {
     std::string name;
