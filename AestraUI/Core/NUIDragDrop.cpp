@@ -17,6 +17,28 @@ bool isComponentEligibleForDragTarget(const NUIComponent* component) {
     }
     return true;
 }
+
+bool isDrawnForDrop(const NUIComponent* node) {
+    return node->isVisible() && node->isHitTestVisible() && node->getOpacity() > 0.0f;
+}
+
+// The topmost component at the point that paints something, front to back (last child first). Pass-through
+// layers (OverlayLayer) are looked through to what is behind them.
+NUIComponent* topmostDrawnAt(const NUIComponent* node, const NUIPoint& position) {
+    const auto& children = node->getChildren();
+    for (auto it = children.rbegin(); it != children.rend(); ++it) {
+        NUIComponent* child = it->get();
+        if (!child || !isDrawnForDrop(child) || !child->getBounds().contains(position)) continue;
+        if (NUIComponent* hit = topmostDrawnAt(child, position)) return hit;
+        if (!child->isDropPassThrough()) return child;
+    }
+    return nullptr;
+}
+
+NUIComponent* rootOf(NUIComponent* node) {
+    while (node->getParent()) node = node->getParent();
+    return node;
+}
 } // namespace
 
 NUIDragDropManager& NUIDragDropManager::getInstance() {
@@ -185,33 +207,57 @@ void NUIDragDropManager::unregisterDropTarget(IDropTarget* target) {
 }
 
 std::shared_ptr<IDropTarget> NUIDragDropManager::findTargetAt(const NUIPoint& position) {
-    for (auto it = m_dropTargets.rbegin(); it != m_dropTargets.rend();) {
-        if (auto target = it->lock()) {
-            
-            // DEBUG LOGGING
-            auto component = std::dynamic_pointer_cast<NUIComponent>(target);
-            const bool isEligible = component ? isComponentEligibleForDragTarget(component.get()) : true;
+    // Every eligible target under the pointer, most recently registered first.
+    struct Candidate {
+        std::shared_ptr<IDropTarget> target;
+        NUIComponent* component;
+    };
+    std::vector<Candidate> candidates;
+    NUIComponent* sharedRoot = nullptr;
+    bool rankableByScreen = true;
 
-            if (component && !isEligible) {
-                Aestra::Log::info("[DragDrop] Skipping hidden/non-interactive target");
-                ++it;
-                continue;
-            }
-            
-auto bounds = target->getDropBounds();
-             if (bounds.contains(position)) {
-                 if (component) {
-                     Aestra::Log::trace("[DragDrop] Hit eligible drop target");
-                 }
-                 return target;
-             }
-            ++it;
-        } else {
+    for (auto it = m_dropTargets.rbegin(); it != m_dropTargets.rend();) {
+        auto target = it->lock();
+        if (!target) {
             // Clean up expired weak_ptr
             it = std::reverse_iterator<std::vector<std::weak_ptr<IDropTarget>>::iterator>(
                 m_dropTargets.erase(std::next(it).base()));
+            continue;
+        }
+        ++it;
+
+        auto* component = dynamic_cast<NUIComponent*>(target.get());
+        if (component && !isComponentEligibleForDragTarget(component)) continue;
+        if (!target->getDropBounds().contains(position)) continue;
+
+        if (!component) {
+            rankableByScreen = false;
+        } else if (NUIComponent* root = rootOf(component); !sharedRoot) {
+            sharedRoot = root;
+        } else if (root != sharedRoot) {
+            rankableByScreen = false;
+        }
+        candidates.push_back({std::move(target), component});
+    }
+
+    if (candidates.empty()) return nullptr;
+    // A target with no place in the shared tree can only be ranked by registration (the old rule).
+    if (!rankableByScreen) return candidates.front().target;
+
+    // Registration order says nothing about what is on top: the timeline registers on its first frame and stays
+    // visible under floating panels, so it used to take their drops (#395, #1328). Take what is drawn at the
+    // pointer and walk up to the nearest target holding it.
+    NUIComponent* hit = topmostDrawnAt(sharedRoot, position);
+    if (!hit && !sharedRoot->isDropPassThrough() && sharedRoot->getBounds().contains(position)) hit = sharedRoot;
+    if (!hit) return candidates.front().target; // nothing drawn reaches the pointer (out-of-parent bounds)
+
+    for (const NUIComponent* node = hit; node; node = node->getParent()) {
+        for (const auto& candidate : candidates) {
+            if (candidate.component == node) return candidate.target;
         }
     }
+    // Something that takes no drops covers every target here (piano roll over the timeline).
+    Aestra::Log::trace("[DragDrop] Drop point covered by a non-target");
     return nullptr;
 }
 

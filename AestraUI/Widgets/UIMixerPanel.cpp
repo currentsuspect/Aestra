@@ -727,25 +727,9 @@ void UIMixerPanel::ensureDropTargetRegistration() {
         }
     }
 
-    // The drop manager scans targets in reverse registration order and the
-    // mixer overlays the timeline, so re-register once per drag to move this
-    // panel to the back of the list — it must be checked before TrackManagerUI
-    // or plugin drops fall through to the lane geometry behind it (#395).
-    // onUpdate only runs while the mixer is shown; when hidden, the manager's
-    // visibility eligibility check skips this target entirely.
-    if (dnd.isDragging()) {
-        if (!m_dropOrderClaimedForDrag) {
-            try {
-                if (auto sharedThis = std::dynamic_pointer_cast<IDropTarget>(shared_from_this())) {
-                    dnd.unregisterDropTarget(this);
-                    dnd.registerDropTarget(sharedThis);
-                    m_dropOrderClaimedForDrag = true;
-                }
-            } catch (const std::bad_weak_ptr&) {}
-        }
-    } else {
-        m_dropOrderClaimedForDrag = false;
-        m_dropHoverChannelId = -1; // clear highlight if a drag ended without onDragLeave
+    // A drag that ended without onDragLeave would leave its strip highlighted.
+    if (!dnd.isDragging()) {
+        m_dropHoverChannelId = -1;
     }
 }
 

@@ -145,6 +145,11 @@ public:
     void setHitTestVisible(bool visible) { hitTestVisible_ = visible; }
     bool isHitTestVisible() const { return hitTestVisible_; }
 
+    // Drag-and-drop occlusion only: a layer that paints nothing of its own (OverlayLayer, the status toast).
+    // NUIDragDropManager picks the drop target under the topmost thing at the pointer and looks through these.
+    void setDropPassThrough(bool passThrough) { dropPassThrough_ = passThrough; }
+    bool isDropPassThrough() const { return dropPassThrough_; }
+
     static NUIComponent* getFocusedComponent();
     static void clearFocusedComponent();
     
@@ -198,6 +203,7 @@ private:
     bool dirty_ = true;
     float opacity_ = 1.0f;
     bool hitTestVisible_ = true;
+    bool dropPassThrough_ = false;
     NUILayer layer_ = NUILayer::Content;
     
     std::string tooltipText_;
