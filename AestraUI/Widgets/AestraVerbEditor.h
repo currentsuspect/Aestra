@@ -86,6 +86,14 @@ private:
     int hitTestPreset(float x, float y) const;
     bool hitTestMix(float x, float y) const;
     bool hitTestBypass(float x, float y) const;
+    // The editor's own coordinates start at the old 32 px title bar. With the two-row header that bar is the second
+    // header row, so everything the editor lays out is shifted down one row and the window is one row taller.
+    NUIRect frameBounds() const {
+        auto b = getBounds();
+        b.y += AestraPanelWindow::TITLE_BAR_H;
+        b.height -= AestraPanelWindow::TITLE_BAR_H;
+        return b;
+    }
     bool hitTestFreeze(float x, float y) const;
     bool hitTestPresetNav(float x, float y, int& direction) const;
     bool hitTestAB(float x, float y, bool& isA) const;
@@ -155,7 +163,7 @@ private:
     ABState m_abA;
     ABState m_abB;
     int m_activeAB = 0; // 0 = none, 1 = A, 2 = B
-    static constexpr float kWinW = 880, kWinH = 620, kPad = 18, kRadius = 10;
+    static constexpr float kWinW = 880, kWinH = 620 + AestraPanelWindow::TITLE_BAR_H, kPad = 18, kRadius = 10;
     static constexpr float kKnobSize = 76, kKnobGap = 16;
     static constexpr int kParamCount = 18;
     static constexpr int kMaxVisiblePresets = 12;
