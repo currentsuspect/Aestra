@@ -32,6 +32,9 @@ class AestraContent;
 
 class AestraWindowManager {
 public:
+    /// Hold input while something renders the live song off the UI thread (an Audition bounce): presses, the wheel,
+    /// key presses and typing are dropped; moves and releases are not. The window keeps painting.
+    void setInputHold(std::function<bool()> held);
     /** @brief Construct the window manager and its top-level UI services. */
     AestraWindowManager();
     /** @brief Tear down the native window, renderer, and owned UI hierarchy. */
@@ -204,6 +207,7 @@ private:
 
     std::shared_ptr<Aestra::SettingsDialog> m_settingsDialog;
     bool m_modalWasOpen = false; // for the one-time cursor hand-back when a modal opens
+    std::function<bool()> m_inputHold; // setInputHold: a bounce rendering the live song
     /** True while any modal dialog covers the content (it then owns the cursor, not the content). */
     bool isModalDialogOpen() const;
     std::shared_ptr<Aestra::ConfirmationDialog> m_confirmationDialog;

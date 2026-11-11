@@ -394,6 +394,10 @@ void TrackManagerUI::finishInstantClipDrag() {
         }
     }
 
+    // The timeline takes the release before the row does, so the row would keep "dragging" (the closed hand stuck).
+    if (m_draggedClipTrack) {
+        m_draggedClipTrack->endClipDrag();
+    }
     m_isDraggingClipInstant = false;
     m_draggedClipTrack = nullptr;
     m_draggedClipId = ClipInstanceID{};
@@ -458,6 +462,10 @@ void TrackManagerUI::cancelInstantClipDrag() {
         }
     }
 
+    // The timeline takes the release before the row does, so the row would keep "dragging" (the closed hand stuck).
+    if (m_draggedClipTrack) {
+        m_draggedClipTrack->endClipDrag();
+    }
     m_isDraggingClipInstant = false;
     m_draggedClipTrack = nullptr;
     m_draggedClipId = ClipInstanceID{};
