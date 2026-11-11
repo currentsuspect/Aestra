@@ -377,6 +377,102 @@ void testMuteToolAndShortcuts() {
     check(f.manager->getCurrentTool() == PlaylistTool::Select, "1 picks Select");
 }
 
+// ---- Letting go outside the clip (owner, 2026-11-08: "sticky cursor, it doesn't let go") -----------------------------
+//
+// Real events through the tree, as the window sends them. The timeline finished the move itself and returned before
+// the lane heard the release, so the lane kept "dragging": the closed hand stuck, and a release over the minimap never
+// ended the move at all.
+
+AestraUI::NUIMouseEvent pointer(AestraUI::NUIMouseEventType type, AestraUI::NUIPoint at) {
+    AestraUI::NUIMouseEvent e;
+    e.type = type;
+    e.position = at;
+    e.button = type == AestraUI::NUIMouseEventType::Move ? AestraUI::NUIMouseButton::None : AestraUI::NUIMouseButton::Left;
+    e.pressed = type == AestraUI::NUIMouseEventType::Down;
+    e.released = type == AestraUI::NUIMouseEventType::Up;
+    return e;
+}
+
+void send(Fixture& f, AestraUI::NUIMouseEventType type, AestraUI::NUIPoint at) {
+    AestraUI::NUIComponent::dispatchMouseEvent(f.root.get(), pointer(type, at));
+}
+
+AestraUI::NUIPoint clipBody(Fixture& f) {
+    // Clip rects are published by painting, as in ClipEdgeZonesTest.
+    Aestra::Testing::NullRenderer renderer;
+    f.root->onRender(renderer);
+    f.lane->renderStatic(renderer);
+    f.lane->renderControlOverlay(renderer);
+    const auto& all = f.lane->getAllClipBounds();
+    const auto it = all.find(f.clipId);
+    if (it == all.end()) {
+        check(false, "the lane laid out no rect for the clip");
+        return f.grabPoint();
+    }
+    return {it->second.x + it->second.width * 0.5f, it->second.y + it->second.height * 0.75f};
+}
+
+void startDrag(Fixture& f) {
+    f.manager->setCurrentTool(PlaylistTool::Select);
+    const auto grab = clipBody(f);
+    send(f, AestraUI::NUIMouseEventType::Down, grab);
+    send(f, AestraUI::NUIMouseEventType::Move, {grab.x + 20.0f, grab.y});
+}
+
+void testLettingGoPastTheTimelineStartReleasesTheClip() {
+    // The clip stops at beat 0; the pointer goes on into the track controls, so the release is outside the clip,
+    // and the clip ends where it began (no row rebuild to wipe the stale state).
+    Fixture f;
+    if (!f.build()) {
+        return;
+    }
+    startDrag(f);
+    check(f.lane->isDraggingClip() && f.manager->isInstantClipDragActive(), "past start: the drag is live");
+    const AestraUI::NUIPoint outside(f.lane->getBounds().x + 20.0f, clipBody(f).y);
+    send(f, AestraUI::NUIMouseEventType::Move, outside);
+    send(f, AestraUI::NUIMouseEventType::Up, outside);
+    check(!f.manager->isInstantClipDragActive(), "past start: the timeline's move ended");
+    check(!f.lane->isDraggingClip(), "past start: the lane let go too (the closed hand stuck on this)");
+    check(f.clipStart() == 0.0, "past start: the clip stayed at the start");
+}
+
+void testLettingGoOverTheMinimapReleasesTheClip() {
+    Fixture f;
+    if (!f.build()) {
+        return;
+    }
+    const size_t undo = f.undoDepth();
+    startDrag(f);
+    const float zoom = f.manager->getHorizontalZoom();
+    const auto grab = clipBody(f);
+    send(f, AestraUI::NUIMouseEventType::Move, {grab.x + 8.0f * zoom, grab.y});
+    const double landed = f.clipStart();
+    check(landed > 0.0, "minimap: the clip moved with the pointer");
+    const AestraUI::NUIPoint overMinimap(grab.x + 8.0f * zoom,
+                                         f.manager->getBounds().y + kTimelineMinimapTop + kTimelineMinimapHeight * 0.5f);
+    send(f, AestraUI::NUIMouseEventType::Up, overMinimap);
+    check(!f.manager->isInstantClipDragActive(), "minimap: a release over the minimap ends the move");
+    check(f.undoDepth() == undo + 1, "minimap: the move is one undo step");
+    const auto lane = findLane(*f.manager);
+    check(lane && !lane->isDraggingClip(), "minimap: no lane is left dragging");
+
+    // And nothing follows the pointer afterwards.
+    send(f, AestraUI::NUIMouseEventType::Move, {grab.x + 2.0f * zoom, grab.y});
+    check(f.clipStart() == landed, "minimap: the clip stays put after the release");
+}
+
+void testCancellingTheMoveReleasesTheLane() {
+    // Escape mid-drag: the timeline puts the clip back; the lane must not stay "dragging".
+    Fixture f;
+    if (!f.build()) {
+        return;
+    }
+    startDrag(f);
+    f.manager->cancelInstantClipDrag();
+    const auto lane = findLane(*f.manager);
+    check(lane && !lane->isDraggingClip(), "cancel: no lane is left dragging");
+}
+
 } // namespace
 
 int main() {
@@ -390,6 +486,9 @@ int main() {
     testCtrlDDuplicatesTheSelectionAndCtrlBDoesNot();
     testDrawPlacesInTheCellThePointerIsIn();
     testDropPlacesInTheCellThePointerIsOver();
+    testLettingGoPastTheTimelineStartReleasesTheClip();
+    testLettingGoOverTheMinimapReleasesTheClip();
+    testCancellingTheMoveReleasesTheLane();
 
     if (g_failures == 0) {
         std::cout << "Clip drag release tests passed\n";

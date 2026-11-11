@@ -11,6 +11,7 @@
 #include "../AestraUI/Core/NUIComponent.h"
 #include "../Core/AuditionCompare.h"
 #include "../Core/AuditionLibrary.h"
+#include "AuditionBounceTile.h"
 #include "AuditionEngine.h"
 #include "AuditionFilesPage.h"
 #include "AuditionHubLayout.h"
@@ -55,8 +56,8 @@ public:
     void setLibraryFile(std::string file);
     /// The user asked to import a reference: the app picks a file and calls addReference.
     void setOnImportReference(std::function<void()> cb) { m_onImportReference = std::move(cb); }
-    /// The user asked to bounce the timeline now; true when it was bounced.
-    void setOnBounceNow(std::function<bool()> cb) { m_onBounceNow = std::move(cb); }
+    /// The user asked to bounce the timeline now: the app starts a job off the UI thread and hands it back at once.
+    void setOnBounceNow(std::function<std::shared_ptr<BounceJob>()> cb) { m_onBounceNow = std::move(cb); }
     void addReference(const std::string& path);
 
     /// Re-read the project's bounces and the reference list (the hub does this when it is shown, and every few seconds).
@@ -105,6 +106,7 @@ private:
     void renderNav(AestraUI::NUIRenderer& r, const AuditionHubLayout::Frame& f);
     void renderPage(AestraUI::NUIRenderer& r, const AuditionHubLayout::Frame& f);
     void renderPlayer(AestraUI::NUIRenderer& r, const AuditionHubLayout::Frame& f);
+    void renderBounceFill(AestraUI::NUIRenderer& r, const AestraUI::NUIRect& cover); ///< the running bounce, filling up
     void openListenOnMenu(const AestraUI::NUIPoint& at);
     void applyPendingReferences();
     std::vector<AuditionHubLayout::Shelf> layoutShelves() const;
@@ -156,7 +158,10 @@ private:
 
     std::function<Project()> m_projectProvider;
     std::function<void()> m_onImportReference;
-    std::function<bool()> m_onBounceNow;
+    std::function<std::shared_ptr<BounceJob>()> m_onBounceNow;
+    AuditionBounceTile m_bounceTile;
+    std::string m_bounceReplaced; ///< the badge a click was about to replace, for the line after
+    std::string m_openBadge; ///< "v1" when the open version has a bounce, else empty (read in refresh)
     std::function<void()> m_onPlayRequest;
     std::string m_libraryFile;
     std::vector<AuditionLibrary::Item> m_versions, m_references;
