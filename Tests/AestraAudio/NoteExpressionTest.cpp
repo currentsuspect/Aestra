@@ -109,7 +109,8 @@ int main() {
     const auto expanded = expandForPlayback(plain, 0.0f, 1, 1, 0);
     check(expanded.size() == 4, "a 3-ratchet makes three hits");
     check(std::abs(expanded[2].startBeat - (0.25 + 0.25 / 3.0)) < 1e-9, "hits are evenly spaced inside the step");
-    check(expanded[1].durationBeats < 0.25 && std::abs(expanded[1].gate - 1.0f / 3.0f) < 1e-6, "the gate shrinks with the hit");
+    check(std::abs(expanded[1].durationBeats - 0.25 / 3.0) < 1e-9 && std::abs(expanded[1].gate - 1.0f) < 1e-6,
+          "each hit is a third of the step and keeps the gate (a share of its own length)");
 
     std::cout << "[4] the scheduler plays them\n";
     const auto straight = playOnce({stepNote(0, 1), stepNote(1, 1), stepNote(2, 1), stepNote(3, 1)}, 0.0f);

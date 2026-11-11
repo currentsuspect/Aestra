@@ -50,6 +50,9 @@ public:
     /** @brief True only while the viewport bar is actually being dragged (not
      *  hovered) — the closed-hand Grabbing cursor, as opposed to the open Grab. */
     bool isViewportDragActive() const { return isVisible() && dragKind_ == DragKind::Viewport; }
+    /** @brief End a drag whose release never reached the minimap (it landed outside the timeline), committing
+     *  the last dragged state exactly as a release would. No-op when nothing is being dragged. */
+    void endDragFromOutside() { endDrag_(); }
     /** @brief Enable or disable the top-left mode toggles. */
     void setShowModeToggles(bool show) { showModeToggles_ = show; repaint(); }
     /** @brief Set an additional leading inset applied before the minimap content. */
