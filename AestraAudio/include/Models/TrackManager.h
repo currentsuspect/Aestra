@@ -17,6 +17,7 @@
 #include "../RealtimeThreadGuard.h"
 #include "AestraLog.h"
 #include "ClipPrefilterService.h"
+#include "MarkerModel.h"
 #include "MeterSnapshot.h"
 #include "PatternManager.h"
 #include "PlaylistModel.h"
@@ -747,6 +748,8 @@ public:
     /// Presets kept in this project only (FD-72 "This project only"): saved in the project file, never in Yours.
     std::vector<Presets::Preset>& projectPresets() { return m_projectPresets; }
 
+    MarkerModel& markers() { return m_markers; } // song sections and cues; UI thread only, mutate through MarkerCommands
+    const MarkerModel& markers() const { return m_markers; }
     /**
      * @brief Get output sample rate
      * @return Output sample rate in Hz.
@@ -2610,6 +2613,7 @@ private:
     std::shared_ptr<ChannelSlotMap> m_channelSlotMap;
     UnitManager m_unitManager;
     std::vector<Presets::Preset> m_projectPresets; // UI thread only; see projectPresets()
+    MarkerModel m_markers;                         // UI thread only; see markers()
     std::function<bool(const AudioQueueCommand&)> m_commandSink;
     std::atomic<bool> m_metronomeDirty{false};
     std::function<void(MixerChannel&)> m_channelPrepareCallback;

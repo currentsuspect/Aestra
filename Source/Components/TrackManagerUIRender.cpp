@@ -173,26 +173,12 @@ void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
     // Render toolbar OUTSIDE cache (interactive tool selection)
     renderToolbar(renderer);
 
-    // Render tool cursor (Split, Paint, AND trim resize cursor)
-    // renderToolCursor handles: trim edges, split tool, paint tool
-    // Skip custom tool/minimap cursor rendering during hidden-cursor drag, and
-    // draw only while isCustomCursorActive() claims the cursor: the same answer
-    // the window manager uses to skip its arrow, so exactly one cursor draws.
-    // Without this gate a stale hover claim (pointer over a context menu) kept a
-    // frozen tool glyph on screen after the arrow had been restored.
+    // The split guide belongs to the timeline. The cursor glyphs do not: the window paints them last, over every
+    // panel (renderCursorOverlay), drawn only while isCustomCursorActive() claims the cursor, the same answer the
+    // window uses to skip its arrow, so exactly one cursor draws.
     if ((!m_window || m_window->getCursorStyle() != AestraUI::NUICursorStyle::Hidden) && isCustomCursorActive() &&
         !AestraUI::NUIDragDropManager::getInstance().isDragging()) {
-        // CURSOR PIPELINE BYPASS: renderToolCursor draws directly on renderer at
-        // m_lastMousePos. Outside both SVG cursor system and SDL cursor system.
-        // Suppressed here rather than through cursor abstraction — intentional.
-        // See renderMinimapResizeCursor below for identical pattern.
-        renderToolCursor(renderer, m_lastMousePos);
-
-        // CURSOR PIPELINE BYPASS: renderMinimapResizeCursor draws directly on
-        // renderer at m_lastMousePos. Outside both SVG cursor system and SDL
-        // cursor system. Suppressed here rather than through cursor abstraction.
-        // See renderToolCursor above for identical pattern.
-        renderMinimapResizeCursor(renderer, m_lastMousePos);
+        renderSplitGuide(renderer, m_lastMousePos);
     }
 
     // Render selection box if currently drawing one
