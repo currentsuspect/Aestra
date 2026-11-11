@@ -210,6 +210,13 @@ private:
     static TooltipState s_tooltipState;
     static bool s_cursorCaptureActive;
     static unsigned s_pointerButtonsHeld; ///< One bit per NUIMouseButton currently down.
+    // Press ownership (2026-11-08): who took the press hears its release, wherever it lands. See dispatchMouseEvent.
+    static NUIComponent* s_pressOwner;      ///< Deepest component that took the held press; cleared on release.
+    static NUIMouseButton s_pressOwnerButton;
+    static NUIComponent* s_eventClaimer;    ///< Deepest component that took the event being dispatched.
+    static void noteEventClaimer(NUIComponent* claimer) {
+        if (!s_eventClaimer) s_eventClaimer = claimer;
+    }
     
     std::shared_ptr<NUITheme> theme_;
     
@@ -246,7 +253,10 @@ public:
     /** @brief Pointer gestures seen by dispatchMouseEvent: a press or scroll dismisses the tooltip. */
     static void notePointerGesture(const NUIMouseEvent& event);
     /** @brief Forget a held button (window focus lost: its release may never arrive). */
-    static void resetPointerGestureState() { s_pointerButtonsHeld = 0; }
+    static void resetPointerGestureState() {
+        s_pointerButtonsHeld = 0;
+        s_pressOwner = nullptr;
+    }
     static bool isPointerButtonHeld() { return s_pointerButtonsHeld != 0; }
     /** @brief After a scroll has been dispatched: a hover tooltip its target re-showed goes too. */
     static void dismissHoverTooltipAfterScroll();

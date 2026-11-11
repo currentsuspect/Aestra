@@ -194,6 +194,128 @@ void testStaleGeometryOverlappingActiveWorkspace() {
     check(fixture.lane->pressesSeen == 2, "second press in the same band also lands");
 }
 
+// ---- The press owner hears its release (owner, 2026-11-08: "it doesn't let go when I let go outside the clip") ----
+//
+// A drag ends on its release. The parent offers the release front to back and stops at the first child that takes it,
+// so a release over another component (a scrollbar, the minimap, a panel) never reached the component that took the
+// press: its drag stayed live and the cursor stuck. The framework now remembers who took the press and hands it the
+// release when someone else took it.
+
+/// Takes a press inside its rect and holds a drag until it hears a release, wherever that lands.
+class DragOwner : public NUIComponent {
+public:
+    bool dragging = false;
+    int releasesSeen = 0;
+
+    bool onMouseEvent(const NUIMouseEvent& event) override {
+        if (event.pressed && getBounds().contains(event.position)) {
+            dragging = true;
+            return true;
+        }
+        if (event.released) {
+            ++releasesSeen;
+            const bool was = dragging;
+            dragging = false;
+            return was;
+        }
+        return dragging;
+    }
+};
+
+/// Takes every release inside its rect, idle or not (the minimap did exactly this).
+class ReleaseEater : public NUIComponent {
+public:
+    bool onMouseEvent(const NUIMouseEvent& event) override {
+        return event.released && getBounds().contains(event.position);
+    }
+};
+
+/// A container whose override offers a member widget the event by hand before its children, as TrackManagerUI does
+/// with its minimap and scrollbar. The member's claim is invisible to the base child loop.
+class HandRoutingContainer : public NUIComponent {
+public:
+    std::shared_ptr<ReleaseEater> member = std::make_shared<ReleaseEater>();
+
+    bool onMouseEvent(const NUIMouseEvent& event) override {
+        if (member->onMouseEvent(event)) {
+            return true;
+        }
+        return NUIComponent::onMouseEvent(event);
+    }
+};
+
+NUIMouseEvent makeRelease(float x, float y) {
+    NUIMouseEvent event;
+    event.type = NUIMouseEventType::Up;
+    event.position = {x, y};
+    event.button = NUIMouseButton::Left;
+    event.released = true;
+    return event;
+}
+
+void testReleaseOverASiblingStillEndsTheDrag() {
+    NUIComponent root;
+    root.setBounds({0.0f, 0.0f, 1000.0f, 700.0f});
+    auto owner = std::make_shared<DragOwner>();
+    auto eater = std::make_shared<ReleaseEater>();
+    owner->setBounds({0.0f, 0.0f, 400.0f, 700.0f});
+    eater->setBounds({500.0f, 0.0f, 400.0f, 700.0f});
+    root.addChild(owner);
+    root.addChild(eater); // front: offered the release first
+
+    NUIComponent::dispatchMouseEvent(&root, makePress(100.0f, 100.0f));
+    check(owner->dragging, "sibling: the press starts the drag");
+    NUIComponent::dispatchMouseEvent(&root, makeRelease(600.0f, 100.0f));
+    check(!owner->dragging, "sibling: a release over another component still ends the drag");
+    check(owner->releasesSeen == 1, "sibling: the owner hears that release once");
+}
+
+void testReleaseOverAHandRoutedWidgetStillEndsTheDrag() {
+    // The timeline's shape: the lane is a base child of a container that offers its minimap the release first.
+    NUIComponent root;
+    root.setBounds({0.0f, 0.0f, 1000.0f, 700.0f});
+    auto container = std::make_shared<HandRoutingContainer>();
+    container->setBounds({0.0f, 0.0f, 1000.0f, 700.0f});
+    container->member->setBounds({0.0f, 0.0f, 1000.0f, 30.0f});
+    auto owner = std::make_shared<DragOwner>();
+    owner->setBounds({0.0f, 100.0f, 1000.0f, 100.0f});
+    container->addChild(owner);
+    root.addChild(container);
+
+    NUIComponent::dispatchMouseEvent(&root, makePress(300.0f, 150.0f));
+    check(owner->dragging, "hand-routed: the press starts the drag");
+    NUIComponent::dispatchMouseEvent(&root, makeRelease(300.0f, 10.0f));
+    check(!owner->dragging, "hand-routed: a release over the container's own widget still ends the drag");
+    check(owner->releasesSeen == 1, "hand-routed: the owner hears it once");
+}
+
+void testReleaseOverTheOwnerIsHeardOnce() {
+    // The guarantee must not double up the ordinary case.
+    NUIComponent root;
+    root.setBounds({0.0f, 0.0f, 1000.0f, 700.0f});
+    auto owner = std::make_shared<DragOwner>();
+    owner->setBounds({0.0f, 0.0f, 400.0f, 700.0f});
+    root.addChild(owner);
+
+    NUIComponent::dispatchMouseEvent(&root, makePress(100.0f, 100.0f));
+    NUIComponent::dispatchMouseEvent(&root, makeRelease(120.0f, 100.0f));
+    check(owner->releasesSeen == 1, "own release: heard exactly once");
+}
+
+void testDestroyedOwnerIsForgotten() {
+    // A row rebuilt mid-gesture must not be handed a release after it is gone.
+    NUIComponent root;
+    root.setBounds({0.0f, 0.0f, 1000.0f, 700.0f});
+    auto owner = std::make_shared<DragOwner>();
+    owner->setBounds({0.0f, 0.0f, 400.0f, 700.0f});
+    root.addChild(owner);
+    NUIComponent::dispatchMouseEvent(&root, makePress(100.0f, 100.0f));
+    root.removeChild(owner);
+    owner.reset();
+    NUIComponent::dispatchMouseEvent(&root, makeRelease(600.0f, 100.0f)); // must not touch freed memory (ASan)
+    check(true, "destroyed owner: no crash");
+}
+
 }  // namespace
 
 int main() {
@@ -203,6 +325,10 @@ int main() {
     testCapturedCursorStillReachesHiddenChild();
     testCapturedReleaseReachesHiddenChildAfterPress();
     testStaleGeometryOverlappingActiveWorkspace();
+    testReleaseOverASiblingStillEndsTheDrag();
+    testReleaseOverAHandRoutedWidgetStillEndsTheDrag();
+    testReleaseOverTheOwnerIsHeardOnce();
+    testDestroyedOwnerIsForgotten();
 
     if (g_failures != 0) {
         std::cout << "[FAIL] NUIHiddenChildDispatchTest: " << g_failures << " failure(s)\n";

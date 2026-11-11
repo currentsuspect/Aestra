@@ -12,6 +12,7 @@
 #include "../Core/AuditionHooks.h"
 #include "AestraFileDialog.h"
 #include <filesystem>
+#include <mutex>
 
 using namespace Aestra;
 
@@ -92,16 +93,54 @@ void AestraApp::wireAudition() {
         pickFileAsync([filter](Aestra::IPlatformUtils& utils) { return utils.openFileDialog("Import a reference", filter); },
                       [this](const std::string& picked) { if (!picked.empty() && m_content) m_content->addAuditionReference(picked); });
     };
-    hooks.bounceNow = [this]() {
+    hooks.bounceNow = [this]() -> std::shared_ptr<BounceJob> {
         const std::string path = m_documentState.canonicalPath();
-        if (path.empty()) return false;
+        if (path.empty()) return BounceJob::failed("Save the project first: a bounce is kept with the saved project.");
         // The bounce renders the project as it is now, so the open version's snapshot must be the same state:
         // save it first (it also creates the Versions manifest a project opened from disk doesn't have yet;
         // without one the tile did nothing at all). A failed save means no bounce.
-        if (!saveActiveTakeSnapshot()) return false;
+        if (!saveActiveTakeSnapshot()) return BounceJob::failed("The project couldn't be saved, so nothing was bounced.");
         const auto manifest = TakeManager::loadManifest(path);
         const auto* open = manifest.ok ? manifest.activeTake() : nullptr;
-        return open && bounceSavedVersion(m_documentState.canonicalPath(), open->id, [this](std::vector<float>& a, uint32_t& c, uint32_t& r) { return m_content->renderMixToBuffer(a, c, r); });
+        if (!open) return BounceJob::failed("No open version to bounce. Nothing was changed.");
+        stopBounceWorker(); // the tile allows one at a time; this only reaps the last, finished thread
+
+        // Owner rule (2026-11-08): no render on the UI thread. The live song renders on a worker, as Export does:
+        // the stream is stopped and input is held (presses, wheel, keys) until it is done, so nothing edits or plays
+        // what is being rendered, and the window keeps painting the tile filling up. A render of a fresh copy would
+        // free the song meanwhile, but the offline path does not sound like the app yet (#1332).
+        auto job = std::make_shared<BounceJob>();
+        m_bounceJob = job;
+        const bool resumeStream = m_content->pauseStreamForRender();
+        auto queue = m_mainThreadQueue;
+        auto* content = m_content.get(); // outlives the worker: shutdown() joins it first (stopBounceWorker)
+        const std::string takeId = open->id;
+        m_bounceThread = std::thread([job, queue, content, path, takeId, resumeStream]() {
+            const std::string name = VersionBounce::writeBounce(path, takeId,
+                [&](std::vector<float>& a, uint32_t& c, uint32_t& r) {
+                    return content->renderMixCore(a, c, r,
+                        [&job](float pct) { job->progress.store(std::max(0.01f, pct), std::memory_order_relaxed); },
+                        [&job]() { return job->cancel.load(std::memory_order_relaxed); });
+                },
+                [](const std::vector<float>& audio, uint32_t channels, uint32_t rate) { return Audio::analyzeAudio(audio, channels, rate).integratedLufs; });
+            std::lock_guard<std::mutex> lock(queue->mutex);
+            if (queue->shuttingDown) return;
+            queue->tasks.push_back([job, content, path, takeId, name, resumeStream]() {
+                content->resumeStreamAfterRender(resumeStream);
+                const bool ok = !name.empty() && TakeManager::setVersionBounce(path, takeId, name).ok;
+                job->outcome = {ok, ok ? std::string() : "The timeline didn't render. Is there anything on it?"};
+                job->finished = true;
+            });
+        });
+        return job;
     };
     m_content->setAuditionHooks(std::move(hooks));
+    // Input is held only while a bounce is rendering the live song (and released on the frame its result lands).
+    if (m_windowManager) m_windowManager->setInputHold([this]() { return m_bounceJob && !m_bounceJob->finished; });
+}
+
+void AestraApp::stopBounceWorker() {
+    if (m_bounceJob) m_bounceJob->cancel.store(true);
+    if (m_bounceThread.joinable()) m_bounceThread.join();
+    m_bounceJob.reset();
 }
