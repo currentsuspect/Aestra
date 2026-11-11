@@ -31,7 +31,7 @@ NUIRect drawDialogChrome(NUIRenderer& renderer, const DialogChrome& chrome)
     auto& theme = NUIThemeManager::getInstance();
     const NUIColor border = theme.getColor("borderSubtle");
 
-    // Same surface, radius, border and title-bar height as AestraPanelWindow, so
+    // Same surface, radius (none), border and title-bar height as AestraPanelWindow, so
     // a dialog and a plugin editor read as the same object family.
     renderer.fillRoundedRect(b, AestraPanelWindow::kRadius, theme.getColor("elevatedPanel"));
 
