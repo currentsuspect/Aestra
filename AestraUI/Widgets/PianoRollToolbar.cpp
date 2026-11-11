@@ -372,7 +372,7 @@ void PianoRollToolbar::openChoiceMenu(const NUIRect& anchor, const std::vector<P
 }
 
 void PianoRollToolbar::openSnapMenu() {
-    constexpr int kSmart = -1;
+    static constexpr int kSmart = -1; // static: MSVC will not let the lambda below use a local constexpr uncaptured
     std::vector<PatternChoice> snaps{{kSmart, "Smart (follows the zoom)"}};
     for (auto snap : MusicTheory::getSnapOptions()) snaps.push_back({static_cast<int>(snap), MusicTheory::getSnapName(snap)});
     openChoiceMenu(m_snapBtn->getBounds(), snaps, m_smartSnap ? kSmart : static_cast<int>(m_currentSnap), "piano-roll-snap",
