@@ -101,6 +101,15 @@ public:
     }
     
     bool onKeyEvent(const NUIKeyEvent& event) override;
+
+    /// While this says so (a bounce rendering the live song), presses and the wheel stop here. Moves and releases still
+    /// go through, so hovers settle and a press made before the hold still hears its release (no stuck drags).
+    void setInputHold(std::function<bool()> held) { m_inputHold = std::move(held); }
+    bool onMouseEvent(const NUIMouseEvent& event) override {
+        if (m_inputHold && m_inputHold() && (event.type == NUIMouseEventType::Down || event.type == NUIMouseEventType::Scroll))
+            return true;
+        return NUIComponent::onMouseEvent(event);
+    }
     
     void onResize(int width, int height) override {
         if (m_rootCustomWindow) {
@@ -118,6 +127,7 @@ public:
     }
 
 private:
+    std::function<bool()> m_inputHold;
     void updateMembershipBadge(double deltaTime) {
         if (!m_rootCustomWindow || !m_rootCustomWindow->getTitleBar()) {
             return;

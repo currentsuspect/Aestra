@@ -104,8 +104,16 @@ void AuditionHub::refresh() {
     const Project project = m_projectProvider ? m_projectProvider() : Project{};
     m_projectName = project.name;
     m_files->setProjectDir(project.path.empty() ? std::string() : std::filesystem::path(project.path).parent_path().string());
-    m_versions = project.path.empty() ? std::vector<AuditionLibrary::Item>{}
-                                      : AuditionLibrary::versionItems(project.name, project.path, TakeManager::loadManifest(project.path), nowMs());
+    m_versions.clear();
+    m_openBadge.clear();
+    if (!project.path.empty()) {
+        const auto manifest = TakeManager::loadManifest(project.path);
+        m_versions = AuditionLibrary::versionItems(project.name, project.path, manifest, nowMs());
+        // The bounce tile says "Bounce again" when a click would replace the open version's bounce.
+        if (const auto* open = manifest.ok ? manifest.activeTake() : nullptr)
+            for (const auto& v : m_versions)
+                if (v.id == "v:" + open->id) m_openBadge = v.badge;
+    }
     m_references.clear();
     for (const auto& r : m_refList) m_references.push_back(AuditionLibrary::itemOf(r));
     std::sort(m_references.begin(), m_references.end(), [](const auto& a, const auto& b) { return a.title < b.title; });
@@ -279,6 +287,15 @@ void AuditionHub::onUpdate(double deltaTime) {
         if (path != m_lastEnginePath) { m_lastEnginePath = path; m_onActiveTrackPathChanged(path); }
     }
     if (++m_tick % 180 == 0) refresh();
+    const bool hadLine = !m_bounceTile.message.empty();
+    if (m_bounceTile.step(deltaTime, [this]() {
+            refresh();
+            const std::string& badge = m_openBadge;
+            if (badge.empty()) return std::string("Bounced. Press play on it to listen.");
+            return m_bounceReplaced == badge ? "Replaced " + badge + " with the timeline as it is now."
+                                             : "Bounced " + badge + ". Press play on it to listen.";
+        }) || hadLine != !m_bounceTile.message.empty() || m_bounceTile.busy())
+        setDirty(true);
     if (m_engine && m_engine->isPlaying()) setDirty(true);  // the position moves
     layoutQueuePage();
 }
@@ -383,17 +400,53 @@ void AuditionHub::renderPage(NUIRenderer& r, const AuditionHubLayout::Frame& f) 
                     r.fillRect({cover.x, cover.y + d, 1.0f, len}, muted.withAlpha(0.6f));
                     r.fillRect({cover.right() - 1.0f, cover.y + d, 1.0f, len}, muted.withAlpha(0.6f));
                 }
-                const std::string label = tile.kind == Tile::Kind::BounceNow ? "Bounce the timeline now" : "Import a reference...";
+                const bool bounce = tile.kind == Tile::Kind::BounceNow;
+                const std::string replaces = bounce ? m_openBadge : std::string();
+                const std::string label = !bounce ? "Import a reference..." : m_bounceTile.busy() ? "Bouncing..." : AuditionBounceTile::label(replaces);
                 const float lw = r.measureText(label, 12.0f).width;
                 r.drawText(label, {cover.x + (cover.width - lw) * 0.5f, cover.bottom() - 26.0f}, 12.0f, text);
-                const std::string sub = tile.kind == Tile::Kind::BounceNow ? "Adds v" + std::to_string(m_versions.size() + 1) + " to this project" : "Any audio file";
-                r.drawText(sub, {cover.x, cover.bottom() + 12.0f}, 11.0f, muted);
+                std::string sub = bounce ? AuditionBounceTile::sub(replaces, m_versions.size()) : "Any audio file";
+                NUIColor subColor = muted;
+                if (bounce && !m_bounceTile.message.empty()) {
+                    // What the click did, where the eye already is: under the tile it clicked.
+                    sub = m_bounceTile.message;
+                    using S = AuditionBounceTile::State;
+                    subColor = m_bounceTile.state == S::Failed ? theme.getColor("warning")
+                               : m_bounceTile.state == S::Done ? theme.getColor("accentPrimary") : text;
+                    if (m_bounceTile.busy()) renderBounceFill(r, cover);
+                }
+                r.drawText(sub, {cover.x, cover.bottom() + 12.0f}, 11.0f, subColor);
             }
         }
     }
     if (m_shared->measuring.load() > 0) r.drawText("Measuring a reference...", {content.x + AuditionHubLayout::kPad, content.bottom() - 28.0f}, 11.5f, muted);
     (void)rule;
     r.clearClipRect();
+}
+
+void AuditionHub::renderBounceFill(NUIRenderer& r, const NUIRect& cover) {
+    // The render fills the tile from the bottom as it goes (owner, 2026-11-08: "an animation filling up the render").
+    // Loading the song comes first and reports no progress, so until then a soft band sweeps across instead.
+    auto& theme = NUIThemeManager::getInstance();
+    const NUIColor accent = theme.getColor("accentPrimary");
+    r.fillRect(cover, theme.getColor("surfaceTertiary"));
+    const float progress = std::clamp(m_bounceTile.progress(), 0.0f, 1.0f);
+    const float wave = static_cast<float>(m_tick % 90) / 90.0f; // ~1.5 s per sweep at 60 fps
+    if (progress <= 0.0f) {
+        const float band = cover.width * 0.35f;
+        const float x = cover.x - band + (cover.width + band) * wave;
+        const float left = std::max(cover.x, x), right = std::min(cover.right(), x + band);
+        if (right > left) r.fillRect({left, cover.y, right - left, cover.height}, accent.withAlpha(0.18f));
+    } else {
+        const float h = cover.height * progress;
+        r.fillRect({cover.x, cover.bottom() - h, cover.width, h}, accent.withAlpha(0.32f));
+        // The rising edge breathes a little, so a slow render still looks alive between progress updates.
+        const float glow = 0.65f + 0.35f * std::sin(wave * 6.2831853f);
+        r.fillRect({cover.x, cover.bottom() - h, cover.width, 2.0f}, accent.withAlpha(glow));
+    }
+    const std::string label = progress <= 0.0f ? "Loading the song..." : "Bouncing... " + std::to_string(static_cast<int>(progress * 100.0f)) + "%";
+    const float lw = r.measureText(label, 12.0f).width;
+    r.drawText(label, {cover.x + (cover.width - lw) * 0.5f, cover.bottom() - 26.0f}, 12.0f, theme.getColor("textPrimary"));
 }
 
 void AuditionHub::renderPlayer(NUIRenderer& r, const AuditionHubLayout::Frame& f) {
@@ -600,7 +653,7 @@ bool AuditionHub::onMouseEvent(const NUIMouseEvent& event) {
                 if (!shelves[s].tiles[t].contains(p)) continue;
                 const Tile& tile = models[s].tiles[t];
                 if (tile.kind == Tile::Kind::Item) openItem(tile.item);
-                else if (tile.kind == Tile::Kind::BounceNow) { if (m_onBounceNow && m_onBounceNow()) refresh(); }
+                else if (tile.kind == Tile::Kind::BounceNow) { if (!m_bounceTile.busy()) m_bounceReplaced = m_openBadge; m_bounceTile.press(m_onBounceNow); setDirty(true); }
                 else if (m_onImportReference) m_onImportReference();
                 return true;
             }

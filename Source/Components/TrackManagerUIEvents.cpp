@@ -1017,6 +1017,15 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
             return true;
         }
 
+        // Ctrl+Shift+X: Delete Silence on the selected audio clips, ripple on their own lane (founder request
+        // 2026-11-07). Ahead of Ctrl+X (cut), which does not look at Shift.
+        if (event.keyCode == AestraUI::NUIKeyCode::X && (event.modifiers & AestraUI::NUIModifiers::Ctrl) &&
+            (event.modifiers & AestraUI::NUIModifiers::Shift) &&
+            (m_selectedClipId.isValid() || !m_clipSelection.empty())) {
+            deleteSilenceInSelection(SilenceRipple::ThisLane);
+            return true;
+        }
+
         if ((event.keyCode == AestraUI::NUIKeyCode::Delete || event.keyCode == AestraUI::NUIKeyCode::Backspace) &&
             (m_selectedClipId.isValid() || !m_clipSelection.empty())) {
             deleteSelectedClip();
