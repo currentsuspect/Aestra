@@ -59,7 +59,12 @@ AestraLFOEditor::AestraLFOEditor(std::shared_ptr<Aestra::Audio::IPluginInstance>
     m_wave.labels = {"Sine", "Triangle", "Saw Down", "Saw Up", "Square", "S&H"};
     m_wave.glyph = [](NUIRenderer& r, int wave, float x, float cy, NUIColor col) {
         NUIPoint pts[17];
-        for (int k = 0; k <= 16; ++k) pts[k] = {x + static_cast<float>(k), cy - waveAt(wave, static_cast<float>(k) / 16.0f) * 4.0f};
+        // The sine mark is one full sine cycle, so it reads differently from the Triangle's V.
+        for (int k = 0; k <= 16; ++k) {
+            const float p = static_cast<float>(k) / 16.0f;
+            const float v = wave == 0 ? std::sin(2.0f * kPi * p) : waveAt(wave, p);
+            pts[k] = {x + static_cast<float>(k), cy - v * 4.0f};
+        }
         r.drawPolyline(pts, 17, 1.5f, col);
     };
     m_division.param = LFO::kNoteDivision;
@@ -109,7 +114,11 @@ void AestraLFOEditor::drawShape(NUIRenderer& renderer, bool bypassed) {
     const int target = std::clamp(static_cast<int>(std::lround(m_instance->getParameter(LFO::kTarget) * 2.0f)), 0, 2);
     const int wave = std::clamp(static_cast<int>(std::lround(m_instance->getParameter(LFO::kWave) * 5.0f)), 0, 5);
     const int div = LFO::noteDivisionIndexFromParam(m_instance->getParameter(LFO::kNoteDivision));
-    const float bpm = 120.0f; // the mock's reference tempo for the readout
+    // The tempo the plugin itself is running at (the host sets it). With no plugin to ask, no tempo is shown and the
+    // synced shape is drawn at one cycle per beat.
+    const auto lfo = std::dynamic_pointer_cast<LFO>(m_instance);
+    const bool haveBpm = static_cast<bool>(lfo);
+    const float bpm = lfo ? lfo->getBPM() : 120.0f;
     const float hz = synced ? 1.0f / (divisionBeats(div) * 60.0f / bpm)
                             : LFO::rateHzFromNorm(m_instance->getParameter(LFO::kRateHz));
     const float period = 1.0f / hz;
@@ -151,8 +160,11 @@ void AestraLFOEditor::drawShape(NUIRenderer& renderer, bool bypassed) {
     renderer.fillRect(NUIRect(pts[best].x - 3.0f, pts[best].y - 3.0f, 6.0f, 6.0f), bypassed ? c.inkOff : c.meter);
 
     char buf[64];
-    if (synced) std::snprintf(buf, sizeof(buf), "%s - %.2f s at %d BPM", EditorKit::noteDivisionLabels()[static_cast<size_t>(div)].c_str(),
-                              static_cast<double>(period), static_cast<int>(bpm));
+    const std::string& divName = EditorKit::noteDivisionLabels()[static_cast<size_t>(div)];
+    if (synced && haveBpm)
+        std::snprintf(buf, sizeof(buf), "%s - %.2f s at %d BPM", divName.c_str(), static_cast<double>(period),
+                      static_cast<int>(std::lround(bpm)));
+    else if (synced) std::snprintf(buf, sizeof(buf), "%s", divName.c_str());
     else std::snprintf(buf, sizeof(buf), "%.2f Hz - %.2f s", static_cast<double>(hz), static_cast<double>(period));
     EditorKit::drawTextRight(renderer, buf, w.right() - 10.0f, w.bottom() - 9.0f, 11.0f, c.inkMuted);
     EditorKit::drawTextLeft(renderer, "2 cycles", gx0, w.bottom() - 9.0f, 11.0f, c.inkMuted);
