@@ -366,6 +366,8 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
                           {bounds.x + trackWidth, trackBounds.bottom()}, 1.0f,
                           themeManager.getCurrentTheme().textPrimary.withAlpha(0.139f));
     }
+    if (m_playlistVisible)
+        renderFoldedEmptyRow(renderer); // V82-T2, TrackManagerUIFold.cpp
 
     // Clear clip rect before drawing the time band (it should draw fully)
     if (clipEnabled) {

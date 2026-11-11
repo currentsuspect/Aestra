@@ -247,6 +247,14 @@ void RtAudioDriver::stopStream() {
     if (m_rtAudio && m_rtAudio->isStreamRunning()) {
         m_rtAudio->stopStream();
     }
+    // Quiescence: when this returns, no client callback is running. Callers
+    // rely on that (an offline render pumps the same engine next). The wait is
+    // bounded — one callback is a few milliseconds — so a callback that never
+    // returns cannot hang the caller; that case is the stalled-stream path.
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(250);
+    while (m_callbacksInFlight.load(std::memory_order_acquire) > 0 && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
 }
 
 void RtAudioDriver::abandonStream() {
@@ -284,8 +292,11 @@ void RtAudioDriver::abandonStream() {
 #ifdef __linux__
     m_audioThreadToken.store(0, std::memory_order_relaxed);
 #endif
-    // A fresh instance on the same API, so the driver can open a stream now.
-    if (!tryInitializeBackend({m_api})) {
+    // A fresh instance so the driver can open a stream again: the API that was
+    // serving it, then auto-detection. If no API sees a device this instant the
+    // instance is kept anyway, so the driver stays available and re-enumerates
+    // when the hardware comes back instead of stranding the user until restart.
+    if (!tryInitializeBackend(restartCandidates(m_api), /*keepWithoutDevices=*/true)) {
         m_lastError = "RtAudio backend could not be restarted after abandoning a stalled stream";
     }
 }
@@ -343,8 +354,10 @@ int RtAudioDriver::rtAudioCallback(void* outputBuffer, void* inputBuffer, unsign
     }
 
     driver->m_stats.callbackCount++;
+    driver->m_callbacksInFlight.fetch_add(1, std::memory_order_acq_rel);
     int result = callback(static_cast<float*>(outputBuffer), static_cast<const float*>(inputBuffer), numFrames,
                           streamTime, callbackUserData);
+    driver->m_callbacksInFlight.fetch_sub(1, std::memory_order_acq_rel);
 
     // Update telemetry (lock-free, RT-safe)
     if (driver->m_telemetry) {
@@ -397,7 +410,8 @@ void RtAudioDriver::applyLinuxRealtimePriority(pthread_t audioThreadId) {
 }
 #endif
 
-bool RtAudioDriver::tryInitializeBackend(const std::vector<RtAudio::Api>& candidates) {
+bool RtAudioDriver::tryInitializeBackend(const std::vector<RtAudio::Api>& candidates, bool keepWithoutDevices) {
+    std::unique_ptr<RtAudio> deviceLess;
     for (RtAudio::Api api : candidates) {
         try {
             auto candidate =
@@ -409,16 +423,44 @@ bool RtAudioDriver::tryInitializeBackend(const std::vector<RtAudio::Api>& candid
             });
 
             auto deviceIds = candidate->getDeviceIds();
-            if (!deviceIds.empty()) {
-                m_driverType = apiToDriverType(candidate->getCurrentApi());
-                m_api = candidate->getCurrentApi(); // what abandonStream() restarts
-                m_rtAudio = std::move(candidate);
-                return true;
+            if (deviceIds.empty()) {
+                // Remember the first instance that at least constructed, so a caller
+                // that can live without devices still gets a backend.
+                if (keepWithoutDevices && !deviceLess)
+                    deviceLess = std::move(candidate);
+                continue;
             }
+            m_driverType = apiToDriverType(candidate->getCurrentApi());
+            m_api = candidate->getCurrentApi(); // what abandonStream() restarts
+            m_rtAudio = std::move(candidate);
+            m_lastError.clear();
+            return true;
         } catch (const std::exception&) {}
     }
 
+    if (deviceLess) {
+        // No API reports a device right now. Keep the instance anyway: RtAudio
+        // re-enumerates on every getDeviceIds() call, so the driver reports empty
+        // device lists while the hardware is gone and picks it up again when it
+        // returns. Dropping the instance instead would make isAvailable() false
+        // forever and strand the driver until the process restarted.
+        m_driverType = apiToDriverType(deviceLess->getCurrentApi());
+        m_api = deviceLess->getCurrentApi();
+        m_rtAudio = std::move(deviceLess);
+        return true;
+    }
+
     return false;
+}
+
+std::vector<RtAudio::Api> RtAudioDriver::restartCandidates(RtAudio::Api savedApi) {
+    // The API that was serving the stream until a moment ago first, then
+    // auto-detection: when the device disappeared from that API, another one may
+    // still see it (a USB interface moving from Pulse to raw ALSA, say).
+    std::vector<RtAudio::Api> candidates{savedApi};
+    if (savedApi != RtAudio::UNSPECIFIED)
+        candidates.push_back(RtAudio::UNSPECIFIED);
+    return candidates;
 }
 
 AudioDriverType RtAudioDriver::apiToDriverType(RtAudio::Api api) {

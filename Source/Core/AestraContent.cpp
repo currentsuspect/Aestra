@@ -352,9 +352,8 @@ void AestraContent::savePanelPreference(Audio::ViewType view, const Aestra::UISu
 
 AestraUI::NUIRect AestraContent::applyPanelPreference(Audio::ViewType view) {
     auto panel = panelForView(view);
-    if (!panel) {
-        return {};
-    }
+    if (!panel) return {};
+    if (placeFullWindowPanel(*panel)) return panel->getBounds(); // FD-63: the piano roll fills the window
     const Content::FloatingPanelGeometry& spec = floatingPanelSpec(view);
     const UISurfaceGeometry preference = panelPreference(view);
     const Layout::NUIWindowRect region = toWindowRect(computePlacementRegion());
@@ -642,7 +641,7 @@ void AestraContent::setupTrackManagerUI() {
         // 4. Perform bounce (Offline rendering)
         AESTRA_LOG_DEBUG("[AestraContent] Bouncing track " + std::to_string(trackId) + " to " + tempPath);
         bool success =
-            m_audioEngine->bounceRangeToWav(0.0, projectDurationBeats, tempPath, static_cast<int32_t>(trackId));
+            bounceRangeWithStreamPaused(0.0, projectDurationBeats, tempPath, static_cast<int32_t>(trackId));
 
         if (success) {
             m_tempFiles.push_back(tempPath);
@@ -674,7 +673,7 @@ void AestraContent::setupTrackManagerUI() {
 
         // 2. Perform bounce (trackId -1 means Master Output)
         AESTRA_LOG_DEBUG("[AestraContent] Bouncing selection to " + tempPath);
-        bool success = m_audioEngine->bounceRangeToWav(startBeat, endBeat, tempPath, -1);
+        bool success = bounceRangeWithStreamPaused(startBeat, endBeat, tempPath, -1);
 
         if (success) {
             m_tempFiles.push_back(tempPath);
@@ -1342,28 +1341,6 @@ void AestraContent::setupArsenalPanels() {
                                          : Aestra::Audio::Plugins::SamplerPlugin::PitchMode::Resample);
         m_trackManager->prewarmSamplerKeepLength(false); // render the unit's notes before they play
     };
-    m_sampleEditorPanel->onNormalizeRequested = [this]() {
-        if (!m_trackManager || !m_sampleEditorUnitId) {
-            return;
-        }
-        auto plugin = m_trackManager->getUnitManager().getUnitPlugin(m_sampleEditorUnitId);
-        auto sampler = std::dynamic_pointer_cast<Aestra::Audio::Plugins::SamplerPlugin>(plugin);
-        if (!sampler) {
-            return;
-        }
-        sampler->normalizeSample();
-    };
-    m_sampleEditorPanel->onReverseRequested = [this]() {
-        if (!m_trackManager || !m_sampleEditorUnitId) {
-            return;
-        }
-        auto plugin = m_trackManager->getUnitManager().getUnitPlugin(m_sampleEditorUnitId);
-        auto sampler = std::dynamic_pointer_cast<Aestra::Audio::Plugins::SamplerPlugin>(plugin);
-        if (!sampler) {
-            return;
-        }
-        sampler->reverseSample();
-    };
     m_sampleEditorPanel->onControlCommitRequested = [this]() {
         if (!m_trackManager || !m_sampleEditorUnitId) return;
         const auto unit = m_sampleEditorUnitId; // an undo or redo shows the restored values in the editor, if it is still on this unit
@@ -1373,6 +1350,7 @@ void AestraContent::setupArsenalPanels() {
 
     m_audioClipEditorPanel = std::make_shared<AudioClipEditorPanel>(m_trackManager);
     m_audioClipEditorPanel->setVisible(false);
+    wireEditorActions(); // both editors exist now: normalize, reverse, Preview (AestraContentEditorPreview.cpp)
     m_audioClipEditorPanel->setOnClipEditsCommitted([this]() {
         if (m_trackManagerUI)
             m_trackManagerUI->invalidateCache();
@@ -1704,7 +1682,7 @@ void AestraContent::onUpdate(double dt) {
     closeContextualPanels();
     updatePendingCountIn();
     logModeStateIfChanged();
-
+    updateFrameServices(dt); // DSP load readout, MIDI hot-plug poll (AestraContentMeters.cpp)
     // Heal dropped mixer-state pushes: cheap when clean (one atomic per
     // channel), converges when a queue flood ends (#913).
     if (m_trackManager) {
@@ -4557,12 +4535,12 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     if (!event.pressed)
         return false;
 
-    // Popup menus own navigation and activation while open. The application
-    // normally evaluates global shortcuts before focused widgets, so route the
-    // focused menu explicitly before Space or letter keys can trigger transport
-    // and musical typing underneath it.
+    // Popup menus and an open preset browser or Save form own the keys while open. Global
+    // shortcuts are evaluated before focused widgets, so route them explicitly before Space
+    // or letter keys can trigger transport and musical typing underneath them.
     if (auto* menu = dynamic_cast<AestraUI::NUIContextMenu*>(AestraUI::NUIComponent::getFocusedComponent());
-        menu && menu->isVisible() && menu->onKeyEvent(event)) {
+        (menu && menu->isVisible() && menu->onKeyEvent(event)) ||
+        (m_pluginController && m_pluginController->routeKeyToPresetBar(event))) {
         return true;
     }
 

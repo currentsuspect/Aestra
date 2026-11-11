@@ -103,8 +103,12 @@ public:
     std::function<void()> onNormalizeRequested;
     std::function<void()> onReverseRequested;
     std::function<void()> onSampleModified;
+    /// Preview: hear the unit as it is now set (trim, envelope, pitch). start=false stops it; seconds is how long the
+    /// trimmed window plays (loops play it twice).
+    std::function<void(bool start, double seconds)> onPreviewRequested;
 
     void onResize(int width, int height) override;
+    void onUpdate(double deltaTime) override;
     AestraUI::NUICursorStyle getResizeCursorStyleForPoint(const AestraUI::NUIPoint& point) const;
 
 private:
@@ -137,6 +141,9 @@ private:
     std::shared_ptr<AestraUI::NUISlider> m_pitchRootSlider;
     std::shared_ptr<AestraUI::NUISlider> m_voiceCountSlider;
 
+    std::shared_ptr<AestraUI::NUIButton> m_previewBtn;
+    double m_previewSecondsLeft{0.0}; ///< > 0 while a preview plays: the key reads Stop
+    void togglePreview();
     std::shared_ptr<AestraUI::NUIButton> m_normalizeBtn;
     std::shared_ptr<AestraUI::NUIButton> m_reverseBtn;
     std::shared_ptr<AestraUI::NUIButton> m_oneShotModeBtn;

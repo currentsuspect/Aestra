@@ -34,7 +34,7 @@ GeneralSettingsPage::GeneralSettingsPage() {
 void GeneralSettingsPage::createUI() {
     auto& theme = AestraUI::NUIThemeManager::getInstance();
     m_projectsPathLabel = std::make_shared<AestraUI::NUILabel>();
-    m_projectsPathLabel->setText("Aestra folder:");
+    m_projectsPathLabel->setText("Aestra folder");
     m_projectsPathLabel->setFontSize(theme.getFontSize("m"));
     addChild(m_projectsPathLabel);
 
@@ -46,7 +46,7 @@ void GeneralSettingsPage::createUI() {
     addChild(m_projectsPathInput);
 
     m_browseButton = std::make_shared<AestraUI::NUIButton>();
-    m_browseButton->setText("Browse...");
+    m_browseButton->setText("Browse");
     m_browseButton->setStyle(AestraUI::NUIButton::Style::Secondary);
     m_browseButton->setVisible(false);
     addChild(m_browseButton);
@@ -77,11 +77,13 @@ void GeneralSettingsPage::syncAutoSaveLabel() {
     if (!m_autoSaveToggle || !m_autoSaveDetail) return;
     if (!m_autoSaveToggle->isOn()) {
         m_autoSaveDetail->setText("Off");
+        m_form.setHint(m_autoSaveToggle.get(), "Off");
         return;
     }
     const int seconds = std::clamp(Preferences::instance().autoSaveIntervalSeconds, 10, 3600);
     m_autoSaveDetail->setText(seconds % 60 == 0 ? "Every " + std::to_string(seconds / 60) + (seconds == 60 ? " minute" : " minutes")
                                                 : "Every " + std::to_string(seconds) + " seconds");
+    m_form.setHint(m_autoSaveToggle.get(), m_autoSaveDetail->getText());
 }
 
 void GeneralSettingsPage::applyChanges() {
@@ -93,7 +95,10 @@ void GeneralSettingsPage::cancelChanges() {
 }
 
 void GeneralSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
+    m_form.paint(renderer);
+    renderer.setClipRect(m_form.area());
     renderChildren(renderer);
+    renderer.clearClipRect();
 }
 
 void GeneralSettingsPage::onResize(int width, int height) {
@@ -102,25 +107,21 @@ void GeneralSettingsPage::onResize(int width, int height) {
 }
 
 void GeneralSettingsPage::layoutComponents() {
-    auto b = getBounds();
-    const auto& theme = AestraUI::NUIThemeManager::getInstance().getCurrentTheme();
-    float padding = theme.spacingM;
-    float rowHeight = theme.layout.standardControlHeight;
-    float gap = theme.spacingS;
-    float x = b.x + padding;
-    float y = b.y + padding;
-    
-    // Row 1: Path
-    m_projectsPathLabel->setBounds(AestraUI::NUIRect(x, y, 120, rowHeight));
-    m_projectsPathInput->setBounds(AestraUI::NUIRect(x + 130, y, 320, rowHeight));
-    m_browseButton->setBounds(AestraUI::NUIRect(x + 440, y, 100, rowHeight));
-    
-    y += rowHeight + gap;
-    
-    // Row 2: Auto-Save
-    m_autoSaveLabel->setBounds(AestraUI::NUIRect(x, y, 120, rowHeight));
-    m_autoSaveToggle->setBounds(AestraUI::NUIRect(x + 130, y + (rowHeight - 20.0f) * 0.5f, 40, 20));
-    m_autoSaveDetail->setBounds(AestraUI::NUIRect(x + 182, y, 200, rowHeight));
+    m_projectsPathLabel->setVisible(false);
+    m_autoSaveLabel->setVisible(false);
+    m_autoSaveDetail->setVisible(false); // the Auto-save row's hint
+    constexpr float kPathWidth = 300.0f;
+
+    m_form.clear();
+    m_form.section("PROJECTS");
+    m_form.row("Aestra folder", m_projectsPathInput, "", kPathWidth);
+    m_form.row("Auto-save", m_autoSaveToggle, m_autoSaveDetail->getText(), 40.0f);
+    m_form.layout(getBounds());
+
+    // Browse sits beside the folder path, in the same row.
+    const auto& path = m_projectsPathInput->getBounds();
+    m_browseButton->setBounds(AestraUI::NUIRect(path.right() + 8.0f, path.y, 84.0f, path.height));
+    m_browseButton->setVisible(m_projectsPathInput->isVisible());
 }
 
 } // namespace Aestra

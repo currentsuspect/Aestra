@@ -2,10 +2,10 @@
 
 ![License](https://img.shields.io/badge/License-ASSAL-blue)
 ![Core](https://img.shields.io/badge/Core-Free%20Forever-brightgreen)
-![Premium](https://img.shields.io/badge/Premium-Paid-orange)
+![Plugins](https://img.shields.io/badge/Plugins-Free-brightgreen)
 
-Reference for how Aestra is licensed as a **product** — the free core, the paid tiers, and
-what each unlocks.
+Reference for how Aestra is licensed as a **product**: the free DAW and plugins, the one
+optional paid tier, and what it pays for.
 
 !!! warning "This page is not the license"
     The agreement covering this source repository is
@@ -20,7 +20,7 @@ what each unlocks.
 - [Hybrid Licensing Model](#hybrid-licensing-model)
 - [ASSAL License Details](#aestra-studios-source-available-license-assal)
 - [Contributor License Agreement](#contributor-license-agreement)
-- [Commercial Licensing](#premium-add-on-licensing-future)
+- [What's Free and What's Paid](#whats-free-and-whats-paid)
 - [License FAQ](#license-faq)
 
 ## Overview
@@ -33,26 +33,23 @@ what each unlocks.
 - 👁️ **Source-available** - Code is publicly visible for transparency and education
 - 🎵 **Full DAW functionality** - Complete digital audio workstation without restrictions
 
-### Paid tiers
+### The paid tier
 
-The application recognises three tiers, defined in `AestraLicense/include/LicenseTier.h`:
-
-| Tier | Unlocks |
+| Tier | What it is |
 | --- | --- |
-| **Core** | the full DAW — free, no licence required |
-| **Supporter** | premium modules on top of Core |
-| **Founder** | premium modules on top of Core |
+| **Core** | the full DAW and all of Aestra's own plugins: free, no licence required |
+| **Supporter** | optional; pays for services that cost money to run (planned: hosting shared projects, online storage, the parts of Muse that run on our servers) |
 
-Today the only gated feature is **Aestra Rumble** (`Feature::RUMBLE`). Further premium
-modules — additional instruments and effects, and Muse's model-backed features — are
-planned but not yet gated, and this table is the list that matches the shipping code
-rather than an aspiration.
+Nothing in the shipping code is gated today: Aestra Rumble, previously Supporter-only, is
+free. Anything that runs on your own computer is never held back to push payment, and
+when something does need Supporter, Aestra says what it costs to run. The code still
+recognises an older **Founder** tier (`AestraLicense/include/LicenseTier.h`) for its
+badge; that tier is retired and no longer offered.
 
 **Key Points:**
-- 🆓 Aestra Core is **free forever** under ASSAL
+- 🆓 Aestra Core and Aestra's own plugins are **free** under ASSAL
 - ❌ Source code is **NOT open-source** (cannot be used in other projects)
 - ✅ Contributions are **welcomed and credited**
-- 🤖 Further premium modules (additional instruments and effects, Muse's model-backed features) are **planned**, not yet gated, and subject to future licensing
 - 📜 Full license text: [LICENSE](https://github.com/currentsuspect/Aestra/blob/main/LICENSE) (plain-language guide: [LICENSING.md](https://github.com/currentsuspect/Aestra/blob/main/LICENSING.md))
 
 ## Hybrid Licensing Model
@@ -74,14 +71,6 @@ Aestra Core is source-available software developed by Dylan Makori in Kenya, lic
 - ✅ **Release music** created with Aestra Core
 - ✅ **Client work** and commercial projects
 - ✅ **Live performances** with Aestra Core
-
-### Premium Add-ons (Require Paid License)
-
-**Muse AI & Premium Plugins** (future releases):
-- 🤖 **Muse AI** - AI-powered pattern generation, mixing assistance, chord suggestions
-- 🎛️ **Premium Plugins** - Advanced effects, instruments, and processing
-- 💰 **Paid licenses** required when available
-- 🚀 **Enhanced features** beyond core DAW functionality
 
 ### Restrictions (What You Cannot Do)
 
@@ -163,69 +152,20 @@ While you grant full rights, we value contributions:
 - ⭐ Featured in documentation for significant contributions
 - 🎖️ Hall of Fame for major contributors
 
-## Premium Add-on Licensing (Future)
+## What's Free and What's Paid
 
-### What's Free vs. Paid
+**Free, for everyone:**
+- ✅ The complete DAW: audio and MIDI editing, mixing, effects, plugin hosting, save and load
+- ✅ Aestra's own plugins, including Aestra Rumble
+- ✅ Muse's help when it runs on your computer
+- ✅ Saving, recovery, version history on your machine, and taking your work elsewhere
+- ✅ Updates
 
-**Aestra Core (FREE Forever):**
-- ✅ Complete DAW application
-- ✅ Multi-track audio editing
-- ✅ MIDI sequencing
-- ✅ Mixing and effects
-- ✅ Plugin hosting (VST3, AU)
-- ✅ Project save/load
-- ✅ All core features
-- ✅ Regular updates
-- ✅ Community support
-- 💲 **Cost: FREE**
+**Supporter (optional, not on sale yet):** pays for services that cost money every time
+they're used. Planned: hosting shared projects, online storage, and the parts of Muse that
+run on our servers. Aestra explains what each of these costs to run.
 
-**Premium Add-ons (PAID - Future Releases):**
-- 🤖 **Muse AI Suite** - AI-powered music generation, mixing assistance, pattern generation
-- 🎛️ **Premium Plugins Pack** - Advanced effects, instruments, and processors
-- 📚 **Premium Content Library** - Professional samples, presets, templates
-- 🎓 **Priority Support** - Direct access to development team
-- 💲 **Cost: Paid licenses** (pricing TBD)
-
-### Premium License Tiers (Planned for Muse AI & Plugins)
-
-**Muse AI Personal** - Individual producers
-- ✅ Muse AI pattern generation
-- ✅ Mix assistant
-- ✅ Chord suggestions
-- ✅ Personal use only
-- 💲 Pricing: TBD
-
-**Muse AI Professional** - Professional studios
-- ✅ All Personal features
-- ✅ Advanced AI models
-- ✅ Priority support
-- ✅ Commercial use
-- ✅ Premium plugin access
-- 💲 Pricing: TBD
-
-**Muse AI Enterprise** - Large organizations
-- ✅ All Professional features
-- ✅ Multiple seats
-- ✅ Custom AI training
-- ✅ Dedicated support
-- ✅ API access
-- 💲 Pricing: Contact sales
-
-**Educational** - Students and schools
-- ✅ Access to Muse AI and plugins
-- ✅ Significant discounts (50-70% off)
-- ✅ Educational resources
-- 💲 Pricing: Discounted
-
-### License Activation (Premium Add-ons Only)
-
-**When Muse AI and plugins are released:**
-- Online activation system
-- Offline activation option
-- License transfer capability
-- Multi-machine support (per tier)
-
-**Note:** Aestra Core requires no activation or license key.
+**Note:** Aestra requires no activation or license key to make music.
 
 ## License FAQ
 
@@ -235,13 +175,13 @@ While you grant full rights, we value contributions:
 
 ### Q: Can I use Aestra Core for free?
 
-**A:** Yes! **Aestra Core is free forever.** You can use it for personal projects, commercial music production, and client work without paying anything. Only premium add-ons (Muse AI, premium plugins) will require paid licenses in the future.
+**A:** Yes! **Aestra Core is free forever.** You can use it for personal projects, commercial music production, and client work without paying anything. Aestra's own plugins are free too. Only optional hosted services (Supporter) will cost money.
 
 ### Q: What's the difference between free and paid?
 
 **A:** 
-- **Free (Aestra Core):** Complete DAW with all essential features - audio/MIDI editing, mixing, effects, plugin hosting
-- **Paid (Future):** Premium add-ons like Muse AI (AI music generation), premium plugins, and advanced content libraries
+- **Free:** the complete DAW, Aestra's own plugins, and Muse's help when it runs on your computer
+- **Paid (optional, future):** Supporter, for services that cost money to run, such as hosting shared projects and online storage
 
 ### Q: Can I contribute to Aestra?
 
@@ -249,7 +189,7 @@ While you grant full rights, we value contributions:
 
 ### Q: What happens to my music?
 
-**A:** You own 100% of the music you create with Aestra. Both free and paid versions grant you full commercial rights to produce, distribute, and sell your music.
+**A:** You own 100% of the music you create with Aestra. Paying or not, you have full commercial rights to produce, distribute, and sell your music.
 
 ### Q: Can I use Aestra Core for client work?
 
@@ -257,19 +197,19 @@ While you grant full rights, we value contributions:
 
 ### Q: Will Aestra Core always be free?
 
-**A:** Yes. Aestra Core will remain free forever. The business model is based on optional premium add-ons (Muse AI, plugins), not the core DAW.
+**A:** Yes. Aestra Core will remain free forever. Aestra asks for money only for services that cost money to run, never for the DAW or its plugins.
 
 ### Q: Are there educational discounts?
 
-**A:** Aestra Core is already free. Educational discounts (50-70% off) will apply to premium add-ons like Muse AI when they're released.
+**A:** Aestra and its plugins are already free for students and schools.
 
 ### Q: What about updates?
 
-**A:** Aestra Core receives free updates forever. Premium add-ons will have their own update policies announced at release.
+**A:** Aestra Core receives free updates forever. So do Aestra's own plugins.
 
 ### Q: Is there a subscription model?
 
-**A:** Licensing model (perpetual vs. subscription) will be announced upon release.
+**A:** Only for Supporter, the optional tier for hosted services. Nothing you need to make music is a subscription.
 
 ### Q: Can I modify the source code?
 

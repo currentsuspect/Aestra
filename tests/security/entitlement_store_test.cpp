@@ -39,7 +39,8 @@ bool testTierAndStatusFallbacks() {
     EntitlementStore invalid(
         [] { return profile(MembershipTier::Founder, EntitlementStatus::InvalidSignature, false); });
     ok &= expect(invalid.currentTier() == MembershipTier::Core, "invalid signature must fall back to Core");
-    ok &= expect(!invalid.canAccess(ProductFeature::Rumble), "invalid signature must not unlock Rumble");
+    ok &= expect(!invalid.canAccess(ProductFeature::SupporterBadge), "invalid signature must not unlock paid features");
+    ok &= expect(invalid.canAccess(ProductFeature::Rumble), "Rumble is free (FD-57), even with an invalid lease");
 
     EntitlementStore malformed([] { return profile(MembershipTier::Supporter, EntitlementStatus::ParseError, false); });
     ok &= expect(malformed.currentTier() == MembershipTier::Core, "parse errors must fall back to Core");
@@ -69,13 +70,18 @@ bool testFeatureMatrix() {
     ok &= expect(supporter.canAccess(ProductFeature::CoreDAW), "CoreDAW allowed for Supporter");
     ok &= expect(founder.canAccess(ProductFeature::CoreDAW), "CoreDAW allowed for Founder");
 
-    ok &= expect(!core.canAccess(ProductFeature::Rumble), "Core must not access Rumble");
-    ok &= expect(supporter.canAccess(ProductFeature::Rumble), "Supporter should access Rumble");
-    ok &= expect(founder.canAccess(ProductFeature::Rumble), "Founder should access Rumble");
+    // FD-57: Aestra's own plugins are free for everyone, signed in or not.
+    for (const EntitlementStore* store : {&missing, &core, &supporter, &founder}) {
+        ok &= expect(store->canAccess(ProductFeature::Rumble), "Rumble is free for every tier");
+        ok &= expect(store->canAccess(ProductFeature::RumbleHeadless), "RumbleHeadless is free for every tier");
+        ok &= expect(store->canUsePlugin("com.Aestrastudios.rumble"), "the Rumble plugin loads for every tier");
+    }
 
-    ok &= expect(!core.canAccess(ProductFeature::RumbleHeadless), "Core must not access RumbleHeadless");
-    ok &= expect(!supporter.canAccess(ProductFeature::RumbleHeadless), "Supporter must not access RumbleHeadless");
-    ok &= expect(founder.canAccess(ProductFeature::RumbleHeadless), "Founder should access RumbleHeadless");
+    ok &= expect(!missing.canAccess(ProductFeature::SupporterBadge), "SupporterBadge needs a verified membership");
+    ok &= expect(!core.canAccess(ProductFeature::SupporterBadge), "Core must not get the Supporter badge");
+    ok &= expect(supporter.canAccess(ProductFeature::SupporterBadge), "Supporter gets the Supporter badge");
+    ok &= expect(!supporter.canAccess(ProductFeature::FounderBadge), "Supporter must not get the Founder badge");
+    ok &= expect(founder.canAccess(ProductFeature::FounderBadge), "Founder keeps the Founder badge");
 
     ok &= expect(!supporter.canAccess(ProductFeature::CloudSync), "planned CloudSync should be denied by tier alone");
     ok &= expect(!founder.canAccess(ProductFeature::EarlyAccess), "planned EarlyAccess should be denied by tier alone");
@@ -102,9 +108,9 @@ bool testExplicitFeatureAndPluginEntitlements() {
                  "explicit plugin entitlement should allow matching plugin ID");
     ok &= expect(!explicitFeature.canUsePlugin("com.Aestrastudios.unknown"), "unknown plugin must be denied");
 
-    EntitlementStore tierFallback([] { return profile(MembershipTier::Supporter, EntitlementStatus::Valid, true); });
-    ok &= expect(tierFallback.canUsePlugin("com.Aestrastudios.rumble"),
-                 "tier fallback should preserve current Rumble plugin behavior");
+    EntitlementStore unverified([] { return profile(MembershipTier::Supporter, EntitlementStatus::Missing, false); });
+    ok &= expect(!unverified.canUsePlugin("com.Aestrastudios.experimental"),
+                 "an unverified profile must not unlock listed plugins");
 
     return ok;
 }

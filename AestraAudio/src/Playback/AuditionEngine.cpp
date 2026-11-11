@@ -126,7 +126,7 @@ void AuditionEngine::clearQueue() {
     stop();
     m_queue.clear();
     m_currentIndex = -1;
-    m_currentSource.store(std::shared_ptr<ClipSource>(nullptr), std::memory_order_release);
+    setCurrentSource(nullptr);
     Log::info("[AuditionEngine] Queue cleared");
 }
 
@@ -142,7 +142,7 @@ void AuditionEngine::removeFromQueue(size_t index) {
 
         if (m_queue.empty()) {
             m_currentIndex = -1;
-            m_currentSource.store(std::shared_ptr<ClipSource>(nullptr), std::memory_order_release);
+            setCurrentSource(nullptr);
             m_positionSeconds.store(0.0, std::memory_order_release);
             m_cachedDurationSeconds.store(0.0, std::memory_order_release);
             m_isPlaying.store(false, std::memory_order_release);
@@ -473,16 +473,16 @@ void AuditionEngine::renderSource(const AudioBufferData* srcBuffer, double start
 void AuditionEngine::setMixSource(std::shared_ptr<ClipSource> source) {
     m_cachedDurationSeconds.store(source ? source->getDurationSeconds() : 0.0, std::memory_order_release);
     m_positionSeconds.store(0.0, std::memory_order_relaxed);
-    m_currentSource.store(std::move(source), std::memory_order_release);
+    setCurrentSource(std::move(source));
 }
 
 void AuditionEngine::setReferenceSource(std::shared_ptr<ClipSource> source, double offsetSeconds) {
     m_referenceOffsetSeconds.store(offsetSeconds, std::memory_order_relaxed);
-    m_referenceSource.store(std::move(source), std::memory_order_release);
+    setReferenceSourcePtr(std::move(source));
 }
 
 void AuditionEngine::clearReferenceSource() {
-    m_referenceSource.store(std::shared_ptr<ClipSource>(nullptr), std::memory_order_release);
+    setReferenceSourcePtr(nullptr);
 }
 
 void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t numChannels) {
@@ -493,10 +493,9 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
         return;
     }
 
-    // RT-safe atomic load - bumps refcount, keeps object alive for this scope
-    // NOTE: C++17 uses free function std::atomic_load_explicit()
-    //       C++20+ has member syntax: std::atomic<std::shared_ptr<T>>::load()
-    auto currentSource = m_currentSource.load(std::memory_order_acquire);
+    // Lock-free pin for the whole block (see m_rtCurrentSource).
+    const auto currentPin = m_rtCurrentSource.readRealtime();
+    ClipSource* currentSource = currentPin.get();
     if (!currentSource) {
         return;
     }
@@ -534,7 +533,8 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
 
     // Synchronised dual playback (V81-E2): with a reference loaded, both sides are read at the same position every
     // block and a switch is a short gain ramp between them, so A/B never seeks or drops a sample.
-    if (auto reference = m_referenceSource.load(std::memory_order_acquire)) {
+    const auto referencePin = m_rtReferenceSource.readRealtime();
+    if (ClipSource* reference = referencePin.get()) {
         const auto* refBuffer = reference->getRawBuffer();
         const bool refPlayable = refBuffer && refBuffer->isValid();
         const bool hearReference = m_listenSide.load(std::memory_order_relaxed) == 1;
@@ -599,7 +599,7 @@ void AuditionEngine::loadCurrentTrack(bool startPlayback) {
     {
         std::lock_guard<std::mutex> lock(m_queueMutex);
         if (m_currentIndex < 0 || m_currentIndex >= static_cast<int32_t>(m_queue.size())) {
-            m_currentSource.store(std::shared_ptr<ClipSource>(nullptr), std::memory_order_release);
+            setCurrentSource(nullptr);
             return;
         }
 
@@ -697,11 +697,11 @@ void AuditionEngine::decodeWorkerLoop() {
             Log::info("[AuditionEngine] Source loaded: " + std::to_string(bufferData->durationSeconds()) + "s");
 
             // Atomic publish to RT thread
-            m_currentSource.store(newSource, std::memory_order_release);
+            setCurrentSource(newSource);
 
         } catch (const std::exception& e) {
             Log::error("[AuditionEngine] Exception creating source: " + std::string(e.what()));
-            m_currentSource.store(std::shared_ptr<ClipSource>(nullptr), std::memory_order_release);
+            setCurrentSource(nullptr);
             m_cachedDurationSeconds.store(0.0, std::memory_order_release);
             continue;
         }

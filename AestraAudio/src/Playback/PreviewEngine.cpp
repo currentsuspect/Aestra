@@ -61,6 +61,7 @@ PreviewEngine::~PreviewEngine() {
 }
 
 void PreviewEngine::publishActiveVoice(std::shared_ptr<PreviewVoice> voice) {
+    m_audibleLastBlock.store(false, std::memory_order_release);
     m_activeVoice.publish(std::move(voice));
 }
 
@@ -229,6 +230,7 @@ PreviewResult PreviewEngine::play(const std::string& path, float gainDb, double 
 }
 
 void PreviewEngine::stop() {
+    m_audibleLastBlock.store(false, std::memory_order_release);
     auto voice = m_activeVoice.owner();
     if (voice) {
         voice->stopRequested.store(true, std::memory_order_release);
@@ -250,6 +252,7 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
 void PreviewEngine::processRealtime(float* interleavedOutput, uint32_t numFrames, uint32_t outputChannels) {
     if (outputChannels == 0) {
         m_lastOutputPeak.store(0.0f, std::memory_order_release);
+        m_audibleLastBlock.store(false, std::memory_order_release);
         return;
     }
     PreviewVoice* voice = m_activeVoice.acquireRealtime();
@@ -261,6 +264,7 @@ void PreviewEngine::processRealtime(float* interleavedOutput, uint32_t numFrames
 
     if (!voice || !voice->playing.load(std::memory_order_acquire) || !interleavedOutput) {
         m_lastOutputPeak.store(0.0f, std::memory_order_release);
+        m_audibleLastBlock.store(false, std::memory_order_release);
         return;
     }
 
@@ -268,12 +272,14 @@ void PreviewEngine::processRealtime(float* interleavedOutput, uint32_t numFrames
     if (!voice->bufferReady.load(std::memory_order_acquire)) {
         // Buffer not ready yet - output silence
         m_lastOutputPeak.store(0.0f, std::memory_order_release);
+        m_audibleLastBlock.store(false, std::memory_order_release);
         return;
     }
 
     const AudioBuffer* buffer = voice->buffer.get();
     if (!buffer || buffer->data.empty() || buffer->sampleRate == 0) {
         m_lastOutputPeak.store(0.0f, std::memory_order_release);
+        m_audibleLastBlock.store(false, std::memory_order_release);
         return;
     }
 
@@ -604,6 +610,11 @@ void PreviewEngine::processRealtime(float* interleavedOutput, uint32_t numFrames
         // completion is close enough in time to share the same callback path.
     }
     m_lastOutputPeak.store(blockPreviewPeak, std::memory_order_release);
+    constexpr float kAudiblePreviewThreshold = 1.0e-5f;
+    m_audibleLastBlock.store(voice->playing.load(std::memory_order_acquire) &&
+                                 !voice->stopRequested.load(std::memory_order_acquire) &&
+                                 blockPreviewPeak > kAudiblePreviewThreshold,
+                             std::memory_order_release);
 }
 
 bool PreviewEngine::isPlaying() const {
@@ -611,13 +622,10 @@ bool PreviewEngine::isPlaying() const {
     return voice && voice->playing.load(std::memory_order_acquire);
 }
 
-bool PreviewEngine::isAudiblyPlaying() const {
-    constexpr float kAudiblePreviewThreshold = 1.0e-5f;
-    auto voice = m_activeVoice.owner();
-    return voice && voice->playing.load(std::memory_order_acquire) &&
-           !voice->stopRequested.load(std::memory_order_acquire) &&
-           voice->bufferReady.load(std::memory_order_acquire) &&
-           m_lastOutputPeak.load(std::memory_order_acquire) > kAudiblePreviewThreshold;
+// Read from the audio callback (AudioEngine::computePreviewDuckGain), so it answers from what processRealtime()
+// recorded while it held the voice: no shared_ptr copy whose release could free a voice on the audio thread (#939).
+bool PreviewEngine::isAudiblyPlaying() const noexcept AESTRA_RT_NONBLOCKING {
+    return m_audibleLastBlock.load(std::memory_order_acquire);
 }
 
 bool PreviewEngine::isBufferReady() const {

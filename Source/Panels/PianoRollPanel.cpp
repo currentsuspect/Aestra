@@ -16,6 +16,9 @@
 #include "Commands/SetPatternLengthCommand.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "Music/ScaleContext.h"
+#include "Harmony/HarmonyAnalysis.h"
+#include "Harmony/HarmonyGather.h"
+#include "Muse/MuseIdeas.h"
 #include <cmath>
 #include <unordered_map>
 #include <random>
@@ -36,13 +39,6 @@ double quantizePatternLengthBeats(double contentEndBeat, int beatsPerBar) {
 }
 } // namespace
 
-namespace {
-// Width reserved for the "PIANO ROLL" title to the left of the tool strip.
-// Layout runs without a renderer, so this is stated rather than measured; it is
-// the 12px title's width plus its left inset and a gap, rounded up.
-constexpr float kTitleZoneWidth = 96.0f;
-} // namespace
-
 PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
     : WindowPanel("PIANO ROLL")
     , m_trackManager(trackManager)
@@ -50,9 +46,9 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
 {
     // Create piano roll view
     m_pianoRoll = std::make_shared<AestraUI::PianoRollView>();
-    m_pianoRoll->setLocalMinimapVisible(true);
+    m_pianoRoll->setLocalMinimapVisible(true); // the overview strip stays (owner, 31 Oct), above the chord ruler
     m_pianoRoll->setBeatsPerBar(4);
-    m_pianoRoll->setPixelsPerBeat(50.0f);
+    m_pianoRoll->setPixelsPerBeat(66.0f); // FD-63 board: four bars across a 1366 px screen
     
     // Start with empty notes (will load when pattern is opened)
     m_pianoRoll->setNotes({});
@@ -242,7 +238,9 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
     // right, and repeating it would cost width the strip needs.
     if (auto toolbar = m_pianoRoll->detachToolbarForHost()) {
         toolbar->setHostedInTitleBar(true);
-        setTitleBarAccessory(toolbar, 26.0f, kTitleZoneWidth);
+        // FD-63: the piano roll fills the window, and the tool strip is its 40 px header (board A + C).
+        setFullWindow(true);
+        setTitleBarAccessory(toolbar, 32.0f, 0.0f);
     }
 }
 
@@ -302,7 +300,8 @@ void PianoRollPanel::loadPattern(PatternID patternId) {
         // The loop zone belongs to the pattern it was drawn on: switching patterns ends it.
         // TrackManager also scopes it to that pattern, so this keeps the ruler honest; the old
         // pattern's length is passed because that is the loop the cleared zone was shaping.
-        if (m_currentPatternId != patternId && m_pianoRoll->getLoopZone()) {
+        const bool switchedPattern = m_currentPatternId != patternId;
+        if (switchedPattern && m_pianoRoll->getLoopZone()) {
             m_pianoRoll->setLoopZone(std::nullopt);
             if (m_playbackContext) {
                 double oldLength = std::max(0.25, pattern->lengthBeats);
@@ -347,6 +346,8 @@ void PianoRollPanel::loadPattern(PatternID patternId) {
             uiNote.durationBeats = vn.durationBeats;
             uiNote.velocity = vn.velocity;
             uiNote.pan = vn.pan;
+            uiNote.chance = vn.chance;
+            uiNote.ratchet = vn.ratchet;
             uiNote.unitId = vn.unitId;
             uiNote.selected = false;
             uiNote.isDeleted = false;
@@ -364,6 +365,8 @@ void PianoRollPanel::loadPattern(PatternID patternId) {
 
         m_pianoRoll->setDefaultUnitId(m_editingUnitId);
         m_pianoRoll->setNotes(uiNotes);
+        refreshHarmony();
+        if (switchedPattern) m_pianoRoll->frameNotesVertically(); // FD-63: open on the notes, not a fixed octave
         double longestBeat = pattern->lengthBeats;
         for (const auto& note : midiPayload.notes) {
             longestBeat = std::max(longestBeat, note.startBeat + note.durationBeats);
@@ -415,6 +418,8 @@ void PianoRollPanel::savePattern() {
         backendNote.durationBeats = uiNote.durationBeats;
         backendNote.velocity = uiNote.velocity;
         backendNote.pan = uiNote.pan;
+        backendNote.chance = uiNote.chance;
+        backendNote.ratchet = uiNote.ratchet;
         backendNote.unitId = uiNote.unitId != 0 ? uiNote.unitId : m_editingUnitId;
         currentNotes.push_back(backendNote);
     }
@@ -491,7 +496,7 @@ void PianoRollPanel::savePattern() {
         }
         for (const auto& [oldNote, newNote] : diff.modified) {
             commands.push_back(std::make_shared<UpdateNoteCommand>(pm, m_currentPatternId, oldNote, newNote.velocity,
-                                                                   newNote.pan));
+                                                                   newNote.pan, newNote.chance, newNote.ratchet));
         }
         for (const auto& note : diff.added) {
             commands.push_back(std::make_shared<AddNoteCommand>(pm, m_currentPatternId, note));
@@ -541,6 +546,7 @@ void PianoRollPanel::savePattern() {
     // Only notify when something actually changed: unconditional notification
     // caused an Arsenal-refresh/refreshTracks storm on every no-op save and
     // fed the setEditingUnit recursion.
+    if (!diff.empty()) refreshHarmony(); // the chords follow every committed edit
     if (!diff.empty() && m_onPatternEdited) {
         m_onPatternEdited(m_currentPatternId);
     }
@@ -653,6 +659,15 @@ void PianoRollPanel::rebuildUnitSwitcher() {
 
 void PianoRollPanel::onUpdate(double deltaTime) {
     WindowPanel::onUpdate(deltaTime);
+    // Muse Quiet (FD-63): ideas come after a short pause in the writing, never while playing.
+    if (m_museWanted && isVisible() && m_pianoRoll && m_pianoRoll->getMuseMode() != AestraUI::MuseMode::Off) {
+        m_museIdle += deltaTime;
+        const bool playing = m_trackManager && m_trackManager->isPlaying();
+        if (!playing && m_museIdle >= 1.2) {
+            m_museWanted = false;
+            refreshMuseIdeas();
+        }
+    }
     if (isVisible() && !m_wasVisible) {
         rebuildPatternSwitcher();
         rebuildUnitSwitcher();
@@ -871,4 +886,86 @@ void PianoRollPanel::updateGhostChannels() {
                                                          (unit->color & 0xff) * scale, 1.0f));
         }
     }
+}
+
+namespace {
+// The service spells flats in ASCII ("Bb", "bVII") for Muse and the verbs; the ruler shows real flat signs ("B♭",
+// "♭VII"). A "b" is a flat after a note letter (names) or before a numeral (romans); "dim", "sus" and "add" stay.
+std::string withFlatSigns(const std::string& s, bool roman) {
+    std::string out;
+    for (size_t i = 0; i < s.size(); ++i) {
+        const bool flat = s[i] == 'b' && (roman ? (i + 1 < s.size() && (s[i + 1] == 'I' || s[i + 1] == 'V' ||
+                                                                         s[i + 1] == 'i' || s[i + 1] == 'v'))
+                                                : (i > 0 && s[i - 1] >= 'A' && s[i - 1] <= 'G'));
+        out += flat ? std::string("\xE2\x99\xAD") : std::string(1, s[i]);
+    }
+    return out;
+}
+} // namespace
+
+// V83-HS1 (FD-63): the harmony of the whole pattern, every unit, re-read after each load and committed edit. The
+// analysis is a few hundred notes of arithmetic, so it runs here on the UI thread; the audio thread never sees it.
+void PianoRollPanel::refreshHarmony() {
+    if (!m_trackManager || !m_pianoRoll || !m_currentPatternId.isValid()) return;
+    const auto* pattern = m_trackManager->getPatternManager().getPattern(m_currentPatternId);
+    if (!pattern || !pattern->isMidi()) {
+        m_pianoRoll->setHarmony({}, {});
+        return;
+    }
+    namespace H = Aestra::Audio::Harmony;
+    m_harmony = H::analyzeHarmony(H::gatherPatternNotes(*pattern), m_pianoRoll->getBeatsPerBar());
+    const H::HarmonyTimeline& timeline = m_harmony;
+    // The notes changed: ideas for the old notes are stale (typing over an idea ignores it, FD-63); new ones come
+    // after a pause.
+    m_pianoRoll->clearMuseIdeas();
+    m_museWanted = true;
+    m_museIdle = 0.0;
+    std::vector<AestraUI::PianoRollChord> chords;
+    chords.reserve(timeline.chords.size());
+    for (const auto& span : timeline.chords) {
+        if (span.isNoChord()) continue;
+        AestraUI::PianoRollChord c;
+        c.startBeat = span.startBeat;
+        c.endBeat = span.endBeat;
+        c.name = withFlatSigns(span.name, false);
+        c.roman = withFlatSigns(span.roman, true);
+        c.root = span.root;
+        c.userSet = span.userSet;
+        for (const int pc : H::chordTones(span.root, span.quality)) c.toneMask |= static_cast<uint16_t>(1u << pc);
+        chords.push_back(std::move(c));
+    }
+    AestraUI::PianoRollKeyGuess key;
+    key.valid = timeline.key.valid();
+    key.tonic = std::max(0, timeline.key.tonic);
+    key.minor = timeline.key.mode == H::KeyMode::Minor;
+    m_pianoRoll->setHarmony(std::move(chords), key);
+}
+
+// V83-MU1 (FD-63 Quiet): ideas for the bar after the editing unit's last note, from the rules engine (local, no
+// network, no learning yet). Shown as a dot on the ruler; nothing lands until the producer keeps one.
+void PianoRollPanel::refreshMuseIdeas() {
+    if (!m_trackManager || !m_pianoRoll || !m_currentPatternId.isValid()) return;
+    const auto* pattern = m_trackManager->getPatternManager().getPattern(m_currentPatternId);
+    if (!pattern || !pattern->isMidi()) return;
+    std::vector<Aestra::Audio::Harmony::HarmonyNote> mine;
+    for (const auto& n : std::get<MidiPayload>(pattern->payload).notes) {
+        if (m_editingUnitId != 0 && n.unitId != 0 && n.unitId != m_editingUnitId) continue;
+        mine.push_back({n.startBeat, n.durationBeats, n.pitch, n.velocity});
+    }
+    namespace M = Aestra::Audio::Muse;
+    const double bpb = m_pianoRoll->getBeatsPerBar();
+    const double bar = M::nextBarStart(mine, bpb);
+    if (bar < 0.0) return;
+    std::vector<AestraUI::PianoRollIdea> ideas;
+    for (const auto& idea : M::nextBarIdeas(mine, m_harmony, bpb, bar)) {
+        AestraUI::PianoRollIdea out;
+        out.label = idea.label;
+        for (const auto& n : idea.notes) {
+            AestraUI::MidiNote ui{n.pitch, n.startBeat, n.durationBeats, n.velocity};
+            ui.unitId = m_editingUnitId;
+            out.notes.push_back(ui);
+        }
+        ideas.push_back(std::move(out));
+    }
+    m_pianoRoll->setMuseIdeas(bar, std::move(ideas));
 }

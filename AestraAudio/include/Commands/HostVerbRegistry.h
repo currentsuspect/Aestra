@@ -54,7 +54,8 @@ enum class HostVerbDomain {
     Settings, ///< application preferences and device configuration
     View,     ///< navigation between workspaces and panels
     Browser,  ///< the file/sample/plugin browser
-    Dialog    ///< modal flows the host owns
+    Dialog,   ///< modal flows the host owns
+    Transport ///< play, stop, seek and loop as the app's own transport does them
 };
 
 /**

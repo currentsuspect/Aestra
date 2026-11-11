@@ -180,6 +180,14 @@ using RealtimeMisuseHandler = void (*)(const char* apiName) noexcept;
 AESTRA_RT_TLS_MODEL inline thread_local int g_realtimeAudioThreadDepth = 0;
 inline std::atomic<RealtimeMisuseHandler> g_realtimeMisuseHandler{nullptr};
 
+// Who owns the real-time thread right now (#885). Dispatch above stays
+// process-wide (one handler pointer), but the handler needs to know which
+// engine's audio thread it was called from so it can account the violation to
+// that engine. The owner publishes an opaque pointer for the duration of its
+// real-time scope; the handler reads it. Same initial-exec TLS as the depth
+// counter, so reading it on the audio thread never allocates.
+AESTRA_RT_TLS_MODEL inline thread_local void* g_realtimeMisuseContext = nullptr;
+
 // Installed once at startup from the main thread, never from the callback, so
 // it stays outside both the annotation and the waiver below.
 inline RealtimeMisuseHandler setRealtimeMisuseHandler(RealtimeMisuseHandler handler) noexcept {
@@ -225,6 +233,24 @@ public:
 
     ScopedRealtimeAudioThread(const ScopedRealtimeAudioThread&) = delete;
     ScopedRealtimeAudioThread& operator=(const ScopedRealtimeAudioThread&) = delete;
+};
+
+/// Marks `owner` as the accountable owner of misuse reported on this thread
+/// while in scope. Nests: the previous owner is restored on exit. Pair it with
+/// ScopedRealtimeAudioThread; it does not mark the thread real-time itself.
+class ScopedRealtimeMisuseContext {
+public:
+    explicit ScopedRealtimeMisuseContext(void* owner) noexcept AESTRA_RT_NONBLOCKING
+        : m_previous(g_realtimeMisuseContext) {
+        g_realtimeMisuseContext = owner;
+    }
+    ~ScopedRealtimeMisuseContext() noexcept AESTRA_RT_NONBLOCKING { g_realtimeMisuseContext = m_previous; }
+
+    ScopedRealtimeMisuseContext(const ScopedRealtimeMisuseContext&) = delete;
+    ScopedRealtimeMisuseContext& operator=(const ScopedRealtimeMisuseContext&) = delete;
+
+private:
+    void* m_previous;
 };
 
 #if defined(__clang__)

@@ -505,9 +505,9 @@ private:
                 pos++;
                 break;
             }
-            if (str[pos] == ',') {
-                pos++;
-            }
+            if (str[pos] != ',')
+                break; // malformed: anything else would be re-read forever, appending an empty value each turn
+            pos++;
         }
 
         return arr;

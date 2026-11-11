@@ -1,17 +1,18 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 // AestraSat V1 — oversampled waveshaping saturator (tape / tube / hard clip).
 //
-// Signal path (per channel, per sample):
+// Signal path (per channel):
 //   in -> drive gain -> 4x oversample -> waveshaper -> downsample
 //      -> DC blocker -> tone low-pass -> output trim -> mix with latency-aligned dry
 //
-// The nonlinear stage always runs at 4x via DSP::Oversampler (47/29-tap halfband
-// cascade), so latency is the oversampler's reported constant. The dry path is
-// delayed by the same amount so the Mix control never comb-filters.
+// The nonlinear stage always runs at 4x via DSP::BlockOversampler4x (the same
+// 47/29-tap halfband cascade as DSP::Oversampler, run over a block at a time),
+// so latency is the oversampler's reported constant. The dry path is delayed by
+// the same amount so the Mix control never comb-filters.
 
 #pragma once
 
-#include "DSP/Oversampler.h"
+#include "DSP/OversamplerBlock.h"
 #include "RealtimeThreadGuard.h"
 #include "Plugin/InternalPluginBase.h"
 #include "Plugin/PluginHost.h"
@@ -53,7 +54,7 @@ public:
         m_sampleRate = std::max(1.0, sampleRate);
         seedDefaultsOnce();
         for (auto& os : m_oversampler) {
-            os.prepare(kOsFactor);
+            os.prepare();
         }
         resetRuntimeState();
         snapSmoothedParams();
@@ -108,64 +109,77 @@ public:
         float blockInputPeak = 0.0f;
         float blockOutputPeak = 0.0f;
 
-        // Parameters are read and smoothed once per control block; the
-        // per-sample loop only does the oversampled shaper, DC blocker, tone
-        // one-pole and mix — no atomics or transcendentals in the hot path.
-        for (uint32_t blockStart = 0; blockStart < numFrames; blockStart += kCtrlBlock) {
-            const uint32_t blockEnd = std::min(blockStart + kCtrlBlock, numFrames);
+        // Work in chunks of kChunk frames (a whole number of control blocks).
+        // Parameters are read and smoothed once per control block; per chunk the
+        // oversampler runs over the whole block, so the shaper and the filters
+        // around it work on contiguous arrays instead of one sample at a time.
+        for (uint32_t chunkStart = 0; chunkStart < numFrames; chunkStart += kChunk) {
+            const uint32_t n = std::min(kChunk, numFrames - chunkStart);
 
-            m_driveSmoothed += (getParameter(kDrive) - m_driveSmoothed) * m_smoothCoeff;
-            m_toneSmoothed += (getParameter(kTone) - m_toneSmoothed) * m_smoothCoeff;
-            m_outputSmoothed += (getParameter(kOutput) - m_outputSmoothed) * m_smoothCoeff;
-            m_mixSmoothed += (getParameter(kMix) - m_mixSmoothed) * m_smoothCoeff;
+            ControlBlock ctl[kChunk / kCtrlBlock];
+            const uint32_t numCtl = (n + kCtrlBlock - 1u) / kCtrlBlock;
+            for (uint32_t c = 0; c < numCtl; ++c) {
+                m_driveSmoothed += (getParameter(kDrive) - m_driveSmoothed) * m_smoothCoeff;
+                m_toneSmoothed += (getParameter(kTone) - m_toneSmoothed) * m_smoothCoeff;
+                m_outputSmoothed += (getParameter(kOutput) - m_outputSmoothed) * m_smoothCoeff;
+                m_mixSmoothed += (getParameter(kMix) - m_mixSmoothed) * m_smoothCoeff;
 
-            const float driveGain = dbToLinear(driveDbFromNorm(m_driveSmoothed));
-            const float outGain = dbToLinear(outputDbFromNorm(m_outputSmoothed));
-            const float wet = m_mixSmoothed;
-            const float dry = 1.0f - wet;
-            const float toneCoeff = toneCoeffFromNorm(m_toneSmoothed);
+                ctl[c].driveGain = dbToLinear(driveDbFromNorm(m_driveSmoothed));
+                ctl[c].outGain = dbToLinear(outputDbFromNorm(m_outputSmoothed));
+                ctl[c].wet = m_mixSmoothed;
+                ctl[c].dry = 1.0f - m_mixSmoothed;
+                ctl[c].toneCoeff = toneCoeffFromNorm(m_toneSmoothed);
+            }
 
-            for (uint32_t i = blockStart; i < blockEnd; ++i) {
-                for (uint32_t ch = 0; ch < channels; ++ch) {
-                    const float in = sanitizeSample(readInput(inputs, numInputChannels, ch, i));
+            for (uint32_t ch = 0; ch < channels; ++ch) {
+                float dryIn[kChunk];
+                float driven[kChunk];
+                for (uint32_t i = 0; i < n; ++i) {
+                    const float in = sanitizeSample(readInput(inputs, numInputChannels, ch, chunkStart + i));
                     blockInputPeak = std::max(blockInputPeak, std::abs(in));
+                    dryIn[i] = in;
+                    driven[i] = in * ctl[i / kCtrlBlock].driveGain;
+                }
+
+                // Nonlinear stage at 4x
+                float osBuf[kOsFactor * kChunk];
+                m_oversampler[ch].upsample(driven, osBuf, n);
+                shapeBlock(osBuf, kOsFactor * n, mode);
+                float sat[kChunk];
+                m_oversampler[ch].downsample(osBuf, sat, n);
+
+                uint32_t dryPos = m_dryPos;
+                for (uint32_t i = 0; i < n; ++i) {
+                    const ControlBlock& cb = ctl[i / kCtrlBlock];
 
                     // Latency-aligned dry tap
-                    const float delayedDry = m_dryDelay[ch][m_dryPos];
-                    m_dryDelay[ch][m_dryPos] = in;
-
-                    // Nonlinear stage at 4x
-                    float osBuf[kOsFactor];
-                    m_oversampler[ch].upsample(in * driveGain, osBuf);
-                    for (uint32_t p = 0; p < kOsFactor; ++p) {
-                        osBuf[p] = shape(osBuf[p], mode);
-                    }
-                    float sat = m_oversampler[ch].downsample(osBuf);
+                    const float delayedDry = m_dryDelay[ch][dryPos];
+                    m_dryDelay[ch][dryPos] = dryIn[i];
+                    dryPos = (dryPos + 1u) % kDryDelayLen;
 
                     // DC blocker (~10 Hz high-pass) — tube asymmetry adds DC
-                    const float dcOut = sat - m_dcX1[ch] + m_dcCoeff * m_dcY1[ch];
-                    m_dcX1[ch] = sat;
+                    const float dcOut = sat[i] - m_dcX1[ch] + m_dcCoeff * m_dcY1[ch];
+                    m_dcX1[ch] = sat[i];
                     m_dcY1[ch] = dcOut;
 
                     // Tone: one-pole low-pass on the wet path
-                    m_toneState[ch] += (dcOut - m_toneState[ch]) * toneCoeff;
+                    m_toneState[ch] += (dcOut - m_toneState[ch]) * cb.toneCoeff;
 
-                    const float out = delayedDry * dry + m_toneState[ch] * outGain * wet;
+                    const float out = delayedDry * cb.dry + m_toneState[ch] * cb.outGain * cb.wet;
                     blockOutputPeak = std::max(blockOutputPeak, std::abs(out));
 
                     if (outputs[ch])
-                        outputs[ch][i] = out;
+                        outputs[ch][chunkStart + i] = out;
                 }
+            }
+            m_dryPos = (m_dryPos + n) % kDryDelayLen;
 
-                m_dryPos = (m_dryPos + 1u) % kDryDelayLen;
-
-                if (!stereo && numOutputChannels > 1 && outputs[1] && outputs[0]) {
-                    outputs[1][i] = outputs[0][i];
-                }
-                for (uint32_t ch = 2; ch < numOutputChannels; ++ch) {
-                    if (outputs[ch])
-                        outputs[ch][i] = 0.0f;
-                }
+            if (!stereo && numOutputChannels > 1 && outputs[1] && outputs[0]) {
+                std::memcpy(outputs[1] + chunkStart, outputs[0] + chunkStart, n * sizeof(float));
+            }
+            for (uint32_t ch = 2; ch < numOutputChannels; ++ch) {
+                if (outputs[ch])
+                    std::memset(outputs[ch] + chunkStart, 0, n * sizeof(float));
             }
         }
 
@@ -267,6 +281,20 @@ private:
     // sized to match the oversampler round-trip latency.
     static constexpr uint32_t kDryDelayLen = DSP::Oversampler::kReportedLatency;
     static constexpr uint32_t kCtrlBlock = 16; // control-rate interval for param/coefficient updates
+    // Frames handled per oversampler call: a whole number of control blocks, and
+    // the most BlockOversampler4x takes at once.
+    static constexpr uint32_t kChunk = DSP::BlockOversampler4x::kMaxFrames;
+    static_assert(kChunk % kCtrlBlock == 0, "a chunk must hold whole control blocks");
+
+    /// Smoothed parameters for one control block, resolved once so the
+    /// per-sample loop does no transcendentals and no atomics.
+    struct ControlBlock {
+        float driveGain = 1.0f;
+        float outGain = 1.0f;
+        float wet = 1.0f;
+        float dry = 0.0f;
+        float toneCoeff = 0.0f;
+    };
 
     /// Bypass copy delayed by the reported latency, through the same dry ring
     /// the active path uses (so the ring stays hot across bypass toggles).
@@ -303,6 +331,24 @@ private:
             return x >= 0.0f ? std::tanh(x) : std::tanh(1.5f * x) * (1.0f / 1.5f);
         default:
             return std::clamp(x, -1.0f, 1.0f);
+        }
+    }
+
+    /// The mode switch sits outside the loop so each loop is a single shaper.
+    static void shapeBlock(float* buf, uint32_t count, Mode mode) {
+        switch (mode) {
+        case kModeTape:
+            for (uint32_t i = 0; i < count; ++i)
+                buf[i] = shape(buf[i], kModeTape);
+            break;
+        case kModeTube:
+            for (uint32_t i = 0; i < count; ++i)
+                buf[i] = shape(buf[i], kModeTube);
+            break;
+        default:
+            for (uint32_t i = 0; i < count; ++i)
+                buf[i] = shape(buf[i], kModeHard);
+            break;
         }
     }
 
@@ -372,7 +418,7 @@ private:
     double m_sampleRate = 48000.0;
     std::atomic<bool> m_active{false};
 
-    std::array<DSP::Oversampler, 2> m_oversampler;
+    std::array<DSP::BlockOversampler4x, 2> m_oversampler;
     std::array<std::array<float, kDryDelayLen>, 2> m_dryDelay{};
     uint32_t m_dryPos = 0;
     bool m_wasBypassed = false;

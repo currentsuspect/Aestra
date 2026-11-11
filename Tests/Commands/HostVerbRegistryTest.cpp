@@ -104,6 +104,12 @@ int main() {
                   HostVerbRegistry::RegisterStatus::ReservedDomain,
               "the audio. domain is reserved");
 
+        // V82-M1: the app's transport is its own domain, with its own prefix.
+        check(ok("transport.play", HostVerbDomain::Transport) == HostVerbRegistry::RegisterStatus::Ok,
+              "a transport capability registers under transport.");
+        check(ok("view.seek", HostVerbDomain::Transport) == HostVerbRegistry::RegisterStatus::DomainMismatch,
+              "a transport capability cannot hide under another prefix");
+
         check(ok("view.openMixer", HostVerbDomain::View) ==
                   HostVerbRegistry::RegisterStatus::Duplicate,
               "re-registering a name is refused, not silently overwritten");

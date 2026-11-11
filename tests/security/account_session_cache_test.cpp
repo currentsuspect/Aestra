@@ -152,7 +152,7 @@ bool testSessionUsesEntitlementStore() {
     ok &= expect(snapshot.state == AccountSessionState::SignedInFresh, "recent cache should be SignedInFresh");
     ok &= expect(snapshot.identity.email == "artist@example.test", "snapshot should expose display identity");
     ok &= expect(snapshot.entitlement.tier == MembershipTier::Supporter, "snapshot should expose trusted entitlement");
-    ok &= expect(entitlements.canAccess(ProductFeature::Rumble), "Rumble access should remain entitlement-backed");
+    ok &= expect(entitlements.canAccess(ProductFeature::SupporterBadge), "paid access should remain entitlement-backed");
 
     return ok;
 }
@@ -176,7 +176,7 @@ bool testMismatchedUserAndForgedCacheBoundary() {
     const auto mismatchSnapshot = mismatchSession.current();
     ok &= expect(mismatchSnapshot.state == AccountSessionState::Invalid, "user mismatch should mark session Invalid");
     ok &= expect(!mismatchSnapshot.signedIn, "user mismatch should not be signed in");
-    ok &= expect(founderForOtherUser.canAccess(ProductFeature::RumbleHeadless),
+    ok &= expect(founderForOtherUser.canAccess(ProductFeature::FounderBadge),
                  "access remains EntitlementStore-backed, not cache-backed");
 
     const fs::path forgedPath = testPath("forged");
@@ -197,7 +197,7 @@ bool testMismatchedUserAndForgedCacheBoundary() {
     const auto forgedSnapshot = forgedSession.current();
     ok &= expect(forgedSnapshot.signedIn, "forged display identity may still load as cached identity");
     ok &= expect(forgedSnapshot.entitlement.tier == MembershipTier::Core, "forged account cache must not elevate tier");
-    ok &= expect(!coreOnly.canAccess(ProductFeature::RumbleHeadless), "forged cache must not grant Founder features");
+    ok &= expect(!coreOnly.canAccess(ProductFeature::FounderBadge), "forged cache must not grant Founder features");
     ok &= expect(coreOnly.canAccess(ProductFeature::CoreDAW), "CoreDAW remains accessible");
 
     return ok;

@@ -30,11 +30,9 @@ Aestra is developed by Dylan Makori in Kenya, with community contributions to th
 
 ### Is Aestra free to use?
 
-**Yes! Aestra Core is free forever.** The hybrid model:
-- ✅ **Aestra Core**: Completely free - full DAW with all essential features
-- 💰 **Premium Add-ons** (future): Muse AI and premium plugins require paid licenses
+**Yes.** The whole DAW is free, and so are Aestra's own plugins and anything that runs on your computer, including Muse's help when it runs there.
+- 💰 **Supporter** (optional, not on sale yet) pays only for things that cost money each time they're used: hosting shared projects, online storage, hosted computing
 - 👁️ Source code is publicly visible for transparency
-- 🎓 Student discounts will apply to premium add-ons
 - 🤝 Contributing to development is free and welcomed
 
 ### What platforms does Aestra support?
@@ -150,7 +148,7 @@ This is necessary because Aestra is commercial software. See [Contributing Guide
 - ✅ Cross-platform compatibility
 
 **Private/commercial-only areas**:
-- ❌ Premium plugins and effects
+- ❌ Source of some of Aestra's own plugins (the plugins themselves are free)
 - ❌ AI models (Muse internals)
 - ❌ Licensing system
 - ❌ Code signing and distribution
@@ -240,7 +238,7 @@ See [Architecture Overview](../architecture/overview.md) for threading details.
 - ✅ Live performances
 - ✅ YouTube, streaming, broadcast
 
-Only premium add-ons (Muse AI, premium plugins - future releases) will require paid licenses.
+Nothing you need to make and release music is paid. The optional Supporter tier covers hosted services only.
 
 **Note:** The source code itself is proprietary and cannot be reused in other software projects.
 

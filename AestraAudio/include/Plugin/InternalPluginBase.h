@@ -474,15 +474,6 @@ private:
         return blobMagic == magic && blobVersion == version;
     }
 
-    /// v1 only. Kept so the blob test can construct a historical blob and prove
-    /// the v2 reader rejects it, rather than asserting rejection against a
-    /// hand-rolled byte pattern that could drift from the real v1 layout.
-    static uint32_t* paramsIn(uint8_t* blob) { return reinterpret_cast<uint32_t*>(blob + sizeof(uint32_t) * 2); }
-
-    static const uint32_t* paramsIn(const uint8_t* blob) {
-        return reinterpret_cast<const uint32_t*>(blob + sizeof(uint32_t) * 2);
-    }
-
     const ParamSpec* findSpec(uint32_t id) const AESTRA_RT_NONBLOCKING {
         for (const ParamSpec* p = specsBegin(); p != specsEnd(); ++p) {
             if (p->id == id)

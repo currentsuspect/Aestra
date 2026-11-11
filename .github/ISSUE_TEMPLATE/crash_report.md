@@ -29,31 +29,28 @@ clip" is more useful than "crashed". -->
 - [ ] Showed an error and kept running
 - [ ] Lost work without closing
 
-## The logs — please attach both
+## The log — please attach it
 
-Aestra writes **two** log files, and they are not copies of each other:
+**From v0.8.2**, Aestra writes one log file per run, named by when the run started
+(`aestra-YYYYMMDD-HHMMSS.log`), and keeps the last 20:
 
-| File | Holds |
+| System | Folder |
 |---|---|
-| `runtime_log.txt` | The first moments of startup — build id, working directory, font setup. Small. |
-| `aestra_debug.log` | Everything after that — audio device, project load, the run itself. This is usually the one with the crash in it. |
+| Linux | `~/.local/state/aestra/` (or `$XDG_STATE_HOME/aestra/`) |
+| Windows | `%LOCALAPPDATA%\Aestra\logs\` |
+| macOS | `~/Library/Logs/Aestra/` |
 
-**Where they are:** whatever directory Aestra was *launched from*, not a fixed
-folder. Launched from a terminal, they are in that directory. Launched from a
-desktop icon or app menu, they are wherever that launcher's working directory
-points — most often your home folder.
+Attach the file from the run that crashed: the newest one, or the one whose time
+matches the crash. Started from a terminal, Aestra prints the file's path on its
+first line.
 
-If you cannot find them, search your home folder for `aestra_debug.log`. The
-top of `runtime_log.txt` prints a line reading `Working Directory: ...`, which
-tells you where that pair came from — useful if you find several.
+**Before v0.8.2** there were two files, `runtime_log.txt` (startup) and
+`aestra_debug.log` (everything after), in whatever directory Aestra was launched
+from (from a desktop icon, usually your home folder). They append and are never
+rotated, so include the whole file, or its last few hundred lines plus the time
+of the crash.
 
-> **Both files append and are never rotated**, so a file from months of use
-> holds many runs. Please include the whole file rather than trimming it; if it
-> is too large, the last few hundred lines plus the timestamp of the crash is
-> enough.
-
-- [ ] `aestra_debug.log` attached
-- [ ] `runtime_log.txt` attached
+- [ ] Log attached
 
 ## The project
 
@@ -75,7 +72,7 @@ it is just as good. -->
 
 ## Build
 
-<!-- Copy the two lines from the top of runtime_log.txt. They look like:
+<!-- Copy the two lines from the top of the log (before v0.8.2: runtime_log.txt). They look like:
      Aestra Starting - Aestra-2025-Core
      Working Directory: /home/you
      If you built it yourself, the git commit is more useful than a version. -->

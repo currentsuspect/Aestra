@@ -79,7 +79,6 @@ Runs existing correctness tests to ensure security guards do not break valid fun
 | Test | What it proves |
 |------|---------------|
 | `MathTests` | Security changes to math code (if any) do not break correctness |
-| `AestraFilterTest` | Security changes to DSP code (if any) do not break filter behavior |
 
 **Gate**: HARD — exit code must be 0.
 

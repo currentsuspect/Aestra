@@ -2,6 +2,8 @@
 #pragma once
 
 #include "../AestraUI/Core/NUIComponent.h"
+
+#include <memory>
 #include <string>
 
 namespace Aestra {
@@ -42,7 +44,20 @@ public:
      * @brief Check if there are unsaved changes
      */
     virtual bool hasUnsavedChanges() const = 0;
-    
+
+    /**
+     * @brief How many settings on this page differ from what is saved (the sidebar badge and the
+     * "N changes not saved" note). Pages that only know yes/no report 1.
+     */
+    virtual int pendingChangeCount() const { return hasUnsavedChanges() ? 1 : 0; }
+
+    /**
+     * @brief A page's own action for the dialog footer's left side (Audio: Test sound), and the
+     * muted note beside it. Null when the page has none.
+     */
+    virtual std::shared_ptr<AestraUI::NUIComponent> footerAction() { return nullptr; }
+    virtual std::string footerNote() const { return ""; }
+
     /**
      * @brief Called when the page becomes visible/active
      */

@@ -12,12 +12,15 @@
 
 Aestra is free. The whole DAW has no export limit, no time limit and no watermark, and you don't need to pay to make music. What you make with it is yours.
 
-Paying is optional. It's for the ecosystem around Aestra: extra plugins, new tools and the work behind them.
+Aestra's own plugins are free too, and so is anything that runs on your own computer, including Muse's help when it runs there. Saving, recovery and version history are never behind a payment.
 
-- **Supporter, $5 a month or $50 a year:** the Native Suite of extra plugins while you're subscribed, new plugins as they're released, development updates and a feedback channel. Planned, not built yet: Muse (help that runs on your machine) and hosting shared projects.
-- **Founder, $129 once:** a numbered digital card (500 ever), a plugin bundle you keep, 24 months of Supporter from public beta, and 25% off Supporter after that. Your name in the credits, if you want it.
+Paying is optional. It's for the things that cost us money every time they're used: servers, storage and hosted computing.
 
-Neither is on sale yet. To hear when they are, join the waitlist at [aestra.studio/pricing](https://www.aestra.studio/pricing).
+- **Supporter, $5 a month or $50 a year:** development updates and a feedback channel. Planned, not built yet: hosting shared projects, keeping a copy of your projects online, and the parts of Muse that run on our servers.
+
+When something needs Supporter, Aestra tells you what it costs us to run, not just that you need to upgrade.
+
+Supporter isn't on sale yet. To hear when they are, join the waitlist at [aestra.studio/pricing](https://www.aestra.studio/pricing).
 
 The website is the source for prices and what's included, so if this page and the website disagree, the website is right.
 

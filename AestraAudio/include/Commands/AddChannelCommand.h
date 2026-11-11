@@ -87,6 +87,8 @@ public:
      * @return Human-readable command name.
      */
     std::string getName() const override { return "Add Channel"; }
+    /// The mixer channel this command created; 0 until it has executed.
+    uint32_t getCreatedChannelId() const { return m_executed ? m_createdChannelId : 0; }
     /**
      * @brief Estimate the in-memory footprint of this command.
      * @return Size of the command object in bytes.

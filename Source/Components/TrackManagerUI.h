@@ -162,6 +162,7 @@ public:
      *  consumed before they reached the timeline. Hover cursor claims are only
      *  honoured while it matches the timeline's own last-seen position. */
     void setWindowPointerPosition(float x, float y);
+    void onWindowMouseReleased(); // the window saw a left release, which may never have reached the timeline
 
     // View Toggle Callbacks (v3.1)
     void setOnToggleMixer(std::function<void()> cb) { m_onToggleMixer = cb; }
@@ -327,6 +328,13 @@ public:
 
     // Loop markers (Visual feedback)
     void setLoopRegion(double startBeat, double endBeat, bool enabled);
+    /// What a ruler drag over [startBeat, endBeat) does: loop that range (Selection preset).
+    void selectLoopRange(double startBeat, double endBeat);
+    /// What a ruler click without a drag does: clear the range and turn the loop off.
+    void clearLoopRange();
+    bool isLoopEnabled() const { return m_loopEnabled; }
+    double getLoopStartBeat() const { return m_loopStartBeat; }
+    double getLoopEndBeat() const { return m_loopEndBeat; }
 
     bool onMouseEvent(const ::AestraUI::NUIMouseEvent& event) override;
     bool onKeyEvent(const ::AestraUI::NUIKeyEvent& event) override;
@@ -589,6 +597,7 @@ private:
     ::AestraUI::NUIPoint m_windowPointerPos; // Every window move, including ones a popup consumed
     bool m_hasWindowPointerPos = false;
     bool isHoverPointerCurrent() const; // m_lastMousePos still matches the real pointer
+    bool minimapClaimsGrab() const;     // minimap viewport drag, or its hover from a current pointer
 
     // Playhead dragging state
     bool m_isDraggingPlayhead = false;
@@ -632,6 +641,14 @@ private:
 
     // Playlist View State
     bool m_playlistVisible{true};
+    // V82-T2 (TrackManagerUIFold.cpp): untouched tracks fold into one row under the last track; "show" unfolds them.
+    bool m_showEmptyTracks{false};
+    size_t m_foldedEmptyTracks{0};
+    AestraUI::NUIRect m_foldedRowRect{};
+    AestraUI::NUIRect m_foldedToggleRect{};
+    bool isFoldableEmptyLane(const Audio::PlaylistLane& lane, size_t laneCountOfItsTrack) const;
+    void renderFoldedEmptyRow(AestraUI::NUIRenderer& renderer);
+    bool handleFoldedRowMouse(const AestraUI::NUIMouseEvent& event);
 
     // ⚡ MULTI-LAYER CACHING SYSTEM for 60+ FPS
 
@@ -821,8 +838,9 @@ private:
     bool handleRulerPress(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos,
                           bool isInRuler);
     bool handleRulerSelectionDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
-    bool handleRulerSelectionMenu(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos,
-                                  bool isInRuler);
+    /// #544: "Send Selection to Audition" lives in the timeline's right-click and toolbar menus; a left press on the
+    /// ruler always scrubs, so a menu there could never open. Adds the item when a ruler selection exists.
+    void addSendSelectionToAudition(::AestraUI::NUIContextMenu& menu);
     bool handleLoopMarkerDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
     bool handlePlayheadDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
     bool handleSplitToolClick(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);

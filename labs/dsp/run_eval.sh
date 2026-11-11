@@ -95,9 +95,7 @@ BIN_OSC="$(find_bin AestraOscillatorTest)" || fail "Cannot find AestraOscillator
 BIN_MIX="$(find_bin AestraMixerBusTest)" || fail "Cannot find AestraMixerBusTest"
 BIN_SRC="$(find_bin AestraSampleRateConverterTest)" || fail "Cannot find AestraSampleRateConverterTest"
 BIN_OFF="$(find_bin OfflineRenderRegressionTest)" || fail "Cannot find OfflineRenderRegressionTest"
-BIN_FILT=""
 find_bin_optional() { local name="$1"; for c in "$BUILD_DIR/Tests/$name" "$BUILD_DIR/bin/Tests/$name" "$BUILD_DIR/Tests/Headless/$name" "$BUILD_DIR/bin/Tests/Headless/$name"; do if [ -x "$c" ]; then echo "$c"; return 0; fi; done; return 1; }
-BIN_FILT="$(find_bin_optional AestraFilterTest 2>/dev/null)" || true
 BIN_SINC="$(find_bin_optional AestraSincBenchmark 2>/dev/null)" || true
 BIN_RBENCH="$(find_bin_optional ResamplerBenchmark 2>/dev/null)" || true
 
@@ -106,18 +104,16 @@ log "  Math:          ${BIN_MATH}"
 log "  Oscillator:    ${BIN_OSC}"
 log "  MixerBus:      ${BIN_MIX}"
 log "  Resampler:     ${BIN_SRC}"
-log "  Filter:        ${BIN_FILT:-NOT FOUND}"
 log "  Offline:       ${BIN_OFF}"
 log "  Sinc BM:       ${BIN_SINC:-NOT FOUND}"
 log "  Resampler BM:  ${BIN_RBENCH:-NOT FOUND}"
 
 # Run eval lanes
-MATH_EXIT=0; OSC_EXIT=0; MIX_EXIT=0; SRC_EXIT=0; FILT_EXIT=0; OFF_EXIT=0; SINC_EXIT=0; RBENCH_EXIT=0
+MATH_EXIT=0; OSC_EXIT=0; MIX_EXIT=0; SRC_EXIT=0; OFF_EXIT=0; SINC_EXIT=0; RBENCH_EXIT=0
 MATH_OUT="${RESULTS_DIR}/${RID}_math.txt"
 OSC_OUT="${RESULTS_DIR}/${RID}_osc.txt"
 MIX_OUT="${RESULTS_DIR}/${RID}_mix.txt"
 SRC_OUT="${RESULTS_DIR}/${RID}_src.txt"
-FILT_OUT="${RESULTS_DIR}/${RID}_filt.txt"
 OFF_OUT="${RESULTS_DIR}/${RID}_off.txt"
 SINC_OUT="${RESULTS_DIR}/${RID}_sinc.txt"
 RBENCH_OUT="${RESULTS_DIR}/${RID}_rbench.txt"
@@ -127,12 +123,7 @@ run_test() { local name="$1"; local bin="$2"; local outfile="$3"; local exitvar=
   log "=== Lane: $name ==="
   if [ -n "$bin" ] && [ -x "$bin" ]; then
     set +e
-    # FilterTest has an interactive prompt at the end — pipe 'n'
-    if [ "$name" = "AestraFilterTest" ]; then
-      echo "n" | "$bin" > "$outfile" 2>&1
-    else
-      "$bin" > "$outfile" 2>&1
-    fi
+    "$bin" > "$outfile" 2>&1
     eval "$exitvar=\$?" ; set -e
     log "Exit code: ${!exitvar}"
   else
@@ -145,7 +136,6 @@ run_test "MathTests" "$BIN_MATH" "$MATH_OUT" "MATH_EXIT"
 run_test "AestraOscillatorTest" "$BIN_OSC" "$OSC_OUT" "OSC_EXIT"
 run_test "AestraMixerBusTest" "$BIN_MIX" "$MIX_OUT" "MIX_EXIT"
 run_test "AestraSampleRateConverterTest" "$BIN_SRC" "$SRC_OUT" "SRC_EXIT"
-run_test "AestraFilterTest" "$BIN_FILT" "$FILT_OUT" "FILT_EXIT"
 run_test "OfflineRenderRegressionTest" "$BIN_OFF" "$OFF_OUT" "OFF_EXIT"
 run_test "AestraSincBenchmark" "$BIN_SINC" "$SINC_OUT" "SINC_EXIT"
 run_test "ResamplerBenchmark" "$BIN_RBENCH" "$RBENCH_OUT" "RBENCH_EXIT"
@@ -163,12 +153,6 @@ for lane_name in "MathTests" "Oscillator" "MixerBus" "Resampler" "Offline"; do
     DECISION="reject"
   fi
 done
-
-# Filter test is hard if the binary exists
-if [ -n "$BIN_FILT" ] && [ -x "$BIN_FILT" ] && [ "$FILT_EXIT" -ne 0 ]; then
-  HARD_FAILURES+=("AestraFilterTest exited with code $FILT_EXIT")
-  DECISION="reject"
-fi
 
 if [ -n "$BIN_SINC" ] && [ -x "$BIN_SINC" ] && [ "$SINC_EXIT" -ne 0 ]; then
   ADVISORY_FLAGS+=("AestraSincBenchmark exited with code $SINC_EXIT")
@@ -203,7 +187,6 @@ cat > "$SUMMARY_FILE" <<EOJSON
     "oscillator":       { "binary": "$BIN_OSC", "exit_code": $OSC_EXIT, "output_file": "$OSC_OUT" },
     "mixer":            { "binary": "$BIN_MIX", "exit_code": $MIX_EXIT, "output_file": "$MIX_OUT" },
     "resampler":        { "binary": "$BIN_SRC", "exit_code": $SRC_EXIT, "output_file": "$SRC_OUT" },
-    "filter":           { "binary": "${BIN_FILT:-N/A}", "exit_code": $FILT_EXIT, "output_file": "${FILT_OUT:-N/A}" },
     "offline":          { "binary": "$BIN_OFF", "exit_code": $OFF_EXIT, "output_file": "$OFF_OUT" },
     "sinc_benchmark":   { "binary": "${BIN_SINC:-N/A}", "exit_code": $SINC_EXIT, "output_file": "${SINC_OUT:-N/A}" },
     "resampler_benchmark": { "binary": "${BIN_RBENCH:-N/A}", "exit_code": $RBENCH_EXIT, "output_file": "${RBENCH_OUT:-N/A}" }
@@ -217,7 +200,7 @@ log "=== Eval Complete ==="
 log "Decision: $DECISION"
 log "Summary:  $SUMMARY_FILE"
 log "Raw outputs:"
-for f in "$MATH_OUT" "$OSC_OUT" "$MIX_OUT" "$SRC_OUT" "$FILT_OUT" "$OFF_OUT" "$SINC_OUT" "$RBENCH_OUT"; do
+for f in "$MATH_OUT" "$OSC_OUT" "$MIX_OUT" "$SRC_OUT" "$OFF_OUT" "$SINC_OUT" "$RBENCH_OUT"; do
   [ -n "$f" ] && [ -f "$f" ] && log "  $f"
 done
 

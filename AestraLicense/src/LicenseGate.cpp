@@ -912,9 +912,9 @@ EntitlementStatus loadAndVerifyLease(LeaseRecord& outLease) {
 bool canAccessForTier(LicenseTier tier, Feature feature) {
     switch (feature) {
     case Feature::RUMBLE:
-        return tier == LicenseTier::Supporter || tier == LicenseTier::Founder;
     case Feature::RUMBLE_HEADLESS:
-        return tier == LicenseTier::Founder;
+        (void)tier;
+        return true; // FD-57: Aestra's own plugins are free
     default:
         return false;
     }

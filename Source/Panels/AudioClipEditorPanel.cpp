@@ -248,6 +248,10 @@ void AudioClipEditorPanel::buildUI() {
     m_makeUniqueButton = std::make_shared<NUIButton>("Make unique");
     m_reverseButton = std::make_shared<NUIButton>("Reverse");
     m_commitButton = std::make_shared<NUIButton>("Commit");
+    m_previewButton = std::make_shared<NUIButton>("Preview");
+    m_previewButton->setTooltip("Hear this clip's part of the source at its speed, pitch and level");
+    styleButton(m_previewButton);
+    m_previewButton->setOnClick([this]() { togglePreview(); });
     styleButton(m_muteButton);
     styleButton(m_normalizeButton);
     styleButton(m_resetButton);
@@ -357,20 +361,15 @@ void AudioClipEditorPanel::buildUI() {
     });
 
     const std::vector<std::shared_ptr<NUIComponent>> children{
-        m_sourceNameLabel,    m_sourceMetaLabel,       m_routeLabel,
-        m_routeHintLabel,     m_routePicker,           m_waveform,
-        m_waveformTitleLabel, m_waveformHintLabel,     m_instanceLabel,
-        m_toneSectionLabel,   m_timingSectionLabel,    m_gainLabel,
-        m_panLabel,           m_fadeInLabel,           m_fadeOutLabel,
-        m_pitchLabel,         m_speedLabel,            m_sourceStartLabel,      m_gainValueLabel,
-        m_panValueLabel,      m_fadeInValueLabel,      m_fadeOutValueLabel,     m_pitchValueLabel,
-        m_speedValueLabel,    m_sourceStartValueLabel, m_gainSlider,             m_panSlider,
-        m_fadeInSlider,       m_fadeOutSlider,         m_pitchSlider,            m_speedSlider,
-        m_sourceStartSlider,  m_muteButton,
-        m_fitLabel,           m_fitButtons[0],         m_fitButtons[1],
-        m_fitButtons[2],      m_fitButtons[3],      m_fitButtons[4],
-        m_normalizeButton,    m_resetButton,           m_makeUniqueButton,
-        m_reverseButton,      m_commitButton};
+        m_sourceNameLabel,    m_sourceMetaLabel,    m_routeLabel,        m_routeHintLabel,  m_routePicker,
+        m_waveform,           m_waveformTitleLabel, m_waveformHintLabel, m_instanceLabel,   m_toneSectionLabel,
+        m_timingSectionLabel, m_gainLabel,          m_panLabel,          m_fadeInLabel,     m_fadeOutLabel,
+        m_pitchLabel,         m_speedLabel,         m_sourceStartLabel,  m_gainValueLabel,  m_panValueLabel,
+        m_fadeInValueLabel,   m_fadeOutValueLabel,  m_pitchValueLabel,   m_speedValueLabel, m_sourceStartValueLabel,
+        m_gainSlider,         m_panSlider,          m_fadeInSlider,      m_fadeOutSlider,   m_pitchSlider,
+        m_speedSlider,        m_sourceStartSlider,  m_muteButton,        m_fitLabel,        m_fitButtons[0],
+        m_fitButtons[1],      m_fitButtons[2],      m_fitButtons[3],     m_fitButtons[4],   m_normalizeButton,
+        m_resetButton,        m_makeUniqueButton,   m_reverseButton,     m_commitButton,    m_previewButton};
     for (const auto& child : children) {
         m_surface->addChild(child);
     }
@@ -806,7 +805,7 @@ void AudioClipEditorPanel::onResize(int width, int height) {
     const float actionH = 24.0f;
     const float resetWidth = 104.0f;
     float actionX = bounds.x + pad;
-    const float totalRequired = buttonGap * 3.0f + 78.0f + 78.0f + 88.0f + 88.0f +
+    const float totalRequired = buttonGap * 4.0f + 78.0f + 78.0f + 78.0f + 88.0f + 88.0f +
                                 (m_makeUniqueButton->isVisible() ? buttonGap + 100.0f : 0.0f);
     const float available = (bounds.right() - pad - resetWidth) - actionX - buttonGap;
     const float scale = totalRequired > 0.0f ? std::clamp(available / totalRequired, 0.0f, 1.0f) : 1.0f;
@@ -815,6 +814,7 @@ void AudioClipEditorPanel::onResize(int width, int height) {
         button->setBounds({actionX, actionY, w, actionH});
         actionX += w + buttonGap * scale;
     };
+    placeAction(m_previewButton, 78.0f);
     placeAction(m_reverseButton, 78.0f);
     placeAction(m_commitButton, 78.0f);
     placeAction(m_normalizeButton, 88.0f);
@@ -862,8 +862,44 @@ void AudioClipEditorPanel::onResize(int width, int height) {
     }
 }
 
+// Preview plays the clip's part of the source (from its start, for its length) at its varispeed and level, so you can
+// hear what the clip holds while editing it. Fades and pan are not applied: this is the source, not the mix.
+void AudioClipEditorPanel::togglePreview() {
+    if (!m_onPreviewRequested)
+        return;
+    if (m_previewSecondsLeft > 0.0) {
+        m_previewSecondsLeft = 0.0;
+        m_onPreviewRequested({}, 0.0, 0.0, 1.0f, 0.0f);
+    } else {
+        ClipInstance* clip = nullptr;
+        PatternSource* pattern = nullptr;
+        if (!resolveClip(clip, pattern))
+            return;
+        const auto* payload = std::get_if<AudioSlicePayload>(&pattern->payload);
+        const auto* source = payload ? m_trackManager->getSourceManager().getSource(payload->audioSourceId) : nullptr;
+        if (!source || source->getFilePath().empty())
+            return;
+        const float rate =
+            std::max(0.01f, m_workingEdits.playbackRate * std::pow(2.0f, m_workingEdits.pitchSemitones / 12.0f));
+        const double length = std::clamp(clip->durationSeconds > 0.0 ? clip->durationSeconds : 4.0, 0.1, 60.0);
+        const float gainDb = 20.0f * std::log10(std::max(1e-4f, m_workingEdits.gainLinear));
+        m_previewSecondsLeft = length;
+        m_onPreviewRequested(source->getFilePath(), m_workingEdits.sourceStart, length, rate, gainDb);
+    }
+    m_previewButton->setText(m_previewSecondsLeft > 0.0 ? "Stop" : "Preview");
+    repaint();
+}
+
 void AudioClipEditorPanel::onUpdate(double deltaTime) {
     WindowPanel::onUpdate(deltaTime);
+    if (m_previewSecondsLeft > 0.0) {
+        m_previewSecondsLeft -= deltaTime;
+        if (m_previewSecondsLeft <= 0.0) {
+            m_previewSecondsLeft = 0.0;
+            m_previewButton->setText("Preview");
+            repaint();
+        }
+    }
     if (!isVisible())
         return;
     ClipInstance* clip = nullptr;

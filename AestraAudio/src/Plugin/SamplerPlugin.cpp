@@ -188,6 +188,7 @@ void SamplerPlugin::shutdown() {
     m_active = false;
     // Force release of data to ensure cleanup
     auto old = m_data.exchange(std::shared_ptr<SampleData>(nullptr), std::memory_order_acq_rel);
+    publishSample(nullptr);
     publishToKeepLength(nullptr);
     GarbageCollector::instance().release(old, "SamplerPlugin::SampleData shutdown");
     std::lock_guard<std::mutex> lock(m_retiredMutex);
@@ -210,6 +211,7 @@ void SamplerPlugin::retireSample(std::shared_ptr<SampleData> old) {
 }
 
 void SamplerPlugin::activate() {
+    m_voiceCompSmoothed = 1.0f;
     m_active = true;
     for (auto& v : m_voices)
         v.active = false;
@@ -270,6 +272,7 @@ bool SamplerPlugin::loadSampleData(const std::string& path, std::vector<float> d
     // Atomic Swap (Thread-Safe, Lock-Free-ish)
     // std::atomic_exchange uses standard atomics for shared_ptr
     auto oldData = m_data.exchange(newData, std::memory_order_acq_rel);
+    publishSample(newData);
     publishToKeepLength(newData);
 
     // Voices still sounding finish on the old sample (gap-free swap); it is collected once none read it.
@@ -299,6 +302,7 @@ bool SamplerPlugin::normalizeSample(float targetPeak) {
     }
 
     auto oldData = m_data.exchange(edited, std::memory_order_acq_rel);
+    publishSample(edited);
     publishToKeepLength(edited);
     retireSample(std::move(oldData));
     return true;
@@ -326,6 +330,7 @@ bool SamplerPlugin::reverseSample() {
     }
 
     auto oldData = m_data.exchange(edited, std::memory_order_acq_rel);
+    publishSample(edited);
     publishToKeepLength(edited);
     retireSample(std::move(oldData));
     return true;
@@ -341,30 +346,12 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
 
     // RT-safe hard reset (requested by engine on transport restart)
     if (m_resetVoicesRequested.exchange(false, std::memory_order_acq_rel)) {
-        for (auto& v : m_voices) {
-            v.active = false;
-            v.stage = EnvStage::Off;
-            v.position = 0.0;
-            v.playbackRate = 1.0;
-            v.targetPlaybackRate = 1.0;
-            v.playbackDirection = 1;
-            v.glideActive = false;
-            v.stageTime = 0.0;
-            v.currentGain = 0.0f;
-            v.releaseGain = 0.0f;
-            v.ownData.reset(); // refcount drop only: the cache or GarbageCollector owns the buffer
-            v.held.reset();
-        }
+        resetAllVoices();
     }
     // Soft release (pause / stop / loop wrap): every sounding voice goes through its own release
     // stage. Voices already releasing keep their tail; their gain is not restarted.
     if (m_releaseVoicesRequested.exchange(false, std::memory_order_acq_rel)) {
-        for (auto& v : m_voices) {
-            if (!v.active || v.stage == EnvStage::Release || v.stage == EnvStage::Off) continue;
-            v.stage = EnvStage::Release;
-            v.stageTime = 0.0;
-            v.releaseGain = v.currentGain;
-        }
+        releaseAllVoices();
     }
     // Idle voices let go of stretched buffers so evicted ones can be collected.
     for (auto& v : m_voices) {
@@ -372,8 +359,9 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
         if (!v.active && v.held) v.held.reset(); // a refcount drop: the retired list owns the buffer
     }
 
-    // Thread-safe access to sample data
-    auto currentData = m_data.load(std::memory_order_acquire);
+    // Thread-safe access to sample data: a lock-free pin held for the whole block.
+    const auto samplePin = m_rtData.readRealtime();
+    const std::shared_ptr<SampleData>& currentData = samplePin.shared();
     if (!currentData || currentData->data.empty())
         return;
 
@@ -451,6 +439,8 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
     // number of sounding voices does, and it was costing a square root and a
     // division on every sample of every block.
     float voiceComp = 1.0f;
+    const float voiceCompGlideCoeff =
+        static_cast<float>(1.0 - std::exp(-1.0 / std::max(1.0, kVoiceCompGlideSeconds * m_sampleRate)));
 
     // The compact list of sounding voices.
     //
@@ -481,6 +471,16 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
     rebuildActiveVoices();
 
     for (uint32_t i = 0; i < numFrames; ++i) {
+        // Rebuild before the events of this sample: the count has to describe the
+        // voices that were sounding when they arrived, otherwise a chord that starts
+        // from silence looks like a voice-count increase and the compensation glides
+        // down across its attack instead of being in place for it.
+        if (activeVoiceCountDirty) {
+            rebuildActiveVoices();
+            activeVoiceCountDirty = false;
+        }
+        const bool wasSilent = activeVoiceCount == 0;
+
         // Handle MIDI
         while (midiInput && eventIdx < eventCount) {
             const auto& e = midiInput->getEvent(eventIdx);
@@ -498,9 +498,18 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
         // Render Voices
         float L = 0.0f;
         float R = 0.0f;
+        // One-pole glide toward the current polyphony compensation (see
+        // kVoiceCompGlideSeconds); per sample, shared by every voice. Gliding keeps
+        // a release tail from stepping when the voice count changes under it. It
+        // must NOT glide up from unity when nothing was sounding: a chord's first
+        // samples would then sum uncompensated and overshoot by ~6 dB, so after
+        // silence the compensation snaps to its target.
+        m_voiceCompSmoothed += (voiceComp - m_voiceCompSmoothed) * voiceCompGlideCoeff;
         if (activeVoiceCountDirty) {
             rebuildActiveVoices();
             activeVoiceCountDirty = false;
+            if (wasSilent)
+                m_voiceCompSmoothed = voiceComp;
         }
 
         for (uint8_t vi = 0; vi < activeVoiceIndicesCount; ++vi) {
@@ -626,7 +635,12 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
                 );
             }
 
-            float gain = (v.velocity * v.velocity) * env * kSamplerOutputHeadroom * voiceComp;
+            // Velocity policy (#462, FD-64): gain = (velocity/127)^2, deliberately.
+            // The square gives a wider, more natural dynamic range than linear
+            // (vel 64 is 0.25x, -12 dB; vel 32 is 0.06x). It is a kept
+            // decision, not a leftover: changing it shifts the balance of every
+            // existing project. Pinned by SamplerVelocityCurveTest.
+            float gain = (v.velocity * v.velocity) * env * kSamplerOutputHeadroom * m_voiceCompSmoothed;
             L += outL * gain * v.gainL;
             R += outR * gain * v.gainR;
 
@@ -643,11 +657,46 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
     }
 }
 
+void SamplerPlugin::resetAllVoices() {
+    for (auto& v : m_voices) {
+        v.active = false;
+        v.stage = EnvStage::Off;
+        v.position = 0.0;
+        v.playbackRate = 1.0;
+        v.targetPlaybackRate = 1.0;
+        v.playbackDirection = 1;
+        v.glideActive = false;
+        v.stageTime = 0.0;
+        v.currentGain = 0.0f;
+        v.releaseGain = 0.0f;
+        v.ownData.reset(); // refcount drop only: the cache or GarbageCollector owns the buffer
+        v.held.reset();
+    }
+}
+
+void SamplerPlugin::releaseAllVoices() {
+    for (auto& v : m_voices) {
+        if (!v.active || v.stage == EnvStage::Release || v.stage == EnvStage::Off) continue;
+        v.stage = EnvStage::Release;
+        v.stageTime = 0.0;
+        v.releaseGain = v.currentGain;
+    }
+}
+
 void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseRate,
                                     const std::shared_ptr<SampleData>& currentData) {
     uint8_t status = event.data[0] & 0xF0;
     uint8_t note = event.data[1];
     uint8_t velocity = event.data[2];
+
+    // The engine's stop sends All Notes Off and its panic All Sound Off to every unit. Acting on
+    // them means a stop reaches this sampler even when the engine's own release request does not
+    // (a unit it has not seen yet). All Notes Off releases through the ADSR, like the request.
+    if (status == 0xB0) {
+        if (note == 123) releaseAllVoices();
+        else if (note == 120) resetAllVoices();
+        return;
+    }
 
     if (status == 0xA0) { // Per-note pan, sent just before the matching note-on
         m_pendingNotePan[note & 0x7F] = velocity; // 1..127, 64 = centre
@@ -698,14 +747,11 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
         // before the mono branch so a mono retrigger chokes the held voice
         // instead of gliding into it.
         if (m_cutSelfMode.load(std::memory_order_relaxed)) {
+            // Choked, not cut: each sounding voice fades over kDeclickSeconds.
+            // The old note is still gone almost at once (no audible overlap),
+            // without the step to zero that ticks on low sounds.
             for (auto& v : m_voices) {
-                if (v.active) {
-                    v.active = false;
-                    v.stage = EnvStage::Off;
-                    v.stageTime = 0.0;
-                    v.currentGain = 0.0f;
-                    v.releaseGain = 0.0f;
-                }
+                if (v.active) declickVoice(v);
             }
         }
 
@@ -719,6 +765,18 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
 
             auto& voice = m_voices[0];
             const bool legato = voice.active && voice.stage != EnvStage::Release && voice.stage != EnvStage::Off;
+            if (!legato && voice.active && voice.currentGain > 0.0f) {
+                // A mono restart reuses slot 0. Whatever is still sounding
+                // there (a release tail, a choked voice) moves to a free slot
+                // and fades out, instead of being overwritten mid-waveform.
+                for (size_t i = 1; i < m_voices.size(); ++i) {
+                    if (!m_voices[i].active) {
+                        m_voices[i] = voice;
+                        declickVoice(m_voices[i]);
+                        break;
+                    }
+                }
+            }
             voice.order = m_nextVoiceOrder++;
             voice.noteId = event.noteId; // the previous note no longer owns the voice; its note-off won't match
 
@@ -749,6 +807,7 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
                 voice.stage = EnvStage::Attack;
                 voice.stageTime = 0.0;
                 voice.currentGain = 0.0f;
+                voice.fadeSeconds = 0.0;
             }
             return;
         }
@@ -791,6 +850,23 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
             freeVoice = oldestRelease ? oldestRelease : oldestActive;
             if (!freeVoice)
                 freeVoice = &m_voices[0]; // Fallback
+            // Every configured slot is busy, so this one is about to be overwritten.
+            // Whatever is still sounding there fades out instead of being cut
+            // mid-waveform: park it in a spare slot outside the configured polyphony,
+            // exactly as a mono restart does. Without this, a one-voice cut-self
+            // retrigger still steps to zero in a single sample and ticks. Only for a
+            // voice with gain: a note-on that has not rendered yet would be parked
+            // silent, and it would still count toward the compensation and thin out
+            // the note that replaced it.
+            if (freeVoice->active && freeVoice->stage != EnvStage::Off && freeVoice->currentGain > 0.0f) {
+                for (size_t i = static_cast<size_t>(maxVoices); i < m_voices.size(); ++i) {
+                    if (!m_voices[i].active) {
+                        m_voices[i] = *freeVoice;
+                        declickVoice(m_voices[i]);
+                        break;
+                    }
+                }
+            }
         }
         freeVoice->order = m_nextVoiceOrder++;
         freeVoice->noteId = event.noteId;
@@ -803,6 +879,7 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
         freeVoice->ownData = keepBuffer;
         freeVoice->held.reset();
         freeVoice->position = startFrameFor(noteStartFrame);
+        freeVoice->fadeSeconds = 0.0;
         freeVoice->playbackRate = targetRate;
         freeVoice->targetPlaybackRate = targetRate;
         freeVoice->playbackDirection = 1;
@@ -834,6 +911,20 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
     }
 }
 
+void SamplerPlugin::declickVoice(Voice& v) {
+    if (!v.active || v.stage == EnvStage::Off) return;
+    // Already declicking: a second choke (a retrigger faster than the fade) must
+    // not restart the clock, or the tail can outlive its 4 ms window and keep
+    // counting toward the voice compensation. fadeSeconds > 0 only for a declick
+    // fade — an ADSR release leaves it 0 — so those still get converted.
+    if (v.stage == EnvStage::Release && v.fadeSeconds > 0.0) return;
+    // Fade from where the envelope is right now, never from a stale value.
+    v.releaseGain = v.currentGain;
+    v.stage = EnvStage::Release;
+    v.stageTime = 0.0;
+    v.fadeSeconds = kDeclickSeconds;
+}
+
 float SamplerPlugin::getEnvelopeLevel(Voice& v, double dt, float attack, float decay, float sustain, float release) {
     v.stageTime += dt;
 
@@ -859,14 +950,16 @@ float SamplerPlugin::getEnvelopeLevel(Voice& v, double dt, float attack, float d
     case EnvStage::Sustain:
         v.currentGain = sustain;
         break;
-    case EnvStage::Release:
-        if (v.stageTime >= release) {
+    case EnvStage::Release: {
+        const double length = v.fadeSeconds > 0.0 ? v.fadeSeconds : release;
+        if (v.stageTime >= length) {
             v.stage = EnvStage::Off;
             v.currentGain = 0.0f;
         } else {
-            v.currentGain = v.releaseGain * static_cast<float>(1.0 - v.stageTime / release);
+            v.currentGain = v.releaseGain * static_cast<float>(1.0 - v.stageTime / length);
         }
         break;
+    }
     case EnvStage::Off:
         v.currentGain = 0.0f;
         break;
@@ -1019,12 +1112,12 @@ bool SamplerPlugin::loadState(const std::vector<uint8_t>& state) {
         setGlideTimeMs(static_cast<float>(json["glideTimeMs"].asNumber()));
     }
 
+    // A path the check refuses (absolute, traversal, URL) is not opened, but it no longer fails the whole state:
+    // every save writes the sample as an absolute path, so failing here reset every unit's settings on reopen (#998).
+    // The unit's own audioClipPath restores the sample instead (UnitManager::loadFromJSON).
     if (json.has("samplePath")) {
         std::string path = json["samplePath"].asString();
-        if (!path.empty()) {
-            if (!isSafeSamplerStatePath(path)) {
-                return false;
-            }
+        if (!path.empty() && isSafeSamplerStatePath(path)) {
             loadSample(path);
         }
     }

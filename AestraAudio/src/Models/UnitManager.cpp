@@ -274,6 +274,7 @@ void UnitManager::publishSnapshot() {
         snapshot->units.push_back(state);
     }
 
+    m_realtimeSnapshot.publish(snapshot);
     // Retire old snapshot through GC so the audio thread never dereferences freed memory.
     auto old = m_publishedSnapshot.exchange(snapshot, std::memory_order_acq_rel);
     if (old) {
@@ -935,6 +936,7 @@ void UnitManager::loadFromJSON(const JSON& json) {
                 // Load state BEFORE activation to ensure plugin is ready before processing audio.
                 // This matches EffectChain lifecycle: create -> initialize -> loadState -> activate.
                 bool stateLoaded = true;
+                const bool hadSavedState = !unit.pluginState.empty();
                 const bool samplerStateIncludesSamplePath = samplerStateHasSamplePath(unit.pluginState);
                 if (!unit.pluginState.empty()) {
                     if (!unit.plugin->loadState(unit.pluginState)) {
@@ -946,8 +948,13 @@ void UnitManager::loadFromJSON(const JSON& json) {
 
                 // Older project saves kept the sampler file only in UnitInfo::audioClipPath.
                 // Rehydrate that path so restored MIDI has sample data even when pluginState lacks samplePath.
-                if (!unit.audioClipPath.empty() && (!samplerStateIncludesSamplePath || !stateLoaded)) {
-                    if (auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unit.plugin)) {
+                // Also when the state named a path the sampler would not open (an absolute one, which is what every
+                // save writes): the settings came back, the sample comes from audioClipPath (#998).
+                auto restoredSampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unit.plugin);
+                const bool samplerHasNoSample = restoredSampler && !restoredSampler->hasSample();
+                if (!unit.audioClipPath.empty() &&
+                    (!samplerStateIncludesSamplePath || !stateLoaded || samplerHasNoSample)) {
+                    if (auto sampler = restoredSampler) {
                         if (sampler->loadSample(unit.audioClipPath)) {
                             unit.pluginState = sampler->saveState();
                         } else {
@@ -961,7 +968,10 @@ void UnitManager::loadFromJSON(const JSON& json) {
                     unit.plugin->activate();
                 }
 
-                applySamplerDefaultsForUnitType(unit);
+                // Type defaults (mono and glide for a pitched sampler) only when nothing was restored: applied after a
+                // good load they overwrote the saved mode on every reopen (#998).
+                if (!hadSavedState || !stateLoaded)
+                    applySamplerDefaultsForUnitType(unit);
             }
         }
 

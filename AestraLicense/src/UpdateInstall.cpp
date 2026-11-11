@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <vector>
@@ -18,6 +19,7 @@
 #else
 #include <fcntl.h>
 #include <spawn.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #ifdef __APPLE__
@@ -88,8 +90,16 @@ bool runProgram(const std::vector<std::string>& args, int* exitCode) {
     std::vector<char*> argv;
     for (const auto& a : args) argv.push_back(const_cast<char*>(a.c_str()));
     argv.push_back(nullptr);
+    // #1267: no PATH lookup and none of the app's environment. args[0] is an absolute, root-owned program
+    // (tarProgram), and it runs with only what it needs: GNU tar reads TAR_OPTIONS on every run, and a hostile one
+    // (--to-command, -I) would execute code while unpacking a signed update.
+    std::vector<std::string> envStore = {"PATH=/usr/bin:/bin", "LC_ALL=C"};
+    if (const char* tmp = std::getenv("TMPDIR")) envStore.push_back(std::string("TMPDIR=") + tmp);
+    std::vector<char*> envp;
+    for (auto& e : envStore) envp.push_back(e.data());
+    envp.push_back(nullptr);
     pid_t pid = 0;
-    if (posix_spawnp(&pid, argv[0], nullptr, nullptr, argv.data(), environ) != 0) return false;
+    if (posix_spawn(&pid, argv[0], nullptr, nullptr, argv.data(), envp.data()) != 0) return false;
     int status = 0;
     if (waitpid(pid, &status, 0) < 0) return false;
     *exitCode = WIFEXITED(status) ? WEXITSTATUS(status) : 1;
@@ -104,7 +114,14 @@ std::string tarProgram() {
     const DWORD n = GetEnvironmentVariableA("SystemRoot", root, MAX_PATH);
     return n > 0 && n < MAX_PATH ? std::string(root) + "\\System32\\tar.exe" : std::string("tar.exe");
 #else
-    return "tar";
+    // #1267: an absolute tar that only root can change, never whichever "tar" comes first on PATH.
+    for (const char* candidate : {"/usr/bin/tar", "/bin/tar"}) {
+        struct stat st {};
+        if (stat(candidate, &st) == 0 && S_ISREG(st.st_mode) && st.st_uid == 0 && (st.st_mode & S_IXUSR) != 0 &&
+            (st.st_mode & (S_IWGRP | S_IWOTH)) == 0)
+            return candidate;
+    }
+    return {};
 #endif
 }
 
@@ -234,7 +251,9 @@ bool extractUpdatePackage(const std::string& packagePath, const std::string& sta
     if (ec) return bad("cannot create the staging folder");
 
     int code = 0;
-    if (!runProgram({tarProgram(), "-xf", packagePath, "-C", stagingDir}, &code)) return bad("cannot start tar to unpack the update");
+    const std::string tar = tarProgram();
+    if (tar.empty()) return bad("no trusted tar (/usr/bin/tar or /bin/tar, owned by root) to unpack the update");
+    if (!runProgram({tar, "-xf", packagePath, "-C", stagingDir}, &code)) return bad("cannot start tar to unpack the update");
     if (code != 0) return bad("the update package could not be unpacked");
 
     // Nothing may have landed outside the folder, and nothing may be a link: a link in a package can point anywhere.

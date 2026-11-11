@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <chrono>
 #include <iostream>
+#include <random>
+#include <thread>
 
 namespace Aestra {
 namespace MuseAgent {
@@ -61,11 +63,26 @@ const char* schemaTypeName(const std::string& museType) {
 
 AgentLoop::AgentLoop(ModelProvider& provider, Transport transport, Options options)
     : m_provider(provider), m_transport(std::move(transport)), m_options(options) {
-    m_askUser = [](const std::string& question) {
+    // Default relay: the terminal, but bounded by the run's time budget so an
+    // absent user cannot hold the process open, and honest when nobody can answer.
+    m_askUser = [this](const std::string& question) {
         std::cerr << "\n[muse-agent asks] " << question << "\n> " << std::flush;
+        const auto left = std::chrono::duration_cast<std::chrono::milliseconds>(
+                              m_deadline - std::chrono::steady_clock::now())
+                              .count();
         std::string answer;
-        std::getline(std::cin, answer);
-        return answer;
+        switch (m_lineReader.readLine(answer, std::max<long long>(0, left))) {
+        case LineReader::Result::Line:
+            return answer;
+        case LineReader::Result::Eof:
+            return std::string("No interactive user is available (input is closed). Do not ask "
+                               "again; make the creative choice yourself and say so in your "
+                               "finish summary.");
+        case LineReader::Result::TimedOut:
+            break;
+        }
+        return std::string("The user did not answer before the time budget ran out. Wrap up "
+                           "and call finish.");
     };
 }
 
@@ -199,14 +216,35 @@ std::vector<ToolDefinition> AgentLoop::buildTools(const std::string& manifestJso
     return tools;
 }
 
+namespace {
+
+// Spreads simultaneous clients' retries apart; not security-sensitive.
+double jitterSource() {
+    static thread_local std::mt19937 generator{std::random_device{}()};
+    return std::uniform_real_distribution<double>(0.0, 1.0)(generator);
+}
+
+} // namespace
+
 AgentLoop::Outcome AgentLoop::run(const std::string& brief) {
     Outcome outcome;
     const auto deadline = std::chrono::steady_clock::now() +
                           std::chrono::seconds(m_options.maxSeconds);
+    m_deadline = deadline;
+    // Tell the transport how long it may block before every Muse request.
+    const auto sendToMuse = [&](const std::string& line) {
+        if (m_budgetHook) {
+            const auto left = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                  deadline - std::chrono::steady_clock::now())
+                                  .count();
+            m_budgetHook(std::max<long long>(1, left));
+        }
+        return m_transport(line);
+    };
 
     // Bootstrap the tool manifest over the wire.
     const std::string schemaResponse =
-        m_transport("{\"id\": 0, \"verb\": \"get_schema\"}");
+        sendToMuse("{\"id\": 0, \"verb\": \"get_schema\"}");
     std::string manifestJson;
     try {
         JSON parsed = JSON::parse(schemaResponse);
@@ -249,14 +287,52 @@ AgentLoop::Outcome AgentLoop::run(const std::string& brief) {
         // The remaining budget becomes the transport deadline, so a hung
         // provider cannot blow past --max-seconds. remaining >= 1 here (the
         // truncated-to-seconds check above already returned at <= 0).
-        request.timeoutSeconds = static_cast<int>(remaining);
-        const ModelResponse response = m_provider.complete(request);
-        outcome.usage.inputTokens += response.usage.inputTokens;
-        outcome.usage.outputTokens += response.usage.outputTokens;
+        ModelResponse response;
+        int attempts = 0;
+        std::string budgetNote;
+        for (;;) {
+            const auto left = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                  deadline - std::chrono::steady_clock::now())
+                                  .count();
+            // At least one second, so a nearly-spent budget still gets a valid timeout.
+            request.timeoutSeconds = static_cast<int>(std::max<long long>(1, left / 1000));
+            response = m_provider.complete(request);
+            ++attempts;
+            outcome.usage.inputTokens += response.usage.inputTokens;
+            outcome.usage.outputTokens += response.usage.outputTokens;
+
+            if (response.stopReason != StopReason::Error ||
+                !isTransientFailure(response.transportFailure, response.httpStatus) ||
+                attempts >= m_options.retry.maxAttempts) {
+                break;
+            }
+            const long delayMs = retryDelayMs(m_options.retry, attempts, response.retryAfterSeconds,
+                                              jitterSource());
+            const auto leftAfter = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                       deadline - std::chrono::steady_clock::now())
+                                       .count();
+            if (delayMs >= leftAfter) {
+                budgetNote = "; not retrying: the " + std::to_string(delayMs / 1000) +
+                             "s wait would exceed the time budget";
+                break;
+            }
+            std::cerr << "[muse-agent] provider failed (" << response.error << "); retry "
+                      << attempts << "/" << (m_options.retry.maxAttempts - 1) << " in "
+                      << delayMs << " ms\n";
+            if (m_sleeper) m_sleeper(delayMs);
+            else std::this_thread::sleep_for(std::chrono::milliseconds(delayMs));
+        }
 
         if (response.stopReason == StopReason::Error) {
             outcome.stopReason = "provider_error";
             outcome.summary = response.error;
+            if (attempts > 1 || !budgetNote.empty()) {
+                outcome.summary += " (after " + std::to_string(attempts) + " attempts";
+                if (response.httpStatus != 0) {
+                    outcome.summary += ", last HTTP status " + std::to_string(response.httpStatus);
+                }
+                outcome.summary += budgetNote + ")";
+            }
             return outcome;
         }
         if (response.stopReason == StopReason::Refusal) {
@@ -339,7 +415,7 @@ AgentLoop::Outcome AgentLoop::run(const std::string& brief) {
                 museRequest.set("args", arguments);
             }
             const std::string museLine = museRequest.toString();
-            const std::string museResponse = m_transport(museLine);
+            const std::string museResponse = sendToMuse(museLine);
             if (m_options.verbose) {
                 std::cerr << "[muse] " << museLine << "\n       " << museResponse << "\n";
             }
@@ -353,6 +429,14 @@ AgentLoop::Outcome AgentLoop::run(const std::string& brief) {
                 result.isError = true;
             }
             request.messages.push_back(result);
+
+            // A slow call can spend the whole budget; do not start the next one.
+            if (std::chrono::steady_clock::now() >= deadline) {
+                outcome.stopReason = "max_seconds";
+                outcome.summary = "time budget exhausted during turn " +
+                                  std::to_string(outcome.iterations);
+                return outcome;
+            }
         }
     }
 

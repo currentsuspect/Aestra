@@ -77,6 +77,22 @@ Reversal:   —
 
 None
 
+## Flow check
+
+<!-- Required for UI, editor and Muse changes; delete this section for anything
+     else. FD-67: "It understands you" (philosophy.md).
+
+     Does this ask the producer for anything it could already tell from what
+     they are doing? Answer in one line.
+
+       "No: the snap follows the zoom, the menu stays for overrides"   <- answer
+       "The user picks the key first"   <- a finding: could the notes tell it?
+
+     And where it acts on a guess: is the guess visible, is one undo enough,
+     and does the producer's choice win? -->
+
+-
+
 ## Docs Updated?
 
 - [ ] Yes

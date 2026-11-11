@@ -5,7 +5,10 @@
 #include "NUIScrollbar.h" // Include Scrollbar
 #include "../Platform/NUICursorStyle.h"
 #include "../Core/NUIHoverCursorClaim.h"
+#include <algorithm>
 #include <array>
+#include <cmath>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -24,6 +27,37 @@ using PianoRollTool = GlobalTool;
 // -----------------------------------------------------------------------------
 // PianoRollKeyLane: The vertical keyboard on the left
 // -----------------------------------------------------------------------------
+/// One chord the harmony service found (FD-63, V83-HS1), as the piano roll draws it. AestraUI does not depend on the
+/// audio library, so the panel converts its timeline into these.
+struct PianoRollChord {
+    double startBeat = 0.0;
+    double endBeat = 0.0;
+    std::string name;     ///< "Dm", "F/A"
+    std::string roman;    ///< "i", "VI"; empty without a key
+    int root = -1;        ///< pitch class
+    uint16_t toneMask = 0; ///< bit n set when pitch class n is a chord tone
+    bool userSet = false;
+};
+
+/// The key the harmony service detected, shown when the producer has not set one.
+struct PianoRollKeyGuess {
+    bool valid = false;
+    int tonic = 0;
+    bool minor = false;
+};
+
+/// Muse in the piano roll (FD-63). v0.8.3 ships Quiet and Off; On (ideas drawn without asking) comes with learning.
+enum class MuseMode : uint8_t { Off, Quiet };
+
+/// One next-bar idea from Muse, as notes to preview and keep.
+struct PianoRollIdea {
+    std::string label;          ///< "Answer bar 2, a step up"
+    std::vector<MidiNote> notes; ///< absolute beats, inside the idea's bar
+};
+
+/// "A4 = 3rd of F": what a pitch is in a chord, or empty when it is not one of its tones.
+std::string chordToneRole(int pitch, const PianoRollChord& chord);
+
 class PianoRollKeyLane : public NUIComponent {
 public:
     /** @brief Create the vertical piano-key lane. */
@@ -91,8 +125,17 @@ public:
 
     /** Seconds a key takes to ease back to rest after its note stops playing. */
     static constexpr float kPlayReleaseSeconds = 0.16f;
+    /** @brief The key and scale, so each key in it shows its scale degree (FD-63). */
+    void setScale(int rootKey, ScaleType scaleType) {
+        if (rootKey_ == rootKey && scaleType_ == scaleType) return;
+        rootKey_ = rootKey;
+        scaleType_ = scaleType;
+        repaint();
+    }
 
 private:
+    int rootKey_ = 0;
+    ScaleType scaleType_ = ScaleType::Chromatic;
     float keyHeight_;
     float scrollY_;
     int hoveredKey_; // -1 if none
@@ -131,6 +174,8 @@ public:
     /** @brief Set the current playhead beat displayed in the minimap. */
     void setPlayheadBeat(double beat);
     /** @brief Replace the note spans rendered inside the minimap. */
+    /** @brief The unit's colour, so the overview's notes match the grid's (FD-63). */
+    void setNoteColor(const NUIColor& color) { noteColor_ = color; repaint(); }
     void setNotes(const std::vector<MidiNote>& notes);
     
     // Callbacks
@@ -139,6 +184,7 @@ public:
 private:
     void updateHoverCursor(const NUIMouseEvent& event);
 
+    NUIColor noteColor_ = NUIColor(0.55f, 0.6f, 0.7f, 1.0f);
     std::vector<MidiNote> notes_;
     double startBeat_ = 0.0;
     double viewDuration_ = 4.0;
@@ -208,7 +254,13 @@ public:
         repaint();
     }
 
+    /** @brief Quiet mode's mark (FD-63): a violet dot on the bar an idea is ready for; a negative beat hides it. */
+    void setMuseMark(double barStartBeat) { if (museMarkBeat_ == barStartBeat) return; museMarkBeat_ = barStartBeat; repaint(); }
+    /** @brief The chords to name under the bar numbers (FD-63 harmony ruler). */
+    void setChords(const std::vector<PianoRollChord>* chords) { chords_ = chords; repaint(); }
 private:
+    double museMarkBeat_ = -1.0;
+    const std::vector<PianoRollChord>* chords_ = nullptr; ///< owned by the view
     float scrollX_; // REORDERED
     float pixelsPerBeat_; // REORDERED
     int beatsPerBar_;
@@ -269,6 +321,8 @@ public:
     void setGrid(std::shared_ptr<PianoRollGrid> grid);
     /** @brief Bind the note layer controlled by the toolbar tools. */
     void setNoteLayer(std::shared_ptr<PianoRollNoteLayer> notes); // To set tools directly
+    /** @brief Bind the key lane, which labels the scale's keys with their degrees. */
+    void setKeyLane(std::shared_ptr<PianoRollKeyLane> keys) { keys_ = std::move(keys); }
     void setPatternLengthBeats(double beats);
     /** @brief The editing unit's colour, shown as a chip beside the unit name. */
     void setUnitColor(const NUIColor& color) { m_unitColor = color; repaint(); }
@@ -327,7 +381,40 @@ private:
     std::shared_ptr<NUIButton> m_lengthUpBtn;
     std::shared_ptr<NUIButton> m_followBtn;
     std::shared_ptr<NUIButton> m_centerBtn;
-    std::shared_ptr<NUIButton> m_scaleBtn;   // SCALE value: opens the root/scale/snap-to-scale menu
+    std::shared_ptr<NUIButton> m_scaleBtn;   // Key value: opens the root/scale/snap-to-scale menu
+    // FD-63 header (board A + C): the pattern and unit as a breadcrumb, Snap as a value box. Each opens a menu.
+    std::shared_ptr<NUIButton> m_patternCrumbBtn;
+    std::shared_ptr<NUIButton> m_unitCrumbBtn;
+    std::shared_ptr<NUIButton> m_snapBtn;
+    void openChoiceMenu(const NUIRect& anchor, const std::vector<PatternChoice>& choices, int selected,
+                        const std::string& group, std::function<void(int)> onPick);
+    void openSnapMenu();
+    // FD-66 Smart Snap: on by default; the view reports every zoom, and the snap follows it until the producer picks
+    // a fixed snap from the menu. Picking Smart again hands it back to the zoom.
+    bool m_smartSnap = true;
+    PianoRollKeyGuess m_detectedKey;
+    MuseMode m_museMode = MuseMode::Quiet; // FD-68: experienced producers start Quiet, never Off
+    std::shared_ptr<NUIButton> m_museQuietBtn;
+    std::shared_ptr<NUIButton> m_museOffBtn;
+    std::function<void(MuseMode)> onMuseModeChanged_;
+    void pushDisplayScale(); ///< grid and keys show the set key, or the detected one when none is set
+    float m_smartPixelsPerBeat = 66.0f;
+    int m_smartBeatsPerBar = 4;
+    void setSnapNow(SnapGrid snap); ///< grid, notes and display, without changing who chose it
+public:
+    void setZoomForSmartSnap(float pixelsPerBeat, int beatsPerBar);
+    bool isSmartSnap() const { return m_smartSnap; }
+    void setSmartSnap(bool on);
+    SnapGrid getSnap() const { return m_currentSnap; }
+    /** @brief Muse's mode in the header switch (FD-63); the callback fires on the producer's change. */
+    void setMuseMode(MuseMode mode) { if (m_museMode == mode) return; m_museMode = mode; repaint(); }
+    MuseMode getMuseMode() const { return m_museMode; }
+    void setOnMuseModeChanged(std::function<void(MuseMode)> cb) { onMuseModeChanged_ = std::move(cb); }
+    /** @brief The key the notes suggest; shown, and used for the rows and degrees, while no key is set (FD-67). */
+    void setDetectedKey(const PianoRollKeyGuess& key);
+    /** @brief A fixed snap, as if picked from the menu: Smart Snap steps aside. */
+    void chooseSnap(SnapGrid snap) { applySnap(snap); }
+private:
     NUIColor m_unitColor = NUIColor(0.55f, 0.6f, 0.7f, 1.0f);
     std::shared_ptr<NUIDropdown> m_patternDropdown;
     std::shared_ptr<NUIDropdown> m_unitDropdown;
@@ -350,6 +437,7 @@ private:
 
     std::weak_ptr<PianoRollGrid> grid_;
     std::weak_ptr<PianoRollNoteLayer> notes_;
+    std::weak_ptr<PianoRollKeyLane> keys_;
     
     std::shared_ptr<NUIComponent> m_activeContextMenu;
     std::function<void(int barsDelta)> onAdjustPatternLength_;
@@ -430,7 +518,10 @@ public:
     /** @brief Beat span the grid renders subdivisions at for the active snap. */
     double getSnapSubdivisionBeats() const { return MusicTheory::getSnapDuration(snap_); }
 
+    /** @brief The chords whose tones are banded across their span (FD-63 chord-tone rows). */
+    void setChords(const std::vector<PianoRollChord>* chords) { chords_ = chords; repaint(); }
 private:
+    const std::vector<PianoRollChord>* chords_ = nullptr; ///< owned by the view
     float pixelsPerBeat_;
     float keyHeight_;
     float scrollX_;
@@ -455,6 +546,9 @@ private:
 
 class NUIPlatformBridge;
 
+/// The per-note values the lane under the piano roll edits (FD-63 adds Chance and Ratchet).
+enum class NoteLaneField : uint8_t { Velocity, Chance, Ratchet, Pan };
+
 // -----------------------------------------------------------------------------
 // PianoRollNoteLayer: Handles Rendering and Editing of Notes
 // Contains Logic for: Painting, Selecting, Moving, Resizing
@@ -463,6 +557,7 @@ class PianoRollNoteLayer : public NUIComponent {
 public:
     /// The unit being edited gives its notes their colour (flat and opaque, FD-48).
     void setNoteColor(const NUIColor& color) { if (noteColor_.r == color.r && noteColor_.g == color.g && noteColor_.b == color.b) return; noteColor_ = color; repaint(); }
+    const NUIColor& getNoteColor() const { return noteColor_; }
 
     struct GhostPattern {
         /** @brief Notes rendered as a ghost overlay. */
@@ -484,17 +579,36 @@ public:
 
     /** @brief Replace the currently edited note list. */
     void setNotes(const std::vector<MidiNote>& notes);
-    /// One note's velocity or pan, edited in place: no copy of the list and no re-sort, so a lane drag costs the same on a
-    /// thousand notes as on ten, and notes that start together (a chord) keep their order under the dragged index.
-    bool setLaneValue(int index, bool pan, float value) {
+    /// One note's lane value (velocity, chance, ratchet or pan), edited in place: no copy of the list and no re-sort, so
+    /// a lane drag costs the same on a thousand notes as on ten, and notes that start together (a chord) keep their order
+    /// under the dragged index.
+    bool setLaneValue(int index, NoteLaneField field, float value) {
         if (index < 0 || static_cast<size_t>(index) >= notes_.size()) return false;
-        (pan ? notes_[index].pan : notes_[index].velocity) = value;
+        auto& n = notes_[static_cast<size_t>(index)];
+        switch (field) {
+        case NoteLaneField::Velocity: n.velocity = value; break;
+        case NoteLaneField::Chance: n.chance = std::clamp(value, 0.0f, 1.0f); break;
+        case NoteLaneField::Ratchet: n.ratchet = static_cast<uint8_t>(std::clamp(static_cast<int>(std::lround(value)), 1, 4)); break;
+        case NoteLaneField::Pan: n.pan = value; break;
+        }
         lastCommitWasVelocityScrub_ = false;
         repaint();
         return true;
     }
     /** @brief Get the currently edited note list. */
     const std::vector<MidiNote>& getNotes() const { return notes_; }
+    /// Add notes as one committed edit, selected, the rest deselected (a kept Muse idea is one undo step, FD-63).
+    void appendNotes(const std::vector<MidiNote>& added) {
+        if (added.empty()) return;
+        for (auto& n : notes_) n.selected = false;
+        for (MidiNote n : added) {
+            n.selected = true;
+            n.isDeleted = false;
+            notes_.push_back(n);
+        }
+        commitNotes();
+        repaint();
+    }
     
     /** @brief Set ghost patterns rendered behind the active notes. */
     void setGhostPatterns(const std::vector<GhostPattern>& ghosts);
@@ -811,7 +925,7 @@ private:
 class PianoRollControlPanel : public NUIComponent {
 public:
     /** @brief Which per-note property the lane draws and edits. */
-    enum class LaneMode : uint8_t { Velocity, Pan };
+    using LaneMode = NoteLaneField;
 
     PianoRollControlPanel();
 
@@ -953,8 +1067,30 @@ public:
     /** @brief One-shot "center on playhead" (no continuous following). */
     void setOnCenterOnPlayhead(std::function<void()> cb);
     void centerOnPlayhead();
+    /** @brief Scroll so the highest note sits just under the top (FD-63: done when a pattern opens). */
+    void frameNotesVertically();
 
     void setPixelsPerBeat(float ppb);
+    /** @brief Muse's next-bar ideas (FD-63 Quiet): a dot on the ruler; Tab previews, Tab keeps, ⇧Tab next, Esc drops. */
+    void setMuseIdeas(double barStartBeat, std::vector<PianoRollIdea> ideas);
+    void clearMuseIdeas();
+    const std::vector<PianoRollIdea>& getMuseIdeas() const { return m_ideas; }
+    int getPreviewedIdea() const { return m_previewIdea; }
+    void previewIdea(int index);
+    bool keepPreviewedIdea();
+    void setMuseMode(MuseMode mode);
+    MuseMode getMuseMode() const;
+    void setOnMuseModeChanged(std::function<void(MuseMode)> cb) { m_onMuseModeChanged = std::move(cb); }
+    /** @brief What the harmony service found in this pattern: chords for the ruler and the grid, and the key. */
+    void setHarmony(std::vector<PianoRollChord> chords, const PianoRollKeyGuess& key);
+    const std::vector<PianoRollChord>& getChords() const { return m_chords; }
+    int getBeatsPerBar() const { return m_beatsPerBar; }
+    /** @brief A fixed snap, as if picked from the menu (Smart Snap steps aside); see FD-66. */
+    void setSnap(SnapGrid snap);
+    /** @brief Hand the snap back to the zoom (FD-66 Smart Snap, the default). */
+    void setSmartSnap(bool on);
+    SnapGrid getSnap() const;
+    bool isSmartSnap() const;
     void setBeatsPerBar(int bpb);
     /** @brief Scrollable domain end in beats (16-bar empty floor, dynamic with
      *  content — Track Manager parity). */
@@ -978,6 +1114,16 @@ private:
     std::shared_ptr<PianoRollGrid> m_grid;
     std::shared_ptr<PianoRollNoteLayer> m_notes;
     std::shared_ptr<PianoRollControlPanel> m_controls;
+    std::shared_ptr<class PianoRollInspector> m_inspector; // FD-63: the selection column at the right
+    int m_statusPitch = -1; ///< the key under the pointer, for the status line
+    std::vector<PianoRollChord> m_chords; ///< the ruler and grid point at this
+    std::vector<PianoRollIdea> m_ideas;   ///< Muse's ideas for the bar at m_ideaBar
+    double m_ideaBar = -1.0;
+    int m_previewIdea = -1;               ///< the idea drawn dashed in the grid, or -1
+    std::function<void(MuseMode)> m_onMuseModeChanged;
+    void renderMusePreview(NUIRenderer& renderer);
+    void syncMuseSurfaces();              ///< ruler dot, inspector list
+    void renderStatusLine(NUIRenderer& renderer);
     std::shared_ptr<PianoRollMinimap> m_minimap;
     std::optional<std::pair<double, double>> m_loopZone;
     std::function<void(std::optional<std::pair<double, double>>)> m_onLoopZoneChanged;
@@ -994,7 +1140,7 @@ private:
     float m_rulerHeight;
     // Spec 2 §6: the velocity/pan lane was 116px of mostly empty space under the
     // grid. Still splitter-resizable; this is only where it starts.
-    float m_controlPanelHeight = 88.0f;
+    float m_controlPanelHeight = 132.0f; // FD-63 board A + C: Velocity, Chance, Ratchet and Pan
     
     float m_pixelsPerBeat;
     float m_keyHeight;

@@ -145,6 +145,37 @@ ProjectSerializer::LoadResult AestraApp::openProjectFromPath(const std::string& 
 
 // --- The verbs ---------------------------------------------------------------
 
+// Save a Copy: the file picked gets the project as it is now, and the document stays where it was (same file, same
+// saved or unsaved state, same autosave). Choosing the open file itself is an ordinary Save.
+void AestraApp::saveProjectCopy() {
+    Aestra::IPlatformUtils::SaveFileDialogOptions options;
+    options.title = "Save a Copy";
+    options.filter =
+        std::string("Aestra Project\0*.aes\0All Files\0*.*\0", sizeof("Aestra Project\0*.aes\0All Files\0*.*\0") - 1);
+    const std::string current = m_documentState.canonicalPath();
+    if (!current.empty()) {
+        const std::filesystem::path p(current);
+        options.defaultPath = (p.parent_path() / (p.stem().string() + " copy.aes")).string();
+    }
+    options.defaultExtension = "aes";
+
+    const bool started =
+        pickFileAsync([options](Aestra::IPlatformUtils& utils) { return utils.saveFileDialog(options); },
+                      [this](const std::string& pickedPath) {
+                          if (pickedPath.empty())
+                              return;
+                          const bool ok = pickedPath == m_documentState.canonicalPath()
+                                              ? saveProject()
+                                              : saveProjectToPath(pickedPath, false);
+                          if (ok)
+                              Log::info("Project copy saved: " + pickedPath);
+                          else
+                              Log::warning("Could not save a copy to " + pickedPath);
+                      });
+    if (!started)
+        Log::warning("Cannot save a copy: a file picker is already open or the platform layer is unavailable");
+}
+
 void AestraApp::registerMuseProjectVerbs(Aestra::Audio::MuseService& service) {
     const auto registerOrLog = [&service](HostVerbSpec spec, HostVerbHandler handler) {
         std::string error;
@@ -166,17 +197,23 @@ void AestraApp::registerMuseProjectVerbs(Aestra::Audio::MuseService& service) {
         spec.domain = HostVerbDomain::Project;
         spec.affinity = HostThreadAffinity::HostUiThread;
         spec.mutates = true;
-        spec.description =
-            "Save the project to disk. With 'path', write there and make it the "
-            "project's canonical location. Without one, save to the current "
-            "canonical path, which fails for a project that has never been saved. "
-            "Returns the path written and whether it is now the canonical path.";
+        spec.description = "Save the project to disk. With 'path', write there and make it the "
+                           "project's canonical location. Without one, save to the current "
+                           "canonical path, which fails for a project that has never been saved. "
+                           "Returns the path written and whether it is now the canonical path. "
+                           "With 'copy': true, write 'path' as a copy and stay on the open project.";
         HostVerbArg path;
         path.name = "path";
         path.type = FlagType::String;
         path.required = false;
         path.description = "Absolute or relative project file path (.aes). Omit to re-save in place.";
         spec.args.push_back(path);
+        HostVerbArg copy;
+        copy.name = "copy";
+        copy.type = FlagType::Bool;
+        copy.required = false;
+        copy.description = "Save a Copy: write 'path' and keep the open project where it is.";
+        spec.args.push_back(copy);
 
         registerOrLog(std::move(spec), [this](const JSON& args) -> HostVerbResult {
             const bool wantsPath = args.has("path") && args["path"].isString() &&
@@ -208,10 +245,16 @@ void AestraApp::registerMuseProjectVerbs(Aestra::Audio::MuseService& service) {
                     "the project now open); pass an explicit 'path' to save elsewhere");
             }
 
+            // copy:true is Save a Copy: write the named file, stay on the open one.
+            const bool copy = args.has("copy") && args["copy"].isBool() && args["copy"].asBool();
+            if (copy && (!wantsPath || target == m_documentState.canonicalPath())) {
+                return HostVerbResult::failure("copy_needs_path",
+                                               "a copy needs an explicit 'path' other than the open project's file");
+            }
             // establishCanonical only when the caller named a path: re-saving in
             // place must not re-point the document at itself, which is the
             // caller's decision to make, not a side effect of a verb.
-            const bool established = saveProjectToPath(target, wantsPath);
+            const bool established = saveProjectToPath(target, wantsPath && !copy);
             if (!established) {
                 return HostVerbResult::failure("save_failed",
                                                "the project could not be written to " + target);
@@ -219,6 +262,8 @@ void AestraApp::registerMuseProjectVerbs(Aestra::Audio::MuseService& service) {
 
             JSON result = JSON::object();
             result.set("path", JSON(m_documentState.canonicalPath()));
+            if (copy)
+                result.set("copy", JSON(target));
             result.set("untitled", JSON(m_documentState.canonicalPath().empty()));
             return HostVerbResult::success(result);
         });

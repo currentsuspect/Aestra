@@ -94,6 +94,26 @@ void AestraPanelWindow::cacheThemeColors()
     m_closeActive = theme.getColor("error");
 }
 
+void AestraPanelWindow::setTitleAccessory(std::shared_ptr<PanelTitleAccessory> accessory)
+{
+    m_accessory = std::move(accessory);
+    setDirty(true);
+}
+
+bool AestraPanelWindow::routeKeyToAccessory(const NUIKeyEvent& event)
+{
+    if (!m_accessory || !m_accessory->wantsKeys() || !isVisible()) return false;
+    const bool used = m_accessory->onKeyEvent(event);
+    if (used) setDirty(true);
+    return used;
+}
+
+bool AestraPanelWindow::onKeyEvent(const NUIKeyEvent& event)
+{
+    if (routeKeyToAccessory(event)) return true;
+    return NUIComponent::onKeyEvent(event);
+}
+
 void AestraPanelWindow::setPanelTitle(const std::string& title)
 {
     m_title = title;
@@ -162,6 +182,9 @@ void AestraPanelWindow::drawTitleBar(NUIRenderer& renderer)
         renderer.drawTextCentered(m_badgeText, badgeRect, 11.0f, theme.getColor("success"));
     }
 
+    if (m_accessory && b.width >= m_accessory->minimumWidth())
+        m_accessory->render(renderer, {b.x, b.y, b.width - 32.0f, TITLE_BAR_H});
+
     // Close button — right-aligned at x=width-28
     NUIRect closeBtn{b.right() - 28.0f, b.y + 4.0f, 24.0f, 24.0f};
     if (m_closeHovered || m_closePressed) {
@@ -193,6 +216,7 @@ void AestraPanelWindow::onRender(NUIRenderer& renderer)
 
     // Title bar on top of content
     drawTitleBar(renderer);
+    if (m_accessory && b.width >= m_accessory->minimumWidth()) m_accessory->renderOverlay(renderer, b);
 
     // Border stroke on top of everything
     renderer.strokeRoundedRect(b, kRadius, 1.0f, m_border);
@@ -201,6 +225,13 @@ void AestraPanelWindow::onRender(NUIRenderer& renderer)
 bool AestraPanelWindow::onMouseEvent(const NUIMouseEvent& event)
 {
     auto b = getBounds();
+
+    // The accessory's popover floats over the content and may reach past the panel: it sees the pointer first.
+    if (m_accessory && b.width >= m_accessory->minimumWidth() && m_accessory->onMouseEvent(event)) {
+        if (m_accessory->wantsKeys()) setFocused(true); // so typed characters reach the browser or Save form
+        setDirty(true);
+        return true;
+    }
 
     // Close on outside click
     if (m_closeOnOutsideClick && event.pressed && event.button == NUIMouseButton::Left

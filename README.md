@@ -69,7 +69,13 @@ muse render_pattern --pattern 1 --file /tmp/loop.wav
 muse get_schema --result           # every verb, its flags, and the semantics
 ```
 
-`muse` talks to a running app or to a headless `MuseRepl --port N`. The surface covers
+`muse` talks to a running app or to a headless `MuseRepl --port N`. The socket listens on
+127.0.0.1 only, and it is guarded by a per-session token: when it starts, Aestra writes a random
+token to a file only your user can read (`$XDG_RUNTIME_DIR/aestra/muse-<port>.token` on Linux,
+`%LOCALAPPDATA%\Aestra\` on Windows, `~/Library/Application Support/Aestra/` on macOS) and
+deletes it on exit. `muse` and `muse-agent` read it for you (`--token-file <path>` names another).
+A client of your own sends `{"auth":"<token>"}` as its first line; until then every request is
+answered `"status":"unauthorized"`, and the connection is closed after a few failures. The surface covers
 transport, tracks, units, patterns, notes, step sequencing, effects, metering, arrangement,
 render, batched all-or-nothing edits, and undo/redo.
 

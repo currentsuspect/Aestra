@@ -7,7 +7,13 @@ namespace Audio {
 UpdateNoteCommand::UpdateNoteCommand(PatternManager& patternManager, PatternID patternId,
                                      const MidiNote& originalNote, float newVelocity, float newPan)
     : m_patternManager(patternManager), m_patternId(patternId),
-      m_originalNote(originalNote), m_newVelocity(newVelocity), m_newPan(newPan) {}
+      m_originalNote(originalNote), m_newVelocity(newVelocity), m_newPan(newPan), m_newChance(originalNote.chance),
+      m_newRatchet(originalNote.ratchet) {}
+
+UpdateNoteCommand::UpdateNoteCommand(PatternManager& patternManager, PatternID patternId, const MidiNote& originalNote,
+                                     float newVelocity, float newPan, float newChance, uint8_t newRatchet)
+    : m_patternManager(patternManager), m_patternId(patternId), m_originalNote(originalNote),
+      m_newVelocity(newVelocity), m_newPan(newPan), m_newChance(newChance), m_newRatchet(newRatchet) {}
 
 void UpdateNoteCommand::execute() {
     if (m_executed)
@@ -22,6 +28,8 @@ void UpdateNoteCommand::execute() {
                     note.unitId == m_originalNote.unitId) {
                     note.velocity = m_newVelocity;
                     note.pan = m_newPan;
+                    note.chance = m_newChance;
+                    note.ratchet = m_newRatchet;
                     break;
                 }
             }
@@ -44,6 +52,8 @@ void UpdateNoteCommand::undo() {
                     note.unitId == m_originalNote.unitId) {
                     note.velocity = m_originalNote.velocity;
                     note.pan = m_originalNote.pan;
+                    note.chance = m_originalNote.chance;
+                    note.ratchet = m_originalNote.ratchet;
                     break;
                 }
             }

@@ -3,6 +3,7 @@
 #include "NUIPianoRollWidgets.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
+#include "PianoRollLook.h"
 #include "PianoRollWidgetShared.h"
 #include "../Helpers/TimelineGridRenderer.h"
 #include "../Helpers/PianoRollInteraction.h"
@@ -41,10 +42,17 @@ void PianoRollControlPanel::setNoteLayer(std::shared_ptr<PianoRollNoteLayer> lay
 }
 
 namespace {
-// The Velocity | Pan segment in the lane's sidebar (FD-48 board 6): two stacked cells, one per lane.
+// The lane picker in the sidebar (FD-48 board 6, FD-63 board A + C): Velocity, Chance, Ratchet and Pan stacked, one cell
+// each, shrinking to fit a short lane.
+constexpr int kLaneCount = 4;
+const char* const kLaneNames[kLaneCount] = {"Velocity", "Chance", "Ratchet", "Pan"};
+
+float laneCellHeight(const NUIRect& b) { return std::clamp((b.height - 16.0f) / kLaneCount, 12.0f, 18.0f); }
+
+// FD-63 board A + C: the picker is a plain list of names, 8 px in, one row each.
 NUIRect laneSegmentCell(const NUIRect& b, float sidebarW, int index) {
-    const float w = std::max(24.0f, sidebarW - 12.0f);
-    return NUIRect(b.x + (sidebarW - w) * 0.5f, b.y + 6.0f + 20.0f * static_cast<float>(index), w, 20.0f);
+    const float h = laneCellHeight(b);
+    return NUIRect(b.x + 4.0f, b.y + 6.0f + h * static_cast<float>(index), std::max(24.0f, sidebarW - 8.0f), h);
 }
 } // namespace
 
@@ -64,12 +72,11 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
     auto layer = noteLayer_.lock();
     if (layer) {
         auto b = getBounds();
-        // Sidebar: clicking it flips the lane between velocity and pan.
+        // Sidebar: clicking a cell shows that lane.
         if (!isDragging_ && event.position.x < b.x + sidebarW) {
              if (event.pressed && event.button == NUIMouseButton::Left) {
-                 if (laneSegmentCell(b, sidebarW, 0).contains(event.position)) laneMode_ = LaneMode::Velocity;
-                 else if (laneSegmentCell(b, sidebarW, 1).contains(event.position)) laneMode_ = LaneMode::Pan;
-                 else laneMode_ = (laneMode_ == LaneMode::Velocity) ? LaneMode::Pan : LaneMode::Velocity;
+                 for (int i = 0; i < kLaneCount; ++i)
+                     if (laneSegmentCell(b, sidebarW, i).contains(event.position)) laneMode_ = static_cast<LaneMode>(i);
                  repaint();
                  return true;
              }
@@ -77,6 +84,7 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
         }
 
         const bool panMode = laneMode_ == LaneMode::Pan;
+        const LaneMode field = laneMode_;
         float localX = event.position.x - b.x + scrollX_ - sidebarW;
 
         // Find the note whose velocity stem sits under a given lane-x, preferring
@@ -112,7 +120,8 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
                     const float centerY = bottomY - availH * 0.5f;
                     return std::clamp((centerY - y) / std::max(1.0f, availH * 0.5f), -1.0f, 1.0f);
                 }
-                return velocityFromPanelPosition(y, bottomY, availH);
+                if (field == LaneMode::Ratchet) return static_cast<float>(ratchetFromPanelPosition(y, bottomY, availH));
+                return velocityFromPanelPosition(y, bottomY, availH); // velocity and chance are both 0..1
             };
 
             if (foundIdx != -1) {
@@ -124,7 +133,7 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
                 // Set the value immediately based on click Y (Global)
                 const float newValue = laneValueAtY(event.position.y);
 
-                layer->setLaneValue(foundIdx, panMode, newValue);
+                layer->setLaneValue(foundIdx, field, newValue);
                 repaint();
                 return true;
             }
@@ -136,7 +145,7 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
                  hoveringNoteIndex_ = -1;
                  // Fold the whole lane drag into a single undo step.
                  if (!dragUndoSnapshot_.empty()) {
-                     layer->pushExternalEdit(dragUndoSnapshot_, panMode ? "Pan" : "Velocity");
+                     layer->pushExternalEdit(dragUndoSnapshot_, kLaneNames[static_cast<int>(field)]);
                      dragUndoSnapshot_.clear();
                  }
                  return true;
@@ -153,6 +162,8 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
                 const float centerY = bottomY - availH * 0.5f;
                 newValue = std::clamp((centerY - event.position.y) / std::max(1.0f, availH * 0.5f),
                                       -1.0f, 1.0f);
+            } else if (field == LaneMode::Ratchet) {
+                newValue = static_cast<float>(ratchetFromPanelPosition(event.position.y, bottomY, availH));
             } else {
                 newValue = velocityFromPanelPosition(event.position.y, bottomY, availH);
             }
@@ -160,7 +171,7 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
             const int swept = noteUnderX(localX);
             if (swept != -1) hoveringNoteIndex_ = swept;
 
-            if (layer->setLaneValue(hoveringNoteIndex_, panMode, newValue)) repaint();
+            if (layer->setLaneValue(hoveringNoteIndex_, field, newValue)) repaint();
             return true;
         }
     }
@@ -173,7 +184,7 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
     auto& themeManager = NUIThemeManager::getInstance();
     
     const auto panelBg = themeManager.getColor("backgroundPrimary");
-    const auto border = themeManager.getColor("border").withAlpha(0.28f);
+    const auto border = themeManager.getColor("border");
     renderer.fillRect(b, panelBg);
     renderer.drawLine(NUIPoint(b.x, b.y), NUIPoint(b.right(), b.y), 1.0f, border);
     
@@ -181,136 +192,67 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
     const float sidebarW = sidebarWidth_; // the view's key-lane width: stems sit under their notes
     NUIRect sidebarRect(b.x, b.y, sidebarW, b.height);
     
-    renderer.fillRect(sidebarRect, themeManager.getColor("backgroundPrimary").withAlpha(0.72f));
-    renderer.drawLine(NUIPoint(sidebarRect.right(), sidebarRect.y),
-                      NUIPoint(sidebarRect.right(), sidebarRect.bottom()),
-                      1.0f,
-                      border);
+    renderer.drawLine(NUIPoint(sidebarRect.right() - 0.5f, sidebarRect.y), NUIPoint(sidebarRect.right() - 0.5f, sidebarRect.bottom()),
+                      1.0f, themeManager.getColor("border"));
 
-    // A Velocity | Pan segment: the active cell filled, the other quiet. Below it, the lane's scale at the guide lines.
+    // FD-63, board "A + C": the lanes as a list of names, the shown one bright.
     const bool panMode = laneMode_ == LaneMode::Pan;
-    const float labelSize = themeManager.getFontSize("xs");
-    const auto accent = themeManager.getColor("accentPrimary");
-    const auto textColor = themeManager.getColor("textPrimary");
-    const char* names[2] = {"Velocity", "Pan"};
-    const NUIRect segment(laneSegmentCell(b, sidebarW, 0).x, laneSegmentCell(b, sidebarW, 0).y, laneSegmentCell(b, sidebarW, 0).width, 40.0f);
-    renderer.strokeRoundedRect(segment, 5.0f, 1.0f, themeManager.getColor("border").withAlpha(0.4f));
-    for (int i = 0; i < 2; ++i) {
+    const LaneMode field = laneMode_;
+    const float labelSize = 11.0f;
+    for (int i = 0; i < kLaneCount; ++i) {
         const NUIRect cell = laneSegmentCell(b, sidebarW, i);
-        const bool active = (i == 1) == panMode;
-        const NUIRect inner(cell.x + 2.0f, cell.y + 2.0f, cell.width - 4.0f, cell.height - 4.0f);
-        if (active) renderer.fillRoundedRect(inner, 3.0f, accent.withAlpha(0.28f));
-        const auto dim = renderer.measureText(names[i], labelSize);
-        renderer.drawText(names[i], NUIPoint(cell.x + (cell.width - dim.width) * 0.5f, renderer.calculateTextY(cell, labelSize)),
-                          labelSize, textColor.withAlpha(active ? 1.0f : 0.55f));
-    }
-    {
-        // 127 / 64 / 0 for velocity, R / C / L for pan, each beside its guide line; skipped where the segment is in the way.
-        const float availHScale = std::max(1.0f, b.height - 28.0f);
-        const float bottom = b.bottom() - 8.0f;
-        const char* marks[3] = {panMode ? "R" : "127", panMode ? "C" : "64", panMode ? "L" : "0"};
-        const float ys[3] = {bottom - availHScale, bottom - availHScale * 0.5f, bottom};
-        for (int i = 0; i < 3; ++i) {
-            if (ys[i] < segment.bottom() + 10.0f) continue;
-            const auto dim = renderer.measureText(marks[i], 9.0f);
-            renderer.drawText(marks[i], NUIPoint(sidebarRect.right() - 6.0f - dim.width, ys[i] - dim.height * 0.5f), 9.0f,
-                              themeManager.getColor("textSecondary").withAlpha(0.6f));
-        }
+        const bool active = static_cast<int>(field) == i;
+        renderer.drawText(kLaneNames[i], NUIPoint(cell.x + 4.0f, renderer.calculateTextY(cell, labelSize)), labelSize,
+                          themeManager.getColor(active ? "textPrimary" : "textMuted"));
     }
 
     auto layer = noteLayer_.lock();
     if (!layer || !isVisible()) return;
 
-    // Content Area Clip
     NUIRect contentRect(b.x + sidebarW, b.y, b.width - sidebarW, b.height);
     renderer.setClipRect(contentRect);
-
     const float startX = contentRect.x;
-    TimelineGridStyle gridStyle;
-    // Gamma-space alphas (F3): converted from linear-era tuning, which inflated
-    // low-alpha light-on-dark roughly 6x before compositing was unified. Same
-    // rendered result, different number to express it.
-    gridStyle.barLineAlpha = 0.148f;         // was 0.02
-    gridStyle.beatLineAlpha = 0.057f;        // was 0.005
-    gridStyle.subdivisionLineAlpha = 0.023f; // was 0.002
-    // No bar zebra (SPEC 3 §5.1, owner): at 0.066 every other bar read as a band of near
-    // black (bed RGB 0-4 against 15-19) in which the beat lines vanished. The timeline gets
-    // by with lines alone, and at matching line alphas so does this.
-    gridStyle.zebraAlpha = 0.0f;
-    renderTimelineGrid(renderer, contentRect, startX, contentRect.right(), scrollX_, pixelsPerBeat_, beatsPerBar_,
-                       themeManager.getCurrentTheme().textPrimary, gridStyle);
-
     const float availH = std::max(1.0f, b.height - 28.0f);
     const float bottomY = b.bottom() - 8.0f;
-    const float topY = bottomY - availH;
-    const auto guideColor = themeManager.getColor("border").withAlpha(0.11f);
-    renderer.drawLine(NUIPoint(contentRect.x, topY), NUIPoint(contentRect.right(), topY), 1.0f, guideColor);
-    renderer.drawLine(NUIPoint(contentRect.x, topY + availH * 0.5f),
-                      NUIPoint(contentRect.right(), topY + availH * 0.5f),
-                      1.0f,
-                      guideColor.withAlpha(0.72f));
-    renderer.drawLine(NUIPoint(contentRect.x, bottomY), NUIPoint(contentRect.right(), bottomY), 1.0f, guideColor);
-
-    const float patternEndX = startX + static_cast<float>(layer->getTotalDurationBeats() * pixelsPerBeat_) - scrollX_;
-    if (patternEndX >= contentRect.x && patternEndX <= contentRect.right()) {
-        renderer.drawLine(NUIPoint(patternEndX, contentRect.y),
-                          NUIPoint(patternEndX, contentRect.bottom()),
-                          1.0f,
-                          themeManager.getColor("accentPrimary").withAlpha(0.34f));
-    }
-    
-    // 2. Render the lane stems: velocity rises from the floor; pan hangs off
-    //    the centre line (up = right, down = left).
-    const auto& notes = layer->getNotes();
-    auto velColorBase = themeManager.getColor("accentPrimary").lightened(0.05f);
     const float centerY = bottomY - availH * 0.5f;
+    if (panMode)
+        renderer.drawLine(NUIPoint(contentRect.x, centerY), NUIPoint(contentRect.right(), centerY), 1.0f,
+                          themeManager.getColor("border"));
+
+    // Each note: a 2 px stem from the floor (from the centre line for pan) and an 8 px square at its value, in the unit's
+    // colour at 70%; the selected ones in the text colour.
+    const auto& notes = layer->getNotes();
+    const NUIColor unit = layer->getNoteColor();
+    const NUIColor stemColor(unit.r * 0.7f, unit.g * 0.7f, unit.b * 0.7f, 1.0f);
+    const NUIColor selectedColor = themeManager.getColor("textPrimary");
 
     for (size_t noteIndex = 0; noteIndex < notes.size(); ++noteIndex) {
         const auto& n = notes[noteIndex];
         if (n.isDeleted && n.animationScale < 0.01f) continue;
-
-        float x = startX + static_cast<float>(n.startBeat * pixelsPerBeat_) - scrollX_;
-
-        // Skip if out of view
-        if (x > b.x + b.width) continue;
+        const float x = startX + static_cast<float>(n.startBeat * pixelsPerBeat_) - scrollX_;
+        if (x > b.right() || x < contentRect.x - 10.0f) continue;
 
         const float normalizedVelocity = std::clamp(n.velocity, 0.0f, 1.0f);
         float y;
         float stemTop;
         float stemH;
-        float intensity; // drives the stem alpha
         if (panMode) {
             const float pv = std::clamp(n.pan, -1.0f, 1.0f);
             y = centerY - pv * availH * 0.5f;
             stemTop = std::min(y, centerY);
             stemH = std::max(2.0f, std::abs(y - centerY));
-            intensity = std::abs(pv);
         } else {
-            const float h = velocityToPanelHeight(normalizedVelocity, availH);
+            // Velocity and chance rise from the floor by their 0..1 value; a ratchet by its step, a quarter per hit.
+            const float v = field == LaneMode::Chance ? std::clamp(n.chance, 0.0f, 1.0f) : normalizedVelocity;
+            const float h = field == LaneMode::Ratchet ? ratchetToPanelHeight(n.ratchet, availH)
+                                                       : velocityToPanelHeight(v, availH);
             y = bottomY - h;
             stemTop = y;
             stemH = std::max(2.0f, h);
-            intensity = normalizedVelocity;
         }
-
-        float alpha = 0.48f + intensity * 0.48f;
-        auto col = velColorBase.withAlpha(alpha);
-        if (n.selected) col = themeManager.getColor("accentSecondary").withAlpha(0.92f);
-
-        renderer.fillRoundedRect(NUIRect(x - 2.0f, stemTop, 4.0f, stemH), 2.0f, col.withAlpha(alpha * 0.78f));
-
-        const float handleSize = n.selected ? 7.0f : 6.0f;
-        NUIRect handleRect(x - handleSize * 0.5f, y - handleSize * 0.5f, handleSize, handleSize);
-        renderer.fillRoundedRect(handleRect, 2.0f, col);
-        renderer.strokeRoundedRect(handleRect,
-                                   2.0f,
-                                   1.0f,
-                                   NUIColor::white().withAlpha(n.selected ? 0.48f : 0.20f));
-
-        float w = static_cast<float>(n.durationBeats * pixelsPerBeat_);
-        if (w > 4.0f) {
-            renderer.drawLine(NUIPoint(x, y), NUIPoint(x + w, y), n.selected ? 2.0f : 1.0f, col.withAlpha(0.64f));
-        }
+        const NUIColor col = n.selected ? selectedColor : stemColor;
+        renderer.fillRect(NUIRect(std::round(x + 3.0f), stemTop, 2.0f, stemH), col);
+        renderer.fillRect(NUIRect(std::round(x), std::round(y - 4.0f), 8.0f, 8.0f), col);
 
         if (isDragging_ && static_cast<int>(noteIndex) == hoveringNoteIndex_) {
             std::string value;
@@ -318,23 +260,23 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
                 const int panSteps = static_cast<int>(std::lround(std::abs(n.pan) * 100.0f));
                 if (panSteps == 0) value = "C";
                 else value = (n.pan < 0.0f ? "L " : "R ") + std::to_string(panSteps);
+            } else if (field == LaneMode::Chance || field == LaneMode::Ratchet) {
+                value = PianoRollLook::expressionTag(field == LaneMode::Chance ? n.chance : 1.0f,
+                                                     field == LaneMode::Ratchet ? n.ratchet : 1);
+                if (value.empty()) value = field == LaneMode::Chance ? "100%" : "\xC3\x97" "1";
             } else {
                 value = std::to_string(static_cast<int>(std::lround(normalizedVelocity * 127.0f)));
             }
-            const float fontSize = 9.0f;
+            const float fontSize = 10.0f;
             const auto textSize = renderer.measureText(value, fontSize);
-            const float bubbleWidth = textSize.width + 10.0f;
-            const float bubbleY = y - 18.0f >= contentRect.y ? y - 18.0f : y + 8.0f;
-            const NUIRect bubble(x + 7.0f, bubbleY, bubbleWidth, 16.0f);
-            renderer.fillRoundedRect(bubble, 4.0f, NUIColor::black().withAlpha(0.92f));
-            renderer.strokeRoundedRect(bubble, 4.0f, 1.0f, col.withAlpha(0.82f));
-            renderer.drawText(value,
-                              NUIPoint(bubble.x + 5.0f, bubble.y + (bubble.height - textSize.height) * 0.5f),
-                              fontSize,
-                              NUIColor::white().withAlpha(0.92f));
+            const NUIRect bubble(x + 12.0f, (y - 18.0f >= contentRect.y ? y - 18.0f : y + 8.0f), textSize.width + 10.0f, 16.0f);
+            renderer.fillRect(bubble, themeManager.getColor("backgroundSecondary"));
+            renderer.strokeRect(bubble, 1.0f, themeManager.getColor("border"));
+            renderer.drawText(value, NUIPoint(bubble.x + 5.0f, bubble.y + (bubble.height - textSize.height) * 0.5f), fontSize,
+                              selectedColor);
         }
     }
-    
+
     renderer.clearClipRect();
 }
 

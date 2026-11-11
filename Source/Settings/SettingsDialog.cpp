@@ -1,47 +1,59 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "SettingsDialog.h"
-#include "../AestraUI/Core/NUIThemeSystem.h"
+
+#include "../AestraCore/include/AestraConfig.h"
 #include "../AestraCore/include/AestraLog.h"
+#include "../AestraUI/Core/NUIThemeSystem.h"
 
 #include <algorithm>
 
 namespace Aestra {
 
-SettingsDialog::SettingsDialog() 
-    : m_visible(false)
-    , m_dialogBounds(0, 0, 950, 600) // Larger than AudioSettingsDialog
-    , m_closeButtonHovered(false)
-    , m_blinkAnimation(0.0f)
-{
+SettingsDialog::SettingsDialog()
+    : m_visible(false), m_dialogBounds(0, 0, 940, 620), m_closeButtonHovered(false), m_blinkAnimation(0.0f) {
     createUI();
 }
 
 void SettingsDialog::createUI() {
-    // Footer buttons
-    m_applyButton = std::make_shared<AestraUI::NUIButton>();
-    m_applyButton->setText("Apply");
-    m_applyButton->setStyle(AestraUI::NUIButton::Style::Secondary);
-    m_applyButton->setOnClick([this]() {
-        if (m_activePage) m_activePage->applyChanges();
-    });
-    addChild(m_applyButton);
-
     m_cancelButton = std::make_shared<AestraUI::NUIButton>();
-    m_cancelButton->setText("Cancel");
+    m_cancelButton->setText("Discard");
     m_cancelButton->setStyle(AestraUI::NUIButton::Style::Secondary);
-    m_cancelButton->setOnClick([this]() {
-        if (m_activePage) m_activePage->cancelChanges();
-        hide();
-    });
+    m_cancelButton->setOnClick([this]() { discardAll(); });
     addChild(m_cancelButton);
 
     m_okButton = std::make_shared<AestraUI::NUIButton>();
-    m_okButton->setText("OK");
-    m_okButton->setOnClick([this]() {
-        if (m_activePage) m_activePage->applyChanges();
-        hide();
-    });
+    m_okButton->setText("Save changes");
+    m_okButton->setStyle(AestraUI::NUIButton::Style::Primary);
+    m_okButton->setOnClick([this]() { saveAll(); });
     addChild(m_okButton);
+}
+
+int SettingsDialog::pendingChangeCount() const {
+    int total = 0;
+    for (const auto& [id, page] : m_pages) {
+        total += page ? page->pendingChangeCount() : 0;
+    }
+    return total;
+}
+
+// Save and Discard act on every page, as the title's "N changes not saved" counts every page.
+void SettingsDialog::saveAll() {
+    for (const auto& item : m_sidebarItems) {
+        auto it = m_pages.find(item.id);
+        if (it != m_pages.end() && it->second && it->second->hasUnsavedChanges()) {
+            it->second->applyChanges();
+        }
+    }
+    setDirty(true);
+}
+
+void SettingsDialog::discardAll() {
+    for (const auto& [id, page] : m_pages) {
+        if (page && page->hasUnsavedChanges()) {
+            page->cancelChanges();
+        }
+    }
+    setDirty(true);
 }
 
 void SettingsDialog::show() {
@@ -97,6 +109,11 @@ void SettingsDialog::setActivePage(const std::string& pageID) {
         
         m_activePage = it->second;
         m_activePageId = pageID;
+        if (m_footerAction)
+            removeChild(m_footerAction);
+        m_footerAction = m_activePage->footerAction();
+        if (m_footerAction)
+            addChild(m_footerAction);
         m_activePage->onShow();
         
         // Update selection state
@@ -107,68 +124,52 @@ void SettingsDialog::setActivePage(const std::string& pageID) {
     }
 }
 
+// Board 2: 38 px title, 196 px sidebar, 50 px footer across the whole dialog; the page fills the rest.
 void SettingsDialog::layoutComponents() {
     if (!m_visible) return;
 
-    const auto& props = AestraUI::NUIThemeManager::getInstance().getCurrentTheme();
-    const float padding = props.layout.dialogPadding;
-    const float sidebarWidth = std::clamp(m_dialogBounds.width * 0.23f, 150.0f, 220.0f);
-    const float footerHeight = props.layout.dialogActionHeight + padding * 2.0f;
-    const float titleHeight = props.layout.panelHeaderHeight;
+    constexpr float kTitleHeight = 38.0f;
+    constexpr float kSidebarWidth = 196.0f;
+    constexpr float kFooterHeight = 50.0f;
+    constexpr float kItemHeight = 32.0f;
+    const float sidebarWidth = std::min(kSidebarWidth, m_dialogBounds.width * 0.3f);
 
-    // Sidebar
-    m_sidebarBounds = AestraUI::NUIRect(
-        m_dialogBounds.x,
-        m_dialogBounds.y + titleHeight,
-        sidebarWidth,
-        m_dialogBounds.height - titleHeight
-    );
+    m_titleBounds = AestraUI::NUIRect(m_dialogBounds.x, m_dialogBounds.y, m_dialogBounds.width, kTitleHeight);
+    m_footerBounds = AestraUI::NUIRect(m_dialogBounds.x, m_dialogBounds.bottom() - kFooterHeight, m_dialogBounds.width,
+                                       kFooterHeight);
+    m_sidebarBounds = AestraUI::NUIRect(m_dialogBounds.x, m_titleBounds.bottom(), sidebarWidth,
+                                        m_footerBounds.y - m_titleBounds.bottom());
+    m_contentBounds = AestraUI::NUIRect(m_sidebarBounds.right(), m_titleBounds.bottom(),
+                                        m_dialogBounds.width - sidebarWidth, m_sidebarBounds.height);
+    m_closeButtonBounds = AestraUI::NUIRect(m_dialogBounds.right() - 32.0f, m_dialogBounds.y + 7.0f, 24.0f, 24.0f);
 
-    // Content Area
-    m_contentBounds = AestraUI::NUIRect(
-        m_dialogBounds.x + sidebarWidth,
-        m_dialogBounds.y + titleHeight,
-        m_dialogBounds.width - sidebarWidth,
-        m_dialogBounds.height - titleHeight - footerHeight
-    );
-
-    // Close button — matches AestraPanelWindow chrome (24x24 at right-28, top+4)
-    m_closeButtonBounds = AestraUI::NUIRect(
-        m_dialogBounds.x + m_dialogBounds.width - 28,
-        m_dialogBounds.y + 4,
-        24, 24
-    );
-
-    // Sidebar items layout
-    float itemY = m_sidebarBounds.y + padding;
-    const float itemHeight = std::max(props.layout.standardRowHeight, 32.0f);
+    float itemY = m_sidebarBounds.y + 10.0f;
     for (auto& item : m_sidebarItems) {
-        item.bounds = AestraUI::NUIRect(m_dialogBounds.x, itemY, sidebarWidth, itemHeight);
-        itemY += itemHeight;
+        item.bounds = AestraUI::NUIRect(m_sidebarBounds.x + 8.0f, itemY, sidebarWidth - 16.0f, kItemHeight);
+        itemY += kItemHeight + 2.0f;
     }
-    
-    // Footer buttons
-    const float buttonWidth = m_dialogBounds.width < 560.0f ? 84.0f : 98.0f;
-    const float buttonHeight = props.layout.dialogActionHeight;
-    const float buttonY = m_dialogBounds.bottom() - padding - buttonHeight;
-    float rightX = m_dialogBounds.x + m_dialogBounds.width - padding;
-    
-    m_okButton->setBounds(AestraUI::NUIRect(rightX - buttonWidth, buttonY, buttonWidth, buttonHeight));
-    m_cancelButton->setBounds(AestraUI::NUIRect(rightX - buttonWidth*2 - 10, buttonY, buttonWidth, buttonHeight));
-    m_applyButton->setBounds(AestraUI::NUIRect(rightX - buttonWidth*3 - 20, buttonY, buttonWidth, buttonHeight));
-    
-    // Active Page
+
+    const float buttonHeight = 28.0f;
+    const float buttonY = m_footerBounds.y + (kFooterHeight - buttonHeight) * 0.5f;
+    const float saveWidth = 112.0f;
+    const float discardWidth = 80.0f;
+    float rightX = m_footerBounds.right() - 14.0f;
+    m_okButton->setBounds(AestraUI::NUIRect(rightX - saveWidth, buttonY, saveWidth, buttonHeight));
+    m_cancelButton->setBounds(
+        AestraUI::NUIRect(rightX - saveWidth - 8.0f - discardWidth, buttonY, discardWidth, buttonHeight));
+    if (m_footerAction) {
+        m_footerAction->setBounds(AestraUI::NUIRect(m_footerBounds.x + 14.0f, buttonY, 96.0f, buttonHeight));
+    }
+
     if (m_activePage) {
         m_activePage->setBounds(m_contentBounds);
-        // Pages usually need to layout their own internal components
-        // We'll rely on onResize propagating the bounds change
     }
 }
 
 void SettingsDialog::updateDialogBounds(const AestraUI::NUIRect& parentBounds) {
     m_layoutViewport = parentBounds;
-    constexpr float kPreferredWidth = 950.0f;
-    constexpr float kPreferredHeight = 600.0f;
+    constexpr float kPreferredWidth = 940.0f;
+    constexpr float kPreferredHeight = 620.0f;
     constexpr float kWindowMargin = 16.0f;
     constexpr float kMinimumWidth = 360.0f;
     constexpr float kMinimumHeight = 320.0f;
@@ -231,85 +232,89 @@ void SettingsDialog::syncToViewport() {
 void SettingsDialog::onRender(AestraUI::NUIRenderer& renderer) {
     syncToViewport();
     if (!m_visible) return;
-    
+
     auto& theme = AestraUI::NUIThemeManager::getInstance();
     const auto& props = theme.getCurrentTheme();
-    
-    // 1. Dimmed Background Overlay
-    renderer.fillRect(getBounds(), theme.getColor("overlay"));
-    
-    // 2. Dialog Window Shadow
-    // (Simple drop shadow simulation if renderer supports it, or just dark rect)
-    
-    // 3. Dialog Window Background - FORCE correct key to avoid purple fallback
-    // Use rounded rect with standard radius (e.g. 8px or theme radius)
-    float radius = 2.0f; // the 2 px frame of every panel
-    renderer.fillRoundedRect(m_dialogBounds, radius, theme.getColor("elevatedPanel"));
-    renderer.strokeRoundedRect(m_dialogBounds, radius, props.layout.dividerWidth, theme.getColor("borderStrong"));
-    
-    // 4. Title bar background (unified 32px chrome)
-    AestraUI::NUIRect titleBar(m_dialogBounds.x, m_dialogBounds.y, m_dialogBounds.width,
-                              props.layout.panelHeaderHeight);
-    renderer.fillRect(titleBar, theme.getColor("elevatedPanel"));
-    renderer.drawLine({titleBar.x, titleBar.bottom() - 0.5f},
-                      {titleBar.right(), titleBar.bottom() - 0.5f},
-                      0.5f, theme.getColor("borderSubtle"));
+    const AestraUI::NUIColor border = theme.getColor("border");
 
-    // 5. Title text — vertically centered via font metrics
-    float titleBaseline = renderer.calculateTextY(titleBar, 11.0f);
-    renderer.drawText("SETTINGS", {m_dialogBounds.x + 12.0f, titleBaseline}, 11.0f, // 11 px capitals, as every panel
-                      theme.getColor("textSecondary"));
+    renderer.fillRect(getBounds(), AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.35f));
+    renderer.fillRect(m_dialogBounds, theme.getColor("backgroundSecondary"));
+    renderer.strokeRect(m_dialogBounds, 1.0f, border);
 
-    // 6. Close button — line-drawn X matching AestraPanelWindow chrome
+    // Title: SETTINGS, and how many changes are waiting.
+    renderer.drawLine({m_titleBounds.x, m_titleBounds.bottom() - 0.5f},
+                      {m_titleBounds.right(), m_titleBounds.bottom() - 0.5f}, 1.0f, border);
+    renderer.drawText("SETTINGS", {m_titleBounds.x + 16.0f, renderer.calculateTextY(m_titleBounds, props.fontSizeXS)},
+                      props.fontSizeXS, theme.getColor("textMuted"));
+    if (const int pending = pendingChangeCount(); pending > 0) {
+        const std::string note = std::to_string(pending) + (pending == 1 ? " change not saved" : " changes not saved");
+        const float noteFont = 11.5f;
+        const float noteWidth = renderer.measureText(note, noteFont).width;
+        const float noteX = m_closeButtonBounds.x - 14.0f - noteWidth;
+        const AestraUI::NUIColor warn = theme.getColor("warning");
+        renderer.fillCircle({noteX - 9.0f, m_titleBounds.y + m_titleBounds.height * 0.5f}, 3.0f, warn);
+        renderer.drawText(note, {noteX, renderer.calculateTextY(m_titleBounds, noteFont)}, noteFont, warn);
+    }
     if (m_closeButtonHovered) {
         renderer.fillRoundedRect(m_closeButtonBounds, props.radiusS, theme.getColor("controlHover"));
     }
-    float cx = m_closeButtonBounds.x + m_closeButtonBounds.width * 0.5f;
-    float cy = m_closeButtonBounds.y + m_closeButtonBounds.height * 0.5f;
-    float d = 5.0f;
-    AestraUI::NUIColor xColor = m_closeButtonHovered
-                                    ? theme.getColor("textPrimary")
-                                    : theme.getColor("textSecondary");
-    renderer.drawLine({cx - d, cy - d}, {cx + d, cy + d}, 1.5f, xColor);
-    renderer.drawLine({cx + d, cy - d}, {cx - d, cy + d}, 1.5f, xColor);
+    const float cx = m_closeButtonBounds.x + m_closeButtonBounds.width * 0.5f;
+    const float cy = m_closeButtonBounds.y + m_closeButtonBounds.height * 0.5f;
+    const float d = 4.5f;
+    const AestraUI::NUIColor xColor = theme.getColor(m_closeButtonHovered ? "textPrimary" : "textMuted");
+    renderer.drawLine({cx - d, cy - d}, {cx + d, cy + d}, 1.25f, xColor);
+    renderer.drawLine({cx + d, cy - d}, {cx - d, cy + d}, 1.25f, xColor);
 
-    // 7. Sidebar Background
-    renderer.fillRect(m_sidebarBounds, theme.getColor("backgroundSecondary"));
-    renderer.fillRect(AestraUI::NUIRect(m_sidebarBounds.x + m_sidebarBounds.width - 1, m_sidebarBounds.y, 1, m_sidebarBounds.height),
-                     theme.getColor("divider"));
-
-    // 8. Sidebar Items
+    // Sidebar: the pages, each with its own count of unsaved changes, and the version at the foot.
+    renderer.drawLine({m_sidebarBounds.right() - 0.5f, m_sidebarBounds.y},
+                      {m_sidebarBounds.right() - 0.5f, m_sidebarBounds.bottom()}, 1.0f, border);
     for (const auto& item : m_sidebarItems) {
-        AestraUI::NUIColor bg = item.active ? theme.getColor("surfaceRaised") :
-                              (item.hovered ? theme.getColor("list.hover") : AestraUI::NUIColor(0,0,0,0));
-
-        if (item.active || item.hovered) {
-            renderer.fillRect(item.bounds, bg);
+        if (item.active) {
+            renderer.fillRoundedRect(item.bounds, 4.0f, theme.getColor("primary").withAlpha(0.20f));
+        } else if (item.hovered) {
+            renderer.fillRoundedRect(item.bounds, 4.0f, theme.getColor("surfaceRaised"));
         }
+        renderer.drawText(item.title, {item.bounds.x + 10.0f, renderer.calculateTextY(item.bounds, 13.0f)}, 13.0f,
+                          theme.getColor(item.active ? "textPrimary" : "textSecondary"));
+        auto page = m_pages.find(item.id);
+        const int count = page != m_pages.end() && page->second ? page->second->pendingChangeCount() : 0;
+        if (count > 0) {
+            const std::string n = std::to_string(count);
+            const float w = renderer.measureText(n, props.fontSizeXS).width;
+            renderer.drawText(n,
+                              {item.bounds.right() - 10.0f - w, renderer.calculateTextY(item.bounds, props.fontSizeXS)},
+                              props.fontSizeXS, theme.getColor("warning"));
+        }
+    }
+    const AestraUI::NUIRect versionRow(m_sidebarBounds.x + 18.0f, m_sidebarBounds.bottom() - 30.0f,
+                                       m_sidebarBounds.width - 26.0f, 20.0f);
+    renderer.drawText(std::string("Aestra ") + AESTRA_VERSION_STRING,
+                      {versionRow.x, renderer.calculateTextY(versionRow, 11.0f)}, 11.0f,
+                      theme.getColor("textDisabled"));
 
-        renderer.drawText(item.title, AestraUI::NUIPoint(item.bounds.x + 20, item.bounds.y + 8), props.fontSizeM,
-                         item.active ? theme.getColor("textSelect") : theme.getColor("text"));
+    // Footer, across the whole dialog.
+    renderer.drawLine({m_footerBounds.x, m_footerBounds.y + 0.5f}, {m_footerBounds.right(), m_footerBounds.y + 0.5f},
+                      1.0f, border);
+    if (m_footerAction) {
+        m_footerAction->onRender(renderer);
+        const std::string note = m_activePage ? m_activePage->footerNote() : std::string();
+        if (!note.empty()) {
+            const auto& fb = m_footerAction->getBounds();
+            renderer.drawText(note, {fb.right() + 10.0f, renderer.calculateTextY(fb, 11.5f)}, 11.5f,
+                              theme.getColor("textMuted"));
+        }
     }
 
-    // 9. Footer Divider
-    float footerY = m_dialogBounds.y + m_dialogBounds.height - 60.0f;
-    renderer.fillRect(AestraUI::NUIRect(m_contentBounds.x, footerY, m_contentBounds.width, 1),
-                     theme.getColor("divider"));
-
-    // 10. Blink Effect
     if (m_blinkAnimation > 0.0f) {
-        renderer.strokeRoundedRect(m_dialogBounds, radius, 2.0f,
-                                   theme.getColor("focusRing").withAlpha(m_blinkAnimation * 0.5f));
+        renderer.strokeRect(m_dialogBounds, 2.0f, theme.getColor("focusRing").withAlpha(m_blinkAnimation * 0.5f));
     }
 
-    // Render Children (Page content + Buttons)
-    // We only want to render the active page
     if (m_activePage) {
         m_activePage->onRender(renderer);
     }
-    
-    // Render footer buttons
-    m_applyButton->onRender(renderer);
+    const bool pending = pendingChangeCount() > 0;
+    m_cancelButton->setEnabled(pending);
+    m_okButton->setEnabled(pending);
     m_cancelButton->onRender(renderer);
     m_okButton->onRender(renderer);
 }
@@ -318,7 +323,8 @@ bool SettingsDialog::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (!m_visible) return false;
     
     // Footer buttons interaction
-    if (m_applyButton->onMouseEvent(event)) return true;
+    if (m_footerAction && m_footerAction->onMouseEvent(event))
+        return true;
     if (m_cancelButton->onMouseEvent(event)) return true;
     if (m_okButton->onMouseEvent(event)) return true;
     
@@ -356,6 +362,7 @@ bool SettingsDialog::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     
     if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
         if (closeHovered) {
+            discardAll();
             hide();
             return true;
         }
@@ -377,6 +384,7 @@ bool SettingsDialog::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     if (m_activePage && m_activePage->onKeyEvent(event)) return true;
     
     if (event.pressed && event.keyCode == AestraUI::NUIKeyCode::Escape) {
+        discardAll();
         hide();
         return true;
     }

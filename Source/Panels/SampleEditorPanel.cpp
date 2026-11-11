@@ -697,6 +697,8 @@ void SampleEditorPanel::buildUI() {
     m_voiceCountSlider->setSliderThickness(3.0f);
 
     // Action buttons
+    m_previewBtn = std::make_shared<NUIButton>("Preview");
+    m_previewBtn->setTooltip("Hear the sample as it is set now: trim, envelope and pitch");
     m_normalizeBtn = std::make_shared<NUIButton>("Normalize");
     m_reverseBtn = std::make_shared<NUIButton>("Reverse");
     m_oneShotModeBtn = std::make_shared<NUIButton>("One-Shot");
@@ -707,6 +709,7 @@ void SampleEditorPanel::buildUI() {
     m_cutSelfModeBtn = std::make_shared<NUIButton>("Cut-Self");
     m_keepLengthBtn = std::make_shared<NUIButton>("Keep length");
     m_keepLengthBtn->setTooltip("Pitch notes without speeding up or slowing down the sample");
+    styleActionButton(m_previewBtn);
     styleActionButton(m_normalizeBtn);
     styleActionButton(m_reverseBtn);
     styleModeButton(m_oneShotModeBtn);
@@ -775,6 +778,7 @@ void SampleEditorPanel::buildUI() {
     m_voiceCountSlider->setOnValueChange([this](double) { onVoiceCountControlChanged(); });
     m_voiceCountSlider->setOnDragEnd([this]() { requestControlCommit(); });
 
+    m_previewBtn->setOnClick([this]() { togglePreview(); });
     m_normalizeBtn->setOnClick([this]() {
         normalize();
         if (onNormalizeRequested) onNormalizeRequested();
@@ -815,6 +819,7 @@ void SampleEditorPanel::buildUI() {
     m_contentContainer->addChild(m_pitchCoarseSlider);
     m_contentContainer->addChild(m_pitchFineSlider);
     m_contentContainer->addChild(m_voiceCountSlider);
+    m_contentContainer->addChild(m_previewBtn);
     m_contentContainer->addChild(m_normalizeBtn);
     m_contentContainer->addChild(m_reverseBtn);
 
@@ -877,6 +882,39 @@ void SampleEditorPanel::loadSample(const std::string& path) {
     m_waveformDisplay->setDurationSeconds(m_sampleRate > 0.0 ? static_cast<double>(m_sampleLength) / m_sampleRate : 0.0);
     m_waveformDisplay->repaint();
     m_adsrDisplay->repaint();
+}
+
+// Preview plays the unit through the real sampler, so what you hear is what the pattern will play. One click plays
+// the trimmed window (loops twice round); a click while it plays stops it.
+void SampleEditorPanel::togglePreview() {
+    if (!onPreviewRequested)
+        return;
+    if (m_previewSecondsLeft > 0.0) {
+        m_previewSecondsLeft = 0.0;
+        onPreviewRequested(false, 0.0);
+    } else {
+        const double window = std::max(0.0f, m_loopPoints.end - m_loopPoints.start);
+        double seconds = m_sampleLength > 0 && m_sampleRate > 0.0 ? window * m_sampleLength / m_sampleRate : 1.0;
+        if (m_loopPoints.mode != LoopMode::OneShot)
+            seconds *= 2.0;
+        seconds = std::clamp(seconds + static_cast<double>(m_adsr.release) * 5.0, 0.1, 60.0);
+        m_previewSecondsLeft = seconds;
+        onPreviewRequested(true, seconds);
+    }
+    m_previewBtn->setText(m_previewSecondsLeft > 0.0 ? "Stop" : "Preview");
+    repaint();
+}
+
+void SampleEditorPanel::onUpdate(double deltaTime) {
+    WindowPanel::onUpdate(deltaTime);
+    if (m_previewSecondsLeft > 0.0) {
+        m_previewSecondsLeft -= deltaTime;
+        if (m_previewSecondsLeft <= 0.0) {
+            m_previewSecondsLeft = 0.0;
+            m_previewBtn->setText("Preview");
+            repaint();
+        }
+    }
 }
 
 void SampleEditorPanel::loadPreparedSample(const std::string& path, double sampleRate, uint32_t sampleLength,
@@ -1032,6 +1070,7 @@ void SampleEditorPanel::onResize(int width, int height) {
     const float keyH = 22.0f;
     m_reverseBtn->setBounds(NUIRect(cb.x + layoutW - pad - 74.0f, hintY, 74.0f, keyH));
     m_normalizeBtn->setBounds(NUIRect(cb.x + layoutW - pad - 74.0f - 6.0f - 84.0f, hintY, 84.0f, keyH));
+    m_previewBtn->setBounds(NUIRect(cb.x + layoutW - pad - 74.0f - 6.0f - 84.0f - 6.0f - 74.0f, hintY, 74.0f, keyH));
 
     // Three columns, 0.297 : 0.351 : 0.351 of the width, each under a titled rule.
     const float top = cb.y + layoutH - kSampleEditorColumnsH;

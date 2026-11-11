@@ -2,6 +2,7 @@
 #pragma once
 
 #include "AestraAtomicSharedPtr.h"
+#include "Core/RealtimeSharedSlot.h"
 
 #include <array>
 #include <atomic>
@@ -82,6 +83,8 @@ private:
 
     struct Slot {
         AtomicSharedPtr<const Buffer> buffer;
+        // tryGet()'s copy: AtomicSharedPtr::load takes a pooled mutex in this C++17 build.
+        RealtimeSharedSlot<const Buffer> rtBuffer;
         std::atomic<uint8_t> state{Empty};
         std::atomic<uint64_t> lastUsed{0};
     };
@@ -89,6 +92,11 @@ private:
     void ensureRegistered();
     void evictToBudget(size_t keepIndex);
     void retire(std::shared_ptr<const Buffer> buffer);
+    // Every buffer swap goes through here so the audio-thread copy never lags (non-RT).
+    static std::shared_ptr<const Buffer> swapBuffer(Slot& slot, std::shared_ptr<const Buffer> next) {
+        slot.rtBuffer.publish(next);
+        return slot.buffer.exchange(std::move(next), std::memory_order_acq_rel);
+    }
 
     std::array<Slot, SLOT_COUNT> m_slots;
     std::atomic<uint64_t> m_useClock{1};

@@ -743,7 +743,7 @@ void TrackUIComponent::updateUI() {
     }
 
     if (m_laneCountLabel && m_laneCountIcon) {
-        const bool isPrimaryRow = track && !track->laneIds.empty() && track->laneIds.front() == m_laneId;
+        const bool isPrimaryRow = track && !track->laneIds.empty() && track->primaryLaneId() == m_laneId;
         const bool multiLaneTrack = track && track->laneIds.size() > 1;
         if (m_expandButton) {
             m_expandButton->setVisible(isPrimaryRow && multiLaneTrack);
@@ -1587,7 +1587,7 @@ void TrackUIComponent::renderDynamic(AestraUI::NUIRenderer& renderer) {
     }
 
     // Live Recording Waveform (v3.0.2) - Dynamic real-time update
-    drawLiveWaveform(renderer, bounds, controlAreaWidth);
+    drawLiveWaveform(renderer, bounds, controlAreaWidth); drawCompOverlay(renderer, bounds, controlAreaWidth);
 
     // Apply overlay for muted/solo state (Grid Area Only)
     if (m_isPrimaryForLane) {
@@ -1991,7 +1991,7 @@ void TrackUIComponent::onResize(int width, int height) {
 // =============================================================================
 
 bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
-    if (handleMuteTool(event) || handleAutomationRowHeaderMouse(event)) return true; // TrackUIComponentMute.cpp, …AutomationRow.cpp
+    if (handleMuteTool(event) || handleCompSwipe(event) || handleAutomationRowHeaderMouse(event)) return true; // …Mute.cpp, …Comp.cpp, …AutomationRow.cpp
     // 1. Invalidate cache on mouse movement in the control area (button hover feedback).
     if (m_onCacheInvalidationCallback) {
         // Check if we are over the control area
@@ -3003,7 +3003,7 @@ void TrackUIComponent::drawLiveWaveform(AestraUI::NUIRenderer& renderer, const A
     if (!m_trackManager || !m_trackManager->isRecording()) return;
     auto* lane = m_trackManager->getPlaylistModel().getLane(m_laneId);
     auto* track = lane ? m_trackManager->getTrack(lane->trackId) : nullptr;
-    if (!track || !track->armed) return;
+    if (!track || !track->armed || m_isAutomationRow || lane->id != track->activeLaneId) return; // only the lane the take lands on
 
     // Bounded decimated read (#846/#849): min/max pairs instead of copying
     // the whole capture ring every frame (~3 MB/track at default limits).

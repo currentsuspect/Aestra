@@ -93,6 +93,8 @@ public:
     }
 
     std::string getName() const override { return "Arrange Pattern"; }
+    /// The timeline clip this command placed; invalid until it has executed.
+    ClipInstanceID getClipId() const { return m_executed ? m_clipId : ClipInstanceID(); }
     size_t getSizeInBytes() const override { return sizeof(*this); }
     bool changesProjectState() const override { return true; }
 

@@ -39,6 +39,11 @@ public:
 
     /** @brief Fired after committed clip edits reach the model (slider commit or discrete edit). */
     void setOnClipEditsCommitted(std::function<void()> callback) { m_onClipEditsCommitted = std::move(callback); }
+    /// Preview: play the clip's part of its source at the clip's speed, pitch and gain (path, start s, length s, rate,
+    /// gain dB). An empty path stops it.
+    void setOnPreviewRequested(std::function<void(const std::string&, double, double, float, float)> callback) {
+        m_onPreviewRequested = std::move(callback);
+    }
 
     void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
@@ -49,6 +54,10 @@ private:
     ClipInstanceID m_clipId;
     PatternID m_patternId;
     std::function<void()> m_onClipEditsCommitted;
+    std::function<void(const std::string&, double, double, float, float)> m_onPreviewRequested;
+    std::shared_ptr<AestraUI::NUIButton> m_previewButton;
+    double m_previewSecondsLeft = 0.0; ///< > 0 while a preview plays: the key reads Stop
+    void togglePreview();
     ClipEdits m_workingEdits;
     ClipEdits m_gestureStartEdits;
     bool m_editGestureActive{false};

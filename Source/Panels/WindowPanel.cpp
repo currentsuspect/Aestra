@@ -214,6 +214,26 @@ void WindowPanel::onRender(AestraUI::NUIRenderer& renderer) {
 
     // Flat: no panel drop shadow — border + surface separation carry the frame.
 
+    if (m_fullWindow) {
+        // The editor's own frame: the bed under everything, the header in the panel colour, one line under it.
+        renderer.fillRect(bounds, theme.getColor("backgroundPrimary"));
+        renderer.fillRect(titleBarRect, titleBarColor);
+        renderer.drawLine(AestraUI::NUIPoint(bounds.x, bounds.y + m_titleBarHeight - 0.5f),
+                          AestraUI::NUIPoint(bounds.right(), bounds.y + m_titleBarHeight - 0.5f), 1.0f, borderColor);
+        renderChildren(renderer);
+        if (m_closeButton && m_closeButton->isVisible()) {
+            const auto cb = m_closeButton->getBounds();
+            renderer.strokeRect(cb, 1.0f, borderColor);
+            if (m_closeIcon) {
+                const float iconSize = 12.0f;
+                m_closeIcon->setBounds({cb.x + (cb.width - iconSize) * 0.5f, cb.y + (cb.height - iconSize) * 0.5f,
+                                        iconSize, iconSize});
+                m_closeIcon->onRender(renderer);
+            }
+        }
+        return;
+    }
+
     // Draw content background
     if (!m_minimized) {
         renderer.fillRoundedRect(bounds, windowRadius, bodyColor);
@@ -394,7 +414,7 @@ bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         auto now = std::chrono::steady_clock::now();
         auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastTitleBarClickTime).count();
         const bool manualDoubleClick = elapsedMs > 0 && elapsedMs < 350;
-        if ((event.doubleClick || manualDoubleClick) && insideTitle) {
+        if ((event.doubleClick || manualDoubleClick) && insideTitle && !m_fullWindow) {
             if (!onTitleBarControl(event.position)) {
                 toggleMaximize();
                 m_lastTitleBarClickTime = std::chrono::steady_clock::time_point{};
@@ -433,6 +453,20 @@ bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     return false;
 }
 
+
+void WindowPanel::setFullWindow(bool fullWindow) {
+    if (m_fullWindow == fullWindow) return;
+    m_fullWindow = fullWindow;
+    m_locked = fullWindow; // no title-bar drag, no edge resize
+    if (m_minimizeButton) m_minimizeButton->setVisible(!fullWindow);
+    if (m_maximizeButton) m_maximizeButton->setVisible(!fullWindow);
+    if (fullWindow) {
+        m_minimized = false;
+        m_maximized = false;
+    }
+    layoutContent();
+    setDirty(true);
+}
 
 void WindowPanel::setTitleBarAccessory(std::shared_ptr<AestraUI::NUIComponent> accessory, float preferredHeight,
                                        float titleZoneWidth) {
@@ -489,7 +523,18 @@ void WindowPanel::layoutContent() {
     const std::vector<float> buttonWidths{buttonSize, buttonSize, buttonSize};
     const auto buttonRects = arrangeTrailingRow(titleBar, buttonWidths, buttonSize, buttonPadding, buttonPadding, trace);
 
-    if (m_closeButton) {
+    if (m_fullWindow) {
+        // One boxed close button, 28 px, 14 px in from the right edge, centred on the header (board A + C).
+        constexpr float kClose = 28.0f;
+        const NUILocalRect closeRect(panelWidth - 14.0f - kClose, (m_titleBarHeight - kClose) * 0.5f, kClose, kClose);
+        if (m_closeButton) m_closeButton->setBounds(localToWindow(closeRect, panelOrigin).raw());
+        if (m_titleBarAccessory) {
+            const float accessoryW = std::floor(std::max(0.0f, closeRect.x - 14.0f));
+            const NUILocalRect accessoryRect(0.0f, 0.0f, accessoryW, m_titleBarHeight);
+            m_titleBarAccessory->setBounds(localToWindow(accessoryRect, panelOrigin).raw());
+            m_titleBarAccessory->onResize(static_cast<int>(accessoryW), static_cast<int>(m_titleBarHeight));
+        }
+    } else if (m_closeButton) {
         m_closeButton->setBounds(localToWindow(buttonRects[0], panelOrigin).raw());
     }
     if (m_maximizeButton) {
@@ -502,7 +547,7 @@ void WindowPanel::layoutContent() {
     // Accessory occupies the title bar between the title text and the window
     // buttons. Computed from the same titleBar rect the buttons use, so the
     // three cannot drift apart.
-    if (m_titleBarAccessory) {
+    if (m_titleBarAccessory && !m_fullWindow) {
         const float buttonsWidth = buttonSize * 3.0f + buttonPadding * 4.0f;
         const float accessoryX = m_accessoryTitleZone;
         // Whole pixels: onResize() below takes ints, and NUIComponent::onResize re-applies the

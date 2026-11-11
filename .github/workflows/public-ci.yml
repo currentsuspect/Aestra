@@ -46,7 +46,7 @@ jobs:
           }
           Write-Host "Public guard passed: no blocked private/release-sensitive artifacts detected."
       - name: Setup CMake
-        uses: lukka/get-cmake@latest
+        uses: lukka/get-cmake@b95330ff7cd6ac8fc8f8198d7f0cd0de1b9d1089 # latest (branch), pinned 2026-10-31
       - name: Setup vcpkg and libsodium
         shell: pwsh
         run: |

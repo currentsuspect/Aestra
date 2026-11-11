@@ -50,6 +50,19 @@ public:
         std::string& outMessage,
         const CommandContext& context);
 
+    /**
+     * If @p cmd is a verb that creates something (unit, track, lane, clip,
+     * pattern, effect slot), fill out.createdId / createdIdText / createdKind
+     * and a message naming it. Returns false when it is such a verb but
+     * nothing was created (execute() threw and was swallowed): the caller
+     * must report a failure. Returns true otherwise, with hasCreatedId telling
+     * whether there was anything to report.
+     *
+     * One function for single verbs and batch members, so the two cannot
+     * report created objects differently.
+     */
+    static bool describeCreated(const ICommand& cmd, CommandResult& out);
+
 private:
     std::unordered_map<std::string, std::string> tokeniseFlags(
         const std::vector<std::string>& tokens,

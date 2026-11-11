@@ -17,9 +17,12 @@
 
 #include "AgentLoop.h"
 #include "AnthropicProvider.h"
+#include "CliArgs.h"
 #include "MuseSocketClient.h"
+#include "MuseSocketToken.h"
 #include "OpenAICompatProvider.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -29,10 +32,16 @@ using namespace Aestra::MuseAgent;
 
 namespace {
 
+// Generous ceilings: they exist to reject typos and overflow, not to tune policy.
+constexpr int kMaxCountLimit = 1000000;
+constexpr int kMaxSecondsLimit = 7 * 24 * 3600;
+
 void printUsage() {
     std::cout <<
         "muse-agent: drive a Muse session with a model.\n"
-        "  --connect <port|host:port>  Muse socket (default host 127.0.0.1)\n"
+        "  --connect <port|host:port|[v6]:port>  Muse socket (default host 127.0.0.1)\n"
+        "  --token-file <path>         session token file (default: the per-user file the app\n"
+        "                              wrote for the port; the socket refuses clients without it)\n"
         "  --brief \"...\"               the production brief (required)\n"
         "  --provider anthropic|openai (default openai — local-first)\n"
         "  --model <id>                model id (defaults: claude-opus-4-8 / server default)\n"
@@ -57,6 +66,7 @@ std::string envOr(const char* primary, const char* fallback) {
 
 int main(int argc, char** argv) {
     std::string connect = "41952";
+    std::string tokenFile;
     std::string brief;
     std::string providerName = "openai";
     std::string model;
@@ -73,6 +83,7 @@ int main(int argc, char** argv) {
             return argv[++i];
         };
         if (arg == "--connect") connect = next("--connect");
+        else if (arg == "--token-file") tokenFile = next("--token-file");
         else if (arg == "--brief") brief = next("--brief");
         else if (arg == "--provider") providerName = next("--provider");
         else if (arg == "--model") model = next("--model");
@@ -84,9 +95,19 @@ int main(int argc, char** argv) {
             else if (mode == "auto") options.mode = AgentLoop::Mode::Autonomous;
             else { std::cerr << "unknown mode: " << mode << "\n"; return 2; }
         }
-        else if (arg == "--max-iterations") options.maxIterations = std::stoi(next(arg.c_str()));
-        else if (arg == "--max-tool-calls") options.maxToolCalls = std::stoi(next(arg.c_str()));
-        else if (arg == "--max-seconds") options.maxSeconds = std::stoi(next(arg.c_str()));
+        else if (arg == "--max-iterations" || arg == "--max-tool-calls" || arg == "--max-seconds") {
+            const std::string text = next(arg.c_str());
+            const int upper = (arg == "--max-seconds") ? kMaxSecondsLimit : kMaxCountLimit;
+            const auto value = parseBoundedInt(text, 1, upper);
+            if (!value) {
+                std::cerr << "invalid " << arg << ": " << text << " (expected a whole number from 1 to "
+                          << upper << ")\n";
+                return 2;
+            }
+            if (arg == "--max-iterations") options.maxIterations = *value;
+            else if (arg == "--max-tool-calls") options.maxToolCalls = *value;
+            else options.maxSeconds = *value;
+        }
         else if (arg == "--verbose") options.verbose = true;
         else if (arg == "--help" || arg == "-h") { printUsage(); return 0; }
         else { std::cerr << "unknown argument: " << arg << "\n"; return 2; }
@@ -99,26 +120,42 @@ int main(int argc, char** argv) {
     }
 
     // Resolve the Muse endpoint.
-    std::string host = "127.0.0.1";
-    std::string portText = connect;
-    if (const auto colon = connect.find(':'); colon != std::string::npos) {
-        host = connect.substr(0, colon);
-        portText = connect.substr(colon + 1);
+    const HostPort endpoint = splitHostPort(connect, "127.0.0.1");
+    if (!endpoint.ok) {
+        std::cerr << "invalid --connect: " << connect
+                  << " (expected <port>, <host>:<port> or [<ipv6>]:<port>)\n";
+        return 2;
     }
-    const int port = std::atoi(portText.c_str());
-    if (port <= 0 || port > 65535) {
+    const std::string host = endpoint.host;
+    const std::string portText = endpoint.portText;
+    const auto parsedPort = parseBoundedInt(portText, 1, 65535);
+    if (!parsedPort) {
         std::cerr << "invalid port in --connect: " << connect << "\n";
         return 2;
     }
 
-    MuseSocketClient client;
+    const int port = *parsedPort;
+
     std::string error;
+    std::string token;
+    if (!Aestra::MuseToken::loadToken(static_cast<uint16_t>(port), tokenFile, token, error)) {
+        std::cerr << error << "\n";
+        return 1;
+    }
+
+    MuseSocketClient client;
     if (!client.connect(host, static_cast<uint16_t>(port), error)) {
         std::cerr << error << "\n"
                   << "Is Muse listening? Start the app with AESTRA_MUSE_PORT=" << port
                   << " or run: MuseRepl --port " << port << "\n";
         return 1;
     }
+    client.setReadTimeoutMs(10 * 1000);
+    if (!client.authenticate(token, error)) {
+        std::cerr << error << "\n";
+        return 1;
+    }
+    client.setReadTimeoutMs(0);
 
     // Resolve the brain. Local-first: the OpenAI-compatible adapter covers
     // llama.cpp server, Ollama, and LM Studio out of the box; hosted keys
@@ -144,6 +181,10 @@ int main(int argc, char** argv) {
     AgentLoop loop(*provider,
                    [&client](const std::string& line) { return client.request(line); },
                    options);
+    // A silent Muse must not outlive --max-seconds: bound each recv by what is left.
+    loop.setBudgetHook([&client](long remainingMs) {
+        client.setReadTimeoutMs(static_cast<int>(std::min<long>(remainingMs, 2000000000L)));
+    });
 
     std::cerr << "[muse-agent] " << provider->name() << " -> " << host << ":" << port
               << "\n";

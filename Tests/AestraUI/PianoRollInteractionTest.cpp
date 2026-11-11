@@ -3,6 +3,7 @@
 #include "Helpers/TimelineGridRenderer.h"
 #include "Common/MusicHelpers.h"
 #include "Widgets/NUIPianoRollWidgets.h"
+#include "Widgets/PianoRollInspector.h"
 #include "Widgets/PianoRollWidgetShared.h"
 #include "../Support/NullRenderer.h"
 #include <algorithm>
@@ -674,8 +675,9 @@ static void test_ruler_draws_and_clears_a_loop_zone() {
     ASSERT(view.getLoopZone().has_value(), "Ctrl+left-drag on the ruler makes a zone");
     view.setTool(PianoRollTool::Pointer);
     const NUIRect grid = view.getGridBounds();
-    view.onMouseEvent(mouse(NUIMouseEventType::Down, NUIMouseButton::Left, grid.x + 40.0f, grid.y + 40.0f));
-    view.onMouseEvent(mouse(NUIMouseEventType::Up, NUIMouseButton::Left, grid.x + 40.0f, grid.y + 40.0f));
+    // At beat 0.25: outside the [1, 3) highlight whatever the grid's width (the FD-63 inspector narrows it).
+    view.onMouseEvent(mouse(NUIMouseEventType::Down, NUIMouseButton::Left, xAt(0.25), grid.y + 40.0f));
+    view.onMouseEvent(mouse(NUIMouseEventType::Up, NUIMouseButton::Left, xAt(0.25), grid.y + 40.0f));
     ASSERT(!view.getLoopZone(), "a Select-tool press on empty grid clears the zone");
 
     // A drag past the pattern end is clamped to it: past the end there is only silence to loop
@@ -782,9 +784,9 @@ static void test_velocity_lane_lines_up_with_the_grid() {
 
     const NUIRect grid = view.getGridBounds();
     const double ppb = static_cast<double>(grid.width) / view.getViewDurationBeats();
-    // Near the top of the lane (the panel is the view's bottom 88 px; its value area
-    // runs from bottom - 8 up by height - 28), so a hit sets a high velocity.
-    const float laneY = 600.0f - 8.0f - (88.0f - 28.0f) * 0.9f;
+    // Near the top of the lane (the panel is the view's bottom 132 px since FD-63 added Chance and
+    // Ratchet; its value area runs from bottom - 8 up by height - 28), so a hit sets a high velocity.
+    const float laneY = 600.0f - 24.0f - 8.0f - (132.0f - 28.0f) * 0.9f; // above the 24 px status line
     auto press = [&](float x) {
         NUIMouseEvent down;
         down.type = NUIMouseEventType::Down;
@@ -1036,7 +1038,8 @@ static void test_alt_drag_copy_is_one_gesture_and_moves_only_the_clone() {
 class NoteBodyRecorder : public Aestra::Testing::NullRenderer {
 public:
     std::vector<NUIRect> strokes;
-    void fillRoundedRect(const NUIRect& r, float, const NUIColor&) override { strokes.push_back(r); } // flat notes are one fill (FD-48)
+    void fillRoundedRect(const NUIRect& r, float, const NUIColor&) override { strokes.push_back(r); }
+    void fillRect(const NUIRect& r, const NUIColor&) override { strokes.push_back(r); } // square notes since FD-63
 };
 
 static void test_alt_drag_clone_is_drawn_while_dragging() {
@@ -1194,9 +1197,14 @@ static void test_lane_value_edits_in_place_and_keeps_chord_order() {
     layer.setNotes(chord);
     const auto before = layer.getNotes();
 
-    ASSERT(layer.setLaneValue(2, false, 0.25f), "an in-range index is edited");
-    ASSERT(layer.setLaneValue(1, true, -0.5f), "pan is edited the same way");
-    ASSERT(!layer.setLaneValue(9, false, 0.1f) && !layer.setLaneValue(-1, false, 0.1f), "an out-of-range index is refused");
+    ASSERT(layer.setLaneValue(2, NoteLaneField::Velocity, 0.25f), "an in-range index is edited");
+    ASSERT(layer.setLaneValue(1, NoteLaneField::Pan, -0.5f), "pan is edited the same way");
+    ASSERT(!layer.setLaneValue(9, NoteLaneField::Velocity, 0.1f) && !layer.setLaneValue(-1, NoteLaneField::Velocity, 0.1f),
+           "an out-of-range index is refused");
+    // FD-63: chance and ratchet are lanes too, each clamped to what the engine plays.
+    ASSERT(layer.setLaneValue(0, NoteLaneField::Chance, 0.4f) && layer.setLaneValue(3, NoteLaneField::Ratchet, 3.2f),
+           "chance and ratchet are edited the same way");
+    ASSERT(layer.setLaneValue(3, NoteLaneField::Chance, 1.7f), "an out-of-range chance is accepted and clamped");
 
     const auto& after = layer.getNotes();
     bool sameOrder = after.size() == before.size();
@@ -1205,7 +1213,178 @@ static void test_lane_value_edits_in_place_and_keeps_chord_order() {
     ASSERT(after[2].velocity == 0.25f && after[2].pan == 0.0f, "the dragged note's velocity changed and nothing else on it");
     ASSERT(after[1].pan == -0.5f && after[1].velocity == 0.8f, "pan changed on its own note only");
     ASSERT(after[0].velocity == 0.8f && after[3].velocity == 0.8f, "the other notes are untouched");
+    ASSERT(after[0].chance == 0.4f && after[0].ratchet == 1, "chance changed on its own note only");
+    ASSERT(after[3].ratchet == 3 && after[3].chance == 1.0f, "a ratchet rounds to whole hits; chance clamps to 100%");
+    ASSERT(after[1].chance == 1.0f && after[2].ratchet == 1, "the others keep chance 100% and x1");
     PASS("a lane edit is in place and keeps chord order");
+}
+
+// FD-63: the Ratchet lane is four equal bands, x1 at the bottom to x4 at the top.
+static void test_ratchet_lane_bands() {
+    const float bottom = 100.0f, h = 80.0f;
+    ASSERT(ratchetFromPanelPosition(bottom, bottom, h) == 1, "the floor is x1");
+    ASSERT(ratchetFromPanelPosition(bottom - 19.0f, bottom, h) == 1, "the bottom quarter is x1");
+    ASSERT(ratchetFromPanelPosition(bottom - 21.0f, bottom, h) == 2, "the second quarter is x2");
+    ASSERT(ratchetFromPanelPosition(bottom - 61.0f, bottom, h) == 4, "the top quarter is x4");
+    ASSERT(ratchetFromPanelPosition(bottom - 500.0f, bottom, h) == 4 && ratchetFromPanelPosition(bottom + 50.0f, bottom, h) == 1,
+           "above and below the lane clamp to x4 and x1");
+    ASSERT(ratchetToPanelHeight(1, h) == 20.0f && ratchetToPanelHeight(4, h) == 80.0f && ratchetToPanelHeight(9, h) == 80.0f,
+           "a stem is a quarter of the lane per hit, at most x4");
+    PASS("the ratchet lane steps x1..x4");
+}
+
+// FD-63: the inspector says what is selected and edits it, each change one commit (one undo step).
+static void test_inspector_summarizes_and_edits_the_selection() {
+    auto layer = std::make_shared<PianoRollNoteLayer>();
+    int commits = 0;
+    layer->setOnNotesChanged([&](const std::vector<MidiNote>&) { ++commits; });
+    std::vector<MidiNote> notes;
+    for (int i = 0; i < 4; ++i) notes.push_back({60 + i, 8.0 + i, 1.0, 0.5f + 0.1f * i, 0.0f, 0, i < 3, false, 1.0f});
+    notes[0].chance = 0.6f;
+    layer->setNotes(notes);
+
+    PianoRollInspector inspector;
+    inspector.setNoteLayer(layer);
+    inspector.setBeatsPerBar(4);
+    inspector.setBounds(NUIRect(1000.0f, 40.0f, PianoRollInspector::kWidth, 700.0f));
+    auto s = inspector.summarize();
+    ASSERT(s.count == 3, "three notes are selected");
+    ASSERT(s.firstBar == 3 && s.lastBar == 3, "they start in bar 3");
+    ASSERT(s.velocityMixed && s.chanceMixed && s.ratchet == 1, "velocity and chance differ; all are x1");
+
+    auto press = [&](float x, float y, bool down) {
+        NUIMouseEvent e;
+        e.type = down ? NUIMouseEventType::Down : NUIMouseEventType::Up;
+        e.button = NUIMouseButton::Left;
+        e.position = {x, y};
+        e.pressed = down;
+        e.released = !down;
+        return inspector.onMouseEvent(e);
+    };
+    const NUIRect x3 = inspector.ratchetButton(3);
+    press(x3.x + 4.0f, x3.y + 4.0f, true);
+    ASSERT(commits == 1, "a ratchet button is one commit");
+    s = inspector.summarize();
+    ASSERT(s.ratchet == 3, "the selection is x3");
+    ASSERT(layer->getNotes()[3].ratchet == 1, "the unselected note is untouched");
+
+    const NUIRect bar = inspector.velocityBar();
+    press(bar.x + bar.width * 0.25f, bar.y + 3.0f, true);
+    NUIMouseEvent move;
+    move.type = NUIMouseEventType::Move;
+    move.button = NUIMouseButton::None;
+    move.position = {bar.x + bar.width * 0.75f, bar.y + 3.0f};
+    inspector.onMouseEvent(move);
+    ASSERT(commits == 1, "a velocity drag commits nothing until release");
+    press(bar.x + bar.width * 0.75f, bar.y + 3.0f, false);
+    ASSERT(commits == 2, "the whole drag is one commit");
+    s = inspector.summarize();
+    ASSERT(!s.velocityMixed && std::abs(s.velocity - 0.75f) < 0.01f, "every selected note took the dragged velocity");
+
+    NUIMouseEvent passing;
+    passing.type = NUIMouseEventType::Move;
+    passing.button = NUIMouseButton::None;
+    passing.position = {1100.0f, 300.0f};
+    ASSERT(!inspector.onMouseEvent(passing), "a move passing over the column is not claimed (a drag elsewhere keeps it)");
+    PASS("the inspector summarizes and edits the selection, one commit per change");
+}
+
+// FD-66 Smart Snap: the zoom says how fine a grid you want.
+static void test_smart_snap_follows_zoom() {
+    ASSERT(smartSnapFor(66.0f, 4) == SnapGrid::Quarter, "the default zoom (66 px a beat) snaps to 1/4 beat, the board's 1/16");
+    ASSERT(smartSnapFor(400.0f, 4) == SnapGrid::Sixteenth, "zoomed far in: 1/16 beat");
+    ASSERT(smartSnapFor(140.0f, 4) == SnapGrid::Eighth, "zoomed in: 1/8 beat (17.5 px)");
+    ASSERT(smartSnapFor(40.0f, 4) == SnapGrid::Half, "zoomed out a little: 1/2 beat (20 px)");
+    ASSERT(smartSnapFor(20.0f, 4) == SnapGrid::Beat, "zoomed out: the beat");
+    ASSERT(smartSnapFor(10.0f, 4) == SnapGrid::Bar, "zoomed far out in 4/4: the bar");
+    ASSERT(smartSnapFor(10.0f, 3) == SnapGrid::Beat, "in 3/4 it stops at the beat (Bar means 4 beats)");
+    bool monotonic = true;
+    double last = 0.0;
+    for (float ppb = 500.0f; ppb >= 5.0f; ppb -= 1.0f) {
+        const double step = MusicTheory::getSnapDuration(smartSnapFor(ppb, 4));
+        monotonic = monotonic && step >= last;
+        last = step;
+    }
+    ASSERT(monotonic, "zooming out never makes the snap finer");
+    ASSERT(smartSnapFor(0.0f, 4) == SnapGrid::Beat && smartSnapFor(-3.0f, 4) == SnapGrid::Beat, "a bad zoom falls back to the beat");
+    PASS("Smart Snap follows the zoom");
+}
+
+// FD-66 in the view: Smart Snap is the default and follows zoom; a picked snap holds until Smart is picked again.
+static void test_view_smart_snap_default_and_override() {
+    PianoRollView view;
+    view.setBounds({0.0f, 0.0f, 1200.0f, 600.0f});
+    view.onResize(1200, 600);
+    view.setBeatsPerBar(4);
+    view.setTotalDurationBeats(64.0);
+    view.setPixelsPerBeat(66.0f);
+    ASSERT(view.isSmartSnap(), "Smart Snap is on by default");
+    ASSERT(view.getSnap() == SnapGrid::Quarter, "at 66 px a beat it snaps to 1/4 beat");
+    view.setPixelsPerBeat(12.0f);
+    ASSERT(view.getSnap() == SnapGrid::Bar, "zooming out moves the snap to the bar");
+    view.setSnap(SnapGrid::Half);
+    ASSERT(!view.isSmartSnap() && view.getSnap() == SnapGrid::Half, "picking a snap fixes it");
+    view.setPixelsPerBeat(300.0f);
+    ASSERT(view.getSnap() == SnapGrid::Half, "a fixed snap holds through zooming");
+    view.setSmartSnap(true);
+    ASSERT(view.isSmartSnap() && view.getSnap() == SnapGrid::Sixteenth, "Smart again follows the zoom at once");
+    PASS("Smart Snap is the default, follows zoom, and steps aside for a picked snap");
+}
+
+// FD-63 status line: what a key is in the chord at the playhead ("A4 = 3rd of F").
+static void test_chord_tone_role() {
+    PianoRollChord f;
+    f.name = "F"; f.root = 5; f.toneMask = (1u << 5) | (1u << 9) | (1u << 0);
+    ASSERT(chordToneRole(69, f) == "3rd", "A is the 3rd of F");
+    ASSERT(chordToneRole(65, f) == "root" && chordToneRole(72, f) == "5th", "F is the root, C the 5th");
+    ASSERT(chordToneRole(67, f).empty(), "G is not a tone of F");
+    PianoRollChord none;
+    ASSERT(chordToneRole(60, none).empty(), "no chord, no role");
+    PASS("chord-tone roles read as the board's status line");
+}
+
+// FD-63 Muse Quiet: ideas wait behind the ruler's dot; Tab previews, Tab keeps (one commit), Shift+Tab next, Esc drops.
+static void test_muse_quiet_keys() {
+    PianoRollView view;
+    view.setBounds({0.0f, 0.0f, 1200.0f, 600.0f});
+    view.onResize(1200, 600);
+    view.setNotes({{69, 0.0, 0.5, 0.9f, 0.0f, 0, false, false, 1.0f}});
+    int commits = 0;
+    view.setOnNotesChanged([&](const std::vector<MidiNote>&) { ++commits; });
+    auto idea = [](const char* label, int pitch) {
+        PianoRollIdea i;
+        i.label = label;
+        i.notes = {{pitch, 4.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f}, {pitch + 2, 5.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f}};
+        return i;
+    };
+    auto key = [&](NUIKeyCode code, NUIModifiers mods = NUIModifiers::None) {
+        NUIKeyEvent e;
+        e.keyCode = code;
+        e.modifiers = mods;
+        e.pressed = true;
+        return view.onKeyEvent(e);
+    };
+    ASSERT(view.getMuseMode() == MuseMode::Quiet, "Muse starts Quiet (FD-68: never Off by default)");
+    view.setMuseIdeas(4.0, {idea("A", 70), idea("B", 62), idea("C", 65)});
+    ASSERT(view.getMuseIdeas().size() == 3 && view.getPreviewedIdea() == -1, "ideas wait unshown");
+    ASSERT(view.getNotes().size() == 1, "nothing lands in the pattern while an idea waits");
+    ASSERT(key(NUIKeyCode::Tab) && view.getPreviewedIdea() == 0, "Tab shows the first idea");
+    ASSERT(key(NUIKeyCode::Tab, NUIModifiers::Shift) && view.getPreviewedIdea() == 1, "Shift+Tab shows the next");
+    key(NUIKeyCode::Tab, NUIModifiers::Shift);
+    key(NUIKeyCode::Tab, NUIModifiers::Shift);
+    ASSERT(view.getPreviewedIdea() == 0, "and wraps round");
+    ASSERT(view.getNotes().size() == 1 && commits == 0, "previewing writes nothing");
+    ASSERT(key(NUIKeyCode::Tab) && view.getNotes().size() == 3, "Tab again keeps it: its two notes join the pattern");
+    ASSERT(commits == 1, "a kept idea is one commit, so one undo step");
+    ASSERT(view.getMuseIdeas().empty(), "and the ideas are done");
+    view.setMuseIdeas(8.0, {idea("D", 60)});
+    key(NUIKeyCode::Tab);
+    ASSERT(key(NUIKeyCode::Escape) && view.getMuseIdeas().empty() && view.getNotes().size() == 3, "Esc drops them, writing nothing");
+    view.setMuseMode(MuseMode::Off);
+    view.setMuseIdeas(8.0, {idea("E", 60)});
+    ASSERT(view.getMuseIdeas().empty(), "Off: no ideas are shown");
+    ASSERT(!key(NUIKeyCode::Tab) || view.getNotes().size() == 3, "and Tab does nothing to the pattern");
+    PASS("Muse Quiet: Tab previews, Tab keeps as one step, Shift+Tab next, Esc drops, Off is off");
 }
 
 int main() {
@@ -1213,6 +1392,12 @@ int main() {
 
     test_alt_drag_clone_is_drawn_while_dragging();
     test_lane_value_edits_in_place_and_keeps_chord_order();
+    test_ratchet_lane_bands();
+    test_smart_snap_follows_zoom();
+    test_chord_tone_role();
+    test_muse_quiet_keys();
+    test_view_smart_snap_default_and_override();
+    test_inspector_summarizes_and_edits_the_selection();
 
     test_alt_drag_copy_is_one_gesture_and_moves_only_the_clone();
     test_drag_painted_notes_keep_the_dragged_length();

@@ -39,16 +39,14 @@ What actually happens?
 ## Logs/Output
 
 <!--
-Aestra writes two log files, and they are not copies of each other:
+From v0.8.2 Aestra writes one log per run, aestra-YYYYMMDD-HHMMSS.log, in
+  Linux    ~/.local/state/aestra/   (or $XDG_STATE_HOME/aestra/)
+  Windows  %LOCALAPPDATA%\Aestra\logs\
+  macOS    ~/Library/Logs/Aestra/
+and prints the path on its first line when started from a terminal.
 
-  runtime_log.txt    the first moments of startup — build id, working directory
-  aestra_debug.log   everything after that — audio device, project load, the run
-
-They land in whatever directory Aestra was *launched from*, not a fixed folder.
-From a terminal, that directory; from a desktop icon, usually your home folder.
-If several turn up, the `Working Directory:` line at the top of runtime_log.txt
-says which launch each pair came from.
-
+Before v0.8.2 there were two files, runtime_log.txt (startup) and
+aestra_debug.log (the run), in the directory Aestra was launched from.
 Both append and are never rotated, so an old file holds many runs — the lines
 around the time it went wrong are the ones that matter.
 

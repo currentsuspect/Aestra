@@ -109,12 +109,8 @@ std::string unavailableReason(ProductFeature feature, MembershipDisplayStatus st
     }
 
     switch (feature) {
-    case ProductFeature::Rumble:
-        return "Requires Supporter or Founder membership.";
-    case ProductFeature::RumbleHeadless:
     case ProductFeature::FounderBadge:
         return "Requires Founder membership.";
-    case ProductFeature::PremiumPluginBundle:
     case ProductFeature::SupporterBadge:
         return "Requires Supporter or Founder membership.";
     case ProductFeature::CloudSync:
@@ -131,11 +127,10 @@ struct FeatureDefinition {
     const char* label;
 };
 
-constexpr std::array<FeatureDefinition, 8> kFeatureDefinitions = {
+constexpr std::array<FeatureDefinition, 7> kFeatureDefinitions = {
     FeatureDefinition{ProductFeature::CoreDAW, "Core DAW"},
     FeatureDefinition{ProductFeature::Rumble, "Aestra Rumble"},
     FeatureDefinition{ProductFeature::RumbleHeadless, "Rumble Headless"},
-    FeatureDefinition{ProductFeature::PremiumPluginBundle, "Premium Plugin Bundle"},
     FeatureDefinition{ProductFeature::SupporterBadge, "Supporter Badge"},
     FeatureDefinition{ProductFeature::FounderBadge, "Founder Badge"},
     FeatureDefinition{ProductFeature::CloudSync, "Cloud Sync"},

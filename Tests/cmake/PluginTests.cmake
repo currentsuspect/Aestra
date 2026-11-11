@@ -161,9 +161,7 @@ target_include_directories(AestraSatTest PRIVATE
 add_test(NAME AestraSatTest COMMAND AestraSatTest)
 set_tests_properties(AestraSatTest PROPERTIES LABELS "audio;plugins;saturation;contract:audio")
 
-# Aestra Filter plugin test. Not to be confused with AestraFilterTest, which is
-# the DSP::Filter lab (AestraAudio/FilterTest.cpp, registered in Tests/CMakeLists.txt
-# and gated on AESTRA_ENABLE_EXPERIMENTAL_TESTS).
+# Aestra Filter plugin test.
 add_executable(AestraFilterPluginTest AestraAudio/AestraFilterPluginTest.cpp)
 target_link_libraries(AestraFilterPluginTest PRIVATE AestraAudio)
 target_include_directories(AestraFilterPluginTest PRIVATE
@@ -557,3 +555,116 @@ target_include_directories(AestraCompSidechainTest PRIVATE
 )
 add_test(NAME AestraCompSidechainTest COMMAND AestraCompSidechainTest)
 set_tests_properties(AestraCompSidechainTest PROPERTIES LABELS "audio;plugins;comp;sidechain;contract:audio")
+
+# Does a sandboxed plugin delay audio by exactly what it reports to PDC? Needs installed plugins; run directly:
+#   build/Tests/AestraSandboxLatencyProbe [callbackFrames]
+if(UNIX AND TARGET AestraPluginHost)
+    add_executable(AestraSandboxLatencyProbe Integration/SandboxLatencyProbe.cpp)
+    target_link_libraries(AestraSandboxLatencyProbe PRIVATE AestraAudio)
+    target_include_directories(AestraSandboxLatencyProbe PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    target_compile_definitions(AestraSandboxLatencyProbe PRIVATE HELPER_PATH="$<TARGET_FILE:AestraPluginHost>")
+    add_dependencies(AestraSandboxLatencyProbe AestraPluginHost)
+endif()
+
+# The block oversampler runs DSP::Oversampler's kernels over a whole block so
+# the compiler can vectorise across samples (AestraSat uses it). The test holds
+# it to the per-sample oversampler sample by sample, at every block size, plus
+# the latency and reset contracts.
+add_executable(OversamplerBlockTest
+    AestraAudio/OversamplerBlockTest.cpp
+)
+target_link_libraries(OversamplerBlockTest PRIVATE AestraAudio)
+target_include_directories(OversamplerBlockTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME OversamplerBlockTest COMMAND OversamplerBlockTest)
+set_tests_properties(OversamplerBlockTest PROPERTIES
+    LABELS "audio;dsp;oversampling;regression;contract:audio"
+    TIMEOUT 120)
+
+# CompRangesTest: comping (SPEC-022) slice 1, the comp model and the clips it plays.
+add_executable(CompRangesTest
+    AestraAudio/CompRangesTest.cpp
+)
+target_link_libraries(CompRangesTest PRIVATE AestraAudio)
+target_include_directories(CompRangesTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME CompRangesTest COMMAND CompRangesTest)
+set_tests_properties(CompRangesTest PROPERTIES
+    LABELS "audio;comping;regression;contract:audio"
+    TIMEOUT 120)
+
+# SetCompRangeCommandTest: comping (SPEC-022 CT-2), a swipe is one undoable step.
+add_executable(SetCompRangeCommandTest
+    AestraAudio/SetCompRangeCommandTest.cpp
+)
+target_link_libraries(SetCompRangeCommandTest PRIVATE AestraAudio)
+target_include_directories(SetCompRangeCommandTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME SetCompRangeCommandTest COMMAND SetCompRangeCommandTest)
+set_tests_properties(SetCompRangeCommandTest PROPERTIES
+    LABELS "audio;comping;command;regression;contract:audio"
+    TIMEOUT 120)
+
+# CompProjectRoundTripTest: a comp survives save and load (SPEC-022 CT-2).
+add_executable(CompProjectRoundTripTest
+    Integration/CompProjectRoundTripTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+)
+target_link_libraries(CompProjectRoundTripTest PRIVATE AestraAudio)
+target_include_directories(CompProjectRoundTripTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+)
+add_test(NAME CompProjectRoundTripTest COMMAND CompProjectRoundTripTest)
+set_tests_properties(CompProjectRoundTripTest PROPERTIES
+    LABELS "integration;serialization;comping;contract:durability"
+    TIMEOUT 120)
+
+# PresetProjectRoundTripTest: "This project only" presets survive save and load (V83-S2, FD-72).
+add_executable(PresetProjectRoundTripTest
+    Integration/PresetProjectRoundTripTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+)
+target_link_libraries(PresetProjectRoundTripTest PRIVATE AestraAudio)
+target_include_directories(PresetProjectRoundTripTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+)
+add_test(NAME PresetProjectRoundTripTest COMMAND PresetProjectRoundTripTest)
+set_tests_properties(PresetProjectRoundTripTest PROPERTIES
+    LABELS "integration;serialization;presets;contract:durability"
+    TIMEOUT 120)

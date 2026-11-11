@@ -113,6 +113,8 @@ public:
         OUTPUT module label and divider over that region and keeps every other
         module clear of it. */
     void setRightReservedWidth(float width);
+    /** DSP load beside the OUTPUT label, in percent of the callback budget (DspLoadReadout); < 0 hides it. */
+    void setDspLoad(float percent);
 
     /** Width the module row needs with the given optional modules shown.
         AestraContent uses it to decide which output visualizers still fit:
@@ -196,6 +198,7 @@ private:
     float m_tempo;
     double m_position;
     float m_rightReservedWidth = 0.0f;
+    int m_dspLoadShown = -1; ///< whole percent drawn; -1: hidden
 
     // View Toggles state
     bool m_mixerActive{false};

@@ -52,6 +52,7 @@ struct AudioSettings {
     int dcRemoval{kUnset};     ///< tri-state: kUnset / 0 off / 1 on
     int masterLimiter{kUnset}; ///< tri-state
     int multiThreading{kUnset};///< tri-state
+    int stopCutsSound{kUnset}; ///< tri-state: stop cuts all sound instead of letting notes release
 };
 
 /// True when a field was actually present in the file.

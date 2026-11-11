@@ -27,9 +27,16 @@ public:
     RealtimeObjectPublisher(const RealtimeObjectPublisher&) = delete;
     RealtimeObjectPublisher& operator=(const RealtimeObjectPublisher&) = delete;
 
+    // Memory ordering: this is a hazard pointer, a store-then-load handshake on BOTH
+    // sides (the reader stores its hazard then re-reads the published pointer; the
+    // writer stores the published pointer then reads the hazard). Acquire/release
+    // does not order a store before a later load — even x86 reorders exactly that —
+    // so with weaker orders both sides could read the old value and the writer would
+    // free the object the reader just pinned. The four operations of the handshake
+    // are seq_cst, which puts them in one total order.
     void publish(std::shared_ptr<T> object) {
         auto previous = m_owner.exchange(object, std::memory_order_acq_rel);
-        m_published.store(object.get(), std::memory_order_release);
+        m_published.store(object.get(), std::memory_order_seq_cst);
         if (previous && previous.get() != object.get()) {
             m_retired.push_back(std::move(previous));
         }
@@ -42,8 +49,8 @@ public:
         T* object = nullptr;
         do {
             object = m_published.load(std::memory_order_acquire);
-            m_realtimeHazard.store(object, std::memory_order_release);
-        } while (object != m_published.load(std::memory_order_acquire));
+            m_realtimeHazard.store(object, std::memory_order_seq_cst);
+        } while (object != m_published.load(std::memory_order_seq_cst));
         return object;
     }
 
@@ -51,7 +58,7 @@ public:
 
     void collectRetired() {
         const T* active = m_published.load(std::memory_order_acquire);
-        const T* inUse = m_realtimeHazard.load(std::memory_order_acquire);
+        const T* inUse = m_realtimeHazard.load(std::memory_order_seq_cst);
         m_retired.erase(std::remove_if(m_retired.begin(), m_retired.end(),
                                        [active, inUse](const auto& object) {
                                            return object.get() != active && object.get() != inUse;

@@ -4,21 +4,24 @@
  * @brief Transport bar implementation
  */
 
-#include <string>
-#include <cstdio>
-#include <algorithm>
 #include "TransportBar.h"
-#include "../Components/TransportModuleStyle.h"
-#include "../AestraUI/Layout/NUILayoutAlgorithms.h"
-#include "../AestraCore/include/AestraUnifiedProfiler.h"
+
 #include "../AestraCore/include/AestraLog.h"
+#include "../AestraCore/include/AestraUnifiedProfiler.h"
+#include "../AestraUI/Layout/NUILayoutAlgorithms.h"
 #include "../AestraUI/Platform/NUIPlatformBridge.h"
-#include <sstream>
-#include <iomanip>
-#include <cmath>
+#include "../Components/TransportModuleStyle.h"
+#include "DspLoadReadout.h"
+
+#include <algorithm>
 #include <chrono>
-#include <vector>
+#include <cmath>
+#include <cstdio>
+#include <iomanip>
+#include <sstream>
+#include <string>
 #include <utility>
+#include <vector>
 
 namespace Aestra {
 
@@ -942,10 +945,31 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
         const float outX = bounds.right() - m_rightReservedWidth;
         TM::drawDivider(renderer, outX, bounds.y, bounds.height);
         TM::drawLabel(renderer, "OUTPUT", outX + TM::kPadX, bounds.y);
+        if (m_dspLoadShown >= 0) {
+            // How much of each callback's time the engine used: a producer's early warning before dropouts.
+            const std::string text = "DSP " + std::to_string(m_dspLoadShown) + "%";
+            const auto level = DspLoadReadout::levelFor(static_cast<float>(m_dspLoadShown));
+            const auto color = level == DspLoadReadout::Level::Overload ? theme.getColor("error")
+                               : level == DspLoadReadout::Level::Busy   ? theme.getColor("warning")
+                                                                        : theme.getColor("textMuted");
+            const float w = renderer.measureText(text, TM::kLabelFontSize).width;
+            const AestraUI::NUIRect labelRect(bounds.right() - TM::kPadX - w, bounds.y + TM::kLabelTop, w,
+                                              TM::kLabelHeight);
+            renderer.drawText(text, {labelRect.x, renderer.calculateTextY(labelRect, TM::kLabelFontSize)},
+                              TM::kLabelFontSize, color);
+        }
     }
 
     renderChildren(renderer);
     renderButtonIcons(renderer);
+}
+
+void TransportBar::setDspLoad(float percent) {
+    const int shown = percent < 0.0f ? -1 : static_cast<int>(percent + 0.5f);
+    if (shown == m_dspLoadShown)
+        return; // repaint only when the number changes
+    m_dspLoadShown = shown;
+    repaint();
 }
 
 void TransportBar::onResize(int width, int height) {

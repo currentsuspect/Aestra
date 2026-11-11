@@ -59,7 +59,11 @@ private:
     static int rtAudioCallback(void* outputBuffer, void* inputBuffer, unsigned int numFrames, double streamTime,
                                RtAudioStreamStatus status, void* userData);
 
-    bool tryInitializeBackend(const std::vector<RtAudio::Api>& candidates);
+    bool tryInitializeBackend(const std::vector<RtAudio::Api>& candidates, bool keepWithoutDevices = false);
+    /// The APIs an abandoned stream is restarted on, in order: the one that was
+    /// serving it, then auto-detection. Empty-device handling lives in
+    /// tryInitializeBackend(keepWithoutDevices).
+    static std::vector<RtAudio::Api> restartCandidates(RtAudio::Api savedApi);
     static AudioDriverType apiToDriverType(RtAudio::Api api);
     static const char* apiName(RtAudio::Api api);
     std::string getDeviceName(unsigned int deviceId) const;
@@ -78,6 +82,11 @@ private:
     std::atomic<uint32_t> m_sampleRate{0};
     std::atomic<uint32_t> m_bufferSize{0};
     std::atomic<bool> m_callbackRtPriorityAttempted{false};
+    // Client callbacks currently running. RtAudio's PulseAudio backend calls
+    // the client callback outside its stream lock, so RtAudio::stopStream()
+    // can return while a callback is still pumping the engine; stopStream()
+    // waits for this to reach zero.
+    std::atomic<int> m_callbacksInFlight{0};
 #ifdef __linux__
     std::atomic<uintptr_t> m_audioThreadToken{0};
     std::atomic<bool> m_rtPriorityWorkerStop{false};

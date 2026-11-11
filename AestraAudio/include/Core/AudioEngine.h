@@ -24,6 +24,9 @@
 #include "Plugin/HostTransport.h"
 #include "Models/TrackManager.h" // [NEW] For headless rendering
 #include "Playback/LiveMidiQueue.h"
+#include "Playback/ScheduleSnapshot.h"
+#include "Core/TransportStart.h"
+#include "Core/RealtimeSharedSlot.h"
 #include "PluginHost.h" // For MidiBuffer [NEW]
 
 #include <cstring>
@@ -105,6 +108,12 @@ public:
      * without doing that work, because a red gate teaches people to skip gates.
      */
     int processBlock(float* outputBuffer, const float* inputBuffer, uint32_t numFrames, double streamTime);
+    void beginManualRender(); // non-RT; see ManualRenderLease (Core/ManualRenderLease.h)
+    void endManualRender();
+    // Live app only: park a play start (silent, <= ~50 ms) until its notes are queued (AudioEngineScheduling.cpp).
+    void setHoldStartForSchedule(bool hold) { m_transportStart.holdForSchedule.store(hold, std::memory_order_relaxed); }
+    /** @brief Preference: a stop cuts all sound (like pressing stop twice) instead of letting notes release. */
+    void setStopCutsSound(bool cut) { m_transportStart.stopCutsSound.store(cut, std::memory_order_relaxed); }
 
     /**
      * @brief Non-real-time maintenance hook for deferred resource reclamation.
@@ -424,7 +433,8 @@ public:
     /** @brief Get metronome output volume. */
     float getMetronomeVolume() const { return m_metronomeEngine.getVolume(); }
     /** @brief Set transport tempo in beats per minute. */
-    void setBPM(float bpm) { m_metronomeEngine.setBPM(bpm); }
+    void setBPM(float bpm) { m_transportStart.requestedBpm = 0.0f; m_metronomeEngine.setBPM(bpm); } // replaces any in-flight tempo chain
+    double setTempoKeepingBeat(float bpm); // non-RT; returns old/new for UI-held positions (changeProjectTempo())
     /** @brief Get transport tempo in beats per minute. */
     float getBPM() const { return m_metronomeEngine.getBPM(); }
     /** @brief Set the time-signature numerator used by the metronome. */
@@ -531,10 +541,8 @@ public:
         if (mgr) {
             refreshSamplerCacheToSnapshot(*mgr, *newCache);
         }
-        auto retired = std::move(m_samplerCacheOwned);
-        m_samplerCacheOwned = std::move(newCache);
-        m_samplerCacheRaw.store(m_samplerCacheOwned.get(), std::memory_order_release);
-        GarbageCollector::instance().release(std::move(retired), "AudioEngine::SamplerCache");
+        std::lock_guard<std::mutex> cacheLock(m_samplerCacheMutex);
+        m_samplerCache.publish(std::move(newCache)); // the old generation goes once no audio-thread pin reads it
     }
 
     // Internal helper: populate a cache snapshot from a specific UnitManager
@@ -891,6 +899,10 @@ private:
     void renderTrack(const AudioGraph& graph, size_t orderedIndex, const RenderContext& ctx, bool& srcActiveThisBlock);
     void prepareTrackStateForGraph(const AudioGraph& graph);
     void applyPendingCommands();
+    // One block no larger than m_maxBufferFrames. processBlock() splits an oversized
+    // driver block into these (AudioEngineBlockSplit.cpp).
+    int processBlockWithinCapacity(float* outputBuffer, const float* inputBuffer, uint32_t numFrames,
+                                   double streamTime);
     void applyPendingMetronomeCountInRt();
     void clearMetronomeCountInRt();
     void processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset, uint64_t startFrame,
@@ -1239,7 +1251,7 @@ private:
     std::vector<float> m_waveformHistory;
     std::atomic<uint32_t> m_waveformWriteIndex{0};
     std::atomic<uint32_t> m_waveformHistoryFrames{0};
-
+    void applyAuditionUnitRt(const AudioQueueCommand& cmd); // AuditionUnit, audio thread (AudioEngineAudition.cpp)
     // Fade state machine
     enum class FadeState { None, FadingIn, FadingOut, Silent };
     std::atomic<FadeState> m_fadeState{FadeState::None};
@@ -1288,21 +1300,24 @@ private:
     // Drain carry-over (applyPendingCommands): audio thread only. See the pair rule there.
     AudioQueueCommand m_carriedCommand{};
     bool m_hasCarriedCommand{false};
-    // Completed pattern-loop passes (audio thread writes at each wrap, reset
-    // while stopped). Gives pattern scheduling a MONOTONIC frame domain
-    // (iteration * loopLen + wrapped pos) so the next iteration's events are
-    // queued before the wrap instead of after a UI maintenance tick.
+    // Completed loop passes, pattern or timeline (audio thread writes at each wrap, reset
+    // while stopped). Gives note scheduling a MONOTONIC frame domain (ScheduleLoop) so the
+    // next pass is queued before the wrap instead of after a UI maintenance tick.
     std::atomic<uint64_t> m_patternLoopIteration{0};
-    // Coherent (iteration * loopLen + wrapped pos) snapshot for maintenance,
-    // published in ONE store at the end of each callback alongside
-    // m_globalSamplePos. Reading iteration and position as separate atomics
-    // could pair a new iteration with a stale position (they are written at
-    // different points in the callback) and schedule an epoch ahead.
-    std::atomic<uint64_t> m_patternMonotonicFrame{0};
-    // Last loop length (samples) used for a maintenance refill. Only touched
-    // on the maintenance thread; a change (BPM / sample-rate) means queued
-    // timestamps are in a stale domain and the pattern engine must rewind.
-    uint64_t m_lastRefillLoopLenSamples{0};
+    // {queue epoch, monotonic frame, loop} as one tuple, published by every playing block.
+    ScheduleSnapshotPublisher m_schedulePublication;
+    std::atomic<size_t> m_manualRenderOwner{0}; // thread tag holding the manual-render lease; 0 = none
+    uint32_t m_manualRenderNesting{0};          // owner thread only
+    std::atomic<uint32_t> m_processBlocksInFlight{0};
+    TransportStartState m_transportStart; // Core/TransportStart.h
+    bool holdStartForScheduleRt(bool transportRestart, float* output, uint32_t numFrames, uint32_t channels);
+    ScheduleLoop m_lastRefillLoop; // maintenance thread: the loop and epoch the last refill planned under
+    uint16_t m_lastRefillEpoch{0};
+    void refillNoteSchedule(); // performNonRealtimeMaintenance, AudioEngineScheduling.cpp
+    uint64_t applyTempoKeepingBeatRt(float bpm, float previousBpm, uint64_t position); // audio thread
+    // Audio thread: the loop this block's notes are planned across (AudioEngineScheduling.cpp).
+    ScheduleLoop resolveScheduleLoopRt(bool patternMode, uint64_t loopStart, uint64_t loopEnd, uint64_t position,
+                                       bool transportRestart);
 
     // Test Tone State
     std::atomic<bool> m_testToneEnabled{false};
@@ -1321,18 +1336,17 @@ private:
     // Legacy separate fields kept for backward compatibility during transition
     // TODO: remove these once all readers migrated to m_unitManagerSnapshot
     // Using double-buffering with atomic pointer swap for thread safety
-    std::shared_ptr<SamplerCacheData> m_samplerCacheOwned{std::make_shared<SamplerCacheData>()};
-    std::atomic<SamplerCacheData*> m_samplerCacheRaw{m_samplerCacheOwned.get()};
+    // Audio-thread reads pin a generation, so a refresh never frees a cache a stop is walking.
+    RealtimeSharedSlot<SamplerCacheData> m_samplerCache{std::make_shared<SamplerCacheData>()};
+    std::mutex m_samplerCacheMutex; // refreshes: the UI loop and the export worker both run maintenance
     std::array<Plugins::SamplerPlugin*, kMaxCachedSamplers> m_cachedSamplers{};
     std::array<std::shared_ptr<Plugins::SamplerPlugin>, kMaxCachedSamplers> m_cachedSamplerOwners{};
     std::atomic<size_t> m_cachedSamplerCount{0}; // Kept for compatibility
+    std::shared_ptr<const AudioArsenalSnapshot> m_samplerCacheSource; // what the cache was built from (main thread)
     std::atomic<uint64_t> m_lastDeferredResourceCollectionNs{0};
 
 public:
-    /**
-     * @brief Refresh the sampler cache from UnitManager snapshot.
-     * Call from main thread after unit changes.
-     */
+    /** @brief Rebuild the sampler cache when the units changed (main thread; maintenance calls it). */
     void refreshSamplerCache();
 
 private:

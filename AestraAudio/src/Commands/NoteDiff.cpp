@@ -30,10 +30,11 @@ bool notesEqualPosition(const Aestra::Audio::MidiNote& a, const Aestra::Audio::M
 }
 
 /**
- * Expression inequality: velocity or pan changed on an otherwise-identical note.
+ * Expression inequality: velocity, pan, chance or ratchet changed on an otherwise-identical note.
  */
 bool notesExpressionDiffers(const Aestra::Audio::MidiNote& a, const Aestra::Audio::MidiNote& b) {
-    return std::abs(a.velocity - b.velocity) > 1e-4f || std::abs(a.pan - b.pan) > 1e-4f;
+    return std::abs(a.velocity - b.velocity) > 1e-4f || std::abs(a.pan - b.pan) > 1e-4f ||
+           std::abs(a.chance - b.chance) > 1e-4f || a.ratchet != b.ratchet;
 }
 
 } // anonymous namespace

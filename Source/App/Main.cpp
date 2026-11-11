@@ -17,7 +17,9 @@
  */
 
 #include "AestraApp.h"
+#include "RunLog.h"
 #include "../AestraCore/include/AestraLog.h"
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
@@ -121,11 +123,16 @@ static void initializeFileLogging() {
     // Create a multi-logger that writes to file only (no console in GUI mode)
     auto multiLogger = std::make_shared<MultiLogger>(LogLevel::Debug);
     
-    // File logger - always log to runtime_log.txt
-    auto fileLogger = std::make_shared<FileLogger>("runtime_log.txt", LogLevel::Debug);
+    // One log file per run in the per-user state folder (#889); AestraApp appends to the same file.
+    bool fellBack = false;
+    const std::string logPath = Aestra::RunLog::path(&fellBack).string();
+    auto fileLogger = std::make_shared<FileLogger>(logPath, LogLevel::Debug);
     if (fileLogger->isOpen()) {
         multiLogger->addLogger(fileLogger);
     }
+    std::fprintf(stderr, "Aestra log: %s%s\n", logPath.c_str(),
+                 fileLogger->isOpen() ? (fellBack ? " (state folder unavailable, using the working directory)" : "")
+                                      : " (could not be opened: running without a file log)");
     
     // In debug builds, also keep console logging if attached
     #if defined(_DEBUG) && defined(_WIN32)

@@ -25,7 +25,7 @@ jobs:
           $req = @('Aestra-premium','Aestra-build')
           foreach ($r in $req) { if (-not (Test-Path $r)) { Write-Error "Missing private folder: $r"; exit 1 } }
       - name: Setup CMake
-        uses: lukka/get-cmake@latest
+        uses: lukka/get-cmake@b95330ff7cd6ac8fc8f8198d7f0cd0de1b9d1089 # latest (branch), pinned 2026-10-31
       - name: Setup vcpkg and libsodium
         shell: pwsh
         run: |
@@ -76,7 +76,7 @@ jobs:
           Compress-Archive -Path build\**\*.exe,build\**\*.dll -DestinationPath $name
           echo "PACKAGE_NAME=$name" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: Upload Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           tag_name: v${{ github.event.inputs.version }}
           name: Aestra Plus v${{ github.event.inputs.version }}

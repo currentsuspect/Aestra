@@ -10,6 +10,16 @@
 #include <sstream>
 #include <algorithm>
 
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
 namespace fs = std::filesystem;
 
 namespace Aestra {
@@ -604,20 +614,25 @@ bool AutosaveManager::writeAutosaveData(const std::string& data, uint64_t genera
         }
     }
     
-    // Atomic replace: on POSIX, rename() atomically replaces the target.
-    // On Windows, we must remove first (no atomic rename-over-existing in std::filesystem).
+    // Atomic replace. POSIX rename() atomically replaces the target. On Windows
+    // std::filesystem::rename over an existing file is not guaranteed, and a
+    // remove-then-rename leaves a window with no autosave at all, so use a
+    // single MoveFileExW call that replaces in place and writes through.
 #ifdef _WIN32
-    if (fs::exists(target, ec)) {
-        fs::remove(target, ec);
+    if (!MoveFileExW(tmp.wstring().c_str(), target.wstring().c_str(),
+                     MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+        notifyError("Autosave failed: cannot replace target file");
+        fs::remove(tmp, ec);
+        return false;
     }
-#endif
-
+#else
     fs::rename(tmp, target, ec);
     if (ec) {
         notifyError("Autosave failed: cannot replace target file");
         fs::remove(tmp, ec);
         return false;
     }
+#endif
 
 #ifndef _WIN32
     if (!Aestra::fsyncParentDirectory(target.string())) {

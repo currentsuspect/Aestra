@@ -193,6 +193,10 @@ endif()
 set(AESTRA_AUDIO_CORE_SOURCES
     # Core
     src/Core/AudioEngine.cpp
+    src/Core/AudioEngineBlockSplit.cpp
+    src/Core/AudioEngineScheduling.cpp
+    src/Core/AudioEngineAudition.cpp
+    src/Core/ProjectTempo.cpp
     src/Core/ClipRenderKernel.cpp
     src/Core/AudioDeviceManager.cpp
     src/Core/AutosaveManager.cpp
@@ -213,6 +217,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     
     # Models
     src/Models/TrackManager.cpp
+    src/Models/RecordingTakeStream.cpp
     src/Models/ClipPrefilterService.cpp
     src/Models/PlaylistModel.cpp
     src/Models/UnitManager.cpp
@@ -224,7 +229,6 @@ set(AESTRA_AUDIO_CORE_SOURCES
 
     # DSP
     src/DSP/AudioProcessor.cpp
-    src/DSP/Filter.cpp
     src/DSP/Oscillator.cpp
     src/DSP/ReverbSIMD.cpp
     src/DSP/SincAVX512.cpp
@@ -236,6 +240,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/IO/AudioExporter.cpp
     src/IO/BounceInPlace.cpp
     src/IO/StemExport.cpp
+    src/IO/EncodedAudioWriter.cpp
     src/IO/MiniAudioDecoder.cpp
     src/IO/StreamingDecoder.cpp
     src/IO/WaveformCache.cpp
@@ -274,10 +279,18 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/MuseGrammar.cpp
     src/Commands/CommandParser.cpp
     src/Commands/CommandRegistry.cpp
+    src/Commands/PianoRollVerbs.cpp
     src/Commands/SessionLog.cpp
     src/Commands/MuseStubs.cpp
     src/Commands/HostVerbRegistry.cpp
     src/Commands/MuseService.cpp
+    src/Harmony/HarmonyAnalysis.cpp
+    src/Harmony/HarmonyGather.cpp
+    src/Muse/MuseIdeas.cpp
+    src/Presets/Preset.cpp
+    src/Presets/PresetLibrary.cpp
+    src/Presets/FactoryPresets.cpp
+    src/Presets/PresetSession.cpp
     # One translation unit per Muse verb family. MuseService.cpp is the
     # dispatcher; these hold the verbs themselves. See MuseServiceInternal.h.
     src/Commands/MuseServiceQueries.cpp
@@ -302,6 +315,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Plugin/PluginManager.cpp
     src/Plugin/PluginFactory.cpp
     src/Plugin/OutOfProcessPluginInstance.cpp
+    src/Plugin/OutOfProcessPluginInstanceRt.cpp
     src/Plugin/InternalPluginRegistry.cpp
     src/Plugin/BuiltInPlugins.cpp
     src/Plugin/SamplerPlugin.cpp
@@ -401,6 +415,13 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/IO/WaveformCache.h
     include/Models/UnitManager.h
     include/Music/ScaleContext.h
+    include/Harmony/HarmonyAnalysis.h
+    include/Harmony/HarmonyGather.h
+    include/Muse/MuseIdeas.h
+    include/Presets/Preset.h
+    include/Presets/PresetLibrary.h
+    include/Presets/PresetSession.h
+    include/Commands/ApplyPresetCommand.h
 
     include/IO/StreamingDecoder.h
     # Undo/Redo
@@ -582,9 +603,9 @@ if(TARGET AestraCore)
     target_link_libraries(AestraAudioCore PUBLIC AestraCore)
 endif()
 
-# MuseSocketServer uses winsock on Windows.
+# MuseSocketServer uses winsock on Windows, and bcrypt for its session token.
 if(WIN32)
-    target_link_libraries(AestraAudioCore PUBLIC ws2_32)
+    target_link_libraries(AestraAudioCore PUBLIC ws2_32 bcrypt)
 endif()
 
 # AestraAudioCore stays license-free: no AestraAudio source references any

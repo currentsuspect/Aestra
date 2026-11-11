@@ -20,7 +20,7 @@ struct KeyBinding {
 // key cannot be readable but unwritable (or the reverse) — which is exactly the
 // asymmetry that let `buffersize` be saved by one component and unknown to
 // another.
-constexpr std::array<KeyBinding, 13> kBindings{{
+constexpr std::array<KeyBinding, 14> kBindings{{
     {"driver", &AudioSettings::driver},
     {"device", &AudioSettings::deviceId},
     {"input_device", &AudioSettings::inputDeviceId},
@@ -34,6 +34,7 @@ constexpr std::array<KeyBinding, 13> kBindings{{
     {"master_limiter", &AudioSettings::masterLimiter},
     {"preview_ducking_db", &AudioSettings::previewDuckingDb},
     {"multi_threading", &AudioSettings::multiThreading},
+    {"stop_cuts_sound", &AudioSettings::stopCutsSound},
 }};
 
 std::string trim(const std::string& s) {

@@ -17,7 +17,6 @@ the dormant memory profiling infrastructure.
 
 **Hot-path allocation sites:**
 - `AestraAudio/src/DSP/AudioProcessor.cpp` (AudioBufferManager)
-- `AestraAudio/src/DSP/Filter.cpp` (OversampledBuffer::resize)
 - `AestraAudio/include/GarbageCollector.h` (deferred deletion)
 - `AestraAudio/include/IO/SamplePool.h` (sample cache)
 - `AestraAudio/src/DSP/SampleRateConverter.cpp` (filter bank allocation)
@@ -48,7 +47,6 @@ An autonomous agent working in this lab may modify:
 
 2. **Hot-path allocation sites** (refactor existing):
    - `AestraAudio/src/DSP/AudioProcessor.cpp`
-   - `AestraAudio/src/DSP/Filter.cpp`
    - `AestraAudio/include/GarbageCollector.h`
    - `AestraAudio/src/DSP/SampleRateConverter.cpp`
    - `AestraCore/include/AestraUnifiedProfiler.h`

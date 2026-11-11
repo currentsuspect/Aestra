@@ -745,6 +745,7 @@ void ArsenalPanel::onResize(int width, int height) {
 
 void ArsenalPanel::onUpdate(double dt) {
     WindowPanel::onUpdate(dt);
+    claimDropOrderForDrag(); // before the timeline behind this panel can take a sample drop
     if (auto folder = m_kitPicker.takeResult()) loadKitFromFolder(*folder); // the kit picker closed
     const float reservedHeight = COMMAND_HEADER_HEIGHT + PROGRESS_HEADER_HEIGHT + 24.0f;
     const float viewportHeight = std::max(0.0f,
@@ -753,7 +754,6 @@ void ArsenalPanel::onUpdate(double dt) {
     const float maxScroll = std::max(0.0f, contentHeight - viewportHeight);
     m_targetScrollY = safeClampPanelScroll(m_targetScrollY, maxScroll);
     m_scrollY = safeClampPanelScroll(m_scrollY, maxScroll);
-
     const float delta = m_targetScrollY - m_scrollY;
     if (std::abs(delta) > 0.1f) {
         const float ease = 1.0f - std::exp(-static_cast<float>(dt) * 18.0f);

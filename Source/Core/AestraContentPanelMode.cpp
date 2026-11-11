@@ -44,6 +44,7 @@ void AestraContent::wireEditorMode() {
     m_pluginController->setEditorModeProvider(
         [this]() { return readPanelMode(surfaceStore(), kPluginEditorsModeKey, /*isPluginEditor=*/true); },
         [this](const AestraUI::PanelMode& next) { writePanelMode(surfaceStore(), kPluginEditorsModeKey, next); });
+    wirePluginPresets(); // every plugin window also gets the preset bar
 }
 
 void AestraContent::wirePanelMode(const std::shared_ptr<Audio::WindowPanel>& panel, Audio::ViewType view) {
@@ -146,4 +147,16 @@ void AestraContent::resetPanelPositions() {
     if (m_pluginController)
         m_pluginController->resetEditorPositions();
     setDirty(true);
+}
+
+bool AestraContent::placeFullWindowPanel(Audio::WindowPanel& panel) {
+    if (!panel.isFullWindow()) return false;
+    // Owner, 31 Oct: under the transport, so play, stop, record and the position stay where the hand expects them;
+    // and over the browser, which the piano roll has no use for. The browser keeps its state underneath and is there
+    // as it was when the editor closes. (If the editor ever uses the browser, bound it beside it like the mixer.)
+    const AestraUI::NUIRect whole = computeSafeRect();
+    const AestraUI::NUIRect now = panel.getBounds();
+    if (now.x != whole.x || now.y != whole.y || now.width != whole.width || now.height != whole.height)
+        panel.setBounds(whole);
+    return true;
 }

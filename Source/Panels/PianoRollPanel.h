@@ -2,6 +2,7 @@
 #pragma once
 
 #include "WindowPanel.h"
+#include "Harmony/HarmonyAnalysis.h"
 #include "../AestraUI/Widgets/NUIPianoRollWidgets.h"
 #include "TrackManager.h"
 #include "../Components/TimelineMinimapBar.h"
@@ -85,6 +86,13 @@ public:
      * @param bpb Beats per bar.
      */
     void setBeatsPerBar(int bpb);
+    /** @brief A fixed snap (Smart Snap steps aside, FD-66). */
+    void setSnap(AestraUI::SnapGrid snap) { if (m_pianoRoll) m_pianoRoll->setSnap(snap); }
+    /** @brief The chords the ruler shows (V83-HS1). */
+    const std::vector<AestraUI::PianoRollChord>& getChords() const { return m_pianoRoll->getChords(); }
+    /** @brief Muse's waiting ideas (V83-MU1), and the mode switch, for tests and the host. */
+    const std::vector<AestraUI::PianoRollIdea>& getMuseIdeas() const { return m_pianoRoll->getMuseIdeas(); }
+    void setMuseMode(AestraUI::MuseMode mode) { m_pianoRoll->setMuseMode(mode); }
     /** @brief Apply one complete harmony edit through the editor view. */
     void applyHarmonyContextEdit(int rootKey, AestraUI::ScaleType scaleType, bool snapToScale);
     /** @brief Return the complete harmony context currently shown by the editor. */
@@ -109,6 +117,11 @@ private:
     void rebuildUnitSwitcher();
     void updateGhostChannels();
     void rebuildTimelineMinimap();
+    void refreshHarmony(); ///< V83-HS1: chords and key for the ruler, grid, Key box and status line (FD-63)
+    void refreshMuseIdeas(); ///< V83-MU1: Quiet mode's next-bar ideas for the editing unit
+    Aestra::Audio::Harmony::HarmonyTimeline m_harmony; ///< the last analysis, for Muse
+    double m_museIdle = 0.0;     ///< seconds since the last committed edit
+    bool m_museWanted = false;   ///< an edit or load has not been answered with ideas yet
     void layoutTimelineMinimap();
 
     std::shared_ptr<TrackManager> m_trackManager;

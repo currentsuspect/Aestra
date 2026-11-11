@@ -11,6 +11,7 @@
 #include "AutosaveManager.h"
 #include "Commands/MuseService.h"
 #include "Commands/MuseSocketServer.h"
+#include "AudioDeviceNotice.h"
 #include "ProjectDocumentState.h"
 #include "ProjectSerializer.h"
 #include "../Settings/MissingAssetsDialog.h"
@@ -155,6 +156,8 @@ private:
     /// (true = written) on the UI thread, possibly frames later.
     void saveCurrentProject(std::function<void(bool)> onDone = {});
     void saveProjectAs(std::function<void(bool)> onDone = {});
+    /// Writes the project to a new file and stays on the open one (its saved state unchanged).
+    void saveProjectCopy();
     /// Show a native picker without blocking the UI thread; @p onPicked runs on
     /// the UI thread (empty = cancelled). One picker at a time: returns false,
     /// without calling @p onPicked, if one is already open.
@@ -241,6 +244,9 @@ private:
     void stopUpdateChecks();
     void addUpdatesPage(Aestra::SettingsDialog& dialog); // Settings > Updates
     std::shared_ptr<Aestra::UpdateNotifier> m_updateNotifier;
+    // Audio interface lost / back (AestraAppAudioStatus.cpp, #650): tells the user in a toast.
+    void watchAudioDevice();
+    Aestra::AudioDeviceNoticeState m_audioDeviceNotice;
 
     // Declared before m_content so it outlives every surface that reads it (reverse destruction order).
     std::unique_ptr<Aestra::UISurfaceStoreFile> m_uiSurfaceStore;

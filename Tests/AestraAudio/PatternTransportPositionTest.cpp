@@ -251,13 +251,12 @@ void patternCuePastLoopEndWrapsIntoLoop() {
 
 // --- Scheduler contract: refill from the cue, not from the loop top. -------------
 //
-// After a mid-pattern transport restart, the audio callback's m_patternMonotonicFrame
-// is still 0 (it was reset while stopped) until the first playing block republishes it.
-// If maintenance refilled from that stale 0, the loop-top events would be queued and a
-// playhead at beat 2 would fire them at the buffer edge — "starts from beat 1" again.
-// performNonRealtimeMaintenance() must refill from the cued m_globalSamplePos instead.
-// This test pins the scheduler contract that guard relies on: refilling at the cue
-// must not schedule events that started before the cue.
+// After a mid-pattern transport restart, maintenance must refill from the cued playhead,
+// not the loop top, or a playhead at beat 2 fires the loop-top events at the buffer
+// edge — "starts from beat 1" again. The engine now refills from the frame the audio
+// thread published with its queue epoch (ScheduleSnapshot), so a stale frame can only
+// ever plan events that are already dead. This test pins the scheduler contract that
+// relies on: refilling at the cue must not schedule events that started before the cue.
 void schedulerRefillAtCueSkipsPastNotes() {
     TimelineClock clock(120.0);
     PatternManager patterns;

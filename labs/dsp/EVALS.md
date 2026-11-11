@@ -24,7 +24,6 @@ cmake --build build-autoresearch --parallel
 | `AestraOscillatorTest` | Oscillator correctness |
 | `AestraMixerBusTest` | MixerBus correctness |
 | `AestraSampleRateConverterTest` | Resampler correctness |
-| `AestraFilterTest` | Filter correctness (experimental) |
 | `OfflineRenderRegressionTest` | Offline export parity |
 | `SincBenchmark` | Sinc interpolator micro-benchmark |
 | `ResamplerBenchmark` | Full resampler benchmark |
@@ -61,15 +60,6 @@ Runs the resampler test suite — the most DSP-sensitive existing test.
 
 **Gate**: HARD — exit code must be 0.
 
-### Lane 5: Filter (`AestraFilterTest`)
-
-Runs the filter test suite:
-- Filter type responses
-- Oversampling behavior
-- Saturation modes
-- Parameter smoothing
-
-**Gate**: HARD — exit code must be 0 (when experimental tests enabled).
 
 ### Lane 6: Offline Render Regression (`OfflineRenderRegressionTest`)
 
@@ -102,7 +92,6 @@ Benchmarks the full `SampleRateConverter::process()` pipeline.
 | `AestraOscillatorTest` exit code | HARD | Reject + revert |
 | `AestraMixerBusTest` exit code | HARD | Reject + revert |
 | `AestraSampleRateConverterTest` exit code | HARD | Reject + revert |
-| `AestraFilterTest` exit code | HARD | Reject + revert |
 | `OfflineRenderRegressionTest` exit code | HARD | Reject + revert |
 | `SincBenchmark` regression > 10% | ADVISORY | Flag + investigate |
 | `ResamplerBenchmark` regression > 10% | ADVISORY | Flag + investigate |

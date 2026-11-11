@@ -91,14 +91,19 @@ struct RenderMetrics {
     float maxAbs = 0.0f;
     float maxFirstDiff = 0.0f;
     float postRetriggerMax = 0.0f;
+    // Peak once the choked voice's declick fade (4 ms) is certainly over.
+    float afterFadeMax = 0.0f;
 };
+
+// Frames after the retrigger by which the declick fade has ended (4 ms + margin).
+constexpr uint32_t kFadeDoneFrames = static_cast<uint32_t>(0.006 * kSampleRate);
 
 // Renders noteOn(firstNote) at frame 0 and noteOn(secondNote) at
 // retriggerOffset within the retrigger block. cutSelf selects the policy;
 // mono selects the mono/legato voice path.
 bool renderRetrigger(const std::filesystem::path& wavPath, bool cutSelf, uint8_t firstNote,
                      uint8_t secondNote, int retriggerOffset, RenderMetrics* metrics, std::string* error,
-                     bool mono = false) {
+                     bool mono = false, int maxVoices = 8) {
     Plugins::SamplerPlugin sampler;
     if (!sampler.initialize(kSampleRate, kBlockFrames)) {
         *error = "sampler initialize failed";
@@ -109,7 +114,7 @@ bool renderRetrigger(const std::filesystem::path& wavPath, bool cutSelf, uint8_t
         return false;
     }
     sampler.setRootMidiNote(60);
-    sampler.setMaxVoices(8);
+    sampler.setMaxVoices(maxVoices);
     sampler.setMonoMode(mono);
     sampler.setEnvelope(0.001f, 1.5f, 0.5f, 0.05f);
     sampler.setCutSelfMode(cutSelf);
@@ -140,6 +145,12 @@ bool renderRetrigger(const std::filesystem::path& wavPath, bool cutSelf, uint8_t
             }
             if (block >= kRetriggerBlock) {
                 metrics->postRetriggerMax = std::max(metrics->postRetriggerMax, std::abs(value));
+            }
+            const uint64_t frame = static_cast<uint64_t>(block) * kBlockFrames + i;
+            const uint64_t fadeDone = static_cast<uint64_t>(kRetriggerBlock) * kBlockFrames +
+                                      static_cast<uint64_t>(retriggerOffset) + kFadeDoneFrames;
+            if (frame >= fadeDone) {
+                metrics->afterFadeMax = std::max(metrics->afterFadeMax, std::abs(value));
             }
             prevLeft = value;
         }
@@ -186,6 +197,44 @@ bool renderSingleNote(const std::filesystem::path& wavPath, float* maxAbs, std::
     return true;
 }
 
+// N notes started on the SAME sample after silence: the polyphony compensation
+// must already be at its target when the chord's attack arrives, not glide down
+// from unity across it (that overshoots by ~6 dB for 4 voices).
+bool renderChordPeak(const std::filesystem::path& wavPath, int voices, float* peak, std::string* error) {
+    Plugins::SamplerPlugin sampler;
+    if (!sampler.initialize(kSampleRate, kBlockFrames)) {
+        *error = "sampler initialize failed";
+        return false;
+    }
+    if (!sampler.loadSample(wavPath.string())) {
+        *error = "sampler failed to load mono wav";
+        return false;
+    }
+    sampler.setRootMidiNote(60);
+    sampler.setMaxVoices(16);
+    sampler.setEnvelope(0.001f, 1.5f, 0.5f, 0.05f);
+    sampler.activate();
+
+    std::vector<float> left(kBlockFrames, 0.0f);
+    std::vector<float> right(kBlockFrames, 0.0f);
+    float* outputs[] = {left.data(), right.data()};
+
+    MidiBuffer midi;
+    for (int v = 0; v < voices; ++v) {
+        midi.addNoteOn(1, static_cast<uint8_t>(kNote + v), kVelocity, 0);
+    }
+
+    for (int block = 0; block < kBlocks; ++block) {
+        std::fill(left.begin(), left.end(), 0.0f);
+        std::fill(right.begin(), right.end(), 0.0f);
+        sampler.process(nullptr, outputs, 0, 2, kBlockFrames, block == 0 ? &midi : nullptr, nullptr);
+        for (uint32_t i = 0; i < kBlockFrames; ++i) {
+            *peak = std::max(*peak, std::abs(left[i]));
+        }
+    }
+    return true;
+}
+
 } // namespace
 
 int main() {
@@ -225,11 +274,12 @@ int main() {
         return fail("cut-self retrigger render: " + error);
     }
 
-    // 1. Choke discontinuity: the old voice is hard-cut at the retrigger.
-    //    The cut lands at the old voice's instantaneous value (~0.9x peak);
-    //    smooth playback never steps that hard.
-    if (cutOn.maxFirstDiff <= singleMax * 0.50f) {
-        return fail("cut-self: retrigger must hard-cut the previous voice (no discontinuity seen)");
+    // 1. The choke is declicked: the old voice fades over a few milliseconds
+    //    instead of jumping to zero mid-cycle. A hard cut used to step by
+    //    ~0.9x peak here and ticked audibly on 808s (owner's session,
+    //    2026-10-25); smooth playback never steps that hard.
+    if (cutOn.maxFirstDiff > singleMax * 0.15f) {
+        return fail("cut-self: the choke stepped the waveform (hard cut, audible tick)");
     }
 
     // 2. The new trigger still sounds (choke kills the OLD voice, not the new).
@@ -237,9 +287,10 @@ int main() {
         return fail("cut-self: new voice was silenced by the choke");
     }
 
-    // 3. No overlap: post-choke output stays at single-voice amplitude.
-    if (cutOn.maxAbs > singleMax * 1.10f) {
-        return fail("cut-self: output exceeded single-voice amplitude (overlap remains)");
+    // 3. No overlap past the fade: once the declick is over, output is back
+    //    at single-voice amplitude.
+    if (cutOn.afterFadeMax > singleMax * 1.10f) {
+        return fail("cut-self: output exceeded single-voice amplitude after the fade (overlap remains)");
     }
 
     // 4. Default (cut-self OFF): ordinary samples are untouched — retrigger
@@ -254,30 +305,30 @@ int main() {
     if (defaultOff.maxAbs <= singleMax * 1.10f) {
         return fail("default sampler: retrigger should overlap (no amplitude boost seen)");
     }
-    if (cutOn.maxAbs >= defaultOff.maxAbs) {
+    if (cutOn.afterFadeMax >= defaultOff.maxAbs) {
         return fail("cut-self must reduce retrigger amplitude vs default overlap");
     }
 
     // 5. Different pitches are still choked: Cut-Self belongs to the sampler
     //    voice group, not to one MIDI note. This is the Piano Roll 808 case:
     //    changing pitch must not allow the prior hit to overlap the next one.
-    //    Use the peak-aligned offset so the hard choke is observable rather
-    //    than hiding it at the sine's zero crossing.
+    //    The peak-aligned offset makes a hard cut as visible as possible, so
+    //    a regression to one cannot hide at a zero crossing.
     RenderMetrics differentPitch;
     if (!renderRetrigger(wavPath, true, kNote, kNote + 12, kChokeOffset, &differentPitch, &error)) {
         return fail("different-pitch render: " + error);
     }
-    if (differentPitch.maxFirstDiff <= singleMax * 0.50f) {
-        return fail("cut-self: different-pitch trigger did not choke the playing voice");
+    if (differentPitch.maxFirstDiff > singleMax * 0.15f) {
+        return fail("cut-self: different-pitch choke stepped the waveform (hard cut)");
     }
-    if (differentPitch.maxAbs > singleMax * 1.10f) {
+    if (differentPitch.afterFadeMax > singleMax * 1.10f) {
         return fail("cut-self: different-pitch output exceeded single-voice amplitude");
     }
 
     // 6. Mono mode: cut-self still wins over legato. With cut-self OFF a mono
     //    retrigger glides the held voice (smooth continuation, no restart);
-    //    with cut-self ON the held voice is choked and the note restarts, so
-    //    the retrigger shows the hard choke step and no overlap boost.
+    //    with cut-self ON the held voice is choked (declicked) and the note
+    //    restarts, with no step and no overlap once the fade is over.
     RenderMetrics monoLegato;
     if (!renderRetrigger(wavPath, false, kNote, kNote, kChokeOffset, &monoLegato, &error, true)) {
         return fail("mono legato render: " + error);
@@ -289,11 +340,91 @@ int main() {
     if (!renderRetrigger(wavPath, true, kNote, kNote, kChokeOffset, &monoCutSelf, &error, true)) {
         return fail("mono cut-self render: " + error);
     }
-    if (monoCutSelf.maxFirstDiff <= singleMax * 0.50f) {
-        return fail("mono cut-self: retrigger must choke the held voice (no step seen)");
+    if (monoCutSelf.maxFirstDiff > singleMax * 0.15f) {
+        return fail("mono cut-self: the choke stepped the waveform (hard cut)");
     }
-    if (monoCutSelf.maxAbs > singleMax * 1.10f) {
+    if (monoCutSelf.afterFadeMax > singleMax * 1.10f) {
         return fail("mono cut-self: retrigger output exceeded single-voice amplitude");
+    }
+
+    // 6c. One configured voice, cut-self on: the pool has no free slot inside the
+    //     polyphony, so the retrigger reuses the only one. It must still fade the
+    //     old hit — the slot search used to overwrite it and step to zero in a
+    //     single sample, which is the tick this whole change removed.
+    RenderMetrics oneVoice;
+    if (!renderRetrigger(wavPath, true, kNote, kNote, kChokeOffset, &oneVoice, &error, false, 1)) {
+        return fail("one-voice cut-self render: " + error);
+    }
+    if (oneVoice.maxFirstDiff > singleMax * 0.15f) {
+        return fail("one-voice cut-self: the choke stepped the waveform (hard cut)");
+    }
+    if (oneVoice.afterFadeMax < 0.10f * singleMax) {
+        return fail("one-voice cut-self: new voice was silenced by the choke");
+    }
+    if (oneVoice.afterFadeMax > singleMax * 1.10f) {
+        return fail("one-voice cut-self: retrigger output exceeded single-voice amplitude");
+    }
+
+    // 6d. A chord that starts from silence: the polyphony compensation must be in
+    //     place for its attack. Gliding down from unity across the attack summed
+    //     the chord uncompensated and overshot — measured 0.179 against 0.0985
+    //     for four voices, ~5 dB — while the glide is only there for release
+    //     tails that are already sounding.
+    for (int voices = 2; voices <= 4; ++voices) {
+        float peak = 0.0f;
+        if (!renderChordPeak(wavPath, voices, &peak, &error)) {
+            return fail("chord render: " + error);
+        }
+        const float compensated = singleMax * std::sqrt(static_cast<float>(voices));
+        if (peak > compensated * 1.15f) {
+            return fail("polyphony compensation: a " + std::to_string(voices) + "-note chord from silence overshoots (" +
+                        std::to_string(peak) + " vs " + std::to_string(compensated) + " compensated)");
+        }
+        if (peak < compensated * 0.85f) {
+            return fail("polyphony compensation: a " + std::to_string(voices) + "-note chord is too quiet (" +
+                        std::to_string(peak) + " vs " + std::to_string(compensated) + " compensated)");
+        }
+    }
+
+    // 6b. The 808 case without cut-self: a mono note is released, and the next
+    //     note arrives while the release tail is still sounding. The restart
+    //     reuses the mono voice; the tail must fade out, not be overwritten
+    //     mid-waveform (that step was the tick on back-to-back 808s).
+    {
+        Plugins::SamplerPlugin sampler;
+        sampler.initialize(kSampleRate, kBlockFrames);
+        if (!sampler.loadSample(wavPath.string())) return fail("mono tail: load");
+        sampler.setRootMidiNote(60);
+        sampler.setMaxVoices(8);
+        sampler.setMonoMode(true);
+        sampler.setEnvelope(0.001f, 1.5f, 0.8f, 0.30f); // long release: the tail is loud at the retrigger
+        sampler.setCutSelfMode(false);
+        sampler.activate();
+        std::vector<float> left(kBlockFrames, 0.0f), right(kBlockFrames, 0.0f);
+        float* outputs[] = {left.data(), right.data()};
+        MidiBuffer on1, offThenOn;
+        on1.addNoteOn(1, kNote, kVelocity, 0);
+        offThenOn.addNoteOff(1, kNote, 0, 0);
+        offThenOn.addNoteOn(1, kNote - 3, kVelocity, kChokeOffset + 40); // mid-tail, different pitch
+        float prev = 0.0f, maxStep = 0.0f, peak = 0.0f;
+        for (int block = 0; block < kBlocks; ++block) {
+            std::fill(left.begin(), left.end(), 0.0f);
+            std::fill(right.begin(), right.end(), 0.0f);
+            const MidiBuffer* midi = block == 0 ? &on1 : (block == 1 ? &offThenOn : nullptr);
+            sampler.process(nullptr, outputs, 0, 2, kBlockFrames, midi, nullptr);
+            for (uint32_t i = 0; i < kBlockFrames; ++i) {
+                if (block > 0 || i > 0) maxStep = std::max(maxStep, std::abs(left[i] - prev));
+                peak = std::max(peak, std::abs(left[i]));
+                prev = left[i];
+            }
+        }
+        if (peak <= 0.0f) return fail("mono tail: silent");
+        // A 220 Hz sine at this level steps ~3% of peak per sample; the tick
+        // measured in the session was ~30%. 10% separates them.
+        if (maxStep > singleMax * 0.10f) {
+            return fail("mono retrigger over a release tail stepped the waveform (" + std::to_string(maxStep) +
+                        " vs peak " + std::to_string(singleMax) + ")");
+        }
     }
 
     // 7. State roundtrip + legacy state default.

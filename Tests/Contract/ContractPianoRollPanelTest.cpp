@@ -103,6 +103,7 @@ int gesture() {
                                        MidiNote{67, 4.0, 2.0, 0.8f, 0.0f, 0}});
     PianoRollPanel panel(tm);
     panel.loadPattern(pid);
+    panel.setSnap(AestraUI::SnapGrid::Beat); // a nudge is one beat here (Smart Snap, FD-66, would follow the zoom)
     auto& history = tm->getCommandHistory();
     const auto original = storedNotes(*tm, pid);
     const double originalLength = tm->getPatternManager().getPattern(pid)->lengthBeats;
@@ -161,6 +162,7 @@ int crossPattern() {
 
     PianoRollPanel panel(tm);
     panel.loadPattern(a);
+    panel.setSnap(AestraUI::SnapGrid::Beat); // fixed one-beat nudge
     key(panel, AestraUI::NUIKeyCode::A, true);
     key(panel, AestraUI::NUIKeyCode::Right); // edit pattern A
     panel.loadPattern(b);                    // switch pattern

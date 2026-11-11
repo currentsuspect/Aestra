@@ -14,10 +14,13 @@ set(Aestra_SOURCES
 	App/AestraApp.cpp
 	App/AestraAppVersions.cpp
 	App/AestraAppUpdates.cpp
+	App/AestraAppAudioStatus.cpp
+	App/AudioDeviceNotice.h
 	App/UpdateNotifier.cpp
 	App/UpdateNotifier.h
 	App/AestraAppRecovery.cpp
     App/MuseHostVerbs.cpp
+    App/MuseTransportVerbs.cpp
     App/MuseProjectLoadReport.h
     App/MuseProjectLoadReport.cpp
     App/ProjectLifecycle.h
@@ -34,8 +37,12 @@ set(Aestra_SOURCES
 	Core/AestraContent.h
 	Core/AestraContent.cpp
 	Core/AestraContentBounce.cpp
+	Core/AestraContentEditorPreview.cpp
+	Core/AestraContentMeters.cpp
+	Panels/DspLoadReadout.h
 	Core/AestraContentImport.cpp
 	Core/AestraContentPanelMode.cpp
+	Core/AestraContentPresets.cpp
 	Core/AestraContentPlacement.cpp
 	Core/AestraContentRouting.cpp
 	Core/WorkspaceFocus.h
@@ -86,6 +93,8 @@ set(Aestra_SOURCES
 	Panels/AudioClipEditorPanel.cpp
 	
 	# Settings
+	Settings/SettingsForm.h
+	Settings/SettingsForm.cpp
 	Settings/ConfirmationDialog.h
 	Settings/ConfirmationDialog.cpp
 	Settings/RecoveryDialog.h
@@ -107,6 +116,7 @@ set(Aestra_SOURCES
 	Settings/AppearanceSettingsPage.cpp
 	Settings/ExportDialog.h
 	Settings/ExportDialog.cpp
+	Settings/ExportDialogBoard.cpp
 	
 	# Components
 	Components/TransportInfoContainer.h
@@ -131,6 +141,7 @@ set(Aestra_SOURCES
 	Components/TrackUIComponentAutomationClips.cpp
 	Components/TrackUIComponentHeader.cpp
 	Components/TrackUIComponentMute.cpp
+	Components/TrackUIComponentComp.cpp
 	Components/TrackUIComponentAutomationRow.cpp
 	Components/TrackHeaderText.h
 	Components/TimelineClipGeometry.h
@@ -146,6 +157,8 @@ set(Aestra_SOURCES
 	Components/TrackManagerUIRender.cpp
 	Components/TrackManagerUIEvents.cpp
 	Components/TrackManagerUIView.cpp
+	Components/TrackManagerUIFold.cpp
+	Components/TimelineFold.h
 	Components/TrackManagerUIDragDrop.cpp
 	Components/MixerView.h
 	Components/MixerView.cpp

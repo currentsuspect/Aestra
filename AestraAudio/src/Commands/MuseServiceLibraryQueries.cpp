@@ -14,9 +14,11 @@
 #include "Models/TrackManager.h"
 #include "Models/UnitManager.h"
 #include "IO/AudioFileValidator.h"
+#include "Harmony/HarmonyGather.h"
 #include "Plugin/PluginManager.h"
 
 #include "AestraJSON.h"
+#include <algorithm>
 #include <cmath>
 #include <optional>
 #include <string>
@@ -85,6 +87,7 @@ std::optional<std::string> handleLibraryVerbs(const RequestContext& ctx, const R
             const uint32_t slot = slotMap->getSlotIndex(channel->getChannelId());
             if (slot == ChannelSlotMap::INVALID_SLOT) continue;
             JSON entry = readoutToJson(meters->readMeter(static_cast<int>(slot)));
+            entry.set("track", JSON(static_cast<double>(i))); // what track verbs take (#1042)
             entry.set("index", JSON(static_cast<double>(i)));
             entry.set("id", JSON(static_cast<double>(channel->getChannelId())));
             tracks.push(entry);
@@ -239,13 +242,15 @@ std::optional<std::string> handleLibraryVerbs(const RequestContext& ctx, const R
             }
         }
         uint64_t trackIndex = 0;
-        if (!args.has("track") || !args["track"].isNumber() ||
-            !numberToId(args["track"].asNumber(), trackIndex)) {
+        const bool master = args.has("track") && args["track"].isNumber() && args["track"].asNumber() == -1.0;
+        if (!master && (!args.has("track") || !args["track"].isNumber() ||
+                        !numberToId(args["track"].asNumber(), trackIndex))) {
             return makeError(id, "validation_error",
-                             "arg 'track' must be a non-negative integer", verb)
+                             "arg 'track' must be a track index, or -1 for the master", verb)
                 .toString();
         }
-        MixerChannel* channel = m_trackManager->getChannel(static_cast<size_t>(trackIndex));
+        MixerChannel* channel = master ? m_trackManager->getMasterChannel()
+                                       : m_trackManager->getChannel(static_cast<size_t>(trackIndex));
         if (!channel) {
             return makeError(id, "execution_error",
                              "no such track: " + std::to_string(trackIndex), verb)
@@ -374,6 +379,8 @@ std::optional<std::string> handleLibraryVerbs(const RequestContext& ctx, const R
                 n.set("duration", JSON(note.durationBeats));
                 n.set("velocity", JSON(static_cast<double>(note.velocity)));
                 n.set("pan", JSON(static_cast<double>(note.pan)));
+                n.set("chance", JSON(static_cast<double>(note.chance)));
+                n.set("ratchet", JSON(static_cast<double>(note.ratchet)));
                 n.set("unit", JSON(static_cast<double>(note.unitId)));
                 notes.push(n);
             }
@@ -381,6 +388,92 @@ std::optional<std::string> handleLibraryVerbs(const RequestContext& ctx, const R
         } else if (pattern->isAudio()) {
             result.set("mixerChannelId", JSON(static_cast<double>(pattern->getMixerChannelId())));
         }
+        JSON response = makeOk();
+        response.set("result", result);
+        return finish(response);
+    }
+    if (verb == "get_harmony") {
+        if (!m_trackManager) {
+            return makeError(id, "execution_error", "no track manager", verb).toString();
+        }
+        // V83-HS1 (FD-63): key and chords of the arrangement, or of one pattern alone. Computed on demand here,
+        // never on the audio thread. All args are optional: pattern, from, to, beatsPerBar.
+        bool havePattern = false;
+        uint64_t patternValue = 0;
+        double from = 0.0, to = 0.0, beatsPerBar = 4.0;
+        if (request.has("args") && request["args"].isObject()) {
+            JSON& args = request["args"];
+            for (auto& entry : args.asObject()) {
+                if (entry.first != "pattern" && entry.first != "from" && entry.first != "to" &&
+                    entry.first != "beatsPerBar") {
+                    return makeError(id, "validation_error", "unknown arg for get_harmony: " + entry.first, verb)
+                        .toString();
+                }
+            }
+            if (args.has("pattern")) {
+                if (!args["pattern"].isNumber() || !numberToId(args["pattern"].asNumber(), patternValue)) {
+                    return makeError(id, "validation_error", "arg 'pattern' must be a non-negative integer", verb)
+                        .toString();
+                }
+                havePattern = true;
+            }
+            for (const char* key : {"from", "to", "beatsPerBar"}) {
+                if (args.has(key) && (!args[key].isNumber() || !std::isfinite(args[key].asNumber()))) {
+                    return makeError(id, "validation_error", std::string("arg '") + key + "' must be a number", verb)
+                        .toString();
+                }
+            }
+            if (args.has("from")) from = args["from"].asNumber();
+            if (args.has("to")) to = args["to"].asNumber();
+            if (args.has("beatsPerBar")) beatsPerBar = args["beatsPerBar"].asNumber();
+            if (beatsPerBar < 1.0 || beatsPerBar > 32.0) {
+                return makeError(id, "validation_error", "arg 'beatsPerBar' must be between 1 and 32", verb)
+                    .toString();
+            }
+        }
+
+        std::vector<Harmony::HarmonyNote> notes;
+        if (havePattern) {
+            const PatternSource* pattern = m_trackManager->getPatternManager().getPattern(PatternID{patternValue});
+            if (!pattern) {
+                return makeError(id, "execution_error", "no such pattern: " + std::to_string(patternValue), verb)
+                    .toString();
+            }
+            notes = Harmony::gatherPatternNotes(*pattern);
+            if (to > from) {
+                std::vector<Harmony::HarmonyNote> kept;
+                for (auto n : notes) {
+                    const double s = std::max(n.startBeat, from), e = std::min(n.startBeat + n.durationBeats, to);
+                    if (e - s > 1e-9) kept.push_back({s, e - s, n.pitch, n.velocity});
+                }
+                notes.swap(kept);
+            }
+        } else {
+            notes = Harmony::gatherArrangementNotes(*m_trackManager, from, to);
+        }
+
+        const Harmony::HarmonyTimeline timeline = Harmony::analyzeHarmony(notes, beatsPerBar);
+        JSON result = JSON::object();
+        JSON key = JSON::object();
+        key.set("name", JSON(timeline.key.name()));
+        key.set("tonic", JSON(static_cast<double>(timeline.key.tonic)));
+        key.set("mode", JSON(timeline.key.valid() ? (timeline.key.mode == Harmony::KeyMode::Major ? "major" : "minor") : ""));
+        key.set("confidence", JSON(timeline.key.confidence));
+        result.set("key", key);
+        JSON chords = JSON::array();
+        for (const Harmony::ChordSpan& c : timeline.chords) {
+            JSON j = JSON::object();
+            j.set("startBeat", JSON(c.startBeat));
+            j.set("endBeat", JSON(c.endBeat));
+            j.set("name", JSON(c.name));
+            j.set("roman", JSON(c.roman));
+            j.set("root", JSON(static_cast<double>(c.root)));
+            j.set("bass", JSON(static_cast<double>(c.bass)));
+            j.set("confidence", JSON(static_cast<double>(c.confidence)));
+            j.set("userSet", JSON(c.userSet));
+            chords.push(j);
+        }
+        result.set("chords", chords);
         JSON response = makeOk();
         response.set("result", result);
         return finish(response);

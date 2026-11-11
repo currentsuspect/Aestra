@@ -54,6 +54,8 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (m_marquee.active()) {
         return handleSelectionBoxMouse(event, localPos);
     }
+    if (handleFoldedRowMouse(event))
+        return true; // V82-T2: "show" / "hide" on the folded empty tracks
 
     // Fix for "Sticky Drag": Route events to any track that is currently dragging automation
     // regardless of whether the mouse is inside its bounds.
@@ -174,9 +176,6 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         return true;
     }
     if (handleRulerSelectionDrag(event, localPos)) {
-        return true;
-    }
-    if (handleRulerSelectionMenu(event, localPos, isInRuler)) {
         return true;
     }
     if (handleLoopMarkerDrag(event, localPos)) {
@@ -848,74 +847,19 @@ bool TrackManagerUI::handleRulerSelectionDrag(const AestraUI::NUIMouseEvent& eve
                 double selStartBeat = std::min(m_rulerSelectionStartBeat, m_rulerSelectionEndBeat);
                 double selEndBeat = std::max(m_rulerSelectionStartBeat, m_rulerSelectionEndBeat);
 
-                // Update loop markers to match selection through centralized propagation.
-                updateSelectionLoopRegion(selStartBeat, selEndBeat);
-                m_loopPreset = TimelineLoopPreset::Selection;
-
-                // Call selection callback - this will jump playhead and set loop region
-                if (m_onSelectionMade) {
-                    m_onSelectionMade(selStartBeat, selEndBeat);
-                }
-
-                // Also notify loop preset changed to selection mode
-                if (m_onLoopPresetChanged) {
-                    m_onLoopPresetChanged(timelineLoopPresetId(TimelineLoopPreset::Selection));
-                }
+                selectLoopRange(selStartBeat, selEndBeat);
 
                 Log::info("[TrackManagerUI] Ruler selection: " + std::to_string(selStartBeat) + " to " +
                           std::to_string(selEndBeat) + " beats");
             } else {
                 // Click without drag - clear selection and disable loop
-                setLoopRegion(0.0, 0.0, false);
-                m_loopPreset = TimelineLoopPreset::Off;
-
-                // SPECIAL: If we clicked on an EXISTNG range on ruler, show menu
-                // (Wait, this is handled in the isInRuler block if it's an instant click)
-
-                // Trigger loop OFF callback
-                if (m_onLoopPresetChanged) {
-                    m_onLoopPresetChanged(timelineLoopPresetId(TimelineLoopPreset::Off));
-                }
+                clearLoopRange();
             }
 
             return true;
         }
 
         return true;
-    }
-    return false;
-}
-
-bool TrackManagerUI::handleRulerSelectionMenu(const AestraUI::NUIMouseEvent& event, const AestraUI::NUIPoint& localPos, bool isInRuler) {
-    // === RULER SELECTION CONTEXT MENU (Click on active range) ===
-    if (isInRuler && event.pressed && event.button == AestraUI::NUIMouseButton::Left && m_hasRulerSelection &&
-        !m_hoveringLoopStart && !m_hoveringLoopEnd) {
-        auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-        const auto& layout = themeManager.getLayoutDimensions();
-        float gridStartX = layout.trackControlsWidth + kTimelineGridInsetX;
-
-        float loopStartX =
-            gridStartX + (static_cast<float>(m_loopStartBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-        float loopEndX = gridStartX + (static_cast<float>(m_loopEndBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-        float minX = std::min(loopStartX, loopEndX);
-        float maxX = std::max(loopStartX, loopEndX);
-
-        if (localPos.x >= minX && localPos.x <= maxX) {
-            if (m_activeContextMenu) {
-                detachContextMenu(m_activeContextMenu);
-            }
-            m_activeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
-            auto menu = m_activeContextMenu;
-
-            menu->addItem("Send Selection to Audition", [this]() {
-                if (m_onSendSelectionToAudition) {
-                    m_onSendSelectionToAudition(m_loopStartBeat, m_loopEndBeat);
-                }
-            });
-
-            attachAndShowContextMenu(this, menu, event.position);
-            return true;
-        }
     }
     return false;
 }

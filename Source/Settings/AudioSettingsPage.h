@@ -1,16 +1,16 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "ISettingsPage.h"
-#include "SettingsPersistencePolicy.h"
 #include "AudioDeviceManager.h"
-#include "TrackManager.h"
+#include "AudioEngine.h"
+#include "ISettingsPage.h"
 #include "NUIButton.h"
+#include "NUICoreWidgets.h" // For NUIToggle
 #include "NUIDropdown.h"
 #include "NUILabel.h"
-#include "NUICoreWidgets.h" // For NUIToggle
-
-#include "AudioEngine.h"
+#include "SettingsForm.h"
+#include "SettingsPersistencePolicy.h"
+#include "TrackManager.h"
 
 namespace Aestra {
 
@@ -75,6 +75,8 @@ public:
     void applyChanges() override;
     void cancelChanges() override;
     bool hasUnsavedChanges() const override;
+    std::shared_ptr<AestraUI::NUIComponent> footerAction() override { return m_testSoundButton; }
+    std::string footerNote() const override { return "Plays a short tone on the output"; }
     void onShow() override;
     void onHide() override;
 
@@ -138,6 +140,8 @@ private:
     
     std::shared_ptr<AestraUI::NUILabel> m_dcRemovalLabel;
     std::shared_ptr<AestraUI::NUIToggle> m_dcRemovalToggle; // Toggle button
+    std::shared_ptr<AestraUI::NUILabel> m_stopCutsSoundLabel;
+    std::shared_ptr<AestraUI::NUIToggle> m_stopCutsSoundToggle; // off: stop lets notes release; on: stop cuts
     
     std::shared_ptr<AestraUI::NUILabel> m_softClippingLabel;
     std::shared_ptr<AestraUI::NUIToggle> m_softClippingToggle;
@@ -152,6 +156,8 @@ private:
     std::shared_ptr<ThreadCountDisplay> m_threadCountInput;
 
     std::shared_ptr<AestraUI::NUIButton> m_testSoundButton;
+    SettingsForm m_form;
+    int m_baselineBuffer = 0; ///< the buffer when the page was opened or last saved, for the "was 512" hint
 
     // Test Sound State
     // Managed by AudioEngine now

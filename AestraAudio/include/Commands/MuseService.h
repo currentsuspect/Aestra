@@ -2,6 +2,7 @@
 #pragma once
 
 #include "Commands/HostVerbRegistry.h"
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -87,12 +88,30 @@ public:
     void setProjectLoadReport(JSON report) { m_projectLoadReport = std::move(report); }
     void clearProjectLoadReport() { m_projectLoadReport.reset(); }
 
+    /**
+     * @brief Let the host pause its live audio stream around offline renders.
+     *
+     * An offline render pumps AudioEngine::processBlock on the calling thread.
+     * In the running app the device callback pumps the same engine at the
+     * same time, and the two interleave: the same render came out with peaks
+     * from -2 to +3.3 dBFS. The app's Export, Bounce and Versions paths all
+     * stop the device stream first; Muse renders must too. @p pause returns
+     * whether a stream was running (so it is resumed only then); @p resume
+     * restarts it. Headless processes have no stream and set nothing.
+     */
+    void setOfflineRenderStreamHooks(std::function<bool()> pause, std::function<void()> resume) {
+        m_pauseStreamForRender = std::move(pause);
+        m_resumeStreamAfterRender = std::move(resume);
+    }
+
 private:
     TrackManager* m_trackManager = nullptr;
     AudioEngine* m_engine = nullptr;
     HostVerbRegistry m_hostVerbs;
     bool m_hostUiThreadAvailable = false;
     std::optional<JSON> m_projectLoadReport;
+    std::function<bool()> m_pauseStreamForRender;
+    std::function<void()> m_resumeStreamAfterRender;
 };
 
 } // namespace Audio

@@ -225,6 +225,24 @@ if(TARGET AestraAudioCore)
     )
 endif()
 
+# Unit Audition Length Test — the Sample Editor's Preview: AuditionUnit with a length plays the sample through,
+# and a negative note stops it (v0.8.2, preview from the editors).
+if(TARGET AestraAudioCore)
+    add_executable(UnitAuditionLengthTest
+        UnitAuditionLengthTest.cpp
+    )
+    target_link_libraries(UnitAuditionLengthTest PRIVATE AestraAudioCore)
+    target_include_directories(UnitAuditionLengthTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME UnitAuditionLengthTest COMMAND UnitAuditionLengthTest)
+    set_tests_properties(UnitAuditionLengthTest PROPERTIES
+        LABELS "headless;arsenal;audio;contract:audio"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 # Sampler One-Shot Envelope Test — regression for #452: one-shot samples
 # shorter than the configured release must be audible with the DEFAULT
 # envelope. Drives SamplerPlugin directly; core-linked, every CI lane.

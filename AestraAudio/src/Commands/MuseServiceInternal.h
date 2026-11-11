@@ -206,12 +206,12 @@ inline bool isQueryVerb(const std::string& verb) {
            verb == "list_units" || verb == "get_pattern" || verb == "list_patterns" || verb == "list_plugins" ||
            verb == "get_effects" || verb == "list_samples" || verb == "get_meters" || verb == "get_schema" ||
            verb == "get_capabilities" || verb == "get_audio_health" || verb == "get_project_load_report" ||
-           verb == "get_routing_graph" || verb == "get_latency_report";
+           verb == "get_routing_graph" || verb == "get_latency_report" || verb == "get_harmony";
 }
 
 // The few queries that take arguments; every other query rejects them.
 inline bool queryTakesArgs(const std::string& verb) {
-    return verb == "get_pattern" || verb == "get_effects" || verb == "list_samples";
+    return verb == "get_pattern" || verb == "get_effects" || verb == "list_samples" || verb == "get_harmony";
 }
 
 // Service actions: handled here like queries, but they do work (render a

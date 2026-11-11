@@ -3,6 +3,7 @@
 // Tests: diffNotes() — the pure note diffing function that powers PianoRollPanel::savePattern()
 
 #include "Commands/NoteDiff.h"
+#include "Commands/UpdateNoteCommand.h"
 #include "Models/PatternManager.h"
 #include "Models/PatternSource.h"
 
@@ -307,12 +308,56 @@ static void test_complex_edit_add_remove_resize_move() {
 }
 
 // ---------------------------------------------------------------------------
+// Chance and ratchet (FD-63): the piano roll's lanes edit them, so the diff and the update command carry them
+// ---------------------------------------------------------------------------
+static void test_chance_change_is_a_modification() {
+    MidiNote before = make(62, 0.0, 1.0);
+    MidiNote after = before;
+    after.chance = 0.6f;
+    auto r = diffNotes({before}, {after});
+    ASSERT_SIZE(r.modified, 1, "a chance edit is a modification");
+    ASSERT(r.added.empty() && r.removed.empty() && r.moved.empty() && r.resized.empty(), "and nothing else");
+
+    MidiNote ratcheted = before;
+    ratcheted.ratchet = 3;
+    auto r2 = diffNotes({before}, {ratcheted});
+    ASSERT_SIZE(r2.modified, 1, "a ratchet edit is a modification");
+    PASS("chance and ratchet edits are modifications");
+}
+
+static void test_update_command_sets_and_undoes_chance_and_ratchet() {
+    PatternManager pm;
+    MidiPayload payload;
+    MidiNote n = make(62, 0.0, 1.0);
+    n.chance = 0.6f;
+    n.ratchet = 2;
+    payload.notes = {n};
+    const PatternID id = pm.createMidiPattern("Expression", 4.0, payload);
+    auto noteAt = [&] { return std::get<MidiPayload>(pm.getPattern(id)->payload).notes.front(); };
+
+    UpdateNoteCommand all(pm, id, n, 0.5f, 0.0f, 0.25f, 4);
+    all.execute();
+    ASSERT(noteAt().chance == 0.25f && noteAt().ratchet == 4 && noteAt().velocity == 0.5f, "all four are set");
+    all.undo();
+    ASSERT(noteAt().chance == 0.6f && noteAt().ratchet == 2 && noteAt().velocity == 0.8f, "undo restores all four");
+
+    UpdateNoteCommand velocityOnly(pm, id, n, 0.3f, 0.1f);
+    velocityOnly.execute();
+    ASSERT(noteAt().chance == 0.6f && noteAt().ratchet == 2, "the velocity/pan form leaves chance and ratchet alone");
+    PASS("UpdateNoteCommand sets and undoes chance and ratchet");
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 int main() {
     std::cout << "=== NoteDiff Unit Tests ===\n\n";
 
-    std::cout << "[Empty Diffs]\n";
+    std::cout << "[Chance and ratchet]\n";
+    test_chance_change_is_a_modification();
+    test_update_command_sets_and_undoes_chance_and_ratchet();
+
+    std::cout << "\n[Empty Diffs]\n";
     test_empty_to_one_note();
     test_one_note_to_empty();
     test_unchanged_note();

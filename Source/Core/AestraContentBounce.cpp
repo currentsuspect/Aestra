@@ -11,6 +11,26 @@
 #include "IO/AudioExporter.h"
 #include "IO/BounceInPlace.h"
 
+bool AestraContent::bounceRangeWithStreamPaused(double startBeat, double endBeat, const std::string& path,
+                                                int32_t trackId) {
+    if (!m_audioEngine) {
+        return false;
+    }
+    // bounceRangeToWav drives the engine by hand on this thread. With the live callback still
+    // running, two threads rendered through the same engine at once (shared master and track
+    // buffers, the note queue, plugin state): Send to Audition corrupted playback and itself.
+    auto* deviceManager = Aestra::ServiceLocator::get<Aestra::Audio::AudioDeviceManager>();
+    const bool resume = deviceManager && deviceManager->isStreamRunning();
+    if (resume) {
+        deviceManager->stopStream();
+    }
+    const bool ok = m_audioEngine->bounceRangeToWav(startBeat, endBeat, path, trackId);
+    if (resume) {
+        deviceManager->startStream();
+    }
+    return ok;
+}
+
 void AestraContent::bounceClipsInPlace(const std::vector<Aestra::Audio::ClipInstanceID>& clipIds) {
     if (!m_audioEngine || !m_trackManager) {
         return;

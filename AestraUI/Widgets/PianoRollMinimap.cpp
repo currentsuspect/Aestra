@@ -90,26 +90,18 @@ void PianoRollMinimap::onRender(NUIRenderer& renderer) {
     auto b = getBounds();
     auto& theme = NUIThemeManager::getInstance();
     
-    const auto panelBg = theme.getColor("recessedPanel");
-    const auto border = theme.getColor("border").withAlpha(0.48f);
-    renderer.fillRoundedRect(NUIRect(b.x + 4.0f, b.y + 3.0f, b.width - 8.0f, b.height - 6.0f), 5.0f, panelBg);
-    renderer.strokeRoundedRect(NUIRect(b.x + 4.0f, b.y + 3.0f, b.width - 8.0f, b.height - 6.0f), 5.0f, 1.0f, border);
-    
-    // View Rect
+    // FD-63: one band of the editor's frame, not a box inside it. The bed, a rule under it, the notes in the unit's
+    // colour; outside the visible window is dimmed and the window is a flat outline, like the rest of the board.
+    renderer.fillRect(b, theme.getColor("backgroundPrimary"));
+    renderer.drawLine(NUIPoint(b.x, b.bottom() - 0.5f), NUIPoint(b.right(), b.bottom() - 0.5f), 1.0f, theme.getColor("border"));
+
     float x1 = b.x + beatToX(startBeat_);
     float w = beatToX(viewDuration_);
-    NUIRect viewRect(x1, b.y + 2, w, b.height - 4);
-    
-    // Navigation chrome, matching the Track Manager minimap: the viewport is a
-    // neutral frame (transparent fill, grey outline, light edge grips) — not a
-    // purple range. Semantic accent colors are reserved for musical content.
-    const auto viewOutline = NUIColor(0.31f, 0.33f, 0.37f, 1.0f);
-    const auto viewHandle = NUIColor(0.62f, 0.64f, 0.68f, 0.92f);
-    
-    renderer.fillRoundedRect(viewRect, 5.0f, NUIColor::transparent());
-    renderer.strokeRoundedRect(viewRect, 5.0f, 1.0f, viewOutline);
+    NUIRect viewRect(std::round(x1), b.y + 3.0f, std::round(w), b.height - 7.0f);
+    const auto viewOutline = theme.getColor("textMuted");
+    const auto viewHandle = theme.getColor("textSecondary");
 
-    renderer.setClipRect(NUIRect(b.x + 2.0f, b.y + 2.0f, b.width - 4.0f, b.height - 4.0f));
+    renderer.setClipRect(b);
     int minPitch = 127;
     int maxPitch = 0;
     for (const auto& note : notes_) {
@@ -130,8 +122,7 @@ void PianoRollMinimap::onRender(NUIRenderer& renderer) {
     const int pitchSpan = std::max(1, maxPitch - minPitch + 1);
     const float laneHeight = noteAreaH / static_cast<float>(pitchSpan);
     const float visibleNoteH = std::max(3.0f, std::min(5.0f, laneHeight * 0.95f));
-    const auto noteFill = theme.getColor("accentPrimary").lightened(0.08f).withAlpha(0.94f);
-    const auto noteEdge = theme.getColor("accentSecondary").withAlpha(0.55f);
+    const auto noteFill = noteColor_.withAlpha(1.0f);
 
     for (const auto& note : notes_) {
         if (note.isDeleted || note.durationBeats <= 0.0) continue;
@@ -144,35 +135,28 @@ void PianoRollMinimap::onRender(NUIRenderer& renderer) {
         const float maxW = std::max(0.0f, (b.x + b.width - 4.0f) - x);
         if (maxW <= 0.0f) continue;
         NUIRect noteRect(x, y, std::min(wNote, maxW), visibleNoteH);
-        renderer.fillRoundedRect(noteRect, std::min(2.0f, visibleNoteH * 0.45f), noteFill);
-        renderer.strokeRoundedRect(noteRect, std::min(2.0f, visibleNoteH * 0.45f), 1.0f, noteEdge);
+        renderer.fillRect(noteRect, noteFill);
     }
+    // Outside the window is dimmed, so the window reads as the part you are looking at.
+    const auto dim = NUIColor(0.0f, 0.0f, 0.0f, 0.5f);
+    if (viewRect.x > b.x) renderer.fillRect(NUIRect(b.x, b.y, viewRect.x - b.x, b.height - 1.0f), dim);
+    if (viewRect.right() < b.right()) renderer.fillRect(NUIRect(viewRect.right(), b.y, b.right() - viewRect.right(), b.height - 1.0f), dim);
+    renderer.strokeRect(viewRect, 1.0f, viewOutline);
     renderer.clearClipRect();
 
-    // Same accent language as the Track Manager playhead (was white-on-black).
-    // A faint dark backing keeps the line legible over dense note blocks.
-    const auto playheadColor = theme.getColor("accentPrimary").withAlpha(0.9f);
-    const auto playheadBacking = theme.getColor("shadow").withAlpha(0.45f);
-    const float playheadX = b.x + beatToX(playheadBeat_);
-    if (playheadX >= b.x && playheadX <= b.x + b.width) {
-        renderer.drawLine(NUIPoint(playheadX, b.y + 1.0f),
-                          NUIPoint(playheadX, b.y + b.height - 1.0f),
-                          3.0f,
-                          playheadBacking);
-        renderer.drawLine(NUIPoint(playheadX, b.y + 1.0f),
-                          NUIPoint(playheadX, b.y + b.height - 1.0f),
-                          1.0f,
-                          playheadColor);
-    }
-    
+    // The grid's playhead: 1 px in the text colour.
+    const float playheadX = std::round(b.x + beatToX(playheadBeat_));
+    if (playheadX >= b.x && playheadX <= b.x + b.width)
+        renderer.fillRect(NUIRect(playheadX, b.y, 1.0f, b.height - 1.0f), theme.getColor("textPrimary"));
+
     // Edge grips — rubberband handles, styled like the Track Manager minimap:
     // slim vertical bars just inside the viewport frame, vertically centred.
     const float gripW = 2.0f;
     const float gripH = std::min(10.0f, std::max(4.0f, viewRect.height - 4.0f));
     const float gripY = viewRect.y + (viewRect.height - gripH) * 0.5f;
     const auto gripColor = viewHandle;
-    renderer.fillRoundedRect(NUIRect(viewRect.x + 2.0f, gripY, gripW, gripH), 1.0f, gripColor);
-    renderer.fillRoundedRect(NUIRect(viewRect.right() - gripW - 2.0f, gripY, gripW, gripH), 1.0f, gripColor);
+    renderer.fillRect(NUIRect(viewRect.x + 2.0f, gripY, gripW, gripH), gripColor);
+    renderer.fillRect(NUIRect(viewRect.right() - gripW - 2.0f, gripY, gripW, gripH), gripColor);
 
     // Bottom border to anchor the overview visually to the ruler beneath it.
     // Color-matched to the ruler tick marks (use the theme border with stronger alpha).

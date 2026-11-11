@@ -13,6 +13,7 @@
 #include "Commands/MuseServiceInternal.h"
 #include "Core/AudioEngine.h"
 #include "Models/TrackManager.h"
+#include "Plugin/SamplerPlugin.h"
 
 #include "AestraJSON.h"
 #include <optional>
@@ -29,6 +30,9 @@ namespace {
 
 JSON trackToJson(const MixerChannel& channel, size_t index) {
     JSON t = JSON::object();
+    // `track` is what every track verb takes; `id` is the mixer channel id (routing, meters), never a `track`
+    // argument. Agents echoed `id` and edited the neighbouring track (#1042).
+    t.set("track", JSON(static_cast<double>(index)));
     t.set("index", JSON(static_cast<double>(index)));
     t.set("id", JSON(static_cast<double>(channel.getChannelId())));
     t.set("name", JSON(channel.getName()));
@@ -192,6 +196,17 @@ std::optional<std::string> handleSessionVerbs(const RequestContext& ctx, const R
                   JSON(static_cast<double>(unitManager.getUnitTimelineLane(unitId))));
             u.set("samplePath", JSON(unit->audioClipPath));
             u.set("sampleDurationSeconds", JSON(unit->audioDurationSeconds));
+            if (auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unitManager.getUnitPlugin(unitId))) {
+                JSON s = JSON::object();
+                s.set("attack", JSON(static_cast<double>(sampler->getAttack())));
+                s.set("decay", JSON(static_cast<double>(sampler->getDecay())));
+                s.set("sustain", JSON(static_cast<double>(sampler->getSustain())));
+                s.set("release", JSON(static_cast<double>(sampler->getRelease())));
+                s.set("voices", JSON(static_cast<double>(sampler->getMaxVoices())));
+                s.set("mono", JSON(sampler->isMonoMode()));
+                s.set("cutSelf", JSON(sampler->isCutSelfMode()));
+                u.set("sampler", s);
+            }
             units.push(u);
         }
         JSON result = JSON::object();

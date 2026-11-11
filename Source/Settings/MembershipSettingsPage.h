@@ -5,6 +5,7 @@
 #include "NUIButton.h"
 #include "NUILabel.h"
 #include "NUITextInput.h"
+#include "SettingsForm.h"
 
 #if defined(AESTRA_HAS_LICENSE_GATE) && AESTRA_HAS_LICENSE_GATE
 #include "AccountApiClient.h"
@@ -28,7 +29,7 @@ public:
     ~MembershipSettingsPage() override = default;
 
     std::string getPageID() const override { return "membership"; }
-    std::string getTitle() const override { return "Membership"; }
+    std::string getTitle() const override { return "Account"; }
 
     void onShow() override;
     void applyChanges() override {}
@@ -78,17 +79,9 @@ private:
     std::string m_signInMessage;
     float m_signInFormBottomY = 0.0f;
 
-    // Redesign layout bounds (for hit testing)
-    AestraUI::NUIRect m_founderCardBounds;
-    AestraUI::NUIRect m_featuresCardBounds;
-    AestraUI::NUIRect m_syncCardBounds;
-    AestraUI::NUIRect m_actionsRowBounds;
-    AestraUI::NUIRect m_btnRefreshBounds;
-    AestraUI::NUIRect m_btnManageBounds;
-    AestraUI::NUIRect m_btnSignOutBounds;
-    bool m_btnRefreshHovered = false;
-    bool m_btnManageHovered = false;
-    bool m_btnSignOutHovered = false;
+    SettingsForm m_form;
+    size_t m_messageItem = SIZE_MAX; ///< the sign-in / refresh feedback line
+    size_t m_aboutItem = SIZE_MAX;   ///< what is free and what Supporter pays for (FD-57)
 
     // Refresh loading state
     bool m_isRefreshing = false;

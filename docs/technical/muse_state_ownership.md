@@ -35,6 +35,7 @@ claim is "nothing reads this", it is a grep result, and the grep is stated.
 | **Browser** | `FileBrowser` (component-owned) | UI + background scan thread | No | No |
 | **Project** | Split: `ProjectDocumentState` (identity) + `TrackManager` (content) + `CommandHistory` (history) | UI | Content yes, identity no | Partly |
 | **Dialog** | None — visibility only | UI | No | No |
+| **Transport** | `AestraContent`'s focus-aware transport over `TrackManager` | UI | No | No |
 
 **Only one domain has an undo model at all.** `TrackManager`'s `CommandHistory`
 covers project *content*. View, settings, browser, dialogs and project *identity*
@@ -259,6 +260,29 @@ dialog exists to obtain — `project.saveAs {path}` rather than
 `dialog.open {saveAs}` — which is the same principle `HostVerbRegistry.h`
 already states about verbs being capabilities rather than gestures. A modal is
 the most gesture-shaped thing in the app.
+
+---
+
+## Transport
+
+Added for V82-M1 (FD-53), after this audit.
+
+**The authority is `AestraContent`'s focus-aware transport, not the engine.** The
+legacy `play`/`stop` verbs start and stop `AudioEngine` directly. The Play button
+does more: `requestTransportPlay()` honours the count-in, picks the Arsenal or the
+Timeline from the workspace focus, and moves the playhead the UI draws. An agent
+driving the running app with `play` got live meters and a frozen playhead.
+
+- **Mutation:** `transport.play {from?, in?}`, `transport.stop {rewind?}`,
+  `transport.pause`, `transport.seek {beat}` and `transport.setLoop {start, end}` /
+  `transport.clearLoop` call the same functions as the transport bar, the ruler
+  click and the ruler drag (`TrackManagerUI::selectLoopRange` / `clearLoopRange`,
+  which the drag itself now calls).
+- **Query:** `transport.state` — playing, count-in, position in beats and
+  seconds, tempo, focus, and the timeline loop.
+- **Undoable:** No. The UI does not put playhead or loop moves on the undo stack.
+- **Headless:** No. MuseRepl keeps the legacy engine verbs; renders take a beat
+  range and a channel instead (`render_song {start, end, channel}`).
 
 ---
 

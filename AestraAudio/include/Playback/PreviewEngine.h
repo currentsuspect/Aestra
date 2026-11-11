@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include "RealtimeThreadGuard.h"
 #include "../IO/SamplePool.h"
 #include "RealtimeObjectPublisher.h"
 
@@ -57,7 +58,8 @@ public:
      */
     void processRealtime(float* interleavedOutput, uint32_t numFrames, uint32_t outputChannels);
     bool isPlaying() const;
-    bool isAudiblyPlaying() const;
+    /// Called from the audio callback (preview ducking), so it must not touch a shared_ptr (#939).
+    bool isAudiblyPlaying() const noexcept AESTRA_RT_NONBLOCKING;
     float getLastOutputPeak() const { return m_lastOutputPeak.load(std::memory_order_relaxed); }
     bool isBufferReady() const; // True when buffer is decoded and ready for playback
     void setOnComplete(std::function<void(const std::string& path)> callback);
@@ -105,6 +107,9 @@ private:
     std::atomic<float> m_globalGainDb;
     std::atomic<float> m_playbackRate{1.0f};
     std::atomic<float> m_lastOutputPeak{0.0f};
+    /// Set by processRealtime() from the voice it holds, so isAudiblyPlaying() can answer on the audio thread without
+    /// a shared_ptr (#939). Cleared by stop() and when a new voice is published, as the old live check would have.
+    std::atomic<bool> m_audibleLastBlock{false};
     std::function<void(const std::string&)> m_onComplete;
 
     // Deferred completion (audio thread -> main thread)

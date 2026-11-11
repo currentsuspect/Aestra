@@ -254,7 +254,7 @@ bool TrackManagerUI::isCustomCursorActive() const {
     }
 
     // 4. Minimap viewport bar body (pan) → grab hand.
-    if (m_timelineMinimap && m_timelineMinimap->isVisible() && m_timelineMinimap->isViewportPanActive()) {
+    if (minimapClaimsGrab()) {
         return true;
     }
 
@@ -264,6 +264,29 @@ bool TrackManagerUI::isCustomCursorActive() const {
     }
 
     return false;
+}
+
+bool TrackManagerUI::minimapClaimsGrab() const {
+    if (!m_timelineMinimap || !m_timelineMinimap->isVisible()) {
+        return false;
+    }
+    // A drag of the viewport bar owns the pointer until release, wherever it goes.
+    if (m_timelineMinimap->isViewportDragActive()) {
+        return true;
+    }
+    // Hover is only as good as the last move the timeline received. The minimap clears its hover when it hears
+    // the pointer leave, and it hears only through the timeline: leave the bar upward into the transport bar (or
+    // onto a panel over the timeline) and that move never arrives. Honouring the stale hover kept the native
+    // cursor hidden and the arrow skipped, with the hand frozen on the minimap: the pointer vanished (6 Nov 2026).
+    return m_timelineMinimap->isViewportPanActive() && isHoverPointerCurrent();
+}
+
+void TrackManagerUI::onWindowMouseReleased() {
+    // A minimap drag released over the transport bar never hears the release: on Linux and macOS nothing else
+    // ends it (the minimap's own button poll is Windows-only), so the drag, its claim and a closed hand stuck.
+    if (m_timelineMinimap && m_timelineMinimap->isViewportDragActive()) {
+        m_timelineMinimap->endDragFromOutside();
+    }
 }
 
 void TrackManagerUI::setWindowPointerPosition(float x, float y) {
@@ -448,8 +471,11 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
             if (row && row->isPrimaryForLane() && !row->isAutomationRow()) ++tracks;
         }
         const AestraUI::NUIRect corner(bounds.x + 10.0f, bounds.y + kTimelineRulerTop, 160.0f, kTimelineRulerHeight);
-        renderer.drawText(std::to_string(tracks) + (tracks == 1 ? " TRACK" : " TRACKS"),
-                          {corner.x, renderer.calculateTextY(corner, smallSize)}, smallSize, text.withAlpha(0.4f));
+        std::string count = std::to_string(tracks) + (tracks == 1 ? " TRACK" : " TRACKS");
+        if (m_foldedEmptyTracks > 0)
+            count += " \xc2\xb7 " + std::to_string(m_foldedEmptyTracks) + " EMPTY";
+        renderer.drawText(count, {corner.x, renderer.calculateTextY(corner, smallSize)}, smallSize,
+                          text.withAlpha(0.4f));
     }
 
     // Follow playhead: the existing icon toggle, filled while on.
@@ -664,6 +690,7 @@ bool TrackManagerUI::handleToolbarClick(const AestraUI::NUIPoint& position) {
                 }
             }
         });
+        addSendSelectionToAudition(*menu);
 
         // Show menu below the icon
         menu->showAt(m_menuIconBounds.x, m_menuIconBounds.y + m_menuIconBounds.height);
@@ -751,8 +778,7 @@ void TrackManagerUI::renderToolCursor(AestraUI::NUIRenderer& renderer, const Aes
     // Ruler scrub/loop zone and minimap viewport-pan → grab hand (the draggable
     // navigation surfaces). Trim (above), split/paint tools and minimap-edge
     // resize all take precedence over this.
-    if (isRulerPointerActive() || (m_timelineMinimap && m_timelineMinimap->isVisible() &&
-                                   m_timelineMinimap->isViewportPanActive())) {
+    if (isRulerPointerActive() || minimapClaimsGrab()) {
         // Open hand while hovering a draggable surface, closed hand while the
         // drag is live: the cursor should say what the pointer is doing.
         const bool dragging = m_isDraggingPlayhead || m_isDraggingLoopStart || m_isDraggingLoopEnd ||

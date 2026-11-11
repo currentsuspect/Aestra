@@ -169,6 +169,13 @@ target_include_directories(MuseCliRequestTest PRIVATE
 add_test(NAME MuseCliRequestTest COMMAND MuseCliRequestTest)
 set_tests_properties(MuseCliRequestTest PROPERTIES LABELS "commands;muse;contract:application")
 
+add_executable(MuseAgentCliArgsTest Commands/MuseAgentCliArgsTest.cpp)
+target_include_directories(MuseAgentCliArgsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/MuseAgent
+)
+add_test(NAME MuseAgentCliArgsTest COMMAND MuseAgentCliArgsTest)
+set_tests_properties(MuseAgentCliArgsTest PROPERTIES LABELS "commands;muse;contract:application")
+
 add_executable(ProjectLoadReportTest
     Commands/ProjectLoadReportTest.cpp
     ${CMAKE_SOURCE_DIR}/Source/App/MuseProjectLoadReport.cpp
@@ -225,6 +232,42 @@ target_include_directories(CompSidechainEndToEndTest PRIVATE
 add_test(NAME CompSidechainEndToEndTest COMMAND CompSidechainEndToEndTest)
 set_tests_properties(CompSidechainEndToEndTest PROPERTIES LABELS "commands;muse;routing;sidechain;contract:application")
 
+add_executable(MuseRenderScopeTest Commands/MuseRenderScopeTest.cpp)
+target_link_libraries(MuseRenderScopeTest PRIVATE AestraAudioCore)
+target_include_directories(MuseRenderScopeTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MuseRenderScopeTest COMMAND MuseRenderScopeTest)
+set_tests_properties(MuseRenderScopeTest PROPERTIES LABELS "commands;muse;contract:application")
+
+add_executable(MuseCreatedIdsTest Commands/MuseCreatedIdsTest.cpp)
+target_link_libraries(MuseCreatedIdsTest PRIVATE AestraAudioCore)
+target_include_directories(MuseCreatedIdsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MuseCreatedIdsTest COMMAND MuseCreatedIdsTest)
+set_tests_properties(MuseCreatedIdsTest PROPERTIES LABELS "commands;muse;contract:application")
+
+add_executable(MuseMixerRoutingTest Commands/MuseMixerRoutingTest.cpp)
+target_link_libraries(MuseMixerRoutingTest PRIVATE AestraAudioCore)
+target_include_directories(MuseMixerRoutingTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MuseMixerRoutingTest COMMAND MuseMixerRoutingTest)
+set_tests_properties(MuseMixerRoutingTest PROPERTIES LABELS "commands;muse;routing;contract:application")
+
+add_executable(MuseMasterEffectsTest Commands/MuseMasterEffectsTest.cpp)
+target_link_libraries(MuseMasterEffectsTest PRIVATE AestraAudioCore)
+target_include_directories(MuseMasterEffectsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MuseMasterEffectsTest COMMAND MuseMasterEffectsTest)
+set_tests_properties(MuseMasterEffectsTest PROPERTIES LABELS "commands;muse;mastering;contract:application")
+
 # --- Host capabilities -------------------------------------------------------
 # The seam the application registers settings./view./browser. verbs into.
 # Append new targets for this group at the END of this sub-section.
@@ -258,6 +301,27 @@ if(TARGET MuseAgentCore)
     )
     add_test(NAME MuseAgentLoopTest COMMAND MuseAgentLoopTest)
     set_tests_properties(MuseAgentLoopTest PROPERTIES LABELS "commands;muse;contract:application")
+
+    if(NOT WIN32)
+        add_executable(MuseHttpClientCapTest Commands/MuseHttpClientCapTest.cpp)
+        target_link_libraries(MuseHttpClientCapTest PRIVATE MuseAgentCore Threads::Threads)
+        add_test(NAME MuseHttpClientCapTest COMMAND MuseHttpClientCapTest)
+        set_tests_properties(MuseHttpClientCapTest PROPERTIES LABELS "commands;muse;contract:application")
+        add_executable(MuseSocketClientHostTest Commands/MuseSocketClientHostTest.cpp)
+        target_link_libraries(MuseSocketClientHostTest PRIVATE MuseAgentCore)
+        add_test(NAME MuseSocketClientHostTest COMMAND MuseSocketClientHostTest)
+        set_tests_properties(MuseSocketClientHostTest PROPERTIES LABELS "commands;muse;contract:application")
+    endif()
+    add_executable(MuseAgentRetryTest Commands/MuseAgentRetryTest.cpp)
+    target_link_libraries(MuseAgentRetryTest PRIVATE MuseAgentCore)
+    add_test(NAME MuseAgentRetryTest COMMAND MuseAgentRetryTest)
+    set_tests_properties(MuseAgentRetryTest PROPERTIES LABELS "commands;muse;contract:application")
+    if(NOT WIN32) # LineReader is POSIX-only
+        add_executable(MuseAgentDeadlineTest Commands/MuseAgentDeadlineTest.cpp)
+        target_link_libraries(MuseAgentDeadlineTest PRIVATE MuseAgentCore)
+        add_test(NAME MuseAgentDeadlineTest COMMAND MuseAgentDeadlineTest)
+        set_tests_properties(MuseAgentDeadlineTest PROPERTIES LABELS "commands;muse;contract:application")
+    endif()
 endif()
 
 # Rumble state and migration are deterministic pure-logic coverage. Keep this in
@@ -376,4 +440,73 @@ if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/Cl
     set_tests_properties(ClipSrcTelemetryTest PROPERTIES LABELS "audio;clip-render;telemetry;contract:audio")
 endif()
 
+if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/MuseSamplerVerbTest.cpp")
+    add_executable(MuseSamplerVerbTest Commands/MuseSamplerVerbTest.cpp)
+    target_link_libraries(MuseSamplerVerbTest PRIVATE AestraAudioCore)
+    target_include_directories(MuseSamplerVerbTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME MuseSamplerVerbTest COMMAND MuseSamplerVerbTest)
+    set_tests_properties(MuseSamplerVerbTest PROPERTIES LABELS "commands;muse;sampler;contract:application")
+endif()
+
 message(STATUS "Commands tests added - Phase 2 undo/redo system")
+
+# V82-M3 (FD-53): the piano-roll Muse verbs — bulk notes, note length, delete a range, FL-style duplicate.
+add_executable(MusePianoRollVerbsTest Commands/MusePianoRollVerbsTest.cpp)
+target_link_libraries(MusePianoRollVerbsTest PRIVATE AestraAudioCore)
+target_include_directories(MusePianoRollVerbsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MusePianoRollVerbsTest COMMAND MusePianoRollVerbsTest)
+set_tests_properties(MusePianoRollVerbsTest PROPERTIES LABELS "commands;muse;contract:application")
+
+# #1042 / #1000: Muse says which value to pass back as `track`, and that plain `play` is not the UI's Play button.
+add_executable(MuseTrackAddressingTest Commands/MuseTrackAddressingTest.cpp)
+target_link_libraries(MuseTrackAddressingTest PRIVATE AestraAudioCore)
+target_include_directories(MuseTrackAddressingTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MuseTrackAddressingTest COMMAND MuseTrackAddressingTest)
+set_tests_properties(MuseTrackAddressingTest PROPERTIES TIMEOUT 60 LABELS "commands;muse;contract:application")
+# V82-M2 (FD-53): per-step chance/ratchet and the pattern menu (rename, delete) through Muse.
+add_executable(MuseStepVerbsTest Commands/MuseStepVerbsTest.cpp)
+target_link_libraries(MuseStepVerbsTest PRIVATE AestraAudioCore)
+target_include_directories(MuseStepVerbsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MuseStepVerbsTest COMMAND MuseStepVerbsTest)
+set_tests_properties(MuseStepVerbsTest PROPERTIES TIMEOUT 60 LABELS "commands;muse;contract:application")
+
+# V83-HS1 (FD-63): the harmony service — key and chord detection from MIDI, and the get_harmony Muse verb.
+add_executable(HarmonyAnalysisTest Commands/HarmonyAnalysisTest.cpp)
+target_link_libraries(HarmonyAnalysisTest PRIVATE AestraAudioCore)
+target_include_directories(HarmonyAnalysisTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME HarmonyAnalysisTest COMMAND HarmonyAnalysisTest)
+set_tests_properties(HarmonyAnalysisTest PROPERTIES TIMEOUT 120 LABELS "commands;muse;contract:application")
+
+# V83-MU1 (FD-63): the Muse Quiet idea engine — next-bar ideas from rules.
+add_executable(MuseIdeasTest Commands/MuseIdeasTest.cpp)
+target_link_libraries(MuseIdeasTest PRIVATE AestraAudioCore)
+target_include_directories(MuseIdeasTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MuseIdeasTest COMMAND MuseIdeasTest)
+set_tests_properties(MuseIdeasTest PROPERTIES TIMEOUT 120 LABELS "commands;muse;contract:application")
+# PresetCoreTest — V83-S2 (FD-72): preset files, capture/apply, the library, Save's name, one-undo apply.
+add_executable(PresetCoreTest Commands/PresetCoreTest.cpp)
+target_link_libraries(PresetCoreTest PRIVATE AestraAudioCore)
+target_include_directories(PresetCoreTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME PresetCoreTest COMMAND PresetCoreTest)
+set_tests_properties(PresetCoreTest PROPERTIES TIMEOUT 120 LABELS "commands;plugins;presets;contract:application")
