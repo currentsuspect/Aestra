@@ -25,6 +25,7 @@
 #include <optional>
 #include <string>
 #include <vector>
+#include <thread>
 
 /**
  * @brief Main application class
@@ -34,6 +35,7 @@
  */
 #include "../Core/RecoveryInfo.h"
 #include "../Core/VersionEdits.h"
+#include "../Panels/AuditionBounceTile.h"
 namespace Aestra { enum class RecoveryResponse; class UpdateNotifier; class SettingsDialog; namespace Audio { class TakesPanel; } }
 
 class AestraApp {
@@ -209,6 +211,9 @@ private:
     void wireVersionsPanel(Aestra::Audio::TakesPanel& panel);
     void refreshVersionChip();
     void wireAudition();
+    void stopBounceWorker(); ///< cancel and join the Audition bounce worker, if any
+    std::thread m_bounceThread;
+    std::shared_ptr<Aestra::BounceJob> m_bounceJob;
     Aestra::RecoveryInfo::Info recoveryInfoFor(const std::string& originalProjectPath, const std::vector<std::string>& candidates);
     void onRecoveryResponse(Aestra::RecoveryResponse response, const std::string& autosavePath, const std::string& projectPath,
                             bool hasRequestedProject, const std::string& originalProjectPath, const std::vector<std::string>& candidates);

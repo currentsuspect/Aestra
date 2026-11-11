@@ -24,6 +24,9 @@ namespace {
 // Define static tooltip state
 TooltipState NUIComponent::s_tooltipState;
 bool NUIComponent::s_cursorCaptureActive = false;
+NUIComponent* NUIComponent::s_pressOwner = nullptr;
+NUIMouseButton NUIComponent::s_pressOwnerButton = NUIMouseButton::None;
+NUIComponent* NUIComponent::s_eventClaimer = nullptr;
 unsigned NUIComponent::s_pointerButtonsHeld = 0;
 
 
@@ -33,6 +36,13 @@ NUIComponent::NUIComponent() {
 
 NUIComponent::~NUIComponent() {
     hideRemoteTooltip(this);
+    // Children are still attached here, so a whole subtree going at once forgets its owner too.
+    if (s_pressOwner && subtreeContains(s_pressOwner)) {
+        s_pressOwner = nullptr;
+    }
+    if (s_eventClaimer && subtreeContains(s_eventClaimer)) {
+        s_eventClaimer = nullptr;
+    }
     if (g_focusedComponent == this) {
         g_focusedComponent = nullptr;
     }
@@ -117,6 +127,7 @@ bool NUIComponent::onMouseEvent(const NUIMouseEvent& event) {
             continue;  // hidden: not eligible for ordinary input
         }
         if ((*it)->onMouseEvent(event)) {
+            noteEventClaimer(it->get()); // the innermost loop to see a claim records it first
             eventHandledByChild = true;
             break;  // Stop at first child that handles the event
         }
@@ -287,7 +298,38 @@ bool NUIComponent::dispatchMouseEvent(NUIComponent* target, const NUIMouseEvent&
     } guard;
 
     notePointerGesture(event);
-    const bool handled = target->onMouseEvent(event);
+    // Press ownership. A drag ends on its release, but a release is offered front to back and stops at the first
+    // component that takes it: one over a scrollbar, the minimap or a panel never reached the component holding the
+    // drag, so the drag stayed live and the cursor stuck (owner, 2026-11-08: "a large class of issue"). Fixing each
+    // gesture by hand (#847's marquee, the automation "sticky drag", #1331's minimap) left the rest broken, so the
+    // dispatcher remembers who took the press and hands it the release when it went elsewhere.
+    const bool outermost = g_eventDispatchDepth == 1;
+    const bool tracksOwnership = outermost && (event.pressed || event.released);
+    if (tracksOwnership) {
+        s_eventClaimer = nullptr;
+    }
+    bool handled = target->onMouseEvent(event);
+    if (tracksOwnership) {
+        NUIComponent* claimer = s_eventClaimer ? s_eventClaimer : (handled ? target : nullptr);
+        s_eventClaimer = nullptr;
+        if (event.pressed) {
+            // A second button pressed mid-drag does not take the drag over.
+            if (!s_pressOwner || s_pressOwnerButton == event.button) {
+                s_pressOwner = claimer;
+                s_pressOwnerButton = event.button;
+            }
+        } else if (s_pressOwner && event.button == s_pressOwnerButton) {
+            NUIComponent* owner = s_pressOwner;
+            s_pressOwner = nullptr;
+            // The owner heard it if the claim was its own or inside it. Any other outcome (someone else took it, or
+            // nobody did) may have passed it by, so it hears it now; release handlers end state and are idempotent.
+            // The dispatch root itself is never re-offered: that would replay the release to the whole tree.
+            const bool ownerHeardIt = claimer && owner->subtreeContains(claimer);
+            if (!ownerHeardIt && owner != target && target->subtreeContains(owner)) {
+                handled = owner->onMouseEvent(event) || handled;
+            }
+        }
+    }
     // A target may re-show its hover tooltip for an in-bounds scroll (the playback-time display
     // does); dismiss after dispatch too, so a scroll never restarts one (review, #965).
     if (event.wheelDelta != 0.0f) {

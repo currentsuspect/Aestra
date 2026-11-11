@@ -1620,7 +1620,7 @@ void AestraApp::cleanupUnreferencedRecordings(const std::string& keeperProjectPa
 }
 
 void AestraApp::shutdown() {
-    stopUpdateChecks(); Log::info("[SHUTDOWN] Entering shutdown function...");
+    stopUpdateChecks(); stopBounceWorker(); Log::info("[SHUTDOWN] Entering shutdown function...");
     Aestra::AppLifecycle::instance().transitionTo(Aestra::AppState::ShuttingDown);
 
     // Invalidate lifetime token so any async callbacks that fire during teardown

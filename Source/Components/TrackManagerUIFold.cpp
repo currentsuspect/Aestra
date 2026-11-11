@@ -19,6 +19,22 @@ bool TrackManagerUI::isFoldableEmptyLane(const PlaylistLane& lane, size_t laneCo
     return isUntouchedTrackLane(lane, laneCountOfItsTrack); // TimelineFold.h
 }
 
+PlaylistLaneID TrackManagerUI::firstFoldedEmptyLane() const {
+    // Same walk as refreshTracks: playlist order, each owned track once by its first lane.
+    if (!m_trackManager)
+        return {};
+    auto& playlist = m_trackManager->getPlaylistModel();
+    for (size_t i = 0; i < playlist.getLaneCount(); ++i) {
+        const auto laneId = playlist.getLaneId(i);
+        const auto* lane = playlist.getLane(laneId);
+        const auto* track = lane && lane->trackId != 0 ? m_trackManager->getTrack(lane->trackId) : nullptr;
+        if (track && !track->laneIds.empty() && track->laneIds.front() == laneId &&
+            isFoldableEmptyLane(*lane, track->laneIds.size()))
+            return laneId;
+    }
+    return {};
+}
+
 void TrackManagerUI::renderFoldedEmptyRow(AestraUI::NUIRenderer& renderer) {
     m_foldedToggleRect = {};
     if (m_foldedEmptyTracks == 0 && !m_showEmptyTracks)
