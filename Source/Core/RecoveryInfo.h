@@ -39,7 +39,8 @@ inline std::string gapWords(uint64_t fromMs, uint64_t toMs) {
     return std::to_string(hours) + (hours == 1 ? " hour" : " hours");
 }
 
-inline Info build(const TakeManager::Manifest& manifest, std::vector<uint64_t> autosaveTimesMs) {
+inline Info build(const TakeManager::Manifest& manifest, std::vector<uint64_t> autosaveTimesMs,
+                  uint64_t projectSavedMs = 0, uint64_t nowMs = 0) {
     Info info;
     std::sort(autosaveTimesMs.begin(), autosaveTimesMs.end());
     const auto* open = manifest.ok ? manifest.activeTake() : nullptr;
@@ -57,9 +58,16 @@ inline Info build(const TakeManager::Manifest& manifest, std::vector<uint64_t> a
     if (info.autosaveMs.size() > kMaxDots) info.autosaveMs.erase(info.autosaveMs.begin(), info.autosaveMs.end() - kMaxDots);
 
     const uint64_t newest = autosaveTimesMs.empty() ? 0 : autosaveTimesMs.back();
-    if (!info.hasVersion) info.detail = "No version of this project has been saved yet.";
-    else if (newest > info.lastSavedMs) info.detail = "The newest autosave is " + gapWords(info.lastSavedMs, newest) + " after your last saved version.";
-    else info.detail = "Nothing newer than your last saved version was autosaved.";
+    if (!info.hasVersion) {
+        // A project saved to disk but never versioned is not an unsaved project (#1309); say what is known.
+        info.detail = projectSavedMs > 0
+                          ? "Last saved to disk " + gapWords(projectSavedMs, nowMs) + " ago; no version of this project yet."
+                          : "No version of this project has been saved yet.";
+    } else if (newest > info.lastSavedMs) {
+        info.detail = "The newest autosave is " + gapWords(info.lastSavedMs, newest) + " after your last saved version.";
+    } else {
+        info.detail = "Nothing newer than your last saved version was autosaved.";
+    }
     return info;
 }
 

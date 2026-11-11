@@ -18,16 +18,25 @@
 using namespace Aestra;
 
 RecoveryInfo::Info AestraApp::recoveryInfoFor(const std::string& originalProjectPath, const std::vector<std::string>& candidates) {
-    std::vector<uint64_t> times;
-    for (const auto& path : candidates) {
+    const auto fileTimeMs = [](const std::string& path) -> uint64_t {
         std::error_code ec;
         const auto ftime = std::filesystem::last_write_time(path, ec);
-        if (ec) continue;
-        const auto sys = std::chrono::time_point_cast<std::chrono::milliseconds>(ftime - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now());
-        times.push_back(static_cast<uint64_t>(sys.time_since_epoch().count()));
+        if (ec) return 0;
+        const auto sys = std::chrono::time_point_cast<std::chrono::milliseconds>(
+            ftime - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now());
+        return static_cast<uint64_t>(sys.time_since_epoch().count());
+    };
+
+    std::vector<uint64_t> times;
+    for (const auto& path : candidates) {
+        if (const uint64_t t = fileTimeMs(path)) times.push_back(t);
     }
     const auto manifest = originalProjectPath.empty() ? TakeManager::Manifest{} : TakeManager::loadManifest(originalProjectPath);
-    return RecoveryInfo::build(manifest, std::move(times));
+    // A project saved to disk but never versioned still has a save to report (#1309).
+    const uint64_t projectSavedMs = originalProjectPath.empty() ? 0 : fileTimeMs(originalProjectPath);
+    const uint64_t nowMs =
+        static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+    return RecoveryInfo::build(manifest, std::move(times), projectSavedMs, nowMs);
 }
 
 /// Keep the autosave as a rescued session beside the project instead of deleting it.

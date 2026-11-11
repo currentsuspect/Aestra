@@ -8,6 +8,7 @@
 #include "VersionsPanelWiring.h"
 #include "../Panels/TakesPanel.h"
 #include "../Core/AestraWindowManager.h"
+#include "../Settings/ConfirmationDialog.h"
 #include "../AestraUI/Base/NUIContextMenu.h"
 #include "../Core/AuditionHooks.h"
 #include "AestraFileDialog.h"
@@ -17,8 +18,9 @@ using namespace Aestra;
 
 void AestraApp::wireVersionsPanel(Aestra::Audio::TakesPanel& panel) {
     const auto path = [this]() { return m_documentState.canonicalPath(); };
-    wireVersionsDock(panel, [this]() -> Audio::CommandHistory& { return m_content->getTrackManager()->getCommandHistory(); }, path,
+    wireVersionsDock(panel, [this]() -> Audio::CommandHistory& { return m_content->getTrackManager()->getCommandHistory(); },
                      [this]() { return m_documentState.displayName(); }, [this]() { m_content->refreshAfterHistoryChange(); });
+    panel.setUnsavedProvider([this]() { return currentVersionEdits().steps; });
     wireVersionBounces(panel, path, [this](const std::string& p) { return m_content->togglePreviewFile(p); },
                        [this](const std::string& p) { return m_content->isPreviewFilePlaying(p); },
                        [this, path](const std::string& id) {
@@ -31,13 +33,34 @@ void AestraApp::wireVersionsPanel(Aestra::Audio::TakesPanel& panel) {
 }
 
 void AestraApp::refreshVersionChip() {
-    if (!m_windowManager) return;
+    // The open version's recorded steps feed the unsaved count; re-read them whenever this version may have
+    // changed (a save rewrites them, a switch and a load move to another version).
     const std::string path = m_documentState.canonicalPath();
     const auto manifest = path.empty() ? TakeManager::Manifest{} : TakeManager::loadManifest(path);
-    const auto chip = VersionPicker::chip(manifest);
     const auto* open = manifest.ok ? manifest.activeTake() : nullptr;
-    m_recordedSteps = open ? static_cast<int>(open->steps.size()) : 0;
+    m_openVersionSteps = open ? open->steps : std::vector<TakeManager::TakeEntry::Step>{};
+    m_versionEditsStale = true;
+
+    if (!m_windowManager) return;
+    const auto chip = VersionPicker::chip(manifest);
     m_windowManager->setVersionChip(chip.branch, AestraUI::NUIColor::fromHex(VersionsTimeline::laneHex(chip.lane)), chip.version);
+}
+
+VersionEdits::State AestraApp::currentVersionEdits() {
+    auto* tm = m_content ? m_content->getTrackManager().get() : nullptr;
+    if (!tm) return {};
+    const auto& history = tm->getCommandHistory();
+    // Reading the stacks is O(1); measuring is O(steps). The frame loop asks every frame, so measure only
+    // when the cursor moved — undo or redo always changes one of these two depths.
+    const size_t undo = history.getUndoStack().size();
+    const size_t redo = history.getRedoStack().size();
+    if (m_versionEditsStale || undo != m_versionEditsUndoDepth || redo != m_versionEditsRedoDepth) {
+        m_versionEdits = VersionEdits::measure(history, m_openVersionSteps);
+        m_versionEditsUndoDepth = undo;
+        m_versionEditsRedoDepth = redo;
+        m_versionEditsStale = false;
+    }
+    return m_versionEdits;
 }
 
 void AestraApp::pushProjectStatus() {
@@ -45,9 +68,10 @@ void AestraApp::pushProjectStatus() {
     auto* tm = m_content ? m_content->getTrackManager().get() : nullptr;
     const bool modified = tm && tm->isModified();
     std::string note = m_documentState.statusNote();
-    if (note.empty() && modified) {  // "7 unsaved": what has been done since the open version was saved
-        const int n = std::max(0, static_cast<int>(tm->getCommandHistory().getUndoStack().size()) - m_recordedSteps);
-        if (n > 0) note = std::to_string(n) + " unsaved";
+    if (note.empty() && modified) {  // what has been done since the open version was saved
+        const auto edits = currentVersionEdits();
+        if (edits.counted && edits.steps > 0) note = std::to_string(edits.steps) + " unsaved";
+        else if (edits.diverged) note = "Edited"; // steps were taken back: not a count, but not the version either
     }
     m_windowManager->setProjectStatus(m_documentState.displayName(), modified, note);
 }
@@ -67,8 +91,7 @@ void AestraApp::showVersionPicker(float x) {
         item->setChecked(e.current);
         if (!e.current) {
             item->setOnClick([this, id = e.versionId]() {
-                if (!switchToTake(id).ok) return;
-                refreshVersionChip();
+                requestSwitchToTake(id);
                 if (auto panel = m_content->getTakesPanel()) panel->refreshTakes();
             });
         }
@@ -78,6 +101,61 @@ void AestraApp::showVersionPicker(float x) {
     menu->addItem("Open Versions...", [this]() { m_content->setViewOpen(Audio::ViewType::Takes, true); });
     menu->addItem("Save as an alt...", [this]() { if (createTakeFromCurrentProject(true)) refreshVersionChip(); });
     m_windowManager->showDropdownMenu(menu, x);
+}
+
+void AestraApp::requestSwitchToTake(const std::string& takeId) {
+    if (takeId.empty() || m_documentState.canonicalPath().empty()) {
+        switchToTake(takeId);
+        return;
+    }
+    const auto edits = currentVersionEdits();
+    if (!edits.diverged) { // the project is still the version: nothing to ask about
+        switchToTake(takeId);
+        return;
+    }
+    showVersionSwitchPrompt(takeId, edits);
+}
+
+void AestraApp::showVersionSwitchPrompt(const std::string& takeId, const VersionEdits::State& edits) {
+    if (!m_windowManager) return;
+    const auto manifest = TakeManager::loadManifest(m_documentState.canonicalPath());
+    const std::string openName = VersionPicker::chip(manifest).version;
+
+    // One line: the dialog draws its message without wrapping.
+    std::string message;
+    if (edits.counted && edits.steps > 0)
+        message = "\"" + openName + "\" does not have your latest " + std::to_string(edits.steps) +
+                  (edits.steps == 1 ? " step yet." : " steps yet.");
+    else
+        message = "The project has changed since \"" + openName + "\" was saved.";
+
+    auto dialog = m_windowManager->getConfirmationDialog();
+    if (!dialog) {
+        dialog = std::make_shared<ConfirmationDialog>();
+        m_windowManager->setConfirmationDialog(dialog);
+    }
+    if (auto* root = m_windowManager->getRootComponent()) {
+        dialog->setBounds(root->getBounds());
+        root->removeChild(dialog);
+        root->addChild(dialog);
+    }
+
+    dialog->showVersionSwitch("Unsaved Work", message, [this, takeId](DialogResponse response) {
+        // The answer decides everything, and only Discard leaves work behind (VersionEdits::plan, tested headlessly).
+        const auto choice = response == DialogResponse::Save           ? VersionEdits::Choice::Save
+                            : response == DialogResponse::SaveAsBranch ? VersionEdits::Choice::SaveAsNewBranch
+                            : response == DialogResponse::DontSave     ? VersionEdits::Choice::Discard
+                                                                       : VersionEdits::Choice::Cancel;
+        const auto plan = VersionEdits::plan(choice);
+        if (!plan.proceed) return; // Cancel or a dismissed dialog: nothing moves
+        if (plan.saveAsNewBranch && !createTakeFromCurrentProject(true)) {
+            Log::warning("[Versions] Could not save the working state as an alt; not switching");
+            return;
+        }
+        const auto result = switchToTake(takeId, plan.saveCurrent);
+        if (!result.ok) Log::error("[Versions] Could not open the version: " + result.errorMessage);
+        if (auto panel = m_content->getTakesPanel()) panel->refreshTakes();
+    });
 }
 
 /// What the Audition hub gets from the app: the open project, a place to keep references, and the two requests.

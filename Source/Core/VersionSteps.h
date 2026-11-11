@@ -16,6 +16,20 @@ namespace Aestra {
  *
  * The log is written when a version is saved. Each step keeps the time its command was made. Pure: reads the history and touches nothing.
  */
+/**
+ * @brief Whether the live history can be written as the open version's steps.
+ *
+ * Opening a version clears the history, and a switch mirrors the loaded project back to disk through a
+ * save. Taking an empty history as the version's steps erases the log the Versions panel shows, so a
+ * save with nothing in either stack leaves a version that has steps alone. (Undoing every step is not
+ * that case: the undone commands are on the redo side.)
+ */
+inline bool historyCanRecordSteps(const Audio::CommandHistory& history,
+                                  const std::vector<TakeManager::TakeEntry::Step>& recordedSteps) {
+    if (recordedSteps.empty()) return true;
+    return !history.getUndoStack().empty() || !history.getRedoStack().empty();
+}
+
 inline std::vector<TakeManager::TakeEntry::Step> collectVersionSteps(const Audio::CommandHistory& history) {
     std::vector<TakeManager::TakeEntry::Step> steps;
     for (const auto& command : history.getUndoStack()) {

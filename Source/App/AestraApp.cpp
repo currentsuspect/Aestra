@@ -2188,7 +2188,11 @@ bool AestraApp::saveActiveTakeSnapshot(const ProjectSerializer::UIState* uiState
         Log::warning("[Takes] Could not save active Take: " + result.errorMessage);
         return false;
     }
-    TakeManager::setVersionSteps(m_documentState.canonicalPath(), result.take.id, collectVersionSteps(m_content->getTrackManager()->getCommandHistory()));
+    const auto& history = m_content->getTrackManager()->getCommandHistory();
+    if (historyCanRecordSteps(history, result.take.steps)) {
+        TakeManager::setVersionSteps(m_documentState.canonicalPath(), result.take.id, collectVersionSteps(history));
+    }
+    refreshVersionChip(); // this version just wrote the steps the unsaved count measures against
     return true;
 }
 
@@ -2213,11 +2217,12 @@ bool AestraApp::createTakeFromCurrentProject(bool newBranch) {
     const std::string branchName = newBranch ? "Alt " + std::to_string(manifest.ok ? manifest.branches().size() : 1) : ""; // empty continues the open branch
     auto result = TakeManager::createVersion(m_documentState.canonicalPath(), ser.contents, takeName, "", branchName, TakeManager::TakeEntry::Kind::Saved, collectVersionSteps(m_content->getTrackManager()->getCommandHistory()));
     if (!result.ok) { Log::warning("[Takes] Could not create version: " + result.errorMessage); return false; }
+    refreshVersionChip(); // the new version is open, and its steps are the ones the unsaved count measures against
 
     Log::info("[Takes] Active version: " + result.take.name); return true;
 }
 
-ProjectSerializer::LoadResult AestraApp::switchToTake(const std::string& takeId) {
+ProjectSerializer::LoadResult AestraApp::switchToTake(const std::string& takeId, bool saveCurrent) {
     ProjectSerializer::LoadResult result;
     if (takeId.empty()) {
         result.errorMessage = "Take id is empty";
@@ -2228,7 +2233,9 @@ ProjectSerializer::LoadResult AestraApp::switchToTake(const std::string& takeId)
         return result;
     }
 
-    if (!saveProject()) {
+    // The save-before-switch rule lives here and nowhere else. `saveCurrent` is false only when the user
+    // answered Discard in the switch prompt, which is the one path allowed to leave the working state behind.
+    if (saveCurrent && !saveProject()) {
         result.errorMessage = "Could not save the current Take before switching";
         return result;
     }
@@ -2278,6 +2285,7 @@ ProjectSerializer::LoadResult AestraApp::switchToTake(const std::string& takeId)
     }
 
     Log::info("[Takes] Switched to Take: " + activeResult.take.name);
+    refreshVersionChip(); // the open version moved: the chip and the unsaved count follow it
     return result;
 }
 
@@ -2348,11 +2356,8 @@ void AestraApp::wireTakesPanel() {
     wireVersionsPanel(*takesPanel); wireAudition();
     takesPanel->setOnSaveActiveTake([this]() { return saveProject(); });
     takesPanel->setOnOpenTake([this](const std::string& takeId) {
-        auto result = switchToTake(takeId);
-        if (!result.ok) {
-            Log::error("[Takes] Failed to open Take: " + takeId + " (" + result.errorMessage + ")");
-        }
-        return result.ok;
+        requestSwitchToTake(takeId);
+        return true;
     });
 
     takesPanel->setOnRenameTake([this](const std::string& takeId, const std::string& name) {
