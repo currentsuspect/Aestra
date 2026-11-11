@@ -455,6 +455,24 @@ void testEditorNeutralsFollowTheme() {
     manager.setActiveTheme("Aestra-dark");
 }
 
+void testControlKitTokens() {
+    std::cout << "[Test] plugin-editor control kit tokens\n";
+    auto& manager = NUIThemeManager::getInstance();
+    manager.setActiveTheme("Aestra-dark");
+    const NUIColor body = manager.getColor("backgroundPrimary");
+    const NUIColor edge = manager.getColor("controlEdge");
+    auto luminance = [](const NUIColor& c) { return 0.2126f * c.r + 0.7152f * c.g + 0.0722f * c.b; };
+    auto contrast = [&](const NUIColor& a, const NUIColor& b) {
+        const float la = luminance(a), lb = luminance(b);
+        return (std::max(la, lb) + 0.05f) / (std::min(la, lb) + 0.05f);
+    };
+    check(contrast(edge, body) >= 3.0f, "a control edge reads at 3:1 on the editor body");
+    check(!colorsEqual(edge, manager.getColor("borderStrong")), "controlEdge is its own token, not borderStrong");
+    const NUIColor selected = manager.getColor("controlSelected");
+    check(selected.b > selected.r && selected.r > body.r, "the selected fill is a violet tint above the body");
+    check(manager.getColor("controlGuide").b > selected.b, "a graph guide is stronger than the selected fill");
+}
+
 int main() {
     testSemanticDefaults();
     testStatePriorityAndGeometry();
@@ -469,6 +487,7 @@ int main() {
     testLightPresetCompleteness();
     testHighContrastPreset();
     testEditorNeutralsFollowTheme();
+    testControlKitTokens();
 
     if (gFailures == 0) {
         std::cout << "All UI theme consistency checks passed\n";
