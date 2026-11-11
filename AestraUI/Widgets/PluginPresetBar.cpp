@@ -95,10 +95,12 @@ PluginPresetBar::Layout PluginPresetBar::layoutFor(const NUIRect& titleBar) cons
         l.name = {x + 28.0f, y, 180.0f, kBarH};
         l.next = {x + 212.0f, y, kArrowW, kBarH};
         l.save = {x + 244.0f, y, kSaveW, kBarH};
-        l.ab = {x + 300.0f, y, 56.0f, kBarH};
-        l.a = {l.ab.x, y, 28.0f, kBarH};
-        l.b = {l.ab.x + 28.0f, y, 28.0f, kBarH};
-        l.more = {x + 364.0f, y, kArrowW, kBarH};
+        // With the pair hidden (an editor with its own compare) the rects are empty and the menu button moves up.
+        const float abW = m_compareShown ? 56.0f : 0.0f;
+        l.ab = {x + 300.0f, y, abW, kBarH};
+        l.a = {l.ab.x, y, abW * 0.5f, kBarH};
+        l.b = {l.ab.x + abW * 0.5f, y, abW * 0.5f, kBarH};
+        l.more = {x + (m_compareShown ? 364.0f : 308.0f), y, kArrowW, kBarH};
         l.power = {titleBar.right() - 32.0f, y, kBarH, kBarH};
         return l;
     }
@@ -365,6 +367,7 @@ void PluginPresetBar::renderTwoRow(NUIRenderer& r, const NUIRect&) {
     // A | B
     const bool cmp = m_session->comparing();
     const int slot = m_session->activeSlot();
+    if (m_compareShown) {
     r.fillRect(l.ab, k.body);
     {
         // A is the sound now until a comparison starts, so it reads as the selected side.
@@ -377,6 +380,7 @@ void PluginPresetBar::renderTwoRow(NUIRenderer& r, const NUIRect&) {
     const bool aOn = !cmp || slot == 0;
     r.drawTextCentered("A", l.a, 12.0f, aOn ? k.ink : k.inkSoft);
     r.drawTextCentered("B", l.b, 12.0f, !aOn ? k.ink : k.inkSoft);
+    }
 
     // ···
     button(l.more, m_hoverControl == 6, false);

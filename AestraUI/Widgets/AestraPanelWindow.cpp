@@ -98,7 +98,10 @@ void AestraPanelWindow::cacheThemeColors()
 void AestraPanelWindow::setTitleAccessory(std::shared_ptr<PanelTitleAccessory> accessory)
 {
     m_accessory = std::move(accessory);
-    if (m_accessory) m_accessory->setHeaderMode(m_twoRowHeader);
+    if (m_accessory) {
+        m_accessory->setHeaderMode(m_twoRowHeader);
+        m_accessory->setCompareShown(m_compareShown);
+    }
     setDirty(true);
 }
 

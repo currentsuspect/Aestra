@@ -39,6 +39,7 @@ public:
     float minimumWidth() const override { return kBarMinWidth; }
     void setHeaderMode(bool twoRow) override { m_twoRow = twoRow; }
     bool twoRow() const { return m_twoRow; }
+    void setCompareShown(bool shown) override { m_compareShown = shown; }
 
     /// What the two-row header's menu and power button do. The bar only draws and asks; the plugin window's
     /// owner answers. A missing bypass hides the power button.
@@ -116,6 +117,7 @@ private:
 
     int m_hoverControl = -1;
     bool m_twoRow = false;
+    bool m_compareShown = true; ///< the A|B pair in the two-row header
     HeaderActions m_actions;
 };
 
