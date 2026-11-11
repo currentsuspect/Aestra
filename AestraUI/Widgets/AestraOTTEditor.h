@@ -36,7 +36,9 @@ private:
     float m_bandGainDb[3]{};
     double m_meterTimer = 0.0;
 
-    static constexpr float kWinW = 640.0f;
+    // 24 px wider than the mock: its nine knobs and two group gaps need 640 px of row, so a 616 px row ran past
+    // the window edge. 12 px margins both sides.
+    static constexpr float kWinW = 664.0f;
     static constexpr float kContentH = 294.0f;
     static constexpr float kWinH = kContentH + 2.0f * AestraPanelWindow::TITLE_BAR_H; // two-row header
 };

@@ -47,7 +47,7 @@ void AestraLimitEditor::layoutControls() {
     const auto b = getBounds();
     m_origin = {b.x, b.y + headerHeight()};
     const float ox = m_origin.x, oy = m_origin.y;
-    m_historyRect = NUIRect(ox + 12.0f, oy + 12.0f, 388.0f, 168.0f);
+    m_historyRect = NUIRect(ox + 12.0f, oy + 36.0f, 388.0f, 144.0f); // a 24 px row above it holds the readout
     m_meterRects[0] = NUIRect(ox + 430.0f, oy + 28.0f, 10.0f, 152.0f);
     m_meterRects[1] = NUIRect(ox + 458.0f, oy + 28.0f, 10.0f, 152.0f);
 
@@ -100,13 +100,15 @@ void AestraLimitEditor::drawHistory(NUIRenderer& renderer, bool bypassed) {
     EditorKit::drawTextLeft(renderer, "4 s", w.x + 30.0f, w.bottom() - 9.0f, 9.0f, c.inkMuted);
     EditorKit::drawTextRight(renderer, "now", w.right() - 10.0f, w.bottom() - 9.0f, 9.0f, c.inkMuted);
 
+    // The current reduction sits in the row above the well, never on the bars.
     char buf[24];
     std::snprintf(buf, sizeof(buf), "%.1f dB", bypassed ? 0.0 : -static_cast<double>(m_grDisplayDb));
-    EditorKit::drawTextRight(renderer, buf, w.right() - 12.0f, w.y + 18.0f, 16.0f, c.ink);
+    const float rowY = w.y - 14.0f;
+    EditorKit::drawTextRight(renderer, buf, w.right(), rowY, 16.0f, c.ink);
     const float vw = renderer.measureText(buf, 16.0f).width;
     const std::string caption = "GAIN REDUCTION";
     const float capsW = renderer.measureText(caption, 9.0f).width + 9.0f * 0.12f * static_cast<float>(caption.size());
-    EditorKit::drawCaps(renderer, caption, w.right() - 12.0f - vw - 10.0f - capsW, w.y + 18.0f, 9.0f, c.inkMuted);
+    EditorKit::drawCaps(renderer, caption, w.right() - vw - 10.0f - capsW, rowY, 9.0f, c.inkMuted);
 }
 
 void AestraLimitEditor::drawMeters(NUIRenderer& renderer, bool bypassed) {

@@ -42,12 +42,12 @@ void AestraOTTEditor::setPlatformBridge(NUIPlatformBridge* bridge) {
 void AestraOTTEditor::layoutControls() {
     const auto b = getBounds();
     const float ox = b.x, oy = b.y + headerHeight();
-    m_well = NUIRect(ox + 12.0f, oy + 12.0f, 616.0f, 160.0f);
+    m_well = NUIRect(ox + 12.0f, oy + 12.0f, kWinW - 24.0f, 160.0f);
     m_plot = NUIRect(m_well.x + 28.0f, m_well.y + 8.0f, m_well.width - 36.0f, m_well.height - 28.0f);
 
     using K = EditorKit::EmberKnobBoard;
     m_board.clear();
-    m_board.layoutRow({ox + 12.0f, oy + 184.0f}, 616.0f,
+    m_board.layoutRow({ox + 12.0f, oy + 184.0f}, kWinW - 24.0f,
                       {K::Group{"Global",
                                 {{AestraOTT::kDepth, "Depth"},
                                  {AestraOTT::kTime, "Time", EditorKit::KnobSize::Medium, true},
