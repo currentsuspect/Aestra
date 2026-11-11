@@ -286,6 +286,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/HostVerbRegistry.cpp
     src/Commands/MuseService.cpp
     src/Harmony/HarmonyAnalysis.cpp
+    src/Harmony/AudioKeyDetect.cpp
     src/Harmony/HarmonyGather.cpp
     src/Muse/MuseIdeas.cpp
     src/Presets/Preset.cpp
@@ -418,6 +419,7 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Models/UnitManager.h
     include/Music/ScaleContext.h
     include/Harmony/HarmonyAnalysis.h
+    include/Harmony/AudioKeyDetect.h
     include/Harmony/HarmonyGather.h
     include/Muse/MuseIdeas.h
     include/Presets/Preset.h

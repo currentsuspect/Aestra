@@ -506,6 +506,16 @@ target_include_directories(HarmonyAnalysisTest PRIVATE
 add_test(NAME HarmonyAnalysisTest COMMAND HarmonyAnalysisTest)
 set_tests_properties(HarmonyAnalysisTest PROPERTIES TIMEOUT 120 LABELS "commands;muse;contract:application")
 
+# V83-KEY1 (FD-76): the harmony service guesses the key of audio (a sample, a loop, a recording).
+add_executable(AudioKeyDetectTest Commands/AudioKeyDetectTest.cpp)
+target_link_libraries(AudioKeyDetectTest PRIVATE AestraAudioCore)
+target_include_directories(AudioKeyDetectTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AudioKeyDetectTest COMMAND AudioKeyDetectTest)
+set_tests_properties(AudioKeyDetectTest PROPERTIES TIMEOUT 300 LABELS "commands;contract:application")
+
 # V83-MU1 (FD-63): the Muse Quiet idea engine — next-bar ideas from rules.
 add_executable(MuseIdeasTest Commands/MuseIdeasTest.cpp)
 target_link_libraries(MuseIdeasTest PRIVATE AestraAudioCore)
