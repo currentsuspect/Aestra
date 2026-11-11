@@ -273,6 +273,14 @@ bool AestraPanelWindow::onMouseEvent(const NUIMouseEvent& event)
 {
     auto b = getBounds();
 
+    // Hover for the editors' controls; cleared when the pointer is reported outside the window.
+    const bool inside = b.contains(event.position);
+    if (inside != m_hoverIn || (inside && (event.position.x != m_hoverPos.x || event.position.y != m_hoverPos.y))) {
+        m_hoverIn = inside;
+        m_hoverPos = event.position;
+        setDirty(true);
+    }
+
     // The accessory's popover floats over the content and may reach past the panel: it sees the pointer first.
     if (m_accessory && b.width >= m_accessory->minimumWidth() && m_accessory->onMouseEvent(event)) {
         if (m_accessory->wantsKeys()) setFocused(true); // so typed characters reach the browser or Save form

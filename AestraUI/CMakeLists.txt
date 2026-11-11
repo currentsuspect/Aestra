@@ -171,6 +171,7 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/AestraPanelWindow.h
     Widgets/AestraPanelWindow.cpp
     Widgets/PluginEditorKit.cpp
+    Widgets/EmberControls.cpp
     Widgets/AestraDialogChrome.cpp
     Widgets/GenericPluginEditor.h
     Widgets/GenericPluginEditor.cpp

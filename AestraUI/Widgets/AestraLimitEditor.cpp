@@ -4,465 +4,180 @@
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include "Plugin/AestraLimit.h"
+#include "PluginEditorKit.h"
 
 #include <algorithm>
-#include <array>
-#include <cstdio>
 #include <cmath>
-#include <cstring>
+#include <cstdio>
 
 namespace AestraUI {
 
 namespace {
-constexpr float kPi = 3.14159265358979323846f;
+using Limit = Aestra::Audio::Plugins::AestraLimit;
 
-NUIColor accentColor() { return NUIColor(0.95f, 0.60f, 0.12f, 1.0f); }
-NUIColor bgDark() { return editorNeutral(0.02f, 0.96f); }
-NUIColor textDim() { return editorInk(0.30f); }
-NUIColor textBright() { return editorInk(0.88f); }
-NUIColor meterBg() { return editorNeutral(0.008f, 1.0f); }
+constexpr float kDragRangePx = 160.0f;
+constexpr float kHistoryRangeDb = 12.0f; // the history runs 0 to -12 dB
+constexpr double kHistoryStep = 4.0 / 90.0; // seconds per bar: the well shows the last 4 s
 
+float levelDb(float linear) { return linear > 1.0e-8f ? 20.0f * std::log10(linear) : -120.0f; }
 float smoothMeter(float current, float target, float attack, float release) {
-    const float coeff = target > current ? attack : release;
-    return current + (target - current) * coeff;
+    return current + (target - current) * (target > current ? attack : release);
 }
-
-float levelToNorm(float linear) {
-    const float db = linear > 1.0e-8f ? 20.0f * std::log10(linear) : -60.0f;
-    return std::clamp((db + 60.0f) / 66.0f, 0.0f, 1.0f);
-}
+// The ceiling's range is -24 to 0 dBTP.
+float ceilingDb(float norm) { return -24.0f + std::clamp(norm, 0.0f, 1.0f) * 24.0f; }
 } // namespace
 
 AestraLimitEditor::AestraLimitEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance)
     : m_instance(std::move(instance)) {
     setId("AestraLimitEditor");
-    setPanelTitle("Aestra Limit");
+    setPanelTitle("Limit");
+    setTwoRowHeader(true);
     setSize(kWinW, kWinH);
     setEnforceParentBounds(true);
-
-    buildControls();
+    m_releaseMode.param = Limit::kReleaseMode;
+    m_releaseMode.labels = {"Auto", "Manual"};
+    layoutControls();
 }
 
 void AestraLimitEditor::setPlatformBridge(NUIPlatformBridge* bridge) {
     AestraPanelWindow::setPlatformBridge(bridge);
-    for (auto& control : m_controls) {
-        if (control.slider) control.slider->setPlatformBridge(bridge);
-    }
-}
-
-void AestraLimitEditor::buildControls() {
-    m_controls.clear();
-    if (!m_instance) return;
-
-    using Limit = Aestra::Audio::Plugins::AestraLimit;
-    struct Meta { const char* label; uint32_t id; bool primary; };
-    const Meta controls[] = {
-        {"Ceiling", Limit::kCeiling, true},
-        {"Release", Limit::kRelease, false},
-    };
-
-    for (const auto& item : controls) {
-        KnobControl control;
-        control.label = item.label;
-        control.paramId = item.id;
-        control.isPrimary = item.primary;
-
-        auto slider = std::make_shared<NUISlider>();
-        slider->setStyle(NUISlider::Style::Rotary);
-        slider->setRange(0.0, 1.0);
-        slider->setValue(std::clamp(m_instance->getParameter(item.id), 0.0f, 1.0f));
-        slider->setPlatformBridge(getPlatformBridge());
-        slider->setOnValueChange([this, paramId = item.id](double value) {
-            if (m_instance) {
-                m_instance->setParameter(paramId, static_cast<float>(std::clamp(value, 0.0, 1.0)));
-                repaint();
-            }
-        });
-
-        control.slider = slider;
-        addChild(slider);
-        m_controls.push_back(control);
-    }
-
-    layoutControls();
 }
 
 void AestraLimitEditor::layoutControls() {
-    auto b = getBounds();
-    if (b.width <= 0.0f || b.height <= 0.0f) {
-        setBounds(b.x, b.y, kWinW, kWinH);
-        b = getBounds();
-    }
+    const auto b = getBounds();
+    m_origin = {b.x, b.y + headerHeight()};
+    const float ox = m_origin.x, oy = m_origin.y;
+    m_historyRect = NUIRect(ox + 12.0f, oy + 12.0f, 388.0f, 168.0f);
+    m_meterRects[0] = NUIRect(ox + 430.0f, oy + 28.0f, 10.0f, 152.0f);
+    m_meterRects[1] = NUIRect(ox + 458.0f, oy + 28.0f, 10.0f, 152.0f);
 
-    const float cx = b.x + kPad;
-    const float cw = b.width - kPad * 2.0f;
-    const float titleH = AestraPanelWindow::TITLE_BAR_H;
-    const float y0 = b.y + titleH + 8.0f;
-
-    // GR Meter (left 60% of width)
-    const float grW = cw * 0.58f;
-    const float grH = 120.0f;
-    m_grBarRect = NUIRect(cx, y0, grW, grH);
-    m_grLabelRect = NUIRect(cx, y0 + grH + 2.0f, grW, 16.0f);
-
-    // Ceiling knob (right 40%)
-    const float ceilX = cx + grW + 12.0f;
-    const float ceilW = cw - grW - 12.0f;
-    m_ceilingKnobRect = NUIRect(ceilX, y0, ceilW, grH + 18.0f);
-    if (!m_controls.empty() && m_controls[0].slider) {
-        const float knobX = ceilX + (ceilW - kKnobSizePrimary) * 0.5f;
-        // Centre label (12) + gap (6) + knob (64) + gap (6) + value (14) = 102 in the 138 cell.
-        const float knobY = y0 + (grH + 18.0f - 102.0f) * 0.5f + 18.0f;
-        m_controls[0].bounds = NUIRect(ceilX, y0, ceilW, grH + 18.0f);
-        m_controls[0].slider->setBounds(NUIRect(knobX, knobY, kKnobSizePrimary, kKnobSizePrimary));
-    }
-
-    // Bottom row: Release knob, Auto/Manual pill, Bypass
-    const float rowY = m_grLabelRect.bottom() + 14.0f;
-    const float knobW = 80.0f;
-
-    // Release knob (left)
-    m_releaseKnobRect = NUIRect(cx, rowY, knobW, 90.0f);
-    if (m_controls.size() > 1 && m_controls[1].slider) {
-        m_controls[1].bounds = NUIRect(cx, rowY, knobW, 90.0f);
-        const float kx = cx + (knobW - kKnobSizeSecondary) * 0.5f;
-        const float ky = rowY + 12.0f;
-        m_controls[1].slider->setBounds(NUIRect(kx, ky, kKnobSizeSecondary, kKnobSizeSecondary));
-    }
-
-    // Auto/Manual pills (center)
-    const float pillY = rowY + 28.0f;
-    const float pillGap = 6.0f;
-    const float pillX = cx + knobW + 16.0f;
-    m_autoPillRect = NUIRect(pillX, pillY, kPillW, kPillH);
-    m_manualPillRect = NUIRect(pillX + kPillW + pillGap, pillY, kPillW, kPillH);
-
-    // Bypass pill (right of release mode pills)
-    m_bypassPillRect = NUIRect(m_manualPillRect.right() + 16.0f, pillY, kPillW, kPillH);
-
-    // Bottom meter bar: IN / OUT / GR
-    const float meterY = m_releaseKnobRect.bottom() + 10.0f;
-    const float meterH = 26.0f;
-    const float thirdW = (cw - 8.0f) / 3.0f;
-    m_inMeterRect = NUIRect(cx, meterY, thirdW, meterH);
-    m_outMeterRect = NUIRect(cx + thirdW + 4.0f, meterY, thirdW, meterH);
-    m_grNumRect = NUIRect(cx + (thirdW + 4.0f) * 2.0f, meterY, thirdW, meterH);
-}
-
-void AestraLimitEditor::onResize(int width, int height) {
-    (void)width;
-    (void)height;
-    layoutControls();
-    AestraPanelWindow::onResize(width, height);
-}
-
-void AestraLimitEditor::syncControlsFromPlugin() {
-    if (!m_instance) return;
-    for (auto& control : m_controls) {
-        if (control.slider)
-            control.slider->setValue(std::clamp(m_instance->getParameter(control.paramId), 0.0f, 1.0f));
-    }
+    m_board.clear();
+    m_board.addHeader(NUIRect(ox + 12.0f, oy + 208.0f, 96.0f, 12.0f), "Ceiling");
+    m_board.place({Limit::kCeiling, "Ceiling", EditorKit::KnobSize::Large}, {ox + 20.0f, oy + 228.0f});
+    m_board.addHeader(NUIRect(ox + 124.0f, oy + 208.0f, 384.0f, 12.0f), "Release");
+    m_board.place({Limit::kRelease, "Release"}, {ox + 316.0f, oy + 228.0f});
+    m_releaseMode.rect = NUIRect(ox + 124.0f, oy + 228.0f, 176.0f, 24.0f);
 }
 
 void AestraLimitEditor::onUpdate(double deltaTime) {
     AestraPanelWindow::onUpdate(deltaTime);
     m_meterTimer += deltaTime;
+    m_historyTimer += deltaTime;
     if (m_meterTimer < 1.0 / 30.0) return;
+    const double elapsed = m_meterTimer;
     m_meterTimer = 0.0;
-
-    syncControlsFromPlugin();
-    if (auto limit = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraLimit>(m_instance)) {
+    if (auto limit = std::dynamic_pointer_cast<Limit>(m_instance)) {
         const float gr = std::clamp(limit->getGainReductionDb(), 0.0f, 48.0f);
-        const float in = std::clamp(limit->getInputLevel(), 0.0f, 16.0f);
-        const float out = std::clamp(limit->getOutputLevel(), 0.0f, 16.0f);
         m_grDisplayDb = smoothMeter(m_grDisplayDb, gr, 0.60f, 0.15f);
-        m_inputDisplay = smoothMeter(m_inputDisplay, in, 0.55f, 0.16f);
-        m_outputDisplay = smoothMeter(m_outputDisplay, out, 0.55f, 0.16f);
+        m_inputDisplay = smoothMeter(m_inputDisplay, std::clamp(limit->getInputLevel(), 0.0f, 16.0f), 0.55f, 0.16f);
+        m_outputDisplay = smoothMeter(m_outputDisplay, std::clamp(limit->getOutputLevel(), 0.0f, 16.0f), 0.55f, 0.16f);
+    }
+    (void)elapsed;
+    while (m_historyTimer >= kHistoryStep) {
+        m_historyTimer -= kHistoryStep;
+        std::rotate(m_history.begin(), m_history.begin() + 1, m_history.end());
+        m_history.back() = m_grDisplayDb;
     }
     repaint();
 }
 
-std::string AestraLimitEditor::valueText(uint32_t paramId) const {
-    if (!m_instance) return {};
-    return m_instance->getParameterDisplay(paramId);
+void AestraLimitEditor::drawHistory(NUIRenderer& renderer, bool bypassed) {
+    const auto c = EditorKit::emberColors();
+    const NUIRect& w = m_historyRect;
+    EditorKit::drawWell(renderer, w);
+    auto sy = [&](float db) { return w.y + 8.0f + (-db / kHistoryRangeDb) * (w.height - 28.0f); };
+    for (int d : {0, -3, -6, -9, -12}) {
+        const float y = std::round(sy(static_cast<float>(d)));
+        renderer.fillRect(NUIRect(w.x + 28.0f, y, w.width - 36.0f, 1.0f), c.gridMinor);
+        EditorKit::drawTextRight(renderer, std::to_string(d), w.x + 22.0f, y, 9.0f, c.inkMuted);
+    }
+    for (int i = 0; i < kHistoryBars; ++i) {
+        const float g = -std::min(m_history[static_cast<size_t>(i)], kHistoryRangeDb);
+        if (bypassed || g > -0.01f) continue;
+        const float y0 = sy(0.0f), y1 = sy(g);
+        renderer.fillRect(NUIRect(w.x + 30.0f + static_cast<float>(i) * 4.0f, y0, 3.0f, y1 - y0), c.warn);
+    }
+    EditorKit::drawTextLeft(renderer, "4 s", w.x + 30.0f, w.bottom() - 9.0f, 9.0f, c.inkMuted);
+    EditorKit::drawTextRight(renderer, "now", w.right() - 10.0f, w.bottom() - 9.0f, 9.0f, c.inkMuted);
+
+    char buf[24];
+    std::snprintf(buf, sizeof(buf), "%.1f dB", bypassed ? 0.0 : -static_cast<double>(m_grDisplayDb));
+    EditorKit::drawTextRight(renderer, buf, w.right() - 12.0f, w.y + 18.0f, 16.0f, c.ink);
+    const float vw = renderer.measureText(buf, 16.0f).width;
+    const std::string caption = "GAIN REDUCTION";
+    const float capsW = renderer.measureText(caption, 9.0f).width + 9.0f * 0.12f * static_cast<float>(caption.size());
+    EditorKit::drawCaps(renderer, caption, w.right() - 12.0f - vw - 10.0f - capsW, w.y + 18.0f, 9.0f, c.inkMuted);
 }
 
-void AestraLimitEditor::drawGrMeter(NUIRenderer& renderer) {
-    const auto& b = m_grBarRect;
-    const NUIColor accent = accentColor();
-
-    // Background
-    renderer.fillRoundedRect(b, 6.0f, meterBg());
-    renderer.strokeRoundedRect(b, 6.0f, 1.0f, editorInk(0.06f));
-
-    // Fill bar (right-to-left for GR)
-    const float grNorm = std::clamp(m_grDisplayDb / 24.0f, 0.0f, 1.0f);
-    if (grNorm > 0.001f) {
-        const float fillW = b.width * grNorm;
-        // Starts below the 28px numeric readout (b.y + 6 .. ~40) so the number
-        // always sits on the meter background, never on the fill.
-        constexpr float kReadoutBand = 42.0f;
-        const NUIRect fillRect(b.x + b.width - fillW, b.y + kReadoutBand, fillW, b.height - kReadoutBand);
-
-        // Gradient: dark amber at low GR, bright yellow-red at high GR
-        NUIColor fillColor = accent;
-        if (grNorm > 0.5f) {
-            fillColor = NUIColor(0.92f, 0.30f, 0.18f, 0.88f);
-        } else if (grNorm > 0.25f) {
-            fillColor = NUIColor(0.95f, 0.60f, 0.12f, 0.88f);
-        }
-        renderer.fillRoundedRect(fillRect, 6.0f, fillColor);
-
-        // Top specular
-        renderer.drawLine({fillRect.x + 4.0f, fillRect.y + 1.0f},
-                          {fillRect.right() - 4.0f, fillRect.y + 1.0f},
-                          1.0f, editorInk(0.15f));
+void AestraLimitEditor::drawMeters(NUIRenderer& renderer, bool bypassed) {
+    const auto c = EditorKit::emberColors();
+    const float inDb = levelDb(m_inputDisplay), outDb = levelDb(m_outputDisplay);
+    EditorKit::drawVerticalMeter(renderer, m_meterRects[0], inDb, EditorKit::MeterKind::Level, bypassed);
+    EditorKit::drawVerticalMeter(renderer, m_meterRects[1], outDb, EditorKit::MeterKind::Level, bypassed);
+    const char* names[2] = {"In", "Out"};
+    const float values[2] = {std::max(inDb, -99.9f), std::max(outDb, -99.9f)};
+    for (int i = 0; i < 2; ++i) {
+        const NUIRect& m = m_meterRects[i];
+        const float cx = m.x + m.width * 0.5f;
+        renderer.drawTextCentered(names[i], NUIRect(cx - 14.0f, m.y - 19.0f, 28.0f, 20.0f), 9.0f, c.inkMuted);
+        char buf[16];
+        std::snprintf(buf, sizeof(buf), "%.1f", static_cast<double>(values[i]));
+        renderer.drawTextCentered(buf, NUIRect(cx - 14.0f, m.bottom() + 4.0f, 28.0f, 20.0f), 10.0f, c.ink);
     }
-
-    // GR label
-    renderer.drawText("GAIN REDUCTION", {b.x + 10.0f, b.y + 6.0f}, 9.0f, textDim());
-
-    // GR numeric readout
-    char grBuf[32]{};
-    std::snprintf(grBuf, sizeof(grBuf), "-%.1f dB", m_grDisplayDb);
-    const float grTextW = renderer.measureText(grBuf, 28.0f).width;
-    renderer.drawText(grBuf, {b.right() - grTextW - 12.0f, b.y + 6.0f}, 28.0f,
-                      m_grDisplayDb > 6.0f ? NUIColor(0.96f, 0.35f, 0.22f, 0.95f)
-                                           : accent.withAlpha(0.92f));
-
-    // Reduction scale ticks
-    constexpr int kTicks = 6;
-    for (int i = 0; i <= kTicks; ++i) {
-        const float t = static_cast<float>(i) / static_cast<float>(kTicks);
-        const float x = b.x + t * b.width;
-        const float tickH = (i == 0 || i == kTicks) ? 6.0f : 4.0f;
-        renderer.drawLine({x, b.bottom() - tickH}, {x, b.bottom()}, 1.0f, editorInk(0.10f));
-
-        if (i < kTicks && i > 0) {
-            char tickBuf[8]{};
-            std::snprintf(tickBuf, sizeof(tickBuf), "%d", static_cast<int>(24.0f * (1.0f - t)));
-            renderer.drawTextCentered(tickBuf, {x - 12.0f, b.bottom() + 2.0f, 24.0f, 12.0f},
-                                      7.0f, textDim());
-        }
+    for (int t : {0, -12, -24, -48}) {
+        const float y = m_meterRects[0].bottom() - 1.0f - (m_meterRects[0].height - 2.0f) * (static_cast<float>(t) + 48.0f) / 48.0f;
+        EditorKit::drawTextRight(renderer, std::to_string(t), m_meterRects[0].x - 6.0f, y, 9.0f, c.inkMuted);
     }
-}
-
-void AestraLimitEditor::drawKnob(NUIRenderer& renderer, const KnobControl& control) {
-    auto& theme = NUIThemeManager::getInstance();
-    const float value = control.slider ? static_cast<float>(control.slider->getValue()) : 0.0f;
-    const NUIColor accent = accentColor();
-    const NUIColor knobAccent = control.isPrimary ? accent : accent.withAlpha(0.72f);
-
-    // Cell background
-    renderer.fillRoundedRect(control.bounds, 8.0f, editorNeutral(0.035f, 0.96f));
-    renderer.strokeRoundedRect(control.bounds, 8.0f, 1.0f,
-                               control.isPrimary ? NUIColor(0.28f, 0.18f, 0.06f, 1.0f)
-                                                 : editorNeutral(0.119f, 1.0f));
-
-    const NUIRect knobRect = control.slider ? control.slider->getBounds() : NUIRect();
-    const float cx = knobRect.center().x;
-    const float cy = knobRect.center().y;
-    const float r = std::min(knobRect.width, knobRect.height) * 0.35f;
-
-    // Glow
-    renderer.fillCircle({cx, cy}, r + 6.0f, knobAccent.withAlpha(0.06f));
-
-    // Body
-    renderer.fillCircle({cx, cy}, r, bgDark());
-    renderer.strokeCircle({cx, cy}, r + 2.5f, 1.5f, editorInk(0.07f));
-
-    // Arc
-    const float start = kPi * 0.75f;
-    const float sweep = kPi * 1.5f * value;
-    std::array<NUIPoint, 32> arc{};
-    for (size_t i = 0; i < arc.size(); ++i) {
-        const float t = static_cast<float>(i) / static_cast<float>(arc.size() - 1);
-        const float a = start + sweep * t;
-        arc[i] = {cx + std::cos(a) * (r + 4.0f), cy + std::sin(a) * (r + 4.0f)};
-    }
-    renderer.drawPolyline(arc.data(), static_cast<int>(arc.size()),
-                          control.isPrimary ? 2.8f : 2.2f, knobAccent.withAlpha(0.90f));
-
-    // Pointer
-    const float pa = start + sweep;
-    const float pointerLen = r - (control.isPrimary ? 4.0f : 3.0f);
-    renderer.drawLine({cx, cy}, {cx + std::cos(pa) * pointerLen, cy + std::sin(pa) * pointerLen},
-                      control.isPrimary ? 1.8f : 1.5f, theme.getColor("textPrimary").withAlpha(0.82f));
-
-    // Label
-    const float labelY = control.isPrimary ? knobRect.y - 18.0f : control.bounds.y + 4.0f;
-    renderer.drawTextCentered(control.label,
-                              {control.bounds.x, labelY, control.bounds.width, 12.0f},
-                              9.0f, editorInk(0.50f));
-
-    // Value
-    const float valY = control.isPrimary
-        ? knobRect.bottom() + 6.0f
-        : knobRect.bottom() + 4.0f;
-    const NUIColor valColor = control.isPrimary
-        ? NUIColor(0.85f, 0.65f, 0.20f, 1.0f)
-        : editorInk(0.85f);
-    renderer.drawTextCentered(valueText(control.paramId),
-                              {control.bounds.x, valY, control.bounds.width, 14.0f},
-                              11.0f, valColor);
-}
-
-void AestraLimitEditor::drawPill(NUIRenderer& renderer, NUIRect rect,
-                                  bool selected, bool hovered,
-                                  const char* label, NUIColor accent) {
-    if (selected) {
-        renderer.fillRoundedRect({rect.x - 2.0f, rect.y - 2.0f, rect.width + 4.0f, rect.height + 4.0f},
-                                 7.0f, accent.withAlpha(0.12f));
-        renderer.fillRoundedRect(rect, 5.0f, accent.withAlpha(0.75f));
-        renderer.drawLine({rect.x + 5.0f, rect.y + 1.0f},
-                          {rect.x + rect.width - 5.0f, rect.y + 1.0f},
-                          1.0f, editorInk(0.18f));
-        renderer.strokeRoundedRect(rect, 5.0f, 1.0f, accent);
-        renderer.drawTextCentered(label, rect, 9.5f, editorInk(0.97f));
-    } else {
-        const NUIColor bg = hovered ? editorNeutral(0.041f, 0.90f)
-                                    : editorNeutral(0.022f, 0.90f);
-        renderer.fillRoundedRect(rect, 5.0f, bg);
-        renderer.drawLine({rect.x + 5.0f, rect.y + 1.0f},
-                          {rect.x + rect.width - 5.0f, rect.y + 1.0f},
-                          0.5f, NUIColor(0, 0, 0, 0.25f));
-        const NUIColor border = hovered ? editorInk(0.16f) : editorInk(0.08f);
-        renderer.strokeRoundedRect(rect, 5.0f, 1.0f, border);
-        renderer.drawTextCentered(label, rect, 9.0f,
-                                  hovered ? editorInk(0.72f) : editorInk(0.40f));
-    }
-}
-
-void AestraLimitEditor::drawMeterBar(NUIRenderer& renderer, NUIRect rect,
-                                      float norm, const char* label,
-                                      const char* value, NUIColor color) {
-    renderer.fillRoundedRect(rect, 5.0f, meterBg());
-    renderer.strokeRoundedRect(rect, 5.0f, 1.0f, editorInk(0.06f));
-
-    const NUISize valSize = renderer.measureText(value, 8.0f);
-    const float valX = rect.right() - valSize.width - 10.0f;
-
-    // Fill scaled into the space left of the value, so the number never sits on the bar.
-    const float fillSpan = std::max(0.0f, valX - 8.0f - rect.x);
-    if (norm > 0.001f && fillSpan > 0.0f) {
-        renderer.fillRoundedRect({rect.x, rect.y, fillSpan * norm, rect.height},
-                                 5.0f, color.withAlpha(0.85f));
-    }
-
-    const float textY = rect.y + (rect.height - 8.0f) * 0.5f;
-    renderer.drawText(label, {rect.x + 8.0f, textY}, 8.0f, textDim());
-    renderer.drawText(value, {valX, textY}, 8.0f, textBright());
+    // The ceiling as a line across the Out meter.
+    const float ceil = ceilingDb(m_instance->getParameter(Limit::kCeiling));
+    const NUIRect& o = m_meterRects[1];
+    const float cy = o.bottom() - 1.0f - 150.0f * ((ceil + 48.0f) / 48.0f);
+    renderer.fillRect(NUIRect(o.x - 4.0f, std::round(cy) - 1.0f, 18.0f, 2.0f), bypassed ? c.inkOff : c.secondary);
+    EditorKit::drawTextLeft(renderer, "ceiling", o.right() + 8.0f, cy, 9.0f, c.inkMuted);
 }
 
 void AestraLimitEditor::drawContent(NUIRenderer& renderer, const NUIRect& contentRect) {
     (void)contentRect;
-    auto& theme = NUIThemeManager::getInstance();
-    const NUIColor accent = accentColor();
-
-    // GR Meter
-    drawGrMeter(renderer);
-
-    // Ceiling knob
-    if (!m_controls.empty()) drawKnob(renderer, m_controls[0]);
-
-    // Release knob
-    if (m_controls.size() > 1) drawKnob(renderer, m_controls[1]);
-
-    // Release mode pills
-    const bool autoMode = m_instance &&
-        m_instance->getParameter(Aestra::Audio::Plugins::AestraLimit::kReleaseMode) <= 0.5f;
-    drawPill(renderer, m_autoPillRect, autoMode, m_autoHovered, "AUTO", accent);
-    drawPill(renderer, m_manualPillRect, !autoMode, m_manualHovered, "MANUAL", accent);
-
-    // Bypass pill
-    const bool bypassed = m_instance &&
-        m_instance->getParameter(Aestra::Audio::Plugins::AestraLimit::kBypass) > 0.5f;
-    drawPill(renderer, m_bypassPillRect, bypassed, m_bypassHovered, "BYPASS",
-             NUIColor(0.92f, 0.28f, 0.22f, 1.0f));
-
-    // Bottom meters
-    char inBuf[16]{}, outBuf[16]{}, grBuf[16]{};
-    const float inDb = m_inputDisplay > 1.0e-8f ? 20.0f * std::log10(m_inputDisplay) : -60.0f;
-    const float outDb = m_outputDisplay > 1.0e-8f ? 20.0f * std::log10(m_outputDisplay) : -60.0f;
-    std::snprintf(inBuf, sizeof(inBuf), "%.1f dB", inDb);
-    std::snprintf(outBuf, sizeof(outBuf), "%.1f dB", outDb);
-    std::snprintf(grBuf, sizeof(grBuf), "-%.1f dB", m_grDisplayDb);
-
-    drawMeterBar(renderer, m_inMeterRect, levelToNorm(m_inputDisplay), "IN", inBuf,
-                 NUIColor(0.35f, 0.45f, 1.0f, 1.0f));
-    drawMeterBar(renderer, m_outMeterRect, levelToNorm(m_outputDisplay), "OUT", outBuf,
-                 NUIColor(0.35f, 0.45f, 1.0f, 1.0f));
-    drawMeterBar(renderer, m_grNumRect, std::clamp(m_grDisplayDb / 24.0f, 0.0f, 1.0f),
-                 "GR", grBuf, accent);
+    if (!m_instance) return;
+    layoutControls();
+    const auto c = EditorKit::emberColors();
+    const bool bypassed = EditorKit::isBypassed(*m_instance, Limit::kBypass);
+    const bool manual = m_instance->getParameter(Limit::kReleaseMode) > 0.5f;
+    m_board.setEnabled(Limit::kRelease, manual);
+    drawHistory(renderer, bypassed);
+    drawMeters(renderer, bypassed);
+    m_releaseMode.draw(renderer, *m_instance, hoverPoint(), bypassed);
+    EditorKit::drawTextLeft(renderer, manual ? "Release applies" : "Release applies in Manual", m_origin.x + 124.0f,
+                            m_origin.y + 266.0f, 11.0f, c.inkMuted);
+    m_board.draw(renderer, *m_instance, hoverPoint(), knobDragParam(), bypassed);
 }
 
 bool AestraLimitEditor::onMouseEvent(const NUIMouseEvent& event) {
     if (!isVisible()) return false;
     if (AestraPanelWindow::onMouseEvent(event)) return true;
+    if (!m_instance) return false;
+    layoutControls();
 
-    auto b = getBounds();
-    if (!b.contains(event.position) && !isDraggingWindow()) return false;
-
-    if (event.pressed && event.button == NUIMouseButton::Left) {
-        // Bypass pill
-        if (m_bypassPillRect.contains(event.position)) {
-            if (m_instance) {
-                const bool was = m_instance->getParameter(Aestra::Audio::Plugins::AestraLimit::kBypass) > 0.5f;
-                m_instance->setParameter(Aestra::Audio::Plugins::AestraLimit::kBypass, was ? 0.0f : 1.0f);
-                setDirty(true);
-            }
-            return true;
-        }
-
-        // Auto/Manual pill
-        if (m_autoPillRect.contains(event.position)) {
-            if (m_instance) {
-                m_instance->setParameter(Aestra::Audio::Plugins::AestraLimit::kReleaseMode, 0.0f);
-                setDirty(true);
-            }
-            return true;
-        }
-        if (m_manualPillRect.contains(event.position)) {
-            if (m_instance) {
-                m_instance->setParameter(Aestra::Audio::Plugins::AestraLimit::kReleaseMode, 1.0f);
-                setDirty(true);
-            }
-            return true;
-        }
+    if (event.pressed && event.button == NUIMouseButton::Left && m_releaseMode.onPress(*m_instance, event.position)) {
+        setDirty();
+        return true;
     }
 
-    // Double-click reset on knobs
-    if (event.pressed && event.button == NUIMouseButton::Left && event.doubleClick) {
-        for (auto& c : m_controls) {
-            if (c.slider && c.slider->getBounds().contains({event.position.x, event.position.y})) {
-                const auto params = m_instance->getParameters();
-                float def = 0.0f;
-                for (const auto& p : params) {
-                    if (p.id == c.paramId) { def = p.defaultValue; break; }
-                }
-                m_instance->setParameter(c.paramId, def);
-                c.slider->setValue(def);
-                setDirty(true);
-                return true;
-            }
-        }
-    }
+    // Knob vertical drag (rotary -> cursor capture); Release is only live in Manual.
+    const bool manual = m_instance->getParameter(Limit::kReleaseMode) > 0.5f;
+    std::vector<KnobTarget> knobs;
+    for (const auto& cell : m_board.cells())
+        if (cell.spec.param != Limit::kRelease || manual) knobs.push_back({cell.rect, cell.spec.param});
+    const auto get = [this](uint32_t id) { return m_instance->getParameter(id); };
+    const auto set = [this](uint32_t id, float v) { m_instance->setParameter(id, v); };
+    if (handleKnobDrag(event, knobs.data(), knobs.size(), kDragRangePx, get, set)) return true;
 
-    // Hover tracking
-    if (!event.pressed && !event.released) {
-        const bool contains = b.contains(event.position);
-        const bool bh = contains && m_bypassPillRect.contains(event.position);
-        const bool ah = contains && m_autoPillRect.contains(event.position);
-        const bool mh = contains && m_manualPillRect.contains(event.position);
-        if (bh != m_bypassHovered || ah != m_autoHovered || mh != m_manualHovered) {
-            m_bypassHovered = bh;
-            m_autoHovered = ah;
-            m_manualHovered = mh;
-            repaint();
-        }
-    }
+    return consumeInsideBounds(event);
+}
 
-    return NUIComponent::onMouseEvent(event) || consumeInsideBounds(event);
+void AestraLimitEditor::onResize(int width, int height) {
+    AestraPanelWindow::onResize(width, height);
+    layoutControls();
 }
 
 } // namespace AestraUI

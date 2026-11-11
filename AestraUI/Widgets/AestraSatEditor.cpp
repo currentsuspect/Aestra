@@ -16,15 +16,16 @@ namespace {
 using Aestra::Audio::Plugins::AestraSat;
 
 constexpr float kDragRangePx = 160.0f;    // full param range per drag distance
+constexpr float kCurveSize = 200.0f;
 
-NUIColor accent() {
-    return NUIColor(0.94f, 0.52f, 0.22f, 1.0f);
-} // heat orange
-NUIColor panelSurface() {
-    return editorNeutral(0.027f, 0.96f);
-}
-NUIColor insetSurface() {
-    return editorNeutral(0.038f, 0.96f);
+float levelDb(float linear) { return linear > 1.0e-8f ? 20.0f * std::log10(linear) : -120.0f; }
+float smooth(float current, float target) { return current + (target - current) * (target > current ? 0.55f : 0.16f); }
+
+// The plugin's own shaper (AestraSat::shape is private): tanh, asymmetric tanh, hard clip.
+float shape(float x, int mode) {
+    if (mode == 0) return std::tanh(x);
+    if (mode == 1) return x >= 0.0f ? std::tanh(x) : std::tanh(1.5f * x) / 1.5f;
+    return std::clamp(x, -1.0f, 1.0f);
 }
 
 } // namespace
@@ -32,10 +33,15 @@ NUIColor insetSurface() {
 AestraSatEditor::AestraSatEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance)
     : m_instance(std::move(instance)) {
     setId("AestraSatEditor");
-    setPanelTitle("Aestra Sat");
-    setBadgeText("Saturator");
+    setPanelTitle("Sat");
+    setTwoRowHeader(true);
     setSize(kWinW, kWinH);
     setEnforceParentBounds(true);
+    m_mode.param = AestraSat::kMode;
+    m_mode.labels = {"Tape", "Tube", "Hard"};
+    m_mix.param = AestraSat::kMix;
+    m_mix.label = "Mix";
+    m_mix.labelWidth = 28.0f;
     layoutControls();
 }
 
@@ -45,115 +51,91 @@ void AestraSatEditor::setPlatformBridge(NUIPlatformBridge* bridge) {
 
 void AestraSatEditor::layoutControls() {
     const auto b = getBounds();
-    const float contentTop = b.y + AestraPanelWindow::TITLE_BAR_H;
+    m_origin = {b.x, b.y + headerHeight()};
+    const float ox = m_origin.x, oy = m_origin.y;
+    m_mode.rect = NUIRect(ox + 12.0f, oy + 12.0f, 240.0f, 24.0f);
+    m_curveRect = NUIRect(ox + 12.0f, oy + 44.0f, kCurveSize, kCurveSize);
+    m_meterRects[0] = NUIRect(ox + 236.0f, oy + 60.0f, 10.0f, 168.0f);
+    m_meterRects[1] = NUIRect(ox + 256.0f, oy + 60.0f, 10.0f, 168.0f);
 
-    // Mode selector: three segments across the top-left
-    constexpr float kSegW = 62.0f;
-    constexpr float kSegH = 26.0f;
-    for (size_t i = 0; i < m_modeRects.size(); ++i) {
-        m_modeRects[i] =
-            NUIRect(b.x + 28.0f + static_cast<float>(i) * (kSegW + 6.0f), contentTop + 16.0f, kSegW, kSegH);
+    m_board.clear();
+    m_board.addHeader(NUIRect(ox + 284.0f, oy + 44.0f, 224.0f, 12.0f), "Shape");
+    m_board.place({AestraSat::kDrive, "Drive", EditorKit::KnobSize::Large}, {ox + 284.0f, oy + 64.0f});
+    m_board.place({AestraSat::kTone, "Tone"}, {ox + 372.0f, oy + 64.0f});
+    m_board.place({AestraSat::kOutput, "Output", EditorKit::KnobSize::Medium, true}, {ox + 444.0f, oy + 64.0f});
+    m_board.addHeader(NUIRect(ox + 284.0f, oy + 176.0f, 224.0f, 12.0f), "Blend");
+    m_mix.rect = NUIRect(ox + 284.0f, oy + 196.0f, 224.0f, 24.0f);
+}
+
+void AestraSatEditor::onUpdate(double deltaTime) {
+    AestraPanelWindow::onUpdate(deltaTime);
+    m_meterTimer += deltaTime;
+    if (m_meterTimer < 1.0 / 30.0) return;
+    m_meterTimer = 0.0;
+    if (auto sat = std::dynamic_pointer_cast<AestraSat>(m_instance)) {
+        m_inputDisplay = smooth(m_inputDisplay, std::clamp(sat->getInputLevel(), 0.0f, 16.0f));
+        m_outputDisplay = smooth(m_outputDisplay, std::clamp(sat->getOutputLevel(), 0.0f, 16.0f));
     }
+    repaint();
+}
 
-    constexpr float kBypassW = 88.0f;
-    constexpr float kBypassH = 26.0f;
-    m_bypassRect = NUIRect(b.right() - 44.0f - kBypassW, contentTop + 16.0f, kBypassW, kBypassH);
+void AestraSatEditor::drawTransferCurve(NUIRenderer& renderer, bool bypassed) {
+    const auto c = EditorKit::emberColors();
+    const NUIRect& w = m_curveRect;
+    EditorKit::drawWell(renderer, w);
+    auto px = [&](float x) { return w.x + 8.0f + (x + 1.0f) * 0.5f * (w.width - 16.0f); };
+    auto py = [&](float y) { return w.y + 8.0f + (1.0f - y) * 0.5f * (w.height - 16.0f); };
+    for (float t : {-0.5f, 0.0f, 0.5f}) {
+        const NUIColor col = t == 0.0f ? c.gridMajor : c.gridMinor;
+        renderer.fillRect(NUIRect(std::round(px(t)), w.y + 1.0f, 1.0f, w.height - 2.0f), col);
+        renderer.fillRect(NUIRect(w.x + 1.0f, std::round(py(t)), w.width - 2.0f, 1.0f), col);
+    }
+    renderer.drawLine({px(-1.0f), py(-1.0f)}, {px(1.0f), py(1.0f)}, 1.0f, c.inkOff);
 
-    // Large drive knob on the left, tone/output stacked on the right
-    const float knobTop = contentTop + 56.0f;
-    // 116 (was 128) so knob + label (+4, 14) + value (+19, 13) end at +148 and the
-    // Mix slider fits below them inside the 300px window. x shifts 6 to keep the centre.
-    m_driveRect = NUIRect(b.x + 58.0f, knobTop, 116.0f, 116.0f);
-    m_toneRect = NUIRect(b.x + 232.0f, knobTop + 4.0f, 84.0f, 84.0f);
-    m_outputRect = NUIRect(b.x + 344.0f, knobTop + 4.0f, 84.0f, 84.0f);
+    const int mode = std::clamp(static_cast<int>(std::lround(m_instance->getParameter(AestraSat::kMode) * 2.0f)), 0, 2);
+    const float gain = std::pow(10.0f, AestraSat::driveDbFromNorm(m_instance->getParameter(AestraSat::kDrive)) / 20.0f);
+    constexpr int kSteps = 200;
+    NUIPoint pts[kSteps + 1];
+    for (int i = 0; i <= kSteps; ++i) {
+        const float x = -1.0f + static_cast<float>(i) / 100.0f;
+        pts[i] = {px(x), py(bypassed ? x : shape(x * gain, mode))};
+    }
+    renderer.drawPolyline(pts, kSteps + 1, 2.0f, bypassed ? c.inkOff : c.secondary);
 
-    // Below the Drive value (ends knobTop + 148), with a gap.
-    const float sliderY = std::min(knobTop + 154.0f, b.bottom() - 34.0f);
-    m_mixRect = NUIRect(b.x + 58.0f, sliderY, b.width - 116.0f, 34.0f);
+    EditorKit::drawTextRight(renderer, "in", w.right() - 8.0f, w.y + w.height * 0.5f + 8.0f, 9.0f, c.inkMuted);
+    EditorKit::drawTextLeft(renderer, "out", w.x + w.width * 0.5f + 6.0f, w.y + 12.0f, 9.0f, c.inkMuted);
+    const char* names[3] = {"Tape \xC2\xB7 tanh", "Tube \xC2\xB7 asymmetric", "Hard \xC2\xB7 clip"};
+    EditorKit::drawTextLeft(renderer, names[mode], w.x + 8.0f, w.bottom() - 10.0f, 10.0f, c.inkMuted);
+}
+
+void AestraSatEditor::drawMeters(NUIRenderer& renderer, bool bypassed) {
+    const auto c = EditorKit::emberColors();
+    EditorKit::drawVerticalMeter(renderer, m_meterRects[0], levelDb(m_inputDisplay), EditorKit::MeterKind::Level,
+                                 bypassed);
+    EditorKit::drawVerticalMeter(renderer, m_meterRects[1], levelDb(m_outputDisplay), EditorKit::MeterKind::Level,
+                                 bypassed);
+    const char* names[2] = {"In", "Out"};
+    for (int i = 0; i < 2; ++i) {
+        const NUIRect& m = m_meterRects[i];
+        renderer.drawTextCentered(names[i], NUIRect(m.x - 10.0f, m.y - 19.0f, m.width + 20.0f, 20.0f), 9.0f, c.inkMuted);
+    }
+    for (int t : {0, -12, -24, -48}) {
+        const float y = m_meterRects[0].bottom() - 1.0f - (m_meterRects[0].height - 2.0f) * (static_cast<float>(t) + 48.0f) / 48.0f;
+        EditorKit::drawTextRight(renderer, std::to_string(t), m_meterRects[0].x - 6.0f, y, 9.0f, c.inkMuted);
+    }
 }
 
 void AestraSatEditor::drawContent(NUIRenderer& renderer, const NUIRect& contentRect) {
+    (void)contentRect;
     if (!m_instance)
         return;
-
-    const NUIRect workArea{contentRect.x + 12.0f, contentRect.y + 10.0f, contentRect.width - 24.0f,
-                           contentRect.height - 18.0f};
-    renderer.fillRoundedRect(workArea, 14.0f, panelSurface());
-    renderer.strokeRoundedRect(workArea, 14.0f, 1.0f, editorInk(0.055f));
-
-    drawModeSelector(renderer);
-    drawBypassPill(renderer);
-    drawKnob(renderer, m_driveRect, AestraSat::kDrive, "Drive", true);
-    drawKnob(renderer, m_toneRect, AestraSat::kTone, "Tone", false);
-    drawKnob(renderer, m_outputRect, AestraSat::kOutput, "Output", false);
-    drawMixSlider(renderer);
-}
-
-void AestraSatEditor::drawKnob(NUIRenderer& renderer, const NUIRect& rect, uint32_t paramId, const char* label,
-                               bool large) {
-    const float value = m_instance ? m_instance->getParameter(paramId) : 0.0f;
-    const std::string valueText = m_instance ? m_instance->getParameterDisplay(paramId) : "";
-    EditorKit::drawKnob(renderer, rect, value, label, valueText, accent(), insetSurface(),
-                        EditorKit::KnobLook{large, false, 10.0f, 0.30f, 10.0f});
-}
-
-void AestraSatEditor::drawModeSelector(NUIRenderer& renderer) {
-    auto& theme = NUIThemeManager::getInstance();
-    const auto mode =
-        m_instance ? AestraSat::modeFromNorm(m_instance->getParameter(AestraSat::kMode)) : AestraSat::kModeTape;
-    static constexpr const char* kLabels[] = {"TAPE", "TUBE", "HARD"};
-    for (size_t i = 0; i < m_modeRects.size(); ++i) {
-        const bool selected = static_cast<uint32_t>(mode) == i;
-        if (selected) {
-            renderer.fillRoundedRect(m_modeRects[i], 7.0f, accent().withAlpha(0.26f));
-            renderer.strokeRoundedRect(m_modeRects[i], 7.0f, 1.0f, accent().withAlpha(0.62f));
-            renderer.drawTextCentered(kLabels[i], m_modeRects[i], 10.0f, accent().withAlpha(0.98f));
-        } else {
-            renderer.fillRoundedRect(m_modeRects[i], 7.0f, insetSurface());
-            renderer.strokeRoundedRect(m_modeRects[i], 7.0f, 1.0f, editorInk(0.08f));
-            renderer.drawTextCentered(kLabels[i], m_modeRects[i], 10.0f,
-                                      theme.getColor("textPrimary").withAlpha(0.62f));
-        }
-    }
-}
-
-void AestraSatEditor::drawBypassPill(NUIRenderer& renderer) {
-    auto& theme = NUIThemeManager::getInstance();
-    const bool bypassed = m_instance && m_instance->getParameter(AestraSat::kBypass) > 0.5f;
-    constexpr float kRadius = 7.0f;
-    constexpr float kFont = 10.0f;
-    if (bypassed) {
-        renderer.fillRoundedRect(m_bypassRect, kRadius,
-                                 NUIColor(0.92f, 0.28f, 0.22f).withAlpha(m_bypassHovered ? 0.94f : 0.78f));
-        renderer.strokeRoundedRect(m_bypassRect, kRadius, 1.0f, NUIColor(0.92f, 0.28f, 0.22f).withAlpha(0.50f));
-        renderer.drawTextCentered("BYPASSED", m_bypassRect, kFont, theme.getColor("textPrimary"));
-    } else {
-        renderer.fillRoundedRect(m_bypassRect, kRadius,
-                                 theme.getColor("success").withAlpha(m_bypassHovered ? 0.30f : 0.18f));
-        renderer.strokeRoundedRect(m_bypassRect, kRadius, 1.0f, theme.getColor("success").withAlpha(0.40f));
-        renderer.drawTextCentered("ACTIVE", m_bypassRect, kFont, theme.getColor("success"));
-    }
-}
-
-void AestraSatEditor::drawMixSlider(NUIRenderer& renderer) {
-    auto& theme = NUIThemeManager::getInstance();
-    const float mix = m_instance ? m_instance->getParameter(AestraSat::kMix) : 1.0f;
-    // Track stops short of the right-aligned percentage so the thumb never covers it.
-    const NUIRect track(m_mixRect.x + 38.0f, m_mixRect.y + 12.0f, m_mixRect.width - 104.0f, 8.0f);
-
-    renderer.fillRoundedRect(m_mixRect, 10.0f, insetSurface());
-    renderer.strokeRoundedRect(m_mixRect, 10.0f, 1.0f, accent().withAlpha(m_draggingMix ? 0.62f : 0.34f));
-    renderer.drawText("Mix", {m_mixRect.x + 14.0f, m_mixRect.y + 11.0f}, 10.5f,
-                      theme.getColor("textPrimary").withAlpha(0.95f));
-    renderer.fillRoundedRect(track, 4.0f, editorInk(0.10f));
-    renderer.fillRoundedRect({track.x, track.y, track.width * mix, track.height}, 4.0f, accent().withAlpha(0.92f));
-    const NUIPoint thumb{track.x + track.width * mix, track.center().y};
-    renderer.fillCircle(thumb, 10.0f, accent().withAlpha(0.18f));
-    renderer.fillCircle(thumb, 7.0f, theme.getColor("textPrimary"));
-    const std::string pctStr = std::to_string(static_cast<int>(std::round(mix * 100.0f))) + "%";
-    const float pctW = renderer.measureText(pctStr, 10.0f).width;
-    renderer.drawText(pctStr, {m_mixRect.right() - 14.0f - pctW, m_mixRect.y + 10.0f}, 10.0f,
-                      accent().withAlpha(0.96f));
+    layoutControls();
+    const bool bypassed = EditorKit::isBypassed(*m_instance, AestraSat::kBypass);
+    m_mode.draw(renderer, *m_instance, hoverPoint(), bypassed);
+    drawTransferCurve(renderer, bypassed);
+    drawMeters(renderer, bypassed);
+    m_board.draw(renderer, *m_instance, hoverPoint(), knobDragParam(), bypassed);
+    m_mix.draw(renderer, *m_instance, hoverPoint(), bypassed);
 }
 
 bool AestraSatEditor::onMouseEvent(const NUIMouseEvent& event) {
@@ -163,58 +145,22 @@ bool AestraSatEditor::onMouseEvent(const NUIMouseEvent& event) {
         return true;
     if (!m_instance)
         return false;
+    layoutControls();
 
-    const float mx = event.position.x;
-
-    // Bypass pill
-    if (m_bypassRect.contains(event.position) && event.pressed && event.button == NUIMouseButton::Left) {
-        const float cur = m_instance->getParameter(AestraSat::kBypass);
-        m_instance->setParameter(AestraSat::kBypass, cur > 0.5f ? 0.0f : 1.0f);
+    if (event.pressed && event.button == NUIMouseButton::Left && m_mode.onPress(*m_instance, event.position)) {
         setDirty();
         return true;
     }
-    m_bypassHovered = m_bypassRect.contains(event.position);
-
-    // Mode segments
-    if (event.pressed && event.button == NUIMouseButton::Left) {
-        for (size_t i = 0; i < m_modeRects.size(); ++i) {
-            if (m_modeRects[i].contains(event.position)) {
-                m_instance->setParameter(AestraSat::kMode, AestraSat::normFromMode(static_cast<AestraSat::Mode>(i)));
-                setDirty();
-                return true;
-            }
-        }
-    }
 
     // Knob vertical drag (rotary -> cursor capture): AestraPanelWindow::handleKnobDrag.
-    const KnobTarget knobs[] = {
-        {m_driveRect, AestraSat::kDrive},
-        {m_toneRect, AestraSat::kTone},
-        {m_outputRect, AestraSat::kOutput},
-    };
+    std::vector<KnobTarget> knobs;
+    for (const auto& cell : m_board.cells()) knobs.push_back({cell.rect, cell.spec.param});
     const auto get = [this](uint32_t id) { return m_instance->getParameter(id); };
     const auto set = [this](uint32_t id, float v) { m_instance->setParameter(id, v); };
-    if (handleKnobDrag(event, knobs, std::size(knobs), kDragRangePx, get, set))
+    if (handleKnobDrag(event, knobs.data(), knobs.size(), kDragRangePx, get, set))
         return true;
 
-    // Mix slider drag
-    const NUIRect mixTrack(m_mixRect.x + 38.0f, m_mixRect.y + 6.0f, m_mixRect.width - 104.0f, m_mixRect.height - 12.0f);
-    if (m_draggingMix) {
-        if (event.released) {
-            m_draggingMix = false;
-            return true;
-        }
-        if (event.button == NUIMouseButton::None) {
-            const float t = std::clamp((mx - mixTrack.x) / mixTrack.width, 0.0f, 1.0f);
-            m_instance->setParameter(AestraSat::kMix, t);
-            setDirty();
-            return true;
-        }
-    }
-    if (event.pressed && event.button == NUIMouseButton::Left && mixTrack.contains(event.position)) {
-        m_draggingMix = true;
-        const float t = std::clamp((mx - mixTrack.x) / mixTrack.width, 0.0f, 1.0f);
-        m_instance->setParameter(AestraSat::kMix, t);
+    if (m_mix.onMouse(event, *m_instance)) {
         setDirty();
         return true;
     }

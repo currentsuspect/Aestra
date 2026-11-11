@@ -128,6 +128,12 @@ EmberSliderGeometry emberSliderGeometry(const NUIRect& rect, float labelWidth);
 void drawEmberSlider(NUIRenderer& renderer, const NUIRect& rect, float labelWidth, const std::string& label,
                      float value, const std::string& valueText, ControlState state, bool bypassed);
 
+/// x for @p hz on a log axis that spans @p lo..@p hi across [x, x + width].
+float logFrequencyX(float hz, float x, float width, float lo = 20.0f, float hi = 20000.0f);
+/// Log-frequency grid over @p plot: a hairline at every 10 Hz step (stronger on decades) and the 20, 100, 1k,
+/// 10k, 20k labels along the bottom.
+void drawFrequencyGrid(NUIRenderer& renderer, const NUIRect& plot);
+
 enum class MeterKind { Level, GainReduction };
 /// Vertical meter. Level fills from the bottom over -48..0 dB (teal, amber above -6 dB) with a peak cap;
 /// gain reduction hangs from the top over 0..-24 dB.

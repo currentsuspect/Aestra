@@ -2,6 +2,7 @@
 #pragma once
 
 #include "AestraPanelWindow.h"
+#include "EmberControls.h"
 #include "NUITypes.h"
 #include "PluginHost.h"
 
@@ -12,20 +13,15 @@ namespace AestraUI {
 
 /// Aestra Transient editor — dedicated UI for com.Aestrastudios.transient.
 ///
-/// The plugin is bipolar at its heart: Attack and Sustain amounts sit at the
-/// centre detent (neutral) and pull in either direction. The generic editor's
-/// uniform 0..1 sweep loses that meaning visually, so this editor renders
-/// the two amounts as bidirectional arcs around 12 o'clock with a hard
-/// centre marker. Output stays a conventional unipolar knob (its meaning is
-/// "trim" not "amount"); Mix is a horizontal slider (matches Sat/Comp).
-/// The center panel sketches a derived envelope (attack + decay halves scaled
-/// by the current amounts) so the surface communicates "shape this envelope"
-/// without requiring an audio-thread tap.
+/// Attack and Sustain are bipolar (centre = neutral), so they draw as bidirectional arcs; Output is bipolar
+/// too. The well sketches an envelope bent by the two amounts so the surface says "shape this envelope"
+/// without an audio-thread tap. It is a sketch, not a measurement, and says so; the In and Out meters are measured.
 class AestraTransientEditor : public AestraPanelWindow {
 public:
     explicit AestraTransientEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance);
 
     void drawContent(NUIRenderer& renderer, const NUIRect& contentRect) override;
+    void onUpdate(double deltaTime) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     void onResize(int width, int height) override;
     using AestraPanelWindow::onResize;
@@ -40,35 +36,22 @@ private:
     static constexpr uint32_t kMix = 3;
     static constexpr uint32_t kBypass = 4;
 
-    static constexpr float kWinW = 560.0f;
-    static constexpr float kWinH = 360.0f;
+    static constexpr float kWinW = 520.0f;
+    static constexpr float kContentH = 298.0f;
+    static constexpr float kWinH = kContentH + 2.0f * AestraPanelWindow::TITLE_BAR_H; // two-row header
 
     void layoutControls();
-    void drawBipolarKnob(NUIRenderer& renderer, const NUIRect& rect, uint32_t paramId, const char* label,
-                         const char* rangeText);
-    void drawUnipolarKnob(NUIRenderer& renderer, const NUIRect& rect, uint32_t paramId, const char* label,
-                          const char* rangeText);
-    void drawMixSlider(NUIRenderer& renderer);
-    void drawBypassPill(NUIRenderer& renderer);
-    void drawEnvelopeSketch(NUIRenderer& renderer, const NUIRect& rect);
-
-    // Hit-test helpers
-    int knobAtPoint(const NUIPoint& p) const;
-    bool mixContains(const NUIPoint& p) const { return m_mixRect.contains(p); }
-    bool bypassContains(const NUIPoint& p) const { return m_bypassRect.contains(p); }
+    void drawEnvelopeSketch(NUIRenderer& renderer, bool bypassed);
+    void drawMeters(NUIRenderer& renderer, bool bypassed);
 
     std::shared_ptr<Aestra::Audio::IPluginInstance> m_instance;
+    EditorKit::EmberKnobBoard m_board;
 
-    NUIRect m_attackRect;
-    NUIRect m_sustainRect;
-    NUIRect m_outputRect;
     NUIRect m_sketchRect;
-    NUIRect m_mixRect;
-    NUIRect m_bypassRect;
-
-    // Drag state: -1 inactive; 0/1/2/3 = attack/sustain/output/mix drag in progress.
-    int m_dragging = -1;
-    bool m_bypassHovered = false;
+    NUIRect m_meterRects[2]; // In, Out
+    float m_inputDisplay = 0.0f;
+    float m_outputDisplay = 0.0f;
+    double m_meterTimer = 0.0;
 };
 
 } // namespace AestraUI

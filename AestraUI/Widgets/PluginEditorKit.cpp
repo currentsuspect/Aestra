@@ -139,15 +139,19 @@ void drawTextRight(NUIRenderer& renderer, const std::string& text, float rightX,
 
 float drawCaps(NUIRenderer& renderer, const std::string& text, float x, float centreY, float size, NUIColor color) {
     const float tracking = size * 0.12f;
-    float cursor = x;
-    for (char raw : text) {
-        const char ch = static_cast<char>(std::toupper(static_cast<unsigned char>(raw)));
-        const std::string glyph(1, ch);
+    std::string upper;
+    for (char raw : text) upper += static_cast<char>(std::toupper(static_cast<unsigned char>(raw)));
+    float cursor = 0.0f;
+    for (size_t i = 0; i < upper.size(); ++i) {
+        // Position from the width of everything before it, so the font's own pair spacing is kept.
+        const float before = renderer.measureText(upper.substr(0, i), size).width;
+        const std::string glyph(1, upper[i]);
         const float w = renderer.measureText(glyph, size).width;
-        if (ch != ' ') renderer.drawTextCentered(glyph, textRect(cursor, centreY, w), size, color);
-        cursor += w + tracking;
+        const float gx = x + before + tracking * static_cast<float>(i);
+        if (upper[i] != ' ') renderer.drawTextCentered(glyph, textRect(gx, centreY, w), size, color);
+        cursor = before + w + tracking * static_cast<float>(i + 1);
     }
-    return cursor - x;
+    return cursor;
 }
 
 void drawSectionHeader(NUIRenderer& renderer, float x, float y, float width, const std::string& label) {
@@ -275,6 +279,34 @@ void drawEmberSlider(NUIRenderer& renderer, const NUIRect& rect, float labelWidt
         renderer.drawTextCentered(valueText, pill, 12.0f, c.ink);
     } else {
         drawTextRight(renderer, valueText, rect.right(), cy, 12.0f, c.ink);
+    }
+}
+
+float logFrequencyX(float hz, float x, float width, float lo, float hi) {
+    return x + width * std::log(hz / lo) / std::log(hi / lo);
+}
+
+void drawFrequencyGrid(NUIRenderer& renderer, const NUIRect& plot) {
+    const auto c = emberColors();
+    static const float kLines[] = {20,   30,   40,   50,   60,   70,   80,   90,    100,   200,   300,  400,  500,
+                                   600,  700,  800,  900,  1000, 2000, 3000, 4000,  5000,  6000,  7000, 8000, 9000,
+                                   10000, 20000};
+    for (float f : kLines) {
+        const bool major = f == 100.0f || f == 1000.0f || f == 10000.0f;
+        const float x = std::round(logFrequencyX(f, plot.x, plot.width));
+        renderer.fillRect(NUIRect(x, plot.y + 1.0f, 1.0f, plot.height - 2.0f), major ? c.gridMajor : c.gridMinor);
+    }
+    struct Label { float hz; const char* text; };
+    static const Label kLabels[] = {{20, "20"}, {100, "100"}, {1000, "1k"}, {10000, "10k"}, {20000, "20k"}};
+    for (size_t i = 0; i < 5; ++i) {
+        const float x = std::clamp(logFrequencyX(kLabels[i].hz, plot.x, plot.width), plot.x + 4.0f, plot.right() - 4.0f);
+        const float y = plot.bottom() - 8.0f;
+        if (i == 0) drawTextLeft(renderer, kLabels[i].text, x, y, 9.0f, c.inkMuted);
+        else if (i == 4) drawTextRight(renderer, kLabels[i].text, x, y, 9.0f, c.inkMuted);
+        else {
+            const float w = renderer.measureText(kLabels[i].text, 9.0f).width;
+            drawTextLeft(renderer, kLabels[i].text, x - w * 0.5f, y, 9.0f, c.inkMuted);
+        }
     }
 }
 
