@@ -241,19 +241,6 @@ private:
     std::function<void(PatternID)> m_onActivePatternChanged;
     std::function<void(PatternID)> m_onPlaceInTimeline;
     bool m_dropTargetRegistered = false;
-    // The drop manager checks the last-registered target first, and the timeline under this panel registers on its
-    // first frame: after this panel when a project opens in Arsenal, so sample drops fell through to the timeline and
-    // were rejected (owner, 4 Nov 2026). Claim the front once per drag while shown, as the mixer does (#395).
-    bool m_dropOrderClaimedForDrag = false;
-    void claimDropOrderForDrag() {
-        if (!AestraUI::NUIDragDropManager::getInstance().isDragging()) {
-            m_dropOrderClaimedForDrag = false;
-            return;
-        }
-        if (m_dropOrderClaimedForDrag || !isVisible()) return;
-        registerDropTargets(true);
-        m_dropOrderClaimedForDrag = true;
-    }
     bool m_showUnitTypePicker = false;
     AestraUI::NUIRect m_addUnitButtonRect{};
     AestraUI::NUIRect m_fitToggleRect{};

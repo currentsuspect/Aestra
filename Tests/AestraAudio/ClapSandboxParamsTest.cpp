@@ -84,9 +84,12 @@ void runGain(bool shm) {
             in[i] = in2[i] = 1.0f;
         const float* ins[2] = {in, in2};
         float* outs[2] = {out, out2};
-        // Read the last block the helper answered: a late answer plays the block dry (x1).
+        // Read the last block the helper answered: a late answer plays the block dry (x1). Keep blocks going
+        // until an answered block plays the new value, up to a deadline: a fixed 30 blocks (150 ms) was not
+        // enough for the helper process on a busy runner under ThreadSanitizer (#1285).
         float played = -1.0f;
-        for (int b = 0; b < 30; ++b) {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        for (int b = 0; b < 30 || (std::fabs(played - 0.25f) >= 1e-4f && std::chrono::steady_clock::now() < deadline); ++b) {
             const uint64_t answered = plugin.helperBlockCount();
             plugin.process(ins, outs, 2, 2, 256);
             if (plugin.helperBlockCount() > answered)

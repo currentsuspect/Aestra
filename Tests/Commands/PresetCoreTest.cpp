@@ -15,6 +15,7 @@
 #include "Presets/Preset.h"
 #include "Presets/PresetLibrary.h"
 #include "Presets/PresetSession.h"
+#include "Presets/LegacyPresets.h"
 
 #include <chrono>
 #include <cmath>
@@ -91,7 +92,7 @@ void testCaptureApplyRoundTrip() {
     const Preset saved = capture(*verb, "  Long Tail  ");
     check(saved.name == "Long Tail", "capture trims the name");
     check(saved.pluginId == BuiltInPlugins::verbInfo().id, "capture records the plugin id");
-    check(saved.state.empty(), "a built-in plugin's preset is its params, no opaque state");
+    check(!saved.state.empty(), "a captured preset keeps the plugin's own state (the EQ's bands live there)");
     bool hasBypass = false;
     for (const auto& p : saved.params) hasBypass |= p.id == byp;
     check(!hasBypass, "bypass is not part of a preset");
@@ -370,6 +371,39 @@ void testSession() {
     fs::remove_all(root.parent_path(), ec);
 }
 
+void testLegacyVerbImport() {
+    const fs::path root = scratchDir("legacy");
+    const fs::path legacy = root / "old" / "AestraVerb";
+    fs::create_directories(legacy);
+    std::ofstream(legacy / "Big Wash.aeverb")
+        << R"({"name":"Big Wash","mode":2,"size":0.7,"decay":0.8,"predelaySync":3,"modCharacter":1})";
+    std::ofstream(legacy / "broken.aeverb") << "not json";
+    PresetLibrary lib(root / "Presets");
+
+    check(importLegacyVerbPresets(lib, legacy) == 1, "one .aeverb imported, the broken one skipped");
+    const auto mine = lib.userPresets(kVerbPluginId);
+    check(mine.size() == 1 && mine[0].name == "Big Wash", "it is in Yours under its own name");
+    if (mine.size() == 1) {
+        auto value = [&](const char* name) {
+            for (const auto& q : mine[0].params)
+                if (q.name == name) return q.value;
+            return -1.0f;
+        };
+        check(near(value("Mode"), 2.0f / 8.0f) && near(value("Pre Sync"), 0.5f) && near(value("Mod Char"), 0.5f),
+              "whole-number indices become the parameters' steps");
+        check(near(value("Size"), 0.7f) && near(value("Decay"), 0.8f), "knob values carry over");
+        check(near(value("Mod Depth"), 0.14f), "a file without modDepth keeps the old default it was made with");
+        auto verb = makeVerb();
+        check(verb && apply(*verb, mine[0]) && countChanges(*verb, mine[0]) == 0, "it loads onto a Verb");
+        lib.removeUser(mine[0]);
+    }
+    check(importLegacyVerbPresets(lib, legacy) == 0 && lib.userPresets(kVerbPluginId).empty(),
+          "the import runs once: a preset you deleted does not come back");
+    check(fs::exists(legacy / "Big Wash.aeverb"), "the old files are left where they were");
+    std::error_code ec;
+    fs::remove_all(root.parent_path(), ec);
+}
+
 } // namespace
 
 int main() {
@@ -379,6 +413,7 @@ int main() {
     testSuggestAndOrder();
     testCommandIsOneUndo();
     testSession();
+    testLegacyVerbImport();
     std::cout << "PresetCoreTest: " << (g_checks - g_failures) << "/" << g_checks << " checks passed\n";
     return g_failures == 0 ? 0 : 1;
 }

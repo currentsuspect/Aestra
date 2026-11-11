@@ -15,6 +15,9 @@ Settings when you say so. The feed is signed; the app trusts the signature, not 
 - `stable`: public. Supporters and everyone else.
 - `early`: founders only. Every read needs `Authorization: Bearer <founder key>`; the Worker hashes it and looks it up in
   the `FOUNDERS` KV namespace (hashes only). `founders.py add "Name"` prints a key once; `revoke` cuts it off at once.
+- Counting testers: each founder read notes, at most once a day, the day, the platform and the last package that key
+  fetched (`seen:<key hash>` in the same namespace). No IP address and no machine id; the app sends nothing extra.
+  `founders.py list` shows it. The tester READ ME says so in one line.
 
 ## Keys (none are in the repo)
 - **Signing key** (Ed25519): private half is the CI secret `AESTRA_UPDATE_SIGNING_KEY`, backed up in

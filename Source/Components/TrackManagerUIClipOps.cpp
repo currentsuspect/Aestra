@@ -15,6 +15,7 @@
 #include "Commands/AddClipCommand.h"
 #include "Commands/CommandTransaction.h"
 #include "Commands/CreateLaneCommand.h"
+#include "Commands/DeleteSilenceCommand.h"
 #include "Commands/DuplicateClipCommand.h"
 #include "Commands/MacroCommand.h"
 #include "Commands/MoveClipCommand.h"
@@ -683,6 +684,49 @@ void TrackManagerUI::bounceSelectedClipsInPlace() {
     refreshTracks();
     invalidateCache();
     scheduleTimelineMinimapRebuild();
+}
+
+void TrackManagerUI::deleteSilenceInSelection(SilenceRipple ripple, ClipInstanceID fallback) {
+    if (!m_trackManager)
+        return;
+    std::vector<ClipInstanceID> targets;
+    m_clipSelection.forEachClip([&](const ClipInstanceID& id) { targets.push_back(id); });
+    if (targets.empty() && m_selectedClipId.isValid())
+        targets.push_back(m_selectedClipId);
+    if (targets.empty() && fallback.isValid())
+        targets.push_back(fallback);
+    if (targets.empty()) {
+        Log::warning("No clip selected for Delete Silence");
+        return;
+    }
+
+    // Founder rulings (2026-11-07): the ripple choice is per use and defaults to this lane only.
+    auto cmd = std::make_shared<DeleteSilenceCommand>(*m_trackManager, std::move(targets), ripple);
+    m_trackManager->getCommandHistory().pushAndExecute(cmd);
+    if (!cmd->isUndoable()) {
+        Log::info("Delete Silence: no measured silence long enough to cut");
+        return;
+    }
+    // The cut replaced clips with pieces: the selection and the cached lanes point at the old ones.
+    clearClipSelection();
+    m_selectedClipId = ClipInstanceID{};
+    m_trackManager->refreshTimelinePatternInstances();
+    refreshTracks();
+    invalidateCache();
+    scheduleTimelineMinimapRebuild();
+    Log::info("Delete Silence: " + std::to_string(cmd->cutCount()) + " cut(s), " +
+              std::to_string(cmd->removedSeconds()) + " s removed");
+}
+
+void TrackManagerUI::addDeleteSilenceMenu(AestraUI::NUIContextMenu& menu, ClipInstanceID clip) {
+    // A params dialog (threshold, minimum, kept pause) is a follow-up; the menu runs the defaults.
+    auto choices = std::make_shared<AestraUI::NUIContextMenu>();
+    auto addChoice = [this, choices, clip](const char* label, SilenceRipple ripple) {
+        choices->addItem(label, [this, ripple, clip]() { deleteSilenceInSelection(ripple, clip); });
+    };
+    addChoice("This lane", SilenceRipple::ThisLane);
+    addChoice("Every lane after the cut", SilenceRipple::AllLanes);
+    menu.addSubmenu("Delete Silence", choices);
 }
 
 void TrackManagerUI::duplicateSelectedClip() {
