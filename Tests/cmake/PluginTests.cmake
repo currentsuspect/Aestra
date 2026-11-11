@@ -644,6 +644,23 @@ set_tests_properties(CompProjectRoundTripTest PROPERTIES
     LABELS "integration;serialization;comping;contract:durability"
     TIMEOUT 120)
 
+# CompDeleteLaneTest: deleting a take or the master keeps the comp true (SPEC-022).
+add_executable(CompDeleteLaneTest
+    AestraAudio/CompDeleteLaneTest.cpp
+)
+target_link_libraries(CompDeleteLaneTest PRIVATE AestraAudio)
+target_include_directories(CompDeleteLaneTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME CompDeleteLaneTest COMMAND CompDeleteLaneTest)
+set_tests_properties(CompDeleteLaneTest PROPERTIES
+    LABELS "audio;comping;lanes;command;regression;contract:audio"
+    TIMEOUT 120)
+
 # PresetProjectRoundTripTest: "This project only" presets survive save and load (V83-S2, FD-72).
 add_executable(PresetProjectRoundTripTest
     Integration/PresetProjectRoundTripTest.cpp
