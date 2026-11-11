@@ -122,7 +122,6 @@ private:
     void appendLegacyBand(uint32_t slotIndex);
     void appendDynamicBand(uint32_t slotIndex);
 
-    void drawBypassPill(NUIRenderer& renderer);
     void drawOutputGainPill(NUIRenderer& renderer);
     void drawPolarityPill(NUIRenderer& renderer);
     void drawComparePills(NUIRenderer& renderer);
@@ -401,7 +400,7 @@ private:
     uint64_t m_workerResultSerial = 0;
 
     static constexpr float kWinW = 820.0f;
-    static constexpr float kWinH = 500.0f;
+    static constexpr float kWinH = 500.0f + AestraPanelWindow::TITLE_BAR_H; // two-row header: 32 px more
     static constexpr float kPad = 18.0f;
     static constexpr float kCurveH = 220.0f;
     static constexpr size_t kNumBands = Aestra::Audio::Plugins::AestraEQ::kLegacyBandCount;
