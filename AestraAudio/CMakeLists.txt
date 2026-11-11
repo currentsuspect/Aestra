@@ -262,6 +262,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/CommandTransaction.cpp
     src/Commands/SplitClipCommand.cpp
     src/Commands/RenderAudioClipCommand.cpp
+    src/Commands/DeleteSilenceCommand.cpp
     src/Commands/BounceInPlaceCommand.cpp
     src/Commands/ImportAudioClipCommand.cpp
     src/Commands/AddClipCommand.cpp
@@ -309,6 +310,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     # Analysis service (V8-S8): R128 loudness, true peak, band energy, correlation
     src/Analysis/AudioAnalysis.cpp
     src/Analysis/ReferenceAnalysis.cpp
+    src/Analysis/SilenceDetector.cpp
     
     # Plugin hosting system
     src/Plugin/PluginScanner.cpp
