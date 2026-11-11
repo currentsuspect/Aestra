@@ -24,6 +24,8 @@
 #include "TrackManager.h"
 #include "TrackManagerUI.h"
 
+#include <chrono>
+#include <thread>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -94,6 +96,24 @@ struct Fixture {
         }
         if (!minimap || !minimap->isVisible()) {
             check(false, "the timeline built no visible minimap");
+            return false;
+        }
+
+        // The minimap's summary is built on TimelineSummaryCache's worker thread. Until the build lands the model
+        // holds the empty starting summary (domain 0..0), and with no domain there is no viewport bar to hover.
+        // Keep the timeline updating, as the frame loop does, until the built summary is in the model. Sweeping
+        // straight away raced the worker: it lost on a loaded machine and on CI runners.
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        auto summaryReady = [&] {
+            const auto* snapshot = minimap->getModel().summary;
+            return snapshot && snapshot->summary && snapshot->summary->domainEndBeat - snapshot->summary->domainStartBeat > 1e-9;
+        };
+        while (!summaryReady() && std::chrono::steady_clock::now() < deadline) {
+            static_cast<AestraUI::NUIComponent&>(*manager).onUpdate(0.0); // public on the base, as the frame loop calls it
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        if (!summaryReady()) {
+            check(false, "the minimap never received its built summary");
             return false;
         }
 
