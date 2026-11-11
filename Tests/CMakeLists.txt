@@ -956,6 +956,17 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternContentEditDuringPlayb
         PROPERTIES LABELS "audio;playback;regression;contract:audio")
 endif()
 
+# V83-KEY2 (FD-76): the project key and the global transpose; key-following units sound transposed.
+add_executable(GlobalTransposePlaybackTest AestraAudio/GlobalTransposePlaybackTest.cpp)
+target_link_libraries(GlobalTransposePlaybackTest PRIVATE AestraAudio)
+target_include_directories(GlobalTransposePlaybackTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME GlobalTransposePlaybackTest COMMAND GlobalTransposePlaybackTest)
+set_tests_properties(GlobalTransposePlaybackTest PROPERTIES TIMEOUT 120 LABELS "audio;playback;contract:audio")
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternLateRefillTest.cpp")
     add_executable(PatternLateRefillTest AestraAudio/PatternLateRefillTest.cpp)
     target_link_libraries(PatternLateRefillTest PRIVATE AestraAudio)
