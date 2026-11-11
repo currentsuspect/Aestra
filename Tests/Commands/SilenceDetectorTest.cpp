@@ -57,7 +57,7 @@ AudioBufferData makeSpeech(double totalSec, double floorDb, const std::vector<Bu
                 for (const auto& burst : bursts) {
                     if (t >= burst.fromSec && t < burst.toSec) {
                         // Sine RMS = amp / sqrt(2).
-                        s += std::sqrt(2.0) * std::pow(10.0, burst.db / 20.0) * std::sin(2.0 * M_PI * 1000.0 * t);
+                        s += std::sqrt(2.0) * std::pow(10.0, burst.db / 20.0) * std::sin(2.0 * 3.14159265358979323846 * 1000.0 * t);
                     }
                 }
             }

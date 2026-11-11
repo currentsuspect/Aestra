@@ -58,7 +58,7 @@ std::shared_ptr<AudioBufferData> makeVoiceOver() {
         const double t = static_cast<double>(f) / kRate;
         for (const auto& w : words)
             if (t >= w.fromSec && t < w.toSec)
-                s += std::sqrt(2.0) * 0.1 * std::sin(2.0 * M_PI * 1000.0 * t);
+                s += std::sqrt(2.0) * 0.1 * std::sin(2.0 * 3.14159265358979323846 * 1000.0 * t);
         b->interleavedData[f] = static_cast<float>(s);
     }
     return b;
