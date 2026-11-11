@@ -41,7 +41,6 @@ private:
     void drawRightColumn(NUIRenderer& renderer);
     void drawKnobs(NUIRenderer& renderer);
     void setParam(uint32_t paramId, float value);
-    void setBypassed(bool bypassed);
     bool isBypassed() const;
     float param(uint32_t paramId) const;
     bool hovering(const NUIRect& rect) const { return m_hasMouse && rect.contains(m_mouse); }
@@ -59,8 +58,6 @@ private:
     NUIRect m_osRect;
     NUIRect m_sidechainRect;
     NUIRect m_hpfRect;
-    NUIRect m_bypassRect;
-    NUIRect m_resetRect;
     NUIPoint m_origin;         // top-left of the content area
 
     NUIPoint m_mouse;
@@ -74,7 +71,7 @@ private:
 
     static constexpr float kWinW = 640.0f;
     static constexpr float kContentH = 332.0f;
-    static constexpr float kWinH = kContentH + AestraPanelWindow::TITLE_BAR_H;
+    static constexpr float kWinH = kContentH + 2.0f * AestraPanelWindow::TITLE_BAR_H; // two-row header
 };
 
 } // namespace AestraUI

@@ -3,6 +3,7 @@
 
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
+#include "PluginEditorKit.h"
 
 #include <algorithm>
 #include <cctype>
@@ -85,6 +86,22 @@ PluginPresetBar::PluginPresetBar(std::unique_ptr<PresetSession> session) : m_ses
 // ---------------------------------------------------------------------------------------------------------------
 
 PluginPresetBar::Layout PluginPresetBar::layoutFor(const NUIRect& titleBar) const {
+    if (m_twoRow) {
+        // FD-73 row two, left to right: ‹ preset › Save A|B ···, and the power button at the far right.
+        const float y = titleBar.y + 4.0f;
+        const float x = titleBar.x + 8.0f;
+        Layout l;
+        l.prev = {x, y, kArrowW, kBarH};
+        l.name = {x + 28.0f, y, 180.0f, kBarH};
+        l.next = {x + 212.0f, y, kArrowW, kBarH};
+        l.save = {x + 244.0f, y, kSaveW, kBarH};
+        l.ab = {x + 300.0f, y, 56.0f, kBarH};
+        l.a = {l.ab.x, y, 28.0f, kBarH};
+        l.b = {l.ab.x + 28.0f, y, 28.0f, kBarH};
+        l.more = {x + 364.0f, y, kArrowW, kBarH};
+        l.power = {titleBar.right() - 32.0f, y, kBarH, kBarH};
+        return l;
+    }
     const float total = kArrowW + kNameWidth + kArrowW + kGap + kSaveW + kGap + kAbW;
     float x = titleBar.x + (titleBar.width - total) * 0.5f;
     // Keep clear of the title text on the left: never start before a third of the bar.
@@ -157,6 +174,8 @@ NUIRect PluginPresetBar::controlRect(int which) const {
     case 3: return m_layout.save;
     case 4: return m_layout.a;
     case 5: return m_layout.b;
+    case 6: return m_layout.more;
+    case 7: return m_layout.power;
     default: return {};
     }
 }
@@ -237,6 +256,10 @@ void PluginPresetBar::doSave(bool update) {
 void PluginPresetBar::render(NUIRenderer& r, const NUIRect& titleBar) {
     m_titleBar = titleBar;
     m_layout = layoutFor(titleBar);
+    if (m_twoRow) {
+        renderTwoRow(r, titleBar);
+        return;
+    }
     const Colors c = colors();
     const Layout& l = m_layout;
 
@@ -291,6 +314,91 @@ void PluginPresetBar::render(NUIRenderer& r, const NUIRect& titleBar) {
     r.drawLine({l.b.x, l.b.y}, {l.b.x, l.b.bottom()}, 1.0f, c.border);
     r.drawTextCentered("A", l.a, 11.5f, cmp && slot == 0 ? c.bed : c.text2);
     r.drawTextCentered("B", l.b, 11.5f, cmp && slot == 1 ? c.bed : c.text2);
+}
+
+// The FD-73 look: flat, sharp, one edge colour, painted by the shared control kit's colours.
+void PluginPresetBar::renderTwoRow(NUIRenderer& r, const NUIRect&) {
+    const auto k = EditorKit::emberColors();
+    const Layout& l = m_layout;
+    const bool bypassed = m_actions.isBypassed && m_actions.isBypassed();
+
+    auto button = [&](const NUIRect& rc, bool hover, bool open) {
+        r.fillRect(rc, hover ? k.raised : k.body);
+        r.strokeRect(rc, 1.0f, open ? k.primary : k.edge);
+    };
+    auto arrow = [&](const NUIRect& rc, bool left, bool hover) {
+        button(rc, hover, false);
+        const float cx = rc.x + rc.width * 0.5f, cy = rc.y + rc.height * 0.5f;
+        const float dir = left ? 1.0f : -1.0f;
+        const NUIColor ink = hover ? k.ink : k.inkSoft;
+        r.drawLine({cx + dir * 2.0f, cy - 5.0f}, {cx - dir * 2.0f, cy}, 1.5f, ink);
+        r.drawLine({cx - dir * 2.0f, cy}, {cx + dir * 2.0f, cy + 5.0f}, 1.5f, ink);
+    };
+    arrow(l.prev, true, m_hoverControl == 0);
+    arrow(l.next, false, m_hoverControl == 2);
+
+    // Preset name: a dropdown with the edit count beside the name.
+    const bool nameHot = m_hoverControl == 1 || m_popover == Popover::Browse;
+    button(l.name, false, m_popover == Popover::Browse);
+    r.fillRect({l.name.x + 1.0f, l.name.y + 1.0f, l.name.width - 2.0f, l.name.height - 2.0f}, nameHot ? k.raised : k.control);
+    const auto& current = m_session->current();
+    const int changes = m_session->changes();
+    const std::string name = current ? current->name : "No preset";
+    const float cy = l.name.y + kBarH * 0.5f;
+    float tx = l.name.x + 8.0f;
+    const float nameRoom = l.name.width - 30.0f - (changes > 0 ? 96.0f : 0.0f);
+    const std::string shown = fit(r, name, 12.0f, nameRoom);
+    EditorKit::drawTextLeft(r, shown, tx, cy, 12.0f, current ? k.ink : k.inkSoft);
+    if (changes > 0) {
+        tx += r.measureText(shown, 12.0f).width + 8.0f;
+        r.fillRect({tx, cy - 3.0f, 6.0f, 6.0f}, k.warn);
+        EditorKit::drawTextLeft(r, changes == 1 ? "1 change" : std::to_string(changes) + " changes", tx + 10.0f, cy,
+                                11.0f, k.inkMuted);
+    }
+    const float vx = l.name.right() - 12.0f;
+    r.drawLine({vx - 4.0f, cy - 2.0f}, {vx, cy + 2.0f}, 1.5f, k.inkSoft);
+    r.drawLine({vx, cy + 2.0f}, {vx + 4.0f, cy - 2.0f}, 1.5f, k.inkSoft);
+
+    button(l.save, m_hoverControl == 3, m_popover == Popover::Save);
+    r.drawTextCentered("Save", l.save, 12.0f, m_hoverControl == 3 ? k.ink : k.inkSoft);
+
+    // A | B
+    const bool cmp = m_session->comparing();
+    const int slot = m_session->activeSlot();
+    r.fillRect(l.ab, k.body);
+    {
+        // A is the sound now until a comparison starts, so it reads as the selected side.
+        const NUIRect on = (!cmp || slot == 0) ? l.a : l.b;
+        r.fillRect(on, k.selected);
+        r.fillRect({on.x, on.bottom() - 2.0f, on.width, 2.0f}, k.primary);
+    }
+    r.fillRect({l.b.x, l.b.y + 1.0f, 1.0f, l.b.height - 2.0f}, k.border);
+    r.strokeRect(l.ab, 1.0f, k.edge);
+    const bool aOn = !cmp || slot == 0;
+    r.drawTextCentered("A", l.a, 12.0f, aOn ? k.ink : k.inkSoft);
+    r.drawTextCentered("B", l.b, 12.0f, !aOn ? k.ink : k.inkSoft);
+
+    // ···
+    button(l.more, m_hoverControl == 6, false);
+    for (float dx : {7.0f, 12.0f, 17.0f})
+        r.fillRect({l.more.x + dx - 1.0f, l.more.y + kBarH * 0.5f - 1.0f, 2.0f, 2.0f}, m_hoverControl == 6 ? k.ink : k.inkSoft);
+
+    // Power = bypass. Lit while the plugin is active.
+    if (m_actions.setBypassed) {
+        button(l.power, false, false);
+        r.fillRect({l.power.x + 1.0f, l.power.y + 1.0f, l.power.width - 2.0f, l.power.height - 2.0f},
+                   (bypassed || m_hoverControl == 7) ? k.raised : k.control);
+        const NUIPoint c{l.power.x + l.power.width * 0.5f, l.power.y + l.power.height * 0.5f + 1.0f};
+        const NUIColor glyph = bypassed ? k.inkMuted : k.secondary;
+        EditorKit::drawArc(r, c, 5.5f, -EditorKit::kPi * 0.5f + 0.7f, EditorKit::kPi * 1.5f - 0.7f, 1.6f, glyph);
+        r.drawLine({c.x, c.y - 8.5f}, {c.x, c.y - 2.5f}, 1.6f, glyph);
+        if (bypassed) {
+            const float w = r.measureText("BYPASSED", 10.0f).width + 28.0f;
+            const NUIRect pill{l.power.x - 8.0f - w, l.power.y, w, kBarH};
+            r.fillRect(pill, k.raised);
+            EditorKit::drawCaps(r, "Bypassed", pill.x + 8.0f, pill.y + kBarH * 0.5f, 10.0f, k.inkSoft);
+        }
+    }
 }
 
 void PluginPresetBar::renderOverlay(NUIRenderer& r, const NUIRect& window) {
@@ -505,8 +613,9 @@ bool PluginPresetBar::onMouseEvent(const NUIMouseEvent& e) {
     }
 
     // The bar itself.
-    const NUIRect frame{l.prev.x, l.prev.y, l.ab.right() - l.prev.x, kBarH};
-    if (!frame.contains(e.position)) {
+    const NUIRect frame{l.prev.x, l.prev.y, (m_twoRow ? l.more.right() : l.ab.right()) - l.prev.x, kBarH};
+    const bool onPower = m_twoRow && m_actions.setBypassed && l.power.contains(e.position);
+    if (!frame.contains(e.position) && !onPower) {
         if (m_hoverControl != -1) m_hoverControl = -1;
         return false;
     }
@@ -515,6 +624,8 @@ bool PluginPresetBar::onMouseEvent(const NUIMouseEvent& e) {
                      : l.next.contains(e.position) ? 2
                      : l.save.contains(e.position) ? 3
                      : l.ab.contains(e.position)   ? 4
+                     : (m_twoRow && l.more.contains(e.position)) ? 6
+                     : onPower ? 7
                                                    : -1;
     if (e.wheelDelta != 0.0f && (m_hoverControl == 1)) {
         m_session->step(e.wheelDelta > 0 ? -1 : 1);
@@ -526,6 +637,13 @@ bool PluginPresetBar::onMouseEvent(const NUIMouseEvent& e) {
         case 1: m_namePressed = true; break;
         case 2: m_session->step(+1); break;
         case 3: openSave(); break;
+        case 6:
+            if (m_actions.openMenu) m_actions.openMenu({l.more.x, l.more.bottom() + 2.0f});
+            break;
+        case 7:
+            if (m_actions.setBypassed)
+                m_actions.setBypassed(!(m_actions.isBypassed && m_actions.isBypassed()));
+            break;
         case 4:
             if (!m_session->comparing()) m_session->beginCompare();
             if ((l.a.contains(e.position) && m_session->activeSlot() == 1) ||

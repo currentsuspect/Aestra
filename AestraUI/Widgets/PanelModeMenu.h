@@ -13,12 +13,18 @@ namespace AestraUI {
 struct PanelModeMenuActions {
     std::function<void(PanelMode)> setMode;
     std::function<void()> resetPosition;
+    /// Plugin editors only: "Reset to default" leads the menu when this is set.
+    std::function<void()> resetToDefault;
 };
 
 /// The panel's own menu: Dock Panel / Float Panel, Keep Open / Make Contextual, Reset Position.
 /// The wording is the owner's (2026-09-23). Items show the choice you would make, not the current state.
 inline std::shared_ptr<NUIContextMenu> buildPanelModeMenu(PanelMode current, PanelModeMenuActions actions) {
     auto menu = std::make_shared<NUIContextMenu>();
+    if (actions.resetToDefault) {
+        menu->addItem("Reset to default", actions.resetToDefault);
+        menu->addSeparator();
+    }
     menu->addItem(current.docked ? "Float Panel" : "Dock Panel", [current, actions]() {
         PanelMode next = current;
         next.docked = !current.docked;

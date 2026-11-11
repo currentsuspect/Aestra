@@ -256,6 +256,32 @@ void testCompareAndKeys() {
     check(panel.onKeyEvent(ch) && rig.bar->saveName() == "Z", "a typed character reaches the Save name");
 }
 
+// The two-row header (FD-73): row two carries the same controls plus "···" and a power button.
+void testTwoRowHeader() {
+    Rig rig;
+    bool bypassed = false;
+    int menus = 0;
+    PluginPresetBar::HeaderActions actions;
+    actions.isBypassed = [&] { return bypassed; };
+    actions.setBypassed = [&](bool on) { bypassed = on; };
+    actions.openMenu = [&](const NUIPoint&) { ++menus; };
+    rig.bar->setHeaderActions(actions);
+    rig.bar->setHeaderMode(true);
+    rig.title = {100, 132, 720, 32}; // row two
+    rig.frame();
+
+    check(rig.bar->controlRect(7).right() == rig.title.right() - 8.0f, "power sits at the right edge of row two");
+    check(rig.bar->controlRect(6).x > rig.bar->controlRect(5).right(), "the menu button follows A|B");
+    rig.click(rig.bar->controlRect(7));
+    check(bypassed, "power bypasses");
+    rig.click(rig.bar->controlRect(7));
+    check(!bypassed, "power again turns it back on");
+    rig.click(rig.bar->controlRect(6));
+    check(menus == 1, "the menu button asks for the menu");
+    rig.click(rig.bar->controlRect(2));
+    check(rig.bar->session().currentName() == "Vocal Plate", "the preset arrows still work in row two");
+}
+
 } // namespace
 
 int main() {
@@ -263,6 +289,7 @@ int main() {
     testBrowse();
     testSave();
     testCompareAndKeys();
+    testTwoRowHeader();
     std::cout << "PluginPresetBarTest: " << (g_checks - g_failures) << "/" << g_checks << " checks passed\n";
     return g_failures == 0 ? 0 : 1;
 }

@@ -72,7 +72,8 @@ std::string oneDecimal(float v) {
 AestraCompEditor::AestraCompEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance)
     : m_instance(std::move(instance)) {
     setId("AestraCompEditor");
-    setPanelTitle("Aestra Compressor");
+    setPanelTitle("Comp");
+    setTwoRowHeader(true);
     setSize(kWinW, kWinH);
     setEnforceParentBounds(true);
     buildControls();
@@ -136,7 +137,7 @@ void AestraCompEditor::layoutControls() {
         setBounds(b.x, b.y, kWinW, kWinH);
         b = getBounds();
     }
-    m_origin = {b.x, b.y + AestraPanelWindow::TITLE_BAR_H};
+    m_origin = {b.x, b.y + headerHeight()};
     const float ox = m_origin.x, oy = m_origin.y;
 
     m_curveRect = NUIRect(ox + kPad, oy + kPad, kCurveSize, kCurveSize);
@@ -146,8 +147,6 @@ void AestraCompEditor::layoutControls() {
     m_osRect = NUIRect(ox + kColumnX + 84.0f, oy + 84.0f, 112.0f, kRowH);
     m_sidechainRect = NUIRect(ox + kColumnX + 204.0f, oy + 84.0f, 96.0f, kRowH);
     m_hpfRect = NUIRect(ox + kColumnX, oy + 120.0f, kColumnW, kRowH);
-    m_bypassRect = NUIRect(ox + kColumnX, oy + 164.0f, 96.0f, kRowH);
-    m_resetRect = NUIRect(ox + kColumnX + 104.0f, oy + 164.0f, 96.0f, kRowH);
 
     // Two groups of knobs, spread across the row with a wider gap between the groups.
     const float cw = EditorKit::emberKnobCellWidth(EditorKit::KnobSize::Medium);
@@ -336,9 +335,6 @@ void AestraCompEditor::drawRightColumn(NUIRenderer& renderer) {
                                                          : EditorKit::ControlState::Idle;
     EditorKit::drawEmberSlider(renderer, m_hpfRect, 60.0f, "Det HPF", param(Comp::kDetectorHPF),
                                valueText(Comp::kDetectorHPF), hs, bypassed);
-
-    EditorKit::drawToggleButton(renderer, m_bypassRect, "Bypass", bypassed, hovering(m_bypassRect), false);
-    EditorKit::drawPushButton(renderer, m_resetRect, "Reset", hovering(m_resetRect));
 }
 
 void AestraCompEditor::drawKnobs(NUIRenderer& renderer) {
@@ -380,12 +376,6 @@ void AestraCompEditor::drawContent(NUIRenderer& renderer, const NUIRect& content
     drawKnobs(renderer);
 }
 
-void AestraCompEditor::setBypassed(bool bypassed) {
-    if (!m_instance) return;
-    m_instance->setParameter(Comp::kBypass, bypassed ? 1.0f : 0.0f);
-    repaint();
-}
-
 bool AestraCompEditor::isBypassed() const {
     return m_instance && m_instance->getParameter(Comp::kBypass) > 0.5f;
 }
@@ -398,7 +388,13 @@ bool AestraCompEditor::onMouseEvent(const NUIMouseEvent& event) {
     layoutControls();
     auto b = getBounds();
     const bool contains = b.contains(event.position);
-    if (!contains && !isDraggingWindow() && !m_hpfDragging) return false;
+    if (!contains && !isDraggingWindow() && !m_hpfDragging) {
+        if (m_hasMouse) {
+            m_hasMouse = false; // the pointer left: nothing stays lit
+            repaint();
+        }
+        return false;
+    }
 
     // Detector HPF is a horizontal slider the editor drives itself.
     if (m_hpfDragging && !event.pressed) {
@@ -409,21 +405,6 @@ bool AestraCompEditor::onMouseEvent(const NUIMouseEvent& event) {
 
     // Click handlers
     if (event.pressed && event.button == NUIMouseButton::Left) {
-        if (m_bypassRect.contains(event.position)) { setBypassed(!isBypassed()); return true; }
-        if (m_resetRect.contains(event.position)) {
-            for (auto& c : m_controls) {
-                if (c.slider) {
-                    const float def = m_instance->getParameters()[c.paramId].defaultValue;
-                    m_instance->setParameter(c.paramId, def);
-                    c.slider->setValue(def);
-                }
-            }
-            // The detector HPF is a slider now, not one of the knobs, but Reset still covers it.
-            const float hpfDef = m_instance->getParameters()[Comp::kDetectorHPF].defaultValue;
-            m_instance->setParameter(Comp::kDetectorHPF, hpfDef);
-            setDirty(true);
-            return true;
-        }
         if (const int i = segmentAt(m_modeRect, 3, event.position); i >= 0) {
             setParam(Comp::kCompMode, static_cast<float>(i) / 2.0f);
             return true;
