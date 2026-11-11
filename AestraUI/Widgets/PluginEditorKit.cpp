@@ -211,7 +211,7 @@ void drawEmberKnob(NUIRenderer& renderer, const NUIPoint& cell, KnobSize size, f
 }
 
 void drawSegmented(NUIRenderer& renderer, const NUIRect& rect, const std::string* labels, int count, int selected,
-                   int hovered, bool bypassed) {
+                   int hovered, bool bypassed, const SegmentGlyph& glyph) {
     if (count <= 0) return;
     const auto c = emberColors();
     renderer.fillRect(rect, c.body);
@@ -229,7 +229,15 @@ void drawSegmented(NUIRenderer& renderer, const NUIRect& rect, const std::string
             renderer.fillRect(cell, c.raised);
         }
         if (i > 0) renderer.fillRect(NUIRect(x0, rect.y + 1.0f, 1.0f, rect.height - 2.0f), c.border);
-        renderer.drawTextCentered(labels[i], cell, 12.0f, (on || hot) ? c.ink : c.inkSoft);
+        const NUIColor ink = (on || hot) ? c.ink : c.inkSoft;
+        if (glyph) {
+            glyph(renderer, i, cell.x + 10.0f, rect.y + rect.height * 0.5f, ink);
+            // 11 px so "Saw Down" fits beside its mark instead of being cut short.
+            renderer.drawTextCentered(labels[i], NUIRect(cell.x + 28.0f, cell.y, cell.width - 28.0f, cell.height), 11.0f,
+                                      ink);
+        } else {
+            renderer.drawTextCentered(labels[i], cell, 12.0f, ink);
+        }
     }
     renderer.strokeRect(rect, 1.0f, c.edge);
 }

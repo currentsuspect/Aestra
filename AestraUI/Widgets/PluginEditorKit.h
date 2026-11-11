@@ -4,6 +4,7 @@
 #include "NUITypes.h"
 
 #include <cstdint>
+#include <functional>
 #include <string>
 
 namespace AestraUI {
@@ -110,8 +111,10 @@ void drawEmberKnob(NUIRenderer& renderer, const NUIPoint& cell, KnobSize size, f
                    const std::string& valueText, ControlState state, bool bipolar, bool bypassed);
 
 /// Segmented control: one cell per label, the selected one filled with a primary underline.
+/// @p glyph, when set, draws a small mark in the left 30 px of cell i (centre x, centre y, colour).
+using SegmentGlyph = std::function<void(NUIRenderer&, int, float, float, NUIColor)>;
 void drawSegmented(NUIRenderer& renderer, const NUIRect& rect, const std::string* labels, int count, int selected,
-                   int hovered, bool bypassed);
+                   int hovered, bool bypassed, const SegmentGlyph& glyph = {});
 /// A labelled on/off button with a square indicator.
 void drawToggleButton(NUIRenderer& renderer, const NUIRect& rect, const std::string& label, bool on, bool hovered,
                       bool bypassed);
