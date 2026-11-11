@@ -325,6 +325,7 @@ public:
     AestraUI::PanelMode panelMode(Aestra::Audio::ViewType view) const;
     void applyPanelMode(Aestra::Audio::ViewType view);
     void wireEditorMode();  ///< the plugin editors' shared mode, from the store
+    void wirePluginPresets(); ///< AestraContentPresets.cpp: the preset bar's track name and undo (FD-72)
     void wirePanelMode(const std::shared_ptr<Aestra::Audio::WindowPanel>& panel, Aestra::Audio::ViewType view);
     void showPanelMenu(Aestra::Audio::ViewType view, const AestraUI::NUIPoint& at);
     void placePatternInTimeline(Aestra::Audio::PatternID pattern); ///< AestraContentPlacement.cpp: the Arsenal's "Place in timeline"

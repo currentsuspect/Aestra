@@ -4535,12 +4535,12 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     if (!event.pressed)
         return false;
 
-    // Popup menus own navigation and activation while open. The application
-    // normally evaluates global shortcuts before focused widgets, so route the
-    // focused menu explicitly before Space or letter keys can trigger transport
-    // and musical typing underneath it.
+    // Popup menus and an open preset browser or Save form own the keys while open. Global
+    // shortcuts are evaluated before focused widgets, so route them explicitly before Space
+    // or letter keys can trigger transport and musical typing underneath them.
     if (auto* menu = dynamic_cast<AestraUI::NUIContextMenu*>(AestraUI::NUIComponent::getFocusedComponent());
-        menu && menu->isVisible() && menu->onKeyEvent(event)) {
+        (menu && menu->isVisible() && menu->onKeyEvent(event)) ||
+        (m_pluginController && m_pluginController->routeKeyToPresetBar(event))) {
         return true;
     }
 

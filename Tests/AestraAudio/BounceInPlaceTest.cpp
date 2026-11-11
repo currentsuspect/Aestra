@@ -266,7 +266,8 @@ int main() {
         auto* lane = pm.getLane(pm.getLaneId(0));
         lane->automationCurves = {curve, vol};
         const auto before = s.masterRender();
-        check(peak(before, 4096) < 0.06 && peak(before, 4096) > 0.04, "automation drives the insert to 0.25 (peak ~0.05)");
+        // 0.4 sine x 0.25 insert gain x 0.5 volume curve x 0.5 fader: automation composes with the fader (FD-64, #466).
+        check(peak(before, 4096) < 0.03 && peak(before, 4096) > 0.02, "automation drives the insert to 0.25 (peak ~0.025)");
 
         const auto r = bounceClipsInPlace(*s.engine, *s.tm, {s.clip});
         check(r.ok, "bounce with automation succeeds: " + r.error);

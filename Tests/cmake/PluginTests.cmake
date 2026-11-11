@@ -643,3 +643,28 @@ add_test(NAME CompProjectRoundTripTest COMMAND CompProjectRoundTripTest)
 set_tests_properties(CompProjectRoundTripTest PROPERTIES
     LABELS "integration;serialization;comping;contract:durability"
     TIMEOUT 120)
+
+# PresetProjectRoundTripTest: "This project only" presets survive save and load (V83-S2, FD-72).
+add_executable(PresetProjectRoundTripTest
+    Integration/PresetProjectRoundTripTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+)
+target_link_libraries(PresetProjectRoundTripTest PRIVATE AestraAudio)
+target_include_directories(PresetProjectRoundTripTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+)
+add_test(NAME PresetProjectRoundTripTest COMMAND PresetProjectRoundTripTest)
+set_tests_properties(PresetProjectRoundTripTest PROPERTIES
+    LABELS "integration;serialization;presets;contract:durability"
+    TIMEOUT 120)

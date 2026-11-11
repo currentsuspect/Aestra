@@ -42,6 +42,20 @@ struct Track {
     /** Which take plays where. The master lane's clips are derived from this (compClipsFor). */
     CompRanges comp;
 
+    /** The row that carries the track's header: the comp (master) lane once a comp exists, else the first lane. */
+    PlaylistLaneID primaryLaneId() const {
+        if (compLaneId.isValid()) return compLaneId;
+        return laneIds.empty() ? PlaylistLaneID{} : laneIds.front();
+    }
+
+    /** The take lanes under the primary row, newest first (the comp lane, if any, is not one of them). */
+    std::vector<PlaylistLaneID> takeLanesNewestFirst() const {
+        std::vector<PlaylistLaneID> out;
+        for (auto it = laneIds.rbegin(); it != laneIds.rend(); ++it)
+            if (*it != compLaneId) out.push_back(*it);
+        return out;
+    }
+
     /** Track-local lane number (1-based position in laneIds), or 0 when the
      * lane is not owned by this track. */
     int laneNumber(PlaylistLaneID laneId) const {

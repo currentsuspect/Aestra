@@ -162,6 +162,7 @@ public:
      *  consumed before they reached the timeline. Hover cursor claims are only
      *  honoured while it matches the timeline's own last-seen position. */
     void setWindowPointerPosition(float x, float y);
+    void onWindowMouseReleased(); // the window saw a left release, which may never have reached the timeline
 
     // View Toggle Callbacks (v3.1)
     void setOnToggleMixer(std::function<void()> cb) { m_onToggleMixer = cb; }
@@ -596,6 +597,7 @@ private:
     ::AestraUI::NUIPoint m_windowPointerPos; // Every window move, including ones a popup consumed
     bool m_hasWindowPointerPos = false;
     bool isHoverPointerCurrent() const; // m_lastMousePos still matches the real pointer
+    bool minimapClaimsGrab() const;     // minimap viewport drag, or its hover from a current pointer
 
     // Playhead dragging state
     bool m_isDraggingPlayhead = false;

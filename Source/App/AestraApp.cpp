@@ -517,7 +517,7 @@ void AestraApp::initializeContent() {
     m_content->setMidiInput(m_audioController->getMidiInput());
     syncRecordingProjectPath(m_content, m_documentState.canonicalPath());
 
-    m_windowManager->setContent(m_content); startUpdateChecks();
+    m_windowManager->setContent(m_content); startUpdateChecks(); watchAudioDevice();
     m_audioController->setContent(m_content);
 
     // Forward project dirty state to autosave. TrackManager marks itself modified

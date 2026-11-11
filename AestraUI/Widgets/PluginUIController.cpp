@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "PluginUIController.h"
+#include "PluginPresetBar.h"
 
 #include "PluginEditorRegistry.h"
 #include "EditorSurfacePlacement.h"
@@ -544,6 +545,7 @@ void PluginUIController::openPluginEditor(
     // m_popupLayer and m_activeEditors, which the registry cannot reach.
     if (auto editor = std::dynamic_pointer_cast<AestraPanelWindow>(editorComp)) {
         wireEditorClose(editor);
+        attachPresetBar(editor, instance);
     }
     
     auto relayoutEditor = [&](const std::shared_ptr<NUIComponent>& editorComp,
@@ -947,6 +949,38 @@ std::pair<int, int> PluginEditorWindow::getPosition() const {
 
 void PluginEditorWindow::setOnClose(std::function<void()> callback) {
     m_onClose = std::move(callback);
+}
+
+
+
+// ---------------------------------------------------------------------------------------------------------------
+// Preset bar (FD-72): one per open plugin window, the same for Aestra's plugins and VST3/CLAP.
+// ---------------------------------------------------------------------------------------------------------------
+
+void PluginUIController::attachPresetBar(const std::shared_ptr<AestraPanelWindow>& editor,
+                                         const std::shared_ptr<Aestra::Audio::IPluginInstance>& instance) {
+    if (!editor || !instance || !m_presetContext) return;
+    auto context = m_presetContext(instance);
+    if (!context) return;
+    if (!m_presetLibrary)
+        m_presetLibrary = std::make_unique<Aestra::Audio::Presets::PresetLibrary>(
+            Aestra::Audio::Presets::PresetLibrary::defaultUserRoot());
+    auto session = std::make_unique<Aestra::Audio::Presets::PresetSession>(instance, *m_presetLibrary,
+                                                                           context->trackName, context->record);
+    if (context->saveToProject) session->setProjectPresets(context->projectPresets, context->saveToProject);
+    std::weak_ptr<AestraPanelWindow> weak = editor;
+    // A loaded preset, an undo or a flip of A/B changes every knob at once: the editor redraws from the plugin.
+    session->setOnSoundChanged([weak] {
+        if (auto e = weak.lock()) e->setDirty(true);
+    });
+    editor->setTitleAccessory(std::make_shared<PluginPresetBar>(std::move(session)));
+}
+
+bool PluginUIController::routeKeyToPresetBar(const NUIKeyEvent& event) {
+    for (const auto& comp : m_activeEditors)
+        if (auto editor = std::dynamic_pointer_cast<AestraPanelWindow>(comp))
+            if (editor->routeKeyToAccessory(event)) return true;
+    return false;
 }
 
 } // namespace AestraUI

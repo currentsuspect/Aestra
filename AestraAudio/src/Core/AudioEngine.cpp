@@ -637,20 +637,15 @@ void AudioEngine::setChannelSlotMap(std::shared_ptr<const ChannelSlotMap> slotMa
 }
 
 void AudioEngine::refreshSamplerCache() {
+    std::lock_guard<std::mutex> lock(m_samplerCacheMutex);
     auto* unitMgr = m_unitManager.load(std::memory_order_acquire);
-    if (unitMgr) {
-        auto newCache = std::make_shared<SamplerCacheData>();
-        refreshSamplerCacheToSnapshot(*unitMgr, *newCache);
-
-        // Double-buffer swap: atomically publish new cache
-        auto retired = std::move(m_samplerCacheOwned);
-        m_samplerCacheOwned = std::move(newCache);
-        m_samplerCacheRaw.store(m_samplerCacheOwned.get(), std::memory_order_release);
-        m_cachedSamplerCount.store(m_samplerCacheOwned->count, std::memory_order_release);
-
-        // Retire old cache via garbage collector
-        GarbageCollector::instance().release(std::move(retired), "AudioEngine::SamplerCache");
-    }
+    auto snapshot = unitMgr ? unitMgr->getAudioSnapshot() : nullptr;
+    if (!unitMgr || snapshot == m_samplerCacheSource) return; // no unit change since the last build
+    m_samplerCacheSource = std::move(snapshot);
+    auto newCache = std::make_shared<SamplerCacheData>();
+    refreshSamplerCacheToSnapshot(*unitMgr, *newCache);
+    m_cachedSamplerCount.store(newCache->count, std::memory_order_release);
+    m_samplerCache.publish(std::move(newCache)); // the old generation goes once no audio-thread pin reads it
 }
 
 void AudioEngine::refreshSamplerCacheToSnapshot(UnitManager& mgr, SamplerCacheData& cache) {
@@ -760,6 +755,7 @@ void AudioEngine::performNonRealtimeMaintenance() {
     }
 
     refillNoteSchedule(); // lookahead refill of the note queue (AudioEngineScheduling.cpp)
+    refreshSamplerCache(); // units added since (every sample dropped into Arsenal) get the stop's release
 
     constexpr uint64_t kCollectionIntervalNs = 500000000ull;
     const uint64_t nowNs = static_cast<uint64_t>(
@@ -835,7 +831,8 @@ void AudioEngine::reclaimRetiredCompensationWhenStopped() {
 }
 
 void AudioEngine::resetCachedSamplerVoicesRt(bool soft) noexcept {
-    auto* cache = m_samplerCacheRaw.load(std::memory_order_acquire);
+    const auto pin = m_samplerCache.readRealtime(); // held for the walk: a refresh cannot free it
+    const auto* cache = pin.get();
     if (!cache)
         return;
     const size_t cachedCount = cache->count;
@@ -853,7 +850,8 @@ void AudioEngine::syncCachedSamplerSampleRatesRt(uint32_t sampleRate) noexcept {
     if (m_lastSyncedArsenalSampleRate == sampleRate) {
         return;
     }
-    auto* cache = m_samplerCacheRaw.load(std::memory_order_acquire);
+    const auto pin = m_samplerCache.readRealtime(); // held for the walk: a refresh cannot free it
+    const auto* cache = pin.get();
     if (!cache)
         return;
     const size_t cachedCount = cache->count;
@@ -2952,17 +2950,17 @@ void AudioEngine::renderTrack(const AudioGraph& graph, size_t orderedIndex, cons
 
     double volTarget = static_cast<double>(track.volume) * gain;
     double panTarget = clampD(static_cast<double>(track.pan), -1.0, 1.0);
-    // Apply Automation Override (v3.1). Beat-domain evaluation: the curve
-    // interpolates on point beats directly, so tempo changes and UI point
-    // drags (which edit beats) stay musically aligned.
+    // Automation COMPOSES with the strip (FD-64 item 4, #466): volume = curve x
+    // fader x trim, pan = curve + fader pan clamped. Beat-domain: tempo changes
+    // and point drags (which edit beats) stay musically aligned.
     if (!track.automationCurves.empty() && cachedSampleRate > 0) {
         uint64_t globalPos = m_globalSamplePos.load(std::memory_order_relaxed);
         double currentBeat = (static_cast<double>(globalPos) / cachedSampleRate) * (graph.bpm / 60.0);
         for (const auto& curve : track.automationCurves) {
             if (curve.getAutomationTarget() == AutomationTarget::Volume) {
-                volTarget = curve.getValueAtBeat(currentBeat);
+                volTarget *= curve.getValueAtBeat(currentBeat);
             } else if (curve.getAutomationTarget() == AutomationTarget::Pan) {
-                panTarget = clampD(curve.getValueAtBeat(currentBeat), -1.0, 1.0);
+                panTarget = clampD(panTarget + curve.getValueAtBeat(currentBeat), -1.0, 1.0);
             } else if (curve.getAutomationTarget() == AutomationTarget::Custom) {
                 // Plugin-parameter automation through the render-thread
                 // contract (V8-A5, PluginHost.h): the engine asks the plugin,

@@ -14,6 +14,8 @@ set(Aestra_SOURCES
 	App/AestraApp.cpp
 	App/AestraAppVersions.cpp
 	App/AestraAppUpdates.cpp
+	App/AestraAppAudioStatus.cpp
+	App/AudioDeviceNotice.h
 	App/UpdateNotifier.cpp
 	App/UpdateNotifier.h
 	App/AestraAppRecovery.cpp
@@ -39,6 +41,7 @@ set(Aestra_SOURCES
 	Panels/DspLoadReadout.h
 	Core/AestraContentImport.cpp
 	Core/AestraContentPanelMode.cpp
+	Core/AestraContentPresets.cpp
 	Core/AestraContentPlacement.cpp
 	Core/AestraContentRouting.cpp
 	Core/WorkspaceFocus.h
@@ -137,6 +140,7 @@ set(Aestra_SOURCES
 	Components/TrackUIComponentAutomationClips.cpp
 	Components/TrackUIComponentHeader.cpp
 	Components/TrackUIComponentMute.cpp
+	Components/TrackUIComponentComp.cpp
 	Components/TrackUIComponentAutomationRow.cpp
 	Components/TrackHeaderText.h
 	Components/TimelineClipGeometry.h

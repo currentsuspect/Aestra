@@ -44,6 +44,7 @@ void AestraContent::wireEditorMode() {
     m_pluginController->setEditorModeProvider(
         [this]() { return readPanelMode(surfaceStore(), kPluginEditorsModeKey, /*isPluginEditor=*/true); },
         [this](const AestraUI::PanelMode& next) { writePanelMode(surfaceStore(), kPluginEditorsModeKey, next); });
+    wirePluginPresets(); // every plugin window also gets the preset bar
 }
 
 void AestraContent::wirePanelMode(const std::shared_ptr<Audio::WindowPanel>& panel, Audio::ViewType view) {

@@ -282,6 +282,8 @@ void testSession() {
     check(s.presets().size() == 3 && s.presets()[0].name == "Vocal Plate" && s.presets()[1].name == "Vocal Room",
           "on Lead Vox the vocal presets come first");
     check(!s.current() && s.changes() == 0, "nothing picked yet");
+    check(s.suggestedName() == "Lead Vox Verb", "with no preset, Save names the plugin: " + s.suggestedName());
+    check(!s.canSaveToProject(), "no project presets until the project can keep them");
 
     verb->setParameter(decay, 0.55f);
     check(s.pick(0) && s.currentName() == "Vocal Plate" && near(verb->getParameter(decay), 0.40f), "pick loads");
