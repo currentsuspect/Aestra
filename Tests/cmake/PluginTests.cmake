@@ -668,3 +668,62 @@ add_test(NAME PresetProjectRoundTripTest COMMAND PresetProjectRoundTripTest)
 set_tests_properties(PresetProjectRoundTripTest PROPERTIES
     LABELS "integration;serialization;presets;contract:durability"
     TIMEOUT 120)
+
+# MarkerModelTest: markers (song sections) stay ordered, id-stable and bounded.
+add_executable(MarkerModelTest
+    AestraAudio/MarkerModelTest.cpp
+)
+target_link_libraries(MarkerModelTest PRIVATE AestraAudio)
+target_include_directories(MarkerModelTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MarkerModelTest COMMAND MarkerModelTest)
+set_tests_properties(MarkerModelTest PROPERTIES
+    LABELS "audio;markers;regression;contract:audio"
+    TIMEOUT 120)
+
+# MarkerCommandTest: add/delete/rename are one undoable step each, and undo keeps the marker id.
+add_executable(MarkerCommandTest
+    AestraAudio/MarkerCommandTest.cpp
+)
+target_link_libraries(MarkerCommandTest PRIVATE AestraAudio)
+target_include_directories(MarkerCommandTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MarkerCommandTest COMMAND MarkerCommandTest)
+set_tests_properties(MarkerCommandTest PROPERTIES
+    LABELS "audio;markers;command;regression;contract:audio"
+    TIMEOUT 120)
+
+# MarkerRoundTripTest: markers survive save/load; a project without them loads without them; damaged entries skip.
+add_executable(MarkerRoundTripTest
+    Integration/MarkerRoundTripTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+)
+target_link_libraries(MarkerRoundTripTest PRIVATE AestraAudio)
+target_include_directories(MarkerRoundTripTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+)
+add_test(NAME MarkerRoundTripTest COMMAND MarkerRoundTripTest)
+set_tests_properties(MarkerRoundTripTest PROPERTIES
+    LABELS "integration;serialization;markers;contract:durability"
+    TIMEOUT 120)
