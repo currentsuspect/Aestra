@@ -18,6 +18,9 @@ public:
 
     std::string getName() const override { return "Split Clip"; }
 
+    /// The second half the split created; invalid until execute() has split something.
+    ClipInstanceID newClipId() const { return m_newClipId; }
+
 private:
     PlaylistModel& m_model;
     ClipInstanceID m_targetClipId;

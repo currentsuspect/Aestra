@@ -2,6 +2,7 @@
 #pragma once
 
 #include "ClipInstance.h"
+#include "Commands/DeleteSilenceCommand.h"
 #include "MixerPanel.h"
 #include "PianoRollPanel.h"
 #include "PlaylistModel.h"
@@ -181,6 +182,10 @@ public:
     }
     /** @brief Bounce the selected clips in place (V8-W5). */
     void bounceSelectedClipsInPlace();
+    /** @brief Delete Silence (founder request 2026-11-07) on the selected audio clips, or on @p fallback when none is selected. */
+    void deleteSilenceInSelection(SilenceRipple ripple, ClipInstanceID fallback = ClipInstanceID{});
+    /** @brief Adds "Delete Silence" with its ripple choice (This lane is the default) to a clip menu. */
+    void addDeleteSilenceMenu(::AestraUI::NUIContextMenu& menu, ClipInstanceID clip);
 
     // Loop control callback (preset: 0=Off, 1=1Bar, 2=2Bars, 3=4Bars, 4=8Bars, 5=Selection, 6=Project)
     void setOnLoopPresetChanged(std::function<void(int preset)> cb) { m_onLoopPresetChanged = cb; }
