@@ -855,7 +855,7 @@ AestraEQEditor::AestraEQEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> i
     : m_instance(std::move(instance)) {
     setId("AestraEQEditor");
     setPanelTitle("EQ");
-    setTwoRowHeader(true);
+    setTwoRowHeader(true), setHeaderCompareShown(false); // the EQ has its own A / B / A>B
     setSize(kWinW, kWinH);
     setEnforceParentBounds(true);
     buildBands();

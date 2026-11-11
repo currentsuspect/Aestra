@@ -18,7 +18,6 @@ constexpr uint32_t kDamping = 1;
 constexpr uint32_t kPredelay = 2;
 constexpr uint32_t kWidth = 3;
 constexpr uint32_t kMix = 4;
-constexpr uint32_t kBypass = 5;
 constexpr uint32_t kSize = 6;
 constexpr uint32_t kDiffusion = 7;
 constexpr uint32_t kModRate = 8;
@@ -144,6 +143,7 @@ AestraVerbEditor::AestraVerbEditor(std::shared_ptr<Aestra::Audio::IPluginInstanc
     setId("AestraVerbEditor");
     setPanelTitle("Verb");
     setTwoRowHeader(true);
+    setHeaderCompareShown(false); // the Verb has its own A / B
     setSize(kWinW, kWinH);
     m_categoryPills = {{
         {"Room", 0, {}, false, true},
@@ -488,10 +488,11 @@ void AestraVerbEditor::layoutControls() {
     const float btnRowY = mixY + 58.0f;
     const float btnRow2Y = btnRowY + 34.0f;
     constexpr float btnH = 26.0f;
-    m_bypassBounds = NUIRect(btnStartX, btnRowY, btnW, btnH);
-    m_freezeBounds = NUIRect(btnStartX + (btnW + btnGap), btnRowY, btnW, btnH);
-    m_saveBounds = NUIRect(btnStartX + (btnW + btnGap) * 2.0f, btnRowY, btnW, btnH);
-    m_mixLockBounds = NUIRect(btnStartX + (btnW + btnGap) * 3.0f, btnRowY, btnW, btnH);
+    // Bypass is the header's power button; the first row is Freeze, Save and Mix lock across the deck's width.
+    const float btnW3 = (btnRowW - 2.0f * btnGap) / 3.0f;
+    m_freezeBounds = NUIRect(btnStartX, btnRowY, btnW3, btnH);
+    m_saveBounds = NUIRect(btnStartX + (btnW3 + btnGap), btnRowY, btnW3, btnH);
+    m_mixLockBounds = NUIRect(btnStartX + (btnW3 + btnGap) * 2.0f, btnRowY, btnW3, btnH);
     m_navPrevBounds = NUIRect(btnStartX, btnRow2Y, btnW, btnH);
     m_navNextBounds = NUIRect(btnStartX + (btnW + btnGap), btnRow2Y, btnW, btnH);
     // A/B compare pinned to the right edge of the band; the mode label owns
@@ -861,15 +862,6 @@ void AestraVerbEditor::drawMixSlider(NUIRenderer& renderer, NUIColor accent) {
                       accent.withAlpha(0.80f + stateLift * 0.14f));
 }
 
-void AestraVerbEditor::drawBypassPill(NUIRenderer& renderer, NUIColor accent) {
-    auto& theme = NUIThemeManager::getInstance();
-    const float v = getParamValue(kBypass);
-    const bool on = v > 0.5f;
-    renderer.fillRect(m_bypassBounds, on ? accent.withAlpha(0.52f) : NUIColor(0, 0, 0, 0));
-    renderer.strokeRect(m_bypassBounds, 1.0f, on ? accent.withAlpha(0.65f) : editorInk(0.15f));
-    renderer.drawTextCentered("BYP", m_bypassBounds, 9.0f, editorInk(on ? 0.95f : 0.60f));
-}
-
 void AestraVerbEditor::drawFreezePill(NUIRenderer& renderer, NUIColor accent) {
     auto& theme = NUIThemeManager::getInstance();
     const float v = getParamValue(kFreeze);
@@ -1042,9 +1034,9 @@ void AestraVerbEditor::drawContent(NUIRenderer& renderer, const NUIRect& content
     renderer.fillRect(mixCard, editorNeutral(NUIColor(0.026f, 0.025f, 0.033f, 0.96f)));
     renderer.strokeRect(mixCard, 1.0f, editorInk(0.06f));
 
-    const NUIRect utilityCard(m_bypassBounds.x - 10.0f, m_bypassBounds.y - 10.0f,
-                              m_mixLockBounds.right() - m_bypassBounds.x + 20.0f,
-                              m_abBoundsB.bottom() - m_bypassBounds.y + 20.0f);
+    const NUIRect utilityCard(m_freezeBounds.x - 10.0f, m_freezeBounds.y - 10.0f,
+                              m_mixLockBounds.right() - m_freezeBounds.x + 20.0f,
+                              m_abBoundsB.bottom() - m_freezeBounds.y + 20.0f);
     renderer.fillRect(utilityCard, editorNeutral(NUIColor(0.023f, 0.023f, 0.029f, 0.94f)));
     renderer.strokeRect(utilityCard, 1.0f, editorInk(0.055f));
 
@@ -1055,14 +1047,12 @@ void AestraVerbEditor::drawContent(NUIRenderer& renderer, const NUIRect& content
     }
     drawParamRow(renderer, accent);
     drawMixSlider(renderer, accent);
-    // Button grid with SVG icons: BYP FRZ SAVE UNLCK / < > A B
+    // Button grid with SVG icons: FRZ SAVE UNLCK / < > A B
     {
-        static const char* kBypassSvg = R"svg(<svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.1"/><line x1="7" y1="2" x2="7" y2="7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>)svg";
         static const char* kFreezeSvg = R"svg(<svg viewBox="0 0 14 14" fill="none"><line x1="7" y1="1" x2="7" y2="13" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="1" y1="7" x2="13" y2="7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="3" y1="3" x2="11" y2="11" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><line x1="11" y1="3" x2="3" y2="11" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>)svg";
         static const char* kSaveSvg = R"svg(<svg viewBox="0 0 14 14" fill="none"><path d="M2 2h8l2 2v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.1"/><rect x="4" y="2" width="5" height="4" rx="0.5" stroke="currentColor" stroke-width="1.1"/><rect x="3" y="9" width="8" height="3" rx="0.5" stroke="currentColor" stroke-width="1.1"/></svg>)svg";
         static const char* kLockSvg = R"svg(<svg viewBox="0 0 14 14" fill="none"><rect x="3" y="6" width="8" height="6.5" rx="1" stroke="currentColor" stroke-width="1.1"/><path d="M5 6V4.5a2 2 0 0 1 4 0V6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>)svg";
         static const char* kUnlockSvg = R"svg(<svg viewBox="0 0 14 14" fill="none"><rect x="3" y="6" width="8" height="6.5" rx="1" stroke="currentColor" stroke-width="1.1"/><path d="M5 6V4.5a2 2 0 0 1 4 0" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>)svg";
-        static auto bypassIcon = std::make_shared<NUIIcon>(kBypassSvg);
         static auto freezeIcon = std::make_shared<NUIIcon>(kFreezeSvg);
         static auto saveIcon = std::make_shared<NUIIcon>(kSaveSvg);
         static auto lockIcon = std::make_shared<NUIIcon>(kLockSvg);
@@ -1070,7 +1060,6 @@ void AestraVerbEditor::drawContent(NUIRenderer& renderer, const NUIRect& content
 
         struct BtnInfo { NUIRect bounds; bool on; bool hov; const char* label; const char* tip; };
         BtnInfo btns[] = {
-            {m_bypassBounds, getParamValue(kBypass) > 0.5f, m_bypassHovered, "BYP", "Bypass"},
             {m_freezeBounds, getParamValue(kFreeze) > 0.5f, m_freezeHovered, "FRZ", "Freeze"},
             {m_saveBounds, false, m_saveHovered, "SAVE", "Save Preset"},
             {m_mixLockBounds, m_mixLocked, m_mixLockHovered, "MIX", m_mixLocked ? "Unlock Mix" : "Lock Mix"},
@@ -1094,10 +1083,9 @@ void AestraVerbEditor::drawContent(NUIRenderer& renderer, const NUIRect& content
                                            std::round(renderer.calculateTextY(btn.bounds, fontSize))},
                               fontSize, color);
         };
-        drawBtnIcon(bypassIcon.get(), btns[0]);
-        drawBtnIcon(freezeIcon.get(), btns[1]);
-        drawBtnIcon(saveIcon.get(), btns[2]);
-        drawBtnIcon(m_mixLocked ? lockIcon.get() : unlockIcon.get(), btns[3]);
+        drawBtnIcon(freezeIcon.get(), btns[0]);
+        drawBtnIcon(saveIcon.get(), btns[1]);
+        drawBtnIcon(m_mixLocked ? lockIcon.get() : unlockIcon.get(), btns[2]);
 
         // Nav and A/B buttons — SVG chevrons for nav, text for A/B
         static const char* kChevronLeftSvg = R"svg(<svg viewBox="0 0 10 10" fill="none"><path d="M6.5 2L3.5 5L6.5 8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>)svg";
@@ -1222,7 +1210,6 @@ int AestraVerbEditor::hitTestPreset(float x, float y) const {
 }
 
 bool AestraVerbEditor::hitTestMix(float x, float y) const { return m_mixBounds.contains({x, y}); }
-bool AestraVerbEditor::hitTestBypass(float x, float y) const { return m_bypassBounds.contains({x, y}); }
 bool AestraVerbEditor::hitTestFreeze(float x, float y) const { return m_freezeBounds.contains({x, y}); }
 
 bool AestraVerbEditor::hitTestPresetNav(float x, float y, int& direction) const {
@@ -1420,7 +1407,6 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
         const int ch = contains ? hitTestCategory(event.position.x, event.position.y) : -1;
         const int ph = contains ? hitTestPreset(event.position.x, event.position.y) : -1;
         const bool mixHovered = contains && hitTestMix(event.position.x, event.position.y);
-        const bool bypassHovered = contains && hitTestBypass(event.position.x, event.position.y);
         const bool freezeHovered = contains && hitTestFreeze(event.position.x, event.position.y);
         int navDir = 0;
         const bool navHovered = contains && hitTestPresetNav(event.position.x, event.position.y, navDir);
@@ -1434,14 +1420,13 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
         const bool abHB = abHovered && !isA;
         const bool mixLockH = contains && hitTestMixLock(event.position.x, event.position.y);
         if (ch == m_hoveredCategory && ph == m_hoveredPreset && mixHovered == m_mixHovered &&
-            bypassHovered == m_bypassHovered && freezeHovered == m_freezeHovered &&
+            freezeHovered == m_freezeHovered &&
             navPrevH == m_navPrevHovered && navNextH == m_navNextHovered &&
             saveHovered == m_saveHovered && abHA == m_abHoveredA && abHB == m_abHoveredB &&
             mixLockH == m_mixLockHovered) return;
         m_hoveredCategory = ch;
         m_hoveredPreset = ph;
         m_mixHovered = mixHovered;
-        m_bypassHovered = bypassHovered;
         m_freezeHovered = freezeHovered;
         m_navPrevHovered = navPrevH;
         m_navNextHovered = navNextH;
@@ -1463,12 +1448,11 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
     }
     if (!contains && !isDraggingWindow() && !m_draggingMix) {
         if (m_hoveredCategory != -1 || m_hoveredPreset != -1 || m_mixHovered ||
-            m_bypassHovered || m_freezeHovered || m_navPrevHovered || m_navNextHovered ||
+            m_freezeHovered || m_navPrevHovered || m_navNextHovered ||
             m_saveHovered || m_abHoveredA || m_abHoveredB || m_mixLockHovered) {
             m_hoveredCategory = -1;
             m_hoveredPreset = -1;
             m_mixHovered = false;
-            m_bypassHovered = false;
             m_freezeHovered = false;
             m_navPrevHovered = false;
             m_navNextHovered = false;
@@ -1520,10 +1504,6 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
             m_focusedCategory = -1;
             m_focusedPreset = -1;
             updateParameter(kMix, (event.position.x - m_mixTrack.x) / std::max(1.0f, m_mixTrack.width));
-            return true;
-        }
-        if (hitTestBypass(event.position.x, event.position.y)) {
-            updateParameter(kBypass, getParamValue(kBypass) > 0.5f ? 0.0f : 1.0f);
             return true;
         }
         if (hitTestFreeze(event.position.x, event.position.y)) {

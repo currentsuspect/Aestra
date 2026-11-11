@@ -72,7 +72,6 @@ private:
     void drawCategoryPills(NUIRenderer& renderer, NUIColor accent);
     void drawModeDropdown(NUIRenderer& renderer, NUIColor accent);
     void drawMixSlider(NUIRenderer& renderer, NUIColor accent);
-    void drawBypassPill(NUIRenderer& renderer, NUIColor accent);
     void drawFreezePill(NUIRenderer& renderer, NUIColor accent);
     void drawSectionLabels(NUIRenderer& renderer);
     void drawPresetStrip(NUIRenderer& renderer, NUIColor accent);
@@ -85,13 +84,14 @@ private:
     int hitTestDropdown(float x, float y) const;
     int hitTestPreset(float x, float y) const;
     bool hitTestMix(float x, float y) const;
-    bool hitTestBypass(float x, float y) const;
-    // The editor's own coordinates start at the old 32 px title bar. With the two-row header that bar is the second
-    // header row, so everything the editor lays out is shifted down one row and the window is one row taller.
+    // The editor's own coordinates start where the old 32 px title bar did. The two-row header is 64 px, so its
+    // second row covers that bar and the layout is shifted down by only 16 px: the first block then sits 12 px under
+    // the header instead of 28. The window is 16 px taller than the old one.
+    static constexpr float kFrameShift = 16.0f;
     NUIRect frameBounds() const {
         auto b = getBounds();
-        b.y += AestraPanelWindow::TITLE_BAR_H;
-        b.height -= AestraPanelWindow::TITLE_BAR_H;
+        b.y += kFrameShift;
+        b.height -= kFrameShift;
         return b;
     }
     bool hitTestFreeze(float x, float y) const;
@@ -128,7 +128,6 @@ private:
     int m_selectedCategory = 0;
     NUIRect m_mixBounds;
     NUIRect m_mixTrack;
-    NUIRect m_bypassBounds;
     NUIRect m_freezeBounds;
     NUIRect m_navPrevBounds;
     NUIRect m_navNextBounds;
@@ -147,7 +146,6 @@ private:
     bool m_draggingMix = false;
     bool m_mixHovered = false;
     bool m_mixFocused = false;
-    bool m_bypassHovered = false;
     bool m_freezeHovered = false;
     bool m_navPrevHovered = false;
     bool m_navNextHovered = false;
@@ -163,7 +161,7 @@ private:
     ABState m_abA;
     ABState m_abB;
     int m_activeAB = 0; // 0 = none, 1 = A, 2 = B
-    static constexpr float kWinW = 880, kWinH = 620 + AestraPanelWindow::TITLE_BAR_H, kPad = 18, kRadius = 10;
+    static constexpr float kWinW = 880, kWinH = 620 + kFrameShift, kPad = 18, kRadius = 10;
     static constexpr float kKnobSize = 76, kKnobGap = 16;
     static constexpr int kParamCount = 18;
     static constexpr int kMaxVisiblePresets = 12;

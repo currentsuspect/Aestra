@@ -73,6 +73,8 @@ public:
     /// True when the panel gives it a second header row of its own (the two-row header, FD-73) instead of the
     /// title bar's free space. render() then gets that row.
     virtual void setHeaderMode(bool /*twoRow*/) {}
+    /// The A|B pair in the two-row header. An editor that has its own compare hides it (default shown).
+    virtual void setCompareShown(bool /*shown*/) {}
 };
 
 /**
@@ -109,6 +111,12 @@ public:
     /// accessory (preset controls, menu, power). Plugin editors turn it on; every other panel keeps one row.
     void setTwoRowHeader(bool twoRow);
     bool hasTwoRowHeader() const { return m_twoRowHeader; }
+    /// Hide or show the header's A|B pair (an editor with its own A / B compare hides it).
+    void setHeaderCompareShown(bool shown) {
+        m_compareShown = shown;
+        if (m_accessory) m_accessory->setCompareShown(shown);
+        setDirty(true);
+    }
     /// Where the plugin sits ("Channel 1 · Insert 1"), drawn after the title in the two-row header.
     void setPanelContext(const std::string& text);
     /// Height of everything above the content: 32 px, or 64 px with the two-row header.
@@ -229,6 +237,7 @@ private:
     bool m_hoverIn = false;
     std::string m_contextText;
     bool m_twoRowHeader = false;
+    bool m_compareShown = true;
     std::shared_ptr<PanelTitleAccessory> m_accessory;
     std::function<void()> m_onClose;
     std::function<void()> m_onWindowDragEnd;
