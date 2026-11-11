@@ -3197,17 +3197,16 @@ void AudioEngine::prepareTrackStateForGraph(const AudioGraph& graph) {
         }
 
         auto& state = m_trackState[track.trackIndex];
-        // The audio thread writes through pointers into these while it renders the CURRENT
-        // graph, so growing them must never reallocate. Full capacity is reserved the first
-        // time a track gets a send — while the vector is still empty, which means the current
-        // graph has no sends here and nothing points into it. Later growth constructs in place.
+        // The audio thread reads and writes these while it renders the CURRENT graph, so they
+        // must never change once a send exists: growing in place still moves the vector's end,
+        // which the audio thread's indexing reads (TSan, SendGrowthDuringPlaybackTest). They are
+        // sized in full the first time a track gets a send — while the vector is still empty,
+        // which means the current graph has no sends here and nothing touches it — and are
+        // never resized again. The audio thread only uses the first track.sends.size() slots.
         const size_t sendCount = std::min(track.sends.size(), kMaxSendsPerTrack);
         for (auto* gains : {&state.sendGainL, &state.sendGainR}) {
-            if (sendCount > 0 && gains->empty() && gains->capacity() < kMaxSendsPerTrack) {
-                gains->reserve(kMaxSendsPerTrack);
-            }
-            if (gains->size() < sendCount) {
-                gains->resize(sendCount);
+            if (sendCount > 0 && gains->size() < kMaxSendsPerTrack) {
+                gains->resize(kMaxSendsPerTrack);
             }
         }
         if (state.preFaderBuffer.capacity() < preFaderSize) {
