@@ -74,7 +74,7 @@ jobs:
       - name: Package
         shell: pwsh
         run: |
-          $out = "Aestra-v0.8.2-preview-windows-x64"
+          $out = "Aestra-v0.8.3-preview-windows-x64"
           New-Item -ItemType Directory -Force -Path $out | Out-Null
           Copy-Item build\bin\Aestra.exe $out\
           if (Test-Path build\bin\AestraPluginHost.exe) { Copy-Item build\bin\AestraPluginHost.exe $out\ }
@@ -98,7 +98,7 @@ jobs:
           Invoke-WebRequest "https://github.com/pal1000/mesa-dist-win/releases/download/$ver/mesa3d-$ver-release-msvc.7z" -OutFile mesa.7z
           7z x mesa.7z -omesa -y | Out-Null
           $test = "smoke"
-          Copy-Item -Recurse "Aestra-v0.8.2-preview-windows-x64" $test
+          Copy-Item -Recurse "Aestra-v0.8.3-preview-windows-x64" $test
           Copy-Item mesa\x64\*.dll $test\
           $env:GALLIUM_DRIVER = "llvmpipe"
           $env:APPDATA = "$PWD\smoke-appdata"; New-Item -ItemType Directory -Force $env:APPDATA | Out-Null
@@ -128,8 +128,8 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Aestra-v0.8.2-preview-windows-x64
-          path: Aestra-v0.8.2-preview-windows-x64
+          name: Aestra-v0.8.3-preview-windows-x64
+          path: Aestra-v0.8.3-preview-windows-x64
           retention-days: 30
 
   linux:
@@ -168,7 +168,7 @@ jobs:
 
       - name: Package
         run: |
-          out=Aestra-v0.8.2-preview-linux-x64
+          out=Aestra-v0.8.3-preview-linux-x64
           mkdir -p "$out"
           cp build/bin/Aestra "$out/"
           [ -f build/bin/AestraPluginHost ] && cp build/bin/AestraPluginHost "$out/"
@@ -188,8 +188,8 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Aestra-v0.8.2-preview-linux-x64
-          path: Aestra-v0.8.2-preview-linux-x64.tar.gz
+          name: Aestra-v0.8.3-preview-linux-x64
+          path: Aestra-v0.8.3-preview-linux-x64.tar.gz
           retention-days: 30
 
   publish:
@@ -215,7 +215,7 @@ jobs:
           AESTRA_UPDATE_UPLOAD_KEY: ${{ secrets.AESTRA_UPDATE_UPLOAD_KEY }}
         run: |
           pip install --quiet cryptography
-          # early-access/v0.8.2 -> 0.8.2-preview.<run number>: each push is newer than the last
+          # early-access/v0.8.3 -> 0.8.3-preview.<run number>: each push is newer than the last
           base=${GITHUB_REF_NAME#early-access/v}
           version="${base}-preview.${GITHUB_RUN_NUMBER}"
           printf 'Early-access build %s (%s)\n' "$version" "$(git log -1 --format=%s)" > notes.txt

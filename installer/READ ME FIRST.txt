@@ -1,8 +1,8 @@
-AESTRA v0.8.2 preview (early access)
+AESTRA v0.8.3 preview (early access)
 ====================================
 
-Thank you for trying Aestra this early. This is a preview of the next version: newer
-than the one shown in the videos, with VST3 and CLAP plugin support built in.
+Thank you for trying Aestra this early. This is a preview of the next version, v0.8.3:
+newer than the v0.8.2 alpha, with the fixes made since.
 It is an alpha. The main parts work, some parts are rough, and some features are
 still being built.
 
@@ -23,6 +23,10 @@ You should only need to download Aestra once. Open Settings > Updates, choose th
 Early channel, and paste the founder key from your email. Aestra then checks for new
 builds by itself and offers "Download and install" when one is ready. Your projects
 are not touched.
+
+What we can see: the last day your key checked for updates, whether it was Windows or
+Linux, and which build it fetched. That is how we count testers. Nothing else is sent:
+no project data, no usage tracking.
 
 PLUGINS
 -------
