@@ -18,12 +18,14 @@ void SettingsDialog::createUI() {
     m_cancelButton = std::make_shared<AestraUI::NUIButton>();
     m_cancelButton->setText("Discard");
     m_cancelButton->setStyle(AestraUI::NUIButton::Style::Secondary);
+    m_cancelButton->setLook(AestraUI::NUIButton::Look::Soft, AestraUI::NUIButton::Tone::Neutral); // Design Spec: dialog actions are standalone pills
     m_cancelButton->setOnClick([this]() { discardAll(); });
     addChild(m_cancelButton);
 
     m_okButton = std::make_shared<AestraUI::NUIButton>();
     m_okButton->setText("Save changes");
     m_okButton->setStyle(AestraUI::NUIButton::Style::Primary);
+    m_okButton->setLook(AestraUI::NUIButton::Look::Solid, AestraUI::NUIButton::Tone::Accent); // Design Spec: dialog actions are standalone pills
     m_okButton->setOnClick([this]() { saveAll(); });
     addChild(m_okButton);
 }

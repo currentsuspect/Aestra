@@ -83,6 +83,7 @@ void ExportDialog::buildControls() {
     addChild(m_outputInput);
     m_browseButton = std::make_shared<AestraUI::NUIButton>("Browse");
     m_browseButton->setStyle(AestraUI::NUIButton::Style::Secondary);
+    m_browseButton->setLook(AestraUI::NUIButton::Look::Soft, AestraUI::NUIButton::Tone::Neutral); // Design Spec: dialog actions are standalone pills
     m_browseButton->setOnClick([this]() { openBrowse(); });
     addChild(m_browseButton);
 
@@ -137,10 +138,12 @@ void ExportDialog::buildControls() {
 
     m_exportButton = std::make_shared<AestraUI::NUIButton>("Export");
     m_exportButton->setStyle(AestraUI::NUIButton::Style::Primary);
+    m_exportButton->setLook(AestraUI::NUIButton::Look::Solid, AestraUI::NUIButton::Tone::Accent); // Design Spec: dialog actions are standalone pills
     m_exportButton->setOnClick([this]() { startExport(); });
     addChild(m_exportButton);
     m_cancelButton = std::make_shared<AestraUI::NUIButton>("Cancel");
     m_cancelButton->setStyle(AestraUI::NUIButton::Style::Secondary);
+    m_cancelButton->setLook(AestraUI::NUIButton::Look::Quiet, AestraUI::NUIButton::Tone::Neutral); // Design Spec: dialog actions are standalone pills
     m_cancelButton->setOnClick([this]() {
         if (m_panelState == PanelState::Progress)
             m_cancelRequested = true;
@@ -150,6 +153,7 @@ void ExportDialog::buildControls() {
     addChild(m_cancelButton);
     m_doneButton = std::make_shared<AestraUI::NUIButton>("Done");
     m_doneButton->setStyle(AestraUI::NUIButton::Style::Primary);
+    m_doneButton->setLook(AestraUI::NUIButton::Look::Solid, AestraUI::NUIButton::Tone::Accent); // Design Spec: dialog actions are standalone pills
     m_doneButton->setOnClick([this]() { finish(); });
     addChild(m_doneButton);
 
