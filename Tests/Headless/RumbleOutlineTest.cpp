@@ -81,7 +81,13 @@ void theScaleIsTheSketchs() {
     check(std::fabs(RumbleOutline::xOf(0.39) - std::sqrt(0.1)) < 1e-12, "on a square-root scale");
     check(RumbleOutline::xOf(-1.0) == 0.0 && RumbleOutline::xOf(10.0) == 1.0, "and stays inside it");
     check(std::fabs(RumbleOutline::secondsAt(RumbleOutline::xOf(1.234)) - 1.234) < 1e-12, "secondsAt undoes xOf");
-    check(std::fabs(RumbleOutline::xOfBin(65) - 0.5) < 1e-12, "bin 65 of 260 sits half way across");
+    // Bin j starts at (j/260)^2 of the picture's time, so it sits at xOf(that) = j/260 across. (The sketch drew
+    // it at sqrt(j/260), a second square root, so its outline ran past its own grid and handles.)
+    check(std::fabs(RumbleOutline::xOfBin(65) - 0.25) < 1e-12, "bin 65 of 260 sits a quarter of the way across");
+    for (size_t j : {1u, 40u, 130u, 259u}) {
+        const double start = std::pow(static_cast<double>(j) / RumbleOutline::kBins, 2.0) * RumbleOutline::kSeconds;
+        check(std::fabs(RumbleOutline::xOfBin(j) - RumbleOutline::xOf(start)) < 1e-12, "a bin sits where its time does");
+    }
 
     const RumbleSound sound = rumbleSoundOf(kRumbleFactoryPresets[0]);
     const double drop = RumbleVoice::dropSemitones(sound[RumbleSound::Punch]);

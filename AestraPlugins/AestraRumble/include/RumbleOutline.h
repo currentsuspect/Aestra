@@ -38,7 +38,8 @@ struct RumbleOutline {
     // Where a moment sits across the picture, 0 to 1 (the sketch's square-root scale), and back.
     static double xOf(double seconds);
     static double secondsAt(double x);
-    // Bin j is drawn at xOf the start of its time span: sqrt(j / kBins).
+    // Bin j is drawn at xOf the start of its time span, which is j / kBins: the bins are already spaced on the
+    // square-root scale. (The sketch drew them at sqrt(j / kBins), off its own grid; corrected 2026-11-12.)
     static double xOfBin(size_t bin);
 
     // How far above its note the sound is at a moment, in semitones: the pitch line over the picture.

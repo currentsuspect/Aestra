@@ -40,8 +40,9 @@ double RumbleOutline::secondsAt(double x) {
     return clamped * clamped * kSeconds;
 }
 
+// Bin j starts at (j / kBins)^2 of the picture's time, so on the square-root scale it sits at j / kBins.
 double RumbleOutline::xOfBin(size_t bin) {
-    return std::sqrt(static_cast<double>(bin) / static_cast<double>(kBins));
+    return static_cast<double>(bin) / static_cast<double>(kBins);
 }
 
 double RumbleOutline::pitchAbove(const RumbleSound& sound, double seconds) {
