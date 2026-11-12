@@ -44,6 +44,8 @@ public:
 
     void drawContent(NUIRenderer& renderer, const NUIRect& contentRect) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
+    // Left and Right move between the sounds, Down makes six more, Up goes back a step (SPEC-025 R8).
+    bool onKeyEvent(const NUIKeyEvent& event) override;
     void onResize(int width, int height) override;
 
     // For tests and the screenshot recipe: the session the screen draws.

@@ -591,6 +591,31 @@ void RumblePluginEditor::dragHandle(const NUIPoint& p) {
     soundChanged();
 }
 
+bool RumblePluginEditor::onKeyEvent(const NUIKeyEvent& event) {
+    if (!isVisible()) return false;
+    if (routeKeyToAccessory(event)) return true; // the preset bar's browser or Save form takes typing first
+    if (!event.pressed) return AestraPanelWindow::onKeyEvent(event);
+    switch (event.keyCode) {
+    case NUIKeyCode::Left:
+        m_session->moveSelection(-1);
+        break;
+    case NUIKeyCode::Right:
+        m_session->moveSelection(1);
+        break;
+    case NUIKeyCode::Down:
+        m_outlines->forgetPending();
+        m_session->more();
+        break;
+    case NUIKeyCode::Up:
+        m_session->back();
+        break;
+    default:
+        return AestraPanelWindow::onKeyEvent(event);
+    }
+    soundChanged();
+    return true;
+}
+
 bool RumblePluginEditor::onMouseEvent(const NUIMouseEvent& event) {
     if (!isVisible()) return false;
     if (AestraPanelWindow::onMouseEvent(event)) return true;
@@ -610,6 +635,7 @@ bool RumblePluginEditor::onMouseEvent(const NUIMouseEvent& event) {
 
     const bool contains = getBounds().contains(event.position);
     if (!contains && knobDragParam() < 0) return false;
+    if (contains && event.pressed) setFocused(true); // so the arrow keys come here (R8)
 
     // Double-click on a control puts its setting back to how the sound arrived.
     if (event.pressed && event.button == NUIMouseButton::Left) {
