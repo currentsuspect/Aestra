@@ -99,6 +99,26 @@ void runGain(bool shm) {
         check(std::fabs(plugin.getParameter(7) - 0.25f) < 1e-4f, "a set value reads back (0.25)");
         check(std::fabs(played - 0.25f) < 1e-4f, "and the plugin plays at it (x0.25)");
 
+        // What a block's reply costs to read. On the hex transport a reply is about 4,100 characters, and reading
+        // it a byte at a time took about 4,100 system calls: on a busy runner under ThreadSanitizer that was
+        // longer than a block, so every answer came back late and the check above failed for the whole ten
+        // seconds (#1285). A count, not a time, so it says the same thing on any machine.
+        {
+            const uint64_t readsBefore = plugin.helperPipeReadCount();
+            const uint64_t blocksBefore = plugin.helperBlockCount();
+            const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+            while (plugin.helperBlockCount() < blocksBefore + 20 && std::chrono::steady_clock::now() < until) {
+                plugin.process(ins, outs, 2, 2, 256);
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            }
+            const uint64_t blocks = plugin.helperBlockCount() - blocksBefore;
+            const uint64_t reads = plugin.helperPipeReadCount() - readsBefore;
+            check(blocks >= 20, "twenty more blocks are answered");
+            check(blocks > 0 && reads <= blocks * 8,
+                  "a block's reply is read in a few calls, not one per byte (" + std::to_string(reads) + " reads for " +
+                      std::to_string(blocks) + " blocks)");
+        }
+
         // The engine's tempo and play state reach the plugin through the helper (HostTransport.h). The fixture
         // reports what its last block was told: Host Tempo = bpm / 1000, Host Playing = 1 or 0.
         const auto playFor = [&](const HostTransport& t) {
