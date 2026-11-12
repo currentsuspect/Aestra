@@ -33,8 +33,9 @@ RumbleFindSession fresh(uint64_t seed = 7) {
 void startsWithSixAndTheFirstPicked() {
     auto s = fresh();
     check(s.stepCount() == 1 && s.currentStep() == 0, "one step to start");
-    check(s.selected() == 0, "the first of the six is picked");
-    check(same(s.current(), s.step(0).six[0]), "and it is what plays");
+    // Opening Rumble must not change the sound on the track: the start itself is picked, not one of the six.
+    check(s.selected() == RumbleFindSession::kParent, "the starting sound stays picked");
+    check(same(s.current(), s.step(0).parent), "and it is what plays");
     check(same(s.step(0).parent, rumbleSoundOf(kRumbleFactoryPresets[0])), "the six come from the starting sound");
     check(s.nameOf(RumbleFindSession::kParent) == "Balanced 808", "the start keeps its own name");
     check(s.soundsMade() == 6, "six sounds made");

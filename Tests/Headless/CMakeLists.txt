@@ -132,7 +132,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RumbleFindSessionTest.cpp")
     target_compile_features(RumbleFindSessionTest PRIVATE cxx_std_17)
     add_test(NAME RumbleFindSessionTest COMMAND RumbleFindSessionTest)
     set_tests_properties(RumbleFindSessionTest PROPERTIES
-        LABELS "headless;rumble;plugin"
+        LABELS "headless;rumble;plugin;contract:plugins"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()

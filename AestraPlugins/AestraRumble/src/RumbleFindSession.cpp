@@ -59,6 +59,7 @@ bool sameSound(const RumbleSound& a, const RumbleSound& b) {
 
 RumbleFindSession::RumbleFindSession(const RumbleSound& start, std::string startName, uint64_t seed) : m_seed(seed) {
     makeStep(start, std::move(startName));
+    m_steps.front().selected = kParent; // opening Rumble keeps the sound the track already has
     m_said = "Pick a sound, then ask for six more like it.";
 }
 
