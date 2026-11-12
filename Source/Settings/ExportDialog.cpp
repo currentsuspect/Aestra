@@ -115,6 +115,7 @@ void ExportDialog::buildControls() {
     addChild(m_tailField);
 
     m_stemsCheckbox = std::make_shared<AestraUI::NUICheckbox>("One file per track (stems), plus the master");
+    m_stemsCheckbox->setStyle(AestraUI::NUICheckbox::Style::Toggle); // Design Spec: on/off is a toggle
     m_stemsCheckbox->setOnCheckedChange([this](bool on) {
         m_stems = on;
         applyPanelState();

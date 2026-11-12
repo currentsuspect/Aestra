@@ -52,6 +52,14 @@ void focusRing(NUIRenderer& renderer, const NUIRect& rect, float radius, float g
 /// Never over a control, the timeline, clips or the mixer's bar meters.
 void glass(NUIRenderer& renderer, const NUIRect& rect, float radius);
 
+/// Design Spec, Slider (locked): a fader on its side. A 6px sunk slot across @p track (centred vertically), the
+/// travelled part in primary from the left, or from @p origin for a bipolar value (pan, width), with a 1px centre tick.
+/// @p t and @p origin are 0..1 along the slot. @p enabled false draws the travel in textDisabled.
+void sliderSlot(NUIRenderer& renderer, const NUIRect& track, float t, float origin = 0.0f, bool enabled = true);
+/// The slider's cap: the fader cap turned 90 degrees, 22 by 16, lit on top, vertical grip ridges and one
+/// textPrimary centre line; @p held lifts it.
+void sliderCap(NUIRenderer& renderer, const NUIPoint& centre, bool held = false);
+
 /// The radius scale (Design Spec rule 4). Clips, the timeline and plugin windows are sharp.
 namespace Radius {
 inline constexpr float sharp = 0.0f;

@@ -1308,8 +1308,8 @@ void deriveFromKitTokens(NUIThemeProperties& t) {
     t.sliderHandle = t.primary;
     t.sliderHandleHover = t.primaryHover;
     t.sliderHandlePressed = t.primaryPressed;
-    t.inputBgDefault = t.backgroundSecondary;
-    t.inputBgHover = t.surfaceTertiary;
+    t.inputBgDefault = t.backgroundPrimary; // Design Spec: a field is a well in the bed
+    t.inputBgHover = t.backgroundPrimary;
     t.inputBorderFocus = t.focusRing;
     t.armed = t.error;
     t.muted = t.warning;
