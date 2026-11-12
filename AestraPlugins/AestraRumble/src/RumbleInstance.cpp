@@ -20,11 +20,12 @@ namespace {
 constexpr double kSlideOff = 0.02;
 // Level used before any note's level is known: a typical raw peak, so a first note is near the right loudness.
 constexpr double kFallbackPeak = 1.2;
-// The 808's own range, C1 to C4, is levelled as soon as the sound changes, nearest C2 first. Any other key
-// is levelled when it is first played (until then it borrows the nearest levelled key).
-constexpr int kLevelRangeLow = 24;
-constexpr int kLevelRangeHigh = 60;
-constexpr int kLevelCentre = 36;
+// The 808's own range, keys C3 to C6 (Aestra's naming, C3 = MIDI 60), is levelled as soon as the sound
+// changes, nearest C4 first. Any other key is levelled when it is first played (until then it borrows the
+// nearest levelled key). Levels are kept per key, not per pitch.
+constexpr int kLevelRangeLow = 60;
+constexpr int kLevelRangeHigh = 96;
+constexpr int kLevelCentre = 72;
 
 struct ParameterInfo {
     const char* key;
@@ -185,14 +186,14 @@ void RumbleInstance::handleMidiEvent(const Aestra::Audio::MidiBuffer::Event& eve
         }
         const RumbleSound now = sound();
         if (overlapping && now[RumbleSound::Slide] > kSlideOff && m_voice.active()) {
-            m_voice.slideTo(note);
+            m_voice.slideTo(pitchOfKey(note));
             return;
         }
         if (m_voice.active()) {
             m_fading = m_voice;
             m_fading.stop();
         }
-        m_voice.start(now, note, levelFor(note), velocityGain(getParameter(kVelocity), velocity));
+        m_voice.start(now, pitchOfKey(note), levelFor(note), velocityGain(getParameter(kVelocity), velocity));
     } else if (status == 0x80 || (status == 0x90 && velocity == 0)) {
         // A one-shot rings for its own length; letting go of the key only ends the overlap that makes a slide.
         if (m_held[note]) {
@@ -277,7 +278,7 @@ void RumbleInstance::levelWorker() {
         if (m_soundVersion.load(std::memory_order_acquire) != version) {
             continue; // changed while being read
         }
-        const double peak = RumbleVoice::rawPeak(snapshot, note, rate);
+        const double peak = RumbleVoice::rawPeak(snapshot, pitchOfKey(note), rate);
         if (m_soundVersion.load(std::memory_order_acquire) == version) {
             m_peak[note].store(static_cast<float>(peak), std::memory_order_relaxed);
             m_peakVersion[note].store(version, std::memory_order_release);

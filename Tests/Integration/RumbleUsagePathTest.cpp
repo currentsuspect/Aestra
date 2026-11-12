@@ -116,7 +116,7 @@ int main() {
         MidiBuffer midi;
 
         if (!noteOnSent) {
-            midi.addNoteOn(1, 36, 112, 0);
+            midi.addNoteOn(1, 72, 112, 0);
             noteOnSent = true;
         }
 

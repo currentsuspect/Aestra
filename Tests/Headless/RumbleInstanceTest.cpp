@@ -67,7 +67,23 @@ std::vector<float> play(RumbleInstance& rumble, const std::vector<Note>& notes, 
 void ready(RumbleInstance& rumble, double rate, uint32_t block) {
     rumble.initialize(rate, block);
     rumble.activate();
-    check(rumble.waitForLevels(30000), "levels for C1 to C4 are found");
+    check(rumble.waitForLevels(30000), "levels for C3 to C6 are found");
+}
+
+// The DAW's root note is C3 (MIDI 60, Aestra's naming). Pressing it plays the sound at its home pitch, the
+// low C0 (MIDI 24) the sketch was approved at, the way a sampler plays its root key (founder, 2026-11-12).
+void c3PlaysTheSoundAtItsHomePitch() {
+    const RumbleSound sound = rumbleSoundOf(kRumbleFactoryPresets[0]);
+    const auto reference = RumbleVoice::render(sound, 24, 48000.0);
+    RumbleInstance rumble;
+    rumble.setSound(sound);
+    ready(rumble, 48000.0, 256);
+    const auto out = play(rumble, {{0, true, 60}, {4800, false, 60}}, reference.size(), 256);
+    double worst = 0.0;
+    for (size_t i = 0; i < out.size(); ++i) {
+        worst = std::max(worst, std::fabs(static_cast<double>(out[i]) - reference[i]));
+    }
+    check(worst < 1.0e-6, "key C3 plays the sound at C0 (worst " + std::to_string(worst) + ")");
 }
 
 void playsTheApprovedVoiceExactly() {
@@ -83,7 +99,7 @@ void playsTheApprovedVoiceExactly() {
                 RumbleInstance rumble;
                 rumble.setSound(sound);
                 ready(rumble, 48000.0, block);
-                const auto out = play(rumble, {{0, true, static_cast<uint8_t>(note)}, {4800, false, static_cast<uint8_t>(note)}},
+                const auto out = play(rumble, {{0, true, static_cast<uint8_t>(note + 36)}, {4800, false, static_cast<uint8_t>(note + 36)}},
                                       reference.size() + 2000, block);
                 double worst = 0.0;
                 for (size_t i = 0; i < out.size(); ++i) {
@@ -101,7 +117,7 @@ void everyNoteIsLevelled() {
     RumbleInstance rumble;
     rumble.setSound(rumbleSoundOf(kRumbleFactoryPresets[5])); // Hard clip: the loudest raw sound
     ready(rumble, 44100.0, 256);
-    for (int note = 24; note <= 60; note += 5) {
+    for (int note = 60; note <= 96; note += 5) {
         const auto out = play(rumble, {{0, true, static_cast<uint8_t>(note)}}, 44100 * 5, 256);
         float peak = 0.0f;
         for (float v : out) {
@@ -114,25 +130,25 @@ void everyNoteIsLevelled() {
 void aKeyOutsideTheRangeIsLevelledWhenPlayed() {
     RumbleInstance rumble;
     ready(rumble, 48000.0, 128);
-    play(rumble, {{0, true, 84}}, 48000, 128); // C6: borrows the nearest level and asks for its own
+    play(rumble, {{0, true, 108}}, 48000, 128); // C7, above the range: borrows the nearest level and asks for its own
     bool levelled = false;
     for (int i = 0; i < 400 && !levelled; ++i) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        const auto out = play(rumble, {{0, true, 84}}, 48000 * 2, 128);
+        const auto out = play(rumble, {{0, true, 108}}, 48000 * 2, 128);
         float peak = 0.0f;
         for (float v : out) {
             peak = std::max(peak, std::fabs(v));
         }
         levelled = std::fabs(peak - 0.85f) < 1.0e-4f;
     }
-    check(levelled, "a key played outside C1 to C4 gets its own exact level soon after");
+    check(levelled, "a key played outside C3 to C6 gets its own exact level soon after");
 }
 
 void aNewNoteCutsTheOldOneCleanly() {
     RumbleInstance rumble;
     rumble.setSound(rumbleSoundOf(kRumbleFactoryPresets[3])); // Long tail: still loud when cut
     ready(rumble, 48000.0, 256);
-    const auto out = play(rumble, {{0, true, 29}, {200, false, 29}, {24000, true, 31}}, 72000, 256);
+    const auto out = play(rumble, {{0, true, 65}, {200, false, 65}, {24000, true, 67}}, 72000, 256);
     float peak = 0.0f;
     for (float v : out) {
         peak = std::max(peak, std::fabs(v));
@@ -141,7 +157,7 @@ void aNewNoteCutsTheOldOneCleanly() {
     RumbleInstance solo;
     solo.setSound(rumbleSoundOf(kRumbleFactoryPresets[3]));
     ready(solo, 48000.0, 256);
-    const auto alone = play(solo, {{0, true, 31}}, 48000, 256);
+    const auto alone = play(solo, {{0, true, 67}}, 48000, 256);
     // 30 ms after the cut the old note is gone: only the new note sounds.
     double worst = 0.0;
     for (size_t i = 24000 + 1440; i < 24000 + 4800; ++i) {
@@ -155,11 +171,11 @@ void slideOnlyWhenNotesOverlapAndSlideIsOn() {
     RumbleInstance rumble;
     rumble.setSound(glide);
     ready(rumble, 48000.0, 64);
-    const auto slid = play(rumble, {{0, true, 29}, {9600, true, 36}, {14400, false, 29}}, 30000, 64);
+    const auto slid = play(rumble, {{0, true, 65}, {9600, true, 72}, {14400, false, 65}}, 30000, 64);
     RumbleInstance fresh;
     fresh.setSound(glide);
     ready(fresh, 48000.0, 64);
-    const auto restarted = play(fresh, {{0, true, 29}, {9000, false, 29}, {9600, true, 36}}, 30000, 64);
+    const auto restarted = play(fresh, {{0, true, 65}, {9000, false, 65}, {9600, true, 72}}, 30000, 64);
     double differs = 0.0;
     for (size_t i = 9600; i < 14400; ++i) {
         differs = std::max(differs, static_cast<double>(std::fabs(slid[i] - restarted[i])));
@@ -173,8 +189,8 @@ void slideOnlyWhenNotesOverlapAndSlideIsOn() {
     RumbleInstance offFresh;
     offFresh.setSound(glide);
     ready(offFresh, 48000.0, 64);
-    const auto a = play(off, {{0, true, 29}, {9600, true, 36}}, 20000, 64);
-    const auto b = play(offFresh, {{0, true, 29}, {9000, false, 29}, {9600, true, 36}}, 20000, 64);
+    const auto a = play(off, {{0, true, 65}, {9600, true, 72}}, 20000, 64);
+    const auto b = play(offFresh, {{0, true, 65}, {9000, false, 65}, {9600, true, 72}}, 20000, 64);
     double same = 0.0;
     for (size_t i = 0; i < a.size(); ++i) {
         same = std::max(same, static_cast<double>(std::fabs(a[i] - b[i])));
@@ -216,9 +232,9 @@ void softerHitsPlayQuieter() {
         RumbleInstance rumble;
         rumble.setParameter(RumbleInstance::kVelocity, amount);
         ready(rumble, 48000.0, 256);
-        const float full = peakOf(play(rumble, {{0, true, 36, 127}}, 48000 * 2, 256));
-        const float half = peakOf(play(rumble, {{0, true, 36, 64}}, 48000 * 2, 256));
-        const float soft = peakOf(play(rumble, {{0, true, 36, 1}}, 48000 * 2, 256));
+        const float full = peakOf(play(rumble, {{0, true, 72, 127}}, 48000 * 2, 256));
+        const float half = peakOf(play(rumble, {{0, true, 72, 64}}, 48000 * 2, 256));
+        const float soft = peakOf(play(rumble, {{0, true, 72, 1}}, 48000 * 2, 256));
         check(std::fabs(full - 0.85f) < 1.0e-4f, "a full-velocity hit is the levelled sound at any Velocity setting");
         const double halfDb = 20.0 * std::log10(half / full);
         const double softDb = 20.0 * std::log10(soft / full);
@@ -251,8 +267,8 @@ void costsLittleToPlay() {
     ready(rumble, 48000.0, 512);
     std::vector<Note> notes;
     for (uint64_t f = 0; f < 48000 * 10; f += 6000) {
-        notes.push_back({f, true, static_cast<uint8_t>(29 + (f / 6000) % 8)});
-        notes.push_back({f + 3000, false, static_cast<uint8_t>(29 + (f / 6000) % 8)});
+        notes.push_back({f, true, static_cast<uint8_t>(65 + (f / 6000) % 8)});
+        notes.push_back({f + 3000, false, static_cast<uint8_t>(65 + (f / 6000) % 8)});
     }
     const auto start = std::chrono::steady_clock::now();
     play(rumble, notes, 48000 * 10, 512);
@@ -263,6 +279,7 @@ void costsLittleToPlay() {
 } // namespace
 
 int main() {
+    c3PlaysTheSoundAtItsHomePitch();
     playsTheApprovedVoiceExactly();
     everyNoteIsLevelled();
     aKeyOutsideTheRangeIsLevelledWhenPlayed();

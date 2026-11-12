@@ -68,6 +68,11 @@ public:
     // Waits until levelsReady() or the timeout. Never from the audio thread.
     bool waitForLevels(int timeoutMs) const;
 
+    // Keys sit 36 semitones above the pitch they play: the DAW's root note C3 (MIDI 60, Aestra's naming) plays
+    // the sound at its home pitch C0 (MIDI 24), the way a sampler plays its root key (founder, 2026-11-12).
+    static constexpr int kKeyShift = 36;
+    static constexpr int pitchOfKey(int key) { return key - kKeyShift; }
+
     static constexpr float kDefaultVelocity = 0.5f;
     static const char* parameterKey(uint32_t id);
     static const char* parameterName(uint32_t id);

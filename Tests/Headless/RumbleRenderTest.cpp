@@ -194,9 +194,9 @@ int main(int argc, char* argv[]) {
     const std::string outputBase = (argc >= 2) ? argv[1] : "rumble_test";
 
     const std::vector<Preset> presets = {
-        {"clean", 0.48f, 0.04f, 0.22f, 0.58f, 36},
-        {"balanced", 0.58f, 0.10f, 0.30f, 0.56f, 36},
-        {"driven", 0.64f, 0.22f, 0.42f, 0.52f, 34},
+        {"clean", 0.48f, 0.04f, 0.22f, 0.58f, 72},
+        {"balanced", 0.58f, 0.10f, 0.30f, 0.56f, 72},
+        {"driven", 0.64f, 0.22f, 0.42f, 0.52f, 70},
     };
 
     std::vector<RenderStats> stats;
