@@ -125,6 +125,13 @@ public:
     int width() const { return m_width; }
     int height() const { return m_height; }
 
+    /// Bring the window to the front. The app cannot raise it itself: another process owns it.
+    void raise() {
+        if (!m_display || !m_window) return;
+        XRaiseWindow(m_display, m_window);
+        XFlush(m_display);
+    }
+
     void close() { teardown(true); }
 
     /// What the command loop should wait on besides its own input: the X connection, and the plugin's descriptors.
@@ -257,6 +264,12 @@ public:
     bool isOpen() const { return m_window != nullptr; }
     int width() const { return m_width; }
     int height() const { return m_height; }
+
+    /// Bring the window to the front. The app cannot raise it itself: another process owns it.
+    void raise() {
+        if (!m_window) return;
+        SetForegroundWindow(m_window);
+    }
 
     void close() { teardown(true); }
 

@@ -1196,6 +1196,17 @@ void OutOfProcessPluginInstance::closeEditor() {
     sendCommand("EDITOR CLOSE", nullptr, std::chrono::seconds(5));
 }
 
+bool OutOfProcessPluginInstance::raiseEditor() {
+    if (!m_editorOpen.load(std::memory_order_acquire)) return false;
+    std::string response;
+    if (!sendCommand("EDITOR RAISE", &response, std::chrono::seconds(5))) return false;
+    if (response.find("OK") == 0) return true;
+    // The helper no longer has a window (the user closed it with its own button).
+    // Record that, so the caller reopens instead of raising nothing.
+    m_editorOpen.store(false, std::memory_order_release);
+    return false;
+}
+
 std::pair<int, int> OutOfProcessPluginInstance::getEditorSize() const {
     return {m_editorWidth.load(std::memory_order_relaxed), m_editorHeight.load(std::memory_order_relaxed)};
 }

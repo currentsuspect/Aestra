@@ -593,7 +593,7 @@ int main(int argc, char** argv) {
 #endif
             reply("OK INIT");
         } else if (command == "EDITOR") {
-            // V82-H3: EDITOR OPEN <titleHex> -> OK EDITOR <w> <h> | ERR; EDITOR CLOSE; EDITOR STATE -> OK EDITOR OPEN|CLOSED
+            // V82-H3: EDITOR OPEN <titleHex> -> OK EDITOR <w> <h> | ERR; EDITOR RAISE; EDITOR CLOSE; EDITOR STATE -> OK EDITOR OPEN|CLOSED
             std::string sub;
             input >> sub;
 #if defined(AESTRA_HELPER_HAS_EDITORS)
@@ -608,6 +608,17 @@ int main(int argc, char** argv) {
                 if (clapModule.plugin) backend = clapEditorBackend(clapModule);
                 if (!editorHost.open(std::move(backend), hexDecode(titleHex), w, h)) reply("ERR no-editor");
                 else reply("OK EDITOR " + std::to_string(w) + " " + std::to_string(h));
+            } else if (sub == "RAISE") {
+                // Clicking Edit on a plugin whose window is already open behind the app: the
+                // window belongs to this process, so only this process can bring it forward.
+                // If it is no longer open (the user closed it), say so: the app reopens it
+                // rather than believing a window it cannot see is in front.
+                if (!editorHost.isOpen()) {
+                    reply("ERR no-editor");
+                } else {
+                    editorHost.raise();
+                    reply("OK EDITOR RAISED");
+                }
             } else if (sub == "CLOSE") {
                 editorHost.close();
                 reply("OK EDITOR CLOSED");

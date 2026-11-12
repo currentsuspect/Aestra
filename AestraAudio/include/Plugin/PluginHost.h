@@ -270,6 +270,17 @@ public:
     virtual bool ownsEditorWindow() const { return false; }
 
     /**
+     * @brief Raise an already-open editor to the front.
+     * @return true when the host could do it. False is not an error: an in-process
+     * editor is a widget the app itself raises.
+     *
+     * Needed because a sandboxed plugin's window belongs to another process, so the
+     * app cannot raise it directly: asking the host beats doing nothing when someone
+     * clicks Edit on an editor that is already open behind the main window.
+     */
+    virtual bool raiseEditor() { return false; }
+
+    /**
      * @brief Close the plugin editor window
      */
     virtual void closeEditor() = 0;

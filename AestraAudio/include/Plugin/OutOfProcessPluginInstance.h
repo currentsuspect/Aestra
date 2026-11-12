@@ -64,6 +64,7 @@ public:
     bool hasEditor() const override;
     bool openEditor(void* parentWindow) override;
     bool ownsEditorWindow() const override { return true; } // the helper makes the window (V82-H3 / H8)
+    bool raiseEditor() override;
     void closeEditor() override;
     bool isEditorOpen() const override { return m_editorOpen.load(std::memory_order_acquire); }
     std::pair<int, int> getEditorSize() const override;

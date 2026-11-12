@@ -25,6 +25,8 @@
 #include "Models/TrackManager.h"
 #include "Core/MixerChannel.h"
 
+#include "../../AestraCore/include/AestraLog.h"
+
 #include <algorithm>
 
 #ifdef AESTRAUI_ENABLE_PREMIUM_EDITORS
@@ -51,6 +53,12 @@ static_assert(EffectChainRack::MAX_SLOTS == static_cast<int>(Aestra::Audio::Effe
 PluginUIController::PluginUIController() = default;
 
 PluginUIController::~PluginUIController() {
+    // Close the plugin windows before anything they point at goes away: a sandboxed
+    // plugin's window keeps the helper alive, and the helper keeps the plugin loaded.
+    for (auto& window : m_nativeEditors) {
+        if (window) window->close();
+    }
+    m_nativeEditors.clear();
     unbindBrowser();
     for (auto& binding : m_rackBindings) {
         unbindEffectRack(binding.rack);
@@ -533,8 +541,70 @@ bool PluginUIController::loadPluginToSlot(const std::string& pluginId,
 void PluginUIController::removePluginFromSlot(Aestra::Audio::EffectChain* chain, 
                                                int slot) {
     if (!chain) return;
+    // Resolve the instance first: after removePlugin() the slot is empty, and its
+    // window would stay on screen with no plugin behind it.
+    closeNativeEditorsFor(chain->getPlugin(slot));
     chain->removePlugin(slot);
     effectChainChanged.emit();
+}
+
+bool PluginUIController::openNativeEditorWindow(
+    const std::shared_ptr<Aestra::Audio::IPluginInstance>& instance) {
+    if (!instance) return false;
+
+    // One window per instance: activating the same plugin again raises the window
+    // that is already showing instead of stacking a second copy of the same GUI.
+    // A false answer means that window is gone (closed with its own button, or its
+    // plugin died), so this falls through and opens a fresh one.
+    for (const auto& open : m_nativeEditors) {
+        if (open && open->getPluginInstance() == instance && open->bringToFront()) {
+            return true;
+        }
+    }
+    // Windows the user closed are still in the list: their instance is the only
+    // thing that would keep them alive, and it may since have been freed.
+    m_nativeEditors.erase(
+        std::remove_if(m_nativeEditors.begin(), m_nativeEditors.end(),
+                       [](const std::shared_ptr<PluginEditorWindow>& window) {
+                           return !window || !window->isOpen();
+                       }),
+        m_nativeEditors.end());
+
+    auto window = std::make_shared<PluginEditorWindow>();
+    std::weak_ptr<PluginEditorWindow> weak = window;
+    window->setOnClose([this, weak]() {
+        auto editor = weak.lock();
+        if (!editor) return;
+        // Hold a reference across the erase: this callback runs from inside the
+        // window, and m_nativeEditors holds its only other pointer.
+        auto keepAlive = editor;
+        m_nativeEditors.erase(std::remove(m_nativeEditors.begin(), m_nativeEditors.end(), keepAlive),
+                              m_nativeEditors.end());
+    });
+
+    const auto& info = instance->getInfo();
+    const std::string title = info.name.empty() ? info.id : info.name;
+    if (!window->open(instance, title)) {
+        Aestra::Log::warning("[PluginUI] " + info.id + " has an editor but the host would not open it; falling back to the parameter editor");
+        return false;
+    }
+    m_nativeEditors.push_back(window);
+    Aestra::Log::info("[PluginUI] Opened " + info.id + "'s own editor window");
+    return true;
+}
+
+void PluginUIController::closeNativeEditorsFor(
+    const std::shared_ptr<Aestra::Audio::IPluginInstance>& instance) {
+    if (!instance) return;
+    m_nativeEditors.erase(
+        std::remove_if(m_nativeEditors.begin(), m_nativeEditors.end(),
+                       [&instance](const std::shared_ptr<PluginEditorWindow>& window) {
+                           if (!window) return true;
+                           if (window->getPluginInstance() != instance) return false;
+                           window->close();
+                           return true;
+                       }),
+        m_nativeEditors.end());
 }
 
 void PluginUIController::openPluginEditor(
@@ -543,6 +613,17 @@ void PluginUIController::openPluginEditor(
     const std::string& surfaceId) {
 
     if (!instance) return;
+
+    // A sandboxed plugin (VST3/CLAP through OutOfProcessPluginInstance) owns its
+    // editor window: the helper process creates it, attaches the plugin's real view
+    // and pumps it while the command channel keeps serving audio (HelperEditorHost.h).
+    // There is no widget to build and nothing to embed, so openEditor(nullptr) is the
+    // whole job. This is the only route that shows a third-party plugin's own GUI;
+    // the registry below exists for Aestra's own effects and is the right fallback
+    // when the helper refuses (a plugin with parameters but no GUI).
+    if (instance->ownsEditorWindow() && openNativeEditorWindow(instance)) {
+        return;
+    }
 
     std::shared_ptr<NUIComponent> editorComp;
     const std::string& pluginId = instance->getInfo().id;
@@ -890,17 +971,24 @@ bool PluginEditorWindow::open(
     m_isOpen = true;
     return true;
 #else
-    // Non-Windows: stub implementation
+    // Linux: a sandboxed plugin's window is the helper's, whatever the app does. The
+    // helper creates it, attaches the plugin's own view and pumps it (HelperEditorHost.h),
+    // so there is nothing here to attach to and an app window beside it would sit empty.
+    if (!instance->openEditor(nullptr)) {
+        return false;
+    }
     m_isOpen = true;
-    return instance->openEditor(nullptr);
+    return true;
 #endif
 }
 
 void PluginEditorWindow::close() {
     if (!m_isOpen) return;
     
-    if (m_instance) {
-        m_instance->closeEditor();
+    // The plugin may already be gone (its channel was deleted, taking the helper
+    // with it), in which case there is no editor left to close.
+    if (auto instance = m_instance.lock()) {
+        instance->closeEditor();
     }
     
 #ifdef _WIN32
@@ -915,7 +1003,10 @@ void PluginEditorWindow::close() {
 }
 
 bool PluginEditorWindow::isOpen() const {
-    return m_isOpen;
+    // A window whose plugin died is not open in any useful sense: the helper closed
+    // it with the plugin. Reporting false lets the controller drop the entry instead
+    // of holding a window nobody can close.
+    return m_isOpen && !m_instance.expired();
 }
 
 void* PluginEditorWindow::getNativeHandle() const {
@@ -927,15 +1018,27 @@ void* PluginEditorWindow::getNativeHandle() const {
 }
 
 std::shared_ptr<Aestra::Audio::IPluginInstance> PluginEditorWindow::getPluginInstance() const {
-    return m_instance;
+    return m_instance.lock();
 }
 
-void PluginEditorWindow::bringToFront() {
+bool PluginEditorWindow::bringToFront() {
+    // A sandboxed plugin's window belongs to the helper process, so only the helper
+    // can raise it. Ask first; the app-side handle below only exists for an
+    // in-process editor, which owns a window this process created.
+    if (auto instance = m_instance.lock()) {
+        if (instance->raiseEditor()) return true;
+    }
 #ifdef _WIN32
     if (m_impl->hwnd) {
         SetForegroundWindow(m_impl->hwnd);
+        return true;
     }
 #endif
+    // The window is gone: the user closed it with the plugin's own close button and
+    // the app was never told. Clear it so the caller opens a fresh one instead of
+    // asking a dead window to come forward.
+    close();
+    return false;
 }
 
 void PluginEditorWindow::setPosition(int x, int y) {
