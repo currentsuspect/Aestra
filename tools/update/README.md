@@ -8,6 +8,7 @@ Settings when you say so. The feed is signed; the app trusts the signature, not 
 | Feed format, signature check, version order | `AestraLicense/include/UpdateFeed.h` |
 | Make a signed feed for a build | `tools/update/make_feed.py` |
 | Publish a build (feed + package) | `tools/update/publish.sh` |
+| Download size budget (FD-77): `publish.sh` refuses a package over its row | `tools/update/size_budget.txt`, `check_package_size.py` |
 | The host (Cloudflare Worker + R2 bucket `aestra-releases`) | `tools/update/worker/` |
 | Founder keys for the `early` channel | `tools/update/founders.py` |
 
@@ -15,6 +16,9 @@ Settings when you say so. The feed is signed; the app trusts the signature, not 
 - `stable`: public. Supporters and everyone else.
 - `early`: founders only. Every read needs `Authorization: Bearer <founder key>`; the Worker hashes it and looks it up in
   the `FOUNDERS` KV namespace (hashes only). `founders.py add "Name"` prints a key once; `revoke` cuts it off at once.
+- Counting testers: each founder read notes, at most once a day, the day, the platform and the last package that key
+  fetched (`seen:<key hash>` in the same namespace). No IP address and no machine id; the app sends nothing extra.
+  `founders.py list` shows it. The tester READ ME says so in one line.
 
 ## Keys (none are in the repo)
 - **Signing key** (Ed25519): private half is the CI secret `AESTRA_UPDATE_SIGNING_KEY`, backed up in

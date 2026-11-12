@@ -1,7 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AestraVerbEditor.h"
-#include "AestraFile.h"
-#include "AestraJSON.h"
+#include "Presets/LegacyPresets.h"
 #include "NUIIcon.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
@@ -1270,77 +1269,45 @@ void AestraVerbEditor::applyPreset(const PresetButton& preset) {
     updateParameter(kModCharacter, static_cast<float>(preset.modCharacter) / 2.0f);
 }
 
+// User presets live in the shared library (FD-72): the same "Yours" list the preset bar shows, so a sound saved here
+// is there too and the other way round. Presets the editor used to keep as .aeverb files are copied in once.
 void AestraVerbEditor::loadUserPresets() {
+    namespace P = Aestra::Audio::Presets;
+    const P::PresetLibrary library(P::PresetLibrary::defaultUserRoot());
+    P::importLegacyVerbPresets(library, P::legacyVerbPresetDir());
     m_userPresets.clear();
-    const std::string dir = getUserPresetDir();
-    namespace fs = std::filesystem;
-    if (!fs::exists(dir) || !fs::is_directory(dir)) return;
-    for (const auto& entry : fs::directory_iterator(dir)) {
-        if (!entry.is_regular_file()) continue;
-        const auto ext = entry.path().extension().string();
-        if (ext != ".aeverb") continue;
-        const std::string json = Aestra::File::readAllText(entry.path().string());
-        if (json.empty()) continue;
-        auto parsed = Aestra::JSON::parse(json);
-        if (!parsed.isObject()) continue;
-        PresetButton p;
-        p.label = parsed.has("name") ? parsed["name"].asString() : entry.path().stem().string();
-        p.tooltip = parsed.has("tooltip") ? parsed["tooltip"].asString() : "User preset";
-        p.mode = parsed.has("mode") ? parsed["mode"].asInt() : 0;
-        p.size = parsed.has("size") ? static_cast<float>(parsed["size"].asNumber()) : 0.5f;
-        p.decay = parsed.has("decay") ? static_cast<float>(parsed["decay"].asNumber()) : 0.5f;
-        p.damping = parsed.has("damping") ? static_cast<float>(parsed["damping"].asNumber()) : 0.5f;
-        p.diffusion = parsed.has("diffusion") ? static_cast<float>(parsed["diffusion"].asNumber()) : 0.7f;
-        p.modRate = parsed.has("modRate") ? static_cast<float>(parsed["modRate"].asNumber()) : 0.4f;
-        // Legacy fallback stays 0.14 (the pre-retune default) so an old user
-        // preset saved without a modDepth field loads exactly as it sounded when
-        // created. New presets persist modDepth explicitly; only fresh instances
-        // use the calmer 0.07 default.
-        p.modDepth = parsed.has("modDepth") ? static_cast<float>(parsed["modDepth"].asNumber()) : 0.14f;
-        p.width = parsed.has("width") ? static_cast<float>(parsed["width"].asNumber()) : 0.68f;
-        p.mix = parsed.has("mix") ? static_cast<float>(parsed["mix"].asNumber()) : 0.36f;
-        p.attack = parsed.has("attack") ? static_cast<float>(parsed["attack"].asNumber()) : 0.0f;
-        p.shape = parsed.has("shape") ? static_cast<float>(parsed["shape"].asNumber()) : 0.5f;
-        p.predelaySync = parsed.has("predelaySync") ? parsed["predelaySync"].asInt() : 0;
-        p.modCharacter = parsed.has("modCharacter") ? parsed["modCharacter"].asInt() : 0;
-        m_userPresets.push_back(p);
+    for (const auto& preset : library.userPresets(P::kVerbPluginId)) {
+        PresetButton b;
+        b.label = preset.name;
+        b.tooltip = preset.description.empty() ? "Your preset" : preset.description;
+        auto value = [&](const char* name, float fallback) {
+            for (const auto& q : preset.params)
+                if (q.name == name) return q.value;
+            return fallback;
+        };
+        b.mode = static_cast<int>(std::lround(value("Mode", 0.0f) * static_cast<float>(kModeCount - 1)));
+        b.size = value("Size", 0.5f); b.decay = value("Decay", 0.5f); b.damping = value("Damping", 0.5f);
+        b.diffusion = value("Diffusion", 0.7f); b.modRate = value("Mod Rate", 0.4f); b.modDepth = value("Mod Depth", 0.07f);
+        b.width = value("Width", 0.68f); b.mix = value("Mix", 0.36f); b.attack = value("Attack", 0.0f); b.shape = value("Shape", 0.5f);
+        b.predelaySync = static_cast<int>(std::lround(value("Pre Sync", 0.0f) * 6.0f));
+        b.modCharacter = static_cast<int>(std::lround(value("Mod Char", 0.0f) * 2.0f));
+        m_userPresets.push_back(b);
     }
 }
 
 void AestraVerbEditor::saveUserPreset(const std::string& name) {
-    const std::string dir = getUserPresetDir();
-    namespace fs = std::filesystem;
-    if (!fs::exists(dir)) fs::create_directories(dir);
-    Aestra::JSON obj = Aestra::JSON::object();
-    obj.set("name", Aestra::JSON(name));
-    obj.set("tooltip", Aestra::JSON("User preset"));
-    obj.set("mode", Aestra::JSON(static_cast<double>(std::round(getParamValue(kMode) * static_cast<float>(kModeCount - 1)))));
-    obj.set("size", Aestra::JSON(static_cast<double>(getParamValue(kSize))));
-    obj.set("decay", Aestra::JSON(static_cast<double>(getParamValue(kDecay))));
-    obj.set("damping", Aestra::JSON(static_cast<double>(getParamValue(kDamping))));
-    obj.set("diffusion", Aestra::JSON(static_cast<double>(getParamValue(kDiffusion))));
-    obj.set("modRate", Aestra::JSON(static_cast<double>(getParamValue(kModRate))));
-    obj.set("modDepth", Aestra::JSON(static_cast<double>(getParamValue(kModDepth))));
-    obj.set("width", Aestra::JSON(static_cast<double>(getParamValue(kWidth))));
-    obj.set("mix", Aestra::JSON(static_cast<double>(getParamValue(kMix))));
-    obj.set("attack", Aestra::JSON(static_cast<double>(getParamValue(kAttack))));
-    obj.set("shape", Aestra::JSON(static_cast<double>(getParamValue(kShape))));
-    obj.set("predelaySync", Aestra::JSON(static_cast<double>(std::round(getParamValue(kPredelaySync) * 6.0f))));
-    obj.set("modCharacter", Aestra::JSON(static_cast<double>(std::round(getParamValue(kModCharacter) * 2.0f))));
-    const std::string path = dir + "/" + name + ".aeverb";
-    Aestra::File::writeAllText(path, obj.toString(2));
+    namespace P = Aestra::Audio::Presets;
+    if (!m_instance) return;
+    P::PresetLibrary(P::PresetLibrary::defaultUserRoot()).saveUser(P::capture(*m_instance, name), true);
     loadUserPresets();
 }
 
 void AestraVerbEditor::deleteUserPreset(const std::string& name) {
-    const std::string path = getUserPresetDir() + "/" + name + ".aeverb";
-    namespace fs = std::filesystem;
-    if (fs::exists(path)) fs::remove(path);
+    namespace P = Aestra::Audio::Presets;
+    const P::PresetLibrary library(P::PresetLibrary::defaultUserRoot());
+    for (const auto& preset : library.userPresets(P::kVerbPluginId))
+        if (preset.name == name) library.removeUser(preset);
     loadUserPresets();
-}
-
-std::string AestraVerbEditor::getUserPresetDir() const {
-    return std::string(std::getenv("HOME") ? std::getenv("HOME") : ".") + "/Documents/Aestra/presets/AestraVerb";
 }
 
 float AestraVerbEditor::paramDefault(uint32_t paramId) {

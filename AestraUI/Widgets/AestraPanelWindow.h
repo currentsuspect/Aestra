@@ -137,7 +137,7 @@ public:
 
     // Helpers
     static constexpr float TITLE_BAR_H = 32.0f;
-    static constexpr float kRadius = 14.0f;
+    static constexpr float kRadius = 0.0f; // sharp corners, as in the FD-73 mock
     NUIRect getContentRect() const;
     bool hitTestCloseButton(float x, float y) const;
     bool hitTestTitleBar(float x, float y) const;

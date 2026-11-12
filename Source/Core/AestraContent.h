@@ -261,6 +261,13 @@ public:
     void toggleTakesPanel();
     /// The whole project's mix, rendered offline into memory (a version's bounce). False when there is nothing to render.
     bool renderMixToBuffer(std::vector<float>& interleaved, uint32_t& channels, uint32_t& sampleRate);
+    /// The render inside renderMixToBuffer, without stopping the stream: for a worker thread, with the stream already
+    /// stopped (pauseStreamForRender) and input held, the way Export renders. `progress` gets 0..1, `cancel` stops it.
+    bool renderMixCore(std::vector<float>& interleaved, uint32_t& channels, uint32_t& sampleRate,
+                       const std::function<void(float)>& progress = nullptr, const std::function<bool()>& cancel = nullptr);
+    /// Stop the device stream so a render can drive the engine by hand; true when it was running.
+    bool pauseStreamForRender();
+    void resumeStreamAfterRender(bool wasRunning);
     /// Play a file through the preview engine, or stop it if it is the file already playing. True when it is playing after.
     bool togglePreviewFile(const std::string& path);
     /// What the Audition hub needs from the app (the open project, the reference list, import and bounce); applied when it is shown.

@@ -2,6 +2,7 @@
 #pragma once
 
 #include "AestraUUID.h"
+#include "Commands/CompSync.h"
 #include "Commands/ICommand.h"
 #include "Models/PlaylistModel.h"
 
@@ -30,7 +31,7 @@ public:
     void redo() override;
 
     std::string getName() const override { return "Delete Lane"; }
-    size_t getSizeInBytes() const override { return sizeof(*this) + m_clips.size() * sizeof(ClipInstance); }
+    size_t getSizeInBytes() const override { return sizeof(*this) + (m_clips.size() + m_compBefore.clips.size()) * sizeof(ClipInstance); }
     bool changesProjectState() const override { return true; }
 
     std::string serialize() const override;
@@ -39,6 +40,7 @@ public:
     static std::shared_ptr<ICommand> deserialize(PlaylistModel& model, const std::string& data);
 
 private:
+    void repairComp();
     TrackManager& m_trackManager;
     PlaylistLaneID m_laneId;
     std::string m_name;
@@ -47,6 +49,10 @@ private:
     int m_playlistIndex{-1};
     int m_laneIdsIndex{-1};
     bool m_wasActiveLane{false};
+    // Comping (SPEC-022): the track's comp as it was, so undo gives back the master, the pieces and the mute flags.
+    bool m_hadComp{false};
+    bool m_wasMaster{false};
+    CompSnapshot m_compBefore;
     bool m_executed = false;
 };
 

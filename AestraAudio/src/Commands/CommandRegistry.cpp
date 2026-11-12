@@ -30,6 +30,7 @@
 #include "Commands/SetAudioPatternMixerChannelCommand.h"
 #include "Commands/SetUnitMixerChannelCommand.h"
 #include "Commands/RenderAudioClipCommand.h"
+#include "Commands/DeleteSilenceCommand.h"
 #include "Commands/RemoveNoteCommand.h"
 #include "Commands/SetMuteCommand.h"
 #include "Commands/SetPanCommand.h"
@@ -356,6 +357,19 @@ void CommandRegistry::initialize() {
         auto idOpt = parseObjectId(*idRaw);
         if (!idOpt) return CommandRegistry::fail("not a clip id: " + std::string(*idRaw));
         return std::make_unique<ReverseAudioClipCommand>(*ctx.trackManager, ClipInstanceID(*idOpt));
+    });
+
+    reg.registerCommand("delete_silence", [](const auto& flags, const CommandContext& ctx) -> std::unique_ptr<ICommand> {
+        if (!ctx.trackManager) return nullptr;
+        auto idRaw = requireFlag(flags, "id");
+        if (!idRaw) return nullptr;
+        auto idOpt = parseObjectId(*idRaw);
+        if (!idOpt) return CommandRegistry::fail("not a clip id: " + std::string(*idRaw));
+        // Founder ruling (2026-11-07): ripple on the clip's own lane unless the caller asks for every lane.
+        auto allLanes = requireFlag(flags, "all_lanes");
+        const auto ripple = (allLanes && parseFlagBool(*allLanes)) ? SilenceRipple::AllLanes : SilenceRipple::ThisLane;
+        return std::make_unique<DeleteSilenceCommand>(*ctx.trackManager, std::vector<ClipInstanceID>{ClipInstanceID(*idOpt)},
+                                                      ripple);
     });
 
     reg.registerCommand("commit_clip_edits", [](const auto& flags,

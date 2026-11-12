@@ -26,6 +26,25 @@ inline bool showsHeaderBand(float clipWidth, float clipHeight) {
     return clipHeight > headerBandHeight(clipHeight) + 6.0f && clipWidth > 12.0f;
 }
 
+/// True when a point @p fromTop px below the clip's top is in its header band (the grab-to-move strip).
+inline bool inHeaderBand(float clipWidth, float clipHeight, float fromTop) {
+    return showsHeaderBand(clipWidth, clipHeight) && fromTop < headerBandHeight(clipHeight);
+}
+
+enum class EdgeHit { None, Left, Right };
+
+/// Which resize edge a point inside a clip is on, given its distance from each side. The strip is
+/// @p trimWidth deep at any height (owner 2026-11-07). On a clip so narrow the strips meet, the nearer edge
+/// wins. The menu glyph owns its rect on the left (@p overGlyph) except the outermost @p underGlyph px.
+inline EdgeHit edgeHit(float fromLeft, float fromRight, float trimWidth, float underGlyph, bool overGlyph) {
+    const bool onLeft = fromLeft < trimWidth;
+    const bool onRight = fromRight < trimWidth;
+    if (onLeft && (!onRight || fromLeft <= fromRight)) {
+        return (overGlyph && fromLeft >= underGlyph) ? EdgeHit::None : EdgeHit::Left;
+    }
+    return onRight ? EdgeHit::Right : EdgeHit::None;
+}
+
 /// Beat, measured from the clip's left edge, at which a pattern note sounds. The scheduler plays a note at
 /// clip start - source offset + note start (PlaylistClip::patternStartBeat) and only inside the clip, so the
 /// mini piano roll maps notes the same way instead of stretching the pattern to the clip's width.
