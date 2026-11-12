@@ -804,7 +804,17 @@ elseif(UNIX)
         # No ALSA - stub already in AestraAudioCore
         # Create an interface library for compatibility
         add_library(AestraAudio INTERFACE)
-        target_link_libraries(AestraAudio INTERFACE AestraAudioCore)
+        if(TARGET AestraRumble AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+            # Rumble is always built now (FD-57), including in headless lab builds without ALSA. GNU ld reads
+            # each archive once, so Rumble's registration (which calls into AestraAudioCore) must sit in the same
+            # rescan group as the core, as in the ALSA branch above. macOS's linker resolves in any order.
+            target_link_libraries(AestraAudio INTERFACE
+                "$<LINK_GROUP:RESCAN,AestraAudioCore,$<LINK_LIBRARY:WHOLE_ARCHIVE,AestraRumble>>"
+            )
+            set(AESTRA_RUMBLE_IN_LINK_GROUP TRUE)
+        else()
+            target_link_libraries(AestraAudio INTERFACE AestraAudioCore)
+        endif()
     endif()
 endif()
 
