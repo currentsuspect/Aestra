@@ -82,6 +82,8 @@ public:
      * @param deltaTime Frame delta in seconds.
      */
     void onUpdate(double deltaTime) override;
+    /// "About 3 s left" from the time so far and the fraction done (Design Spec, Progress).
+    static std::string formatTimeLeft(double elapsedSeconds, double progress);
     /**
      * @brief Render the modal overlay and active export panel.
      * @param renderer Active UI renderer.

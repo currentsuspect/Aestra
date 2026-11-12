@@ -45,6 +45,10 @@ void object(NUIRenderer& renderer, const NUIRect& rect, float radius, bool held 
 /// a soft shadow under it, never by a line.
 void restingPanel(NUIRenderer& renderer, const NUIRect& rect, float radius, const NUIColor& fill);
 
+/// Design Spec, Empty state (locked): the sunk well (8px round) a panel shows where its content would be, inset
+/// 8px inside @p area.
+void emptyWell(NUIRenderer& renderer, const NUIRect& area);
+
 /// A floating card: menus, folds, tooltips, toasts and dialogs. @p lift scales the shadow (1 for menus,
 /// 2 for a dialog over the dimmed window).
 void floatingCard(NUIRenderer& renderer, const NUIRect& rect, float radius, const NUIColor& fill, float lift = 1.0f);

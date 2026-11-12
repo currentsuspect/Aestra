@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "FileBrowserInternal.h"
 #include "FileBrowserLayout.h"
+#include "../AestraUI/Graphics/NUIDepth.h"
 
 
 
@@ -361,11 +362,9 @@ void FileBrowser::drawListEmptyState(NUIRenderer& renderer, const NUIRect& listC
     constexpr float kIconSize = 28.0f;
     constexpr float kIconGap = 12.0f;
     constexpr float kTitleH = 20.0f;
-    constexpr float kTitleGap = 6.0f;
-    constexpr float kHintLineH = 16.0f;
+    constexpr float kTitleGap = 6.0f, kHintLineH = 16.0f;
 
-    // Cap the hint measure so it reads as a compact centered paragraph with
-    // real side margins instead of running edge to edge.
+    // Cap the hint measure so it reads as a compact centred paragraph, not edge to edge.
     const float hintMaxWidth = std::max(60.0f, std::min(listClip.width - 48.0f, 240.0f));
     const auto hintLines = wrapHintBalanced(renderer, hint, hintFont, hintMaxWidth);
 
@@ -374,18 +373,19 @@ void FileBrowser::drawListEmptyState(NUIRenderer& renderer, const NUIRect& listC
     float y = listClip.y + std::max(12.0f, listClip.height * 0.42f - blockH * 0.5f);
 
     renderer.setClipRect(listClip);
+    Depth::emptyWell(renderer, listClip);
     if (icon) {
         const NUIRect iconRect(std::round(listClip.x + (listClip.width - kIconSize) * 0.5f), std::round(y),
                                kIconSize, kIconSize);
         icon->setBounds(iconRect);
-        icon->setColor(themeManager.getColor("textSecondary").withAlpha(0.30f));
+        icon->setColor(themeManager.getColor("textMuted")); // one quiet icon
         icon->onRender(renderer);
         y += kIconSize + kIconGap;
     }
     renderer.drawTextCentered(title, NUIRect(listClip.x, y, listClip.width, kTitleH), titleFont,
-                              themeManager.getColor("textPrimary").withAlpha(0.66f));
+                              themeManager.getColor("textPrimary"));
     y += kTitleH + kTitleGap;
-    const NUIColor hintColor = themeManager.getColor("textSecondary").withAlpha(0.5f);
+    const NUIColor hintColor = themeManager.getColor("textSecondary");
     for (const auto& line : hintLines) {
         renderer.drawTextCentered(line, NUIRect(listClip.x, y, listClip.width, kHintLineH), hintFont, hintColor);
         y += kHintLineH;

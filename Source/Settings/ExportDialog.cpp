@@ -134,7 +134,7 @@ void ExportDialog::buildControls() {
     m_elapsedLabel = makeLabel("");
     m_elapsedLabel->setFontSize(theme.getCurrentTheme().fontSizeS);
     m_progressBar = std::make_shared<AestraUI::NUIProgressBar>();
-    m_progressBar->setTextVisible(true);
+    m_progressBar->setTextVisible(false); // a 6px slot carries no text; the time left sits under it
     addChild(m_progressBar);
 
     m_exportButton = std::make_shared<AestraUI::NUIButton>("Export");
@@ -358,15 +358,26 @@ void ExportDialog::layoutDialog() {
     }
 }
 
+// Design Spec, Progress: a time estimate in plain words ("About 3 s left"), from the rate so far. Until there is
+// enough progress to judge the rate, it says the work has started rather than guessing.
+std::string ExportDialog::formatTimeLeft(double elapsedSeconds, double progress) {
+    if (progress < 0.05 || elapsedSeconds < 0.5)
+        return "Working out the time left";
+    const int left = static_cast<int>(std::ceil(elapsedSeconds * (1.0 - progress) / progress));
+    if (left < 1)
+        return "Almost done";
+    if (left < 60)
+        return "About " + std::to_string(left) + " s left";
+    return "About " + std::to_string((left + 30) / 60) + " min left";
+}
+
 void ExportDialog::onUpdate(double deltaTime) {
     NUIComponent::onUpdate(deltaTime);
     if (m_panelState == PanelState::Progress && m_exporting) {
         m_exportElapsed += deltaTime;
-        m_progressBar->setProgress(std::clamp(static_cast<double>(m_progress.load()), 0.0, 1.0));
-        char timeBuf[32];
-        std::snprintf(timeBuf, sizeof(timeBuf), "Elapsed: %d:%02d", static_cast<int>(m_exportElapsed) / 60,
-                      static_cast<int>(m_exportElapsed) % 60);
-        m_elapsedLabel->setText(timeBuf);
+        const double progress = std::clamp(static_cast<double>(m_progress.load()), 0.0, 1.0);
+        m_progressBar->setProgress(progress);
+        m_elapsedLabel->setText(formatTimeLeft(m_exportElapsed, progress));
     }
 
     if (m_exportFuture.valid() &&
@@ -475,10 +486,8 @@ void ExportDialog::onResize(int width, int height) {
 void ExportDialog::onRender(AestraUI::NUIRenderer& renderer) {
     if (!m_visible) return;
     auto& theme = AestraUI::NUIThemeManager::getInstance();
-    const auto& props = theme.getCurrentTheme();
 
     renderer.fillRect(getBounds(), theme.getColor("overlay"));
-    renderer.drawShadow(m_dialogRect, 0.0f, props.spacingS, props.spacingL, theme.getColor("shadow"));
 
     // Surface and title bar come from the shared dialog chrome (spec 2 §5).
     AestraUI::DialogChrome chrome;
@@ -489,9 +498,7 @@ void ExportDialog::onRender(AestraUI::NUIRenderer& renderer) {
     chrome.showClose = false; // The panel's own Cancel/Close button is the dismissal.
     AestraUI::drawDialogChrome(renderer, chrome);
     if (m_panelState == PanelState::Settings) {
-        paintSettingsBoard(renderer);
-        const float footerY = m_dialogRect.bottom() - 56.0f;
-        renderer.drawLine({m_dialogRect.x, footerY}, {m_dialogRect.right(), footerY}, 1.0f, theme.getColor("border"));
+        paintSettingsBoard(renderer); // the foot is its buttons alone, no rule above it
     }
 
     renderChildren(renderer);

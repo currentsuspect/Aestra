@@ -59,15 +59,18 @@ void UIMixerInsertList::onRender(NUIRenderer& renderer) {
     const NUIColor textSecondary = theme.getColor("textSecondary");
     const NUIColor accent = theme.getColor("accentPrimary");
 
-    // Design Spec, Mixer: the insert slots are cut into the strip, a shallow well, never an outlined box.
+    // Design Spec, Empty state: an empty slot is a quiet row with quiet hover, not a well and not a dashed box.
+    if (m_rows.empty()) {
+        if (m_hovered)
+            renderer.fillRoundedRect(r, kRadius, theme.getColor("hover"));
+        const char* invite = renderer.measureText("+ Add an effect", kFont).width <= r.width - 6.0f ? "+ Add an effect" : "+";
+        renderer.drawTextCentered(invite, r, kFont, m_hovered ? textPrimary : theme.getColor("textMuted"));
+        return;
+    }
+    // Design Spec, Mixer: filled insert slots are cut into the strip, a shallow well, never an outlined box.
     Depth::bed(renderer, r, kRadius, Depth::Cut::Shallow);
     if (m_hovered)
         renderer.fillRoundedRect(r, kRadius, theme.getColor("hover"));
-
-    if (m_rows.empty()) {
-        renderer.drawTextCentered("+ insert", r, kFont, textSecondary.withAlpha(m_hovered ? 0.95f : 0.62f));
-        return;
-    }
 
     const int capacity = visibleRowCapacity();
     const bool overflow = static_cast<int>(m_rows.size()) > capacity;
