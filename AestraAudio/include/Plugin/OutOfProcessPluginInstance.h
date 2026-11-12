@@ -64,6 +64,9 @@ public:
     bool hasEditor() const override;
     bool openEditor(void* parentWindow) override;
     bool ownsEditorWindow() const override { return true; } // the helper makes the window (V82-H3 / H8)
+    bool raiseEditor() override;
+    std::uintptr_t openEditorEmbedded(std::uintptr_t parentWindow) override;
+    bool canResizeEditor() const override { return m_editorResizable.load(std::memory_order_relaxed); }
     void closeEditor() override;
     bool isEditorOpen() const override { return m_editorOpen.load(std::memory_order_acquire); }
     std::pair<int, int> getEditorSize() const override;
@@ -192,6 +195,7 @@ private:
     std::atomic<uint64_t> m_watchdogViolationCount{0};
     std::atomic<bool> m_watchdogBypassed{false};
     std::atomic<bool> m_editorOpen{false};
+    std::atomic<bool> m_editorResizable{false};
     std::atomic<int> m_editorWidth{0};
     std::atomic<int> m_editorHeight{0};
     std::atomic<uint32_t> m_pluginLatency{0}; ///< the plugin's own latency in samples, from the helper

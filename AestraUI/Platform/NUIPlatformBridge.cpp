@@ -611,6 +611,14 @@ void NUIPlatformBridge::setHitTestCallback(Aestra::HitTestCallback callback) {
 // Native Handles
 // =============================================================================
 
+bool NUIPlatformBridge::placeChildWindow(std::uintptr_t child, int x, int y, int width, int height, bool visible) {
+    return m_window && m_window->placeChildWindow(child, x, y, width, height, visible);
+}
+
+bool NUIPlatformBridge::getChildWindowSize(std::uintptr_t child, int& width, int& height) const {
+    return m_window && m_window->getChildWindowSize(child, width, height);
+}
+
 void* NUIPlatformBridge::getNativeHandle() const {
     return m_window ? m_window->getNativeHandle() : nullptr;
 }

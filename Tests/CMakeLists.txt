@@ -3606,6 +3606,26 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(PluginRackBindingLifecycleTest PROPERTIES LABELS "ui;plugin;regression;contract:application")
 endif()
 
+# A sandboxed plugin's editor is its OWN window (HelperEditorHost.h), not the generic
+# parameter grid. openPluginEditor() used to build a widget editor for every plugin, so
+# VST3/CLAP GUI support that already existed in the host was unreachable.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(PluginEditorDispatchTest AestraUI_Core AestraUI_Platform)
+    add_executable(PluginEditorDispatchTest
+        AestraUI/PluginEditorDispatchTest.cpp
+    )
+    target_link_libraries(PluginEditorDispatchTest PRIVATE AestraUI_Core AestraUI_Platform AestraAudio)
+    target_include_directories(PluginEditorDispatchTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PluginEditorDispatchTest COMMAND PluginEditorDispatchTest)
+    set_tests_properties(PluginEditorDispatchTest PROPERTIES LABELS "ui;plugin;regression;contract:plugins")
+endif()
+
 # The preset bar in every plugin window (V83-S2, FD-72): step, browse by ear (Esc puts back, Enter keeps as one
 # undo), Save with the name filled in, A|B, and keys only while a popover is open.
 if(AESTRA_ENABLE_UI)
@@ -4506,6 +4526,7 @@ if(AESTRA_ENABLE_UI)
         ArsenalKitTest
         UIMixerPanelGroupingTest
         PluginRackBindingLifecycleTest
+        PluginEditorDispatchTest
         PluginPresetBarTest
         WindowPanelRaiseTest
         TakesHistoryPanelTest

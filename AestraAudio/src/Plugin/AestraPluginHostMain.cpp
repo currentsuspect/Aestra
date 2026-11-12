@@ -593,21 +593,42 @@ int main(int argc, char** argv) {
 #endif
             reply("OK INIT");
         } else if (command == "EDITOR") {
-            // V82-H3: EDITOR OPEN <titleHex> -> OK EDITOR <w> <h> | ERR; EDITOR CLOSE; EDITOR STATE -> OK EDITOR OPEN|CLOSED
+            // V82-H3: EDITOR OPEN <titleHex> -> OK EDITOR <w> <h> | ERR; EDITOR RAISE; EDITOR CLOSE; EDITOR STATE -> OK EDITOR OPEN|CLOSED
             std::string sub;
             input >> sub;
 #if defined(AESTRA_HELPER_HAS_EDITORS)
-            if (sub == "OPEN") {
+            if (sub == "OPEN" || sub == "EMBED") {
+                // EDITOR EMBED <titleHex> <parentWindow> -> OK EDITOR <w> <h> <window> <resizable>: the window is a child
+                // of the app's, unmapped; the app places and maps it inside its plugin panel.
                 std::string titleHex;
                 input >> titleHex;
+                unsigned long long parent = 0;
+                if (sub == "EMBED" && !(input >> parent)) parent = 0;
                 int w = 0, h = 0;
                 AestraHelper::EditorBackend backend;
 #ifdef AESTRA_HAS_VST3
                 if (vst3Module.plugin) backend = AestraHelper::vst3EditorBackend(vst3Module.plugin);
 #endif
                 if (clapModule.plugin) backend = clapEditorBackend(clapModule);
-                if (!editorHost.open(std::move(backend), hexDecode(titleHex), w, h)) reply("ERR no-editor");
+                if (sub == "EMBED" && (parent == 0 || editorHost.windowIdUnsupported())) reply("ERR no-embed");
+                else if (!editorHost.open(std::move(backend), hexDecode(titleHex), w, h, static_cast<std::uintptr_t>(parent)))
+                    reply("ERR no-editor");
+                else if (sub == "EMBED")
+                    reply("OK EDITOR " + std::to_string(w) + " " + std::to_string(h) + " " +
+                          std::to_string(static_cast<unsigned long long>(editorHost.windowId())) + " " +
+                          (editorHost.resizable() ? "1" : "0"));
                 else reply("OK EDITOR " + std::to_string(w) + " " + std::to_string(h));
+            } else if (sub == "RAISE") {
+                // Clicking Edit on a plugin whose window is already open behind the app: the
+                // window belongs to this process, so only this process can bring it forward.
+                // If it is no longer open (the user closed it), say so: the app reopens it
+                // rather than believing a window it cannot see is in front.
+                if (!editorHost.isOpen()) {
+                    reply("ERR no-editor");
+                } else {
+                    editorHost.raise();
+                    reply("OK EDITOR RAISED");
+                }
             } else if (sub == "CLOSE") {
                 editorHost.close();
                 reply("OK EDITOR CLOSED");

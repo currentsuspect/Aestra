@@ -1196,6 +1196,35 @@ void OutOfProcessPluginInstance::closeEditor() {
     sendCommand("EDITOR CLOSE", nullptr, std::chrono::seconds(5));
 }
 
+std::uintptr_t OutOfProcessPluginInstance::openEditorEmbedded(std::uintptr_t parentWindow) {
+    if (!parentWindow || !hasEditor()) return 0;
+    std::string response;
+    if (!sendCommand("EDITOR EMBED " + hexEncode(m_info.name) + " " +
+                         std::to_string(static_cast<unsigned long long>(parentWindow)),
+                     &response, std::chrono::seconds(15)))
+        return 0;
+    int width = 0, height = 0, resizable = 0;
+    unsigned long long window = 0;
+    if (std::sscanf(response.c_str(), "OK EDITOR %d %d %llu %d", &width, &height, &window, &resizable) != 4 || !window)
+        return 0;
+    m_editorWidth.store(width, std::memory_order_relaxed);
+    m_editorHeight.store(height, std::memory_order_relaxed);
+    m_editorResizable.store(resizable != 0, std::memory_order_relaxed);
+    m_editorOpen.store(true, std::memory_order_release);
+    return static_cast<std::uintptr_t>(window);
+}
+
+bool OutOfProcessPluginInstance::raiseEditor() {
+    if (!m_editorOpen.load(std::memory_order_acquire)) return false;
+    std::string response;
+    if (!sendCommand("EDITOR RAISE", &response, std::chrono::seconds(5))) return false;
+    if (response.find("OK") == 0) return true;
+    // The helper no longer has a window (the user closed it with its own button).
+    // Record that, so the caller reopens instead of raising nothing.
+    m_editorOpen.store(false, std::memory_order_release);
+    return false;
+}
+
 std::pair<int, int> OutOfProcessPluginInstance::getEditorSize() const {
     return {m_editorWidth.load(std::memory_order_relaxed), m_editorHeight.load(std::memory_order_relaxed)};
 }

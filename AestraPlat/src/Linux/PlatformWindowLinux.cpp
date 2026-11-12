@@ -1,6 +1,7 @@
 #include "PlatformWindowLinux.h"
 
 #include <SDL2/SDL_syswm.h>
+#include <algorithm>
 #include <iostream>
 #if defined(SDL_VIDEO_DRIVER_X11)
 #include <X11/Xlib.h>
@@ -445,6 +446,56 @@ void* PlatformWindowLinux::getNativeHandle() const {
         }
     }
     return nullptr;
+}
+
+bool PlatformWindowLinux::placeChildWindow(std::uintptr_t child, int x, int y, int width, int height, bool visible) {
+#if defined(SDL_VIDEO_DRIVER_X11)
+    Display* display = nullptr;
+    ::Window parent = 0;
+    if (!child || !getX11WindowInfo(m_window, display, parent))
+        return false;
+    // The child belongs to the plugin helper's connection, but X lets any client move a window it can name. Doing it
+    // here, on the app's own connection, keeps the plugin glued to its panel while the panel is dragged, with no round
+    // trip to the helper. The helper sees the new size (ConfigureNotify) and tells the plugin.
+    const auto id = static_cast<::Window>(child);
+    if (!visible) {
+        XUnmapWindow(display, id);
+        XFlush(display);
+        return true;
+    }
+    XMoveResizeWindow(display, id, x, y, static_cast<unsigned>(std::max(1, width)), static_cast<unsigned>(std::max(1, height)));
+    XMapRaised(display, id);
+    XFlush(display);
+    return true;
+#else
+    (void)child; (void)x; (void)y; (void)width; (void)height; (void)visible;
+    return false;
+#endif
+}
+
+bool PlatformWindowLinux::getChildWindowSize(std::uintptr_t child, int& width, int& height) const {
+#if defined(SDL_VIDEO_DRIVER_X11)
+    Display* display = nullptr;
+    ::Window parent = 0;
+    if (!child || !getX11WindowInfo(m_window, display, parent))
+        return false;
+    // A window the helper has already destroyed would raise BadWindow through Xlib's default handler, which exits.
+    auto* previous = XSetErrorHandler([](Display*, XErrorEvent*) { return 0; });
+    ::Window root = 0;
+    int gx = 0, gy = 0;
+    unsigned w = 0, h = 0, border = 0, depth = 0;
+    const Status ok = XGetGeometry(display, static_cast<::Window>(child), &root, &gx, &gy, &w, &h, &border, &depth);
+    XSync(display, False);
+    XSetErrorHandler(previous);
+    if (!ok)
+        return false;
+    width = static_cast<int>(w);
+    height = static_cast<int>(h);
+    return true;
+#else
+    (void)child; (void)width; (void)height;
+    return false;
+#endif
 }
 
 void* PlatformWindowLinux::getNativeDisplayHandle() const {
