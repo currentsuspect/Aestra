@@ -34,6 +34,22 @@ std::string trackNameFor(const Audio::TrackManager& tm, const Audio::IPluginInst
     return {};
 }
 
+/// "Channel 1 · Insert 2" for a plugin in a mixer chain; the unit's name for an instrument; nothing otherwise.
+std::string whereFor(const Audio::TrackManager& tm, const Audio::IPluginInstance* plugin, const std::string& name) {
+    if (name.empty()) return {};
+    auto slotIn = [plugin](const Audio::MixerChannel* ch) -> int {
+        if (!ch) return 0;
+        const auto& chain = ch->getEffectChain();
+        for (size_t i = 0; i < chain.slotCount(); ++i)
+            if (chain.getPlugin(i).get() == plugin) return static_cast<int>(i) + 1;
+        return 0;
+    };
+    int slot = 0;
+    for (size_t i = 0; i < tm.getChannelCount() && slot == 0; ++i) slot = slotIn(tm.getChannel(i));
+    if (slot == 0) slot = slotIn(tm.getMasterChannel());
+    return slot > 0 ? name + " \xC2\xB7 Insert " + std::to_string(slot) : name;
+}
+
 } // namespace
 
 void AestraContent::wirePluginPresets() {
@@ -44,6 +60,7 @@ void AestraContent::wirePluginPresets() {
             if (!plugin || !m_trackManager) return std::nullopt;
             AestraUI::PluginUIController::PresetContext context;
             context.trackName = trackNameFor(*m_trackManager, plugin.get());
+            context.where = whereFor(*m_trackManager, plugin.get(), context.trackName);
             std::weak_ptr<Audio::TrackManager> weakTm = m_trackManager;
             context.record = [weakTm](std::shared_ptr<Audio::ICommand> command) {
                 if (auto tm = weakTm.lock()) tm->getCommandHistory().pushExecuted(std::move(command));

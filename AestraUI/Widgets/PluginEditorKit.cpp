@@ -6,7 +6,9 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <cmath>
+#include <string>
 #include <utility>
 
 namespace AestraUI {
@@ -64,6 +66,239 @@ void drawKnob(NUIRenderer& renderer, const NUIRect& rect, float value, const cha
     const float pad = look.valueLabelPad;
     renderer.drawTextCentered(valueText, NUIRect(rect.x - pad, rect.bottom() + 19.0f, rect.width + pad * 2.0f, 13.0f),
                               look.large ? 10.0f : 9.0f, accent.withAlpha(0.96f));
+}
+
+
+// ---------------------------------------------------------------------------------------------------------------
+// Ember control kit (FD-73)
+// ---------------------------------------------------------------------------------------------------------------
+
+namespace {
+
+struct KnobGeometry {
+    float disc;
+    float cell;
+    float track;
+};
+
+KnobGeometry knobGeometry(KnobSize size) {
+    switch (size) {
+    case KnobSize::Large: return {56.0f, 80.0f, 3.0f};
+    case KnobSize::Small: return {28.0f, 56.0f, 2.0f};
+    case KnobSize::Medium: break;
+    }
+    return {40.0f, 64.0f, 2.0f};
+}
+
+NUIRect textRect(float x, float centreY, float width, float height = 20.0f) {
+    return NUIRect(x, centreY - height * 0.5f, width, height);
+}
+
+} // namespace
+
+EmberColors emberColors() {
+    auto& tm = NUIThemeManager::getInstance();
+    const auto& t = tm.getCurrentTheme();
+    EmberColors c;
+    c.well = tm.getColor("timelineBed");
+    c.body = t.backgroundPrimary;
+    c.panel = t.backgroundSecondary;
+    c.control = t.surfaceTertiary;
+    c.raised = t.surfaceRaised;
+    c.border = t.border;
+    c.edge = tm.getColor("controlEdge");
+    c.ink = t.textPrimary;
+    c.inkSoft = t.textSecondary;
+    c.inkMuted = t.textMuted;
+    c.inkOff = t.textDisabled;
+    c.primary = t.primary;
+    c.primaryHover = t.primaryHover;
+    c.secondary = t.secondary;
+    c.selected = tm.getColor("controlSelected");
+    c.guide = tm.getColor("controlGuide");
+    c.meter = t.meterSafe;
+    c.warn = t.meterWarn;
+    c.gridMajor = t.divider;
+    c.gridMinor = t.backgroundSecondary;
+    return c;
+}
+
+float emberKnobCellWidth(KnobSize size) { return knobGeometry(size).cell; }
+float emberKnobDiscSize(KnobSize size) { return knobGeometry(size).disc; }
+float emberKnobCellHeight(KnobSize size) { return knobGeometry(size).disc + 38.0f; }
+
+void drawTextLeft(NUIRenderer& renderer, const std::string& text, float x, float centreY, float size, NUIColor color) {
+    renderer.drawTextCentered(text, textRect(x, centreY, renderer.measureText(text, size).width), size, color);
+}
+
+void drawTextRight(NUIRenderer& renderer, const std::string& text, float rightX, float centreY, float size,
+                   NUIColor color) {
+    const float w = renderer.measureText(text, size).width;
+    renderer.drawTextCentered(text, textRect(rightX - w, centreY, w), size, color);
+}
+
+float drawCaps(NUIRenderer& renderer, const std::string& text, float x, float centreY, float size, NUIColor color) {
+    const float tracking = size * 0.12f;
+    float cursor = x;
+    for (char raw : text) {
+        const char ch = static_cast<char>(std::toupper(static_cast<unsigned char>(raw)));
+        const std::string glyph(1, ch);
+        const float w = renderer.measureText(glyph, size).width;
+        if (ch != ' ') renderer.drawTextCentered(glyph, textRect(cursor, centreY, w), size, color);
+        cursor += w + tracking;
+    }
+    return cursor - x;
+}
+
+void drawSectionHeader(NUIRenderer& renderer, float x, float y, float width, const std::string& label) {
+    const auto c = emberColors();
+    const float tw = drawCaps(renderer, label, x, y + 6.0f, 10.0f, c.inkMuted);
+    renderer.fillRect(NUIRect(x + tw + 8.0f, y + 6.0f, std::max(0.0f, width - tw - 8.0f), 1.0f), c.border);
+}
+
+void drawWell(NUIRenderer& renderer, const NUIRect& rect) {
+    const auto c = emberColors();
+    renderer.fillRect(rect, c.well);
+    renderer.strokeRect(rect, 1.0f, c.border);
+}
+
+void drawEmberKnob(NUIRenderer& renderer, const NUIPoint& cell, KnobSize size, float value, const std::string& label,
+                   const std::string& valueText, ControlState state, bool bipolar, bool bypassed) {
+    const auto c = emberColors();
+    const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
+    const KnobGeometry g = knobGeometry(size);
+    const bool lit = state == ControlState::Hover || state == ControlState::Drag;
+    const bool disabled = state == ControlState::Disabled;
+    const float v = std::clamp(value, 0.0f, 1.0f);
+    const NUIPoint ctr(cell.x + g.cell * 0.5f, cell.y + g.disc * 0.5f);
+    const float r = g.disc * 0.5f - g.track * 0.5f - 1.0f;
+    const float angle = kKnobStart + v * kKnobSweep;
+
+    drawArc(renderer, ctr, r, kKnobStart, kKnobStart + kKnobSweep, g.track, disabled ? theme.borderStrong : c.edge);
+    const NUIColor arc = (disabled || bypassed) ? c.inkOff : lit ? c.primaryHover : c.primary;
+    if (bipolar) {
+        drawArc(renderer, ctr, r, kKnobStart + kKnobSweep * 0.5f, angle, g.track + 1.0f, arc);
+        // Detent tick above the arc's top-centre.
+        renderer.drawLine({ctr.x, ctr.y - r - g.track * 0.5f - 1.0f}, {ctr.x, ctr.y - r - g.track * 0.5f - 5.0f}, 1.0f,
+                          c.inkMuted);
+    } else {
+        drawArc(renderer, ctr, r, kKnobStart, angle, g.track + 1.0f, arc);
+    }
+
+    const float rd = r - g.track * 0.5f - (size == KnobSize::Large ? 5.0f : 4.0f);
+    renderer.fillCircle(ctr, rd, lit ? c.raised : c.control);
+    renderer.drawLine({ctr.x + std::cos(angle) * rd * 0.3f, ctr.y + std::sin(angle) * rd * 0.3f},
+                      {ctr.x + std::cos(angle) * (rd - 1.0f), ctr.y + std::sin(angle) * (rd - 1.0f)}, 2.0f,
+                      disabled ? c.inkMuted : c.ink);
+
+    const float labelSize = size == KnobSize::Small ? 10.0f : 11.0f;
+    renderer.drawTextCentered(label, textRect(cell.x, cell.y + g.disc + 13.0f, g.cell, 14.0f), labelSize,
+                              lit ? c.ink : c.inkSoft);
+    if (state == ControlState::Drag) {
+        const float w = std::max(g.cell, renderer.measureText(valueText, 12.0f).width + 16.0f);
+        const NUIRect pill(ctr.x - w * 0.5f, cell.y + g.disc + 20.0f, w, 20.0f);
+        renderer.fillRect(pill, c.selected);
+        renderer.strokeRect(pill, 1.0f, c.primary);
+        renderer.drawTextCentered(valueText, pill, 12.0f, c.ink);
+    } else {
+        renderer.drawTextCentered(valueText, textRect(cell.x - 4.0f, cell.y + g.disc + 29.0f, g.cell + 8.0f, 16.0f),
+                                  12.0f, disabled ? c.inkMuted : c.ink);
+    }
+}
+
+void drawSegmented(NUIRenderer& renderer, const NUIRect& rect, const std::string* labels, int count, int selected,
+                   int hovered, bool bypassed) {
+    if (count <= 0) return;
+    const auto c = emberColors();
+    renderer.fillRect(rect, c.body);
+    const float cellW = rect.width / static_cast<float>(count);
+    for (int i = 0; i < count; ++i) {
+        const float x0 = std::round(rect.x + cellW * static_cast<float>(i));
+        const float x1 = std::round(rect.x + cellW * static_cast<float>(i + 1));
+        const NUIRect cell(x0, rect.y, x1 - x0, rect.height);
+        const bool on = i == selected;
+        const bool hot = i == hovered;
+        if (on) {
+            renderer.fillRect(cell, c.selected);
+            renderer.fillRect(NUIRect(x0, rect.bottom() - 2.0f, cell.width, 2.0f), bypassed ? c.inkOff : c.primary);
+        } else if (hot) {
+            renderer.fillRect(cell, c.raised);
+        }
+        if (i > 0) renderer.fillRect(NUIRect(x0, rect.y + 1.0f, 1.0f, rect.height - 2.0f), c.border);
+        renderer.drawTextCentered(labels[i], cell, 12.0f, (on || hot) ? c.ink : c.inkSoft);
+    }
+    renderer.strokeRect(rect, 1.0f, c.edge);
+}
+
+void drawToggleButton(NUIRenderer& renderer, const NUIRect& rect, const std::string& label, bool on, bool hovered,
+                      bool bypassed) {
+    const auto c = emberColors();
+    renderer.fillRect(rect, on ? c.selected : hovered ? c.raised : c.body);
+    renderer.strokeRect(rect, 1.0f, c.edge);
+    const NUIRect mark(rect.x + 8.0f, rect.y + rect.height * 0.5f - 3.0f, 6.0f, 6.0f);
+    if (on) renderer.fillRect(mark, bypassed ? c.inkOff : c.primary);
+    else renderer.strokeRect(mark, 1.0f, c.inkMuted);
+    drawCaps(renderer, label, rect.x + 20.0f, rect.y + rect.height * 0.5f, 11.0f, (on || hovered) ? c.ink : c.inkSoft);
+}
+
+void drawPushButton(NUIRenderer& renderer, const NUIRect& rect, const std::string& label, bool hovered) {
+    const auto c = emberColors();
+    renderer.fillRect(rect, hovered ? c.raised : c.body);
+    renderer.strokeRect(rect, 1.0f, c.edge);
+    renderer.drawTextCentered(label, rect, 12.0f, hovered ? c.ink : c.inkSoft);
+}
+
+EmberSliderGeometry emberSliderGeometry(const NUIRect& rect, float labelWidth) {
+    return {rect.x + labelWidth + 8.0f, rect.right() - 72.0f};
+}
+
+void drawEmberSlider(NUIRenderer& renderer, const NUIRect& rect, float labelWidth, const std::string& label,
+                     float value, const std::string& valueText, ControlState state, bool bypassed) {
+    const auto c = emberColors();
+    const bool lit = state == ControlState::Hover || state == ControlState::Drag;
+    const float v = std::clamp(value, 0.0f, 1.0f);
+    const float cy = rect.y + rect.height * 0.5f;
+    const EmberSliderGeometry g = emberSliderGeometry(rect, labelWidth);
+    const float tx = g.x0 + (g.x1 - g.x0) * v;
+
+    drawTextLeft(renderer, label, rect.x, cy, 11.0f, lit ? c.ink : c.inkSoft);
+    renderer.fillRect(NUIRect(g.x0, cy - 1.0f, g.x1 - g.x0, 2.0f), c.edge);
+    const NUIColor fill = (bypassed || state == ControlState::Disabled) ? c.inkOff : lit ? c.primaryHover : c.primary;
+    renderer.fillRect(NUIRect(g.x0, cy - 2.0f, tx - g.x0, 4.0f), fill);
+    renderer.fillRect(NUIRect(std::round(tx) - 2.0f, cy - 8.0f, 4.0f, 16.0f),
+                      state == ControlState::Disabled ? c.inkMuted : c.ink);
+    if (state == ControlState::Drag) {
+        const float w = renderer.measureText(valueText, 12.0f).width + 16.0f;
+        const NUIRect pill(rect.right() - w, cy - 10.0f, w, 20.0f);
+        renderer.fillRect(pill, c.selected);
+        renderer.strokeRect(pill, 1.0f, c.primary);
+        renderer.drawTextCentered(valueText, pill, 12.0f, c.ink);
+    } else {
+        drawTextRight(renderer, valueText, rect.right(), cy, 12.0f, c.ink);
+    }
+}
+
+void drawVerticalMeter(NUIRenderer& renderer, const NUIRect& rect, float db, MeterKind kind, bool bypassed) {
+    const auto c = emberColors();
+    drawWell(renderer, rect);
+    const float inner = rect.height - 2.0f;
+    if (kind == MeterKind::Level) {
+        constexpr float kLo = -48.0f;
+        const float f = std::clamp((db - kLo) / -kLo, 0.0f, 1.0f);
+        const float bottom = rect.bottom() - 1.0f;
+        const float top = bottom - inner * f;
+        const float warnY = bottom - inner * ((-6.0f - kLo) / -kLo);
+        const float bodyTop = std::max(top, warnY);
+        renderer.fillRect(NUIRect(rect.x + 1.0f, bodyTop, rect.width - 2.0f, bottom - bodyTop),
+                          bypassed ? c.inkOff : c.meter);
+        if (top < warnY)
+            renderer.fillRect(NUIRect(rect.x + 1.0f, top, rect.width - 2.0f, warnY - top), bypassed ? c.inkOff : c.warn);
+        renderer.fillRect(NUIRect(rect.x + 1.0f, top - 2.0f, rect.width - 2.0f, 2.0f), c.ink);
+    } else {
+        const float f = std::clamp(-db / 24.0f, 0.0f, 1.0f);
+        renderer.fillRect(NUIRect(rect.x + 1.0f, rect.y + 1.0f, rect.width - 2.0f, inner * f),
+                          bypassed ? c.inkOff : c.warn);
+    }
 }
 
 } // namespace EditorKit

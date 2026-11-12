@@ -3,6 +3,7 @@
 #include "../Platform/NUIPlatformBridge.h"
 #include "NUIThemeSystem.h"
 #include "NUIRenderer.h"
+#include "PluginEditorKit.h"
 #include <algorithm>
 #include <cmath>
 
@@ -97,6 +98,7 @@ void AestraPanelWindow::cacheThemeColors()
 void AestraPanelWindow::setTitleAccessory(std::shared_ptr<PanelTitleAccessory> accessory)
 {
     m_accessory = std::move(accessory);
+    if (m_accessory) m_accessory->setHeaderMode(m_twoRowHeader);
     setDirty(true);
 }
 
@@ -120,6 +122,19 @@ void AestraPanelWindow::setPanelTitle(const std::string& title)
     setDirty(true);
 }
 
+void AestraPanelWindow::setTwoRowHeader(bool twoRow)
+{
+    m_twoRowHeader = twoRow;
+    if (m_accessory) m_accessory->setHeaderMode(twoRow);
+    setDirty(true);
+}
+
+void AestraPanelWindow::setPanelContext(const std::string& text)
+{
+    m_contextText = text;
+    setDirty(true);
+}
+
 void AestraPanelWindow::setBadgeText(const std::string& text)
 {
     m_badgeText = text;
@@ -134,13 +149,13 @@ void AestraPanelWindow::setPlatformBridge(NUIPlatformBridge* bridge)
 NUIRect AestraPanelWindow::getContentRect() const
 {
     auto b = getBounds();
-    return NUIRect(b.x, b.y + TITLE_BAR_H, b.width, std::max(0.0f, b.height - TITLE_BAR_H));
+    return NUIRect(b.x, b.y + headerHeight(), b.width, std::max(0.0f, b.height - headerHeight()));
 }
 
 bool AestraPanelWindow::hitTestCloseButton(float x, float y) const
 {
     auto b = getBounds();
-    NUIRect closeBtn{b.right() - 28.0f, b.y + 4.0f, 24.0f, 24.0f};
+    NUIRect closeBtn{b.right() - (m_twoRowHeader ? 30.0f : 28.0f), b.y + 4.0f, 24.0f, 24.0f};
     return closeBtn.contains({x, y});
 }
 
@@ -154,6 +169,11 @@ void AestraPanelWindow::drawTitleBar(NUIRenderer& renderer)
 {
     auto b = getBounds();
     if (b.isEmpty()) return;
+
+    if (m_twoRowHeader) {
+        drawTwoRowHeader(renderer);
+        return;
+    }
 
     // Bottom border only — body fillRoundedRect already covered the top area
     renderer.drawLine({b.x, b.y + TITLE_BAR_H - 0.5f},
@@ -196,6 +216,33 @@ void AestraPanelWindow::drawTitleBar(NUIRenderer& renderer)
     NUIColor xColor = m_closeHovered ? m_closeActive : m_textTertiary;
     renderer.drawLine({cx - d, cy - d}, {cx + d, cy + d}, 1.5f, xColor);
     renderer.drawLine({cx + d, cy - d}, {cx - d, cy + d}, 1.5f, xColor);
+}
+
+// The FD-73 header: row one is the panel's (title, where it sits, close); row two is the accessory's.
+void AestraPanelWindow::drawTwoRowHeader(NUIRenderer& renderer)
+{
+    const auto b = getBounds();
+    const auto c = EditorKit::emberColors();
+    const NUIRect row1{b.x, b.y, b.width, TITLE_BAR_H};
+    renderer.fillRect(row1, c.panel);
+    renderer.fillRect({b.x, b.y + TITLE_BAR_H - 1.0f, b.width, 1.0f}, c.border);
+    renderer.fillRect({b.x, b.y + 2.0f * TITLE_BAR_H - 1.0f, b.width, 1.0f}, c.border);
+
+    const float cy = b.y + TITLE_BAR_H * 0.5f;
+    float x = b.x + 12.0f;
+    if (!m_title.empty()) x += EditorKit::drawCaps(renderer, m_title, x, cy, 12.0f, c.inkSoft) + 10.0f;
+    if (!m_contextText.empty()) EditorKit::drawTextLeft(renderer, m_contextText, x, cy, 12.0f, c.inkMuted);
+
+    const NUIRect closeBtn{b.right() - 30.0f, b.y + 4.0f, 24.0f, 24.0f};
+    const bool lit = m_closeHovered || m_closePressed;
+    if (lit) renderer.fillRect(closeBtn, c.raised);
+    const NUIPoint ctr = closeBtn.center();
+    const NUIColor ink = lit ? c.ink : c.inkSoft;
+    renderer.drawLine({ctr.x - 4.0f, ctr.y - 4.0f}, {ctr.x + 4.0f, ctr.y + 4.0f}, 1.5f, ink);
+    renderer.drawLine({ctr.x + 4.0f, ctr.y - 4.0f}, {ctr.x - 4.0f, ctr.y + 4.0f}, 1.5f, ink);
+
+    if (m_accessory && b.width >= m_accessory->minimumWidth())
+        m_accessory->render(renderer, {b.x, b.y + TITLE_BAR_H, b.width, TITLE_BAR_H});
 }
 
 void AestraPanelWindow::onRender(NUIRenderer& renderer)

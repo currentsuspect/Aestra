@@ -6,6 +6,7 @@
 
 #include "Presets/PresetSession.h"
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -36,6 +37,17 @@ public:
     bool onKeyEvent(const NUIKeyEvent& event) override;
     bool wantsKeys() const override { return m_popover != Popover::None; }
     float minimumWidth() const override { return kBarMinWidth; }
+    void setHeaderMode(bool twoRow) override { m_twoRow = twoRow; }
+    bool twoRow() const { return m_twoRow; }
+
+    /// What the two-row header's menu and power button do. The bar only draws and asks; the plugin window's
+    /// owner answers. A missing bypass hides the power button.
+    struct HeaderActions {
+        std::function<bool()> isBypassed;
+        std::function<void(bool)> setBypassed;
+        std::function<void(const NUIPoint&)> openMenu; ///< the "···" button, anchored under itself
+    };
+    void setHeaderActions(HeaderActions actions) { m_actions = std::move(actions); }
 
     Aestra::Audio::Presets::PresetSession& session() { return *m_session; }
 
@@ -52,7 +64,8 @@ public:
     int filter() const { return m_filter; } ///< 0 All, 1 Factory, 2 Yours, 3 This project
     void setFilter(int f);
     int chipCount() const; ///< "This project" shows only when the project can keep presets
-    /// Where things were drawn last frame, for tests: 0 ‹, 1 name, 2 ›, 3 Save, 4 A, 5 B.
+    /// Where things were drawn last frame, for tests: 0 ‹, 1 name, 2 ›, 3 Save, 4 A, 5 B, 6 ···, 7 power
+    /// (the last two only in the two-row header).
     NUIRect controlRect(int which) const;
     NUIRect popoverRect() const { return m_popoverRect; }
     NUIRect rowRect(int visibleIndex) const { return browseRowRect(m_popoverRect, visibleIndex); }
@@ -65,7 +78,7 @@ public:
 
 private:
     struct Layout {
-        NUIRect prev, name, next, save, ab, a, b;
+        NUIRect prev, name, next, save, ab, a, b, more, power;
     };
     Layout layoutFor(const NUIRect& titleBar) const;
     NUIRect browseRect(const NUIRect& window) const;
@@ -99,7 +112,11 @@ private:
     int m_savePlace = 0;         ///< 0 Yours, 1 This project
     std::string m_saveError;
 
+    void renderTwoRow(NUIRenderer& renderer, const NUIRect& row);
+
     int m_hoverControl = -1;
+    bool m_twoRow = false;
+    HeaderActions m_actions;
 };
 
 } // namespace AestraUI

@@ -554,8 +554,18 @@ NUIColor NUIThemeManager::getColor(const std::string& colorName) const {
                          : NUIColor(0.935f, 0.937f, 0.943f, 0.92f);
     }
 
+    // Plugin-editor control kit (FD-73). borderStrong is only 1.7:1 on the editor
+    // body, too faint for the edge of a control that has to be found. controlEdge
+    // is the visible edge (3:1 and up); controlSelected fills the "on" segment or
+    // toggle; controlGuide marks a threshold or crossover line on a graph.
+    if (colorName == "controlEdge") {
+        return editorLightUi() ? theme.textMuted : NUIColor::fromHex(0x6b645c);
+    }
+    if (colorName == "controlSelected") return NUIColor::lerp(theme.backgroundSecondary, theme.primary, 0.23f);
+    if (colorName == "controlGuide") return NUIColor::lerp(theme.backgroundSecondary, theme.primary, 0.45f);
+
     // Step Grid Colors
-    if (colorName == "stepActive") return theme.primary;                              // Active step (on)
+    if (colorName == "stepActive") return theme.primary;                            // Active step (on)
     if (colorName == "stepInactive") return theme.surfaceRaised;                      // Inactive step (off)
     if (colorName == "stepHover") return theme.hover;                                 // Step hover state
     if (colorName == "stepTriggerGlow") return theme.primary.withAlpha(0.6f);         // Glow on pad hit
