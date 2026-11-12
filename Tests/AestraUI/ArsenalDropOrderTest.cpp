@@ -4,14 +4,15 @@
 //
 // The bug (owner, 4 Nov 2026, Angel Dust session): dragging a sample from the browser onto Arsenal
 // stopped working; the drop went to the timeline behind the panel and was rejected ("Invalid track
-// position"). The drop manager checks the most recently registered target first, and the timeline
+// position"). The drop manager checked the most recently registered target first, and the timeline
 // registers itself on its first frame — after Arsenal when a project opens with Arsenal in front.
-// Arsenal now claims the front of the list once per drag, as the mixer does (#395).
+// The drop manager now picks the target on top on screen (#1328), so nothing re-registers per drag.
 //
-// Stand-in for the timeline: a full-window drop target registered after the panel.
-//   A. The pointer moves over Arsenal after the claim: the sample loads into Arsenal.
-//   B. The pointer was already over Arsenal (cached target: the timeline) when the claim happens, and
-//      the release comes with no further move: it still loads into Arsenal.
+// The tree mirrors AestraContent: a workspace layer with a full-window timeline stand-in, then the
+// pass-through overlay layer holding Arsenal. The timeline registers after the panel.
+//   A. The pointer moves over Arsenal: the sample loads into Arsenal.
+//   B. The pointer is over the timeline when Arsenal opens under it, and the release comes with no
+//      further move: it still loads into Arsenal.
 
 #include "ArsenalPanel.h"
 #include "NUIDragDrop.h"
@@ -41,6 +42,9 @@ public:
 };
 
 struct Rig {
+    std::shared_ptr<NUIComponent> root = std::make_shared<NUIComponent>();
+    std::shared_ptr<NUIComponent> workspace = std::make_shared<NUIComponent>();
+    std::shared_ptr<NUIComponent> overlay = std::make_shared<NUIComponent>();
     std::shared_ptr<Aestra::Audio::TrackManager> tm = std::make_shared<Aestra::Audio::TrackManager>();
     std::shared_ptr<Aestra::Audio::ArsenalPanel> arsenal = std::make_shared<Aestra::Audio::ArsenalPanel>(tm);
     std::shared_ptr<TimelineStandIn> timeline = std::make_shared<TimelineStandIn>();
@@ -48,6 +52,12 @@ struct Rig {
     DragData data;
 
     Rig() {
+        for (auto& layer : {root, workspace, overlay}) layer->setBounds({0.0f, 0.0f, 1366.0f, 768.0f});
+        overlay->setDropPassThrough(true);
+        root->addChild(workspace);
+        root->addChild(overlay);
+        workspace->addChild(timeline);
+        overlay->addChild(arsenal);
         arsenal->setBounds({260.0f, 90.0f, 1100.0f, 670.0f});
         arsenal->setVisible(true);
         arsenal->refreshUnits();
@@ -67,12 +77,12 @@ struct Rig {
     }
 };
 
-void testMoveAfterClaim() {
+void testMoveOverArsenal() {
     Rig rig;
     auto& dnd = NUIDragDropManager::getInstance();
     const NUIPoint start{150.0f, 464.0f};
     dnd.beginDrag(rig.data, start, nullptr);
-    dnd.updateDrag({start.x + 40.0f, start.y}); // past the threshold: the drag starts
+    dnd.updateDrag({start.x + 40.0f, start.y}); // past the threshold: the drag starts (over the timeline)
     rig.arsenal->onUpdate(0.016);                // a frame while the drag is in flight
     dnd.updateDrag({800.0f, 600.0f});            // over Arsenal (and the timeline behind it)
     check(dnd.isDragging(), "A: the drag is in flight");
@@ -81,15 +91,17 @@ void testMoveAfterClaim() {
     check(rig.loadedPath == rig.data.filePath, "A: it loads into Arsenal");
 }
 
-void testReleaseWithoutMoveAfterClaim() {
+void testArsenalOpensUnderStillPointer() {
     Rig rig;
     auto& dnd = NUIDragDropManager::getInstance();
     const NUIPoint over{800.0f, 600.0f};
+    rig.arsenal->setVisible(false);
     dnd.beginDrag(rig.data, {150.0f, 464.0f}, nullptr);
-    dnd.updateDrag(over);         // already over Arsenal: the cached target is the timeline
-    rig.arsenal->onUpdate(0.016); // the claim happens now
-    dnd.endDrag(over);            // released with no move in between
-    check(!rig.timeline->dropped, "B: a release with no move after the claim does not land on the timeline");
+    dnd.updateDrag(over);           // Arsenal is closed: the cached target is the timeline
+    rig.arsenal->setVisible(true);  // it opens under the pointer
+    rig.arsenal->onUpdate(0.016);
+    dnd.endDrag(over);              // released with no move in between
+    check(!rig.timeline->dropped, "B: a release with no move after Arsenal opens does not land on the timeline");
     check(rig.loadedPath == rig.data.filePath, "B: it loads into Arsenal");
 }
 
@@ -97,7 +109,7 @@ void testReleaseWithoutMoveAfterClaim() {
 
 int main() {
     std::cout << "ArsenalDropOrderTest\n";
-    testMoveAfterClaim();
-    testReleaseWithoutMoveAfterClaim();
+    testMoveOverArsenal();
+    testArsenalOpensUnderStillPointer();
     return g_failures == 0 ? 0 : 1;
 }

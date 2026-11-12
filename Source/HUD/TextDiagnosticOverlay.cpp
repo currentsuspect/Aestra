@@ -44,6 +44,7 @@ std::string f(float v, int precision = 3) {
 
 TextDiagnosticOverlay::TextDiagnosticOverlay() {
     setBounds(NUIRect(0, 0, PANEL_WIDTH, PANEL_MIN_HEIGHT));
+    setDropPassThrough(true); // own m_visible shadows isVisible(): never let the hidden overlay swallow drops
 }
 
 void TextDiagnosticOverlay::onUpdate(double /*deltaTime*/) {

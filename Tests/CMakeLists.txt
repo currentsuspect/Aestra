@@ -3046,6 +3046,19 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(PanelResizeLayoutTest PROPERTIES LABELS "ui;layout;regression;contract:application")
 endif()
 
+# A drop goes to the target on top on screen, not the last one registered (#1328)
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(DropTargetZOrderTest AestraUI_Core)
+    add_executable(DropTargetZOrderTest AestraUI/DropTargetZOrderTest.cpp)
+    target_link_libraries(DropTargetZOrderTest PRIVATE AestraUI_Core)
+    target_include_directories(DropTargetZOrderTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+    )
+    add_test(NAME DropTargetZOrderTest COMMAND DropTargetZOrderTest)
+    set_tests_properties(DropTargetZOrderTest PROPERTIES LABELS "ui;dragdrop;regression;contract:application")
+endif()
+
 # A sample dragged onto an open Arsenal lands there, not on the timeline under it (4 Nov 2026)
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(ArsenalDropOrderTest AestraUI_Core AestraUI_Platform)
@@ -4467,6 +4480,7 @@ if(AESTRA_ENABLE_UI)
         BPMEditorPaintTest
         TransportClockFormatTest
         PanelResizeLayoutTest
+        DropTargetZOrderTest
         ArsenalDropOrderTest
         ExportDialogWidgetsTest
         AutomationClipLayerTest
