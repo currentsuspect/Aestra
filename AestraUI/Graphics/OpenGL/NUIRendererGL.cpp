@@ -2664,24 +2664,23 @@ bool NUIRendererGL::tryAddGlyphToAtlas(uint32_t codepoint, FT_Face face, int atl
 }
 
 bool NUIRendererGL::tryLoadFallbackGlyph(uint32_t codepoint, int atlasSize) {
-    if (!ftCJKFace_) return false;
-
-    if (atlasSize == atlasFontSize_) {
-        return tryAddGlyphToAtlas(codepoint, ftCJKFace_, atlasSize,
-            fontAtlasTextureId_, fontCache_,
-            fontAtlasX_, fontAtlasY_, fontAtlasRowHeight_);
-    } else if (atlasSize == atlasFontSizeMedium_) {
-        return tryAddGlyphToAtlas(codepoint, ftCJKFace_, atlasSize,
-            fontAtlasTextureIdMedium_, fontCacheMedium_,
-            fontAtlasXMedium_, fontAtlasYMedium_, fontAtlasRowHeightMedium_);
-    } else if (atlasSize == atlasFontSizeSmall_) {
-        return tryAddGlyphToAtlas(codepoint, ftCJKFace_, atlasSize,
-            fontAtlasTextureIdSmall_, fontCacheSmall_,
-            fontAtlasXSmall_, fontAtlasYSmall_, fontAtlasRowHeightSmall_);
-    } else if (atlasSize == atlasFontSizeXSmall_) {
-        return tryAddGlyphToAtlas(codepoint, ftCJKFace_, atlasSize,
-            fontAtlasTextureIdXSmall_, fontCacheXSmall_,
-            fontAtlasXXSmall_, fontAtlasYXSmall_, fontAtlasRowHeightXSmall_);
+    // The UI face first: only ASCII is preloaded, so the minus sign, infinity and the ellipsis load here. Then CJK.
+    for (FT_Face face : {ftFace_, ftCJKFace_}) {
+        if (!face) continue;
+        bool added = false;
+        if (atlasSize == atlasFontSize_)
+            added = tryAddGlyphToAtlas(codepoint, face, atlasSize, fontAtlasTextureId_, fontCache_, fontAtlasX_,
+                                       fontAtlasY_, fontAtlasRowHeight_);
+        else if (atlasSize == atlasFontSizeMedium_)
+            added = tryAddGlyphToAtlas(codepoint, face, atlasSize, fontAtlasTextureIdMedium_, fontCacheMedium_,
+                                       fontAtlasXMedium_, fontAtlasYMedium_, fontAtlasRowHeightMedium_);
+        else if (atlasSize == atlasFontSizeSmall_)
+            added = tryAddGlyphToAtlas(codepoint, face, atlasSize, fontAtlasTextureIdSmall_, fontCacheSmall_,
+                                       fontAtlasXSmall_, fontAtlasYSmall_, fontAtlasRowHeightSmall_);
+        else if (atlasSize == atlasFontSizeXSmall_)
+            added = tryAddGlyphToAtlas(codepoint, face, atlasSize, fontAtlasTextureIdXSmall_, fontCacheXSmall_,
+                                       fontAtlasXXSmall_, fontAtlasYXSmall_, fontAtlasRowHeightXSmall_);
+        if (added) return true;
     }
     return false;
 }
