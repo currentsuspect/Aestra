@@ -21,10 +21,12 @@ target_include_directories(AestraRumble
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+# Rumble is free (FD-57): no licence check, so no AestraLicense, which lab and sanitizer builds leave out.
+find_package(Threads REQUIRED)
 target_link_libraries(AestraRumble
     PUBLIC
         AestraPluginAPI
-        AestraLicense
+        Threads::Threads
 )
 
 target_compile_features(AestraRumble PUBLIC cxx_std_17)
