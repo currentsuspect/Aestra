@@ -273,7 +273,8 @@ void testLightPresetCompleteness() {
     std::cout << "[Test] light preset semantic completeness\n";
     const auto theme = NUIThemePresets::createAestraLight();
 
-    check(colorsEqual(theme.textLink, theme.primary), "light link text is initialized");
+    // FD-79: the kit reads the accent as text in `secondary` in both polarities.
+    check(colorsEqual(theme.textLink, theme.secondary), "light link text is the readable accent");
     check(colorsEqual(theme.textCritical, theme.error), "light critical text is initialized");
     check(theme.highlightGlow.a > 0.0f && theme.highlightGlow.a < 0.3f,
           "light highlight glow is initialized and restrained");
@@ -467,7 +468,12 @@ void testControlKitTokens() {
         return (std::max(la, lb) + 0.05f) / (std::min(la, lb) + 0.05f);
     };
     check(contrast(edge, body) >= 3.0f, "a control edge reads at 3:1 on the editor body");
-    check(!colorsEqual(edge, manager.getColor("borderStrong")), "controlEdge is its own token, not borderStrong");
+    // FD-79 (Design Spec rule 4c): controlEdge is a legacy outline colour, kept for high contrast. In Ember dark it
+    // is the kit's borderStrong; high contrast must keep it bright enough to find every control.
+    manager.setActiveTheme("ember-hc");
+    check(contrast(manager.getColor("controlEdge"), manager.getColor("backgroundPrimary")) >= 3.0f,
+          "high contrast keeps a findable control edge");
+    manager.setActiveTheme("Aestra-dark");
     const NUIColor selected = manager.getColor("controlSelected");
     check(selected.b > selected.r && selected.r > body.r, "the selected fill is a violet tint above the body");
     check(manager.getColor("controlGuide").b > selected.b, "a graph guide is stronger than the selected fill");

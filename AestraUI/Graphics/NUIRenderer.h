@@ -177,6 +177,25 @@ public:
     /**
      * Draw a rectangle outline.
      */
+    /**
+     * @brief A rounded rect whose colour runs from @p top to @p bottom: a cap or thumb lit from above.
+     * The default draws the middle colour flat, for renderers that cannot shade.
+     */
+    virtual void fillRoundedRectVertical(const NUIRect& rect, float radius, const NUIColor& top, const NUIColor& bottom) {
+        fillRoundedRect(rect, radius, NUIColor::lerp(top, bottom, 0.5f));
+    }
+
+    /**
+     * @brief The inner shadow of a rounded rect: what makes a well read as sunk (Design Spec rule 1).
+     * A positive @p offset shades the top-left inner edge, a negative one lights the bottom-right; with
+     * @p verticalOnly the shift is straight down (or up). Drawn as one SDF quad, so it costs no blur pass.
+     * The default draws nothing, which leaves a flat well.
+     */
+    virtual void drawInnerShadow(const NUIRect& rect, float radius, float offset, float blur, const NUIColor& color,
+                                 bool verticalOnly = false) {
+        (void)rect; (void)radius; (void)offset; (void)blur; (void)color; (void)verticalOnly;
+    }
+
     virtual void strokeRect(const NUIRect& rect, float thickness, const NUIColor& color) = 0;
     
     /**

@@ -233,14 +233,13 @@ NUIThemeManager::NUIThemeManager()
 }
 
 void NUIThemeManager::initializeDefaultThemes() {
-    // Aestra Dark Theme
-    NUIThemeProperties AestraDark = NUIThemePresets::createAestraDark();
-    themes_["Aestra-dark"] = AestraDark;
-    themes_["aestra-dark"] = AestraDark;  // Alias for lowercase preference key
-    
-    // Aestra Light Theme
-    NUIThemeProperties AestraLight = NUIThemePresets::createAestraLight();
-    themes_["Aestra-light"] = AestraLight;
+    // The twelve Aestra Kit variants (FD-79). The older names are kept as aliases so saved preferences still
+    // load: "Aestra-dark" is Ember dark, "Aestra-light" Ember light, "high-contrast-dark" Ember high contrast.
+    for (const auto& kit : NUIThemePresets::kitThemes())
+        themes_[kit.key] = NUIThemePresets::createKitTheme(kit.key);
+    themes_["Aestra-dark"] = themes_["ember-dark"];
+    themes_["aestra-dark"] = themes_["ember-dark"];  // Alias for lowercase preference key
+    themes_["Aestra-light"] = themes_["ember-light"];
     
     // Material Themes
     themes_["material-light"] = NUIThemePresets::createMaterialLight();
@@ -256,7 +255,7 @@ void NUIThemeManager::initializeDefaultThemes() {
     
     // High Contrast Themes
     themes_["high-contrast-light"] = NUIThemePresets::createHighContrastLight();
-    themes_["high-contrast-dark"] = NUIThemePresets::createHighContrastDark();
+    themes_["high-contrast-dark"] = themes_["ember-hc"];
 }
 
 void NUIThemeManager::setThemeVariant(NUIThemeVariant variant) {
@@ -518,51 +517,26 @@ NUIColor NUIThemeManager::getColor(const std::string& colorName) const {
     // Timeline work bed + track chrome: derived per theme polarity. Dark
     // themes keep the owner-directed pure-black grid and near-black chrome;
     // light themes get a recessed light bed and clean white chrome instead.
-    if (colorName == "timelineBed" || colorName == "trackChrome") {
-        const float bgLuma = 0.2126f * theme.backgroundPrimary.r +
-                             0.7152f * theme.backgroundPrimary.g +
-                             0.0722f * theme.backgroundPrimary.b;
-        const bool darkTheme = bgLuma < 0.5f;
-        if (colorName == "timelineBed") {
-            return darkTheme ? NUIColor::black()
-                             : NUIColor(0.936f, 0.938f, 0.942f, 1.0f);
-        }
-        // Track chrome is the theme's deepest surface, so a palette change
-        // (e.g. Ember's warm black) reaches the headers instead of stopping
-        // at a hardcoded blue-black.
-        return darkTheme ? theme.backgroundPrimary
-                         : theme.backgroundSecondary;
-    }
-    // Plugin-editor internals share one polarity-aware language: cards,
-    // display wells, and control fills that are near-black on dark themes
-    // and clean light surfaces on light ones. Identity accents stay per-editor.
-    if (colorName == "editorCard" || colorName == "editorWell" || colorName == "editorControl") {
-        const float bgLuma = 0.2126f * theme.backgroundPrimary.r +
-                             0.7152f * theme.backgroundPrimary.g +
-                             0.0722f * theme.backgroundPrimary.b;
-        const bool darkTheme = bgLuma < 0.5f;
-        // Dark values derive from the theme's surfaces so they carry its tint.
-        if (colorName == "editorCard") {
-            return darkTheme ? theme.backgroundSecondary.withAlpha(0.95f)
-                             : NUIColor(0.962f, 0.963f, 0.968f, 0.97f);
-        }
-        if (colorName == "editorWell") {
-            return darkTheme ? NUIColor::lerp(theme.backgroundPrimary, NUIColor::black(), 0.6f).withAlpha(0.98f)
-                             : NUIColor(0.915f, 0.918f, 0.925f, 0.98f);
-        }
-        return darkTheme ? NUIColor::lerp(theme.backgroundPrimary, theme.backgroundSecondary, 0.5f).withAlpha(0.90f)
-                         : NUIColor(0.935f, 0.937f, 0.943f, 0.92f);
-    }
-
-    // Plugin-editor control kit (FD-73). borderStrong is only 1.7:1 on the editor
-    // body, too faint for the edge of a control that has to be found. controlEdge
-    // is the visible edge (3:1 and up); controlSelected fills the "on" segment or
-    // toggle; controlGuide marks a threshold or crossover line on a graph.
-    if (colorName == "controlEdge") {
-        return editorLightUi() ? theme.textMuted : NUIColor::fromHex(0x6b645c);
-    }
-    if (colorName == "controlSelected") return NUIColor::lerp(theme.backgroundSecondary, theme.primary, 0.23f);
-    if (colorName == "controlGuide") return NUIColor::lerp(theme.backgroundSecondary, theme.primary, 0.45f);
+    // Timeline bed and track chrome. The bed is pure black on every dark theme by owner direction; each theme
+    // states it (kit themes) or has it derived from its polarity (finishDerivedTokens).
+    if (colorName == "timelineBed") return theme.timelineBed;
+    if (colorName == "trackChrome") return theme.mode == 1 ? theme.backgroundSecondary : theme.backgroundPrimary;
+    // Plugin-editor internals: cards, display wells and control fills.
+    if (colorName == "editorCard") return theme.editorCard;
+    if (colorName == "editorWell") return theme.editorWell;
+    if (colorName == "editorControl") return theme.editorControl;
+    // controlEdge is a legacy outline colour (Design Spec rule 3): high contrast only, never a control at rest.
+    if (colorName == "controlEdge") return theme.controlEdge;
+    if (colorName == "controlSelected") return theme.controlSelected;
+    if (colorName == "controlGuide") return theme.controlGuide;
+    if (colorName == "textOnStatus") return theme.textOnStatus;
+    // Depth and glass (Design Spec rules 1 and 6).
+    if (colorName == "neuHi") return theme.neuHi;
+    if (colorName == "neuLo") return theme.neuLo;
+    if (colorName == "neuEdge") return theme.neuEdge;
+    if (colorName == "glassHi") return theme.glassHi;
+    if (colorName == "glassEdge") return theme.glassEdge;
+    if (colorName == "glassShade") return theme.glassShade;
 
     // Step Grid Colors
     if (colorName == "stepActive") return theme.primary;                            // Active step (on)
@@ -843,7 +817,7 @@ float NUIThemedComponent::getThemeComponentDimension(const std::string& componen
 }
 
 // NUIThemePresets Implementation
-NUIThemeProperties NUIThemePresets::createAestraDark() {
+static NUIThemeProperties legacyAestraDark() {
     NUIThemeProperties theme;
 
     // ========================================================================
@@ -1005,11 +979,13 @@ NUIThemeProperties NUIThemePresets::createAestraDark() {
     theme.mixerStripBg      = NUIColor::fromHex(0x161412);
     theme.mixerMasterBorder = theme.primary.withAlpha(0.34f);
 
+    NUIThemePresets::finishDerivedTokens(theme);
     return theme;
 }
 
-NUIThemeProperties NUIThemePresets::createAestraLight() {
+static NUIThemeProperties legacyAestraLight() {
     NUIThemeProperties theme;
+    theme.mode = 1;
 
     // The light theme is the same product as the dark one: the same brand violet (a step deeper,
     // for contrast on white), the same tuned accent hues, and neutrals with the same slight
@@ -1127,6 +1103,7 @@ NUIThemeProperties NUIThemePresets::createAestraLight() {
     theme.mixerStripBg = NUIColor(0.95f, 0.95f, 0.95f, 0.95f);
     theme.mixerMasterBorder = NUIColor(0.0f, 0.0f, 0.0f, 0.08f);
     
+    NUIThemePresets::finishDerivedTokens(theme);
     return theme;
 }
 
@@ -1136,8 +1113,12 @@ NUIThemeProperties NUIThemePresets::createFluentLight() { return createAestraLig
 NUIThemeProperties NUIThemePresets::createFluentDark() { return createAestraDark(); }
 NUIThemeProperties NUIThemePresets::createCupertinoLight() { return createAestraLight(); }
 NUIThemeProperties NUIThemePresets::createCupertinoDark() { return createAestraDark(); }
+NUIThemeProperties NUIThemePresets::createAestraDark() { return createKitTheme("ember-dark"); }
+NUIThemeProperties NUIThemePresets::createAestraLight() { return createKitTheme("ember-light"); }
+
 NUIThemeProperties NUIThemePresets::createHighContrastLight() {
     auto theme = createAestraLight();
+    theme.mode = 2;
     theme.backgroundPrimary = NUIColor::white();
     theme.backgroundSecondary = NUIColor::fromHex(0xf5f5f5);
     theme.surfaceTertiary = NUIColor::fromHex(0xebebeb);
@@ -1153,6 +1134,8 @@ NUIThemeProperties NUIThemePresets::createHighContrastLight() {
     theme.border = theme.borderStrong;
     theme.divider = theme.borderSubtle;
     theme.focusRing = theme.primary;
+    theme.controlEdge = theme.borderStrong;
+    theme.neuEdge = theme.borderSubtle;
     return theme;
 }
 
@@ -1197,6 +1180,194 @@ NUIThemeProperties NUIThemePresets::createHighContrastDark() {
     theme.gridMajor = NUIColor::white().withAlpha(0.24f);
     theme.gridMinor = NUIColor::white().withAlpha(0.12f);
     return theme;
+}
+
+// ============================================================================
+// Aestra Kit themes (FD-79)
+// ============================================================================
+
+namespace {
+
+struct KitToken {
+    const char* name;
+    uint32_t rgba;
+};
+
+struct KitThemeRow {
+    NUIThemePresets::KitTheme info;
+    std::vector<KitToken> tokens;
+};
+
+#define AESTRA_KIT_THEME(key, name, modeName, mode, ...) {{key, name, modeName, mode}, {__VA_ARGS__}},
+const std::vector<KitThemeRow>& kitRows() {
+    static const std::vector<KitThemeRow> rows = {
+#include "NUIKitThemes.inc"
+    };
+    return rows;
+}
+#undef AESTRA_KIT_THEME
+
+NUIColor colorFromRgba(uint32_t rgba) {
+    return NUIColor(static_cast<float>((rgba >> 24) & 0xffu) / 255.0f, static_cast<float>((rgba >> 16) & 0xffu) / 255.0f,
+                    static_cast<float>((rgba >> 8) & 0xffu) / 255.0f, static_cast<float>(rgba & 0xffu) / 255.0f);
+}
+
+NUIColor* kitTokenSlot(NUIThemeProperties& t, const std::string& name) {
+    static const std::unordered_map<std::string, NUIColor NUIThemeProperties::*> slots = {
+        {"backgroundPrimary", &NUIThemeProperties::backgroundPrimary},
+        {"backgroundSecondary", &NUIThemeProperties::backgroundSecondary},
+        {"surfaceTertiary", &NUIThemeProperties::surfaceTertiary},
+        {"surfaceRaised", &NUIThemeProperties::surfaceRaised},
+        {"timelineBed", &NUIThemeProperties::timelineBed},
+        {"mixerStripBg", &NUIThemeProperties::mixerStripBg},
+        {"textPrimary", &NUIThemeProperties::textPrimary},
+        {"textSecondary", &NUIThemeProperties::textSecondary},
+        {"textMuted", &NUIThemeProperties::textMuted},
+        {"textDisabled", &NUIThemeProperties::textDisabled},
+        {"borderSubtle", &NUIThemeProperties::borderSubtle},
+        {"border", &NUIThemeProperties::border},
+        {"borderStrong", &NUIThemeProperties::borderStrong},
+        {"divider", &NUIThemeProperties::divider},
+        {"primary", &NUIThemeProperties::primary},
+        {"primaryHover", &NUIThemeProperties::primaryHover},
+        {"primaryPressed", &NUIThemeProperties::primaryPressed},
+        {"textOnPrimary", &NUIThemeProperties::textOnPrimary},
+        {"secondary", &NUIThemeProperties::secondary},
+        {"focusRing", &NUIThemeProperties::focusRing},
+        {"success", &NUIThemeProperties::success},
+        {"warning", &NUIThemeProperties::warning},
+        {"error", &NUIThemeProperties::error},
+        {"textOnStatus", &NUIThemeProperties::textOnStatus},
+        {"meterSafe", &NUIThemeProperties::meterSafe},
+        {"meterWarn", &NUIThemeProperties::meterWarn},
+        {"meterCrit", &NUIThemeProperties::meterCrit},
+        {"meterBackground", &NUIThemeProperties::meterBackground},
+        {"accentCyan", &NUIThemeProperties::accentCyan},
+        {"accentMagenta", &NUIThemeProperties::accentMagenta},
+        {"accentLime", &NUIThemeProperties::accentLime},
+        {"hover", &NUIThemeProperties::hover},
+        {"pressed", &NUIThemeProperties::pressed},
+        {"selected", &NUIThemeProperties::selected},
+        {"focused", &NUIThemeProperties::focused},
+        {"dragTarget", &NUIThemeProperties::dragTarget},
+        {"gridMajor", &NUIThemeProperties::gridMajor},
+        {"gridMinor", &NUIThemeProperties::gridMinor},
+        {"overlay", &NUIThemeProperties::overlay},
+        {"shadow", &NUIThemeProperties::shadow},
+        {"editorCard", &NUIThemeProperties::editorCard},
+        {"editorWell", &NUIThemeProperties::editorWell},
+        {"editorControl", &NUIThemeProperties::editorControl},
+        {"controlEdge", &NUIThemeProperties::controlEdge},
+        {"controlSelected", &NUIThemeProperties::controlSelected},
+        {"controlGuide", &NUIThemeProperties::controlGuide},
+        {"neuHi", &NUIThemeProperties::neuHi},
+        {"neuLo", &NUIThemeProperties::neuLo},
+        {"neuEdge", &NUIThemeProperties::neuEdge},
+        {"glassHi", &NUIThemeProperties::glassHi},
+        {"glassEdge", &NUIThemeProperties::glassEdge},
+        {"glassShade", &NUIThemeProperties::glassShade},
+    };
+    const auto it = slots.find(name);
+    return it == slots.end() ? nullptr : &(t.*(it->second));
+}
+
+/// The legacy fields every widget still reads, restated from the kit's tokens so no part of the app keeps an
+/// older theme's colour after a theme change.
+void deriveFromKitTokens(NUIThemeProperties& t) {
+    t.background = t.backgroundPrimary;
+    t.surface = t.backgroundSecondary;
+    t.surfaceVariant = t.surfaceTertiary;
+    t.primaryVariant = t.primaryPressed;
+    t.secondaryVariant = t.primary;
+    t.accentPrimary = t.primary;
+    t.accentSecondary = t.secondary;
+    t.info = t.secondary;
+    t.textLink = t.secondary;
+    t.textCritical = t.error;
+    t.textOnSecondary = t.textOnPrimary;
+    t.onBackground = t.textPrimary;
+    t.onSurface = t.textPrimary;
+    t.onPrimary = t.textOnPrimary;
+    t.onSecondary = t.textOnPrimary;
+    t.onWarning = t.textOnStatus;
+    t.onSuccess = t.textOnStatus;
+    t.onInfo = t.textOnStatus;
+    t.borderActive = t.primary;
+    t.outline = t.borderStrong;
+    t.outlineVariant = t.divider;
+    t.glassActive = t.primary.withAlpha(0.16f);
+    t.buttonBgDefault = t.backgroundSecondary;
+    t.buttonBgHover = NUIColor::lerp(t.backgroundSecondary, t.surfaceTertiary, 0.5f);
+    t.buttonBgActive = t.primary.withAlpha(0.30f);
+    t.buttonTextDefault = t.textPrimary;
+    t.buttonTextActive = t.textPrimary;
+    t.toggleDefault = t.backgroundSecondary;
+    t.toggleHover = t.surfaceTertiary;
+    t.toggleActive = t.primary.withAlpha(0.85f);
+    t.sliderTrack = t.surfaceTertiary;
+    t.sliderHandle = t.primary;
+    t.sliderHandleHover = t.primaryHover;
+    t.sliderHandlePressed = t.primaryPressed;
+    t.inputBgDefault = t.backgroundSecondary;
+    t.inputBgHover = t.surfaceTertiary;
+    t.inputBorderFocus = t.focusRing;
+    t.armed = t.error;
+    t.muted = t.warning;
+    t.soloed = t.secondary;
+    t.bypassed = t.textDisabled;
+    t.highlightGlow = t.primary.withAlpha(0.20f);
+    t.meterActive = t.meterSafe;
+    t.mixerMasterBorder = t.primary.withAlpha(0.34f);
+    t.backdrop = t.overlay.withAlpha(t.overlay.a * 0.64f);
+}
+
+} // namespace
+
+const std::vector<NUIThemePresets::KitTheme>& NUIThemePresets::kitThemes() {
+    static const std::vector<KitTheme> list = [] {
+        std::vector<KitTheme> out;
+        for (const auto& row : kitRows())
+            out.push_back(row.info);
+        return out;
+    }();
+    return list;
+}
+
+NUIThemeProperties NUIThemePresets::createKitTheme(const std::string& key) {
+    const auto& rows = kitRows();
+    const auto it = std::find_if(rows.begin(), rows.end(), [&](const KitThemeRow& r) { return key == r.info.key; });
+    const KitThemeRow& row = it != rows.end() ? *it : rows.front();
+
+    // Type, spacing, radii, shadows and motion are shared; only colours differ between variants.
+    NUIThemeProperties theme = row.info.mode == 1 ? legacyAestraLight() : legacyAestraDark();
+    theme.mode = row.info.mode;
+    for (const auto& token : row.tokens) {
+        if (NUIColor* slot = kitTokenSlot(theme, token.name))
+            *slot = colorFromRgba(token.rgba);
+    }
+    deriveFromKitTokens(theme);
+    return theme;
+}
+
+void NUIThemePresets::finishDerivedTokens(NUIThemeProperties& theme) {
+    const bool dark = theme.mode != 1;
+    theme.timelineBed = dark ? NUIColor::black() : NUIColor(0.936f, 0.938f, 0.942f, 1.0f);
+    theme.editorCard = dark ? theme.backgroundSecondary.withAlpha(0.95f) : NUIColor(0.962f, 0.963f, 0.968f, 0.97f);
+    theme.editorWell = dark ? NUIColor::lerp(theme.backgroundPrimary, NUIColor::black(), 0.6f).withAlpha(0.98f)
+                            : NUIColor(0.915f, 0.918f, 0.925f, 0.98f);
+    theme.editorControl = dark ? NUIColor::lerp(theme.backgroundPrimary, theme.backgroundSecondary, 0.5f).withAlpha(0.90f)
+                               : NUIColor(0.935f, 0.937f, 0.943f, 0.92f);
+    theme.controlEdge = dark ? NUIColor::fromHex(0x6b645c) : theme.textMuted;
+    theme.controlSelected = NUIColor::lerp(theme.backgroundSecondary, theme.primary, 0.23f);
+    theme.controlGuide = NUIColor::lerp(theme.backgroundSecondary, theme.primary, 0.45f);
+    theme.textOnStatus = NUIColor::fromHex(0x12100e);
+    const bool light = theme.mode == 1;
+    theme.neuHi = light ? NUIColor::white().withAlpha(0.90f) : NUIColor::white().withAlpha(0.055f);
+    theme.neuLo = light ? NUIColor::black().withAlpha(0.17f) : NUIColor::black().withAlpha(0.85f);
+    theme.neuEdge = theme.mode == 2 ? theme.borderSubtle : NUIColor(0.0f, 0.0f, 0.0f, 0.0f);
+    theme.glassHi = light ? NUIColor::white().withAlpha(0.65f) : NUIColor::white().withAlpha(0.10f);
+    theme.glassEdge = light ? NUIColor::white().withAlpha(0.85f) : NUIColor::white().withAlpha(0.15f);
+    theme.glassShade = light ? NUIColor::black().withAlpha(0.14f) : NUIColor::black().withAlpha(0.70f);
 }
 
 } // namespace AestraUI
