@@ -1,282 +1,59 @@
+// © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
+// Rumble's starting sounds: the seven the founder played in the approved sketch (FD-80, SPEC-025), with the
+// sketch's values. Settings in RumbleSound order: Punch, Tail, Weight, Tone, Dirt, Slide, Drop time, Hold,
+// Curve, 2nd, 3rd, Clip type, Click, Click length, Click tone.
 #pragma once
+
+#include "RumbleVoice.h"
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <string_view>
 
 namespace Aestra {
 namespace Plugins {
 
-constexpr size_t kRumblePresetParameterCount = 25;
+constexpr size_t kRumblePresetParameterCount = RumbleSound::Count;
 
 struct RumbleFactoryPreset {
     std::string_view name;
     std::string_view category;
     std::string_view description;
     std::array<float, kRumblePresetParameterCount> values;
+    uint32_t seed;
 };
 
-inline constexpr std::array<float, kRumblePresetParameterCount> kRumbleDefaultValues = {
-    0.45f,          // AmpDecay
-    0.10f,          // Drive
-    0.30f,          // Tone
-    0.50f,          // OutputGain
-    0.35f,          // PitchAmount
-    0.25f,          // PitchDecay
-    0.42f,          // PitchCurve
-    0.04081632653f, // AmpAttack
-    0.55f,          // Resonance
-    0.48f,          // TransientAmount
-    0.25f,          // ClickLevel
-    0.20f,          // ClickDecay
-    0.35f,          // ClickTone
-    0.15f,          // GlideTime
-    0.50f,          // GlideCurve
-    0.0f,           // GlideMode
-    0.0f,           // RetriggerMode
-    0.50f,          // FilterEnvAmount
-    0.0f,           // FilterKeytrack
-    0.0f,           // SatMode
-    0.75f,          // VelocityToAmp
-    0.50f,          // Tune
-    0.50f,          // Fine
-    0.22f,          // Harmonics
-    0.70f,          // SubClean
-};
+inline constexpr std::array<RumbleFactoryPreset, 7> kRumbleFactoryPresets = {{
+    {"Balanced 808", "Start from", "The all-round 808 every sound in the sketch began from.",
+     {0.42f, 0.55f, 0.5f, 0.5f, 0.3f, 0.0f, 0.35f, 0.3f, 0.5f, 0.3f, 0.2f, 0.1f, 0.35f, 0.3f, 0.4f}, 1000u},
+    {"Pure sub", "Start from", "Almost all clean sine, a gentle drop and barely any click.",
+     {0.15f, 0.6f, 0.88f, 0.25f, 0.04f, 0.0f, 0.35f, 0.3f, 0.5f, 0.1f, 0.05f, 0.1f, 0.08f, 0.3f, 0.4f}, 1001u},
+    {"Tight punch", "Start from", "Short, hard at the front, with a clear click.",
+     {0.75f, 0.2f, 0.4f, 0.6f, 0.35f, 0.0f, 0.2f, 0.3f, 0.5f, 0.3f, 0.2f, 0.1f, 0.7f, 0.3f, 0.4f}, 1002u},
+    {"Long tail", "Start from", "Rings long, with a rounder decay.",
+     {0.3f, 0.9f, 0.62f, 0.4f, 0.2f, 0.0f, 0.35f, 0.3f, 0.7f, 0.3f, 0.2f, 0.1f, 0.35f, 0.3f, 0.4f}, 1003u},
+    {"Dark trap", "Start from", "Long and low, with a slow pitch drop and some grit.",
+     {0.5f, 0.76f, 0.7f, 0.2f, 0.46f, 0.0f, 0.6f, 0.3f, 0.5f, 0.3f, 0.2f, 0.1f, 0.35f, 0.3f, 0.4f}, 1004u},
+    {"Hard clip", "Start from", "Driven into hard clipping, bright and loud on small speakers.",
+     {0.55f, 0.6f, 0.3f, 0.76f, 0.86f, 0.0f, 0.35f, 0.3f, 0.5f, 0.3f, 0.5f, 0.5f, 0.35f, 0.3f, 0.4f}, 1005u},
+    {"Glide lead", "Start from", "Bright and driven, and slides between overlapping notes.",
+     {0.25f, 0.66f, 0.35f, 0.7f, 0.5f, 0.5f, 0.35f, 0.3f, 0.5f, 0.5f, 0.2f, 0.1f, 0.35f, 0.3f, 0.4f}, 1006u},
+}};
 
-inline constexpr auto kRumbleFactoryPresets = [] {
-    std::array<RumbleFactoryPreset, 16> presets{};
+inline RumbleSound rumbleSoundOf(const RumbleFactoryPreset& preset) {
+    RumbleSound sound;
+    for (size_t id = 0; id < RumbleSound::Count; ++id) {
+        sound[id] = preset.values[id];
+    }
+    sound.seed = preset.seed;
+    return sound;
+}
 
-    presets[0] = {"Pure Sub", "Essentials", "Clean, centered fundamental with a restrained pitch drop.",
-                  kRumbleDefaultValues};
-    presets[0].values[0] = 0.55f;
-    presets[0].values[1] = 0.0f;
-    presets[0].values[2] = 0.52f;
-    presets[0].values[3] = 0.46f;
-    presets[0].values[4] = 0.12f;
-    presets[0].values[5] = 0.12f;
-    presets[0].values[8] = 0.25f;
-    presets[0].values[9] = 0.32f;
-    presets[0].values[10] = 0.04f;
-    presets[0].values[23] = 0.0f;
-    presets[0].values[24] = 1.0f;
-
-    presets[1] = {"Balanced 808", "Essentials", "Finished default for melodic trap and hip-hop basslines.",
-                  kRumbleDefaultValues};
-    presets[1].values[0] = 0.58f;
-    presets[1].values[1] = 0.14f;
-    presets[1].values[2] = 0.46f;
-    presets[1].values[3] = 0.47f;
-    presets[1].values[4] = 0.30f;
-    presets[1].values[9] = 0.58f;
-    presets[1].values[23] = 0.30f;
-    presets[1].values[24] = 0.82f;
-
-    presets[2] = {"Tight Punch", "Essentials", "Short tail, assertive pitch strike, and defined click.",
-                  kRumbleDefaultValues};
-    presets[2].values[0] = 0.25f;
-    presets[2].values[1] = 0.12f;
-    presets[2].values[2] = 0.58f;
-    presets[2].values[3] = 0.47f;
-    presets[2].values[4] = 0.46f;
-    presets[2].values[5] = 0.08f;
-    presets[2].values[6] = 0.65f;
-    presets[2].values[7] = 0.0f;
-    presets[2].values[9] = 0.82f;
-    presets[2].values[10] = 0.45f;
-    presets[2].values[11] = 0.10f;
-    presets[2].values[12] = 0.65f;
-    presets[2].values[23] = 0.25f;
-
-    presets[3] = {"Long Tail", "Essentials", "Deep sustained tail with a soft, classic front edge.",
-                  kRumbleDefaultValues};
-    presets[3].values[0] = 0.82f;
-    presets[3].values[1] = 0.07f;
-    presets[3].values[2] = 0.40f;
-    presets[3].values[3] = 0.44f;
-    presets[3].values[4] = 0.18f;
-    presets[3].values[5] = 0.22f;
-    presets[3].values[7] = 0.02f;
-    presets[3].values[9] = 0.42f;
-    presets[3].values[10] = 0.08f;
-    presets[3].values[23] = 0.18f;
-    presets[3].values[24] = 0.94f;
-
-    presets[4] = {"Phone Ready", "Modern", "Strong upper harmonics without abandoning the sub fundamental.",
-                  kRumbleDefaultValues};
-    presets[4].values[0] = 0.52f;
-    presets[4].values[1] = 0.34f;
-    presets[4].values[2] = 0.72f;
-    presets[4].values[3] = 0.42f;
-    presets[4].values[4] = 0.26f;
-    presets[4].values[8] = 0.40f;
-    presets[4].values[9] = 0.60f;
-    presets[4].values[10] = 0.20f;
-    presets[4].values[12] = 0.62f;
-    presets[4].values[23] = 0.78f;
-    presets[4].values[24] = 0.72f;
-
-    presets[5] = {"Clean R&B", "Modern", "Rounded note starts and a polished, nearly clean tail.",
-                  kRumbleDefaultValues};
-    presets[5].values[0] = 0.67f;
-    presets[5].values[1] = 0.04f;
-    presets[5].values[2] = 0.50f;
-    presets[5].values[3] = 0.45f;
-    presets[5].values[4] = 0.14f;
-    presets[5].values[7] = 0.10f;
-    presets[5].values[9] = 0.34f;
-    presets[5].values[10] = 0.03f;
-    presets[5].values[13] = 0.24f;
-    presets[5].values[15] = 1.0f;
-    presets[5].values[23] = 0.24f;
-    presets[5].values[24] = 0.96f;
-
-    presets[6] = {"Dark Trap", "Modern", "Low-passed weight with controlled grit and a long pitch gesture.",
-                  kRumbleDefaultValues};
-    presets[6].values[0] = 0.72f;
-    presets[6].values[1] = 0.24f;
-    presets[6].values[2] = 0.32f;
-    presets[6].values[3] = 0.44f;
-    presets[6].values[4] = 0.40f;
-    presets[6].values[5] = 0.34f;
-    presets[6].values[6] = 0.52f;
-    presets[6].values[9] = 0.56f;
-    presets[6].values[10] = 0.12f;
-    presets[6].values[23] = 0.38f;
-    presets[6].values[24] = 0.84f;
-
-    presets[7] = {"Glide Lead", "Modern", "Legato mono glide with enough harmonic information to lead a hook.",
-                  kRumbleDefaultValues};
-    presets[7].values[0] = 0.76f;
-    presets[7].values[1] = 0.22f;
-    presets[7].values[2] = 0.66f;
-    presets[7].values[3] = 0.41f;
-    presets[7].values[4] = 0.10f;
-    presets[7].values[7] = 0.05f;
-    presets[7].values[9] = 0.28f;
-    presets[7].values[10] = 0.0f;
-    presets[7].values[13] = 0.42f;
-    presets[7].values[14] = 0.45f;
-    presets[7].values[15] = 1.0f;
-    presets[7].values[16] = 1.0f;
-    presets[7].values[18] = 0.55f;
-    presets[7].values[23] = 0.58f;
-    presets[7].values[24] = 0.80f;
-
-    presets[8] = {"Tape Weight", "Character", "Soft saturation and restrained highs for sampled-record warmth.",
-                  kRumbleDefaultValues};
-    presets[8].values[0] = 0.62f;
-    presets[8].values[1] = 0.40f;
-    presets[8].values[2] = 0.50f;
-    presets[8].values[3] = 0.42f;
-    presets[8].values[4] = 0.22f;
-    presets[8].values[8] = 0.48f;
-    presets[8].values[9] = 0.48f;
-    presets[8].values[10] = 0.12f;
-    presets[8].values[19] = 0.0f;
-    presets[8].values[23] = 0.46f;
-    presets[8].values[24] = 0.84f;
-
-    presets[9] = {"Hard Clip", "Character", "Aggressive hard saturation with deliberate midrange projection.",
-                  kRumbleDefaultValues};
-    presets[9].values[0] = 0.55f;
-    presets[9].values[1] = 0.72f;
-    presets[9].values[2] = 0.76f;
-    presets[9].values[3] = 0.36f;
-    presets[9].values[4] = 0.28f;
-    presets[9].values[9] = 0.68f;
-    presets[9].values[10] = 0.18f;
-    presets[9].values[19] = 1.0f;
-    presets[9].values[23] = 0.68f;
-    presets[9].values[24] = 0.54f;
-
-    presets[10] = {"Knock", "Character", "Pronounced resonant front with a compact, chest-focused body.",
-                   kRumbleDefaultValues};
-    presets[10].values[0] = 0.34f;
-    presets[10].values[1] = 0.18f;
-    presets[10].values[2] = 0.60f;
-    presets[10].values[3] = 0.45f;
-    presets[10].values[4] = 0.54f;
-    presets[10].values[5] = 0.10f;
-    presets[10].values[6] = 0.72f;
-    presets[10].values[8] = 0.66f;
-    presets[10].values[9] = 0.92f;
-    presets[10].values[10] = 0.24f;
-    presets[10].values[23] = 0.34f;
-    presets[10].values[24] = 0.78f;
-
-    presets[11] = {"Hollow", "Character", "Resonant, filtered body with a scooped and synthetic identity.",
-                   kRumbleDefaultValues};
-    presets[11].values[0] = 0.60f;
-    presets[11].values[1] = 0.20f;
-    presets[11].values[2] = 0.42f;
-    presets[11].values[3] = 0.43f;
-    presets[11].values[4] = 0.32f;
-    presets[11].values[8] = 0.86f;
-    presets[11].values[9] = 0.52f;
-    presets[11].values[10] = 0.10f;
-    presets[11].values[17] = 0.30f;
-    presets[11].values[23] = 0.58f;
-    presets[11].values[24] = 0.76f;
-
-    presets[12] = {"Kick Layer", "Utility", "Short percussive strike designed to sit above a separate sub bass.",
-                   kRumbleDefaultValues};
-    presets[12].values[0] = 0.16f;
-    presets[12].values[1] = 0.16f;
-    presets[12].values[2] = 0.72f;
-    presets[12].values[3] = 0.46f;
-    presets[12].values[4] = 0.62f;
-    presets[12].values[5] = 0.05f;
-    presets[12].values[6] = 0.76f;
-    presets[12].values[7] = 0.0f;
-    presets[12].values[9] = 1.0f;
-    presets[12].values[10] = 0.78f;
-    presets[12].values[11] = 0.08f;
-    presets[12].values[12] = 0.78f;
-    presets[12].values[23] = 0.16f;
-    presets[12].values[24] = 0.88f;
-
-    presets[13] = {"Bass Only", "Utility", "Soft onset and no click for layering under a separate kick.",
-                   kRumbleDefaultValues};
-    presets[13].values[0] = 0.78f;
-    presets[13].values[1] = 0.08f;
-    presets[13].values[2] = 0.44f;
-    presets[13].values[3] = 0.45f;
-    presets[13].values[4] = 0.08f;
-    presets[13].values[7] = 0.18f;
-    presets[13].values[9] = 0.26f;
-    presets[13].values[10] = 0.0f;
-    presets[13].values[23] = 0.22f;
-    presets[13].values[24] = 1.0f;
-
-    presets[14] = {"Mix Safe", "Utility", "Conservative level, moderate translation, and controlled tail length.",
-                   kRumbleDefaultValues};
-    presets[14].values[0] = 0.44f;
-    presets[14].values[1] = 0.12f;
-    presets[14].values[2] = 0.56f;
-    presets[14].values[3] = 0.38f;
-    presets[14].values[4] = 0.24f;
-    presets[14].values[8] = 0.38f;
-    presets[14].values[9] = 0.52f;
-    presets[14].values[10] = 0.14f;
-    presets[14].values[23] = 0.36f;
-    presets[14].values[24] = 0.92f;
-
-    presets[15] = {"Overdrive 808", "Utility", "Forward soft-drive tone that remains safer than the hard-clip bank.",
-                   kRumbleDefaultValues};
-    presets[15].values[0] = 0.58f;
-    presets[15].values[1] = 0.58f;
-    presets[15].values[2] = 0.68f;
-    presets[15].values[3] = 0.39f;
-    presets[15].values[4] = 0.30f;
-    presets[15].values[9] = 0.66f;
-    presets[15].values[10] = 0.16f;
-    presets[15].values[19] = 0.0f;
-    presets[15].values[23] = 0.62f;
-    presets[15].values[24] = 0.64f;
-
-    return presets;
-}();
+// A new Rumble opens on Balanced 808.
+inline RumbleSound rumbleDefaultSound() {
+    return rumbleSoundOf(kRumbleFactoryPresets[0]);
+}
 
 } // namespace Plugins
 } // namespace Aestra

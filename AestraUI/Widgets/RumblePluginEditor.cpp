@@ -157,19 +157,20 @@ void RumblePluginEditor::buildControls() {
         Zone zone;
     };
     const Meta meta[] = {
-        {9, "PUNCH", "Chest hit", Zone::Impact},
-        {4, "SWEEP", "Pitch strike", Zone::Impact},
-        {0, "DECAY", "Tail length", Zone::Impact},
-        {1, "DRIVE", "Weight + grit", Zone::Body},
-        {23, "HARMONICS", "Speaker translation", Zone::Body},
-        {24, "CLEAN SUB", "Fundamental hold", Zone::Body},
-        {2, "TONE", "Top-end focus", Zone::Body},
-        {3, "OUTPUT", "Final level", Zone::Body},
+        // Interim layout over the approved voice's settings (FD-80); the editor is rebuilt in SPEC-025 R5.
+        {Aestra::Plugins::RumbleSound::Punch, "PUNCH", "Pitch drop", Zone::Impact},
+        {Aestra::Plugins::RumbleSound::Click, "CLICK", "Front noise", Zone::Impact},
+        {Aestra::Plugins::RumbleSound::Tail, "TAIL", "How long it rings", Zone::Impact},
+        {Aestra::Plugins::RumbleSound::Weight, "WEIGHT", "Clean sub", Zone::Body},
+        {Aestra::Plugins::RumbleSound::Tone, "TONE", "Dark or open", Zone::Body},
+        {Aestra::Plugins::RumbleSound::Dirt, "DIRT", "Clean or driven", Zone::Body},
+        {Aestra::Plugins::RumbleSound::Count, "VELOCITY", "Softer hits, quieter", Zone::Body}, // RumbleInstance::kVelocity
+        {Aestra::Plugins::RumbleSound::Slide, "SLIDE", "Glide between notes", Zone::Body},
     };
 
     const auto parameters = m_instance->getParameters();
     // The macro layout, preset application, and preset matching all assume the
-    // full 25-parameter contract. Silently dropping a missing ID would shift
+    // full Rumble parameter contract (RumbleSound::Count). Silently dropping a missing ID would shift
     // the index-based zones while presets still write every ID — reject the
     // incompatible instance outright instead of rendering a lying panel.
     for (const auto& item : meta) {
@@ -364,7 +365,7 @@ void RumblePluginEditor::drawImpactShape(NUIRenderer& renderer) {
                           editorInk(0.035f));
     }
     const float punch = m_controls.size() > 0 ? m_controls[0].normalizedValue : 0.0f;
-    const float sweep = m_controls.size() > 1 ? m_controls[1].normalizedValue : 0.0f;
+    const float sweep = punch; // Punch is the pitch drop in the approved voice
     const float decay = m_controls.size() > 2 ? m_controls[2].normalizedValue : 0.0f;
     std::array<NUIPoint, 97> points{};
     float phase = 0.0f;

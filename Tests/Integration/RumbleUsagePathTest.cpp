@@ -91,10 +91,10 @@ int main() {
     }
     std::cout << "✅ PASS\n";
 
-    instance->setParameter(0, 0.58f); // decay
-    instance->setParameter(1, 0.20f); // drive
-    instance->setParameter(2, 0.36f); // tone
-    instance->setParameter(3, 0.54f); // gain
+    instance->setParameter(0, 0.58f); // punch
+    instance->setParameter(1, 0.20f); // tail
+    instance->setParameter(2, 0.36f); // weight
+    instance->setParameter(3, 0.54f); // tone
 
     constexpr uint32_t sampleRate = 48000;
     constexpr uint32_t blockSize = 256;

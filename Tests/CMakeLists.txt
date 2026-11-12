@@ -584,7 +584,11 @@ endif()
 # Rumble Plugin Factory Test (requires runtime plugin system)
 if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/RumblePluginFactoryTest.cpp")
     add_executable(RumblePluginFactoryTest Integration/RumblePluginFactoryTest.cpp)
-    target_link_libraries(RumblePluginFactoryTest PRIVATE AestraAudioCore AestraPremiumPlugins)
+    if(UNIX AND NOT APPLE)
+        target_link_libraries(RumblePluginFactoryTest PRIVATE -Wl,--start-group AestraRumble AestraAudioCore -Wl,--end-group)
+    else()
+        target_link_libraries(RumblePluginFactoryTest PRIVATE AestraAudioCore AestraPremiumPlugins)
+    endif()
     target_include_directories(RumblePluginFactoryTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
@@ -600,7 +604,11 @@ endif()
 # Rumble Usage Path Test (requires runtime plugin system)
 if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/RumbleUsagePathTest.cpp")
     add_executable(RumbleUsagePathTest Integration/RumbleUsagePathTest.cpp)
-    target_link_libraries(RumbleUsagePathTest PRIVATE AestraAudioCore AestraPremiumPlugins)
+    if(UNIX AND NOT APPLE)
+        target_link_libraries(RumbleUsagePathTest PRIVATE -Wl,--start-group AestraRumble AestraAudioCore -Wl,--end-group)
+    else()
+        target_link_libraries(RumbleUsagePathTest PRIVATE AestraAudioCore AestraPremiumPlugins)
+    endif()
     target_include_directories(RumbleUsagePathTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
@@ -616,7 +624,11 @@ endif()
 # Rumble Discovery Test (requires runtime plugin system)
 if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/RumbleDiscoveryTest.cpp")
     add_executable(RumbleDiscoveryTest Integration/RumbleDiscoveryTest.cpp)
-    target_link_libraries(RumbleDiscoveryTest PRIVATE AestraAudioCore AestraPremiumPlugins)
+    if(UNIX AND NOT APPLE)
+        target_link_libraries(RumbleDiscoveryTest PRIVATE -Wl,--start-group AestraRumble AestraAudioCore -Wl,--end-group)
+    else()
+        target_link_libraries(RumbleDiscoveryTest PRIVATE AestraAudioCore AestraPremiumPlugins)
+    endif()
     target_include_directories(RumbleDiscoveryTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include

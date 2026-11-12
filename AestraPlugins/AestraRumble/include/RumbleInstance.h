@@ -1,12 +1,18 @@
+// © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
+// Rumble, the 808 instrument (FD-80, SPEC-025). Plays the voice the founder approved (RumbleVoice): each note
+// is one finished one-shot, levelled to the same peak as every other note and every other sound.
 #pragma once
 
 #include "Plugin/PluginHost.h"
+#include "RumbleVoice.h"
 
 #include <array>
 #include <atomic>
+#include <condition_variable>
 #include <cstdint>
-#include <optional>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -16,11 +22,7 @@ namespace Plugins {
 class RumbleInstance : public Aestra::Audio::IPluginInstance {
 public:
     RumbleInstance();
-#if defined(AESTRA_ENABLE_TEST_LICENSES) && AESTRA_ENABLE_TEST_LICENSES
-    enum class TestLicense { GrantRumble };
-    explicit RumbleInstance(TestLicense);
-#endif
-    ~RumbleInstance() override = default;
+    ~RumbleInstance() override;
 
     bool initialize(double sampleRate, uint32_t maxBlockSize) override;
     void shutdown() override;
@@ -57,177 +59,59 @@ public:
     bool isBypassedByWatchdog() const override { return false; }
     bool isCrashed() const override { return false; }
 
+    // The whole sound, settings and click seed together. For the editor and for Find (SPEC-025).
+    RumbleSound sound() const;
+    void setSound(const RumbleSound& sound);
+
+    // True once the 808 range (C1 to C4) is levelled for the current sound. For tests and a busy indicator.
+    bool levelsReady() const;
+    // Waits until levelsReady() or the timeout. Never from the audio thread.
+    bool waitForLevels(int timeoutMs) const;
+
+    static constexpr float kDefaultVelocity = 0.5f;
+    static const char* parameterKey(uint32_t id);
+    static const char* parameterName(uint32_t id);
+
+    // The sound's fifteen settings, then Velocity: how much a softer hit plays quieter. Velocity is how the sound
+    // is played, not what it is, so it is not part of RumbleSound and Find never changes it.
+    static constexpr uint32_t kVelocity = RumbleSound::Count;
+    static constexpr uint32_t kParameterCount = RumbleSound::Count + 1;
+    // The gain of a hit: 1 at full velocity; at Velocity 1 the softest hit is 30 dB down.
+    static double velocityGain(double amount, int velocity);
+
+
 private:
-    void initializeDefaultParameters();
-
-    enum ParamID : uint32_t {
-        kParamAmpDecay = 0,
-        kParamDrive,
-        kParamTone,
-        kParamOutputGain,
-        kParamPitchAmount,
-        kParamPitchDecay,
-        kParamPitchCurve,
-        kParamAmpAttack,
-        kParamResonance,
-        kParamTransientAmount,
-        kParamClickLevel,
-        kParamClickDecay,
-        kParamClickTone,
-        kParamGlideTime,
-        kParamGlideCurve,
-        kParamGlideMode,
-        kParamRetriggerMode,
-        kParamFilterEnvAmount,
-        kParamFilterKeytrack,
-        kParamSatMode,
-        kParamVelocityToAmp,
-        kParamTune,
-        kParamFine,
-        kParamHarmonics,
-        kParamSubClean,
-        kParamCount,
-    };
-
-    struct PendingNote {
-        uint8_t note = 36;
-        float velocity = 1.0f;
-    };
-
-    struct OversampledTanhStage {
-        float previousInput = 0.0f;
-        float antiAliasState = 0.0f;
-    };
-
-    struct Voice {
-        bool active = false;
-        uint8_t note = 36;
-        float velocity = 1.0f;
-        float ampPeak = 1.0f;
-        double baseFrequency = 65.406391;
-        double tunedFrequency = 65.406391;
-        float currentEffectivePitch_hz = 65.406391f;
-        float glideSourcePitch_hz = 65.406391f;
-        float glideTargetPitch_hz = 65.406391f;
-        float glideProgress = 1.0f;
-        float glideCurveExponent = 1.0f;
-        bool isGliding = false;
-        bool noteIsHeld = false;
-        double phase = 0.0;
-        double phaseIncrement = 0.0;
-        double resonatorMagnitude = 0.0;
-        double amplitudeEnvelope = 0.0;
-        double decayCoeff = 0.0;
-        double pitchDecayProgress = 1.0;
-        double pitchDecayIncrement = 0.0;
-        double attackPitchEnvelope = 0.0;
-        double attackPitchCoeff = 0.0;
-        double transientEnvelope = 0.0;
-        double transientCoeff = 0.0;
-        double clickEnvelope = 0.0;
-        double clickCoeff = 0.0;
-        bool attackActive = false;
-        uint32_t attackSamplesRemaining = 0;
-        double attackIncrement = 0.0;
-        float filterIc1Eq = 0.0f;
-        float filterIc2Eq = 0.0f;
-        float filterCachedCutoffHz = -1.0f;
-        float filterCachedQ = -1.0f;
-        float filterCachedG = 0.0f;
-        float filterCachedDamping = 1.0f;
-        float clickFilterState = 0.0f;
-        float clickSlowFilterState = 0.0f;
-        float dcInputPrev = 0.0f;
-        float dcOutputPrev = 0.0f;
-        uint32_t clickNoiseState = 0;
-    };
-
-    struct DspParameters {
-        float driveAmount = 0.0f;
-        float driveMix = 0.0f;
-        float toneHz = 1000.0f;
-        float outputGain = 1.0f;
-        float pitchAmountSemitones = 0.0f;
-        float pitchCurveExponent = 1.0f;
-        float resonanceQ = 0.5f;
-        float transientAmount = 0.0f;
-        float clickLevel = 0.0f;
-        float clickToneHz = 1000.0f;
-        float clickFilterAlpha = 0.0f;
-        float glideTimeSeconds = 0.01f;
-        float filterEnvAmount = 0.0f;
-        float filterKeytrack = 0.0f;
-        float harmonics = 0.0f;
-        float subClean = 1.0f;
-        float decayCoeff = 0.0f;
-        float clickCoeff = 0.0f;
-        float satMode = 0.0f;
-    };
-
     void handleMidiEvent(const Aestra::Audio::MidiBuffer::Event& event);
-    void beginNote(uint8_t note, uint8_t velocity, bool resetEnvelopes);
-    void handleNoteOff(uint8_t note);
-    void rememberHeldNote(uint8_t note);
-    void forgetHeldNote(uint8_t note);
-    void resetVoiceProcessingState();
-    void refreshParameterTargets();
-    bool updateSmoothedParameters();
-    DspParameters mapDspParameters() const;
-    static bool isSmoothedParameter(uint32_t id);
-    static const char* getParameterKey(uint32_t id);
-    static float midiNoteToFrequency(uint8_t note);
-    static float clamp01(float value);
-    static uint32_t seedClickNoise(uint8_t note, uint64_t samplePosition, uint32_t triggerIndex);
-    static float nextClickNoiseSample(uint32_t& state);
-    float mapAmpDecaySeconds(float normalized) const;
-    float mapDriveAmount(float normalized) const;
-    float mapToneHz(float normalized) const;
-    float mapOutputGainLinear(float normalized) const;
-    float mapPitchAmountSemitones(float normalized) const;
-    float mapPitchDecaySeconds(float normalized) const;
-    float mapPitchCurveExponent(float normalized) const;
-    float mapAmpAttackSeconds(float normalized) const;
-    float mapResonanceQ(float normalized) const;
-    float mapTransientAmount(float normalized) const;
-    float mapClickLevel(float normalized) const;
-    float mapClickDecaySeconds(float normalized) const;
-    float mapClickToneHz(float normalized) const;
-    float mapGlideTimeSeconds(float normalized) const;
-    float mapGlideCurveExponent(float normalized) const;
-    float mapFilterEnvAmount(float normalized) const;
-    float mapFilterKeytrack(float normalized) const;
-    float mapVelocityToAmp(float normalized) const;
-    float mapTuneSemitones(float normalized) const;
-    float mapFineCents(float normalized) const;
-    float tunedNoteFrequency(uint8_t note) const;
-    uint8_t getMostRecentHeldNote() const;
-    float processFilter(float input, float cutoffHz, float resonanceQ);
-    float processDcBlocker(float input);
-    float processOversampledTanh(float input, float drive, OversampledTanhStage& stage);
-    static float processSafetyKnee(float input);
+    double levelFor(int note);
+    void soundChanged();
+    void levelWorker();
+    int nextNoteToLevel(uint32_t version);
 
     std::atomic<bool> m_active{false};
-    double m_sampleRate = 44100.0;
-    uint32_t m_maxBlockSize = 512;
+    double m_sampleRate = 48000.0;
 
-    std::array<std::atomic<float>, kParamCount> m_params;
-    std::array<float, kParamCount> m_smoothedParams{};
-    std::array<float, kParamCount> m_parameterTargets{};
-    Voice m_voice;
-    bool m_licensed = true;
-    OversampledTanhStage m_driveStageSoft;
-    OversampledTanhStage m_driveStageHard;
-    float m_parameterSmoothingCoeff = 0.0f;
-    float m_oversampleAntiAliasAlpha = 0.0f;
-    float m_dcBlockerR = 0.0f;
-    float m_smoothedSatMode = 0.0f;
-    bool m_parameterSmoothingActive = false;
-    uint64_t m_processedSamples = 0;
-    uint32_t m_triggerIndex = 0;
-    std::array<bool, 128> m_heldNotes{};
-    std::array<uint8_t, 128> m_heldVelocities{};
-    std::array<uint8_t, 128> m_heldNoteOrder{};
-    uint8_t m_heldNoteCount = 0;
+    std::array<std::atomic<float>, kParameterCount> m_params;
+    std::atomic<uint32_t> m_seed{1};
+
+    // Two voices: the one ringing, and the one fading out under a new note.
+    RumbleVoice m_voice;
+    RumbleVoice m_fading;
+    std::array<bool, 128> m_held{};
+    int m_heldCount = 0;
+
+    // Note levels are found off the audio thread (RumbleVoice::rawPeak is milliseconds of work). The audio
+    // thread only reads them; until a note's level for the current sound is ready it uses the nearest note
+    // that is ready, and asks for its own.
+    std::atomic<uint32_t> m_soundVersion{1};
+    std::atomic<double> m_workerRate{48000.0};
+    std::array<std::atomic<float>, 128> m_peak;
+    std::array<std::atomic<uint32_t>, 128> m_peakVersion;
+    std::array<std::atomic<bool>, 128> m_wanted;
+    mutable std::mutex m_workerMutex;
+    mutable std::condition_variable m_workerWake;
+    mutable std::condition_variable m_levelsDone;
+    bool m_workerStop = false;
+    std::thread m_worker;
 };
 
 } // namespace Plugins

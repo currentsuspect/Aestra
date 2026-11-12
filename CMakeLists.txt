@@ -47,7 +47,6 @@ option(AESTRA_HEADLESS_ONLY "Configure/build headless targets only (skips UI + a
 option(AESTRA_ENABLE_UI "Build the AESTRA_DAW UI application" ON)
 option(AESTRA_ENABLE_TESTS "Build test executables" ON)
 option(AESTRA_CI "Configure deterministic CI-safe defaults" OFF)
-option(AESTRA_ENABLE_PREMIUM_PLUGINS "Build private premium plugin modules" OFF)
 option(AESTRA_LICENSE_ENABLE_PREMIUM_LEASES "Allow signed Supporter/Founder leases to activate premium entitlements" OFF)
 option(AESTRA_ALLOW_LICENSE_GATE_OFF "Allow lab/development builds to omit offline license verification" OFF)
 option(AESTRA_ENABLE_TEST_LICENSES "Enable test-only mock license acceptance" OFF)
@@ -86,9 +85,8 @@ if(AESTRA_CI)
   set(AESTRA_ENABLE_EXPERIMENTAL_TESTS OFF CACHE BOOL "Enable unstable/experimental tests" FORCE)
 endif()
 
-if(AESTRA_ENABLE_PREMIUM_PLUGINS)
-  set(AESTRAUI_ENABLE_PREMIUM_EDITORS ON CACHE BOOL "Build private premium plugin editors" FORCE)
-endif()
+# Aestra's own plugins are free and always built (FD-57), so their editors are too.
+set(AESTRAUI_ENABLE_PREMIUM_EDITORS ON CACHE BOOL "Build the editors of Aestra's own plugins" FORCE)
 
 # =============================================================================
 # Platform Detection & Flags
@@ -189,16 +187,9 @@ target_include_directories(AestraPluginAPI INTERFACE
 target_link_libraries(AestraPluginAPI INTERFACE AestraCore)
 
 # =============================================================================
-# AestraPlugins - Premium Plugins (Optional Private Modules)
+# AestraPlugins - Aestra's own plugins (Rumble). Free and always built (FD-57, FD-80)
 # =============================================================================
-if(AESTRA_ENABLE_PREMIUM_PLUGINS AND EXISTS "${CMAKE_SOURCE_DIR}/AestraPlugins/CMakeLists.txt")
-    message(STATUS "Aestra premium plugins enabled")
-    add_subdirectory(AestraPlugins)
-elseif(AESTRA_ENABLE_PREMIUM_PLUGINS)
-    message(WARNING "AESTRA_ENABLE_PREMIUM_PLUGINS=ON but AestraPlugins/CMakeLists.txt was not found")
-else()
-    message(STATUS "Aestra premium plugins disabled")
-endif()
+add_subdirectory(AestraPlugins)
 
 # =============================================================================
 # AestraAudio - Audio Engine
