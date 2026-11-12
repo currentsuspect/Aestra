@@ -15,6 +15,9 @@
 
 namespace AestraUI {
 
+static_assert(AestraUI::RumblePluginEditor::kPresetSlots == Aestra::Plugins::kRumbleFactoryPresets.size(),
+              "one preset slot per factory sound");
+
 namespace {
 constexpr float kPi = 3.14159265358979323846f;
 constexpr float kKnobStart = kPi * 0.75f;
@@ -93,17 +96,8 @@ void drawSvgIcon(NUIRenderer& renderer, const std::shared_ptr<NUIIcon>& icon, co
     icon->onRender(renderer);
 }
 
-NUIColor presetAccent(size_t presetIndex) {
-    if (presetIndex < 4) {
-        return impactAccent();
-    }
-    if (presetIndex < 8) {
-        return cleanAccent();
-    }
-    if (presetIndex < 12) {
-        return bodyAccent();
-    }
-    return NUIColor(0.30f, 0.82f, 0.68f, 1.0f);
+NUIColor presetAccent(size_t) {
+    return impactAccent();
 }
 
 void drawArc(NUIRenderer& renderer, NUIPoint center, float radius, float startAngle, float endAngle, float thickness,
@@ -428,17 +422,14 @@ void RumblePluginEditor::drawPresetBrowser(NUIRenderer& renderer) {
     renderer.strokeRoundedRect(m_presetMenuBounds, 16.0f, 1.2f, bodyAccent().withAlpha(0.58f));
     renderer.drawText("FACTORY SOUNDS", {m_presetMenuBounds.x + 18.0f, m_presetMenuBounds.y + 17.0f}, 11.0f,
                       theme.getColor("textPrimary"));
-    renderer.drawText("16 starting points / 4 characters",
+    renderer.drawText(std::to_string(Aestra::Plugins::kRumbleFactoryPresets.size()) + " starting sounds",
                       {m_presetMenuBounds.x + 132.0f, m_presetMenuBounds.y + 19.0f}, 8.5f,
                       theme.getColor("textSecondary").withAlpha(0.70f));
 
-    for (size_t column = 0; column < 4; ++column) {
-        const size_t firstIndex = column * 4;
-        const auto& firstPreset = Aestra::Plugins::kRumbleFactoryPresets[firstIndex];
-        renderer.drawText(std::string(firstPreset.category),
-                          {m_presetItemBounds[column * 4].x + 3.0f, m_presetMenuBounds.y + 41.0f}, 8.0f,
-                          presetAccent(firstIndex).withAlpha(0.88f));
-    }
+    // Interim menu over the sketch's seven sounds, one group (the editor is rebuilt in SPEC-025 R5).
+    renderer.drawText(std::string(Aestra::Plugins::kRumbleFactoryPresets[0].category),
+                      {m_presetItemBounds[0].x + 3.0f, m_presetMenuBounds.y + 41.0f}, 8.0f,
+                      presetAccent(0).withAlpha(0.88f));
     for (size_t i = 0; i < Aestra::Plugins::kRumbleFactoryPresets.size(); ++i) {
         const bool active = i == m_activePreset;
         const bool hovered = static_cast<int>(i) == m_hoveredPreset;
