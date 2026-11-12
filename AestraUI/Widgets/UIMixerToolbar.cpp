@@ -1,5 +1,6 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerToolbar.h"
+#include "../Graphics/NUIDepth.h"
 
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
@@ -63,8 +64,6 @@ void UIMixerToolbar::onRender(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
     const NUIColor text = theme.getColor("textPrimary");
     const NUIColor muted = theme.getColor("textSecondary");
-    const NUIColor border = theme.getColor("border").withAlpha(0.45f);
-    const NUIColor accent = theme.getColor("accentPrimary");
 
     // The title and summary take only the room the controls leave: the summary shortens, then goes, then the title.
     const float room = densityRect(MixerDensity::Wide).x - 8.0f;
@@ -79,27 +78,29 @@ void UIMixerToolbar::onRender(NUIRenderer& renderer) {
 
     static constexpr const char* names[3] = {"Wide", "Normal", "Narrow"};
     const auto seg = NUIRect{densityRect(MixerDensity::Wide).x, densityRect(MixerDensity::Wide).y, segW() * 3.0f, kH};
-    renderer.strokeRoundedRect(seg, 3.0f, 1.0f, border);
+    // Design Spec, Segment switch (locked): a sunk pill track, the choice on a lit thumb, flat text, quiet hover.
+    Depth::bed(renderer, seg, seg.height * 0.5f, Depth::Cut::Shallow);
     for (int i = 0; i < 3; ++i) {
         const auto r = densityRect(static_cast<MixerDensity>(i));
         const bool on = static_cast<int>(m_density) == i;
-        if (on) renderer.fillRoundedRect(r, 3.0f, accent.withAlpha(0.28f));
-        else if (m_hover == i) renderer.fillRoundedRect(r, 3.0f, border.withAlpha(0.35f));
-        renderer.drawTextCentered(names[i], r, kFont, on ? text : muted);
+        if (on) {
+            const NUIRect thumb{r.x + 2.0f, r.y + 2.0f, r.width - 4.0f, r.height - 4.0f};
+            Depth::object(renderer, thumb, thumb.height * 0.5f);
+        }
+        renderer.drawTextCentered(names[i], r, kFont, on || m_hover == i ? text : theme.getColor("textMuted"));
     }
 
     const auto g = groupRect();
-    renderer.strokeRoundedRect(g, 3.0f, 1.0f, border);
-    // The switch: a small track with a knob that sits right when on.
-    const NUIRect track{g.x + 8.0f, g.y + (g.height - 10.0f) * 0.5f, 22.0f, 10.0f};
-    renderer.fillRoundedRect(track, 5.0f, m_group ? accent.withAlpha(0.85f) : border);
-    renderer.fillRoundedRect(NUIRect{m_group ? track.right() - 9.0f : track.x + 1.0f, track.y + 1.0f, 8.0f, 8.0f}, 4.0f, text);
+    // Design Spec, Toggle (locked): a sunk pill track that fills with the accent when on, a lit thumb that slides.
+    const NUIRect track{g.x + 6.0f, g.y + (g.height - 12.0f) * 0.5f, 22.0f, 12.0f};
+    if (m_group) renderer.fillRoundedRect(track, 6.0f, theme.getColor("primary"));
+    else Depth::bed(renderer, track, 6.0f, Depth::Cut::Slot);
+    Depth::object(renderer, NUIRect{m_group ? track.right() - 10.0f : track.x + 2.0f, track.y + 2.0f, 8.0f, 8.0f}, 4.0f);
     renderer.drawText(compact() ? "Group" : "Group by output", {track.right() + 6.0f, g.y + (g.height - 9.0f) * 0.5f - 1.0f}, 9.0f,
                       m_hover == 3 ? text : muted);
 
     const auto r = resetRect();
-    if (m_hover == 4) renderer.fillRoundedRect(r, 3.0f, border.withAlpha(0.35f));
-    renderer.strokeRoundedRect(r, 3.0f, 1.0f, border);
+    renderer.fillRoundedRect(r, r.height * 0.5f, theme.getColor(m_hover == 4 ? "surfaceRaised" : "surfaceTertiary"));
     renderer.drawTextCentered(compact() ? "Reset" : "Reset peaks", r, kFont, m_hover == 4 ? text : muted);
 }
 
