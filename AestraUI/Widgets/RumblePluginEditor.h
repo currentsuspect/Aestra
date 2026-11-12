@@ -1,4 +1,15 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
+// Rumble's screen (FD-80, SPEC-025 R5): find a sound by picking, then shape it.
+//
+//   Start from  |  trail of steps
+//   (shelf)     |  the parent, a hairline, six sounds made from it
+//               |  More like this · Close / Further / Far · Hold chips · Back
+//               |  the picture: outline, pitch line, length square, pitch-drop dot
+//               |  six controls: Punch, Tail, Weight, Tone, Dirt, Slide
+//               |  one sentence saying what the last move changed
+//
+// The moves live in RumbleFindSession (headless, tested). This file draws it and hands the picked sound to the
+// instrument after every move. Outlines come from RumbleOutlineWorker, never from the UI thread.
 #pragma once
 
 #include "AestraPanelWindow.h"
@@ -10,83 +21,88 @@
 #include <cstdint>
 #include <memory>
 #include <string>
-#include <vector>
+
+namespace Aestra {
+namespace Plugins {
+class RumbleFindSession;
+class RumbleOutlineWorker;
+struct RumbleOutline;
+struct RumbleSound;
+} // namespace Plugins
+} // namespace Aestra
 
 namespace AestraUI {
 
 class RumblePluginEditor : public AestraPanelWindow {
 public:
-    // One slot per factory sound (kRumbleFactoryPresets; checked by a static_assert in the .cpp).
+    // One shelf row per starting sound (kRumbleFactoryPresets; checked by a static_assert in the .cpp).
     static constexpr size_t kPresetSlots = 7;
+    static constexpr size_t kControlCount = 6;
+
     explicit RumblePluginEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance);
-    ~RumblePluginEditor() override = default;
+    ~RumblePluginEditor() override;
 
     void drawContent(NUIRenderer& renderer, const NUIRect& contentRect) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     void onResize(int width, int height) override;
 
+    // For tests and the screenshot recipe: the session the screen draws.
+    const Aestra::Plugins::RumbleFindSession& session() const { return *m_session; }
+
 private:
-    enum class Zone { Impact, Body };
+    enum class Handle { None, Length, Drop };
 
-    struct MacroControl {
-        uint32_t parameterId = 0;
-        std::string title;
-        std::string subtitle;
-        float defaultValue = 0.0f;
-        float normalizedValue = 0.0f;
-        Zone zone = Zone::Body;
-        NUIRect bounds;
-        NUIRect knobBounds;
-    };
+    void layout();
+    void startFrom(size_t presetIndex);
+    void soundChanged(); // hand the current sound to the instrument; ask for outlines
+    Aestra::Plugins::RumbleSound instrumentSound() const;
 
-    void buildControls();
-    void layoutControls();
-    void syncControlValues();
-    void drawHeader(NUIRenderer& renderer);
-    void drawImpactPanel(NUIRenderer& renderer);
-    void drawBodyPanel(NUIRenderer& renderer);
-    void drawImpactShape(NUIRenderer& renderer);
-    void drawKnob(NUIRenderer& renderer, const MacroControl& control, int controlIndex, bool primary);
-    void drawPresetBrowser(NUIRenderer& renderer);
-    int hitTestControl(NUIPoint point) const;
-    void setControlValue(int controlIndex, float normalizedValue);
-    void applyFactoryPreset(size_t presetIndex);
-    int matchingFactoryPreset() const;
+    void drawShelf(NUIRenderer& renderer);
+    void drawTrail(NUIRenderer& renderer);
+    void drawRow(NUIRenderer& renderer);
+    void drawCard(NUIRenderer& renderer, const NUIRect& rect, int index);
+    void drawActions(NUIRenderer& renderer);
+    void drawPicture(NUIRenderer& renderer);
+    void drawControls(NUIRenderer& renderer);
+    void drawSaid(NUIRenderer& renderer);
+    // An outline in @p rect, mirrored about its middle; false while it is still being made.
+    bool drawOutline(NUIRenderer& renderer, const NUIRect& rect, const Aestra::Plugins::RumbleSound& sound,
+                     const NUIColor& color, bool picture);
+
+    bool handlePress(const NUIPoint& p);
+    void dragHandle(const NUIPoint& p);
+    float pictureX(double seconds) const;
+    float pictureDropY(double semitones) const;
 
     std::shared_ptr<Aestra::Audio::IPluginInstance> m_instance;
-    std::vector<MacroControl> m_controls;
+    std::unique_ptr<Aestra::Plugins::RumbleFindSession> m_session;
+    std::unique_ptr<Aestra::Plugins::RumbleOutlineWorker> m_outlines;
+    std::shared_ptr<const Aestra::Plugins::RumbleOutline> m_lastPicture; // shown while a shaped one is made
+    size_t m_startPreset = 0;
 
-    NUIRect m_headerBounds;
-    NUIRect m_presetButtonBounds;
-    NUIRect m_previousPresetBounds;
-    NUIRect m_nextPresetBounds;
-    NUIRect m_impactPanelBounds;
-    NUIRect m_bodyPanelBounds;
-    NUIRect m_impactShapeBounds;
-    NUIRect m_presetMenuBounds;
-    std::array<NUIRect, kPresetSlots> m_presetItemBounds{};
+    // Layout.
+    NUIRect m_shelf;
+    std::array<NUIRect, kPresetSlots> m_shelfRows{};
+    NUIRect m_trail;
+    std::array<NUIRect, 16> m_trailPills{};
+    size_t m_trailPillCount = 0;
+    std::array<NUIRect, 7> m_cards{}; // [0] the parent, then the six
+    NUIRect m_more;
+    std::array<NUIRect, 3> m_distance{};
+    std::array<NUIRect, 5> m_holds{};
+    NUIRect m_back;
+    NUIRect m_picture;
+    std::array<NUIRect, kControlCount> m_controls{};
+    NUIRect m_said;
 
-    int m_hoveredControl = -1;
-    int m_draggingControl = -1;
-    int m_hoveredPreset = -1;
-    size_t m_activePreset = 1;
-    float m_dragStartY = 0.0f;
-    float m_dragStartValue = 0.0f;
-    bool m_presetMenuOpen = false;
-    bool m_presetButtonHovered = false;
-    bool m_previousPresetHovered = false;
-    bool m_nextPresetHovered = false;
-
-    // Manual double-click detection (the platform never sets
-    // NUIMouseEvent::doubleClick) for knob reset-to-default.
-    long long m_lastClickTimeMs = 0;
+    // Pointer.
+    NUIPoint m_hover;
+    Handle m_dragging = Handle::None;
+    long long m_lastClickMs = 0;
     NUIPoint m_lastClickPos;
 
-    static constexpr float kWindowWidth = 840.0f;
-    static constexpr float kWindowHeight = 520.0f;
-    static constexpr float kPadding = 14.0f;
-    static constexpr float kHeaderHeight = 76.0f;
-    static constexpr float kDragRangePixels = 180.0f;
+    static constexpr float kWindowWidth = 920.0f;
+    static constexpr float kWindowHeight = 530.0f;
 };
 
 } // namespace AestraUI
