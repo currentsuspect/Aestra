@@ -29,8 +29,9 @@ inline constexpr std::array<RumbleFactoryPreset, 7> kRumbleFactoryPresets = {{
      {0.42f, 0.55f, 0.5f, 0.5f, 0.3f, 0.0f, 0.35f, 0.3f, 0.5f, 0.3f, 0.2f, 0.1f, 0.35f, 0.3f, 0.4f}, 1000u},
     {"Pure sub", "Start from", "Almost all clean sine, a gentle drop and barely any click.",
      {0.15f, 0.6f, 0.88f, 0.25f, 0.04f, 0.0f, 0.35f, 0.3f, 0.5f, 0.1f, 0.05f, 0.1f, 0.08f, 0.3f, 0.4f}, 1001u},
-    {"Tight punch", "Start from", "Short, hard at the front, with a clear click.",
-     {0.75f, 0.2f, 0.4f, 0.6f, 0.35f, 0.0f, 0.2f, 0.3f, 0.5f, 0.3f, 0.2f, 0.1f, 0.7f, 0.3f, 0.4f}, 1002u},
+    // Retuned by ear 2026-11-12: the founder picked "Fat short" over the sketch's thinner original.
+    {"Tight punch", "Start from", "Short and fat: a full sub that holds, then stops, with a clear click.",
+     {0.55f, 0.3f, 0.72f, 0.5f, 0.4f, 0.0f, 0.25f, 0.5f, 0.85f, 0.3f, 0.2f, 0.1f, 0.6f, 0.3f, 0.4f}, 1002u},
     {"Long tail", "Start from", "Rings long, with a rounder decay.",
      {0.3f, 0.9f, 0.62f, 0.4f, 0.2f, 0.0f, 0.35f, 0.3f, 0.7f, 0.3f, 0.2f, 0.1f, 0.35f, 0.3f, 0.4f}, 1003u},
     {"Dark trap", "Start from", "Long and low, with a slow pitch drop and some grit.",
