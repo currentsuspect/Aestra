@@ -336,6 +336,7 @@ if(AESTRAUI_BUILD_OPENGL)
         Graphics/OpenGL/NUIRendererGL.h
         Graphics/OpenGL/NUIRendererGL.cpp
         Graphics/OpenGL/NUIRendererGLBatch.cpp
+        Graphics/OpenGL/NUIRendererGLShapes.cpp
         Graphics/OpenGL/NUIRenderCache.h
         Graphics/OpenGL/NUIRenderCache.cpp
     )
