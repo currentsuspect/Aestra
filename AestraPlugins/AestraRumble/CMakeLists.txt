@@ -3,11 +3,13 @@ cmake_minimum_required(VERSION 3.22)
 project(AestraRumble LANGUAGES CXX)
 
 add_library(AestraRumble STATIC
+    src/RumbleFindSession.cpp
     src/RumbleInstance.cpp
     src/RumbleOutline.cpp
     src/RumblePluginRegistration.cpp
     src/RumbleVariation.cpp
     src/RumbleVoice.cpp
+    include/RumbleFindSession.h
     include/RumbleInstance.h
     include/RumbleOutline.h
     include/RumbleVariation.h
