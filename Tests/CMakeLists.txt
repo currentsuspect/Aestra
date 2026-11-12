@@ -4526,6 +4526,7 @@ if(AESTRA_ENABLE_UI)
         ArsenalKitTest
         UIMixerPanelGroupingTest
         PluginRackBindingLifecycleTest
+        PluginEditorDispatchTest
         PluginPresetBarTest
         WindowPanelRaiseTest
         TakesHistoryPanelTest
