@@ -292,8 +292,8 @@ struct NUIThemeProperties {
         float standardControlHeight = 28.0f;
         float dialogActionHeight = 36.0f;
         float standardRowHeight = 28.0f;
-        float compactMenuRowHeight = 24.0f;
-        float standardMenuRowHeight = 28.0f;
+        float compactMenuRowHeight = 22.0f;  // Design Spec, Menu: rows 22px (dense) to 26px
+        float standardMenuRowHeight = 26.0f;
         float panelHeaderHeight = 32.0f;
         float sectionHeaderHeight = 24.0f;
         float standardIconSize = 16.0f;

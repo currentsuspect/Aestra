@@ -136,8 +136,8 @@ std::shared_ptr<NUITheme> NUITheme::createDefault() {
     theme->setDimension("standardControlHeight", 28.0f);
     theme->setDimension("dialogActionHeight", 36.0f);
     theme->setDimension("standardRowHeight", 28.0f);
-    theme->setDimension("compactMenuRowHeight", 24.0f);
-    theme->setDimension("standardMenuRowHeight", 28.0f);
+    theme->setDimension("compactMenuRowHeight", 22.0f);
+    theme->setDimension("standardMenuRowHeight", 26.0f);
     theme->setDimension("panelHeaderHeight", 32.0f);
     theme->setDimension("sectionHeaderHeight", 24.0f);
     theme->setDimension("standardIconSize", 16.0f);
