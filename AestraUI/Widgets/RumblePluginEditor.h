@@ -72,6 +72,7 @@ private:
     void drawPicture(NUIRenderer& renderer);
     void drawControls(NUIRenderer& renderer);
     void drawSaid(NUIRenderer& renderer);
+    void drawEverything(NUIRenderer& renderer);
     // An outline in @p rect, mirrored about its middle; false while it is still being made.
     bool drawOutline(NUIRenderer& renderer, const NUIRect& rect, const Aestra::Plugins::RumbleSound& sound,
                      const NUIColor& color, bool picture);
@@ -102,6 +103,9 @@ private:
     NUIRect m_picture;
     std::array<NUIRect, kControlCount> m_controls{};
     NUIRect m_said;
+    NUIRect m_everythingToggle;
+    std::array<NUIRect, 10> m_everything{}; // the nine detail settings, then Velocity
+    bool m_showEverything = false;
 
     // Pointer.
     NUIPoint m_hover;

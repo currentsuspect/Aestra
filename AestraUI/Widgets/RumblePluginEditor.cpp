@@ -40,6 +40,13 @@ constexpr uint32_t kControlIds[RumblePluginEditor::kControlCount] = {
     RumbleSound::Punch, RumbleSound::Tail, RumbleSound::Weight, RumbleSound::Tone, RumbleSound::Dirt, RumbleSound::Slide};
 constexpr const char* kControlNames[RumblePluginEditor::kControlCount] = {"PUNCH", "TAIL", "WEIGHT", "TONE", "DIRT", "SLIDE"};
 constexpr const char* kHoldNames[5] = {"Punch", "Tail", "Weight", "Tone", "Dirt"};
+// The Everything page: the settings the six controls do not show, then how hard hits play.
+constexpr uint32_t kEverythingIds[10] = {RumbleSound::DropTime, RumbleSound::Hold,     RumbleSound::Curve,
+                                         RumbleSound::Second,   RumbleSound::Third,    RumbleSound::ClipType,
+                                         RumbleSound::Click,    RumbleSound::ClickLength, RumbleSound::ClickTone,
+                                         Aestra::Plugins::RumbleInstance::kVelocity};
+constexpr const char* kEverythingNames[10] = {"DROP TIME", "HOLD", "CURVE", "2ND", "3RD",
+                                              "CLIP", "CLICK", "CLICK LENGTH", "CLICK TONE", "VELOCITY"};
 constexpr const char* kDistanceNames[3] = {"Close", "Further", "Far"};
 
 NUIColor token(const char* name) {
@@ -227,6 +234,13 @@ void RumblePluginEditor::layout() {
     const float colW = mw / static_cast<float>(kControlCount);
     for (size_t i = 0; i < m_controls.size(); ++i) m_controls[i] = {mx + colW * static_cast<float>(i), ky, colW, 92.0f};
     m_said = {mx, m_controls[0].bottom() + 4.0f, mw, 20.0f};
+    m_everythingToggle = {b.right() - kPad - 92.0f, m_said.y - 2.0f, 92.0f, 24.0f};
+    const float ew = (m_picture.width - 16.0f) / 5.0f;
+    for (size_t i = 0; i < m_everything.size(); ++i) {
+        const float ex = m_picture.x + 8.0f + ew * static_cast<float>(i % 5);
+        const float ey = m_picture.y + 26.0f + 72.0f * static_cast<float>(i / 5);
+        m_everything[i] = {ex, ey, ew, 64.0f};
+    }
 }
 
 void RumblePluginEditor::onResize(int width, int height) {
@@ -258,7 +272,11 @@ void RumblePluginEditor::drawContent(NUIRenderer& renderer, const NUIRect& conte
     drawTrail(renderer);
     drawRow(renderer);
     drawActions(renderer);
-    drawPicture(renderer);
+    if (m_showEverything) {
+        drawEverything(renderer);
+    } else {
+        drawPicture(renderer);
+    }
     drawControls(renderer);
     drawSaid(renderer);
 }
@@ -511,6 +529,38 @@ void RumblePluginEditor::drawControls(NUIRenderer& r) {
 
 void RumblePluginEditor::drawSaid(NUIRenderer& r) {
     textLeft(r, m_session->said(), m_said, 12.0f, token("textSecondary"));
+    pill(r, m_everythingToggle, "Everything", m_everythingToggle.contains(m_hover), m_showEverything);
+}
+
+// The rest of the sound's settings on one flat page, in the picture's place (SPEC-025 R8).
+void RumblePluginEditor::drawEverything(NUIRenderer& r) {
+    Depth::bed(r, m_picture, 6.0f, token("editorWell"), Depth::Cut::Deep);
+    r.drawText("Everything else about the sound. The six controls below stay as they are.", {m_picture.x + 14.0f, m_picture.y + 7.0f},
+               10.0f, token("textMuted"));
+    const auto& step = m_session->step(m_session->currentStep());
+    const int sel = m_session->selected();
+    const RumbleSound& arrived = sel == RumbleFindSession::kParent ? step.parentArrived : step.arrived[static_cast<size_t>(sel)];
+    const RumbleSound& sound = m_session->current();
+    constexpr float start = kPi * 0.75f, sweep = kPi * 1.5f;
+    for (size_t i = 0; i < m_everything.size(); ++i) {
+        const uint32_t id = kEverythingIds[i];
+        const NUIRect& cell = m_everything[i];
+        const bool velocity = id >= RumbleSound::Count;
+        const float v = velocity ? (m_instance ? m_instance->getParameter(id) : 0.0f) : static_cast<float>(sound[id]);
+        const NUIPoint c{cell.x + 22.0f, cell.y + 26.0f};
+        drawArc(r, c, 15.0f, start, start + sweep, 2.6f, token("meterBackground"));
+        drawArc(r, c, 15.0f, start, start + sweep * v, 2.6f, token("primary"));
+        Depth::object(r, {c.x - 9.0f, c.y - 9.0f, 18.0f, 18.0f}, 9.0f, knobDragParam() == static_cast<int>(id));
+        const float a = start + sweep * v;
+        r.drawLine({c.x + std::cos(a) * 3.0f, c.y + std::sin(a) * 3.0f}, {c.x + std::cos(a) * 8.0f, c.y + std::sin(a) * 8.0f}, 1.6f,
+                   token("textPrimary"));
+        r.drawText(kEverythingNames[i], {cell.x + 44.0f, cell.y + 12.0f}, 10.0f, token("textMuted"));
+        if (!velocity && std::abs(sound[id] - arrived[id]) > 1.0e-9) {
+            r.fillCircle({cell.x + 44.0f + r.measureText(kEverythingNames[i], 10.0f).width + 6.0f, cell.y + 18.0f}, 2.5f, token("secondary"));
+        }
+        r.drawText(m_instance ? m_instance->getParameterDisplay(id) : std::string(), {cell.x + 44.0f, cell.y + 28.0f}, 11.0f,
+                   token("textPrimary"));
+    }
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -558,12 +608,17 @@ bool RumblePluginEditor::handlePress(const NUIPoint& p) {
             return true;
         }
     }
+    if (m_everythingToggle.contains(p)) {
+        m_showEverything = !m_showEverything;
+        setDirty(true);
+        return true;
+    }
     if (m_back.contains(p)) {
         m_session->back();
         soundChanged();
         return true;
     }
-    if (m_picture.contains(p)) {
+    if (!m_showEverything && m_picture.contains(p)) {
         const RumbleSound& sound = m_session->current();
         const double length = RumbleVoice::holdSeconds(sound[RumbleSound::Hold]) + RumbleVoice::tailSeconds(sound[RumbleSound::Tail]);
         const NUIPoint sq{pictureX(length), m_picture.y + kPicTop + (m_picture.height - kPicTop - kPicBottom) * 0.5f};
@@ -639,29 +694,44 @@ bool RumblePluginEditor::onMouseEvent(const NUIMouseEvent& event) {
 
     // Double-click on a control puts its setting back to how the sound arrived.
     if (event.pressed && event.button == NUIMouseButton::Left) {
-        for (size_t i = 0; i < kControlCount; ++i) {
-            if (!m_controls[i].contains(event.position)) continue;
+        for (size_t i = 0; i < kControlCount + (m_showEverything ? m_everything.size() : 0); ++i) {
+            const bool everything = i >= kControlCount;
+            const NUIRect& rect = everything ? m_everything[i - kControlCount] : m_controls[i];
+            const uint32_t id = everything ? kEverythingIds[i - kControlCount] : kControlIds[i];
+            if (!rect.contains(event.position) || id >= RumbleSound::Count) continue;
             const long long now = nowMs();
             const bool twice = event.doubleClick || (now - m_lastClickMs < 400 && near(event.position, m_lastClickPos, 5.0f));
             m_lastClickMs = twice ? 0 : now;
             m_lastClickPos = event.position;
             if (twice) {
-                m_session->putBack(kControlIds[i]);
+                m_session->putBack(id);
                 soundChanged();
                 return true;
             }
         }
     }
 
-    std::array<KnobTarget, kControlCount> knobs{};
+    std::array<KnobTarget, kControlCount + 10> knobs{};
+    size_t knobCount = 0;
     for (size_t i = 0; i < kControlCount; ++i) {
         // Centred on the drawn knob (16 px down, kKnobSize across), so the cursor comes back to the knob.
         const NUIRect& col = m_controls[i];
-        knobs[i] = {{col.x, col.y, col.width, 2.0f * (16.0f + kKnobSize * 0.5f)}, kControlIds[i]};
+        knobs[knobCount++] = {{col.x, col.y, col.width, 2.0f * (16.0f + kKnobSize * 0.5f)}, kControlIds[i]};
     }
-    if (handleKnobDrag(event, knobs.data(), knobs.size(), kKnobRange,
-                       [this](uint32_t id) { return static_cast<float>(m_session->current()[id]); },
+    if (m_showEverything) {
+        for (size_t i = 0; i < m_everything.size(); ++i) knobs[knobCount++] = {m_everything[i], kEverythingIds[i]};
+    }
+    if (handleKnobDrag(event, knobs.data(), knobCount, kKnobRange,
+                       [this](uint32_t id) {
+                           if (id >= RumbleSound::Count) return m_instance ? m_instance->getParameter(id) : 0.0f;
+                           return static_cast<float>(m_session->current()[id]);
+                       },
                        [this](uint32_t id, float v) {
+                           if (id >= RumbleSound::Count) { // Velocity: how the sound is played, not what it is
+                               if (m_instance) m_instance->setParameter(id, v);
+                               setDirty(true);
+                               return;
+                           }
                            m_session->shape(id, v);
                            soundChanged();
                        })) {
