@@ -1772,8 +1772,8 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
         // full 24 px button; only the drawn key is smaller.
         const auto keyInk = themeManager.getColor("textSecondary");
         const auto keyInkHover = themeManager.getColor("textPrimary");
-        const auto keyBorder = themeManager.getColor("border");
-        const auto keyBorderHover = themeManager.getColor("borderStrong");
+        const auto keyRest = themeManager.getColor("surfaceTertiary"); // Design Spec: flat tile, no edge
+        const auto keyHover = themeManager.getColor("surfaceRaised");
         const auto onActive = themeManager.getColor("backgroundPrimary");
 
         const auto drawKey = [&](const std::shared_ptr<AestraUI::NUIButton>& button, const char* letter,
@@ -1787,12 +1787,7 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
             const AestraUI::NUIRect key(std::round(hit.x + (hit.width - kKeyW) * 0.5f),
                                         std::round(hit.y + (hit.height - kKeyH) * 0.5f), kKeyW, kKeyH);
             const bool hovered = button->isHovered() && button->isEnabled();
-            if (active) {
-                renderer.fillRoundedRect(key, 3.0f, activeColor);
-            } else {
-                if (hovered) renderer.fillRoundedRect(key, 3.0f, themeManager.getColor("surfaceRaised"));
-                renderer.strokeRoundedRect(key, 3.0f, 1.0f, hovered ? keyBorderHover : keyBorder);
-            }
+            renderer.fillRoundedRect(key, 3.0f, active ? activeColor : (hovered ? keyHover : keyRest));
             constexpr float kLetterSize = 9.5f;
             renderer.drawTextCentered(letter, key, kLetterSize, active ? onActive : (hovered ? keyInkHover : keyInk));
         };

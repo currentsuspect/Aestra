@@ -11,6 +11,7 @@
 #include "../AestraUI/Layout/NUILayoutAlgorithms.h"
 #include "../AestraUI/Platform/NUIPlatformBridge.h"
 #include "../Components/TransportModuleStyle.h"
+#include "../AestraUI/Graphics/NUIDepth.h"
 #include "DspLoadReadout.h"
 
 #include <algorithm>
@@ -686,11 +687,8 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
     auto& theme = AestraUI::NUIThemeManager::getInstance();
     const AestraUI::NUIColor control = theme.getColor("surfaceTertiary");
     const AestraUI::NUIColor raised = theme.getColor("surfaceRaised");
-    const AestraUI::NUIColor border = theme.getColor("border");
-    const AestraUI::NUIColor borderStrong = theme.getColor("borderStrong");
     const AestraUI::NUIColor ink = theme.getColor("textPrimary");
     const AestraUI::NUIColor inkQuiet = theme.getColor("textSecondary");
-    const AestraUI::NUIColor primary = theme.getColor("primary");
     const AestraUI::NUIColor recordRed = theme.getColor("error");
     const AestraUI::NUIColor lampOn = theme.getColor("warning");
     const AestraUI::NUIColor lampOff = theme.getColor("textDisabled");
@@ -704,26 +702,30 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
         icon->onRender(renderer);
     };
 
-    // Play, stop, record: plated keys. Play fills violet while it plays; record
-    // fills red while armed. Nothing else in the row is filled, so state reads
-    // at a glance.
+    // Design Spec, Keys and transport (locked 12 Nov 2026). Keys are flat tiles at rest and lighten one step on
+    // hover. Engaging one pushes it into the surface: play while playing, record while armed, a key held down, an
+    // open panel, a lit record aid. Nothing pops out and nothing carries an outline. The record glyph is red in
+    // every state, so record never reads as play.
+    const AestraUI::NUIColor accentInk = theme.getColor("secondary");
+    const auto keyFace = [&](const AestraUI::NUIRect& rect, float radius, bool engaged, bool hovered, bool deep) {
+        if (engaged) {
+            AestraUI::Depth::bed(renderer, rect, radius, deep ? AestraUI::Depth::Cut::Deep : AestraUI::Depth::Cut::Shallow);
+        } else {
+            renderer.fillRoundedRect(rect, radius, hovered ? raised : control);
+        }
+    };
+
     const auto primaryKey = [&](const std::shared_ptr<AestraUI::NUIButton>& btn,
                                 const std::shared_ptr<AestraUI::NUIIcon>& icon, bool active, bool isRecord) {
         if (!btn || !btn->isVisible()) return;
         const AestraUI::NUIRect rect = btn->getBounds();
         const bool hovered = btn->isHovered() && btn->isEnabled();
-        AestraUI::NUIColor fill = hovered ? raised : control;
-        AestraUI::NUIColor stroke = hovered ? borderStrong : border;
-        AestraUI::NUIColor glyph = isRecord ? recordRed : (hovered ? ink : inkQuiet);
-        if (active) {
-            fill = isRecord ? recordRed : primary;
-            stroke = AestraUI::NUIColor::transparent();
-            glyph = isRecord ? theme.getColor("backgroundPrimary") : AestraUI::NUIColor::white();
-        }
+        const bool engaged = active || btn->isPressed();
+        keyFace(rect, 9.0f, engaged, hovered, true);
+        AestraUI::NUIColor glyph = isRecord ? recordRed : (active ? accentInk : (hovered ? ink : inkQuiet));
         if (!btn->isEnabled()) glyph = glyph.withAlpha(0.3f);
-        renderer.fillRoundedRect(rect, 5.0f, fill);
-        if (stroke.a > 0.0f) renderer.strokeRoundedRect(rect, 5.0f, 1.0f, stroke);
-        drawIcon(icon, rect, TRANSPORT_PRIMARY_ICON, glyph);
+        // A held key's glyph dips with it.
+        drawIcon(icon, rect, engaged && !active ? TRANSPORT_PRIMARY_ICON * 0.92f : TRANSPORT_PRIMARY_ICON, glyph);
     };
 
     const bool isPlaying = (m_state == TransportState::Playing);
@@ -733,16 +735,13 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
         primaryKey(m_recordButton, m_recordIcon, m_recordButton->isToggled(), true);
     }
 
-    // Record aids: lamp chips. The lamp is the state; the word is the meaning.
+    // Record aids: pill keys with a lamp. The lamp is the state; the word is the meaning. A lit aid is sunk.
     const auto lampChip = [&](const std::shared_ptr<AestraUI::NUIButton>& btn, bool on, const char* label,
                               const std::shared_ptr<AestraUI::NUIIcon>& icon) {
         if (!btn || !btn->isVisible()) return;
         const AestraUI::NUIRect rect = btn->getBounds();
         const bool hovered = btn->isHovered() && btn->isEnabled();
-        if (on || hovered) {
-            renderer.fillRoundedRect(rect, 4.0f, on ? control : raised.withAlpha(0.6f));
-        }
-        renderer.strokeRoundedRect(rect, 4.0f, 1.0f, on || hovered ? borderStrong : border);
+        keyFace(rect, rect.height * 0.5f, on || btn->isPressed(), hovered, false);
 
         const AestraUI::NUIPoint lampCenter(rect.x + CHIP_PAD_X + CHIP_LAMP * 0.5f, rect.y + rect.height * 0.5f);
         if (on) renderer.fillCircle(lampCenter, CHIP_LAMP, lampOn.withAlpha(0.22f));
@@ -763,18 +762,17 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
     lampChip(m_loopRecordButton, m_loopRecordActive, TRANSPORT_LABEL_LOOP_REC, nullptr);
     lampChip(m_metronomeButton, m_metronomeActive, nullptr, m_metronomeIcon);
 
-    // Panel switches: an open panel gets a raised key with a violet underline.
+    // Panel switches: quiet at rest (a dense row), sunk with an accent glyph while the panel is open.
     const auto panelKey = [&](const std::shared_ptr<AestraUI::NUIButton>& btn,
                               const std::shared_ptr<AestraUI::NUIIcon>& icon, bool open) {
         if (!btn || !btn->isVisible()) return;
         const AestraUI::NUIRect rect = btn->getBounds();
         const bool hovered = btn->isHovered() && btn->isEnabled();
-        if (open || hovered) renderer.fillRoundedRect(rect, 4.0f, open ? raised : control);
-        if (open) {
-            renderer.fillRect(AestraUI::NUIRect(rect.x + 6.0f, rect.bottom() - 2.0f, rect.width - 12.0f, 2.0f),
-                              primary);
-        }
-        drawIcon(icon, rect, PANEL_ICON, (open || hovered) ? ink : inkQuiet);
+        if (open || btn->isPressed())
+            AestraUI::Depth::bed(renderer, rect, 8.0f, AestraUI::Depth::Cut::Shallow);
+        else if (hovered)
+            renderer.fillRoundedRect(rect, 8.0f, control);
+        drawIcon(icon, rect, PANEL_ICON, open ? accentInk : (hovered ? ink : inkQuiet));
     };
     panelKey(m_mixerButton, m_mixerIcon, m_mixerActive);
     panelKey(m_sequencerButton, m_sequencerIcon, m_sequencerActive);

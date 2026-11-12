@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios All Rights Reserved. Licensed for personal & educational use only.
 // TrackManagerUI — toolbar, tools, and tool cursors.
 // Split out of the former monolithic TrackManagerUI.cpp — bodies moved verbatim.
+#include "../AestraUI/Graphics/NUIDepth.h"
 #include "TrackManagerUI.h"
 
 #include "../AestraCore/include/AestraLog.h"
@@ -414,13 +415,18 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
     renderer.fillRect(row, theme.getColor("surfaceRaised").withAlpha(0.35f));
     renderer.fillRect({row.x, row.bottom() - 1.0f, row.width, 1.0f}, border.withAlpha(0.35f));
 
+    // Design Spec: buttons in a toolbar are soft pills with the quiet hover (one step lighter, no outline).
     const auto outlined = [&](const AestraUI::NUIRect& r, bool hovered) {
-        if (hovered) renderer.fillRoundedRect(r, 4.0f, theme.getColor("buttonBgHover").withAlpha(0.9f));
-        renderer.strokeRoundedRect(r, 4.0f, 1.0f, border.withAlpha(hovered ? 0.55f : 0.35f));
+        renderer.fillRoundedRect(r, r.height * 0.5f, theme.getColor(hovered ? "surfaceRaised" : "surfaceTertiary"));
+    };
+    // Icon buttons (Design Spec): no fill at rest, one step lighter on hover, sunk with an accent glyph when latched.
+    const auto iconKey = [&](const AestraUI::NUIRect& r, bool latched, bool hovered) {
+        if (latched) AestraUI::Depth::bed(renderer, r, 8.0f, AestraUI::Depth::Cut::Shallow);
+        else if (hovered) renderer.fillRoundedRect(r, 8.0f, theme.getColor("surfaceTertiary"));
     };
 
-    // Tools: one segmented group of white glyphs; the active one is filled and fully lit, and named beside the group.
-    renderer.strokeRoundedRect(m_toolbarBounds, 5.0f, 1.0f, border.withAlpha(0.35f));
+    // Tools: a segment switch of glyphs (Design Spec): a sunk track, the active tool on a lit thumb, named beside it.
+    AestraUI::Depth::bed(renderer, m_toolbarBounds, m_toolbarBounds.height * 0.5f, AestraUI::Depth::Cut::Shallow);
     struct Tool { const AestraUI::NUIRect* r; PlaylistTool tool; const char* label; bool hovered; };
     const Tool tools[] = {
         {&m_selectToolBounds, PlaylistTool::Select, "Select", m_selectToolHovered},
@@ -432,9 +438,8 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
     for (const auto& t : tools) {
         const bool active = m_currentTool == t.tool;
         if (active) {
-            renderer.fillRoundedRect(*t.r, 3.0f, theme.getColor("accentPrimary").withAlpha(0.28f));
-        } else if (t.hovered) {
-            renderer.fillRoundedRect(*t.r, 3.0f, theme.getColor("buttonBgHover").withAlpha(0.9f));
+            const AestraUI::NUIRect thumb(t.r->x + 1.0f, m_toolbarBounds.y + 3.0f, t.r->width - 2.0f, m_toolbarBounds.height - 6.0f);
+            AestraUI::Depth::object(renderer, thumb, thumb.height * 0.5f);
         }
         const auto& glyph = t.tool == PlaylistTool::Select ? m_selectToolIcon
                             : t.tool == PlaylistTool::Paint ? m_paintToolIcon
@@ -443,7 +448,7 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
         if (glyph) {
             glyph->setIconSize(kGlyph, kGlyph);
             glyph->setBounds({std::round(t.r->x + (t.r->width - kGlyph) * 0.5f), std::round(t.r->y + (t.r->height - kGlyph) * 0.5f), kGlyph, kGlyph});
-            glyph->setColor(text.withAlpha(active ? 1.0f : (t.hovered ? 0.9f : 0.62f)));
+            glyph->setColor(theme.getColor(active || t.hovered ? "textPrimary" : "textMuted"));
             glyph->onRender(renderer);
         }
         if (active) {
@@ -455,7 +460,7 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
     // SNAP value: small caps label, then the current value and a caret.
     {
         const AestraUI::NUIRect& r = m_snapBounds;
-        if (m_snapHovered) renderer.fillRoundedRect(r, 4.0f, theme.getColor("buttonBgHover").withAlpha(0.9f));
+        if (m_snapHovered) renderer.fillRoundedRect(r, 8.0f, theme.getColor("surfaceTertiary"));
         const float ty = renderer.calculateTextY(r, smallSize);
         renderer.drawText("SNAP", {r.x + 6.0f, ty}, smallSize, text.withAlpha(0.45f));
         const std::string value = (m_snapEnabled && m_snapSetting != AestraUI::SnapGrid::None)
@@ -488,26 +493,21 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
     }
 
     // Follow playhead: the existing icon toggle, filled while on.
-    if (m_followPlayhead || m_followPlayheadHovered) {
-        renderer.fillRoundedRect(m_followPlayheadBounds, 4.0f,
-                                 m_followPlayhead ? theme.getColor("selection")
-                                                  : theme.getColor("buttonBgHover").withAlpha(0.9f));
-    }
+    iconKey(m_followPlayheadBounds, m_followPlayhead, m_followPlayheadHovered);
     if (m_followPlayheadIcon) {
         const float iconSz = theme.getLayoutDimension("standardIconSize");
         m_followPlayheadIcon->setBounds({std::round(m_followPlayheadBounds.x + (m_followPlayheadBounds.width - iconSz) * 0.5f),
                                          std::round(m_followPlayheadBounds.y + (m_followPlayheadBounds.height - iconSz) * 0.5f),
                                          iconSz, iconSz});
-        m_followPlayheadIcon->setColor(text.withAlpha(m_followPlayhead ? 0.9f : (m_followPlayheadHovered ? 0.7f : 0.4f)));
+        m_followPlayheadIcon->setColor(theme.getColor(m_followPlayhead ? "secondary"
+                                                      : (m_followPlayheadHovered ? "textPrimary" : "textSecondary")));
         m_followPlayheadIcon->onRender(renderer);
     }
 
     // Right side: the timeline menu (loop presets, send to Audition), Fit song, + Track.
     {
         const bool menuActive = m_activeContextMenu != nullptr && !m_snapHovered;
-        if (menuActive || m_menuHovered) {
-            renderer.fillRoundedRect(m_menuIconBounds, 4.0f, theme.getColor("buttonBgHover").withAlpha(0.9f));
-        }
+        iconKey(m_menuIconBounds, menuActive, m_menuHovered);
         if (m_menuIcon) {
             const float iconSz = theme.getLayoutDimension("standardIconSize");
             m_menuIcon->setBounds({std::round(m_menuIconBounds.x + (m_menuIconBounds.width - iconSz) * 0.5f),
