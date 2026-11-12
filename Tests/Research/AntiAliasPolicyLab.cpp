@@ -560,6 +560,18 @@ double timeNsPerFrame(Option o, const Signal& src, uint32_t dstRate, const DownP
     return outFrames > 0 ? best / static_cast<double>(outFrames) : 0.0;
 }
 
+#if defined(__SANITIZE_THREAD__)
+constexpr bool kUnderThreadSanitizer = true;
+#elif defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+constexpr bool kUnderThreadSanitizer = true;
+#else
+constexpr bool kUnderThreadSanitizer = false;
+#endif
+#else
+constexpr bool kUnderThreadSanitizer = false;
+#endif
+
 void runCpuCost(CheckSession& t) {
     std::printf("\n=== CPU cost (stereo, ns per OUTPUT frame; relative comparison only) ===\n");
     for (const DownPair& p : kDownPairs) {
@@ -576,6 +588,10 @@ void runCpuCost(CheckSession& t) {
             // ratios (window precomputed): optionA64 5.2-6.6x, optionA128 12.0-13.9x,
             // optionB 2.1-4.4x baseline (option B's one-time prefilter amortizes over
             // the whole clip; its steady-state playback cost is EXACTLY baseline).
+            // Under ThreadSanitizer the ratio means nothing: instrumentation slows the options' inner loops far
+            // more than the baseline's (CI measured 61-64x there against 2-14x uninstrumented), so the bound
+            // failed on busy runners. The measurement is still printed; the ceiling is checked in normal builds.
+            if (kUnderThreadSanitizer) continue;
             t.expect((pairName(p) + " " + std::string(optionName(o)) + ": CPU within 60x baseline sanity bound")
                          .c_str(),
                      ns < baseNs * 60.0,

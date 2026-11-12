@@ -2,6 +2,7 @@
 #pragma once
 
 #include "ClipInstance.h"
+#include "Commands/DeleteSilenceCommand.h"
 #include "MixerPanel.h"
 #include "PianoRollPanel.h"
 #include "PlaylistModel.h"
@@ -162,7 +163,9 @@ public:
      *  consumed before they reached the timeline. Hover cursor claims are only
      *  honoured while it matches the timeline's own last-seen position. */
     void setWindowPointerPosition(float x, float y);
-    void onWindowMouseReleased(); // the window saw a left release, which may never have reached the timeline
+    void onWindowMouseReleased();
+    /** @brief The timeline's cursor glyph (hand, trim, tool), painted by the window last so nothing covers it. */
+    void renderCursorOverlay(::AestraUI::NUIRenderer& renderer); // the window saw a left release, which may never have reached the timeline
 
     // View Toggle Callbacks (v3.1)
     void setOnToggleMixer(std::function<void()> cb) { m_onToggleMixer = cb; }
@@ -179,6 +182,10 @@ public:
     }
     /** @brief Bounce the selected clips in place (V8-W5). */
     void bounceSelectedClipsInPlace();
+    /** @brief Delete Silence (founder request 2026-11-07) on the selected audio clips, or on @p fallback when none is selected. */
+    void deleteSilenceInSelection(SilenceRipple ripple, ClipInstanceID fallback = ClipInstanceID{});
+    /** @brief Adds "Delete Silence" with its ripple choice (This lane is the default) to a clip menu. */
+    void addDeleteSilenceMenu(::AestraUI::NUIContextMenu& menu, ClipInstanceID clip);
 
     // Loop control callback (preset: 0=Off, 1=1Bar, 2=2Bars, 3=4Bars, 4=8Bars, 5=Selection, 6=Project)
     void setOnLoopPresetChanged(std::function<void(int preset)> cb) { m_onLoopPresetChanged = cb; }
@@ -647,6 +654,7 @@ private:
     AestraUI::NUIRect m_foldedRowRect{};
     AestraUI::NUIRect m_foldedToggleRect{};
     bool isFoldableEmptyLane(const Audio::PlaylistLane& lane, size_t laneCountOfItsTrack) const;
+    PlaylistLaneID firstFoldedEmptyLane() const; // the lane a drop on the folded row fills
     void renderFoldedEmptyRow(AestraUI::NUIRenderer& renderer);
     bool handleFoldedRowMouse(const AestraUI::NUIMouseEvent& event);
 
@@ -824,6 +832,7 @@ private:
     void renderToolbar(::AestraUI::NUIRenderer& renderer);
     bool handleToolbarClick(const ::AestraUI::NUIPoint& position);
     void renderToolCursor(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIPoint& position);
+    void renderSplitGuide(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIPoint& position);
 
     // onMouseEvent decomposition — called by the dispatcher in this order;
     // bool handlers return true when the event was consumed.

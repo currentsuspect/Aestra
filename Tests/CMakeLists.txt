@@ -3035,6 +3035,19 @@ if(AESTRA_ENABLE_UI)
     set_tests_properties(PanelResizeLayoutTest PROPERTIES LABELS "ui;layout;regression;contract:application")
 endif()
 
+# A drop goes to the target on top on screen, not the last one registered (#1328)
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(DropTargetZOrderTest AestraUI_Core)
+    add_executable(DropTargetZOrderTest AestraUI/DropTargetZOrderTest.cpp)
+    target_link_libraries(DropTargetZOrderTest PRIVATE AestraUI_Core)
+    target_include_directories(DropTargetZOrderTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+    )
+    add_test(NAME DropTargetZOrderTest COMMAND DropTargetZOrderTest)
+    set_tests_properties(DropTargetZOrderTest PROPERTIES LABELS "ui;dragdrop;regression;contract:application")
+endif()
+
 # A sample dragged onto an open Arsenal lands there, not on the timeline under it (4 Nov 2026)
 if(AESTRA_ENABLE_UI)
     aestra_require_ui_targets(ArsenalDropOrderTest AestraUI_Core AestraUI_Platform)
@@ -3485,6 +3498,11 @@ if(AESTRA_ENABLE_UI)
     add_test(NAME AuditionHubLayoutTest COMMAND AuditionHubLayoutTest)
     set_tests_properties(AuditionHubLayoutTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 endif()
+
+# The Audition hub's bounce tile: "Bouncing..." on screen before the render, then what happened (owner, 2026-11-08).
+add_executable(AuditionBounceTileTest AestraUI/AuditionBounceTileTest.cpp)
+add_test(NAME AuditionBounceTileTest COMMAND AuditionBounceTileTest)
+set_tests_properties(AuditionBounceTileTest PROPERTIES LABELS "ui;interaction;regression;contract:application")
 
 # Kits and the empty state: a folder of sounds becomes a row of units (V81-AR1, FD-27 point 6).
 if(AESTRA_ENABLE_UI)
@@ -4035,6 +4053,132 @@ if(AESTRA_ENABLE_UI)
         LABELS "ui;interaction;timeline;playback;regression;contract:application")
 endif()
 
+# Owner 2026-11-08: a drop into a project with no used tracks lands on Track 1, the next on Track 2; the number by a
+# track name is its place, never a digit from a sample name.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(TimelineDropTargetTest AestraUI_Core AestraUI_Platform AestraUI_OpenGL)
+    add_executable(TimelineDropTargetTest
+        AestraUI/TimelineDropTargetTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentHeader.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentMute.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentComp.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationRow.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIFold.cpp
+        # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
+        # compiles in.
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapRenderer.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineSummaryCache.cpp
+    )
+    # TrackManagerUIRender references the FBO render cache. The test never reaches
+    # that path — NullRenderer::getRenderCache() returns nullptr, so the documented
+    # no-cache branch runs — but the symbols are needed at link time. The cache
+    # lives in AestraUI_OpenGL, which also carries the glad and FreeType include
+    # paths its header needs. Note AestraUI_OpenGL deliberately does not link
+    # OpenGL::GL: glad resolves GL entry points dynamically, and this test never
+    # initialises them.
+    target_link_libraries(TimelineDropTargetTest PRIVATE
+        AestraUI_Core AestraUI_Platform AestraUI_OpenGL AestraAudio AestraCore)
+    target_include_directories(TimelineDropTargetTest PRIVATE
+        ${CMAKE_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        # TrackManagerUI.h pulls MixerPanel.h and PianoRollPanel.h transitively
+        # without using either, so these are needed to compile, not to link.
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/Source/Settings
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
+        ${CMAKE_SOURCE_DIR}/AestraUI/Helpers
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME TimelineDropTargetTest COMMAND TimelineDropTargetTest)
+    set_tests_properties(TimelineDropTargetTest PROPERTIES
+        LABELS "ui;interaction;timeline;playback;regression;contract:application")
+endif()
+
+# Where a press on a clip lands (resize / fade / split / move): owner reports 2026-11-07.
+# Same TrackManagerUI translation-unit set as ClipDragReleaseTest.
+if(AESTRA_ENABLE_UI)
+    aestra_require_ui_targets(ClipEdgeZonesTest AestraUI_Core AestraUI_Platform AestraUI_OpenGL)
+    add_executable(ClipEdgeZonesTest
+        AestraUI/ClipEdgeZonesTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponent.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationClips.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentHeader.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentMute.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentComp.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackUIComponentAutomationRow.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineClipPaint.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/AutomationClipLayer.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUI.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIClipOps.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIDragDrop.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIEvents.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIRender.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIToolbar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIAutomation.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIView.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TrackManagerUIFold.cpp
+        # Referenced by the TrackManagerUI set; same files PianoRollPanelPersistenceTest
+        # compiles in.
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapBar.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineMinimapRenderer.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Components/TimelineSummaryCache.cpp
+    )
+    # TrackManagerUIRender references the FBO render cache. The test never reaches
+    # that path — NullRenderer::getRenderCache() returns nullptr, so the documented
+    # no-cache branch runs — but the symbols are needed at link time. The cache
+    # lives in AestraUI_OpenGL, which also carries the glad and FreeType include
+    # paths its header needs. Note AestraUI_OpenGL deliberately does not link
+    # OpenGL::GL: glad resolves GL entry points dynamically, and this test never
+    # initialises them.
+    target_link_libraries(ClipEdgeZonesTest PRIVATE
+        AestraUI_Core AestraUI_Platform AestraUI_OpenGL AestraAudio AestraCore)
+    target_include_directories(ClipEdgeZonesTest PRIVATE
+        ${CMAKE_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Components
+        # TrackManagerUI.h pulls MixerPanel.h and PianoRollPanel.h transitively
+        # without using either, so these are needed to compile, not to link.
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/Source/Settings
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
+        ${CMAKE_SOURCE_DIR}/AestraUI/Helpers
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ClipEdgeZonesTest COMMAND ClipEdgeZonesTest)
+    set_tests_properties(ClipEdgeZonesTest PROPERTIES
+        LABELS "ui;interaction;timeline;regression;contract:application")
+endif()
+
 # V8-G1: UI headless scenarios, modelled on Tests/headless_scenarios.json. Each
 # scenario in Tests/ui_scenarios.json drives a real TrackManagerUI with real mouse
 # events and checks clip placement, undo depth and layout problems. Same
@@ -4305,6 +4449,8 @@ if(AESTRA_ENABLE_UI)
         ClipContextMenuReachabilityTest
         TimelineMinimapCursorClaimTest
         ClipDragReleaseTest
+        TimelineDropTargetTest
+        ClipEdgeZonesTest
         TimelineFollowPreferenceTest
         TimelineGridSelectionTest
         ModalDialogInteractionTest
@@ -4323,6 +4469,7 @@ if(AESTRA_ENABLE_UI)
         BPMEditorPaintTest
         TransportClockFormatTest
         PanelResizeLayoutTest
+        DropTargetZOrderTest
         ArsenalDropOrderTest
         ExportDialogWidgetsTest
         AutomationClipLayerTest

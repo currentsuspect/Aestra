@@ -23,6 +23,18 @@ inline bool isDefaultTrackName(const std::string& name) {
     return true;
 }
 
+// The number beside a track's name is its place. Only a default "Track N" keeps its own N. A trailing digit in any
+// other name is part of the name: a track named after the sample "kick 3" on the first row is track 1, not 3 (owner,
+// 2026-11-08: a drop into an empty project "sometimes lands on track 1 sometimes even track 3").
+inline unsigned timelineTrackNumber(const std::string& name, size_t laneIndex) {
+    if (isDefaultTrackName(name) && name.size() - 6 < 9) {
+        const unsigned n = static_cast<unsigned>(std::stoul(name.substr(6)));
+        if (n != 0)
+            return n;
+    }
+    return static_cast<unsigned>(laneIndex + 1);
+}
+
 inline bool isUntouchedTrackLane(const PlaylistLane& lane, size_t lanesInItsTrack) {
     if (lanesInItsTrack > 1 || !lane.clips.empty() || !isDefaultTrackName(lane.name))
         return false;
