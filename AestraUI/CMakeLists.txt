@@ -209,6 +209,8 @@ endif()
 set(AESTRAUI_GRAPHICS_SOURCES
     Graphics/NUIRenderer.h
     Graphics/NUIRenderer.cpp
+    Graphics/NUIDepth.h
+    Graphics/NUIDepth.cpp
     Graphics/NUISVGParser.h
     Graphics/NUISVGParser.cpp
     Graphics/NUISVGCache.h

@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <functional>
 #include <map>
+#include <vector>
 
 namespace AestraUI {
 
@@ -143,6 +144,30 @@ struct NUIThemeProperties {
     // Mixer tokens
     NUIColor mixerStripBg;
     NUIColor mixerMasterBorder;
+
+    // Surfaces that used to be derived inside getColor() from the theme's polarity. Kit themes (FD-79) state them;
+    // the older presets fill them from the same derivation in finishDerivedTokens().
+    NUIColor timelineBed;
+    NUIColor editorCard;
+    NUIColor editorWell;
+    NUIColor editorControl;
+    NUIColor controlEdge;       ///< legacy outline colour: high contrast only, never a control at rest
+    NUIColor controlSelected;
+    NUIColor controlGuide;
+    NUIColor textOnStatus;
+
+    // Depth (Design Spec rule 1: three depths, light from above). A well is shaded on its top-left inner edge
+    // (neuLo) with a faint highlight opposite (neuHi); neuEdge is the inner edge high contrast keeps on controls.
+    NUIColor neuHi;
+    NUIColor neuLo;
+    NUIColor neuEdge;
+    // The one pane of glass over read-only displays: reflection, lit edge, bezel shade.
+    NUIColor glassHi;
+    NUIColor glassEdge;
+    NUIColor glassShade;
+
+    /// 0 dark, 1 light, 2 high contrast. Lets depth helpers pick a light-mode cap without guessing from luma.
+    int mode = 0;
     
     // Spacing
     float spacingXS = 4.0f;
@@ -423,6 +448,20 @@ public:
     static NUIThemeProperties createAestraDark();
     static NUIThemeProperties createHighContrastLight();
     static NUIThemeProperties createHighContrastDark();
+
+    /// One of the twelve Aestra Kit variants (FD-79): Ember, Obsidian Moss, Solace and Monolith, each dark, light
+    /// and high contrast. Values come from NUIKitThemes.inc, generated from the kit.
+    struct KitTheme {
+        const char* key;      ///< "ember-dark", "solace-hc", ...
+        const char* name;     ///< "Ember"
+        const char* modeName; ///< "Dark", "Light", "High contrast"
+        int mode;             ///< 0 dark, 1 light, 2 high contrast
+    };
+    static const std::vector<KitTheme>& kitThemes();
+    /// The variant called @p key; Ember dark when there is none.
+    static NUIThemeProperties createKitTheme(const std::string& key);
+    /// Fills the surface and depth tokens an older preset does not state, from its polarity.
+    static void finishDerivedTokens(NUIThemeProperties& theme);
 };
 
 // ---------------------------------------------------------------------------
