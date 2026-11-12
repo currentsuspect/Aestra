@@ -44,6 +44,7 @@ struct EditorBackend {
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
 #include <X11/Xlib.h>
+#include <dlfcn.h>
 #include <poll.h>
 
 #include <atomic>
@@ -65,6 +66,32 @@ inline int ignoreXError(Display*, XErrorEvent* e) {
     return 0;
 }
 
+/// Set when the X server drops the editor's connection: a window manager force-closing the plugin window
+/// (XKillClient, as Hyprland and xkill do) or the server going away. Xlib calls that fatal and exits the process,
+/// which took the plugin, its sound and the app's chance to reopen it down with the window. The helper runs one
+/// editor at a time, on one thread, so one flag is enough.
+inline std::atomic<bool>& editorConnectionLost() {
+    static std::atomic<bool> lost{false};
+    return lost;
+}
+
+inline int noteLostConnection(Display*) {
+    editorConnectionLost().store(true);
+    return 0; // returning is what lets the exit handler below keep the process alive
+}
+
+/// XSetIOErrorExitHandler (libX11 1.7+) lets a lost connection return to the caller instead of exiting. It is looked
+/// up at run time so a helper built against an older libX11 still loads; there it keeps the old behaviour.
+inline void surviveLostConnection(Display* display) {
+    using ExitHandler = void (*)(Display*, void*);
+    using SetExitHandler = void (*)(Display*, ExitHandler, void*);
+    static const auto setExitHandler =
+        reinterpret_cast<SetExitHandler>(dlsym(RTLD_DEFAULT, "XSetIOErrorExitHandler"));
+    if (!setExitHandler) return;
+    XSetIOErrorHandler(noteLostConnection);
+    setExitHandler(display, [](Display*, void*) { editorConnectionLost().store(true); }, nullptr);
+}
+
 class EditorHost {
 public:
     ~EditorHost() { close(); }
@@ -79,6 +106,8 @@ public:
         m_display = XOpenDisplay(nullptr);
         if (!m_display) return false;
         XSetErrorHandler(ignoreXError);
+        editorConnectionLost().store(false);
+        surviveLostConnection(m_display);
         m_screen = DefaultScreen(m_display);
         m_wmDelete = XInternAtom(m_display, "WM_DELETE_WINDOW", False);
         m_backend = std::move(backend);
@@ -121,18 +150,24 @@ public:
     }
 
     /// Whether the window is still on screen (false after the user closes it, or before open).
-    bool isOpen() const { return m_display != nullptr; }
+    bool isOpen() const { return m_display != nullptr && !editorConnectionLost().load(); }
     int width() const { return m_width; }
     int height() const { return m_height; }
 
     /// Bring the window to the front. The app cannot raise it itself: another process owns it.
     void raise() {
-        if (!m_display || !m_window) return;
+        if (!isOpen() || !m_window) return;
         XRaiseWindow(m_display, m_window);
         XFlush(m_display);
     }
 
-    void close() { teardown(true); }
+    void close() {
+        if (m_display && editorConnectionLost().load()) {
+            dropLostConnection();
+            return;
+        }
+        teardown(true);
+    }
 
     /// What the command loop should wait on besides its own input: the X connection, and the plugin's descriptors.
     /// @p timeoutMs is lowered to when the plugin's next timer is due (never raised).
@@ -148,7 +183,15 @@ public:
     /// Run whatever is ready: window events, the plugin's descriptors and due timers. Never blocks.
     void service() {
         if (!m_display) return;
+        if (editorConnectionLost().load()) {
+            dropLostConnection();
+            return;
+        }
         while (m_display && XPending(m_display) > 0) {
+            if (editorConnectionLost().load()) {
+                dropLostConnection();
+                return;
+            }
             XEvent event;
             XNextEvent(m_display, &event);
             if (event.type == ClientMessage && static_cast<Atom>(event.xclient.data.l[0]) == m_wmDelete) {
@@ -173,6 +216,19 @@ public:
     }
 
 private:
+    /// The window was force-closed: the connection is dead, so no X call may touch it again. Detach the plugin's view
+    /// (the plugin talks to the server on its own connection) and forget the display. Leaking the dead Display is
+    /// deliberate: XCloseDisplay on it would write to a closed socket. The plugin, its state and its sound stay; the
+    /// app's next EDITOR OPEN makes a new window.
+    void dropLostConnection() {
+        std::fprintf(stderr, "AestraPluginHost: the editor window was force-closed; the plugin keeps running\n");
+        if (m_backend.close) m_backend.close();
+        m_display = nullptr;
+        m_window = 0;
+        m_backend = {};
+        editorConnectionLost().store(false);
+    }
+
     void teardown(bool closeBackend) {
         if (!m_display) return;
         if (closeBackend && m_backend.close) m_backend.close();
