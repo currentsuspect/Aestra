@@ -208,6 +208,11 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         run: python3 scripts/ci/test-check-budgets.py
 
+      # FD-77: the download size budget that publish.sh enforces. A broken check would let an oversized package out.
+      - name: Download size budget self-tests
+        if: steps.scope.outputs.run == 'true'
+        run: python3 tools/update/check_package_size_selftest.py
+
       - name: Budget gate (V8-G5)
         if: steps.scope.outputs.run == 'true'
         run: python3 scripts/ci/check-budgets.py --bin-dir build-app/bin
