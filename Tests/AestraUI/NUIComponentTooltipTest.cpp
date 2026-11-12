@@ -45,7 +45,7 @@ void testHoverTooltipsWaitForStableIntent() {
     check(NUIComponent::getGlobalTooltipState().alpha == 0.0f, "tooltip remains hidden during hover delay");
 
     NUIComponent::showRemoteTooltip("Delayed", {80.0f, 80.0f}, &owner);
-    NUIComponent::updateGlobalTooltip(0.26);
+    NUIComponent::updateGlobalTooltip(0.31); // past the Design Spec's 500 ms only if the first 0.20 s still counts
     const auto& state = NUIComponent::getGlobalTooltipState();
     check(state.alpha > 0.0f, "repeated show calls do not restart the hover delay");
     check(state.position.x == 20.0f && state.position.y == 20.0f, "visible tooltip keeps a stable anchor");
