@@ -4,6 +4,7 @@
 #include "NUITheme.h"
 #include "NUIThemeSystem.h"
 #include "NUIRenderer.h"
+#include "NUIDepth.h"
 #include <algorithm>
 #include <chrono>
 #include <iostream>
@@ -699,7 +700,7 @@ void NUIComponent::setTooltip(const std::string& text) {
 }
 
 namespace {
-constexpr float kTooltipDelaySeconds = 0.45f;
+constexpr float kTooltipDelaySeconds = 0.5f; // Design Spec: tooltips wait half a second
 } // namespace
 
 void NUIComponent::showRemoteTooltip(const std::string& text, const NUIPoint& position, const void* owner, bool force) {
@@ -903,26 +904,52 @@ void NUIComponent::renderGlobalTooltip(NUIRenderer& renderer, const NUIRect& vie
     auto& theme = NUIThemeManager::getInstance();
     const auto& props = theme.getCurrentTheme();
 
-    // Reuse the compact minimap tooltip styling around the stable hover anchor.
-    const float tooltipPadX = props.spacingS;
-    const float tooltipPadY = props.spacingXS;
-    const float tooltipRadius = props.radiusS;
-    const float fontSize = props.fontSizeXS;
-    const auto size = renderer.measureText(s_tooltipState.text, fontSize);
-
-    const float w = size.width + tooltipPadX * 2.0f;
-    const float h = size.height + tooltipPadY * 2.0f;
+    // Design Spec, Tooltip (locked 12 Nov 2026): a small floating card of surfaceRaised, 8px radius, 11px text,
+    // a soft cast shadow and no outline. A trailing shortcut written "Name (F6)" sits in a sunk key tag.
+    const float alpha = s_tooltipState.alpha;
+    const float padX = 8.0f;
+    const float padY = 6.0f;
+    const float fontSize = props.fontSizeS;
+    const float keySize = props.fontSizeXS;
+    const TooltipParts parts = splitTooltipShortcut(s_tooltipState.text);
+    const auto labelSize = renderer.measureText(parts.label, fontSize);
+    float keyW = 0.0f;
+    if (!parts.key.empty())
+        keyW = renderer.measureText(parts.key, keySize).width + 10.0f;
+    const float gap = parts.key.empty() ? 0.0f : 8.0f;
+    const float h = std::max(labelSize.height, keySize + 6.0f) + padY * 2.0f;
+    const float w = labelSize.width + gap + keyW + padX * 2.0f;
 
     const NUIRect tipRect = calculateTooltipBounds(s_tooltipState.anchor, {w, h}, viewport);
+    renderer.setOpacity(alpha);
+    Depth::floatingCard(renderer, tipRect, 8.0f, props.surfaceRaised);
+    const NUIRect labelRect{tipRect.x + padX, tipRect.y, labelSize.width, tipRect.height};
+    renderer.drawTextCentered(parts.label, labelRect, fontSize, props.textPrimary);
+    if (!parts.key.empty()) {
+        const float tagH = keySize + 6.0f;
+        const NUIRect tag{labelRect.right() + gap, tipRect.y + (tipRect.height - tagH) * 0.5f, keyW, tagH};
+        renderer.fillRoundedRect(tag, Depth::Radius::small, props.backgroundPrimary);
+        renderer.drawInnerShadow(tag, Depth::Radius::small, 1.0f, 1.0f, props.neuLo);
+        renderer.drawTextCentered(parts.key, tag, keySize, props.textSecondary);
+    }
+    renderer.setOpacity(1.0f);
+}
 
-    // Theme colors (matching minimap style)
-    const NUIColor bg = theme.getColor("elevatedPanel").withAlpha(0.98f * s_tooltipState.alpha);
-    const NUIColor border = theme.getColor("borderStrong").withAlpha(0.88f * s_tooltipState.alpha);
-    const NUIColor text = theme.getColor("textPrimary").withAlpha(0.96f * s_tooltipState.alpha);
-
-    renderer.fillRoundedRect(tipRect, tooltipRadius, bg);
-    renderer.strokeRoundedRect(tipRect, tooltipRadius, props.layout.dividerWidth, border);
-    renderer.drawTextCentered(s_tooltipState.text, tipRect, fontSize, text);
+NUIComponent::TooltipParts NUIComponent::splitTooltipShortcut(const std::string& text) {
+    // "Mixer (F3)", "Stop (Space)", "Mute Track (M)": a short, space-free trailing group is a shortcut.
+    // "Overview: notes across the piano roll (by pitch)" has a space inside, so it stays part of the label.
+    TooltipParts parts{text, {}};
+    if (text.size() < 4 || text.back() != ')')
+        return parts;
+    const auto open = text.rfind(" (");
+    if (open == std::string::npos)
+        return parts;
+    const std::string key = text.substr(open + 2, text.size() - open - 3);
+    if (key.empty() || key.size() > 12 || key.find(' ') != std::string::npos)
+        return parts;
+    parts.label = text.substr(0, open);
+    parts.key = key;
+    return parts;
 }
 
 void NUIComponent::setCursorCaptureActive(bool active) {
