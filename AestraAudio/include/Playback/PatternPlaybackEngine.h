@@ -340,6 +340,8 @@ private:
     TimelineClock* m_clock;
     PatternManager* m_patternManager;
     UnitManager* m_unitManager;
+    // The transpose and its followers as of the current refill (FD-76); scheduler thread only.
+    std::shared_ptr<const PlaybackHarmony> m_refillHarmony;
 
     // Active instances (scheduler thread only - LOCK REQUIRED if called from RT)
     std::vector<PatternInstance> m_activeInstances;
