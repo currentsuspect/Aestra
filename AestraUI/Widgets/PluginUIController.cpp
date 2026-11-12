@@ -26,6 +26,7 @@
 #include "Core/MixerChannel.h"
 
 #include "../../AestraCore/include/AestraLog.h"
+#include "NativePluginPanel.h"
 
 #include <algorithm>
 
@@ -596,6 +597,16 @@ bool PluginUIController::openNativeEditorWindow(
 void PluginUIController::closeNativeEditorsFor(
     const std::shared_ptr<Aestra::Audio::IPluginInstance>& instance) {
     if (!instance) return;
+    // A plugin's GUI inside its panel goes with the panel: dropping the panel closes the editor.
+    m_activeEditors.erase(
+        std::remove_if(m_activeEditors.begin(), m_activeEditors.end(),
+                       [this, &instance](const std::shared_ptr<NUIComponent>& editor) {
+                           auto panel = std::dynamic_pointer_cast<NativePluginPanel>(editor);
+                           if (!panel || panel->instance() != instance) return false;
+                           if (m_popupLayer) m_popupLayer->removeChild(panel);
+                           return true;
+                       }),
+        m_activeEditors.end());
     m_nativeEditors.erase(
         std::remove_if(m_nativeEditors.begin(), m_nativeEditors.end(),
                        [&instance](const std::shared_ptr<PluginEditorWindow>& window) {
@@ -617,22 +628,44 @@ void PluginUIController::openPluginEditor(
     // A sandboxed plugin (VST3/CLAP through OutOfProcessPluginInstance) owns its
     // editor window: the helper process creates it, attaches the plugin's real view
     // and pumps it while the command channel keeps serving audio (HelperEditorHost.h).
-    // There is no widget to build and nothing to embed, so openEditor(nullptr) is the
-    // whole job. This is the only route that shows a third-party plugin's own GUI;
-    // the registry below exists for Aestra's own effects and is the right fallback
-    // when the helper refuses (a plugin with parameters but no GUI).
-    if (instance->ownsEditorWindow() && openNativeEditorWindow(instance)) {
-        return;
-    }
-
+    //
+    // First choice: the plugin's window inside an Aestra panel (X11), so it has the
+    // panel's header, moves with it and resizes from its grip. An already open panel
+    // for this plugin comes to the front instead of opening a second one.
     std::shared_ptr<NUIComponent> editorComp;
     const std::string& pluginId = instance->getInfo().id;
+    if (instance->ownsEditorWindow()) {
+        for (const auto& open : m_activeEditors) {
+            auto panel = std::dynamic_pointer_cast<NativePluginPanel>(open);
+            // Membership here, not the parent: an add made during this same event
+            // dispatch is not parented yet, and a double-click can ask twice.
+            if (panel && panel->instance() == instance) {
+                if (m_popupLayer && panel->getParent() == m_popupLayer) {
+                    m_popupLayer->removeChild(panel);
+                    m_popupLayer->addChild(panel); // last child draws on top
+                }
+                panel->setVisible(true);
+                return;
+            }
+        }
+        editorComp = NativePluginPanel::create(instance, m_platformBridge);
+        if (editorComp) {
+            Aestra::Log::info("[PluginUI] Opened " + pluginId + "'s own editor inside its panel");
+        } else if (openNativeEditorWindow(instance)) {
+            // Where embedding is not possible (Wayland without XWayland, Windows for
+            // now), the plugin's window stands on its own.
+            return;
+        }
+        // Otherwise the registry below is the fallback: a plugin with parameters
+        // but no GUI gets the parameter editor.
+    }
 
     // Which editor a plugin gets is data, not a branch: see PluginEditorRegistry.
     // A new special editor is a table row, and a typo'd plugin id can no longer
     // silently degrade to the generic editor because the ids are enumerable and
     // checked by PluginEditorRegistryTest.
-    editorComp = pluginEditorFactoryFor(pluginId)(instance, m_platformBridge);
+    if (!editorComp)
+        editorComp = pluginEditorFactoryFor(pluginId)(instance, m_platformBridge);
 
     // Close-wiring happens once, here, rather than in every arm. It stayed a
     // controller member rather than moving into the registry because it touches

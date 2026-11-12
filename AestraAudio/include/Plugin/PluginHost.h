@@ -281,6 +281,22 @@ public:
     virtual bool raiseEditor() { return false; }
 
     /**
+     * @brief Open the editor inside the app's window, as a child the app places itself.
+     * @param parentWindow the app's native window (an X11 Window id).
+     * @return the editor's own window id, or 0 when the host cannot embed (then use openEditor()).
+     *
+     * A sandboxed plugin's window belongs to the helper process, but on X11 it can still be a child of the app's
+     * window: the app then keeps it inside a plugin panel, moves it with the panel and resizes it from the panel's
+     * grip. canResizeEditor() says whether the plugin accepts other sizes.
+     */
+    virtual std::uintptr_t openEditorEmbedded(std::uintptr_t parentWindow) {
+        (void)parentWindow;
+        return 0;
+    }
+    /// Whether the open editor accepts a size other than the one it asked for.
+    virtual bool canResizeEditor() const { return false; }
+
+    /**
      * @brief Close the plugin editor window
      */
     virtual void closeEditor() = 0;

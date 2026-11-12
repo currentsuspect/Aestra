@@ -1,6 +1,8 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include <cstdint>
+
 #include "../../AestraCore/include/AestraConfig.h"
 
 #include <functional>
@@ -232,6 +234,21 @@ public:
     virtual void* getNativeHandle() const = 0;
     /** @brief Retrieve the platform-specific display handle when applicable. */
     virtual void* getNativeDisplayHandle() const = 0;
+
+    /**
+     * @brief Place a window another process made as a child of this one (a plugin's own editor).
+     * @param child the child's native id (an X11 Window); x, y, width, height in this window's client pixels.
+     * @return false when the platform cannot (Wayland, or the child is gone).
+     */
+    virtual bool placeChildWindow(std::uintptr_t child, int x, int y, int width, int height, bool visible) {
+        (void)child; (void)x; (void)y; (void)width; (void)height; (void)visible;
+        return false;
+    }
+    /** @brief The child's current size in pixels: the plugin may resize its own window. */
+    virtual bool getChildWindowSize(std::uintptr_t child, int& width, int& height) const {
+        (void)child; (void)width; (void)height;
+        return false;
+    }
 
     /** @brief Query the current DPI scale factor for the window. */
     virtual float getDPIScale() const = 0;

@@ -100,7 +100,7 @@ public:
     /// helper's command thread, which is also the thread that loaded the plugin: a plugin that insists its window code
     /// runs on "the main thread" (CLAP's thread-check, Surge's included) finds it is. The same thread must then call
     /// pollFds() and service() while the editor is open; the command loop does.
-    bool open(EditorBackend backend, const std::string& title, int& width, int& height) {
+    bool open(EditorBackend backend, const std::string& title, int& width, int& height, std::uintptr_t parent = 0) {
         close();
         if (!backend.open) return false;
         m_display = XOpenDisplay(nullptr);
@@ -119,10 +119,22 @@ public:
             m_width = w;
             m_height = h;
         };
-        auto makeWindow = [this, &title](int w, int h, bool resizable) -> std::uintptr_t {
-            m_window = XCreateSimpleWindow(m_display, RootWindow(m_display, m_screen), 0, 0, static_cast<unsigned>(w),
-                                           static_cast<unsigned>(h), 0, 0, BlackPixel(m_display, m_screen));
+        m_embedded = parent != 0;
+        auto makeWindow = [this, &title, parent](int w, int h, bool resizable) -> std::uintptr_t {
+            // Embedded: a child of the app's window, which the app places inside its plugin panel and maps itself.
+            // No title, no size hints, no close protocol: the panel is the window the user sees.
+            const ::Window owner = parent ? static_cast<::Window>(parent) : RootWindow(m_display, m_screen);
+            m_window = XCreateSimpleWindow(m_display, owner, 0, 0, static_cast<unsigned>(w), static_cast<unsigned>(h), 0, 0,
+                                           BlackPixel(m_display, m_screen));
             if (!m_window) return 0;
+            m_resizable = resizable;
+            if (parent) {
+                XSelectInput(m_display, m_window, StructureNotifyMask | KeyPressMask | KeyReleaseMask | FocusChangeMask);
+                XFlush(m_display);
+                m_width = w;
+                m_height = h;
+                return static_cast<std::uintptr_t>(m_window);
+            }
             XStoreName(m_display, m_window, title.c_str());
             XSetWMProtocols(m_display, m_window, &m_wmDelete, 1);
             XSelectInput(m_display, m_window, StructureNotifyMask | KeyPressMask | KeyReleaseMask | FocusChangeMask);
@@ -151,6 +163,13 @@ public:
 
     /// Whether the window is still on screen (false after the user closes it, or before open).
     bool isOpen() const { return m_display != nullptr && !editorConnectionLost().load(); }
+    /// The editor's window id: the app places an embedded one itself.
+    std::uintptr_t windowId() const { return static_cast<std::uintptr_t>(m_window); }
+    /// Whether the plugin lets its view be resized (the app then offers a resize grip).
+    bool resizable() const { return m_resizable; }
+    bool embedded() const { return m_embedded; }
+    /// Embedding is X11 only for now.
+    static constexpr bool windowIdUnsupported() { return false; }
     int width() const { return m_width; }
     int height() const { return m_height; }
 
@@ -243,6 +262,8 @@ private:
     Aestra::Audio::EditorLoopPump m_pump;
     Display* m_display = nullptr;
     Window m_window = 0;
+    bool m_resizable = false;
+    bool m_embedded = false;
     Atom m_wmDelete = 0;
     int m_screen = 0;
     int m_width = 0;
@@ -272,7 +293,7 @@ class EditorHost {
 public:
     ~EditorHost() { close(); }
 
-    bool open(EditorBackend backend, const std::string& title, int& width, int& height) {
+    bool open(EditorBackend backend, const std::string& title, int& width, int& height, std::uintptr_t parent = 0) {
         close();
         if (!backend.open || !registerClass()) return false;
         m_backend = std::move(backend);
@@ -326,6 +347,12 @@ public:
         if (!m_window) return;
         SetForegroundWindow(m_window);
     }
+
+    /// Windows does not embed yet: the editor stays a top-level window the helper owns.
+    std::uintptr_t windowId() const { return 0; }
+    bool resizable() const { return false; }
+    bool embedded() const { return false; }
+    static constexpr bool windowIdUnsupported() { return true; }
 
     void close() { teardown(true); }
 
