@@ -203,7 +203,9 @@ std::array<double, 12> pitchClassHistogram(const std::vector<HarmonyNote>& notes
     return h;
 }
 
-Key keyFromHistogram(const std::array<double, 12>& h) {
+} // namespace
+
+Key keyFromPitchClassWeights(const std::array<double, 12>& h) {
     double total = 0;
     for (double v : h)
         total += v;
@@ -237,9 +239,8 @@ Key keyFromHistogram(const std::array<double, 12>& h) {
         k.confidence = 1e-3; // a key was chosen; "no key" is tonic -1
     return k;
 }
-} // namespace
 
-Key detectKey(const std::vector<HarmonyNote>& notes) { return keyFromHistogram(pitchClassHistogram(notes)); }
+Key detectKey(const std::vector<HarmonyNote>& notes) { return keyFromPitchClassWeights(pitchClassHistogram(notes)); }
 
 // ---- Names -------------------------------------------------------------------------------------------------
 
@@ -521,7 +522,7 @@ HarmonyTimeline analyzeHarmony(const std::vector<HarmonyNote>& notes, double bea
             break;
         }
     }
-    out.key = keyFromHistogram(hist);
+    out.key = keyFromPitchClassWeights(hist);
     const bool flats = keyUsesFlats(out.key);
 
     // Viterbi over the non-empty windows.
