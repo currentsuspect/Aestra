@@ -348,7 +348,7 @@ if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND TARGET AestraRumbl
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME RumbleStateTest COMMAND RumbleStateTest)
-    set_tests_properties(RumbleStateTest PROPERTIES LABELS "plugins;rumble;state")
+    set_tests_properties(RumbleStateTest PROPERTIES LABELS "plugins;rumble;state;contract:durability")
 endif()
 
 # TARGET AestraRumble is required as well as AestraPremiumPlugins: the Linux
@@ -370,7 +370,7 @@ if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND TARGET AestraRumbl
         ${CMAKE_SOURCE_DIR}/AestraPlugins/AestraRumble/include
     )
     add_test(NAME RumbleSilentOutputTest COMMAND RumbleSilentOutputTest)
-    set_tests_properties(RumbleSilentOutputTest PROPERTIES LABELS "plugins;rumble;safety")
+    set_tests_properties(RumbleSilentOutputTest PROPERTIES LABELS "plugins;rumble;safety;contract:audio")
 endif()
 
 if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/ClipRenderServiceTest.cpp")

@@ -95,7 +95,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RumbleVariationTest.cpp")
     target_compile_features(RumbleVariationTest PRIVATE cxx_std_17)
     add_test(NAME RumbleVariationTest COMMAND RumbleVariationTest)
     set_tests_properties(RumbleVariationTest PROPERTIES
-        LABELS "headless;rumble;plugin"
+        LABELS "headless;rumble;plugin;contract:plugins"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()
@@ -113,7 +113,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RumbleVoiceTest.cpp")
     target_compile_features(RumbleVoiceTest PRIVATE cxx_std_17)
     add_test(NAME RumbleVoiceTest COMMAND RumbleVoiceTest)
     set_tests_properties(RumbleVoiceTest PROPERTIES
-        LABELS "headless;rumble;plugin;quality"
+        LABELS "headless;rumble;plugin;quality;contract:plugins"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()
@@ -134,7 +134,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RumbleOutlineTest.cpp")
     target_link_libraries(RumbleOutlineTest PRIVATE Threads::Threads)
     add_test(NAME RumbleOutlineTest COMMAND RumbleOutlineTest)
     set_tests_properties(RumbleOutlineTest PROPERTIES
-        LABELS "headless;rumble;plugin;quality"
+        LABELS "headless;rumble;plugin;quality;contract:plugins"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()
@@ -154,7 +154,7 @@ if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND
     )
     add_test(NAME RumbleInstanceTest COMMAND RumbleInstanceTest)
     set_tests_properties(RumbleInstanceTest PROPERTIES
-        LABELS "headless;rumble;plugin;quality"
+        LABELS "headless;rumble;plugin;quality;contract:plugins"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()
@@ -174,7 +174,7 @@ if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND
     )
     add_test(NAME RumblePresetBankTest COMMAND RumblePresetBankTest)
     set_tests_properties(RumblePresetBankTest PROPERTIES
-        LABELS "headless;rumble;plugin;presets"
+        LABELS "headless;rumble;plugin;presets;contract:plugins"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()
@@ -195,7 +195,7 @@ if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CU
     )
     add_test(NAME RumbleRenderTest COMMAND RumbleRenderTest)
     set_tests_properties(RumbleRenderTest PROPERTIES
-        LABELS "headless;rumble;plugin;render"
+        LABELS "headless;rumble;plugin;render;contract:plugins"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()
@@ -216,7 +216,7 @@ if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CU
     )
     add_test(NAME RumbleArsenalAudibleTest COMMAND RumbleArsenalAudibleTest)
     set_tests_properties(RumbleArsenalAudibleTest PROPERTIES
-        LABELS "headless;rumble;arsenal;audio"
+        LABELS "headless;rumble;arsenal;audio;contract:audio"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()
