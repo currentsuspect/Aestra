@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerButtonRow.h"
+#include "../Graphics/NUIDepth.h"
 
 #include "NUIThemeSystem.h"
 #include "NUIRenderer.h"
@@ -145,17 +146,19 @@ void UIMixerButtonRow::onRender(NUIRenderer& renderer)
             std::max(1.0f, std::floor(rect.height) - 1.0f)
         };
 
-        NUIColor textColor = m_text;
+        // Design Spec, KeyToggle (locked): off is a flat surfaceTertiary tile with no edge and a textSecondary
+        // letter; hover is one step lighter; a key held down sinks; on fills with its state colour.
+        NUIColor textColor = theme.getColor("textSecondary");
         if (active) {
             renderer.fillRoundedRect(visualRect, BTN_RADIUS, pressed ? activeBg.withAlpha(0.8f) : activeBg);
             textColor = inkOnActive;
+        } else if (pressed) {
+            Depth::bed(renderer, visualRect, BTN_RADIUS, Depth::Cut::Shallow);
+            textColor = theme.getColor("textPrimary");
         } else {
-            if (hovered || pressed) {
-                renderer.fillRoundedRect(visualRect, BTN_RADIUS,
-                                         theme.getColor(pressed ? "buttonBgActive" : "buttonBgHover").withAlpha(0.99f));
-                textColor = theme.getColor("textPrimary");
-            }
-            renderer.strokeRoundedRect(visualRect, BTN_RADIUS, 1.0f, hovered ? m_hoverBorder : m_border);
+            renderer.fillRoundedRect(visualRect, BTN_RADIUS,
+                                     theme.getColor(hovered ? "surfaceRaised" : "surfaceTertiary"));
+            if (hovered) textColor = theme.getColor("textPrimary");
         }
         renderer.drawTextCentered(letters[i], rect, 9.5f, textColor);
     }
