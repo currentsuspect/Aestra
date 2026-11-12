@@ -145,6 +145,11 @@ public:
     void setHitTestVisible(bool visible) { hitTestVisible_ = visible; }
     bool isHitTestVisible() const { return hitTestVisible_; }
 
+    // Drag-and-drop occlusion only: a layer that paints nothing of its own (OverlayLayer, the status toast).
+    // NUIDragDropManager picks the drop target under the topmost thing at the pointer and looks through these.
+    void setDropPassThrough(bool passThrough) { dropPassThrough_ = passThrough; }
+    bool isDropPassThrough() const { return dropPassThrough_; }
+
     static NUIComponent* getFocusedComponent();
     static void clearFocusedComponent();
     
@@ -198,6 +203,7 @@ private:
     bool dirty_ = true;
     float opacity_ = 1.0f;
     bool hitTestVisible_ = true;
+    bool dropPassThrough_ = false;
     NUILayer layer_ = NUILayer::Content;
     
     std::string tooltipText_;
@@ -210,6 +216,13 @@ private:
     static TooltipState s_tooltipState;
     static bool s_cursorCaptureActive;
     static unsigned s_pointerButtonsHeld; ///< One bit per NUIMouseButton currently down.
+    // Press ownership (2026-11-08): who took the press hears its release, wherever it lands. See dispatchMouseEvent.
+    static NUIComponent* s_pressOwner;      ///< Deepest component that took the held press; cleared on release.
+    static NUIMouseButton s_pressOwnerButton;
+    static NUIComponent* s_eventClaimer;    ///< Deepest component that took the event being dispatched.
+    static void noteEventClaimer(NUIComponent* claimer) {
+        if (!s_eventClaimer) s_eventClaimer = claimer;
+    }
     
     std::shared_ptr<NUITheme> theme_;
     
@@ -246,7 +259,10 @@ public:
     /** @brief Pointer gestures seen by dispatchMouseEvent: a press or scroll dismisses the tooltip. */
     static void notePointerGesture(const NUIMouseEvent& event);
     /** @brief Forget a held button (window focus lost: its release may never arrive). */
-    static void resetPointerGestureState() { s_pointerButtonsHeld = 0; }
+    static void resetPointerGestureState() {
+        s_pointerButtonsHeld = 0;
+        s_pressOwner = nullptr;
+    }
     static bool isPointerButtonHeld() { return s_pointerButtonsHeld != 0; }
     /** @brief After a scroll has been dispatched: a hover tooltip its target re-showed goes too. */
     static void dismissHoverTooltipAfterScroll();

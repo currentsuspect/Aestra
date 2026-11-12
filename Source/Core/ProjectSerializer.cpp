@@ -11,6 +11,7 @@
 #include "Music/ScaleContext.h"
 #include "Models/LegacyTrackRepair.h"
 #include "CompJson.h"
+#include "MarkerJson.h"
 #include "ProjectPresetsJson.h"
 #include <array>
 #include <atomic>
@@ -1116,6 +1117,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
 
     // 4. Save Arsenal Units
     root.set("arsenal", trackManager->getUnitManager().saveToJSON());
+    saveMarkers(root, trackManager->markers()); // only when the project has some (MarkerJson.h)
     if (!trackManager->projectPresets().empty()) root.set("presets", projectPresetsToJson(trackManager->projectPresets()));
 
     // 5. Optional UI state (panels, dialog, etc.)
@@ -1723,6 +1725,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                          " audio file(s) not found - clips will appear without waveforms");
         }
     
+        loadMarkers(root, trackManager->markers()); // a file with no markers loads with none (MarkerJson.h)
         // 5. Load Arsenal Units (must load before patterns - patterns reference unitId in MIDI note data)
         if (root.has("presets")) trackManager->projectPresets() = projectPresetsFromJson(root["presets"]); // FD-72
         if (root.has("arsenal")) {

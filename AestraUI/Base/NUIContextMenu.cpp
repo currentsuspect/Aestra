@@ -97,6 +97,7 @@ NUIContextMenu::NUIContextMenu()
     : NUIComponent()
 {
     setSize(200, 100); // Default size
+    setDropPassThrough(true); // isVisible_ shadows isVisible(): a closed menu left in the tree must not swallow drops
     
     // Apply Aestra theme colors - using the new layered system
     auto& themeManager = NUIThemeManager::getInstance();
@@ -433,6 +434,7 @@ void NUIContextMenu::showAt(int x, int y)
     }
 
     isVisible_ = true;
+    setDropPassThrough(false);
     hoveredItemIndex_ = findSelectableItem(0, 1);
     ensureItemVisible(hoveredItemIndex_);
     pressedItemIndex_ = -1;
@@ -448,6 +450,7 @@ void NUIContextMenu::hide()
     // Mark the parent hidden before cascading so a submenu cannot restore focus
     // to an already-hidden menu.
     isVisible_ = false;
+    setDropPassThrough(true);
     hoveredItemIndex_ = -1;
     pressedItemIndex_ = -1;
     hideSubmenu();

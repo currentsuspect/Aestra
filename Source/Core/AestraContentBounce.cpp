@@ -49,17 +49,36 @@ void AestraContent::bounceClipsInPlace(const std::vector<Aestra::Audio::ClipInst
     showToast(result.ok ? "Bounced in place. Undo puts the clips and effects back." : result.error);
 }
 
+bool AestraContent::pauseStreamForRender() {
+    auto* deviceManager = Aestra::ServiceLocator::get<Aestra::Audio::AudioDeviceManager>();
+    const bool running = deviceManager && deviceManager->isStreamRunning();
+    if (running) deviceManager->stopStream();
+    return running;
+}
+
+void AestraContent::resumeStreamAfterRender(bool wasRunning) {
+    if (!wasRunning) return;
+    if (auto* deviceManager = Aestra::ServiceLocator::get<Aestra::Audio::AudioDeviceManager>()) deviceManager->startStream();
+}
+
 bool AestraContent::renderMixToBuffer(std::vector<float>& interleaved, uint32_t& channels, uint32_t& sampleRate) {
+    const bool resume = pauseStreamForRender();
+    const bool ok = renderMixCore(interleaved, channels, sampleRate);
+    resumeStreamAfterRender(resume);
+    return ok;
+}
+
+bool AestraContent::renderMixCore(std::vector<float>& interleaved, uint32_t& channels, uint32_t& sampleRate,
+                                  const std::function<void(float)>& progress, const std::function<bool()>& cancel) {
     if (!m_audioEngine || !m_trackManager) return false;
     const double beats = m_trackManager->getPlaylistModel().getTotalDurationBeats();
     if (beats < 0.1) {
         AESTRA_LOG_INFO("[Versions] Nothing on the timeline to bounce");
         return false;
     }
-    auto* deviceManager = Aestra::ServiceLocator::get<Aestra::Audio::AudioDeviceManager>();
-    const bool resume = deviceManager && deviceManager->isStreamRunning();
-    if (resume) deviceManager->stopStream();
     Aestra::Audio::AudioExporter exporter(*m_audioEngine, *m_trackManager);
+    if (progress) exporter.setProgressCallback(progress);
+    if (cancel) exporter.setCancelCheck(cancel);
     Aestra::Audio::AudioExporter::Config config;
     config.scope = Aestra::Audio::AudioExporter::RenderScope::FullSong;
     config.startBeat = 0.0;
@@ -74,7 +93,6 @@ bool AestraContent::renderMixToBuffer(std::vector<float>& interleaved, uint32_t&
     m_trackManager->scheduleTimelineForOfflineRender(0.0);
     const auto result = exporter.renderToBuffer(config, rendered);
     patterns.clearScheduledInstances();
-    if (resume) deviceManager->startStream();
     if (!result.ok() || rendered.interleaved.empty()) {
         AESTRA_LOG_WARNING("[Versions] Bounce render failed: " + result.errorMessage);
         return false;

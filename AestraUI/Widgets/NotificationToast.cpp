@@ -10,6 +10,7 @@ namespace AestraUI {
 NotificationToast::NotificationToast()
     : duration_(2.0), elapsed_(0.0)
 {
+    setDropPassThrough(true); // mouse-transparent status text: drops reach the panel under it
 }
 
 void NotificationToast::onRender(NUIRenderer& renderer)

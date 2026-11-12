@@ -262,6 +262,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/CommandTransaction.cpp
     src/Commands/SplitClipCommand.cpp
     src/Commands/RenderAudioClipCommand.cpp
+    src/Commands/DeleteSilenceCommand.cpp
     src/Commands/BounceInPlaceCommand.cpp
     src/Commands/ImportAudioClipCommand.cpp
     src/Commands/AddClipCommand.cpp
@@ -285,12 +286,14 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/HostVerbRegistry.cpp
     src/Commands/MuseService.cpp
     src/Harmony/HarmonyAnalysis.cpp
+    src/Harmony/AudioKeyDetect.cpp
     src/Harmony/HarmonyGather.cpp
     src/Muse/MuseIdeas.cpp
     src/Presets/Preset.cpp
     src/Presets/PresetLibrary.cpp
     src/Presets/FactoryPresets.cpp
     src/Presets/PresetSession.cpp
+    src/Presets/LegacyPresets.cpp
     # One translation unit per Muse verb family. MuseService.cpp is the
     # dispatcher; these hold the verbs themselves. See MuseServiceInternal.h.
     src/Commands/MuseServiceQueries.cpp
@@ -309,6 +312,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     # Analysis service (V8-S8): R128 loudness, true peak, band energy, correlation
     src/Analysis/AudioAnalysis.cpp
     src/Analysis/ReferenceAnalysis.cpp
+    src/Analysis/SilenceDetector.cpp
     
     # Plugin hosting system
     src/Plugin/PluginScanner.cpp
@@ -416,11 +420,13 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Models/UnitManager.h
     include/Music/ScaleContext.h
     include/Harmony/HarmonyAnalysis.h
+    include/Harmony/AudioKeyDetect.h
     include/Harmony/HarmonyGather.h
     include/Muse/MuseIdeas.h
     include/Presets/Preset.h
     include/Presets/PresetLibrary.h
     include/Presets/PresetSession.h
+    include/Presets/LegacyPresets.h
     include/Commands/ApplyPresetCommand.h
 
     include/IO/StreamingDecoder.h

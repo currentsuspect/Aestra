@@ -149,6 +149,8 @@ private:
     NUIDragDropManager(const NUIDragDropManager&) = delete;
     NUIDragDropManager& operator=(const NUIDragDropManager&) = delete;
     
+    /// The target on top on screen at @p position: the nearest registered target holding the topmost component
+    /// there (#1328). Targets outside one shared component tree fall back to the most recently registered.
     std::shared_ptr<IDropTarget> findTargetAt(const NUIPoint& position);
     void updateCurrentTarget(const NUIPoint& position);
     

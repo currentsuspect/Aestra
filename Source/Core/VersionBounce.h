@@ -101,26 +101,33 @@ using Render = std::function<bool(std::vector<float>& interleaved, uint32_t& cha
 /// Integrated loudness of the render, LUFS.
 using Measure = std::function<double(const std::vector<float>& interleaved, uint32_t channels, uint32_t rate)>;
 
-/// Bounce a saved version: render, write the WAV and its card info, and record the file on the version.
-/// Returns false (leaving the version as it was) when the render is empty, too long, or cannot be written.
-inline bool bounceVersion(const std::string& projectPath, const std::string& takeId, const Render& render, const Measure& measure) {
+/// Render and write a version's bounce (the WAV and its card info) without recording it on the version: the part a
+/// worker thread can do. Returns the file name to record, or empty when the render is empty, too long, or unwritable.
+inline std::string writeBounce(const std::string& projectPath, const std::string& takeId, const Render& render, const Measure& measure) {
     std::vector<float> audio;
     uint32_t channels = 0, rate = 0;
-    if (!render || !render(audio, channels, rate) || audio.empty() || channels == 0 || rate == 0) return false;
+    if (!render || !render(audio, channels, rate) || audio.empty() || channels == 0 || rate == 0) return {};
     const double seconds = static_cast<double>(audio.size() / channels) / rate;
-    if (seconds > kMaxSeconds) return false;
+    if (seconds > kMaxSeconds) return {};
 
     const std::string name = fileNameFor(takeId);
     const std::filesystem::path wav = std::filesystem::path(TakeManager::getTakesDirectory(projectPath)) / name;
     std::error_code ec;
     std::filesystem::create_directories(wav.parent_path(), ec);
-    if (!writeWav16(wav.string(), audio, channels, rate)) return false;
+    if (!writeWav16(wav.string(), audio, channels, rate)) return {};
     VersionBounceInfo info;
     info.seconds = seconds;
     info.lufs = measure ? measure(audio, channels, rate) : -70.0;
     info.peaks = peaks(audio, channels);
-    if (!writeInfo(wav.string(), info)) return false;
-    return TakeManager::setVersionBounce(projectPath, takeId, name).ok;
+    if (!writeInfo(wav.string(), info)) return {};
+    return name;
+}
+
+/// Bounce a saved version: render, write the WAV and its card info, and record the file on the version.
+/// Returns false (leaving the version as it was) when the render is empty, too long, or cannot be written.
+inline bool bounceVersion(const std::string& projectPath, const std::string& takeId, const Render& render, const Measure& measure) {
+    const std::string name = writeBounce(projectPath, takeId, render, measure);
+    return !name.empty() && TakeManager::setVersionBounce(projectPath, takeId, name).ok;
 }
 
 } // namespace VersionBounce

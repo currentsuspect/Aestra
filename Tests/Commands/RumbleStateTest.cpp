@@ -4,6 +4,8 @@
 
 #include "AestraJSON.h"
 #include "RumbleInstance.h"
+#include "RumblePluginRegistration.h"
+#include "Presets/PresetLibrary.h"
 
 #include <array>
 #include <cassert>
@@ -272,10 +274,27 @@ bool testRejectsCorruptStateSize() {
 }
 } // namespace
 
+// FD-72: ten of Rumble's presets are in the shared preset bar, and every name they use is a real parameter.
+void testSharedFactoryPresets() {
+    Aestra::Plugins::registerRumblePlugin();
+    const auto presets = Aestra::Audio::Presets::factoryPresets("com.Aestrastudios.rumble");
+    assert(presets.size() == 10);
+    RumbleInstance rumble;
+    const auto params = rumble.getParameters();
+    for (const auto& preset : presets)
+        for (const auto& want : preset.params) {
+            bool found = false;
+            for (const auto& p : params) found = found || p.name == want.name;
+            assert(found && "a shared Rumble preset names a parameter Rumble does not have");
+        }
+    std::cout << "  shared factory presets: " << presets.size() << " OK\n";
+}
+
 int main() {
     std::cout << "\n=== Aestra Rumble State Test ===\n";
 
     testParameterContract();
+    testSharedFactoryPresets();
     testJsonStateRoundTrip();
     testLegacyV2Migration();
     testJsonV1AdditiveMigration();
