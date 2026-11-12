@@ -2,10 +2,10 @@
 #pragma once
 
 #include "AestraPanelWindow.h"
+#include "EmberControls.h"
 #include "NUITypes.h"
 #include "PluginHost.h"
 
-#include <array>
 #include <memory>
 #include <string>
 
@@ -15,6 +15,8 @@ class AestraLFOEditor : public AestraPanelWindow {
 public:
     explicit AestraLFOEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance);
     void drawContent(NUIRenderer& renderer, const NUIRect& contentRect) override;
+    void drawOverlay(NUIRenderer& renderer) override;
+    void onUpdate(double deltaTime) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     void onResize(int width, int height) override;
     using AestraPanelWindow::onResize;
@@ -23,31 +25,22 @@ public:
 
 private:
     void layoutControls();
-    void drawKnob(NUIRenderer& renderer, const NUIRect& rect, uint32_t paramId, const char* label, bool large);
-    void drawRateKnob(NUIRenderer& renderer);
-    void drawTargetSelector(NUIRenderer& renderer);
-    void drawWaveSelector(NUIRenderer& renderer);
-    void drawSyncPill(NUIRenderer& renderer);
-    void drawBypassPill(NUIRenderer& renderer);
+    void drawShape(NUIRenderer& renderer, bool bypassed);
 
     std::shared_ptr<Aestra::Audio::IPluginInstance> m_instance;
+    EditorKit::EmberKnobBoard m_board;
+    EditorKit::EmberSegments m_target;
+    EditorKit::EmberSegments m_sync;
+    EditorKit::EmberSegments m_wave;
+    EditorKit::EmberDropdown m_division;
 
-    std::array<NUIRect, 3> m_targetRects{};
-    std::array<NUIRect, 6> m_waveRects{};
-    NUIRect m_syncRect;
-    NUIRect m_rateRect;
-    NUIRect m_depthRect;
-    NUIRect m_phaseRect;
-    NUIRect m_smoothRect;
-    NUIRect m_bypassRect;
-
-    // Vertical-drag knob state: which param is being dragged, and the value
-    // at drag start so movement is relative, not absolute.
-    float m_dragStartY = 0.0f;
-    bool m_bypassHovered = false;
+    NUIRect m_well;
+    float m_level = 0.0f; // 0..1, the LFO's current position
+    double m_meterTimer = 0.0;
 
     static constexpr float kWinW = 560.0f;
-    static constexpr float kWinH = 320.0f;
+    static constexpr float kContentH = 298.0f;
+    static constexpr float kWinH = kContentH + 2.0f * AestraPanelWindow::TITLE_BAR_H; // two-row header
 };
 
 } // namespace AestraUI

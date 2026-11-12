@@ -264,6 +264,7 @@ void AestraPanelWindow::onRender(NUIRenderer& renderer)
     // Title bar on top of content
     drawTitleBar(renderer);
     if (m_accessory && b.width >= m_accessory->minimumWidth()) m_accessory->renderOverlay(renderer, b);
+    drawOverlay(renderer);
 
     // Border stroke on top of everything
     renderer.strokeRoundedRect(b, kRadius, 1.0f, m_border);

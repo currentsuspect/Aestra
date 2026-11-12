@@ -47,7 +47,7 @@ std::string whereFor(const Audio::TrackManager& tm, const Audio::IPluginInstance
     int slot = 0;
     for (size_t i = 0; i < tm.getChannelCount() && slot == 0; ++i) slot = slotIn(tm.getChannel(i));
     if (slot == 0) slot = slotIn(tm.getMasterChannel());
-    return slot > 0 ? name + " \xC2\xB7 Insert " + std::to_string(slot) : name;
+    return slot > 0 ? name + " - Insert " + std::to_string(slot) : name;
 }
 
 } // namespace

@@ -25,7 +25,8 @@ void EmberKnobBoard::clear() {
 void EmberKnobBoard::place(const Spec& spec, const NUIPoint& topLeft) {
     Cell c;
     c.spec = spec;
-    c.rect = NUIRect(topLeft.x, topLeft.y, emberKnobCellWidth(spec.size), emberKnobCellHeight(spec.size));
+    const float w = spec.width > 0.0f ? spec.width : emberKnobCellWidth(spec.size);
+    c.rect = NUIRect(topLeft.x, topLeft.y, w, emberKnobCellHeight(spec.size));
     m_cells.push_back(c);
 }
 
@@ -37,7 +38,7 @@ void EmberKnobBoard::layoutRow(const NUIPoint& origin, float width, const std::v
     int count = 0;
     for (const auto& g : groups)
         for (const auto& k : g.knobs) {
-            sum += emberKnobCellWidth(k.size);
+            sum += k.width > 0.0f ? k.width : emberKnobCellWidth(k.size);
             ++count;
         }
     const float gap = std::max(4.0f, (width - sum - kGroupGap * static_cast<float>(groups.size() - 1)) /
@@ -51,11 +52,16 @@ void EmberKnobBoard::layoutRow(const NUIPoint& origin, float width, const std::v
         float groupEnd = x;
         for (const auto& k : g.knobs) {
             place(k, {x, origin.y + 20.0f});
-            groupEnd = x + emberKnobCellWidth(k.size);
+            groupEnd = x + (k.width > 0.0f ? k.width : emberKnobCellWidth(k.size));
             x = groupEnd + gap;
         }
         m_headers.push_back({NUIRect(groupStart, origin.y, groupEnd - groupStart, 12.0f), g.label});
     }
+}
+
+void EmberKnobBoard::setValueText(uint32_t param, const std::string& text) {
+    for (auto& c : m_cells)
+        if (c.spec.param == param) c.valueText = text;
 }
 
 void EmberKnobBoard::setEnabled(uint32_t param, bool enabled) {
@@ -73,13 +79,26 @@ void EmberKnobBoard::draw(NUIRenderer& renderer, const Aestra::Audio::IPluginIns
                           int dragParam, bool bypassed) const {
     for (const auto& h : m_headers) drawSectionHeader(renderer, h.span.x, h.span.y, h.span.width, h.label);
     for (const auto& c : m_cells) {
+        if (c.spec.param == kNoParam) continue;
         ControlState state = ControlState::Idle;
         if (!c.enabled) state = ControlState::Disabled;
         else if (dragParam == static_cast<int>(c.spec.param)) state = ControlState::Drag;
         else if (mouse && c.rect.contains(*mouse)) state = ControlState::Hover;
         drawEmberKnob(renderer, {c.rect.x, c.rect.y}, c.spec.size, plugin.getParameter(c.spec.param), c.spec.label,
-                      plugin.getParameterDisplay(c.spec.param), state, c.spec.bipolar, bypassed);
+                      c.valueText.empty() ? plugin.getParameterDisplay(c.spec.param) : c.valueText, state, c.spec.bipolar,
+                      bypassed);
     }
+}
+
+const std::vector<std::string>& noteDivisionLabels() {
+    static const std::vector<std::string> kLabels = {"1/1", "1/2", "1/4",  "1/16", "1/8",  "1/32", "1/2D",
+                                                     "1/4D", "1/8D", "1/16D", "1/4T", "1/8T", "1/16T"};
+    return kLabels;
+}
+
+const std::vector<int>& noteDivisionMenuOrder() {
+    static const std::vector<int> kOrder = {0, 1, 6, 2, 10, 7, 4, 11, 8, 3, 12, 9, 5};
+    return kOrder;
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -109,7 +128,7 @@ bool EmberSegments::onPress(Aestra::Audio::IPluginInstance& plugin, const NUIPoi
 void EmberSegments::draw(NUIRenderer& renderer, const Aestra::Audio::IPluginInstance& plugin, const NUIPoint* mouse,
                          bool bypassed) const {
     drawSegmented(renderer, rect, labels.data(), static_cast<int>(labels.size()), index(plugin),
-                  (mouse && enabled) ? hit(*mouse) : -1, bypassed);
+                  (mouse && enabled) ? hit(*mouse) : -1, bypassed, glyph);
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -149,6 +168,91 @@ void EmberSliderControl::draw(NUIRenderer& renderer, const Aestra::Audio::IPlugi
                                                                      : ControlState::Idle;
     drawEmberSlider(renderer, rect, labelWidth, label, plugin.getParameter(param), plugin.getParameterDisplay(param),
                     state, bypassed);
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Dropdown
+// ---------------------------------------------------------------------------------------------------------------
+
+namespace {
+constexpr float kMenuRowH = 22.0f;
+}
+
+int EmberDropdown::index(const Aestra::Audio::IPluginInstance& plugin) const {
+    const int n = static_cast<int>(labels.size());
+    if (n < 2) return 0;
+    return static_cast<int>(std::lround(std::clamp(plugin.getParameter(param), 0.0f, 1.0f) * static_cast<float>(n - 1)));
+}
+
+NUIRect EmberDropdown::menuRect(const NUIRect& window) const {
+    const float h = static_cast<float>(labels.size()) * kMenuRowH + 2.0f;
+    float y = rect.bottom() + 2.0f;
+    if (y + h > window.bottom() - 4.0f) y = rect.y - h - 2.0f; // flip above
+    y = std::clamp(y, window.y + 4.0f, std::max(window.y + 4.0f, window.bottom() - h - 4.0f));
+    return NUIRect(rect.x, y, rect.width, h);
+}
+
+void EmberDropdown::draw(NUIRenderer& renderer, const Aestra::Audio::IPluginInstance& plugin, const NUIPoint* mouse,
+                         bool) const {
+    const auto c = emberColors();
+    const bool hover = enabled && mouse && rect.contains(*mouse);
+    renderer.fillRect(rect, (hover || open) ? c.raised : c.control);
+    renderer.strokeRect(rect, 1.0f, open ? c.primary : enabled ? c.edge : c.border);
+    const int i = index(plugin);
+    drawTextLeft(renderer, labels.empty() ? std::string() : labels[static_cast<size_t>(i)], rect.x + 8.0f,
+                 rect.y + rect.height * 0.5f, 12.0f, enabled ? c.ink : c.inkMuted);
+    const float vx = rect.right() - 12.0f, vy = rect.y + rect.height * 0.5f;
+    const NUIColor ink = enabled ? c.inkSoft : c.inkOff;
+    renderer.drawLine({vx - 4.0f, vy - 2.0f}, {vx, vy + 2.0f}, 1.5f, ink);
+    renderer.drawLine({vx, vy + 2.0f}, {vx + 4.0f, vy - 2.0f}, 1.5f, ink);
+}
+
+void EmberDropdown::drawMenu(NUIRenderer& renderer, const Aestra::Audio::IPluginInstance& plugin,
+                             const NUIPoint* mouse, const NUIRect& window) const {
+    if (!open) return;
+    const auto c = emberColors();
+    const NUIRect m = menuRect(window);
+    renderer.fillRect(m, c.panel);
+    renderer.strokeRect(m, 1.0f, c.edge);
+    const int current = index(plugin);
+    for (size_t row = 0; row < labels.size(); ++row) {
+        const int li = order.empty() ? static_cast<int>(row) : order[row];
+        const NUIRect r(m.x + 1.0f, m.y + 1.0f + static_cast<float>(row) * kMenuRowH, m.width - 2.0f, kMenuRowH);
+        const bool on = li == current;
+        const bool hot = mouse && r.contains(*mouse);
+        if (on) renderer.fillRect(r, c.selected);
+        else if (hot) renderer.fillRect(r, c.raised);
+        drawTextLeft(renderer, labels[static_cast<size_t>(li)], r.x + 9.0f, r.y + kMenuRowH * 0.5f, 12.0f,
+                     (on || hot) ? c.ink : c.inkSoft);
+        if (on) {
+            const float cx = r.right() - 14.0f, cy = r.y + kMenuRowH * 0.5f;
+            renderer.drawLine({cx - 3.0f, cy}, {cx - 1.0f, cy + 3.0f}, 1.5f, c.secondary);
+            renderer.drawLine({cx - 1.0f, cy + 3.0f}, {cx + 4.0f, cy - 3.0f}, 1.5f, c.secondary);
+        }
+    }
+}
+
+bool EmberDropdown::onMouse(const NUIMouseEvent& event, Aestra::Audio::IPluginInstance& plugin,
+                            const NUIRect& window) {
+    const bool press = event.pressed && event.button == NUIMouseButton::Left;
+    if (!press) return open && window.contains(event.position); // a move or release over an open menu is ours
+    if (open) {
+        const NUIRect m = menuRect(window);
+        if (m.contains(event.position)) {
+            const int row = std::clamp(static_cast<int>((event.position.y - m.y - 1.0f) / kMenuRowH), 0,
+                                       static_cast<int>(labels.size()) - 1);
+            const int li = order.empty() ? row : order[static_cast<size_t>(row)];
+            const int n = static_cast<int>(labels.size());
+            plugin.setParameter(param, n > 1 ? static_cast<float>(li) / static_cast<float>(n - 1) : 0.0f);
+        }
+        open = false;
+        return true;
+    }
+    if (enabled && rect.contains(event.position)) {
+        open = true;
+        return true;
+    }
+    return false;
 }
 
 } // namespace EditorKit
