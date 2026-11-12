@@ -46,6 +46,19 @@ public:
     void setStyle(Style style);
     Style getStyle() const { return style_; }
 
+    /// Design Spec looks (FD-79), all pills. Legacy keeps the older drawing for call sites not yet moved.
+    enum class Look { Legacy, Solid, Soft, Outline, Quiet };
+    enum class Tone { Neutral, Accent, Danger };
+    /// Full: the tone grows out from where the pointer entered and the button lifts (standalone buttons: dialog
+    /// actions, Export, empty-state actions). Quiet: one step lighter, no growth, no lift (anything in a dense row).
+    /// The test: could the pointer cross this on its way to something else? Then it is Quiet.
+    enum class HoverStrength { Full, Quiet };
+    void setLook(Look look, Tone tone = Tone::Neutral, HoverStrength hover = HoverStrength::Full);
+    Look getLook() const { return look_; }
+    Tone getTone() const { return tone_; }
+    /// A trailing arrow that nudges forward on hover ("Open the library ->").
+    void setTrailingArrow(bool on) { trailingArrow_ = on; setDirty(); }
+
     /**
      * Set the click callback.
      */
@@ -172,6 +185,18 @@ private:
     std::function<void()> onClick_;
     std::function<void(bool)> onToggle_;
     
+    // Design Spec look
+    Look look_ = Look::Legacy;
+    Tone tone_ = Tone::Neutral;
+    HoverStrength hoverStrength_ = HoverStrength::Full;
+    bool trailingArrow_ = false;
+    bool wasHovered_ = false;
+    float fill_ = 0.0f;        ///< 0..1, how far the hover fill has grown (eased when drawn)
+    float entryX_ = 0.0f;      ///< where the pointer came in (or left): the fill grows from and shrinks to here
+    float ripple_ = -1.0f;     ///< press ripple progress 0..1, < 0 when none
+    float rippleX_ = 0.0f;
+    void renderSpecLook(NUIRenderer& renderer);
+
     // Helpers
     NUIColor getCurrentBackgroundColor() const;
     NUIColor getCurrentTextColor() const;

@@ -249,6 +249,12 @@ public:
     static void showRemoteTooltip(const std::string& text, const NUIPoint& position, const void* owner = nullptr, bool force = false);
     static void hideRemoteTooltip(const void* owner = nullptr);
     static void renderGlobalTooltip(NUIRenderer& renderer, const NUIRect& viewport = {});
+    /// A tooltip's label and its trailing shortcut, split from "Name (F6)". The key is empty when there is none.
+    struct TooltipParts {
+        std::string label;
+        std::string key;
+    };
+    static TooltipParts splitTooltipShortcut(const std::string& text);
     static void updateGlobalTooltip(double deltaTime);
     static NUIRect calculateTooltipBounds(const NUIRect& anchor, const NUISize& tooltipSize,
                                           const NUIRect& viewport);
