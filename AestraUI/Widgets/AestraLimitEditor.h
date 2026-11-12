@@ -2,13 +2,13 @@
 #pragma once
 
 #include "AestraPanelWindow.h"
-#include "NUISlider.h"
+#include "EmberControls.h"
 #include "NUITypes.h"
 #include "PluginHost.h"
 
+#include <array>
 #include <memory>
 #include <string>
-#include <vector>
 
 namespace AestraUI {
 
@@ -25,55 +25,30 @@ public:
     void setPlatformBridge(NUIPlatformBridge* bridge) override;
 
 private:
-    struct KnobControl {
-        std::shared_ptr<NUISlider> slider;
-        std::string label;
-        uint32_t paramId = 0;
-        NUIRect bounds;
-        bool isPrimary = false;
-    };
-
-    void buildControls();
     void layoutControls();
-    void syncControlsFromPlugin();
-    void drawGrMeter(NUIRenderer& renderer);
-    void drawKnob(NUIRenderer& renderer, const KnobControl& control);
-    void drawPill(NUIRenderer& renderer, NUIRect rect, bool selected, bool hovered,
-                  const char* label, NUIColor accent);
-    void drawMeterBar(NUIRenderer& renderer, NUIRect rect, float norm,
-                      const char* label, const char* value, NUIColor color);
-    std::string valueText(uint32_t paramId) const;
+    void drawHistory(NUIRenderer& renderer, bool bypassed);
+    void drawMeters(NUIRenderer& renderer, bool bypassed);
 
     std::shared_ptr<Aestra::Audio::IPluginInstance> m_instance;
-    std::vector<KnobControl> m_controls;
+    EditorKit::EmberKnobBoard m_board;
+    EditorKit::EmberSegments m_releaseMode;
 
-    NUIRect m_grBarRect;
-    NUIRect m_grLabelRect;
-    NUIRect m_ceilingKnobRect;
-    NUIRect m_releaseKnobRect;
-    NUIRect m_autoPillRect;
-    NUIRect m_manualPillRect;
-    NUIRect m_bypassPillRect;
-    NUIRect m_inMeterRect;
-    NUIRect m_outMeterRect;
-    NUIRect m_grNumRect;
+    NUIRect m_historyRect;
+    NUIRect m_meterRects[2]; // In, Out
+    NUIPoint m_origin;
 
-    bool m_bypassHovered = false;
-    bool m_autoHovered = false;
-    bool m_manualHovered = false;
-
+    // The last ~4 s of gain reduction (positive dB), one bar per sample, newest last.
+    static constexpr int kHistoryBars = 90;
+    std::array<float, kHistoryBars> m_history{};
     float m_grDisplayDb = 0.0f;
     float m_inputDisplay = 0.0f;
     float m_outputDisplay = 0.0f;
     double m_meterTimer = 0.0;
+    double m_historyTimer = 0.0;
 
     static constexpr float kWinW = 520.0f;
-    static constexpr float kWinH = 400.0f;
-    static constexpr float kPad = 16.0f;
-    static constexpr float kKnobSizePrimary = 64.0f;
-    static constexpr float kKnobSizeSecondary = 48.0f;
-    static constexpr float kPillW = 56.0f;
-    static constexpr float kPillH = 22.0f;
+    static constexpr float kContentH = 334.0f;
+    static constexpr float kWinH = kContentH + 2.0f * AestraPanelWindow::TITLE_BAR_H; // two-row header
 };
 
 } // namespace AestraUI

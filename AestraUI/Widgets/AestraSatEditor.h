@@ -2,10 +2,10 @@
 #pragma once
 
 #include "AestraPanelWindow.h"
+#include "EmberControls.h"
 #include "NUITypes.h"
 #include "PluginHost.h"
 
-#include <array>
 #include <memory>
 #include <string>
 
@@ -15,6 +15,7 @@ class AestraSatEditor : public AestraPanelWindow {
 public:
     explicit AestraSatEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance);
     void drawContent(NUIRenderer& renderer, const NUIRect& contentRect) override;
+    void onUpdate(double deltaTime) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     void onResize(int width, int height) override;
     using AestraPanelWindow::onResize;
@@ -23,28 +24,25 @@ public:
 
 private:
     void layoutControls();
-    void drawKnob(NUIRenderer& renderer, const NUIRect& rect, uint32_t paramId, const char* label, bool large);
-    void drawModeSelector(NUIRenderer& renderer);
-    void drawBypassPill(NUIRenderer& renderer);
-    void drawMixSlider(NUIRenderer& renderer);
+    void drawTransferCurve(NUIRenderer& renderer, bool bypassed);
+    void drawMeters(NUIRenderer& renderer, bool bypassed);
 
     std::shared_ptr<Aestra::Audio::IPluginInstance> m_instance;
+    EditorKit::EmberKnobBoard m_board;
+    EditorKit::EmberSegments m_mode;
+    EditorKit::EmberSliderControl m_mix;
 
-    NUIRect m_driveRect;
-    NUIRect m_toneRect;
-    NUIRect m_outputRect;
-    std::array<NUIRect, 3> m_modeRects{};
-    NUIRect m_mixRect;
-    NUIRect m_bypassRect;
+    NUIRect m_curveRect;
+    NUIRect m_meterRects[2]; // In, Out
+    NUIPoint m_origin;
 
-    // Vertical-drag knob state: which param is being dragged, and the value
-    // at drag start so movement is relative, not absolute.
-    float m_dragStartY = 0.0f;
-    bool m_draggingMix = false;
-    bool m_bypassHovered = false;
+    float m_inputDisplay = 0.0f;  // linear
+    float m_outputDisplay = 0.0f; // linear
+    double m_meterTimer = 0.0;
 
-    static constexpr float kWinW = 480.0f;
-    static constexpr float kWinH = 300.0f;
+    static constexpr float kWinW = 520.0f;
+    static constexpr float kContentH = 256.0f;
+    static constexpr float kWinH = kContentH + 2.0f * AestraPanelWindow::TITLE_BAR_H; // two-row header
 };
 
 } // namespace AestraUI

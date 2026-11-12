@@ -121,6 +121,8 @@ public:
     bool isLocked() const { return m_locked; }
     void setOnMenuRequested(std::function<void(const NUIPoint&)> callback) { m_onMenuRequested = std::move(callback); }
     bool isDraggingWindow() const { return m_isDraggingWindow; }
+    /// The pointer's position while it is over the window, for hover states; nullptr once it has left.
+    const NUIPoint* hoverPoint() const { return m_hoverIn ? &m_hoverPos : nullptr; }
 
     // Derived classes render here; rect is the global content area (below title bar)
     virtual void drawContent(NUIRenderer& renderer, const NUIRect& contentRect) {}
@@ -220,6 +222,8 @@ private:
 
     std::string m_title;
     std::string m_badgeText;
+    NUIPoint m_hoverPos;
+    bool m_hoverIn = false;
     std::string m_contextText;
     bool m_twoRowHeader = false;
     std::shared_ptr<PanelTitleAccessory> m_accessory;
