@@ -107,7 +107,10 @@ NUIContextMenu::NUIContextMenu()
     
     // Apply Aestra theme colors - using the new layered system
     auto& themeManager = NUIThemeManager::getInstance();
-    backgroundColor_ = themeManager.getColor("elevatedPanel");
+    // The same values onThemeChanged applies (Design Spec, Menu), so a menu is right before any theme change.
+    backgroundColor_ = themeManager.getColor("surfaceTertiary");
+    borderRadius_ = kCardRadius;
+    itemHeight_ = themeManager.getCurrentTheme().layout.standardMenuRowHeight;
     borderColor_ = themeManager.getColor("borderStrong");
     textColor_ = themeManager.getColor("textPrimary");                // #E5E5E8 - Main text
     // The row hover is an overlay on the menu's elevated surface: a polarity-correct tint
@@ -115,7 +118,7 @@ NUIContextMenu::NUIContextMenu()
     // on this surface it was DARKER than the menu (RGB 23 vs 25), so hover was invisible.
     hoverColor_ = themeManager.getColor("hover");
     separatorColor_ = themeManager.getColor("borderSubtle");          // #2c2c2f - Subtle dividers
-    shortcutColor_ = themeManager.getColor("textSecondary");          // #A6A6AA - Muted shortcuts
+    shortcutColor_ = themeManager.getColor("textMuted");
 }
 
 void NUIContextMenu::onRender(NUIRenderer& renderer)
@@ -853,8 +856,9 @@ NUIRect NUIContextMenu::getItemRect(int index) const
 
 float NUIContextMenu::calculateMenuHeight() const
 {
+    // The cap is for rows: the card's own padding never pushes a menu into scrolling.
     const float contentHeight = calculateContentHeight();
-    if (!scrollable_ || contentHeight <= maxHeight_) return contentHeight;
+    if (!scrollable_ || contentHeight <= maxHeight_ + kCardPad * 2.0f) return contentHeight;
 
     // Clamp to whole rows. A raw min() left the last visible item sliced in half
     // at the menu's bottom edge, which reads as clipping rather than as "there is
