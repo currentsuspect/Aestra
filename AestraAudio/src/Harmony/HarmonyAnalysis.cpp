@@ -97,7 +97,13 @@ double correlation(const double* a, const double* b) {
 
 const char* kSharpNames[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 const char* kFlatNames[12] = {"C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"};
-const char* noteName(int pc, bool flats) { return (flats ? kFlatNames : kSharpNames)[((pc % 12) + 12) % 12]; }
+const char* noteName(int pc, bool flats) {
+    // Wrap first, then pick the table. Indexing the ?: of the two arrays directly drew "index -4 out of bounds for
+    // type 'char *[12]'" from the CI sanitizer build (GCC, -O0), though the wrapped index is always 0..11; it did not
+    // reproduce with GCC 16 or clang locally. Splitting the two steps leaves nothing for the bounds check to misread.
+    const int i = ((pc % 12) + 12) % 12;
+    return flats ? kFlatNames[i] : kSharpNames[i];
+}
 
 bool inScale(const Key& key, int pc) {
     static const bool major[12] = {1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1};
@@ -197,7 +203,9 @@ std::array<double, 12> pitchClassHistogram(const std::vector<HarmonyNote>& notes
     return h;
 }
 
-Key keyFromHistogram(const std::array<double, 12>& h) {
+} // namespace
+
+Key keyFromPitchClassWeights(const std::array<double, 12>& h) {
     double total = 0;
     for (double v : h)
         total += v;
@@ -231,9 +239,8 @@ Key keyFromHistogram(const std::array<double, 12>& h) {
         k.confidence = 1e-3; // a key was chosen; "no key" is tonic -1
     return k;
 }
-} // namespace
 
-Key detectKey(const std::vector<HarmonyNote>& notes) { return keyFromHistogram(pitchClassHistogram(notes)); }
+Key detectKey(const std::vector<HarmonyNote>& notes) { return keyFromPitchClassWeights(pitchClassHistogram(notes)); }
 
 // ---- Names -------------------------------------------------------------------------------------------------
 
@@ -515,7 +522,7 @@ HarmonyTimeline analyzeHarmony(const std::vector<HarmonyNote>& notes, double bea
             break;
         }
     }
-    out.key = keyFromHistogram(hist);
+    out.key = keyFromPitchClassWeights(hist);
     const bool flats = keyUsesFlats(out.key);
 
     // Viterbi over the non-empty windows.

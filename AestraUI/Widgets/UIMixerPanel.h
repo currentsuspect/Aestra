@@ -253,7 +253,6 @@ private:
 
     // Drag-and-drop state (#395)
     bool m_dropTargetRegistered{false};
-    bool m_dropOrderClaimedForDrag{false};
     int64_t m_dropHoverChannelId{-1}; ///< Channel id of strip under an active plugin drag, -1 = none
 
     // Horizontal scroll offset for channel strips (pixels).

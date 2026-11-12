@@ -235,7 +235,15 @@ AestraUI::DropResult TrackManagerUI::placeDrop(const AestraUI::DragData& data, c
     // an empty orphan lane the user never asked for and cannot undo away.
     PlaylistLaneID targetLaneId;
     std::shared_ptr<CreateTrackWithLaneCommand> laneCommand;
-    if (laneIndex == displayRows) {
+    if (laneIndex == displayRows && !m_showEmptyTracks) {
+        // The folded row stands for the untouched tracks: a drop on it fills the first of them, so a new project's
+        // first drop lands on Track 1 and the next on Track 2 (owner, 2026-11-08). It appended a track after all of
+        // them before. Undo takes the clip off and the track folds away again; there is nothing else to roll back.
+        targetLaneId = firstFoldedEmptyLane();
+    }
+    if (targetLaneId.isValid()) {
+        Log::info("[TrackManagerUI] Drop fills the first empty track.");
+    } else if (laneIndex == displayRows) {
         // When a new lane is created for a file drop, name it from the sample
         // rather than "Track N" — the moment a clip lands on a track, the track
         // should inherit the content name.  MIDI patterns keep the sequential

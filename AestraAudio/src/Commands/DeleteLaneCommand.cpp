@@ -38,11 +38,22 @@ void DeleteLaneCommand::execute() {
             }
             m_wasActiveLane = track->activeLaneId == m_laneId;
         }
+        if (const Track* t = m_trackManager.getTrack(m_trackId); t && t->compLaneId.isValid()) {
+            m_hadComp = true;
+            m_wasMaster = t->compLaneId == m_laneId;
+            m_compBefore = captureComp(model, *t);
+        }
         m_trackManager.detachLaneFromTrack(m_trackId, m_laneId);
     }
     model.removeLane(m_laneId);
+    repairComp();
     m_trackManager.requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
     m_executed = true;
+}
+
+void DeleteLaneCommand::repairComp() {
+    if (!m_hadComp) return;
+    if (Track* t = m_trackManager.getTrack(m_trackId)) compAfterLaneRemoved(m_trackManager.getPlaylistModel(), *t, m_laneId, m_wasMaster);
 }
 
 void DeleteLaneCommand::undo() {
@@ -70,6 +81,9 @@ void DeleteLaneCommand::undo() {
     if (m_playlistIndex >= 0) {
         model.moveLaneToIndex(restored, static_cast<size_t>(m_playlistIndex));
     }
+    if (m_hadComp) {
+        if (Track* t = m_trackManager.getTrack(m_trackId)) restoreComp(model, *t, m_compBefore);
+    }
     m_trackManager.requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
     m_executed = false;
 }
@@ -83,6 +97,7 @@ void DeleteLaneCommand::redo() {
         m_trackManager.detachLaneFromTrack(m_trackId, m_laneId);
     }
     model.removeLane(m_laneId);
+    repairComp();
     m_trackManager.requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
     m_executed = true;
 }
