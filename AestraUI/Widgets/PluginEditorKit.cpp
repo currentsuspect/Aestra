@@ -179,7 +179,7 @@ void drawEmberKnob(NUIRenderer& renderer, const NUIPoint& cell, KnobSize size, f
     const float r = g.disc * 0.5f - g.track * 0.5f - 1.0f;
     const float angle = kKnobStart + v * kKnobSweep;
 
-    drawArc(renderer, ctr, r, kKnobStart, kKnobStart + kKnobSweep, g.track, disabled ? theme.borderStrong : c.edge);
+    drawArc(renderer, ctr, r, kKnobStart, kKnobStart + kKnobSweep, g.track, theme.meterBackground); // the sunk ring
     const NUIColor arc = (disabled || bypassed) ? c.inkOff : lit ? c.primaryHover : c.primary;
     if (bipolar) {
         drawArc(renderer, ctr, r, kKnobStart + kKnobSweep * 0.5f, angle, g.track + 1.0f, arc);
@@ -191,10 +191,8 @@ void drawEmberKnob(NUIRenderer& renderer, const NUIPoint& cell, KnobSize size, f
     }
 
     const float rd = r - g.track * 0.5f - (size == KnobSize::Large ? 5.0f : 4.0f);
-    renderer.fillCircle(ctr, rd, lit ? c.raised : c.control);
-    renderer.drawLine({ctr.x + std::cos(angle) * rd * 0.3f, ctr.y + std::sin(angle) * rd * 0.3f},
-                      {ctr.x + std::cos(angle) * (rd - 1.0f), ctr.y + std::sin(angle) * (rd - 1.0f)}, 2.0f,
-                      disabled ? c.inkMuted : c.ink);
+    // Design Spec, Knob (locked): a lit cap sitting in the sunk ring, lifting while it is turned.
+    Depth::knobCap(renderer, ctr, rd, angle, state == ControlState::Drag, !disabled);
 
     const float labelSize = size == KnobSize::Small ? 10.0f : 11.0f;
     renderer.drawTextCentered(label, textRect(cell.x, cell.y + g.disc + 13.0f, g.cell, 14.0f), labelSize,

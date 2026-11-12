@@ -281,7 +281,6 @@ private:
 
     // Cached theme colors
     NUIColor m_backgroundColor;
-    NUIColor m_separatorColor;
 
     /**
      * @brief Layout all meter widgets horizontally.
@@ -291,7 +290,7 @@ private:
     /**
      * @brief Render separator lines between strips.
      */
-    void renderSeparators(NUIRenderer& renderer);
+    void renderBed(NUIRenderer& renderer);
 
     /**
      * @brief Cache theme colors.

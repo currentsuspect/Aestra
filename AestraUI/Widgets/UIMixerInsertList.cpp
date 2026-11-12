@@ -1,5 +1,6 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerInsertList.h"
+#include "../Graphics/NUIDepth.h"
 
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
@@ -58,8 +59,10 @@ void UIMixerInsertList::onRender(NUIRenderer& renderer) {
     const NUIColor textSecondary = theme.getColor("textSecondary");
     const NUIColor accent = theme.getColor("accentPrimary");
 
-    renderer.fillRoundedRect(r, kRadius, theme.getColor("buttonBgDefault").withAlpha(m_hovered ? 0.98f : 0.7f));
-    renderer.strokeRoundedRect(r, kRadius, 1.0f, theme.getColor("border").withAlpha(m_hovered ? 0.5f : 0.26f));
+    // Design Spec, Mixer: the insert slots are cut into the strip, a shallow well, never an outlined box.
+    Depth::bed(renderer, r, kRadius, Depth::Cut::Shallow);
+    if (m_hovered)
+        renderer.fillRoundedRect(r, kRadius, theme.getColor("hover"));
 
     if (m_rows.empty()) {
         renderer.drawTextCentered("+ insert", r, kFont, textSecondary.withAlpha(m_hovered ? 0.95f : 0.62f));

@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerPanel.h"
+#include "../Graphics/NUIDepth.h"
 #include "UIMixerStrip.h"
 #include "MixerScale.h"
 #include "TrackColorPalette.h"
@@ -137,7 +138,6 @@ void UIMixerPanel::cacheThemeColors()
     // Deep Void Background from Theme
     m_backgroundColor = theme.getColor("backgroundPrimary");
     // Subtle Glass Separator
-    m_separatorColor = theme.getColor("divider");
 }
 
 bool UIMixerPanel::channelLayoutMatchesViewModel() const
@@ -579,7 +579,7 @@ void UIMixerPanel::renderDbScale(NUIRenderer& renderer)
     float lastY = 1e9f;
     for (const float db : MixerScale::kTicks) {
         const float y = bars.bottom() - MixerScale::norm(db) * bars.height;
-        if (lastY - y < 11.0f && lastY < 1e8f) continue; // never print two labels on top of each other
+        if (std::fabs(y - lastY) < 11.0f) continue; // never print two labels on top of each other
         lastY = y;
         char buf[8];
         std::snprintf(buf, sizeof(buf), "%s%d", db > 0.0f ? "+" : (db < 0.0f ? "\xE2\x88\x92" : ""), static_cast<int>(std::fabs(db)));
@@ -733,27 +733,15 @@ void UIMixerPanel::ensureDropTargetRegistration() {
     }
 }
 
-void UIMixerPanel::renderSeparators(NUIRenderer& renderer)
+void UIMixerPanel::renderBed(NUIRenderer& renderer)
 {
-    auto bounds = getBounds();
-    const NUIRect minimapRect = getMinimapRect();
-    float y1 = minimapRect.bottom() + MINIMAP_GAP;
-    float y2 = bounds.y + bounds.height;
-
-    const TrailingLayout trailing = trailingLayout();
-    const float inspectorX = trailing.inspectorRect.x;
-    const NUIColor boundaryColor = m_separatorColor.withAlpha(0.62f);
-
-    // Draw separator before inspector
-    if (m_inspector && m_inspector->isVisible()) {
-        renderer.drawLine({inspectorX - STRIP_SPACING, y1}, {inspectorX - STRIP_SPACING, y2}, 1.0f, boundaryColor);
-    }
-
-    // Draw separator before master strip
-    if (m_masterStrip && m_masterStrip->isVisible()) {
-        const float masterX = trailing.masterRect.x;
-        renderer.drawLine({masterX - STRIP_SPACING, y1}, {masterX - STRIP_SPACING, y2}, 1.0f, boundaryColor);
-    }
+    // Design Spec, Mixer (locked): the mixer is a sunk bed. Strips, the inspector and the master rest on it,
+    // set apart by gaps and their own soft shadows, so no divider lines are drawn between them.
+    const auto bounds = getBounds();
+    const float y = getMinimapRect().bottom() + MINIMAP_GAP * 0.5f;
+    const NUIRect bed{bounds.x, y, bounds.width, std::max(0.0f, bounds.bottom() - y)};
+    if (!bed.isEmpty())
+        Depth::bed(renderer, bed, 0.0f, m_backgroundColor, Depth::Cut::Deep);
 }
 
 void UIMixerPanel::onRender(NUIRenderer& renderer)
@@ -768,8 +756,7 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
 
     if (m_navigator && m_navigator->isVisible()) m_navigator->onRender(renderer);
 
-    // Separators
-    renderSeparators(renderer);
+    renderBed(renderer);
 
     // Render channel strips with a clip so they never draw into the inspector/master area.
     const TrailingLayout trailing = trailingLayout();

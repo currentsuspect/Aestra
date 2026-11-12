@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerMeter.h"
+#include "../Graphics/NUIDepth.h"
 #include "MixerScale.h"
 
 #include "NUIRenderer.h"
@@ -173,23 +174,17 @@ void UIMixerMeter::renderMeterBar(NUIRenderer& renderer, const NUIRect& bounds,
     // Resting rail. A bare dark fill was indistinguishable from the strip
     // background, so a silent channel gave no clue where level would appear.
     // The groove plus its top edge say "meter lives here" before any signal.
-    renderer.fillRect(bounds, m_colorBackground);
-    renderer.strokeRect(bounds, 1.0f, m_colorRailEdge);
+    // Design Spec, Mixer: the meter is a slot cut into the strip, not an outlined box.
+    Depth::bed(renderer, bounds, 1.5f, m_colorBackground, Depth::Cut::Slot);
 
     const NUIColor& yellow = m_dimmed ? m_colorYellowDim : m_colorYellow;
     const NUIColor& red = m_dimmed ? m_colorRedDim : m_colorRed;
     const NUIColor& peakOverlay = m_dimmed ? m_colorPeakOverlayDim : m_colorPeakOverlay;
 
-    // Calculate meter fill height
-    float meterAreaHeight = bounds.height - CLIP_HEIGHT;
-
-    // Meter bar area (below clip indicator)
-    NUIRect meterArea = {
-        bounds.x,
-        bounds.y + CLIP_HEIGHT,
-        bounds.width,
-        meterAreaHeight
-    };
+    // The bar uses its whole slot; the clip lamp sits above both bars (onRender).
+    float meterAreaHeight = bounds.height;
+    NUIRect meterArea = bounds;
+    (void)clip;
 
     // RMS Bar (Thick, Solid, Main Body)
     // User: "RMS thick bar"
@@ -269,15 +264,6 @@ void UIMixerMeter::renderMeterBar(NUIRenderer& renderer, const NUIRect& bounds,
     }
 
     (void)peakOverlayDb; // Unused in this mode (bars are already showing fast peak)
-
-    // Clip indicator at top
-    NUIRect clipRect = {
-        bounds.x,
-        bounds.y,
-        bounds.width,
-        CLIP_HEIGHT
-    };
-    renderer.fillRect(clipRect, clip ? red : m_colorClipOff);
 }
 
 void UIMixerMeter::onRender(NUIRenderer& renderer)
@@ -296,19 +282,19 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
     // Reserve space for Text Readout at top (increased for better readability).
     // In master mode the strip owns a wider, explicitly labelled readout block,
     // so the meter reclaims that space and only labels its two bars L / R.
-    constexpr float TEXT_HEIGHT = 24.0f;
+    constexpr float TEXT_HEIGHT = READOUT_BAND;
     constexpr float LR_LABEL_HEIGHT = 11.0f;
     // Track strips keep TEXT_HEIGHT reserved even when the compact readout is
     // hidden (idle): reclaiming it on hover would grow the bars by 24 px and
     // then shrink them again — a geometry jump. Stable meter geometry is the
     // deliberate tradeoff; the empty band reads as quiet headroom, not layout.
-    const float topReserve = m_masterMode ? 0.0f : TEXT_HEIGHT;
+    const float topReserve = barsTopOffset() - LAMP_BAND;
     const float bottomReserve = m_masterMode ? LR_LABEL_HEIGHT : 0.0f;
 
     // Left Meter
     NUIRect leftBounds = bounds;
-    leftBounds.y += topReserve;
-    leftBounds.height = std::max(1.0f, meterHeight - topReserve - bottomReserve);
+    leftBounds.y += topReserve + LAMP_BAND;
+    leftBounds.height = std::max(1.0f, meterHeight - topReserve - LAMP_BAND - bottomReserve);
     leftBounds.width = (bounds.width - METER_GAP) * 0.5f;
     renderMeterBar(renderer, leftBounds, m_peakL, m_rmsL, m_peakOverlayL, m_peakHoldL, m_clipL);
 
@@ -316,6 +302,16 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
     NUIRect rightBounds = leftBounds;
     rightBounds.x += leftBounds.width + METER_GAP;
     renderMeterBar(renderer, rightBounds, m_peakR, m_rmsR, m_peakOverlayR, m_peakHoldR, m_clipR);
+
+    // Design Spec, Mixer (locked): the clip lamp, an 8px sunk dot above the meters. Any sample at or over 0 dBFS
+    // lights it in meterCrit and it stays lit until clicked, so a clip you missed is still there when you look.
+    {
+        const bool clipped = m_clipL || m_clipR;
+        const NUIRect lamp{std::round(bounds.x + (bounds.width - CLIP_LAMP) * 0.5f),
+                           bounds.y + topReserve + (LAMP_BAND - CLIP_LAMP) * 0.5f, CLIP_LAMP, CLIP_LAMP};
+        Depth::bed(renderer, lamp, CLIP_LAMP * 0.5f, clipped ? (m_dimmed ? m_colorRedDim : m_colorRed) : m_colorBackground,
+                   Depth::Cut::Slot);
+    }
 
     // Which bar is which — otherwise the master's two bars are unidentified.
     if (m_masterMode) {

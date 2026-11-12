@@ -116,6 +116,46 @@ void sliderCap(NUIRenderer& renderer, const NUIPoint& centre, bool held) {
     renderer.fillRect({cap.x + 10.0f, cap.y + 2.0f, 2.0f, cap.height - 4.0f}, th.textPrimary);
 }
 
+void faderCap(NUIRenderer& renderer, const NUIRect& cap, bool master, bool held) {
+    const auto& th = theme();
+    ObjectLook look;
+    look.base = master ? NUIColor::lerp(th.backgroundPrimary, th.textPrimary, 0.8f) : th.surfaceRaised;
+    look.held = held;
+    const float radius = master ? 4.0f : 3.0f;
+    object(renderer, cap, radius, look);
+    // Grip ridges above and below the centre line: a dark groove with a lit lip under it.
+    const float inset = std::max(2.0f, cap.width * 0.2f);
+    const float cy = std::round(cap.y + cap.height * 0.5f);
+    for (float dy : {-6.0f, -4.0f, 4.0f, 6.0f}) {
+        if (std::fabs(dy) + 1.0f >= cap.height * 0.5f)
+            continue;
+        renderer.fillRect({cap.x + inset, cy + dy, cap.width - inset * 2.0f, 1.0f}, NUIColor::black().withAlpha(0.26f));
+        renderer.fillRect({cap.x + inset, cy + dy + 1.0f, cap.width - inset * 2.0f, 1.0f},
+                          NUIColor::white().withAlpha(0.10f));
+    }
+    const float lineH = master ? 3.0f : 2.0f;
+    renderer.fillRect({cap.x + 2.0f, cy - lineH * 0.5f, cap.width - 4.0f, lineH}, master ? th.primary : th.textPrimary);
+}
+
+void knobCap(NUIRenderer& renderer, const NUIPoint& centre, float radius, float angle, bool held, bool enabled) {
+    const auto& th = theme();
+    const float r = held ? radius * 1.06f : radius;
+    const NUIRect disc{centre.x - r, centre.y - r, r * 2.0f, r * 2.0f};
+    ObjectLook look;
+    look.base = th.surfaceRaised;
+    look.held = held;
+    object(renderer, disc, r, look);
+    const NUIColor ink = enabled ? th.textPrimary : th.textDisabled;
+    renderer.drawLine({centre.x + std::cos(angle) * r * 0.25f, centre.y + std::sin(angle) * r * 0.25f},
+                      {centre.x + std::cos(angle) * (r - 2.0f), centre.y + std::sin(angle) * (r - 2.0f)}, 2.0f, ink);
+}
+
+void restingPanel(NUIRenderer& renderer, const NUIRect& rect, float radius, const NUIColor& fill) {
+    const auto& t = theme();
+    renderer.drawShadow(rect, 0.0f, 2.0f, 4.0f, scaledAlpha(t.neuLo, 0.5f));
+    renderer.fillRoundedRect(rect, radius, fill);
+}
+
 void focusRing(NUIRenderer& renderer, const NUIRect& rect, float radius, float gap) {
     // The stroke is centred on its path, so a 2px ring 2px off the control sits on a path gap + 1 out.
     const float out = gap + 1.0f;

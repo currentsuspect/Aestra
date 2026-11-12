@@ -104,7 +104,6 @@ private:
     NUIColor m_selectedTint;
     NUIColor m_selectedOutline;
     NUIColor m_selectedTopHighlight;
-    NUIColor m_masterBackground;
     NUIColor m_mutedOverlay;
     NUIColor m_stripBg;
     NUIColor m_masterBorder;

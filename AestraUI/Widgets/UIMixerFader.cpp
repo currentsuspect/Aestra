@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerFader.h"
+#include "../Graphics/NUIDepth.h"
 #include "MixerScale.h"
 
 #include "NUIThemeSystem.h"
@@ -23,18 +24,19 @@ namespace AestraUI {
 namespace {
     constexpr float TRACK_RADIUS = 4.0f;
     constexpr float HANDLE_RADIUS = 4.0f;
-    constexpr float HANDLE_HEIGHT = 22.0f;  // taller cap: a real grab target
-    constexpr float HANDLE_WIDTH = 30.0f;
-    constexpr float kOverlayHandleH = 18.0f;
-    constexpr float TRACK_WIDTH = 6.0f;     // was 4 — thin enough to look like a meter
+    // Design Spec, Mixer (locked): two caps. The master's is wider and heavier (28 by 30), a channel's is slim (20 by 26).
+    constexpr float HANDLE_HEIGHT = 30.0f;
+    constexpr float HANDLE_WIDTH = 28.0f;
+    constexpr float kOverlayHandleW = 20.0f;
+    constexpr float kOverlayHandleH = 26.0f;
+    constexpr float TRACK_WIDTH = 8.0f;     // the master's wider slot (Design Spec, Mixer)
     constexpr float TOP_PAD = 18.0f;    // room for fixed dB readout at top
     constexpr float BOTTOM_PAD = 6.0f;   // minimal padding below track
     constexpr float SNAP_DB = 0.5f;
     constexpr float DRAG_SLOP = 1.5f;
 
-    // Restrained scale: unity plus a few orientation marks. Unity (0 dB) is the
-    // only one that gets emphasis and a label.
-    constexpr float SCALE_TICKS[] = {6.0f, 0.0f, -6.0f, -12.0f, -18.0f, -24.0f, -36.0f, -48.0f};
+    // The console scale's marks (MixerScale). Unity (0 dB) is the only one that gets emphasis.
+    constexpr const auto& SCALE_TICKS = MixerScale::kTicks;
 
 }
 
@@ -129,16 +131,17 @@ NUIRect UIMixerFader::readoutRect() const
 
 float UIMixerFader::normFromDb(float db) const
 {
-    if (m_overlay) return MixerScale::norm(db);
-    return std::clamp((db - m_minDb) / std::max(1e-3f, (m_maxDb - m_minDb)), 0.0f, 1.0f);
+    // Every fader, the master's included, travels the one console scale the meters use (Design Spec, Mixer).
+    return MixerScale::norm(db);
 }
 
 float UIMixerFader::dbFromNorm(float norm) const
 {
     norm = std::clamp(norm, 0.0f, 1.0f);
-    if (m_overlay) return norm <= 0.004f ? m_minDb : MixerScale::db(norm);
-    return m_minDb + norm * (m_maxDb - m_minDb);
+    return norm <= 0.004f ? m_minDb : MixerScale::db(norm);
 }
+
+float UIMixerFader::overlayHandleHeight() { return kOverlayHandleH; }
 
 float UIMixerFader::topPad() const { return m_overlay ? kOverlayHandleH * 0.5f : TOP_PAD; }
 float UIMixerFader::bottomPad() const { return m_overlay ? kOverlayHandleH * 0.5f : BOTTOM_PAD; }
@@ -147,7 +150,7 @@ NUIRect UIMixerFader::handleRectAt(float handleY) const
 {
     const auto bounds = getBounds();
     if (m_overlay) {
-        constexpr float w = 12.0f;
+        const float w = std::min(kOverlayHandleW, bounds.width);
         return NUIRect{bounds.x + (bounds.width - w) * 0.5f, handleY, w, kOverlayHandleH};
     }
     const float handleW = handleWidth();
@@ -156,8 +159,7 @@ NUIRect UIMixerFader::handleRectAt(float handleY) const
 
 float UIMixerFader::dbToY(float db, float trackTop, float trackHeight) const
 {
-    const float norm = (db - m_minDb) / std::max(1e-3f, (m_maxDb - m_minDb));
-    return trackTop + (1.0f - std::clamp(norm, 0.0f, 1.0f)) * trackHeight;
+    return trackTop + (1.0f - normFromDb(db)) * trackHeight;
 }
 
 void UIMixerFader::renderScale(NUIRenderer& renderer, float trackX, float trackWidth,
@@ -257,17 +259,12 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
     const bool showScaleLabels = m_showScaleLabels || isHovered() || m_dragging;
     renderScale(renderer, trackX, trackWidth, trackTop, trackHeight, showScaleLabels);
 
-    // 2. Track Background (deep recessed slot)
-    renderer.fillRoundedRect(trackRect, 3.0f, m_trackBg);
+    // 2. The slot, cut into the strip (Design Spec: a sunk bed).
+    Depth::bed(renderer, trackRect, 3.0f, NUIThemeManager::getInstance().getCurrentTheme().meterBackground,
+               Depth::Cut::Slot);
 
     // 3. Filled Portion — neutral. This is control state, not signal.
-    const float norm = (m_valueDb - m_minDb) / std::max(1e-3f, (m_maxDb - m_minDb));
-    const float filledH = std::clamp(norm, 0.0f, 1.0f) * trackHeight;
-
-    if (filledH > 0.0f) {
-        NUIRect fillRect{trackX, trackBottom - filledH, trackWidth, filledH};
-        renderer.fillRoundedRect(fillRect, 3.0f, m_railFill);
-    }
+    const float filledH = normFromDb(m_valueDb) * trackHeight;
 
     // 4. Fader Handle (distinct grab block)
     const float handleY = std::clamp(trackBottom - filledH - HANDLE_HEIGHT * 0.5f,
@@ -279,29 +276,9 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
     const float handleH = HANDLE_HEIGHT;
 
     NUIRect handleRect{handleX, handleY, handleW, handleH};
-    float handleRad = 4.0f;
-
-    // Handle Body (dark surface) — flat, no drop shadow; the border + grip
-    // give it enough definition.
-    renderer.fillRoundedRect(handleRect, handleRad, m_handle.withAlpha(0.98f));
-
-    // Handle Border — the one place the per-channel accent appears on the fader,
-    // and only while the control is actually engaged.
-    bool handleActive = isHovered() || m_dragging;
-    NUIColor handleBorder = handleActive ? m_accent : m_border;
-    renderer.strokeRoundedRect(handleRect, handleRad, 1.0f, handleBorder);
-
-    // Grip: three short lines read as "grab me" better than a single slit.
-    const float gripW = std::min(18.0f, handleW - 10.0f);
-    const float gripX = handleX + (handleW - gripW) * 0.5f;
-    const float gripCy = handleY + handleH * 0.5f;
-    const NUIColor gripColor = handleActive ? m_accent : m_textSecondary.withAlpha(0.85f);
-    for (int i = -1; i <= 1; ++i) {
-        renderer.fillRoundedRect(
-            NUIRect{gripX, gripCy + static_cast<float>(i) * 4.0f - 1.0f, gripW, 2.0f},
-            1.0f,
-            i == 0 ? gripColor : gripColor.withAlpha(gripColor.a * 0.45f));
-    }
+    // The cap is an object (Design Spec, Mixer). Only the master strip draws its fader standalone (channel faders
+    // ride their meters as an overlay), so this one takes the master cap.
+    Depth::faderCap(renderer, handleRect, true, m_dragging);
 
     // 5. dB readout at top. It remains available for exact entry, but recedes
     //    on ordinary channel strips so the control shape and the adjacent meter
@@ -353,11 +330,9 @@ void UIMixerFader::renderOverlay(NUIRenderer& renderer)
     const NUIRect line{bounds.x - m_lineExtentLeft, y - 1.0f, m_lineExtentLeft + bounds.width * 0.5f, 3.0f};
     renderer.fillRect(line, cap);
 
-    // The handle: a small block on the meters' right edge, the thing you grab.
+    // The handle on the meters' right edge is the cap you grab: lit, ridged, lifting while held.
     const NUIRect handle = handleRectAt(y - kOverlayHandleH * 0.5f);
-    renderer.fillRoundedRect(handle, 2.0f, cap);
-    renderer.fillRect(NUIRect{handle.x + 3.0f, handle.y + handle.height * 0.5f - 0.5f, handle.width - 6.0f, 1.0f},
-                      m_trackBg.withAlpha(0.7f));
+    Depth::faderCap(renderer, handle, false, m_dragging);
 
     if (m_dragging) {
         const float tipW = 38.0f;

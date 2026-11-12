@@ -105,31 +105,21 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
     // header prevents the selected channel from acquiring a second card and a
     // second border inside the selected strip.
 
-    // Track colour is identity, not surface decoration. A narrow marker gives
-    // the eye a fast way to scan channels without turning every nameplate into
-    // a coloured button.
-    constexpr float TOP_BAR_H = 3.0f;
+    // Design Spec, Mixer (locked): the name sits on the track's colour with dark text; the master's on
+    // surfaceRaised. The plate is the strip's identity, so the eye scans channels by it.
+    auto& theme = NUIThemeManager::getInstance();
+    const NUIRect plate{std::floor(bounds.x), std::floor(bounds.y), std::ceil(bounds.width), std::ceil(bounds.height)};
+    const NUIColor plateColor =
+        m_isMaster ? theme.getColor("surfaceRaised") : colorFromARGB(m_trackColorArgb).withAlpha(1.0f);
+    renderer.fillRoundedRect(plate, 4.0f, plateColor);
+    const NUIColor ink = m_isMaster ? m_text : theme.getColor("textOnStatus");
+    const NUIColor routeInk = m_isMaster ? m_textSecondary.withAlpha(0.62f) : ink.withAlpha(0.68f);
 
-    NUIRect topBar{
-        std::floor(bounds.x),
-        std::floor(bounds.y),
-        std::ceil(bounds.width),
-        TOP_BAR_H
-    };
-
-    NUIColor trackColor = (m_isMaster && m_trackColorArgb == 0)
-                        ? NUIThemeManager::getInstance().getColor("primary")
-                        : colorFromARGB(m_trackColorArgb);
-    trackColor = trackColor.withAlpha(1.0f);
-
-    renderer.fillRect(topBar, trackColor);
-
-    // Text area (below the top bar)
     NUIRect textRect{
         bounds.x + (m_compact ? 1.0f : PAD_X),
-        bounds.y + TOP_BAR_H + 3.0f,
+        bounds.y + 2.0f,
         bounds.width - ((m_compact ? 1.0f : PAD_X) * 2),
-        bounds.height - (TOP_BAR_H + 3.0f)
+        bounds.height - 4.0f
     };
 
     const float nameFont = m_isMaster ? 12.0f : 11.5f;
@@ -147,13 +137,12 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
         renderer.drawTextCentered(m_name,
                                   {textRect.x, stackY, textRect.width, MASTER_NAME_H},
                                   nameFont,
-                                  m_text);
+                                  ink);
         if (!m_route.empty()) {
             NUIRect routeRect{textRect.x,
                               stackY + MASTER_NAME_H + STACK_GAP,
                               textRect.width, MASTER_ROUTE_H};
-            renderer.drawTextCentered(m_route, routeRect, routeFont,
-                                      m_textSecondary.withAlpha(0.62f));
+            renderer.drawTextCentered(m_route, routeRect, routeFont, routeInk);
         }
         return;
     }
@@ -176,12 +165,12 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
         const float tagH = (second.empty() && !m_route.empty()) ? 9.0f : 0.0f;
         const float stack = lineH * (second.empty() ? 1.0f : 2.0f) + tagH;
         float y = textRect.y + std::max(0.0f, (textRect.height - stack) * 0.5f);
-        renderer.drawTextCentered(fitText(renderer, first, font, textRect.width), {textRect.x, y, textRect.width, lineH}, font, m_text);
+        renderer.drawTextCentered(fitText(renderer, first, font, textRect.width), {textRect.x, y, textRect.width, lineH}, font, ink);
         y += lineH;
         if (!second.empty()) {
-            renderer.drawTextCentered(fitText(renderer, second, font, textRect.width), {textRect.x, y, textRect.width, lineH}, font, m_text);
+            renderer.drawTextCentered(fitText(renderer, second, font, textRect.width), {textRect.x, y, textRect.width, lineH}, font, ink);
         } else if (!m_route.empty()) {
-            renderer.drawTextCentered(m_route, {textRect.x, y, textRect.width, 9.0f}, 8.0f, m_textSecondary.withAlpha(0.64f));
+            renderer.drawTextCentered(m_route, {textRect.x, y, textRect.width, 9.0f}, 8.0f, routeInk);
         }
         return;
     }
@@ -195,14 +184,11 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
     const float stackY = textRect.y + std::max(0.0f, (textRect.height - stackH) * 0.5f) - 0.5f;
 
     NUIRect nameRect{textRect.x, stackY, textRect.width, TRACK_NAME_H};
-    renderer.drawTextCentered(fitText(renderer, m_name, nameFont, nameRect.width), nameRect, nameFont, m_text);
+    renderer.drawTextCentered(fitText(renderer, m_name, nameFont, nameRect.width), nameRect, nameFont, ink);
 
     if (!m_route.empty()) {
         NUIRect routeRect{textRect.x, stackY + TRACK_NAME_H + TRACK_GAP, textRect.width, TRACK_ROUTE_H};
-        renderer.drawTextCentered(m_route,
-                                  routeRect,
-                                  routeFont,
-                                  m_textSecondary.withAlpha(0.64f));
+        renderer.drawTextCentered(m_route, routeRect, routeFont, routeInk);
     }
 }
 

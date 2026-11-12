@@ -56,6 +56,8 @@ public:
      */
     void setOverlay(bool overlay, float lineExtentLeft = 0.0f) { m_overlay = overlay; m_lineExtentLeft = lineExtentLeft; repaint(); }
     bool isOverlay() const { return m_overlay; }
+    /// The channel cap's height (Design Spec, Mixer: 20 by 26); an overlay fader's track is inset by half of it.
+    static float overlayHandleHeight();
 
     /// Wider scale/readout treatment for the master strip.
     void setShowScaleLabels(bool show) { m_showScaleLabels = show; repaint(); }

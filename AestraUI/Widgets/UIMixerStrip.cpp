@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerStrip.h"
+#include "../Graphics/NUIDepth.h"
 
 #include "NUIThemeSystem.h"
 #include "NUIRenderer.h"
@@ -33,7 +34,7 @@ namespace {
     constexpr float SIDE_INSET = 4.0f;
     constexpr float SECTION_GAP = 8.0f;
     constexpr float METER_W = 24.0f;     // two 11 px bars and the gap between them
-    constexpr float FADER_COL_W = 14.0f; // the handle column beside the meters
+    constexpr float FADER_COL_W = 20.0f; // the handle column beside the meters: the channel cap is 20 wide
     constexpr float MASTER_METER_W = 36.0f;
     // Technical master readouts (held peak dBFS, integrated LUFS, gain) are a
     // permanent fixture under the master's meter/fader columns — the master
@@ -50,6 +51,7 @@ namespace {
     constexpr float MASTER_READOUT_H = MASTER_ROW_H * 6.0f + 8.0f;
 
     constexpr float SELECT_TOP_H = 3.0f;
+    constexpr float kStripRadius = 7.0f; // Design Spec, Mixer: strips are 6 to 8px round
     constexpr float MIXER_MIN_CHANNEL_HEIGHT = 220.0f;
 
     // Resolve a palette index to a renderer colour (matches UIMixerHeader::colorFromARGB).
@@ -323,11 +325,10 @@ void UIMixerStrip::cacheThemeColors()
     m_selectedTopHighlight = theme.getColor("primary").withAlpha(0.72f);
     
     // Master: Distinct Dark Glass
-    m_masterBackground = theme.getColor("surfaceRaised").withAlpha(0.78f);
     m_mutedOverlay = NUIColor(0.0f, 0.0f, 0.0f, 0.4f);
     
     // Strips are layered surfaces, not individual floating cards.
-    m_stripBg = theme.getColor("backgroundSecondary").withAlpha(0.88f);
+    m_stripBg = theme.getColor("mixerStripBg");
     
     // Master Border
     m_masterBorder = theme.getColor("border").withAlpha(0.36f);
@@ -457,16 +458,17 @@ void UIMixerStrip::layoutChildren()
     // Channel strips: the meters sit centred with the fader's handle column on their right edge, and the cap
     // line drawn by the fader runs back across both bars.
     const float chMeterW = narrow ? 18.0f : meterW;
-    const float chFaderCol = narrow ? 12.0f : FADER_COL_W;
+    const float chFaderCol = narrow ? 16.0f : FADER_COL_W;
     const float groupW = chMeterW + 2.0f + chFaderCol;
     const float meterX = std::floor(contentX + (contentW - groupW) * 0.5f);
     if (m_meter) m_meter->setBounds(meterX, meterY, chMeterW, meterH);
     if (m_fader) {
-        // The meter reserves its clip lamp at the top; the fader's track starts where the bars do.
-        constexpr float kClipLamp = 6.0f;
-        constexpr float kHandleHalf = 9.0f;
-        m_fader->setBounds(meterX + chMeterW + 1.0f, meterY + kClipLamp - kHandleHalf, chFaderCol,
-                           meterH - kClipLamp + kHandleHalf * 2.0f);
+        // The meter reserves its readout and clip lamp at the top; the fader's track starts where the bars do and
+        // its pad (half the cap) hangs over both ends.
+        const float barsTop = m_meter ? m_meter->barsTopOffset() : 0.0f;
+        const float handleHalf = UIMixerFader::overlayHandleHeight() * 0.5f;
+        m_fader->setBounds(meterX + chMeterW + 1.0f, meterY + barsTop - handleHalf, chFaderCol,
+                           meterH - barsTop + handleHalf * 2.0f);
     }
     m_masterMeterReadoutRect = NUIRect{};
     m_masterGainReadoutRect = NUIRect{};
@@ -767,17 +769,9 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
 
     const bool selected = m_viewModel && (m_viewModel->getSelectedChannelId() == static_cast<int32_t>(m_channelId));
 
-    // Strips form one continuous instrument surface. Gaps and tonal contrast
-    // establish columns; rounded card outlines would fragment the mixer.
-    constexpr float radius = 4.0f;
-    renderer.fillRect(bounds, m_stripBg);
-
-    // Master gets a slightly different tone to distinguish it (optional, but good for hierarchy)
-    if (m_channelId == 0) {
-        // Master is differentiated by a quiet tonal step and its fixed place,
-        // not by an always-on purple frame.
-        renderer.fillRect(bounds, m_masterBackground);
-    }
+    // Design Spec, Mixer (locked): each strip is a flat panel resting on the mixer's sunk bed, set apart by the
+    // gap and a soft shadow, not by lines. The master is the same panel, its place and its cap set it apart.
+    Depth::restingPanel(renderer, bounds, kStripRadius, m_stripBg);
 
     if (selected) {
         // Selection = a slight tinted body + a strong top edge. No outline.
@@ -787,8 +781,9 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
         // tinted body and a bright edge the strip is already unmistakable, and
         // the border was what made a selected strip read as a different kind of
         // component rather than the same strip, selected.
-        renderer.fillRect(bounds, m_selectedTint);
-        renderer.fillRect(NUIRect{bounds.x, bounds.y, bounds.width, SELECT_TOP_H}, m_selectedTopHighlight);
+        renderer.fillRoundedRect(bounds, kStripRadius, m_selectedTint);
+        renderer.fillRoundedRect(NUIRect{bounds.x + kStripRadius, bounds.y, bounds.width - kStripRadius * 2.0f, SELECT_TOP_H},
+                                 SELECT_TOP_H * 0.5f, m_selectedTopHighlight);
     }
 
     // While dragging, render live (no caching) so interactive controls update every frame.
@@ -804,7 +799,7 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
             renderPanValue(renderer, *channel);
         }
         if (channel && channel->muted) {
-            renderer.fillRect(getBounds(), m_mutedOverlay);
+            renderer.fillRoundedRect(getBounds(), kStripRadius, m_mutedOverlay);
         }
         return;
     }
@@ -856,7 +851,7 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
         renderer.drawTextCentered(label, badge, 8.4f, text.withAlpha(0.964f));
     }
     if (channel && channel->muted) {
-        renderer.fillRect(getBounds(), m_mutedOverlay);
+        renderer.fillRoundedRect(getBounds(), kStripRadius, m_mutedOverlay);
     }
 }
 
@@ -945,9 +940,10 @@ void UIMixerStrip::renderStaticLayer(NUIRenderer& renderer)
 NUIRect UIMixerStrip::meterBarsRect() const
 {
     if (!m_meter) return NUIRect{};
-    constexpr float kClipLamp = 6.0f; // the meter reserves this at the top for its clip indicator
+    // The meter reserves its readout and clip lamp above the bars; the panel's scale reads against the bars alone.
     const auto b = m_meter->getBounds();
-    return NUIRect{b.x, b.y + kClipLamp, b.width, std::max(0.0f, b.height - kClipLamp)};
+    const float top = m_meter->barsTopOffset();
+    return NUIRect{b.x, b.y + top, b.width, std::max(0.0f, b.height - top)};
 }
 
 NUIRect UIMixerStrip::getFXSummaryBounds() const
